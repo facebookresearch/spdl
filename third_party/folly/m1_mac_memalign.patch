@@ -1,0 +1,38 @@
+###############################################################################
+# Source https://github.com/milvus-io/folly/commit/e47b975a8129af20f535821b1b5041d61082513f.patch
+###############################################################################
+From e47b975a8129af20f535821b1b5041d61082513f Mon Sep 17 00:00:00 2001
+From: Enwei Jiao <enwei.jiao@zilliz.com>
+Date: Thu, 2 Nov 2023 15:18:39 -0700
+Subject: [PATCH] Fix compile error with clang15 on MacOS
+
+Signed-off-by: Enwei Jiao <enwei.jiao@zilliz.com>
+---
+ folly/Memory.h | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/folly/Memory.h b/folly/Memory.h
+index 9ae546cb0d1..9bf17a75ff8 100644
+--- a/folly/Memory.h
++++ b/folly/Memory.h
+@@ -40,14 +40,18 @@
+ #include <folly/portability/Config.h>
+ #include <folly/portability/Malloc.h>
+ 
++#ifdef __APPLE__
++#include <AvailabilityMacros.h>
++#endif
++
+ namespace folly {
+ 
+ #if (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L) || \
+     (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 600) ||         \
+     (defined(__ANDROID__) && (__ANDROID_API__ > 16)) ||         \
+     (defined(__APPLE__) &&                                      \
+-     (__MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_6 ||          \
+-      __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_3_0)) ||     \
++     (MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_6 ||            \
++      IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_3_0)) ||       \
+     defined(__FreeBSD__) || defined(__wasm32__)
+ 
+ inline void* aligned_malloc(size_t size, size_t align) {
