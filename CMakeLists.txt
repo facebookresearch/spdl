@@ -28,10 +28,11 @@ add_subdirectory(third_party/boost)
 add_subdirectory(third_party/folly)
 
 ###############################################################################
-# Build test app
+# SPDL
 ###############################################################################
-# add_executable(test foo.cpp)
-# target_link_libraries(test glog::glog)
+add_subdirectory(src/libspdl)
 
-add_executable(coro_test coro_test.cpp)
-target_link_libraries(coro_test folly)
+###############################################################################
+# Prototype / test code
+###############################################################################
+add_subdirectory(src/prototypes)

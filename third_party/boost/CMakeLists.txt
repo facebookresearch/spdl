@@ -8,8 +8,11 @@ FetchContent_Declare(
   GIT_TAG boost-1.83.0
   GIT_SUBMODULES
   tools/cmake
+  libs/algorithm
+  libs/array
   libs/assert
   libs/bind
+  libs/exception
   libs/config
   libs/concept_check
   libs/conversion
@@ -33,6 +36,9 @@ FetchContent_Declare(
   libs/pool
   libs/predef
   libs/preprocessor
+  libs/range
+  libs/regex
+  libs/unordered
   libs/static_assert
   libs/smart_ptr
   libs/tuple
