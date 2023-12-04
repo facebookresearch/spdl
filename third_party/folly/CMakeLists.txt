@@ -34,9 +34,11 @@ set(
   "${base_dir}/folly/CancellationToken.cpp"
   "${base_dir}/folly/Conv.cpp"
   "${base_dir}/folly/Demangle.cpp"
+  "${base_dir}/folly/dynamic.cpp"
   "${base_dir}/folly/Executor.cpp"
   "${base_dir}/folly/ExceptionString.cpp"
   "${base_dir}/folly/ExceptionWrapper.cpp"
+  "${base_dir}/folly/File.cpp"
   "${base_dir}/folly/FileUtil.cpp"
   "${base_dir}/folly/Format.cpp"
   "${base_dir}/folly/ScopeGuard.cpp"
@@ -44,6 +46,9 @@ set(
   "${base_dir}/folly/Singleton.cpp"
   "${base_dir}/folly/SingletonThreadLocal.cpp"
   "${base_dir}/folly/String.cpp"
+  "${base_dir}/folly/Unicode.cpp"
+  "${base_dir}/folly/json.cpp"
+  "${base_dir}/folly/json_pointer.cpp"
 
   "${base_dir}/folly/concurrency/CacheLocality.cpp"
   "${base_dir}/folly/concurrency/ProcessLocalUniqueId.cpp"
@@ -63,6 +68,9 @@ set(
   "${base_dir}/folly/fibers/Fiber.cpp"
   "${base_dir}/folly/fibers/FiberManager.cpp"
   "${base_dir}/folly/fibers/GuardPageAllocator.cpp"
+  "${base_dir}/folly/fibers/Semaphore.cpp"
+
+  "${base_dir}/folly/futures/detail/Core.cpp"
 
   "${base_dir}/folly/executors/GlobalExecutor.cpp"
   "${base_dir}/folly/executors/GlobalThreadPoolList.cpp"
@@ -71,6 +79,8 @@ set(
   "${base_dir}/folly/executors/CPUThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/QueueObserver.cpp"
   "${base_dir}/folly/executors/QueuedImmediateExecutor.cpp"
+
+  "${base_dir}/folly/hash/SpookyHashV2.cpp"
 
   "${base_dir}/folly/io/async/AsyncTimeout.cpp"
   "${base_dir}/folly/io/async/DelayedDestruction.cpp"
@@ -84,11 +94,36 @@ set(
   "${base_dir}/folly/io/async/TimeoutManager.cpp"
   "${base_dir}/folly/io/async/VirtualEventBase.cpp"
 
+  "${base_dir}/folly/init/Init.cpp"
+  "${base_dir}/folly/init/Phase.cpp"
+
   "${base_dir}/folly/lang/CString.cpp"
   "${base_dir}/folly/lang/Exception.cpp"
   "${base_dir}/folly/lang/SafeAssert.cpp"
   "${base_dir}/folly/lang/ToAscii.cpp"
   "${base_dir}/folly/lang/UncaughtExceptions.cpp"
+
+  "${base_dir}/folly/logging/AsyncFileWriter.cpp"
+  "${base_dir}/folly/logging/AsyncLogWriter.cpp"
+  "${base_dir}/folly/logging/CustomLogFormatter.cpp"
+  "${base_dir}/folly/logging/ImmediateFileWriter.cpp"
+  "${base_dir}/folly/logging/Init.cpp"
+  "${base_dir}/folly/logging/InitWeak.cpp"
+  "${base_dir}/folly/logging/FileWriterFactory.cpp"
+  "${base_dir}/folly/logging/GlogStyleFormatter.cpp"
+  "${base_dir}/folly/logging/LogCategory.cpp"
+  "${base_dir}/folly/logging/LogCategoryConfig.cpp"
+  "${base_dir}/folly/logging/LogConfig.cpp"
+  "${base_dir}/folly/logging/LogConfigParser.cpp"
+  "${base_dir}/folly/logging/LoggerDB.cpp"
+  "${base_dir}/folly/logging/LogHandlerConfig.cpp"
+  "${base_dir}/folly/logging/LogLevel.cpp"
+  "${base_dir}/folly/logging/LogMessage.cpp"
+  "${base_dir}/folly/logging/LogName.cpp"
+  "${base_dir}/folly/logging/RateLimiter.cpp"
+  "${base_dir}/folly/logging/StandardLogHandler.cpp"
+  "${base_dir}/folly/logging/StandardLogHandlerFactory.cpp"
+  "${base_dir}/folly/logging/StreamHandlerFactory.cpp"
 
   "${base_dir}/folly/memory/MallctlHelper.cpp"
   "${base_dir}/folly/memory/ReentrantAllocator.cpp"
@@ -98,8 +133,9 @@ set(
 
   "${base_dir}/folly/synchronization/AtomicNotification.cpp"
   "${base_dir}/folly/synchronization/DistributedMutex.cpp"
-  "${base_dir}/folly/synchronization/HazptrDomain.cpp"
   "${base_dir}/folly/synchronization/Hazptr.cpp"
+  "${base_dir}/folly/synchronization/HazptrDomain.cpp"
+  "${base_dir}/folly/synchronization/HazptrThreadPoolExecutor.cpp"
   "${base_dir}/folly/synchronization/ParkingLot.cpp"
 
   "${base_dir}/folly/system/AtFork.cpp"
@@ -112,6 +148,7 @@ set(
 
   "${base_dir}/folly/experimental/coro/Baton.cpp"
   "${base_dir}/folly/experimental/coro/detail/Malloc.cpp"
+  "${base_dir}/folly/experimental/symbolizer/SignalHandler.cpp"
   )
 
 add_library(folly "${src}")
@@ -126,6 +163,7 @@ target_link_libraries(
   double-conversion
   fmt
   glog::glog
+  Boost::algorithm
   Boost::intrusive
   Boost::context
   Boost::preprocessor
