@@ -48,6 +48,7 @@ folly::coro::AsyncGenerator<Bar&&> gen_move2() {
   co_yield Bar(3);
 }
 
+
 folly::coro::Task<void> run_gen() {
   auto g = gen_move2();
   while (auto result = co_await g.next()) {
