@@ -18,6 +18,7 @@ endif()
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0063 NEW)
 
+add_subdirectory(third_party/ffmpeg/multi)
 add_subdirectory(third_party/double-conversion)
 add_subdirectory(third_party/fmt)
 # add_subdirectory(third_party/gflags)
