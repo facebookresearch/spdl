@@ -1,10 +1,10 @@
 #include <fmt/format.h>
+#include <folly/init/Init.h>
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 #include <folly/experimental/coro/Collect.h>
 #include <folly/experimental/coro/Task.h>
-#include <folly/init/Init.h>
 
 #include <libspdl/ffmpeg/utils.h>
 #include <libspdl/interface/mmap.h>
@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
   LOG(INFO) << avcodec_configuration();
 
   std::vector<std::string> srcs = {
-      "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4",
-      "mmap://NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4",
+    "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4",
+    "mmap://NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4",
   };
 
   auto exec = folly::getGlobalIOExecutor().get();
