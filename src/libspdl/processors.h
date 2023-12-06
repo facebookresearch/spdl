@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <folly/Executor.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 #include <folly/experimental/coro/Task.h>
@@ -10,6 +12,9 @@ struct AVFrame;
 struct AVFormatContext;
 
 namespace spdl {
+
+// Temporaly output struct
+// until we have a proper way to expose the output of Engine to client code.
 
 // We deal with multiple frames at a time, so we use vector of raw
 // pointers with dedicated destructor, as opposed to vector of managed pointers
@@ -31,14 +36,39 @@ struct PackagedAVFrames {
   ~PackagedAVFrames();
 };
 
+// Temp
 using FrameQueue = folly::coro::BoundedQueue<PackagedAVFrames, false, true>;
 
 //////////////////////////////////////////////////////////////////////////////
-// Processor
+// Engine
 //////////////////////////////////////////////////////////////////////////////
-folly::coro::Task<void> stream_decode(
-    AVFormatContext* fmt_ctx,
-    const std::vector<double> timestamps,
-    FrameQueue& queue);
+class Engine {
+  using Executor = folly::CPUThreadPoolExecutor;
+
+ public:
+  struct Job {
+    std::string path;
+    std::vector<double> timestamps;
+  };
+
+ private:
+  std::unique_ptr<Executor> io_task_executors;
+  std::unique_ptr<Executor> decoding_task_executors;
+
+  folly::Executor::KeepAlive<> io_exec;
+  folly::Executor::KeepAlive<> decoding_exec;
+
+ public:
+  // temp
+  FrameQueue frame_queue;
+  std::vector<folly::SemiFuture<folly::Unit>> sfs;
+
+  Engine(
+      size_t num_io_threads,
+      size_t num_decoding_threads,
+      size_t frame_queue_size);
+
+  void enqueue(Job job);
+};
 
 } // namespace spdl

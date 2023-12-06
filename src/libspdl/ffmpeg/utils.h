@@ -2,6 +2,8 @@
 #include <libspdl/ffmpeg/wrappers.h>
 #include <map>
 #include <optional>
+#include <string>
+#include <string_view>
 
 namespace spdl {
 
