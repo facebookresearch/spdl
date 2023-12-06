@@ -18,6 +18,7 @@ endif()
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0063 NEW)
 
+add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/ffmpeg/multi)
 add_subdirectory(third_party/double-conversion)
 add_subdirectory(third_party/fmt)
@@ -27,10 +28,12 @@ add_subdirectory(third_party/libevent)
 add_subdirectory(third_party/boost)
 add_subdirectory(third_party/folly)
 
+
 ###############################################################################
 # SPDL
 ###############################################################################
 add_subdirectory(src/libspdl)
+add_subdirectory(src/pybind)
 
 ###############################################################################
 # Prototype / test code
