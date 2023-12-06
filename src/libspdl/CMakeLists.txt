@@ -14,4 +14,4 @@ set(
 
 add_library(spdl "${src}")
 target_link_libraries(spdl PUBLIC folly ffmpeg6)
-target_include_directories(spdl PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
+target_include_directories(spdl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
