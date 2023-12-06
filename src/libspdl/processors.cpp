@@ -1,4 +1,3 @@
-
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -8,11 +7,19 @@ extern "C" {
 #include <fmt/core.h>
 #include <fmt/std.h>
 
+#include <folly/experimental/coro/AsyncGenerator.h>
+#include <folly/experimental/coro/BoundedQueue.h>
+
 #include <libspdl/ffmpeg/logging.h>
 #include <libspdl/ffmpeg/utils.h>
+#include <libspdl/interface/interface.h>
 #include <libspdl/processors.h>
 
-#include <folly/experimental/coro/BoundedQueue.h>
+template <typename T>
+using Task = folly::coro::Task<T>;
+
+template <typename T>
+using Generator = folly::coro::AsyncGenerator<T>;
 
 namespace spdl {
 //////////////////////////////////////////////////////////////////////////////
@@ -84,7 +91,7 @@ AVFramePtr alloc_frame() {
 // Producer
 //////////////////////////////////////////////////////////////////////////////
 
-folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_avframes(
+Generator<PackagedAVPackets&&> streaming_demux(
     AVFormatContext* fmt_ctx,
     std::vector<double> timestamps) {
   CHECK_AVERROR(
@@ -144,9 +151,7 @@ folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_avframes(
 //////////////////////////////////////////////////////////////////////////////
 // Consumer
 //////////////////////////////////////////////////////////////////////////////
-folly::coro::Task<void> decode_packets(
-    PackagedAVPackets message,
-    FrameQueue& queue) {
+Task<PackagedAVFrames> decode_packets(PackagedAVPackets message) {
   AVCodecContextPtr codec_ctx = get_codec_ctx(message.stream->codecpar);
   PackagedAVFrames frames;
   for (auto& packet : message.packets) {
@@ -167,11 +172,16 @@ folly::coro::Task<void> decode_packets(
       frames.frames.push_back(frame.release());
     }
   }
+  co_return std::move(frames);
+}
 
+Task<void> decode_and_enque(PackagedAVPackets message, FrameQueue& queue) {
+  auto ts = message.timestamp;
+  auto frames = co_await decode_packets(std::move(message));
   LOG(INFO) << fmt::format(
       "    [{}] Target timestamp: {} - Decoded frames: {}",
       std::this_thread::get_id(),
-      message.timestamp,
+      ts,
       frames.frames.size());
   co_await queue.enqueue(std::move(frames));
 }
@@ -179,17 +189,52 @@ folly::coro::Task<void> decode_packets(
 //////////////////////////////////////////////////////////////////////////////
 // Processor
 //////////////////////////////////////////////////////////////////////////////
-folly::coro::Task<void> stream_decode(
+Task<void> stream_decode(
     AVFormatContext* fmt_ctx,
     const std::vector<double> timestamps,
+    folly::Executor::KeepAlive<> executor,
     FrameQueue& queue) {
-  auto exec = folly::getGlobalCPUExecutor().get();
-  auto streamer = stream_avframes(fmt_ctx, timestamps);
+  auto streamer = streaming_demux(fmt_ctx, timestamps);
   std::vector<folly::SemiFuture<folly::Unit>> sfs;
-  while (auto res = co_await streamer.next()) {
-    sfs.emplace_back(decode_packets(*res, queue).scheduleOn(exec).start());
+  while (auto decode_job = co_await streamer.next()) {
+    sfs.emplace_back(
+        decode_and_enque(*decode_job, queue).scheduleOn(executor).start());
   }
   co_await folly::collectAll(sfs);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Engine
+//////////////////////////////////////////////////////////////////////////////
+namespace {
+folly::coro::Task<void> stream_decode(
+    Engine::Job job,
+    folly::Executor::KeepAlive<> decode_exec,
+    FrameQueue& queue,
+    const std::optional<OptionDict> options = std::nullopt,
+    const std::optional<std::string> format = std::nullopt,
+    int buffer_size = 8096) {
+  auto dp =
+      interface::get_data_provider(job.path, options, format, buffer_size);
+  co_await stream_decode(
+      dp->get_fmt_ctx(), std::move(job.timestamps), decode_exec, queue);
+}
+} // namespace
+
+Engine::Engine(
+    size_t num_io_threads,
+    size_t num_decoding_threads,
+    size_t frame_queue_size)
+    : io_task_executors(std::make_unique<Executor>(num_io_threads)),
+      decoding_task_executors(std::make_unique<Executor>(num_decoding_threads)),
+      io_exec(io_task_executors.get()),
+      decoding_exec(decoding_task_executors.get()),
+      frame_queue(frame_queue_size) {}
+
+void Engine::enqueue(Job job) {
+  sfs.emplace_back(stream_decode(std::move(job), decoding_exec, frame_queue)
+                       .scheduleOn(io_exec)
+                       .start());
 }
 
 } // namespace spdl

@@ -11,10 +11,12 @@ class MemoryMappedFile {
   int64_t pos_ = 0;
 
  public:
-  MemoryMappedFile(std::string_view path);
+  MemoryMappedFile(const std::string_view path);
 
   MemoryMappedFile(const MemoryMappedFile&) = delete;
   MemoryMappedFile& operator=(const MemoryMappedFile&) = delete;
+
+  MemoryMappedFile(MemoryMappedFile&&) noexcept = default;
 
   ~MemoryMappedFile();
 
