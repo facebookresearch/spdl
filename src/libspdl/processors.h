@@ -69,6 +69,8 @@ class Engine {
       size_t frame_queue_size);
 
   void enqueue(Job job);
+
+  void dequeue();
 };
 
 } // namespace spdl

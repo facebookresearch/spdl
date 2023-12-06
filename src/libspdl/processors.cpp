@@ -8,6 +8,7 @@ extern "C" {
 #include <fmt/std.h>
 
 #include <folly/experimental/coro/AsyncGenerator.h>
+#include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 
 #include <libspdl/ffmpeg/logging.h>
@@ -235,6 +236,13 @@ void Engine::enqueue(Job job) {
   sfs.emplace_back(stream_decode(std::move(job), decoding_exec, frame_queue)
                        .scheduleOn(io_exec)
                        .start());
+}
+
+void Engine::dequeue() {
+  folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
+    auto val = co_await frame_queue.dequeue();
+    LOG(INFO) << fmt::format("Dequeue {} frames", val.frames.size());
+  }());
 }
 
 } // namespace spdl
