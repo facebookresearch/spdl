@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
       "mmap://NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4",
   };
 
-  spdl::Engine engine{64, 32, 100};
+  spdl::Engine engine{64, 3, 100};
 
   LOG(INFO) << "Executing the coroutine";
   int num_jobs = 0;
