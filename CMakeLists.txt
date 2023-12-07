@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
+option(SPDL_BUILD_SAMPLES "Build sample codes." OFF)
+
 ###############################################################################
 # Third party libraries
 ###############################################################################
@@ -38,4 +40,6 @@ add_subdirectory(src/pybind)
 ###############################################################################
 # Prototype / test code
 ###############################################################################
+if (SPDL_BUILD_SAMPLES)
 add_subdirectory(src/prototypes)
+endif (SPDL_BUILD_SAMPLES)
