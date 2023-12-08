@@ -35,4 +35,18 @@ inline std::string av_error(int errnum, std::string_view tmp, Args&&... args) {
     throw std::runtime_error(av_error(_errnum, __VA_ARGS__)); \
   }
 
+#define CHECK_AVERROR_NUM(errnum, ...)                       \
+  if (errnum < 0) [[unlikely]] {                             \
+    throw std::runtime_error(av_error(errnum, __VA_ARGS__)); \
+  }
+
+#define CHECK_AVALLOCATE(expression)                                   \
+  [&]() {                                                              \
+    auto* p = expression;                                              \
+    if (!p) [[unlikely]] {                                             \
+      throw std::runtime_error("Allocation failed (" #expression ")"); \
+    }                                                                  \
+    return p;                                                          \
+  }()
+
 } // namespace spdl

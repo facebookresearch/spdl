@@ -1,18 +1,20 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavfilter/buffersink.h>
+#include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
 #include <libavutil/rational.h>
 }
 
 #include <fmt/core.h>
-#include <fmt/std.h>
 
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 
+#include <libspdl/ffmpeg/ctx_utils.h>
+#include <libspdl/ffmpeg/filter_graph.h>
 #include <libspdl/ffmpeg/logging.h>
-#include <libspdl/ffmpeg/utils.h>
 #include <libspdl/interface/interface.h>
 #include <libspdl/processors.h>
 
@@ -43,7 +45,11 @@ namespace {
 // It contains sufficient information to build decoder via AVStream*.
 struct PackagedAVPackets {
   // Owned by the top level AVFormatContext that client code keeps.
-  AVStream* stream = nullptr;
+  AVCodecParameters* codec_par = nullptr;
+  // Packet time base
+  AVRational time_base{};
+  // frame rate for video
+  AVRational frame_rate;
 
   // Requested timestamp
   std::string src;
@@ -52,8 +58,16 @@ struct PackagedAVPackets {
   // Sliced raw packets
   std::vector<AVPacket*> packets = {};
 
-  PackagedAVPackets(AVStream* stream, std::string src, double timestamp)
-      : stream(stream), src(src), timestamp(timestamp){};
+  PackagedAVPackets(
+      AVStream* stream,
+      AVRational frame_rate,
+      std::string src,
+      double timestamp)
+      : codec_par(stream->codecpar),
+        time_base(stream->time_base),
+        frame_rate(frame_rate),
+        src(src),
+        timestamp(timestamp){};
 
   // No copy constructors
   PackagedAVPackets(const PackagedAVPackets&) = delete;
@@ -64,28 +78,13 @@ struct PackagedAVPackets {
   // Destructor releases AVPacket* resources
   ~PackagedAVPackets() {
     std::for_each(packets.begin(), packets.end(), [](AVPacket* p) {
-      av_packet_unref(p);
-      av_packet_free(&p);
+      if (p) {
+        av_packet_unref(p);
+        av_packet_free(&p);
+      }
     });
   };
 };
-
-AVPacketPtr alloc_packet() {
-  AVPacket* p = av_packet_alloc();
-  if (!p) {
-    throw std::runtime_error("Failed to allocate AVPacket.");
-  }
-  return AVPacketPtr{p};
-}
-
-AVFramePtr alloc_frame() {
-  AVFrame* p = av_frame_alloc();
-  if (!p) {
-    throw std::runtime_error("Failed to allocate AVFrame.");
-  }
-  return AVFramePtr{p};
-}
-
 } // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -122,16 +121,18 @@ Generator<PackagedAVPackets&&> streaming_demux(
 
     int num_req_frames = 10;
 
-    PackagedAVPackets package{stream, fmt_ctx->url, timestamp};
+    PackagedAVPackets package{
+        stream,
+        av_guess_frame_rate(fmt_ctx, stream, nullptr),
+        fmt_ctx->url,
+        timestamp};
     while (num_req_frames >= 0) {
-      AVPacketPtr packet = alloc_packet();
+      AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
       int errnum = av_read_frame(fmt_ctx, packet.get());
       if (errnum == AVERROR_EOF) {
         break;
       }
-      if (errnum < 0) {
-        throw std::runtime_error(av_error(errnum, "Failed to process packet."));
-      }
+      CHECK_AVERROR_NUM(errnum, "Failed to process packet.");
       if (packet->stream_index != idx) {
         continue;
       }
@@ -145,6 +146,9 @@ Generator<PackagedAVPackets&&> streaming_demux(
       }
       package.packets.push_back(packet.release());
     }
+    XLOG(INFO) << fmt::format(" - Sliced {} packets", package.packets.size());
+    // For flushing
+    package.packets.push_back(nullptr);
     co_yield std::move(package);
   }
 }
@@ -152,38 +156,132 @@ Generator<PackagedAVPackets&&> streaming_demux(
 //////////////////////////////////////////////////////////////////////////////
 // Consumer
 //////////////////////////////////////////////////////////////////////////////
-Task<PackagedAVFrames> decode_packets(PackagedAVPackets message) {
-  AVCodecContextPtr codec_ctx = get_codec_ctx(message.stream->codecpar);
-  PackagedAVFrames frames;
-  for (auto& packet : message.packets) {
-    int errnum = avcodec_send_packet(codec_ctx.get(), packet);
-    while (errnum >= 0) {
-      AVFramePtr frame = alloc_frame();
-      errnum = avcodec_receive_frame(codec_ctx.get(), frame.get());
-      if (errnum == AVERROR(EAGAIN)) {
-        break;
-      }
-      if (errnum == AVERROR_EOF) {
-        // co_wait flush_buffer()
-        break;
-      }
-      if (errnum < 0) {
-        throw std::runtime_error(av_error(errnum, "Failed to decode a frame."));
-      }
-      frames.frames.push_back(frame.release());
-    }
-  }
-  co_return std::move(frames);
+double ts(int64_t pts, AVRational time_base) {
+  return pts * av_q2d(time_base);
 }
 
-Task<void> decode_and_enque(PackagedAVPackets message, FrameQueue& queue) {
-  auto ts = message.timestamp;
-  auto frames = co_await decode_packets(std::move(message));
-  XLOG(INFO) << fmt::format(
-      "    [{}] Target timestamp: {} - Decoded frames: {}",
-      std::this_thread::get_id(),
-      ts,
-      frames.frames.size());
+Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
+  AVFilterContext* src_ctx = filter_graph->filters[0];
+  AVFilterContext* sink_ctx = filter_graph->filters[1];
+
+  assert(strcmp(src_ctx->name, "in") == 0);
+  assert(strcmp(sink_ctx->name, "out") == 0);
+
+  XLOG(INFO)
+      << ((!frame) ? fmt::format(" --- flush filter graph")
+                   : fmt::format(
+                         "{:15s} {:.3f} ({})",
+                         " --- raw frame:",
+                         ts(frame->pts, src_ctx->outputs[0]->time_base),
+                         frame->pts));
+
+  int errnum =
+      av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
+
+  CHECK_AVERROR_NUM(errnum, "Failed to pass a frame to filter.");
+
+  AVFrameAutoUnref frame_ref{frame};
+  while (errnum >= 0) {
+    AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
+    errnum = av_buffersink_get_frame(sink_ctx, frame2.get());
+    switch (errnum) {
+      case AVERROR(EAGAIN):
+        co_return;
+      case AVERROR_EOF:
+        co_return;
+      default: {
+        CHECK_AVERROR_NUM(errnum, "Failed to filter a frame.");
+
+        XLOG(INFO) << fmt::format(
+            "{:15s} {:.3f} ({})",
+            " ---- frame:",
+            ts(frame2->pts, sink_ctx->inputs[0]->time_base),
+            frame2->pts);
+        co_yield frame2.release();
+      }
+    }
+  }
+}
+
+Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
+  XLOG(INFO)
+      << ((!packet) ? fmt::format(" -- flush decoder")
+                    : fmt::format(
+                          "{:15s} {:.3f} ({})",
+                          " -- packet:",
+                          ts(packet->pts, codec_ctx->pkt_timebase),
+                          packet->pts));
+
+  int errnum = avcodec_send_packet(codec_ctx, packet);
+  while (errnum >= 0) {
+    AVFramePtr frame{CHECK_AVALLOCATE(av_frame_alloc())};
+    errnum = avcodec_receive_frame(codec_ctx, frame.get());
+    switch (errnum) {
+      case AVERROR(EAGAIN):
+        co_return;
+      case AVERROR_EOF:
+        co_yield nullptr;
+        co_return;
+      default: {
+        CHECK_AVERROR_NUM(errnum, "Failed to decode a frame.");
+        co_yield frame.release();
+      }
+    }
+  }
+}
+
+Generator<AVFrame*> decode_packets(
+    std::vector<AVPacket*>& packets,
+    AVCodecContext* codec_ctx,
+    AVFilterGraph* filter_graph) {
+  for (auto& packet : packets) {
+    auto decoding = decode_packet(codec_ctx, packet);
+    while (auto raw_frame = co_await decoding.next()) {
+      if (!filter_graph) {
+        if (AVFrame* _f = *raw_frame; _f) {
+          co_yield _f;
+        }
+      } else {
+        AVFramePtr f{*raw_frame};
+        auto filtering = filter_frame(*raw_frame, filter_graph);
+        while (auto frame = co_await filtering.next()) {
+          co_yield *frame;
+        }
+      }
+    }
+  }
+}
+
+Task<void> decode_and_enque(
+    PackagedAVPackets packets,
+    Engine::PostProcessArgs post_process_args,
+    FrameQueue& queue) {
+  auto codec_ctx = get_codec_ctx(packets.codec_par, packets.time_base);
+  auto filter_graph = [&]() {
+    auto filter_desc = get_video_filter_description(
+        post_process_args.frame_rate,
+        post_process_args.width,
+        post_process_args.height,
+        post_process_args.pix_fmt);
+    if (filter_desc.empty()) {
+      return AVFilterGraphPtr{nullptr};
+    }
+    return get_video_filter(
+        filter_desc, codec_ctx.get(), packets.time_base, packets.frame_rate);
+  }();
+
+  // XLOG(INFO) << describe_graph(filter_graph.get());
+
+  PackagedAVFrames frames;
+  frames.time_base = filter_graph
+      ? filter_graph->filters[1]->inputs[0]->time_base
+      : packets.time_base;
+  auto decoding =
+      decode_packets(packets.packets, codec_ctx.get(), filter_graph.get());
+  while (auto frame = co_await decoding.next()) {
+    frames.frames.push_back(*frame);
+  }
+  XLOG(INFO) << fmt::format(" - Generated {} frames", frames.frames.size());
   co_await queue.enqueue(std::move(frames));
 }
 
@@ -194,12 +292,14 @@ Task<void> stream_decode(
     AVFormatContext* fmt_ctx,
     const std::vector<double> timestamps,
     folly::Executor::KeepAlive<> executor,
+    Engine::PostProcessArgs post_process_args,
     FrameQueue& queue) {
   auto streamer = streaming_demux(fmt_ctx, timestamps);
   std::vector<folly::SemiFuture<folly::Unit>> sfs;
-  while (auto decode_job = co_await streamer.next()) {
-    sfs.emplace_back(
-        decode_and_enque(*decode_job, queue).scheduleOn(executor).start());
+  while (auto packets = co_await streamer.next()) {
+    sfs.emplace_back(decode_and_enque(*packets, post_process_args, queue)
+                         .scheduleOn(executor)
+                         .start());
   }
   co_await folly::collectAll(sfs);
 }
@@ -211,6 +311,7 @@ namespace {
 folly::coro::Task<void> stream_decode(
     Engine::Job job,
     folly::Executor::KeepAlive<> decode_exec,
+    Engine::PostProcessArgs post_process_args,
     FrameQueue& queue,
     const std::optional<OptionDict> options = std::nullopt,
     const std::optional<std::string> format = std::nullopt,
@@ -218,24 +319,35 @@ folly::coro::Task<void> stream_decode(
   auto dp =
       interface::get_data_provider(job.path, options, format, buffer_size);
   co_await stream_decode(
-      dp->get_fmt_ctx(), std::move(job.timestamps), decode_exec, queue);
+      dp->get_fmt_ctx(),
+      std::move(job.timestamps),
+      decode_exec,
+      post_process_args,
+      queue);
 }
 } // namespace
 
 Engine::Engine(
     size_t num_io_threads,
     size_t num_decoding_threads,
-    size_t frame_queue_size)
+    size_t frame_queue_size,
+    std::optional<AVRational> frame_rate,
+    std::optional<int> width,
+    std::optional<int> height,
+    std::optional<std::string> pix_fmt)
     : io_task_executors(std::make_unique<Executor>(num_io_threads)),
       decoding_task_executors(std::make_unique<Executor>(num_decoding_threads)),
       io_exec(io_task_executors.get()),
       decoding_exec(decoding_task_executors.get()),
+      post_process_args({frame_rate, width, height, pix_fmt}),
       frame_queue(frame_queue_size) {}
 
 void Engine::enqueue(Job job) {
-  sfs.emplace_back(stream_decode(std::move(job), decoding_exec, frame_queue)
-                       .scheduleOn(io_exec)
-                       .start());
+  sfs.emplace_back(
+      stream_decode(
+          std::move(job), decoding_exec, post_process_args, frame_queue)
+          .scheduleOn(io_exec)
+          .start());
 }
 
 void Engine::dequeue() {

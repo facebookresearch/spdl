@@ -1,6 +1,8 @@
 #pragma once
 
+#include <optional>
 #include <vector>
+#include <string>
 
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
@@ -8,8 +10,11 @@
 #include <folly/experimental/coro/BoundedQueue.h>
 #include <folly/experimental/coro/Task.h>
 
-struct AVFrame;
-struct AVFormatContext;
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavutil/frame.h>
+#include <libavutil/rational.h>
+}
 
 namespace spdl {
 
@@ -23,9 +28,10 @@ namespace spdl {
 // When destructing, they will be first unreferenced with av_frame_unref,
 // then the data must be released with av_frame_free.
 struct PackagedAVFrames {
+  AVRational time_base{0, 1};
   std::vector<AVFrame*> frames{};
 
-  PackagedAVFrames() = default;
+  explicit PackagedAVFrames() = default;
   // No copy constructors
   PackagedAVFrames(const PackagedAVFrames&) = delete;
   PackagedAVFrames& operator=(const PackagedAVFrames&) = delete;
@@ -51,6 +57,13 @@ class Engine {
     std::vector<double> timestamps;
   };
 
+  struct PostProcessArgs {
+    std::optional<AVRational> frame_rate = std::nullopt;
+    std::optional<int> width = std::nullopt;
+    std::optional<int> height = std::nullopt;
+    std::optional<std::string> pix_fmt = std::nullopt;
+  };
+
  private:
   std::unique_ptr<Executor> io_task_executors;
   std::unique_ptr<Executor> decoding_task_executors;
@@ -59,14 +72,20 @@ class Engine {
   folly::Executor::KeepAlive<> decoding_exec;
 
  public:
-  // temp
+  // temporarily public until we figure out a good way to do bookkeeping
+  PostProcessArgs post_process_args;
+
   FrameQueue frame_queue;
   std::vector<folly::SemiFuture<folly::Unit>> sfs;
 
   Engine(
       size_t num_io_threads,
       size_t num_decoding_threads,
-      size_t frame_queue_size);
+      size_t frame_queue_size,
+      std::optional<AVRational> frame_rate = std::nullopt,
+      std::optional<int> width = std::nullopt,
+      std::optional<int> height = std::nullopt,
+      std::optional<std::string> pix_fmt = std::nullopt);
 
   void enqueue(Job job);
 

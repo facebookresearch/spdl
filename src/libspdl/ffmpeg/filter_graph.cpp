@@ -15,10 +15,7 @@ namespace spdl {
 namespace {
 
 AVFilterGraphPtr alloc_filter_graph() {
-  AVFilterGraph* ptr = avfilter_graph_alloc();
-  if (!ptr) {
-    throw std::runtime_error("Failed to allocate AVFilterGraph.");
-  }
+  AVFilterGraph* ptr = CHECK_AVALLOCATE(avfilter_graph_alloc());
   ptr->nb_threads = 1;
   return AVFilterGraphPtr{ptr};
 }
@@ -31,7 +28,7 @@ std::string get_buffer_arg(
     AVRational frame_rate,
     AVRational sample_aspect_ratio) {
   return fmt::format(
-      "video_size=%dx%d:pix_fmt=%s:time_base=%d/%d:frame_rate=%d/%d:pixel_aspect=%d/%d",
+      "video_size={}x{}:pix_fmt={}:time_base={}/{}:frame_rate={}/{}:pixel_aspect={}/{}",
       width,
       height,
       pix_fmt_name,
@@ -49,7 +46,7 @@ std::string get_abuffer_arg(
     const char* sample_fmt_name,
     uint64_t channel_layout) {
   return fmt::format(
-      "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%" PRIx64,
+      "time_base={}/{}:sample_rate={}:sample_fmt={}:channel_layout={:x}",
       time_base.num,
       time_base.den,
       sample_rate,
@@ -76,26 +73,12 @@ AVFilterContext* create_filter(
   return flt_ctx;
 }
 
-DEF_DPtr(AVFilterInOut);
+DEF_DPtr(AVFilterInOut, avfilter_inout_free); // this defines AVFilterInOutDPtr
 
-AVFilterInOut* AVFilterInOutDPtr::operator->() const {
-  return p;
-}
-AVFilterInOutDPtr::~AVFilterInOutDPtr() {
-  avfilter_inout_free(&p);
-}
-AVFilterInOutDPtr::operator AVFilterInOut**() {
-  return &p;
-}
-
-AVFilterInOutDPtr get_io(const char* name, AVFilterContext* flt_ctx) {
-  AVFilterInOut* p = avfilter_inout_alloc();
-  if (!p) {
-    throw std::runtime_error("Failed to allocate AVFilterInOut.");
-  }
-  AVFilterInOutDPtr io{p};
+AVFilterInOutDPtr get_io(const char* name, AVFilterContext* filter_ctx) {
+  AVFilterInOutDPtr io{CHECK_AVALLOCATE(avfilter_inout_alloc())};
   io->name = av_strdup(name);
-  io->filter_ctx = flt_ctx;
+  io->filter_ctx = filter_ctx;
   io->pad_idx = 0;
   io->next = nullptr;
   return io;
@@ -107,15 +90,15 @@ AVFilterGraphPtr get_filter(
     const char* src_arg,
     const AVFilter* sink,
     AVBufferRef* hw_frames_ctx = nullptr) {
-  auto graph = alloc_filter_graph();
-  auto p = graph.get();
+  auto filter_graph = alloc_filter_graph();
+  auto p = filter_graph.get();
 
   // 1. Define the filters at the ends
   // Note
   // AVFilterContext* are attached to the graph and will be freed when the
   // graph is freed. So we don't need to free them here.
-  AVFilterContext* src_ctx = create_filter(p, src, "in", src_arg);
-  AVFilterContext* sink_ctx = create_filter(p, sink, "out");
+  auto src_ctx = create_filter(p, src, "in", src_arg);
+  auto sink_ctx = create_filter(p, sink, "out");
 
   // 2. Define the middle
   AVFilterInOutDPtr in = get_io("in", src_ctx);
@@ -132,7 +115,12 @@ AVFilterGraphPtr get_filter(
   // 3. Create the filter graph
   CHECK_AVERROR(
       avfilter_graph_config(p, nullptr), "Failed to configure the graph.");
-  return graph;
+
+  // for (unsigned i = 0; i < p->nb_filters; ++i) {
+  //   XLOG(INFO) << "Filter " << i << ": " << p->filters[i]->name;
+  // }
+
+  return filter_graph;
 }
 
 } // namespace
@@ -171,6 +159,39 @@ AVFilterGraphPtr get_video_filter(
       arg.c_str(),
       sink,
       codec_ctx->hw_frames_ctx);
+}
+
+std::string get_video_filter_description(
+    std::optional<AVRational> frame_rate,
+    std::optional<int> width,
+    std::optional<int> height,
+    std::optional<std::string> pix_fmt) {
+  std::vector<std::string> parts;
+  if (frame_rate) {
+    auto fr = frame_rate.value();
+    parts.emplace_back(fmt::format("fps={}/{}", fr.num, fr.den));
+  }
+  if (width || height) {
+    std::vector<std::string> scale;
+    if (width) {
+      scale.emplace_back(fmt::format("width={}", width.value()));
+    }
+    if (height > 0) {
+      scale.emplace_back(fmt::format("height={}", height.value()));
+    }
+    parts.push_back(fmt::format("scale={}", fmt::join(scale, ":")));
+  }
+  if (pix_fmt) {
+    parts.push_back(fmt::format("format=pix_fmts={}", pix_fmt.value()));
+  }
+  return fmt::to_string(fmt::join(parts, ","));
+}
+
+std::string describe_graph(AVFilterGraph* graph) {
+  char* desc_ = avfilter_graph_dump(graph, NULL);
+  std::string desc{desc_};
+  av_free(static_cast<void*>(desc_));
+  return desc;
 }
 
 } // namespace spdl

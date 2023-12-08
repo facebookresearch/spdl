@@ -1,4 +1,4 @@
-#include <libspdl/ffmpeg/utils.h>
+#include <libspdl/ffmpeg/ctx_utils.h>
 #include <libspdl/ffmpeg/wrappers.h>
 #include <libspdl/interface/interface.h>
 #include <libspdl/interface/mmap.h>

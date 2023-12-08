@@ -41,4 +41,9 @@ void AVFilterGraphDeleter::operator()(AVFilterGraph* p) {
   avfilter_graph_free(&p);
 }
 
+AVFrameAutoUnref::AVFrameAutoUnref(AVFrame* p_) : p(p_){};
+AVFrameAutoUnref::~AVFrameAutoUnref() {
+  av_frame_unref(p);
+}
+
 } // namespace spdl

@@ -23,9 +23,13 @@ def _main():
     src2 = f"mmap://{src}"
 
     engine = libspdl.Engine(3, 6, 10)
-    engine.enqueue(src, [3.0])
-    engine.enqueue(src2, [3.0])
+    engine.enqueue(src, [0.0])
     engine.dequeue()
+
+    engine = libspdl.Engine(
+        3, 6, 10, frame_rate=(60, 1), width=36, height=48, pix_fmt="rgb24"
+    )
+    engine.enqueue(src2, [0.0])
     engine.dequeue()
 
 

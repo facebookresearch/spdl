@@ -67,9 +67,19 @@ struct AVFilterGraphDeleter {
 
 using AVFilterGraphPtr = std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter>;
 
+// AVFrameAutoUnref
+struct AVFrameAutoUnref {
+  AVFrame* p;
+  AVFrameAutoUnref(AVFrame* p);
+  ~AVFrameAutoUnref();
+};
+
 // RAII wrapper for objects that require clean up, but need to expose double
-// pointer.
-#define DEF_DPtr(Type)                                      \
+// pointer. As they are re-allocated by FFmpeg functions.
+// Examples are AVDictionary and AVFilterInOut.
+// They are typically only used in cpp files, so we use macro and let each
+// implementation file defines them in anonymous scope.
+#define DEF_DPtr(Type, delete_func)                         \
   class Type##DPtr {                                        \
     Type* p = nullptr;                                      \
                                                             \
@@ -79,10 +89,18 @@ using AVFilterGraphPtr = std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter>;
     Type##DPtr& operator=(const Type##DPtr&) = delete;      \
     Type##DPtr(Type##DPtr&&) noexcept = default;            \
     Type##DPtr& operator=(Type##DPtr&&) noexcept = default; \
-    ~Type##DPtr();                                          \
-    operator Type*() const;                                 \
-    operator Type**();                                      \
-    Type* operator->() const;                               \
-  };
+    ~Type##DPtr() {                                         \
+      delete_func(&p);                                      \
+    };                                                      \
+    operator Type*() const {                                \
+      return p;                                             \
+    };                                                      \
+    operator Type**() {                                     \
+      return &p;                                            \
+    };                                                      \
+    Type* operator->() const {                              \
+      return p;                                             \
+    };                                                      \
+  }
 
 } // namespace spdl

@@ -36,6 +36,7 @@ AVFormatInputContextPtr get_input_format_ctx(
 
 AVCodecContextPtr get_codec_ctx(
     const AVCodecParameters* params,
+    AVRational pkt_timebase,
     const std::optional<std::string>& decoder_name = std::nullopt,
     const std::optional<OptionDict>& decoder_option = std::nullopt,
     const int cuda_device_index = -1);
