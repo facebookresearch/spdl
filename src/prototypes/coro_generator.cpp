@@ -2,7 +2,7 @@
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/Task.h>
 
-#include <glog/logging.h>
+#include <folly/logging/xlog.h>
 
 folly::coro::AsyncGenerator<int> gen() {
   for (int i = 0; i < 5; ++i) {
@@ -17,7 +17,7 @@ struct Foo {
 
 struct Deleter {
   void operator()(Foo* p) {
-    LOG(ERROR) << "Deleting Foo* " << p << std::endl;
+    XLOG(ERR) << "Deleting Foo* " << p << std::endl;
     delete p;
   }
 };
@@ -36,7 +36,7 @@ struct Bar {
   Bar(int val) : foo(new Foo{val}), foos(val) {}
   std::vector<Foo*> foos{};
   ~Bar() {
-    LOG(ERROR) << "Deleting Bar: " << foos.size();
+    XLOG(ERR) << "Deleting Bar: " << foos.size();
     std::for_each(foos.begin(), foos.end(), [](Foo* p) { delete p; });
   }
   Bar(Bar&& other) = default;
@@ -51,7 +51,7 @@ folly::coro::AsyncGenerator<Bar&&> gen_move2() {
 folly::coro::Task<void> run_gen() {
   auto g = gen_move2();
   while (auto result = co_await g.next()) {
-    LOG(INFO) << "val: " << result->foo->val;
+    XLOG(INFO) << "val: " << result->foo->val;
   }
   co_return;
 }

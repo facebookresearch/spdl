@@ -7,6 +7,7 @@ set(
   ffmpeg/cuda.cpp
   ffmpeg/utils.cpp
   ffmpeg/wrappers.cpp
+  ffmpeg/filter_graph.cpp
   interface/interface.cpp
   interface/mmap.cpp
   processors.cpp

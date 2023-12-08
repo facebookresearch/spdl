@@ -45,7 +45,7 @@ int64_t MemoryMappedFile::seek(int64_t offset, int whence) {
       pos_ = buffer_size_ + offset;
       break;
     default:
-      LOG(ERROR) << "Unexpected whence value was found: " << whence;
+      XLOG(ERR) << "Unexpected whence value was found: " << whence;
       return -1;
   }
   return pos_;

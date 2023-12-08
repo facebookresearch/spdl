@@ -6,7 +6,7 @@ extern "C" {
 }
 
 #include <fmt/format.h>
-#include <glog/logging.h>
+#include <folly/logging/xlog.h>
 
 namespace spdl {
 
@@ -34,21 +34,5 @@ inline std::string av_error(int errnum, std::string_view tmp, Args&&... args) {
   if (int _errnum = expression; _errnum < 0) [[unlikely]] {   \
     throw std::runtime_error(av_error(_errnum, __VA_ARGS__)); \
   }
-
-/*
-// https://stackoverflow.com/a/27375675/3670924
-template <typename... Args>
-inline void _LOG_AVERROR(std::ostream& stream, int errnum, Args&&... args) {
-  // Replacement of av_err2str, which causes
-  // `error: taking address of temporary array`
-  // https://github.com/joncampbell123/composite-video-simulator/issues/5
-  char buf[AV_ERROR_MAX_STRING_SIZE];
-  ((stream << std::forward<Args>(args)), ...)
-      << " (" << av_err2string(errnum) << ")";
-}
-
-// Need to create LOG(ERROR) in define, so that it happens on caller site.
-#define LOG_AVERROR(errnum, ...) _LOG_AVERROR(LOG(ERROR), errnum, __VA_ARGS__);
-*/
 
 } // namespace spdl

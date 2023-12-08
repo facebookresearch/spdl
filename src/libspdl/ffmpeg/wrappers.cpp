@@ -37,8 +37,8 @@ void AVBufferRefDeleter::operator()(AVBufferRef* p) {
   av_buffer_unref(&p);
 }
 
-void AVDictionaryDeleter::operator()(AVDictionary* p) {
-  av_dict_free(&p);
+void AVFilterGraphDeleter::operator()(AVFilterGraph* p) {
+  avfilter_graph_free(&p);
 }
 
 } // namespace spdl

@@ -81,9 +81,4 @@ def _import_libspdl_ver(ver):
     except Exception:
         raise RuntimeError(f"Failed to load extension: {ext}.")
 
-    try:
-        ext.init_logging(sys.argv[0])
-    except Exception as e:
-        raise RuntimeError(f"Unexpected error has occured while initializing the extension.") from e
-
     return ext

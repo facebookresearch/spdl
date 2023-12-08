@@ -7,6 +7,50 @@ extern "C" {
 #include <libspdl/ffmpeg/utils.h>
 
 namespace spdl {
+namespace {
+//////////////////////////////////////////////////////////////////////////////
+// AVDictionary
+//////////////////////////////////////////////////////////////////////////////
+DEF_DPtr(AVDictionary); // Defines AVDictionaryDPtr;
+
+AVDictionaryDPtr::~AVDictionaryDPtr() {
+  av_dict_free(&p);
+}
+
+AVDictionaryDPtr::operator AVDictionary*() const {
+  return p;
+}
+
+AVDictionaryDPtr::operator AVDictionary**() {
+  return &p;
+}
+
+AVDictionaryDPtr get_option_dict(const std::optional<OptionDict>& options) {
+  AVDictionaryDPtr opt;
+  if (options) {
+    for (const auto& [key, value] : options.value()) {
+      int ret = av_dict_set(opt, key.c_str(), value.c_str(), 0);
+      if (ret < 0) [[unlikely]] {
+        throw std::runtime_error(av_error(
+            ret, "Failed to convert option dictionary. ({}={})", key, value));
+      }
+    }
+  }
+  return opt;
+}
+
+void check_empty(const AVDictionary* p) {
+  AVDictionaryEntry* t = nullptr;
+  if (p && av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX)) [[unlikely]] {
+    std::vector<std::string> keys{t->key};
+    while ((t = av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX))) {
+      keys.emplace_back(t->key);
+    }
+    throw std::runtime_error(
+        fmt::format("Unexpected options: {}", fmt::join(keys, ", ")));
+  }
+}
+} // namespace
 
 AVIOContextPtr get_io_ctx(
     void* opaque,
@@ -29,31 +73,13 @@ AVIOContextPtr get_io_ctx(
 
 //////////////////////////////////////////////////////////////////////////////
 namespace {
-AVDictionaryPtr get_option_dict(const std::optional<OptionDict>& options) {
-  AVDictionary* opt = nullptr;
-  if (options) {
-    for (const auto& [key, value] : options.value()) {
-      int ret = av_dict_set(&opt, key.c_str(), value.c_str(), 0);
-      if (ret < 0) [[unlikely]] {
-        av_dict_free(&opt);
-        throw std::runtime_error(av_error(
-            ret, "Failed to convert option dictionary. ({}={})", key, value));
-      }
-    }
-  }
-  return AVDictionaryPtr{opt};
-}
 
-void check_empty(AVDictionary* p) {
-  AVDictionaryEntry* t = nullptr;
-  if (p && av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX)) [[unlikely]] {
-    std::vector<std::string> keys{t->key};
-    while ((t = av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX))) {
-      keys.emplace_back(t->key);
-    }
-    throw std::runtime_error(
-        fmt::format("Unexpected options: {}", fmt::join(keys, ", ")));
+AVFormatContext* alloc_format_ctx() {
+  AVFormatContext* fmt_ctx = avformat_alloc_context();
+  if (!fmt_ctx) [[unlikely]] {
+    throw std::runtime_error("Failed to allocate AVFormatContext.");
   }
+  return fmt_ctx;
 }
 
 AVFormatInputContextPtr get_input_format_ctx(
@@ -75,22 +101,17 @@ AVFormatInputContextPtr get_input_format_ctx(
     return fmt;
   }();
 
-  auto option = get_option_dict(options);
-  AVFormatContext* fmt_ctx = avformat_alloc_context();
-  if (!fmt_ctx) [[unlikely]] {
-    throw std::runtime_error("Failed to allocate AVFormatContext.");
-  }
+  AVDictionaryDPtr option = get_option_dict(options);
+
+  // Note:
+  // If `avformat_open_input` fails, it frees fmt_ctx.
+  // So we use raw pointer untill we know `avformat_open_input` succeeded.
+  // https://ffmpeg.org/doxygen/5.0/group__lavf__decoding.html#gac05d61a2b492ae3985c658f34622c19d
+  AVFormatContext* fmt_ctx = alloc_format_ctx();
   if (io_ctx) {
     fmt_ctx->pb = io_ctx;
   }
-
-  // Note:
-  // In case of failure, fmt_ctx is freed by avformat_open_input.
-  // So we only need to clean up dict.
-  // https://ffmpeg.org/doxygen/5.0/group__lavf__decoding.html#gac05d61a2b492ae3985c658f34622c19d
-  AVDictionary* opt = option.release();
-  int errnum = avformat_open_input(&fmt_ctx, src, in_fmt, &opt);
-  option.reset(opt);
+  int errnum = avformat_open_input(&fmt_ctx, src, in_fmt, option);
   if (errnum < 0) [[unlikely]] {
     throw std::runtime_error(
         src ? av_error(errnum, "Failed to open the input: {}", src)
@@ -99,8 +120,7 @@ AVFormatInputContextPtr get_input_format_ctx(
   // Now pass down the responsibility of resource clean up to RAII.
   AVFormatInputContextPtr ret{fmt_ctx};
 
-  check_empty(opt);
-
+  check_empty(option);
   return ret;
 }
 
@@ -199,7 +219,7 @@ enum AVPixelFormat get_hw_format(
       return *p;
     }
   }
-  LOG(WARNING) << "Failed to get HW surface format.";
+  XLOG(WARN) << "Failed to get HW surface format.";
   return AV_PIX_FMT_NONE;
 }
 
@@ -262,22 +282,18 @@ void configure_codec_context(
 void open_codec(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& decoder_option) {
-  AVDictionaryPtr option = get_option_dict(decoder_option);
+  AVDictionaryDPtr option = get_option_dict(decoder_option);
 
   // Default to single thread execution.
-  if (!av_dict_get(option.get(), "threads", nullptr, 0)) {
-    AVDictionary* opt = option.release();
-    av_dict_set(&opt, "threads", "1", 0);
-    option.reset(opt);
+  if (!av_dict_get(option, "threads", nullptr, 0)) {
+    av_dict_set(option, "threads", "1", 0);
   }
-  AVDictionary* opt = option.release();
-  int ret = avcodec_open2(codec_ctx, codec_ctx->codec, &opt);
-  option.reset(opt);
+  int ret = avcodec_open2(codec_ctx, codec_ctx->codec, option);
   if (ret < 0) {
     throw std::runtime_error(
         av_error(ret, "Failed to initialize CodecContext."));
   }
-  check_empty(opt);
+  check_empty(option);
 }
 
 } // namespace
