@@ -5,7 +5,7 @@ message(STATUS "########################################")
 set(
   src
   ffmpeg/cuda.cpp
-  ffmpeg/utils.cpp
+  ffmpeg/ctx_utils.cpp
   ffmpeg/wrappers.cpp
   ffmpeg/filter_graph.cpp
   interface/interface.cpp

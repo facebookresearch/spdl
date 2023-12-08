@@ -2,38 +2,27 @@ extern "C" {
 #include <libavutil/channel_layout.h>
 }
 
+#include <libspdl/ffmpeg/ctx_utils.h>
 #include <libspdl/ffmpeg/cuda.h>
 #include <libspdl/ffmpeg/logging.h>
-#include <libspdl/ffmpeg/utils.h>
 
 namespace spdl {
 namespace {
 //////////////////////////////////////////////////////////////////////////////
 // AVDictionary
 //////////////////////////////////////////////////////////////////////////////
-DEF_DPtr(AVDictionary); // Defines AVDictionaryDPtr;
 
-AVDictionaryDPtr::~AVDictionaryDPtr() {
-  av_dict_free(&p);
-}
-
-AVDictionaryDPtr::operator AVDictionary*() const {
-  return p;
-}
-
-AVDictionaryDPtr::operator AVDictionary**() {
-  return &p;
-}
+DEF_DPtr(AVDictionary, av_dict_free); // This defines AVDictionaryDPtr class
 
 AVDictionaryDPtr get_option_dict(const std::optional<OptionDict>& options) {
   AVDictionaryDPtr opt;
   if (options) {
     for (const auto& [key, value] : options.value()) {
-      int ret = av_dict_set(opt, key.c_str(), value.c_str(), 0);
-      if (ret < 0) [[unlikely]] {
-        throw std::runtime_error(av_error(
-            ret, "Failed to convert option dictionary. ({}={})", key, value));
-      }
+      CHECK_AVERROR(
+          av_dict_set(opt, key.c_str(), value.c_str(), 0),
+          "Failed to convert option dictionary. ({}={})",
+          key,
+          value);
     }
   }
   return opt;
@@ -57,11 +46,8 @@ AVIOContextPtr get_io_ctx(
     int buffer_size,
     int (*read_packet)(void* opaque, uint8_t* buf, int buf_size),
     int64_t (*seek)(void* opaque, int64_t offset, int whence)) {
-  auto buffer = static_cast<unsigned char*>(av_malloc(buffer_size));
-  if (!buffer) [[unlikely]] {
-    throw std::runtime_error("Failed to allocate buffer.");
-  }
-
+  auto buffer =
+      static_cast<unsigned char*>(CHECK_AVALLOCATE(av_malloc(buffer_size)));
   AVIOContext* io_ctx = avio_alloc_context(
       buffer, buffer_size, 0, opaque, read_packet, nullptr, seek);
   if (!io_ctx) [[unlikely]] {
@@ -73,15 +59,6 @@ AVIOContextPtr get_io_ctx(
 
 //////////////////////////////////////////////////////////////////////////////
 namespace {
-
-AVFormatContext* alloc_format_ctx() {
-  AVFormatContext* fmt_ctx = avformat_alloc_context();
-  if (!fmt_ctx) [[unlikely]] {
-    throw std::runtime_error("Failed to allocate AVFormatContext.");
-  }
-  return fmt_ctx;
-}
-
 AVFormatInputContextPtr get_input_format_ctx(
     const char* src,
     const std::optional<OptionDict>& options,
@@ -107,7 +84,7 @@ AVFormatInputContextPtr get_input_format_ctx(
   // If `avformat_open_input` fails, it frees fmt_ctx.
   // So we use raw pointer untill we know `avformat_open_input` succeeded.
   // https://ffmpeg.org/doxygen/5.0/group__lavf__decoding.html#gac05d61a2b492ae3985c658f34622c19d
-  AVFormatContext* fmt_ctx = alloc_format_ctx();
+  AVFormatContext* fmt_ctx = CHECK_AVALLOCATE(avformat_alloc_context());
   if (io_ctx) {
     fmt_ctx->pb = io_ctx;
   }
@@ -163,11 +140,8 @@ AVCodecContextPtr alloc_codec_context(
     }
   }();
 
-  AVCodecContext* codec_ctx = avcodec_alloc_context3(codec);
-  if (!codec) {
-    throw std::runtime_error("Failed to allocate CodecContext.");
-  }
-  return AVCodecContextPtr(codec_ctx);
+  auto* codec_ctx = CHECK_AVALLOCATE(avcodec_alloc_context3(codec));
+  return AVCodecContextPtr{codec_ctx};
 }
 
 #ifdef USE_CUDA
@@ -288,11 +262,9 @@ void open_codec(
   if (!av_dict_get(option, "threads", nullptr, 0)) {
     av_dict_set(option, "threads", "1", 0);
   }
-  int ret = avcodec_open2(codec_ctx, codec_ctx->codec, option);
-  if (ret < 0) {
-    throw std::runtime_error(
-        av_error(ret, "Failed to initialize CodecContext."));
-  }
+  CHECK_AVERROR(
+      avcodec_open2(codec_ctx, codec_ctx->codec, option),
+      "Failed to initialize CodecContext.");
   check_empty(option);
 }
 
@@ -300,12 +272,14 @@ void open_codec(
 
 AVCodecContextPtr get_codec_ctx(
     const AVCodecParameters* params,
+    AVRational pkt_timebase,
     const std::optional<std::string>& decoder_name,
     const std::optional<OptionDict>& decoder_option,
     const int cuda_device_index) {
   AVCodecContextPtr codec_ctx =
       alloc_codec_context(params->codec_id, decoder_name);
   configure_codec_context(codec_ctx.get(), params, cuda_device_index);
+  codec_ctx->pkt_timebase = pkt_timebase;
   open_codec(codec_ctx.get(), decoder_option);
 #ifdef USE_CUDA
   if (codec_ctx->hw_device_ctx) {
