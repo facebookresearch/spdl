@@ -120,10 +120,13 @@ set(
   "${base_dir}/folly/logging/LogLevel.cpp"
   "${base_dir}/folly/logging/LogMessage.cpp"
   "${base_dir}/folly/logging/LogName.cpp"
+  "${base_dir}/folly/logging/LogStream.cpp"
+  "${base_dir}/folly/logging/LogStreamProcessor.cpp"
   "${base_dir}/folly/logging/RateLimiter.cpp"
   "${base_dir}/folly/logging/StandardLogHandler.cpp"
   "${base_dir}/folly/logging/StandardLogHandlerFactory.cpp"
   "${base_dir}/folly/logging/StreamHandlerFactory.cpp"
+  "${base_dir}/folly/logging/xlog.cpp"
 
   "${base_dir}/folly/memory/MallctlHelper.cpp"
   "${base_dir}/folly/memory/ReentrantAllocator.cpp"

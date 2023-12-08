@@ -179,7 +179,7 @@ Task<PackagedAVFrames> decode_packets(PackagedAVPackets message) {
 Task<void> decode_and_enque(PackagedAVPackets message, FrameQueue& queue) {
   auto ts = message.timestamp;
   auto frames = co_await decode_packets(std::move(message));
-  LOG(INFO) << fmt::format(
+  XLOG(INFO) << fmt::format(
       "    [{}] Target timestamp: {} - Decoded frames: {}",
       std::this_thread::get_id(),
       ts,
@@ -241,7 +241,7 @@ void Engine::enqueue(Job job) {
 void Engine::dequeue() {
   folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
     auto val = co_await frame_queue.dequeue();
-    LOG(INFO) << fmt::format("Dequeue {} frames", val.frames.size());
+    XLOG(INFO) << fmt::format("Dequeue {} frames", val.frames.size());
   }());
 }
 

@@ -2,6 +2,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavfilter/avfilter.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 }
@@ -59,11 +60,29 @@ struct AVBufferRefDeleter {
 
 using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;
 
-// AVDictionary
-struct AVDictionaryDeleter {
-  void operator()(AVDictionary* p);
+// AVFilterGraph
+struct AVFilterGraphDeleter {
+  void operator()(AVFilterGraph* p);
 };
 
-using AVDictionaryPtr = std::unique_ptr<AVDictionary, AVDictionaryDeleter>;
+using AVFilterGraphPtr = std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter>;
+
+// RAII wrapper for objects that require clean up, but need to expose double
+// pointer.
+#define DEF_DPtr(Type)                                      \
+  class Type##DPtr {                                        \
+    Type* p = nullptr;                                      \
+                                                            \
+   public:                                                  \
+    explicit Type##DPtr(Type* p_ = nullptr) : p(p_) {}      \
+    Type##DPtr(const Type##DPtr&) = delete;                 \
+    Type##DPtr& operator=(const Type##DPtr&) = delete;      \
+    Type##DPtr(Type##DPtr&&) noexcept = default;            \
+    Type##DPtr& operator=(Type##DPtr&&) noexcept = default; \
+    ~Type##DPtr();                                          \
+    operator Type*() const;                                 \
+    operator Type**();                                      \
+    Type* operator->() const;                               \
+  };
 
 } // namespace spdl
