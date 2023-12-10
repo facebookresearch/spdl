@@ -9,6 +9,6 @@ FetchContent_Declare(
   glog
   GIT_REPOSITORY https://github.com/google/glog
   GIT_TAG v0.5.0
-  PATCH_COMMAND git am "${CMAKE_CURRENT_SOURCE_DIR}/glog.patch" || true
+  PATCH_COMMAND git am "${CMAKE_CURRENT_SOURCE_DIR}/glog_0.5.0.patch" || true
   )
 FetchContent_MakeAvailable(glog)

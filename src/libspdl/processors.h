@@ -45,6 +45,13 @@ struct PackagedAVFrames {
 // Temp
 using FrameQueue = folly::coro::BoundedQueue<PackagedAVFrames, false, true>;
 
+// buffer class to be exposed to python
+struct VideoBuffer {
+  size_t n, c, h, w;
+  bool channel_last = false;
+  std::vector<uint8_t> data;
+};
+
 //////////////////////////////////////////////////////////////////////////////
 // Engine
 //////////////////////////////////////////////////////////////////////////////
@@ -89,7 +96,7 @@ class Engine {
 
   void enqueue(Job job);
 
-  void dequeue();
+  VideoBuffer dequeue();
 };
 
 } // namespace spdl

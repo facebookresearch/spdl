@@ -62,7 +62,7 @@ def _import_libspdl():
         try:
             return _import_libspdl_ver(ver)
         except Exception:
-            _LG.debug("Failed to import libspdl with FFmpeg %s.", ver, exec_info=True)
+            _LG.debug("Failed to import libspdl with FFmpeg %s.", ver, exc_info=True)
             continue
     raise RuntimeError(
         f"Failed to import libspdl. Tried with FFmpeg versions {versions}. "

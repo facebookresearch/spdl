@@ -8,6 +8,16 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 option(SPDL_BUILD_SAMPLES "Build sample codes." OFF)
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  message(STATUS "Found ccache")
+  set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+else()
+  message(STATUS "Could not find ccache. Consider installing ccache to speed up compilation.")
+endif()
+
 ###############################################################################
 # Third party libraries
 ###############################################################################

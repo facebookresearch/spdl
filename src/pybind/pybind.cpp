@@ -8,6 +8,8 @@
 #error SPDL_FFMPEG_EXT_NAME must be defined.
 #endif
 
+namespace py = pybind11;
+
 namespace spdl {
 namespace {
 
@@ -20,9 +22,35 @@ std::optional<AVRational> to_rational(std::optional<std::tuple<int, int>> src) {
   return {r};
 }
 
-namespace py = pybind11;
+py::buffer_info get_buffer(VideoBuffer& b) {
+  if (b.channel_last) {
+    return {
+        b.data.data(),
+        sizeof(uint8_t),
+        py::format_descriptor<uint8_t>::format(),
+        4,
+        {b.n, b.h, b.w, b.c},
+        {sizeof(uint8_t) * b.c * b.w * b.h,
+         sizeof(uint8_t) * b.c * b.w,
+         sizeof(uint8_t) * b.c,
+         sizeof(uint8_t)}};
+  }
+  return {
+      b.data.data(),
+      sizeof(uint8_t),
+      py::format_descriptor<uint8_t>::format(),
+      4,
+      {b.n, b.c, b.h, b.w},
+      {sizeof(uint8_t) * b.w * b.h * b.c,
+       sizeof(uint8_t) * b.w * b.h,
+       sizeof(uint8_t) * b.w,
+       sizeof(uint8_t)}};
+}
 
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
+  py::class_<VideoBuffer>(
+      m, "VideoBuffer", py::buffer_protocol(), py::module_local())
+      .def_buffer(get_buffer);
   py::class_<Engine>(m, "Engine", py::module_local())
       .def(
           py::init(
