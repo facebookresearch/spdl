@@ -1,5 +1,4 @@
 import logging
-import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,7 +51,6 @@ def _main():
 
 def _init_logging(debug):
     logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
-    # os.environ["GLOG_logtostderr"] = "1"
 
 
 if __name__ == "__main__":
