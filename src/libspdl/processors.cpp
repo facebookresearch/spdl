@@ -1,11 +1,3 @@
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavfilter/buffersink.h>
-#include <libavfilter/buffersrc.h>
-#include <libavformat/avformat.h>
-#include <libavutil/rational.h>
-}
-
 #include <fmt/core.h>
 
 #include <folly/experimental/coro/AsyncGenerator.h>
@@ -17,6 +9,17 @@ extern "C" {
 #include <libspdl/ffmpeg/logging.h>
 #include <libspdl/interface/interface.h>
 #include <libspdl/processors.h>
+#include <cstddef>
+#include <cstdint>
+
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavfilter/buffersink.h>
+#include <libavfilter/buffersrc.h>
+#include <libavformat/avformat.h>
+#include <libavutil/pixdesc.h>
+#include <libavutil/rational.h>
+}
 
 template <typename T>
 using Task = folly::coro::Task<T>;
@@ -161,19 +164,20 @@ double ts(int64_t pts, AVRational time_base) {
 }
 
 Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
+  assert(filter_graph);
   AVFilterContext* src_ctx = filter_graph->filters[0];
   AVFilterContext* sink_ctx = filter_graph->filters[1];
 
   assert(strcmp(src_ctx->name, "in") == 0);
   assert(strcmp(sink_ctx->name, "out") == 0);
 
-  XLOG(INFO)
-      << ((!frame) ? fmt::format(" --- flush filter graph")
-                   : fmt::format(
-                         "{:15s} {:.3f} ({})",
-                         " --- raw frame:",
-                         ts(frame->pts, src_ctx->outputs[0]->time_base),
-                         frame->pts));
+  // XLOG(INFO)
+  //     << ((!frame) ? fmt::format(" --- flush filter graph")
+  //                  : fmt::format(
+  //                        "{:15s} {:.3f} ({})",
+  //                        " --- raw frame:",
+  //                        ts(frame->pts, src_ctx->outputs[0]->time_base),
+  //                        frame->pts));
 
   int errnum =
       av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
@@ -192,11 +196,11 @@ Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
       default: {
         CHECK_AVERROR_NUM(errnum, "Failed to filter a frame.");
 
-        XLOG(INFO) << fmt::format(
-            "{:15s} {:.3f} ({})",
-            " ---- frame:",
-            ts(frame2->pts, sink_ctx->inputs[0]->time_base),
-            frame2->pts);
+        // XLOG(INFO) << fmt::format(
+        //     "{:15s} {:.3f} ({})",
+        //     " ---- frame:",
+        //     ts(frame2->pts, sink_ctx->inputs[0]->time_base),
+        //     frame2->pts);
         co_yield frame2.release();
       }
     }
@@ -204,13 +208,14 @@ Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
 }
 
 Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
-  XLOG(INFO)
-      << ((!packet) ? fmt::format(" -- flush decoder")
-                    : fmt::format(
-                          "{:15s} {:.3f} ({})",
-                          " -- packet:",
-                          ts(packet->pts, codec_ctx->pkt_timebase),
-                          packet->pts));
+  assert(codec_ctx);
+  // XLOG(INFO)
+  //     << ((!packet) ? fmt::format(" -- flush decoder")
+  //                   : fmt::format(
+  //                         "{:15s} {:.3f} ({})",
+  //                         " -- packet:",
+  //                         ts(packet->pts, codec_ctx->pkt_timebase),
+  //                         packet->pts));
 
   int errnum = avcodec_send_packet(codec_ctx, packet);
   while (errnum >= 0) {
@@ -232,21 +237,28 @@ Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
 
 Generator<AVFrame*> decode_packets(
     std::vector<AVPacket*>& packets,
+    AVCodecContext* codec_ctx) {
+  for (auto& packet : packets) {
+    auto decoding = decode_packet(codec_ctx, packet);
+    while (auto raw_frame = co_await decoding.next()) {
+      if (AVFrame* _f = *raw_frame; _f) {
+        co_yield _f;
+      }
+    }
+  }
+}
+
+Generator<AVFrame*> decode_packets(
+    std::vector<AVPacket*>& packets,
     AVCodecContext* codec_ctx,
     AVFilterGraph* filter_graph) {
   for (auto& packet : packets) {
     auto decoding = decode_packet(codec_ctx, packet);
     while (auto raw_frame = co_await decoding.next()) {
-      if (!filter_graph) {
-        if (AVFrame* _f = *raw_frame; _f) {
-          co_yield _f;
-        }
-      } else {
-        AVFramePtr f{*raw_frame};
-        auto filtering = filter_frame(*raw_frame, filter_graph);
-        while (auto frame = co_await filtering.next()) {
-          co_yield *frame;
-        }
+      AVFramePtr f{*raw_frame};
+      auto filtering = filter_frame(*raw_frame, filter_graph);
+      while (auto frame = co_await filtering.next()) {
+        co_yield *frame;
       }
     }
   }
@@ -276,12 +288,13 @@ Task<void> decode_and_enque(
   frames.time_base = filter_graph
       ? filter_graph->filters[1]->inputs[0]->time_base
       : packets.time_base;
-  auto decoding =
-      decode_packets(packets.packets, codec_ctx.get(), filter_graph.get());
+  auto decoding = filter_graph
+      ? decode_packets(packets.packets, codec_ctx.get(), filter_graph.get())
+      : decode_packets(packets.packets, codec_ctx.get());
   while (auto frame = co_await decoding.next()) {
     frames.frames.push_back(*frame);
   }
-  XLOG(INFO) << fmt::format(" - Generated {} frames", frames.frames.size());
+  XLOG(INFO) << fmt::format("Generated {} frames", frames.frames.size());
   co_await queue.enqueue(std::move(frames));
 }
 
@@ -350,11 +363,115 @@ void Engine::enqueue(Job job) {
           .start());
 }
 
-void Engine::dequeue() {
-  folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
-    auto val = co_await frame_queue.dequeue();
-    XLOG(INFO) << fmt::format("Dequeue {} frames", val.frames.size());
-  }());
+VideoBuffer convert_rgb24(PackagedAVFrames& val) {
+  assert(val.frames[0]->format == AV_PIX_FMT_RGB24);
+  VideoBuffer buf;
+  buf.n = val.frames.size();
+  buf.c = 3;
+  buf.h = static_cast<size_t>(val.frames[0]->height);
+  buf.w = static_cast<size_t>(val.frames[0]->width);
+  buf.channel_last = true;
+  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
+  size_t linesize = buf.c * buf.w;
+  uint8_t* dst = buf.data.data();
+  for (const auto& frame : val.frames) {
+    uint8_t* src = frame->data[0];
+    for (int i = 0; i < frame->height; ++i) {
+      memcpy(dst, src, linesize);
+      src += frame->linesize[0];
+      dst += linesize;
+    }
+
+    XLOG(INFO) << fmt::format(
+        " - {:.3f} ({}x{}, {})",
+        ts(frame->pts, val.time_base),
+        frame->width,
+        frame->height,
+        av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format)));
+  }
+  return buf;
+}
+
+VideoBuffer convert_yuv420p(PackagedAVFrames& val) {
+  assert(val.frames[0]->format == AV_PIX_FMT_YUV420P);
+  size_t height = val.frames[0]->height;
+  size_t width = val.frames[0]->width;
+  assert(height % 2 == 0 && width % 2 == 0);
+  size_t h2 = height / 2;
+  size_t w2 = width / 2;
+  VideoBuffer buf;
+  buf.n = val.frames.size();
+  buf.c = 1;
+  buf.h = height + h2;
+  buf.w = width;
+  buf.channel_last = false;
+  buf.data.resize(buf.n * buf.h * buf.w);
+
+  uint8_t* dst = buf.data.data();
+  for (const auto& frame : val.frames) {
+    // Y
+    {
+      uint8_t* src = frame->data[0];
+      size_t linesize = buf.w;
+      for (int i = 0; i < frame->height; ++i) {
+        memcpy(dst, src, linesize);
+        src += frame->linesize[0];
+        dst += linesize;
+      }
+    }
+    // U & V
+    {
+      uint8_t* src_u = frame->data[1];
+      uint8_t* src_v = frame->data[2];
+      size_t linesize = w2;
+      for (int i = 0; i < h2; ++i) {
+        // U
+        memcpy(dst, src_u, linesize);
+        src_u += frame->linesize[1];
+        dst += linesize;
+        // V
+        memcpy(dst, src_v, linesize);
+        src_v += frame->linesize[2];
+        dst += linesize;
+      }
+    }
+    XLOG(INFO) << fmt::format(
+        " - {:.3f} ({}x{}, {})",
+        ts(frame->pts, val.time_base),
+        frame->width,
+        frame->height,
+        av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format)));
+  }
+  return buf;
+}
+
+VideoBuffer Engine::dequeue() {
+  VideoBuffer val =
+      folly::coro::blockingWait([&]() -> folly::coro::Task<VideoBuffer> {
+        auto val = co_await frame_queue.dequeue();
+        // TODO: validate the number of frames > 0
+        XLOG(INFO) << fmt::format("Dequeue {} frames", val.frames.size());
+        switch (static_cast<AVPixelFormat>(val.frames[0]->format)) {
+          case AV_PIX_FMT_RGB24:
+            co_return convert_rgb24(val);
+          case AV_PIX_FMT_YUV420P:
+            co_return convert_yuv420p(val);
+          default:
+            throw std::runtime_error(fmt::format(
+                "Unsupported pixel format: {}",
+                av_get_pix_fmt_name(
+                    static_cast<AVPixelFormat>(val.frames[0]->format))));
+        }
+      }());
+
+  XLOG(INFO) << fmt::format(
+      "Buffer returned: {}x{}x{}x{} ({})",
+      val.n,
+      val.c,
+      val.h,
+      val.w,
+      fmt::ptr(val.data.data()));
+  return val;
 }
 
 } // namespace spdl
