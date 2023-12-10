@@ -38,7 +38,7 @@ class CMakeBuild(build_ext):
             "-B", self.build_temp,
             "-S", ROOT_DIR,
             f"-DCMAKE_BUILD_TYPE={cfg}",
-            f"-DCMAKE_INSTALL_PREFIX={extdir}",
+            f"-DCMAKE_INSTALL_PREFIX={extdir}/spdl",
             f"-DSPDL_BUILD_SAMPLES:BOOL=OFF"
             "-GNinja",
         ]
@@ -50,7 +50,9 @@ class CMakeBuild(build_ext):
         ]
         # fmt: on
 
+        print(" ".join(config_cmd), flush=True)
         subprocess.check_call(config_cmd)
+        print(" ".join(build_cmd), flush=True)
         subprocess.check_call(build_cmd)
 
 
