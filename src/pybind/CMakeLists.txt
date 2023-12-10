@@ -9,8 +9,8 @@ function(add_spdl_extension ffmpeg_version)
 
   install(
     TARGETS ${name}
-    LIBRARY DESTINATION spdl/lib
-    RUNTIME DESTINATION spdl/lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION lib
   )
 endfunction()
 

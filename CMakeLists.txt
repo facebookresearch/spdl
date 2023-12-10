@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
+# This adds the library directory to search path
+if (APPLE)
+  set(CMAKE_INSTALL_RPATH "@loader_path")
+elseif (UNIX)
+  set(CMAKE_INSTALL_RPATH $ORIGIN)
+endif ()
+
 option(SPDL_BUILD_SAMPLES "Build sample codes." OFF)
 
 find_program(CCACHE_PROGRAM ccache)
