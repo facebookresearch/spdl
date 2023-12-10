@@ -5,7 +5,7 @@ function(add_spdl_extension ffmpeg_version)
 
   pybind11_add_module(${name} ${src})
   target_compile_definitions(${name} PRIVATE "-DSPDL_FFMPEG_EXT_NAME=${name}")
-  target_link_libraries(${name} PRIVATE "libspdl_ffmpeg${ffmpeg_version}")
+  target_link_libraries(${name} PRIVATE "spdl_ffmpeg${ffmpeg_version}")
 
   install(
     TARGETS ${name}

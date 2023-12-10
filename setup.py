@@ -7,6 +7,9 @@ from setuptools.command.build_ext import build_ext
 ROOT_DIR = os.path.dirname(__file__)
 
 ext_modules = [
+    Extension("spdl.lib.libspdl_ffmpeg4", sources=[]),
+    Extension("spdl.lib.libspdl_ffmpeg5", sources=[]),
+    Extension("spdl.lib.libspdl_ffmpeg6", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg4", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg5", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg6", sources=[]),
@@ -39,7 +42,7 @@ class CMakeBuild(build_ext):
             "-S", ROOT_DIR,
             f"-DCMAKE_BUILD_TYPE={cfg}",
             f"-DCMAKE_INSTALL_PREFIX={extdir}/spdl",
-            f"-DSPDL_BUILD_SAMPLES:BOOL=OFF"
+            f"-DSPDL_BUILD_SAMPLES:BOOL=OFF",
             "-GNinja",
         ]
 
@@ -54,6 +57,17 @@ class CMakeBuild(build_ext):
         subprocess.check_call(config_cmd)
         print(" ".join(build_cmd), flush=True)
         subprocess.check_call(build_cmd)
+
+    def get_ext_filename(self, fullname):
+        ext_filename = super().get_ext_filename(fullname)
+        parts = ext_filename.split(".")
+        if '_spdl_ffmpeg' not in ext_filename:
+            # remove ABI
+            del parts[-2]
+            if sys.platform == 'darwin':
+                parts[-1] = "dylib"
+        ext_filename = ".".join(parts)
+        return ext_filename
 
 
 def main():
