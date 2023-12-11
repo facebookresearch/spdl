@@ -11,6 +11,7 @@ FetchContent_Declare(
   gflags
   GIT_REPOSITORY https://github.com/gflags/gflags
   GIT_TAG v2.2.2
-  OVERRIDE_FIND_PACKAGE
+  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
   )
 FetchContent_MakeAvailable(gflags)

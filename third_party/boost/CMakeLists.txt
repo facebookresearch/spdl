@@ -7,6 +7,8 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/boostorg/boost.git
   GIT_TAG boost-1.83.0
   GIT_SUBMODULES
+  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
   tools/cmake
   libs/algorithm
   libs/array

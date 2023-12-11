@@ -19,32 +19,38 @@ if (APPLE)
       f4
       URL ${base_url}/2023-08-14/macos_arm64/4.4.4.tar.gz
       URL_HASH SHA256=9a593eb241eb8b23bc557856ee6db5d9aecd2d8895c614a949f3a1ad9799c1a1
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f5
       URL ${base_url}/2023-07-06/macos_arm64/5.0.3.tar.gz
       URL_HASH SHA256=316fe8378afadcf63089acf3ad53a626fd3c26cc558b96ce1dc94d2a78f4deb4
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f6
       URL ${base_url}/2023-07-06/macos_arm64/6.0.tar.gz
       URL_HASH SHA256=5d1da9626f8cb817d6c558a2c61085a3d39a8d9f725a6f69f4658bea8efa9389
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
     FetchContent_Declare(
       f4
       URL ${base_url}/2023-08-14/macos_x86_64/4.4.4.tar.gz
       URL_HASH SHA256=0935e359c0864969987d908397f9208d6dc4dc0ef8bfe2ec730bb2c44eae89fc
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f5
       URL ${base_url}/2023-07-06/macos_x86_64/5.0.3.tar.gz
       URL_HASH SHA256=d0b49575d3b174cfcca53b3049641855e48028cf22dd32f3334bbec4ca94f43e
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f6
       URL ${base_url}/2023-07-06/macos_x86_64/6.0.tar.gz
       URL_HASH SHA256=eabc01eb7d9e714e484d5e1b27bf7d921e87c1f3c00334abd1729e158d6db862
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
     message(
@@ -62,32 +68,38 @@ elseif (UNIX)
       f4
       URL ${base_url}/2023-08-14/linux_aarch64/4.4.4.tar.gz
       URL_HASH SHA256=6f00437d13a3b3812ebe81c6e6f3a84a58f260d946a1995df87ba09aae234504
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f5
       URL ${base_url}/2023-07-06/linux_aarch64/5.0.3.tar.gz
       URL_HASH SHA256=65c663206982ee3f0ff88436d8869d191b46061e01e753518c77ecc13ea0236d
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f6
       URL ${base_url}/2023-07-06/linux_aarch64/6.0.tar.gz
       URL_HASH SHA256=ec762fd41ea7b8d9ad4f810f53fd78a565f2bc6f680afe56d555c80f3d35adef
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
     FetchContent_Declare(
       f4
       URL ${base_url}/2023-08-14/linux_x86_64/4.4.4.tar.gz
       URL_HASH SHA256=9b87eeba9b6975e25f28ba12163bd713228ed84f4c2b3721bc5ebe92055edb51
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f5
       URL ${base_url}/2023-07-06/linux_x86_64/5.0.3.tar.gz
       URL_HASH SHA256=de3c75c99b9ce33de7efdc144566804ae5880457ce71e185b3f592dc452edce7
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f6
       URL ${base_url}/2023-07-06/linux_x86_64/6.0.tar.gz
       URL_HASH SHA256=04d3916404bab5efadd29f68361b7d13ea71e6242c6473edcb747a41a9fb97a6
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
     # Possible case ppc64le (though it's not officially supported.)
@@ -105,16 +117,19 @@ elseif(MSVC)
     f4
     URL ${base_url}/2023-08-14/windows/4.4.4.tar.gz
     URL_HASH SHA256=9f9a65cf03a3e164edca601ba18180a504e44e03fae48ce706ca3120b55a4db5
+    DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
   FetchContent_Declare(
     f5
     URL ${base_url}/2023-07-06/windows/5.0.3.tar.gz
     URL_HASH SHA256=e2daa10799909e366cb1b4b91a217d35f6749290dcfeea40ecae3d5b05a46cb3
+    DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
   FetchContent_Declare(
     f6
     URL ${base_url}/2023-07-06/windows/6.0.tar.gz
     URL_HASH SHA256=098347eca8cddb5aaa61e9ecc1a00548c645fc59b4f7346b3d91414aa00a9cf6
+    DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
 endif()
 
