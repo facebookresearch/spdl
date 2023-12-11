@@ -7,6 +7,8 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/facebook/folly
   GIT_TAG v2023.11.27.00
   PATCH_COMMAND patch -N -i "${CMAKE_CURRENT_SOURCE_DIR}/m1_mac_memalign.patch" || true
+  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
   )
 FetchContent_Populate(folly_src)
 

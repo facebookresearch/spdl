@@ -1,3 +1,7 @@
+/third_party/**/src
+/third_party/**/subbuild
+/scripts
+
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles

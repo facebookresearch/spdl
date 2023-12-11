@@ -14,5 +14,7 @@ FetchContent_Declare(
   libevent
   GIT_REPOSITORY https://github.com/libevent/libevent
   GIT_TAG release-2.1.12-stable
+  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
   )
 FetchContent_MakeAvailable(libevent)

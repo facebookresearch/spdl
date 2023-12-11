@@ -6,5 +6,7 @@ FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
   GIT_TAG 10.1.1
+  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
   )
 FetchContent_MakeAvailable(fmt)
