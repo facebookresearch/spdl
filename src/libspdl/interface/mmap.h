@@ -4,14 +4,13 @@
 namespace spdl::interface {
 
 class MemoryMappedFile {
-  const std::string path_;
   uint8_t* buffer_ = nullptr;
   size_t buffer_size_ = 0;
 
   int64_t pos_ = 0;
 
  public:
-  MemoryMappedFile(const std::string_view path);
+  MemoryMappedFile(const std::string path);
 
   MemoryMappedFile(const MemoryMappedFile&) = delete;
   MemoryMappedFile& operator=(const MemoryMappedFile&) = delete;

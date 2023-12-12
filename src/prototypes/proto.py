@@ -35,10 +35,8 @@ def _main():
         plt.imshow(frame[0])
         plt.show()
 
-    engine = libspdl.Engine(
-        3, 6, 10, frame_rate=(60, 1), width=36, height=48, pix_fmt="rgb24"
-    )
-    engine.enqueue(src2, [0.0])
+    engine = libspdl.Engine(3, 6, 10)
+    engine.enqueue(src2, [0.0], frame_rate=(60, 1), width=36, height=48, pix_fmt="rgb24")
     buffer = engine.dequeue()
     a = np.array(buffer, copy=False)
     del buffer
@@ -50,7 +48,9 @@ def _main():
 
 
 def _init_logging(debug):
-    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+    if debug:
+        logging.getLogger("spdl").setLevel(logging.DEBUG)
 
 
 if __name__ == "__main__":

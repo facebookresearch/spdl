@@ -1,14 +1,16 @@
 #pragma once
 
 #include <optional>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 #include <folly/experimental/coro/Task.h>
+
+#include <libspdl/common.h>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -62,9 +64,12 @@ class Engine {
   struct Job {
     std::string path;
     std::vector<double> timestamps;
-  };
-
-  struct PostProcessArgs {
+    std::optional<std::string> format = std::nullopt;
+    std::optional<OptionDict> format_options = std::nullopt;
+    int buffer_size = 8096;
+    std::optional<std::string> decoder = std::nullopt;
+    std::optional<OptionDict> decoder_options = std::nullopt;
+    int cuda_device_index = -1;
     std::optional<AVRational> frame_rate = std::nullopt;
     std::optional<int> width = std::nullopt;
     std::optional<int> height = std::nullopt;
@@ -80,19 +85,13 @@ class Engine {
 
  public:
   // temporarily public until we figure out a good way to do bookkeeping
-  PostProcessArgs post_process_args;
-
   FrameQueue frame_queue;
   std::vector<folly::SemiFuture<folly::Unit>> sfs;
 
   Engine(
       size_t num_io_threads,
       size_t num_decoding_threads,
-      size_t frame_queue_size,
-      std::optional<AVRational> frame_rate = std::nullopt,
-      std::optional<int> width = std::nullopt,
-      std::optional<int> height = std::nullopt,
-      std::optional<std::string> pix_fmt = std::nullopt);
+      size_t frame_queue_size);
 
   void enqueue(Job job);
 

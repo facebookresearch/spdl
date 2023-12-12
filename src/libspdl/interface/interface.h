@@ -1,4 +1,7 @@
 #pragma once
+
+#include <libspdl/common.h>
+
 #include <map>
 #include <memory>
 #include <optional>
@@ -21,12 +24,10 @@ struct DataProvider {
   virtual AVFormatContext* get_fmt_ctx() = 0;
 };
 
-using OptionDict = std::map<std::string, std::string>;
-
 std::unique_ptr<DataProvider> get_data_provider(
-    const std::string_view url,
-    const std::optional<OptionDict> options = std::nullopt,
-    const std::optional<std::string> format = std::nullopt,
+    const std::string& url,
+    const std::optional<std::string>& format = std::nullopt,
+    const std::optional<OptionDict>& format_options = std::nullopt,
     int buffer_size = 8096);
 
 } // namespace spdl::interface

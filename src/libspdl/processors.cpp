@@ -88,12 +88,10 @@ struct PackagedAVPackets {
     });
   };
 };
-} // namespace
 
 //////////////////////////////////////////////////////////////////////////////
-// Producer
+// Demuxer
 //////////////////////////////////////////////////////////////////////////////
-
 Generator<PackagedAVPackets&&> streaming_demux(
     AVFormatContext* fmt_ctx,
     std::vector<double> timestamps) {
@@ -157,7 +155,7 @@ Generator<PackagedAVPackets&&> streaming_demux(
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// Consumer
+// Decoder and filter
 //////////////////////////////////////////////////////////////////////////////
 double ts(int64_t pts, AVRational time_base) {
   return pts * av_q2d(time_base);
@@ -236,7 +234,7 @@ Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
 }
 
 Generator<AVFrame*> decode_packets(
-    std::vector<AVPacket*>& packets,
+    const std::vector<AVPacket*>& packets,
     AVCodecContext* codec_ctx) {
   for (auto& packet : packets) {
     auto decoding = decode_packet(codec_ctx, packet);
@@ -249,7 +247,7 @@ Generator<AVFrame*> decode_packets(
 }
 
 Generator<AVFrame*> decode_packets(
-    std::vector<AVPacket*>& packets,
+    const std::vector<AVPacket*>& packets,
     AVCodecContext* codec_ctx,
     AVFilterGraph* filter_graph) {
   for (auto& packet : packets) {
@@ -266,15 +264,23 @@ Generator<AVFrame*> decode_packets(
 
 Task<void> decode_and_enque(
     PackagedAVPackets packets,
-    Engine::PostProcessArgs post_process_args,
+    const std::optional<std::string>& decoder,
+    const std::optional<OptionDict>& decoder_options,
+    const int cuda_device_index,
+    const std::optional<AVRational>& frame_rate,
+    const std::optional<int>& width,
+    const std::optional<int>& height,
+    const std::optional<std::string>& pix_fmt,
     FrameQueue& queue) {
-  auto codec_ctx = get_codec_ctx(packets.codec_par, packets.time_base);
+  auto codec_ctx = get_codec_ctx(
+      packets.codec_par,
+      packets.time_base,
+      decoder,
+      decoder_options,
+      cuda_device_index);
   auto filter_graph = [&]() {
-    auto filter_desc = get_video_filter_description(
-        post_process_args.frame_rate,
-        post_process_args.width,
-        post_process_args.height,
-        post_process_args.pix_fmt);
+    auto filter_desc =
+        get_video_filter_description(frame_rate, width, height, pix_fmt);
     if (filter_desc.empty()) {
       return AVFilterGraphPtr{nullptr};
     }
@@ -298,69 +304,49 @@ Task<void> decode_and_enque(
   co_await queue.enqueue(std::move(frames));
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// Processor
-//////////////////////////////////////////////////////////////////////////////
 Task<void> stream_decode(
-    AVFormatContext* fmt_ctx,
-    const std::vector<double> timestamps,
-    folly::Executor::KeepAlive<> executor,
-    Engine::PostProcessArgs post_process_args,
+    Engine::Job job,
+    folly::Executor::KeepAlive<> decode_exec,
     FrameQueue& queue) {
-  auto streamer = streaming_demux(fmt_ctx, timestamps);
+  auto dp = interface::get_data_provider(
+      job.path, job.format, job.format_options, job.buffer_size);
+  auto demuxer = streaming_demux(dp->get_fmt_ctx(), job.timestamps);
   std::vector<folly::SemiFuture<folly::Unit>> sfs;
-  while (auto packets = co_await streamer.next()) {
-    sfs.emplace_back(decode_and_enque(*packets, post_process_args, queue)
-                         .scheduleOn(executor)
+  while (auto packets = co_await demuxer.next()) {
+    sfs.emplace_back(decode_and_enque(
+                         *packets,
+                         job.decoder,
+                         job.decoder_options,
+                         job.cuda_device_index,
+                         job.frame_rate,
+                         job.width,
+                         job.height,
+                         job.pix_fmt,
+                         queue)
+                         .scheduleOn(decode_exec)
                          .start());
   }
   co_await folly::collectAll(sfs);
 }
+} // namespace
 
 //////////////////////////////////////////////////////////////////////////////
 // Engine
 //////////////////////////////////////////////////////////////////////////////
-namespace {
-folly::coro::Task<void> stream_decode(
-    Engine::Job job,
-    folly::Executor::KeepAlive<> decode_exec,
-    Engine::PostProcessArgs post_process_args,
-    FrameQueue& queue,
-    const std::optional<OptionDict> options = std::nullopt,
-    const std::optional<std::string> format = std::nullopt,
-    int buffer_size = 8096) {
-  auto dp =
-      interface::get_data_provider(job.path, options, format, buffer_size);
-  co_await stream_decode(
-      dp->get_fmt_ctx(),
-      std::move(job.timestamps),
-      decode_exec,
-      post_process_args,
-      queue);
-}
-} // namespace
-
 Engine::Engine(
     size_t num_io_threads,
     size_t num_decoding_threads,
-    size_t frame_queue_size,
-    std::optional<AVRational> frame_rate,
-    std::optional<int> width,
-    std::optional<int> height,
-    std::optional<std::string> pix_fmt)
+    size_t frame_queue_size)
     : io_task_executors(std::make_unique<Executor>(num_io_threads)),
       decoding_task_executors(std::make_unique<Executor>(num_decoding_threads)),
       io_exec(io_task_executors.get()),
       decoding_exec(decoding_task_executors.get()),
-      post_process_args({frame_rate, width, height, pix_fmt}),
       frame_queue(frame_queue_size) {}
 
 void Engine::enqueue(Job job) {
-  sfs.emplace_back(
-      stream_decode(
-          std::move(job), decoding_exec, post_process_args, frame_queue)
-          .scheduleOn(io_exec)
-          .start());
+  sfs.emplace_back(stream_decode(std::move(job), decoding_exec, frame_queue)
+                       .scheduleOn(io_exec)
+                       .start());
 }
 
 VideoBuffer convert_rgb24(PackagedAVFrames& val) {

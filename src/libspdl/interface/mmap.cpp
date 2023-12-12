@@ -10,9 +10,9 @@ extern "C" {
 
 namespace spdl::interface {
 
-MemoryMappedFile::MemoryMappedFile(const std::string_view path) : path_(path) {
+MemoryMappedFile::MemoryMappedFile(const std::string path) {
   CHECK_AVERROR(
-      av_file_map(path_.c_str(), &buffer_, &buffer_size_, 0, NULL),
+      av_file_map(path.data(), &buffer_, &buffer_size_, 0, NULL),
       "Failed to map file ({}).",
       path);
 };
