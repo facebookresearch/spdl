@@ -6,6 +6,15 @@ extern "C" {
 #include <libspdl/ffmpeg/cuda.h>
 #include <libspdl/ffmpeg/logging.h>
 
+// https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
+// Starting from libavformat 59 (ffmpeg 5),
+// AVInputFormat is const and related functions expect constant.
+#if LIBAVFORMAT_VERSION_MAJOR >= 59
+#define AVFORMAT_CONST const
+#else
+#define AVFORMAT_CONST
+#endif
+
 namespace spdl {
 namespace {
 //////////////////////////////////////////////////////////////////////////////
@@ -61,8 +70,8 @@ AVIOContextPtr get_io_ctx(
 namespace {
 AVFormatInputContextPtr get_input_format_ctx(
     const char* src,
-    const std::optional<OptionDict>& options,
     const std::optional<std::string>& format,
+    const std::optional<OptionDict>& format_options,
     AVIOContext* io_ctx) {
   // We check the input format first because the heap data is owned by FFmpeg
   // library, so we do't need to free it in case of an error.
@@ -78,7 +87,7 @@ AVFormatInputContextPtr get_input_format_ctx(
     return fmt;
   }();
 
-  AVDictionaryDPtr option = get_option_dict(options);
+  AVDictionaryDPtr option = get_option_dict(format_options);
 
   // Note:
   // If `avformat_open_input` fails, it frees fmt_ctx.
@@ -105,16 +114,16 @@ AVFormatInputContextPtr get_input_format_ctx(
 
 AVFormatInputContextPtr get_input_format_ctx(
     const std::string_view id,
-    const std::optional<OptionDict>& options,
-    const std::optional<std::string>& format) {
-  return get_input_format_ctx(id.data(), options, format, nullptr);
+    const std::optional<std::string>& format,
+    const std::optional<OptionDict>& format_options) {
+  return get_input_format_ctx(id.data(), format, format_options, nullptr);
 }
 
 AVFormatInputContextPtr get_input_format_ctx(
     AVIOContext* io_ctx,
-    const std::optional<OptionDict>& options,
-    const std::optional<std::string>& format) {
-  return get_input_format_ctx(nullptr, options, format, io_ctx);
+    const std::optional<std::string>& format,
+    const std::optional<OptionDict>& format_options) {
+  return get_input_format_ctx(nullptr, format, format_options, io_ctx);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -255,8 +264,8 @@ void configure_codec_context(
 
 void open_codec(
     AVCodecContext* codec_ctx,
-    const std::optional<OptionDict>& decoder_option) {
-  AVDictionaryDPtr option = get_option_dict(decoder_option);
+    const std::optional<OptionDict>& decoder_options) {
+  AVDictionaryDPtr option = get_option_dict(decoder_options);
 
   // Default to single thread execution.
   if (!av_dict_get(option, "threads", nullptr, 0)) {
@@ -273,14 +282,13 @@ void open_codec(
 AVCodecContextPtr get_codec_ctx(
     const AVCodecParameters* params,
     AVRational pkt_timebase,
-    const std::optional<std::string>& decoder_name,
-    const std::optional<OptionDict>& decoder_option,
+    const std::optional<std::string>& decoder,
+    const std::optional<OptionDict>& decoder_options,
     const int cuda_device_index) {
-  AVCodecContextPtr codec_ctx =
-      alloc_codec_context(params->codec_id, decoder_name);
+  AVCodecContextPtr codec_ctx = alloc_codec_context(params->codec_id, decoder);
   configure_codec_context(codec_ctx.get(), params, cuda_device_index);
   codec_ctx->pkt_timebase = pkt_timebase;
-  open_codec(codec_ctx.get(), decoder_option);
+  open_codec(codec_ctx.get(), decoder_options);
 #ifdef USE_CUDA
   if (codec_ctx->hw_device_ctx) {
     codec_ctx->hw_frames_ctx = get_hw_frames_ctx(codec_ctx.get());

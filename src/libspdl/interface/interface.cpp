@@ -25,17 +25,17 @@ class MemoryMap : public DataProvider {
 
  public:
   MemoryMap(
-      const std::string_view url,
-      const std::optional<OptionDict> options,
-      const std::optional<std::string> format,
+      const std::string url,
+      const std::optional<std::string>& format,
+      const std::optional<OptionDict>& format_options,
       int buffer_size)
-      : file(url),
+      : file(std::move(url)),
         io_ctx(get_io_ctx(
             &file,
             buffer_size,
             MemoryMappedFile::read_packet,
             MemoryMappedFile::seek)),
-        fmt_ctx(get_input_format_ctx(io_ctx.get(), options, format)) {}
+        fmt_ctx(get_input_format_ctx(io_ctx.get(), format, format_options)) {}
   ~MemoryMap() = default;
   AVFormatContext* get_fmt_ctx() override {
     return fmt_ctx.get();
@@ -45,15 +45,15 @@ class MemoryMap : public DataProvider {
 } // namespace
 
 std::unique_ptr<DataProvider> get_data_provider(
-    const std::string_view url,
-    const std::optional<OptionDict> options,
-    const std::optional<std::string> format,
+    const std::string& url,
+    const std::optional<std::string>& format,
+    const std::optional<OptionDict>& format_options,
     int buffer_size) {
   if (url.starts_with("mmap://")) {
     return std::unique_ptr<DataProvider>{
-        new MemoryMap{url.substr(7), options, format, buffer_size}};
+        new MemoryMap{url.substr(7), format, format_options, buffer_size}};
   }
-  auto fmt_ctx = get_input_format_ctx(url, options, format);
+  auto fmt_ctx = get_input_format_ctx(url, format, format_options);
   return std::unique_ptr<DataProvider>{new Native{std::move(fmt_ctx)}};
 }
 
