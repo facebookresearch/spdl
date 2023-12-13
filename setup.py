@@ -1,7 +1,8 @@
 import os
 import subprocess
+import sys
 
-from setuptools import find_packages, Extension, setup
+from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 ROOT_DIR = os.path.dirname(__file__)
@@ -16,6 +17,7 @@ ext_modules = [
 ]
 
 BUILT_ONCE = False
+
 
 class CMakeBuild(build_ext):
     def run(self):
@@ -42,7 +44,8 @@ class CMakeBuild(build_ext):
             "-S", ROOT_DIR,
             f"-DCMAKE_BUILD_TYPE={cfg}",
             f"-DCMAKE_INSTALL_PREFIX={extdir}/spdl",
-            f"-DSPDL_BUILD_SAMPLES:BOOL=OFF",
+            "-DSPDL_BUILD_SAMPLES:BOOL=OFF",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-GNinja",
         ]
 
@@ -61,10 +64,10 @@ class CMakeBuild(build_ext):
     def get_ext_filename(self, fullname):
         ext_filename = super().get_ext_filename(fullname)
         parts = ext_filename.split(".")
-        if '_spdl_ffmpeg' not in ext_filename:
+        if "_spdl_ffmpeg" not in ext_filename:
             # remove ABI
             del parts[-2]
-            if sys.platform == 'darwin':
+            if sys.platform == "darwin":
                 parts[-1] = "dylib"
         ext_filename = ".".join(parts)
         return ext_filename
