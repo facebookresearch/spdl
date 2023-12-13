@@ -1,6 +1,12 @@
+"""Implement mechanism to load extension module `libspdl`.
+
+It abstracts away the selection of FFmpeg version, and provide
+lazy access to the module so that the module won't be loaded until
+it's used by user code.
+"""
+
 import importlib
 import logging
-import sys
 from types import ModuleType
 from typing import Any, List
 
@@ -17,11 +23,11 @@ def __dir__() -> List[str]:
 
 def __getattr__(name: str) -> Any:
     if name == "libspdl":
-        return _LazyImporter(name, _import_libspdl)
+        return _LazilyImportedModule(name, _import_libspdl)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-class _LazyImporter(ModuleType):
+class _LazilyImportedModule(ModuleType):
     """Delay module import until its attribute is accessed."""
 
     def __init__(self, name, import_func):
@@ -78,7 +84,7 @@ def _import_libspdl_ver(ver):
 
     try:
         ext = importlib.import_module(ext)
-    except Exception:
-        raise RuntimeError(f"Failed to load extension: {ext}.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load extension: {ext}.") from e
 
     return ext

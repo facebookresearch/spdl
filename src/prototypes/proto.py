@@ -1,7 +1,8 @@
 import logging
 
-import numpy as np
 import matplotlib.pyplot as plt
+
+import numpy as np
 
 from spdl.lib import libspdl
 
@@ -36,7 +37,9 @@ def _main():
         plt.show()
 
     engine = libspdl.Engine(3, 6, 10)
-    engine.enqueue(src2, [0.0], frame_rate=(60, 1), width=36, height=48, pix_fmt="rgb24")
+    engine.enqueue(
+        src2, [0.0], frame_rate=(60, 1), width=36, height=48, pix_fmt="rgb24"
+    )
     buffer = engine.dequeue()
     a = np.array(buffer, copy=False)
     del buffer
