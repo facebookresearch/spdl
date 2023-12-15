@@ -150,7 +150,7 @@ Generator<PackagedAVPackets&&> streaming_demux(
       }
       package.packets.push_back(packet.release());
     }
-    XLOG(INFO) << fmt::format(" - Sliced {} packets", package.packets.size());
+    XLOG(DBG) << fmt::format(" - Sliced {} packets", package.packets.size());
     // For flushing
     package.packets.push_back(nullptr);
     co_yield std::move(package);
@@ -177,7 +177,7 @@ Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
   assert(strcmp(src_ctx->name, "in") == 0);
   assert(strcmp(sink_ctx->name, "out") == 0);
 
-  // XLOG(INFO)
+  // XLOG(DBG)
   //     << ((!frame) ? fmt::format(" --- flush filter graph")
   //                  : fmt::format(
   //                        "{:15s} {:.3f} ({})",
@@ -202,7 +202,7 @@ Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
       default: {
         CHECK_AVERROR_NUM(errnum, "Failed to filter a frame.");
 
-        // XLOG(INFO) << fmt::format(
+        // XLOG(DBG) << fmt::format(
         //     "{:15s} {:.3f} ({})",
         //     " ---- frame:",
         //     ts(frame2->pts, sink_ctx->inputs[0]->time_base),
@@ -215,7 +215,7 @@ Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
 
 Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
   assert(codec_ctx);
-  // XLOG(INFO)
+  // XLOG(DBG)
   //     << ((!packet) ? fmt::format(" -- flush decoder")
   //                   : fmt::format(
   //                         "{:15s} {:.3f} ({})",
@@ -296,7 +296,7 @@ Task<void> decode_and_enque(
         filter_desc, codec_ctx.get(), packets.time_base, packets.frame_rate);
   }();
 
-  // XLOG(INFO) << describe_graph(filter_graph.get());
+  // XLOG(DBG) << describe_graph(filter_graph.get());
 
   PackagedAVFrames frames;
   frames.time_base = to_tuple(
@@ -308,7 +308,7 @@ Task<void> decode_and_enque(
   while (auto frame = co_await decoding.next()) {
     frames.frames.push_back(*frame);
   }
-  XLOG(INFO) << fmt::format("Generated {} frames", frames.frames.size());
+  XLOG(DBG) << fmt::format("Generated {} frames", frames.frames.size());
   co_await queue.enqueue(std::move(frames));
 }
 
@@ -376,7 +376,7 @@ VideoBuffer convert_rgb24(PackagedAVFrames& val) {
       dst += linesize;
     }
 
-    XLOG(INFO) << fmt::format(
+    XLOG(DBG) << fmt::format(
         " - {:.3f} ({}x{}, {})",
         ts(frame->pts, val.time_base),
         frame->width,
@@ -429,7 +429,7 @@ VideoBuffer convert_yuv420p(PackagedAVFrames& val) {
         dst += linesize;
       }
     }
-    XLOG(INFO) << fmt::format(
+    XLOG(DBG) << fmt::format(
         " - {:.3f} ({}x{}, {})",
         ts(frame->pts, val.time_base),
         frame->width,
@@ -444,7 +444,7 @@ VideoBuffer Engine::dequeue() {
       folly::coro::blockingWait([&]() -> folly::coro::Task<VideoBuffer> {
         auto val = co_await frame_queue.dequeue();
         // TODO: validate the number of frames > 0
-        XLOG(INFO) << fmt::format("Dequeue {} frames", val.frames.size());
+        XLOG(DBG) << fmt::format("Dequeue {} frames", val.frames.size());
         switch (static_cast<AVPixelFormat>(val.frames[0]->format)) {
           case AV_PIX_FMT_RGB24:
             co_return convert_rgb24(val);
@@ -458,7 +458,7 @@ VideoBuffer Engine::dequeue() {
         }
       }());
 
-  XLOG(INFO) << fmt::format(
+  XLOG(DBG) << fmt::format(
       "Buffer returned: {}x{}x{}x{} ({})",
       val.n,
       val.c,
