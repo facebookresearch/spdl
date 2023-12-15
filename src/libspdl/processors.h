@@ -6,11 +6,9 @@
 
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
-#include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BoundedQueue.h>
-#include <folly/experimental/coro/Task.h>
 
-#include <libspdl/common.h>
+#include <libspdl/defs.h>
 
 struct AVFrame;
 
