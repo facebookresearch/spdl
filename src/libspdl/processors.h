@@ -54,22 +54,6 @@ struct VideoBuffer {
 class Engine {
   using Executor = folly::CPUThreadPoolExecutor;
 
- public:
-  struct Job {
-    std::string path;
-    std::vector<double> timestamps;
-    std::optional<std::string> format = std::nullopt;
-    std::optional<OptionDict> format_options = std::nullopt;
-    int buffer_size = 8096;
-    std::optional<std::string> decoder = std::nullopt;
-    std::optional<OptionDict> decoder_options = std::nullopt;
-    int cuda_device_index = -1;
-    std::optional<Rational> frame_rate = std::nullopt;
-    std::optional<int> width = std::nullopt;
-    std::optional<int> height = std::nullopt;
-    std::optional<std::string> pix_fmt = std::nullopt;
-  };
-
  private:
   std::unique_ptr<Executor> io_task_executors;
   std::unique_ptr<Executor> decoding_task_executors;
@@ -87,7 +71,7 @@ class Engine {
       size_t num_decoding_threads,
       size_t frame_queue_size);
 
-  void enqueue(Job job);
+  void enqueue(VideoDecodingJob job);
 
   VideoBuffer dequeue();
 };

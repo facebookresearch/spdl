@@ -56,7 +56,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       .def(
           "enqueue",
           [](Engine& self,
-             const std::string& url,
+             const std::string& src,
              const std::vector<double>& timestamps,
              const std::optional<std::string>& format = std::nullopt,
              const std::optional<OptionDict>& format_options = std::nullopt,
@@ -70,7 +70,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
              const std::optional<int>& height = std::nullopt,
              const std::optional<std::string>& pix_fmt = std::nullopt) {
             self.enqueue(
-                {url,
+                {src,
                  timestamps,
                  format,
                  format_options,
@@ -83,7 +83,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
                  height,
                  pix_fmt});
           },
-          py::arg("url"),
+          py::arg("src"),
           py::arg("timestamps"),
           py::arg("format") = py::none(),
           py::arg("format_options") = py::none(),
