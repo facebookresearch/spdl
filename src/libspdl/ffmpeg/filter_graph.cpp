@@ -162,14 +162,15 @@ AVFilterGraphPtr get_video_filter(
 }
 
 std::string get_video_filter_description(
-    std::optional<AVRational> frame_rate,
+    std::optional<Rational> frame_rate,
     std::optional<int> width,
     std::optional<int> height,
     std::optional<std::string> pix_fmt) {
   std::vector<std::string> parts;
   if (frame_rate) {
     auto fr = frame_rate.value();
-    parts.emplace_back(fmt::format("fps={}/{}", fr.num, fr.den));
+    parts.emplace_back(
+        fmt::format("fps={}/{}", std::get<0>(fr), std::get<1>(fr)));
   }
   if (width || height) {
     std::vector<std::string> scale;
