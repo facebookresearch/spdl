@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace spdl::interface {
+namespace spdl::detail {
 
 class MemoryMappedFile {
   uint8_t* buffer_ = nullptr;
@@ -29,4 +29,4 @@ class MemoryMappedFile {
   static int64_t seek(void* opaque, int64_t offset, int whence);
 };
 
-} // namespace spdl::interface
+} // namespace spdl::detail

@@ -10,7 +10,7 @@
 
 struct AVFormatContext;
 
-namespace spdl::interface {
+namespace spdl {
 
 // DataProvider serves two purposes:
 // 1. It encapsulates the AVFormatContext, AVIOContext and other
@@ -30,4 +30,4 @@ std::unique_ptr<DataProvider> get_data_provider(
     const std::optional<OptionDict>& format_options = std::nullopt,
     int buffer_size = 8096);
 
-} // namespace spdl::interface
+} // namespace spdl

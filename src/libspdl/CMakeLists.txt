@@ -7,12 +7,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
 
 set(
   src
-  ffmpeg/cuda.cpp
-  ffmpeg/ctx_utils.cpp
-  ffmpeg/wrappers.cpp
-  ffmpeg/filter_graph.cpp
-  interface/interface.cpp
-  interface/mmap.cpp
+  detail/ffmpeg/cuda.cpp
+  detail/ffmpeg/ctx_utils.cpp
+  detail/ffmpeg/wrappers.cpp
+  detail/ffmpeg/filter_graph.cpp
+  detail/interface/mmap.cpp
+  interface.cpp
   processors.cpp
   )
 
