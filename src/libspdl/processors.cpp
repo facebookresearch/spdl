@@ -313,11 +313,11 @@ Task<void> decode_and_enque(
 }
 
 Task<void> stream_decode(
-    Engine::Job job,
+    VideoDecodingJob job,
     folly::Executor::KeepAlive<> decode_exec,
     FrameQueue& queue) {
   auto dp = get_data_provider(
-      job.path, job.format, job.format_options, job.buffer_size);
+      job.src, job.format, job.format_options, job.buffer_size);
   auto demuxer = streaming_demux(dp->get_fmt_ctx(), job.timestamps);
   std::vector<folly::SemiFuture<folly::Unit>> sfs;
   while (auto packets = co_await demuxer.next()) {
@@ -351,7 +351,7 @@ Engine::Engine(
       decoding_exec(decoding_task_executors.get()),
       frame_queue(frame_queue_size) {}
 
-void Engine::enqueue(Job job) {
+void Engine::enqueue(VideoDecodingJob job) {
   sfs.emplace_back(stream_decode(std::move(job), decoding_exec, frame_queue)
                        .scheduleOn(io_exec)
                        .start());

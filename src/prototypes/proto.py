@@ -1,7 +1,5 @@
 import logging
 
-import matplotlib.pyplot as plt
-
 import numpy as np
 
 from spdl.lib import libspdl
@@ -15,7 +13,20 @@ def _parse_args():
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("-i", "--input-video", help="Input video file.", required=True)
+    parser.add_argument("--plot", action="store_true")
     return parser.parse_args()
+
+
+def _plot(frames):
+    import matplotlib.pyplot as plt
+
+    if frames.shape[1] in [1, 3]:
+        frames = np.moveaxis(frames, 1, -1)
+
+    for frame in frames:
+        print(frame.shape)
+        plt.imshow(frame)
+        plt.show()
 
 
 def _main():
@@ -25,29 +36,27 @@ def _main():
     src = args.input_video
     src2 = f"mmap://{src}"
 
-    engine = libspdl.Engine(3, 6, 10)
-    engine.enqueue(src, [0.0])
-    buffer = engine.dequeue()
-    a = np.array(buffer, copy=False)
-    del buffer
-    print(a.shape, a.dtype)
-    for frame in a:
-        print(frame.shape)
-        plt.imshow(frame[0])
-        plt.show()
+    configs = [
+        {"src": src, "timestamps": [0.0]},
+        {
+            "src": src2,
+            "timestamps": [0.0],
+            "frame_rate": (60, 1),
+            "width": 36,
+            "height": 48,
+            "pix_fmt": "rgb24",
+        },
+    ]
 
-    engine = libspdl.Engine(3, 6, 10)
-    engine.enqueue(
-        src2, [0.0], frame_rate=(60, 1), width=36, height=48, pix_fmt="rgb24"
-    )
-    buffer = engine.dequeue()
-    a = np.array(buffer, copy=False)
-    del buffer
-    print(a.shape, a.dtype)
-    for frame in a:
-        print(frame.shape)
-        plt.imshow(frame)
-        plt.show()
+    for cfg in configs:
+        engine = libspdl.Engine(3, 6, 10)
+        engine.enqueue(**cfg)
+        buffer = engine.dequeue()
+        a = np.array(buffer, copy=False)
+        del buffer
+        print(a.shape, a.dtype)
+        if args.plot:
+            _plot(a)
 
 
 def _init_logging(debug):

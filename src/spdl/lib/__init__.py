@@ -6,6 +6,7 @@ it's used by user code.
 """
 
 import importlib
+from importlib import util as importlib_util
 import logging
 from types import ModuleType
 from typing import Any, List
@@ -79,7 +80,7 @@ def _import_libspdl():
 def _import_libspdl_ver(ver):
     ext = f"spdl.lib._spdl_ffmpeg{ver}"
 
-    if not importlib.util.find_spec(ext):
+    if not importlib_util.find_spec(ext):
         raise RuntimeError(f"Extension is not available: {ext}.")
 
     try:
