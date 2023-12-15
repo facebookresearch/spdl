@@ -1,5 +1,5 @@
 #pragma once
-#include <libspdl/common.h>
+#include <libspdl/defs.h>
 #include <libspdl/detail/ffmpeg/wrappers.h>
 #include <optional>
 
