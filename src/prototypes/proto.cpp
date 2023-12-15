@@ -11,12 +11,13 @@ extern "C" {
 }
 
 int main(int argc, char** argv) {
-  // auto _ = folly::Init{&argc, &argv};
+  auto _ = folly::Init{&argc, &argv};
+
   XLOG(INFO) << avcodec_configuration();
 
   std::vector<std::string> srcs = {
-      "/home/moto/NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4",
-      "mmap:///home/moto/NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4",
+    argv[1],
+    fmt::format("mmap://{}", argv[1]),
   };
 
   spdl::Engine engine{64, 32, 100};
