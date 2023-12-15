@@ -1,7 +1,7 @@
-#include <libspdl/ffmpeg/logging.h>
-#include <libspdl/ffmpeg/wrappers.h>
+#include <libspdl/detail/ffmpeg/logging.h>
+#include <libspdl/detail/ffmpeg/wrappers.h>
 
-namespace spdl {
+namespace spdl::detail {
 
 ////////////////////////////////////////////////////////////////////////////////
 // RAII wrappers
@@ -46,4 +46,4 @@ AVFrameAutoUnref::~AVFrameAutoUnref() {
   av_frame_unref(p);
 }
 
-} // namespace spdl
+} // namespace spdl::detail

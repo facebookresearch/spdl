@@ -4,10 +4,10 @@
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 
-#include <libspdl/ffmpeg/ctx_utils.h>
-#include <libspdl/ffmpeg/filter_graph.h>
-#include <libspdl/ffmpeg/logging.h>
-#include <libspdl/interface/interface.h>
+#include <libspdl/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/detail/ffmpeg/filter_graph.h>
+#include <libspdl/detail/ffmpeg/logging.h>
+#include <libspdl/interface.h>
 #include <libspdl/processors.h>
 #include <cstddef>
 #include <cstdint>
@@ -21,6 +21,8 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 #include <libavutil/rational.h>
 }
+
+using namespace spdl::detail;
 
 template <typename T>
 using Task = folly::coro::Task<T>;
@@ -314,7 +316,7 @@ Task<void> stream_decode(
     Engine::Job job,
     folly::Executor::KeepAlive<> decode_exec,
     FrameQueue& queue) {
-  auto dp = interface::get_data_provider(
+  auto dp = get_data_provider(
       job.path, job.format, job.format_options, job.buffer_size);
   auto demuxer = streaming_demux(dp->get_fmt_ctx(), job.timestamps);
   std::vector<folly::SemiFuture<folly::Unit>> sfs;

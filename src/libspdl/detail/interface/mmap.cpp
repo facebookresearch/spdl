@@ -3,12 +3,10 @@ extern "C" {
 #include <libavutil/file.h>
 }
 
-#include <string>
+#include <libspdl/detail/ffmpeg/logging.h>
+#include <libspdl/detail/interface/mmap.h>
 
-#include <libspdl/ffmpeg/logging.h>
-#include <libspdl/interface/mmap.h>
-
-namespace spdl::interface {
+namespace spdl::detail {
 
 MemoryMappedFile::MemoryMappedFile(const std::string path) {
   CHECK_AVERROR(
@@ -59,4 +57,4 @@ int64_t MemoryMappedFile::seek(void* opaque, int64_t offset, int whence) {
   return static_cast<MemoryMappedFile*>(opaque)->seek(offset, whence);
 }
 
-} // namespace spdl::interface
+} // namespace spdl::detail

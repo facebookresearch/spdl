@@ -1,7 +1,7 @@
 #include <fmt/format.h>
 
-#include <libspdl/ffmpeg/filter_graph.h>
-#include <libspdl/ffmpeg/logging.h>
+#include <libspdl/detail/ffmpeg/filter_graph.h>
+#include <libspdl/detail/ffmpeg/logging.h>
 #include <stdexcept>
 
 extern "C" {
@@ -11,7 +11,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 
-namespace spdl {
+namespace spdl::detail {
 namespace {
 
 AVFilterGraphPtr alloc_filter_graph() {
@@ -195,4 +195,4 @@ std::string describe_graph(AVFilterGraph* graph) {
   return desc;
 }
 
-} // namespace spdl
+} // namespace spdl::detail

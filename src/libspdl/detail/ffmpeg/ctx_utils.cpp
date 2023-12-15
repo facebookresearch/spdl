@@ -2,9 +2,9 @@ extern "C" {
 #include <libavutil/channel_layout.h>
 }
 
-#include <libspdl/ffmpeg/ctx_utils.h>
-#include <libspdl/ffmpeg/cuda.h>
-#include <libspdl/ffmpeg/logging.h>
+#include <libspdl/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/detail/ffmpeg/cuda.h>
+#include <libspdl/detail/ffmpeg/logging.h>
 
 // https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
 // Starting from libavformat 59 (ffmpeg 5),
@@ -15,7 +15,7 @@ extern "C" {
 #define AVFORMAT_CONST
 #endif
 
-namespace spdl {
+namespace spdl::detail {
 namespace {
 //////////////////////////////////////////////////////////////////////////////
 // AVDictionary
@@ -298,4 +298,4 @@ AVCodecContextPtr get_codec_ctx(
   return codec_ctx;
 }
 
-} // namespace spdl
+} // namespace spdl::detail

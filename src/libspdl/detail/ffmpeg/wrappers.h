@@ -9,7 +9,7 @@ extern "C" {
 
 #include <memory>
 
-namespace spdl {
+namespace spdl::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // RAII wrappers
 ////////////////////////////////////////////////////////////////////////////////
@@ -103,4 +103,4 @@ struct AVFrameAutoUnref {
     };                                                      \
   }
 
-} // namespace spdl
+} // namespace spdl::detail

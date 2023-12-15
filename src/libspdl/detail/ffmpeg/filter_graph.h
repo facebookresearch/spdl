@@ -1,9 +1,9 @@
 #pragma once
 #include <libspdl/common.h>
-#include <libspdl/ffmpeg/wrappers.h>
+#include <libspdl/detail/ffmpeg/wrappers.h>
 #include <optional>
 
-namespace spdl {
+namespace spdl::detail {
 
 AVFilterGraphPtr get_audio_filter(
     const std::string& filter_description,
@@ -25,4 +25,4 @@ std::string get_video_filter_description(
 // for debug
 std::string describe_graph(AVFilterGraph* graph);
 
-} // namespace spdl
+} // namespace spdl::detail

@@ -6,10 +6,10 @@ extern "C" {
 #include <map>
 #include <mutex>
 
-#include <libspdl/ffmpeg/logging.h>
-#include <libspdl/ffmpeg/wrappers.h>
+#include <libspdl/detail/ffmpeg/logging.h>
+#include <libspdl/detail/ffmpeg/wrappers.h>
 
-namespace spdl {
+namespace spdl::detail {
 
 ////////////////////////////////////////////////////////////////////////////////
 // HardWare context
@@ -51,4 +51,4 @@ void clear_cuda_context_cache() {
   CUDA_CONTEXT_CACHE.clear();
 }
 
-} // namespace spdl
+} // namespace spdl::detail

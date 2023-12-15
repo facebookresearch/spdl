@@ -1,14 +1,14 @@
 #pragma once
 
 #include <libspdl/common.h>
-#include <libspdl/ffmpeg/wrappers.h>
+#include <libspdl/detail/ffmpeg/wrappers.h>
 
 #include <map>
 #include <optional>
 #include <string>
 #include <string_view>
 
-namespace spdl {
+namespace spdl::detail {
 
 AVIOContextPtr get_io_ctx(
     void* opaque,
@@ -32,4 +32,4 @@ AVCodecContextPtr get_codec_ctx(
     const std::optional<std::string>& decoder = std::nullopt,
     const std::optional<OptionDict>& decoder_options = std::nullopt,
     const int cuda_device_index = -1);
-} // namespace spdl
+} // namespace spdl::detail

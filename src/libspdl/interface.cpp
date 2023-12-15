@@ -1,10 +1,12 @@
-#include <libspdl/ffmpeg/ctx_utils.h>
-#include <libspdl/ffmpeg/wrappers.h>
-#include <libspdl/interface/interface.h>
-#include <libspdl/interface/mmap.h>
+#include <libspdl/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/detail/ffmpeg/wrappers.h>
+#include <libspdl/detail/interface/mmap.h>
+#include <libspdl/interface.h>
 #include <memory>
 
-namespace spdl::interface {
+using namespace spdl::detail;
+
+namespace spdl {
 namespace {
 
 class Native : public DataProvider {
@@ -57,4 +59,4 @@ std::unique_ptr<DataProvider> get_data_provider(
   return std::unique_ptr<DataProvider>{new Native{std::move(fmt_ctx)}};
 }
 
-} // namespace spdl::interface
+} // namespace spdl
