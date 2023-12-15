@@ -1,4 +1,5 @@
 #pragma once
+#include <libspdl/common.h>
 #include <libspdl/ffmpeg/wrappers.h>
 #include <optional>
 
@@ -16,7 +17,7 @@ AVFilterGraphPtr get_video_filter(
     AVRational frame_rate);
 
 std::string get_video_filter_description(
-    std::optional<AVRational> frame_rate,
+    std::optional<Rational> frame_rate,
     std::optional<int> width,
     std::optional<int> height,
     std::optional<std::string> format);

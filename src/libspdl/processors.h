@@ -12,11 +12,7 @@
 
 #include <libspdl/common.h>
 
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavutil/frame.h>
-#include <libavutil/rational.h>
-}
+struct AVFrame;
 
 namespace spdl {
 
@@ -30,7 +26,7 @@ namespace spdl {
 // When destructing, they will be first unreferenced with av_frame_unref,
 // then the data must be released with av_frame_free.
 struct PackagedAVFrames {
-  AVRational time_base{0, 1};
+  Rational time_base{0, 1};
   std::vector<AVFrame*> frames{};
 
   explicit PackagedAVFrames() = default;
@@ -70,7 +66,7 @@ class Engine {
     std::optional<std::string> decoder = std::nullopt;
     std::optional<OptionDict> decoder_options = std::nullopt;
     int cuda_device_index = -1;
-    std::optional<AVRational> frame_rate = std::nullopt;
+    std::optional<Rational> frame_rate = std::nullopt;
     std::optional<int> width = std::nullopt;
     std::optional<int> height = std::nullopt;
     std::optional<std::string> pix_fmt = std::nullopt;

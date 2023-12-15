@@ -17,6 +17,7 @@ extern "C" {
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
+#include <libavutil/frame.h>
 #include <libavutil/pixdesc.h>
 #include <libavutil/rational.h>
 }
@@ -157,8 +158,13 @@ Generator<PackagedAVPackets&&> streaming_demux(
 //////////////////////////////////////////////////////////////////////////////
 // Decoder and filter
 //////////////////////////////////////////////////////////////////////////////
-double ts(int64_t pts, AVRational time_base) {
-  return pts * av_q2d(time_base);
+double ts(int64_t pts, Rational time_base) {
+  auto& [num, den] = time_base;
+  return static_cast<double>(pts) * num / den;
+}
+
+inline Rational to_tuple(const AVRational& r) {
+  return {r.num, r.den};
 }
 
 Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
@@ -267,7 +273,7 @@ Task<void> decode_and_enque(
     const std::optional<std::string>& decoder,
     const std::optional<OptionDict>& decoder_options,
     const int cuda_device_index,
-    const std::optional<AVRational>& frame_rate,
+    const std::optional<Rational>& frame_rate,
     const std::optional<int>& width,
     const std::optional<int>& height,
     const std::optional<std::string>& pix_fmt,
@@ -291,9 +297,9 @@ Task<void> decode_and_enque(
   // XLOG(INFO) << describe_graph(filter_graph.get());
 
   PackagedAVFrames frames;
-  frames.time_base = filter_graph
-      ? filter_graph->filters[1]->inputs[0]->time_base
-      : packets.time_base;
+  frames.time_base = to_tuple(
+      filter_graph ? filter_graph->filters[1]->inputs[0]->time_base
+                   : packets.time_base);
   auto decoding = filter_graph
       ? decode_packets(packets.packets, codec_ctx.get(), filter_graph.get())
       : decode_packets(packets.packets, codec_ctx.get());

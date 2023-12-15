@@ -13,15 +13,6 @@ namespace py = pybind11;
 namespace spdl {
 namespace {
 
-std::optional<AVRational> to_rational(std::optional<std::tuple<int, int>> src) {
-  if (!src) {
-    return {};
-  }
-  AVRational r;
-  std::tie(r.num, r.den) = *src;
-  return {r};
-}
-
 py::buffer_info get_buffer(VideoBuffer& b) {
   if (b.channel_last) {
     return {
@@ -87,7 +78,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
                  decoder,
                  decoder_options,
                  cuda_device_index,
-                 to_rational(frame_rate),
+                 frame_rate,
                  width,
                  height,
                  pix_fmt});
