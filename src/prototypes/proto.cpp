@@ -16,8 +16,8 @@ int main(int argc, char** argv) {
   XLOG(INFO) << avcodec_configuration();
 
   std::vector<std::string> srcs = {
-    argv[1],
-    fmt::format("mmap://{}", argv[1]),
+      argv[1],
+      fmt::format("mmap://{}", argv[1]),
   };
 
   spdl::Engine engine{64, 32, 100};
