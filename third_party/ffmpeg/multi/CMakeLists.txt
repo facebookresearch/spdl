@@ -1,5 +1,5 @@
 message(STATUS "########################################")
-message(STATUS "Configuring FFmpeg")
+message(STATUS "# Configuring FFmpeg")
 message(STATUS "########################################")
 
 ################################################################################

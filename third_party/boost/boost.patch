@@ -1,0 +1,13 @@
+--- tools/cmake/include/BoostRoot.cmake
++++ tools/cmake/include/BoostRoot.cmake
+@@ -108,7 +108,9 @@ else()
+   endif()
+ 
+   set(BUILD_TESTING OFF)
+-  set(BOOST_SKIP_INSTALL_RULES ON)
++  if(NOT DEFINED BOOST_SKIP_INSTALL_RULES)
++    set(BOOST_SKIP_INSTALL_RULES ON)
++  endif()
+ 
+ endif()
+ 

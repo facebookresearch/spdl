@@ -1,55 +1,60 @@
 message(STATUS "########################################")
-message(STATUS "Configuring Boost")
+message(STATUS "# Configuring Boost")
 message(STATUS "########################################")
+
+set(BOOST_INCLUDE_LIBRARIES
+  algorithm
+  array
+  assert
+  bind
+  exception
+  config
+  concept_check
+  conversion
+  container_hash
+  context
+  core
+  describe
+  detail
+  function
+  function_types
+  functional
+  fusion
+  integer
+  intrusive
+  io
+  iterator
+  move
+  mp11
+  mpl
+  optional
+  pool
+  predef
+  preprocessor
+  range
+  regex
+  unordered
+  static_assert
+  smart_ptr
+  tuple
+  type_index
+  typeof
+  utility
+  variant
+  winapi
+  throw_exception
+  type_traits
+  )
+
+set(BOOST_SKIP_INSTALL_RULES OFF)
+
+message(STATUS "Downloading & extracting boost source... (This may take a while.)" )
 
 FetchContent_Declare(
   boost
-  GIT_REPOSITORY https://github.com/boostorg/boost.git
-  GIT_TAG boost-1.83.0
-  GIT_SUBMODULES
-  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
-  tools/cmake
-  libs/algorithm
-  libs/array
-  libs/assert
-  libs/bind
-  libs/exception
-  libs/config
-  libs/concept_check
-  libs/conversion
-  libs/container_hash
-  libs/context
-  libs/core
-  libs/describe
-  libs/detail
-  libs/function
-  libs/function_types
-  libs/functional
-  libs/fusion
-  libs/integer
-  libs/intrusive
-  libs/io
-  libs/iterator
-  libs/move
-  libs/mp11
-  libs/mpl
-  libs/optional
-  libs/pool
-  libs/predef
-  libs/preprocessor
-  libs/range
-  libs/regex
-  libs/unordered
-  libs/static_assert
-  libs/smart_ptr
-  libs/tuple
-  libs/type_index
-  libs/typeof
-  libs/utility
-  libs/variant
-  libs/winapi
-  libs/throw_exception
-  libs/type_traits
+  URL https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.tar.xz
+  URL_HASH SHA256=2e64e5d79a738d0fa6fb546c6e5c2bd28f88d268a2a080546f74e5ff98f29d0e
+  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+  PATCH_COMMAND patch < "${CMAKE_CURRENT_SOURCE_DIR}/boost.patch"
   )
 FetchContent_MakeAvailable(boost)

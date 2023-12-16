@@ -1,12 +1,11 @@
 message(STATUS "########################################")
-message(STATUS "Configuring libfmt")
+message(STATUS "# Configuring libfmt")
 message(STATUS "########################################")
 
 FetchContent_Declare(
   fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt
-  GIT_TAG 10.1.1
-  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
+  URL https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz
+  URL_HASH SHA256=78b8c0a72b1c35e4443a7e308df52498252d1cefc2b08c9a97bc9ee6cfe61f8b
+  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
   )
 FetchContent_MakeAvailable(fmt)
