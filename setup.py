@@ -45,6 +45,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_BUILD_TYPE={cfg}",
             f"-DCMAKE_INSTALL_PREFIX={extdir}/spdl",
             "-DSPDL_BUILD_SAMPLES:BOOL=OFF",
+            # "-DCMAKE_VERBOSE_MAKEFILE=ON",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-GNinja",
         ]
