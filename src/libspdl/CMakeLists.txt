@@ -3,7 +3,6 @@ message(STATUS "Configuring SPDL")
 message(STATUS "########################################")
 
 set(CMAKE_CXX_VISIBILITY_PRESET default)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
 
 set(
   src
