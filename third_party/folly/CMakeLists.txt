@@ -159,18 +159,20 @@ set(
   "${base_dir}/folly/experimental/symbolizer/SignalHandler.cpp"
   )
 
-add_library(folly "${src}")
+add_library(folly STATIC "${src}")
 target_include_directories(folly PUBLIC "${base_dir}")
 target_compile_definitions(folly PRIVATE "${defs}")
+target_compile_options(folly PUBLIC "-Wno-nullability-completeness")
 target_link_libraries(
   folly
   PRIVATE
   c++abi
+  gflags::gflags
   PUBLIC
-  event_core
+  event_static
+  event_core_static
   double-conversion
   fmt
-  gflags::gflags
   glog::glog
   Boost::algorithm
   Boost::intrusive
