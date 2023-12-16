@@ -1,3 +1,4 @@
+#include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
 #include <libspdl/processors.h>
 #include <pybind11/pybind11.h>
@@ -38,7 +39,44 @@ py::buffer_info get_buffer(VideoBuffer& b) {
        sizeof(uint8_t)}};
 }
 
+struct DoublePtr {
+  char** p;
+  DoublePtr(int argc) : p(new char*[argc]) {}
+  DoublePtr(const DoublePtr&) = delete;
+  DoublePtr& operator=(const DoublePtr&) = delete;
+  DoublePtr(DoublePtr&&) noexcept = delete;
+  DoublePtr& operator=(DoublePtr&&) noexcept = delete;
+  ~DoublePtr() {
+    delete[] p;
+  }
+};
+
+folly::Init* FOLLY_INIT = nullptr;
+
+void delete_folly_init() {
+  delete FOLLY_INIT;
+}
+  
+void init_folly_init(const std::string& prog, const std::vector<std::string>& orig_args) {
+  int nargs = 1 + orig_args.size();
+  DoublePtr args(nargs);
+  args.p[0] = const_cast<char*>(prog.c_str());
+  for (size_t i = 1; i < nargs; ++i) {
+    args.p[i] = const_cast<char*>(orig_args[i-1].c_str());
+  }
+  FOLLY_INIT = new folly::Init{&nargs, &args.p, false};
+  Py_AtExit(delete_folly_init);
+}
+
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
+  m.def(
+      "init_folly",
+      [](const std::string& prog,
+         const std::optional<std::vector<std::string>>& args){
+        init_folly_init(prog, args.value_or(std::vector<std::string>{}));
+      },
+      py::arg("prog"),
+      py::arg("args") = py::none());
   py::class_<VideoBuffer>(
       m, "VideoBuffer", py::buffer_protocol(), py::module_local())
       .def_buffer(get_buffer);
