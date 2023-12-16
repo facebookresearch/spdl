@@ -4,6 +4,7 @@ message(STATUS "########################################")
 
 set(BUILD_SHARED_LIBS OFF)
 set(WITH_GFLAGS ON)
+set(WITH_GTEST OFF)
 
 FetchContent_Declare(
   glog

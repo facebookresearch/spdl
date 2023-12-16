@@ -10,7 +10,7 @@ set(GFLAGS_BUILD_gflags_nothreads_LIB OFF)
 FetchContent_Declare(
   gflags
   GIT_REPOSITORY https://github.com/gflags/gflags
-  GIT_TAG v2.2.2
+  GIT_TAG v2.2.0
   SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
   SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
   )
