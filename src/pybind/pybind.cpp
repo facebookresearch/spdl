@@ -85,14 +85,9 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       .def_buffer(get_buffer);
   py::class_<Engine>(m, "Engine", py::module_local())
       .def(
-          py::init([](size_t num_io_threads,
-                      size_t num_decoding_threads,
-                      size_t frame_queue_size) {
-            return new Engine{
-                num_io_threads, num_decoding_threads, frame_queue_size};
+          py::init([](size_t frame_queue_size) {
+            return new Engine{frame_queue_size};
           }),
-          py::arg("num_io_threads"),
-          py::arg("num_decoding_threads"),
           py::arg("frame_queue_size"))
       .def(
           "enqueue",

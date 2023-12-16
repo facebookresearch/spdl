@@ -11,6 +11,7 @@ set(
   detail/ffmpeg/wrappers.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/interface/mmap.cpp
+  detail/executors.cpp
   interface.cpp
   processors.cpp
   )

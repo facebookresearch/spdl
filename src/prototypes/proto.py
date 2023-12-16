@@ -33,7 +33,6 @@ def _plot(frames, k):
 
 def _main():
     args = _parse_python_args()
-    print(args.others)
     libspdl.init_folly(args.others)
 
     _init_logging(args.debug)
@@ -58,7 +57,7 @@ def _main():
             cfg["decoder"] = "h264_cuvid"
             # cfg["cuda_device_index"] = 0
 
-        engine = libspdl.Engine(3, 6, 10)
+        engine = libspdl.Engine(10)
         engine.enqueue(**cfg)
         buffer = engine.dequeue()
         a = np.array(buffer, copy=False)
