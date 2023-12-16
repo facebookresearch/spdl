@@ -22,8 +22,12 @@ function(add_libspdl ffmpeg_version)
   target_link_libraries("${name}" PUBLIC folly "ffmpeg${ffmpeg_version}")
   target_include_directories("${name}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
+  add_library("${name}_static" STATIC "${src}")
+  target_link_libraries("${name}_static" PUBLIC folly "ffmpeg${ffmpeg_version}")
+  target_include_directories("${name}_static" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
   install(
-    TARGETS ${name}
+    TARGETS "${name}" "${name}_static"
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib
     )

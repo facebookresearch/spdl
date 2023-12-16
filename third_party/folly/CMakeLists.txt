@@ -5,7 +5,7 @@ message(STATUS "########################################")
 FetchContent_Declare(
   folly_src
   GIT_REPOSITORY https://github.com/facebook/folly
-  GIT_TAG v2023.11.27.00
+  GIT_TAG v2023.12.11.00
   PATCH_COMMAND patch -N -i "${CMAKE_CURRENT_SOURCE_DIR}/m1_mac_memalign.patch" || true
   SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
   SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
@@ -15,10 +15,13 @@ FetchContent_Populate(folly_src)
 #------------------------------------------------------------------------------
 # Configure
 #------------------------------------------------------------------------------
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+
 set(
   defs
   FOLLY_HAS_COROUTINES
   FOLLY_HAVE_PTHREAD
+  FOLLY_HAVE_LIBGFLAGS
   )
 
 set(base_dir ${folly_src_SOURCE_DIR})
@@ -167,6 +170,7 @@ target_link_libraries(
   event_core
   double-conversion
   fmt
+  gflags::gflags
   glog::glog
   Boost::algorithm
   Boost::intrusive
