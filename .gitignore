@@ -1,6 +1,6 @@
-/third_party/**/src
-/third_party/**/subbuild
 /scripts
+*.tar.gz
+*.tar.xz
 
 CMakeLists.txt.user
 CMakeCache.txt

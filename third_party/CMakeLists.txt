@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
-project(spdl)
+project(folly-deps)
 
 ###############################################################################
 # Global config
@@ -37,23 +37,20 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0063 NEW)
 
 ###############################################################################
-# Build folly, libspdl and binding
+# Build folly dependencies.
 ###############################################################################
-find_package(double-conversion REQUIRED)
-find_package(Libevent REQUIRED)
-find_package(fmt REQUIRED)
-find_package(gflags REQUIRED)
-find_package(glog REQUIRED)
-find_package(Boost REQUIRED COMPONENTS algorithm intrusive context preprocessor variant iterator)
+# glog has some private header file, which name conflicts with clang's tooling,
+# so we need to install glog somewhere once.
 
-add_subdirectory(third_party/folly)
-add_subdirectory(third_party/ffmpeg/multi)
-add_subdirectory(third_party/pybind11)
-add_subdirectory(src/libspdl)
-if (SPDL_BUILD_PYTHON_BINDING)
-  add_subdirectory(src/pybind)
-endif()
+# glog exports package to user registery (~/.glog) with build path and this
+# causes issue when compiling folly.
+# https://github.com/google/glog/issues/705
+# the following disables the export.
+set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY true)
 
-if (SPDL_BUILD_SAMPLES)
-  add_subdirectory(src/prototypes)
-endif (SPDL_BUILD_SAMPLES)
+add_subdirectory(double-conversion)
+add_subdirectory(fmt)
+add_subdirectory(gflags)
+add_subdirectory(glog)
+add_subdirectory(libevent)
+add_subdirectory(boost)

@@ -7,6 +7,11 @@ elseif (UNIX)
   set(CMAKE_INSTALL_RPATH $ORIGIN)
 endif ()
 
+
+if (NOT DEFINED SPDL_PYTHON_BINDING_INSTALL_PREFIX)
+  set(SPDL_PYTHON_BINDING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+endif ()
+
 function(add_spdl_extension ffmpeg_version)
   set(name "_spdl_ffmpeg${ffmpeg_version}")
 
@@ -16,8 +21,8 @@ function(add_spdl_extension ffmpeg_version)
 
   install(
     TARGETS ${name}
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION lib
+    LIBRARY DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
+    RUNTIME DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
   )
 endfunction()
 

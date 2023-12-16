@@ -1,21 +1,21 @@
 message(STATUS "########################################")
-message(STATUS "Configuring folly")
+message(STATUS "# Configuring folly")
 message(STATUS "########################################")
 
 FetchContent_Declare(
   folly_src
-  GIT_REPOSITORY https://github.com/facebook/folly
-  GIT_TAG v2023.12.11.00
-  PATCH_COMMAND patch -N -i "${CMAKE_CURRENT_SOURCE_DIR}/m1_mac_memalign.patch" || true
-  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-  SUBBUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subbuild"
+  URL https://github.com/facebook/folly/releases/download/v2023.12.11.00/folly-v2023.12.11.00.tar.gz
+  URL_HASH SHA256=a814feab0a988ac3aca33e3ffb1cf03c12ed782215f76d9cf018ed66230ea10a
+  PATCH_COMMAND patch < "${CMAKE_CURRENT_SOURCE_DIR}/m1_mac_memalign.patch"
+  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
   )
 FetchContent_Populate(folly_src)
 
 #------------------------------------------------------------------------------
 # Configure
 #------------------------------------------------------------------------------
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(
   defs
@@ -136,6 +136,7 @@ set(
   "${base_dir}/folly/memory/MallctlHelper.cpp"
   "${base_dir}/folly/memory/ReentrantAllocator.cpp"
   "${base_dir}/folly/memory/detail/MallocImpl.cpp"
+  "${base_dir}/folly/memory/SanitizeAddress.cpp"
 
   "${base_dir}/folly/net/NetOps.cpp"
 
@@ -145,6 +146,7 @@ set(
   "${base_dir}/folly/synchronization/HazptrDomain.cpp"
   "${base_dir}/folly/synchronization/HazptrThreadPoolExecutor.cpp"
   "${base_dir}/folly/synchronization/ParkingLot.cpp"
+  "${base_dir}/folly/synchronization/SanitizeThread.cpp"
 
   "${base_dir}/folly/system/AtFork.cpp"
   "${base_dir}/folly/system/HardwareConcurrency.cpp"
@@ -159,8 +161,24 @@ set(
   "${base_dir}/folly/experimental/symbolizer/SignalHandler.cpp"
   )
 
+file(GLOB_RECURSE headers "${base_dir}/folly/*.h" "${base_dir}/folly/**/*.h")
 add_library(folly STATIC "${src}")
-target_include_directories(folly PUBLIC "${base_dir}")
+
+set_property(
+  TARGET folly
+  PROPERTY
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED true)
+
+target_sources(
+  folly
+  PUBLIC
+  FILE_SET headers
+  TYPE HEADERS
+  BASE_DIRS "${base_dir}"
+  FILES "${headers}"
+  )
+
 target_compile_definitions(folly PRIVATE "${defs}")
 target_compile_options(folly PUBLIC "-Wno-nullability-completeness")
 target_link_libraries(
@@ -168,11 +186,10 @@ target_link_libraries(
   PRIVATE
   c++abi
   gflags_static
+  libevent::core
   PUBLIC
-  event_static
-  event_core_static
-  double-conversion
-  fmt
+  double-conversion::double-conversion
+  fmt::fmt
   glog::glog
   Boost::algorithm
   Boost::intrusive
@@ -181,4 +198,3 @@ target_link_libraries(
   Boost::variant
   Boost::iterator
 )
-set_property(TARGET folly PROPERTY CXX_STANDARD 20)
