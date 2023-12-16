@@ -1,5 +1,12 @@
 set(src pybind.cpp)
 
+# This adds the library directory to search path
+if (APPLE)
+  set(CMAKE_INSTALL_RPATH "@loader_path")
+elseif (UNIX)
+  set(CMAKE_INSTALL_RPATH $ORIGIN)
+endif ()
+
 function(add_spdl_extension ffmpeg_version)
   set(name "_spdl_ffmpeg${ffmpeg_version}")
 

@@ -3,7 +3,7 @@ message(STATUS "Configuring glog")
 message(STATUS "########################################")
 
 set(BUILD_SHARED_LIBS OFF)
-set(WITH_GFLAGS OFF)
+set(WITH_GFLAGS ON)
 
 FetchContent_Declare(
   glog
