@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include <folly/Executor.h>
-#include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 
 #include <libspdl/defs.h>
@@ -52,24 +50,12 @@ struct VideoBuffer {
 // Engine
 //////////////////////////////////////////////////////////////////////////////
 class Engine {
-  using Executor = folly::CPUThreadPoolExecutor;
-
- private:
-  std::unique_ptr<Executor> io_task_executors;
-  std::unique_ptr<Executor> decoding_task_executors;
-
-  folly::Executor::KeepAlive<> io_exec;
-  folly::Executor::KeepAlive<> decoding_exec;
-
  public:
   // temporarily public until we figure out a good way to do bookkeeping
   FrameQueue frame_queue;
   std::vector<folly::SemiFuture<folly::Unit>> sfs;
 
-  Engine(
-      size_t num_io_threads,
-      size_t num_decoding_threads,
-      size_t frame_queue_size);
+  Engine(size_t frame_queue_size);
 
   void enqueue(VideoDecodingJob job);
 

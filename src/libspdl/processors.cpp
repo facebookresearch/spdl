@@ -4,6 +4,7 @@
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 
+#include <libspdl/detail/executors.h>
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/detail/ffmpeg/filter_graph.h>
 #include <libspdl/detail/ffmpeg/logging.h>
@@ -312,10 +313,7 @@ Task<void> decode_and_enque(
   co_await queue.enqueue(std::move(frames));
 }
 
-Task<void> stream_decode(
-    VideoDecodingJob job,
-    folly::Executor::KeepAlive<> decode_exec,
-    FrameQueue& queue) {
+Task<void> stream_decode(VideoDecodingJob job, FrameQueue& queue) {
   auto dp = get_data_provider(
       job.src, job.format, job.format_options, job.buffer_size);
   auto demuxer = streaming_demux(dp->get_fmt_ctx(), job.timestamps);
@@ -331,7 +329,7 @@ Task<void> stream_decode(
                          job.height,
                          job.pix_fmt,
                          queue)
-                         .scheduleOn(decode_exec)
+                         .scheduleOn(getDecoderThreadPoolExecutor())
                          .start());
   }
   co_await folly::collectAll(sfs);
@@ -341,19 +339,11 @@ Task<void> stream_decode(
 //////////////////////////////////////////////////////////////////////////////
 // Engine
 //////////////////////////////////////////////////////////////////////////////
-Engine::Engine(
-    size_t num_io_threads,
-    size_t num_decoding_threads,
-    size_t frame_queue_size)
-    : io_task_executors(std::make_unique<Executor>(num_io_threads)),
-      decoding_task_executors(std::make_unique<Executor>(num_decoding_threads)),
-      io_exec(io_task_executors.get()),
-      decoding_exec(decoding_task_executors.get()),
-      frame_queue(frame_queue_size) {}
+Engine::Engine(size_t frame_queue_size) : frame_queue(frame_queue_size) {}
 
 void Engine::enqueue(VideoDecodingJob job) {
-  sfs.emplace_back(stream_decode(std::move(job), decoding_exec, frame_queue)
-                       .scheduleOn(io_exec)
+  sfs.emplace_back(stream_decode(std::move(job), frame_queue)
+                       .scheduleOn(getDemuxerThreadPoolExecutor())
                        .start());
 }
 
