@@ -167,7 +167,7 @@ target_link_libraries(
   folly
   PRIVATE
   c++abi
-  gflags::gflags
+  gflags_static
   PUBLIC
   event_static
   event_core_static
