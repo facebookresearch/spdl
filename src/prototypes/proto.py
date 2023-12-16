@@ -1,3 +1,4 @@
+import sys
 import logging
 
 import numpy as np
@@ -31,6 +32,7 @@ def _plot(frames):
 
 def _main():
     args = _parse_args()
+
     _init_logging(args.debug)
 
     src = args.input_video
@@ -63,6 +65,8 @@ def _init_logging(debug):
     logging.basicConfig(level=logging.INFO)
     if debug:
         logging.getLogger("spdl").setLevel(logging.DEBUG)
+
+    libspdl.init_folly(sys.argv[0])
 
 
 if __name__ == "__main__":
