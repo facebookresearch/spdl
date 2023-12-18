@@ -153,7 +153,7 @@ AVCodecContextPtr alloc_codec_context(
   return AVCodecContextPtr{codec_ctx};
 }
 
-#ifdef USE_CUDA
+#ifdef SPDL_USE_CUDA
 const AVCodecHWConfig* get_cuda_config(const AVCodec* codec) {
   for (int i = 0;; ++i) {
     const AVCodecHWConfig* config = avcodec_get_hw_config(codec, i);
@@ -245,7 +245,7 @@ void configure_codec_context(
   }
 
   if (cuda_device_index >= 0) {
-#ifndef USE_CUDA
+#ifndef SPDL_USE_CUDA
     throw std::runtime_error("SPDL is not compiled with CUDA support.");
 #else
     XLOG(DBG9) << "Enabling CUDA acceleration";
@@ -292,7 +292,7 @@ AVCodecContextPtr get_codec_ctx(
   configure_codec_context(codec_ctx.get(), params, cuda_device_index);
   codec_ctx->pkt_timebase = pkt_timebase;
   open_codec(codec_ctx.get(), decoder_options);
-#ifdef USE_CUDA
+#ifdef SPDL_USE_CUDA
   if (codec_ctx->hw_device_ctx) {
     codec_ctx->hw_frames_ctx = get_hw_frames_ctx(codec_ctx.get());
   }
