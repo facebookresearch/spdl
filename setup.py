@@ -14,13 +14,32 @@ ext_modules = [
     Extension("spdl.lib._spdl_ffmpeg6", sources=[]),
 ]
 
+def _get_build_env(var, default=False):
+    if var not in os.environ:
+        return default
 
-_USE_CUDA = os.environ.get("USE_CUDA", "OFF")
+    val = os.environ.get(var, "0")
+    trues = ["1", "true", "TRUE", "on", "ON", "yes", "YES"]
+    falses = ["0", "false", "FALSE", "off", "OFF", "no", "NO"]
+    if val in trues:
+        return True
+    if val not in falses:
+        print(f"WARNING: Unexpected environment variable value `{var}={val}`. " f"Expected one of {trues + falses}")
+    return False
+
+
+def _get_option(var, default=False):
+    return "ON" if _get_build_env(var, default) else "OFF"
+
+
+_USE_CUDA = _get_option("USE_CUDA", "OFF")
+_SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS", False)
+
 
 def _get_cmake_commands(build_dir, install_dir, debug):
     cfg = "Debug" if debug else "Release"
     deps_build_dir = os.path.join(build_dir, "folly-deps")
-    cmds = [
+    deps_cmd = [
         # fmt: off
         [
             "cmake",
@@ -37,6 +56,10 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "--target", "install",
             "--config", cfg,
         ],
+        # fmt: on
+    ]
+    main_build_cmd = [
+        # fmt: off
         [
             "cmake",
             "-S", ROOT_DIR,
@@ -60,7 +83,9 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         ],
         # fmt: on
     ]
-    return cmds
+    if _SKIP_FOLLY_DEPS:
+        return main_build_cmd
+    return deps_cmd + main_build_cmd
 
 
 BUILT_ONCE = False
