@@ -439,6 +439,55 @@ VideoBuffer convert_yuv420p(PackagedAVFrames& val) {
   return buf;
 }
 
+VideoBuffer convert_nv12(PackagedAVFrames& val) {
+  assert(val.frames[0]->format == AV_PIX_FMT_NV12);
+  size_t height = val.frames[0]->height;
+  size_t width = val.frames[0]->width;
+  assert(height % 2 == 0 && width % 2 == 0);
+  size_t h2 = height / 2;
+  size_t w2 = width / 2;
+  VideoBuffer buf;
+  buf.n = val.frames.size();
+  buf.c = 1;
+  buf.h = height + h2;
+  buf.w = width;
+  buf.channel_last = false;
+  buf.data.resize(buf.n * buf.h * buf.w);
+
+  uint8_t* dst = buf.data.data();
+  for (const auto& frame : val.frames) {
+    // Y
+    {
+      uint8_t* src = frame->data[0];
+      size_t linesize = buf.w;
+      for (int i = 0; i < frame->height; ++i) {
+        memcpy(dst, src, linesize);
+        src += frame->linesize[0];
+        dst += linesize;
+      }
+    }
+    // UV
+    // TODO: Fix the interweived UV
+    {
+      uint8_t* src = frame->data[1];
+      size_t linesize = buf.w;
+      for (int i = 0; i < h2; ++i) {
+        memcpy(dst, src, linesize);
+        src += frame->linesize[1];
+        dst += linesize;
+      }
+    }
+    XLOG(DBG) << fmt::format(
+        " - {:.3f} ({}x{}, {})",
+        ts(frame->pts, val.time_base),
+        frame->width,
+        frame->height,
+        av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format)));
+  }
+  return buf;
+
+}
+                           
 VideoBuffer Engine::dequeue() {
   VideoBuffer val =
       folly::coro::blockingWait([&]() -> folly::coro::Task<VideoBuffer> {
@@ -450,6 +499,8 @@ VideoBuffer Engine::dequeue() {
             co_return convert_rgb24(val);
           case AV_PIX_FMT_YUV420P:
             co_return convert_yuv420p(val);
+          case AV_PIX_FMT_NV12:
+            co_return convert_nv12(val);
           default:
             throw std::runtime_error(fmt::format(
                 "Unsupported pixel format: {}",

@@ -15,6 +15,8 @@ ext_modules = [
 ]
 
 
+_USE_CUDA = os.environ.get("USE_CUDA", "OFF")
+
 def _get_cmake_commands(build_dir, install_dir, debug):
     cfg = "Debug" if debug else "Release"
     deps_build_dir = os.path.join(build_dir, "folly-deps")
@@ -47,6 +49,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
+            f"-DUSE_CUDA={_USE_CUDA}",
             "-GNinja",
         ],
         [

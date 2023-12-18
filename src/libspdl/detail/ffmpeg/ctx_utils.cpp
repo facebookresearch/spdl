@@ -233,9 +233,11 @@ void configure_codec_context(
     AVCodecContext* codec_ctx,
     const AVCodecParameters* params,
     const int cuda_device_index) {
+  XLOG(DBG9) << "Configuring codec context.";
   CHECK_AVERROR(
       avcodec_parameters_to_context(codec_ctx, params),
       "Failed to set CodecContext parameter.");
+  XLOG(DBG9) << "Codex: " << codec_ctx->codec->name;
 
   if (!codec_ctx->channel_layout) {
     codec_ctx->channel_layout =
@@ -246,6 +248,7 @@ void configure_codec_context(
 #ifndef USE_CUDA
     throw std::runtime_error("SPDL is not compiled with CUDA support.");
 #else
+    XLOG(DBG9) << "Enabling CUDA acceleration";
     const AVCodecHWConfig* cfg = get_cuda_config(codec_ctx->codec);
     // https://www.ffmpeg.org/doxygen/trunk/hw__decode_8c_source.html#l00221
     // 1. Set HW config to opaue pointer.

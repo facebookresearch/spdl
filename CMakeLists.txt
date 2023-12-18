@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
 project(spdl)
 
+option(USE_CUDA "Enable CUDA support" OFF)
+
 ###############################################################################
 # Global config
 ###############################################################################

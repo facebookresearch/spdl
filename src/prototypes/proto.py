@@ -15,19 +15,20 @@ def _parse_args():
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("-i", "--input-video", help="Input video file.", required=True)
     parser.add_argument("--plot", action="store_true")
+    parser.add_argument("--gpu", action="store_true")
     return parser.parse_args()
 
 
-def _plot(frames):
+def _plot(frames, k):
     import matplotlib.pyplot as plt
 
     if frames.shape[1] in [1, 3]:
         frames = np.moveaxis(frames, 1, -1)
 
-    for frame in frames:
+    for i, frame in enumerate(frames):
         print(frame.shape)
         plt.imshow(frame)
-        plt.show()
+        plt.savefig(f'tmp/frame_{k}_{i:03d}.png')
 
 
 def _main():
@@ -50,7 +51,11 @@ def _main():
         },
     ]
 
-    for cfg in configs:
+    for i, cfg in enumerate(configs):
+        if args.gpu:
+            cfg["decoder"] = "h264_cuvid"
+            # cfg["cuda_device_index"] = 0
+
         engine = libspdl.Engine(3, 6, 10)
         engine.enqueue(**cfg)
         buffer = engine.dequeue()
@@ -58,7 +63,7 @@ def _main():
         del buffer
         print(a.shape, a.dtype)
         if args.plot:
-            _plot(a)
+            _plot(a, i)
 
 
 def _init_logging(debug):
