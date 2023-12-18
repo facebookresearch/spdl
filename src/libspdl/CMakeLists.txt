@@ -18,8 +18,8 @@ set(
 set(
   def)
 
-if (USE_CUDA)
-  list(APPEND def USE_CUDA)
+if (SPDL_USE_CUDA)
+  list(APPEND def SPDL_USE_CUDA)
 endif()
 
 function(add_libspdl ffmpeg_version)
