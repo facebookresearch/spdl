@@ -55,6 +55,6 @@ FetchContent_Declare(
   URL https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.tar.xz
   URL_HASH SHA256=2e64e5d79a738d0fa6fb546c6e5c2bd28f88d268a2a080546f74e5ff98f29d0e
   DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
-  PATCH_COMMAND patch < "${CMAKE_CURRENT_SOURCE_DIR}/boost.patch"
+  PATCH_COMMAND patch -p0 < "${CMAKE_CURRENT_SOURCE_DIR}/boost.patch"
   )
 FetchContent_MakeAvailable(boost)

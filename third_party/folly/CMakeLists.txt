@@ -2,21 +2,30 @@ message(STATUS "########################################")
 message(STATUS "# Configuring folly")
 message(STATUS "########################################")
 
+set(url https://github.com/facebook/folly/releases/download/v2023.12.11.00/folly-v2023.12.11.00.tar.gz)
+set(hash SHA256=a814feab0a988ac3aca33e3ffb1cf03c12ed782215f76d9cf018ed66230ea10a)
+
+if (APPLE)
 FetchContent_Declare(
   folly_src
-  URL https://github.com/facebook/folly/releases/download/v2023.12.11.00/folly-v2023.12.11.00.tar.gz
-  URL_HASH SHA256=a814feab0a988ac3aca33e3ffb1cf03c12ed782215f76d9cf018ed66230ea10a
+  URL "${url}"
+  URL_HASH "${hash}"
   PATCH_COMMAND patch < "${CMAKE_CURRENT_SOURCE_DIR}/m1_mac_memalign.patch"
   DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
   )
+else()
+FetchContent_Declare(
+  folly_src
+  URL "${url}"
+  URL_HASH "${hash}"
+  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+endif()
 FetchContent_Populate(folly_src)
 
 #------------------------------------------------------------------------------
 # Configure
 #------------------------------------------------------------------------------
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-
 set(
   defs
   FOLLY_HAS_COROUTINES
@@ -140,6 +149,9 @@ set(
 
   "${base_dir}/folly/net/NetOps.cpp"
 
+  "${base_dir}/folly/portability/SysMembarrier.cpp"
+
+  "${base_dir}/folly/synchronization/AsymmetricThreadFence.cpp"
   "${base_dir}/folly/synchronization/AtomicNotification.cpp"
   "${base_dir}/folly/synchronization/DistributedMutex.cpp"
   "${base_dir}/folly/synchronization/Hazptr.cpp"
@@ -184,7 +196,6 @@ target_compile_options(folly PUBLIC "-Wno-nullability-completeness")
 target_link_libraries(
   folly
   PRIVATE
-  c++abi
   gflags_static
   libevent::core
   PUBLIC
@@ -198,3 +209,11 @@ target_link_libraries(
   Boost::variant
   Boost::iterator
 )
+
+if (APPLE)
+target_link_libraries(
+  folly
+  PRIVATE
+  c++abi
+)
+endif()
