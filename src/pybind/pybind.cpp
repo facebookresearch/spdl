@@ -82,7 +82,10 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
 
   py::class_<VideoBuffer>(
       m, "VideoBuffer", py::buffer_protocol(), py::module_local())
-      .def_buffer(get_buffer);
+      .def_buffer(get_buffer)
+      .def_property_readonly("channel_last", [](const VideoBuffer& self) {
+        return self.channel_last;
+      });
   py::class_<Engine>(m, "Engine", py::module_local())
       .def(
           py::init([](size_t frame_queue_size) {

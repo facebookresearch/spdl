@@ -1,7 +1,5 @@
 import logging
 
-import numpy as np
-
 from spdl import libspdl
 
 
@@ -21,9 +19,6 @@ def _parse_python_args():
 
 def _plot(frames, k):
     import matplotlib.pyplot as plt
-
-    if frames.shape[1] in [1, 3]:
-        frames = np.moveaxis(frames, 1, -1)
 
     for i, frame in enumerate(frames):
         print(frame.shape)
@@ -59,9 +54,7 @@ def _main():
 
         engine = libspdl.Engine(10)
         engine.enqueue(**cfg)
-        buffer = engine.dequeue()
-        a = np.array(buffer, copy=False)
-        del buffer
+        a = libspdl.to_numpy(engine.dequeue(), format="NHWC")
         print(a.shape, a.dtype)
         if args.plot:
             _plot(a, i)
