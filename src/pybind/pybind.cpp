@@ -40,14 +40,14 @@ py::buffer_info get_buffer(VideoBuffer& b) {
 }
 
 struct DoublePtr {
-  char** p;
-  DoublePtr(int argc) : p(new char*[argc]) {}
+  char **p, **p_orig;
+  DoublePtr(int argc) : p(new char*[argc]), p_orig(p) {}
   DoublePtr(const DoublePtr&) = delete;
   DoublePtr& operator=(const DoublePtr&) = delete;
   DoublePtr(DoublePtr&&) noexcept = delete;
   DoublePtr& operator=(DoublePtr&&) noexcept = delete;
   ~DoublePtr() {
-    delete[] p;
+    delete[] p_orig;
   }
 };
 
@@ -57,28 +57,29 @@ void delete_folly_init() {
   delete FOLLY_INIT;
 }
 
-void init_folly_init(
+std::vector<std::string> init_folly_init(
     const std::string& prog,
     const std::vector<std::string>& orig_args) {
   int nargs = 1 + orig_args.size();
   DoublePtr args(nargs);
   args.p[0] = const_cast<char*>(prog.c_str());
-  for (size_t i = 1; i < nargs; ++i) {
+  for (int i = 1; i < nargs; ++i) {
     args.p[i] = const_cast<char*>(orig_args[i - 1].c_str());
   }
-  FOLLY_INIT = new folly::Init{&nargs, &args.p, false};
+
+  FOLLY_INIT = new folly::Init{&nargs, &args.p};
   Py_AtExit(delete_folly_init);
+
+  std::vector<std::string> ret;
+  for (int i = 0; i < nargs; ++i) {
+    ret.emplace_back(args.p[i]);
+  }
+  return ret;
 }
 
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
-  m.def(
-      "init_folly",
-      [](const std::string& prog,
-         const std::optional<std::vector<std::string>>& args) {
-        init_folly_init(prog, args.value_or(std::vector<std::string>{}));
-      },
-      py::arg("prog"),
-      py::arg("args") = py::none());
+  m.def("init_folly", &init_folly_init);
+
   py::class_<VideoBuffer>(
       m, "VideoBuffer", py::buffer_protocol(), py::module_local())
       .def_buffer(get_buffer);

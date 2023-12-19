@@ -485,9 +485,8 @@ VideoBuffer convert_nv12(PackagedAVFrames& val) {
         av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format)));
   }
   return buf;
-
 }
-                           
+
 VideoBuffer Engine::dequeue() {
   VideoBuffer val =
       folly::coro::blockingWait([&]() -> folly::coro::Task<VideoBuffer> {

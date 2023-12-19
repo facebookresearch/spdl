@@ -14,6 +14,7 @@ ext_modules = [
     Extension("spdl.lib._spdl_ffmpeg6", sources=[]),
 ]
 
+
 def _get_build_env(var, default=False):
     if var not in os.environ:
         return default
@@ -24,7 +25,10 @@ def _get_build_env(var, default=False):
     if val in trues:
         return True
     if val not in falses:
-        print(f"WARNING: Unexpected environment variable value `{var}={val}`. " f"Expected one of {trues + falses}")
+        print(
+            f"WARNING: Unexpected environment variable value `{var}={val}`. "
+            f"Expected one of {trues + falses}"
+        )
     return False
 
 
