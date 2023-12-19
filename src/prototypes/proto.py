@@ -15,7 +15,8 @@ def _parse_python_args():
     parser.add_argument("-i", "--input-video", help="Input video file.", required=True)
     parser.add_argument("--plot", action="store_true")
     parser.add_argument("--gpu", action="store_true")
-    return parser.parse_known_args()
+    parser.add_argument("others", nargs="*")
+    return parser.parse_args()
 
 
 def _plot(frames, k):
@@ -31,8 +32,9 @@ def _plot(frames, k):
 
 
 def _main():
-    args, others = _parse_python_args()
-    libspdl.init_folly(others)
+    args = _parse_python_args()
+    print(args.others)
+    libspdl.init_folly(args.others)
 
     _init_logging(args.debug)
 
