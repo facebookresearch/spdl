@@ -1,12 +1,11 @@
 import logging
-import sys
 
 import numpy as np
 
-from spdl.lib import libspdl
+from spdl import libspdl
 
 
-def _parse_args():
+def _parse_python_args():
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -16,7 +15,7 @@ def _parse_args():
     parser.add_argument("-i", "--input-video", help="Input video file.", required=True)
     parser.add_argument("--plot", action="store_true")
     parser.add_argument("--gpu", action="store_true")
-    return parser.parse_args()
+    return parser.parse_known_args()
 
 
 def _plot(frames, k):
@@ -28,11 +27,12 @@ def _plot(frames, k):
     for i, frame in enumerate(frames):
         print(frame.shape)
         plt.imshow(frame)
-        plt.savefig(f'tmp/frame_{k}_{i:03d}.png')
+        plt.savefig(f"tmp/frame_{k}_{i:03d}.png")
 
 
 def _main():
-    args = _parse_args()
+    args, others = _parse_python_args()
+    libspdl.init_folly(others)
 
     _init_logging(args.debug)
 
@@ -70,8 +70,6 @@ def _init_logging(debug):
     logging.basicConfig(level=logging.INFO)
     if debug:
         logging.getLogger("spdl").setLevel(logging.DEBUG)
-
-    libspdl.init_folly(sys.argv[0])
 
 
 if __name__ == "__main__":
