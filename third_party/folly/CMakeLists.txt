@@ -26,22 +26,28 @@ FetchContent_Populate(folly_src)
 #------------------------------------------------------------------------------
 # Configure
 #------------------------------------------------------------------------------
-set(
-  defs
-  FOLLY_HAS_COROUTINES
-  FOLLY_HAVE_PTHREAD
-  FOLLY_HAVE_LIBGFLAGS
-  )
-
 set(base_dir ${folly_src_SOURCE_DIR})
 set(CMAKE_MODULE_PATH
   "${base_dir}/CMake"
   )
+
+set(FOLLY_HAVE_PTHREAD ON)
 include(FollyConfigChecks)
+# Overrides some configuration.
+# FollyConfigChecks does not work properly as we do not call `include(folly-deps)`
+set(FOLLY_HAVE_LIBGLOG ON)
+set(FOLLY_HAVE_LIBGFLAGS ON)
+set(FOLLY_UNUSUAL_GFLAGS_NAMESPACE OFF)
+set(FOLLY_GFLAGS_NAMESPACE gflags)
 configure_file(
   ${base_dir}/CMake/folly-config.h.cmake
   ${base_dir}/folly/folly-config.h
 )
+
+set(
+  defs
+  FOLLY_HAS_COROUTINES
+  )
 
 set(
   src
