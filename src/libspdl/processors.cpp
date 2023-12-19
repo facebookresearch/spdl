@@ -32,23 +32,13 @@ template <typename T>
 using Generator = folly::coro::AsyncGenerator<T>;
 
 namespace spdl {
-//////////////////////////////////////////////////////////////////////////////
-// PackagedAVFrames
-//////////////////////////////////////////////////////////////////////////////
-PackagedAVFrames::~PackagedAVFrames() {
-  std::for_each(frames.begin(), frames.end(), [](AVFrame* p) {
-    av_frame_unref(p);
-    av_frame_free(&p);
-  });
-}
-
 namespace {
 
 //////////////////////////////////////////////////////////////////////////////
 // PackagedAVPackets
 //////////////////////////////////////////////////////////////////////////////
 // Struct passed from IO thread pool to decoder thread pool.
-// Similar to PackagedAVFrames, AVFrame pointers are bulk released.
+// Similar to DecodedVideoFrames, AVFrame pointers are bulk released.
 // It contains sufficient information to build decoder via AVStream*.
 struct PackagedAVPackets {
   // Owned by the top level AVFormatContext that client code keeps.
@@ -299,10 +289,12 @@ Task<void> decode_and_enque(
 
   // XLOG(DBG) << describe_graph(filter_graph.get());
 
-  PackagedAVFrames frames;
-  frames.time_base = to_tuple(
-      filter_graph ? filter_graph->filters[1]->inputs[0]->time_base
-                   : packets.time_base);
+  DecodedVideoFrames frames;
+  // Note:
+  // Way to retrieve the time base of the decoded frame are different
+  // whether filter graph is used or not
+  // with filter graph, it's `filter_graph->filters[1]->inputs[0]->time_base`
+  // otherwise packets.time_base
   auto decoding = filter_graph
       ? decode_packets(packets.packets, codec_ctx.get(), filter_graph.get())
       : decode_packets(packets.packets, codec_ctx.get());
@@ -347,7 +339,7 @@ void Engine::enqueue(VideoDecodingJob job) {
                        .start());
 }
 
-VideoBuffer convert_rgb24(PackagedAVFrames& val) {
+VideoBuffer convert_rgb24(DecodedVideoFrames& val) {
   assert(val.frames[0]->format == AV_PIX_FMT_RGB24);
   VideoBuffer buf;
   buf.n = val.frames.size();
@@ -365,18 +357,11 @@ VideoBuffer convert_rgb24(PackagedAVFrames& val) {
       src += frame->linesize[0];
       dst += linesize;
     }
-
-    XLOG(DBG) << fmt::format(
-        " - {:.3f} ({}x{}, {})",
-        ts(frame->pts, val.time_base),
-        frame->width,
-        frame->height,
-        av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format)));
   }
   return buf;
 }
 
-VideoBuffer convert_yuv420p(PackagedAVFrames& val) {
+VideoBuffer convert_yuv420p(DecodedVideoFrames& val) {
   assert(val.frames[0]->format == AV_PIX_FMT_YUV420P);
   size_t height = val.frames[0]->height;
   size_t width = val.frames[0]->width;
@@ -419,17 +404,11 @@ VideoBuffer convert_yuv420p(PackagedAVFrames& val) {
         dst += linesize;
       }
     }
-    XLOG(DBG) << fmt::format(
-        " - {:.3f} ({}x{}, {})",
-        ts(frame->pts, val.time_base),
-        frame->width,
-        frame->height,
-        av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format)));
   }
   return buf;
 }
 
-VideoBuffer convert_nv12(PackagedAVFrames& val) {
+VideoBuffer convert_nv12(DecodedVideoFrames& val) {
   assert(val.frames[0]->format == AV_PIX_FMT_NV12);
   size_t height = val.frames[0]->height;
   size_t width = val.frames[0]->width;
@@ -467,12 +446,6 @@ VideoBuffer convert_nv12(PackagedAVFrames& val) {
         dst += linesize;
       }
     }
-    XLOG(DBG) << fmt::format(
-        " - {:.3f} ({}x{}, {})",
-        ts(frame->pts, val.time_base),
-        frame->width,
-        frame->height,
-        av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format)));
   }
   return buf;
 }

@@ -12,6 +12,7 @@ set(
   detail/ffmpeg/filter_graph.cpp
   detail/interface/mmap.cpp
   detail/executors.cpp
+  buffer.cpp
   interface.cpp
   processors.cpp
   )
