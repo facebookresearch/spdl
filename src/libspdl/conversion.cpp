@@ -11,7 +11,7 @@ extern "C" {
 
 namespace spdl {
 
-VideoBuffer convert_rgb24(const DecodedFrames& val) {
+VideoBuffer convert_rgb24(const Frames& val) {
   assert(val.frames[0]->format == AV_PIX_FMT_RGB24);
   VideoBuffer buf;
   buf.n = val.frames.size();
@@ -33,7 +33,7 @@ VideoBuffer convert_rgb24(const DecodedFrames& val) {
   return buf;
 }
 
-VideoBuffer convert_yuv420p(const DecodedFrames& val) {
+VideoBuffer convert_yuv420p(const Frames& val) {
   assert(val.frames[0]->format == AV_PIX_FMT_YUV420P);
   size_t height = val.frames[0]->height;
   size_t width = val.frames[0]->width;
@@ -80,7 +80,7 @@ VideoBuffer convert_yuv420p(const DecodedFrames& val) {
   return buf;
 }
 
-VideoBuffer convert_nv12(const DecodedFrames& val) {
+VideoBuffer convert_nv12(const Frames& val) {
   assert(val.frames[0]->format == AV_PIX_FMT_NV12);
   size_t height = val.frames[0]->height;
   size_t width = val.frames[0]->width;
@@ -122,7 +122,7 @@ VideoBuffer convert_nv12(const DecodedFrames& val) {
   return buf;
 }
 
-VideoBuffer convert_frames(const DecodedFrames& val) {
+VideoBuffer convert_frames(const Frames& val) {
   switch (static_cast<AVPixelFormat>(val.frames[0]->format)) {
     case AV_PIX_FMT_RGB24:
       return convert_rgb24(val);

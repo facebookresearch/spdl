@@ -54,7 +54,14 @@ def _main():
 
         engine = libspdl.Engine(10)
         engine.enqueue(**cfg)
-        a = libspdl.to_numpy(engine.dequeue().get_batch(), format="NHWC")
+        decoded_frames = engine.dequeue()
+        print(len(decoded_frames))
+        sliced = decoded_frames[2:7:2]
+        print(len(sliced))
+        a = libspdl.to_numpy(decoded_frames.to_buffer(), format="NHWC")
+        del decoded_frames
+        print()
+        del sliced
         print(a.shape, a.dtype)
         if args.plot:
             _plot(a, i)

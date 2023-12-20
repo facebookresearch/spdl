@@ -83,9 +83,19 @@ std::vector<std::string> init_folly_init(
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   m.def("init_folly", &init_folly_init);
 
-  py::class_<DecodedFrames>(m, "DecodedFrames", py::module_local())
-      .def("get_batch", [](DecodedFrames& self) {
-        return convert_frames(self);
+  py::class_<Frames>(m, "Frames", py::module_local())
+      .def("to_buffer", [](const Frames& self) { return convert_frames(self); })
+      .def("__len__", [](const Frames& self) { return self.frames.size(); })
+      .def("__getitem__", [](const Frames& self, const py::slice& slice) {
+        py::ssize_t start = 0, stop = 0, step = 0, len = 0;
+        if (!slice.compute(self.frames.size(), &start, &stop, &step, &len)) {
+          throw py::error_already_set();
+        }
+        return slice_frames(
+            self,
+            static_cast<int>(start),
+            static_cast<int>(stop),
+            static_cast<int>(step));
       });
 
   py::class_<VideoBuffer>(
