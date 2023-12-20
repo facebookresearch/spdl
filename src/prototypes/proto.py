@@ -56,9 +56,11 @@ def _main():
         engine.enqueue(**cfg)
         decoded_frames = engine.dequeue()
         print(len(decoded_frames))
+        print(decoded_frames.width, decoded_frames.height)
         sliced = decoded_frames[2:7:2]
         print(len(sliced))
         a = libspdl.to_numpy(decoded_frames.to_buffer(), format="NHWC")
+
         del decoded_frames
         print()
         del sliced

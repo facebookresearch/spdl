@@ -86,17 +86,22 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   py::class_<Frames>(m, "Frames", py::module_local())
       .def("to_buffer", [](const Frames& self) { return convert_frames(self); })
       .def("__len__", [](const Frames& self) { return self.frames.size(); })
-      .def("__getitem__", [](const Frames& self, const py::slice& slice) {
-        py::ssize_t start = 0, stop = 0, step = 0, len = 0;
-        if (!slice.compute(self.frames.size(), &start, &stop, &step, &len)) {
-          throw py::error_already_set();
-        }
-        return slice_frames(
-            self,
-            static_cast<int>(start),
-            static_cast<int>(stop),
-            static_cast<int>(step));
-      });
+      .def(
+          "__getitem__",
+          [](const Frames& self, const py::slice& slice) {
+            py::ssize_t start = 0, stop = 0, step = 0, len = 0;
+            if (!slice.compute(
+                    self.frames.size(), &start, &stop, &step, &len)) {
+              throw py::error_already_set();
+            }
+            return self.slice(
+                static_cast<int>(start),
+                static_cast<int>(stop),
+                static_cast<int>(step));
+          })
+      .def_property_readonly("width", &Frames::get_width)
+      .def_property_readonly("height", &Frames::get_height)
+      .def_property_readonly("sample_rate", &Frames::get_sample_rate);
 
   py::class_<VideoBuffer>(
       m, "VideoBuffer", py::buffer_protocol(), py::module_local())
