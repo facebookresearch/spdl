@@ -6,14 +6,14 @@ set(CMAKE_CXX_VISIBILITY_PRESET default)
 
 set(
   src
+  detail/conversion.cpp
+  detail/executors.cpp
   detail/ffmpeg/cuda.cpp
   detail/ffmpeg/ctx_utils.cpp
   detail/ffmpeg/wrappers.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/interface/mmap.cpp
-  detail/executors.cpp
   frames.cpp
-  conversion.cpp
   interface.cpp
   processors.cpp
   )

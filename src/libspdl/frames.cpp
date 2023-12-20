@@ -1,3 +1,4 @@
+#include <libspdl/detail/conversion.h>
 #include <libspdl/detail/ffmpeg/logging.h>
 #include <libspdl/frames.h>
 
@@ -63,6 +64,10 @@ Frames Frames::slice(int start, int stop, int step) const {
     out.frames.push_back(dst);
   }
   return out;
+}
+
+VideoBuffer Frames::to_video_buffer(int plane) const {
+  return detail::convert_frames(frames, plane);
 }
 
 } // namespace spdl

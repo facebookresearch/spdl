@@ -59,14 +59,15 @@ def _main():
         print(decoded_frames.width, decoded_frames.height)
         sliced = decoded_frames[2:7:2]
         print(len(sliced))
-        a = libspdl.to_numpy(decoded_frames.to_buffer(), format="NHWC")
-
-        del decoded_frames
-        print()
         del sliced
+        a = libspdl.to_numpy(decoded_frames.to_video_buffer(), format="NHWC")
         print(a.shape, a.dtype)
         if args.plot:
-            _plot(a, i)
+            _plot(a, 2 * i)
+        a = libspdl.to_numpy(decoded_frames.to_video_buffer(0), format="NHWC")
+        print(a.shape, a.dtype)
+        if args.plot:
+            _plot(a, 2 * i + 1)
 
 
 def _init_logging(debug):

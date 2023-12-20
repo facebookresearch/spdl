@@ -34,11 +34,4 @@ struct VideoDecodingJob {
   std::optional<std::string> pix_fmt = std::nullopt;
 };
 
-// video buffer class to be exposed to python
-struct VideoBuffer {
-  size_t n, c, h, w;
-  bool channel_last = false;
-  std::vector<uint8_t> data;
-};
-
 } // namespace spdl

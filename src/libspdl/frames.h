@@ -6,6 +6,8 @@ struct AVFrame;
 
 namespace spdl {
 
+struct VideoBuffer;
+
 // We deal with multiple frames at a time, so we use vector of raw
 // pointers with dedicated destructor, as opposed to vector of managed pointers
 
@@ -26,7 +28,10 @@ struct Frames {
   int get_width() const;
   int get_height() const;
   int get_sample_rate() const;
+
   Frames slice(int start, int stop, int step) const;
+
+  VideoBuffer to_video_buffer(int plane = -1) const;
 };
 
 } // namespace spdl

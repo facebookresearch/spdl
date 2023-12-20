@@ -1,7 +1,8 @@
 #include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
 
-#include <libspdl/conversion.h>
+#include <libspdl/buffers.h>
+#include <libspdl/defs.h>
 #include <libspdl/processors.h>
 
 #include <pybind11/pybind11.h>
@@ -84,7 +85,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   m.def("init_folly", &init_folly_init);
 
   py::class_<Frames>(m, "Frames", py::module_local())
-      .def("to_buffer", [](const Frames& self) { return convert_frames(self); })
+      .def("to_video_buffer", &Frames::to_video_buffer, py::arg("plane") = -1)
       .def("__len__", [](const Frames& self) { return self.frames.size(); })
       .def(
           "__getitem__",
