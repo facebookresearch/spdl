@@ -22,8 +22,11 @@ struct Frames {
   Frames& operator=(Frames&&) noexcept = default;
   // Destructor releases AVFrame* resources
   ~Frames();
-};
 
-Frames slice_frames(const Frames& orig, int start, int stop, int step);
+  int get_width() const;
+  int get_height() const;
+  int get_sample_rate() const;
+  Frames slice(int start, int stop, int step) const;
+};
 
 } // namespace spdl

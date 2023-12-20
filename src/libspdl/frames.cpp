@@ -41,12 +41,24 @@ Frames::~Frames() {
   });
 }
 
-Frames slice_frames(const Frames& orig, int start, int stop, int step) {
+int Frames::get_width() const {
+  return frames.size() ? frames[0]->width : -1;
+}
+
+int Frames::get_height() const {
+  return frames.size() ? frames[0]->height : -1;
+}
+
+int Frames::get_sample_rate() const {
+  return frames.size() ? frames[0]->sample_rate : -1;
+}
+
+Frames Frames::slice(int start, int stop, int step) const {
   Frames out{};
   for (int i = start; i < stop; i += step) {
     AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
     CHECK_AVERROR(
-        av_frame_ref(dst, orig.frames[i]),
+        av_frame_ref(dst, frames[i]),
         "Failed to create a new reference to an AVFrame.");
     out.frames.push_back(dst);
   }
