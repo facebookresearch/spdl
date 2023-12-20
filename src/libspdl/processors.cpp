@@ -4,7 +4,6 @@
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 
-#include <libspdl/conversion.h>
 #include <libspdl/detail/executors.h>
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/detail/ffmpeg/filter_graph.h>
