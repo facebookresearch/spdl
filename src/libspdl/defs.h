@@ -34,32 +34,6 @@ struct VideoDecodingJob {
   std::optional<std::string> pix_fmt = std::nullopt;
 };
 
-} // namespace spdl
-
-struct AVFrame;
-
-namespace spdl {
-
-// We deal with multiple frames at a time, so we use vector of raw
-// pointers with dedicated destructor, as opposed to vector of managed pointers
-// Each AVFrame* is expected to be created by av_read_frame.
-// Therefore, they are reference counted and the counter should be 1.
-// When destructing, they will be first unreferenced with av_frame_unref,
-// then the data must be released with av_frame_free.
-struct DecodedFrames {
-  std::vector<AVFrame*> frames{};
-
-  explicit DecodedFrames() = default;
-  // No copy constructors
-  DecodedFrames(const DecodedFrames&) = delete;
-  DecodedFrames& operator=(const DecodedFrames&) = delete;
-  // Move constructors to support MPMCQueue (BoundedQueue)
-  DecodedFrames(DecodedFrames&&) noexcept = default;
-  DecodedFrames& operator=(DecodedFrames&&) noexcept = default;
-  // Destructor releases AVFrame* resources
-  ~DecodedFrames();
-};
-
 // video buffer class to be exposed to python
 struct VideoBuffer {
   size_t n, c, h, w;

@@ -12,7 +12,7 @@ set(
   detail/ffmpeg/filter_graph.cpp
   detail/interface/mmap.cpp
   detail/executors.cpp
-  defs.cpp
+  frames.cpp
   conversion.cpp
   interface.cpp
   processors.cpp
@@ -23,6 +23,10 @@ set(
 
 if (SPDL_USE_CUDA)
   list(APPEND def SPDL_USE_CUDA)
+endif()
+
+if (SPDL_DEBUG_REFCOUNT)
+  list(APPEND def SPDL_DEBUG_REFCOUNT)
 endif()
 
 function(add_libspdl ffmpeg_version)

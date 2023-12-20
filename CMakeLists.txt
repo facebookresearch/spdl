@@ -4,6 +4,7 @@ project(spdl)
 
 include(./cmake/spdl_common_config.cmake)
 option(SPDL_USE_CUDA "Enable CUDA support" OFF)
+option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
 
 ###############################################################################
 # Build folly, libspdl and binding

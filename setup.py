@@ -36,7 +36,8 @@ def _get_option(var, default=False):
     return "ON" if _get_build_env(var, default) else "OFF"
 
 
-_USE_CUDA = _get_option("USE_CUDA", "OFF")
+_USE_CUDA = _get_option("USE_CUDA")
+_DEBUG_REFCOUNT = _get_option("DEBUG_REFCOUNT")
 _SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS", False)
 
 
@@ -77,6 +78,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
             f"-DSPDL_USE_CUDA={_USE_CUDA}",
+            f"-DSPDL_DEBUG_REFCOUNT={_DEBUG_REFCOUNT}",
             "-GNinja",
         ],
         [

@@ -6,14 +6,14 @@
 
 #include <folly/experimental/coro/BoundedQueue.h>
 
-#include <libspdl/defs.h>
+#include <libspdl/frames.h>
 
 struct AVFrame;
 
 namespace spdl {
 
 // Temp
-using FrameQueue = folly::coro::BoundedQueue<DecodedFrames, false, true>;
+using FrameQueue = folly::coro::BoundedQueue<Frames, false, true>;
 
 //////////////////////////////////////////////////////////////////////////////
 // Engine
@@ -28,7 +28,7 @@ class Engine {
 
   void enqueue(VideoDecodingJob job);
 
-  DecodedFrames dequeue();
+  Frames dequeue();
 };
 
 } // namespace spdl

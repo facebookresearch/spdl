@@ -39,7 +39,7 @@ namespace {
 // PackagedAVPackets
 //////////////////////////////////////////////////////////////////////////////
 // Struct passed from IO thread pool to decoder thread pool.
-// Similar to DecodedFrames, AVFrame pointers are bulk released.
+// Similar to Frames, AVFrame pointers are bulk released.
 // It contains sufficient information to build decoder via AVStream*.
 struct PackagedAVPackets {
   // Owned by the top level AVFormatContext that client code keeps.
@@ -290,7 +290,7 @@ Task<void> decode_and_enque(
 
   // XLOG(DBG) << describe_graph(filter_graph.get());
 
-  DecodedFrames frames;
+  Frames frames;
   // Note:
   // Way to retrieve the time base of the decoded frame are different
   // whether filter graph is used or not
@@ -340,8 +340,8 @@ void Engine::enqueue(VideoDecodingJob job) {
                        .start());
 }
 
-DecodedFrames Engine::dequeue() {
-  DecodedFrames frames = folly::coro::blockingWait(frame_queue.dequeue());
+Frames Engine::dequeue() {
+  Frames frames = folly::coro::blockingWait(frame_queue.dequeue());
   // TODO: validate the number of frames > 0
   XLOG(DBG) << fmt::format("Dequeue {} frames", frames.frames.size());
   return frames;
