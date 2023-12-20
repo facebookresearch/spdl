@@ -1,6 +1,9 @@
 #include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
+
+#include <libspdl/conversion.h>
 #include <libspdl/processors.h>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <cstddef>
@@ -79,6 +82,11 @@ std::vector<std::string> init_folly_init(
 
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   m.def("init_folly", &init_folly_init);
+
+  py::class_<DecodedFrames>(m, "DecodedFrames", py::module_local())
+      .def("get_batch", [](DecodedFrames& self) {
+        return convert_frames(self);
+      });
 
   py::class_<VideoBuffer>(
       m, "VideoBuffer", py::buffer_protocol(), py::module_local())

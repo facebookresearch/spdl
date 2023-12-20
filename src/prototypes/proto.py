@@ -54,7 +54,7 @@ def _main():
 
         engine = libspdl.Engine(10)
         engine.enqueue(**cfg)
-        a = libspdl.to_numpy(engine.dequeue(), format="NHWC")
+        a = libspdl.to_numpy(engine.dequeue().get_batch(), format="NHWC")
         print(a.shape, a.dtype)
         if args.plot:
             _plot(a, i)

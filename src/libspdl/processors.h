@@ -7,21 +7,13 @@
 #include <folly/experimental/coro/BoundedQueue.h>
 
 #include <libspdl/defs.h>
-#include <libspdl/buffer.h>
 
 struct AVFrame;
 
 namespace spdl {
 
 // Temp
-using FrameQueue = folly::coro::BoundedQueue<DecodedVideoFrames, false, true>;
-
-// buffer class to be exposed to python
-struct VideoBuffer {
-  size_t n, c, h, w;
-  bool channel_last = false;
-  std::vector<uint8_t> data;
-};
+using FrameQueue = folly::coro::BoundedQueue<DecodedFrames, false, true>;
 
 //////////////////////////////////////////////////////////////////////////////
 // Engine
@@ -36,7 +28,7 @@ class Engine {
 
   void enqueue(VideoDecodingJob job);
 
-  VideoBuffer dequeue();
+  DecodedFrames dequeue();
 };
 
 } // namespace spdl
