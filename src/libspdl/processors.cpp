@@ -4,6 +4,7 @@
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/BoundedQueue.h>
 
+#include <libspdl/conversion.h>
 #include <libspdl/detail/executors.h>
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/detail/ffmpeg/filter_graph.h>
@@ -38,7 +39,7 @@ namespace {
 // PackagedAVPackets
 //////////////////////////////////////////////////////////////////////////////
 // Struct passed from IO thread pool to decoder thread pool.
-// Similar to DecodedVideoFrames, AVFrame pointers are bulk released.
+// Similar to DecodedFrames, AVFrame pointers are bulk released.
 // It contains sufficient information to build decoder via AVStream*.
 struct PackagedAVPackets {
   // Owned by the top level AVFormatContext that client code keeps.
@@ -289,7 +290,7 @@ Task<void> decode_and_enque(
 
   // XLOG(DBG) << describe_graph(filter_graph.get());
 
-  DecodedVideoFrames frames;
+  DecodedFrames frames;
   // Note:
   // Way to retrieve the time base of the decoded frame are different
   // whether filter graph is used or not
@@ -339,146 +340,11 @@ void Engine::enqueue(VideoDecodingJob job) {
                        .start());
 }
 
-VideoBuffer convert_rgb24(DecodedVideoFrames& val) {
-  assert(val.frames[0]->format == AV_PIX_FMT_RGB24);
-  VideoBuffer buf;
-  buf.n = val.frames.size();
-  buf.c = 3;
-  buf.h = static_cast<size_t>(val.frames[0]->height);
-  buf.w = static_cast<size_t>(val.frames[0]->width);
-  buf.channel_last = true;
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  size_t linesize = buf.c * buf.w;
-  uint8_t* dst = buf.data.data();
-  for (const auto& frame : val.frames) {
-    uint8_t* src = frame->data[0];
-    for (int i = 0; i < frame->height; ++i) {
-      memcpy(dst, src, linesize);
-      src += frame->linesize[0];
-      dst += linesize;
-    }
-  }
-  return buf;
-}
-
-VideoBuffer convert_yuv420p(DecodedVideoFrames& val) {
-  assert(val.frames[0]->format == AV_PIX_FMT_YUV420P);
-  size_t height = val.frames[0]->height;
-  size_t width = val.frames[0]->width;
-  assert(height % 2 == 0 && width % 2 == 0);
-  size_t h2 = height / 2;
-  size_t w2 = width / 2;
-  VideoBuffer buf;
-  buf.n = val.frames.size();
-  buf.c = 1;
-  buf.h = height + h2;
-  buf.w = width;
-  buf.channel_last = false;
-  buf.data.resize(buf.n * buf.h * buf.w);
-
-  uint8_t* dst = buf.data.data();
-  for (const auto& frame : val.frames) {
-    // Y
-    {
-      uint8_t* src = frame->data[0];
-      size_t linesize = buf.w;
-      for (int i = 0; i < frame->height; ++i) {
-        memcpy(dst, src, linesize);
-        src += frame->linesize[0];
-        dst += linesize;
-      }
-    }
-    // U & V
-    {
-      uint8_t* src_u = frame->data[1];
-      uint8_t* src_v = frame->data[2];
-      size_t linesize = w2;
-      for (int i = 0; i < h2; ++i) {
-        // U
-        memcpy(dst, src_u, linesize);
-        src_u += frame->linesize[1];
-        dst += linesize;
-        // V
-        memcpy(dst, src_v, linesize);
-        src_v += frame->linesize[2];
-        dst += linesize;
-      }
-    }
-  }
-  return buf;
-}
-
-VideoBuffer convert_nv12(DecodedVideoFrames& val) {
-  assert(val.frames[0]->format == AV_PIX_FMT_NV12);
-  size_t height = val.frames[0]->height;
-  size_t width = val.frames[0]->width;
-  assert(height % 2 == 0 && width % 2 == 0);
-  size_t h2 = height / 2;
-  size_t w2 = width / 2;
-  VideoBuffer buf;
-  buf.n = val.frames.size();
-  buf.c = 1;
-  buf.h = height + h2;
-  buf.w = width;
-  buf.channel_last = false;
-  buf.data.resize(buf.n * buf.h * buf.w);
-
-  uint8_t* dst = buf.data.data();
-  for (const auto& frame : val.frames) {
-    // Y
-    {
-      uint8_t* src = frame->data[0];
-      size_t linesize = buf.w;
-      for (int i = 0; i < frame->height; ++i) {
-        memcpy(dst, src, linesize);
-        src += frame->linesize[0];
-        dst += linesize;
-      }
-    }
-    // UV
-    // TODO: Fix the interweived UV
-    {
-      uint8_t* src = frame->data[1];
-      size_t linesize = buf.w;
-      for (int i = 0; i < h2; ++i) {
-        memcpy(dst, src, linesize);
-        src += frame->linesize[1];
-        dst += linesize;
-      }
-    }
-  }
-  return buf;
-}
-
-VideoBuffer Engine::dequeue() {
-  VideoBuffer val =
-      folly::coro::blockingWait([&]() -> folly::coro::Task<VideoBuffer> {
-        auto val = co_await frame_queue.dequeue();
-        // TODO: validate the number of frames > 0
-        XLOG(DBG) << fmt::format("Dequeue {} frames", val.frames.size());
-        switch (static_cast<AVPixelFormat>(val.frames[0]->format)) {
-          case AV_PIX_FMT_RGB24:
-            co_return convert_rgb24(val);
-          case AV_PIX_FMT_YUV420P:
-            co_return convert_yuv420p(val);
-          case AV_PIX_FMT_NV12:
-            co_return convert_nv12(val);
-          default:
-            throw std::runtime_error(fmt::format(
-                "Unsupported pixel format: {}",
-                av_get_pix_fmt_name(
-                    static_cast<AVPixelFormat>(val.frames[0]->format))));
-        }
-      }());
-
-  XLOG(DBG) << fmt::format(
-      "Buffer returned: {}x{}x{}x{} ({})",
-      val.n,
-      val.c,
-      val.h,
-      val.w,
-      fmt::ptr(val.data.data()));
-  return val;
+DecodedFrames Engine::dequeue() {
+  DecodedFrames frames = folly::coro::blockingWait(frame_queue.dequeue());
+  // TODO: validate the number of frames > 0
+  XLOG(DBG) << fmt::format("Dequeue {} frames", frames.frames.size());
+  return frames;
 }
 
 } // namespace spdl
