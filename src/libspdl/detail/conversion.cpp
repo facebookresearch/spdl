@@ -26,7 +26,7 @@ void copy_2d(
   }
 }
 
-VideoBuffer convert_rgb24(const std::vector<AVFrame*>& frames) {
+VideoBuffer convert_interleaved(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
   VideoBuffer buf{frames.size(), 3, h, w, /*channel_last=*/true};
@@ -35,6 +35,32 @@ VideoBuffer convert_rgb24(const std::vector<AVFrame*>& frames) {
   uint8_t* dst = buf.data.data();
   for (const auto& f : frames) {
     copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc);
+  }
+  return buf;
+}
+
+VideoBuffer convert_planer(const std::vector<AVFrame*>& frames) {
+  size_t h = frames[0]->height, w = frames[0]->width;
+
+  VideoBuffer buf{frames.size(), 3, h, w};
+  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
+  uint8_t* dst = buf.data.data();
+  for (const auto& f : frames) {
+    for (int c = 0; c < buf.c; ++c) {
+      copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
+    }
+  }
+  return buf;
+}
+
+VideoBuffer convert_plane(const std::vector<AVFrame*>& frames, int plane) {
+  size_t h = frames[0]->height, w = frames[0]->width;
+
+  VideoBuffer buf{frames.size(), 1, h, w};
+  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
+  uint8_t* dst = buf.data.data();
+  for (const auto& f : frames) {
+    copy_2d(f->data[plane], h, w, f->linesize[plane], &dst, w);
   }
   return buf;
 }
@@ -54,18 +80,6 @@ VideoBuffer convert_yuv420p(const std::vector<AVFrame*>& frames) {
     uint8_t* dst2 = dst + w2;
     copy_2d(f->data[1], h2, w2, f->linesize[1], &dst, w);
     copy_2d(f->data[2], h2, w2, f->linesize[2], &dst2, w);
-  }
-  return buf;
-}
-
-VideoBuffer convert_y(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-
-  VideoBuffer buf{frames.size(), 1, h, w};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  uint8_t* dst = buf.data.data();
-  for (const auto& f : frames) {
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
   }
   return buf;
 }
@@ -117,7 +131,7 @@ VideoBuffer convert_nv12_uv(const std::vector<AVFrame*>& frames) {
 
 } // namespace
 
-VideoBuffer convert_frames(
+VideoBuffer convert_video_frames(
     const std::vector<AVFrame*>& frames,
     const int plane) {
   if (!frames.size()) {
@@ -128,10 +142,24 @@ VideoBuffer convert_frames(
       switch (plane) {
         case -1:
         case 0:
-          return convert_rgb24(frames);
+          return convert_interleaved(frames);
         default:
           throw std::runtime_error(fmt::format(
               "`plane` value for RGB24 format must be 0. (Found: {})", plane));
+      }
+    }
+    case AV_PIX_FMT_YUV444P: {
+      switch (plane) {
+        case -1:
+          return convert_interleaved(frames);
+        case 0:
+        case 1:
+        case 2:
+          return convert_plane(frames, plane);
+        default:
+          throw std::runtime_error(fmt::format(
+              "Valid `plane` values for YUV444P are [0, 1, 2]. (Found: {})",
+              plane));
       }
     }
     case AV_PIX_FMT_YUV420P: {
@@ -139,7 +167,7 @@ VideoBuffer convert_frames(
         case -1:
           return convert_yuv420p(frames);
         case 0:
-          return convert_y(frames);
+          return convert_plane(frames, plane);
         case 1:
         case 2:
           return convert_u_or_v(frames, plane);
@@ -154,7 +182,7 @@ VideoBuffer convert_frames(
         case -1:
           return convert_nv12(frames);
         case 0:
-          return convert_y(frames);
+          return convert_plane(frames, plane);
         case 1:
           return convert_nv12_uv(frames);
         default:
