@@ -21,7 +21,6 @@ def _plot(frames, k):
     import matplotlib.pyplot as plt
 
     for i, frame in enumerate(frames):
-        print(frame.shape)
         plt.imshow(frame)
         plt.savefig(f"tmp/frame_{k}_{i:03d}.png")
 

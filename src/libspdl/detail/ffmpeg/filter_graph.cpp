@@ -127,12 +127,11 @@ AVFilterGraphPtr get_filter(
 
 AVFilterGraphPtr get_audio_filter(
     const std::string& filter_description,
-    AVCodecContext* codec_ctx,
-    AVRational time_base) {
+    AVCodecContext* codec_ctx) {
   static const AVFilter* src = avfilter_get_by_name("abuffer");
   static const AVFilter* sink = avfilter_get_by_name("abuffersink");
   auto arg = get_abuffer_arg(
-      time_base,
+      codec_ctx->pkt_timebase,
       codec_ctx->sample_rate,
       av_get_sample_fmt_name(codec_ctx->sample_fmt),
       codec_ctx->channel_layout);
@@ -142,7 +141,6 @@ AVFilterGraphPtr get_audio_filter(
 AVFilterGraphPtr get_video_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx,
-    AVRational time_base,
     AVRational frame_rate) {
   static const AVFilter* src = avfilter_get_by_name("buffer");
   static const AVFilter* sink = avfilter_get_by_name("buffersink");
@@ -150,7 +148,7 @@ AVFilterGraphPtr get_video_filter(
       codec_ctx->width,
       codec_ctx->height,
       av_get_pix_fmt_name(codec_ctx->pix_fmt),
-      time_base,
+      codec_ctx->pkt_timebase,
       frame_rate,
       codec_ctx->sample_aspect_ratio);
   return get_filter(
@@ -162,10 +160,11 @@ AVFilterGraphPtr get_video_filter(
 }
 
 std::string get_video_filter_description(
-    std::optional<Rational> frame_rate,
-    std::optional<int> width,
-    std::optional<int> height,
-    std::optional<std::string> pix_fmt) {
+    const std::optional<Rational> frame_rate,
+    const std::optional<int> width,
+    const std::optional<int> height,
+    const std::optional<std::string> pix_fmt,
+    const enum AVPixelFormat src_pix_fmt) {
   std::vector<std::string> parts;
   if (frame_rate) {
     auto fr = frame_rate.value();
@@ -183,7 +182,11 @@ std::string get_video_filter_description(
     parts.push_back(fmt::format("scale={}", fmt::join(scale, ":")));
   }
   if (pix_fmt) {
-    parts.push_back(fmt::format("format=pix_fmts={}", pix_fmt.value()));
+    auto val = pix_fmt.value();
+    if (src_pix_fmt == AV_PIX_FMT_NONE ||
+        val != av_get_pix_fmt_name(src_pix_fmt)) {
+      parts.push_back(fmt::format("format=pix_fmts={}", val));
+    }
   }
   return fmt::to_string(fmt::join(parts, ","));
 }
