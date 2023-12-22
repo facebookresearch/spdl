@@ -6,8 +6,8 @@ it's used by user code.
 """
 
 import importlib
-from importlib import util as importlib_util
 import logging
+from importlib import util as importlib_util
 from types import ModuleType
 from typing import Any, List
 
