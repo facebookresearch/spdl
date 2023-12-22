@@ -61,6 +61,23 @@ def test_video_buffer_conversion_yuv420(format, pix_fmt="yuv420p"):
 
 
 @pytest.mark.parametrize("format", ["NCHW", "NHWC"])
+def test_video_buffer_conversion_yuv444(format, pix_fmt="yuv444p"):
+    h, w = 128, 256
+
+    frames = _get_video_frames(pix_fmt, h, w)
+
+    # combined
+    array = libspdl.to_numpy(frames.to_video_buffer(), format=format)
+    expected_shape = (3, h, w) if format == "NCHW" else (h, w, 3)
+    assert array.shape[1:4] == expected_shape
+    # individual
+    for i in range(0, 3):
+        array = libspdl.to_numpy(frames.to_video_buffer(i), format=format)
+        expected_shape = (1, h, w) if format == "NCHW" else (h, w, 1)
+        assert array.shape[1:4] == expected_shape
+
+
+@pytest.mark.parametrize("format", ["NCHW", "NHWC"])
 def test_video_buffer_conversion_nv12(format, pix_fmt="nv12"):
     h, w = 128, 256
     h2, w2 = h // 2, w // 2
