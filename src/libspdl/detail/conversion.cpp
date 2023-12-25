@@ -6,6 +6,7 @@
 
 extern "C" {
 #include <libavutil/frame.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/pixdesc.h>
 }
 
@@ -129,15 +130,20 @@ VideoBuffer convert_nv12_uv(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-} // namespace
-
-VideoBuffer convert_video_frames(
+VideoBuffer convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
     const int plane) {
-  if (!frames.size()) {
-    return {};
-  }
-  switch (static_cast<AVPixelFormat>(frames[0]->format)) {
+  auto frames_ctx = (AVHWFramesContext*)(frames[0]->hw_frames_ctx->data);
+  auto sw_pix_fmt = frames_ctx->sw_format;
+  throw std::runtime_error(fmt::format(
+      "CUDA frame ({}) is not supported.", av_get_pix_fmt_name(sw_pix_fmt)));
+}
+
+VideoBuffer convert_video_frames_cpu(
+    const std::vector<AVFrame*>& frames,
+    const int plane) {
+  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+  switch (pix_fmt) {
     case AV_PIX_FMT_RGB24: {
       switch (plane) {
         case -1:
@@ -192,9 +198,23 @@ VideoBuffer convert_video_frames(
     }
     default:
       throw std::runtime_error(fmt::format(
-          "Unsupported pixel format: {}",
-          av_get_pix_fmt_name(static_cast<AVPixelFormat>(frames[0]->format))));
+          "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
+}
+
+} // namespace
+
+VideoBuffer convert_video_frames(
+    const std::vector<AVFrame*>& frames,
+    const int plane) {
+  if (!frames.size()) {
+    return {};
+  }
+  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+  if (pix_fmt == AV_PIX_FMT_CUDA) {
+    return convert_video_frames_cuda(frames, plane);
+  }
+  return convert_video_frames_cpu(frames, plane);
 }
 
 } // namespace spdl::detail
