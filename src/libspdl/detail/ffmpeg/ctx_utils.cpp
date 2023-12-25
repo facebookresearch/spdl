@@ -1,10 +1,12 @@
 extern "C" {
 #include <libavutil/channel_layout.h>
+#include <libavutil/hwcontext.h>
 }
 
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
-#include <libspdl/detail/ffmpeg/cuda.h>
 #include <libspdl/detail/ffmpeg/logging.h>
+
+#include <mutex>
 
 // https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
 // Starting from libavformat 59 (ffmpeg 5),
@@ -50,6 +52,49 @@ void check_empty(const AVDictionary* p) {
 }
 } // namespace
 
+////////////////////////////////////////////////////////////////////////////////
+// HardWare context
+////////////////////////////////////////////////////////////////////////////////
+
+namespace {
+
+static std::mutex MUTEX;
+static std::map<int, AVBufferRefPtr> CUDA_CONTEXT_CACHE;
+
+AVBufferRef* get_cuda_context(int index) {
+  std::lock_guard<std::mutex> lock(MUTEX);
+  if (index == -1) {
+    index = 0;
+  }
+  if (CUDA_CONTEXT_CACHE.count(index) == 0) {
+    AVBufferRef* p = nullptr;
+    CHECK_AVERROR(
+        av_hwdevice_ctx_create(
+            &p,
+            AV_HWDEVICE_TYPE_CUDA,
+            std::to_string(index).c_str(),
+            nullptr,
+            0),
+        "Failed to create CUDA device context on device {}.",
+        index);
+    assert(p);
+    CUDA_CONTEXT_CACHE.emplace(index, p);
+    return p;
+  }
+  AVBufferRefPtr& buffer = CUDA_CONTEXT_CACHE.at(index);
+  return buffer.get();
+}
+
+} // namespace
+
+void clear_cuda_context_cache() {
+  std::lock_guard<std::mutex> lock(MUTEX);
+  CUDA_CONTEXT_CACHE.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// AVIOContext
+////////////////////////////////////////////////////////////////////////////////
 AVIOContextPtr get_io_ctx(
     void* opaque,
     int buffer_size,
@@ -66,7 +111,9 @@ AVIOContextPtr get_io_ctx(
   return AVIOContextPtr{io_ctx};
 }
 
-//////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// AVFormatContext
+////////////////////////////////////////////////////////////////////////////////
 namespace {
 AVFormatInputContextPtr get_input_format_ctx(
     const char* src,
@@ -126,6 +173,8 @@ AVFormatInputContextPtr get_input_format_ctx(
   return get_input_format_ctx(nullptr, format, format_options, io_ctx);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// AVCodecContext
 //////////////////////////////////////////////////////////////////////////////
 namespace {
 AVCodecContextPtr alloc_codec_context(
