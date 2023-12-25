@@ -4,6 +4,7 @@
 #include <libspdl/buffers.h>
 #include <libspdl/defs.h>
 #include <libspdl/processors.h>
+#include <libspdl/utils.h>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -83,6 +84,9 @@ std::vector<std::string> init_folly_init(
 
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   m.def("init_folly", &init_folly_init);
+  m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
+  m.def("set_ffmpeg_log_level", &set_ffmpeg_log_level);
+  m.def("clear_ffmpeg_cuda_context_cache", &clear_ffmpeg_cuda_context_cache);
 
   py::class_<Frames>(m, "Frames", py::module_local())
       .def("to_video_buffer", &Frames::to_video_buffer, py::arg("plane") = -1)
