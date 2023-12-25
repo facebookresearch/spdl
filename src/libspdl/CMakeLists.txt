@@ -4,8 +4,9 @@ message(STATUS "########################################")
 
 set(CMAKE_CXX_VISIBILITY_PRESET default)
 
-set(
-  src
+set(defs)
+set(deps folly)
+set(srcs
   detail/conversion.cpp
   detail/executors.cpp
   detail/ffmpeg/ctx_utils.cpp
@@ -17,22 +18,19 @@ set(
   processors.cpp
   )
 
-set(
-  def)
-
 if (SPDL_USE_CUDA)
-  list(APPEND def SPDL_USE_CUDA)
+  list(APPEND defs SPDL_USE_CUDA)
 endif()
 
 if (SPDL_DEBUG_REFCOUNT)
-  list(APPEND def SPDL_DEBUG_REFCOUNT)
+  list(APPEND defs SPDL_DEBUG_REFCOUNT)
 endif()
 
 function(add_libspdl ffmpeg_version)
   set(name "spdl_ffmpeg${ffmpeg_version}")
-  add_library("${name}_static" STATIC "${src}")
-  target_compile_definitions("${name}_static" PRIVATE "${def}")
-  target_link_libraries("${name}_static" PUBLIC folly "ffmpeg${ffmpeg_version}")
+  add_library("${name}_static" STATIC "${srcs}")
+  target_compile_definitions("${name}_static" PRIVATE "${defs}")
+  target_link_libraries("${name}_static" PUBLIC "${deps}" "ffmpeg${ffmpeg_version}")
   target_include_directories("${name}_static" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
   install(
@@ -41,9 +39,9 @@ function(add_libspdl ffmpeg_version)
     RUNTIME DESTINATION lib
     )
 
-  add_library("${name}" SHARED "${src}")
-  target_compile_definitions("${name}_static" PRIVATE "${def}")
-  target_link_libraries("${name}" PUBLIC folly "ffmpeg${ffmpeg_version}")
+  add_library("${name}" SHARED "${srcs}")
+  target_compile_definitions("${name}_static" PRIVATE "${defs}")
+  target_link_libraries("${name}" PUBLIC "${deps}" "ffmpeg${ffmpeg_version}")
   target_include_directories("${name}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
   install(

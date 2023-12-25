@@ -1,12 +1,12 @@
-extern "C" {
-#include <libavutil/channel_layout.h>
-#include <libavutil/hwcontext.h>
-}
-
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/detail/ffmpeg/logging.h>
 
 #include <mutex>
+
+extern "C" {
+#include <libavutil/channel_layout.h>
+#include <libavutil/hwcontext.h>
+}
 
 // https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
 // Starting from libavformat 59 (ffmpeg 5),
@@ -53,7 +53,7 @@ void check_empty(const AVDictionary* p) {
 } // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
-// HardWare context
+// Hardware context
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace {
@@ -61,25 +61,28 @@ namespace {
 static std::mutex MUTEX;
 static std::map<int, AVBufferRefPtr> CUDA_CONTEXT_CACHE;
 
+void create_cuda_context(const int index) {
+  AVBufferRef* p = nullptr;
+  CHECK_AVERROR(
+      av_hwdevice_ctx_create(
+          &p,
+          AV_HWDEVICE_TYPE_CUDA,
+          std::to_string(index).c_str(),
+          nullptr,
+          0),
+      "Failed to create CUDA device context on device {}.",
+      index);
+  assert(p);
+  CUDA_CONTEXT_CACHE.emplace(index, p);
+}
+
 AVBufferRef* get_cuda_context(int index) {
   std::lock_guard<std::mutex> lock(MUTEX);
   if (index == -1) {
     index = 0;
   }
   if (CUDA_CONTEXT_CACHE.count(index) == 0) {
-    AVBufferRef* p = nullptr;
-    CHECK_AVERROR(
-        av_hwdevice_ctx_create(
-            &p,
-            AV_HWDEVICE_TYPE_CUDA,
-            std::to_string(index).c_str(),
-            nullptr,
-            0),
-        "Failed to create CUDA device context on device {}.",
-        index);
-    assert(p);
-    CUDA_CONTEXT_CACHE.emplace(index, p);
-    return p;
+    create_cuda_context(index);
   }
   AVBufferRefPtr& buffer = CUDA_CONTEXT_CACHE.at(index);
   return buffer.get();
@@ -286,7 +289,7 @@ void configure_codec_context(
   CHECK_AVERROR(
       avcodec_parameters_to_context(codec_ctx, params),
       "Failed to set CodecContext parameter.");
-  XLOG(DBG9) << "Codex: " << codec_ctx->codec->name;
+  XLOG(DBG9) << "Codec: " << codec_ctx->codec->name;
 
   if (!codec_ctx->channel_layout) {
     codec_ctx->channel_layout =
