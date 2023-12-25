@@ -16,6 +16,7 @@ set(srcs
   frames.cpp
   interface.cpp
   processors.cpp
+  utils.cpp
   )
 
 if (SPDL_USE_CUDA)

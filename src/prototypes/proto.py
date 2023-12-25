@@ -27,9 +27,10 @@ def _plot(frames, k):
 
 def _main():
     args = _parse_python_args()
-    libspdl.init_folly(args.others)
-
     _init_logging(args.debug)
+    libspdl.init_folly(args.others)
+    if args.debug:
+        libspdl.set_ffmpeg_log_level(54)
 
     src = args.input_video
     src2 = f"mmap://{src}"

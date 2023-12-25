@@ -5,6 +5,7 @@ lazy access to the module so that the module won't be loaded until
 it's used by user code.
 """
 
+import atexit
 import importlib
 import logging
 from importlib import util as importlib_util
@@ -87,5 +88,8 @@ def _import_libspdl_ver(ver):
         ext = importlib.import_module(ext)
     except Exception as e:
         raise RuntimeError(f"Failed to load extension: {ext}.") from e
+
+    if hasattr(ext, "clear_ffmpeg_cuda_context_cache"):
+        atexit.register(ext.clear_ffmpeg_cuda_context_cache)
 
     return ext

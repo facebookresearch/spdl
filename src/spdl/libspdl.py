@@ -23,7 +23,7 @@ def __dir__() -> List[str]:
 def __getattr__(name: str) -> Any:
     if name == "Engine":
         return _libspdl.Engine
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return getattr(_libspdl, name)
 
 
 def init_folly(args: List[str]) -> List[str]:
