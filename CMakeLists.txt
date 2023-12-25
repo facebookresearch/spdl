@@ -6,6 +6,11 @@ include(./cmake/spdl_common_config.cmake)
 option(SPDL_USE_CUDA "Enable CUDA support" OFF)
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
 
+if (SPDL_USE_CUDA)
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED COMPONENT cuda_driver cudart)
+endif()
+
 ###############################################################################
 # Build folly, libspdl and binding
 ###############################################################################

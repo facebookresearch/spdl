@@ -20,6 +20,7 @@ set(srcs
 
 if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
+  list(APPEND deps CUDA::cudart CUDA::cuda_driver)
 endif()
 
 if (SPDL_DEBUG_REFCOUNT)
