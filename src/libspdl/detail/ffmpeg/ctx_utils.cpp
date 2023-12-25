@@ -1,6 +1,10 @@
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/detail/ffmpeg/logging.h>
 
+#ifdef SPDL_USE_CUDA
+#include <cuda.h>
+#endif
+
 #include <mutex>
 
 extern "C" {
@@ -61,28 +65,80 @@ namespace {
 static std::mutex MUTEX;
 static std::map<int, AVBufferRefPtr> CUDA_CONTEXT_CACHE;
 
-void create_cuda_context(const int index) {
+} // namespace
+
+#ifdef SPDL_USE_CUDA
+void warn_if_device_is_initialized(int index) {
+  // FFmpeg rejects the use of the primary context if it is already initialized
+  // with undesired flags. i.e. FFmpeg only accepts CU_CTX_SCHED_BLOCKING_SYNC.
+  //
+  // PyTorch initializes the primary context without any flag.
+  // So, the primary context must be created by FFmpeg before the client code
+  // call any PyTorch utility that initializes the primary context.
+  // This is out of our controll, so this function emits the warning before
+  // the subsequent procedure fails.
+  CUdevice device;
+  auto result = cuDeviceGet(&device, index);
+  if (result != CUDA_SUCCESS) {
+    return;
+  }
+
+  int active = 0;
+  unsigned int flags = 0;
+  result = cuDevicePrimaryCtxGetState(device, &flags, &active);
+  XLOG(DBG9) << fmt::format(
+      "Device {}: flag={} ({}active)", index, flags, active ? "" : "in");
+  if (result == CUDA_SUCCESS && active && flags != CU_CTX_SCHED_BLOCKING_SYNC) {
+    XLOG(WARN) << fmt::format(
+        "The primary CUDA device context is already initialized on device {} with flag {}. This likely causes a failure in subsequent decoder intialization procedures as FFmpeg rejects using primary context when the flag is not CU_CTX_SCHED_BLOCKING_SYNC. PyTorch initializes the primary context with incompatible flag by default (and there seems to be no way to configure it according to https://github.com/pytorch/pytorch/issues/28224. Plese initialize the CUDA context with proper flag by calling this function first before calling PyTorch functions.",
+        index,
+        flags);
+  }
+}
+#endif
+
+void create_cuda_context(const int index, const bool use_primary_context) {
+#ifndef SPDL_USE_CUDA
+  throw std::runtime_error("SPDL is not compiled with CUDA support.");
+#else
+  if (CUDA_CONTEXT_CACHE.count(index)) {
+    throw std::runtime_error(fmt::format(
+        "CUDA context for device {} is already initialized", index));
+  }
   AVBufferRef* p = nullptr;
+  AVDictionaryDPtr opt;
+  unsigned int device_flags = 0;
+  if (use_primary_context) {
+    XLOG(DBG9) << "Creating CUDA context for device " << index
+               << " using the primary context";
+    warn_if_device_is_initialized(index);
+    av_dict_set(opt, "primary_ctx", "1", 0);
+    device_flags = CU_CTX_SCHED_BLOCKING_SYNC;
+  }
+
   CHECK_AVERROR(
       av_hwdevice_ctx_create(
           &p,
           AV_HWDEVICE_TYPE_CUDA,
           std::to_string(index).c_str(),
-          nullptr,
-          0),
+          opt,
+          device_flags),
       "Failed to create CUDA device context on device {}.",
       index);
   assert(p);
   CUDA_CONTEXT_CACHE.emplace(index, p);
+#endif
 }
 
-AVBufferRef* get_cuda_context(int index) {
+namespace {
+
+AVBufferRef* get_cuda_context(int index, bool use_primary_context = false) {
   std::lock_guard<std::mutex> lock(MUTEX);
   if (index == -1) {
     index = 0;
   }
   if (CUDA_CONTEXT_CACHE.count(index) == 0) {
-    create_cuda_context(index);
+    create_cuda_context(index, use_primary_context);
   }
   AVBufferRefPtr& buffer = CUDA_CONTEXT_CACHE.at(index);
   return buffer.get();
@@ -91,6 +147,7 @@ AVBufferRef* get_cuda_context(int index) {
 } // namespace
 
 void clear_cuda_context_cache() {
+  XLOG(DBG9) << "Clearing CUDA context cache.";
   std::lock_guard<std::mutex> lock(MUTEX);
   CUDA_CONTEXT_CACHE.clear();
 }

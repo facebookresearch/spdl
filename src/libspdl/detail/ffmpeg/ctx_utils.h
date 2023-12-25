@@ -12,6 +12,10 @@ namespace spdl::detail {
 
 void clear_cuda_context_cache();
 
+void create_cuda_context(
+    const int index,
+    const bool use_primary_context = false);
+
 AVIOContextPtr get_io_ctx(
     void* opaque,
     int buffer_size,
