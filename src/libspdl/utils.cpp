@@ -20,4 +20,8 @@ void clear_ffmpeg_cuda_context_cache() {
   detail::clear_cuda_context_cache();
 }
 
+void create_cuda_context(int index, bool use_primary_context) {
+  detail::create_cuda_context(index, use_primary_context);
+}
+
 } // namespace spdl
