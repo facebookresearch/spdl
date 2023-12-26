@@ -30,10 +30,9 @@ void copy_2d(
 VideoBuffer convert_interleaved(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
-  VideoBuffer buf{frames.size(), 3, h, w, /*channel_last=*/true};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  size_t wc = buf.c * buf.w;
-  uint8_t* dst = buf.data.data();
+  VideoBuffer buf = video_buffer({frames.size(), h, w, 3}, true);
+  size_t wc = 3 * w;
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc);
   }
@@ -43,11 +42,10 @@ VideoBuffer convert_interleaved(const std::vector<AVFrame*>& frames) {
 VideoBuffer convert_planer(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
-  VideoBuffer buf{frames.size(), 3, h, w};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  uint8_t* dst = buf.data.data();
+  VideoBuffer buf = video_buffer({frames.size(), 3, h, w});
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
-    for (int c = 0; c < buf.c; ++c) {
+    for (int c = 0; c < 3; ++c) {
       copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
     }
   }
@@ -57,9 +55,8 @@ VideoBuffer convert_planer(const std::vector<AVFrame*>& frames) {
 VideoBuffer convert_plane(const std::vector<AVFrame*>& frames, int plane) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
-  VideoBuffer buf{frames.size(), 1, h, w};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  uint8_t* dst = buf.data.data();
+  VideoBuffer buf = video_buffer({frames.size(), 1, h, w});
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     copy_2d(f->data[plane], h, w, f->linesize[plane], &dst, w);
   }
@@ -71,9 +68,8 @@ VideoBuffer convert_yuv420p(const std::vector<AVFrame*>& frames) {
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2, w2 = w / 2;
 
-  VideoBuffer buf{frames.size(), 1, h + h2, w};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  uint8_t* dst = buf.data.data();
+  VideoBuffer buf = video_buffer({frames.size(), 1, h + h2, w});
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     // Y
     copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
@@ -90,9 +86,8 @@ VideoBuffer convert_u_or_v(const std::vector<AVFrame*>& frames, int plane) {
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2, w2 = w / 2;
 
-  VideoBuffer buf{frames.size(), 1, h2, w2};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  uint8_t* dst = buf.data.data();
+  VideoBuffer buf = video_buffer({frames.size(), 1, h2, w2});
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     copy_2d(f->data[plane], h2, w2, f->linesize[plane], &dst, w2);
   }
@@ -104,9 +99,8 @@ VideoBuffer convert_nv12(const std::vector<AVFrame*>& frames) {
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
 
-  VideoBuffer buf{frames.size(), 1, h + h2, w};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  uint8_t* dst = buf.data.data();
+  VideoBuffer buf = video_buffer({frames.size(), 1, h + h2, w});
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     // Y
     copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
@@ -121,9 +115,8 @@ VideoBuffer convert_nv12_uv(const std::vector<AVFrame*>& frames) {
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2, w2 = w / 2;
 
-  VideoBuffer buf{frames.size(), 2, h2, w2, /*channel_last=*/true};
-  buf.data.resize(buf.n * buf.c * buf.h * buf.w);
-  uint8_t* dst = buf.data.data();
+  VideoBuffer buf = video_buffer({frames.size(), h2, w2, 2}, true);
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
   }
@@ -157,7 +150,7 @@ VideoBuffer convert_video_frames_cpu(
     case AV_PIX_FMT_YUV444P: {
       switch (plane) {
         case -1:
-          return convert_interleaved(frames);
+          return convert_planer(frames);
         case 0:
         case 1:
         case 2:
@@ -208,7 +201,7 @@ VideoBuffer convert_video_frames(
     const std::vector<AVFrame*>& frames,
     const int plane) {
   if (!frames.size()) {
-    return {};
+    return video_buffer({0, 0, 0, 0});
   }
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   if (pix_fmt == AV_PIX_FMT_CUDA) {

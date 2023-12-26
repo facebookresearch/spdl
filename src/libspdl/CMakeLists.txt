@@ -13,6 +13,7 @@ set(srcs
   detail/ffmpeg/wrappers.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/interface/mmap.cpp
+  buffers.cpp
   frames.cpp
   interface.cpp
   processors.cpp
