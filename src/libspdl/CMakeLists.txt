@@ -13,6 +13,7 @@ set(srcs
   detail/ffmpeg/wrappers.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/interface/mmap.cpp
+  storage.cpp
   buffers.cpp
   frames.cpp
   interface.cpp
@@ -23,6 +24,7 @@ set(srcs
 if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
   list(APPEND deps CUDA::cudart CUDA::cuda_driver)
+  list(APPEND srcs detail/cuda.cpp)
 endif()
 
 if (SPDL_DEBUG_REFCOUNT)

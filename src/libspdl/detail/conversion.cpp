@@ -1,6 +1,10 @@
 #include <libspdl/detail/conversion.h>
+#ifdef SPDL_USE_CUDA
+#include <libspdl/detail/cuda.h>
+#endif
 
 #include <fmt/core.h>
+#include <folly/logging/xlog.h>
 
 #include <cassert>
 
@@ -123,14 +127,59 @@ VideoBuffer convert_nv12_uv(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
+#ifdef SPDL_USE_CUDA
+VideoBuffer convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
+  size_t h = frames[0]->height, w = frames[0]->width;
+  assert(h % 2 == 0 && w % 2 == 0);
+  size_t h2 = h / 2;
+
+  XLOG(DBG) << "creating cuda buffer";
+  VideoBuffer buf = video_buffer_cuda({frames.size(), 1, h + h2, w});
+  uint8_t* dst = static_cast<uint8_t*>(buf.data());
+  for (const auto& f : frames) {
+    // Y
+    CUDA_CHECK(cudaMemcpy2DAsync(
+        dst, w, f->data[0], f->linesize[0], w, h, cudaMemcpyDeviceToDevice, 0));
+    dst += h * w;
+    // UV
+    CUDA_CHECK(cudaMemcpy2DAsync(
+        dst,
+        w,
+        f->data[1],
+        f->linesize[1],
+        w,
+        h2,
+        cudaMemcpyDeviceToDevice,
+        0));
+    dst += h2 * w;
+  }
+  XLOG(DBG) << "returning from " << __func__;
+  return buf;
+}
+
 VideoBuffer convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
     const int plane) {
   auto frames_ctx = (AVHWFramesContext*)(frames[0]->hw_frames_ctx->data);
   auto sw_pix_fmt = frames_ctx->sw_format;
-  throw std::runtime_error(fmt::format(
-      "CUDA frame ({}) is not supported.", av_get_pix_fmt_name(sw_pix_fmt)));
+  switch (sw_pix_fmt) {
+    case AV_PIX_FMT_NV12:
+      switch (plane) {
+        case -1:
+          return convert_nv12_cuda(frames);
+        default:
+          throw std::runtime_error(fmt::format(
+              "CUDA frame ({}:{}) is not supported.",
+              av_get_pix_fmt_name(sw_pix_fmt),
+              plane));
+      }
+    default:
+      throw std::runtime_error(fmt::format(
+          "CUDA frame ({}) is not supported.",
+          av_get_pix_fmt_name(sw_pix_fmt)));
+  }
 }
+#endif
 
 VideoBuffer convert_video_frames_cpu(
     const std::vector<AVFrame*>& frames,
@@ -205,7 +254,11 @@ VideoBuffer convert_video_frames(
   }
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   if (pix_fmt == AV_PIX_FMT_CUDA) {
+#ifdef SPDL_USE_CUDA
     return convert_video_frames_cuda(frames, plane);
+#else
+    throw std::runtime_error("SPDL is not compiled with CUDA support.");
+#endif
   }
   return convert_video_frames_cpu(frames, plane);
 }
