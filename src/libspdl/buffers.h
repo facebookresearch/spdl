@@ -1,6 +1,7 @@
 #pragma once
 
-#include <cstdint>
+#include <libspdl/storage.h>
+
 #include <memory>
 #include <variant>
 #include <vector>
@@ -9,25 +10,40 @@ namespace spdl {
 
 // video buffer class to be exposed to python
 struct VideoBuffer {
-  struct CPUStorage {
-    std::unique_ptr<uint8_t[]> data;
-
-    CPUStorage(size_t size);
-  };
+  using StorageVariants =
+#ifdef SPDL_USE_CUDA
+      std::variant<Storage, CUDAStorage>;
+#else
+      std::variant<Storage>;
+#endif
 
   std::vector<size_t> shape;
   bool channel_last = false;
-  std::variant<CPUStorage> storage;
+
+  std::shared_ptr<StorageVariants> storage;
 
   VideoBuffer(
       const std::vector<size_t> shape,
       bool channel_last,
-      CPUStorage storage);
+      Storage&& storage);
+#ifdef SPDL_USE_CUDA
+  VideoBuffer(
+      const std::vector<size_t> shape,
+      bool channel_last,
+      CUDAStorage&& storage);
+#endif
+
   void* data();
+  bool is_cuda() const;
 };
 
 VideoBuffer video_buffer(
     const std::vector<size_t> shape,
     bool channel_last = false);
 
+#ifdef SPDL_USE_CUDA
+VideoBuffer video_buffer_cuda(
+    const std::vector<size_t> shape,
+    bool channel_last = false);
+#endif
 } // namespace spdl
