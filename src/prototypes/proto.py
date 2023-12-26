@@ -52,6 +52,8 @@ def _main():
             cfg["decoder"] = "h264_cuvid"
             # cfg["cuda_device_index"] = 0
 
+        print(cfg)
+
         engine = libspdl.Engine(10)
         engine.enqueue(**cfg)
         decoded_frames = engine.dequeue()

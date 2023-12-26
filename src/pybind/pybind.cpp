@@ -20,27 +20,15 @@ namespace spdl {
 namespace {
 
 py::buffer_info get_buffer(VideoBuffer& b) {
-  if (b.channel_last) {
-    return {
-        b.data.data(),
-        sizeof(uint8_t),
-        py::format_descriptor<uint8_t>::format(),
-        4,
-        {b.n, b.h, b.w, b.c},
-        {sizeof(uint8_t) * b.c * b.w * b.h,
-         sizeof(uint8_t) * b.c * b.w,
-         sizeof(uint8_t) * b.c,
-         sizeof(uint8_t)}};
-  }
   return {
-      b.data.data(),
+      b.data(),
       sizeof(uint8_t),
       py::format_descriptor<uint8_t>::format(),
       4,
-      {b.n, b.c, b.h, b.w},
-      {sizeof(uint8_t) * b.w * b.h * b.c,
-       sizeof(uint8_t) * b.w * b.h,
-       sizeof(uint8_t) * b.w,
+      b.shape,
+      {sizeof(uint8_t) * b.shape[3] * b.shape[2] * b.shape[1],
+       sizeof(uint8_t) * b.shape[3] * b.shape[2],
+       sizeof(uint8_t) * b.shape[3],
        sizeof(uint8_t)}};
 }
 
