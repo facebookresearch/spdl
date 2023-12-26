@@ -47,12 +47,27 @@ def _main():
         },
     ]
 
+    if args.gpu:
+        for i in range(2):
+            libspdl.create_cuda_context(i, use_primary_context=True)
+
+        import torch
+
+        a = torch.empty([1, 2]).to(device=f"cuda:{i}")
+        print(a)
+
     for i, cfg in enumerate(configs):
         if args.gpu:
             cfg["decoder"] = "h264_cuvid"
-            # cfg["cuda_device_index"] = 0
+            cfg["cuda_device_index"] = 1
+            cfg["width"] = None
+            cfg["height"] = None
+            cfg["pix_fmt"] = None
+            cfg["frame_rate"] = None
 
+        print("*" * 40)
         print(cfg)
+        print("*" * 40)
 
         engine = libspdl.Engine(10)
         engine.enqueue(**cfg)
@@ -62,6 +77,7 @@ def _main():
         sliced = decoded_frames[2:7:2]
         print(len(sliced))
         del sliced
+
         a = libspdl.to_numpy(decoded_frames.to_video_buffer(), format="NHWC")
         print(a.shape, a.dtype)
         if args.plot:
@@ -70,6 +86,8 @@ def _main():
         print(a.shape, a.dtype)
         if args.plot:
             _plot(a, 2 * i + 1)
+
+        del decoded_frames
 
 
 def _init_logging(debug):
