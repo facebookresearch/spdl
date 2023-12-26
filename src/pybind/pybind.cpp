@@ -19,21 +19,19 @@ namespace py = pybind11;
 namespace spdl {
 namespace {
 
-py::buffer_info get_buffer(VideoBuffer& b) {
-  if (b.is_cuda()) {
-    throw std::runtime_error(
-        "CUDA frames cannot be converted to Python buffer.");
-  }
-  return {
-      b.data(),
-      sizeof(uint8_t),
-      py::format_descriptor<uint8_t>::format(),
-      4,
-      b.shape,
-      {sizeof(uint8_t) * b.shape[3] * b.shape[2] * b.shape[1],
-       sizeof(uint8_t) * b.shape[3] * b.shape[2],
-       sizeof(uint8_t) * b.shape[3],
-       sizeof(uint8_t)}};
+py::dict get_array_interface(VideoBuffer& b) {
+  auto strides = std::vector<size_t>{
+      b.shape[3] * b.shape[2] * b.shape[1],
+      b.shape[3] * b.shape[2],
+      b.shape[3],
+      1};
+  py::dict ret;
+  ret["version"] = 3;
+  ret["shape"] = py::tuple(py::cast(b.shape));
+  ret["typestr"] = std::string("|u1");
+  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
+  ret["strides"] = py::tuple(py::cast(strides));
+  return ret;
 }
 
 struct DoublePtr {
@@ -105,13 +103,15 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       .def_property_readonly("height", &Frames::get_height)
       .def_property_readonly("sample_rate", &Frames::get_sample_rate);
 
-  py::class_<VideoBuffer>(
-      m, "VideoBuffer", py::buffer_protocol(), py::module_local())
-      .def_buffer(get_buffer)
+  py::class_<VideoBuffer>(m, "VideoBuffer", py::module_local())
       .def_property_readonly(
           "channel_last",
           [](const VideoBuffer& self) { return self.channel_last; })
-      .def_property_readonly("is_cuda", &VideoBuffer::is_cuda);
+      .def_property_readonly("is_cuda", &VideoBuffer::is_cuda)
+      .def_property_readonly("__array_interface__", [](VideoBuffer& self) {
+        return get_array_interface(self);
+      });
+
   py::class_<Engine>(m, "Engine", py::module_local())
       .def(
           py::init([](size_t frame_queue_size) {
