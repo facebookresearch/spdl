@@ -43,7 +43,7 @@ function(add_libspdl ffmpeg_version)
     )
 
   add_library("${name}" SHARED "${srcs}")
-  target_compile_definitions("${name}_static" PRIVATE "${defs}")
+  target_compile_definitions("${name}" PRIVATE "${defs}")
   target_link_libraries("${name}" PUBLIC "${deps}" "ffmpeg${ffmpeg_version}")
   target_include_directories("${name}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
