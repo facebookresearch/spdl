@@ -14,11 +14,15 @@ endif()
 ###############################################################################
 # Build folly, libspdl and binding
 ###############################################################################
-find_package(double-conversion REQUIRED)
-find_package(Libevent REQUIRED)
-find_package(fmt REQUIRED)
-find_package(gflags REQUIRED)
-find_package(glog REQUIRED)
+message(STATUS "########################################")
+message(STATUS "# Looking for folly dependencies")
+message(STATUS "########################################")
+set(folly_deps double-conversion Libevent fmt gflags glog)
+foreach (folly_dep IN LISTS folly_deps)
+  message(STATUS "Looking for ${folly_dep}")
+  find_package("${folly_dep}" REQUIRED)
+endforeach()
+message(STATUS "Looking for Boost")
 find_package(Boost REQUIRED COMPONENTS algorithm intrusive context preprocessor variant iterator)
 
 add_subdirectory(third_party/folly)
