@@ -35,6 +35,10 @@ struct VideoBuffer {
 
   void* data();
   bool is_cuda() const;
+
+#ifdef SPDL_USE_CUDA
+  uintptr_t get_cuda_stream() const;
+#endif
 };
 
 VideoBuffer video_buffer(

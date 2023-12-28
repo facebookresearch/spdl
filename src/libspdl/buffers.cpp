@@ -51,6 +51,16 @@ bool VideoBuffer::is_cuda() const {
 #endif
 }
 
+#ifdef SPDL_USE_CUDA
+uintptr_t VideoBuffer::get_cuda_stream() const {
+  if (!std::holds_alternative<CUDAStorage>(*storage)) {
+    // this should not happen
+    throw std::runtime_error("CUDAStream is not available.");
+  }
+  return (uintptr_t)std::get<CUDAStorage>(*storage).stream;
+}
+#endif
+
 namespace {
 
 inline size_t prod(const std::vector<size_t>& shape) {
