@@ -44,6 +44,7 @@ VideoBuffer video_buffer(
 #ifdef SPDL_USE_CUDA
 VideoBuffer video_buffer_cuda(
     const std::vector<size_t> shape,
+    CUstream stream,
     bool channel_last = false);
 #endif
 } // namespace spdl
