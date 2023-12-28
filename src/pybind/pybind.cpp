@@ -34,6 +34,24 @@ py::dict get_array_interface(VideoBuffer& b) {
   return ret;
 }
 
+#ifdef SPDL_USE_CUDA
+py::dict get_cuda_array_interface(VideoBuffer& b) {
+  auto strides = std::vector<size_t>{
+      b.shape[3] * b.shape[2] * b.shape[1],
+      b.shape[3] * b.shape[2],
+      b.shape[3],
+      1};
+  py::dict ret;
+  ret["version"] = 2;
+  ret["shape"] = py::tuple(py::cast(b.shape));
+  ret["typestr"] = std::string("|u1");
+  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
+  ret["strides"] = py::tuple(py::cast(strides));
+  ret["stream"] = b.get_cuda_stream();
+  return ret;
+}
+#endif
+
 struct DoublePtr {
   char **p, **p_orig;
   DoublePtr(int argc) : p(new char*[argc]), p_orig(p) {}
@@ -107,10 +125,16 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       .def_property_readonly(
           "channel_last",
           [](const VideoBuffer& self) { return self.channel_last; })
-      .def_property_readonly("is_cuda", &VideoBuffer::is_cuda)
-      .def_property_readonly("__array_interface__", [](VideoBuffer& self) {
-        return get_array_interface(self);
-      });
+      .def("is_cuda", &VideoBuffer::is_cuda)
+      .def(
+          "get_array_interface",
+          [](VideoBuffer& self) { return get_array_interface(self); })
+#ifdef SPDL_USE_CUDA
+      .def(
+          "get_cuda_array_interface",
+          [](VideoBuffer& self) { return get_cuda_array_interface(self); })
+#endif
+      ;
 
   py::class_<Engine>(m, "Engine", py::module_local())
       .def(

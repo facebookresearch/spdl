@@ -11,8 +11,11 @@
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/hwcontext.h>
-#include <libavutil/hwcontext_cuda.h>
 #include <libavutil/pixdesc.h>
+
+#ifdef SPDL_USE_CUDA
+#include <libavutil/hwcontext_cuda.h>
+#endif
 }
 
 namespace spdl::detail {
