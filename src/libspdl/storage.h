@@ -3,6 +3,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#ifdef SPDL_USE_CUDA
+#include <cuda.h>
+#endif
+
 namespace spdl {
 
 struct Storage {
@@ -23,9 +27,10 @@ struct Storage {
 #ifdef SPDL_USE_CUDA
 struct CUDAStorage {
   void* data = nullptr;
+  CUstream stream = 0;
 
   CUDAStorage() = default;
-  CUDAStorage(size_t size);
+  CUDAStorage(size_t size, CUstream stream);
 
   CUDAStorage(const CUDAStorage&) = delete;
   CUDAStorage& operator=(const CUDAStorage&) = delete;

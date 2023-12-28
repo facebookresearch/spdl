@@ -10,6 +10,7 @@
 extern "C" {
 #include <libavutil/channel_layout.h>
 #include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_cuda.h>
 }
 
 // https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
@@ -127,6 +128,11 @@ void create_cuda_context(const int index, const bool use_primary_context) {
       index);
   assert(p);
   CUDA_CONTEXT_CACHE.emplace(index, p);
+
+  auto hw_device_ctx = (AVHWDeviceContext*)p->data;
+  auto device_hwctx = (AVCUDADeviceContext*)hw_device_ctx->hwctx;
+  XLOG(DBG9) << "CUcontext: " << device_hwctx->cuda_ctx;
+  XLOG(DBG9) << "CUstream: " << device_hwctx->stream;
 #endif
 }
 

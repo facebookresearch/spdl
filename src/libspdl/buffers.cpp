@@ -70,8 +70,10 @@ VideoBuffer video_buffer(const std::vector<size_t> shape, bool channel_last) {
 #ifdef SPDL_USE_CUDA
 VideoBuffer video_buffer_cuda(
     const std::vector<size_t> shape,
+    CUstream stream,
     bool channel_last) {
-  return VideoBuffer{std::move(shape), channel_last, CUDAStorage{prod(shape)}};
+  return VideoBuffer{
+      std::move(shape), channel_last, CUDAStorage{prod(shape), stream}};
 }
 #endif
 

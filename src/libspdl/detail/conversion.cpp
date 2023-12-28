@@ -11,6 +11,7 @@
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_cuda.h>
 #include <libavutil/pixdesc.h>
 }
 
@@ -133,13 +134,27 @@ VideoBuffer convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
 
+  auto hw_frames_ctx = (AVHWFramesContext*)frames[0]->hw_frames_ctx->data;
+  auto hw_device_ctx = (AVHWDeviceContext*)hw_frames_ctx->device_ctx;
+  auto cuda_device_ctx = (AVCUDADeviceContext*)hw_device_ctx->hwctx;
+  auto stream = cuda_device_ctx->stream;
+  XLOG(DBG9) << "CUcontext: " << cuda_device_ctx->cuda_ctx;
+  XLOG(DBG9) << "CUstream: " << cuda_device_ctx->stream;
+
   XLOG(DBG) << "creating cuda buffer";
-  VideoBuffer buf = video_buffer_cuda({frames.size(), 1, h + h2, w});
+  VideoBuffer buf = video_buffer_cuda({frames.size(), 1, h + h2, w}, stream);
   uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     // Y
     CUDA_CHECK(cudaMemcpy2DAsync(
-        dst, w, f->data[0], f->linesize[0], w, h, cudaMemcpyDeviceToDevice, 0));
+        dst,
+        w,
+        f->data[0],
+        f->linesize[0],
+        w,
+        h,
+        cudaMemcpyDeviceToDevice,
+        stream));
     dst += h * w;
     // UV
     CUDA_CHECK(cudaMemcpy2DAsync(
@@ -150,10 +165,9 @@ VideoBuffer convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
         w,
         h2,
         cudaMemcpyDeviceToDevice,
-        0));
+        stream));
     dst += h2 * w;
   }
-  XLOG(DBG) << "returning from " << __func__;
   return buf;
 }
 
