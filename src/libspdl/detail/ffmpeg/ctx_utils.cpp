@@ -138,6 +138,22 @@ void create_cuda_context(const int index, const bool use_primary_context) {
 #endif
 }
 
+int get_device_index_from_frame_context(const AVBufferRef* hw_frames_ctx) {
+  auto hw_frames_ctx_ = (AVHWFramesContext*)hw_frames_ctx->data;
+  auto hw_device_ctx = (AVHWDeviceContext*)hw_frames_ctx_->device_ctx;
+
+  for (auto const& [index, ref] : CUDA_CONTEXT_CACHE) {
+    AVBufferRef* p = ref.get();
+    auto ctx = (AVHWDeviceContext*)p->data;
+    if (ctx == hw_device_ctx) {
+      return index;
+    }
+  }
+  throw std::runtime_error(fmt::format(
+      "[Internal] Failed to locate the device associated with context {}",
+      (void*)hw_device_ctx));
+}
+
 namespace {
 
 AVBufferRef* get_cuda_context(int index, bool use_primary_context = false) {

@@ -12,6 +12,8 @@ namespace spdl::detail {
 
 void clear_cuda_context_cache();
 
+int get_device_index_from_frame_context(const AVBufferRef* hw_frames_ctx);
+
 void create_cuda_context(
     const int index,
     const bool use_primary_context = false);

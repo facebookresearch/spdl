@@ -30,7 +30,7 @@ def _main():
     _init_logging(args.debug)
     libspdl.init_folly(args.others)
     if args.debug:
-        libspdl.set_ffmpeg_log_level(54)
+        libspdl.set_ffmpeg_log_level(40)
 
     src = args.input_video
     src2 = f"mmap://{src}"
