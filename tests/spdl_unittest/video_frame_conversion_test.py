@@ -1,22 +1,48 @@
+import gc
+import sys
+
 import pytest
 from spdl import libspdl
 
-
-def _get_src_video():
-    return "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4"
+from spdl_unittest import helpers
 
 
-def _get_video_frames(pix_fmt, height, width):
-    engine = libspdl.Engine(10)
-    engine.enqueue(
-        src=_get_src_video(),
-        timestamps=[0.0],
-        pix_fmt=pix_fmt,
-        height=height,
-        width=width,
-    )
-    frames = engine.dequeue()
-    return frames
+def _get_video_frames(pix_fmt, h=128, w=256):
+    src = helpers.get_src_video()
+    return helpers.get_video_frames(src=src, pix_fmt=pix_fmt, height=h, width=w)
+
+
+def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
+    """NumPy array created from VideoBuffer should increment a reference to the buffer
+    so that array keeps working after the original VideoBuffer variable is deleted.
+    """
+    buf = _get_video_frames(pix_fmt).to_video_buffer()
+    assert hasattr(buf, "__array_interface__")
+    print(f"{buf.__array_interface__=}")
+
+    gc.collect()
+
+    n = sys.getrefcount(buf)
+    assert n == 2
+
+    arr = libspdl.to_numpy(buf, format=None)
+
+    n1 = sys.getrefcount(buf)
+    assert n1 == n + 1
+
+    print(f"{arr.__array_interface__=}")
+    assert arr.__array_interface__ is not buf.__array_interface__
+    assert arr.__array_interface__ == buf.__array_interface__
+
+    vals = arr.tolist()
+
+    # Not sure if this will properly fail in case that NumPy array does not
+    # keep the reference to the Buffer object. But let's do it anyways
+    del buf
+    gc.collect()
+
+    vals2 = arr.tolist()
+    assert vals == vals2
 
 
 @pytest.mark.parametrize("format", ["NCHW", "NHWC"])
