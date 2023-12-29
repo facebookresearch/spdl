@@ -20,33 +20,24 @@ namespace spdl {
 namespace {
 
 py::dict get_array_interface(VideoBuffer& b) {
-  auto strides = std::vector<size_t>{
-      b.shape[3] * b.shape[2] * b.shape[1],
-      b.shape[3] * b.shape[2],
-      b.shape[3],
-      1};
   py::dict ret;
   ret["version"] = 3;
   ret["shape"] = py::tuple(py::cast(b.shape));
   ret["typestr"] = std::string("|u1");
   ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
-  ret["strides"] = py::tuple(py::cast(strides));
+  ret["strides"] = py::none();
+  ret["descr"] = std::vector<std::tuple<std::string, std::string>>{{"", "|u1"}};
   return ret;
 }
 
 #ifdef SPDL_USE_CUDA
 py::dict get_cuda_array_interface(VideoBuffer& b) {
-  auto strides = std::vector<size_t>{
-      b.shape[3] * b.shape[2] * b.shape[1],
-      b.shape[3] * b.shape[2],
-      b.shape[3],
-      1};
   py::dict ret;
   ret["version"] = 2;
   ret["shape"] = py::tuple(py::cast(b.shape));
   ret["typestr"] = std::string("|u1");
   ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
-  ret["strides"] = py::tuple(py::cast(strides));
+  ret["strides"] = py::none();
   ret["stream"] = b.get_cuda_stream();
   return ret;
 }
