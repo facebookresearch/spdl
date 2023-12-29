@@ -15,8 +15,13 @@ endif ()
 function(add_spdl_extension ffmpeg_version)
   set(name "_spdl_ffmpeg${ffmpeg_version}")
 
+  set(defs "-DSPDL_FFMPEG_EXT_NAME=${name}")
+  if (SPDL_USE_CUDA)
+    list(APPEND defs SPDL_USE_CUDA)
+  endif()
+
   pybind11_add_module(${name} ${src})
-  target_compile_definitions(${name} PRIVATE "-DSPDL_FFMPEG_EXT_NAME=${name}")
+  target_compile_definitions(${name} PRIVATE "${defs}")
   target_link_libraries(${name} PRIVATE "spdl_ffmpeg${ffmpeg_version}_static")
 
   install(
