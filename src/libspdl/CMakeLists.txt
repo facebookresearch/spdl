@@ -2,7 +2,14 @@ message(STATUS "########################################")
 message(STATUS "# Configuring SPDL")
 message(STATUS "########################################")
 
-set(CMAKE_CXX_VISIBILITY_PRESET default)
+# This adds the library directory to search path
+if (SPDL_BUILD_PYTHON_BINDING)
+  if (APPLE)
+    set(CMAKE_INSTALL_RPATH "@loader_path")
+  elseif (UNIX)
+    set(CMAKE_INSTALL_RPATH $ORIGIN)
+  endif ()
+endif()
 
 set(defs)
 set(deps folly)

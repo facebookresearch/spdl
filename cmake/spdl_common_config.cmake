@@ -6,9 +6,12 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 message(STATUS "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}")
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # set(CMAKE_C_VISIBILITY_PRESET hidden)
 # set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
+cmake_policy(SET CMP0042 NEW) # MACOSX_RPATH is enabled by default.
+cmake_policy(SET CMP0068 NEW) # RPATH settings on macOS do not affect install_name.
 
 ###############################################################################
 # CCache
