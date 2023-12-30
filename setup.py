@@ -9,6 +9,8 @@ ROOT_DIR = os.path.dirname(__file__)
 TP_DIR = os.path.join(ROOT_DIR, "third_party")
 
 ext_modules = [
+    Extension("spdl.lib.libgflags", sources=[]),
+    Extension("spdl.lib.libglog", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg4", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg5", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg6", sources=[]),
@@ -52,7 +54,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-B", deps_build_dir,
             "-DCMAKE_VERBOSE_MAKEFILE=OFF",
             "-DCMAKE_INSTALL_MESSAGE=NEVER",
-            f"-DCMAKE_INSTALL_PREFIX={build_dir}",
+            f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             "-GNinja",
         ],
         [
@@ -71,8 +73,8 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-B", build_dir,
             f"-DCMAKE_VERBOSE_MAKEFILE={'ON' if debug else 'OFF'}",
             f"-DCMAKE_INSTALL_MESSAGE={'ALWAYS' if debug else 'LAZY'}",
-            f"-DCMAKE_INSTALL_PREFIX={build_dir}",
-            f"-DCMAKE_PREFIX_PATH={build_dir}",
+            f"-DCMAKE_INSTALL_PREFIX={install_dir}",
+            f"-DCMAKE_PREFIX_PATH={install_dir}",
             "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=false",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
@@ -92,6 +94,30 @@ def _get_cmake_commands(build_dir, install_dir, debug):
     if _SKIP_FOLLY_DEPS:
         return main_build_cmd
     return deps_cmd + main_build_cmd
+
+
+def _fix_tp_library_name(path):
+    parts = path.split(".")
+    if sys.platform == "darwin":
+        # remove ABI or replace it with version number
+        if "gflags" in path:
+            parts[-2] = "2.2"
+        elif "glog" in path:
+            parts[-2] = "0"
+        else:
+            del parts[-2]
+        # replace suffix
+        parts[-1] = "dylib"
+    elif sys.platform.startswith("linux"):
+        # remove ABI
+        del parts[-2]
+        # append soversion
+        if "gflags" in path:
+            parts.append("2.2")
+        elif "glog" in path:
+            parts.append("0")
+
+    return ".".join(parts)
 
 
 BUILT_ONCE = False
@@ -119,6 +145,12 @@ class CMakeBuild(build_ext):
         for cmd in cmds:
             print(" ".join(cmd), flush=True)
             subprocess.check_call(cmd)
+
+    def get_ext_filename(self, fullname):
+        ext_filename = super().get_ext_filename(fullname)
+        if "_spdl_ffmpeg" not in ext_filename:
+            ext_filename = _fix_tp_library_name(ext_filename)
+        return ext_filename
 
 
 def main():

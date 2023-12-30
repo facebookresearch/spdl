@@ -6,8 +6,8 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 message(STATUS "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}")
 
-set(CMAKE_C_VISIBILITY_PRESET hidden)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+# set(CMAKE_C_VISIBILITY_PRESET hidden)
+# set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 
 ###############################################################################
