@@ -22,7 +22,7 @@ function(add_spdl_extension ffmpeg_version)
 
   pybind11_add_module(${name} ${src})
   target_compile_definitions(${name} PRIVATE "${defs}")
-  target_link_libraries(${name} PRIVATE "spdl_ffmpeg${ffmpeg_version}_static")
+  target_link_libraries(${name} PRIVATE "spdl_ffmpeg${ffmpeg_version}")
 
   install(
     TARGETS ${name}
