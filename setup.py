@@ -10,6 +10,7 @@ TP_DIR = os.path.join(ROOT_DIR, "third_party")
 
 ext_modules = [
     Extension("spdl.lib.libdouble-conversion", sources=[]),
+    Extension("spdl.lib.libevent_core", sources=[]),
     Extension("spdl.lib.libfmt", sources=[]),
     Extension("spdl.lib.libgflags", sources=[]),
     Extension("spdl.lib.libglog", sources=[]),
@@ -114,6 +115,9 @@ def _fix_tp_library_name(path):
             parts[-2] = "3"
         elif "fmt" in path:
             parts[-2] = "10"
+        elif "libevent" in path:
+            del parts[-2]
+            parts[-2] = f"{parts[-2]}-2.1.7"
         else:
             del parts[-2]
         # replace suffix
@@ -130,6 +134,9 @@ def _fix_tp_library_name(path):
             parts.append("3")
         elif "fmt" in path:
             parts.append("10")
+        elif "libevent" in path:
+            parts[-2] += "-2.1"
+            parts.append("7")
     return ".".join(parts)
 
 
