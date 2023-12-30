@@ -9,6 +9,8 @@ ROOT_DIR = os.path.dirname(__file__)
 TP_DIR = os.path.join(ROOT_DIR, "third_party")
 
 ext_modules = [
+    Extension("spdl.lib.libdouble-conversion", sources=[]),
+    Extension("spdl.lib.libfmt", sources=[]),
     Extension("spdl.lib.libgflags", sources=[]),
     Extension("spdl.lib.libglog", sources=[]),
     Extension("spdl.lib.libspdl_ffmpeg4", sources=[]),
@@ -108,6 +110,10 @@ def _fix_tp_library_name(path):
             parts[-2] = "2.2"
         elif "glog" in path:
             parts[-2] = "0"
+        elif "double-conversion" in path:
+            parts[-2] = "3"
+        elif "fmt" in path:
+            parts[-2] = "10"
         else:
             del parts[-2]
         # replace suffix
@@ -120,7 +126,10 @@ def _fix_tp_library_name(path):
             parts.append("2.2")
         elif "glog" in path:
             parts.append("0")
-
+        elif "double-conversion" in path:
+            parts.append("3")
+        elif "fmt" in path:
+            parts.append("10")
     return ".".join(parts)
 
 

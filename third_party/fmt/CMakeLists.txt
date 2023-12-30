@@ -2,6 +2,7 @@ message(STATUS "########################################")
 message(STATUS "# Configuring libfmt")
 message(STATUS "########################################")
 
+set(BUILD_SHARED_LIBS ON)
 FetchContent_Declare(
   fmt
   URL https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz
