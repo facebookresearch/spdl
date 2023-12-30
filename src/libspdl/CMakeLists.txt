@@ -33,17 +33,6 @@ endif()
 
 function(add_libspdl ffmpeg_version)
   set(name "spdl_ffmpeg${ffmpeg_version}")
-  add_library("${name}_static" STATIC "${srcs}")
-  target_compile_definitions("${name}_static" PRIVATE "${defs}")
-  target_link_libraries("${name}_static" PUBLIC "${deps}" "ffmpeg${ffmpeg_version}")
-  target_include_directories("${name}_static" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
-
-  install(
-    TARGETS "${name}_static"
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION lib
-    )
-
   add_library("${name}" SHARED "${srcs}")
   target_compile_definitions("${name}" PRIVATE "${defs}")
   target_link_libraries("${name}" PUBLIC "${deps}" "ffmpeg${ffmpeg_version}")

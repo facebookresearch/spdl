@@ -11,6 +11,9 @@ TP_DIR = os.path.join(ROOT_DIR, "third_party")
 ext_modules = [
     Extension("spdl.lib.libgflags", sources=[]),
     Extension("spdl.lib.libglog", sources=[]),
+    Extension("spdl.lib.libspdl_ffmpeg4", sources=[]),
+    Extension("spdl.lib.libspdl_ffmpeg5", sources=[]),
+    Extension("spdl.lib.libspdl_ffmpeg6", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg4", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg5", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg6", sources=[]),
@@ -46,6 +49,7 @@ _SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS", False)
 def _get_cmake_commands(build_dir, install_dir, debug):
     cfg = "Debug" if debug else "Release"
     deps_build_dir = os.path.join(build_dir, "folly-deps")
+    main_build_dir = os.path.join(build_dir, "main")
     deps_cmd = [
         # fmt: off
         [
@@ -70,7 +74,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         [
             "cmake",
             "-S", ROOT_DIR,
-            "-B", build_dir,
+            "-B", main_build_dir,
             f"-DCMAKE_VERBOSE_MAKEFILE={'ON' if debug else 'OFF'}",
             f"-DCMAKE_INSTALL_MESSAGE={'ALWAYS' if debug else 'LAZY'}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
@@ -85,7 +89,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         ],
         [
             "cmake",
-            "--build", build_dir,
+            "--build", main_build_dir,
             "--target", "install",
             "--config", cfg,
         ],
