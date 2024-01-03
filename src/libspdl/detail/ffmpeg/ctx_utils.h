@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libspdl/defs.h>
 #include <libspdl/detail/ffmpeg/wrappers.h>
+#include <libspdl/types.h>
 
 #include <map>
 #include <optional>

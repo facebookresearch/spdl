@@ -2,8 +2,8 @@
 #include <folly/logging/xlog.h>
 
 #include <libspdl/buffers.h>
-#include <libspdl/defs.h>
 #include <libspdl/processors.h>
+#include <libspdl/types.h>
 #include <libspdl/utils.h>
 
 #include <pybind11/pybind11.h>
