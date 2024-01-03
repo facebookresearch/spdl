@@ -40,16 +40,15 @@ def _get_build_env(var, default=False):
     return False
 
 
-def _get_option(var, default=False):
-    return "ON" if _get_build_env(var, default) else "OFF"
-
-
-_USE_CUDA = _get_option("USE_CUDA")
-_DEBUG_REFCOUNT = _get_option("DEBUG_REFCOUNT")
-_SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS", False)
+_USE_CUDA = _get_build_env("USE_CUDA")
+_DEBUG_REFCOUNT = _get_build_env("DEBUG_REFCOUNT")
+_SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS")
 
 
 def _get_cmake_commands(build_dir, install_dir, debug):
+    def _b(var):
+        return "ON" if var else "OFF"
+
     cfg = "Debug" if debug else "Release"
     deps_build_dir = os.path.join(build_dir, "folly-deps")
     main_build_dir = os.path.join(build_dir, "main")
@@ -86,8 +85,8 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
-            f"-DSPDL_USE_CUDA={_USE_CUDA}",
-            f"-DSPDL_DEBUG_REFCOUNT={_DEBUG_REFCOUNT}",
+            f"-DSPDL_USE_CUDA={_b(_USE_CUDA)}",
+            f"-DSPDL_DEBUG_REFCOUNT={_b(_DEBUG_REFCOUNT)}",
             "-GNinja",
         ],
         [
