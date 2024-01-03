@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
 project(spdl)
 
-include(./cmake/spdl_common_config.cmake)
 option(SPDL_USE_CUDA "Enable CUDA support" OFF)
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
 
@@ -10,6 +9,12 @@ if (SPDL_USE_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED COMPONENT cuda_driver cudart)
 endif()
+
+###############################################################################
+# Condigurations
+###############################################################################
+include(./cmake/spdl_common_config.cmake)
+include(./cmake/check_cxx_coroutine.cmake)
 
 ###############################################################################
 # Build folly, libspdl and binding
