@@ -36,10 +36,10 @@ def _main():
     src2 = f"mmap://{src}"
 
     configs = [
-        {"src": src, "timestamps": [0.0]},
+        {"src": src, "timestamps": [0.0, 1.0, 2.0]},
         {
             "src": src2,
-            "timestamps": [0.0],
+            "timestamps": [0.0, 1.0, 2.0],
             "frame_rate": (60, 1),
             "width": 36,
             "height": 48,
@@ -69,9 +69,7 @@ def _main():
         print(cfg)
         print("*" * 40)
 
-        engine = libspdl.Engine(10)
-        engine.enqueue(**cfg)
-        decoded_frames = engine.dequeue()
+        decoded_frames = libspdl.decode_video(**cfg)[0]
         print(len(decoded_frames))
         print(decoded_frames.width, decoded_frames.height)
         sliced = decoded_frames[2:7:2]

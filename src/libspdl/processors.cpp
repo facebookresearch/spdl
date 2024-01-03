@@ -2,7 +2,8 @@
 
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/BoundedQueue.h>
+#include <folly/experimental/coro/Collect.h>
+#include <folly/logging/xlog.h>
 
 #include <libspdl/detail/executors.h>
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
@@ -30,6 +31,8 @@ using Task = folly::coro::Task<T>;
 
 template <typename T>
 using Generator = folly::coro::AsyncGenerator<T>;
+
+using folly::coro::collectAllTryRange;
 
 namespace spdl {
 namespace {
@@ -264,18 +267,16 @@ Task<Frames> decode_packets(
   co_return frames;
 }
 
-Task<void> process_packets(
+Task<Frames> process_packets(
     PackagedAVPackets packets,
     AVCodecContextPtr codec_ctx,
-    const std::string filter_desc,
-    FrameQueue& queue) {
-  auto decode_job = filter_desc.empty()
+    const std::string filter_desc) {
+  return filter_desc.empty()
       ? decode_packets(std::move(packets), std::move(codec_ctx))
       : decode_packets(std::move(packets), std::move(codec_ctx), filter_desc);
-  co_await queue.enqueue(co_await std::move(decode_job));
 }
 
-Task<void> stream_decode(VideoDecodingJob job, FrameQueue& q) {
+Task<std::vector<Frames>> stream_decode(VideoDecodingJob job) {
   auto dp = get_data_provider(
       job.src, job.format, job.format_options, job.buffer_size);
 
@@ -291,7 +292,7 @@ Task<void> stream_decode(VideoDecodingJob job, FrameQueue& q) {
       static_cast<AVPixelFormat>(stream->codecpar->format));
 
   auto demuxer = streaming_demux(fmt_ctx, idx, job.timestamps);
-  std::vector<folly::SemiFuture<folly::Unit>> sfs;
+  std::vector<folly::SemiFuture<Frames>> futures;
   auto exec = getDecoderThreadPoolExecutor();
   while (auto packets = co_await demuxer.next()) {
     auto codec_ctx = get_codec_ctx(
@@ -301,32 +302,38 @@ Task<void> stream_decode(VideoDecodingJob job, FrameQueue& q) {
         job.decoder_options,
         job.cuda_device_index);
 
-    sfs.emplace_back(
-        process_packets(*packets, std::move(codec_ctx), filter_desc, q)
+    futures.emplace_back(
+        process_packets(*packets, std::move(codec_ctx), filter_desc)
             .scheduleOn(exec)
             .start());
   }
-  co_await folly::collectAll(sfs);
+  XLOG(DBG) << "Waiting for decode jobs to finish";
+  std::vector<Frames> results;
+  size_t i = 0;
+  for (auto& result : co_await collectAllTryRange(std::move(futures))) {
+    if (result.hasValue()) {
+      results.emplace_back(std::move(result.value()));
+    } else {
+      XLOG(ERR) << fmt::format(
+          "Failed to decode video clip. Error: {} (Source: {}, timestamp: {})",
+          result.exception().what(),
+          job.src,
+          job.timestamps[i]);
+    }
+    ++i;
+  };
+  if (results.size() != job.timestamps.size()) {
+    throw std::runtime_error(
+        "Failed to decode some video clips. Check the error log.");
+  }
+  co_return results;
 }
-
 } // namespace
 
-//////////////////////////////////////////////////////////////////////////////
-// Engine
-//////////////////////////////////////////////////////////////////////////////
-Engine::Engine(size_t frame_queue_size) : frame_queue(frame_queue_size) {}
-
-void Engine::enqueue(VideoDecodingJob job) {
+std::vector<Frames> decode(VideoDecodingJob job) {
   auto exec = getDemuxerThreadPoolExecutor();
-  sfs.emplace_back(
-      stream_decode(std::move(job), frame_queue).scheduleOn(exec).start());
-}
-
-Frames Engine::dequeue() {
-  Frames frames = folly::coro::blockingWait(frame_queue.dequeue());
-  // TODO: validate the number of frames > 0
-  XLOG(DBG) << fmt::format("Dequeue {} frames", frames.frames.size());
-  return frames;
+  return folly::coro::blockingWait(
+      stream_decode(std::move(job)).scheduleOn(exec));
 }
 
 } // namespace spdl
