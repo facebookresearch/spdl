@@ -28,7 +28,7 @@ repos:
     rev: 4.0.1
     hooks:
       - id: flake8
-        args: ['src', 'test']
+        args: ['src', 'tests']
         exclude: 'build|docs/src|third_party'
         additional_dependencies:
           - flake8-breakpoint == 1.1.0

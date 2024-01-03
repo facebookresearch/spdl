@@ -10,8 +10,8 @@ from spdl.lib import libspdl as _libspdl
 
 
 __all__ = [  # noqa: F822
+    "decode_video",
     "init_folly",
-    "Engine",
     "to_numpy",
 ]
 
@@ -91,13 +91,7 @@ class VideoBuffer:
         return getattr(self._buffer, name)
 
 
-class Engine:
-    def __init__(self, *args, **kwargs):
-        self._engine = _libspdl.Engine(*args, **kwargs)
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._engine, name)
-
-    def dequeue(self):
-        frames = self._engine.dequeue()
-        return Frames(frames)
+def decode_video(*args, **kwargs) -> List[Frames]:
+    """Decode video."""
+    frames = _libspdl.decode_video(*args, **kwargs)
+    return [Frames(f) for f in frames]

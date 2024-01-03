@@ -4,12 +4,16 @@ import sys
 import pytest
 from spdl import libspdl
 
-from spdl_unittest import helpers
-
 
 def _get_video_frames(pix_fmt, h=128, w=256):
-    src = helpers.get_src_video()
-    return helpers.get_video_frames(src=src, pix_fmt=pix_fmt, height=h, width=w)
+    src = "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4"
+    return libspdl.decode_video(
+        src=src,
+        timestamps=[0.0],
+        pix_fmt=pix_fmt,
+        height=h,
+        width=w,
+    )[0]
 
 
 def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):

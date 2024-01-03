@@ -127,55 +127,46 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
 #endif
       ;
 
-  py::class_<Engine>(m, "Engine", py::module_local())
-      .def(
-          py::init([](size_t frame_queue_size) {
-            return new Engine{frame_queue_size};
-          }),
-          py::arg("frame_queue_size"))
-      .def(
-          "enqueue",
-          [](Engine& self,
-             const std::string& src,
-             const std::vector<double>& timestamps,
-             const std::optional<std::string>& format = std::nullopt,
-             const std::optional<OptionDict>& format_options = std::nullopt,
-             const int buffer_size = 8096,
-             const std::optional<std::string>& decoder = std::nullopt,
-             const std::optional<OptionDict>& decoder_options = std::nullopt,
-             const int cuda_device_index = -1,
-             const std::optional<std::tuple<int, int>>& frame_rate =
-                 std::nullopt,
-             const std::optional<int>& width = std::nullopt,
-             const std::optional<int>& height = std::nullopt,
-             const std::optional<std::string>& pix_fmt = std::nullopt) {
-            self.enqueue(
-                {src,
-                 timestamps,
-                 format,
-                 format_options,
-                 buffer_size,
-                 decoder,
-                 decoder_options,
-                 cuda_device_index,
-                 frame_rate,
-                 width,
-                 height,
-                 pix_fmt});
-          },
-          py::arg("src"),
-          py::arg("timestamps"),
-          py::arg("format") = py::none(),
-          py::arg("format_options") = py::none(),
-          py::arg("buffer_size") = 8096,
-          py::arg("decoder") = py::none(),
-          py::arg("decoder_options") = py::none(),
-          py::arg("cuda_device_index") = -1,
-          py::arg("frame_rate") = py::none(),
-          py::arg("width") = py::none(),
-          py::arg("height") = py::none(),
-          py::arg("pix_fmt") = py::none())
-      .def("dequeue", &Engine::dequeue);
+  m.def(
+      "decode_video",
+      [](const std::string& src,
+         const std::vector<double>& timestamps,
+         const std::optional<std::string>& format = std::nullopt,
+         const std::optional<OptionDict>& format_options = std::nullopt,
+         const int buffer_size = 8096,
+         const std::optional<std::string>& decoder = std::nullopt,
+         const std::optional<OptionDict>& decoder_options = std::nullopt,
+         const int cuda_device_index = -1,
+         const std::optional<std::tuple<int, int>>& frame_rate = std::nullopt,
+         const std::optional<int>& width = std::nullopt,
+         const std::optional<int>& height = std::nullopt,
+         const std::optional<std::string>& pix_fmt = std::nullopt) {
+        return decode(
+            {src,
+             timestamps,
+             format,
+             format_options,
+             buffer_size,
+             decoder,
+             decoder_options,
+             cuda_device_index,
+             frame_rate,
+             width,
+             height,
+             pix_fmt});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = 8096,
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("frame_rate") = py::none(),
+      py::arg("width") = py::none(),
+      py::arg("height") = py::none(),
+      py::arg("pix_fmt") = py::none());
 }
 } // namespace
 } // namespace spdl
