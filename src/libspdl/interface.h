@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/defs.h>
+#include <libspdl/types.h>
 
 #include <map>
 #include <memory>
