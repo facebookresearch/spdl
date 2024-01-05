@@ -31,6 +31,7 @@ struct Frames {
   int get_width() const;
   int get_height() const;
   int get_sample_rate() const;
+  int get_num_samples() const;
 
   Frames slice(int start, int stop, int step) const;
 
