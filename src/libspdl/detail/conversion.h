@@ -6,7 +6,7 @@ struct AVFrame;
 
 namespace spdl::detail {
 
-VideoBuffer convert_video_frames(
+Buffer convert_video_frames(
     const std::vector<AVFrame*>& frames,
     const int plane = -1);
 

@@ -19,7 +19,7 @@ namespace py = pybind11;
 namespace spdl {
 namespace {
 
-py::dict get_array_interface(VideoBuffer& b) {
+py::dict get_array_interface(Buffer& b) {
   py::dict ret;
   ret["version"] = 3;
   ret["shape"] = py::tuple(py::cast(b.shape));
@@ -31,7 +31,7 @@ py::dict get_array_interface(VideoBuffer& b) {
 }
 
 #ifdef SPDL_USE_CUDA
-py::dict get_cuda_array_interface(VideoBuffer& b) {
+py::dict get_cuda_array_interface(Buffer& b) {
   py::dict ret;
   ret["version"] = 2;
   ret["shape"] = py::tuple(py::cast(b.shape));
@@ -112,18 +112,17 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       .def_property_readonly("height", &Frames::get_height)
       .def_property_readonly("sample_rate", &Frames::get_sample_rate);
 
-  py::class_<VideoBuffer>(m, "VideoBuffer", py::module_local())
+  py::class_<Buffer>(m, "Buffer", py::module_local())
       .def_property_readonly(
-          "channel_last",
-          [](const VideoBuffer& self) { return self.channel_last; })
-      .def("is_cuda", &VideoBuffer::is_cuda)
+          "channel_last", [](const Buffer& self) { return self.channel_last; })
+      .def("is_cuda", &Buffer::is_cuda)
       .def(
           "get_array_interface",
-          [](VideoBuffer& self) { return get_array_interface(self); })
+          [](Buffer& self) { return get_array_interface(self); })
 #ifdef SPDL_USE_CUDA
       .def(
           "get_cuda_array_interface",
-          [](VideoBuffer& self) { return get_cuda_array_interface(self); })
+          [](Buffer& self) { return get_cuda_array_interface(self); })
 #endif
       ;
 
