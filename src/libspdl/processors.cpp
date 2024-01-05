@@ -10,6 +10,7 @@
 #include <libspdl/detail/ffmpeg/filter_graph.h>
 #include <libspdl/detail/ffmpeg/logging.h>
 #include <libspdl/interface.h>
+#include <libspdl/logging.h>
 #include <libspdl/processors.h>
 #include <cstddef>
 #include <cstdint>
@@ -117,7 +118,7 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
 
   int idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
   if (idx < 0) {
-    throw std::runtime_error("No video stream was found.");
+    SPDL_FAIL("No video stream was found.");
   }
   return idx;
 }
@@ -363,8 +364,7 @@ Task<std::vector<Frames>> stream_decode(
     ++i;
   };
   if (results.size() != timestamps.size()) {
-    throw std::runtime_error(
-        "Failed to decode some video clips. Check the error log.");
+    SPDL_FAIL("Failed to decode some video clips. Check the error log.");
   }
   co_return results;
 }
