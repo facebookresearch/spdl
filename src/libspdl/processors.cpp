@@ -282,10 +282,7 @@ Task<Frames> decode_packets(
 Task<Frames> decode_packets(
     PackagedAVPackets packets,
     AVCodecContextPtr codec_ctx,
-    const std::string filter_desc) {
-  auto filter_graph =
-      get_video_filter(filter_desc, codec_ctx.get(), packets.frame_rate);
-
+    AVFilterGraphPtr filter_graph) {
   // XLOG(DBG) << describe_graph(filter_graph.get());
 
   // Note:
@@ -305,7 +302,7 @@ Task<Frames> decode_packets(
   co_return frames;
 }
 
-Task<Frames> process_packets(
+Task<Frames> get_decode_task(
     PackagedAVPackets packets,
     const std::string& filter_desc,
     const DecodeConfig& cfg) {
@@ -316,16 +313,20 @@ Task<Frames> process_packets(
       cfg.decoder_options,
       cfg.cuda_device_index);
 
-  return filter_desc.empty()
-      ? decode_packets(std::move(packets), std::move(codec_ctx))
-      : decode_packets(std::move(packets), std::move(codec_ctx), filter_desc);
+  if (filter_desc.empty()) {
+    return decode_packets(std::move(packets), std::move(codec_ctx));
+  }
+  auto filter_graph =
+      get_video_filter(filter_desc, codec_ctx.get(), packets.frame_rate);
+  return decode_packets(
+      std::move(packets), std::move(codec_ctx), std::move(filter_graph));
 }
 
 Generator<PackagedAVPackets&&> stream_demux(
     const enum AVMediaType type,
-    const std::string src,
-    const std::vector<double> timestamps,
-    const IOConfig cfg) {
+    const std::string& src,
+    const std::vector<double>& timestamps,
+    const IOConfig& cfg) {
   auto dp =
       get_data_provider(src, cfg.format, cfg.format_options, cfg.buffer_size);
   auto demuxer = streaming_demux(type, dp->get_fmt_ctx(), timestamps);
@@ -336,17 +337,17 @@ Generator<PackagedAVPackets&&> stream_demux(
 
 Task<std::vector<Frames>> stream_decode(
     const enum AVMediaType type,
-    const std::string& src,
+    const std::string src,
     const std::vector<double> timestamps,
     const std::string filter_desc,
-    IOConfig io_cfg,
-    DecodeConfig decode_cfg) {
+    const IOConfig io_cfg,
+    const DecodeConfig decode_cfg) {
   auto streamer = stream_demux(type, src, timestamps, io_cfg);
   std::vector<folly::SemiFuture<Frames>> futures;
   auto exec = getDecoderThreadPoolExecutor();
   while (auto packets = co_await streamer.next()) {
-    auto decode_job = process_packets(*packets, filter_desc, decode_cfg);
-    futures.emplace_back(std::move(decode_job).scheduleOn(exec).start());
+    auto task = get_decode_task(*packets, filter_desc, decode_cfg);
+    futures.emplace_back(std::move(task).scheduleOn(exec).start());
   }
   XLOG(DBG) << "Waiting for decode jobs to finish";
   std::vector<Frames> results;
@@ -374,15 +375,10 @@ std::vector<Frames> decode_video(
     const std::string& src,
     const std::vector<double>& timestamps,
     const std::string& filter_desc,
-    IOConfig io_cfg,
-    DecodeConfig decode_cfg) {
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg) {
   auto job = stream_decode(
-      AVMEDIA_TYPE_VIDEO,
-      src,
-      std::move(timestamps),
-      std::move(filter_desc),
-      std::move(io_cfg),
-      std::move(decode_cfg));
+      AVMEDIA_TYPE_VIDEO, src, timestamps, filter_desc, io_cfg, decode_cfg);
   return folly::coro::blockingWait(
       std::move(job).scheduleOn(getDemuxerThreadPoolExecutor()));
 }
