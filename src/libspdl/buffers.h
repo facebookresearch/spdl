@@ -8,8 +8,8 @@
 
 namespace spdl {
 
-// video buffer class to be exposed to python
-struct VideoBuffer {
+// buffer class to be exposed to python
+struct Buffer {
   using StorageVariants =
 #ifdef SPDL_USE_CUDA
       std::variant<Storage, CUDAStorage>;
@@ -22,12 +22,9 @@ struct VideoBuffer {
 
   std::shared_ptr<StorageVariants> storage;
 
-  VideoBuffer(
-      const std::vector<size_t> shape,
-      bool channel_last,
-      Storage&& storage);
+  Buffer(const std::vector<size_t> shape, bool channel_last, Storage&& storage);
 #ifdef SPDL_USE_CUDA
-  VideoBuffer(
+  Buffer(
       const std::vector<size_t> shape,
       bool channel_last,
       CUDAStorage&& storage);
@@ -41,12 +38,10 @@ struct VideoBuffer {
 #endif
 };
 
-VideoBuffer video_buffer(
-    const std::vector<size_t> shape,
-    bool channel_last = false);
+Buffer cpu_buffer(const std::vector<size_t> shape, bool channel_last = false);
 
 #ifdef SPDL_USE_CUDA
-VideoBuffer video_buffer_cuda(
+Buffer cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
     bool channel_last = false);

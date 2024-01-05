@@ -5,7 +5,7 @@
 
 namespace spdl {
 
-VideoBuffer::VideoBuffer(
+Buffer::Buffer(
     const std::vector<size_t> shape_,
     bool channel_last_,
     Storage&& storage_)
@@ -14,7 +14,7 @@ VideoBuffer::VideoBuffer(
       storage(std::make_shared<StorageVariants>(std::move(storage_))) {}
 
 #ifdef SPDL_USE_CUDA
-VideoBuffer::VideoBuffer(
+Buffer::Buffer(
     const std::vector<size_t> shape_,
     bool channel_last_,
     CUDAStorage&& storage_)
@@ -30,7 +30,7 @@ struct Overload : Fs... {
 template <class... Fs>
 Overload(Fs...) -> Overload<Fs...>;
 
-void* VideoBuffer::data() {
+void* Buffer::data() {
   return std::visit(
       Overload{
           [](Storage& s) { return static_cast<void*>(s.data); }
@@ -42,7 +42,7 @@ void* VideoBuffer::data() {
       *storage);
 }
 
-bool VideoBuffer::is_cuda() const {
+bool Buffer::is_cuda() const {
 #ifdef SPDL_USE_CUDA
   assert(storage);
   return std::holds_alternative<CUDAStorage>(*storage);
@@ -52,7 +52,7 @@ bool VideoBuffer::is_cuda() const {
 }
 
 #ifdef SPDL_USE_CUDA
-uintptr_t VideoBuffer::get_cuda_stream() const {
+uintptr_t Buffer::get_cuda_stream() const {
   if (!std::holds_alternative<CUDAStorage>(*storage)) {
     SPDL_FAIL_INTERNAL("CUDAStream is not available.");
   }
@@ -72,16 +72,16 @@ inline size_t prod(const std::vector<size_t>& shape) {
 
 } // namespace
 
-VideoBuffer video_buffer(const std::vector<size_t> shape, bool channel_last) {
-  return VideoBuffer{std::move(shape), channel_last, Storage{prod(shape)}};
+Buffer cpu_buffer(const std::vector<size_t> shape, bool channel_last) {
+  return Buffer{std::move(shape), channel_last, Storage{prod(shape)}};
 }
 
 #ifdef SPDL_USE_CUDA
-VideoBuffer video_buffer_cuda(
+Buffer cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
     bool channel_last) {
-  return VideoBuffer{
+  return Buffer{
       std::move(shape), channel_last, CUDAStorage{prod(shape), stream}};
 }
 #endif

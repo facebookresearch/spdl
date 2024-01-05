@@ -6,13 +6,16 @@ struct AVFrame;
 
 namespace spdl {
 
-struct VideoBuffer;
+struct Buffer;
 
 // We deal with multiple frames at a time, so we use vector of raw
 // pointers with dedicated destructor, as opposed to vector of managed pointers
 
 /// Represents series of decoded frames
 struct Frames {
+  enum class Type { NA, Audio, Video };
+
+  Type type = Type::NA;
   std::vector<AVFrame*> frames{};
 
   explicit Frames() = default;
@@ -31,7 +34,7 @@ struct Frames {
 
   Frames slice(int start, int stop, int step) const;
 
-  VideoBuffer to_video_buffer(int plane = -1) const;
+  Buffer to_video_buffer(int plane = -1) const;
 };
 
 } // namespace spdl
