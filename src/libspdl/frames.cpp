@@ -54,6 +54,14 @@ int Frames::get_sample_rate() const {
   return frames.size() ? frames[0]->sample_rate : -1;
 }
 
+int Frames::get_num_samples() const {
+  int ret = 0;
+  for (auto& f : frames) {
+    ret += f->nb_samples;
+  }
+  return ret;
+}
+
 Frames Frames::slice(int start, int stop, int step) const {
   Frames out{};
   for (int i = start; i < stop; i += step) {

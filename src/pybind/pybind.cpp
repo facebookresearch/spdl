@@ -131,7 +131,8 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
           })
       .def_property_readonly("width", &Frames::get_width)
       .def_property_readonly("height", &Frames::get_height)
-      .def_property_readonly("sample_rate", &Frames::get_sample_rate);
+      .def_property_readonly("sample_rate", &Frames::get_sample_rate)
+      .def_property_readonly("num_samples", &Frames::get_num_samples);
 
   py::class_<Buffer>(m, "Buffer", py::module_local())
       .def_property_readonly(
