@@ -141,7 +141,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
          const std::optional<int>& width = std::nullopt,
          const std::optional<int>& height = std::nullopt,
          const std::optional<std::string>& pix_fmt = std::nullopt) {
-        return decode(
+        return decode_video(
             {src,
              timestamps,
              format,
@@ -149,11 +149,8 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
              buffer_size,
              decoder,
              decoder_options,
-             cuda_device_index,
-             frame_rate,
-             width,
-             height,
-             pix_fmt});
+             cuda_device_index},
+            get_video_filter_description(frame_rate, width, height, pix_fmt));
       },
       py::arg("src"),
       py::arg("timestamps"),

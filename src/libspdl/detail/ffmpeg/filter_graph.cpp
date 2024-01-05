@@ -160,11 +160,10 @@ AVFilterGraphPtr get_video_filter(
 }
 
 std::string get_video_filter_description(
-    const std::optional<Rational> frame_rate,
-    const std::optional<int> width,
-    const std::optional<int> height,
-    const std::optional<std::string> pix_fmt,
-    const enum AVPixelFormat src_pix_fmt) {
+    const std::optional<Rational>& frame_rate,
+    const std::optional<int>& width,
+    const std::optional<int>& height,
+    const std::optional<std::string>& pix_fmt) {
   std::vector<std::string> parts;
   if (frame_rate) {
     auto fr = frame_rate.value();
@@ -182,11 +181,7 @@ std::string get_video_filter_description(
     parts.push_back(fmt::format("scale={}", fmt::join(scale, ":")));
   }
   if (pix_fmt) {
-    auto val = pix_fmt.value();
-    if (src_pix_fmt == AV_PIX_FMT_NONE ||
-        val != av_get_pix_fmt_name(src_pix_fmt)) {
-      parts.push_back(fmt::format("format=pix_fmts={}", val));
-    }
+    parts.push_back(fmt::format("format=pix_fmts={}", pix_fmt.value()));
   }
   return fmt::to_string(fmt::join(parts, ","));
 }
