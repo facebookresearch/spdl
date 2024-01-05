@@ -1,4 +1,5 @@
 #include <libspdl/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/detail/ffmpeg/filter_graph.h>
 #include <libspdl/utils.h>
 
 #include <cstdint>
@@ -22,6 +23,15 @@ void clear_ffmpeg_cuda_context_cache() {
 
 void create_cuda_context(int index, bool use_primary_context) {
   detail::create_cuda_context(index, use_primary_context);
+}
+
+std::string get_video_filter_description(
+    const std::optional<std::tuple<int, int>>& frame_rate,
+    const std::optional<int>& width,
+    const std::optional<int>& height,
+    const std::optional<std::string>& pix_fmt) {
+  return detail::get_video_filter_description(
+      frame_rate, width, height, pix_fmt);
 }
 
 } // namespace spdl

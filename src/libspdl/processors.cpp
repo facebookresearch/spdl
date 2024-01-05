@@ -19,6 +19,7 @@ extern "C" {
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
 #include <libavutil/frame.h>
 #include <libavutil/pixdesc.h>
 #include <libavutil/rational.h>
@@ -77,13 +78,12 @@ struct PackagedAVPackets {
 //////////////////////////////////////////////////////////////////////////////
 // Demuxer
 //////////////////////////////////////////////////////////////////////////////
-int parse_fmt_ctx(AVFormatContext* fmt_ctx) {
+int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
   CHECK_AVERROR(
       avformat_find_stream_info(fmt_ctx, nullptr),
       "Failed to find stream information.");
 
-  int idx =
-      av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
+  int idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
   if (idx < 0) {
     throw std::runtime_error("No video stream was found.");
   }
@@ -270,37 +270,33 @@ Task<Frames> decode_packets(
 Task<Frames> process_packets(
     PackagedAVPackets packets,
     AVCodecContextPtr codec_ctx,
-    const std::string filter_desc) {
+    const std::string& filter_desc) {
   return filter_desc.empty()
       ? decode_packets(std::move(packets), std::move(codec_ctx))
       : decode_packets(std::move(packets), std::move(codec_ctx), filter_desc);
 }
 
-Task<std::vector<Frames>> stream_decode(VideoDecodingJob job) {
+Task<std::vector<Frames>> stream_decode(
+    enum AVMediaType type,
+    DecodeConfig cfg,
+    const std::string filter_desc) {
   auto dp = get_data_provider(
-      job.src, job.format, job.format_options, job.buffer_size);
+      cfg.src, cfg.format, cfg.format_options, cfg.buffer_size);
 
   auto fmt_ctx = dp->get_fmt_ctx();
-  int idx = parse_fmt_ctx(fmt_ctx);
+  int idx = parse_fmt_ctx(fmt_ctx, type);
   AVStream* stream = fmt_ctx->streams[idx];
 
-  auto filter_desc = get_video_filter_description(
-      job.frame_rate,
-      job.width,
-      job.height,
-      job.pix_fmt,
-      static_cast<AVPixelFormat>(stream->codecpar->format));
-
-  auto demuxer = streaming_demux(fmt_ctx, idx, job.timestamps);
+  auto demuxer = streaming_demux(fmt_ctx, idx, cfg.timestamps);
   std::vector<folly::SemiFuture<Frames>> futures;
   auto exec = getDecoderThreadPoolExecutor();
   while (auto packets = co_await demuxer.next()) {
     auto codec_ctx = get_codec_ctx(
         stream->codecpar,
         stream->time_base,
-        job.decoder,
-        job.decoder_options,
-        job.cuda_device_index);
+        cfg.decoder,
+        cfg.decoder_options,
+        cfg.cuda_device_index);
 
     futures.emplace_back(
         process_packets(*packets, std::move(codec_ctx), filter_desc)
@@ -317,12 +313,12 @@ Task<std::vector<Frames>> stream_decode(VideoDecodingJob job) {
       XLOG(ERR) << fmt::format(
           "Failed to decode video clip. Error: {} (Source: {}, timestamp: {})",
           result.exception().what(),
-          job.src,
-          job.timestamps[i]);
+          cfg.src,
+          cfg.timestamps[i]);
     }
     ++i;
   };
-  if (results.size() != job.timestamps.size()) {
+  if (results.size() != cfg.timestamps.size()) {
     throw std::runtime_error(
         "Failed to decode some video clips. Check the error log.");
   }
@@ -330,10 +326,13 @@ Task<std::vector<Frames>> stream_decode(VideoDecodingJob job) {
 }
 } // namespace
 
-std::vector<Frames> decode(VideoDecodingJob job) {
+std::vector<Frames> decode_video(
+    DecodeConfig cfg,
+    const std::string& filter_desc) {
   auto exec = getDemuxerThreadPoolExecutor();
   return folly::coro::blockingWait(
-      stream_decode(std::move(job)).scheduleOn(exec));
+      stream_decode(AVMEDIA_TYPE_VIDEO, std::move(cfg), std::move(filter_desc))
+          .scheduleOn(exec));
 }
 
 } // namespace spdl
