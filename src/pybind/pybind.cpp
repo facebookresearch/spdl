@@ -137,20 +137,27 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
          const std::optional<std::string>& decoder = std::nullopt,
          const std::optional<OptionDict>& decoder_options = std::nullopt,
          const int cuda_device_index = -1,
-         const std::optional<std::tuple<int, int>>& frame_rate = std::nullopt,
+         const py::object& frame_rate = py::none(),
          const std::optional<int>& width = std::nullopt,
          const std::optional<int>& height = std::nullopt,
          const std::optional<std::string>& pix_fmt = std::nullopt) {
+        auto fr = [&]() -> std::optional<std::tuple<int, int>> {
+          if (frame_rate == py::none()) {
+            return std::nullopt;
+          }
+          py::object Fraction =
+              py::module_::import("fractions").attr("Fraction");
+          py::object r = Fraction(frame_rate);
+          return {
+              {r.attr("numerator").cast<int>(),
+               r.attr("denominator").cast<int>()}};
+        }();
         return decode_video(
-            {src,
-             timestamps,
-             format,
-             format_options,
-             buffer_size,
-             decoder,
-             decoder_options,
-             cuda_device_index},
-            get_video_filter_description(frame_rate, width, height, pix_fmt));
+            src,
+            timestamps,
+            get_video_filter_description(fr, width, height, pix_fmt),
+            {format, format_options, buffer_size},
+            {decoder, decoder_options, cuda_device_index});
       },
       py::arg("src"),
       py::arg("timestamps"),

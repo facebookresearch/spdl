@@ -38,6 +38,13 @@ using folly::coro::collectAllTryRange;
 namespace spdl {
 namespace {
 
+inline AVCodecParameters* copy(const AVCodecParameters* src) {
+  auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
+  CHECK_AVERROR(
+      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
+  return dst;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // PackagedAVPackets
 //////////////////////////////////////////////////////////////////////////////
@@ -45,25 +52,49 @@ namespace {
 // Similar to Frames, AVFrame pointers are bulk released.
 // It contains sufficient information to build decoder via AVStream*.
 struct PackagedAVPackets {
-  // frame rate for video
-  AVRational frame_rate;
-
-  // Requested timestamp
+  // Source information
   std::string src;
   double timestamp;
+
+  //
+  AVCodecParameters* codecpar = nullptr;
+  AVRational time_base = {0, 1};
+
+  // frame rate for video
+  AVRational frame_rate = {0, 1};
 
   // Sliced raw packets
   std::vector<AVPacket*> packets = {};
 
-  PackagedAVPackets(AVRational frame_rate, std::string src, double timestamp)
-      : frame_rate(frame_rate), src(src), timestamp(timestamp){};
+  PackagedAVPackets(
+      std::string src_,
+      double timestamp_,
+      AVCodecParameters* codecpar_,
+      AVRational time_base_,
+      AVRational frame_rate_)
+      : src(src_),
+        timestamp(timestamp_),
+        codecpar(copy(codecpar_)),
+        time_base(time_base_),
+        frame_rate(frame_rate_){};
 
   // No copy constructors
   PackagedAVPackets(const PackagedAVPackets&) = delete;
   PackagedAVPackets& operator=(const PackagedAVPackets&) = delete;
   // Move constructor to support AsyncGenerator
-  PackagedAVPackets(PackagedAVPackets&&) noexcept = default;
-  PackagedAVPackets& operator=(PackagedAVPackets&&) noexcept = default;
+  PackagedAVPackets(PackagedAVPackets&& other) noexcept {
+    *this = std::move(other);
+  };
+  PackagedAVPackets& operator=(PackagedAVPackets&& other) noexcept {
+    using std::swap;
+    swap(src, other.src);
+    swap(timestamp, other.timestamp);
+    swap(codecpar, other.codecpar);
+    swap(time_base, other.time_base);
+    swap(frame_rate, other.frame_rate);
+    swap(packets, other.packets);
+    return *this;
+  };
   // Destructor releases AVPacket* resources
   ~PackagedAVPackets() {
     std::for_each(packets.begin(), packets.end(), [](AVPacket* p) {
@@ -72,13 +103,14 @@ struct PackagedAVPackets {
         av_packet_free(&p);
       }
     });
+    avcodec_parameters_free(&codecpar);
   };
 };
 
 //////////////////////////////////////////////////////////////////////////////
 // Demuxer
 //////////////////////////////////////////////////////////////////////////////
-int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
+inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
   CHECK_AVERROR(
       avformat_find_stream_info(fmt_ctx, nullptr),
       "Failed to find stream information.");
@@ -91,9 +123,10 @@ int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
 }
 
 Generator<PackagedAVPackets&&> streaming_demux(
+    enum AVMediaType type,
     AVFormatContext* fmt_ctx,
-    int idx,
     std::vector<double> timestamps) {
+  int idx = parse_fmt_ctx(fmt_ctx, type);
   AVStream* stream = fmt_ctx->streams[idx];
 
   // Disable other streams
@@ -113,7 +146,11 @@ Generator<PackagedAVPackets&&> streaming_demux(
     int num_req_frames = 10;
 
     PackagedAVPackets package{
-        av_guess_frame_rate(fmt_ctx, stream, nullptr), fmt_ctx->url, timestamp};
+        fmt_ctx->url,
+        timestamp,
+        stream->codecpar,
+        stream->time_base,
+        av_guess_frame_rate(fmt_ctx, stream, nullptr)};
     while (num_req_frames >= 0) {
       AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
       int errnum = av_read_frame(fmt_ctx, packet.get());
@@ -269,39 +306,46 @@ Task<Frames> decode_packets(
 
 Task<Frames> process_packets(
     PackagedAVPackets packets,
-    AVCodecContextPtr codec_ctx,
-    const std::string& filter_desc) {
+    const std::string& filter_desc,
+    const DecodeConfig& cfg) {
+  auto codec_ctx = get_codec_ctx(
+      packets.codecpar,
+      packets.time_base,
+      cfg.decoder,
+      cfg.decoder_options,
+      cfg.cuda_device_index);
+
   return filter_desc.empty()
       ? decode_packets(std::move(packets), std::move(codec_ctx))
       : decode_packets(std::move(packets), std::move(codec_ctx), filter_desc);
 }
 
+Generator<PackagedAVPackets&&> stream_demux(
+    const enum AVMediaType type,
+    const std::string src,
+    const std::vector<double> timestamps,
+    const IOConfig cfg) {
+  auto dp =
+      get_data_provider(src, cfg.format, cfg.format_options, cfg.buffer_size);
+  auto demuxer = streaming_demux(type, dp->get_fmt_ctx(), timestamps);
+  while (auto packets = co_await demuxer.next()) {
+    co_yield *packets;
+  }
+}
+
 Task<std::vector<Frames>> stream_decode(
-    enum AVMediaType type,
-    DecodeConfig cfg,
-    const std::string filter_desc) {
-  auto dp = get_data_provider(
-      cfg.src, cfg.format, cfg.format_options, cfg.buffer_size);
-
-  auto fmt_ctx = dp->get_fmt_ctx();
-  int idx = parse_fmt_ctx(fmt_ctx, type);
-  AVStream* stream = fmt_ctx->streams[idx];
-
-  auto demuxer = streaming_demux(fmt_ctx, idx, cfg.timestamps);
+    const enum AVMediaType type,
+    const std::string& src,
+    const std::vector<double> timestamps,
+    const std::string filter_desc,
+    IOConfig io_cfg,
+    DecodeConfig decode_cfg) {
+  auto streamer = stream_demux(type, src, timestamps, io_cfg);
   std::vector<folly::SemiFuture<Frames>> futures;
   auto exec = getDecoderThreadPoolExecutor();
-  while (auto packets = co_await demuxer.next()) {
-    auto codec_ctx = get_codec_ctx(
-        stream->codecpar,
-        stream->time_base,
-        cfg.decoder,
-        cfg.decoder_options,
-        cfg.cuda_device_index);
-
-    futures.emplace_back(
-        process_packets(*packets, std::move(codec_ctx), filter_desc)
-            .scheduleOn(exec)
-            .start());
+  while (auto packets = co_await streamer.next()) {
+    auto decode_job = process_packets(*packets, filter_desc, decode_cfg);
+    futures.emplace_back(std::move(decode_job).scheduleOn(exec).start());
   }
   XLOG(DBG) << "Waiting for decode jobs to finish";
   std::vector<Frames> results;
@@ -313,12 +357,12 @@ Task<std::vector<Frames>> stream_decode(
       XLOG(ERR) << fmt::format(
           "Failed to decode video clip. Error: {} (Source: {}, timestamp: {})",
           result.exception().what(),
-          cfg.src,
-          cfg.timestamps[i]);
+          src,
+          timestamps[i]);
     }
     ++i;
   };
-  if (results.size() != cfg.timestamps.size()) {
+  if (results.size() != timestamps.size()) {
     throw std::runtime_error(
         "Failed to decode some video clips. Check the error log.");
   }
@@ -327,12 +371,20 @@ Task<std::vector<Frames>> stream_decode(
 } // namespace
 
 std::vector<Frames> decode_video(
-    DecodeConfig cfg,
-    const std::string& filter_desc) {
-  auto exec = getDemuxerThreadPoolExecutor();
+    const std::string& src,
+    const std::vector<double>& timestamps,
+    const std::string& filter_desc,
+    IOConfig io_cfg,
+    DecodeConfig decode_cfg) {
+  auto job = stream_decode(
+      AVMEDIA_TYPE_VIDEO,
+      src,
+      std::move(timestamps),
+      std::move(filter_desc),
+      std::move(io_cfg),
+      std::move(decode_cfg));
   return folly::coro::blockingWait(
-      stream_decode(AVMEDIA_TYPE_VIDEO, std::move(cfg), std::move(filter_desc))
-          .scheduleOn(exec));
+      std::move(job).scheduleOn(getDemuxerThreadPoolExecutor()));
 }
 
 } // namespace spdl

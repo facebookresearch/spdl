@@ -40,7 +40,7 @@ def _main():
         {
             "src": src2,
             "timestamps": [0.0, 1.0, 2.0],
-            "frame_rate": (60, 1),
+            "frame_rate": "30000/1001",
             "width": 36,
             "height": 48,
             "pix_fmt": "rgb24",

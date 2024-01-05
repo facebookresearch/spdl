@@ -1,8 +1,7 @@
 """Thin wrapper around the libspdl extension."""
 
 import sys
-from fractions import Fraction
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -90,29 +89,6 @@ class VideoBuffer:
             if self._buffer.is_cuda():
                 return self._buffer.get_cuda_array_interface()
         return getattr(self._buffer, name)
-
-
-def _get_vfilter_desc(
-    frame_rate: Optional[int | float | str],
-    width: Optional[int],
-    height: Optional[int],
-    pix_fmt: Optional[str],
-):
-    descs = []
-    if frame_rate is not None:
-        fr = Fraction(frame_rate)
-        descs.append(f"fps={fr.numerator}/{fr.denominator}")
-    if width is not None and height is not None:
-        scales = []
-        if width is not None:
-            scales.append(f"width={width}")
-        if height is not None:
-            scales.append(f"height={height}")
-        if scales:
-            descs.append(f"scale={':'.join(scales)}")
-    if pix_fmt is not None:
-        descs.append(f"format=pix_fmts={pix_fmt}")
-    return ",".join(descs) if descs else None
 
 
 def decode_video(*args, **kwargs) -> List[Frames]:
