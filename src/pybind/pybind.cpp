@@ -19,6 +19,9 @@ namespace py = pybind11;
 namespace spdl {
 namespace {
 
+////////////////////////////////////////////////////////////////////////////////
+// Array Interface
+////////////////////////////////////////////////////////////////////////////////
 py::dict get_array_interface(Buffer& b) {
   py::dict ret;
   ret["version"] = 3;
@@ -43,6 +46,9 @@ py::dict get_cuda_array_interface(Buffer& b) {
 }
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+// FOLLY INITIALIZATION
+////////////////////////////////////////////////////////////////////////////////
 struct DoublePtr {
   char **p, **p_orig;
   DoublePtr(int argc) : p(new char*[argc]), p_orig(p) {}
@@ -81,6 +87,21 @@ std::vector<std::string> init_folly_init(
   return ret;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Misc
+////////////////////////////////////////////////////////////////////////////////
+std::optional<std::tuple<int, int>> get_frame_rate(
+    const py::object& frame_rate) {
+  if (frame_rate == py::none()) {
+    return std::nullopt;
+  }
+  py::object Fraction = py::module_::import("fractions").attr("Fraction");
+  py::object r = Fraction(frame_rate);
+  return {{r.attr("numerator").cast<int>(), r.attr("denominator").cast<int>()}};
+}
+////////////////////////////////////////////////////////////////////////////////
+// Registeration
+////////////////////////////////////////////////////////////////////////////////
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   m.def("init_folly", &init_folly_init);
   m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
@@ -140,21 +161,11 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
          const std::optional<int>& width = std::nullopt,
          const std::optional<int>& height = std::nullopt,
          const std::optional<std::string>& pix_fmt = std::nullopt) {
-        auto fr = [&]() -> std::optional<std::tuple<int, int>> {
-          if (frame_rate == py::none()) {
-            return std::nullopt;
-          }
-          py::object Fraction =
-              py::module_::import("fractions").attr("Fraction");
-          py::object r = Fraction(frame_rate);
-          return {
-              {r.attr("numerator").cast<int>(),
-               r.attr("denominator").cast<int>()}};
-        }();
         return decode_video(
             src,
             timestamps,
-            get_video_filter_description(fr, width, height, pix_fmt),
+            get_video_filter_description(
+                get_frame_rate(frame_rate), width, height, pix_fmt),
             {format, format_options, buffer_size},
             {decoder, decoder_options, cuda_device_index});
       },
