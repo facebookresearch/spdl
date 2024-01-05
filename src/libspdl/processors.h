@@ -24,7 +24,7 @@ std::vector<Frames> decode_video(
     const std::string& src,
     const std::vector<double>& timestamps,
     const std::string& filter_desc,
-    IOConfig io_cfg,
-    DecodeConfig decode_cfg);
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg);
 
 } // namespace spdl
