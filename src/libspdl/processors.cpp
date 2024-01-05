@@ -123,10 +123,14 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
   return idx;
 }
 
-Generator<PackagedAVPackets&&> streaming_demux(
-    enum AVMediaType type,
-    AVFormatContext* fmt_ctx,
-    std::vector<double> timestamps) {
+Generator<PackagedAVPackets&&> stream_demux(
+    const enum AVMediaType type,
+    const std::string& src,
+    const std::vector<double>& timestamps,
+    const IOConfig& cfg) {
+  auto dp =
+      get_data_provider(src, cfg.format, cfg.format_options, cfg.buffer_size);
+  AVFormatContext* fmt_ctx = dp->get_fmt_ctx();
   int idx = parse_fmt_ctx(fmt_ctx, type);
   AVStream* stream = fmt_ctx->streams[idx];
 
@@ -322,19 +326,6 @@ Task<Frames> get_decode_task(
       std::move(packets), std::move(codec_ctx), std::move(filter_graph));
 }
 
-Generator<PackagedAVPackets&&> stream_demux(
-    const enum AVMediaType type,
-    const std::string& src,
-    const std::vector<double>& timestamps,
-    const IOConfig& cfg) {
-  auto dp =
-      get_data_provider(src, cfg.format, cfg.format_options, cfg.buffer_size);
-  auto demuxer = streaming_demux(type, dp->get_fmt_ctx(), timestamps);
-  while (auto packets = co_await demuxer.next()) {
-    co_yield *packets;
-  }
-}
-
 Task<std::vector<Frames>> stream_decode(
     const enum AVMediaType type,
     const std::string src,
@@ -342,10 +333,10 @@ Task<std::vector<Frames>> stream_decode(
     const std::string filter_desc,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg) {
-  auto streamer = stream_demux(type, src, timestamps, io_cfg);
+  auto demuxer = stream_demux(type, src, timestamps, io_cfg);
   std::vector<folly::SemiFuture<Frames>> futures;
   auto exec = getDecoderThreadPoolExecutor();
-  while (auto packets = co_await streamer.next()) {
+  while (auto packets = co_await demuxer.next()) {
     auto task = get_decode_task(*packets, filter_desc, decode_cfg);
     futures.emplace_back(std::move(task).scheduleOn(exec).start());
   }
