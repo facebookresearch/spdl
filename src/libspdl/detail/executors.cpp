@@ -1,4 +1,5 @@
 #include <libspdl/detail/executors.h>
+#include <libspdl/logging.h>
 
 #include <folly/Singleton.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
@@ -83,7 +84,7 @@ Singleton<std::shared_ptr<Executor>, DecoderTag> DECODER_EXECUTOR([] {
 Executor::KeepAlive<> getDemuxerThreadPoolExecutor() {
   auto executorPtrPtr = DEMUX_EXECUTOR.try_get();
   if (!executorPtrPtr) {
-    throw std::runtime_error("Requested Demuxer executor during shutdown.");
+    SPDL_FAIL("Requested Demuxer executor during shutdown.");
   }
   return getKeepAliveToken(executorPtrPtr->get());
 }
@@ -91,7 +92,7 @@ Executor::KeepAlive<> getDemuxerThreadPoolExecutor() {
 Executor::KeepAlive<> getDecoderThreadPoolExecutor() {
   auto executorPtrPtr = DECODER_EXECUTOR.try_get();
   if (!executorPtrPtr) {
-    throw std::runtime_error("Requested Demuxer executor during shutdown.");
+    SPDL_FAIL("Requested Demuxer executor during shutdown.");
   }
   return getKeepAliveToken(executorPtrPtr->get());
 }

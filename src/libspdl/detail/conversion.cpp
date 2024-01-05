@@ -1,4 +1,5 @@
 #include <libspdl/detail/conversion.h>
+#include <libspdl/logging.h>
 #ifdef SPDL_USE_CUDA
 #include <libspdl/detail/cuda.h>
 #endif
@@ -185,13 +186,13 @@ VideoBuffer convert_video_frames_cuda(
         case -1:
           return convert_nv12_cuda(frames);
         default:
-          throw std::runtime_error(fmt::format(
+          SPDL_FAIL(fmt::format(
               "CUDA frame ({}:{}) is not supported.",
               av_get_pix_fmt_name(sw_pix_fmt),
               plane));
       }
     default:
-      throw std::runtime_error(fmt::format(
+      SPDL_FAIL(fmt::format(
           "CUDA frame ({}) is not supported.",
           av_get_pix_fmt_name(sw_pix_fmt)));
   }
@@ -209,7 +210,7 @@ VideoBuffer convert_video_frames_cpu(
         case 0:
           return convert_interleaved(frames);
         default:
-          throw std::runtime_error(fmt::format(
+          SPDL_FAIL(fmt::format(
               "`plane` value for RGB24 format must be 0. (Found: {})", plane));
       }
     }
@@ -222,7 +223,7 @@ VideoBuffer convert_video_frames_cpu(
         case 2:
           return convert_plane(frames, plane);
         default:
-          throw std::runtime_error(fmt::format(
+          SPDL_FAIL(fmt::format(
               "Valid `plane` values for YUV444P are [0, 1, 2]. (Found: {})",
               plane));
       }
@@ -237,7 +238,7 @@ VideoBuffer convert_video_frames_cpu(
         case 2:
           return convert_u_or_v(frames, plane);
         default:
-          throw std::runtime_error(fmt::format(
+          SPDL_FAIL(fmt::format(
               "Valid `plane` values for YUV420P are [0, 1, 2]. (Found: {})",
               plane));
       }
@@ -251,12 +252,12 @@ VideoBuffer convert_video_frames_cpu(
         case 1:
           return convert_nv12_uv(frames);
         default:
-          throw std::runtime_error(fmt::format(
+          SPDL_FAIL(fmt::format(
               "Valid `plane` values for NV12 are [0, 1]. (Found: {})", plane));
       }
     }
     default:
-      throw std::runtime_error(fmt::format(
+      SPDL_FAIL(fmt::format(
           "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
@@ -274,7 +275,7 @@ VideoBuffer convert_video_frames(
 #ifdef SPDL_USE_CUDA
     return convert_video_frames_cuda(frames, plane);
 #else
-    throw std::runtime_error("SPDL is not compiled with CUDA support.");
+    SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #endif
   }
   return convert_video_frames_cpu(frames, plane);

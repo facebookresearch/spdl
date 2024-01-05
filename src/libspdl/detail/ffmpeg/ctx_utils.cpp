@@ -53,8 +53,7 @@ void check_empty(const AVDictionary* p) {
     while ((t = av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX))) {
       keys.emplace_back(t->key);
     }
-    throw std::runtime_error(
-        fmt::format("Unexpected options: {}", fmt::join(keys, ", ")));
+    SPDL_FAIL(fmt::format("Unexpected options: {}", fmt::join(keys, ", ")));
   }
 }
 } // namespace
@@ -102,10 +101,10 @@ void warn_if_device_is_initialized(int index) {
 
 void create_cuda_context(const int index, const bool use_primary_context) {
 #ifndef SPDL_USE_CUDA
-  throw std::runtime_error("SPDL is not compiled with CUDA support.");
+  SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
   if (CUDA_CONTEXT_CACHE.count(index)) {
-    throw std::runtime_error(fmt::format(
+    SPDL_FAIL(fmt::format(
         "CUDA context for device {} is already initialized", index));
   }
   AVBufferRef* p = nullptr;
@@ -149,8 +148,8 @@ int get_device_index_from_frame_context(const AVBufferRef* hw_frames_ctx) {
       return index;
     }
   }
-  throw std::runtime_error(fmt::format(
-      "[Internal] Failed to locate the device associated with context {}",
+  SPDL_FAIL_INTERNAL(fmt::format(
+      "Failed to locate the device associated with context {}",
       (void*)hw_device_ctx));
 }
 
@@ -190,7 +189,7 @@ AVIOContextPtr get_io_ctx(
       buffer, buffer_size, 0, opaque, read_packet, nullptr, seek);
   if (!io_ctx) [[unlikely]] {
     av_freep(&buffer);
-    throw std::runtime_error("Failed to allocate AVIOContext.");
+    SPDL_FAIL("Failed to allocate AVIOContext.");
   }
   return AVIOContextPtr{io_ctx};
 }
@@ -211,8 +210,7 @@ AVFormatInputContextPtr get_input_format_ctx(
     if (format) {
       fmt = av_find_input_format(format.value().c_str());
       if (!fmt) [[unlikely]] {
-        throw std::runtime_error(
-            fmt::format("Unsupported device/format: {}", format.value()));
+        SPDL_FAIL(fmt::format("Unsupported device/format: {}", format.value()));
       }
     }
     return fmt;
@@ -230,7 +228,7 @@ AVFormatInputContextPtr get_input_format_ctx(
   }
   int errnum = avformat_open_input(&fmt_ctx, src, in_fmt, option);
   if (errnum < 0) [[unlikely]] {
-    throw std::runtime_error(
+    SPDL_FAIL(
         src ? av_error(errnum, "Failed to open the input: {}", src)
             : av_error(errnum, "Failed to open custom input."));
   }
@@ -268,14 +266,13 @@ AVCodecContextPtr alloc_codec_context(
     if (decoder_name) {
       auto c = avcodec_find_decoder_by_name(decoder_name.value().c_str());
       if (!c) {
-        throw std::runtime_error(
-            fmt::format("Unsupported codec: {}", decoder_name.value()));
+        SPDL_FAIL(fmt::format("Unsupported codec: {}", decoder_name.value()));
       }
       return c;
     } else {
       auto c = avcodec_find_decoder(codec_id);
       if (!c) {
-        throw std::runtime_error(
+        SPDL_FAIL(
             fmt::format("Unsupported codec: {}", avcodec_get_name(codec_id)));
       }
       return c;
@@ -298,7 +295,7 @@ const AVCodecHWConfig* get_cuda_config(const AVCodec* codec) {
       return config;
     }
   }
-  throw std::runtime_error(fmt::format(
+  SPDL_FAIL(fmt::format(
       "CUDA device was requested, but the codec \"{}\" is not supported.",
       codec->name));
 }
@@ -342,7 +339,7 @@ enum AVPixelFormat get_hw_format(
 AVBufferRef* get_hw_frames_ctx(AVCodecContext* codec_ctx) {
   AVBufferRef* p = av_hwframe_ctx_alloc(codec_ctx->hw_device_ctx);
   if (!p) {
-    throw std::runtime_error(fmt::format(
+    SPDL_FAIL(fmt::format(
         "Failed to allocate CUDA frame context from device context at {}",
         fmt::ptr(codec_ctx->hw_device_ctx)));
   }
@@ -355,8 +352,7 @@ AVBufferRef* get_hw_frames_ctx(AVCodecContext* codec_ctx) {
   int ret = av_hwframe_ctx_init(p);
   if (ret < 0) {
     av_buffer_unref(&p);
-    throw std::runtime_error(
-        av_error(ret, "Failed to initialize CUDA frame context."));
+    SPDL_FAIL(av_error(ret, "Failed to initialize CUDA frame context."));
   }
   return p;
 }
@@ -379,7 +375,7 @@ void configure_codec_context(
 
   if (cuda_device_index >= 0) {
 #ifndef SPDL_USE_CUDA
-    throw std::runtime_error("SPDL is not compiled with CUDA support.");
+    SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
     XLOG(DBG9) << "Enabling CUDA acceleration";
     const AVCodecHWConfig* cfg = get_cuda_config(codec_ctx->codec);
@@ -392,7 +388,7 @@ void configure_codec_context(
     codec_ctx->hw_device_ctx =
         av_buffer_ref(get_cuda_context(cuda_device_index));
     if (!codec_ctx->hw_device_ctx) {
-      throw std::runtime_error("Failed to reference HW device context.");
+      SPDL_FAIL("Failed to reference HW device context.");
     }
 #endif
   }
