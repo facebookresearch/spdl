@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libspdl/types.h>
 #include <vector>
 
 struct AVFrame;
@@ -13,9 +14,7 @@ struct Buffer;
 
 /// Represents series of decoded frames
 struct Frames {
-  enum class Type { NA, Audio, Video };
-
-  Type type = Type::NA;
+  MediaType type = MediaType::NA;
   std::vector<AVFrame*> frames{};
 
   explicit Frames() = default;

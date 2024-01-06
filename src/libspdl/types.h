@@ -13,4 +13,8 @@ using OptionDict = std::map<std::string, std::string>;
 // alternative for AVRational so that we can avoid exposing FFmpeg headers
 using Rational = std::tuple<int, int>;
 
+// simplified version of AVMediaType so that public headers do not
+// include ffmpeg headers
+enum class MediaType { NA, Audio, Video };
+
 } // namespace spdl
