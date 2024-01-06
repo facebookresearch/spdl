@@ -75,10 +75,7 @@ Frames Frames::slice(int start, int stop, int step) const {
 }
 
 Buffer Frames::to_video_buffer(int plane) const {
-  if (type != Type::Video) {
-    SPDL_FAIL("Frames class is not video type.");
-  }
-  return detail::convert_video_frames(frames, plane);
+  return detail::convert_video_frames(*this, plane);
 }
 
 } // namespace spdl

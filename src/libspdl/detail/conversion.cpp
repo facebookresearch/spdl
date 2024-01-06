@@ -264,21 +264,24 @@ Buffer convert_video_frames_cpu(
 
 } // namespace
 
-Buffer convert_video_frames(
-    const std::vector<AVFrame*>& frames,
-    const int plane) {
-  if (!frames.size()) {
-    return cpu_buffer({0, 0, 0, 0});
+Buffer convert_video_frames(const Frames& frames, const int plane) {
+  if (frames.type != Frames::Type::Video) {
+    SPDL_FAIL("Frames class is not video type.");
   }
-  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+
+  const auto& fs = frames.frames;
+  if (!fs.size()) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  auto pix_fmt = static_cast<AVPixelFormat>(fs[0]->format);
   if (pix_fmt == AV_PIX_FMT_CUDA) {
 #ifdef SPDL_USE_CUDA
-    return convert_video_frames_cuda(frames, plane);
+    return convert_video_frames_cuda(fs, plane);
 #else
     SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #endif
   }
-  return convert_video_frames_cpu(frames, plane);
+  return convert_video_frames_cpu(fs, plane);
 }
 
 } // namespace spdl::detail
