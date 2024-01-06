@@ -72,8 +72,14 @@ inline size_t prod(const std::vector<size_t>& shape) {
 
 } // namespace
 
-Buffer cpu_buffer(const std::vector<size_t> shape, bool channel_last) {
-  return Buffer{std::move(shape), channel_last, Storage{prod(shape)}};
+Buffer
+cpu_buffer(const std::vector<size_t> shape, bool channel_last, size_t size) {
+  XLOG(DBG) << fmt::format(
+      "Allocating {} bytes. (shape: {}, elem: {})",
+      prod(shape) * size,
+      fmt::join(shape, ", "),
+      size);
+  return Buffer{std::move(shape), channel_last, Storage{prod(shape) * size}};
 }
 
 #ifdef SPDL_USE_CUDA
