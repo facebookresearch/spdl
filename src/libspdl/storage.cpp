@@ -8,7 +8,7 @@
 
 namespace spdl {
 
-Storage::Storage(size_t size) : data(new uint8_t[size]) {}
+Storage::Storage(size_t size) : data(operator new(size)) {}
 Storage::Storage(Storage&& other) noexcept {
   *this = std::move(other);
 }
@@ -19,7 +19,7 @@ Storage& Storage::operator=(Storage&& other) noexcept {
 }
 Storage::~Storage() {
   if (data) {
-    delete[] data;
+    operator delete(data);
   }
 }
 
