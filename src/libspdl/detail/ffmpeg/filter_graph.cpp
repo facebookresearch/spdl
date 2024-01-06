@@ -186,6 +186,29 @@ std::string get_video_filter_description(
   return fmt::to_string(fmt::join(parts, ","));
 }
 
+MediaType get_output_media_type(const AVFilterGraph* p) {
+  static const AVFilter* sink = avfilter_get_by_name("buffersink");
+  static const AVFilter* asink = avfilter_get_by_name("abuffersink");
+  for (unsigned i = 0; i < p->nb_filters; ++i) {
+    AVFilterContext* ctx = p->filters[i];
+    if (ctx->filter == sink || ctx->filter == asink) {
+      AVFilterLink* l = ctx->inputs[0];
+      switch (l->type) {
+        case AVMEDIA_TYPE_AUDIO:
+          return MediaType::Audio;
+        case AVMEDIA_TYPE_VIDEO:
+          return MediaType::Video;
+        default:
+          SPDL_FAIL(fmt::format(
+              "Unexpected output media type: {}",
+              av_get_media_type_string(l->type)));
+      }
+    }
+  }
+  SPDL_FAIL(
+      "The given AVFilterGraph does not have buffersink or abuffersink filter.");
+}
+
 std::string describe_graph(AVFilterGraph* graph) {
   char* desc_ = avfilter_graph_dump(graph, NULL);
   std::string desc{desc_};

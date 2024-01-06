@@ -295,8 +295,7 @@ Task<Frames> decode_packets(
   // The time_base of filtered frames can be found at
   // `filter_graph->filters[1]->inputs[0]->time_base`
   Frames frames;
-  frames.type = codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
-                                                            : MediaType::Video;
+  frames.type = get_output_media_type(filter_graph.get());
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
