@@ -1,5 +1,6 @@
 #include <libspdl/detail/conversion.h>
 #include <libspdl/logging.h>
+#include <libspdl/types.h>
 #ifdef SPDL_USE_CUDA
 #include <libspdl/detail/cuda.h>
 #endif
@@ -265,7 +266,7 @@ Buffer convert_video_frames_cpu(
 } // namespace
 
 Buffer convert_video_frames(const Frames& frames, const int plane) {
-  if (frames.type != Frames::Type::Video) {
+  if (frames.type != MediaType::Video) {
     SPDL_FAIL("Frames class is not video type.");
   }
 
