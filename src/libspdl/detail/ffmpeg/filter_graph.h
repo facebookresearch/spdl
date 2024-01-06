@@ -20,6 +20,8 @@ std::string get_video_filter_description(
     const std::optional<int>& height,
     const std::optional<std::string>& pix_fmt);
 
+MediaType get_output_media_type(const AVFilterGraph* p);
+
 // for debug
 std::string describe_graph(AVFilterGraph* graph);
 
