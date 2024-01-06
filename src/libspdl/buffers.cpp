@@ -33,7 +33,7 @@ Overload(Fs...) -> Overload<Fs...>;
 void* Buffer::data() {
   return std::visit(
       Overload{
-          [](Storage& s) { return static_cast<void*>(s.data); }
+          [](Storage& s) { return s.data; }
 #ifdef SPDL_USE_CUDA
           ,
           [](CUDAStorage& s) { return s.data; }

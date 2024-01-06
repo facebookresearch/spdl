@@ -10,7 +10,7 @@
 namespace spdl {
 
 struct Storage {
-  uint8_t* data = nullptr;
+  void* data = nullptr;
 
   Storage() = default;
   Storage(size_t size);
