@@ -38,7 +38,10 @@ struct Buffer {
 #endif
 };
 
-Buffer cpu_buffer(const std::vector<size_t> shape, bool channel_last = false);
+Buffer cpu_buffer(
+    const std::vector<size_t> shape,
+    bool channel_last = false,
+    size_t size = sizeof(uint8_t));
 
 #ifdef SPDL_USE_CUDA
 Buffer cuda_buffer(
