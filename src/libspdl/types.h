@@ -15,7 +15,7 @@ using Rational = std::tuple<int, int>;
 
 // simplified version of AVMediaType so that public headers do not
 // include ffmpeg headers
-enum class MediaType { NA, Audio, Video };
+enum class MediaType { Audio, Video };
 
 // Used to construct Dtype when converting buffer to array
 enum class ElemClass { Int, UInt, Float };
