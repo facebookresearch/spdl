@@ -14,11 +14,11 @@ struct Buffer;
 
 /// Represents series of decoded frames
 struct Frames {
-  MediaType type = MediaType::NA;
+  MediaType type;
 
   std::vector<AVFrame*> frames{};
 
-  explicit Frames() = default;
+  Frames(MediaType type);
   // No copy constructors
   Frames(const Frames&) = delete;
   Frames& operator=(const Frames&) = delete;

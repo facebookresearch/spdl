@@ -51,7 +51,7 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
 //////////////////////////////////////////////////////////////////////////////
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to Frames, AVFrame pointers are bulk released.
-// It contains sufficient information to build decoder via AVStream*.
+// It contains suffiient information to build decoder via AVStream*.
 struct PackagedAVPackets {
   // Source information
   std::string src;
@@ -265,9 +265,9 @@ Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
 Task<Frames> decode_packets(
     PackagedAVPackets packets,
     AVCodecContextPtr codec_ctx) {
-  Frames frames;
-  frames.type = codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
-                                                            : MediaType::Video;
+  Frames frames{
+      codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
+                                                  : MediaType::Video};
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto frame = co_await decoding.next()) {
@@ -294,8 +294,7 @@ Task<Frames> decode_packets(
   // Note:
   // The time_base of filtered frames can be found at
   // `filter_graph->filters[1]->inputs[0]->time_base`
-  Frames frames;
-  frames.type = get_output_media_type(filter_graph.get());
+  Frames frames{get_output_media_type(filter_graph.get())};
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {

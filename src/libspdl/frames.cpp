@@ -22,6 +22,8 @@ static struct AVBuffer {
 
 namespace spdl {
 
+Frames::Frames(MediaType type_) : type(type_) {}
+
 Frames::~Frames() {
   std::for_each(frames.begin(), frames.end(), [](AVFrame* p) {
 #ifdef SPDL_DEBUG_REFCOUNT
@@ -59,8 +61,6 @@ std::string Frames::get_format() const {
       return av_get_sample_fmt_name((AVSampleFormat)frames[0]->format);
     case MediaType::Video:
       return av_get_pix_fmt_name((AVPixelFormat)frames[0]->format);
-    default:
-      SPDL_FAIL_INTERNAL("Frames are neither audio/video.");
   }
 }
 
@@ -92,8 +92,7 @@ int Frames::get_num_samples() const {
 }
 
 Frames Frames::slice(int start, int stop, int step) const {
-  Frames out;
-  out.type = this->type;
+  Frames out{type};
   for (int i = start; i < stop; i += step) {
     AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
     CHECK_AVERROR(
@@ -105,7 +104,7 @@ Frames Frames::slice(int start, int stop, int step) const {
 }
 
 Buffer Frames::to_buffer(const std::optional<int>& index) const {
-  return detail::convert_video_frames(*this, index);
+  return detail::convert_frames(*this, index);
 }
 
 } // namespace spdl

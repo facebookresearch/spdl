@@ -23,6 +23,9 @@ extern "C" {
 namespace spdl::detail {
 namespace {
 
+////////////////////////////////////////////////////////////////////////////////
+// Video
+////////////////////////////////////////////////////////////////////////////////
 void copy_2d(
     uint8_t* src,
     int height,
@@ -262,7 +265,6 @@ Buffer convert_video_frames_cpu(
           "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
-} // namespace
 
 Buffer convert_video_frames(
     const Frames& frames,
@@ -284,6 +286,11 @@ Buffer convert_video_frames(
 #endif
   }
   return convert_video_frames_cpu(fs, index);
+}
+} // namespace
+
+Buffer convert_frames(const Frames& frames, const std::optional<int>& index) {
+  return detail::convert_video_frames(frames, index);
 }
 
 } // namespace spdl::detail

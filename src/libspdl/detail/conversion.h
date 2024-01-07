@@ -5,7 +5,7 @@
 
 namespace spdl::detail {
 
-Buffer convert_video_frames(
+Buffer convert_frames(
     const Frames& frames,
     const std::optional<int>& index = std::nullopt);
 

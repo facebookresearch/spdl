@@ -156,9 +156,6 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
                 return "audio";
               case MediaType::Video:
                 return "video";
-              default:
-                SPDL_FAIL_INTERNAL(
-                    "Frames other than Audio/Video is exposed to Python.");
             }
           })
       .def_property_readonly("format", &Frames::get_format)
