@@ -20,7 +20,7 @@ def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
     """NumPy array created from VideoBuffer should increment a reference to the buffer
     so that array keeps working after the original VideoBuffer variable is deleted.
     """
-    buf = _get_video_frames(pix_fmt).to_video_buffer()
+    buf = _get_video_frames(pix_fmt).to_buffer()
     assert hasattr(buf, "__array_interface__")
     print(f"{buf.__array_interface__=}")
 
@@ -55,17 +55,14 @@ def test_video_buffer_conversion_rgb24(format, pix_fmt="rgb24"):
 
     frames = _get_video_frames(pix_fmt, h, w)
 
-    # combined (rgb24 is interweived, so extracting the first plane (i==0)
-    # should return the same result.)
-    for i in [-1, 0]:
-        array = libspdl.to_numpy(frames.to_video_buffer(i), format=format)
-        expected_shape = (3, h, w) if format == "NCHW" else (h, w, 3)
-        assert array.shape[1:4] == expected_shape
+    array = libspdl.to_numpy(frames.to_buffer(), format=format)
+    expected_shape = (3, h, w) if format == "NCHW" else (h, w, 3)
+    assert array.shape[1:4] == expected_shape
 
     # plane 1 & 2 are not defined
-    for i in [1, 2]:
+    for i in [0, 1, 2]:
         with pytest.raises(RuntimeError):
-            libspdl.to_numpy(frames.to_video_buffer(i), format=format)
+            libspdl.to_numpy(frames.to_buffer(i), format=format)
 
 
 @pytest.mark.parametrize("format", ["NCHW", "NHWC"])
@@ -76,16 +73,16 @@ def test_video_buffer_conversion_yuv420(format, pix_fmt="yuv420p"):
     frames = _get_video_frames(pix_fmt, h, w)
 
     # combined
-    array = libspdl.to_numpy(frames.to_video_buffer(), format=format)
+    array = libspdl.to_numpy(frames.to_buffer(), format=format)
     expected_shape = (1, h + h2, w) if format == "NCHW" else (h + h2, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - Y
-    array = libspdl.to_numpy(frames.to_video_buffer(0), format=format)
+    array = libspdl.to_numpy(frames.to_buffer(0), format=format)
     expected_shape = (1, h, w) if format == "NCHW" else (h, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - U, V
     for i in range(1, 3):
-        array = libspdl.to_numpy(frames.to_video_buffer(i), format=format)
+        array = libspdl.to_numpy(frames.to_buffer(i), format=format)
         expected_shape = (1, h2, w2) if format == "NCHW" else (h2, w2, 1)
         assert array.shape[1:4] == expected_shape
 
@@ -97,12 +94,12 @@ def test_video_buffer_conversion_yuv444(format, pix_fmt="yuv444p"):
     frames = _get_video_frames(pix_fmt, h, w)
 
     # combined
-    array = libspdl.to_numpy(frames.to_video_buffer(), format=format)
+    array = libspdl.to_numpy(frames.to_buffer(), format=format)
     expected_shape = (3, h, w) if format == "NCHW" else (h, w, 3)
     assert array.shape[1:4] == expected_shape
     # individual
     for i in range(0, 3):
-        array = libspdl.to_numpy(frames.to_video_buffer(i), format=format)
+        array = libspdl.to_numpy(frames.to_buffer(i), format=format)
         expected_shape = (1, h, w) if format == "NCHW" else (h, w, 1)
         assert array.shape[1:4] == expected_shape
 
@@ -115,14 +112,14 @@ def test_video_buffer_conversion_nv12(format, pix_fmt="nv12"):
     frames = _get_video_frames(pix_fmt, h, w)
 
     # combined
-    array = libspdl.to_numpy(frames.to_video_buffer(), format=format)
+    array = libspdl.to_numpy(frames.to_buffer(), format=format)
     expected_shape = (1, h + h2, w) if format == "NCHW" else (h + h2, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - Y
-    array = libspdl.to_numpy(frames.to_video_buffer(0), format=format)
+    array = libspdl.to_numpy(frames.to_buffer(0), format=format)
     expected_shape = (1, h, w) if format == "NCHW" else (h, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - UV
-    array = libspdl.to_numpy(frames.to_video_buffer(1), format=format)
+    array = libspdl.to_numpy(frames.to_buffer(1), format=format)
     expected_shape = (2, h2, w2) if format == "NCHW" else (h2, w2, 2)
     assert array.shape[1:4] == expected_shape

@@ -72,8 +72,8 @@ class Frames:
     def __getitem__(self, slice):
         return self._frames[slice]
 
-    def to_video_buffer(self, plane=-1):
-        buffer = self._frames.to_video_buffer(plane)
+    def to_buffer(self, index: Optional[int] = None):
+        buffer = self._frames.to_buffer(index)
         return VideoBuffer(buffer)
 
 

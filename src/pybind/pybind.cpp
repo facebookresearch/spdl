@@ -114,7 +114,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       py::arg("use_primary_context") = false);
 
   py::class_<Frames>(m, "Frames", py::module_local())
-      .def("to_video_buffer", &Frames::to_video_buffer, py::arg("plane") = -1)
+      .def("to_buffer", &Frames::to_buffer)
       .def("__len__", [](const Frames& self) { return self.frames.size(); })
       .def(
           "__getitem__",
