@@ -76,14 +76,10 @@ def _main():
         print(len(sliced))
         del sliced
 
-        a = libspdl.to_numpy(decoded_frames.to_video_buffer(), format="NHWC")
+        a = libspdl.to_numpy(decoded_frames.to_buffer(), format="NHWC")
         print(a.shape, a.dtype)
         if args.plot:
             _plot(a, 2 * i)
-        a = libspdl.to_numpy(decoded_frames.to_video_buffer(0), format="NHWC")
-        print(a.shape, a.dtype)
-        if args.plot:
-            _plot(a, 2 * i + 1)
 
         del decoded_frames
 

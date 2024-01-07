@@ -5,6 +5,8 @@
 
 namespace spdl::detail {
 
-Buffer convert_video_frames(const Frames& frames, const int plane = -1);
+Buffer convert_video_frames(
+    const Frames& frames,
+    const std::optional<int>& index = std::nullopt);
 
 } // namespace spdl::detail

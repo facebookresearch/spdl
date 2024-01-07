@@ -34,7 +34,7 @@ struct Frames {
 
   Frames slice(int start, int stop, int step) const;
 
-  Buffer to_video_buffer(int plane = -1) const;
+  Buffer to_buffer(const std::optional<int>& index = std::nullopt) const;
 };
 
 } // namespace spdl

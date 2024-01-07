@@ -178,20 +178,17 @@ Buffer convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
 
 Buffer convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
-    const int plane) {
+    const std::optional<int>& index) {
   auto frames_ctx = (AVHWFramesContext*)(frames[0]->hw_frames_ctx->data);
   auto sw_pix_fmt = frames_ctx->sw_format;
   switch (sw_pix_fmt) {
     case AV_PIX_FMT_NV12:
-      switch (plane) {
-        case -1:
-          return convert_nv12_cuda(frames);
-        default:
-          SPDL_FAIL(fmt::format(
-              "CUDA frame ({}:{}) is not supported.",
-              av_get_pix_fmt_name(sw_pix_fmt),
-              plane));
+      if (index) {
+        SPDL_FAIL(fmt::format(
+            "Selecting a plane from CUDA frame ({}) is not supported.",
+            av_get_pix_fmt_name(sw_pix_fmt)));
       }
+      return convert_nv12_cuda(frames);
     default:
       SPDL_FAIL(fmt::format(
           "CUDA frame ({}) is not supported.",
@@ -202,23 +199,21 @@ Buffer convert_video_frames_cuda(
 
 Buffer convert_video_frames_cpu(
     const std::vector<AVFrame*>& frames,
-    const int plane) {
+    const std::optional<int>& index) {
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   switch (pix_fmt) {
     case AV_PIX_FMT_RGB24: {
-      switch (plane) {
-        case -1:
-        case 0:
-          return convert_interleaved(frames);
-        default:
-          SPDL_FAIL(fmt::format(
-              "`plane` value for RGB24 format must be 0. (Found: {})", plane));
+      if (index) {
+        SPDL_FAIL("Cannot select channel from interleaved video frames.");
       }
+      return convert_interleaved(frames);
     }
     case AV_PIX_FMT_YUV444P: {
+      if (!index) {
+        return convert_planer(frames);
+      }
+      auto plane = index.value();
       switch (plane) {
-        case -1:
-          return convert_planer(frames);
         case 0:
         case 1:
         case 2:
@@ -230,9 +225,11 @@ Buffer convert_video_frames_cpu(
       }
     }
     case AV_PIX_FMT_YUV420P: {
+      if (!index) {
+        return convert_yuv420p(frames);
+      }
+      auto plane = index.value();
       switch (plane) {
-        case -1:
-          return convert_yuv420p(frames);
         case 0:
           return convert_plane(frames, plane);
         case 1:
@@ -245,9 +242,11 @@ Buffer convert_video_frames_cpu(
       }
     }
     case AV_PIX_FMT_NV12: {
+      if (!index) {
+        return convert_nv12(frames);
+      }
+      auto plane = index.value();
       switch (plane) {
-        case -1:
-          return convert_nv12(frames);
         case 0:
           return convert_plane(frames, plane);
         case 1:
@@ -262,27 +261,28 @@ Buffer convert_video_frames_cpu(
           "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
-
 } // namespace
 
-Buffer convert_video_frames(const Frames& frames, const int plane) {
+Buffer convert_video_frames(
+    const Frames& frames,
+    const std::optional<int>& index) {
   if (frames.type != MediaType::Video) {
-    SPDL_FAIL("Frames class is not video type.");
+    SPDL_FAIL("Frames must be video type.");
   }
 
   const auto& fs = frames.frames;
   if (!fs.size()) {
-    SPDL_FAIL("No frame to convert to buffer.");
+    SPDL_FAIL("No video frame to convert to buffer.");
   }
   auto pix_fmt = static_cast<AVPixelFormat>(fs[0]->format);
   if (pix_fmt == AV_PIX_FMT_CUDA) {
 #ifdef SPDL_USE_CUDA
-    return convert_video_frames_cuda(fs, plane);
+    return convert_video_frames_cuda(fs, index);
 #else
     SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #endif
   }
-  return convert_video_frames_cpu(fs, plane);
+  return convert_video_frames_cpu(fs, index);
 }
 
 } // namespace spdl::detail

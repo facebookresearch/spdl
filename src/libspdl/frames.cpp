@@ -74,8 +74,8 @@ Frames Frames::slice(int start, int stop, int step) const {
   return out;
 }
 
-Buffer Frames::to_video_buffer(int plane) const {
-  return detail::convert_video_frames(*this, plane);
+Buffer Frames::to_buffer(const std::optional<int>& index) const {
+  return detail::convert_video_frames(*this, index);
 }
 
 } // namespace spdl
