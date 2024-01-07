@@ -15,6 +15,7 @@ struct Buffer;
 /// Represents series of decoded frames
 struct Frames {
   MediaType type = MediaType::NA;
+
   std::vector<AVFrame*> frames{};
 
   explicit Frames() = default;
@@ -27,6 +28,7 @@ struct Frames {
   // Destructor releases AVFrame* resources
   ~Frames();
 
+  bool is_cuda() const;
   int get_width() const;
   int get_height() const;
   int get_sample_rate() const;

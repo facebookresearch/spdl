@@ -42,6 +42,13 @@ Frames::~Frames() {
   });
 }
 
+bool Frames::is_cuda() const {
+  if (type == MediaType::Audio || !frames.size()) {
+    return false;
+  }
+  return static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
+}
+
 int Frames::get_width() const {
   return frames.size() ? frames[0]->width : -1;
 }
