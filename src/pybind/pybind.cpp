@@ -161,6 +161,8 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
                     "Frames other than Audio/Video is exposed to Python.");
             }
           })
+      .def_property_readonly("format", &Frames::get_format)
+      .def_property_readonly("num_planes", &Frames::get_num_planes)
       .def_property_readonly("width", &Frames::get_width)
       .def_property_readonly("height", &Frames::get_height)
       .def_property_readonly("sample_rate", &Frames::get_sample_rate)

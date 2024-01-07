@@ -58,12 +58,13 @@ def test_video_buffer_conversion_rgb24(format, pix_fmt="rgb24"):
 
     frames = _get_video_frames(pix_fmt, h, w)
 
-    array = libspdl.to_numpy(frames, format=format)
-    expected_shape = (3, h, w) if format == "channel_first" else (h, w, 3)
-    assert array.shape[1:4] == expected_shape
+    for index in [None, 0]:
+        array = libspdl.to_numpy(frames, index=index, format=format)
+        expected_shape = (3, h, w) if format == "channel_first" else (h, w, 3)
+        assert array.shape[1:4] == expected_shape
 
     # plane 1 & 2 are not defined
-    for i in [0, 1, 2]:
+    for i in [1, 2]:
         with pytest.raises(RuntimeError):
             libspdl.to_numpy(frames, index=i, format=format)
 

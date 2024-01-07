@@ -29,6 +29,8 @@ struct Frames {
   ~Frames();
 
   bool is_cuda() const;
+  std::string get_format() const;
+  int get_num_planes() const;
   int get_width() const;
   int get_height() const;
   int get_sample_rate() const;
