@@ -76,7 +76,7 @@ def _main():
         print(len(sliced))
         del sliced
 
-        a = libspdl.to_numpy(decoded_frames.to_buffer(), format="NHWC")
+        a = libspdl.to_numpy(decoded_frames, format="NHWC")
         print(a.shape, a.dtype)
         if args.plot:
             _plot(a, 2 * i)
