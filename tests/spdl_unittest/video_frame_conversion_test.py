@@ -49,14 +49,14 @@ def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
     assert vals == vals2
 
 
-@pytest.mark.parametrize("format", ["NCHW", "NHWC"])
+@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
 def test_video_buffer_conversion_rgb24(format, pix_fmt="rgb24"):
     h, w = 128, 256
 
     frames = _get_video_frames(pix_fmt, h, w)
 
     array = libspdl.to_numpy(frames.to_buffer(), format=format)
-    expected_shape = (3, h, w) if format == "NCHW" else (h, w, 3)
+    expected_shape = (3, h, w) if format == "channel_first" else (h, w, 3)
     assert array.shape[1:4] == expected_shape
 
     # plane 1 & 2 are not defined
@@ -65,7 +65,7 @@ def test_video_buffer_conversion_rgb24(format, pix_fmt="rgb24"):
             libspdl.to_numpy(frames.to_buffer(i), format=format)
 
 
-@pytest.mark.parametrize("format", ["NCHW", "NHWC"])
+@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
 def test_video_buffer_conversion_yuv420(format, pix_fmt="yuv420p"):
     h, w = 128, 256
     h2, w2 = h // 2, w // 2
@@ -74,20 +74,20 @@ def test_video_buffer_conversion_yuv420(format, pix_fmt="yuv420p"):
 
     # combined
     array = libspdl.to_numpy(frames.to_buffer(), format=format)
-    expected_shape = (1, h + h2, w) if format == "NCHW" else (h + h2, w, 1)
+    expected_shape = (1, h + h2, w) if format == "channel_first" else (h + h2, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - Y
     array = libspdl.to_numpy(frames.to_buffer(0), format=format)
-    expected_shape = (1, h, w) if format == "NCHW" else (h, w, 1)
+    expected_shape = (1, h, w) if format == "channel_first" else (h, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - U, V
     for i in range(1, 3):
         array = libspdl.to_numpy(frames.to_buffer(i), format=format)
-        expected_shape = (1, h2, w2) if format == "NCHW" else (h2, w2, 1)
+        expected_shape = (1, h2, w2) if format == "channel_first" else (h2, w2, 1)
         assert array.shape[1:4] == expected_shape
 
 
-@pytest.mark.parametrize("format", ["NCHW", "NHWC"])
+@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
 def test_video_buffer_conversion_yuv444(format, pix_fmt="yuv444p"):
     h, w = 128, 256
 
@@ -95,16 +95,16 @@ def test_video_buffer_conversion_yuv444(format, pix_fmt="yuv444p"):
 
     # combined
     array = libspdl.to_numpy(frames.to_buffer(), format=format)
-    expected_shape = (3, h, w) if format == "NCHW" else (h, w, 3)
+    expected_shape = (3, h, w) if format == "channel_first" else (h, w, 3)
     assert array.shape[1:4] == expected_shape
     # individual
     for i in range(0, 3):
         array = libspdl.to_numpy(frames.to_buffer(i), format=format)
-        expected_shape = (1, h, w) if format == "NCHW" else (h, w, 1)
+        expected_shape = (1, h, w) if format == "channel_first" else (h, w, 1)
         assert array.shape[1:4] == expected_shape
 
 
-@pytest.mark.parametrize("format", ["NCHW", "NHWC"])
+@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
 def test_video_buffer_conversion_nv12(format, pix_fmt="nv12"):
     h, w = 128, 256
     h2, w2 = h // 2, w // 2
@@ -113,13 +113,13 @@ def test_video_buffer_conversion_nv12(format, pix_fmt="nv12"):
 
     # combined
     array = libspdl.to_numpy(frames.to_buffer(), format=format)
-    expected_shape = (1, h + h2, w) if format == "NCHW" else (h + h2, w, 1)
+    expected_shape = (1, h + h2, w) if format == "channel_first" else (h + h2, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - Y
     array = libspdl.to_numpy(frames.to_buffer(0), format=format)
-    expected_shape = (1, h, w) if format == "NCHW" else (h, w, 1)
+    expected_shape = (1, h, w) if format == "channel_first" else (h, w, 1)
     assert array.shape[1:4] == expected_shape
     # individual - UV
     array = libspdl.to_numpy(frames.to_buffer(1), format=format)
-    expected_shape = (2, h2, w2) if format == "NCHW" else (h2, w2, 2)
+    expected_shape = (2, h2, w2) if format == "channel_first" else (h2, w2, 2)
     assert array.shape[1:4] == expected_shape

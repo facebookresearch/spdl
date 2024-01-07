@@ -29,24 +29,26 @@ def init_folly(args: List[str]) -> List[str]:
     return _libspdl.init_folly(sys.argv[0], args)[1:]
 
 
-def to_numpy(buffer, format: Optional[str] = "NCHW") -> NDArray:
+def to_numpy(buffer, format: Optional[str] = None) -> NDArray:
     """Convert to numpy array.
 
     Args:
         buffer (VideoBuffer): Raw buffer.
 
         format (str or None): Channel order.
-            Valid values are ``"NCHW"``, ``"NHWC"`` or ``None``.
+            Valid values are ``"channel_first"``, ``"channel_last"`` or ``None``.
             If ``None`` no conversion is performed and native format is returned.
+            If ``"channel_first"``, the returned video data is "NCHW".
+            If ``"channel_last"``, the returned video data is "NHWC".
     """
     if buffer.is_cuda():
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
     array = np.array(buffer, copy=False)
     match format:
-        case "NCHW":
+        case "channel_first":
             if buffer.channel_last:
                 array = np.moveaxis(array, -1, -3)
-        case "NHWC":
+        case "channel_last":
             if not buffer.channel_last:
                 array = np.moveaxis(array, -3, -1)
         case None:
@@ -74,10 +76,10 @@ class Frames:
 
     def to_buffer(self, index: Optional[int] = None):
         buffer = self._frames.to_buffer(index)
-        return VideoBuffer(buffer)
+        return Buffer(buffer)
 
 
-class VideoBuffer:
+class Buffer:
     def __init__(self, buffer):
         self._buffer = buffer
 
