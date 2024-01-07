@@ -43,7 +43,9 @@ class _BufferWrapper:
         return getattr(self._buffer, name)
 
 
-def to_numpy(buffer, format: Optional[str] = None, index: Optional[int] = None) -> NDArray:
+def to_numpy(
+    frames, format: Optional[str] = None, index: Optional[int] = None
+) -> NDArray:
     """Convert to numpy array.
 
     Args:
@@ -58,6 +60,8 @@ def to_numpy(buffer, format: Optional[str] = None, index: Optional[int] = None) 
             (``"NCHW"`` and ``"NHWC"`` can be  respectively used alias for
              ``"channel_first"`` and ``"channel_last"`` in case of video frames.)
     """
+    buffer = _BufferWrapper(frames.to_buffer(index))
+
     if buffer.is_cuda():
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
     array = np.array(buffer, copy=False)
@@ -76,27 +80,3 @@ def to_numpy(buffer, format: Optional[str] = None, index: Optional[int] = None) 
                 f", but received: {format}"
             )
     return array
-
-
-class Frames:
-    def __init__(self, frames):
-        self._frames = frames
-
-    def __getattr__(self, name):
-        return getattr(self._frames, name)
-
-    def __len__(self):
-        return len(self._frames)
-
-    def __getitem__(self, slice):
-        return Frames(self._frames[slice])
-
-    def to_buffer(self, index: Optional[int] = None):
-        buffer = self._frames.to_buffer(index)
-        return _BufferWrapper(buffer)
-
-
-def decode_video(*args, **kwargs) -> List[Frames]:
-    """Decode video."""
-    frames = _libspdl.decode_video(*args, **kwargs)
-    return [Frames(f) for f in frames]
