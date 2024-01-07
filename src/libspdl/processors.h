@@ -22,7 +22,7 @@ struct DecodeConfig {
 
 std::vector<Frames> decode_video(
     const std::string& src,
-    const std::vector<double>& timestamps,
+    const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg);

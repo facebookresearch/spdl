@@ -55,7 +55,7 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
 struct PackagedAVPackets {
   // Source information
   std::string src;
-  double timestamp;
+  std::tuple<double, double> timestamp;
 
   //
   AVCodecParameters* codecpar = nullptr;
@@ -69,7 +69,7 @@ struct PackagedAVPackets {
 
   PackagedAVPackets(
       std::string src_,
-      double timestamp_,
+      std::tuple<double, double> timestamp_,
       AVCodecParameters* codecpar_,
       AVRational time_base_,
       AVRational frame_rate_)
@@ -126,7 +126,7 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
 Generator<PackagedAVPackets&&> stream_demux(
     const enum AVMediaType type,
     const std::string& src,
-    const std::vector<double>& timestamps,
+    const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& cfg) {
   auto dp =
       get_data_provider(src, cfg.format, cfg.format_options, cfg.buffer_size);
@@ -142,13 +142,13 @@ Generator<PackagedAVPackets&&> stream_demux(
   }
 
   for (auto& timestamp : timestamps) {
-    int64_t t = static_cast<int64_t>(timestamp * AV_TIME_BASE);
+    auto [start, end] = timestamp;
+
+    int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
     CHECK_AVERROR(
         av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
         "Failed to seek to the timestamp {} [sec]",
-        timestamp);
-
-    int num_req_frames = 10;
+        start);
 
     PackagedAVPackets package{
         fmt_ctx->url,
@@ -156,7 +156,7 @@ Generator<PackagedAVPackets&&> stream_demux(
         stream->codecpar,
         stream->time_base,
         av_guess_frame_rate(fmt_ctx, stream, nullptr)};
-    while (num_req_frames >= 0) {
+    while (true) {
       AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
       int errnum = av_read_frame(fmt_ctx, packet.get());
       if (errnum == AVERROR_EOF) {
@@ -166,15 +166,15 @@ Generator<PackagedAVPackets&&> stream_demux(
       if (packet->stream_index != idx) {
         continue;
       }
+      double packet_ts = packet->pts * av_q2d(stream->time_base);
+      if (start <= packet_ts) {
+        package.packets.push_back(packet.release());
+      }
       // Note:
       // Since the video frames can be non-chronological order, this is not
-      // correct.
-      // TODO: fix this.
-      double packet_ts = packet->pts * av_q2d(stream->time_base);
-      if (packet_ts > timestamp) {
-        num_req_frames -= 1;
+      if (end + 0.3 < packet_ts) {
+        break;
       }
-      package.packets.push_back(packet.release());
     }
     XLOG(DBG) << fmt::format(" - Sliced {} packets", package.packets.size());
     // For flushing
@@ -332,7 +332,7 @@ Task<Frames> get_decode_task(
 Task<std::vector<Frames>> stream_decode(
     const enum AVMediaType type,
     const std::string src,
-    const std::vector<double> timestamps,
+    const std::vector<std::tuple<double, double>> timestamps,
     const std::string filter_desc,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg) {
@@ -351,10 +351,11 @@ Task<std::vector<Frames>> stream_decode(
       results.emplace_back(std::move(result.value()));
     } else {
       XLOG(ERR) << fmt::format(
-          "Failed to decode video clip. Error: {} (Source: {}, timestamp: {})",
+          "Failed to decode video clip. Error: {} (Source: {}, timestamp: {}, {})",
           result.exception().what(),
           src,
-          timestamps[i]);
+          std::get<0>(timestamps[i]),
+          std::get<1>(timestamps[i]));
     }
     ++i;
   };
@@ -367,7 +368,7 @@ Task<std::vector<Frames>> stream_decode(
 
 std::vector<Frames> decode_video(
     const std::string& src,
-    const std::vector<double>& timestamps,
+    const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg) {

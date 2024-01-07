@@ -9,7 +9,7 @@ def _get_video_frames(pix_fmt, h=128, w=256):
     src = "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4"
     return libspdl.decode_video(
         src=src,
-        timestamps=[0.0],
+        timestamps=[(0.0, 0.5)],
         pix_fmt=pix_fmt,
         height=h,
         width=w,
