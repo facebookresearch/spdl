@@ -187,7 +187,7 @@ Generator<PackagedAVPackets&&> stream_demux(
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-Generator<AVFrame*> filter_frame(
+Generator<AVFramePtr&&> filter_frame(
     AVFrame* frame,
     AVFilterContext* src_ctx,
     AVFilterContext* sink_ctx) {
@@ -207,13 +207,13 @@ Generator<AVFrame*> filter_frame(
         co_return;
       default: {
         CHECK_AVERROR_NUM(errnum, "Failed to filter a frame.");
-        co_yield frame2.release();
+        co_yield std::move(frame2);
       }
     }
   }
 }
 
-Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
+Generator<AVFramePtr&&> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
   assert(codec_ctx);
   XLOG(DBG)
       << ((!packet) ? fmt::format(" -- flush decoder")
@@ -235,7 +235,7 @@ Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
         co_return;
       default: {
         CHECK_AVERROR_NUM(errnum, "Failed to decode a frame.");
-        co_yield frame.release();
+        co_yield std::move(frame);
       }
     }
   }
@@ -251,7 +251,7 @@ Task<Frames> decode_packets(
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto frame = co_await decoding.next()) {
-      AVFramePtr f{*frame};
+      AVFramePtr f = *frame;
       if (f) {
         double ts = TS(f, codec_ctx->pkt_timebase);
         if (start <= ts && ts <= end) {
@@ -283,7 +283,7 @@ Task<Frames> decode_packets(
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
-      AVFramePtr rf{*raw_frame};
+      AVFramePtr rf = *raw_frame;
 
       XLOG(DBG)
           << (rf ? fmt::format(
@@ -293,9 +293,9 @@ Task<Frames> decode_packets(
                        rf->pts)
                  : fmt::format(" --- flush filter graph"));
 
-      auto filtering = filter_frame(*raw_frame, src_ctx, sink_ctx);
+      auto filtering = filter_frame(rf.get(), src_ctx, sink_ctx);
       while (auto frame = co_await filtering.next()) {
-        AVFramePtr f{*frame};
+        AVFramePtr f = *frame;
         if (f) {
           double ts = TS(f, sink_ctx->inputs[0]->time_base);
           if (start <= ts && ts <= end) {
