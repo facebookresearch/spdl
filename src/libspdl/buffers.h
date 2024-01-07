@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libspdl/storage.h>
+#include <libspdl/types.h>
 
 #include <memory>
 #include <variant>
@@ -18,11 +19,18 @@ struct Buffer {
 #endif
 
   std::vector<size_t> shape;
+  ElemClass elem_class = ElemClass::UInt;
+  size_t depth = sizeof(uint8_t);
   bool channel_last = false;
 
   std::shared_ptr<StorageVariants> storage;
 
-  Buffer(const std::vector<size_t> shape, bool channel_last, Storage&& storage);
+  Buffer(
+      const std::vector<size_t> shape,
+      bool channel_last,
+      ElemClass elem_class,
+      size_t depth,
+      Storage&& storage);
 #ifdef SPDL_USE_CUDA
   Buffer(
       const std::vector<size_t> shape,
@@ -41,6 +49,7 @@ struct Buffer {
 Buffer cpu_buffer(
     const std::vector<size_t> shape,
     bool channel_last = false,
+    ElemClass elem_class = ElemClass::UInt,
     size_t size = sizeof(uint8_t));
 
 #ifdef SPDL_USE_CUDA

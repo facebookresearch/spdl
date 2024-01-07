@@ -17,4 +17,7 @@ using Rational = std::tuple<int, int>;
 // include ffmpeg headers
 enum class MediaType { NA, Audio, Video };
 
+// Used to construct Dtype when converting buffer to array
+enum class ElemClass { Int, UInt, Float };
+
 } // namespace spdl
