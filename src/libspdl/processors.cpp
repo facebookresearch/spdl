@@ -286,12 +286,12 @@ Task<Frames> decode_packets(
       AVFramePtr rf{*raw_frame};
 
       XLOG(DBG)
-          << ((!rf) ? fmt::format(" --- flush filter graph")
-                    : fmt::format(
-                          "{:21s} {:.3f} ({})",
-                          " --- raw frame:",
-                          TS(rf, src_ctx->outputs[0]->time_base),
-                          rf->pts));
+          << (rf ? fmt::format(
+                       "{:21s} {:.3f} ({})",
+                       " --- raw frame:",
+                       TS(rf, src_ctx->outputs[0]->time_base),
+                       rf->pts)
+                 : fmt::format(" --- flush filter graph"));
 
       auto filtering = filter_frame(*raw_frame, src_ctx, sink_ctx);
       while (auto frame = co_await filtering.next()) {

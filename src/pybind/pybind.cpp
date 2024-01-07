@@ -219,6 +219,34 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       py::arg("pix_fmt") = py::none());
 
   m.def(
+      "decode_video",
+      [](const std::string& src,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<std::string>& format = std::nullopt,
+         const std::optional<OptionDict>& format_options = std::nullopt,
+         const int buffer_size = 8096,
+         const std::optional<std::string>& decoder = std::nullopt,
+         const std::optional<OptionDict>& decoder_options = std::nullopt,
+         const int cuda_device_index = -1,
+         const std::string& filter_desc = "") {
+        return decode_video(
+            src,
+            timestamps,
+            filter_desc,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options, cuda_device_index});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = 8096,
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("filter_desc") = std::string());
+
+  m.def(
       "decode_audio",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
@@ -247,6 +275,32 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       py::arg("sample_rate") = py::none(),
       py::arg("num_channels") = py::none(),
       py::arg("sample_fmt") = py::none());
+
+  m.def(
+      "decode_audio",
+      [](const std::string& src,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<std::string>& format = std::nullopt,
+         const std::optional<OptionDict>& format_options = std::nullopt,
+         const int buffer_size = 8096,
+         const std::optional<std::string>& decoder = std::nullopt,
+         const std::optional<OptionDict>& decoder_options = std::nullopt,
+         const std::string& filter_desc = "") {
+        return decode_audio(
+            src,
+            timestamps,
+            filter_desc,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = 8096,
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("filter_desc") = std::string());
 }
 } // namespace
 } // namespace spdl
