@@ -8,8 +8,12 @@ namespace spdl {
 Buffer::Buffer(
     const std::vector<size_t> shape_,
     bool channel_last_,
+    ElemClass elem_class_,
+    size_t depth_,
     Storage&& storage_)
     : shape(std::move(shape_)),
+      elem_class(elem_class_),
+      depth(depth_),
       channel_last(channel_last_),
       storage(std::make_shared<StorageVariants>(std::move(storage_))) {}
 
@@ -72,14 +76,22 @@ inline size_t prod(const std::vector<size_t>& shape) {
 
 } // namespace
 
-Buffer
-cpu_buffer(const std::vector<size_t> shape, bool channel_last, size_t size) {
+Buffer cpu_buffer(
+    const std::vector<size_t> shape,
+    bool channel_last,
+    ElemClass elem_class,
+    size_t depth) {
   XLOG(DBG) << fmt::format(
       "Allocating {} bytes. (shape: {}, elem: {})",
-      prod(shape) * size,
+      prod(shape) * depth,
       fmt::join(shape, ", "),
-      size);
-  return Buffer{std::move(shape), channel_last, Storage{prod(shape) * size}};
+      depth);
+  return Buffer{
+      std::move(shape),
+      channel_last,
+      elem_class,
+      depth,
+      Storage{prod(shape) * depth}};
 }
 
 #ifdef SPDL_USE_CUDA

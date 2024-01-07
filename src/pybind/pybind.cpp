@@ -22,23 +22,40 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Array Interface
 ////////////////////////////////////////////////////////////////////////////////
+std::string get_typestr(Buffer& b) {
+  const auto key = [&]() {
+    switch (b.elem_class) {
+      case ElemClass::UInt:
+        return "u";
+      case ElemClass::Int:
+        return "i";
+      case ElemClass::Float:
+        return "f";
+    }
+  }();
+  return fmt::format("|{}{}", key, b.depth);
+}
+
 py::dict get_array_interface(Buffer& b) {
+  auto typestr = get_typestr(b);
   py::dict ret;
   ret["version"] = 3;
   ret["shape"] = py::tuple(py::cast(b.shape));
-  ret["typestr"] = std::string("|u1");
+  ret["typestr"] = typestr;
   ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
   ret["strides"] = py::none();
-  ret["descr"] = std::vector<std::tuple<std::string, std::string>>{{"", "|u1"}};
+  ret["descr"] =
+      std::vector<std::tuple<std::string, std::string>>{{"", typestr}};
   return ret;
 }
 
 #ifdef SPDL_USE_CUDA
 py::dict get_cuda_array_interface(Buffer& b) {
+  auto typestr = get_typestr(b);
   py::dict ret;
   ret["version"] = 2;
   ret["shape"] = py::tuple(py::cast(b.shape));
-  ret["typestr"] = std::string("|u1");
+  ret["typestr"] = typestr;
   ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
   ret["strides"] = py::none();
   ret["stream"] = b.get_cuda_stream();
@@ -92,7 +109,7 @@ std::vector<std::string> init_folly_init(
 ////////////////////////////////////////////////////////////////////////////////
 std::optional<std::tuple<int, int>> get_frame_rate(
     const py::object& frame_rate) {
-  if (frame_rate == py::none()) {
+  if (frame_rate.is(py::none())) {
     return std::nullopt;
   }
   py::object Fraction = py::module_::import("fractions").attr("Fraction");
@@ -137,6 +154,10 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   py::class_<Buffer>(m, "Buffer", py::module_local())
       .def_property_readonly(
           "channel_last", [](const Buffer& self) { return self.channel_last; })
+      .def_property_readonly(
+          "ndim", [](const Buffer& self) { return self.shape.size(); })
+      .def_property_readonly(
+          "shape", [](const Buffer& self) { return self.shape; })
       .def("is_cuda", &Buffer::is_cuda)
       .def(
           "get_array_interface",
