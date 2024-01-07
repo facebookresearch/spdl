@@ -34,4 +34,12 @@ std::string get_video_filter_description(
       frame_rate, width, height, pix_fmt);
 }
 
+std::string get_audio_filter_description(
+    const std::optional<int>& sample_rate,
+    const std::optional<int>& num_channels,
+    const std::optional<std::string>& sample_fmt) {
+  return detail::get_audio_filter_description(
+      sample_rate, num_channels, sample_fmt);
+}
+
 } // namespace spdl

@@ -68,10 +68,16 @@ def to_numpy(
     match format:
         case "channel_first" | "NCHW":
             if buffer.channel_last:
-                array = np.moveaxis(array, -1, -3)
+                if frames.media_type == "video":
+                    array = np.moveaxis(array, -1, -3)
+                else:
+                    array = np.moveaxis(array, -1, -2)
         case "channel_last" | "NHWC":
             if not buffer.channel_last:
-                array = np.moveaxis(array, -3, -1)
+                if frames.media_type == "video":
+                    array = np.moveaxis(array, -3, -1)
+                else:
+                    array = np.moveaxis(array, -2, -1)
         case None:
             pass
         case _:

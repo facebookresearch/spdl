@@ -217,6 +217,36 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none());
+
+  m.def(
+      "decode_audio",
+      [](const std::string& src,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<std::string>& format = std::nullopt,
+         const std::optional<OptionDict>& format_options = std::nullopt,
+         const int buffer_size = 8096,
+         const std::optional<std::string>& decoder = std::nullopt,
+         const std::optional<OptionDict>& decoder_options = std::nullopt,
+         const std::optional<int>& sample_rate = std::nullopt,
+         const std::optional<int>& num_channels = std::nullopt,
+         const std::optional<std::string>& sample_fmt = std::nullopt) {
+        return decode_audio(
+            src,
+            timestamps,
+            get_audio_filter_description(sample_rate, num_channels, sample_fmt),
+            {format, format_options, buffer_size},
+            {decoder, decoder_options});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = 8096,
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("sample_rate") = py::none(),
+      py::arg("num_channels") = py::none(),
+      py::arg("sample_fmt") = py::none());
 }
 } // namespace
 } // namespace spdl
