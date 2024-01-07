@@ -118,7 +118,8 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum AVMediaType type) {
 
   int idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
   if (idx < 0) {
-    SPDL_FAIL("No video stream was found.");
+    SPDL_FAIL(
+        fmt::format("No {} stream was found.", av_get_media_type_string(type)));
   }
   return idx;
 }
@@ -322,8 +323,21 @@ Task<Frames> get_decode_task(
   if (filter_desc.empty()) {
     return decode_packets(std::move(packets), std::move(codec_ctx));
   }
-  auto filter_graph =
-      get_video_filter(filter_desc, codec_ctx.get(), packets.frame_rate);
+
+  auto filter_graph = [&]() {
+    switch (codec_ctx->codec_type) {
+      case AVMEDIA_TYPE_AUDIO:
+        return get_audio_filter(filter_desc, codec_ctx.get());
+      case AVMEDIA_TYPE_VIDEO:
+        return get_video_filter(
+            filter_desc, codec_ctx.get(), packets.frame_rate);
+      default:
+        SPDL_FAIL_INTERNAL(fmt::format(
+            "Unexpected media type was given: {}",
+            av_get_media_type_string(codec_ctx->codec_type)));
+    }
+  }();
+
   return decode_packets(
       std::move(packets), std::move(codec_ctx), std::move(filter_graph));
 }
@@ -373,6 +387,18 @@ std::vector<Frames> decode_video(
     const DecodeConfig& decode_cfg) {
   auto job = stream_decode(
       AVMEDIA_TYPE_VIDEO, src, timestamps, filter_desc, io_cfg, decode_cfg);
+  return folly::coro::blockingWait(
+      std::move(job).scheduleOn(getDemuxerThreadPoolExecutor()));
+}
+
+std::vector<Frames> decode_audio(
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::string& filter_desc,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg) {
+  auto job = stream_decode(
+      AVMEDIA_TYPE_AUDIO, src, timestamps, filter_desc, io_cfg, decode_cfg);
   return folly::coro::blockingWait(
       std::move(job).scheduleOn(getDemuxerThreadPoolExecutor()));
 }

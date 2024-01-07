@@ -1,4 +1,5 @@
 import gc
+import itertools
 import sys
 
 import pytest
@@ -16,9 +17,19 @@ def _get_video_frames(pix_fmt, h=128, w=256):
     )[0]
 
 
+def _get_audio_frames(sample_fmt, **kwargs):
+    src = "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4"
+    return libspdl.decode_audio(
+        src=src,
+        timestamps=[(0.0, 0.5)],
+        sample_fmt=sample_fmt,
+        **kwargs,
+    )[0]
+
+
 def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
-    """NumPy array created from VideoBuffer should increment a reference to the buffer
-    so that array keeps working after the original VideoBuffer variable is deleted.
+    """NumPy array created from Buffer should increment a reference to the buffer
+    so that array keeps working after the original Buffer variable is deleted.
     """
     import numpy as np
     from spdl.libspdl import _BufferWrapper
@@ -127,3 +138,28 @@ def test_video_buffer_conversion_nv12(format, pix_fmt="nv12"):
     array = libspdl.to_numpy(frames, index=1, format=format)
     expected_shape = (2, h2, w2) if format == "channel_first" else (h2, w2, 2)
     assert array.shape[1:4] == expected_shape
+
+
+@pytest.mark.parametrize(
+    "format,sample_fmts",
+    itertools.product(
+        ["channel_first", "channel_last"],
+        [("s16p", "int16"), ("s16", "int16"), ("fltp", "float32"), ("flt", "float32")],
+    ),
+)
+def test_audio_buffer_conversion_s16p(format, sample_fmts):
+    import numpy as np
+
+    num_channels = 2
+    sample_fmt, expected = sample_fmts
+    frames = _get_audio_frames(
+        sample_fmt=sample_fmt, num_channels=num_channels, sample_rate=8000
+    )
+
+    array = libspdl.to_numpy(frames, format=format)
+    assert array.ndim == 2
+    assert array.dtype == np.dtype(expected)
+    if format == "channel_first":
+        assert array.shape[0] == num_channels
+    if format == "channel_last":
+        assert array.shape[1] == num_channels

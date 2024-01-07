@@ -186,6 +186,28 @@ std::string get_video_filter_description(
   return fmt::to_string(fmt::join(parts, ","));
 }
 
+std::string get_audio_filter_description(
+    const std::optional<int>& sample_rate,
+    const std::optional<int>& num_channels,
+    const std::optional<std::string>& sample_fmt) {
+  std::vector<std::string> parts;
+  if (sample_rate) {
+    parts.emplace_back(fmt::format("aresample={}", sample_rate.value()));
+  }
+  if (num_channels || sample_fmt) {
+    std::vector<std::string> aformat;
+    if (num_channels) {
+      aformat.emplace_back(
+          fmt::format("channel_layouts={}c", num_channels.value()));
+    }
+    if (sample_fmt) {
+      aformat.emplace_back(fmt::format("sample_fmts={}", sample_fmt.value()));
+    }
+    parts.push_back(fmt::format("aformat={}", fmt::join(aformat, ":")));
+  }
+  return fmt::to_string(fmt::join(parts, ","));
+}
+
 MediaType get_output_media_type(const AVFilterGraph* p) {
   static const AVFilter* sink = avfilter_get_by_name("buffersink");
   static const AVFilter* asink = avfilter_get_by_name("abuffersink");

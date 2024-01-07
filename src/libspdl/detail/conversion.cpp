@@ -287,10 +287,105 @@ Buffer convert_video_frames(
   }
   return convert_video_frames_cpu(fs, index);
 }
+
+template <size_t depth, ElemClass type, bool is_planar>
+Buffer convert_audio_frames(
+    const Frames& frames,
+    const std::optional<int>& index) {
+  size_t num_frames = frames.get_num_samples();
+  size_t num_channels = frames.frames[0]->channels;
+
+  if (index) {
+    auto c = index.value();
+    if (c < 0 || c >= num_channels) {
+      SPDL_FAIL(fmt::format("Channel index must be [0, {})", num_channels));
+    }
+    num_channels = 1;
+  }
+
+  if constexpr (is_planar) {
+    auto buffer =
+        cpu_buffer({num_channels, num_frames}, !is_planar, type, depth);
+    uint8_t* dst = static_cast<uint8_t*>(buffer.data());
+    for (int i = 0; i < num_channels; ++i) {
+      if (index && index.value() != i) {
+        continue;
+      }
+      for (auto frame : frames.frames) {
+        int plane_size = depth * frame->nb_samples;
+        memcpy(dst, frame->extended_data[i], plane_size);
+        dst += plane_size;
+      }
+    }
+    return buffer;
+  } else {
+    if (index) {
+      SPDL_FAIL("Cannot select channel from non-planar audio.");
+    }
+    auto buffer =
+        cpu_buffer({num_frames, num_channels}, !is_planar, type, depth);
+    uint8_t* dst = static_cast<uint8_t*>(buffer.data());
+    for (auto frame : frames.frames) {
+      int plane_size = depth * frame->nb_samples * num_channels;
+      memcpy(dst, frame->extended_data[0], plane_size);
+      dst += plane_size;
+    }
+    return buffer;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Audio
+////////////////////////////////////////////////////////////////////////////////
+Buffer convert_audio_frames(const Frames& frames, const std::optional<int>& i) {
+  if (frames.type != MediaType::Audio) {
+    SPDL_FAIL("Frames must be audio type.");
+  }
+  const auto& fs = frames.frames;
+  if (!fs.size()) {
+    SPDL_FAIL("No audio frame to convert to buffer.");
+  }
+
+  auto sample_fmt = static_cast<AVSampleFormat>(fs[0]->format);
+  switch (sample_fmt) {
+    case AV_SAMPLE_FMT_U8:
+      return convert_audio_frames<1, ElemClass::UInt, false>(frames, i);
+    case AV_SAMPLE_FMT_U8P:
+      return convert_audio_frames<1, ElemClass::UInt, true>(frames, i);
+    case AV_SAMPLE_FMT_S16:
+      return convert_audio_frames<2, ElemClass::Int, false>(frames, i);
+    case AV_SAMPLE_FMT_S16P:
+      return convert_audio_frames<2, ElemClass::Int, true>(frames, i);
+    case AV_SAMPLE_FMT_S32:
+      return convert_audio_frames<4, ElemClass::Int, false>(frames, i);
+    case AV_SAMPLE_FMT_S32P:
+      return convert_audio_frames<4, ElemClass::Int, true>(frames, i);
+    case AV_SAMPLE_FMT_FLT:
+      return convert_audio_frames<4, ElemClass::Float, false>(frames, i);
+    case AV_SAMPLE_FMT_FLTP:
+      return convert_audio_frames<4, ElemClass::Float, true>(frames, i);
+    case AV_SAMPLE_FMT_S64:
+      return convert_audio_frames<8, ElemClass::Int, false>(frames, i);
+    case AV_SAMPLE_FMT_S64P:
+      return convert_audio_frames<8, ElemClass::Int, true>(frames, i);
+    case AV_SAMPLE_FMT_DBL:
+      return convert_audio_frames<8, ElemClass::Float, false>(frames, i);
+    case AV_SAMPLE_FMT_DBLP:
+      return convert_audio_frames<8, ElemClass::Float, true>(frames, i);
+    default:
+      SPDL_FAIL_INTERNAL(fmt::format(
+          "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt)));
+  }
+}
 } // namespace
 
 Buffer convert_frames(const Frames& frames, const std::optional<int>& index) {
-  return detail::convert_video_frames(frames, index);
+  switch (frames.type) {
+    case MediaType::Audio:
+      return detail::convert_audio_frames(frames, index);
+    case MediaType::Video:
+      return detail::convert_video_frames(frames, index);
+  }
 }
 
 } // namespace spdl::detail

@@ -27,4 +27,11 @@ std::vector<Frames> decode_video(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg);
 
+std::vector<Frames> decode_audio(
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::string& filter_desc,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg);
+
 } // namespace spdl

@@ -31,6 +31,21 @@ def _plot(frames):
     n_plot += 1
 
 
+def _plot_audio(frames, sample_rate):
+    import matplotlib.pyplot as plt
+
+    print(f"{frames.shape=}")
+    fig, axes = plt.subplots(2 * frames.shape[0])
+    for i, channel in enumerate(frames):
+        print(
+            f"{channel.shape=}, {channel.dtype=}, ({channel.min()=}, {channel.max()=})"
+        )
+        axes[2 * i].specgram(channel, Fs=sample_rate)
+        axes[2 * i + 1].plot(channel)
+
+    plt.show()
+
+
 def _main():
     args = _parse_python_args()
     _init_logging(args.debug)
@@ -38,6 +53,48 @@ def _main():
     if args.debug:
         libspdl.set_ffmpeg_log_level(40)
 
+    # test_video(args)
+    test_audio(args)
+
+
+def test_audio(args):
+    src = args.input_video
+    src2 = f"mmap://{src}"
+
+    configs = [
+        {
+            "src": src,
+            "timestamps": [(5.0, 10.0)],
+            "sample_rate": 8000,
+        },
+        {
+            "src": src2,
+            "timestamps": [(5.0, 10.0)],
+            "sample_rate": 8000,
+            "sample_fmt": "s16p",
+        },
+    ]
+
+    for i, cfg in enumerate(configs):
+        print("*" * 40)
+        print(cfg)
+        print("*" * 40)
+
+        decoded_frames = libspdl.decode_audio(**cfg)[0]
+        print(f"{len(decoded_frames)=}")
+        print(f"{decoded_frames.num_samples=}")
+        sliced = decoded_frames[2:7:2]
+        print(len(sliced))
+        del sliced
+
+        a = libspdl.to_numpy(decoded_frames, index=None, format="channel_first")
+        print(f"{a.shape=}, {a.dtype=}")
+
+        if args.plot:
+            _plot_audio(a, decoded_frames.sample_rate)
+
+
+def test_video(args):
     src = args.input_video
     src2 = f"mmap://{src}"
 
