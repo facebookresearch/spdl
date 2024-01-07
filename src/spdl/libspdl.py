@@ -29,26 +29,43 @@ def init_folly(args: List[str]) -> List[str]:
     return _libspdl.init_folly(sys.argv[0], args)[1:]
 
 
-def to_numpy(buffer, format: Optional[str] = None) -> NDArray:
+class _BufferWrapper:
+    def __init__(self, buffer):
+        self._buffer = buffer
+
+    def __getattr__(self, name):
+        if name == "__array_interface__":
+            if not self._buffer.is_cuda():
+                return self._buffer.get_array_interface()
+        if name == "__cuda_array_interface__":
+            if self._buffer.is_cuda():
+                return self._buffer.get_cuda_array_interface()
+        return getattr(self._buffer, name)
+
+
+def to_numpy(buffer, format: Optional[str] = None, index: Optional[int] = None) -> NDArray:
     """Convert to numpy array.
 
     Args:
-        buffer (VideoBuffer): Raw buffer.
+        frames (Frames): Decoded frames.
 
         format (str or None): Channel order.
             Valid values are ``"channel_first"``, ``"channel_last"`` or ``None``.
             If ``None`` no conversion is performed and native format is returned.
             If ``"channel_first"``, the returned video data is "NCHW".
             If ``"channel_last"``, the returned video data is "NHWC".
+
+            (``"NCHW"`` and ``"NHWC"`` can be  respectively used alias for
+             ``"channel_first"`` and ``"channel_last"`` in case of video frames.)
     """
     if buffer.is_cuda():
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
     array = np.array(buffer, copy=False)
     match format:
-        case "channel_first":
+        case "channel_first" | "NCHW":
             if buffer.channel_last:
                 array = np.moveaxis(array, -1, -3)
-        case "channel_last":
+        case "channel_last" | "NHWC":
             if not buffer.channel_last:
                 array = np.moveaxis(array, -3, -1)
         case None:
@@ -72,25 +89,11 @@ class Frames:
         return len(self._frames)
 
     def __getitem__(self, slice):
-        return self._frames[slice]
+        return Frames(self._frames[slice])
 
     def to_buffer(self, index: Optional[int] = None):
         buffer = self._frames.to_buffer(index)
-        return Buffer(buffer)
-
-
-class Buffer:
-    def __init__(self, buffer):
-        self._buffer = buffer
-
-    def __getattr__(self, name):
-        if name == "__array_interface__":
-            if not self._buffer.is_cuda():
-                return self._buffer.get_array_interface()
-        if name == "__cuda_array_interface__":
-            if self._buffer.is_cuda():
-                return self._buffer.get_cuda_array_interface()
-        return getattr(self._buffer, name)
+        return _BufferWrapper(buffer)
 
 
 def decode_video(*args, **kwargs) -> List[Frames]:
