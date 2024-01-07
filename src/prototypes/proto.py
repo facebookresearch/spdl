@@ -53,8 +53,8 @@ def _main():
     if args.debug:
         libspdl.set_ffmpeg_log_level(40)
 
-    # test_video(args)
     test_audio(args)
+    test_video(args)
 
 
 def test_audio(args):
@@ -62,6 +62,11 @@ def test_audio(args):
     src2 = f"mmap://{src}"
 
     configs = [
+        {
+            "src": src,
+            "timestamps": [(5.0, 10.0)],
+            "filter_desc": "flanger",
+        },
         {
             "src": src,
             "timestamps": [(5.0, 10.0)],
@@ -75,7 +80,7 @@ def test_audio(args):
         },
     ]
 
-    for i, cfg in enumerate(configs):
+    for cfg in configs:
         print("*" * 40)
         print(cfg)
         print("*" * 40)
@@ -102,10 +107,12 @@ def test_video(args):
         {
             "src": src,
             "timestamps": [(0.0, 1.0), (10.0, 11.0)],
+            "frame_rate": 2,
         },
+        {"src": src, "timestamps": [(0.0, 0.5)], "filter_desc": "vflip"},
         {
             "src": src2,
-            "timestamps": [(0.0, 1.0), (10.0, 11.0)],
+            "timestamps": [(10.0, 10.2)],
             "frame_rate": "30000/1001",
             "width": 36,
             "height": 48,

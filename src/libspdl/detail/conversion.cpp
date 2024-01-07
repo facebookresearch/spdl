@@ -346,6 +346,12 @@ Buffer convert_audio_frames(const Frames& frames, const std::optional<int>& i) {
     SPDL_FAIL("No audio frame to convert to buffer.");
   }
 
+  // NOTE:
+  // This conversion converts all the samples in underlying frames.
+  // This does not take the time stamp of each sample into account.
+  //
+  // TODO:
+  // Check time stamp here?
   auto sample_fmt = static_cast<AVSampleFormat>(fs[0]->format);
   switch (sample_fmt) {
     case AV_SAMPLE_FMT_U8:
