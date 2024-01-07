@@ -203,8 +203,9 @@ Buffer convert_video_frames_cpu(
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   switch (pix_fmt) {
     case AV_PIX_FMT_RGB24: {
-      if (index) {
-        SPDL_FAIL("Cannot select channel from interleaved video frames.");
+      if (auto plane = index.value_or(0); plane != 0) {
+        SPDL_FAIL(fmt::format(
+            "Valid `plane` value for RGB24 is 0. (Found: {})", plane));
       }
       return convert_interleaved(frames);
     }

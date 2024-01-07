@@ -17,7 +17,7 @@ def _parse_python_args():
     return parser.parse_args()
 
 
-n_plot = 1
+n_plot = 0
 
 
 def _plot(frames):
@@ -65,7 +65,7 @@ def _main():
         a = torch.empty([1, 2]).to(device=f"cuda:{i}")
         print(a)
 
-    for i, cfg in enumerate(configs):
+    for cfg in configs:
         if args.gpu:
             cfg["decoder"] = "h264_cuvid"
             cfg["cuda_device_index"] = 1
@@ -80,14 +80,24 @@ def _main():
 
         decoded_frames = libspdl.decode_video(**cfg)
         for frames in decoded_frames:
-            print(len(frames))
-            print(frames.width, frames.height)
-            sliced = frames[::2]
+            print(
+                f"{frames.format=}, {len(frames)=}, {frames.width=}, {frames.height=}"
+            )
+            frames = frames[::2]
+            print(
+                f"{frames.format=}, {len(frames)=}, {frames.width=}, {frames.height=}"
+            )
 
             a = libspdl.to_numpy(frames, format="NHWC")
             print(a.shape, a.dtype)
             if args.plot:
                 _plot(a)
+
+            for p in range(frames.num_planes):
+                a = libspdl.to_numpy(frames, index=p, format="NHWC")
+                print(a.shape, a.dtype)
+                if args.plot:
+                    _plot(a)
 
 
 def _init_logging(debug):

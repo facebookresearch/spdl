@@ -4,6 +4,7 @@
 
 extern "C" {
 #include <libavutil/frame.h>
+#include <libavutil/pixdesc.h>
 }
 
 #ifdef SPDL_DEBUG_REFCOUNT
@@ -49,6 +50,27 @@ bool Frames::is_cuda() const {
   return static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
 }
 
+std::string Frames::get_format() const {
+  if (!frames.size()) {
+    return "none";
+  }
+  switch (type) {
+    case MediaType::Audio:
+      return av_get_sample_fmt_name((AVSampleFormat)frames[0]->format);
+    case MediaType::Video:
+      return av_get_pix_fmt_name((AVPixelFormat)frames[0]->format);
+    default:
+      SPDL_FAIL_INTERNAL("Frames are neither audio/video.");
+  }
+}
+
+int Frames::get_num_planes() const {
+  if (type != MediaType::Video) {
+    SPDL_FAIL("Frames are not video.");
+  }
+  return av_pix_fmt_count_planes((AVPixelFormat)frames[0]->format);
+}
+
 int Frames::get_width() const {
   return frames.size() ? frames[0]->width : -1;
 }
@@ -70,7 +92,8 @@ int Frames::get_num_samples() const {
 }
 
 Frames Frames::slice(int start, int stop, int step) const {
-  Frames out{};
+  Frames out;
+  out.type = this->type;
   for (int i = start; i < stop; i += step) {
     AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
     CHECK_AVERROR(
