@@ -60,10 +60,10 @@ def to_numpy(
             (``"NCHW"`` and ``"NHWC"`` can be  respectively used alias for
              ``"channel_first"`` and ``"channel_last"`` in case of video frames.)
     """
-    buffer = _BufferWrapper(frames.to_buffer(index))
-
-    if buffer.is_cuda():
+    if frames.is_cuda():
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
+
+    buffer = _BufferWrapper(frames.to_buffer(index))
     array = np.array(buffer, copy=False)
     match format:
         case "channel_first" | "NCHW":

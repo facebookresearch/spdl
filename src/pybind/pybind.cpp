@@ -2,6 +2,7 @@
 #include <folly/logging/xlog.h>
 
 #include <libspdl/buffers.h>
+#include <libspdl/logging.h>
 #include <libspdl/processors.h>
 #include <libspdl/types.h>
 #include <libspdl/utils.h>
@@ -145,6 +146,20 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
                 static_cast<int>(start),
                 static_cast<int>(stop),
                 static_cast<int>(step));
+          })
+      .def("is_cuda", &Frames::is_cuda)
+      .def_property_readonly(
+          "media_type",
+          [](const Frames& self) -> std::string {
+            switch (self.type) {
+              case MediaType::Audio:
+                return "audio";
+              case MediaType::Video:
+                return "video";
+              default:
+                SPDL_FAIL_INTERNAL(
+                    "Frames other than Audio/Video is exposed to Python.");
+            }
           })
       .def_property_readonly("width", &Frames::get_width)
       .def_property_readonly("height", &Frames::get_height)
