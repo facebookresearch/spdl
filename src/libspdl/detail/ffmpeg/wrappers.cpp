@@ -1,3 +1,4 @@
+
 #include <libspdl/detail/ffmpeg/logging.h>
 #include <libspdl/detail/ffmpeg/wrappers.h>
 
@@ -24,13 +25,17 @@ void AVCodecContextDeleter::operator()(AVCodecContext* p) {
 }
 
 void AVPacketDeleter::operator()(AVPacket* p) {
-  av_packet_unref(p);
-  av_packet_free(&p);
+  if (p) {
+    av_packet_unref(p);
+    av_packet_free(&p);
+  }
 }
 
 void AVFrameDeleter::operator()(AVFrame* p) {
-  av_frame_unref(p);
-  av_frame_free(&p);
+  if (p) {
+    av_frame_unref(p);
+    av_frame_free(&p);
+  }
 }
 
 void AVBufferRefDeleter::operator()(AVBufferRef* p) {

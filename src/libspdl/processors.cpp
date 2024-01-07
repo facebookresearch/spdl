@@ -157,7 +157,8 @@ Generator<PackagedAVPackets&&> stream_demux(
         stream->codecpar,
         stream->time_base,
         av_guess_frame_rate(fmt_ctx, stream, nullptr)};
-    while (true) {
+    double packet_ts = 0;
+    do {
       AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
       int errnum = av_read_frame(fmt_ctx, packet.get());
       if (errnum == AVERROR_EOF) {
@@ -167,16 +168,12 @@ Generator<PackagedAVPackets&&> stream_demux(
       if (packet->stream_index != idx) {
         continue;
       }
-      double packet_ts = packet->pts * av_q2d(stream->time_base);
-      if (start <= packet_ts) {
-        package.packets.push_back(packet.release());
-      }
+      packet_ts = packet->pts * av_q2d(stream->time_base);
+      package.packets.push_back(packet.release());
       // Note:
-      // Since the video frames can be non-chronological order, this is not
-      if (end + 0.3 < packet_ts) {
-        break;
-      }
-    }
+      // Since the video frames can be non-chronological order, so we add small
+      // margin to end
+    } while (packet_ts < end + 0.3);
     XLOG(DBG) << fmt::format(" - Sliced {} packets", package.packets.size());
     // For flushing
     package.packets.push_back(nullptr);
@@ -188,24 +185,12 @@ Generator<PackagedAVPackets&&> stream_demux(
 // Decoder and filter
 //////////////////////////////////////////////////////////////////////////////
 
-#define TS(PTS, BASE) (static_cast<double>(PTS) * BASE.num / BASE.den)
+#define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
-  assert(filter_graph);
-  AVFilterContext* src_ctx = filter_graph->filters[0];
-  AVFilterContext* sink_ctx = filter_graph->filters[1];
-
-  assert(strcmp(src_ctx->name, "in") == 0);
-  assert(strcmp(sink_ctx->name, "out") == 0);
-
-  XLOG(DBG)
-      << ((!frame) ? fmt::format(" --- flush filter graph")
-                   : fmt::format(
-                         "{:15s} {:.3f} ({})",
-                         " --- raw frame:",
-                         TS(frame->pts, src_ctx->outputs[0]->time_base),
-                         frame->pts));
-
+Generator<AVFrame*> filter_frame(
+    AVFrame* frame,
+    AVFilterContext* src_ctx,
+    AVFilterContext* sink_ctx) {
   int errnum =
       av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
 
@@ -222,13 +207,6 @@ Generator<AVFrame*> filter_frame(AVFrame* frame, AVFilterGraph* filter_graph) {
         co_return;
       default: {
         CHECK_AVERROR_NUM(errnum, "Failed to filter a frame.");
-
-        XLOG(DBG) << fmt::format(
-            "{:15s} {:.3f} ({})",
-            " ---- frame:",
-            TS(frame2->pts, sink_ctx->inputs[0]->time_base),
-            frame2->pts);
-
         co_yield frame2.release();
       }
     }
@@ -240,9 +218,9 @@ Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
   XLOG(DBG)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(
-                          "{:15s} {:.3f} ({})",
+                          "{:21s} {:.3f} ({})",
                           " -- packet:",
-                          TS(packet->pts, codec_ctx->pkt_timebase),
+                          TS(packet, codec_ctx->pkt_timebase),
                           packet->pts));
 
   int errnum = avcodec_send_packet(codec_ctx, packet);
@@ -266,20 +244,21 @@ Generator<AVFrame*> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
 Task<Frames> decode_packets(
     PackagedAVPackets packets,
     AVCodecContextPtr codec_ctx) {
+  auto [start, end] = packets.timestamp;
   Frames frames{
       codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
                                                   : MediaType::Video};
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto frame = co_await decoding.next()) {
-      if (*frame) {
-        XLOG(DBG) << fmt::format(
-            "{:15s} {:.3f} ({})",
-            " --- raw frame:",
-            TS((*frame)->pts, codec_ctx->pkt_timebase),
-            (*frame)->pts);
-
-        frames.frames.push_back(*frame);
+      AVFramePtr f{*frame};
+      if (f) {
+        double ts = TS(f, codec_ctx->pkt_timebase);
+        if (start <= ts && ts <= end) {
+          XLOG(DBG) << fmt::format(
+              "{:21s} {:.3f} ({})", " --- raw frame:", ts, f->pts);
+          frames.frames.push_back(f.release());
+        }
       }
     }
   }
@@ -292,17 +271,40 @@ Task<Frames> decode_packets(
     AVFilterGraphPtr filter_graph) {
   // XLOG(DBG) << describe_graph(filter_graph.get());
 
-  // Note:
-  // The time_base of filtered frames can be found at
-  // `filter_graph->filters[1]->inputs[0]->time_base`
+  auto [start, end] = packets.timestamp;
+
+  assert(filter_graph);
+  AVFilterContext* src_ctx = filter_graph->filters[0];
+  AVFilterContext* sink_ctx = filter_graph->filters[1];
+  assert(strcmp(src_ctx->name, "in") == 0);
+  assert(strcmp(sink_ctx->name, "out") == 0);
+
   Frames frames{get_output_media_type(filter_graph.get())};
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
-      AVFramePtr f{*raw_frame};
-      auto filtering = filter_frame(*raw_frame, filter_graph.get());
+      AVFramePtr rf{*raw_frame};
+
+      XLOG(DBG)
+          << ((!rf) ? fmt::format(" --- flush filter graph")
+                    : fmt::format(
+                          "{:21s} {:.3f} ({})",
+                          " --- raw frame:",
+                          TS(rf, src_ctx->outputs[0]->time_base),
+                          rf->pts));
+
+      auto filtering = filter_frame(*raw_frame, src_ctx, sink_ctx);
       while (auto frame = co_await filtering.next()) {
-        frames.frames.push_back(*frame);
+        AVFramePtr f{*frame};
+        if (f) {
+          double ts = TS(f, sink_ctx->inputs[0]->time_base);
+          if (start <= ts && ts <= end) {
+            XLOG(DBG) << fmt::format(
+                "{:21s} {:.3f} ({})", " ---- filtered frame:", ts, f->pts);
+
+            frames.frames.push_back(f.release());
+          }
+        }
       }
     }
   }
