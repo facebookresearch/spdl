@@ -76,7 +76,7 @@ def to_numpy(
             pass
         case _:
             raise ValueError(
-                "Expected format value to be one of ['NCHW', 'NHWC', None]"
-                f", but received: {format}"
+                'Expected `format` argument to be one of ``"channel_first"``, '
+                f'``"channel_last"``, ``None``. Found: {format}'
             )
     return array
