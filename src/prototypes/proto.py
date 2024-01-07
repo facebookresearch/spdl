@@ -17,12 +17,18 @@ def _parse_python_args():
     return parser.parse_args()
 
 
-def _plot(frames, k):
+n_plot = 1
+
+
+def _plot(frames):
     import matplotlib.pyplot as plt
 
+    global n_plot
     for i, frame in enumerate(frames):
         plt.imshow(frame)
-        plt.savefig(f"tmp/frame_{k}_{i:03d}.png")
+        plt.savefig(f"tmp/frame_{n_plot}_{i:03d}.png")
+
+    n_plot += 1
 
 
 def _main():
@@ -36,10 +42,13 @@ def _main():
     src2 = f"mmap://{src}"
 
     configs = [
-        {"src": src, "timestamps": [0.0, 1.0, 2.0]},
+        {
+            "src": src,
+            "timestamps": [(0.0, 1.0), (10.0, 11.0)],
+        },
         {
             "src": src2,
-            "timestamps": [0.0, 1.0, 2.0],
+            "timestamps": [(0.0, 1.0), (10.0, 11.0)],
             "frame_rate": "30000/1001",
             "width": 36,
             "height": 48,
@@ -69,19 +78,16 @@ def _main():
         print(cfg)
         print("*" * 40)
 
-        decoded_frames = libspdl.decode_video(**cfg)[0]
-        print(len(decoded_frames))
-        print(decoded_frames.width, decoded_frames.height)
-        sliced = decoded_frames[2:7:2]
-        print(len(sliced))
-        del sliced
+        decoded_frames = libspdl.decode_video(**cfg)
+        for frames in decoded_frames:
+            print(len(frames))
+            print(frames.width, frames.height)
+            sliced = frames[::2]
 
-        a = libspdl.to_numpy(decoded_frames, format="NHWC")
-        print(a.shape, a.dtype)
-        if args.plot:
-            _plot(a, 2 * i)
-
-        del decoded_frames
+            a = libspdl.to_numpy(frames, format="NHWC")
+            print(a.shape, a.dtype)
+            if args.plot:
+                _plot(a)
 
 
 def _init_logging(debug):

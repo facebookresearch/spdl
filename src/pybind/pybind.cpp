@@ -187,7 +187,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   m.def(
       "decode_video",
       [](const std::string& src,
-         const std::vector<double>& timestamps,
+         const std::vector<std::tuple<double, double>>& timestamps,
          const std::optional<std::string>& format = std::nullopt,
          const std::optional<OptionDict>& format_options = std::nullopt,
          const int buffer_size = 8096,
