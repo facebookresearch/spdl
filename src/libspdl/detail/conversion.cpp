@@ -267,10 +267,10 @@ Buffer convert_video_frames_cpu(
 }
 
 Buffer convert_video_frames(
-    const Frames& frames,
+    const FrameContainer& frames,
     const std::optional<int>& index) {
   if (frames.type != MediaType::Video) {
-    SPDL_FAIL("Frames must be video type.");
+    SPDL_FAIL("FrameContainer must be video type.");
   }
 
   const auto& fs = frames.frames;
@@ -290,7 +290,7 @@ Buffer convert_video_frames(
 
 template <size_t depth, ElemClass type, bool is_planar>
 Buffer convert_audio_frames(
-    const Frames& frames,
+    const FrameContainer& frames,
     const std::optional<int>& index) {
   size_t num_frames = frames.get_num_samples();
   size_t num_channels = frames.frames[0]->channels;
@@ -337,9 +337,11 @@ Buffer convert_audio_frames(
 ////////////////////////////////////////////////////////////////////////////////
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
-Buffer convert_audio_frames(const Frames& frames, const std::optional<int>& i) {
+Buffer convert_audio_frames(
+    const FrameContainer& frames,
+    const std::optional<int>& i) {
   if (frames.type != MediaType::Audio) {
-    SPDL_FAIL("Frames must be audio type.");
+    SPDL_FAIL("FrameContainer must be audio type.");
   }
   const auto& fs = frames.frames;
   if (!fs.size()) {
@@ -385,7 +387,9 @@ Buffer convert_audio_frames(const Frames& frames, const std::optional<int>& i) {
 }
 } // namespace
 
-Buffer convert_frames(const Frames& frames, const std::optional<int>& index) {
+Buffer convert_frames(
+    const FrameContainer& frames,
+    const std::optional<int>& index) {
   switch (frames.type) {
     case MediaType::Audio:
       return detail::convert_audio_frames(frames, index);

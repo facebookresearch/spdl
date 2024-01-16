@@ -22,9 +22,9 @@ static struct AVBuffer {
 
 namespace spdl {
 
-Frames::Frames(MediaType type_) : type(type_) {}
+FrameContainer::FrameContainer(MediaType type_) : type(type_) {}
 
-Frames::~Frames() {
+FrameContainer::~FrameContainer() {
   std::for_each(frames.begin(), frames.end(), [](AVFrame* p) {
 #ifdef SPDL_DEBUG_REFCOUNT
     for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
@@ -45,14 +45,14 @@ Frames::~Frames() {
   });
 }
 
-bool Frames::is_cuda() const {
+bool FrameContainer::is_cuda() const {
   if (type == MediaType::Audio || !frames.size()) {
     return false;
   }
   return static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
 }
 
-std::string Frames::get_format() const {
+std::string FrameContainer::get_format() const {
   if (!frames.size()) {
     return "none";
   }
@@ -64,26 +64,26 @@ std::string Frames::get_format() const {
   }
 }
 
-int Frames::get_num_planes() const {
+int FrameContainer::get_num_planes() const {
   if (type != MediaType::Video) {
-    SPDL_FAIL("Frames are not video.");
+    SPDL_FAIL("FrameContainer are not video.");
   }
   return av_pix_fmt_count_planes((AVPixelFormat)frames[0]->format);
 }
 
-int Frames::get_width() const {
+int FrameContainer::get_width() const {
   return frames.size() ? frames[0]->width : -1;
 }
 
-int Frames::get_height() const {
+int FrameContainer::get_height() const {
   return frames.size() ? frames[0]->height : -1;
 }
 
-int Frames::get_sample_rate() const {
+int FrameContainer::get_sample_rate() const {
   return frames.size() ? frames[0]->sample_rate : -1;
 }
 
-int Frames::get_num_samples() const {
+int FrameContainer::get_num_samples() const {
   int ret = 0;
   for (auto& f : frames) {
     ret += f->nb_samples;
@@ -91,8 +91,8 @@ int Frames::get_num_samples() const {
   return ret;
 }
 
-Frames Frames::slice(int start, int stop, int step) const {
-  Frames out{type};
+FrameContainer FrameContainer::slice(int start, int stop, int step) const {
+  FrameContainer out{type};
   for (int i = start; i < stop; i += step) {
     AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
     CHECK_AVERROR(
@@ -103,7 +103,7 @@ Frames Frames::slice(int start, int stop, int step) const {
   return out;
 }
 
-Buffer Frames::to_buffer(const std::optional<int>& index) const {
+Buffer FrameContainer::to_buffer(const std::optional<int>& index) const {
   return detail::convert_frames(*this, index);
 }
 
