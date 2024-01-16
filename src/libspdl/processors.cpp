@@ -50,7 +50,7 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
 // PackagedAVPackets
 //////////////////////////////////////////////////////////////////////////////
 // Struct passed from IO thread pool to decoder thread pool.
-// Similar to Frames, AVFrame pointers are bulk released.
+// Similar to FrameContainer, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
 struct PackagedAVPackets {
   // Source information
@@ -213,7 +213,9 @@ Generator<AVFramePtr&&> filter_frame(
   }
 }
 
-Generator<AVFramePtr&&> decode_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
+Generator<AVFramePtr&&> decode_packet(
+    AVCodecContext* codec_ctx,
+    AVPacket* packet) {
   assert(codec_ctx);
   XLOG(DBG)
       << ((!packet) ? fmt::format(" -- flush decoder")
@@ -241,11 +243,11 @@ Generator<AVFramePtr&&> decode_packet(AVCodecContext* codec_ctx, AVPacket* packe
   }
 }
 
-Task<Frames> decode_packets(
+Task<FrameContainer> decode_packets(
     PackagedAVPackets packets,
     AVCodecContextPtr codec_ctx) {
   auto [start, end] = packets.timestamp;
-  Frames frames{
+  FrameContainer frames{
       codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
                                                   : MediaType::Video};
   for (auto& packet : packets.packets) {
@@ -265,7 +267,7 @@ Task<Frames> decode_packets(
   co_return frames;
 }
 
-Task<Frames> decode_packets(
+Task<FrameContainer> decode_packets(
     PackagedAVPackets packets,
     AVCodecContextPtr codec_ctx,
     AVFilterGraphPtr filter_graph) {
@@ -279,7 +281,7 @@ Task<Frames> decode_packets(
   assert(strcmp(src_ctx->name, "in") == 0);
   assert(strcmp(sink_ctx->name, "out") == 0);
 
-  Frames frames{get_output_media_type(filter_graph.get())};
+  FrameContainer frames{get_output_media_type(filter_graph.get())};
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
@@ -311,7 +313,7 @@ Task<Frames> decode_packets(
   co_return frames;
 }
 
-Task<Frames> get_decode_task(
+Task<FrameContainer> get_decode_task(
     PackagedAVPackets packets,
     const std::string& filter_desc,
     const DecodeConfig& cfg) {
@@ -344,7 +346,7 @@ Task<Frames> get_decode_task(
       std::move(packets), std::move(codec_ctx), std::move(filter_graph));
 }
 
-Task<std::vector<Frames>> stream_decode(
+Task<std::vector<FrameContainer>> stream_decode(
     const enum AVMediaType type,
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -352,14 +354,14 @@ Task<std::vector<Frames>> stream_decode(
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg) {
   auto demuxer = stream_demux(type, src, timestamps, io_cfg);
-  std::vector<folly::SemiFuture<Frames>> futures;
+  std::vector<folly::SemiFuture<FrameContainer>> futures;
   auto exec = getDecoderThreadPoolExecutor();
   while (auto packets = co_await demuxer.next()) {
     auto task = get_decode_task(*packets, filter_desc, decode_cfg);
     futures.emplace_back(std::move(task).scheduleOn(exec).start());
   }
   XLOG(DBG) << "Waiting for decode jobs to finish";
-  std::vector<Frames> results;
+  std::vector<FrameContainer> results;
   size_t i = 0;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
     if (result.hasValue()) {
@@ -381,7 +383,7 @@ Task<std::vector<Frames>> stream_decode(
 }
 } // namespace
 
-std::vector<Frames> decode_video(
+std::vector<FrameContainer> decode_video(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
@@ -393,7 +395,7 @@ std::vector<Frames> decode_video(
       std::move(job).scheduleOn(getDemuxerThreadPoolExecutor()));
 }
 
-std::vector<Frames> decode_audio(
+std::vector<FrameContainer> decode_audio(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,

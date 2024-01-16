@@ -20,14 +20,14 @@ struct DecodeConfig {
   int cuda_device_index = -1;
 };
 
-std::vector<Frames> decode_video(
+std::vector<FrameContainer> decode_video(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg);
 
-std::vector<Frames> decode_audio(
+std::vector<FrameContainer> decode_audio(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,

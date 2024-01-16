@@ -6,7 +6,7 @@
 namespace spdl::detail {
 
 Buffer convert_frames(
-    const Frames& frames,
+    const FrameContainer& frames,
     const std::optional<int>& index = std::nullopt);
 
 } // namespace spdl::detail

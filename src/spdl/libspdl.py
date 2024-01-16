@@ -49,7 +49,7 @@ def to_numpy(
     """Convert to numpy array.
 
     Args:
-        frames (Frames): Decoded frames.
+        frames (FrameContainer): Decoded frames.
 
         format (str or None): Channel order.
             Valid values are ``"channel_first"``, ``"channel_last"`` or ``None``.

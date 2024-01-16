@@ -13,20 +13,20 @@ struct Buffer;
 // pointers with dedicated destructor, as opposed to vector of managed pointers
 
 /// Represents series of decoded frames
-struct Frames {
+struct FrameContainer {
   MediaType type;
 
   std::vector<AVFrame*> frames{};
 
-  Frames(MediaType type);
+  FrameContainer(MediaType type);
   // No copy constructors
-  Frames(const Frames&) = delete;
-  Frames& operator=(const Frames&) = delete;
+  FrameContainer(const FrameContainer&) = delete;
+  FrameContainer& operator=(const FrameContainer&) = delete;
   // Move constructors to support MPMCQueue (BoundedQueue)
-  Frames(Frames&&) noexcept = default;
-  Frames& operator=(Frames&&) noexcept = default;
+  FrameContainer(FrameContainer&&) noexcept = default;
+  FrameContainer& operator=(FrameContainer&&) noexcept = default;
   // Destructor releases AVFrame* resources
-  ~Frames();
+  ~FrameContainer();
 
   bool is_cuda() const;
   std::string get_format() const;
@@ -36,7 +36,7 @@ struct Frames {
   int get_sample_rate() const;
   int get_num_samples() const;
 
-  Frames slice(int start, int stop, int step) const;
+  FrameContainer slice(int start, int stop, int step) const;
 
   Buffer to_buffer(const std::optional<int>& index = std::nullopt) const;
 };

@@ -131,12 +131,14 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       py::arg("index"),
       py::arg("use_primary_context") = false);
 
-  py::class_<Frames>(m, "Frames", py::module_local())
-      .def("to_buffer", &Frames::to_buffer)
-      .def("__len__", [](const Frames& self) { return self.frames.size(); })
+  py::class_<FrameContainer>(m, "FrameContainer", py::module_local())
+      .def("to_buffer", &FrameContainer::to_buffer)
+      .def(
+          "__len__",
+          [](const FrameContainer& self) { return self.frames.size(); })
       .def(
           "__getitem__",
-          [](const Frames& self, const py::slice& slice) {
+          [](const FrameContainer& self, const py::slice& slice) {
             py::ssize_t start = 0, stop = 0, step = 0, len = 0;
             if (!slice.compute(
                     self.frames.size(), &start, &stop, &step, &len)) {
@@ -147,10 +149,10 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
                 static_cast<int>(stop),
                 static_cast<int>(step));
           })
-      .def("is_cuda", &Frames::is_cuda)
+      .def("is_cuda", &FrameContainer::is_cuda)
       .def_property_readonly(
           "media_type",
-          [](const Frames& self) -> std::string {
+          [](const FrameContainer& self) -> std::string {
             switch (self.type) {
               case MediaType::Audio:
                 return "audio";
@@ -158,12 +160,12 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
                 return "video";
             }
           })
-      .def_property_readonly("format", &Frames::get_format)
-      .def_property_readonly("num_planes", &Frames::get_num_planes)
-      .def_property_readonly("width", &Frames::get_width)
-      .def_property_readonly("height", &Frames::get_height)
-      .def_property_readonly("sample_rate", &Frames::get_sample_rate)
-      .def_property_readonly("num_samples", &Frames::get_num_samples);
+      .def_property_readonly("format", &FrameContainer::get_format)
+      .def_property_readonly("num_planes", &FrameContainer::get_num_planes)
+      .def_property_readonly("width", &FrameContainer::get_width)
+      .def_property_readonly("height", &FrameContainer::get_height)
+      .def_property_readonly("sample_rate", &FrameContainer::get_sample_rate)
+      .def_property_readonly("num_samples", &FrameContainer::get_num_samples);
 
   py::class_<Buffer>(m, "Buffer", py::module_local())
       .def_property_readonly(
