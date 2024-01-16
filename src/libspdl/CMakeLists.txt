@@ -20,6 +20,8 @@ set(srcs
   detail/ffmpeg/wrappers.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/interface/mmap.cpp
+  detail/packets.cpp
+  detail/demuxer.cpp
   storage.cpp
   buffers.cpp
   frames.cpp
