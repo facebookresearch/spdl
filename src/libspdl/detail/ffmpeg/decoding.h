@@ -1,6 +1,13 @@
 #pragma once
 
+#include <libspdl/frames.h>
+#include <libspdl/types.h>
+
+#include <folly/experimental/coro/AsyncGenerator.h>
+#include <folly/experimental/coro/Task.h>
+
 #include <string>
+#include <tuple>
 #include <vector>
 
 extern "C" {
@@ -9,6 +16,19 @@ extern "C" {
 }
 
 namespace spdl::detail {
+
+struct PackagedAVPackets;
+
+folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
+    const enum MediaType type,
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const IOConfig& cfg);
+
+folly::coro::Task<FrameContainer> decode_packets(
+    PackagedAVPackets packets,
+    const std::string& filter_desc,
+    const DecodeConfig& cfg);
 
 //////////////////////////////////////////////////////////////////////////////
 // PackagedAVPackets

@@ -17,11 +17,10 @@ set(srcs
   detail/conversion.cpp
   detail/executors.cpp
   detail/ffmpeg/ctx_utils.cpp
-  detail/ffmpeg/wrappers.cpp
+  detail/ffmpeg/decoding.cpp
   detail/ffmpeg/filter_graph.cpp
+  detail/ffmpeg/wrappers.cpp
   detail/interface/mmap.cpp
-  detail/packets.cpp
-  detail/demuxer.cpp
   storage.cpp
   buffers.cpp
   frames.cpp
