@@ -34,9 +34,9 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
 
 folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
-    const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    const IOConfig& cfg) {
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    const IOConfig cfg) {
   auto dp =
       get_data_provider(src, cfg.format, cfg.format_options, cfg.buffer_size);
   AVFormatContext* fmt_ctx = dp->get_fmt_ctx();
@@ -250,9 +250,9 @@ folly::coro::Task<FrameContainer> decode_pkts(
 } // namespace
 
 folly::coro::Task<FrameContainer> decode_packets(
-    PackagedAVPackets packets,
-    const std::string& filter_desc,
-    const DecodeConfig& cfg) {
+    PackagedAVPackets&& packets,
+    const std::string filter_desc,
+    const DecodeConfig cfg) {
   if (filter_desc.empty()) {
     return decode_pkts(std::move(packets), cfg);
   }

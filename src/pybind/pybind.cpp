@@ -1,15 +1,13 @@
-#include <folly/init/Init.h>
-#include <folly/logging/xlog.h>
-
 #include <libspdl/buffers.h>
-#include <libspdl/logging.h>
-#include <libspdl/processors.h>
-#include <libspdl/types.h>
+#include <libspdl/conversion.h>
+#include <libspdl/decoding.h>
 #include <libspdl/utils.h>
+
+#include <fmt/core.h>
+#include <folly/init/Init.h>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <cstddef>
 
 #ifndef SPDL_FFMPEG_EXT_NAME
 #error SPDL_FFMPEG_EXT_NAME must be defined.
@@ -132,7 +130,6 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       py::arg("use_primary_context") = false);
 
   py::class_<FrameContainer>(m, "FrameContainer", py::module_local())
-      .def("to_buffer", &FrameContainer::to_buffer)
       .def(
           "__len__",
           [](const FrameContainer& self) { return self.frames.size(); })
@@ -184,6 +181,8 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
           [](Buffer& self) { return get_cuda_array_interface(self); })
 #endif
       ;
+
+  m.def("convert_frames", &convert_frames);
 
   m.def(
       "decode_video",

@@ -8,8 +8,6 @@ struct AVFrame;
 
 namespace spdl {
 
-struct Buffer;
-
 // We deal with multiple frames at a time, so we use vector of raw
 // pointers with dedicated destructor, as opposed to vector of managed pointers
 
@@ -38,8 +36,6 @@ struct FrameContainer {
   int get_num_samples() const;
 
   FrameContainer slice(int start, int stop, int step) const;
-
-  Buffer to_buffer(const std::optional<int>& index = std::nullopt) const;
 };
 
 } // namespace spdl
