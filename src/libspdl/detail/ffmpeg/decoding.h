@@ -21,14 +21,14 @@ struct PackagedAVPackets;
 
 folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
-    const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    const IOConfig& cfg);
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    const IOConfig cfg={});
 
 folly::coro::Task<FrameContainer> decode_packets(
-    PackagedAVPackets packets,
-    const std::string& filter_desc,
-    const DecodeConfig& cfg);
+    PackagedAVPackets&& packets,
+    const std::string filter_desc,
+    const DecodeConfig cfg={});
 
 //////////////////////////////////////////////////////////////////////////////
 // PackagedAVPackets

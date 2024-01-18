@@ -14,18 +14,18 @@ endif()
 set(defs)
 set(deps folly)
 set(srcs
-  detail/conversion.cpp
   detail/executors.cpp
   detail/ffmpeg/ctx_utils.cpp
   detail/ffmpeg/decoding.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/ffmpeg/wrappers.cpp
   detail/interface/mmap.cpp
-  storage.cpp
   buffers.cpp
+  conversion.cpp
+  decoding.cpp
   frames.cpp
   interface.cpp
-  processors.cpp
+  storage.cpp
   utils.cpp
   )
 

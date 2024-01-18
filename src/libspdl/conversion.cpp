@@ -1,4 +1,4 @@
-#include <libspdl/detail/conversion.h>
+#include <libspdl/conversion.h>
 #include <libspdl/logging.h>
 #include <libspdl/types.h>
 #ifdef SPDL_USE_CUDA
@@ -20,7 +20,7 @@ extern "C" {
 #endif
 }
 
-namespace spdl::detail {
+namespace spdl {
 namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -392,10 +392,10 @@ Buffer convert_frames(
     const std::optional<int>& index) {
   switch (frames.type) {
     case MediaType::Audio:
-      return detail::convert_audio_frames(frames, index);
+      return convert_audio_frames(frames, index);
     case MediaType::Video:
-      return detail::convert_video_frames(frames, index);
+      return convert_video_frames(frames, index);
   }
 }
 
-} // namespace spdl::detail
+} // namespace spdl

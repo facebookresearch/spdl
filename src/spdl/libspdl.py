@@ -63,7 +63,7 @@ def to_numpy(
     if frames.is_cuda():
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
 
-    buffer = _BufferWrapper(frames.to_buffer(index))
+    buffer = _BufferWrapper(_libspdl.convert_frames(frames, index))
     array = np.array(buffer, copy=False)
     match format:
         case "channel_first" | "NCHW":

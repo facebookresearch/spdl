@@ -1,4 +1,3 @@
-#include <libspdl/detail/conversion.h>
 #include <libspdl/detail/ffmpeg/logging.h>
 #include <libspdl/frames.h>
 
@@ -101,10 +100,6 @@ FrameContainer FrameContainer::slice(int start, int stop, int step) const {
     out.frames.push_back(dst);
   }
   return out;
-}
-
-Buffer FrameContainer::to_buffer(const std::optional<int>& index) const {
-  return detail::convert_frames(*this, index);
 }
 
 } // namespace spdl
