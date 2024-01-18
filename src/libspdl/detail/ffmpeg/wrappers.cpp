@@ -1,13 +1,6 @@
-
-#include <libspdl/detail/ffmpeg/logging.h>
 #include <libspdl/detail/ffmpeg/wrappers.h>
 
 namespace spdl::detail {
-
-////////////////////////////////////////////////////////////////////////////////
-// RAII wrappers
-////////////////////////////////////////////////////////////////////////////////
-
 void AVIOContextDeleter::operator()(AVIOContext* p) {
   if (p) {
     avio_flush(p);
@@ -50,5 +43,4 @@ AVFrameAutoUnref::AVFrameAutoUnref(AVFrame* p_) : p(p_){};
 AVFrameAutoUnref::~AVFrameAutoUnref() {
   av_frame_unref(p);
 }
-
 } // namespace spdl::detail

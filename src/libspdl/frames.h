@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libspdl/types.h>
+
 #include <vector>
 
 struct AVFrame;
