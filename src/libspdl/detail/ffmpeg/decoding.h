@@ -23,12 +23,12 @@ folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    const IOConfig cfg={});
+    const IOConfig cfg = {});
 
-folly::coro::Task<FrameContainer> decode_packets(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     PackagedAVPackets&& packets,
     const std::string filter_desc,
-    const DecodeConfig cfg={});
+    const DecodeConfig cfg = {});
 
 //////////////////////////////////////////////////////////////////////////////
 // PackagedAVPackets

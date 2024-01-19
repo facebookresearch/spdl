@@ -152,7 +152,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
   }
 }
 
-folly::coro::Task<FrameContainer> decode_pkts(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
     PackagedAVPackets packets,
     const DecodeConfig cfg) {
   auto codec_ctx = get_codec_ctx(
@@ -163,9 +163,9 @@ folly::coro::Task<FrameContainer> decode_pkts(
       cfg.cuda_device_index);
 
   auto [start, end] = packets.timestamp;
-  FrameContainer frames{
+  auto container = std::make_unique<FrameContainer>(
       codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
-                                                  : MediaType::Video};
+                                                  : MediaType::Video);
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto frame = co_await decoding.next()) {
@@ -175,15 +175,15 @@ folly::coro::Task<FrameContainer> decode_pkts(
         if (start <= ts && ts <= end) {
           XLOG(DBG) << fmt::format(
               "{:21s} {:.3f} ({})", " --- raw frame:", ts, f->pts);
-          frames.frames.push_back(f.release());
+          container->frames.push_back(f.release());
         }
       }
     }
   }
-  co_return frames;
+  co_return container;
 }
 
-folly::coro::Task<FrameContainer> decode_pkts(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
     PackagedAVPackets packets,
     const std::string filter_desc,
     const DecodeConfig cfg) {
@@ -216,7 +216,8 @@ folly::coro::Task<FrameContainer> decode_pkts(
   assert(strcmp(src_ctx->name, "in") == 0);
   assert(strcmp(sink_ctx->name, "out") == 0);
 
-  FrameContainer frames{get_output_media_type(filter_graph.get())};
+  auto container = std::make_unique<FrameContainer>(
+      get_output_media_type(filter_graph.get()));
   for (auto& packet : packets.packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
@@ -239,17 +240,17 @@ folly::coro::Task<FrameContainer> decode_pkts(
             XLOG(DBG) << fmt::format(
                 "{:21s} {:.3f} ({})", " ---- filtered frame:", ts, f->pts);
 
-            frames.frames.push_back(f.release());
+            container->frames.push_back(f.release());
           }
         }
       }
     }
   }
-  co_return frames;
+  co_return container;
 }
 } // namespace
 
-folly::coro::Task<FrameContainer> decode_packets(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     PackagedAVPackets&& packets,
     const std::string filter_desc,
     const DecodeConfig cfg) {
