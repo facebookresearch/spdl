@@ -2,6 +2,8 @@
 
 #include <libspdl/frames.h>
 #include <libspdl/types.h>
+
+#include <memory>
 #include <vector>
 
 namespace spdl {
