@@ -1,4 +1,5 @@
 #include <libspdl/buffers.h>
+#include <libspdl/logging.h>
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
