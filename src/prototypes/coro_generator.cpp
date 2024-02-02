@@ -1,7 +1,7 @@
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/Task.h>
-
+#include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
 
 folly::coro::AsyncGenerator<int> gen() {
@@ -56,7 +56,10 @@ folly::coro::Task<void> run_gen() {
   co_return;
 }
 
-int main(int argc, char** argv) {
-  folly::coro::blockingWait(
-      run_gen().scheduleOn(folly::getGlobalCPUExecutor().get()));
+int main(int nargs, char** argv) {
+  {
+    folly::Init init{&nargs, &argv};
+    folly::coro::blockingWait(
+        run_gen().scheduleOn(folly::getGlobalCPUExecutor().get()));
+  }
 }
