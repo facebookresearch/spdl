@@ -1,7 +1,7 @@
-#include <libspdl/detail/ffmpeg/ctx_utils.h>
-#include <libspdl/detail/ffmpeg/wrappers.h>
-#include <libspdl/detail/interface/mmap.h>
-#include <libspdl/interface.h>
+#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/core/detail/ffmpeg/wrappers.h>
+#include <libspdl/core/detail/interface/mmap.h>
+#include <libspdl/core/interface.h>
 #include <memory>
 
 using namespace spdl::detail;

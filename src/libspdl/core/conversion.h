@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libspdl/buffers.h>
-#include <libspdl/frames.h>
+#include <libspdl/core/buffers.h>
+#include <libspdl/core/frames.h>
 
 namespace spdl {
 

@@ -1,4 +1,4 @@
-#include <libspdl/detail/ffmpeg/wrappers.h>
+#include <libspdl/core/detail/ffmpeg/wrappers.h>
 
 namespace spdl::detail {
 void AVIOContextDeleter::operator()(AVIOContext* p) {

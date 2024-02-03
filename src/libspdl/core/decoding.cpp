@@ -1,7 +1,7 @@
-#include <libspdl/decoding.h>
-#include <libspdl/detail/executors.h>
-#include <libspdl/detail/ffmpeg/decoding.h>
-#include <libspdl/logging.h>
+#include <libspdl/core/decoding.h>
+#include <libspdl/core/detail/executors.h>
+#include <libspdl/core/detail/ffmpeg/decoding.h>
+#include <libspdl/core/logging.h>
 
 #include <fmt/core.h>
 #include <folly/experimental/coro/BlockingWait.h>

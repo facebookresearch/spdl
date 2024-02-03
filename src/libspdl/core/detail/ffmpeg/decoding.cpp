@@ -1,10 +1,10 @@
-#include <libspdl/detail/ffmpeg/ctx_utils.h>
-#include <libspdl/detail/ffmpeg/decoding.h>
-#include <libspdl/detail/ffmpeg/filter_graph.h>
-#include <libspdl/detail/ffmpeg/logging.h>
-#include <libspdl/detail/ffmpeg/wrappers.h>
-#include <libspdl/interface.h>
-#include <libspdl/logging.h>
+#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/core/detail/ffmpeg/decoding.h>
+#include <libspdl/core/detail/ffmpeg/filter_graph.h>
+#include <libspdl/core/detail/ffmpeg/logging.h>
+#include <libspdl/core/detail/ffmpeg/wrappers.h>
+#include <libspdl/core/interface.h>
+#include <libspdl/core/logging.h>
 
 extern "C" {
 #include <libavfilter/buffersink.h>

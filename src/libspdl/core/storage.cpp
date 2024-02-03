@@ -1,6 +1,6 @@
-#include <libspdl/storage.h>
+#include <libspdl/core/storage.h>
 #ifdef SPDL_USE_CUDA
-#include <libspdl/detail/cuda.h>
+#include <libspdl/core/detail/cuda.h>
 #endif
 
 #include <fmt/core.h>

@@ -1,5 +1,5 @@
-#include <libspdl/detail/ffmpeg/ctx_utils.h>
-#include <libspdl/detail/ffmpeg/logging.h>
+#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/core/detail/ffmpeg/logging.h>
 
 #ifdef SPDL_USE_CUDA
 #include <cuda.h>

@@ -1,4 +1,4 @@
-#include <libspdl/detail/cuda.h>
+#include <libspdl/core/detail/cuda.h>
 
 #include <fmt/core.h>
 

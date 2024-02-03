@@ -3,8 +3,8 @@ extern "C" {
 #include <libavutil/file.h>
 }
 
-#include <libspdl/detail/ffmpeg/logging.h>
-#include <libspdl/detail/interface/mmap.h>
+#include <libspdl/core/detail/ffmpeg/logging.h>
+#include <libspdl/core/detail/interface/mmap.h>
 
 namespace spdl::detail {
 
