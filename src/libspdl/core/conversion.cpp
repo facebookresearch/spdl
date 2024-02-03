@@ -20,7 +20,7 @@ extern "C" {
 #endif
 }
 
-namespace spdl {
+namespace spdl::core {
 namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -398,4 +398,4 @@ Buffer convert_frames(
   }
 }
 
-} // namespace spdl
+} // namespace spdl::core

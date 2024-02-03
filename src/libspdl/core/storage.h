@@ -7,7 +7,7 @@
 #include <cuda.h>
 #endif
 
-namespace spdl {
+namespace spdl::core {
 
 struct Storage {
   void* data = nullptr;
@@ -42,4 +42,4 @@ struct CUDAStorage {
 };
 #endif
 
-} // namespace spdl
+} // namespace spdl::core

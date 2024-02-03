@@ -15,7 +15,7 @@
 
 namespace py = pybind11;
 
-namespace spdl {
+namespace spdl::core {
 namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -304,4 +304,4 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       py::arg("filter_desc") = std::string());
 }
 } // namespace
-} // namespace spdl
+} // namespace spdl::core

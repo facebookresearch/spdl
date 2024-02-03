@@ -1,6 +1,6 @@
 #pragma once
 
-namespace spdl {
+namespace spdl::core {
 
 int get_ffmpeg_log_level();
 
@@ -21,4 +21,4 @@ std::string get_audio_filter_description(
     const std::optional<int>& num_channels,
     const std::optional<std::string>& sample_fmt);
 
-} // namespace spdl
+} // namespace spdl::core

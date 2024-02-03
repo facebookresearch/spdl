@@ -19,7 +19,7 @@ static struct AVBuffer {
 };
 #endif
 
-namespace spdl {
+namespace spdl::core {
 
 FrameContainer::FrameContainer(MediaType type_) : type(type_) {}
 
@@ -102,4 +102,4 @@ FrameContainer FrameContainer::slice(int start, int stop, int step) const {
   return out;
 }
 
-} // namespace spdl
+} // namespace spdl::core

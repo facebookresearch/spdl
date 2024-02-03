@@ -6,12 +6,14 @@
 #include <libspdl/core/interface.h>
 #include <libspdl/core/logging.h>
 
+#include <folly/logging/xlog.h>
+
 extern "C" {
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 }
 
-namespace spdl::detail {
+namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
 ////////////////////////////////////////////////////////////////////////////////
@@ -310,4 +312,4 @@ PackagedAVPackets::~PackagedAVPackets() {
   avcodec_parameters_free(&codecpar);
 };
 
-} // namespace spdl::detail
+} // namespace spdl::core::detail

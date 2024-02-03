@@ -6,7 +6,7 @@
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
-namespace spdl {
+namespace spdl::core {
 
 Storage::Storage(size_t size) : data(operator new(size)) {}
 Storage::Storage(Storage&& other) noexcept {
@@ -46,4 +46,4 @@ CUDAStorage::~CUDAStorage() {
 }
 #endif
 
-} // namespace spdl
+} // namespace spdl::core

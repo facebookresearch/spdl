@@ -4,7 +4,7 @@
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
-namespace spdl {
+namespace spdl::core {
 
 Buffer::Buffer(
     const std::vector<size_t> shape_,
@@ -105,4 +105,4 @@ Buffer cuda_buffer(
 }
 #endif
 
-} // namespace spdl
+} // namespace spdl::core

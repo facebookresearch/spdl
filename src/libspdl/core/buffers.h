@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-namespace spdl {
+namespace spdl::core {
 
 // buffer class to be exposed to python
 struct Buffer {
@@ -58,4 +58,4 @@ Buffer cuda_buffer(
     CUstream stream,
     bool channel_last = false);
 #endif
-} // namespace spdl
+} // namespace spdl::core

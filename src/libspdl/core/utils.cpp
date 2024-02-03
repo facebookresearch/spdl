@@ -3,11 +3,12 @@
 #include <libspdl/core/utils.h>
 
 #include <cstdint>
+
 extern "C" {
 #include <libavutil/log.h>
 }
 
-namespace spdl {
+namespace spdl::core {
 
 int get_ffmpeg_log_level() {
   return av_log_get_level();
@@ -42,4 +43,4 @@ std::string get_audio_filter_description(
       sample_rate, num_channels, sample_fmt);
 }
 
-} // namespace spdl
+} // namespace spdl::core

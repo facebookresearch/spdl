@@ -1,9 +1,10 @@
 #pragma once
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
 #include <libspdl/core/types.h>
+
 #include <optional>
 
-namespace spdl::detail {
+namespace spdl::core::detail {
 
 AVFilterGraphPtr get_audio_filter(
     const std::string& filter_description,
@@ -30,4 +31,4 @@ MediaType get_output_media_type(const AVFilterGraph* p);
 // for debug
 std::string describe_graph(AVFilterGraph* graph);
 
-} // namespace spdl::detail
+} // namespace spdl::core::detail

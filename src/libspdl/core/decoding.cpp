@@ -14,7 +14,7 @@
 
 using folly::coro::collectAllTryRange;
 
-namespace spdl {
+namespace spdl::core {
 namespace {
 folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
     const enum MediaType type,
@@ -77,4 +77,4 @@ std::vector<std::unique_ptr<FrameContainer>> decode_audio(
       std::move(job).scheduleOn(detail::getDemuxerThreadPoolExecutor()));
 }
 
-} // namespace spdl
+} // namespace spdl::core

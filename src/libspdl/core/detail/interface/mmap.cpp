@@ -1,12 +1,14 @@
+#include <libspdl/core/detail/ffmpeg/logging.h>
+#include <libspdl/core/detail/interface/mmap.h>
+
+#include <folly/logging/xlog.h>
+
 extern "C" {
 #include <libavformat/avio.h>
 #include <libavutil/file.h>
 }
 
-#include <libspdl/core/detail/ffmpeg/logging.h>
-#include <libspdl/core/detail/interface/mmap.h>
-
-namespace spdl::detail {
+namespace spdl::core::detail {
 
 MemoryMappedFile::MemoryMappedFile(const std::string path) {
   CHECK_AVERROR(
@@ -57,4 +59,4 @@ int64_t MemoryMappedFile::seek(void* opaque, int64_t offset, int whence) {
   return static_cast<MemoryMappedFile*>(opaque)->seek(offset, whence);
 }
 
-} // namespace spdl::detail
+} // namespace spdl::core::detail

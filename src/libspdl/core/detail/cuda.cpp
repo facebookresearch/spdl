@@ -2,7 +2,7 @@
 
 #include <fmt/core.h>
 
-namespace spdl::detail {
+namespace spdl::core::detail {
 
 void cuda_check_impl(
     const cudaError_t err,
@@ -19,4 +19,4 @@ void cuda_check_impl(
   }
 }
 
-} // namespace spdl::detail
+} // namespace spdl::core::detail
