@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
@@ -7,9 +9,7 @@ extern "C" {
 #include <libavformat/avio.h>
 }
 
-#include <memory>
-
-namespace spdl::detail {
+namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // RAII wrappers
 ////////////////////////////////////////////////////////////////////////////////
@@ -74,6 +74,8 @@ struct AVFrameAutoUnref {
   ~AVFrameAutoUnref();
 };
 
+} // namespace spdl::core::detail
+
 // RAII wrapper for objects that require clean up, but need to expose double
 // pointer. As they are re-allocated by FFmpeg functions.
 // Examples are AVDictionary and AVFilterInOut.
@@ -102,5 +104,3 @@ struct AVFrameAutoUnref {
       return p;                                             \
     };                                                      \
   }
-
-} // namespace spdl::detail

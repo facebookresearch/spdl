@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-namespace spdl::detail {
+namespace spdl::core::detail {
 
 void clear_cuda_context_cache();
 
@@ -41,4 +41,4 @@ AVCodecContextPtr get_codec_ctx(
     const std::optional<OptionDict>& decoder_options = std::nullopt,
     const int cuda_device_index = -1);
 
-} // namespace spdl::detail
+} // namespace spdl::core::detail

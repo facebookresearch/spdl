@@ -15,7 +15,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 
-namespace spdl::detail {
+namespace spdl::core::detail {
 
 struct PackagedAVPackets;
 
@@ -68,4 +68,4 @@ struct PackagedAVPackets {
   ~PackagedAVPackets();
 };
 
-} // namespace spdl::detail
+} // namespace spdl::core::detail

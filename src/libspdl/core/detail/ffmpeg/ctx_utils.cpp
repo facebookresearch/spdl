@@ -1,6 +1,8 @@
 #include <libspdl/core/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/core/detail/ffmpeg/logging.h>
 
+#include <folly/logging/xlog.h>
+
 #ifdef SPDL_USE_CUDA
 #include <cuda.h>
 #endif
@@ -24,7 +26,7 @@ extern "C" {
 #define AVFORMAT_CONST
 #endif
 
-namespace spdl::detail {
+namespace spdl::core::detail {
 namespace {
 //////////////////////////////////////////////////////////////////////////////
 // AVDictionary
@@ -430,4 +432,4 @@ AVCodecContextPtr get_codec_ctx(
   return codec_ctx;
 }
 
-} // namespace spdl::detail
+} // namespace spdl::core::detail

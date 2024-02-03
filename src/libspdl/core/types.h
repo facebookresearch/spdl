@@ -6,7 +6,7 @@
 #include <tuple>
 #include <vector>
 
-namespace spdl {
+namespace spdl::core {
 
 using OptionDict = std::map<std::string, std::string>;
 
@@ -32,4 +32,4 @@ struct DecodeConfig {
 // Used to construct Dtype when converting buffer to array
 enum class ElemClass { Int, UInt, Float };
 
-} // namespace spdl
+} // namespace spdl::core

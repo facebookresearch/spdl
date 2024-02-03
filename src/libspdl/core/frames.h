@@ -6,7 +6,7 @@
 
 struct AVFrame;
 
-namespace spdl {
+namespace spdl::core {
 
 // We deal with multiple frames at a time, so we use vector of raw
 // pointers with dedicated destructor, as opposed to vector of managed pointers
@@ -38,4 +38,4 @@ struct FrameContainer {
   FrameContainer slice(int start, int stop, int step) const;
 };
 
-} // namespace spdl
+} // namespace spdl::core

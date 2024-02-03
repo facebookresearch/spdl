@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-namespace spdl {
+namespace spdl::core {
 
 std::vector<std::unique_ptr<FrameContainer>> decode_video(
     const std::string& src,
@@ -22,4 +22,4 @@ std::vector<std::unique_ptr<FrameContainer>> decode_audio(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg);
 
-} // namespace spdl
+} // namespace spdl::core

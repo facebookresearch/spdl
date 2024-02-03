@@ -2,11 +2,12 @@
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
 #include <libspdl/core/detail/interface/mmap.h>
 #include <libspdl/core/interface.h>
+
 #include <memory>
 
-using namespace spdl::detail;
+using namespace spdl::core::detail;
 
-namespace spdl {
+namespace spdl::core {
 namespace {
 
 class Native : public DataProvider {
@@ -59,4 +60,4 @@ std::unique_ptr<DataProvider> get_data_provider(
   return std::unique_ptr<DataProvider>{new Native{std::move(fmt_ctx)}};
 }
 
-} // namespace spdl
+} // namespace spdl::core

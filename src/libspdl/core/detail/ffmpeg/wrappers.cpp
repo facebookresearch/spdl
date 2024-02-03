@@ -1,6 +1,6 @@
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
 
-namespace spdl::detail {
+namespace spdl::core::detail {
 void AVIOContextDeleter::operator()(AVIOContext* p) {
   if (p) {
     avio_flush(p);
@@ -43,4 +43,4 @@ AVFrameAutoUnref::AVFrameAutoUnref(AVFrame* p_) : p(p_){};
 AVFrameAutoUnref::~AVFrameAutoUnref() {
   av_frame_unref(p);
 }
-} // namespace spdl::detail
+} // namespace spdl::core::detail
