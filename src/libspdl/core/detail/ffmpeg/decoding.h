@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libspdl/frames.h>
-#include <libspdl/types.h>
+#include <libspdl/core/frames.h>
+#include <libspdl/core/types.h>
 
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/Task.h>

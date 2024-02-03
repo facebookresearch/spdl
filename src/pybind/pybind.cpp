@@ -1,7 +1,7 @@
-#include <libspdl/buffers.h>
-#include <libspdl/conversion.h>
-#include <libspdl/decoding.h>
-#include <libspdl/utils.h>
+#include <libspdl/core/buffers.h>
+#include <libspdl/core/conversion.h>
+#include <libspdl/core/decoding.h>
+#include <libspdl/core/utils.h>
 
 #include <fmt/core.h>
 #include <folly/init/Init.h>

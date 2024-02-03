@@ -14,25 +14,25 @@ endif()
 set(defs)
 set(deps folly)
 set(srcs
-  detail/executors.cpp
-  detail/ffmpeg/ctx_utils.cpp
-  detail/ffmpeg/decoding.cpp
-  detail/ffmpeg/filter_graph.cpp
-  detail/ffmpeg/wrappers.cpp
-  detail/interface/mmap.cpp
-  buffers.cpp
-  conversion.cpp
-  decoding.cpp
-  frames.cpp
-  interface.cpp
-  storage.cpp
-  utils.cpp
+  core/detail/executors.cpp
+  core/detail/ffmpeg/ctx_utils.cpp
+  core/detail/ffmpeg/decoding.cpp
+  core/detail/ffmpeg/filter_graph.cpp
+  core/detail/ffmpeg/wrappers.cpp
+  core/detail/interface/mmap.cpp
+  core/buffers.cpp
+  core/conversion.cpp
+  core/decoding.cpp
+  core/frames.cpp
+  core/interface.cpp
+  core/storage.cpp
+  core/utils.cpp
   )
 
 if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
   list(APPEND deps CUDA::cudart CUDA::cuda_driver)
-  list(APPEND srcs detail/cuda.cpp)
+  list(APPEND srcs core/detail/cuda.cpp)
 endif()
 
 if (SPDL_DEBUG_REFCOUNT)

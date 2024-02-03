@@ -1,6 +1,6 @@
-#include <libspdl/detail/ffmpeg/ctx_utils.h>
-#include <libspdl/detail/ffmpeg/filter_graph.h>
-#include <libspdl/utils.h>
+#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
+#include <libspdl/core/detail/ffmpeg/filter_graph.h>
+#include <libspdl/core/utils.h>
 
 #include <cstdint>
 extern "C" {

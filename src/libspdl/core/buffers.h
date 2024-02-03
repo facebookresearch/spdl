@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libspdl/storage.h>
-#include <libspdl/types.h>
+#include <libspdl/core/storage.h>
+#include <libspdl/core/types.h>
 
 #include <memory>
 #include <variant>

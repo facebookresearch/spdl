@@ -1,7 +1,7 @@
 #include <fmt/format.h>
 
-#include <libspdl/detail/ffmpeg/filter_graph.h>
-#include <libspdl/detail/ffmpeg/logging.h>
+#include <libspdl/core/detail/ffmpeg/filter_graph.h>
+#include <libspdl/core/detail/ffmpeg/logging.h>
 #include <stdexcept>
 
 extern "C" {

@@ -1,8 +1,8 @@
-#include <libspdl/conversion.h>
-#include <libspdl/logging.h>
-#include <libspdl/types.h>
+#include <libspdl/core/conversion.h>
+#include <libspdl/core/logging.h>
+#include <libspdl/core/types.h>
 #ifdef SPDL_USE_CUDA
-#include <libspdl/detail/cuda.h>
+#include <libspdl/core/detail/cuda.h>
 #endif
 
 #include <fmt/core.h>
