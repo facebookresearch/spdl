@@ -18,23 +18,23 @@ void create_cuda_context(
     const int index,
     const bool use_primary_context = false);
 
-AVIOContextPtr get_io_ctx(
+AVIOContext* get_io_ctx(
     void* opaque,
     int buffer_size,
     int (*read_packet)(void* opaque, uint8_t* buf, int buf_size),
     int64_t (*seek)(void* opaque, int64_t offset, int whence));
 
-AVFormatInputContextPtr get_input_format_ctx(
+AVFormatInputContextPtr get_input_format_ctx_ptr(
     const std::string_view uri,
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options);
 
-AVFormatInputContextPtr get_input_format_ctx(
+AVFormatContext* get_input_format_ctx(
     AVIOContext* io_ctx,
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options);
 
-AVCodecContextPtr get_codec_ctx(
+AVCodecContextPtr get_codec_ctx_ptr(
     const AVCodecParameters* params,
     AVRational pkt_timebase,
     const std::optional<std::string>& decoder = std::nullopt,

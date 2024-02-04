@@ -1,4 +1,5 @@
 #include <libspdl/core/decoding.h>
+
 #include <libspdl/core/detail/executors.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
 #include <libspdl/core/logging.h>
@@ -19,11 +20,11 @@ namespace {
 folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
     const enum MediaType type,
     const std::string src,
+    const std::unique_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>> timestamps,
     const std::string filter_desc,
-    const IOConfig io_cfg,
     const DecodeConfig decode_cfg) {
-  auto demuxer = detail::stream_demux(type, src, timestamps, io_cfg);
+  auto demuxer = detail::stream_demux(type, src, adoptor, timestamps);
   std::vector<folly::SemiFuture<std::unique_ptr<FrameContainer>>> futures;
   auto exec = detail::getDecoderThreadPoolExecutor();
   while (auto packets = co_await demuxer.next()) {
@@ -55,24 +56,24 @@ folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
 
 std::vector<std::unique_ptr<FrameContainer>> decode_video(
     const std::string& src,
+    const std::unique_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
-    const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg) {
   auto job = stream_decode(
-      MediaType::Video, src, timestamps, filter_desc, io_cfg, decode_cfg);
+      MediaType::Video, src, adoptor, timestamps, filter_desc, decode_cfg);
   return folly::coro::blockingWait(
       std::move(job).scheduleOn(detail::getDemuxerThreadPoolExecutor()));
 }
 
 std::vector<std::unique_ptr<FrameContainer>> decode_audio(
     const std::string& src,
+    const std::unique_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
-    const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg) {
   auto job = stream_decode(
-      MediaType::Audio, src, timestamps, filter_desc, io_cfg, decode_cfg);
+      MediaType::Audio, src, adoptor, timestamps, filter_desc, decode_cfg);
   return folly::coro::blockingWait(
       std::move(job).scheduleOn(detail::getDemuxerThreadPoolExecutor()));
 }

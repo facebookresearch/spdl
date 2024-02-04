@@ -1,6 +1,8 @@
 #include <libspdl/core/buffers.h>
 #include <libspdl/core/conversion.h>
 #include <libspdl/core/decoding.h>
+#include <libspdl/core/interface/basic.h>
+#include <libspdl/core/interface/mmap.h>
 #include <libspdl/core/utils.h>
 
 #include <fmt/core.h>
@@ -115,6 +117,7 @@ std::optional<std::tuple<int, int>> get_frame_rate(
   py::object r = Fraction(frame_rate);
   return {{r.attr("numerator").cast<int>(), r.attr("denominator").cast<int>()}};
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 // Registeration
 ////////////////////////////////////////////////////////////////////////////////
@@ -184,33 +187,39 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
 
   m.def("convert_frames", &convert_frames);
 
+  py::class_<BasicAdoptor>(m, "BasicAdoptor", py::module_local())
+      .def(
+          py::init<
+              const std::optional<std::string>&,
+              const std::optional<std::string>&,
+              const std::optional<OptionDict>&>(),
+          py::arg("prefix") = py::none(),
+          py::arg("format") = py::none(),
+          py::arg("format_options") = py::none());
+
   m.def(
       "decode_video",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format = std::nullopt,
-         const std::optional<OptionDict>& format_options = std::nullopt,
-         const int buffer_size = 8096,
-         const std::optional<std::string>& decoder = std::nullopt,
-         const std::optional<OptionDict>& decoder_options = std::nullopt,
-         const int cuda_device_index = -1,
-         const py::object& frame_rate = py::none(),
-         const std::optional<int>& width = std::nullopt,
-         const std::optional<int>& height = std::nullopt,
-         const std::optional<std::string>& pix_fmt = std::nullopt) {
+         const BasicAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const py::object& frame_rate,
+         const std::optional<int>& width,
+         const std::optional<int>& height,
+         const std::optional<std::string>& pix_fmt) {
         return decode_video(
             src,
+            std::make_unique<BasicAdoptor>(adoptor),
             timestamps,
             get_video_filter_description(
                 get_frame_rate(frame_rate), width, height, pix_fmt),
-            {format, format_options, buffer_size},
             {decoder, decoder_options, cuda_device_index});
       },
       py::arg("src"),
       py::arg("timestamps"),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = 8096,
+      py::arg("adoptor") = BasicAdoptor(),
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
@@ -223,25 +232,21 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       "decode_video",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format = std::nullopt,
-         const std::optional<OptionDict>& format_options = std::nullopt,
-         const int buffer_size = 8096,
-         const std::optional<std::string>& decoder = std::nullopt,
-         const std::optional<OptionDict>& decoder_options = std::nullopt,
-         const int cuda_device_index = -1,
-         const std::string& filter_desc = "") {
+         const BasicAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const std::string& filter_desc) {
         return decode_video(
             src,
+            std::make_unique<BasicAdoptor>(adoptor),
             timestamps,
             filter_desc,
-            {format, format_options, buffer_size},
             {decoder, decoder_options, cuda_device_index});
       },
       py::arg("src"),
       py::arg("timestamps"),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = 8096,
+      py::arg("adoptor") = BasicAdoptor(),
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
@@ -251,26 +256,22 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       "decode_audio",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format = std::nullopt,
-         const std::optional<OptionDict>& format_options = std::nullopt,
-         const int buffer_size = 8096,
-         const std::optional<std::string>& decoder = std::nullopt,
-         const std::optional<OptionDict>& decoder_options = std::nullopt,
-         const std::optional<int>& sample_rate = std::nullopt,
-         const std::optional<int>& num_channels = std::nullopt,
-         const std::optional<std::string>& sample_fmt = std::nullopt) {
+         const BasicAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const std::optional<int>& sample_rate,
+         const std::optional<int>& num_channels,
+         const std::optional<std::string>& sample_fmt) {
         return decode_audio(
             src,
+            std::make_unique<BasicAdoptor>(adoptor),
             timestamps,
             get_audio_filter_description(sample_rate, num_channels, sample_fmt),
-            {format, format_options, buffer_size},
             {decoder, decoder_options});
       },
       py::arg("src"),
       py::arg("timestamps"),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = 8096,
+      py::arg("adoptor") = BasicAdoptor(),
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("sample_rate") = py::none(),
@@ -281,24 +282,141 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
       "decode_audio",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format = std::nullopt,
-         const std::optional<OptionDict>& format_options = std::nullopt,
-         const int buffer_size = 8096,
-         const std::optional<std::string>& decoder = std::nullopt,
-         const std::optional<OptionDict>& decoder_options = std::nullopt,
-         const std::string& filter_desc = "") {
+         const BasicAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const std::string& filter_desc) {
         return decode_audio(
             src,
+            std::make_unique<BasicAdoptor>(adoptor),
             timestamps,
             filter_desc,
-            {format, format_options, buffer_size},
             {decoder, decoder_options});
       },
       py::arg("src"),
       py::arg("timestamps"),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = 8096,
+      py::arg("adoptor") = BasicAdoptor(),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("filter_desc") = std::string());
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // MMap version
+  ////////////////////////////////////////////////////////////////////////////////
+
+  // TODO: Reduce somehow the code duplication caused by the adoptor
+
+  py::class_<MMapAdoptor>(m, "MMapAdoptor", py::module_local())
+      .def(
+          py::init<
+              const std::optional<std::string>&,
+              const std::optional<std::string>&,
+              const std::optional<OptionDict>&,
+              int>(),
+          py::arg("prefix") = py::none(),
+          py::arg("format") = py::none(),
+          py::arg("format_options") = py::none(),
+          py::arg("buffer_size") = 8096);
+
+  m.def(
+      "decode_video",
+      [](const std::string& src,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const MMapAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const py::object& frame_rate,
+         const std::optional<int>& width,
+         const std::optional<int>& height,
+         const std::optional<std::string>& pix_fmt) {
+        return decode_video(
+            src,
+            std::make_unique<MMapAdoptor>(adoptor),
+            timestamps,
+            get_video_filter_description(
+                get_frame_rate(frame_rate), width, height, pix_fmt),
+            {decoder, decoder_options, cuda_device_index});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("adoptor"),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("frame_rate") = py::none(),
+      py::arg("width") = py::none(),
+      py::arg("height") = py::none(),
+      py::arg("pix_fmt") = py::none());
+
+  m.def(
+      "decode_video",
+      [](const std::string& src,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const MMapAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const std::string& filter_desc) {
+        return decode_video(
+            src,
+            std::make_unique<MMapAdoptor>(adoptor),
+            timestamps,
+            filter_desc,
+            {decoder, decoder_options, cuda_device_index});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("adoptor"),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("filter_desc") = std::string());
+
+  m.def(
+      "decode_audio",
+      [](const std::string& src,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const MMapAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const std::optional<int>& sample_rate,
+         const std::optional<int>& num_channels,
+         const std::optional<std::string>& sample_fmt) {
+        return decode_audio(
+            src,
+            std::make_unique<MMapAdoptor>(adoptor),
+            timestamps,
+            get_audio_filter_description(sample_rate, num_channels, sample_fmt),
+            {decoder, decoder_options});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("adoptor"),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("sample_rate") = py::none(),
+      py::arg("num_channels") = py::none(),
+      py::arg("sample_fmt") = py::none());
+
+  m.def(
+      "decode_audio",
+      [](const std::string& src,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const MMapAdoptor& adoptor,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const std::string& filter_desc) {
+        return decode_audio(
+            src,
+            std::make_unique<MMapAdoptor>(adoptor),
+            timestamps,
+            filter_desc,
+            {decoder, decoder_options});
+      },
+      py::arg("src"),
+      py::arg("timestamps"),
+      py::arg("adoptor"),
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("filter_desc") = std::string());

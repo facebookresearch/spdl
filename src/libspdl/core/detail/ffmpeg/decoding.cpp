@@ -1,9 +1,9 @@
-#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
+
+#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
 #include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
-#include <libspdl/core/interface.h>
 #include <libspdl/core/logging.h>
 
 #include <folly/logging/xlog.h>
@@ -37,11 +37,10 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
 folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
     const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    const IOConfig cfg) {
-  auto dp =
-      get_data_provider(src, cfg.format, cfg.format_options, cfg.buffer_size);
-  AVFormatContext* fmt_ctx = dp->get_fmt_ctx();
+    const std::unique_ptr<SourceAdoptor>& adoptor,
+    const std::vector<std::tuple<double, double>> timestamps) {
+  auto interface = adoptor->get(src);
+  AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   int idx = parse_fmt_ctx(fmt_ctx, type);
   AVStream* stream = fmt_ctx->streams[idx];
 
@@ -157,7 +156,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
 folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
     PackagedAVPackets packets,
     const DecodeConfig cfg) {
-  auto codec_ctx = get_codec_ctx(
+  auto codec_ctx = get_codec_ctx_ptr(
       packets.codecpar,
       packets.time_base,
       cfg.decoder,
@@ -189,7 +188,7 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
     PackagedAVPackets packets,
     const std::string filter_desc,
     const DecodeConfig cfg) {
-  auto codec_ctx = get_codec_ctx(
+  auto codec_ctx = get_codec_ctx_ptr(
       packets.codecpar,
       packets.time_base,
       cfg.decoder,
