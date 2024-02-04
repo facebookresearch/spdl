@@ -59,7 +59,6 @@ def _main():
 
 def test_audio(args):
     src = args.input_video
-    src2 = f"mmap://{src}"
 
     configs = [
         {
@@ -73,7 +72,8 @@ def test_audio(args):
             "sample_rate": 8000,
         },
         {
-            "src": src2,
+            "src": src,
+            "adoptor": libspdl.MMapAdoptor(),
             "timestamps": [(5.0, 10.0)],
             "sample_rate": 8000,
             "sample_fmt": "s16p",
@@ -101,7 +101,6 @@ def test_audio(args):
 
 def test_video(args):
     src = args.input_video
-    src2 = f"mmap://{src}"
 
     configs = [
         {
@@ -111,7 +110,8 @@ def test_video(args):
         },
         {"src": src, "timestamps": [(0.0, 0.5)], "filter_desc": "vflip"},
         {
-            "src": src2,
+            "src": src,
+            "adoptor": libspdl.MMapAdoptor(),
             "timestamps": [(10.0, 10.2)],
             "frame_rate": "30000/1001",
             "width": 36,

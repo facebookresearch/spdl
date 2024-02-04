@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libspdl/core/frames.h>
+#include <libspdl/core/interface/base.h>
 #include <libspdl/core/types.h>
 
 #include <folly/experimental/coro/AsyncGenerator.h>
@@ -22,8 +23,8 @@ struct PackagedAVPackets;
 folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
     const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    const IOConfig cfg = {});
+    const std::unique_ptr<SourceAdoptor>& adoptor,
+    const std::vector<std::tuple<double, double>> timestamps);
 
 folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     PackagedAVPackets&& packets,

@@ -19,12 +19,12 @@ set(srcs
   core/detail/ffmpeg/decoding.cpp
   core/detail/ffmpeg/filter_graph.cpp
   core/detail/ffmpeg/wrappers.cpp
-  core/detail/interface/mmap.cpp
   core/buffers.cpp
   core/conversion.cpp
   core/decoding.cpp
   core/frames.cpp
-  core/interface.cpp
+  core/interface/basic.cpp
+  core/interface/mmap.cpp
   core/storage.cpp
   core/utils.cpp
   )

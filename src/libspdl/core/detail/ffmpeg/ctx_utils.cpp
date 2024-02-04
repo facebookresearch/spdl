@@ -180,7 +180,7 @@ void clear_cuda_context_cache() {
 ////////////////////////////////////////////////////////////////////////////////
 // AVIOContext
 ////////////////////////////////////////////////////////////////////////////////
-AVIOContextPtr get_io_ctx(
+AVIOContext* get_io_ctx(
     void* opaque,
     int buffer_size,
     int (*read_packet)(void* opaque, uint8_t* buf, int buf_size),
@@ -193,7 +193,7 @@ AVIOContextPtr get_io_ctx(
     av_freep(&buffer);
     SPDL_FAIL("Failed to allocate AVIOContext.");
   }
-  return AVIOContextPtr{io_ctx};
+  return io_ctx;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,18 +243,19 @@ AVFormatInputContextPtr get_input_format_ctx(
 
 } // namespace
 
-AVFormatInputContextPtr get_input_format_ctx(
+AVFormatInputContextPtr get_input_format_ctx_ptr(
     const std::string_view id,
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options) {
   return get_input_format_ctx(id.data(), format, format_options, nullptr);
 }
 
-AVFormatInputContextPtr get_input_format_ctx(
+AVFormatContext* get_input_format_ctx(
     AVIOContext* io_ctx,
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options) {
-  return get_input_format_ctx(nullptr, format, format_options, io_ctx);
+  return get_input_format_ctx(nullptr, format, format_options, io_ctx)
+      .release();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -413,7 +414,7 @@ void open_codec(
 
 } // namespace
 
-AVCodecContextPtr get_codec_ctx(
+AVCodecContextPtr get_codec_ctx_ptr(
     const AVCodecParameters* params,
     AVRational pkt_timebase,
     const std::optional<std::string>& decoder,

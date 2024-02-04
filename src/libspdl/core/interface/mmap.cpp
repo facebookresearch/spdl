@@ -1,5 +1,5 @@
 #include <libspdl/core/detail/ffmpeg/logging.h>
-#include <libspdl/core/detail/interface/mmap.h>
+#include <libspdl/core/interface/mmap.h>
 
 #include <folly/logging/xlog.h>
 

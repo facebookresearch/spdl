@@ -1,7 +1,11 @@
 #pragma once
+
+#include <libspdl/core/interface/custom.h>
+
 #include <string>
 
-namespace spdl::core::detail {
+namespace spdl::core {
+namespace detail {
 
 class MemoryMappedFile {
   uint8_t* buffer_ = nullptr;
@@ -29,4 +33,8 @@ class MemoryMappedFile {
   static int64_t seek(void* opaque, int64_t offset, int whence);
 };
 
-} // namespace spdl::core::detail
+} // namespace detail
+
+using MMapAdoptor = CustomAdoptor<detail::MemoryMappedFile>;
+
+} // namespace spdl::core
