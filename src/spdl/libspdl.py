@@ -10,9 +10,19 @@ from spdl.lib import libspdl as _libspdl
 
 
 __all__ = [  # noqa: F822
+    "Buffer",
+    "DataSet",
+    "DecodingState",
+    "FrameContainer",
+    "clear_ffmpeg_cuda_context_cache",
+    "convert_frames",
+    "create_cuda_context",
+    "create_dataset_from_csv",
+    "decode_audio",
     "decode_video",
+    "get_ffmpeg_log_level",
     "init_folly",
-    "to_numpy",
+    "set_ffmpeg_log_level",
 ]
 
 

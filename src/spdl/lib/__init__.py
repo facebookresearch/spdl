@@ -8,7 +8,7 @@ it's used by user code.
 import atexit
 import importlib
 import logging
-from importlib import util as importlib_util
+import importlib.resources
 from types import ModuleType
 from typing import Any, List
 
@@ -64,32 +64,27 @@ class _LazilyImportedModule(ModuleType):
 
 
 def _import_libspdl():
-    versions = ["6", "5", "4", ""]
-    for ver in versions:
-        _LG.debug("Importing libspdl with FFmpeg %s", ver)
+    libs = [
+        f"{__package__}.{t.name.split('.')[0]}"
+        for t in importlib.resources.files(__package__).iterdir()
+        if t.name.startswith("_spdl_ffmpeg")
+    ]
+    # Newer FFmpeg first
+    libs.sort(reverse=True)
+    for lib in libs:
+        _LG.debug("Importing %s", lib)
         try:
-            return _import_libspdl_ver(ver)
+            ext = importlib.import_module(lib)
         except Exception:
-            _LG.debug("Failed to import libspdl with FFmpeg %s.", ver, exc_info=True)
+            _LG.debug("Failed to import %s.", lib, exc_info=True)
             continue
+
+        if hasattr(ext, "clear_ffmpeg_cuda_context_cache"):
+            atexit.register(ext.clear_ffmpeg_cuda_context_cache)
+
+        return ext
+
     raise RuntimeError(
-        f"Failed to import libspdl. Tried with FFmpeg versions {versions}. "
-        "Enable DEBUG logging to see more details about the error."
+        f"Failed to import libspdl. Tried {libs}. "
+        "Enable DEBUG logging to see details about the failure."
     )
-
-
-def _import_libspdl_ver(ver):
-    ext = f"spdl.lib._spdl_ffmpeg{ver}"
-
-    if not importlib_util.find_spec(ext):
-        raise RuntimeError(f"Extension is not available: {ext}.")
-
-    try:
-        ext = importlib.import_module(ext)
-    except Exception as e:
-        raise RuntimeError(f"Failed to load extension: {ext}.") from e
-
-    if hasattr(ext, "clear_ffmpeg_cuda_context_cache"):
-        atexit.register(ext.clear_ffmpeg_cuda_context_cache)
-
-    return ext
