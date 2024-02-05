@@ -22,7 +22,7 @@ class BasicAdoptor : public SourceAdoptor {
       const std::optional<std::string>& prefix = std::nullopt,
       const std::optional<std::string>& format = std::nullopt,
       const std::optional<OptionDict>& format_options = std::nullopt);
-  std::unique_ptr<DataInterface> get(const std::string& url) override;
+  void* get(const std::string& url) override;
 };
 
 } // namespace spdl::core

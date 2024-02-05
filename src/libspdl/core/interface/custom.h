@@ -79,8 +79,8 @@ class CustomAdoptor : public SourceAdoptor {
         format_options(format_options_),
         buffer_size(buffer_size_) {}
 
-  std::unique_ptr<DataInterface> get(const std::string& url) override {
-    return std::make_unique<CustomInterface>(
+  void* get(const std::string& url) override {
+    return new CustomInterface(
         prefix ? prefix.value() + url : url,
         format,
         format_options,

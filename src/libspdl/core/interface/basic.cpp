@@ -31,8 +31,8 @@ BasicAdoptor::BasicAdoptor(
     const std::optional<OptionDict>& format_options_)
     : prefix(prefix_), format(format_), format_options(format_options_) {}
 
-std::unique_ptr<DataInterface> BasicAdoptor::get(const std::string& url) {
-  return std::make_unique<BasicInterface>(
+void* BasicAdoptor::get(const std::string& url) {
+  return new BasicInterface(
       prefix ? prefix.value() + url : url, format, format_options);
 }
 } // namespace spdl::core
