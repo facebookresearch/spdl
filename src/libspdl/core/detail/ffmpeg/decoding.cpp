@@ -39,7 +39,8 @@ folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const std::string src,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>> timestamps) {
-  auto interface = adoptor->get(src);
+  auto interface = std::unique_ptr<DataInterface>(
+      static_cast<DataInterface*>(adoptor->get(src)));
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   int idx = parse_fmt_ctx(fmt_ctx, type);
   AVStream* stream = fmt_ctx->streams[idx];
