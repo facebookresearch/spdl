@@ -130,7 +130,7 @@ class PySourceAdoptor : public SourceAdoptor {
 
 std::shared_ptr<SourceAdoptor> get_adoptor(py::object obj) {
   if (obj.is_none()) {
-    return std::shared_ptr<SourceAdoptor>(new BasicAdoptor());
+    return nullptr;
   }
   return obj.cast<std::shared_ptr<SourceAdoptor>>();
 }

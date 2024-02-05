@@ -26,8 +26,8 @@ AVIOContext* get_io_ctx(
 
 AVFormatInputContextPtr get_input_format_ctx_ptr(
     const std::string_view uri,
-    const std::optional<std::string>& format,
-    const std::optional<OptionDict>& format_options);
+    const std::optional<std::string>& format = std::nullopt,
+    const std::optional<OptionDict>& format_options = std::nullopt);
 
 AVFormatContext* get_input_format_ctx(
     AVIOContext* io_ctx,
