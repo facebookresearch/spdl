@@ -20,7 +20,7 @@ namespace {
 folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
     const enum MediaType type,
     const std::string src,
-    const std::unique_ptr<SourceAdoptor>& adoptor,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>> timestamps,
     const std::string filter_desc,
     const DecodeConfig decode_cfg) {
@@ -56,7 +56,7 @@ folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
 
 std::vector<std::unique_ptr<FrameContainer>> decode_video(
     const std::string& src,
-    const std::unique_ptr<SourceAdoptor>& adoptor,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
     const DecodeConfig& decode_cfg) {
@@ -68,7 +68,7 @@ std::vector<std::unique_ptr<FrameContainer>> decode_video(
 
 std::vector<std::unique_ptr<FrameContainer>> decode_audio(
     const std::string& src,
-    const std::unique_ptr<SourceAdoptor>& adoptor,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::string& filter_desc,
     const DecodeConfig& decode_cfg) {
