@@ -37,7 +37,7 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
 folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
     const std::string src,
-    const std::unique_ptr<SourceAdoptor>& adoptor,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>> timestamps) {
   auto interface = adoptor->get(src);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
