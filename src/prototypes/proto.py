@@ -13,6 +13,8 @@ def _parse_python_args():
     parser.add_argument("-i", "--input-video", help="Input video file.", required=True)
     parser.add_argument("--plot", action="store_true")
     parser.add_argument("--gpu", action="store_true")
+    parser.add_argument("--adoptor", default="BasicAdoptor")
+    parser.add_argument("--prefix")
     parser.add_argument("others", nargs="*")
     return parser.parse_args()
 
@@ -60,20 +62,25 @@ def _main():
 def test_audio(args):
     src = args.input_video
 
+    Adoptor = getattr(libspdl, args.adoptor)
+    adoptor = Adoptor(prefix=args.prefix)
+
     configs = [
         {
             "src": src,
+            "adoptor": adoptor,
             "timestamps": [(5.0, 10.0)],
             "filter_desc": "flanger",
         },
         {
             "src": src,
+            "adoptor": adoptor,
             "timestamps": [(5.0, 10.0)],
             "sample_rate": 8000,
         },
         {
             "src": src,
-            "adoptor": libspdl.MMapAdoptor(),
+            "adoptor": adoptor,
             "timestamps": [(5.0, 10.0)],
             "sample_rate": 8000,
             "sample_fmt": "s16p",
@@ -102,16 +109,25 @@ def test_audio(args):
 def test_video(args):
     src = args.input_video
 
+    Adoptor = getattr(libspdl, args.adoptor)
+    adoptor = Adoptor(prefix=args.prefix)
+
     configs = [
         {
             "src": src,
+            "adoptor": adoptor,
             "timestamps": [(0.0, 1.0), (10.0, 11.0)],
             "frame_rate": 2,
         },
-        {"src": src, "timestamps": [(0.0, 0.5)], "filter_desc": "vflip"},
         {
             "src": src,
-            "adoptor": libspdl.MMapAdoptor(),
+            "adoptor": adoptor,
+            "timestamps": [(0.0, 0.5)],
+            "filter_desc": "vflip",
+        },
+        {
+            "src": src,
+            "adoptor": adoptor,
             "timestamps": [(10.0, 10.2)],
             "frame_rate": "30000/1001",
             "width": 36,
