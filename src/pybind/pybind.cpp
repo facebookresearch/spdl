@@ -128,13 +128,6 @@ class PySourceAdoptor : public SourceAdoptor {
   }
 };
 
-std::shared_ptr<SourceAdoptor> get_adoptor(py::object obj) {
-  if (obj.is_none()) {
-    return nullptr;
-  }
-  return obj.cast<std::shared_ptr<SourceAdoptor>>();
-}
-
 } // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -242,7 +235,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
         "decode_video",
         [](const std::string& src,
            const std::vector<std::tuple<double, double>>& timestamps,
-           py::object adoptor,
+           std::shared_ptr<SourceAdoptor> adoptor,
            const std::optional<std::string>& decoder,
            const std::optional<OptionDict>& decoder_options,
            const int cuda_device_index,
@@ -252,7 +245,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
            const std::optional<std::string>& pix_fmt) {
           return decode_video(
               src,
-              get_adoptor(adoptor),
+              adoptor,
               timestamps,
               get_video_filter_description(
                   get_frame_rate(frame_rate), width, height, pix_fmt),
@@ -260,7 +253,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
         },
         py::arg("src"),
         py::arg("timestamps"),
-        py::arg("adoptor") = py::none(),
+        py::arg("adoptor") = nullptr,
         py::arg("decoder") = py::none(),
         py::arg("decoder_options") = py::none(),
         py::arg("cuda_device_index") = -1,
@@ -273,21 +266,21 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
         "decode_video",
         [](const std::string& src,
            const std::vector<std::tuple<double, double>>& timestamps,
-           py::object adoptor,
+           std::shared_ptr<SourceAdoptor> adoptor,
            const std::optional<std::string>& decoder,
            const std::optional<OptionDict>& decoder_options,
            const int cuda_device_index,
            const std::string& filter_desc) {
           return decode_video(
               src,
-              get_adoptor(adoptor),
+              adoptor,
               timestamps,
               filter_desc,
               {decoder, decoder_options, cuda_device_index});
         },
         py::arg("src"),
         py::arg("timestamps"),
-        py::arg("adoptor") = py::none(),
+        py::arg("adoptor") = nullptr,
         py::arg("decoder") = py::none(),
         py::arg("decoder_options") = py::none(),
         py::arg("cuda_device_index") = -1,
@@ -297,7 +290,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
         "decode_audio",
         [](const std::string& src,
            const std::vector<std::tuple<double, double>>& timestamps,
-           py::object adoptor,
+           std::shared_ptr<SourceAdoptor> adoptor,
            const std::optional<std::string>& decoder,
            const std::optional<OptionDict>& decoder_options,
            const std::optional<int>& sample_rate,
@@ -305,7 +298,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
            const std::optional<std::string>& sample_fmt) {
           return decode_audio(
               src,
-              get_adoptor(adoptor),
+              adoptor,
               timestamps,
               get_audio_filter_description(
                   sample_rate, num_channels, sample_fmt),
@@ -313,7 +306,7 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
         },
         py::arg("src"),
         py::arg("timestamps"),
-        py::arg("adoptor") = py::none(),
+        py::arg("adoptor") = nullptr,
         py::arg("decoder") = py::none(),
         py::arg("decoder_options") = py::none(),
         py::arg("sample_rate") = py::none(),
@@ -324,20 +317,20 @@ PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
         "decode_audio",
         [](const std::string& src,
            const std::vector<std::tuple<double, double>>& timestamps,
-           py::object adoptor,
+           std::shared_ptr<SourceAdoptor> adoptor,
            const std::optional<std::string>& decoder,
            const std::optional<OptionDict>& decoder_options,
            const std::string& filter_desc) {
           return decode_audio(
               src,
-              get_adoptor(adoptor),
+              adoptor,
               timestamps,
               filter_desc,
               {decoder, decoder_options});
         },
         py::arg("src"),
         py::arg("timestamps"),
-        py::arg("adoptor") = py::none(),
+        py::arg("adoptor") = nullptr,
         py::arg("decoder") = py::none(),
         py::arg("decoder_options") = py::none(),
         py::arg("filter_desc") = std::string());
