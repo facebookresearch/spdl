@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shutil
 import sys
 
 from setuptools import Extension, find_packages, setup
@@ -156,14 +157,20 @@ class CMakeBuild(build_ext):
             return
         BUILT_ONCE = True
 
-        extdir = os.path.dirname(self.get_ext_fullpath("foo"))
-        install_dir = os.path.abspath(os.path.join(extdir, "spdl"))
+        install_dir = os.path.abspath(os.path.join(self.build_lib, "spdl"))
 
         cmds = _get_cmake_commands(self.build_temp, install_dir, self.debug)
 
         for cmd in cmds:
             print(f"Running \"{' '.join(cmd)}\"", flush=True)
             subprocess.check_call(cmd)
+
+        # Copy public header files
+        src = os.path.abspath(os.path.join(self.build_lib, "spdl", "include", "libspdl"))
+        build_py = self.get_finalized_command('build_py')
+        dst = build_py.get_package_dir("spdl.include.libspdl")
+        print(src, dst)
+        shutil.copytree(src, dst, dirs_exist_ok=True)
 
     def get_ext_filename(self, fullname):
         ext_filename = super().get_ext_filename(fullname)
