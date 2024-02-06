@@ -70,7 +70,7 @@ struct CustomAdoptor : public SourceAdoptor {
       const std::optional<std::string>& prefix_ = std::nullopt,
       const std::optional<std::string>& format_ = std::nullopt,
       const std::optional<OptionDict>& format_options_ = std::nullopt,
-      int buffer_size_ = 8096)
+      int buffer_size_ = SPDL_DEFAULT_BUFFER_SIZE)
       : prefix(prefix_),
         format(format_),
         format_options(format_options_),
