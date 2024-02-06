@@ -25,6 +25,7 @@ set(srcs
   core/frames.cpp
   core/interface/basic.cpp
   core/interface/mmap.cpp
+  core/logging.cpp
   core/storage.cpp
   core/utils.cpp
   )
