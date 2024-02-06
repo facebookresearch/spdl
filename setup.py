@@ -162,7 +162,7 @@ class CMakeBuild(build_ext):
         cmds = _get_cmake_commands(self.build_temp, install_dir, self.debug)
 
         for cmd in cmds:
-            print(" ".join(cmd), flush=True)
+            print(f"Running \"{' '.join(cmd)}\"", flush=True)
             subprocess.check_call(cmd)
 
     def get_ext_filename(self, fullname):
@@ -184,7 +184,6 @@ def main():
         package_dir={"": "src"},
         ext_modules=ext_modules,
         cmdclass={"build_ext": CMakeBuild},
-        zip_safe=False,
         python_requires=">=3.10",
         install_requires=[
             "numpy >= 1.21",
