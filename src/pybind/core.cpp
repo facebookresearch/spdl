@@ -248,7 +248,7 @@ void register_pybind(py::module& m) {
           py::arg("prefix") = py::none(),
           py::arg("format") = py::none(),
           py::arg("format_options") = py::none(),
-          py::arg("buffer_size") = 8096)
+          py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE)
       .def("__repr__", [](const MMapAdoptor& self) -> std::string {
         return fmt::format(
             "MMapAdoptor(prefix=\"{}\")", self.prefix.value_or(""));

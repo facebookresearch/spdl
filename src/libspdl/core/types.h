@@ -6,6 +6,8 @@
 #include <tuple>
 #include <vector>
 
+#define SPDL_DEFAULT_BUFFER_SIZE 8096
+
 namespace spdl::core {
 
 using OptionDict = std::map<std::string, std::string>;
@@ -20,7 +22,7 @@ enum class MediaType { Audio, Video };
 struct IOConfig {
   std::optional<std::string> format = std::nullopt;
   std::optional<OptionDict> format_options = std::nullopt;
-  int buffer_size = 8096;
+  int buffer_size = SPDL_DEFAULT_BUFFER_SIZE;
 };
 
 struct DecodeConfig {
