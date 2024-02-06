@@ -2,8 +2,8 @@ message(STATUS "########################################")
 message(STATUS "# Configuring folly")
 message(STATUS "########################################")
 
-set(url https://github.com/facebook/folly/releases/download/v2023.12.11.00/folly-v2023.12.11.00.tar.gz)
-set(hash SHA256=a814feab0a988ac3aca33e3ffb1cf03c12ed782215f76d9cf018ed66230ea10a)
+set(url https://github.com/facebook/folly/releases/download/v2024.02.05.00/folly-v2024.02.05.00.tar.gz)
+set(hash SHA256=729a1f167a154774cc588b1c0c3f5cbb0ff79f404eaff13d582ca69dd5ecd8ad)
 
 if (APPLE)
 FetchContent_Declare(
