@@ -11,16 +11,18 @@ namespace spdl::core {
 
 std::vector<std::unique_ptr<FrameContainer>> decode_video(
     const std::string& src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::string& filter_desc,
-    const DecodeConfig& decode_cfg);
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc);
 
 std::vector<std::unique_ptr<FrameContainer>> decode_audio(
     const std::string& src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::string& filter_desc,
-    const DecodeConfig& decode_cfg);
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc);
 
 } // namespace spdl::core

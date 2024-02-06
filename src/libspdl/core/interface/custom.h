@@ -41,16 +41,17 @@ struct CustomAdoptor : public SourceAdoptor {
     AVFormatContext* fmt_ctx;
 
    public:
-    CustomInterface(
-        const std::string& url,
-        const std::optional<std::string>& format,
-        const std::optional<OptionDict>& format_options,
-        int buffer_size)
+    CustomInterface(const std::string& url, const IOConfig& io_cfg)
         : obj(url),
-          io_ctx(
-              detail::get_io_ctx(&obj, buffer_size, T::read_packet, T::seek)),
-          fmt_ctx(
-              detail::get_input_format_ctx(io_ctx, format, format_options)) {}
+          io_ctx(detail::get_io_ctx(
+              &obj,
+              io_cfg.buffer_size,
+              T::read_packet,
+              T::seek)),
+          fmt_ctx(detail::get_input_format_ctx(
+              io_ctx,
+              io_cfg.format,
+              io_cfg.format_options)) {}
 
     ~CustomInterface() {
       detail::free_av_io_ctx(io_ctx);
@@ -62,26 +63,12 @@ struct CustomAdoptor : public SourceAdoptor {
   };
 
   std::optional<std::string> prefix;
-  std::optional<std::string> format;
-  std::optional<OptionDict> format_options;
-  int buffer_size;
 
-  CustomAdoptor(
-      const std::optional<std::string>& prefix_ = std::nullopt,
-      const std::optional<std::string>& format_ = std::nullopt,
-      const std::optional<OptionDict>& format_options_ = std::nullopt,
-      int buffer_size_ = SPDL_DEFAULT_BUFFER_SIZE)
-      : prefix(prefix_),
-        format(format_),
-        format_options(format_options_),
-        buffer_size(buffer_size_) {}
+  CustomAdoptor(const std::optional<std::string>& prefix_ = std::nullopt)
+      : prefix(prefix_) {}
 
-  void* get(const std::string& url) override {
-    return new CustomInterface(
-        prefix ? prefix.value() + url : url,
-        format,
-        format_options,
-        buffer_size);
+  void* get(const std::string& url, const IOConfig& io_cfg) override {
+    return new CustomInterface(prefix ? prefix.value() + url : url, io_cfg);
   };
 };
 

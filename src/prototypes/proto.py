@@ -68,20 +68,20 @@ def test_audio(args):
     configs = [
         {
             "src": src,
-            "adoptor": adoptor,
             "timestamps": [(5.0, 10.0)],
+            "adoptor": adoptor,
             "filter_desc": "flanger",
         },
         {
             "src": src,
-            "adoptor": adoptor,
             "timestamps": [(5.0, 10.0)],
+            "adoptor": adoptor,
             "sample_rate": 8000,
         },
         {
             "src": src,
-            "adoptor": adoptor,
             "timestamps": [(5.0, 10.0)],
+            "adoptor": adoptor,
             "sample_rate": 8000,
             "sample_fmt": "s16p",
         },
@@ -115,20 +115,20 @@ def test_video(args):
     configs = [
         {
             "src": src,
-            "adoptor": adoptor,
             "timestamps": [(0.0, 1.0), (10.0, 11.0)],
+            "adoptor": adoptor,
             "frame_rate": 2,
         },
         {
             "src": src,
-            "adoptor": adoptor,
             "timestamps": [(0.0, 0.5)],
+            "adoptor": adoptor,
             "filter_desc": "vflip",
         },
         {
             "src": src,
-            "adoptor": adoptor,
             "timestamps": [(10.0, 10.2)],
+            "adoptor": adoptor,
             "frame_rate": "30000/1001",
             "width": 36,
             "height": 48,

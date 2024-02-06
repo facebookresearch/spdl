@@ -23,8 +23,9 @@ struct PackagedAVPackets;
 folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
     const std::string src,
-    const std::shared_ptr<SourceAdoptor> adoptor,
-    const std::vector<std::tuple<double, double>> timestamps);
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg);
 
 folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     PackagedAVPackets&& packets,

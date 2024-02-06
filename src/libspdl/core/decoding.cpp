@@ -20,11 +20,12 @@ namespace {
 folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
     const enum MediaType type,
     const std::string src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>> timestamps,
-    const std::string filter_desc,
-    const DecodeConfig decode_cfg) {
-  auto demuxer = detail::stream_demux(type, src, adoptor, timestamps);
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    const DecodeConfig decode_cfg,
+    const std::string filter_desc) {
+  auto demuxer = detail::stream_demux(type, src, timestamps, adoptor, io_cfg);
   std::vector<folly::SemiFuture<std::unique_ptr<FrameContainer>>> futures;
   auto exec = detail::getDecoderThreadPoolExecutor();
   while (auto packets = co_await demuxer.next()) {
@@ -56,24 +57,38 @@ folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
 
 std::vector<std::unique_ptr<FrameContainer>> decode_video(
     const std::string& src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::string& filter_desc,
-    const DecodeConfig& decode_cfg) {
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc) {
   auto job = stream_decode(
-      MediaType::Video, src, adoptor, timestamps, filter_desc, decode_cfg);
+      MediaType::Video,
+      src,
+      timestamps,
+      adoptor,
+      io_cfg,
+      decode_cfg,
+      filter_desc);
   return folly::coro::blockingWait(
       std::move(job).scheduleOn(detail::getDemuxerThreadPoolExecutor()));
 }
 
 std::vector<std::unique_ptr<FrameContainer>> decode_audio(
     const std::string& src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::string& filter_desc,
-    const DecodeConfig& decode_cfg) {
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc) {
   auto job = stream_decode(
-      MediaType::Audio, src, adoptor, timestamps, filter_desc, decode_cfg);
+      MediaType::Audio,
+      src,
+      timestamps,
+      adoptor,
+      io_cfg,
+      decode_cfg,
+      filter_desc);
   return folly::coro::blockingWait(
       std::move(job).scheduleOn(detail::getDemuxerThreadPoolExecutor()));
 }
