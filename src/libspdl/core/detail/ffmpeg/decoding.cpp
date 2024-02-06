@@ -4,6 +4,7 @@
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
 #include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
+#include <libspdl/core/interface/basic.h>
 #include <libspdl/core/logging.h>
 
 #include <folly/logging/xlog.h>
@@ -33,36 +34,25 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
   return idx;
 }
 
-class EmptyInterface : public DataInterface {
-  AVFormatInputContextPtr fmt_ctx;
-
- public:
-  EmptyInterface(const std::string& url)
-      : fmt_ctx(get_input_format_ctx_ptr(url)) {}
-  ~EmptyInterface() = default;
-  AVFormatContext* get_fmt_ctx() override {
-    return fmt_ctx.get();
-  }
-};
-
 std::unique_ptr<DataInterface> get_interface(
     const std::string src,
-    const std::shared_ptr<SourceAdoptor>& adoptor) {
-  if (adoptor) {
-    return std::unique_ptr<DataInterface>(
-        static_cast<DataInterface*>(adoptor->get(src)));
+    std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg) {
+  if (!adoptor) {
+    adoptor.reset(static_cast<SourceAdoptor*>(new BasicAdoptor{}));
   }
   return std::unique_ptr<DataInterface>(
-      static_cast<DataInterface*>(new EmptyInterface{src}));
+      static_cast<DataInterface*>(adoptor->get(src, io_cfg)));
 }
 } // namespace
 
 folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const enum MediaType type,
     const std::string src,
-    const std::shared_ptr<SourceAdoptor> adoptor,
-    const std::vector<std::tuple<double, double>> timestamps) {
-  auto interface = get_interface(src, adoptor);
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg) {
+  auto interface = get_interface(src, adoptor, io_cfg);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   int idx = parse_fmt_ctx(fmt_ctx, type);
   AVStream* stream = fmt_ctx->streams[idx];

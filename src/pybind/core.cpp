@@ -122,8 +122,8 @@ class PySourceAdoptor : public SourceAdoptor {
  public:
   using SourceAdoptor::SourceAdoptor;
 
-  void* get(const std::string& url) override {
-    PYBIND11_OVERLOAD_PURE(void*, SourceAdoptor, get, url);
+  void* get(const std::string& url, const IOConfig& io_cfg) override {
+    PYBIND11_OVERLOAD_PURE(void*, SourceAdoptor, get, url, io_cfg);
   }
 };
 
@@ -226,13 +226,8 @@ void register_pybind(py::module& m) {
 
   _BasicAdoptor
       .def(
-          py::init<
-              const std::optional<std::string>&,
-              const std::optional<std::string>&,
-              const std::optional<OptionDict>&>(),
-          py::arg("prefix") = py::none(),
-          py::arg("format") = py::none(),
-          py::arg("format_options") = py::none())
+          py::init<const std::optional<std::string>&>(),
+          py::arg("prefix") = py::none())
       .def("__repr__", [](const BasicAdoptor& self) -> std::string {
         return fmt::format(
             "BasicAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
@@ -240,15 +235,8 @@ void register_pybind(py::module& m) {
 
   _MMapAdoptor
       .def(
-          py::init<
-              const std::optional<std::string>&,
-              const std::optional<std::string>&,
-              const std::optional<OptionDict>&,
-              int>(),
-          py::arg("prefix") = py::none(),
-          py::arg("format") = py::none(),
-          py::arg("format_options") = py::none(),
-          py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE)
+          py::init<const std::optional<std::string>&>(),
+          py::arg("prefix") = py::none())
       .def("__repr__", [](const MMapAdoptor& self) -> std::string {
         return fmt::format(
             "MMapAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
@@ -259,6 +247,9 @@ void register_pybind(py::module& m) {
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
          std::shared_ptr<SourceAdoptor> adoptor,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
@@ -268,15 +259,19 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt) {
         return decode_video(
             src,
-            adoptor,
             timestamps,
+            adoptor,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options, cuda_device_index},
             get_video_filter_description(
-                get_frame_rate(frame_rate), width, height, pix_fmt),
-            {decoder, decoder_options, cuda_device_index});
+                get_frame_rate(frame_rate), width, height, pix_fmt));
       },
       py::arg("src"),
       py::arg("timestamps"),
       py::arg("adoptor") = nullptr,
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
@@ -290,20 +285,27 @@ void register_pybind(py::module& m) {
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
          std::shared_ptr<SourceAdoptor> adoptor,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc) {
         return decode_video(
             src,
-            adoptor,
             timestamps,
-            filter_desc,
-            {decoder, decoder_options, cuda_device_index});
+            adoptor,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options, cuda_device_index},
+            filter_desc);
       },
       py::arg("src"),
       py::arg("timestamps"),
       py::arg("adoptor") = nullptr,
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
@@ -314,6 +316,9 @@ void register_pybind(py::module& m) {
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
          std::shared_ptr<SourceAdoptor> adoptor,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const std::optional<int>& sample_rate,
@@ -321,14 +326,19 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& sample_fmt) {
         return decode_audio(
             src,
-            adoptor,
             timestamps,
-            get_audio_filter_description(sample_rate, num_channels, sample_fmt),
-            {decoder, decoder_options});
+            adoptor,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options},
+            get_audio_filter_description(
+                sample_rate, num_channels, sample_fmt));
       },
       py::arg("src"),
       py::arg("timestamps"),
       py::arg("adoptor") = nullptr,
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("sample_rate") = py::none(),
@@ -340,15 +350,26 @@ void register_pybind(py::module& m) {
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
          std::shared_ptr<SourceAdoptor> adoptor,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const std::string& filter_desc) {
         return decode_audio(
-            src, adoptor, timestamps, filter_desc, {decoder, decoder_options});
+            src,
+            timestamps,
+            adoptor,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options},
+            filter_desc);
       },
       py::arg("src"),
       py::arg("timestamps"),
       py::arg("adoptor") = nullptr,
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("filter_desc") = std::string());
