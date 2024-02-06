@@ -1,4 +1,5 @@
 /scripts
+/src/spdl/include
 *.tar.gz
 *.tar.xz
 
