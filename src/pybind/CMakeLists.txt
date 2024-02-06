@@ -1,4 +1,4 @@
-set(src pybind.cpp)
+set(src pybind.cpp core.cpp)
 
 # This adds the library directory to search path
 if (APPLE)

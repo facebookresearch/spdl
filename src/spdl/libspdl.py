@@ -10,14 +10,14 @@ from spdl.lib import libspdl as _libspdl
 
 
 __all__ = [  # noqa: F822
+    "BasicAdoptor",
     "Buffer",
-    "DataSet",
-    "DecodingState",
     "FrameContainer",
+    "MMapAdoptor",
+    "SourceAdoptor",
     "clear_ffmpeg_cuda_context_cache",
     "convert_frames",
     "create_cuda_context",
-    "create_dataset_from_csv",
     "decode_audio",
     "decode_video",
     "get_ffmpeg_log_level",
@@ -31,6 +31,8 @@ def __dir__() -> List[str]:
 
 
 def __getattr__(name: str) -> Any:
+    if name == "SourceAdoptor":
+        return _libspdl.SourceAdoptor_SPDL_GLOBAL
     return getattr(_libspdl, name)
 
 
