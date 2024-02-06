@@ -219,27 +219,40 @@ void register_pybind(py::module& m) {
 
   m.def("convert_frames", &convert_frames);
 
-  _SourceAdoptor.def("get", &SourceAdoptor::get);
+  _SourceAdoptor.def("get", &SourceAdoptor::get)
+      .def("__repr__", [](const SourceAdoptor& _) -> std::string {
+        return "SourceAdoptor";
+      });
 
-  _BasicAdoptor.def(
-      py::init<
-          const std::optional<std::string>&,
-          const std::optional<std::string>&,
-          const std::optional<OptionDict>&>(),
-      py::arg("prefix") = py::none(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none());
+  _BasicAdoptor
+      .def(
+          py::init<
+              const std::optional<std::string>&,
+              const std::optional<std::string>&,
+              const std::optional<OptionDict>&>(),
+          py::arg("prefix") = py::none(),
+          py::arg("format") = py::none(),
+          py::arg("format_options") = py::none())
+      .def("__repr__", [](const BasicAdoptor& self) -> std::string {
+        return fmt::format(
+            "BasicAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
+      });
 
-  _MMapAdoptor.def(
-      py::init<
-          const std::optional<std::string>&,
-          const std::optional<std::string>&,
-          const std::optional<OptionDict>&,
-          int>(),
-      py::arg("prefix") = py::none(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = 8096);
+  _MMapAdoptor
+      .def(
+          py::init<
+              const std::optional<std::string>&,
+              const std::optional<std::string>&,
+              const std::optional<OptionDict>&,
+              int>(),
+          py::arg("prefix") = py::none(),
+          py::arg("format") = py::none(),
+          py::arg("format_options") = py::none(),
+          py::arg("buffer_size") = 8096)
+      .def("__repr__", [](const MMapAdoptor& self) -> std::string {
+        return fmt::format(
+            "MMapAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
+      });
 
   m.def(
       "decode_video",
