@@ -34,8 +34,7 @@ void free_av_fmt_ctx(AVFormatContext*);
 } // namespace detail
 
 template <typename T>
-class CustomAdoptor : public SourceAdoptor {
- public:
+struct CustomAdoptor : public SourceAdoptor {
   class CustomInterface : public DataInterface {
     T obj;
     AVIOContext* io_ctx;
@@ -62,13 +61,11 @@ class CustomAdoptor : public SourceAdoptor {
     }
   };
 
- private:
   std::optional<std::string> prefix;
   std::optional<std::string> format;
   std::optional<OptionDict> format_options;
   int buffer_size;
 
- public:
   CustomAdoptor(
       const std::optional<std::string>& prefix_ = std::nullopt,
       const std::optional<std::string>& format_ = std::nullopt,
