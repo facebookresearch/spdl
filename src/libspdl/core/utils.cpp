@@ -2,6 +2,8 @@
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
 #include <libspdl/core/utils.h>
 
+#include <folly/init/Init.h>
+
 #include <cstdint>
 
 extern "C" {
@@ -41,6 +43,19 @@ std::string get_audio_filter_description(
     const std::optional<std::string>& sample_fmt) {
   return detail::get_audio_filter_description(
       sample_rate, num_channels, sample_fmt);
+}
+
+namespace {
+folly::Init* FOLLY_INIT = nullptr;
+
+void delete_folly_init() {
+  delete FOLLY_INIT;
+}
+} // namespace
+
+void init_folly(int* argc, char*** argv) {
+  FOLLY_INIT = new folly::Init{argc, argv};
+  std::atexit(delete_folly_init);
 }
 
 } // namespace spdl::core

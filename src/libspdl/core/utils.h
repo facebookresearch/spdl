@@ -21,4 +21,11 @@ std::string get_audio_filter_description(
     const std::optional<int>& num_channels,
     const std::optional<std::string>& sample_fmt);
 
+// Convenient method for initializing folly, in case
+// applications are not linked to folly directly.
+//
+// If your application uses folly, then use the proper
+// folly::Init mechanism.
+void init_folly(int* argc, char*** argv);
+
 } // namespace spdl::core

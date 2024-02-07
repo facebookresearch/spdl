@@ -6,7 +6,6 @@
 #include <libspdl/core/utils.h>
 
 #include <fmt/core.h>
-#include <folly/init/Init.h>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -79,12 +78,6 @@ struct DoublePtr {
   }
 };
 
-folly::Init* FOLLY_INIT = nullptr;
-
-void delete_folly_init() {
-  delete FOLLY_INIT;
-}
-
 std::vector<std::string> init_folly_init(
     const std::string& prog,
     const std::vector<std::string>& orig_args) {
@@ -94,9 +87,7 @@ std::vector<std::string> init_folly_init(
   for (int i = 1; i < nargs; ++i) {
     args.p[i] = const_cast<char*>(orig_args[i - 1].c_str());
   }
-
-  FOLLY_INIT = new folly::Init{&nargs, &args.p};
-  Py_AtExit(delete_folly_init);
+  init_folly(&nargs, &args.p);
 
   std::vector<std::string> ret;
   for (int i = 0; i < nargs; ++i) {
