@@ -16,6 +16,52 @@
 using folly::coro::collectAllTryRange;
 
 namespace spdl::core {
+////////////////////////////////////////////////////////////////////////////////
+// DecodingResult
+////////////////////////////////////////////////////////////////////////////////
+struct DecodingResultFuture::Impl {
+  bool fetched{false};
+  folly::SemiFuture<ResultType> future;
+
+  Impl(folly::SemiFuture<ResultType>&& fut) : future(std::move(fut)){};
+
+  ResultType get() {
+    if (fetched) {
+      SPDL_FAIL("The decoding result is already fetched.");
+    }
+    fetched = true;
+    return folly::coro::blockingWait(std::move(future));
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// DecodingResult
+////////////////////////////////////////////////////////////////////////////////
+DecodingResultFuture::DecodingResultFuture(Impl* i) : pimpl(i) {}
+
+DecodingResultFuture::DecodingResultFuture(
+    DecodingResultFuture&& other) noexcept {
+  *this = std::move(other);
+}
+
+DecodingResultFuture& DecodingResultFuture::operator=(
+    DecodingResultFuture&& other) noexcept {
+  using std::swap;
+  swap(pimpl, other.pimpl);
+  return *this;
+}
+
+DecodingResultFuture::~DecodingResultFuture() {
+  delete pimpl;
+}
+
+auto DecodingResultFuture::get() -> DecodingResultFuture::ResultType {
+  return pimpl->get();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Decoding functions
+////////////////////////////////////////////////////////////////////////////////
 namespace {
 folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
     const enum MediaType type,
@@ -55,7 +101,7 @@ folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
 }
 } // namespace
 
-std::vector<std::unique_ptr<FrameContainer>> decode_video(
+DecodingResultFuture decode_video(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -70,11 +116,13 @@ std::vector<std::unique_ptr<FrameContainer>> decode_video(
       io_cfg,
       decode_cfg,
       filter_desc);
-  return folly::coro::blockingWait(
-      std::move(job).scheduleOn(detail::getDemuxerThreadPoolExecutor()));
+  return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(job)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
 }
 
-std::vector<std::unique_ptr<FrameContainer>> decode_audio(
+DecodingResultFuture decode_audio(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -89,8 +137,10 @@ std::vector<std::unique_ptr<FrameContainer>> decode_audio(
       io_cfg,
       decode_cfg,
       filter_desc);
-  return folly::coro::blockingWait(
-      std::move(job).scheduleOn(detail::getDemuxerThreadPoolExecutor()));
+  return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(job)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
 }
 
 } // namespace spdl::core

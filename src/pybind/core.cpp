@@ -130,6 +130,9 @@ void register_pybind(py::module& m) {
   auto _FrameContainer =
       py::class_<FrameContainer>(m, "FrameContainer", py::module_local());
 
+  auto _DecodingResultFuture = py::class_<DecodingResultFuture>(
+      m, "DecodingResultFuture", py::module_local());
+
   // SourceAdoptor is used by external libraries to provide customized source.
   // This registeration is global.
   // To reduce the possibilty of name colision, suffixing with `_SPDL_GLOBAL`.
@@ -209,6 +212,8 @@ void register_pybind(py::module& m) {
       ;
 
   m.def("convert_frames", &convert_frames);
+
+  _DecodingResultFuture.def("get", &DecodingResultFuture::get);
 
   _SourceAdoptor.def("get", &SourceAdoptor::get)
       .def("__repr__", [](const SourceAdoptor& _) -> std::string {

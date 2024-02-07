@@ -92,7 +92,8 @@ def test_audio(args):
         print(cfg)
         print("*" * 40)
 
-        decoded_frames = libspdl.decode_audio(**cfg)[0]
+        future = libspdl.decode_audio(**cfg)
+        decoded_frames = future.get()[0]
         print(f"{len(decoded_frames)=}")
         print(f"{decoded_frames.num_samples=}")
         sliced = decoded_frames[2:7:2]
@@ -158,7 +159,8 @@ def test_video(args):
         print(cfg)
         print("*" * 40)
 
-        decoded_frames = libspdl.decode_video(**cfg)
+        decoding_result = libspdl.decode_video(**cfg)
+        decoded_frames = decoding_result.get()
         for frames in decoded_frames:
             print(
                 f"{frames.format=}, {len(frames)=}, {frames.width=}, {frames.height=}"
