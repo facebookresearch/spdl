@@ -34,7 +34,7 @@ struct SourceAdoptor {
 
   // This returns a pointer to DataInterface classes, but for the sake of
   // exposing this via PyBind11, we use void*
-  virtual void* get(const std::string& url, const IOConfig& io_cfg) = 0;
+  virtual void* get(const std::string& url, const IOConfig& io_cfg) const = 0;
 };
 
 } // namespace spdl::core

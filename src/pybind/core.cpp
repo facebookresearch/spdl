@@ -113,7 +113,7 @@ class PySourceAdoptor : public SourceAdoptor {
  public:
   using SourceAdoptor::SourceAdoptor;
 
-  void* get(const std::string& url, const IOConfig& io_cfg) override {
+  void* get(const std::string& url, const IOConfig& io_cfg) const override {
     PYBIND11_OVERLOAD_PURE(void*, SourceAdoptor, get, url, io_cfg);
   }
 };
@@ -237,7 +237,7 @@ void register_pybind(py::module& m) {
       "decode_video",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         std::shared_ptr<SourceAdoptor> adoptor,
+         const std::shared_ptr<SourceAdoptor>& adoptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
@@ -275,7 +275,7 @@ void register_pybind(py::module& m) {
       "decode_video",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         std::shared_ptr<SourceAdoptor> adoptor,
+         const std::shared_ptr<SourceAdoptor>& adoptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
@@ -306,7 +306,7 @@ void register_pybind(py::module& m) {
       "decode_audio",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         std::shared_ptr<SourceAdoptor> adoptor,
+         const std::shared_ptr<SourceAdoptor>& adoptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
@@ -340,7 +340,7 @@ void register_pybind(py::module& m) {
       "decode_audio",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         std::shared_ptr<SourceAdoptor> adoptor,
+         const std::shared_ptr<SourceAdoptor>& adoptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,

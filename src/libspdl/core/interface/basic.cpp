@@ -28,7 +28,7 @@ class BasicInterface : public DataInterface {
 BasicAdoptor::BasicAdoptor(const std::optional<std::string>& prefix_)
     : prefix(prefix_) {}
 
-void* BasicAdoptor::get(const std::string& url, const IOConfig& io_cfg) {
+void* BasicAdoptor::get(const std::string& url, const IOConfig& io_cfg) const {
   return new BasicInterface(prefix ? prefix.value() + url : url, io_cfg);
 }
 } // namespace spdl::core
