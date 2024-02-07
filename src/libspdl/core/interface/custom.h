@@ -62,12 +62,12 @@ struct CustomAdoptor : public SourceAdoptor {
     }
   };
 
-  std::optional<std::string> prefix;
+  const std::optional<std::string> prefix;
 
   CustomAdoptor(const std::optional<std::string>& prefix_ = std::nullopt)
       : prefix(prefix_) {}
 
-  void* get(const std::string& url, const IOConfig& io_cfg) override {
+  void* get(const std::string& url, const IOConfig& io_cfg) const override {
     return new CustomInterface(prefix ? prefix.value() + url : url, io_cfg);
   };
 };
