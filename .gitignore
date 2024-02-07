@@ -1,7 +1,10 @@
 /scripts
 /src/spdl/include
+/third_party/sqlite/csv.c
+*.zip
 *.tar.gz
 *.tar.xz
+*.db
 
 CMakeLists.txt.user
 CMakeCache.txt
