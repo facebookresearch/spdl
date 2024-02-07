@@ -1,4 +1,4 @@
-#include <libspdl/core/interface/basic.h>
+#include <libspdl/core/adoptor/basic.h>
 
 #include <libspdl/core/detail/ffmpeg/ctx_utils.h>
 

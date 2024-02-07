@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/interface/custom.h>
+#include <libspdl/core/adoptor/custom.h>
 
 #include <string>
 

@@ -23,8 +23,8 @@ set(srcs
   libspdl/core/conversion.cpp
   libspdl/core/decoding.cpp
   libspdl/core/frames.cpp
-  libspdl/core/interface/basic.cpp
-  libspdl/core/interface/mmap.cpp
+  libspdl/core/adoptor/basic.cpp
+  libspdl/core/adoptor/mmap.cpp
   libspdl/core/logging.cpp
   libspdl/core/storage.cpp
   libspdl/core/utils.cpp
