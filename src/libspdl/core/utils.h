@@ -1,5 +1,9 @@
 #pragma once
 
+#include <optional>
+#include <string>
+#include <tuple>
+
 namespace spdl::core {
 
 int get_ffmpeg_log_level();

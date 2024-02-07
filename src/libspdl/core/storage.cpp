@@ -1,4 +1,5 @@
 #include <libspdl/core/storage.h>
+
 #ifdef SPDL_USE_CUDA
 #include <libspdl/core/detail/cuda.h>
 #endif

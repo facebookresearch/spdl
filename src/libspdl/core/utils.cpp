@@ -1,6 +1,7 @@
+#include <libspdl/core/utils.h>
+
 #include <libspdl/core/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
-#include <libspdl/core/utils.h>
 
 #include <folly/init/Init.h>
 

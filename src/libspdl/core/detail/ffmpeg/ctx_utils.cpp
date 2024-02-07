@@ -1,4 +1,5 @@
 #include <libspdl/core/detail/ffmpeg/ctx_utils.h>
+
 #include <libspdl/core/detail/ffmpeg/logging.h>
 
 #include <folly/logging/xlog.h>
