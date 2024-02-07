@@ -44,6 +44,7 @@ def _get_build_env(var, default=False):
 _USE_CUDA = _get_build_env("USE_CUDA")
 _DEBUG_REFCOUNT = _get_build_env("DEBUG_REFCOUNT")
 _SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS")
+_SPDL_BUILD_SAMPLES = _get_build_env("SPDL_BUILD_SAMPLES")
 
 
 def _get_cmake_commands(build_dir, install_dir, debug):
@@ -85,6 +86,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=false",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
+            f"-DSPDL_BUILD_SAMPLES={'ON' if _SPDL_BUILD_SAMPLES else 'OFF'}",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
             f"-DSPDL_USE_CUDA={_b(_USE_CUDA)}",
             f"-DSPDL_DEBUG_REFCOUNT={_b(_DEBUG_REFCOUNT)}",
