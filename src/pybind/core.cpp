@@ -1,8 +1,8 @@
+#include <libspdl/core/adoptor/basic.h>
+#include <libspdl/core/adoptor/mmap.h>
 #include <libspdl/core/buffers.h>
 #include <libspdl/core/conversion.h>
 #include <libspdl/core/decoding.h>
-#include <libspdl/core/interface/basic.h>
-#include <libspdl/core/interface/mmap.h>
 #include <libspdl/core/utils.h>
 
 #include <fmt/core.h>

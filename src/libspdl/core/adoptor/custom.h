@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/interface/base.h>
+#include <libspdl/core/adoptor/base.h>
 
 #include <libspdl/core/types.h>
 
