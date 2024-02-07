@@ -1,5 +1,6 @@
-#include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/frames.h>
+
+#include <libspdl/core/detail/ffmpeg/logging.h>
 
 extern "C" {
 #include <libavutil/frame.h>

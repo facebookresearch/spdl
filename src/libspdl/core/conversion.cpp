@@ -1,4 +1,5 @@
 #include <libspdl/core/conversion.h>
+
 #include <libspdl/core/logging.h>
 #include <libspdl/core/types.h>
 #ifdef SPDL_USE_CUDA
