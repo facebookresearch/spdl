@@ -20,7 +20,7 @@ namespace spdl::core::detail {
 
 struct PackagedAVPackets;
 
-folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
+folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     const enum MediaType type,
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -28,7 +28,7 @@ folly::coro::AsyncGenerator<PackagedAVPackets&&> stream_demux(
     const IOConfig io_cfg);
 
 folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
-    PackagedAVPackets&& packets,
+    std::unique_ptr<PackagedAVPackets> packets,
     const std::string filter_desc,
     const DecodeConfig cfg = {});
 
