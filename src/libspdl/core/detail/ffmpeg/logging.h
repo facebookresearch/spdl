@@ -9,7 +9,7 @@ extern "C" {
 #include <libavutil/error.h>
 }
 
-namespace spdl::core {
+namespace spdl::core::detail {
 namespace {
 // Replacement of av_err2str, which causes
 // `error: taking address of temporary array`
@@ -27,16 +27,16 @@ inline std::string av_error(int errnum, std::string_view tmp, Args&&... args) {
       fmt::vformat(tmp, fmt::make_format_args(std::forward<Args>(args)...)),
       av_err2string(errnum));
 }
-} // namespace spdl::core
+} // namespace spdl::core::detail
 
-#define CHECK_AVERROR(expression, ...)                      \
-  if (int _errnum = expression; _errnum < 0) [[unlikely]] { \
-    SPDL_FAIL(av_error(_errnum, __VA_ARGS__));              \
+#define CHECK_AVERROR(expression, ...)                               \
+  if (int _errnum = expression; _errnum < 0) [[unlikely]] {          \
+    SPDL_FAIL(::spdl::core::detail::av_error(_errnum, __VA_ARGS__)); \
   }
 
-#define CHECK_AVERROR_NUM(errnum, ...)        \
-  if (errnum < 0) [[unlikely]] {              \
-    SPDL_FAIL(av_error(errnum, __VA_ARGS__)); \
+#define CHECK_AVERROR_NUM(errnum, ...)                              \
+  if (errnum < 0) [[unlikely]] {                                    \
+    SPDL_FAIL(::spdl::core::detail::av_error(errnum, __VA_ARGS__)); \
   }
 
 #define CHECK_AVALLOCATE(expression)                    \
