@@ -1,24 +1,12 @@
 #include <libspdl/core/frames.h>
 
 #include <libspdl/core/detail/ffmpeg/logging.h>
+#include <libspdl/core/detail/ffmpeg/wrappers.h>
 
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/pixdesc.h>
 }
-
-#ifdef SPDL_DEBUG_REFCOUNT
-#include <stdatomic.h>
-static struct AVBuffer {
-  uint8_t* data;
-  size_t size;
-  atomic_uint refcount;
-  void (*free)(void* opaque, uint8_t* data);
-  void* opaque;
-  int flags;
-  int flags_internal;
-};
-#endif
 
 namespace spdl::core {
 
@@ -26,20 +14,7 @@ FrameContainer::FrameContainer(MediaType type_) : type(type_) {}
 
 FrameContainer::~FrameContainer() {
   std::for_each(frames.begin(), frames.end(), [](AVFrame* p) {
-#ifdef SPDL_DEBUG_REFCOUNT
-    for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
-      if (!p->data[i]) {
-        break;
-      }
-      auto buf = p->buf[i]->buffer;
-      XLOG(DBG) << fmt::format(
-          "Refcount {}: {} ({} -> {})",
-          i,
-          buf->refcount,
-          (void*)(buf->data),
-          (void*)(p->data[i]));
-    }
-#endif
+    DEBUG_PRINT_AVFRAME_REFCOUNT(p);
     av_frame_unref(p);
     av_frame_free(&p);
   });
