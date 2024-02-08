@@ -53,3 +53,45 @@ AVFrameAutoUnref::~AVFrameAutoUnref() {
   av_frame_unref(p);
 }
 } // namespace spdl::core::detail
+
+#ifdef SPDL_DEBUG_REFCOUNT
+
+#include <fmt/core.h>
+#include <folly/logging/xlog.h>
+
+extern "C" {
+#include <stdatomic.h>
+struct AVBuffer {
+  uint8_t* data;
+  size_t size;
+  atomic_uint refcount;
+  void (*free)(void* opaque, uint8_t* data);
+  void* opaque;
+  int flags;
+  int flags_internal;
+};
+}
+
+namespace spdl::core::detail {
+void debug_log_avframe_refcount(AVFrame* p) {
+  for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
+    if (!p->data[i]) {
+      break;
+    }
+    auto buf = p->buf[i]->buffer;
+    XLOG(DBG) << fmt::format(
+        "Refcount {}: {} ({} -> {})",
+        i,
+        buf->refcount,
+        (void*)(buf->data),
+        (void*)(p->data[i]));
+  }
+}
+
+void debug_log_avpacket_refcount(AVPacket* p) {
+  auto buf = p->buf->buffer;
+  XLOG(INFO) << fmt::format(
+      "Refcount: {} ({})", buf->refcount, (void*)(buf->data));
+}
+} // namespace spdl::core::detail
+#endif

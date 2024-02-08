@@ -104,3 +104,17 @@ struct AVFrameAutoUnref {
       return p;                                             \
     };                                                      \
   }
+
+#ifdef SPDL_DEBUG_REFCOUNT
+namespace spdl::core::detail {
+void debug_log_avframe_refcount(AVFrame* frame);
+void debug_log_avpacket_refcount(AVPacket* packet);
+} // namespace spdl::core::detail
+#define DEBUG_PRINT_AVFRAME_REFCOUNT(x) \
+  ::spdl::core::detail::debug_log_avframe_refcount(x)
+#define DEBUG_PRINT_AVPACKET_REFCOUNT(x) \
+  ::spdl::core::detail::debug_log_avpacket_refcount(x)
+#else
+#define DEBUG_PRINT_AVFRAME_REFCOUNT(x)
+#define DEBUG_PRINT_AVPACKET_REFCOUNT(x)
+#endif
