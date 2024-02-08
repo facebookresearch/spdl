@@ -1,5 +1,6 @@
 #include <libspdl/core/conversion.h>
 
+#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
 #include <libspdl/core/types.h>
 #ifdef SPDL_USE_CUDA
@@ -34,6 +35,7 @@ void copy_2d(
     int src_linesize,
     uint8_t** dst,
     int dst_linesize) {
+  TRACE_EVENT("decoding", "conversion::copy_2d");
   for (int h = 0; h < height; ++h) {
     memcpy(*dst, src, width);
     src += src_linesize;
@@ -391,6 +393,10 @@ Buffer convert_audio_frames(
 Buffer convert_frames(
     const FrameContainer& frames,
     const std::optional<int>& index) {
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_frames",
+      perfetto::Flow::ProcessScoped(frames.id));
   switch (frames.type) {
     case MediaType::Audio:
       return convert_audio_frames(frames, index);

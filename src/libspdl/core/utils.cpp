@@ -2,10 +2,14 @@
 
 #include <libspdl/core/detail/ffmpeg/ctx_utils.h>
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
+#include <libspdl/core/detail/tracing.h>
+#include <libspdl/core/logging.h>
 
 #include <folly/init/Init.h>
+#include <folly/logging/xlog.h>
 
 #include <cstdint>
+#include <mutex>
 
 extern "C" {
 #include <libavutil/log.h>
@@ -57,6 +61,66 @@ void delete_folly_init() {
 void init_folly(int* argc, char*** argv) {
   FOLLY_INIT = new folly::Init{argc, argv};
   std::atexit(delete_folly_init);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Tracing
+////////////////////////////////////////////////////////////////////////////////
+TracingSession::TracingSession(void* s) : sess(s) {}
+TracingSession::TracingSession(TracingSession&& other) noexcept {
+  *this = std::move(other);
+}
+TracingSession& TracingSession::operator=(TracingSession&& other) noexcept {
+  using std::swap;
+  swap(sess, other.sess);
+  return *this;
+}
+TracingSession::~TracingSession() {
+  if (sess) {
+    stop();
+  }
+}
+
+void TracingSession::init() {
+  static std::once_flag flag;
+  std::call_once(flag, []() {
+#ifdef SPDL_ENABLE_TRACING
+    detail::init_perfetto();
+#else
+    XLOG(WARN) << "Tracing is not enabled.";
+#endif
+  });
+}
+
+void TracingSession::config(const std::string& process_name) {
+#ifdef SPDL_ENABLE_TRACING
+  detail::configure_perfetto(process_name);
+#endif
+}
+
+void TracingSession::start(int fd) {
+#ifdef SPDL_ENABLE_TRACING
+  if (sess) {
+    SPDL_FAIL("Tracing session is avtive.");
+  }
+  sess = (void*)(detail::start_tracing_session(fd).release());
+#endif
+}
+
+void TracingSession::stop() {
+#ifdef SPDL_ENABLE_TRACING
+  if (!sess) {
+    SPDL_FAIL("Tracing session is not avtive.");
+  }
+  std::unique_ptr<perfetto::TracingSession> p;
+  p.reset((perfetto::TracingSession*)sess);
+  sess = nullptr;
+  detail::stop_tracing_session(std::move(p));
+#endif
+}
+
+std::unique_ptr<TracingSession> init_tracing() {
+  return std::make_unique<TracingSession>();
 }
 
 } // namespace spdl::core

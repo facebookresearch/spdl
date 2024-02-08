@@ -125,7 +125,6 @@ void register_pybind(py::module& m) {
   // Class registerations
   ////////////////////////////////////////////////////////////////////////////////
   // Make sure classes are module_local.
-
   auto _Buffer = py::class_<Buffer>(m, "Buffer", py::module_local());
   auto _FrameContainer =
       py::class_<FrameContainer>(m, "FrameContainer", py::module_local());
@@ -147,6 +146,14 @@ void register_pybind(py::module& m) {
   auto _MMapAdoptor =
       py::class_<MMapAdoptor, SourceAdoptor, std::shared_ptr<MMapAdoptor>>(
           m, "MMapAdoptor", py::module_local());
+
+  auto _TracingSession =
+      py::class_<TracingSession>(m, "TracingSession", py::module_local());
+
+  _TracingSession.def("init", &TracingSession::init)
+      .def("config", &TracingSession::config)
+      .def("start", &TracingSession::start)
+      .def("stop", &TracingSession::stop);
 
   m.def("init_folly", &init_folly_init);
   m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
@@ -369,5 +376,7 @@ void register_pybind(py::module& m) {
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("filter_desc") = std::string());
+
+  m.def("init_tracing", init_tracing);
 }
 } // namespace spdl::core

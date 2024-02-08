@@ -36,6 +36,12 @@ if (SPDL_USE_CUDA)
   list(APPEND srcs libspdl/core/detail/cuda.cpp)
 endif()
 
+if(SPDL_ENABLE_TRACING)
+  list(APPEND deps perfetto)
+  list(APPEND defs SPDL_ENABLE_TRACING)
+  list(APPEND srcs libspdl/core/detail/tracing.cpp)
+endif()
+
 if (SPDL_DEBUG_REFCOUNT)
   list(APPEND defs SPDL_DEBUG_REFCOUNT)
 endif()

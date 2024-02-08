@@ -2,6 +2,7 @@
 
 #include <libspdl/core/detail/executors.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
+#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
 
 #include <fmt/core.h>

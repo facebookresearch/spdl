@@ -13,17 +13,18 @@ namespace spdl::core {
 
 /// Represents series of decoded frames
 struct FrameContainer {
+  uint64_t id;
   MediaType type;
 
   std::vector<AVFrame*> frames{};
 
-  FrameContainer(MediaType type);
+  FrameContainer(uint64_t id, MediaType type);
   // No copy constructors
   FrameContainer(const FrameContainer&) = delete;
   FrameContainer& operator=(const FrameContainer&) = delete;
   // Move constructors to support MPMCQueue (BoundedQueue)
-  FrameContainer(FrameContainer&&) noexcept = default;
-  FrameContainer& operator=(FrameContainer&&) noexcept = default;
+  FrameContainer(FrameContainer&&) noexcept;
+  FrameContainer& operator=(FrameContainer&&) noexcept;
   // Destructor releases AVFrame* resources
   ~FrameContainer();
 

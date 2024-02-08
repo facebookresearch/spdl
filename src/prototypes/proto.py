@@ -1,5 +1,6 @@
 import logging
 
+import spdl.utils
 from spdl import libspdl
 
 
@@ -55,8 +56,9 @@ def _main():
     if args.debug:
         libspdl.set_ffmpeg_log_level(40)
 
-    test_audio(args)
-    test_video(args)
+    with spdl.utils.tracing("proto.py.pftrace"):
+        test_audio(args)
+        test_video(args)
 
 
 def test_audio(args):
