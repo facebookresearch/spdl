@@ -2,6 +2,7 @@
 
 #include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
+#include <libspdl/core/detail/tracing.h>
 
 extern "C" {
 #include <libavutil/frame.h>
@@ -10,9 +11,32 @@ extern "C" {
 
 namespace spdl::core {
 
-FrameContainer::FrameContainer(MediaType type_) : type(type_) {}
+FrameContainer::FrameContainer(uint64_t id_, MediaType type_)
+    : id(id_), type(type_) {
+  TRACE_EVENT(
+      "decoding",
+      "FrameContainer::FrameContainer",
+      perfetto::Flow::ProcessScoped(id));
+}
+
+FrameContainer::FrameContainer(FrameContainer&& other) noexcept
+    : id(0), type(MediaType::Audio) {
+  *this = std::move(other);
+}
+
+FrameContainer& FrameContainer::operator=(FrameContainer&& other) noexcept {
+  using std::swap;
+  swap(id, other.id);
+  swap(type, other.type);
+  swap(frames, other.frames);
+  return *this;
+}
 
 FrameContainer::~FrameContainer() {
+  TRACE_EVENT(
+      "decoding",
+      "FrameContainer::~FrameContainer",
+      perfetto::Flow::ProcessScoped(id));
   std::for_each(frames.begin(), frames.end(), [](AVFrame* p) {
     DEBUG_PRINT_AVFRAME_REFCOUNT(p);
     av_frame_unref(p);
@@ -67,7 +91,7 @@ int FrameContainer::get_num_samples() const {
 }
 
 FrameContainer FrameContainer::slice(int start, int stop, int step) const {
-  FrameContainer out{type};
+  FrameContainer out{0, type};
   for (int i = start; i < stop; i += step) {
     AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
     CHECK_AVERROR(

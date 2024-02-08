@@ -5,9 +5,12 @@
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
 #include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
+#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
 
 #include <folly/logging/xlog.h>
+
+#include <random>
 
 extern "C" {
 #include <libavfilter/buffersink.h>
@@ -44,6 +47,13 @@ std::unique_ptr<DataInterface> get_interface(
   return std::unique_ptr<DataInterface>(
       static_cast<DataInterface*>(adoptor->get(src, io_cfg)));
 }
+
+uint64_t random() {
+  static thread_local std::random_device rd;
+  static thread_local std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<uint64_t> dis;
+  return dis(gen);
+}
 } // namespace
 
 folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
@@ -52,6 +62,7 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg) {
+  TRACE_EVENT("decoding", "detail::stream_demux");
   auto interface = get_interface(src, adoptor, io_cfg);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   int idx = parse_fmt_ctx(fmt_ctx, type);
@@ -63,8 +74,8 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
       fmt_ctx->streams[i]->discard = AVDISCARD_ALL;
     }
   }
-
   for (auto& timestamp : timestamps) {
+    TRACE_EVENT("decoding", "detail::stream_demux - iter");
     auto [start, end] = timestamp;
 
     int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
@@ -114,6 +125,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
     AVFrame* frame,
     AVFilterContext* src_ctx,
     AVFilterContext* sink_ctx) {
+  TRACE_EVENT("decoding", "detail::filter_frame");
   int errnum =
       av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
 
@@ -139,6 +151,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
 folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
     AVCodecContext* codec_ctx,
     AVPacket* packet) {
+  TRACE_EVENT("decoding", "detail::decode_packet");
   assert(codec_ctx);
   XLOG(DBG9)
       << ((!packet) ? fmt::format(" -- flush decoder")
@@ -148,10 +161,14 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
                           TS(packet, codec_ctx->pkt_timebase),
                           packet->pts));
 
+  TRACE_EVENT_BEGIN("decoding", "avcodec_send_packet");
   int errnum = avcodec_send_packet(codec_ctx, packet);
+  TRACE_EVENT_END("decoding");
   while (errnum >= 0) {
     AVFramePtr frame{CHECK_AVALLOCATE(av_frame_alloc())};
+    TRACE_EVENT_BEGIN("decoding", "avcodec_receive_frame");
     errnum = avcodec_receive_frame(codec_ctx, frame.get());
+    TRACE_EVENT_END("decoding");
     switch (errnum) {
       case AVERROR(EAGAIN):
         co_return;
@@ -159,6 +176,9 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
         co_yield nullptr;
         co_return;
       default: {
+        if (frame->key_frame) {
+          TRACE_EVENT_INSTANT("decoding", "key_frame");
+        }
         CHECK_AVERROR_NUM(errnum, "Failed to decode a frame.");
         co_yield std::move(frame);
       }
@@ -169,6 +189,10 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
 folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
     std::unique_ptr<PackagedAVPackets> packets,
     const DecodeConfig cfg) {
+  TRACE_EVENT(
+      "decoding",
+      "detail::decode_pkts",
+      perfetto::Flow::ProcessScoped(packets->id));
   auto codec_ctx = get_codec_ctx_ptr(
       packets->codecpar,
       packets->time_base,
@@ -178,6 +202,7 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
 
   auto [start, end] = packets->timestamp;
   auto container = std::make_unique<FrameContainer>(
+      packets->id,
       codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
                                                   : MediaType::Video);
   for (auto& packet : packets->packets) {
@@ -201,6 +226,10 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
     std::unique_ptr<PackagedAVPackets> packets,
     const std::string filter_desc,
     const DecodeConfig cfg) {
+  TRACE_EVENT(
+      "decoding",
+      "detail::decode_pkts",
+      perfetto::Flow::ProcessScoped(packets->id));
   auto codec_ctx = get_codec_ctx_ptr(
       packets->codecpar,
       packets->time_base,
@@ -231,7 +260,7 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
   assert(strcmp(sink_ctx->name, "out") == 0);
 
   auto container = std::make_unique<FrameContainer>(
-      get_output_media_type(filter_graph.get()));
+      packets->id, get_output_media_type(filter_graph.get()));
   for (auto& packet : packets->packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
@@ -292,11 +321,17 @@ PackagedAVPackets::PackagedAVPackets(
     AVCodecParameters* codecpar_,
     AVRational time_base_,
     AVRational frame_rate_)
-    : src(src_),
+    : id(random()),
+      src(src_),
       timestamp(timestamp_),
       codecpar(copy(codecpar_)),
       time_base(time_base_),
-      frame_rate(frame_rate_){};
+      frame_rate(frame_rate_) {
+  TRACE_EVENT(
+      "decoding",
+      "PackagedAVPackets::PackagedAVPackets",
+      perfetto::Flow::ProcessScoped(id));
+};
 
 PackagedAVPackets::PackagedAVPackets(PackagedAVPackets&& other) noexcept {
   *this = std::move(other);
@@ -305,6 +340,7 @@ PackagedAVPackets::PackagedAVPackets(PackagedAVPackets&& other) noexcept {
 PackagedAVPackets& PackagedAVPackets::operator=(
     PackagedAVPackets&& other) noexcept {
   using std::swap;
+  swap(id, other.id);
   swap(src, other.src);
   swap(timestamp, other.timestamp);
   swap(codecpar, other.codecpar);
@@ -315,6 +351,10 @@ PackagedAVPackets& PackagedAVPackets::operator=(
 };
 
 PackagedAVPackets::~PackagedAVPackets() {
+  TRACE_EVENT(
+      "decoding",
+      "PackagedAVPackets::~PackagedAVPackets",
+      perfetto::Flow::ProcessScoped(id));
   std::for_each(packets.begin(), packets.end(), [](AVPacket* p) {
     if (p) {
       av_packet_unref(p);

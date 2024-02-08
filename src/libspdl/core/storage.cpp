@@ -1,5 +1,6 @@
 #include <libspdl/core/storage.h>
 
+#include <libspdl/core/detail/tracing.h>
 #ifdef SPDL_USE_CUDA
 #include <libspdl/core/detail/cuda.h>
 #endif
@@ -8,8 +9,14 @@
 #include <folly/logging/xlog.h>
 
 namespace spdl::core {
+namespace {
+void* _get_buffer(size_t size) {
+  TRACE_EVENT("decoding", "storage::_get_buffer");
+  return operator new(size);
+}
+} // namespace
 
-Storage::Storage(size_t size) : data(operator new(size)) {}
+Storage::Storage(size_t size) : data(_get_buffer(size)) {}
 Storage::Storage(Storage&& other) noexcept {
   *this = std::move(other);
 }

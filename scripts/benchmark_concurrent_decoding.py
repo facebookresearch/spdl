@@ -1,7 +1,8 @@
-"""Decode multiple videos using GPU"""
+"""Decode multiple videos using GPU."""
 import logging
 import time
 
+import spdl.utils
 from spdl import libspdl
 
 
@@ -27,7 +28,7 @@ def _parse_python_args():
     return parser.parse_args()
 
 
-def test(
+def _test(
         input_video: str,
         decoder: str,
         gpu: int,
@@ -38,7 +39,7 @@ def test(
 ):
     adoptor = getattr(libspdl, adoptor)(prefix)
 
-    timestamps = [(10 * i, 10 * (i+1)) for i in range(num_ts)]
+    timestamps = [(10 * i, 10 * i + 3) for i in range(num_ts)]
     futures = []
 
     cfg = {
@@ -48,6 +49,7 @@ def test(
         "decoder_options": None if decoder is None or gpu == -1 else {"gpu": str(gpu)},
         "cuda_device_index": gpu,
         "adoptor": adoptor,
+        "pix_fmt": "rgb24",
         "width": 640,
         "height": 480,
     }
@@ -77,14 +79,15 @@ def _main():
     args = _parse_python_args()
     _init(args.debug, args.demuxer_threads, args.decoder_threads)
 
-    test(
-        args.input_video,
-        args.decoder,
-        args.gpu,
-        args.adoptor,
-        args.prefix,
-        args.num_jobs,
-        args.num_ts)
+    with spdl.utils.tracing("benchmark.pftrace"):
+        _test(
+            args.input_video,
+            args.decoder,
+            args.gpu,
+            args.adoptor,
+            args.prefix,
+            args.num_jobs,
+            args.num_ts)
 
 
 def _init(debug, demuxer_threads, decoder_threads):

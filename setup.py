@@ -1,6 +1,6 @@
 import os
-import subprocess
 import shutil
+import subprocess
 import sys
 
 from setuptools import Extension, find_packages, setup
@@ -43,6 +43,7 @@ def _get_build_env(var, default=False):
 
 _USE_CUDA = _get_build_env("USE_CUDA")
 _DEBUG_REFCOUNT = _get_build_env("DEBUG_REFCOUNT")
+_ENABLE_TRACING = _get_build_env("ENABLE_TRACING")
 _SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS")
 _SPDL_BUILD_SAMPLES = _get_build_env("SPDL_BUILD_SAMPLES")
 
@@ -85,6 +86,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DCMAKE_PREFIX_PATH={install_dir}",
             "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=false",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DSPDL_ENABLE_TRACING={'ON' if _ENABLE_TRACING else 'OFF'}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
             f"-DSPDL_BUILD_SAMPLES={'ON' if _SPDL_BUILD_SAMPLES else 'OFF'}",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
@@ -168,8 +170,10 @@ class CMakeBuild(build_ext):
             subprocess.check_call(cmd)
 
         # Copy public header files
-        src = os.path.abspath(os.path.join(self.build_lib, "spdl", "include", "libspdl"))
-        build_py = self.get_finalized_command('build_py')
+        src = os.path.abspath(
+            os.path.join(self.build_lib, "spdl", "include", "libspdl")
+        )
+        build_py = self.get_finalized_command("build_py")
         dst = build_py.get_package_dir("spdl.include.libspdl")
         print(src, dst)
         shutil.copytree(src, dst, dirs_exist_ok=True)

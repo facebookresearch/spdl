@@ -39,6 +39,7 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
 // Similar to FrameContainer, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
 struct PackagedAVPackets {
+  uint64_t id;
   // Source information
   std::string src;
   std::tuple<double, double> timestamp;
@@ -54,11 +55,11 @@ struct PackagedAVPackets {
   std::vector<AVPacket*> packets = {};
 
   PackagedAVPackets(
-      std::string src_,
-      std::tuple<double, double> timestamp_,
-      AVCodecParameters* codecpar_,
-      AVRational time_base_,
-      AVRational frame_rate_);
+      std::string src,
+      std::tuple<double, double> timestamp,
+      AVCodecParameters* codecpar,
+      AVRational time_base,
+      AVRational frame_rate);
 
   // No copy constructors
   PackagedAVPackets(const PackagedAVPackets&) = delete;

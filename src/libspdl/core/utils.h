@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -31,5 +32,24 @@ std::string get_audio_filter_description(
 // If your application uses folly, then use the proper
 // folly::Init mechanism.
 void init_folly(int* argc, char*** argv);
+
+class TracingSession {
+  void* sess = nullptr;
+
+ public:
+  explicit TracingSession(void* sess = nullptr);
+  TracingSession(const TracingSession&) = delete;
+  TracingSession& operator=(const TracingSession&) = delete;
+  TracingSession(TracingSession&& other) noexcept;
+  TracingSession& operator=(TracingSession&& other) noexcept;
+  ~TracingSession();
+
+  void init();
+  void config(const std::string& process_name);
+  void start(int fd);
+  void stop();
+};
+
+std::unique_ptr<TracingSession> init_tracing();
 
 } // namespace spdl::core
