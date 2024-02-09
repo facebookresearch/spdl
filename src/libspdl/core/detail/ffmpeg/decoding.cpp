@@ -62,7 +62,7 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg) {
-  TRACE_EVENT("decoding", "detail::stream_demux");
+  TRACE_EVENT("demuxing", "detail::stream_demux");
   auto interface = get_interface(src, adoptor, io_cfg);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   int idx = parse_fmt_ctx(fmt_ctx, type);
@@ -75,16 +75,16 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     }
   }
   for (auto& timestamp : timestamps) {
-    TRACE_EVENT("decoding", "detail::stream_demux - iter");
+    TRACE_EVENT("demuxing", "detail::stream_demux - iter");
     auto [start, end] = timestamp;
 
     int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
-    TRACE_EVENT_BEGIN("decoding", "av_seek_frame");
+    TRACE_EVENT_BEGIN("demuxing", "av_seek_frame");
     CHECK_AVERROR(
         av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
         "Failed to seek to the timestamp {} [sec]",
         start);
-    TRACE_EVENT_END("decoding");
+    TRACE_EVENT_END("demuxing");
 
     auto package = std::make_unique<PackagedAVPackets>(
         fmt_ctx->url,
@@ -95,9 +95,9 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     double packet_ts = 0;
     do {
       AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
-      TRACE_EVENT_BEGIN("decoding", "av_read_frame");
+      TRACE_EVENT_BEGIN("demuxing", "av_read_frame");
       int errnum = av_read_frame(fmt_ctx, packet.get());
-      TRACE_EVENT_END("decoding");
+      TRACE_EVENT_END("demuxing");
       if (errnum == AVERROR_EOF) {
         break;
       }
@@ -193,12 +193,12 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
   }
 }
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
     const DecodeConfig cfg) {
   TRACE_EVENT(
       "decoding",
-      "detail::decode_pkts",
+      "detail::decode_packets",
       perfetto::Flow::ProcessScoped(packets->id));
   auto codec_ctx = get_codec_ctx_ptr(
       packets->codecpar,
@@ -229,13 +229,13 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
   co_return container;
 }
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets_with_filter(
     std::unique_ptr<PackagedAVPackets> packets,
     const std::string filter_desc,
     const DecodeConfig cfg) {
   TRACE_EVENT(
       "decoding",
-      "detail::decode_pkts",
+      "detail::decode_packets_with_filter",
       perfetto::Flow::ProcessScoped(packets->id));
   auto codec_ctx = get_codec_ctx_ptr(
       packets->codecpar,
@@ -300,14 +300,14 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
 }
 } // namespace
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
+folly::coro::Task<std::unique_ptr<FrameContainer>> get_decode_task(
     std::unique_ptr<PackagedAVPackets> packets,
     const std::string filter_desc,
     const DecodeConfig cfg) {
   if (filter_desc.empty()) {
-    return decode_pkts(std::move(packets), cfg);
+    return decode_packets(std::move(packets), cfg);
   }
-  return decode_pkts(std::move(packets), filter_desc, cfg);
+  return decode_packets_with_filter(std::move(packets), filter_desc, cfg);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

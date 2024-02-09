@@ -77,7 +77,7 @@ folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
   auto exec = detail::getDecoderThreadPoolExecutor();
   while (auto result = co_await demuxer.next()) {
     auto task =
-        detail::decode_packets(*std::move(result), filter_desc, decode_cfg);
+        detail::get_decode_task(*std::move(result), filter_desc, decode_cfg);
     futures.emplace_back(std::move(task).scheduleOn(exec).start());
   }
   XLOG(DBG) << "Waiting for decode jobs to finish";
