@@ -65,15 +65,8 @@ void check_empty(const AVDictionary* p) {
 ////////////////////////////////////////////////////////////////////////////////
 // Hardware context
 ////////////////////////////////////////////////////////////////////////////////
-
-namespace {
-
-static std::mutex MUTEX;
-static std::map<int, AVBufferRefPtr> CUDA_CONTEXT_CACHE;
-
-} // namespace
-
 #ifdef SPDL_USE_CUDA
+namespace {
 void warn_if_device_is_initialized(int index) {
   // FFmpeg rejects the use of the primary context if it is already initialized
   // with undesired flags. i.e. FFmpeg only accepts CU_CTX_SCHED_BLOCKING_SYNC.
@@ -101,16 +94,10 @@ void warn_if_device_is_initialized(int index) {
         flags);
   }
 }
-#endif
 
-void create_cuda_context(const int index, const bool use_primary_context) {
-#ifndef SPDL_USE_CUDA
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#else
-  if (CUDA_CONTEXT_CACHE.count(index)) {
-    SPDL_FAIL(fmt::format(
-        "CUDA context for device {} is already initialized", index));
-  }
+AVBufferRefPtr _create_cuda_context(
+    const int index,
+    const bool use_primary_context) {
   AVBufferRef* p = nullptr;
   AVDictionaryDPtr opt;
   unsigned int device_flags = 0;
@@ -134,19 +121,21 @@ void create_cuda_context(const int index, const bool use_primary_context) {
       index);
   TRACE_EVENT_END("decoding");
   assert(p);
-  CUDA_CONTEXT_CACHE.emplace(index, p);
-
   auto hw_device_ctx = (AVHWDeviceContext*)p->data;
   auto device_hwctx = (AVCUDADeviceContext*)hw_device_ctx->hwctx;
   XLOG(DBG9) << "CUcontext: " << device_hwctx->cuda_ctx;
   XLOG(DBG9) << "CUstream: " << device_hwctx->stream;
-#endif
+  return AVBufferRefPtr{p};
 }
+
+static std::shared_mutex CUDA_CACHE_MUTEX;
+static std::unordered_map<int, AVBufferRefPtr> CUDA_CONTEXT_CACHE;
 
 int get_device_index_from_frame_context(const AVBufferRef* hw_frames_ctx) {
   auto hw_frames_ctx_ = (AVHWFramesContext*)hw_frames_ctx->data;
   auto hw_device_ctx = (AVHWDeviceContext*)hw_frames_ctx_->device_ctx;
 
+  std::shared_lock<std::shared_mutex> lock(CUDA_CACHE_MUTEX);
   for (auto const& [index, ref] : CUDA_CONTEXT_CACHE) {
     AVBufferRef* p = ref.get();
     auto ctx = (AVHWDeviceContext*)p->data;
@@ -159,26 +148,49 @@ int get_device_index_from_frame_context(const AVBufferRef* hw_frames_ctx) {
       (void*)hw_device_ctx));
 }
 
-namespace {
-
 AVBufferRef* get_cuda_context(int index, bool use_primary_context = false) {
-  std::lock_guard<std::mutex> lock(MUTEX);
+  TRACE_EVENT("decoding", "get_cuda_context");
   if (index == -1) {
     index = 0;
   }
-  if (CUDA_CONTEXT_CACHE.count(index) == 0) {
-    create_cuda_context(index, use_primary_context);
+  {
+    std::shared_lock<std::shared_mutex> lock(CUDA_CACHE_MUTEX);
+    if (CUDA_CONTEXT_CACHE.contains(index)) {
+      return CUDA_CONTEXT_CACHE.at(index).get();
+    }
   }
-  AVBufferRefPtr& buffer = CUDA_CONTEXT_CACHE.at(index);
-  return buffer.get();
+  std::lock_guard<std::shared_mutex> lock(CUDA_CACHE_MUTEX);
+  if (!CUDA_CONTEXT_CACHE.contains(index)) {
+    CUDA_CONTEXT_CACHE.emplace(
+        index, _create_cuda_context(index, use_primary_context));
+  }
+  return CUDA_CONTEXT_CACHE.at(index).get();
 }
 
 } // namespace
+#endif
+
+void create_cuda_context(const int index, const bool use_primary_context) {
+#ifndef SPDL_USE_CUDA
+  SPDL_FAIL("SPDL is not compiled with CUDA support.");
+#else
+  XLOG(INFO) << "Creating CUDA context for device: " << index;
+  std::lock_guard<std::shared_mutex> lock(CUDA_CACHE_MUTEX);
+  if (CUDA_CONTEXT_CACHE.contains(index)) {
+    XLOG(WARN) << fmt::format(
+        "The CUDA device {} has been already initialized.", index);
+  }
+  CUDA_CONTEXT_CACHE.emplace(
+      index, _create_cuda_context(index, use_primary_context));
+#endif
+}
 
 void clear_cuda_context_cache() {
+#ifdef SPDL_USE_CUDA
   XLOG(DBG9) << "Clearing CUDA context cache.";
-  std::lock_guard<std::mutex> lock(MUTEX);
+  std::lock_guard<std::shared_mutex> lock(CUDA_CACHE_MUTEX);
   CUDA_CONTEXT_CACHE.clear();
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
