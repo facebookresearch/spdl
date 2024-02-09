@@ -18,7 +18,7 @@ using folly::coro::collectAllTryRange;
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
-// DecodingResult
+// DecodingResultFuture::Impl
 ////////////////////////////////////////////////////////////////////////////////
 struct DecodingResultFuture::Impl {
   bool fetched{false};
@@ -36,7 +36,7 @@ struct DecodingResultFuture::Impl {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// DecodingResult
+// DecodingResultFuture
 ////////////////////////////////////////////////////////////////////////////////
 DecodingResultFuture::DecodingResultFuture(Impl* i) : pimpl(i) {}
 
@@ -61,10 +61,42 @@ auto DecodingResultFuture::get() -> DecodingResultFuture::ResultType {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Decoding functions
+// async_decode wrapper
+////////////////////////////////////////////////////////////////////////////////
+using ResultType = std::unique_ptr<FrameContainer>;
+
+namespace {
+folly::coro::Task<std::vector<ResultType>> stream_decode_task(
+    const enum MediaType type,
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    const DecodeConfig decode_cfg,
+    const std::string filter_desc);
+} // namespace
+
+DecodingResultFuture async_decode(
+    const enum MediaType type,
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc) {
+  auto task = stream_decode_task(
+      type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
+  return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(task)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Actual implementation of decoding task;
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
+folly::coro::Task<std::vector<ResultType>> stream_decode_task(
     const enum MediaType type,
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -72,16 +104,20 @@ folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc) {
-  auto demuxer = detail::stream_demux(type, src, timestamps, adoptor, io_cfg);
-  std::vector<folly::SemiFuture<std::unique_ptr<FrameContainer>>> futures;
-  auto exec = detail::getDecoderThreadPoolExecutor();
-  while (auto result = co_await demuxer.next()) {
-    auto task =
-        detail::get_decode_task(*std::move(result), filter_desc, decode_cfg);
-    futures.emplace_back(std::move(task).scheduleOn(exec).start());
+  std::vector<folly::SemiFuture<ResultType>> futures;
+  {
+    auto exec = detail::getDecoderThreadPoolExecutor();
+    auto demuxer = detail::stream_demux(
+        type, src, timestamps, std::move(adoptor), std::move(io_cfg));
+    while (auto result = co_await demuxer.next()) {
+      auto task = detail::decode_packets(
+          *std::move(result), std::move(decode_cfg), std::move(filter_desc));
+      futures.emplace_back(std::move(task).scheduleOn(exec).start());
+    }
   }
+
   XLOG(DBG) << "Waiting for decode jobs to finish";
-  std::vector<std::unique_ptr<FrameContainer>> results;
+  std::vector<ResultType> results;
   size_t i = 0;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
     if (result.hasValue()) {
@@ -102,47 +138,5 @@ folly::coro::Task<std::vector<std::unique_ptr<FrameContainer>>> stream_decode(
   co_return results;
 }
 } // namespace
-
-DecodingResultFuture decode_video(
-    const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
-    const IOConfig& io_cfg,
-    const DecodeConfig& decode_cfg,
-    const std::string& filter_desc) {
-  auto job = stream_decode(
-      MediaType::Video,
-      src,
-      timestamps,
-      adoptor,
-      io_cfg,
-      decode_cfg,
-      filter_desc);
-  return DecodingResultFuture{new DecodingResultFuture::Impl{
-      std::move(job)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
-          .start()}};
-}
-
-DecodingResultFuture decode_audio(
-    const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
-    const IOConfig& io_cfg,
-    const DecodeConfig& decode_cfg,
-    const std::string& filter_desc) {
-  auto job = stream_decode(
-      MediaType::Audio,
-      src,
-      timestamps,
-      adoptor,
-      io_cfg,
-      decode_cfg,
-      filter_desc);
-  return DecodingResultFuture{new DecodingResultFuture::Impl{
-      std::move(job)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
-          .start()}};
-}
 
 } // namespace spdl::core

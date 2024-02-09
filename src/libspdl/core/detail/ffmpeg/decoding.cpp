@@ -193,20 +193,9 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
   }
 }
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
     std::unique_ptr<PackagedAVPackets> packets,
-    const DecodeConfig cfg) {
-  TRACE_EVENT(
-      "decoding",
-      "detail::decode_packets",
-      perfetto::Flow::ProcessScoped(packets->id));
-  auto codec_ctx = get_codec_ctx_ptr(
-      packets->codecpar,
-      packets->time_base,
-      cfg.decoder,
-      cfg.decoder_options,
-      cfg.cuda_device_index);
-
+    AVCodecContextPtr codec_ctx) {
   auto [start, end] = packets->timestamp;
   auto container = std::make_unique<FrameContainer>(
       packets->id,
@@ -229,21 +218,10 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
   co_return container;
 }
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets_with_filter(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts_with_filter(
     std::unique_ptr<PackagedAVPackets> packets,
-    const std::string filter_desc,
-    const DecodeConfig cfg) {
-  TRACE_EVENT(
-      "decoding",
-      "detail::decode_packets_with_filter",
-      perfetto::Flow::ProcessScoped(packets->id));
-  auto codec_ctx = get_codec_ctx_ptr(
-      packets->codecpar,
-      packets->time_base,
-      cfg.decoder,
-      cfg.decoder_options,
-      cfg.cuda_device_index);
-
+    AVCodecContextPtr codec_ctx,
+    std::string filter_desc) {
   auto filter_graph = [&]() {
     switch (codec_ctx->codec_type) {
       case AVMEDIA_TYPE_AUDIO:
@@ -257,17 +235,17 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets_with_filter(
             av_get_media_type_string(codec_ctx->codec_type)));
     }
   }();
-  XLOG(DBG5) << describe_graph(filter_graph.get());
-
-  auto [start, end] = packets->timestamp;
-
   AVFilterContext* src_ctx = filter_graph->filters[0];
   AVFilterContext* sink_ctx = filter_graph->filters[1];
   assert(strcmp(src_ctx->name, "in") == 0);
   assert(strcmp(sink_ctx->name, "out") == 0);
 
+  XLOG(DBG5) << describe_graph(filter_graph.get());
+
+  auto [start, end] = packets->timestamp;
   auto container = std::make_unique<FrameContainer>(
       packets->id, get_output_media_type(filter_graph.get()));
+
   for (auto& packet : packets->packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
@@ -300,14 +278,23 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets_with_filter(
 }
 } // namespace
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> get_decode_task(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
-    const std::string filter_desc,
-    const DecodeConfig cfg) {
+    const DecodeConfig cfg,
+    std::string filter_desc) {
+  TRACE_EVENT(
+      "decoding", "decode_packets", perfetto::Flow::ProcessScoped(packets->id));
+  auto codec_ctx = get_codec_ctx_ptr(
+      packets->codecpar,
+      packets->time_base,
+      cfg.decoder,
+      cfg.decoder_options,
+      cfg.cuda_device_index);
   if (filter_desc.empty()) {
-    return decode_packets(std::move(packets), cfg);
+    co_return co_await decode_pkts(std::move(packets), std::move(codec_ctx));
   }
-  return decode_packets_with_filter(std::move(packets), filter_desc, cfg);
+  co_return co_await decode_pkts_with_filter(
+      std::move(packets), std::move(codec_ctx), std::move(filter_desc));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

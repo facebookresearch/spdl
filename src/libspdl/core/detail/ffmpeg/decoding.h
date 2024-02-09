@@ -27,10 +27,10 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> get_decode_task(
+folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
-    const std::string filter_desc,
-    const DecodeConfig cfg = {});
+    const DecodeConfig cfg = {},
+    const std::string filter_desc = {});
 
 //////////////////////////////////////////////////////////////////////////////
 // PackagedAVPackets
