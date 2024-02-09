@@ -5,6 +5,7 @@
 *.tar.gz
 *.tar.xz
 *.db
+*.pftrace
 
 CMakeLists.txt.user
 CMakeCache.txt
