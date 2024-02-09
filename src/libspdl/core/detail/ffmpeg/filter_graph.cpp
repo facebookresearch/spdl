@@ -1,6 +1,7 @@
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
 
 #include <libspdl/core/detail/ffmpeg/logging.h>
+#include <libspdl/core/detail/tracing.h>
 
 #include <fmt/format.h>
 
@@ -17,6 +18,7 @@ namespace spdl::core::detail {
 namespace {
 
 AVFilterGraphPtr alloc_filter_graph() {
+  TRACE_EVENT("decoding", "avfilter_graph_alloc");
   AVFilterGraph* ptr = CHECK_AVALLOCATE(avfilter_graph_alloc());
   ptr->nb_threads = 1;
   return AVFilterGraphPtr{ptr};
@@ -67,6 +69,7 @@ AVFilterContext* create_filter(
     const char* name,
     const char* args = nullptr) {
   AVFilterContext* flt_ctx = nullptr;
+  TRACE_EVENT("decoding", "avfilter_graph_create_filter");
   CHECK_AVERROR(
       avfilter_graph_create_filter(&flt_ctx, flt, name, args, nullptr, graph),
       "Failed to create input filter: {}({})",
@@ -105,18 +108,22 @@ AVFilterGraphPtr get_filter(
   // 2. Define the middle
   AVFilterInOutDPtr in = get_io("in", src_ctx);
   AVFilterInOutDPtr out = get_io("out", sink_ctx);
+  TRACE_EVENT_BEGIN("decoding", "avfilter_graph_parse_ptr");
   CHECK_AVERROR(
       avfilter_graph_parse_ptr(p, desc, out, in, nullptr),
       "Failed to create filter from: \"{}\"",
       desc);
+  TRACE_EVENT_END("decoding");
 
   if (hw_frames_ctx) {
     src_ctx->outputs[0]->hw_frames_ctx = av_buffer_ref(hw_frames_ctx);
   }
 
   // 3. Create the filter graph
+  TRACE_EVENT_BEGIN("decoding", "avfilter_graph_config");
   CHECK_AVERROR(
       avfilter_graph_config(p, nullptr), "Failed to configure the graph.");
+  TRACE_EVENT_END("decoding");
 
   // for (unsigned i = 0; i < p->nb_filters; ++i) {
   //   XLOG(INFO) << "Filter " << i << ": " << p->filters[i]->name;
@@ -130,8 +137,12 @@ AVFilterGraphPtr get_filter(
 AVFilterGraphPtr get_audio_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx) {
+  TRACE_EVENT_BEGIN("decoding", "avfilter_get_by_name(abuffer)");
   static const AVFilter* src = avfilter_get_by_name("abuffer");
+  TRACE_EVENT_END("decoding");
+  TRACE_EVENT_BEGIN("decoding", "avfilter_get_by_name(abuffersink)");
   static const AVFilter* sink = avfilter_get_by_name("abuffersink");
+  TRACE_EVENT_END("decoding");
   auto arg = get_abuffer_arg(
       codec_ctx->pkt_timebase,
       codec_ctx->sample_rate,
@@ -144,8 +155,12 @@ AVFilterGraphPtr get_video_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx,
     AVRational frame_rate) {
+  TRACE_EVENT_BEGIN("decoding", "avfilter_get_by_name(buffer)");
   static const AVFilter* src = avfilter_get_by_name("buffer");
+  TRACE_EVENT_END("decoding");
+  TRACE_EVENT_BEGIN("decoding", "avfilter_get_by_name(buffersink)");
   static const AVFilter* sink = avfilter_get_by_name("buffersink");
+  TRACE_EVENT_END("decoding");
   auto arg = get_buffer_arg(
       codec_ctx->width,
       codec_ctx->height,
