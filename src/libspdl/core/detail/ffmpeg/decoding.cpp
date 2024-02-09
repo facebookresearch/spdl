@@ -79,10 +79,12 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     auto [start, end] = timestamp;
 
     int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
+    TRACE_EVENT_BEGIN("decoding", "av_seek_frame");
     CHECK_AVERROR(
         av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
         "Failed to seek to the timestamp {} [sec]",
         start);
+    TRACE_EVENT_END("decoding");
 
     auto package = std::make_unique<PackagedAVPackets>(
         fmt_ctx->url,
@@ -93,7 +95,9 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     double packet_ts = 0;
     do {
       AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
+      TRACE_EVENT_BEGIN("decoding", "av_read_frame");
       int errnum = av_read_frame(fmt_ctx, packet.get());
+      TRACE_EVENT_END("decoding");
       if (errnum == AVERROR_EOF) {
         break;
       }
@@ -125,16 +129,19 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
     AVFrame* frame,
     AVFilterContext* src_ctx,
     AVFilterContext* sink_ctx) {
-  TRACE_EVENT("decoding", "detail::filter_frame");
+  TRACE_EVENT_BEGIN("decoding", "av_buffersrc_add_frame_flags");
   int errnum =
       av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
+  TRACE_EVENT_END("decoding");
 
   CHECK_AVERROR_NUM(errnum, "Failed to pass a frame to filter.");
 
   AVFrameAutoUnref frame_ref{frame};
   while (errnum >= 0) {
     AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
+    TRACE_EVENT_BEGIN("decoding", "av_buffersrc_get_frame");
     errnum = av_buffersink_get_frame(sink_ctx, frame2.get());
+    TRACE_EVENT_END("decoding");
     switch (errnum) {
       case AVERROR(EAGAIN):
         co_return;
