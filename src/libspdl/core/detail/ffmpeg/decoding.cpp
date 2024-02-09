@@ -158,7 +158,6 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
 folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
     AVCodecContext* codec_ctx,
     AVPacket* packet) {
-  TRACE_EVENT("decoding", "detail::decode_packet");
   assert(codec_ctx);
   XLOG(DBG9)
       << ((!packet) ? fmt::format(" -- flush decoder")
