@@ -260,7 +260,8 @@ void register_pybind(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt) {
-        return decode_video(
+        return async_decode(
+            MediaType::Video,
             src,
             timestamps,
             adoptor,
@@ -295,7 +296,8 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc) {
-        return decode_video(
+        return async_decode(
+            MediaType::Video,
             src,
             timestamps,
             adoptor,
@@ -327,7 +329,8 @@ void register_pybind(py::module& m) {
          const std::optional<int>& sample_rate,
          const std::optional<int>& num_channels,
          const std::optional<std::string>& sample_fmt) {
-        return decode_audio(
+        return async_decode(
+            MediaType::Audio,
             src,
             timestamps,
             adoptor,
@@ -359,7 +362,8 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const std::string& filter_desc) {
-        return decode_audio(
+        return async_decode(
+            MediaType::Audio,
             src,
             timestamps,
             adoptor,
