@@ -1,8 +1,11 @@
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
 
+#include <libspdl/core/detail/tracing.h>
+
 namespace spdl::core::detail {
 
 void free_av_io_ctx(AVIOContext* p) {
+  TRACE_EVENT("decoding", "AVIOContext::~AVIOContext");
   if (p) {
     avio_flush(p);
     av_freep(&p->buffer);
@@ -15,6 +18,7 @@ void AVIOContextDeleter::operator()(AVIOContext* p) {
 };
 
 void free_av_fmt_ctx(AVFormatContext* p) {
+  TRACE_EVENT("decoding", "avformat_close_input");
   avformat_close_input(&p);
 }
 
@@ -23,6 +27,7 @@ void AVFormatInputContextDeleter::operator()(AVFormatContext* p) {
 };
 
 void AVCodecContextDeleter::operator()(AVCodecContext* p) {
+  TRACE_EVENT("decoding", "avcodec_free_context");
   avcodec_free_context(&p);
 }
 
@@ -41,6 +46,7 @@ void AVFrameDeleter::operator()(AVFrame* p) {
 }
 
 void AVBufferRefDeleter::operator()(AVBufferRef* p) {
+  TRACE_EVENT("decoding", "av_buffer_unref");
   av_buffer_unref(&p);
 }
 

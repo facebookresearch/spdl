@@ -149,7 +149,6 @@ int get_device_index_from_frame_context(const AVBufferRef* hw_frames_ctx) {
 }
 
 AVBufferRef* get_cuda_context(int index, bool use_primary_context = false) {
-  TRACE_EVENT("decoding", "get_cuda_context");
   if (index == -1) {
     index = 0;
   }
