@@ -4,7 +4,11 @@ import sys
 from typing import Any, List, Optional
 
 import numpy as np
-from numpy.typing import NDArray
+
+try:
+    from numpy.typing import NDArray
+except ImportError:
+    from numpy import ndarray as NDArray
 
 from spdl.lib import libspdl as _libspdl
 
