@@ -28,7 +28,3 @@ The libspdl uses the following third party libraries.
 
 † FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.    
 Users are free to dynamically link GPL or non-distributable version of FFmpeg libraries. However, note that linking a non-LGPL binary might change of the condition for redistribution of your application.
-
-
-
-
