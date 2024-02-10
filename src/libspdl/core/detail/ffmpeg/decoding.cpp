@@ -47,13 +47,6 @@ std::unique_ptr<DataInterface> get_interface(
   return std::unique_ptr<DataInterface>(
       static_cast<DataInterface*>(adoptor->get(src, io_cfg)));
 }
-
-uint64_t random() {
-  static thread_local std::random_device rd;
-  static thread_local std::mt19937_64 gen(rd());
-  std::uniform_int_distribution<uint64_t> dis;
-  return dis(gen);
-}
 } // namespace
 
 folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
@@ -305,6 +298,13 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
   CHECK_AVERROR(
       avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
   return dst;
+}
+
+uint64_t random() {
+  static thread_local std::random_device rd;
+  static thread_local std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<uint64_t> dis;
+  return dis(gen);
 }
 } // namespace
 
