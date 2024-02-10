@@ -4,6 +4,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavcodec/bsf.h>
 #include <libavfilter/avfilter.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
@@ -36,6 +37,13 @@ struct AVCodecContextDeleter {
 
 using AVCodecContextPtr =
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
+
+// AVBSFContext
+struct AVBSFContextDeleter {
+  void operator()(AVBSFContext* p);
+};
+
+using AVBSFContextPtr = std::unique_ptr<AVBSFContext, AVBSFContextDeleter>;
 
 // AVPacket
 // Assumption: AVPacket is reference counted and the counter is always 1.
