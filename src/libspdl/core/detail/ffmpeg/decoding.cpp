@@ -20,7 +20,7 @@ namespace spdl::core::detail {
 // Demuxer
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
+inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
   CHECK_AVERROR(
       avformat_find_stream_info(fmt_ctx, nullptr),
       "Failed to find stream information.");
@@ -32,7 +32,13 @@ inline int parse_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
     SPDL_FAIL(
         fmt::format("No {} stream was found.", av_get_media_type_string(type)));
   }
-  return idx;
+  // Disable other streams
+  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
+    if (i != idx) {
+      fmt_ctx->streams[i]->discard = AVDISCARD_ALL;
+    }
+  }
+  return fmt_ctx->streams[idx];
 }
 
 std::unique_ptr<DataInterface> get_interface(
@@ -45,6 +51,48 @@ std::unique_ptr<DataInterface> get_interface(
   return std::unique_ptr<DataInterface>(
       static_cast<DataInterface*>(adoptor->get(src, io_cfg)));
 }
+
+folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
+    AVFormatContext* fmt_ctx,
+    AVStream* stream,
+    const std::tuple<double, double>& timestamp) {
+  TRACE_EVENT("demuxing", "detail::demux_window");
+  auto [start, end] = timestamp;
+
+  if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+    // Note:
+    // Since the video frames can be non-chronological order, so we add small
+    // margin to end
+    end += 0.3;
+  }
+
+  int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
+  TRACE_EVENT_BEGIN("demuxing", "av_seek_frame");
+  CHECK_AVERROR(
+      av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
+      "Failed to seek to the timestamp {} [sec]",
+      start);
+  TRACE_EVENT_END("demuxing");
+
+  double packet_ts = -1;
+  do {
+    AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
+    TRACE_EVENT_BEGIN("demuxing", "av_read_frame");
+    int errnum = av_read_frame(fmt_ctx, packet.get());
+    TRACE_EVENT_END("demuxing");
+    if (errnum == AVERROR_EOF) {
+      break;
+    }
+    CHECK_AVERROR_NUM(errnum, "Failed to process packet.");
+    if (packet->stream_index != stream->index) {
+      continue;
+    }
+    packet_ts = packet->pts * av_q2d(stream->time_base);
+    co_yield std::move(packet);
+  } while (packet_ts < end);
+  co_yield {nullptr}; // For flushing
+}
+
 } // namespace
 
 folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
@@ -56,55 +104,21 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
   TRACE_EVENT("demuxing", "detail::stream_demux");
   auto interface = get_interface(src, adoptor, io_cfg);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
-  int idx = parse_fmt_ctx(fmt_ctx, type);
-  AVStream* stream = fmt_ctx->streams[idx];
+  AVStream* stream = init_fmt_ctx(fmt_ctx, type);
+  auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
 
-  // Disable other streams
-  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
-    if (i != idx) {
-      fmt_ctx->streams[i]->discard = AVDISCARD_ALL;
-    }
-  }
   for (auto& timestamp : timestamps) {
-    TRACE_EVENT("demuxing", "detail::stream_demux - iter");
-    auto [start, end] = timestamp;
-
-    int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
-    TRACE_EVENT_BEGIN("demuxing", "av_seek_frame");
-    CHECK_AVERROR(
-        av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
-        "Failed to seek to the timestamp {} [sec]",
-        start);
-    TRACE_EVENT_END("demuxing");
-
     auto package = std::make_unique<PackagedAVPackets>(
         fmt_ctx->url,
         timestamp,
         stream->codecpar,
         stream->time_base,
-        av_guess_frame_rate(fmt_ctx, stream, nullptr));
-    double packet_ts = 0;
-    do {
-      AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
-      TRACE_EVENT_BEGIN("demuxing", "av_read_frame");
-      int errnum = av_read_frame(fmt_ctx, packet.get());
-      TRACE_EVENT_END("demuxing");
-      if (errnum == AVERROR_EOF) {
-        break;
-      }
-      CHECK_AVERROR_NUM(errnum, "Failed to process packet.");
-      if (packet->stream_index != idx) {
-        continue;
-      }
-      packet_ts = packet->pts * av_q2d(stream->time_base);
-      package->packets.push_back(packet.release());
-      // Note:
-      // Since the video frames can be non-chronological order, so we add small
-      // margin to end
-    } while (packet_ts < end + 0.3);
+        frame_rate);
+    auto task = demux_window(fmt_ctx, stream, timestamp);
+    while (auto packet = co_await task.next()) {
+      package->packets.push_back(packet->release());
+    }
     XLOG(DBG9) << fmt::format(" - Sliced {} packets", package->packets.size());
-    // For flushing
-    package->packets.push_back(nullptr);
     co_yield std::move(package);
   }
 }
