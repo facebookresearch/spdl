@@ -19,6 +19,7 @@ set(srcs
   libspdl/core/detail/ffmpeg/decoding.cpp
   libspdl/core/detail/ffmpeg/filter_graph.cpp
   libspdl/core/detail/ffmpeg/wrappers.cpp
+  libspdl/core/detail/ffmpeg/package.cpp
   libspdl/core/buffers.cpp
   libspdl/core/conversion.cpp
   libspdl/core/decoding.cpp
