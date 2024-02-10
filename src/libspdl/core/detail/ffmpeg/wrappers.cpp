@@ -27,8 +27,13 @@ void AVFormatInputContextDeleter::operator()(AVFormatContext* p) {
 };
 
 void AVCodecContextDeleter::operator()(AVCodecContext* p) {
+  // Tracing because it takes as long as 300ms in case of cuvid decoder.
   TRACE_EVENT("decoding", "avcodec_free_context");
   avcodec_free_context(&p);
+}
+
+void AVBSFContextDeleter::operator()(AVBSFContext* p) {
+  av_bsf_free(&p);
 }
 
 void AVPacketDeleter::operator()(AVPacket* p) {
