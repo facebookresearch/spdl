@@ -25,6 +25,14 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
+// Apply some bit-stream-filtering for certain video formats
+folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>>
+stream_demux_nvdec(
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg);
+
 folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
     const DecodeConfig cfg = {},

@@ -7,6 +7,7 @@
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
 #include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
+#include <libspdl/core/types.h>
 
 #include <folly/logging/xlog.h>
 
@@ -90,7 +91,6 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
     packet_ts = packet->pts * av_q2d(stream->time_base);
     co_yield std::move(packet);
   } while (packet_ts < end);
-  co_yield {nullptr}; // For flushing
 }
 
 } // namespace
@@ -117,6 +117,97 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     auto task = demux_window(fmt_ctx, stream, timestamp);
     while (auto packet = co_await task.next()) {
       package->packets.push_back(packet->release());
+    }
+    XLOG(DBG9) << fmt::format(" - Sliced {} packets", package->packets.size());
+    package->packets.push_back(nullptr); // For downstream flushing
+    co_yield std::move(package);
+  }
+}
+
+namespace {
+AVBSFContextPtr init_bsf(AVCodecParameters* codecpar) {
+  // Note
+  // FFmpeg's implementation applies BSF to all H264/HEVC formats,
+  //
+  // https://github.com/FFmpeg/FFmpeg/blob/5e2b0862eb1d408625232b37b7a2420403cd498f/libavcodec/cuviddec.c#L1185-L1191
+  //
+  // while NVidia SDK samples exclude those with the following substrings in
+  // long_name attribute
+  //
+  //  "QuickTime / MOV", "FLV (Flash Video)", "Matroska / WebM"
+  const char* name;
+  switch (codecpar->codec_id) {
+    case AV_CODEC_ID_H264:
+      name = "h264_mp4toannexb";
+      break;
+    case AV_CODEC_ID_HEVC:
+      name = "hevc_mp4toannexb";
+      break;
+    default:
+      return {nullptr};
+  }
+
+  TRACE_EVENT("demuxing", "init_bsf");
+  const AVBitStreamFilter* bsf = av_bsf_get_by_name(name);
+  if (!bsf) {
+    SPDL_FAIL(fmt::format("Bit stream filter ({}) is not available", name));
+  }
+  AVBSFContext* p = nullptr;
+  CHECK_AVERROR(av_bsf_alloc(bsf, &p), "Failed to allocate AVBSFContext.");
+  AVBSFContextPtr bsf_ctx{p};
+  CHECK_AVERROR(
+      avcodec_parameters_copy(p->par_in, codecpar),
+      "Failed to copy codec parameter.");
+  CHECK_AVERROR(av_bsf_init(p), "Failed to initialize AVBSFContext..");
+  return bsf_ctx;
+}
+AVPacketPtr apply_bsf(AVBSFContext* bsf_ctx, AVPacket* packet) {
+  AVPacketPtr filtered{CHECK_AVALLOCATE(av_packet_alloc())};
+  {
+    TRACE_EVENT("decoding", "av_bsf_send_packet");
+    CHECK_AVERROR(
+        av_bsf_send_packet(bsf_ctx, packet),
+        "Failed to send packet to bit stream filter.");
+  }
+  {
+    TRACE_EVENT("decoding", "av_bsf_receive_packet");
+    CHECK_AVERROR(
+        av_bsf_receive_packet(bsf_ctx, filtered.get()),
+        "Failed to fetch packet from bit stream filter.");
+  }
+  return filtered;
+}
+} // namespace
+
+folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>>
+stream_demux_nvdec(
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg) {
+  TRACE_EVENT("demuxing", "detail::stream_demux_nvdec");
+  auto interface = get_interface(src, adoptor, io_cfg);
+  AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
+  AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
+  auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
+
+  auto bsf_ctx = init_bsf(stream->codecpar);
+
+  for (auto& timestamp : timestamps) {
+    auto package = std::make_unique<PackagedAVPackets>(
+        fmt_ctx->url,
+        timestamp,
+        bsf_ctx ? bsf_ctx->par_out : stream->codecpar,
+        stream->time_base,
+        frame_rate);
+    auto task = demux_window(fmt_ctx, stream, timestamp);
+    while (auto packet = co_await task.next()) {
+      if (bsf_ctx) {
+        AVPacketPtr filtered = apply_bsf(bsf_ctx.get(), packet->get());
+        package->packets.push_back(filtered.release());
+      } else {
+        package->packets.push_back(packet->release());
+      }
     }
     XLOG(DBG9) << fmt::format(" - Sliced {} packets", package->packets.size());
     co_yield std::move(package);
