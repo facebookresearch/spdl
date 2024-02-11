@@ -25,6 +25,7 @@ set(srcs
   libspdl/core/decoding.cpp
   libspdl/core/frames.cpp
   libspdl/core/adoptor/basic.cpp
+  libspdl/core/adoptor/bytes.cpp
   libspdl/core/adoptor/mmap.cpp
   libspdl/core/logging.cpp
   libspdl/core/storage.cpp

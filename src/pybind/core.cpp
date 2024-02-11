@@ -1,4 +1,5 @@
 #include <libspdl/core/adoptor/basic.h>
+#include <libspdl/core/adoptor/bytes.h>
 #include <libspdl/core/adoptor/mmap.h>
 #include <libspdl/core/buffers.h>
 #include <libspdl/core/conversion.h>
@@ -147,6 +148,10 @@ void register_pybind(py::module& m) {
       py::class_<MMapAdoptor, SourceAdoptor, std::shared_ptr<MMapAdoptor>>(
           m, "MMapAdoptor", py::module_local());
 
+  auto _BytesAdoptor =
+      py::class_<BytesAdoptor, SourceAdoptor, std::shared_ptr<BytesAdoptor>>(
+          m, "BytesAdoptor", py::module_local());
+
   auto _TracingSession =
       py::class_<TracingSession>(m, "TracingSession", py::module_local());
 
@@ -243,6 +248,15 @@ void register_pybind(py::module& m) {
       .def("__repr__", [](const MMapAdoptor& self) -> std::string {
         return fmt::format(
             "MMapAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
+      });
+
+  _BytesAdoptor
+      .def(
+          py::init<const std::optional<std::string>&>(),
+          py::arg("prefix") = py::none())
+      .def("__repr__", [](const BytesAdoptor& self) -> std::string {
+        return fmt::format(
+            "BytesAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
       });
 
   m.def(
