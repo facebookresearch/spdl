@@ -96,27 +96,10 @@ DecodingResultFuture async_decode(
 // Actual implementation of decoding task;
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-folly::coro::Task<std::vector<ResultType>> stream_decode_task(
-    const enum MediaType type,
-    const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    const std::shared_ptr<SourceAdoptor> adoptor,
-    const IOConfig io_cfg,
-    const DecodeConfig decode_cfg,
-    const std::string filter_desc) {
-  std::vector<folly::SemiFuture<ResultType>> futures;
-  {
-    auto exec = detail::getDecoderThreadPoolExecutor();
-    auto demuxer = detail::stream_demux(
-        type, src, timestamps, std::move(adoptor), std::move(io_cfg));
-    while (auto result = co_await demuxer.next()) {
-      auto task = detail::decode_packets(
-          *std::move(result), std::move(decode_cfg), std::move(filter_desc));
-      futures.emplace_back(std::move(task).scheduleOn(exec).start());
-    }
-  }
-
-  XLOG(DBG) << "Waiting for decode jobs to finish";
+folly::coro::Task<std::vector<ResultType>> check_futures(
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    std::vector<folly::SemiFuture<ResultType>> futures) {
   std::vector<ResultType> results;
   size_t i = 0;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
@@ -136,6 +119,28 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task(
     SPDL_FAIL("Failed to decode some video clips. Check the error log.");
   }
   co_return results;
+}
+
+folly::coro::Task<std::vector<ResultType>> stream_decode_task(
+    const enum MediaType type,
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    const DecodeConfig decode_cfg,
+    const std::string filter_desc) {
+  std::vector<folly::SemiFuture<ResultType>> futures;
+  {
+    auto exec = detail::getDecoderThreadPoolExecutor();
+    auto demuxer = detail::stream_demux(
+        type, src, timestamps, std::move(adoptor), std::move(io_cfg));
+    while (auto result = co_await demuxer.next()) {
+      auto task = detail::decode_packets(
+          *std::move(result), std::move(decode_cfg), std::move(filter_desc));
+      futures.emplace_back(std::move(task).scheduleOn(exec).start());
+    }
+  }
+  co_return co_await check_futures(src, timestamps, std::move(futures));
 }
 } // namespace
 
