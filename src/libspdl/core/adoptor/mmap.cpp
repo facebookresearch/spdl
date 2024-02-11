@@ -11,12 +11,25 @@ extern "C" {
 
 namespace spdl::core::detail {
 
-MemoryMappedFile::MemoryMappedFile(const std::string path) {
+MemoryMappedFile::MemoryMappedFile(const std::string& path) {
   CHECK_AVERROR(
       av_file_map(path.data(), &buffer_, &buffer_size_, 0, NULL),
       "Failed to map file ({}).",
       path);
 };
+
+MemoryMappedFile::MemoryMappedFile(MemoryMappedFile&& other) noexcept {
+  *this = std::move(other);
+}
+
+MemoryMappedFile& MemoryMappedFile::operator=(
+    MemoryMappedFile&& other) noexcept {
+  using std::swap;
+  swap(buffer_, other.buffer_);
+  swap(buffer_size_, other.buffer_size_);
+  swap(pos_, other.pos_);
+  return *this;
+}
 
 MemoryMappedFile::~MemoryMappedFile() {
   av_file_unmap(buffer_, buffer_size_);
