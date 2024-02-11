@@ -14,12 +14,13 @@ class MemoryMappedFile {
   int64_t pos_ = 0;
 
  public:
-  MemoryMappedFile(const std::string path);
+  MemoryMappedFile(const std::string& path);
 
   MemoryMappedFile(const MemoryMappedFile&) = delete;
   MemoryMappedFile& operator=(const MemoryMappedFile&) = delete;
 
-  MemoryMappedFile(MemoryMappedFile&&) noexcept = default;
+  MemoryMappedFile(MemoryMappedFile&&) noexcept;
+  MemoryMappedFile& operator=(MemoryMappedFile&&) noexcept;
 
   ~MemoryMappedFile();
 
