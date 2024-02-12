@@ -5,22 +5,26 @@
 namespace spdl::core::detail {
 
 // TODO: Add stacktrace
-
-std::string format_err(
-    const std::string& msg,
-    const std::string& file,
-    const int line,
-    const std::string& func) {
-  return fmt::format("{} ({}:{} - {})", msg, file, line, func);
+std::string get_err_str(
+    const std::string_view msg,
+    const source_location& location) {
+  return fmt::format(
+      "{} ({}:{} - {})",
+      msg,
+      location.file_name(),
+      location.line(),
+      location.function_name());
 }
 
-std::string format_err_internal(
-    const std::string& msg,
-    const std::string& file,
-    const int line,
-    const std::string& func) {
+std::string get_internal_err_str(
+    const std::string_view msg,
+    const source_location& location) {
   return fmt::format(
-      "[INTERNAL FAILURE] {} ({}:{} - {})", msg, file, line, func);
+      "[INTERNAL FAILURE] {} ({}:{} - {})",
+      msg,
+      location.file_name(),
+      location.line(),
+      location.function_name());
 }
 
 } // namespace spdl::core::detail

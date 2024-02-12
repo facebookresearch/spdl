@@ -1,28 +1,38 @@
 #pragma once
 
 #include <exception>
-#include <string>
+#include <string_view>
+#include <version>
+
+#if defined __cpp_lib_source_location
+#include <source_location>
+#elif __has_include(<experimental/source_location>)
+#include <experimental/source_location>
+#else
+#error \
+    "Neither <source_location> or <experimental/source_location> is available."
+#endif
 
 namespace spdl::core::detail {
 
-std::string format_err(
-    const std::string& msg,
-    const std::string& file,
-    const int line,
-    const std::string& func);
+#if defined __cpp_lib_source_location
+using std::source_location;
+#else
+using std::experimental::source_location;
+#endif
 
-std::string format_err_internal(
-    const std::string& msg,
-    const std::string& file,
-    const int line,
-    const std::string& func);
+std::string get_err_str(
+    const std::string_view msg,
+    const source_location& location = source_location::current());
+
+std::string get_internal_err_str(
+    const std::string_view msg,
+    const source_location& location = source_location::current());
 
 } // namespace spdl::core::detail
 
-#define SPDL_FAIL(msg)      \
-  throw std::runtime_error( \
-      spdl::core::detail::format_err(msg, __FILE__, __LINE__, __func__));
+#define SPDL_FAIL(msg) \
+  throw std::runtime_error(spdl::core::detail::get_err_str(msg))
 
-#define SPDL_FAIL_INTERNAL(msg)                                     \
-  throw std::runtime_error(spdl::core::detail::format_err_internal( \
-      msg, __FILE__, __LINE__, __func__));
+#define SPDL_FAIL_INTERNAL(msg) \
+  throw std::runtime_error(spdl::core::detail::get_internal_err_str(msg))
