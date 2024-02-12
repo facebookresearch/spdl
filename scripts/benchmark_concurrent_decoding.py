@@ -104,7 +104,6 @@ def _main():
             args.num_ts)
         if args.plot:
             _plot(frames[0], args.output_dir / "frames")
-            
 
 
 def _init(debug, demuxer_threads, decoder_threads):
