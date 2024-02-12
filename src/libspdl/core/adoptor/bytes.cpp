@@ -1,8 +1,10 @@
 #include <libspdl/core/adoptor/bytes.h>
 
-#include <fstream>
+#include <libspdl/core/logging.h>
 
 #include <folly/logging/xlog.h>
+
+#include <fstream>
 
 extern "C" {
 #include <libavformat/avio.h>
@@ -13,6 +15,9 @@ namespace spdl::core::detail {
 namespace {
 std::vector<char> read(const std::string& filename) {
   std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
+  if (ifs.fail()) {
+    SPDL_FAIL(fmt::format("Failed to open file: {}", filename));
+  }
   std::ifstream::pos_type pos = ifs.tellg();
 
   if (pos == 0) {
