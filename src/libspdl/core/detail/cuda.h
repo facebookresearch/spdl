@@ -1,20 +1,20 @@
 #pragma once
+
+#include <libspdl/core/logging.h>
+
+#include <fmt/core.h>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-namespace spdl::core::detail {
-
-void cuda_check_impl(
-    const cudaError_t err,
-    const char* filename,
-    const char* function_name,
-    const int line_number);
-
-} // namespace spdl::core::detail
-
-#define CUDA_CHECK(EXPR)                                             \
-  do {                                                               \
-    const cudaError_t __err = EXPR;                                  \
-    spdl::core::detail::cuda_check_impl(                             \
-        __err, __FILE__, __func__, static_cast<uint32_t>(__LINE__)); \
+#define CHECK_CUDA(expr, msg)            \
+  do {                                   \
+    auto _status = expr;                 \
+    if (_status != cudaSuccess) {        \
+      SPDL_FAIL(fmt::format(             \
+          "{} ({}: {})",                 \
+          msg,                           \
+          cudaGetErrorName(_status),     \
+          cudaGetErrorString(_status))); \
+    }                                    \
   } while (0)

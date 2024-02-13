@@ -157,26 +157,30 @@ Buffer convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
   uint8_t* dst = static_cast<uint8_t*>(buf.data());
   for (const auto& f : frames) {
     // Y
-    CUDA_CHECK(cudaMemcpy2DAsync(
-        dst,
-        w,
-        f->data[0],
-        f->linesize[0],
-        w,
-        h,
-        cudaMemcpyDeviceToDevice,
-        stream));
+    CHECK_CUDA(
+        cudaMemcpy2DAsync(
+            dst,
+            w,
+            f->data[0],
+            f->linesize[0],
+            w,
+            h,
+            cudaMemcpyDeviceToDevice,
+            stream),
+        "Failed to copy Y plane.");
     dst += h * w;
     // UV
-    CUDA_CHECK(cudaMemcpy2DAsync(
-        dst,
-        w,
-        f->data[1],
-        f->linesize[1],
-        w,
-        h2,
-        cudaMemcpyDeviceToDevice,
-        stream));
+    CHECK_CUDA(
+        cudaMemcpy2DAsync(
+            dst,
+            w,
+            f->data[1],
+            f->linesize[1],
+            w,
+            h2,
+            cudaMemcpyDeviceToDevice,
+            stream),
+        "Failed to copy UV plane.");
     dst += h2 * w;
   }
   return buf;
