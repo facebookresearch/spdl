@@ -7,8 +7,8 @@ it's used by user code.
 
 import atexit
 import importlib
-import logging
 import importlib.resources
+import logging
 from types import ModuleType
 from typing import Any, List
 
