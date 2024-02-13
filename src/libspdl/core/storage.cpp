@@ -34,7 +34,7 @@ Storage::~Storage() {
 #ifdef SPDL_USE_CUDA
 CUDAStorage::CUDAStorage(size_t size, CUstream stream_) : stream(stream_) {
   XLOG(DBG9) << fmt::format("Allocating CUDA memory {} ({} bytes)", data, size);
-  CUDA_CHECK(cudaMallocAsync(&data, size, 0));
+  CHECK_CUDA(cudaMallocAsync(&data, size, 0), "Failed to allocate CUDA memory");
   XLOG(DBG9) << fmt::format("Allocation queued {}", data);
 }
 CUDAStorage::CUDAStorage(CUDAStorage&& other) noexcept {
@@ -49,7 +49,7 @@ CUDAStorage& CUDAStorage::operator=(CUDAStorage&& other) noexcept {
 CUDAStorage::~CUDAStorage() {
   if (data) {
     XLOG(DBG9) << "Freeing CUDA memory " << data;
-    CUDA_CHECK(cudaFreeAsync(data, 0));
+    CHECK_CUDA(cudaFreeAsync(data, 0), "Failed to free CUDA memory");
   }
 }
 #endif
