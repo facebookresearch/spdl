@@ -35,7 +35,6 @@ set(srcs
 if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
   list(APPEND deps CUDA::cudart CUDA::cuda_driver)
-  list(APPEND srcs libspdl/core/detail/cuda.cpp)
 endif()
 
 if(SPDL_ENABLE_TRACING)
