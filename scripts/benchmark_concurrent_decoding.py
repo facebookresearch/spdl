@@ -28,6 +28,7 @@ def _parse_python_args():
     parser.add_argument("--num-ts", type=int, default=5)
     parser.add_argument("--decoder-threads", type=int, default=8)
     parser.add_argument("--demuxer-threads", type=int, default=4)
+    parser.add_argument("--enable-tracing", action="store_true")
     return parser.parse_args()
 
 
@@ -93,7 +94,7 @@ def _main():
     _init(args.debug, args.demuxer_threads, args.decoder_threads)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    with spdl.utils.tracing(str(args.output_dir / "benchmark.pftrace")):
+    with spdl.utils.tracing(str(args.output_dir / "benchmark.pftrace"), enable=args.enable_tracing):
         frames = _test(
             args.input_video,
             args.decoder,
