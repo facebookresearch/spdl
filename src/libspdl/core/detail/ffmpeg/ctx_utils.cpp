@@ -109,17 +109,18 @@ AVBufferRefPtr _create_cuda_context(
     device_flags = CU_CTX_SCHED_BLOCKING_SYNC;
   }
 
-  TRACE_EVENT_BEGIN("decoding", "av_hwdevice_ctx_create");
-  CHECK_AVERROR(
-      av_hwdevice_ctx_create(
-          &p,
-          AV_HWDEVICE_TYPE_CUDA,
-          std::to_string(index).c_str(),
-          opt,
-          device_flags),
-      "Failed to create CUDA device context on device {}.",
-      index);
-  TRACE_EVENT_END("decoding");
+  {
+    TRACE_EVENT("decoding", "av_hwdevice_ctx_create");
+    CHECK_AVERROR(
+        av_hwdevice_ctx_create(
+            &p,
+            AV_HWDEVICE_TYPE_CUDA,
+            std::to_string(index).c_str(),
+            opt,
+            device_flags),
+        "Failed to create CUDA device context on device {}.",
+        index);
+  }
   assert(p);
   auto hw_device_ctx = (AVHWDeviceContext*)p->data;
   auto device_hwctx = (AVCUDADeviceContext*)hw_device_ctx->hwctx;
@@ -202,10 +203,12 @@ AVIOContext* get_io_ctx(
     int64_t (*seek)(void* opaque, int64_t offset, int whence)) {
   auto buffer =
       static_cast<unsigned char*>(CHECK_AVALLOCATE(av_malloc(buffer_size)));
-  TRACE_EVENT_BEGIN("decoding", "avio_alloc_context");
-  AVIOContext* io_ctx = avio_alloc_context(
-      buffer, buffer_size, 0, opaque, read_packet, nullptr, seek);
-  TRACE_EVENT_END("decoding");
+  AVIOContext* io_ctx;
+  {
+    TRACE_EVENT("decoding", "avio_alloc_context");
+    io_ctx = avio_alloc_context(
+        buffer, buffer_size, 0, opaque, read_packet, nullptr, seek);
+  }
   if (!io_ctx) [[unlikely]] {
     av_freep(&buffer);
     SPDL_FAIL("Failed to allocate AVIOContext.");
@@ -245,9 +248,11 @@ AVFormatInputContextPtr get_input_format_ctx(
   if (io_ctx) {
     fmt_ctx->pb = io_ctx;
   }
-  TRACE_EVENT_BEGIN("decoding", "avformat_open_input");
-  int errnum = avformat_open_input(&fmt_ctx, src, in_fmt, option);
-  TRACE_EVENT_END("decoding");
+  int errnum;
+  {
+    TRACE_EVENT("decoding", "avformat_open_input");
+    errnum = avformat_open_input(&fmt_ctx, src, in_fmt, option);
+  }
   if (errnum < 0) [[unlikely]] {
     SPDL_FAIL(
         src ? av_error(errnum, "Failed to open the input: {}", src)
@@ -425,11 +430,12 @@ void open_codec(
   if (!av_dict_get(option, "threads", nullptr, 0)) {
     av_dict_set(option, "threads", "1", 0);
   }
-  TRACE_EVENT_BEGIN("decoding", "avcodec_open2");
-  CHECK_AVERROR(
-      avcodec_open2(codec_ctx, codec_ctx->codec, option),
-      "Failed to initialize CodecContext.");
-  TRACE_EVENT_END("decoding");
+  {
+    TRACE_EVENT("decoding", "avcodec_open2");
+    CHECK_AVERROR(
+        avcodec_open2(codec_ctx, codec_ctx->codec, option),
+        "Failed to initialize CodecContext.");
+  }
   check_empty(option);
 }
 

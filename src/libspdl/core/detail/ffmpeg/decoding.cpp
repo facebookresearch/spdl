@@ -68,19 +68,22 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
   }
 
   int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
-  TRACE_EVENT_BEGIN("demuxing", "av_seek_frame");
-  CHECK_AVERROR(
-      av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
-      "Failed to seek to the timestamp {} [sec]",
-      start);
-  TRACE_EVENT_END("demuxing");
+  {
+    TRACE_EVENT("demuxing", "av_seek_frame");
+    CHECK_AVERROR(
+        av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
+        "Failed to seek to the timestamp {} [sec]",
+        start);
+  }
 
   double packet_ts = -1;
   do {
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
-    TRACE_EVENT_BEGIN("demuxing", "av_read_frame");
-    int errnum = av_read_frame(fmt_ctx, packet.get());
-    TRACE_EVENT_END("demuxing");
+    int errnum;
+    {
+      TRACE_EVENT("demuxing", "av_read_frame");
+      errnum = av_read_frame(fmt_ctx, packet.get());
+    }
     if (errnum == AVERROR_EOF) {
       break;
     }
@@ -225,19 +228,22 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
     AVFrame* frame,
     AVFilterContext* src_ctx,
     AVFilterContext* sink_ctx) {
-  TRACE_EVENT_BEGIN("decoding", "av_buffersrc_add_frame_flags");
-  int errnum =
-      av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
-  TRACE_EVENT_END("decoding");
+  int errnum;
+  {
+    TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
+    errnum = av_buffersrc_add_frame_flags(
+        src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
+  }
 
   CHECK_AVERROR_NUM(errnum, "Failed to pass a frame to filter.");
 
   AVFrameAutoUnref frame_ref{frame};
   while (errnum >= 0) {
     AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
-    TRACE_EVENT_BEGIN("decoding", "av_buffersrc_get_frame");
-    errnum = av_buffersink_get_frame(sink_ctx, frame2.get());
-    TRACE_EVENT_END("decoding");
+    {
+      TRACE_EVENT("decoding", "av_buffersrc_get_frame");
+      errnum = av_buffersink_get_frame(sink_ctx, frame2.get());
+    }
     switch (errnum) {
       case AVERROR(EAGAIN):
         co_return;
@@ -263,14 +269,17 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
                           TS(packet, codec_ctx->pkt_timebase),
                           packet->pts));
 
-  TRACE_EVENT_BEGIN("decoding", "avcodec_send_packet");
-  int errnum = avcodec_send_packet(codec_ctx, packet);
-  TRACE_EVENT_END("decoding");
+  int errnum;
+  {
+    TRACE_EVENT("decoding", "avcodec_send_packet");
+    errnum = avcodec_send_packet(codec_ctx, packet);
+  }
   while (errnum >= 0) {
     AVFramePtr frame{CHECK_AVALLOCATE(av_frame_alloc())};
-    TRACE_EVENT_BEGIN("decoding", "avcodec_receive_frame");
-    errnum = avcodec_receive_frame(codec_ctx, frame.get());
-    TRACE_EVENT_END("decoding");
+    {
+      TRACE_EVENT("decoding", "avcodec_receive_frame");
+      errnum = avcodec_receive_frame(codec_ctx, frame.get());
+    }
     switch (errnum) {
       case AVERROR(EAGAIN):
         co_return;
