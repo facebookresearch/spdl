@@ -6,6 +6,7 @@
 
 extern "C" {
 #include <libavformat/avio.h>
+#include <libavutil/error.h>
 #include <libavutil/file.h>
 }
 
