@@ -4,7 +4,10 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+// Starting from 4.3, BSF is in own header
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 91, 100)
 #include <libavcodec/bsf.h>
+#endif
 #include <libavfilter/avfilter.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
