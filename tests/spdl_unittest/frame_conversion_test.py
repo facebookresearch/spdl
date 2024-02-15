@@ -14,7 +14,7 @@ def _get_video_frames(pix_fmt, h=128, w=256):
         pix_fmt=pix_fmt,
         height=h,
         width=w,
-    )[0]
+    ).get()[0]
 
 
 def _get_audio_frames(sample_fmt, **kwargs):
@@ -24,7 +24,7 @@ def _get_audio_frames(sample_fmt, **kwargs):
         timestamps=[(0.0, 0.5)],
         sample_fmt=sample_fmt,
         **kwargs,
-    )[0]
+    ).get()[0]
 
 
 def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
