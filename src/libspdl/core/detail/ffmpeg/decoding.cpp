@@ -297,14 +297,11 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
   }
 }
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
+folly::coro::Task<void> decode_pkts(
     std::unique_ptr<PackagedAVPackets> packets,
-    AVCodecContextPtr codec_ctx) {
+    AVCodecContextPtr codec_ctx,
+    FFmpegFrames* frames) {
   auto [start, end] = packets->timestamp;
-  auto container = std::make_unique<FrameContainer>(
-      packets->id,
-      codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ? MediaType::Audio
-                                                  : MediaType::Video);
   for (auto& packet : packets->packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto frame = co_await decoding.next()) {
@@ -314,18 +311,18 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts(
         if (start <= ts && ts <= end) {
           XLOG(DBG9) << fmt::format(
               "{:21s} {:.3f} ({})", " --- raw frame:", ts, f->pts);
-          container->frames.push_back(f.release());
+          frames->frames.push_back(f.release());
         }
       }
     }
   }
-  co_return container;
 }
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts_with_filter(
+folly::coro::Task<void> decode_pkts_with_filter(
     std::unique_ptr<PackagedAVPackets> packets,
     AVCodecContextPtr codec_ctx,
-    std::string filter_desc) {
+    std::string filter_desc,
+    FFmpegFrames* frames) {
   auto filter_graph = [&]() {
     switch (codec_ctx->codec_type) {
       case AVMEDIA_TYPE_AUDIO:
@@ -347,9 +344,6 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts_with_filter(
   XLOG(DBG5) << describe_graph(filter_graph.get());
 
   auto [start, end] = packets->timestamp;
-  auto container = std::make_unique<FrameContainer>(
-      packets->id, get_output_media_type(filter_graph.get()));
-
   for (auto& packet : packets->packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
@@ -372,17 +366,16 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_pkts_with_filter(
             XLOG(DBG9) << fmt::format(
                 "{:21s} {:.3f} ({})", " ---- filtered frame:", ts, f->pts);
 
-            container->frames.push_back(f.release());
+            frames->frames.push_back(f.release());
           }
         }
       }
     }
   }
-  co_return container;
 }
 } // namespace
 
-folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
+folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
     const DecodeConfig cfg,
     std::string filter_desc) {
@@ -394,10 +387,30 @@ folly::coro::Task<std::unique_ptr<FrameContainer>> decode_packets(
       cfg.decoder,
       cfg.decoder_options,
       cfg.cuda_device_index);
+  auto frames = [&]() -> std::unique_ptr<FFmpegFrames> {
+    switch (codec_ctx->codec_type) {
+      case AVMEDIA_TYPE_AUDIO:
+        return std::unique_ptr<FFmpegFrames>{
+            new FFmpegAudioFrames{packets->id, MediaType::Audio}};
+      case AVMEDIA_TYPE_VIDEO:
+        return std::unique_ptr<FFmpegFrames>{
+            new FFmpegVideoFrames{packets->id, MediaType::Video}};
+      default:
+        SPDL_FAIL_INTERNAL(fmt::format(
+            "Unsupported media type: {}",
+            av_get_media_type_string(codec_ctx->codec_type)));
+    }
+  }();
   if (filter_desc.empty()) {
-    co_return co_await decode_pkts(std::move(packets), std::move(codec_ctx));
+    co_await decode_pkts(
+        std::move(packets), std::move(codec_ctx), frames.get());
+  } else {
+    co_await decode_pkts_with_filter(
+        std::move(packets),
+        std::move(codec_ctx),
+        std::move(filter_desc),
+        frames.get());
   }
-  co_return co_await decode_pkts_with_filter(
-      std::move(packets), std::move(codec_ctx), std::move(filter_desc));
+  co_return std::move(frames);
 }
 } // namespace spdl::core::detail

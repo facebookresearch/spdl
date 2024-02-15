@@ -2,41 +2,72 @@
 
 #include <libspdl/core/types.h>
 
+#include <memory>
 #include <vector>
 
 struct AVFrame;
 
 namespace spdl::core {
 
+////////////////////////////////////////////////////////////////////////////////
+// Base
+////////////////////////////////////////////////////////////////////////////////
+struct DecodedFrames {
+  virtual ~DecodedFrames() = default;
+
+  virtual std::string get_media_format() const = 0;
+  virtual std::string get_media_type() const = 0;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// FFmpeg Common
+////////////////////////////////////////////////////////////////////////////////
 // We deal with multiple frames at a time, so we use vector of raw
 // pointers with dedicated destructor, as opposed to vector of managed pointers
-
-/// Represents series of decoded frames
-struct FrameContainer {
-  uint64_t id;
-  MediaType type;
+struct FFmpegFrames : public DecodedFrames {
+  uint64_t id{0};
+  MediaType type{0};
 
   std::vector<AVFrame*> frames{};
 
-  FrameContainer(uint64_t id, MediaType type);
+  std::string get_media_format() const override;
+  std::string get_media_type() const override;
+
+  FFmpegFrames(uint64_t id, MediaType type);
   // No copy constructors
-  FrameContainer(const FrameContainer&) = delete;
-  FrameContainer& operator=(const FrameContainer&) = delete;
+  FFmpegFrames(const FFmpegFrames&) = delete;
+  FFmpegFrames& operator=(const FFmpegFrames&) = delete;
   // Move constructors to support MPMCQueue (BoundedQueue)
-  FrameContainer(FrameContainer&&) noexcept;
-  FrameContainer& operator=(FrameContainer&&) noexcept;
+  FFmpegFrames(FFmpegFrames&&) noexcept;
+  FFmpegFrames& operator=(FFmpegFrames&&) noexcept;
   // Destructor releases AVFrame* resources
-  ~FrameContainer();
+  ~FFmpegFrames();
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// FFmpeg - Audio
+////////////////////////////////////////////////////////////////////////////////
+struct FFmpegAudioFrames : public FFmpegFrames {
+  using FFmpegFrames::FFmpegFrames;
 
   bool is_cuda() const;
-  std::string get_format() const;
+  int get_sample_rate() const;
+  int get_num_frames() const;
+  int get_num_channels() const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// FFmpeg - Video
+////////////////////////////////////////////////////////////////////////////////
+struct FFmpegVideoFrames : public FFmpegFrames {
+  using FFmpegFrames::FFmpegFrames;
+
+  bool is_cuda() const;
+  int get_num_frames() const;
   int get_num_planes() const;
   int get_width() const;
   int get_height() const;
-  int get_sample_rate() const;
-  int get_num_samples() const;
 
-  FrameContainer slice(int start, int stop, int step) const;
+  FFmpegVideoFrames slice(int start, int stop, int step) const;
 };
-
 } // namespace spdl::core

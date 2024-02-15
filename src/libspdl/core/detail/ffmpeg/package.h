@@ -11,7 +11,7 @@ extern "C" {
 
 namespace spdl::core::detail {
 // Struct passed from IO thread pool to decoder thread pool.
-// Similar to FrameContainer, AVFrame pointers are bulk released.
+// Similar to FFmpegFrames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
 struct PackagedAVPackets {
   uint64_t id;

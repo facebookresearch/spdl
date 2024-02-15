@@ -16,7 +16,7 @@ from spdl.lib import libspdl as _libspdl
 __all__ = [  # noqa: F822
     "BasicAdoptor",
     "Buffer",
-    "FrameContainer",
+    "DecodedFrames",
     "MMapAdoptor",
     "SourceAdoptor",
     "clear_ffmpeg_cuda_context_cache",
@@ -51,10 +51,10 @@ class _BufferWrapper:
 
     def __getattr__(self, name):
         if name == "__array_interface__":
-            if not self._buffer.is_cuda():
+            if not self._buffer.is_cuda:
                 return self._buffer.get_array_interface()
         if name == "__cuda_array_interface__":
-            if self._buffer.is_cuda():
+            if self._buffer.is_cuda:
                 return self._buffer.get_cuda_array_interface()
         return getattr(self._buffer, name)
 
@@ -65,7 +65,7 @@ def to_numpy(
     """Convert to numpy array.
 
     Args:
-        frames (FrameContainer): Decoded frames.
+        frames (DecodedFrames): Decoded frames.
 
         format (str or None): Channel order.
             Valid values are ``"channel_first"``, ``"channel_last"`` or ``None``.
@@ -76,7 +76,7 @@ def to_numpy(
             (``"NCHW"`` and ``"NHWC"`` can be  respectively used alias for
              ``"channel_first"`` and ``"channel_last"`` in case of video frames.)
     """
-    if frames.is_cuda():
+    if frames.is_cuda:
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
 
     buffer = _BufferWrapper(_libspdl.convert_frames(frames, index))

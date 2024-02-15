@@ -23,11 +23,10 @@ extern "C" {
 }
 
 namespace spdl::core {
-namespace {
-
 ////////////////////////////////////////////////////////////////////////////////
 // Video
 ////////////////////////////////////////////////////////////////////////////////
+namespace {
 void copy_2d(
     uint8_t* src,
     int height,
@@ -272,14 +271,11 @@ Buffer convert_video_frames_cpu(
           "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
+} // namespace
 
 Buffer convert_video_frames(
-    const FrameContainer& frames,
+    const FFmpegVideoFrames& frames,
     const std::optional<int>& index) {
-  if (frames.type != MediaType::Video) {
-    SPDL_FAIL("FrameContainer must be video type.");
-  }
-
   const auto& fs = frames.frames;
   if (!fs.size()) {
     SPDL_FAIL("No video frame to convert to buffer.");
@@ -295,11 +291,15 @@ Buffer convert_video_frames(
   return convert_video_frames_cpu(fs, index);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Audio
+////////////////////////////////////////////////////////////////////////////////
+namespace {
 template <size_t depth, ElemClass type, bool is_planar>
 Buffer convert_audio_frames(
-    const FrameContainer& frames,
+    const FFmpegAudioFrames& frames,
     const std::optional<int>& index) {
-  size_t num_frames = frames.get_num_samples();
+  size_t num_frames = frames.get_num_frames();
   size_t num_channels = frames.frames[0]->channels;
 
   if (index) {
@@ -340,21 +340,23 @@ Buffer convert_audio_frames(
     return buffer;
   }
 }
+} // namespace
 
-////////////////////////////////////////////////////////////////////////////////
-// Audio
-////////////////////////////////////////////////////////////////////////////////
 Buffer convert_audio_frames(
-    const FrameContainer& frames,
+    const FFmpegAudioFrames& frames,
     const std::optional<int>& i) {
   if (frames.type != MediaType::Audio) {
-    SPDL_FAIL("FrameContainer must be audio type.");
+    SPDL_FAIL("FFmpegFrames must be audio type.");
   }
   const auto& fs = frames.frames;
   if (!fs.size()) {
     SPDL_FAIL("No audio frame to convert to buffer.");
   }
 
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_audio_frames",
+      perfetto::Flow::ProcessScoped(frames.id));
   // NOTE:
   // This conversion converts all the samples in underlying frames.
   // This does not take the time stamp of each sample into account.
@@ -392,21 +394,4 @@ Buffer convert_audio_frames(
           "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt)));
   }
 }
-} // namespace
-
-Buffer convert_frames(
-    const FrameContainer& frames,
-    const std::optional<int>& index) {
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_frames",
-      perfetto::Flow::ProcessScoped(frames.id));
-  switch (frames.type) {
-    case MediaType::Audio:
-      return convert_audio_frames(frames, index);
-    case MediaType::Video:
-      return convert_video_frames(frames, index);
-  }
-}
-
 } // namespace spdl::core
