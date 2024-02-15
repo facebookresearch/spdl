@@ -5,11 +5,11 @@
 
 namespace spdl::core {
 
-Buffer convert_audio_frames(
+std::unique_ptr<Buffer> convert_audio_frames(
     const FFmpegAudioFrames& frames,
     const std::optional<int>& index = std::nullopt);
 
-Buffer convert_video_frames(
+std::unique_ptr<Buffer> convert_video_frames(
     const FFmpegVideoFrames& frames,
     const std::optional<int>& index = std::nullopt);
 

@@ -42,7 +42,7 @@ py::dict get_array_interface(Buffer& b) {
 }
 
 #ifdef SPDL_USE_CUDA
-py::dict get_cuda_array_interface(Buffer& b) {
+py::dict get_cuda_array_interface(CUDABuffer& b) {
   auto typestr = get_typestr(b);
   py::dict ret;
   ret["version"] = 2;
@@ -69,10 +69,27 @@ class PyDecodedFrames : public DecodedFrames {
     PYBIND11_OVERLOAD_PURE(std::string, DecodedFrames, get_media_type);
   }
 };
+
+class PyBuffer : public Buffer {
+ public:
+  using Buffer::Buffer;
+
+  bool is_cuda() const override {
+    PYBIND11_OVERLOAD_PURE(bool, Buffer, is_cuda);
+  }
+};
 } // namespace
 
 void register_frames_and_buffers(py::module& m) {
-  auto _Buffer = py::class_<Buffer>(m, "Buffer", py::module_local());
+  auto _Buffer = py::class_<Buffer, PyBuffer, std::shared_ptr<Buffer>>(
+      m, "Buffer", py::module_local());
+
+  auto _CPUBuffer = py::class_<CPUBuffer>(m, "CPUBuffer", py::module_local());
+
+#ifdef SPDL_USE_CUDA
+  auto _CUDABuffer =
+      py::class_<CUDABuffer>(m, "CUDABuffer", py::module_local());
+#endif
 
   auto _DecodedFrames = py::
       class_<DecodedFrames, PyDecodedFrames, std::shared_ptr<DecodedFrames>>(
@@ -87,27 +104,33 @@ void register_frames_and_buffers(py::module& m) {
   auto _FFmpegVideoFrames =
       py::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames", py::module_local());
 
-  _Buffer
+  _CPUBuffer
       .def_property_readonly(
-          "channel_last", [](const Buffer& self) { return self.channel_last; })
+          "channel_last",
+          [](const CPUBuffer& self) { return self.channel_last; })
       .def_property_readonly(
-          "ndim", [](const Buffer& self) { return self.shape.size(); })
+          "ndim", [](const CPUBuffer& self) { return self.shape.size(); })
       .def_property_readonly(
-          "shape", [](const Buffer& self) { return self.shape; })
-      .def_property_readonly("is_cuda", &Buffer::is_cuda)
-      .def(
-          "get_array_interface",
-          [](Buffer& self) { return get_array_interface(self); })
+          "shape", [](const CPUBuffer& self) { return self.shape; })
+      .def_property_readonly("is_cuda", &CPUBuffer::is_cuda)
+      .def("get_array_interface", [](CPUBuffer& self) {
+        return get_array_interface(self);
+      });
+
 #ifdef SPDL_USE_CUDA
+  _CUDABuffer
+      .def_property_readonly(
+          "channel_last",
+          [](const CUDABuffer& self) { return self.channel_last; })
+      .def_property_readonly(
+          "ndim", [](const CUDABuffer& self) { return self.shape.size(); })
+      .def_property_readonly(
+          "shape", [](const CUDABuffer& self) { return self.shape; })
+      .def_property_readonly("is_cuda", &CUDABuffer::is_cuda)
       .def(
           "get_cuda_array_interface",
-          [](Buffer& self) { return get_cuda_array_interface(self); })
+          [](CUDABuffer& self) { return get_cuda_array_interface(self); });
 #endif
-      ;
-
-  _DecodedFrames
-      .def_property_readonly("media_format", &DecodedFrames::get_media_format)
-      .def_property_readonly("media_type", &DecodedFrames::get_media_type);
 
   _FFmpegAudioFrames
       .def_property_readonly(
