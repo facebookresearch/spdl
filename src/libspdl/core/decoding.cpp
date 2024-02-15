@@ -61,40 +61,9 @@ auto DecodingResultFuture::get() -> DecodingResultFuture::ResultType {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// async_decode wrapper
-////////////////////////////////////////////////////////////////////////////////
-using ResultType = std::unique_ptr<FrameContainer>;
-
-namespace {
-folly::coro::Task<std::vector<ResultType>> stream_decode_task(
-    const enum MediaType type,
-    const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    const std::shared_ptr<SourceAdoptor> adoptor,
-    const IOConfig io_cfg,
-    const DecodeConfig decode_cfg,
-    const std::string filter_desc);
-} // namespace
-
-DecodingResultFuture async_decode(
-    const enum MediaType type,
-    const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
-    const IOConfig& io_cfg,
-    const DecodeConfig& decode_cfg,
-    const std::string& filter_desc) {
-  auto task = stream_decode_task(
-      type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
-  return DecodingResultFuture{new DecodingResultFuture::Impl{
-      std::move(task)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
-          .start()}};
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // Actual implementation of decoding task;
 ////////////////////////////////////////////////////////////////////////////////
+using ResultType = std::unique_ptr<DecodedFrames>;
 namespace {
 folly::coro::Task<std::vector<ResultType>> check_futures(
     const std::string& src,
@@ -143,5 +112,24 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task(
   co_return co_await check_futures(src, timestamps, std::move(futures));
 }
 } // namespace
+
+////////////////////////////////////////////////////////////////////////////////
+// async_decode wrapper
+////////////////////////////////////////////////////////////////////////////////
+DecodingResultFuture async_decode(
+    const enum MediaType type,
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc) {
+  auto task = stream_decode_task(
+      type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
+  return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(task)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
+}
 
 } // namespace spdl::core

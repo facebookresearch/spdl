@@ -119,6 +119,18 @@ class PySourceAdoptor : public SourceAdoptor {
   }
 };
 
+class PyDecodedFrames : public DecodedFrames {
+ public:
+  using DecodedFrames::DecodedFrames;
+
+  std::string get_media_format() const override {
+    PYBIND11_OVERLOAD_PURE(std::string, DecodedFrames, get_media_format);
+  }
+  std::string get_media_type() const override {
+    PYBIND11_OVERLOAD_PURE(std::string, DecodedFrames, get_media_type);
+  }
+};
+
 } // namespace
 
 void register_pybind(py::module& m) {
@@ -127,8 +139,19 @@ void register_pybind(py::module& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Make sure classes are module_local.
   auto _Buffer = py::class_<Buffer>(m, "Buffer", py::module_local());
-  auto _FrameContainer =
-      py::class_<FrameContainer>(m, "FrameContainer", py::module_local());
+
+  auto _DecodedFrames = py::
+      class_<DecodedFrames, PyDecodedFrames, std::shared_ptr<DecodedFrames>>(
+          m, "DecodedFrames", py::module_local());
+
+  auto _FFmpegFrames =
+      py::class_<FFmpegFrames>(m, "FFmpegFrames", py::module_local());
+
+  auto _FFmpegAudioFrames =
+      py::class_<FFmpegAudioFrames>(m, "FFmpegAudioFrames", py::module_local());
+
+  auto _FFmpegVideoFrames =
+      py::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames", py::module_local());
 
   auto _DecodingResultFuture = py::class_<DecodingResultFuture>(
       m, "DecodingResultFuture", py::module_local());
@@ -170,13 +193,34 @@ void register_pybind(py::module& m) {
       py::arg("index"),
       py::arg("use_primary_context") = false);
 
-  _FrameContainer
-      .def(
-          "__len__",
-          [](const FrameContainer& self) { return self.frames.size(); })
+  _DecodedFrames
+      .def_property_readonly("media_format", &DecodedFrames::get_media_format)
+      .def_property_readonly("media_type", &DecodedFrames::get_media_type);
+
+  _FFmpegAudioFrames
+      .def_property_readonly(
+          "media_format", &FFmpegAudioFrames::get_media_format)
+      .def_property_readonly("media_type", &FFmpegAudioFrames::get_media_type)
+      .def_property_readonly("is_cuda", &FFmpegAudioFrames::is_cuda)
+      .def_property_readonly("num_frames", &FFmpegAudioFrames::get_num_frames)
+      .def_property_readonly("sample_rate", &FFmpegAudioFrames::get_sample_rate)
+      .def_property_readonly(
+          "num_channels", &FFmpegAudioFrames::get_num_channels)
+      .def("__len__", &FFmpegAudioFrames::get_num_frames);
+
+  _FFmpegVideoFrames
+      .def_property_readonly(
+          "media_format", &FFmpegVideoFrames::get_media_format)
+      .def_property_readonly("media_type", &FFmpegVideoFrames::get_media_type)
+      .def_property_readonly("is_cuda", &FFmpegVideoFrames::is_cuda)
+      .def_property_readonly("num_frames", &FFmpegVideoFrames::get_num_frames)
+      .def_property_readonly("num_planes", &FFmpegVideoFrames::get_num_planes)
+      .def_property_readonly("width", &FFmpegVideoFrames::get_width)
+      .def_property_readonly("height", &FFmpegVideoFrames::get_height)
+      .def("__len__", &FFmpegVideoFrames::get_num_frames)
       .def(
           "__getitem__",
-          [](const FrameContainer& self, const py::slice& slice) {
+          [](const FFmpegVideoFrames& self, const py::slice& slice) {
             py::ssize_t start = 0, stop = 0, step = 0, len = 0;
             if (!slice.compute(
                     self.frames.size(), &start, &stop, &step, &len)) {
@@ -186,24 +230,7 @@ void register_pybind(py::module& m) {
                 static_cast<int>(start),
                 static_cast<int>(stop),
                 static_cast<int>(step));
-          })
-      .def("is_cuda", &FrameContainer::is_cuda)
-      .def_property_readonly(
-          "media_type",
-          [](const FrameContainer& self) -> std::string {
-            switch (self.type) {
-              case MediaType::Audio:
-                return "audio";
-              case MediaType::Video:
-                return "video";
-            }
-          })
-      .def_property_readonly("format", &FrameContainer::get_format)
-      .def_property_readonly("num_planes", &FrameContainer::get_num_planes)
-      .def_property_readonly("width", &FrameContainer::get_width)
-      .def_property_readonly("height", &FrameContainer::get_height)
-      .def_property_readonly("sample_rate", &FrameContainer::get_sample_rate)
-      .def_property_readonly("num_samples", &FrameContainer::get_num_samples);
+          });
 
   _Buffer
       .def_property_readonly(
@@ -212,7 +239,7 @@ void register_pybind(py::module& m) {
           "ndim", [](const Buffer& self) { return self.shape.size(); })
       .def_property_readonly(
           "shape", [](const Buffer& self) { return self.shape; })
-      .def("is_cuda", &Buffer::is_cuda)
+      .def_property_readonly("is_cuda", &Buffer::is_cuda)
       .def(
           "get_array_interface",
           [](Buffer& self) { return get_array_interface(self); })
@@ -223,7 +250,8 @@ void register_pybind(py::module& m) {
 #endif
       ;
 
-  m.def("convert_frames", &convert_frames);
+  m.def("convert_frames", &convert_audio_frames);
+  m.def("convert_frames", &convert_video_frames);
 
   _DecodingResultFuture.def("get", &DecodingResultFuture::get);
 

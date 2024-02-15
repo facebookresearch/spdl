@@ -24,7 +24,7 @@ class DecodingResultFuture;
 ASYNC_DECODE;
 
 class DecodingResultFuture {
-  using ResultType = std::vector<std::unique_ptr<FrameContainer>>;
+  using ResultType = std::vector<std::unique_ptr<DecodedFrames>>;
 
   struct Impl;
 
