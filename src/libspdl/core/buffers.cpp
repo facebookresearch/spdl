@@ -7,6 +7,9 @@
 
 namespace spdl::core {
 
+////////////////////////////////////////////////////////////////////////////////
+// Buffer
+////////////////////////////////////////////////////////////////////////////////
 Buffer::Buffer(
     const std::vector<size_t> shape_,
     bool channel_last_,
@@ -66,8 +69,10 @@ uintptr_t Buffer::get_cuda_stream() const {
 }
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+// Factory functions
+////////////////////////////////////////////////////////////////////////////////
 namespace {
-
 inline size_t prod(const std::vector<size_t>& shape) {
   size_t val = 1;
   for (auto& v : shape) {
@@ -75,7 +80,6 @@ inline size_t prod(const std::vector<size_t>& shape) {
   }
   return val;
 }
-
 } // namespace
 
 Buffer cpu_buffer(
