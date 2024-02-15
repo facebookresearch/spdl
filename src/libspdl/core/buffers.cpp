@@ -1,12 +1,18 @@
 #include <libspdl/core/buffers.h>
 
+#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
+
+#ifdef SPDL_USE_CUDA
+#include <libspdl/core/detail/cuda.h>
+
+#include <cuda_runtime.h>
+#endif
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
 namespace spdl::core {
-
 ////////////////////////////////////////////////////////////////////////////////
 // Buffer
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,6 +89,11 @@ inline size_t prod(const std::vector<size_t>& shape) {
   }
   return val;
 }
+
+void* cpu_alloc(size_t size) {
+  TRACE_EVENT("decoding", "operator new");
+  return operator new(size);
+}
 } // namespace
 
 std::unique_ptr<CPUBuffer> cpu_buffer(
@@ -100,10 +111,21 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
       channel_last,
       elem_class,
       depth,
-      new CPUStorage{prod(shape) * depth});
+      new CPUStorage{cpu_alloc(prod(shape) * depth)});
 }
 
 #ifdef SPDL_USE_CUDA
+namespace {
+void* cuda_alloc(size_t size) {
+  void* p;
+  XLOG(DBG9) << fmt::format("Allocating CUDA memory ({} bytes)", size);
+  TRACE_EVENT("decoding", "cudaMallocAsync");
+  CHECK_CUDA(cudaMallocAsync(&p, size, 0), "Failed to allocate CUDA memory");
+  XLOG(DBG9) << fmt::format("Allocation queued {}", p);
+  return p;
+}
+} // namespace
+
 std::unique_ptr<CUDABuffer> cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
@@ -113,7 +135,7 @@ std::unique_ptr<CUDABuffer> cuda_buffer(
       channel_last,
       ElemClass::UInt,
       sizeof(uint8_t),
-      new CUDAStorage{prod(shape), stream});
+      new CUDAStorage{cuda_alloc(prod(shape)), stream});
 }
 #endif
 
