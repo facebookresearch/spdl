@@ -10,24 +10,33 @@
 namespace spdl::core {
 
 struct Storage {
-  void* data = nullptr;
+  virtual void* data() const = 0;
+  virtual ~Storage() = default;
+};
 
-  Storage() = default;
-  Storage(size_t size);
+struct CPUStorage : Storage {
+  void* data_ = nullptr;
 
-  Storage(const Storage&) = delete;
-  Storage& operator=(const Storage&) = delete;
+  void* data() const override;
 
-  Storage(Storage&&) noexcept;
-  Storage& operator=(Storage&&) noexcept;
+  CPUStorage() = default;
+  CPUStorage(size_t size);
 
-  ~Storage();
+  CPUStorage(const CPUStorage&) = delete;
+  CPUStorage& operator=(const CPUStorage&) = delete;
+
+  CPUStorage(CPUStorage&&) noexcept;
+  CPUStorage& operator=(CPUStorage&&) noexcept;
+
+  ~CPUStorage();
 };
 
 #ifdef SPDL_USE_CUDA
-struct CUDAStorage {
-  void* data = nullptr;
+struct CUDAStorage : Storage {
+  void* data_ = nullptr;
   CUstream stream = 0;
+
+  void* data() const override;
 
   CUDAStorage() = default;
   CUDAStorage(size_t size, CUstream stream);
