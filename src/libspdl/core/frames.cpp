@@ -116,16 +116,78 @@ int FFmpegVideoFrames::get_height() const {
   return frames.size() ? frames[0]->height : -1;
 }
 
+namespace {
+int adjust_indices(const int length, int* start, int* stop, int step) {
+  if (step <= 0) {
+    SPDL_FAIL(fmt::format("Step must be larget than 0. Found: {}", step));
+  }
+  if (*start < 0) {
+    *start += length;
+    if (*start < 0) {
+      *start = (step < 0) ? -1 : 0;
+    }
+  } else if (*start >= length) {
+    *start = (step < 0) ? length - 1 : length;
+  }
+
+  if (*stop < 0) {
+    *stop += length;
+    if (*stop < 0) {
+      *stop = (step < 0) ? -1 : 0;
+    }
+  } else if (*stop >= length) {
+    *stop = (step < 0) ? length - 1 : length;
+  }
+
+  if (step < 0) {
+    if (*stop < *start) {
+      return (*start - *stop - 1) / (-step) + 1;
+    }
+  } else {
+    if (*start < *stop) {
+      return (*stop - *start - 1) / step + 1;
+    }
+  }
+  return 0;
+}
+} // namespace
+
 FFmpegVideoFrames FFmpegVideoFrames::slice(int start, int stop, int step)
     const {
+  const int numel = frames.size();
+  int len = adjust_indices(numel, &start, &stop, step);
+
   auto out = FFmpegVideoFrames{0, type};
+  if (!len) {
+    return out;
+  }
+
   for (int i = start; i < stop; i += step) {
+    assert(0 <= i && i < numel);
     AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
     CHECK_AVERROR(
         av_frame_ref(dst, frames[i]),
         "Failed to create a new reference to an AVFrame.");
     out.frames.push_back(dst);
   }
+  return out;
+}
+
+FFmpegVideoFrames FFmpegVideoFrames::slice(int i) const {
+  const int numel = frames.size();
+  int stop = i + 1, step = 1;
+  if (!adjust_indices(numel, &i, &stop, step)) {
+    throw std::out_of_range(
+        fmt::format("Index {} is outside of [0, {})", i, frames.size()));
+  }
+  assert(0 <= i && i < numel);
+
+  auto out = FFmpegVideoFrames{0, type};
+  AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
+  CHECK_AVERROR(
+      av_frame_ref(dst, frames[i]),
+      "Failed to create a new reference to an AVFrame.");
+  out.frames.push_back(dst);
   return out;
 }
 
