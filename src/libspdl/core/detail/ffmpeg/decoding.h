@@ -16,8 +16,6 @@
 
 namespace spdl::core::detail {
 
-struct PackagedAVPackets;
-
 folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     const enum MediaType type,
     const std::string src,
