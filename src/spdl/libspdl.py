@@ -59,6 +59,10 @@ class _BufferWrapper:
         return getattr(self._buffer, name)
 
 
+def _to_buffer(frames, index=None):
+    return _BufferWrapper(_libspdl.convert_frames(frames, index))
+
+
 def to_numpy(
     frames, format: Optional[str] = None, index: Optional[int] = None
 ) -> NDArray:
@@ -79,7 +83,7 @@ def to_numpy(
     if frames.is_cuda:
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
 
-    buffer = _BufferWrapper(_libspdl.convert_frames(frames, index))
+    buffer = _to_buffer(frames, index)
     array = np.array(buffer, copy=False)
     match format:
         case "channel_first" | "NCHW":
