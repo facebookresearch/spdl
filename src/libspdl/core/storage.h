@@ -20,7 +20,7 @@ struct CPUStorage : Storage {
   void* data() const override;
 
   CPUStorage() = default;
-  CPUStorage(void* data);
+  CPUStorage(size_t size);
 
   CPUStorage(const CPUStorage&) = delete;
   CPUStorage& operator=(const CPUStorage&) = delete;
@@ -39,8 +39,7 @@ struct CUDAStorage : Storage {
   void* data() const override;
 
   CUDAStorage() = default;
-  // Will allocate the data
-  CUDAStorage(void* data, CUstream stream);
+  CUDAStorage(size_t size, CUstream stream);
 
   CUDAStorage(const CUDAStorage&) = delete;
   CUDAStorage& operator=(const CUDAStorage&) = delete;
