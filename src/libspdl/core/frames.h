@@ -69,5 +69,6 @@ struct FFmpegVideoFrames : public FFmpegFrames {
   int get_height() const;
 
   FFmpegVideoFrames slice(int start, int stop, int step) const;
+  FFmpegVideoFrames slice(int index) const;
 };
 } // namespace spdl::core

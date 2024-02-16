@@ -165,7 +165,10 @@ void register_frames_and_buffers(py::module& m) {
                 static_cast<int>(start),
                 static_cast<int>(stop),
                 static_cast<int>(step));
-          });
+          })
+      .def("__getitem__", [](const FFmpegVideoFrames& self, int i) {
+        return self.slice(i);
+      });
 
   m.def("convert_frames", &convert_audio_frames);
   m.def("convert_frames", &convert_video_frames);
