@@ -32,9 +32,9 @@ def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
     so that array keeps working after the original Buffer variable is deleted.
     """
     import numpy as np
-    from spdl.libspdl import _BufferWrapper, convert_frames
+    from spdl.libspdl import _to_buffer
 
-    buf = _BufferWrapper(convert_frames(_get_video_frames(pix_fmt), None))
+    buf = _to_buffer(_get_video_frames(pix_fmt), None)
     assert hasattr(buf, "__array_interface__")
     print(f"{buf.__array_interface__=}")
 
