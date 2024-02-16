@@ -127,9 +127,9 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly(
           "shape", [](const CUDABuffer& self) { return self.shape; })
       .def_property_readonly("is_cuda", &CUDABuffer::is_cuda)
-      .def(
-          "get_cuda_array_interface",
-          [](CUDABuffer& self) { return get_cuda_array_interface(self); });
+      .def("get_cuda_array_interface", [](CUDABuffer& self) {
+        return get_cuda_array_interface(self);
+      });
 #endif
 
   _FFmpegAudioFrames
