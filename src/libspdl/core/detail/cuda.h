@@ -35,3 +35,14 @@ const char* get_error_desc(CUresult error);
           spdl::core::detail::get_error_desc(_status))); \
     }                                                    \
   } while (0)
+
+namespace spdl::core::detail {
+
+// Get or create a CUcontext associated with the device.
+// If the current context is associated with the device, then return it.
+// Otherwise, create or fetch a floating primary context and return it.
+//
+// TODO: Test if this works if there is a context already created by others
+CUcontext get_cucontext(CUdevice device);
+
+} // namespace spdl::core::detail
