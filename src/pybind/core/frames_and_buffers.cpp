@@ -1,6 +1,7 @@
 #include <libspdl/core/buffers.h>
 #include <libspdl/core/conversion.h>
 #include <libspdl/core/frames.h>
+#include <libspdl/core/types.h>
 
 #include <fmt/core.h>
 
@@ -14,9 +15,9 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Array interface supplements
 ////////////////////////////////////////////////////////////////////////////////
-std::string get_typestr(Buffer& b) {
+std::string get_typestr(const ElemClass elem_class, size_t depth) {
   const auto key = [&]() {
-    switch (b.elem_class) {
+    switch (elem_class) {
       case ElemClass::UInt:
         return "u";
       case ElemClass::Int:
@@ -25,11 +26,11 @@ std::string get_typestr(Buffer& b) {
         return "f";
     }
   }();
-  return fmt::format("|{}{}", key, b.depth);
+  return fmt::format("|{}{}", key, depth);
 }
 
 py::dict get_array_interface(Buffer& b) {
-  auto typestr = get_typestr(b);
+  auto typestr = get_typestr(b.elem_class, b.depth);
   py::dict ret;
   ret["version"] = 3;
   ret["shape"] = py::tuple(py::cast(b.shape));
@@ -43,7 +44,7 @@ py::dict get_array_interface(Buffer& b) {
 
 #ifdef SPDL_USE_CUDA
 py::dict get_cuda_array_interface(CUDABuffer& b) {
-  auto typestr = get_typestr(b);
+  auto typestr = get_typestr(b.elem_class, b.depth);
   py::dict ret;
   ret["version"] = 2;
   ret["shape"] = py::tuple(py::cast(b.shape));
