@@ -43,11 +43,12 @@ void copy_2d(
 }
 
 std::unique_ptr<Buffer> convert_interleaved(
-    const std::vector<AVFrame*>& frames) {
+    const std::vector<AVFrame*>& frames,
+    unsigned int num_channels = 3) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
-  auto buf = cpu_buffer({frames.size(), h, w, 3}, true);
-  size_t wc = 3 * w;
+  auto buf = cpu_buffer({frames.size(), h, w, num_channels}, true);
+  size_t wc = num_channels * w;
   uint8_t* dst = static_cast<uint8_t*>(buf->data());
   for (const auto& f : frames) {
     copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc);
@@ -216,6 +217,20 @@ std::unique_ptr<Buffer> convert_video_frames_cpu(
     const std::optional<int>& index) {
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   switch (pix_fmt) {
+    case AV_PIX_FMT_GRAY8: {
+      if (auto plane = index.value_or(0); plane != 0) {
+        SPDL_FAIL(fmt::format(
+            "Valid `plane` values for GRAY8 is 0. (Found: {})", plane));
+      }
+      return convert_plane(frames, 0);
+    }
+    case AV_PIX_FMT_RGBA: {
+      if (auto plane = index.value_or(0); plane != 0) {
+        SPDL_FAIL(fmt::format(
+            "Valid `plane` values for RGBA is 0. (Found: {})", plane));
+      }
+      return convert_interleaved(frames, 4);
+    }
     case AV_PIX_FMT_RGB24: {
       if (auto plane = index.value_or(0); plane != 0) {
         SPDL_FAIL(fmt::format(
