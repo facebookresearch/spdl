@@ -3,6 +3,7 @@
 #include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
 #include <libspdl/core/detail/tracing.h>
+#include <libspdl/core/types.h>
 
 extern "C" {
 #include <libavutil/frame.h>
@@ -10,6 +11,16 @@ extern "C" {
 }
 
 namespace spdl::core {
+namespace {
+std::string get_type_string(MediaType type) {
+  switch (type) {
+    case MediaType::Audio:
+      return "audio";
+    case MediaType::Video:
+      return "video";
+  }
+}
+} // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg Common
@@ -59,12 +70,7 @@ std::string FFmpegFrames::get_media_format() const {
 }
 
 std::string FFmpegFrames::get_media_type() const {
-  switch (type) {
-    case MediaType::Audio:
-      return "audio";
-    case MediaType::Video:
-      return "video";
-  }
+  return get_type_string(type);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
