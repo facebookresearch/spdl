@@ -23,6 +23,22 @@ class DecodingResultFuture;
 
 ASYNC_DECODE;
 
+#define ASYNC_DECODE_NVDEC                                       \
+  DecodingResultFuture async_decode_nvdec(                       \
+      const std::string& src,                                    \
+      const std::vector<std::tuple<double, double>>& timestamps, \
+      const int cuda_device_index,                               \
+      const std::shared_ptr<SourceAdoptor>& adoptor,             \
+      const IOConfig& io_cfg,                                    \
+      int crop_left,                                             \
+      int crop_top,                                              \
+      int crop_right,                                            \
+      int crop_bottom,                                           \
+      int width,                                                 \
+      int height)
+
+ASYNC_DECODE_NVDEC;
+
 class DecodingResultFuture {
   using ResultType = std::vector<std::unique_ptr<DecodedFrames>>;
 
@@ -43,8 +59,10 @@ class DecodingResultFuture {
   ResultType get();
 
   friend ASYNC_DECODE;
+  friend ASYNC_DECODE_NVDEC;
 };
 
 #undef ASYNC_DECODE
+#undef ASYNC_DECODE_NVDEC
 
 } // namespace spdl::core

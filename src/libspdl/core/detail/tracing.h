@@ -13,7 +13,8 @@
 
 PERFETTO_DEFINE_CATEGORIES(
     perfetto::Category("demuxing").SetDescription("Demuxing events"),
-    perfetto::Category("decoding").SetDescription("Decoding events"));
+    perfetto::Category("decoding").SetDescription("Decoding events"),
+    perfetto::Category("nvdec").SetDescription("Decoding events using NVDEC"));
 
 namespace spdl::core::detail {
 void init_perfetto();

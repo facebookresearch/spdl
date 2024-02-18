@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libspdl/core/buffers.h>
 #include <libspdl/core/types.h>
 
 #include <memory>
@@ -71,4 +72,34 @@ struct FFmpegVideoFrames : public FFmpegFrames {
   FFmpegVideoFrames slice(int start, int stop, int step) const;
   FFmpegVideoFrames slice(int index) const;
 };
+
+#ifdef SPDL_USE_NVDEC
+////////////////////////////////////////////////////////////////////////////////
+// NVDEC - Video
+////////////////////////////////////////////////////////////////////////////////
+struct NvDecVideoFrames : public DecodedFrames {
+  uint64_t id{0};
+  MediaType media_type{0};
+
+  // enum AVPixelFormat but using int so as not to include FFmpeg header
+  int media_format;
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Buffer: TODO: clean up or move
+  //////////////////////////////////////////////////////////////////////////////
+  std::shared_ptr<CUDABuffer2DPitch> buffer;
+
+  bool is_cuda() const;
+  std::string get_media_format() const override;
+  std::string get_media_type() const override;
+
+  NvDecVideoFrames(uint64_t id, MediaType media_type, int media_format);
+  NvDecVideoFrames(const NvDecVideoFrames&) = delete;
+  NvDecVideoFrames& operator=(const NvDecVideoFrames&) = delete;
+  NvDecVideoFrames(NvDecVideoFrames&&) noexcept;
+  NvDecVideoFrames& operator=(NvDecVideoFrames&&) noexcept;
+  // Destructor releases AVFrame* resources
+  ~NvDecVideoFrames() = default;
+};
+#endif
 } // namespace spdl::core

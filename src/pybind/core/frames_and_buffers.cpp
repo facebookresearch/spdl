@@ -56,6 +56,21 @@ py::dict get_cuda_array_interface(CUDABuffer& b) {
 }
 #endif
 
+#ifdef SPDL_USE_NVDEC
+py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
+  auto typestr = get_typestr(ElemClass::UInt, 1);
+  py::dict ret;
+  ret["version"] = 2;
+  ret["shape"] = py::tuple(py::cast(b.get_shape()));
+  ret["typestr"] = typestr;
+  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.p, false};
+  ret["strides"] = py::tuple(py::cast(
+      std::vector<size_t>{b.c * b.h * b.pitch, b.h * b.pitch, b.pitch, b.bpp}));
+  ret["stream"] = py::none();
+  return ret;
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Trampoline class for registering abstract DecodedFrames
 ////////////////////////////////////////////////////////////////////////////////
@@ -92,6 +107,12 @@ void register_frames_and_buffers(py::module& m) {
       py::class_<CUDABuffer>(m, "CUDABuffer", py::module_local());
 #endif
 
+#ifdef SPDL_USE_NVDEC
+  auto _CUDABuffer2DPitch =
+      py::class_<CUDABuffer2DPitch, std::shared_ptr<CUDABuffer2DPitch>>(
+          m, "CUDABuffer2DPitch", py::module_local());
+#endif
+
   auto _DecodedFrames = py::
       class_<DecodedFrames, PyDecodedFrames, std::shared_ptr<DecodedFrames>>(
           m, "DecodedFrames", py::module_local());
@@ -104,6 +125,11 @@ void register_frames_and_buffers(py::module& m) {
 
   auto _FFmpegVideoFrames =
       py::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames", py::module_local());
+
+#ifdef SPDL_USE_NVDEC
+  auto _NvDecVideoFrames =
+      py::class_<NvDecVideoFrames>(m, "NvDecVideoFrames", py::module_local());
+#endif
 
   _CPUBuffer
       .def_property_readonly(
@@ -129,6 +155,22 @@ void register_frames_and_buffers(py::module& m) {
           "shape", [](const CUDABuffer& self) { return self.shape; })
       .def_property_readonly("is_cuda", &CUDABuffer::is_cuda)
       .def("get_cuda_array_interface", [](CUDABuffer& self) {
+        return get_cuda_array_interface(self);
+      });
+#endif
+
+#ifdef SPDL_USE_NVDEC
+  _CUDABuffer2DPitch
+      .def_property_readonly(
+          "channel_last",
+          [](const CUDABuffer2DPitch& self) { return self.channel_last; })
+      .def_property_readonly(
+          "ndim",
+          [](const CUDABuffer2DPitch& self) { return self.get_shape().size(); })
+      .def_property_readonly("shape", &CUDABuffer2DPitch::get_shape)
+      .def_property_readonly(
+          "is_cuda", [](const CUDABuffer2DPitch& self) { return true; })
+      .def("get_cuda_array_interface", [](CUDABuffer2DPitch& self) {
         return get_cuda_array_interface(self);
       });
 #endif
@@ -170,6 +212,37 @@ void register_frames_and_buffers(py::module& m) {
       .def("__getitem__", [](const FFmpegVideoFrames& self, int i) {
         return self.slice(i);
       });
+
+#ifdef SPDL_USE_NVDEC
+  _NvDecVideoFrames
+      .def_property_readonly(
+          "media_format", &NvDecVideoFrames::get_media_format)
+      .def_property_readonly("media_type", &NvDecVideoFrames::get_media_type)
+      .def_property_readonly("is_cuda", &NvDecVideoFrames::is_cuda)
+      // TODO:
+      // Clean up the buffer's public methods
+      .def_property_readonly(
+          "channel_last",
+          [](const NvDecVideoFrames& self) {
+            return self.buffer->channel_last;
+          })
+      .def_property_readonly(
+          "ndim",
+          [](const NvDecVideoFrames& self) {
+            return self.buffer->get_shape().size();
+          })
+      .def_property_readonly(
+          "shape",
+          [](const NvDecVideoFrames& self) { return self.buffer->get_shape(); })
+      .def(
+          "get_cuda_array_interface",
+          [](NvDecVideoFrames& self) {
+            return get_cuda_array_interface(*self.buffer);
+          })
+      .def("__len__", [](const NvDecVideoFrames& self) {
+        return self.buffer->get_shape()[0];
+      });
+#endif
 
   m.def("convert_frames", &convert_audio_frames);
   m.def("convert_frames", &convert_video_frames);
