@@ -88,14 +88,20 @@ CUDABuffer2DPitch::~CUDABuffer2DPitch() {
   }
 }
 
-void CUDABuffer2DPitch::allocate(size_t c_, size_t h_, size_t w_, size_t bpp_) {
+void CUDABuffer2DPitch::allocate(
+    size_t c_,
+    size_t h_,
+    size_t w_,
+    size_t bpp_,
+    bool channel_last_) {
   if (p) {
     SPDL_FAIL_INTERNAL("Arena is already allocated.");
   }
+  channel_last = channel_last_;
   c = c_, h = h_, w = w_, bpp = bpp_;
-  width_in_bytes = w * bpp;
 
-  size_t height = max_frames * c * h;
+  width_in_bytes = channel_last ? w * c * bpp : w * bpp;
+  size_t height = channel_last ? max_frames * h : max_frames * c * h;
 
   TRACE_EVENT("nvdec", "cuMemAllocPitch");
   CHECK_CU(

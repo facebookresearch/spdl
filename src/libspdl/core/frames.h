@@ -84,9 +84,6 @@ struct NvDecVideoFrames : public DecodedFrames {
   // enum AVPixelFormat but using int so as not to include FFmpeg header
   int media_format;
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Buffer: TODO: clean up or move
-  //////////////////////////////////////////////////////////////////////////////
   std::shared_ptr<CUDABuffer2DPitch> buffer;
 
   bool is_cuda() const;

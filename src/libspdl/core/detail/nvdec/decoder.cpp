@@ -261,10 +261,11 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
 
   // Allocate arena
   // TODO: change c and bpp based on codec
+  bool channel_last = false;
   size_t c = 1, bpp = 1;
   auto w = decoder_param.ulTargetWidth;
   auto h = decoder_param.ulTargetHeight + decoder_param.ulTargetHeight / 2;
-  buffer->allocate(c, h, w, bpp);
+  buffer->allocate(c, h, w, bpp, channel_last);
   return ret;
 }
 
