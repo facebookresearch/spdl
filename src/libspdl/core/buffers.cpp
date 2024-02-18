@@ -113,6 +113,18 @@ std::vector<size_t> CUDABuffer2DPitch::get_shape() const {
   return channel_last ? std::vector<size_t>{n, h, w, c}
                       : std::vector<size_t>{n, c, h, w};
 }
+
+uint8_t* CUDABuffer2DPitch::get_next_frame() {
+  if (!p) {
+    SPDL_FAIL_INTERNAL("Memory is not allocated.");
+  }
+  if (n >= max_frames) {
+    SPDL_FAIL_INTERNAL(
+        "Attempted to write beyond the maximum number of frames.");
+  }
+  return channel_last ? (uint8_t*)p + n * h * pitch
+                      : (uint8_t*)p + n * c * h * pitch;
+}
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

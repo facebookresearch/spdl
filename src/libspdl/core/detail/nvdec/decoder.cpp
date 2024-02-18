@@ -353,25 +353,18 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
         get_surface_format_name(decoder_param.OutputFormat)));
   }
 
-  assert(buffer->p);
-  if (buffer->n >= buffer->max_frames) {
-    // This should not happen
-    SPDL_FAIL_INTERNAL(
-        "Attempted to write beyond the maximum number of frames.");
-  }
-
   // Copy memory
   // Note: arena->H contains both luma and chroma planes.
   CUDA_MEMCPY2D cfg{
       .Height = buffer->h,
       .WidthInBytes = buffer->width_in_bytes,
       .dstArray = nullptr,
-      .dstDevice = buffer->p,
+      .dstDevice = (CUdeviceptr)buffer->get_next_frame(),
       .dstHost = nullptr,
       .dstMemoryType = CU_MEMORYTYPE_DEVICE,
       .dstPitch = buffer->pitch,
       .dstXInBytes = 0,
-      .dstY = buffer->n * buffer->h,
+      .dstY = 0,
       .srcArray = nullptr,
       .srcDevice = (CUdeviceptr)src_frame,
       .srcHost = nullptr,
