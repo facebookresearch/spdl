@@ -26,8 +26,14 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
       avformat_find_stream_info(fmt_ctx, nullptr),
       "Failed to find stream information.");
 
-  AVMediaType type =
-      type_ == MediaType::Video ? AVMEDIA_TYPE_VIDEO : AVMEDIA_TYPE_AUDIO;
+  AVMediaType type = [&]() {
+    switch (type_) {
+      case MediaType::Audio:
+        return AVMEDIA_TYPE_AUDIO;
+      case MediaType::Video:
+        return AVMEDIA_TYPE_VIDEO;
+    }
+  }();
   int idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
   if (idx < 0) {
     SPDL_FAIL(
@@ -43,7 +49,7 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
 }
 
 std::unique_ptr<DataInterface> get_interface(
-    const std::string src,
+    const std::string& src,
     std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg) {
   if (!adoptor) {
