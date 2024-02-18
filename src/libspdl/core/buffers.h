@@ -62,12 +62,12 @@ struct CUDABuffer2DPitch {
   size_t max_frames;
 
   // Shape of the data.
-  // n will be updated each time a frame is written
-  // n and dst_h are updated by writer.
   bool channel_last = false;
   size_t n{0}, c{0}, h{0}, w{0}, bpp{0};
   size_t width_in_bytes{0};
-  size_t dst_h{0}; // The next height position to be written
+  // n keeps track of how many frames are written.
+  // n < max_frames;
+  // n is updated by writer.
 
   // Data pointer and pitch size, set by CUDA API
   CUdeviceptr p{0};

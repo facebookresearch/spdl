@@ -354,6 +354,11 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   }
 
   assert(!buffer->p);
+  if (buffer->n >= buffer->max_frames) {
+    // This should not happen
+    SPDL_FAIL_INTERNAL(
+        "Attempted to write beyond the maximum number of frames.");
+  }
 
   // Copy memory
   // Note: arena->H contains both luma and chroma planes.
@@ -366,7 +371,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
       .dstMemoryType = CU_MEMORYTYPE_DEVICE,
       .dstPitch = buffer->pitch,
       .dstXInBytes = 0,
-      .dstY = buffer->dst_h,
+      .dstY = buffer->n * buffer->h,
       .srcArray = nullptr,
       .srcDevice = (CUdeviceptr)src_frame,
       .srcHost = nullptr,
@@ -381,7 +386,6 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
         cuMemcpy2DAsync(&cfg, stream),
         "Failed to copy Y plane from decoder output surface.");
   }
-  buffer->dst_h += buffer->h;
   buffer->n += 1;
 
   {
