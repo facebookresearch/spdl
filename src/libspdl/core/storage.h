@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#ifdef SPDL_USE_CUDA
+#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVDEC)
 #include <cuda.h>
 #endif
 

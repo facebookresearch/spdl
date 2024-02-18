@@ -1,5 +1,4 @@
 import numpy as np
-import spdl.utils
 from spdl import libspdl
 
 

@@ -3,6 +3,7 @@
 #include <libspdl/core/storage.h>
 #include <libspdl/core/types.h>
 
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -52,6 +53,33 @@ struct CUDABuffer : Buffer {
 
   bool is_cuda() const override;
   uintptr_t get_cuda_stream() const;
+};
+#endif
+
+#ifdef SPDL_USE_NVDEC
+struct CUDABuffer2DPitch {
+  // const until we introduce RGB and other picture formats
+  const bool channel_last = false;
+
+  // information to track the stateo f memory
+  size_t max_frames;
+
+  // Shape of the data.
+  // n will be updated each time a frame is written
+  size_t n{0}, c{0}, h{0}, w{0}, bpp{0};
+  size_t width_in_bytes{0};
+  size_t dst_h{0}; // The next height position to be written
+  // n and dst_h are updated by writer.
+
+  // Data pointer and pitch size, set by CUDA API
+  CUdeviceptr p{0};
+  size_t pitch{0};
+
+  CUDABuffer2DPitch(size_t max_frames);
+  ~CUDABuffer2DPitch();
+
+  void allocate(size_t c, size_t h, size_t w, size_t bpp);
+  std::vector<size_t> get_shape() const;
 };
 #endif
 

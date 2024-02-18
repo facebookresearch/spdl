@@ -5,6 +5,10 @@
 #include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
 
+#ifdef SPDL_USE_NVDEC
+#include <libspdl/core/detail/nvdec/decoding.h>
+#endif
+
 #include <fmt/core.h>
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/Collect.h>
@@ -111,6 +115,41 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task(
   }
   co_return co_await check_futures(src, timestamps, std::move(futures));
 }
+
+#ifdef SPDL_USE_NVDEC
+folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    const int cuda_device_index,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    int crop_left,
+    int crop_top,
+    int crop_right,
+    int crop_bottom,
+    int width,
+    int height) {
+  std::vector<folly::SemiFuture<ResultType>> futures;
+  {
+    auto exec = detail::getDecoderThreadPoolExecutor();
+    auto demuxer = detail::stream_demux_nvdec(
+        src, timestamps, std::move(adoptor), std::move(io_cfg));
+    while (auto result = co_await demuxer.next()) {
+      auto task = detail::decode_packets_nvdec(
+          *std::move(result),
+          cuda_device_index,
+          crop_left,
+          crop_top,
+          crop_right,
+          crop_bottom,
+          width,
+          height);
+      futures.emplace_back(std::move(task).scheduleOn(exec).start());
+    }
+  }
+  co_return co_await check_futures(src, timestamps, std::move(futures));
+}
+#endif
 } // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,6 +169,69 @@ DecodingResultFuture async_decode(
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
+}
+
+DecodingResultFuture async_decode_nvdec(
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const int cuda_device_index,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    int crop_left,
+    int crop_top,
+    int crop_right,
+    int crop_bottom,
+    int width,
+    int height) {
+#ifndef SPDL_USE_NVDEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+  if (crop_left < 0) {
+    SPDL_FAIL(
+        fmt::format("crop_left must be non-negative. Found: {}", crop_left));
+  }
+  if (crop_top < 0) {
+    SPDL_FAIL(
+        fmt::format("crop_top must be non-negative. Found: {}", crop_top));
+  }
+  if (crop_right < 0) {
+    SPDL_FAIL(
+        fmt::format("crop_right must be non-negative. Found: {}", crop_right));
+  }
+  if (crop_bottom < 0) {
+    SPDL_FAIL(fmt::format(
+        "crop_bottom must be non-negative. Found: {}", crop_bottom));
+  }
+  if (width > 0 && width % 2) {
+    SPDL_FAIL(fmt::format("width must be positive and even. Found: {}", width));
+  }
+  if (height > 0 && height % 2) {
+    SPDL_FAIL(
+        fmt::format("height must be positive and even. Found: {}", height));
+  }
+  static std::once_flag flag;
+  std::call_once(flag, []() {
+    TRACE_EVENT("nvdec", "cuInit");
+    cuInit(0);
+  });
+
+  auto task = stream_decode_task_nvdec(
+      src,
+      timestamps,
+      cuda_device_index,
+      adoptor,
+      io_cfg,
+      crop_left,
+      crop_top,
+      crop_right,
+      crop_bottom,
+      width,
+      height);
+  return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(task)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
+#endif
 }
 
 } // namespace spdl::core

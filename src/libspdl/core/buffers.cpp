@@ -1,6 +1,11 @@
 #include <libspdl/core/buffers.h>
 
+#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
+
+#ifdef SPDL_USE_NVDEC
+#include <libspdl/core/detail/cuda.h>
+#endif
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
@@ -69,6 +74,38 @@ bool CUDABuffer::is_cuda() const {
 
 uintptr_t CUDABuffer::get_cuda_stream() const {
   return (uintptr_t)(((CUDAStorage*)(storage.get()))->stream);
+}
+#endif
+
+#ifdef SPDL_USE_NVDEC
+CUDABuffer2DPitch::CUDABuffer2DPitch(size_t max_frames_)
+    : max_frames(max_frames_) {}
+
+CUDABuffer2DPitch::~CUDABuffer2DPitch() {
+  if (p) {
+    TRACE_EVENT("nvdec", "cuMemFree");
+    CHECK_CU(cuMemFree(p), "Failed to free memory.");
+  }
+}
+
+void CUDABuffer2DPitch::allocate(size_t c_, size_t h_, size_t w_, size_t bpp_) {
+  if (p) {
+    SPDL_FAIL_INTERNAL("Arena is already allocated.");
+  }
+  c = c_, h = h_, w = w_, bpp = bpp_;
+  width_in_bytes = w * bpp;
+
+  size_t height = max_frames * c * h;
+
+  TRACE_EVENT("nvdec", "cuMemAllocPitch");
+  CHECK_CU(
+      cuMemAllocPitch((CUdeviceptr*)&p, &pitch, width_in_bytes, height, 8),
+      "Failed to allocate memory.");
+}
+
+std::vector<size_t> CUDABuffer2DPitch::get_shape() const {
+  return channel_last ? std::vector<size_t>{n, h, w, c}
+                      : std::vector<size_t>{n, c, h, w};
 }
 #endif
 
