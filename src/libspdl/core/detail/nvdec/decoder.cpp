@@ -239,8 +239,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   uint ret = [&]() -> uint {
     if (!decoder) {
       decoder.reset(get_decoder(&new_decoder_param));
-      decoder_param = new_decoder_param;
-      return decoder_param.ulNumDecodeSurfaces;
+      return new_decoder_param.ulNumDecodeSurfaces;
     }
     switch (update_type(decoder_param, new_decoder_param)) {
       case RETAIN:
@@ -253,11 +252,11 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
         break;
     }
     auto prev_num_surfs = decoder_param.ulNumDecodeSurfaces;
-    decoder_param = new_decoder_param;
     return prev_num_surfs == new_decoder_param.ulNumDecodeSurfaces
         ? 1
         : new_decoder_param.ulNumDecodeSurfaces;
   }();
+  decoder_param = new_decoder_param;
 
   // Allocate arena
   // TODO: change c and bpp based on codec
