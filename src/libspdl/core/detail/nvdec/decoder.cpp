@@ -353,7 +353,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
         get_surface_format_name(decoder_param.OutputFormat)));
   }
 
-  assert(!buffer->p);
+  assert(buffer->p);
   if (buffer->n >= buffer->max_frames) {
     // This should not happen
     SPDL_FAIL_INTERNAL(
