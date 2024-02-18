@@ -78,6 +78,7 @@ struct CUDABuffer2DPitch {
 
   void allocate(size_t c, size_t h, size_t w, size_t bpp, bool channel_last);
   std::vector<size_t> get_shape() const;
+  uint8_t* get_next_frame();
 };
 #endif
 
