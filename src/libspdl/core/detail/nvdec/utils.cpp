@@ -356,7 +356,7 @@ const char* get_video_signal_format_name(unsigned char video_format) {
   return names[video_format];
 }
 
-std::string print(const CUVIDEOFORMAT* viedo_format) {
+std::string print(const CUVIDEOFORMAT* video_fmt) {
   return fmt::format(
       R"EOF(CUVIDEOFORMAT(
   .codec = {}
@@ -389,34 +389,33 @@ std::string print(const CUVIDEOFORMAT* viedo_format) {
   )
   .seqhdr_data_length = {}
 ))EOF",
-      get_codec_name(viedo_format->codec),
-      viedo_format->frame_rate.numerator,
-      viedo_format->frame_rate.denominator,
-      viedo_format->progressive_sequence,
-      viedo_format->progressive_sequence ? "progressive" : "interlaced",
-      viedo_format->bit_depth_luma_minus8,
-      viedo_format->bit_depth_chroma_minus8,
-      viedo_format->min_num_decode_surfaces,
-      viedo_format->coded_width,
-      viedo_format->coded_height,
-      viedo_format->display_area.left,
-      viedo_format->display_area.top,
-      viedo_format->display_area.right,
-      viedo_format->display_area.bottom,
-      get_chroma_name(viedo_format->chroma_format),
-      viedo_format->bitrate,
-      viedo_format->display_aspect_ratio.x,
-      viedo_format->display_aspect_ratio.y,
-      (unsigned char)viedo_format->video_signal_description.video_format,
+      get_codec_name(video_fmt->codec),
+      video_fmt->frame_rate.numerator,
+      video_fmt->frame_rate.denominator,
+      video_fmt->progressive_sequence,
+      video_fmt->progressive_sequence ? "progressive" : "interlaced",
+      video_fmt->bit_depth_luma_minus8,
+      video_fmt->bit_depth_chroma_minus8,
+      video_fmt->min_num_decode_surfaces,
+      video_fmt->coded_width,
+      video_fmt->coded_height,
+      video_fmt->display_area.left,
+      video_fmt->display_area.top,
+      video_fmt->display_area.right,
+      video_fmt->display_area.bottom,
+      get_chroma_name(video_fmt->chroma_format),
+      video_fmt->bitrate,
+      video_fmt->display_aspect_ratio.x,
+      video_fmt->display_aspect_ratio.y,
+      (unsigned char)video_fmt->video_signal_description.video_format,
       get_video_signal_format_name(
-          viedo_format->video_signal_description.video_format),
-      (unsigned char)
-          viedo_format->video_signal_description.video_full_range_flag,
-      (unsigned char)viedo_format->video_signal_description.reserved_zero_bits,
-      viedo_format->video_signal_description.color_primaries,
-      viedo_format->video_signal_description.transfer_characteristics,
-      viedo_format->video_signal_description.matrix_coefficients,
-      viedo_format->seqhdr_data_length);
+          video_fmt->video_signal_description.video_format),
+      (unsigned char)video_fmt->video_signal_description.video_full_range_flag,
+      (unsigned char)video_fmt->video_signal_description.reserved_zero_bits,
+      video_fmt->video_signal_description.color_primaries,
+      video_fmt->video_signal_description.transfer_characteristics,
+      video_fmt->video_signal_description.matrix_coefficients,
+      video_fmt->seqhdr_data_length);
 }
 
 const char* get_surface_format_name(cudaVideoSurfaceFormat s) {
