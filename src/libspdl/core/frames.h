@@ -47,7 +47,7 @@ struct FFmpegFrames : public DecodedFrames {
 struct FFmpegAudioFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
-  std::string get_media_type() const override;
+  constexpr std::string get_media_type() const override;
   std::string get_media_format() const override;
 
   bool is_cuda() const;
@@ -62,7 +62,7 @@ struct FFmpegAudioFrames : public FFmpegFrames {
 struct FFmpegVideoFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
-  std::string get_media_type() const override;
+  constexpr std::string get_media_type() const override;
   std::string get_media_format() const override;
 
   bool is_cuda() const;
@@ -90,7 +90,7 @@ struct NvDecVideoFrames : public DecodedFrames {
 
   bool is_cuda() const;
   std::string get_media_format() const override;
-  std::string get_media_type() const override;
+  constexpr std::string get_media_type() const override;
 
   NvDecVideoFrames(uint64_t id, MediaType media_type, int media_format);
   NvDecVideoFrames(const NvDecVideoFrames&) = delete;
