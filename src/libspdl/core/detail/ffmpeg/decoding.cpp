@@ -118,6 +118,7 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
 
   for (auto& timestamp : timestamps) {
     auto package = std::make_unique<PackagedAVPackets>(
+        type,
         fmt_ctx->url,
         timestamp,
         stream->codecpar,
@@ -204,6 +205,7 @@ stream_demux_nvdec(
 
   for (auto& timestamp : timestamps) {
     auto package = std::make_unique<PackagedAVPackets>(
+        MediaType::Video,
         fmt_ctx->url,
         timestamp,
         bsf_ctx ? bsf_ctx->par_out : stream->codecpar,
@@ -330,10 +332,10 @@ folly::coro::Task<void> decode_pkts_with_filter(
     std::string filter_desc,
     FFmpegFrames* frames) {
   auto filter_graph = [&]() {
-    switch (codec_ctx->codec_type) {
-      case AVMEDIA_TYPE_AUDIO:
+    switch (packets->media_type) {
+      case MediaType::Audio:
         return get_audio_filter(filter_desc, codec_ctx.get());
-      case AVMEDIA_TYPE_VIDEO:
+      case MediaType::Video:
         return get_video_filter(
             filter_desc, codec_ctx.get(), packets->frame_rate);
       default:
@@ -394,13 +396,13 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets(
       cfg.decoder_options,
       cfg.cuda_device_index);
   auto frames = [&]() -> std::unique_ptr<FFmpegFrames> {
-    switch (codec_ctx->codec_type) {
-      case AVMEDIA_TYPE_AUDIO:
+    switch (packets->media_type) {
+      case MediaType::Audio:
         return std::unique_ptr<FFmpegFrames>{
-            new FFmpegAudioFrames{packets->id, MediaType::Audio}};
-      case AVMEDIA_TYPE_VIDEO:
+            new FFmpegAudioFrames{packets->id}};
+      case MediaType::Video:
         return std::unique_ptr<FFmpegFrames>{
-            new FFmpegVideoFrames{packets->id, MediaType::Video}};
+            new FFmpegVideoFrames{packets->id}};
       default:
         SPDL_FAIL_INTERNAL(fmt::format(
             "Unsupported media type: {}",

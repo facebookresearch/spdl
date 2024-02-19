@@ -363,9 +363,6 @@ std::unique_ptr<Buffer> convert_audio_frames(
 std::unique_ptr<Buffer> convert_audio_frames(
     const FFmpegAudioFrames& frames,
     const std::optional<int>& i) {
-  if (frames.type != MediaType::Audio) {
-    SPDL_FAIL("FFmpegFrames must be audio type.");
-  }
   const auto& fs = frames.frames;
   if (!fs.size()) {
     SPDL_FAIL("No audio frame to convert to buffer.");

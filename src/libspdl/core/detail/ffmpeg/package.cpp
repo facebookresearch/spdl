@@ -25,12 +25,14 @@ uint64_t random() {
 } // namespace
 
 PackagedAVPackets::PackagedAVPackets(
+    MediaType media_type_,
     std::string src_,
     std::tuple<double, double> timestamp_,
     AVCodecParameters* codecpar_,
     AVRational time_base_,
     AVRational frame_rate_)
     : id(random()),
+      media_type(media_type_),
       src(src_),
       timestamp(timestamp_),
       codecpar(copy(codecpar_)),
@@ -50,6 +52,7 @@ PackagedAVPackets& PackagedAVPackets::operator=(
     PackagedAVPackets&& other) noexcept {
   using std::swap;
   swap(id, other.id);
+  swap(media_type, other.media_type);
   swap(src, other.src);
   swap(timestamp, other.timestamp);
   swap(codecpar, other.codecpar);
