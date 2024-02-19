@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libspdl/core/types.h>
+
 #include <string>
 #include <tuple>
 #include <vector>
@@ -16,6 +18,7 @@ namespace spdl::core::detail {
 struct PackagedAVPackets {
   uint64_t id;
   // Source information
+  MediaType media_type;
   std::string src;
   std::tuple<double, double> timestamp;
 
@@ -30,6 +33,7 @@ struct PackagedAVPackets {
   std::vector<AVPacket*> packets = {};
 
   PackagedAVPackets(
+      MediaType type,
       std::string src,
       std::tuple<double, double> timestamp,
       AVCodecParameters* codecpar,

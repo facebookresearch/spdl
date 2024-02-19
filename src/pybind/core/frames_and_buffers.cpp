@@ -119,9 +119,6 @@ void register_frames_and_buffers(py::module& m) {
       class_<DecodedFrames, PyDecodedFrames, std::shared_ptr<DecodedFrames>>(
           m, "DecodedFrames", py::module_local());
 
-  auto _FFmpegFrames =
-      py::class_<FFmpegFrames>(m, "FFmpegFrames", py::module_local());
-
   auto _FFmpegAudioFrames =
       py::class_<FFmpegAudioFrames>(m, "FFmpegAudioFrames", py::module_local());
 

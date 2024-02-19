@@ -27,14 +27,10 @@ struct DecodedFrames {
 // pointers with dedicated destructor, as opposed to vector of managed pointers
 struct FFmpegFrames : public DecodedFrames {
   uint64_t id{0};
-  MediaType type{0};
 
   std::vector<AVFrame*> frames{};
 
-  std::string get_media_format() const override;
-  std::string get_media_type() const override;
-
-  FFmpegFrames(uint64_t id, MediaType type);
+  FFmpegFrames(uint64_t id);
   // No copy constructors
   FFmpegFrames(const FFmpegFrames&) = delete;
   FFmpegFrames& operator=(const FFmpegFrames&) = delete;
@@ -51,6 +47,9 @@ struct FFmpegFrames : public DecodedFrames {
 struct FFmpegAudioFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
+  std::string get_media_type() const override;
+  std::string get_media_format() const override;
+
   bool is_cuda() const;
   int get_sample_rate() const;
   int get_num_frames() const;
@@ -62,6 +61,9 @@ struct FFmpegAudioFrames : public FFmpegFrames {
 ////////////////////////////////////////////////////////////////////////////////
 struct FFmpegVideoFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
+
+  std::string get_media_type() const override;
+  std::string get_media_format() const override;
 
   bool is_cuda() const;
   int get_num_frames() const;

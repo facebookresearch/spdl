@@ -29,8 +29,7 @@ std::string get_type_string(MediaType type) {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg Common
 ////////////////////////////////////////////////////////////////////////////////
-FFmpegFrames::FFmpegFrames(uint64_t id_, MediaType type_)
-    : id(id_), type(type_) {
+FFmpegFrames::FFmpegFrames(uint64_t id_) : id(id_) {
   TRACE_EVENT(
       "decoding",
       "FFmpegFrames::FFmpegFrames",
@@ -44,7 +43,6 @@ FFmpegFrames::FFmpegFrames(FFmpegFrames&& other) noexcept {
 FFmpegFrames& FFmpegFrames::operator=(FFmpegFrames&& other) noexcept {
   using std::swap;
   swap(id, other.id);
-  swap(type, other.type);
   swap(frames, other.frames);
   return *this;
 }
@@ -61,25 +59,20 @@ FFmpegFrames::~FFmpegFrames() {
   });
 }
 
-std::string FFmpegFrames::get_media_format() const {
-  if (!frames.size()) {
-    return "none";
-  }
-  switch (type) {
-    case MediaType::Audio:
-      return av_get_sample_fmt_name((AVSampleFormat)frames[0]->format);
-    case MediaType::Video:
-      return av_get_pix_fmt_name((AVPixelFormat)frames[0]->format);
-  }
-}
-
-std::string FFmpegFrames::get_media_type() const {
-  return get_type_string(type);
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Audio
 ////////////////////////////////////////////////////////////////////////////////
+std::string FFmpegAudioFrames::get_media_type() const {
+  return get_type_string(MediaType::Audio);
+}
+
+std::string FFmpegAudioFrames::get_media_format() const {
+  if (!frames.size()) {
+    return "none";
+  }
+  return av_get_sample_fmt_name((AVSampleFormat)frames[0]->format);
+}
+
 bool FFmpegAudioFrames::is_cuda() const {
   return false;
 }
@@ -103,6 +96,17 @@ int FFmpegAudioFrames::get_num_channels() const {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Video
 ////////////////////////////////////////////////////////////////////////////////
+std::string FFmpegVideoFrames::get_media_type() const {
+  return get_type_string(MediaType::Video);
+}
+
+std::string FFmpegVideoFrames::get_media_format() const {
+  if (!frames.size()) {
+    return "none";
+  }
+  return av_get_pix_fmt_name((AVPixelFormat)frames[0]->format);
+}
+
 bool FFmpegVideoFrames::is_cuda() const {
   if (!frames.size()) {
     return false;
@@ -167,7 +171,7 @@ FFmpegVideoFrames FFmpegVideoFrames::slice(int start, int stop, int step)
   const int numel = frames.size();
   int len = adjust_indices(numel, &start, &stop, step);
 
-  auto out = FFmpegVideoFrames{0, type};
+  auto out = FFmpegVideoFrames{0};
   if (!len) {
     return out;
   }
@@ -192,7 +196,7 @@ FFmpegVideoFrames FFmpegVideoFrames::slice(int i) const {
   }
   assert(0 <= i && i < numel);
 
-  auto out = FFmpegVideoFrames{0, type};
+  auto out = FFmpegVideoFrames{0};
   AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
   CHECK_AVERROR(
       av_frame_ref(dst, frames[i]),
