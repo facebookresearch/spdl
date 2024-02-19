@@ -26,8 +26,6 @@ std::string get_audio_filter_description(
     const std::optional<int>& num_channels,
     const std::optional<std::string>& sample_fmt);
 
-MediaType get_output_media_type(const AVFilterGraph* p);
-
 // for debug
 std::string describe_graph(AVFilterGraph* graph);
 
