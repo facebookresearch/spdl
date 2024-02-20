@@ -75,6 +75,21 @@ struct FFmpegVideoFrames : public FFmpegFrames {
   FFmpegVideoFrames slice(int index) const;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// FFmpeg - Image
+////////////////////////////////////////////////////////////////////////////////
+struct FFmpegImageFrames : public FFmpegFrames {
+  using FFmpegFrames::FFmpegFrames;
+
+  constexpr std::string get_media_type() const override;
+  std::string get_media_format() const override;
+
+  bool is_cuda() const;
+  int get_num_planes() const;
+  int get_width() const;
+  int get_height() const;
+};
+
 #ifdef SPDL_USE_NVDEC
 ////////////////////////////////////////////////////////////////////////////////
 // NVDEC - Video

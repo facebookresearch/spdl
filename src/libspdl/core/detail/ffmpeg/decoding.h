@@ -23,6 +23,12 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
+// Demuxer for a single image
+folly::coro::Task<std::unique_ptr<PackagedAVPackets>> demux_image(
+    const std::string src,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg);
+
 folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
     const DecodeConfig cfg = {},

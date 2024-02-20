@@ -102,7 +102,7 @@ std::unique_ptr<Buffer> convert_yuv420p(const std::vector<AVFrame*>& frames) {
 
 std::unique_ptr<Buffer> convert_yuv422p(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
+  assert(w % 2 == 0);
   size_t w2 = w / 2;
 
   auto buf = cpu_buffer({frames.size(), 1, h + h, w});
@@ -356,6 +356,24 @@ std::unique_ptr<Buffer> convert_video_frames(
 #endif
   }
   return convert_video_frames_cpu(fs, index);
+}
+
+std::unique_ptr<Buffer> convert_image_frames(
+    const FFmpegImageFrames& frames,
+    const std::optional<int>& index) {
+  const auto& fs = frames.frames;
+  if (!fs.size()) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  if (fs.size() != 1) {
+    SPDL_FAIL_INTERNAL(fmt::format(
+        "There must be exactly one frame to convert to buffer. Found: {}",
+        fs.size()));
+  }
+  auto buf = convert_video_frames_cpu(fs, index);
+  // Trim the first dim
+  buf->shape.erase(buf->shape.begin());
+  return std::move(buf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
