@@ -23,16 +23,18 @@ using std::experimental::source_location;
 
 std::string get_err_str(
     const std::string_view msg,
-    const source_location& location = source_location::current());
+    const source_location& location);
 
 std::string get_internal_err_str(
     const std::string_view msg,
-    const source_location& location = source_location::current());
+    const source_location& location);
 
 } // namespace spdl::core::detail
 
-#define SPDL_FAIL(msg) \
-  throw std::runtime_error(spdl::core::detail::get_err_str(msg))
+#define SPDL_FAIL(msg)                                      \
+  throw std::runtime_error(spdl::core::detail::get_err_str( \
+      msg, spdl::core::detail::source_location::current()))
 
-#define SPDL_FAIL_INTERNAL(msg) \
-  throw std::runtime_error(spdl::core::detail::get_internal_err_str(msg))
+#define SPDL_FAIL_INTERNAL(msg)                                      \
+  throw std::runtime_error(spdl::core::detail::get_internal_err_str( \
+      msg, spdl::core::detail::source_location::current()))
