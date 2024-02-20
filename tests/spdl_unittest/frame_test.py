@@ -40,7 +40,7 @@ def test_video_frames_getitem_int():
 
     assert num_frames > 0
     for i in range(num_frames):
-        arr0 = libspdl.to_numpy(decoded_frames[i])[0]
+        arr0 = libspdl.to_numpy(decoded_frames[i])
         assert np.array_equal(arr0, arr[i])
 
 
@@ -52,5 +52,5 @@ def test_video_frames_iterate():
 
     assert num_frames > 0
     for i, decoded_frame in enumerate(decoded_frames):
-        arr0 = libspdl.to_numpy(decoded_frame)[0]
+        arr0 = libspdl.to_numpy(decoded_frame)
         assert np.array_equal(arr0, arr[i])
