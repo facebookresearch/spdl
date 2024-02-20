@@ -80,11 +80,11 @@ folly::coro::Task<std::vector<ResultType>> check_futures(
       results.emplace_back(std::move(result.value()));
     } else {
       XLOG(ERR) << fmt::format(
-          "Failed to decode video clip. Error: {} (Source: {}, timestamp: {}, {})",
-          result.exception().what(),
+          "Failed to decode video clip. (Source: {} {}-{}) Error: {})",
           src,
           std::get<0>(timestamps[i]),
-          std::get<1>(timestamps[i]));
+          std::get<1>(timestamps[i]),
+          result.exception().what());
     }
     ++i;
   };
