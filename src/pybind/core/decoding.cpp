@@ -109,8 +109,6 @@ void register_pybind(py::module& m) {
          int buffer_size,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
-         const int cuda_device_index,
-         const py::object& frame_rate,
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt) {
@@ -120,9 +118,8 @@ void register_pybind(py::module& m) {
             {{0, HUGE_VAL}},
             adoptor,
             {format, format_options, buffer_size},
-            {decoder, decoder_options, cuda_device_index},
-            get_video_filter_description(
-                get_frame_rate(frame_rate), width, height, pix_fmt));
+            {decoder, decoder_options},
+            get_video_filter_description(std::nullopt, width, height, pix_fmt));
       },
       py::arg("src"),
       py::arg("adoptor") = nullptr,
@@ -131,8 +128,6 @@ void register_pybind(py::module& m) {
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
-      py::arg("cuda_device_index") = -1,
-      py::arg("frame_rate") = py::none(),
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none());
@@ -154,7 +149,7 @@ void register_pybind(py::module& m) {
             {{0, HUGE_VAL}},
             adoptor,
             {format, format_options, buffer_size},
-            {decoder, decoder_options, cuda_device_index},
+            {decoder, decoder_options},
             filter_desc);
       },
       py::arg("src"),
