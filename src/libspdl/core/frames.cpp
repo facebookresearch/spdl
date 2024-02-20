@@ -191,7 +191,7 @@ FFmpegVideoFrames FFmpegVideoFrames::slice(int start, int stop, int step)
   return out;
 }
 
-FFmpegVideoFrames FFmpegVideoFrames::slice(int i) const {
+FFmpegImageFrames FFmpegVideoFrames::slice(int i) const {
   const int numel = frames.size();
   int stop = i + 1, step = 1;
   if (!adjust_indices(numel, &i, &stop, step)) {
@@ -200,7 +200,7 @@ FFmpegVideoFrames FFmpegVideoFrames::slice(int i) const {
   }
   assert(0 <= i && i < numel);
 
-  auto out = FFmpegVideoFrames{0};
+  auto out = FFmpegImageFrames{0};
   AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
   CHECK_AVERROR(
       av_frame_ref(dst, frames[i]),
