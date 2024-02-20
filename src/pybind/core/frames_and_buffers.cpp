@@ -125,6 +125,9 @@ void register_frames_and_buffers(py::module& m) {
   auto _FFmpegVideoFrames =
       py::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames", py::module_local());
 
+  auto _FFmpegImageFrames =
+      py::class_<FFmpegImageFrames>(m, "FFmpegImageFrames", py::module_local());
+
 #ifdef SPDL_USE_NVDEC
   auto _NvDecVideoFrames =
       py::class_<NvDecVideoFrames>(m, "NvDecVideoFrames", py::module_local());
@@ -212,6 +215,15 @@ void register_frames_and_buffers(py::module& m) {
         return self.slice(i);
       });
 
+  _FFmpegImageFrames
+      .def_property_readonly(
+          "media_format", &FFmpegImageFrames::get_media_format)
+      .def_property_readonly("media_type", &FFmpegImageFrames::get_media_type)
+      .def_property_readonly("is_cuda", &FFmpegImageFrames::is_cuda)
+      .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
+      .def_property_readonly("width", &FFmpegImageFrames::get_width)
+      .def_property_readonly("height", &FFmpegImageFrames::get_height);
+
 #ifdef SPDL_USE_NVDEC
   _NvDecVideoFrames
       .def_property_readonly(
@@ -245,5 +257,6 @@ void register_frames_and_buffers(py::module& m) {
 
   m.def("convert_frames", &convert_audio_frames);
   m.def("convert_frames", &convert_video_frames);
+  m.def("convert_frames", &convert_image_frames);
 }
 } // namespace spdl::core

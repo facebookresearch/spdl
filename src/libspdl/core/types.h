@@ -17,7 +17,7 @@ using Rational = std::tuple<int, int>;
 
 // simplified version of AVMediaType so that public headers do not
 // include ffmpeg headers
-enum class MediaType { Audio, Video };
+enum class MediaType { Audio, Video, Image };
 
 struct IOConfig {
   std::optional<std::string> format = std::nullopt;

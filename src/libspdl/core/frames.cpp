@@ -22,6 +22,8 @@ constexpr std::string get_type_string(MediaType type) {
       return "audio";
     case MediaType::Video:
       return "video";
+    case MediaType::Image:
+      return "image";
   }
 }
 } // namespace
@@ -119,7 +121,9 @@ int FFmpegVideoFrames::get_num_frames() const {
 }
 
 int FFmpegVideoFrames::get_num_planes() const {
-  return av_pix_fmt_count_planes((AVPixelFormat)frames[0]->format);
+  return frames.size()
+      ? av_pix_fmt_count_planes((AVPixelFormat)frames[0]->format)
+      : -1;
 }
 
 int FFmpegVideoFrames::get_width() const {
@@ -203,6 +207,38 @@ FFmpegVideoFrames FFmpegVideoFrames::slice(int i) const {
       "Failed to create a new reference to an AVFrame.");
   out.frames.push_back(dst);
   return out;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// FFmpeg - Image
+////////////////////////////////////////////////////////////////////////////////
+constexpr std::string FFmpegImageFrames::get_media_type() const {
+  return get_type_string(MediaType::Image);
+}
+
+std::string FFmpegImageFrames::get_media_format() const {
+  if (!frames.size()) {
+    SPDL_FAIL_INTERNAL("There is no frame.");
+  }
+  return av_get_pix_fmt_name((AVPixelFormat)frames[0]->format);
+}
+
+bool FFmpegImageFrames::is_cuda() const {
+  return false;
+}
+
+int FFmpegImageFrames::get_num_planes() const {
+  return frames.size()
+      ? av_pix_fmt_count_planes((AVPixelFormat)frames[0]->format)
+      : -1;
+}
+
+int FFmpegImageFrames::get_width() const {
+  return frames.size() ? frames[0]->width : -1;
+}
+
+int FFmpegImageFrames::get_height() const {
+  return frames.size() ? frames[0]->height : -1;
 }
 
 #ifdef SPDL_USE_NVDEC

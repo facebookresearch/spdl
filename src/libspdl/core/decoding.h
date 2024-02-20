@@ -8,7 +8,48 @@
 #include <vector>
 
 namespace spdl::core {
+////////////////////////////////////////////////////////////////////////////////
+// Image
+////////////////////////////////////////////////////////////////////////////////
+class SingleDecodingResult;
 
+#define ASYNC_DECODE_IMAGE                           \
+  SingleDecodingResult async_decode_image(           \
+      const std::string& src,                        \
+      const std::shared_ptr<SourceAdoptor>& adoptor, \
+      const IOConfig& io_cfg,                        \
+      const DecodeConfig& decode_cfg,                \
+      const std::string& filter_desc);
+
+ASYNC_DECODE_IMAGE;
+
+class SingleDecodingResult {
+  using ResultType = std::unique_ptr<DecodedFrames>;
+
+  struct Impl;
+
+  Impl* pimpl = nullptr;
+
+  SingleDecodingResult(Impl* impl);
+
+ public:
+  SingleDecodingResult() = delete;
+  SingleDecodingResult(const SingleDecodingResult&) = delete;
+  SingleDecodingResult& operator=(const SingleDecodingResult&) = delete;
+  SingleDecodingResult(SingleDecodingResult&&) noexcept;
+  SingleDecodingResult& operator=(SingleDecodingResult&&) noexcept;
+  ~SingleDecodingResult();
+
+  ResultType get();
+
+  friend ASYNC_DECODE_IMAGE;
+};
+
+#undef ASYNC_DECODE_IMAGE
+
+////////////////////////////////////////////////////////////////////////////////
+// Audio / Video
+////////////////////////////////////////////////////////////////////////////////
 class DecodingResultFuture;
 
 #define ASYNC_DECODE                                             \

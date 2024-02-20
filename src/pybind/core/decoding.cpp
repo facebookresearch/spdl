@@ -27,7 +27,12 @@ void register_pybind(py::module& m) {
   auto _DecodingResultFuture = py::class_<DecodingResultFuture>(
       m, "DecodingResultFuture", py::module_local());
 
+  auto _SingleDecodingResult = py::class_<SingleDecodingResult>(
+      m, "SingleDecodingResult", py::module_local());
+
   _DecodingResultFuture.def("get", &DecodingResultFuture::get);
+
+  _SingleDecodingResult.def("get", &SingleDecodingResult::get);
 
   m.def(
       "decode_video",
@@ -112,10 +117,8 @@ void register_pybind(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt) {
-        return async_decode(
-            MediaType::Video,
+        return async_decode_image(
             src,
-            {{0, HUGE_VAL}},
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
@@ -143,10 +146,8 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc) {
-        return async_decode(
-            MediaType::Video,
+        return async_decode_image(
             src,
-            {{0, HUGE_VAL}},
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},

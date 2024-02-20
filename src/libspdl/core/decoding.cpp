@@ -65,6 +65,49 @@ auto DecodingResultFuture::get() -> DecodingResultFuture::ResultType {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SingleDecodingResult::Impl
+////////////////////////////////////////////////////////////////////////////////
+struct SingleDecodingResult::Impl {
+  bool fetched{false};
+  folly::SemiFuture<ResultType> future;
+
+  Impl(folly::SemiFuture<ResultType>&& fut) : future(std::move(fut)){};
+
+  ResultType get() {
+    if (fetched) {
+      SPDL_FAIL("The decoding result is already fetched.");
+    }
+    fetched = true;
+    return folly::coro::blockingWait(std::move(future));
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// SingleDecodingResult
+////////////////////////////////////////////////////////////////////////////////
+SingleDecodingResult::SingleDecodingResult(Impl* i) : pimpl(i) {}
+
+SingleDecodingResult::SingleDecodingResult(
+    SingleDecodingResult&& other) noexcept {
+  *this = std::move(other);
+}
+
+SingleDecodingResult& SingleDecodingResult::operator=(
+    SingleDecodingResult&& other) noexcept {
+  using std::swap;
+  swap(pimpl, other.pimpl);
+  return *this;
+}
+
+SingleDecodingResult::~SingleDecodingResult() {
+  delete pimpl;
+}
+
+auto SingleDecodingResult::get() -> SingleDecodingResult::ResultType {
+  return pimpl->get();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Actual implementation of decoding task;
 ////////////////////////////////////////////////////////////////////////////////
 using ResultType = std::unique_ptr<DecodedFrames>;
@@ -114,6 +157,22 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task(
     }
   }
   co_return co_await check_futures(src, timestamps, std::move(futures));
+}
+
+folly::coro::Task<ResultType> image_decode_task(
+    const std::string src,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    const DecodeConfig decode_cfg,
+    const std::string filter_desc) {
+  auto exec = detail::getDecoderThreadPoolExecutor();
+  auto packet =
+      co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
+  auto task = detail::decode_packets(
+      std::move(packet), std::move(decode_cfg), std::move(filter_desc));
+  folly::SemiFuture<ResultType> future =
+      std::move(task).scheduleOn(exec).start();
+  co_return co_await std::move(future);
 }
 
 #ifdef SPDL_USE_NVDEC
@@ -166,6 +225,19 @@ DecodingResultFuture async_decode(
   auto task = stream_decode_task(
       type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
   return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(task)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
+}
+
+SingleDecodingResult async_decode_image(
+    const std::string& src,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc) {
+  auto task = image_decode_task(src, adoptor, io_cfg, decode_cfg, filter_desc);
+  return SingleDecodingResult{new SingleDecodingResult::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};

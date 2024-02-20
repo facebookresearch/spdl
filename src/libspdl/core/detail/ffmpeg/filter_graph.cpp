@@ -29,17 +29,29 @@ std::string get_buffer_arg(
     int height,
     const char* pix_fmt_name,
     AVRational time_base,
-    AVRational frame_rate,
+    std::optional<AVRational> frame_rate,
     AVRational sample_aspect_ratio) {
+  if (frame_rate) {
+    auto fr = frame_rate.value();
+    return fmt::format(
+        "video_size={}x{}:pix_fmt={}:time_base={}/{}:frame_rate={}/{}:pixel_aspect={}/{}",
+        width,
+        height,
+        pix_fmt_name,
+        time_base.num,
+        time_base.den,
+        fr.num,
+        fr.den,
+        sample_aspect_ratio.num,
+        sample_aspect_ratio.den);
+  }
   return fmt::format(
-      "video_size={}x{}:pix_fmt={}:time_base={}/{}:frame_rate={}/{}:pixel_aspect={}/{}",
+      "video_size={}x{}:pix_fmt={}:time_base={}/{}:pixel_aspect={}/{}",
       width,
       height,
       pix_fmt_name,
       time_base.num,
       time_base.den,
-      frame_rate.num,
-      frame_rate.den,
       sample_aspect_ratio.num,
       sample_aspect_ratio.den);
 }
@@ -159,7 +171,7 @@ AVFilterGraphPtr get_audio_filter(
 AVFilterGraphPtr get_video_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx,
-    AVRational frame_rate) {
+    std::optional<AVRational> frame_rate) {
   static const AVFilter *src, *sink;
   {
     TRACE_EVENT("decoding", "avfilter_get_by_name(buffer)");

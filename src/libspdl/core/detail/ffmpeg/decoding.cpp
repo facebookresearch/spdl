@@ -30,6 +30,8 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
     switch (type_) {
       case MediaType::Audio:
         return AVMEDIA_TYPE_AUDIO;
+      case MediaType::Image:
+        [[fallthrough]];
       case MediaType::Video:
         return AVMEDIA_TYPE_VIDEO;
     }
@@ -132,6 +134,48 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
     package->packets.push_back(nullptr); // For downstream flushing
     co_yield std::move(package);
   }
+}
+
+folly::coro::Task<std::unique_ptr<PackagedAVPackets>> demux_image(
+    const std::string src,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg) {
+  TRACE_EVENT("demuxing", "detail::demux");
+  auto interface = get_interface(src, adoptor, io_cfg);
+  AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
+  AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
+
+  auto package = std::make_unique<PackagedAVPackets>(
+      MediaType::Image,
+      fmt_ctx->url,
+      std::tuple<double, double>{0., 1000.},
+      stream->codecpar,
+      AVRational{1, 1},
+      AVRational{1, 1});
+
+  int ite = 0;
+  do {
+    ++ite;
+    AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
+    int errnum;
+    {
+      TRACE_EVENT("demuxing", "av_read_frame");
+      errnum = av_read_frame(fmt_ctx, packet.get());
+    }
+    if (errnum == AVERROR_EOF) {
+      break;
+    }
+    CHECK_AVERROR_NUM(errnum, "Failed to process packet.");
+    if (packet->stream_index != stream->index) {
+      continue;
+    }
+    package->packets.push_back(packet.release());
+    break;
+  } while (ite < 1000);
+  if (!package->packets.size()) {
+    SPDL_FAIL(fmt::format("Failed to demux a sigle frame from {}", src));
+  }
+  co_return std::move(package);
 }
 
 namespace {
@@ -338,6 +382,8 @@ folly::coro::Task<void> decode_pkts_with_filter(
       case MediaType::Video:
         return get_video_filter(
             filter_desc, codec_ctx.get(), packets->frame_rate);
+      case MediaType::Image:
+        return get_video_filter(filter_desc, codec_ctx.get());
       default:
         SPDL_FAIL_INTERNAL(fmt::format(
             "Unexpected media type was given: {}",
@@ -403,6 +449,9 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets(
       case MediaType::Video:
         return std::unique_ptr<FFmpegFrames>{
             new FFmpegVideoFrames{packets->id}};
+      case MediaType::Image:
+        return std::unique_ptr<FFmpegFrames>{
+            new FFmpegImageFrames{packets->id}};
       default:
         SPDL_FAIL_INTERNAL(fmt::format(
             "Unsupported media type: {}",
