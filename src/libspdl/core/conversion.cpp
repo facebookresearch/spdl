@@ -100,17 +100,40 @@ std::unique_ptr<Buffer> convert_yuv420p(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-std::unique_ptr<Buffer> convert_u_or_v(
-    const std::vector<AVFrame*>& frames,
-    int plane) {
+std::unique_ptr<Buffer> convert_yuv422p(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2, w2 = w / 2;
+  size_t w2 = w / 2;
 
-  auto buf = cpu_buffer({frames.size(), 1, h2, w2});
+  auto buf = cpu_buffer({frames.size(), 1, h + h, w});
   uint8_t* dst = static_cast<uint8_t*>(buf->data());
   for (const auto& f : frames) {
-    copy_2d(f->data[plane], h2, w2, f->linesize[plane], &dst, w2);
+    // Y
+    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
+    // UV
+    uint8_t* dst2 = dst + w2;
+    copy_2d(f->data[1], h, w2, f->linesize[1], &dst, w);
+    copy_2d(f->data[2], h, w2, f->linesize[2], &dst2, w);
+  }
+  return buf;
+}
+
+/// YUV420 -> half_h = true
+/// YUV422 -> half_h = false
+std::unique_ptr<Buffer>
+convert_u_or_v(const std::vector<AVFrame*>& frames, int plane, bool half_h) {
+  size_t h = frames[0]->height, w = frames[0]->width;
+  assert(w % 2 == 0);
+  w /= 2;
+  if (half_h) {
+    assert(h % 2 == 0);
+    h /= 2;
+  }
+
+  auto buf = cpu_buffer({frames.size(), 1, h, w});
+  uint8_t* dst = static_cast<uint8_t*>(buf->data());
+  for (const auto& f : frames) {
+    copy_2d(f->data[plane], h, w, f->linesize[plane], &dst, w);
   }
   return buf;
 }
@@ -264,10 +287,34 @@ std::unique_ptr<Buffer> convert_video_frames_cpu(
           return convert_plane(frames, plane);
         case 1:
         case 2:
-          return convert_u_or_v(frames, plane);
+          return convert_u_or_v(frames, plane, /*half_h=*/true);
         default:
           SPDL_FAIL(fmt::format(
               "Valid `plane` values for YUV420P are [0, 1, 2]. (Found: {})",
+              plane));
+      }
+    }
+    case AV_PIX_FMT_YUVJ422P: {
+      if (!index) {
+        // Note:
+        //
+        // YUVJ420P == YUV420P + AVCOL_RANGE_JPEG
+        //
+        // AVCOL_RANGE_JPEG has slight different value range for Chroma.
+        // (1 - 255 instead of 0 - 255)
+        // https://ffmpeg.org/doxygen/5.1/pixfmt_8h.html#a3da0bf691418bc22c4bcbe6583ad589a
+        return convert_yuv422p(frames);
+      }
+      auto plane = index.value();
+      switch (plane) {
+        case 0:
+          return convert_plane(frames, plane);
+        case 1:
+        case 2:
+          return convert_u_or_v(frames, plane, /*half_h=*/false);
+        default:
+          SPDL_FAIL(fmt::format(
+              "Valid `plane` values for YUV422P are [0, 1, 2]. (Found: {})",
               plane));
       }
     }
