@@ -1,6 +1,7 @@
 #include <libspdl/core/detail/nvdec/decoder.h>
 
 #include <libspdl/core/detail/cuda.h>
+#include <libspdl/core/detail/nvdec/converter.h>
 #include <libspdl/core/detail/nvdec/utils.h>
 #include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
@@ -258,13 +259,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   }();
   decoder_param = new_decoder_param;
 
-  // Allocate arena
-  // TODO: change c and bpp based on codec
-  bool channel_last = false;
-  size_t c = 1, bpp = 1;
-  auto w = decoder_param.ulTargetWidth;
-  auto h = decoder_param.ulTargetHeight + decoder_param.ulTargetHeight / 2;
-  buffer->allocate(c, h, w, bpp, channel_last);
+  converter = get_converter(stream, buffer, &decoder_param);
   return ret;
 }
 
@@ -326,64 +321,15 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
       .unpaired_field = disp_info->repeat_first_field < 0,
       .output_stream = stream};
 
+  // Make the decoded frame available to output surface
   MapGuard mapping(decoder.get(), &proc_params, disp_info->picture_index);
 
-  auto src_frame = (uint8_t*)mapping.frame;
-  unsigned int src_pitch = mapping.pitch;
-  // Source memory layout
-  //
-  // <---pitch--->
-  // <-width->
-  // ┌────────┬───┐  ▲
-  // │ YYYYYY │   │ height
-  // │ YYYYYY │   │  ▼
-  // ├────────┤   │  ▲
-  // │ UVUVUV |   │ height / 2
-  // └────────┴───┘  ▼
-  //
-
-  if (!(decoder_param.bitDepthMinus8 == 8 ||
-        decoder_param.ChromaFormat == cudaVideoChromaFormat_420 ||
-        decoder_param.OutputFormat == cudaVideoSurfaceFormat_NV12)) {
-    SPDL_FAIL(fmt::format(
-        "Decoding is not yet implemented for this format. bit_depth={}, chroma_format={}, output_surface_format={}",
-        decoder_param.bitDepthMinus8 + 8,
-        get_chroma_name(decoder_param.ChromaFormat),
-        get_surface_format_name(decoder_param.OutputFormat)));
-  }
-
-  // Copy memory
-  // Note: arena->H contains both luma and chroma planes.
-  CUDA_MEMCPY2D cfg{
-      .Height = buffer->h,
-      .WidthInBytes = buffer->width_in_bytes,
-      .dstArray = nullptr,
-      .dstDevice = (CUdeviceptr)buffer->get_next_frame(),
-      .dstHost = nullptr,
-      .dstMemoryType = CU_MEMORYTYPE_DEVICE,
-      .dstPitch = buffer->pitch,
-      .dstXInBytes = 0,
-      .dstY = 0,
-      .srcArray = nullptr,
-      .srcDevice = (CUdeviceptr)src_frame,
-      .srcHost = nullptr,
-      .srcMemoryType = CU_MEMORYTYPE_DEVICE,
-      .srcPitch = src_pitch,
-      .srcXInBytes = 0,
-      .srcY = 0,
-  };
-  {
-    TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
-    CHECK_CU(
-        cuMemcpy2DAsync(&cfg, stream),
-        "Failed to copy Y plane from decoder output surface.");
-  }
+  // Copy the surface to user-owning buffer
+  converter->convert((uint8_t*)mapping.frame, mapping.pitch);
   buffer->n += 1;
 
-  {
-    TRACE_EVENT("nvdec", "cuStreamSynchronize");
-    CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
-  }
+  TRACE_EVENT("nvdec", "cuStreamSynchronize");
+  CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
   return 1;
 }
 
