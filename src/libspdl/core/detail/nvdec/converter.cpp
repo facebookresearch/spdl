@@ -1,7 +1,7 @@
 #include <libspdl/core/detail/nvdec/converter.h>
 
 #include <libspdl/core/detail/cuda.h>
-#include <libspdl/core/detail/nvdec/ColorSpace.h>
+#include <libspdl/core/detail/nvdec/utils.h>
 #include <libspdl/core/detail/tracing.h>
 
 namespace spdl::core::detail {
@@ -39,13 +39,13 @@ void NV12Passthrough::convert(uint8_t* src_ptr, unsigned int src_pitch) {
 };
 
 std::unique_ptr<Converter> get_converter(
-    CUstream s,
-    CUDABuffer2DPitch* b,
+    CUstream stream,
+    CUDABuffer2DPitch* buffer,
     const CUVIDDECODECREATEINFO* param) {
   // NV12
-  if (param.bitDepthMinus8 == 8 &&
-      param.ChromaFormat == cudaVideoChromaFormat_420 &&
-      param.OutputFormat == cudaVideoSurfaceFormat_NV12) {
+  if (param->bitDepthMinus8 == 0 &&
+      param->ChromaFormat == cudaVideoChromaFormat_420 &&
+      param->OutputFormat == cudaVideoSurfaceFormat_NV12) {
     // Source memory layout
     //
     // <---pitch--->
@@ -60,17 +60,17 @@ std::unique_ptr<Converter> get_converter(
 
     bool channel_last = false;
     size_t c = 1, bpp = 1;
-    auto w = param.ulTargetWidth;
-    auto h = param.ulTargetHeight;
+    auto w = param->ulTargetWidth;
+    auto h = param->ulTargetHeight;
     buffer->allocate(c, h + h / 2, w, bpp, channel_last);
-    return std::unique_ptr<Converter>(new NV12Passthrough{s, b});
+    return std::unique_ptr<Converter>(new NV12Passthrough{stream, buffer});
   }
 
   SPDL_FAIL(fmt::format(
       "Decoding is not implemented for this format. bit_depth={}, chroma_format={}, output_surface_format={}",
-      param.bitDepthMinus8 + 8,
-      get_chroma_name(param.ChromaFormat),
-      get_surface_format_name(param.OutputFormat)));
+      param->bitDepthMinus8 + 8,
+      get_chroma_name(param->ChromaFormat),
+      get_surface_format_name(param->OutputFormat)));
 }
 
 } // namespace spdl::core::detail

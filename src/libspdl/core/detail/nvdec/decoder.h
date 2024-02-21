@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libspdl/core/buffers.h>
+#include <libspdl/core/detail/nvdec/converter.h>
 #include <libspdl/core/detail/nvdec/utils.h>
 #include <libspdl/core/detail/nvdec/wrapper.h>
 
@@ -51,6 +52,7 @@ class NvDecDecoder {
 
   // Where the output frames will be stored.
   CUDABuffer2DPitch* buffer = nullptr;
+  std::unique_ptr<Converter> converter{nullptr};
 
   // Timebase of the incomding packets/decoded frames
   AVRational timebase;

@@ -2,6 +2,8 @@
 
 #include <libspdl/core/buffers.h>
 
+#include <cuviddec.h>
+
 namespace spdl::core::detail {
 
 struct Converter {
