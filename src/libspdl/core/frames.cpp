@@ -16,7 +16,7 @@ extern "C" {
 
 namespace spdl::core {
 namespace {
-constexpr std::string get_type_string(MediaType type) {
+std::string get_type_string(MediaType type) {
   switch (type) {
     case MediaType::Audio:
       return "audio";
@@ -64,7 +64,7 @@ FFmpegFrames::~FFmpegFrames() {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Audio
 ////////////////////////////////////////////////////////////////////////////////
-constexpr std::string FFmpegAudioFrames::get_media_type() const {
+std::string FFmpegAudioFrames::get_media_type() const {
   return get_type_string(MediaType::Audio);
 }
 
@@ -98,7 +98,7 @@ int FFmpegAudioFrames::get_num_channels() const {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Video
 ////////////////////////////////////////////////////////////////////////////////
-constexpr std::string FFmpegVideoFrames::get_media_type() const {
+std::string FFmpegVideoFrames::get_media_type() const {
   return get_type_string(MediaType::Video);
 }
 
@@ -212,7 +212,7 @@ FFmpegImageFrames FFmpegVideoFrames::slice(int i) const {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Image
 ////////////////////////////////////////////////////////////////////////////////
-constexpr std::string FFmpegImageFrames::get_media_type() const {
+std::string FFmpegImageFrames::get_media_type() const {
   return get_type_string(MediaType::Image);
 }
 
@@ -256,7 +256,7 @@ std::string NvDecVideoFrames::get_media_format() const {
   return av_get_pix_fmt_name((AVPixelFormat)media_format);
 }
 
-constexpr std::string NvDecVideoFrames::get_media_type() const {
+std::string NvDecVideoFrames::get_media_type() const {
   return get_type_string(media_type);
 }
 #endif
