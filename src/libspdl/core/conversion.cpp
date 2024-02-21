@@ -373,7 +373,7 @@ std::unique_ptr<Buffer> convert_image_frames(
   auto buf = convert_video_frames_cpu(fs, index);
   // Trim the first dim
   buf->shape.erase(buf->shape.begin());
-  return std::move(buf);
+  return buf;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
