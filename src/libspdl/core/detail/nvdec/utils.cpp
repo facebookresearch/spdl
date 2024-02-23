@@ -9,6 +9,10 @@
 
 #include <span>
 
+extern "C" {
+#include <libavcodec/codec_id.h>
+}
+
 namespace spdl::core::detail {
 
 cudaVideoCodec covert_codec_id(AVCodecID id) {
@@ -35,7 +39,7 @@ cudaVideoCodec covert_codec_id(AVCodecID id) {
     case AV_CODEC_ID_AV1:
       return cudaVideoCodec_AV1;
     default:
-      return cudaVideoCodec_NumCodecs;
+      SPDL_FAIL(fmt::format("Unsupported codec ID: {}", avcodec_get_name(id)));
   }
 }
 

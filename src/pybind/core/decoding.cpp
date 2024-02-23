@@ -269,5 +269,44 @@ void register_pybind(py::module& m) {
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
       py::arg("height") = -1);
+
+  m.def(
+      "decode_image_nvdec",
+      [](const std::string& src,
+         const int cuda_device_index,
+         const std::shared_ptr<SourceAdoptor>& adoptor,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
+         int crop_left,
+         int crop_top,
+         int crop_right,
+         int crop_bottom,
+         int width,
+         int height) {
+        return async_decode_image_nvdec(
+            src,
+            cuda_device_index,
+            adoptor,
+            {format, format_options, buffer_size},
+            crop_left,
+            crop_top,
+            crop_right,
+            crop_bottom,
+            width,
+            height);
+      },
+      py::arg("src"),
+      py::arg("cuda_device_index"),
+      py::arg("adoptor") = nullptr,
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("crop_left") = 0,
+      py::arg("crop_top") = 0,
+      py::arg("crop_right") = 0,
+      py::arg("crop_bottom") = 0,
+      py::arg("width") = -1,
+      py::arg("height") = -1);
 }
 } // namespace spdl::core

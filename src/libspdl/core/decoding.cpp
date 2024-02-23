@@ -176,6 +176,35 @@ folly::coro::Task<ResultType> image_decode_task(
 }
 
 #ifdef SPDL_USE_NVDEC
+folly::coro::Task<ResultType> image_decode_task_nvdec(
+    const std::string src,
+    const int cuda_device_index,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    int crop_left,
+    int crop_top,
+    int crop_right,
+    int crop_bottom,
+    int width,
+    int height) {
+  auto exec = detail::getDecoderThreadPoolExecutor();
+  auto packet =
+      co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
+  auto task = detail::decode_packets_nvdec(
+      std::move(packet),
+      cuda_device_index,
+      crop_left,
+      crop_top,
+      crop_right,
+      crop_bottom,
+      width,
+      height,
+      /*is_image*/ true);
+  folly::SemiFuture<ResultType> future =
+      std::move(task).scheduleOn(exec).start();
+  co_return co_await std::move(future);
+}
+
 folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -330,6 +359,47 @@ DecodingResultFuture async_decode_nvdec(
       width,
       height);
   return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(task)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
+#endif
+}
+
+SingleDecodingResult async_decode_image_nvdec(
+    const std::string& src,
+    const int cuda_device_index,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    int crop_left,
+    int crop_top,
+    int crop_right,
+    int crop_bottom,
+    int width,
+    int height) {
+#ifndef SPDL_USE_NVDEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+  validate_nvdec_params(
+      cuda_device_index,
+      crop_left,
+      crop_top,
+      crop_right,
+      crop_bottom,
+      width,
+      height);
+  init_cuda();
+  auto task = image_decode_task_nvdec(
+      src,
+      cuda_device_index,
+      adoptor,
+      io_cfg,
+      crop_left,
+      crop_top,
+      crop_right,
+      crop_bottom,
+      width,
+      height);
+  return SingleDecodingResult{new SingleDecodingResult::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
