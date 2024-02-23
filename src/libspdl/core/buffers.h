@@ -60,6 +60,7 @@ struct CUDABuffer : Buffer {
 struct CUDABuffer2DPitch {
   // information to track the stateo f memory
   size_t max_frames;
+  bool is_image = false;
 
   // Shape of the data.
   bool channel_last = false;
@@ -73,7 +74,7 @@ struct CUDABuffer2DPitch {
   CUdeviceptr p{0};
   size_t pitch{0};
 
-  CUDABuffer2DPitch(size_t max_frames);
+  CUDABuffer2DPitch(size_t max_frames, bool is_image = false);
   ~CUDABuffer2DPitch();
 
   void allocate(size_t c, size_t h, size_t w, size_t bpp, bool channel_last);

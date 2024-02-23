@@ -35,7 +35,8 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
     int crop_right,
     int crop_bottom,
     int target_width,
-    int target_height) {
+    int target_height,
+    bool is_image) {
   size_t num_packets = packets->packets.size();
   assert(num_packets > 0);
 
@@ -48,7 +49,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
   AVCodecParameters* codecpar = packets->codecpar;
   auto frames = std::make_unique<NvDecVideoFrames>(
       packets->id, MediaType::Video, codecpar->format);
-  frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets);
+  frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets, is_image);
 
   decoder.init(
       cuda_device_index,

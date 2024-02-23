@@ -3,6 +3,9 @@ import logging
 
 from pathlib import Path
 
+import numpy as np
+from numba import cuda
+
 from spdl import libspdl
 
 
@@ -14,41 +17,61 @@ def _parse_python_args():
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument(
-        "-i", "--input-video", help="Input video file.", type=Path, required=True
+        "-i", "--input", help="Input media file.", type=Path, required=True
+    )
+    parser.add_argument(
+        "-t",
+        "--type",
+        help="Input media file type.",
+        choices=["video", "image"],
+        default="video",
     )
     parser.add_argument(
         "-o", "--output-dir", help="Output directory.", type=Path, required=True
     )
-    parser.add_argument("--show", action="store_true")
     parser.add_argument("--gpu", type=int)
     parser.add_argument("others", nargs="*")
     return parser.parse_args()
 
 
-def decode(input_video, gpu):
+def decode(src_path, type, gpu):
     """Test the python wrapper of SPDL"""
 
-    input_video = str(input_video.resolve())
-    future = libspdl.decode_video_nvdec(
-        src=input_video,
-        timestamps=[(1, 1.05), (10, 10.05), (20, 20.05)],
-        cuda_device_index=gpu,
-    )
-    return [libspdl.to_numpy(frames) for frames in future.get()]
+    cuda.select_device(gpu)
+
+    src = str(src_path.resolve())
+    if type == "video":
+        future = libspdl.decode_video_nvdec(
+            src=src,
+            timestamps=[(1, 1.05), (10, 10.05), (20, 20.05)],
+            cuda_device_index=gpu,
+        )
+        buffers = [libspdl._BufferWrapper(fut) for fut in future.get()]
+        frames = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
+        return frames
+    if type == "image":
+        future = libspdl.decode_image_nvdec(
+            src=src,
+            cuda_device_index=gpu,
+        )
+        buffer = libspdl._BufferWrapper(future.get())
+        frames = [[cuda.as_cuda_array(buffer).copy_to_host()]]
+        return frames
 
 
-def _plot(frames, output_dir, show):
-    import matplotlib.pyplot as plt
+def _plot(frameset, output_dir):
+    from PIL import Image
 
-    i = 0
-    for fs in frames:
-        for f in fs:
-            plt.imshow(f)
-            plt.savefig(output_dir / f"{i}.png")
-            i += 1
-
-    if show:
-        plt.show()
+    for i, frames in enumerate(frameset):
+        for j, array in enumerate(frames):
+            print(array.shape)  # CHW
+            if array.shape[0] == 1:
+                array = array[0]
+            else:
+                array = np.moveaxis(array, 0, 2)
+            path = output_dir / f"{i}_{j}.png"
+            print(f"Saving {path}", flush=True)
+            Image.fromarray(array).save(path)
 
 
 def _main():
@@ -59,11 +82,12 @@ def _main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     frames = decode(
-        args.input_video,
+        args.input,
+        args.type,
         args.gpu,
     )
 
-    _plot(frames, output_dir, args.show)
+    _plot(frames, output_dir)
 
 
 def _init(debug, demuxer_threads=1, decoder_threads=1):

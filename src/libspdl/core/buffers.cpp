@@ -78,8 +78,8 @@ uintptr_t CUDABuffer::get_cuda_stream() const {
 #endif
 
 #ifdef SPDL_USE_NVDEC
-CUDABuffer2DPitch::CUDABuffer2DPitch(size_t max_frames_)
-    : max_frames(max_frames_) {}
+CUDABuffer2DPitch::CUDABuffer2DPitch(size_t max_frames_, bool is_image_)
+    : max_frames(max_frames_), is_image(is_image_) {}
 
 CUDABuffer2DPitch::~CUDABuffer2DPitch() {
   if (p) {
@@ -110,6 +110,10 @@ void CUDABuffer2DPitch::allocate(
 }
 
 std::vector<size_t> CUDABuffer2DPitch::get_shape() const {
+  if (is_image) {
+    return channel_last ? std::vector<size_t>{h, w, c}
+                        : std::vector<size_t>{c, h, w};
+  }
   return channel_last ? std::vector<size_t>{n, h, w, c}
                       : std::vector<size_t>{n, c, h, w};
 }
@@ -121,6 +125,9 @@ uint8_t* CUDABuffer2DPitch::get_next_frame() {
   if (n >= max_frames) {
     SPDL_FAIL_INTERNAL(
         "Attempted to write beyond the maximum number of frames.");
+  }
+  if (is_image && n == 1) {
+    SPDL_FAIL_INTERNAL("Attempted to write multiple frames for image buffer.");
   }
   return channel_last ? (uint8_t*)p + n * h * pitch
                       : (uint8_t*)p + n * c * h * pitch;

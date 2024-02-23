@@ -23,6 +23,21 @@ class SingleDecodingResult;
 
 ASYNC_DECODE_IMAGE;
 
+#define ASYNC_DECODE_IMAGE_NVDEC                     \
+  SingleDecodingResult async_decode_image_nvdec(     \
+      const std::string& src,                        \
+      const int cuda_device_index,                   \
+      const std::shared_ptr<SourceAdoptor>& adoptor, \
+      const IOConfig& io_cfg,                        \
+      int crop_left,                                 \
+      int crop_top,                                  \
+      int crop_right,                                \
+      int crop_bottom,                               \
+      int width,                                     \
+      int height)
+
+ASYNC_DECODE_IMAGE_NVDEC;
+
 class SingleDecodingResult {
   using ResultType = std::unique_ptr<DecodedFrames>;
 
@@ -43,9 +58,11 @@ class SingleDecodingResult {
   ResultType get();
 
   friend ASYNC_DECODE_IMAGE;
+  friend ASYNC_DECODE_IMAGE_NVDEC;
 };
 
 #undef ASYNC_DECODE_IMAGE
+#undef ASYNC_DECODE_IMAGE_NVDEC
 
 ////////////////////////////////////////////////////////////////////////////////
 // Audio / Video

@@ -65,9 +65,14 @@ py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
   ret["typestr"] = typestr;
   ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.p, false};
   auto hp = b.h * b.pitch;
-  ret["strides"] = py::tuple(py::cast(
-      b.channel_last ? std::vector<size_t>{hp, b.pitch, b.c * b.bpp, b.bpp}
-                     : std::vector<size_t>{b.c * hp, hp, b.pitch, b.bpp}));
+  ret["strides"] = b.is_image
+      ? py::tuple(py::cast(
+            b.channel_last ? std::vector<size_t>{b.pitch, b.c * b.bpp, b.bpp}
+                           : std::vector<size_t>{hp, b.pitch, b.bpp}))
+      : py::tuple(py::cast(
+            b.channel_last
+                ? std::vector<size_t>{hp, b.pitch, b.c * b.bpp, b.bpp}
+                : std::vector<size_t>{b.c * hp, hp, b.pitch, b.bpp}));
   ret["stream"] = py::none();
   return ret;
 }
