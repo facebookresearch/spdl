@@ -243,21 +243,20 @@ SingleDecodingResult async_decode_image(
           .start()}};
 }
 
-DecodingResultFuture async_decode_nvdec(
-    const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    const int cuda_device_index,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
-    const IOConfig& io_cfg,
+namespace {
+void validate_nvdec_params(
+    int cuda_device_index,
     int crop_left,
     int crop_top,
     int crop_right,
     int crop_bottom,
     int width,
     int height) {
-#ifndef SPDL_USE_NVDEC
-  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-#else
+  if (cuda_device_index < 0) {
+    SPDL_FAIL(fmt::format(
+        "cuda_device_index must be non-negative. Found: {}",
+        cuda_device_index));
+  }
   if (crop_left < 0) {
     SPDL_FAIL(
         fmt::format("crop_left must be non-negative. Found: {}", crop_left));
@@ -281,11 +280,42 @@ DecodingResultFuture async_decode_nvdec(
     SPDL_FAIL(
         fmt::format("height must be positive and even. Found: {}", height));
   }
+}
+
+void init_cuda() {
   static std::once_flag flag;
   std::call_once(flag, []() {
     TRACE_EVENT("nvdec", "cuInit");
     cuInit(0);
   });
+}
+
+} // namespace
+
+DecodingResultFuture async_decode_nvdec(
+    const std::string& src,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const int cuda_device_index,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    int crop_left,
+    int crop_top,
+    int crop_right,
+    int crop_bottom,
+    int width,
+    int height) {
+#ifndef SPDL_USE_NVDEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+  validate_nvdec_params(
+      cuda_device_index,
+      crop_left,
+      crop_top,
+      crop_right,
+      crop_bottom,
+      width,
+      height);
+  init_cuda();
 
   auto task = stream_decode_task_nvdec(
       src,
