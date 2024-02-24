@@ -5,14 +5,12 @@ import pytest
 
 
 @pytest.fixture
-def run_in_tmpdir(tmpdir):
-    cwd = Path(tmpdir)
-
+def run_in_tmpdir(tmp_path):
     def run_in_tmpdir_(cmd, shell=True, **kwargs):
         print(f"Executing `{cmd}`")
         subprocess.run(
-            cmd, cwd=cwd, shell=shell, check=True, capture_output=False, **kwargs
+            cmd, cwd=tmp_path, shell=shell, check=True, capture_output=False, **kwargs
         )
-        return cwd
+        return tmp_path
 
     return run_in_tmpdir_
