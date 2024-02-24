@@ -272,6 +272,7 @@ SingleDecodingResult async_decode_image(
           .start()}};
 }
 
+#ifdef SPDL_USE_NVDEC
 namespace {
 void validate_nvdec_params(
     int cuda_device_index,
@@ -318,8 +319,8 @@ void init_cuda() {
     cuInit(0);
   });
 }
-
 } // namespace
+#endif
 
 DecodingResultFuture async_decode_nvdec(
     const std::string& src,
