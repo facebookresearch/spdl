@@ -48,7 +48,10 @@ bool is_compatible(const CUVIDEOFORMAT* fmt, const CUVIDDECODECAPS& caps) {
 void check_support(CUVIDEOFORMAT* fmt, CUVIDDECODECAPS caps) {
   if (!caps.bIsSupported) {
     SPDL_FAIL(fmt::format(
-        "Codec not supported on this GPU. {}", get_codec_name(fmt->codec)));
+        "Codec not supported on this GPU. Codec: {}, Bit Depth: {}, Chroma Format: {}",
+        get_codec_name(fmt->codec),
+        fmt->bit_depth_luma_minus8 + 8,
+        get_chroma_name(fmt->chroma_format)));
   }
   if ((fmt->coded_width < caps.nMinWidth) ||
       (fmt->coded_width > caps.nMaxWidth) ||
@@ -131,6 +134,22 @@ CUVIDDECODECREATEINFO get_create_info(
       crop_left - crop_right;
   int height = video_fmt->display_area.bottom - video_fmt->display_area.top -
       crop_top - crop_bottom;
+  if (width <= 0) {
+    SPDL_FAIL(fmt::format(
+        "Invalid image width: {} (source width: {}, crop_left: {}, crop_right: {})",
+        width,
+        video_fmt->display_area.right - video_fmt->display_area.left,
+        crop_left,
+        crop_right));
+  }
+  if (height <= 0) {
+    SPDL_FAIL(fmt::format(
+        "Invalid image height: {} (source height: {}, crop_top: {}, crop_bottom: {})",
+        height,
+        video_fmt->display_area.bottom - video_fmt->display_area.top,
+        crop_top,
+        crop_bottom));
+  }
 
   // Note: The frame is first cropped then resized to target_width/height
 

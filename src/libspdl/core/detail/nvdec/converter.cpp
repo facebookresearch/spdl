@@ -43,9 +43,7 @@ std::unique_ptr<Converter> get_converter(
     CUDABuffer2DPitch* buffer,
     const CUVIDDECODECREATEINFO* param) {
   // NV12
-  if (param->bitDepthMinus8 == 0 &&
-      param->ChromaFormat == cudaVideoChromaFormat_420 &&
-      param->OutputFormat == cudaVideoSurfaceFormat_NV12) {
+  if (param->OutputFormat == cudaVideoSurfaceFormat_NV12) {
     // Source memory layout
     //
     // <---pitch--->
@@ -67,9 +65,7 @@ std::unique_ptr<Converter> get_converter(
   }
 
   SPDL_FAIL(fmt::format(
-      "Decoding is not implemented for this format. bit_depth={}, chroma_format={}, output_surface_format={}",
-      param->bitDepthMinus8 + 8,
-      get_chroma_name(param->ChromaFormat),
+      "Conversion is not implemented for {}",
       get_surface_format_name(param->OutputFormat)));
 }
 

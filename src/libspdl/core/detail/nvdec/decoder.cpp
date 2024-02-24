@@ -306,7 +306,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   XLOG(DBG9) << fmt::format(
       " --- Frame  PTS={:.3f} ({})", ts, disp_info->timestamp);
 
-  if (ts < start_time || end_time < ts) {
+  if (ts < start_time || end_time <= ts) {
     return 1;
   }
 

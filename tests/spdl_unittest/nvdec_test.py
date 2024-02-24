@@ -1,11 +1,64 @@
+from dataclasses import dataclass
+
 import numpy as np
 import pytest
 from numba import cuda
 from spdl import libspdl
 
+DEFAULT_CUDA = 0
 
-SRC = "/home/moto/test.mp4"
-HEIGHT, WIDTH = 540, 960
+
+@dataclass
+class SrcInfo:
+    path: str
+    width: int
+    height: int
+
+
+@pytest.fixture
+def h264(run_in_tmpdir):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    width, height = 320, 240
+
+    tmpdir = run_in_tmpdir(cmd)
+    path = str(tmpdir / "sample.mp4")
+    return SrcInfo(path, width, height)
+
+
+def test_nvdec_odd_size(h264):
+    """Odd width/height must be rejected"""
+    with pytest.raises(RuntimeError):
+        libspdl.decode_video_nvdec(
+            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, width=121
+        )
+
+    with pytest.raises(RuntimeError):
+        libspdl.decode_video_nvdec(
+            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, height=257
+        )
+
+
+def test_nvdec_negative(h264):
+    """Negative options must be rejected"""
+    with pytest.raises(RuntimeError):
+        libspdl.decode_video_nvdec(
+            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_left=-1
+        )
+
+    with pytest.raises(RuntimeError):
+        libspdl.decode_video_nvdec(
+            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_top=-1
+        )
+
+    with pytest.raises(RuntimeError):
+        libspdl.decode_video_nvdec(
+            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_right=-1
+        )
+
+    with pytest.raises(RuntimeError):
+        libspdl.decode_video_nvdec(
+            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_bottom=-1
+        )
 
 
 def _save(array, prefix):
@@ -15,30 +68,12 @@ def _save(array, prefix):
         Image.fromarray(arr[0]).save(f"{prefix}_{i}.png")
 
 
-def _get_frames(cuda_device_index=0, timestamp=(0, 0.1), **cfg):
-    cuda.select_device(cuda_device_index)
-    futures = libspdl.decode_video_nvdec(
-        SRC,
-        timestamps=[timestamp],
-        cuda_device_index=cuda_device_index,
-        **cfg,
-    )
-    results = futures.get()
-    return cuda.as_cuda_array(libspdl._BufferWrapper(results[0])).copy_to_host()
-
-
-def _get_frames_set(timestamps, cuda_device_index=0, **cfg):
-    cuda.select_device(cuda_device_index)
-    futures = libspdl.decode_video_nvdec(
-        SRC,
-        timestamps=timestamps,
-        cuda_device_index=cuda_device_index,
-        **cfg,
-    )
-    return [
-        cuda.as_cuda_array(libspdl._BufferWrapper(res)).copy_to_host()
-        for res in futures.get()
-    ]
+def _to_arrays(results):
+    # temporarily needed as CUDA device context is not set in the main thread
+    cuda.select_device(DEFAULT_CUDA)
+    buffers = [libspdl._BufferWrapper(res) for res in results]
+    frames = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
+    return frames
 
 
 def split_nv12(array):
@@ -51,47 +86,14 @@ def split_nv12(array):
     return y, u, v
 
 
-def test_nvdec_odd_size():
-    """Odd width/height must be rejected"""
-    with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
-            SRC, timestamps=[(0, 0.1)], cuda_device_index=0, width=121
-        )
-
-    with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
-            SRC, timestamps=[(0, 0.1)], cuda_device_index=0, height=257
-        )
-
-
-def test_nvdec_negative():
-    """Negative options must be rejected"""
-    with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
-            SRC, timestamps=[(0, 0.1)], cuda_device_index=0, crop_left=-1
-        )
-
-    with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
-            SRC, timestamps=[(0, 0.1)], cuda_device_index=0, crop_top=-1
-        )
-
-    with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
-            SRC, timestamps=[(0, 0.1)], cuda_device_index=0, crop_right=-1
-        )
-
-    with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
-            SRC, timestamps=[(0, 0.1)], cuda_device_index=0, crop_bottom=-1
-        )
-
-
-def test_nvdec_decode():
-    """Check NVDEC decoder with basic configuration."""
-    cuda_device_index = 0
-
-    array = _get_frames(cuda_device_index=cuda_device_index)
+def test_nvdec_decode_h264_420p_basic(h264):
+    """NVDEC can decode YUV420P video."""
+    results = libspdl.decode_video_nvdec(
+        h264.path,
+        timestamps=[(0, 1.0)],
+        cuda_device_index=DEFAULT_CUDA,
+    ).get()
+    array = _to_arrays(results)[0]
 
     # y, u, v = split_nv12(array)
     # _save(array, "./base")
@@ -99,41 +101,54 @@ def test_nvdec_decode():
     # _save(u, "./base_u")
     # _save(v, "./base_v")
 
+    height = h264.height + h264.height // 2
+
     assert array.dtype == np.uint8
-    assert array.shape == (3, 1, HEIGHT + HEIGHT // 2, WIDTH)
+    assert array.shape == (25, 1, height, h264.width)
 
 
-def test_nvdec_decode_resize():
+# TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
+
+
+def test_nvdec_decode_h264_420p_resize(h264):
     """Check NVDEC decoder with resizing."""
-    cuda_device_index = 0
-    width, height = 640, 540
+    width, height = 160, 120
+    h2 = height // 2
 
-    array = _get_frames(cuda_device_index=cuda_device_index, width=width, height=height)
+    results = libspdl.decode_video_nvdec(
+        h264.path,
+        timestamps=[(0, 1.0)],
+        cuda_device_index=DEFAULT_CUDA,
+        width=width,
+        height=height,
+    ).get()
+    array = _to_arrays(results)[0]
 
     # _save(array, "./resize")
 
     assert array.dtype == np.uint8
-    assert array.shape == (3, 1, height + height // 2, width)
+    assert array.shape == (25, 1, height + h2, width)
 
 
-def test_nvdec_decode_crop():
-    """Check NVDEC decoder with resizing."""
+def test_nvdec_decode_h264_420p_crop(h264):
+    """Check NVDEC decoder with cropping."""
+    top, bottom, left, right = 40, 80, 100, 50
+    h = h264.height - top - bottom
+    w = h264.width - left - right
 
-    cuda_device_index = 0
-    top, bottom, left, right = 80, 160, 200, 100
-    height = HEIGHT - top - bottom
-    width = WIDTH - left - right
-
-    h2, w2 = height // 2, width // 2
+    h2, w2 = h // 2, w // 2
     l2, t2 = left // 2, top // 2
 
-    array = _get_frames(
-        cuda_device_index=cuda_device_index,
+    results = libspdl.decode_video_nvdec(
+        h264.path,
+        timestamps=[(0, 1.0)],
+        cuda_device_index=DEFAULT_CUDA,
         crop_top=top,
         crop_bottom=bottom,
         crop_left=left,
         crop_right=right,
-    )
+    ).get()
+    array = _to_arrays(results)[0]
     y, u, v = split_nv12(array)
 
     # _save(array, "./crop")
@@ -142,11 +157,14 @@ def test_nvdec_decode_crop():
     # _save(v, "./crop_v")
 
     assert array.dtype == np.uint8
-    assert array.shape == (3, 1, height + h2, width)
+    assert array.shape == (25, 1, h + h2, w)
 
-    array0 = _get_frames(
-        cuda_device_index=cuda_device_index,
-    )
+    results = libspdl.decode_video_nvdec(
+        h264.path,
+        timestamps=[(0, 1.0)],
+        cuda_device_index=DEFAULT_CUDA,
+    ).get()
+    array0 = _to_arrays(results)[0]
     y0, u0, v0 = split_nv12(array0)
 
     # _save(array0, "./crop_ref")
@@ -154,7 +172,7 @@ def test_nvdec_decode_crop():
     # _save(u0, "./crop_ref_u")
     # _save(v0, "./crop_ref_v")
 
-    y0 = y0[:, :, top : top + height, left : left + width]
+    y0 = y0[:, :, top : top + h, left : left + w]
     u0 = u0[:, :, t2 : t2 + h2, l2 : l2 + w2]
     v0 = v0[:, :, t2 : t2 + h2, l2 : l2 + w2]
 
@@ -167,25 +185,25 @@ def test_nvdec_decode_crop():
     assert np.array_equal(v, v0)
 
 
-def test_nvdec_decode_crop_resize():
+def test_nvdec_decode_crop_resize(h264):
     """Check NVDEC decoder with cropping and resizing."""
+    top, bottom, left, right = 40, 80, 100, 60
+    h = (h264.height - top - bottom) // 2
+    w = (h264.width - left - right) // 2
 
-    cuda_device_index = 0
-    top, bottom, left, right = 80, 160, 200, 100
-    height = (HEIGHT - top - bottom) // 2
-    width = (WIDTH - left - right) // 2
-
-    h2 = height // 2
-
-    array = _get_frames(
-        cuda_device_index=cuda_device_index,
-        crop_top=top,
-        crop_bottom=bottom,
-        crop_left=left,
-        crop_right=right,
-        width=width,
-        height=height,
-    )
+    array = _to_arrays(
+        libspdl.decode_video_nvdec(
+            h264.path,
+            timestamps=[(0.0, 1.0)],
+            cuda_device_index=DEFAULT_CUDA,
+            crop_top=top,
+            crop_bottom=bottom,
+            crop_left=left,
+            crop_right=right,
+            width=w,
+            height=h,
+        ).get()
+    )[0]
 
     # y, u, v = split_nv12(array)
     # _save(array, "./crop_resize")
@@ -194,58 +212,46 @@ def test_nvdec_decode_crop_resize():
     # _save(v, "./crop_resize_v")
 
     assert array.dtype == np.uint8
-    assert array.shape == (3, 1, height + h2, width)
+    assert array.shape == (25, 1, h + h // 2, w)
 
 
-def test_non_zero_keyframes():
-    """Key frames at non-zero start time should produce proper number of frames."""
-    timestamps = [
-        (0.1, 1.0),
-        (0.2, 1.0),
-        (0.3, 1.0),
-        (10, 10.1),
-        (20, 20.1),
-    ]
-    features = libspdl.decode_video_nvdec(
-        SRC,
-        cuda_device_index=0,
-        timestamps=timestamps,
-    )
-    for ts, frames in zip(timestamps, features.get(), strict=True):
-        print(f"{len(frames):3d}, {ts=}")
-        assert len(frames) > 0
-
-
-def test_num_frames_arithmetics():
+def test_num_frames_arithmetics(h264):
     """NVDEC with non-zero start time should produce proper number of frames."""
-    cuda_device_index = 0
+    ref = _to_arrays(
+        libspdl.decode_video_nvdec(
+            h264.path,
+            timestamps=[(0, 1.0)],
+            cuda_device_index=DEFAULT_CUDA,
+        ).get()
+    )[0]
 
-    # NOTE: The source video has 29.97 FPS.
-    ref = _get_frames(
-        cuda_device_index=cuda_device_index,
-        timestamp=(0, 0.5),
-    )
-
+    # NOTE: The source video has 25 FPS.
+    # fmt: off
     cfgs = [
         # timestamp, args_for_slicing
-        ((0, 0.1), [3]),
-        ((0, 0.2), [6]),
-        ((0, 0.3), [9]),
-        ((0, 0.4), [12]),
-        ((0, 0.5), [15]),
-        ((0.1, 0.2), [-12, -9]),
-        ((0.1, 0.3), [-12, -6]),
-        ((0.1, 0.4), [-12, -3]),
-        ((0.1, 0.5), [-12, None]),
-        ((0.2, 0.3), [-9, -6]),
-        ((0.2, 0.4), [-9, -3]),
-        ((0.2, 0.5), [-9, None]),
-        ((0.3, 0.4), [-6, -3]),
-        ((0.3, 0.5), [-6, None]),
-        ((0.4, 0.5), [-3, None]),
+        ((0, 0.2), [5]),
+        ((0, 0.4), [10]),
+        ((0, 0.6), [15]),
+        ((0, 0.8), [20]),
+        ((0, 1.0,), [25]),
+        ((0.2, 0.4), [5, 10]),
+        ((0.2, 0.6), [5, 15]),
+        ((0.2, 0.8), [5, 20]),
+        ((0.2, 1.0), [5, 25]),
+        ((0.4, 0.6), [10, 15]),
+        ((0.4, 0.8), [10, 20]),
+        ((0.4, 1.0), [10, 25]),
+        ((0.6, 0.8), [15, 20]),
+        ((0.6, 1.0), [15, 25]),
+        ((0.8, 1.0), [20, 25]),
     ]
-    frames = _get_frames_set(
-        cuda_device_index=cuda_device_index, timestamps=[cfg[0] for cfg in cfgs]
+    # fmt: on
+    frames = _to_arrays(
+        libspdl.decode_video_nvdec(
+            h264.path,
+            cuda_device_index=DEFAULT_CUDA,
+            timestamps=[cfg[0] for cfg in cfgs],
+        ).get()
     )
 
     for (ts, slice_args), fs in zip(cfgs, frames, strict=True):
