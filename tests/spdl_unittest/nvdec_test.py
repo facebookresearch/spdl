@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import numpy as np
 import pytest
 from numba import cuda
@@ -8,56 +6,45 @@ from spdl import libspdl
 DEFAULT_CUDA = 0
 
 
-@dataclass
-class SrcInfo:
-    path: str
-    width: int
-    height: int
-
-
 @pytest.fixture
-def h264(run_in_tmpdir):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    width, height = 320, 240
-
-    tmpdir = run_in_tmpdir(cmd)
-    path = str(tmpdir / "sample.mp4")
-    return SrcInfo(path, width, height)
+def dummy(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample.mp4"
+    return get_sample(cmd, width=320, height=240)
 
 
-def test_nvdec_odd_size(h264):
+def test_nvdec_odd_size(dummy):
     """Odd width/height must be rejected"""
     with pytest.raises(RuntimeError):
         libspdl.decode_video_nvdec(
-            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, width=121
+            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, width=121
         )
 
     with pytest.raises(RuntimeError):
         libspdl.decode_video_nvdec(
-            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, height=257
+            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, height=257
         )
 
 
-def test_nvdec_negative(h264):
+def test_nvdec_negative(dummy):
     """Negative options must be rejected"""
     with pytest.raises(RuntimeError):
         libspdl.decode_video_nvdec(
-            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_left=-1
+            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_left=-1
         )
 
     with pytest.raises(RuntimeError):
         libspdl.decode_video_nvdec(
-            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_top=-1
+            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_top=-1
         )
 
     with pytest.raises(RuntimeError):
         libspdl.decode_video_nvdec(
-            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_right=-1
+            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_right=-1
         )
 
     with pytest.raises(RuntimeError):
         libspdl.decode_video_nvdec(
-            h264.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_bottom=-1
+            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_bottom=-1
         )
 
 
@@ -84,6 +71,12 @@ def split_nv12(array):
     uv = array[:, :, h1:, :].reshape(-1, 1, h2, w // 2, 2)
     u, v = uv[..., 0], uv[..., 1]
     return y, u, v
+
+
+@pytest.fixture
+def h264(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    return get_sample(cmd, width=320, height=240)
 
 
 def test_nvdec_decode_h264_420p_basic(h264):
