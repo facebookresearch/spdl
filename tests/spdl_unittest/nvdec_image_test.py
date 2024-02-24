@@ -13,27 +13,25 @@ def _to_array(frame):
     return cuda.as_cuda_array(libspdl._BufferWrapper(frame)).copy_to_host()
 
 
-@dataclass
-class SrcInfo:
-    path: str
-    width: int
-    height: int
+def test_decode_image_yuv422(get_sample):
+    """JPEG image (yuv422p) can be decoded."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv422p -frames:v 1 sample.jpeg"
+    sample = get_sample(cmd, width=320, height=240)
+
+    yuv = _to_array(
+        libspdl.decode_image_nvdec(sample.path, cuda_device_index=DEFAULT_CUDA).get()
+    )
+
+    height = sample.height + sample.height // 2
+
+    assert yuv.dtype == np.uint8
+    assert yuv.shape == (1, height, sample.width)
 
 
 @pytest.fixture
-def yuvj420p(run_in_tmpdir):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj420p -frames:v 1 sample_%d.jpeg"
-    tmpdir = run_in_tmpdir(cmd)
-    src = str(tmpdir / "sample_1.jpeg")
-    return SrcInfo(src, 320, 240)
-
-
-@pytest.fixture
-def yuv422p(run_in_tmpdir):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv422p -frames:v 1 sample_%d.jpeg"
-    tmpdir = run_in_tmpdir(cmd)
-    src = str(tmpdir / "sample_1.jpeg")
-    return SrcInfo(src, 320, 240)
+def yuvj420p(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj420p -frames:v 1 sample.jpeg"
+    return get_sample(cmd, width=320, height=240)
 
 
 def test_decode_image_yuv420(yuvj420p):
@@ -46,15 +44,3 @@ def test_decode_image_yuv420(yuvj420p):
 
     assert yuv.dtype == np.uint8
     assert yuv.shape == (1, height, yuvj420p.width)
-
-
-def test_decode_image_yuv422(yuv422p):
-    """JPEG image (yuv422p) can be decoded."""
-    yuv = _to_array(
-        libspdl.decode_image_nvdec(yuv422p.path, cuda_device_index=DEFAULT_CUDA).get()
-    )
-
-    height = yuv422p.height + yuv422p.height // 2
-
-    assert yuv.dtype == np.uint8
-    assert yuv.shape == (1, height, yuv422p.width)
