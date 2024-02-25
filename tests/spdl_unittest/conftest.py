@@ -19,16 +19,17 @@ def run_in_tmpdir(tmp_path):
 @dataclass
 class SrcInfo:
     path: str
-    width: int
-    height: int
+    width: int = -1
+    height: int = -1
+    num_channels: int = -1
 
 
 @pytest.fixture
 def get_sample(run_in_tmpdir):
-    def _get_sample(cmd, width, height, output_file=None):
+    def _get_sample(cmd, output_file=None, **kwargs):
         tmpdir = run_in_tmpdir(cmd)
         output_file = output_file or cmd.split()[-1]
         path = str(tmpdir / output_file)
-        return SrcInfo(path, width, height)
+        return SrcInfo(path, **kwargs)
 
     return _get_sample
