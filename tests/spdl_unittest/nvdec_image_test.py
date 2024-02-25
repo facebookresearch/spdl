@@ -19,7 +19,9 @@ def test_decode_image_yuv422(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     yuv = _to_array(
-        libspdl.decode_image_nvdec(sample.path, cuda_device_index=DEFAULT_CUDA).get()
+        libspdl.decode_image_nvdec(
+            sample.path, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
+        ).get()
     )
 
     height = sample.height + sample.height // 2
@@ -37,7 +39,9 @@ def yuvj420p(get_sample):
 def test_decode_image_yuv420(yuvj420p):
     """JPEG image (yuvj420p) can be decoded."""
     yuv = _to_array(
-        libspdl.decode_image_nvdec(yuvj420p.path, cuda_device_index=DEFAULT_CUDA).get()
+        libspdl.decode_image_nvdec(
+            yuvj420p.path, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
+        ).get()
     )
 
     height = yuvj420p.height + yuvj420p.height // 2
