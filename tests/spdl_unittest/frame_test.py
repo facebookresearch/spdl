@@ -1,21 +1,22 @@
 import numpy as np
+import pytest
 from spdl import libspdl
 
 
-def _get_video_frames(pix_fmt, h=128, w=256):
-    src = "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4"
-    return libspdl.decode_video(
-        src=src,
+@pytest.fixture
+def yuv420p(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    return get_sample(cmd, width=320, height=240)
+
+
+def test_video_frames_getitem_slice(yuv420p):
+    """DecodedFrames.__getitem__ works for slice input"""
+    decoded_frames = libspdl.decode_video(
+        src=yuv420p.path,
         timestamps=[(0.0, 0.5)],
-        pix_fmt=pix_fmt,
-        height=h,
-        width=w,
+        pix_fmt="rgb24",
     ).get()[0]
 
-
-def test_video_frames_getitem_slice():
-    """DecodedFrames.__getitem__ works for slice input"""
-    decoded_frames = _get_video_frames("rgb24")
     num_frames = len(decoded_frames)
     arr = libspdl.to_numpy(decoded_frames)
 
@@ -32,9 +33,14 @@ def test_video_frames_getitem_slice():
     assert np.array_equal(arr[::3], arr3)
 
 
-def test_video_frames_getitem_int():
+def test_video_frames_getitem_int(yuv420p):
     """DecodedFrames.__getitem__ works for index input"""
-    decoded_frames = _get_video_frames("rgb24")
+    decoded_frames = libspdl.decode_video(
+        src=yuv420p.path,
+        timestamps=[(0.0, 0.5)],
+        pix_fmt="rgb24",
+    ).get()[0]
+
     num_frames = len(decoded_frames)
     arr = libspdl.to_numpy(decoded_frames)
 
@@ -44,9 +50,14 @@ def test_video_frames_getitem_int():
         assert np.array_equal(arr0, arr[i])
 
 
-def test_video_frames_iterate():
+def test_video_frames_iterate(yuv420p):
     """DecodedFrames works as iterator"""
-    decoded_frames = _get_video_frames("rgb24")
+    decoded_frames = libspdl.decode_video(
+        src=yuv420p.path,
+        timestamps=[(0.0, 0.5)],
+        pix_fmt="rgb24",
+    ).get()[0]
+
     num_frames = len(decoded_frames)
     arr = libspdl.to_numpy(decoded_frames)
 

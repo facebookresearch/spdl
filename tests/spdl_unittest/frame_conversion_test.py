@@ -2,39 +2,28 @@ import gc
 import itertools
 import sys
 
+import numpy as np
 import pytest
 from spdl import libspdl
 
 
-def _get_video_frames(pix_fmt, h=128, w=256):
-    src = "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4"
-    return libspdl.decode_video(
-        src=src,
-        timestamps=[(0.0, 0.5)],
-        pix_fmt=pix_fmt,
-        height=h,
-        width=w,
-    ).get()[0]
+@pytest.fixture
+def yuv420p(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    return get_sample(cmd, width=320, height=240)
 
 
-def _get_audio_frames(sample_fmt, **kwargs):
-    src = "NASAs_Most_Scientifically_Complex_Space_Observatory_Requires_Precision-MP4_small.mp4"
-    return libspdl.decode_audio(
-        src=src,
-        timestamps=[(0.0, 0.5)],
-        sample_fmt=sample_fmt,
-        **kwargs,
-    ).get()[0]
-
-
-def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
+def test_video_buffer_conversion_refcount(yuv420p):
     """NumPy array created from Buffer should increment a reference to the buffer
     so that array keeps working after the original Buffer variable is deleted.
     """
-    import numpy as np
-    from spdl.libspdl import _to_buffer
+    decoded_frames = libspdl.decode_video(
+        src=yuv420p.path,
+        timestamps=[(0.0, 0.5)],
+        pix_fmt="rgb24",
+    ).get()[0]
 
-    buf = _to_buffer(_get_video_frames(pix_fmt), None)
+    buf = libspdl._to_buffer(decoded_frames, None)
     assert hasattr(buf, "__array_interface__")
     print(f"{buf.__array_interface__=}")
 
@@ -64,10 +53,16 @@ def test_video_buffer_conversion_refcount(pix_fmt="yuv420p"):
 
 
 @pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_rgb24(format, pix_fmt="rgb24"):
-    h, w = 128, 256
+def test_video_buffer_conversion_rgb24(format, get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=rgb24 -frames:v 100 sample.mp4"
+    h, w = 240, 320
+    sample = get_sample(cmd, width=w, height=h)
 
-    frames = _get_video_frames(pix_fmt, h, w)
+    frames = libspdl.decode_video(
+        src=sample.path,
+        timestamps=[(0.0, 0.5)],
+        pix_fmt="rgb24",
+    ).get()[0]
 
     for index in [None, 0]:
         array = libspdl.to_numpy(frames, index=index, format=format)
@@ -81,11 +76,14 @@ def test_video_buffer_conversion_rgb24(format, pix_fmt="rgb24"):
 
 
 @pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_yuv420(format, pix_fmt="yuv420p"):
-    h, w = 128, 256
+def test_video_buffer_conversion_yuv420(format, yuv420p):
+    h, w = yuv420p.height, yuv420p.width
     h2, w2 = h // 2, w // 2
 
-    frames = _get_video_frames(pix_fmt, h, w)
+    frames = libspdl.decode_video(
+        src=yuv420p.path,
+        timestamps=[(0.0, 0.5)],
+    ).get()[0]
 
     # combined
     array = libspdl.to_numpy(frames, format=format)
@@ -103,10 +101,17 @@ def test_video_buffer_conversion_yuv420(format, pix_fmt="yuv420p"):
 
 
 @pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_yuv444(format, pix_fmt="yuv444p"):
-    h, w = 128, 256
+def test_video_buffer_conversion_yuv444(format, get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample.mp4"
+    h, w = 240, 320
 
-    frames = _get_video_frames(pix_fmt, h, w)
+    sample = get_sample(cmd, width=w, height=h)
+
+    frames = libspdl.decode_video(
+        src=sample.path,
+        timestamps=[(0.0, 0.5)],
+        pix_fmt="yuv444p",
+    ).get()[0]
 
     # combined
     array = libspdl.to_numpy(frames, format=format)
@@ -120,11 +125,17 @@ def test_video_buffer_conversion_yuv444(format, pix_fmt="yuv444p"):
 
 
 @pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_nv12(format, pix_fmt="nv12"):
-    h, w = 128, 256
+def test_video_buffer_conversion_nv12(format, get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample.mp4"
+    h, w = 240, 320
     h2, w2 = h // 2, w // 2
 
-    frames = _get_video_frames(pix_fmt, h, w)
+    sample = get_sample(cmd, width=w, height=h)
+    frames = libspdl.decode_video(
+        src=sample.path,
+        timestamps=[(0.0, 0.5)],
+        pix_fmt="nv12",
+    ).get()[0]
 
     # combined
     array = libspdl.to_numpy(frames, format=format)
@@ -147,19 +158,21 @@ def test_video_buffer_conversion_nv12(format, pix_fmt="nv12"):
         [("s16p", "int16"), ("s16", "int16"), ("fltp", "float32"), ("flt", "float32")],
     ),
 )
-def test_audio_buffer_conversion_s16p(format, sample_fmts):
-    import numpy as np
+def test_audio_buffer_conversion_s16p(format, sample_fmts, get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=305:duration=5' -f lavfi -i 'sine=frequency=300:duration=5'  -filter_complex amerge  -c:a pcm_s16le sample.wav"
+    sample = get_sample(cmd, num_channels=2)
 
-    num_channels = 2
     sample_fmt, expected = sample_fmts
-    frames = _get_audio_frames(
-        sample_fmt=sample_fmt, num_channels=num_channels, sample_rate=8000
-    )
+    frames = libspdl.decode_audio(
+        src=sample.path,
+        timestamps=[(0.0, 0.5)],
+        sample_fmt=sample_fmt,
+    ).get()[0]
 
     array = libspdl.to_numpy(frames, format=format)
     assert array.ndim == 2
     assert array.dtype == np.dtype(expected)
     if format == "channel_first":
-        assert array.shape[0] == num_channels
+        assert array.shape[0] == sample.num_channels
     if format == "channel_last":
-        assert array.shape[1] == num_channels
+        assert array.shape[1] == sample.num_channels
