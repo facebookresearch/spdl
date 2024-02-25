@@ -1,4 +1,5 @@
 #include <libspdl/core/detail/nvdec/color_conversion.h>
+#include <libspdl/core/detail/tracing.h>
 
 #include <cstdint>
 
@@ -145,6 +146,7 @@ void nv12_to_planar_rgba(
     int matrix_coefficients) {
   auto dimGrid = dim3((width + 63) / 64, (height + 3) / 4);
   auto dimBlock = dim3(32, 2);
+  TRACE_EVENT("nvdec", "nv12_to_planar_rgb32");
   nv12_to_planar_rgb32<RGBA32><<<dimGrid, dimBlock, 0, stream>>>(
       src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
 }
@@ -160,6 +162,7 @@ void nv12_to_planar_bgra(
     int matrix_coefficients) {
   auto dimGrid = dim3((width + 63) / 64, (height + 3) / 4);
   auto dimBlock = dim3(32, 2);
+  TRACE_EVENT("nvdec", "nv12_to_planar_rgb32");
   nv12_to_planar_rgb32<BGRA32><<<dimGrid, dimBlock, 0, stream>>>(
       src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
 }
