@@ -94,19 +94,42 @@ def test_nvdec_decode_h264_420p_basic(h264):
     # _save(u, "./base_u")
     # _save(v, "./base_v")
 
-    height = h264.height + h264.height // 2
-
     assert array.dtype == np.uint8
-    assert array.shape == (25, 1, height, h264.width)
+    assert array.shape == (25, 4, h264.height, h264.width)
 
 
 # TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
 
 
+@pytest.mark.xfail(
+    raises=RuntimeError,
+    reason=(
+        "FFmpeg seems to have issue with seeking HEVC. "
+        "It returns 'Operation not permitted'. "
+        "See https://trac.ffmpeg.org/ticket/9412"
+    ),
+)
+def test_nvdec_decode_hevc_P010_basic(get_sample):
+    """NVDEC can decode HEVC video."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
+    sample = get_sample(cmd, width=320, height=240)
+
+    results = libspdl.decode_video_nvdec(
+        sample.path,
+        timestamps=[(0, 1.0)],
+        cuda_device_index=DEFAULT_CUDA,
+    ).get()
+    array = _to_arrays(results)[0]
+
+    height = sample.height + sample.height // 2
+
+    assert array.dtype == np.uint8
+    assert array.shape == (25, 1, height, h264.width)
+
+
 def test_nvdec_decode_h264_420p_resize(h264):
     """Check NVDEC decoder with resizing."""
     width, height = 160, 120
-    h2 = height // 2
 
     results = libspdl.decode_video_nvdec(
         h264.path,
@@ -120,7 +143,7 @@ def test_nvdec_decode_h264_420p_resize(h264):
     # _save(array, "./resize")
 
     assert array.dtype == np.uint8
-    assert array.shape == (25, 1, height + h2, width)
+    assert array.shape == (25, 4, height, width)
 
 
 def test_nvdec_decode_h264_420p_crop(h264):
@@ -128,9 +151,6 @@ def test_nvdec_decode_h264_420p_crop(h264):
     top, bottom, left, right = 40, 80, 100, 50
     h = h264.height - top - bottom
     w = h264.width - left - right
-
-    h2, w2 = h // 2, w // 2
-    l2, t2 = left // 2, top // 2
 
     results = libspdl.decode_video_nvdec(
         h264.path,
@@ -141,41 +161,20 @@ def test_nvdec_decode_h264_420p_crop(h264):
         crop_left=left,
         crop_right=right,
     ).get()
-    array = _to_arrays(results)[0]
-    y, u, v = split_nv12(array)
+    rgba = _to_arrays(results)[0]
 
-    # _save(array, "./crop")
-    # _save(y, "./crop_y")
-    # _save(u, "./crop_u")
-    # _save(v, "./crop_v")
-
-    assert array.dtype == np.uint8
-    assert array.shape == (25, 1, h + h2, w)
+    assert rgba.dtype == np.uint8
+    assert rgba.shape == (25, 4, h, w)
 
     results = libspdl.decode_video_nvdec(
         h264.path,
         timestamps=[(0, 1.0)],
         cuda_device_index=DEFAULT_CUDA,
     ).get()
-    array0 = _to_arrays(results)[0]
-    y0, u0, v0 = split_nv12(array0)
+    rgba0 = _to_arrays(results)[0]
 
-    # _save(array0, "./crop_ref")
-    # _save(y0, "./crop_ref_y")
-    # _save(u0, "./crop_ref_u")
-    # _save(v0, "./crop_ref_v")
-
-    y0 = y0[:, :, top : top + h, left : left + w]
-    u0 = u0[:, :, t2 : t2 + h2, l2 : l2 + w2]
-    v0 = v0[:, :, t2 : t2 + h2, l2 : l2 + w2]
-
-    # _save(y0, "./crop_ref_y_cropped")
-    # _save(u0, "./crop_ref_u_cropped")
-    # _save(v0, "./crop_ref_v_cropped")
-
-    assert np.array_equal(y, y0)
-    assert np.array_equal(u, u0)
-    assert np.array_equal(v, v0)
+    for i in range(4):
+        assert np.array_equal(rgba[:, i], rgba0[:, i, top : top + h, left : left + w])
 
 
 def test_nvdec_decode_crop_resize(h264):
@@ -198,14 +197,8 @@ def test_nvdec_decode_crop_resize(h264):
         ).get()
     )[0]
 
-    # y, u, v = split_nv12(array)
-    # _save(array, "./crop_resize")
-    # _save(y, "./crop_resize_y")
-    # _save(u, "./crop_resize_u")
-    # _save(v, "./crop_resize_v")
-
     assert array.dtype == np.uint8
-    assert array.shape == (25, 1, h + h // 2, w)
+    assert array.shape == (25, 4, h, w)
 
 
 def test_num_frames_arithmetics(h264):
