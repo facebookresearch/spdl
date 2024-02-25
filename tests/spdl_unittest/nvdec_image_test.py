@@ -44,3 +44,17 @@ def test_decode_image_yuv420(yuvj420p):
 
     assert yuv.dtype == np.uint8
     assert yuv.shape == (1, height, yuvj420p.width)
+
+
+def test_decode_image_convert_rgba(yuvj420p):
+    """Providing pix_fmt="rgba" should produce (4,H,W) array."""
+    array = _to_array(
+        libspdl.decode_image_nvdec(
+            yuvj420p.path,
+            cuda_device_index=DEFAULT_CUDA,
+            pix_fmt="rgba",
+        ).get()
+    )
+
+    assert array.dtype == np.uint8
+    assert array.shape == (4, yuvj420p.height, yuvj420p.width)

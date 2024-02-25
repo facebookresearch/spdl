@@ -26,5 +26,8 @@ The libspdl uses the following third party libraries.
 
 * [Perfetto](https://perfetto.dev/docs/instrumentation/tracing-sdk) ([Apache 2.0](https://github.com/google/perfetto/blob/v41.0/LICENSE))
 
+* [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk) ([NVIDIA DesignWorks SDK License](https://gitlab.com/nvidia/video/video-codec-sdk/-/blob/master/Video_Codec_SDK_12.1.14/LicenseAgreement.pdf))
+   Header files (`nvcuvid.h` and `cuviddec.h`) and corresponding library files from Video Codec SDK are required to use NVDEC-based decoder.
+
 † FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.    
 Users are free to dynamically link GPL or non-distributable version of FFmpeg libraries. However, note that linking a non-LGPL binary might change of the condition for redistribution of your application.

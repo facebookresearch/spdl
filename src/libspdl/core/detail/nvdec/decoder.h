@@ -66,6 +66,8 @@ class NvDecDecoder {
   int crop_top = 0;
   int crop_right = 0;
   int crop_bottom = 0;
+  // Color conversion
+  std::optional<std::string> pix_fmt;
 
  public:
   NvDecDecoder() = default;
@@ -87,7 +89,8 @@ class NvDecDecoder {
       int crop_right = 0,
       int crop_bottom = 0,
       int target_width = -1,
-      int target_height = -1);
+      int target_height = -1,
+      const std::optional<std::string>& pix_fmt = std::nullopt);
 
   void decode(
       const uint8_t* data,

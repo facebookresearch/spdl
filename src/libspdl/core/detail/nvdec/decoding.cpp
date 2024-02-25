@@ -36,6 +36,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
     int crop_bottom,
     int target_width,
     int target_height,
+    const std::optional<std::string> pix_fmt,
     bool is_image) {
   size_t num_packets = packets->packets.size();
   assert(num_packets > 0);
@@ -62,7 +63,8 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
       crop_right,
       crop_bottom,
       target_width,
-      target_height);
+      target_height,
+      pix_fmt);
 
 #define _PKT(i) packets->packets[i]
 #define _PTS(pkt)                                           \

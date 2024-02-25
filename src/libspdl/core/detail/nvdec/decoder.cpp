@@ -127,7 +127,8 @@ void NvDecDecoder::init(
     int crop_r,
     int crop_b,
     int tgt_w,
-    int tgt_h) {
+    int tgt_h,
+    const std::optional<std::string>& pix_fmt_) {
   if (crop_l < 0) {
     SPDL_FAIL(fmt::format("crop_left must be non-negative. Found: {}", crop_l));
   }
@@ -180,6 +181,7 @@ void NvDecDecoder::init(
   crop_bottom = crop_b;
   target_width = tgt_w;
   target_height = tgt_h;
+  pix_fmt = pix_fmt_;
 }
 
 int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
@@ -259,7 +261,12 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   }();
   decoder_param = new_decoder_param;
 
-  converter = get_converter(stream, buffer, &decoder_param);
+  converter = get_converter(
+      stream,
+      buffer,
+      &decoder_param,
+      video_fmt->video_signal_description.matrix_coefficients,
+      pix_fmt);
   return ret;
 }
 

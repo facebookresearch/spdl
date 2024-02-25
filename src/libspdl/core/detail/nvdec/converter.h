@@ -12,21 +12,18 @@ struct Converter {
 
   Converter(CUstream stream, CUDABuffer2DPitch* buffer);
 
+  virtual ~Converter() = default;
+
   /// @param src_ptr CUdeviceptr
   /// @param src_pitch Pitch in bytes
-  virtual ~Converter() = default;
   virtual void convert(uint8_t* src_ptr, unsigned int src_pitch) = 0;
-};
-
-class NV12Passthrough : public Converter {
- public:
-  using Converter::Converter;
-  void convert(uint8_t* src_ptr, unsigned int src_pitch) override;
 };
 
 std::unique_ptr<Converter> get_converter(
     CUstream stream,
     CUDABuffer2DPitch* buffer,
-    const CUVIDDECODECREATEINFO* decoder_param);
+    const CUVIDDECODECREATEINFO* decoder_param,
+    unsigned char matrix_coeff,
+    const std::optional<std::string>& pix_fmt);
 
 } // namespace spdl::core::detail
