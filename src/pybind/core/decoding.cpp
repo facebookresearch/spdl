@@ -271,7 +271,7 @@ void register_pybind(py::module& m) {
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
       py::arg("height") = -1,
-      py::arg("pix_fmt") = py::none());
+      py::arg("pix_fmt") = "rgba");
 
   m.def(
       "decode_image_nvdec",
@@ -313,6 +313,6 @@ void register_pybind(py::module& m) {
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
       py::arg("height") = -1,
-      py::arg("pix_fmt") = py::none());
+      py::arg("pix_fmt") = "rgba");
 }
 } // namespace spdl::core
