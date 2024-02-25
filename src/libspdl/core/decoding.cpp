@@ -186,7 +186,8 @@ folly::coro::Task<ResultType> image_decode_task_nvdec(
     int crop_right,
     int crop_bottom,
     int width,
-    int height) {
+    int height,
+    const std::optional<std::string> pix_fmt) {
   auto exec = detail::getDecoderThreadPoolExecutor();
   auto packet =
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
@@ -199,6 +200,7 @@ folly::coro::Task<ResultType> image_decode_task_nvdec(
       crop_bottom,
       width,
       height,
+      pix_fmt,
       /*is_image*/ true);
   folly::SemiFuture<ResultType> future =
       std::move(task).scheduleOn(exec).start();
@@ -216,7 +218,8 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
     int crop_right,
     int crop_bottom,
     int width,
-    int height) {
+    int height,
+    const std::optional<std::string> pix_fmt) {
   std::vector<folly::SemiFuture<ResultType>> futures;
   {
     auto exec = detail::getDecoderThreadPoolExecutor();
@@ -231,7 +234,8 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
           crop_right,
           crop_bottom,
           width,
-          height);
+          height,
+          pix_fmt);
       futures.emplace_back(std::move(task).scheduleOn(exec).start());
     }
   }
@@ -333,7 +337,8 @@ DecodingResultFuture async_decode_nvdec(
     int crop_right,
     int crop_bottom,
     int width,
-    int height) {
+    int height,
+    const std::optional<std::string>& pix_fmt) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
@@ -358,7 +363,8 @@ DecodingResultFuture async_decode_nvdec(
       crop_right,
       crop_bottom,
       width,
-      height);
+      height,
+      pix_fmt);
   return DecodingResultFuture{new DecodingResultFuture::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
@@ -376,7 +382,8 @@ SingleDecodingResult async_decode_image_nvdec(
     int crop_right,
     int crop_bottom,
     int width,
-    int height) {
+    int height,
+    const std::optional<std::string>& pix_fmt) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
@@ -399,7 +406,8 @@ SingleDecodingResult async_decode_image_nvdec(
       crop_right,
       crop_bottom,
       width,
-      height);
+      height,
+      pix_fmt);
   return SingleDecodingResult{new SingleDecodingResult::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())

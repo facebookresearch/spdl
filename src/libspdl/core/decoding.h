@@ -34,7 +34,8 @@ ASYNC_DECODE_IMAGE;
       int crop_right,                                \
       int crop_bottom,                               \
       int width,                                     \
-      int height)
+      int height,                                    \
+      const std::optional<std::string>& pix_fmt)
 
 ASYNC_DECODE_IMAGE_NVDEC;
 
@@ -93,7 +94,8 @@ ASYNC_DECODE;
       int crop_right,                                            \
       int crop_bottom,                                           \
       int width,                                                 \
-      int height)
+      int height,                                                \
+      const std::optional<std::string>& pix_fmt)
 
 ASYNC_DECODE_NVDEC;
 

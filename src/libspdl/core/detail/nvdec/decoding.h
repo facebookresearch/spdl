@@ -34,6 +34,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
     int crop_bottom = 0,
     int target_width = -1,
     int target_height = -1,
+    const std::optional<std::string> pix_fmt = std::nullopt,
     bool is_image = false);
 
 } // namespace spdl::core::detail

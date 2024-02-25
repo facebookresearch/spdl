@@ -242,7 +242,8 @@ void register_pybind(py::module& m) {
          int crop_right,
          int crop_bottom,
          int width,
-         int height) {
+         int height,
+         const std::optional<std::string>& pix_fmt) {
         return async_decode_nvdec(
             src,
             timestamps,
@@ -254,7 +255,8 @@ void register_pybind(py::module& m) {
             crop_right,
             crop_bottom,
             width,
-            height);
+            height,
+            pix_fmt);
       },
       py::arg("src"),
       py::arg("timestamps"),
@@ -268,7 +270,8 @@ void register_pybind(py::module& m) {
       py::arg("crop_right") = 0,
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
-      py::arg("height") = -1);
+      py::arg("height") = -1,
+      py::arg("pix_fmt") = py::none());
 
   m.def(
       "decode_image_nvdec",
@@ -283,7 +286,8 @@ void register_pybind(py::module& m) {
          int crop_right,
          int crop_bottom,
          int width,
-         int height) {
+         int height,
+         const std::optional<std::string>& pix_fmt) {
         return async_decode_image_nvdec(
             src,
             cuda_device_index,
@@ -294,7 +298,8 @@ void register_pybind(py::module& m) {
             crop_right,
             crop_bottom,
             width,
-            height);
+            height,
+            pix_fmt);
       },
       py::arg("src"),
       py::arg("cuda_device_index"),
@@ -307,6 +312,7 @@ void register_pybind(py::module& m) {
       py::arg("crop_right") = 0,
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
-      py::arg("height") = -1);
+      py::arg("height") = -1,
+      py::arg("pix_fmt") = py::none());
 }
 } // namespace spdl::core

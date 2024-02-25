@@ -1,6 +1,7 @@
 """Test numba __cuda_array_interface__ integration"""
 
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 
@@ -17,6 +18,7 @@ def _parse_args():
     parser.add_argument("-o", "--output-dir", type=Path, required=True)
     parser.add_argument("--width", type=int)
     parser.add_argument("--height", type=int)
+    parser.add_argument("--pix-fmt")
     parser.add_argument("--decoder")
     parser.add_argument("--gpu", type=int)
     parser.add_argument("--nvdec", action="store_true")
@@ -52,7 +54,7 @@ def _main():
         buffers = test_ffmpeg(args, timestamps)
 
     arrays = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
-    _plot(arrays, args.output_dir)
+    _plot(arrays, args.output_dir, args.pix_fmt)
 
 
 def test_nvdec(args, timestamps):
@@ -62,6 +64,7 @@ def test_nvdec(args, timestamps):
         cuda_device_index=-1 if args.gpu is None else args.gpu,
         width=args.width or -1,
         height=args.height or -1,
+        pix_fmt=args.pix_fmt,
     )
     return [spdl.libspdl._BufferWrapper(fut) for fut in future.get()]
 
@@ -79,19 +82,25 @@ def test_ffmpeg(args, timestamps):
     return [spdl.libspdl._to_buffer(fut) for fut in future.get()]
 
 
-def _plot(arrays, output_dir):
+def _plot(arrays, output_dir, pix_fmt: Optional[str]):
     from PIL import Image
 
+    mode = None
+    if pix_fmt is not None:
+        mode = pix_fmt.upper()
+        print(f"{mode=}")
     for i, array in enumerate(arrays):
-        print(array.shape)
+        print(f"{array.shape=}")
         for j, frame in enumerate(array):
+            print(f"{frame.shape=}")
             if frame.shape[0] == 1:
                 frame = frame[0]
-            else:
+            elif frame.shape[0] in [3, 4]:
                 frame = np.moveaxis(frame, 0, 2)
+            print(f"{frame.shape=}")
             path = output_dir / f"{i}_{j}.png"
             print(f"Saving {path}", flush=True)
-            Image.fromarray(frame).save(path)
+            Image.fromarray(frame, mode).save(path)
 
 
 if __name__ == "__main__":

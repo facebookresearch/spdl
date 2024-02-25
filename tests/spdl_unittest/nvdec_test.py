@@ -250,3 +250,78 @@ def test_num_frames_arithmetics(h264):
     for (ts, slice_args), fs in zip(cfgs, frames, strict=True):
         print(f"{fs.shape}, {ts=}, {slice_args=}")
         assert np.array_equal(fs, ref[slice(*slice_args)])
+
+
+@pytest.fixture
+def red(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xFF0000 -frames:v 100 sample.mp4"
+    return get_sample(cmd, width=320, height=240)
+
+
+@pytest.fixture
+def green(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x00FF00 -frames:v 100 sample.mp4"
+    return get_sample(cmd, width=320, height=240)
+
+
+@pytest.fixture
+def blue(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x0000FF -frames:v 100 sample.mp4"
+    return get_sample(cmd, width=320, height=240)
+
+
+def test_color_conversion_rgba_red(red):
+    """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
+    array = _to_arrays(
+        libspdl.decode_video_nvdec(
+            red.path,
+            timestamps=[(0, 1.0)],
+            cuda_device_index=DEFAULT_CUDA,
+            pix_fmt="rgba",
+        ).get()
+    )[0]
+
+    assert array.dtype == np.uint8
+    assert array.shape == (25, 4, red.height, red.width)
+
+    assert np.all(array[:, 0, ...] == 255)
+    assert np.all(array[:, 1, ...] == 22)  # TODO: investivate if this is correct.
+    assert np.all(array[:, 2, ...] == 0)
+
+
+def test_color_conversion_rgba_green(green):
+    """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
+    array = _to_arrays(
+        libspdl.decode_video_nvdec(
+            green.path,
+            timestamps=[(0, 1.0)],
+            cuda_device_index=DEFAULT_CUDA,
+            pix_fmt="rgba",
+        ).get()
+    )[0]
+
+    assert array.dtype == np.uint8
+    assert array.shape == (25, 4, green.height, green.width)
+
+    assert np.all(array[:, 0, ...] == 0)
+    assert np.all(array[:, 1, ...] == 217)  # TODO: investivate if this is correct.
+    assert np.all(array[:, 2, ...] == 0)
+
+
+def test_color_conversion_rgba_blue(blue):
+    """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
+    array = _to_arrays(
+        libspdl.decode_video_nvdec(
+            blue.path,
+            timestamps=[(0, 1.0)],
+            cuda_device_index=DEFAULT_CUDA,
+            pix_fmt="rgba",
+        ).get()
+    )[0]
+
+    assert array.dtype == np.uint8
+    assert array.shape == (25, 4, blue.height, blue.width)
+
+    assert np.all(array[:, 0, ...] == 0)
+    assert np.all(array[:, 1, ...] == 14)  # TODO: investivate if this is correct.
+    assert np.all(array[:, 2, ...] == 255)
