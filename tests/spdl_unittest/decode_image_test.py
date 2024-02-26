@@ -1,7 +1,7 @@
 import numpy as np
-from spdl import libspdl
 
 import pytest
+from spdl import libspdl
 
 
 def test_decode_image_gray_black(get_sample):
