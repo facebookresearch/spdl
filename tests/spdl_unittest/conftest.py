@@ -33,3 +33,12 @@ def get_sample(run_in_tmpdir):
         return SrcInfo(path, **kwargs)
 
     return _get_sample
+
+
+@pytest.fixture
+def get_samples(run_in_tmpdir):
+    def _get_samples(cmd):
+        tmpdir = run_in_tmpdir(cmd)
+        return [str(f) for f in tmpdir.glob("**/*") if f.is_file()]
+
+    return _get_samples

@@ -164,6 +164,64 @@ void register_pybind(py::module& m) {
       py::arg("filter_desc") = std::string());
 
   m.def(
+      "batch_decode_image",
+      [](const std::vector<std::string>& srcs,
+         const std::shared_ptr<SourceAdoptor>& adoptor,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const std::optional<int>& width,
+         const std::optional<int>& height,
+         const std::optional<std::string>& pix_fmt) {
+        return async_batch_decode_image(
+            srcs,
+            adoptor,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options},
+            get_video_filter_description(std::nullopt, width, height, pix_fmt));
+      },
+      py::arg("srcs"),
+      py::arg("adoptor") = nullptr,
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("width") = py::none(),
+      py::arg("height") = py::none(),
+      py::arg("pix_fmt") = py::none());
+
+  m.def(
+      "batch_decode_image",
+      [](const std::vector<std::string>& srcs,
+         const std::shared_ptr<SourceAdoptor>& adoptor,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const std::string& filter_desc) {
+        return async_batch_decode_image(
+            srcs,
+            adoptor,
+            {format, format_options, buffer_size},
+            {decoder, decoder_options},
+            filter_desc);
+      },
+      py::arg("srcs"),
+      py::arg("adoptor") = nullptr,
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("filter_desc") = std::string());
+
+  m.def(
       "decode_audio",
       [](const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,

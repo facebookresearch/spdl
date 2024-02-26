@@ -70,6 +70,16 @@ class SingleDecodingResult {
 ////////////////////////////////////////////////////////////////////////////////
 class DecodingResultFuture;
 
+#define ASYNC_BATCH_DECODE_IMAGE                     \
+  DecodingResultFuture async_batch_decode_image(     \
+      const std::vector<std::string>& srcs,          \
+      const std::shared_ptr<SourceAdoptor>& adoptor, \
+      const IOConfig& io_cfg,                        \
+      const DecodeConfig& decode_cfg,                \
+      const std::string& filter_desc);
+
+ASYNC_BATCH_DECODE_IMAGE;
+
 #define ASYNC_DECODE                                             \
   DecodingResultFuture async_decode(                             \
       const enum MediaType type,                                 \
@@ -120,9 +130,11 @@ class DecodingResultFuture {
 
   friend ASYNC_DECODE;
   friend ASYNC_DECODE_NVDEC;
+  friend ASYNC_BATCH_DECODE_IMAGE;
 };
 
 #undef ASYNC_DECODE
 #undef ASYNC_DECODE_NVDEC
+#undef ASYNC_BATCH_DECODE_IMAGE
 
 } // namespace spdl::core

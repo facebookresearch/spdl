@@ -133,3 +133,40 @@ def test_decode_image_rgb24_blue(get_sample):
     # FFmpeg 4.1 returns 0 while FFmpeg 6.0 returns 1
     assert np.all(array[..., 1] <= 1)
     assert np.all(array[..., 2] == 254)
+
+
+def test_batch_decode_image_rgb24(get_samples):
+    # fmt: off
+    cmd = """
+    ffmpeg -hide_banner -y                          \
+        -f lavfi -i color=color=0xff0000:size=32x64 \
+        -f lavfi -i color=color=0x00ff00:size=32x64 \
+        -f lavfi -i color=color=0x0000ff:size=32x64 \
+        -filter_complex hstack=inputs=3             \
+        -frames:v 32 sample_%03d.png
+    """
+    height, width = 64, 96
+    # fmt: on
+    flist = get_samples(cmd)
+
+    frames = libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
+    arrays = [libspdl.to_numpy(f) for f in frames]
+
+    for array in arrays:
+        assert array.dtype == np.uint8
+        assert array.shape == (height, width, 3)
+
+        # Red
+        assert np.all(array[:, :32, 0] >= 252)
+        assert np.all(array[:, :32, 1] == 0)
+        assert np.all(array[:, :32, 2] == 0)
+
+        # Green
+        assert np.all(array[:, 32:64, 0] == 0)
+        assert np.all(array[:, 32:64, 1] == 254)
+        assert np.all(array[:, 32:64, 2] == 0)
+
+        # Blue
+        assert np.all(array[:, 64:, 0] == 0)
+        assert np.all(array[:, 64:, 1] == 0)
+        assert np.all(array[:, 64:, 2] >= 253)

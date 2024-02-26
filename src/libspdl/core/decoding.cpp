@@ -137,6 +137,28 @@ folly::coro::Task<std::vector<ResultType>> check_futures(
   co_return results;
 }
 
+folly::coro::Task<std::vector<ResultType>> check_futures(
+    std::vector<folly::SemiFuture<ResultType>> futures,
+    const std::vector<std::string>& srcs) {
+  std::vector<ResultType> results;
+  size_t i = 0;
+  for (auto& result : co_await collectAllTryRange(std::move(futures))) {
+    if (result.hasValue()) {
+      results.emplace_back(std::move(result.value()));
+    } else {
+      XLOG(ERR) << fmt::format(
+          "Failed to decode image (Source: {}, Error: {})",
+          srcs[i],
+          result.exception().what());
+    }
+    ++i;
+  };
+  if (results.size() != srcs.size()) {
+    SPDL_FAIL("Failed to decode some images. Check the error log.");
+  }
+  co_return results;
+}
+
 folly::coro::Task<std::vector<ResultType>> stream_decode_task(
     const enum MediaType type,
     const std::string src,
@@ -157,6 +179,26 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task(
     }
   }
   co_return co_await check_futures(src, timestamps, std::move(futures));
+}
+
+folly::coro::Task<std::vector<ResultType>> image_batch_decode_task(
+    const std::vector<std::string> srcs,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    const DecodeConfig decode_cfg,
+    const std::string filter_desc) {
+  std::vector<folly::SemiFuture<ResultType>> futures;
+  {
+    auto exec = detail::getDecoderThreadPoolExecutor();
+    for (auto& src : srcs) {
+      auto packet = co_await detail::demux_image(
+          src, std::move(adoptor), std::move(io_cfg));
+      auto task = detail::decode_packets(
+          std::move(packet), std::move(decode_cfg), std::move(filter_desc));
+      futures.emplace_back(std::move(task).scheduleOn(exec).start());
+    }
+  }
+  co_return co_await check_futures(std::move(futures), srcs);
 }
 
 folly::coro::Task<ResultType> image_decode_task(
@@ -257,6 +299,20 @@ DecodingResultFuture async_decode(
     const std::string& filter_desc) {
   auto task = stream_decode_task(
       type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
+  return DecodingResultFuture{new DecodingResultFuture::Impl{
+      std::move(task)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
+}
+
+DecodingResultFuture async_batch_decode_image(
+    const std::vector<std::string>& srcs,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    const DecodeConfig& decode_cfg,
+    const std::string& filter_desc) {
+  auto task =
+      image_batch_decode_task(srcs, adoptor, io_cfg, decode_cfg, filter_desc);
   return DecodingResultFuture{new DecodingResultFuture::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
