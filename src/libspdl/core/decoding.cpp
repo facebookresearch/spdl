@@ -19,6 +19,7 @@
 #include <cstdint>
 
 using folly::SemiFuture;
+using folly::coro::blockingWait;
 using folly::coro::collectAllTryRange;
 using folly::coro::Task;
 
@@ -30,52 +31,59 @@ using Output = std::unique_ptr<DecodedFrames>;
 // MultipleDecodingResult::Impl
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-Task<std::vector<Output>> check_futures(
+Task<std::vector<Output>> check(
     SemiFuture<std::vector<SemiFuture<Output>>>&& future,
-    const enum MediaType type,
-    const std::vector<std::string>& srcs,
+    const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps) {
   auto futures = co_await std::move(future);
 
   std::vector<Output> results;
-  size_t i = 0, num_failures = 0;
+  int i = -1, num_failures = 0;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
+    ++i;
     if (result.hasValue()) {
       results.emplace_back(std::move(result.value()));
-    } else {
-      ++num_failures;
-      switch (type) {
-        case MediaType::Audio:
-          XLOG(ERR) << fmt::format(
-              "Failed to decode audio clip. (Source: {} {}-{}) {})",
-              srcs[0],
-              std::get<0>(timestamps[i]),
-              std::get<1>(timestamps[i]),
-              result.exception().what());
-          break;
-        case MediaType::Video:
-          XLOG(ERR) << fmt::format(
-              "Failed to decode video clip. (Source: {} {}-{}) {})",
-              srcs[0],
-              std::get<0>(timestamps[i]),
-              std::get<1>(timestamps[i]),
-              result.exception().what());
-          break;
-        case MediaType::Image:
-          XLOG(ERR) << fmt::format(
-              "Failed to decode image. (Source: {}) {})",
-              srcs[i],
-              result.exception().what());
-          break;
-      }
+      continue;
     }
-    ++i;
-  };
+    ++num_failures;
+    XLOG(ERR) << fmt::format(
+        "Failed to decode a clip. (Source: {} {}-{}) {})",
+        src,
+        std::get<0>(timestamps[i]),
+        std::get<1>(timestamps[i]),
+        result.exception().what());
+  }
   if (num_failures > 0) {
     SPDL_FAIL("Failed to decode some video clips. Check the error log.");
   }
   co_return results;
 }
+
+Task<std::vector<Output>> check_image(
+    SemiFuture<std::vector<SemiFuture<Output>>>&& future,
+    const std::vector<std::string>& srcs) {
+  auto futures = co_await std::move(future);
+
+  std::vector<Output> results;
+  int i = -1, num_failures = 0;
+  for (auto& result : co_await collectAllTryRange(std::move(futures))) {
+    ++i;
+    if (result.hasValue()) {
+      results.emplace_back(std::move(result.value()));
+      continue;
+    }
+    ++num_failures;
+    XLOG(ERR) << fmt::format(
+        "Failed to decode an image. (Source: {}) {})",
+        srcs[i],
+        result.exception().what());
+  }
+  if (num_failures > 0) {
+    SPDL_FAIL("Failed to decode some video clips. Check the error log.");
+  }
+  co_return results;
+}
+
 } // namespace
 
 struct MultipleDecodingResult::Impl {
@@ -102,8 +110,10 @@ struct MultipleDecodingResult::Impl {
       SPDL_FAIL("The decoding result is already fetched.");
     }
     fetched = true;
-    return folly::coro::blockingWait(
-        check_futures(std::move(future), type, srcs, timestamps));
+    if (type == MediaType::Image) {
+      return blockingWait(check_image(std::move(future), srcs));
+    }
+    return blockingWait(check(std::move(future), srcs[0], timestamps));
   }
 };
 
