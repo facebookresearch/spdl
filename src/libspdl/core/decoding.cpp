@@ -21,16 +21,19 @@
 using folly::coro::collectAllTryRange;
 
 namespace spdl::core {
+using ResultType = std::unique_ptr<DecodedFrames>;
+
 ////////////////////////////////////////////////////////////////////////////////
-// DecodingResultFuture::Impl
+// MultipleDecodingResult::Impl
 ////////////////////////////////////////////////////////////////////////////////
-struct DecodingResultFuture::Impl {
+struct MultipleDecodingResult::Impl {
   bool fetched{false};
-  folly::SemiFuture<ResultType> future;
+  folly::SemiFuture<std::vector<ResultType>> future;
 
-  Impl(folly::SemiFuture<ResultType>&& fut) : future(std::move(fut)){};
+  Impl(folly::SemiFuture<std::vector<ResultType>>&& fut)
+      : future(std::move(fut)){};
 
-  ResultType get() {
+  std::vector<ResultType> get() {
     if (fetched) {
       SPDL_FAIL("The decoding result is already fetched.");
     }
@@ -40,27 +43,27 @@ struct DecodingResultFuture::Impl {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// DecodingResultFuture
+// MultipleDecodingResult
 ////////////////////////////////////////////////////////////////////////////////
-DecodingResultFuture::DecodingResultFuture(Impl* i) : pimpl(i) {}
+MultipleDecodingResult::MultipleDecodingResult(Impl* i) : pimpl(i) {}
 
-DecodingResultFuture::DecodingResultFuture(
-    DecodingResultFuture&& other) noexcept {
+MultipleDecodingResult::MultipleDecodingResult(
+    MultipleDecodingResult&& other) noexcept {
   *this = std::move(other);
 }
 
-DecodingResultFuture& DecodingResultFuture::operator=(
-    DecodingResultFuture&& other) noexcept {
+MultipleDecodingResult& MultipleDecodingResult::operator=(
+    MultipleDecodingResult&& other) noexcept {
   using std::swap;
   swap(pimpl, other.pimpl);
   return *this;
 }
 
-DecodingResultFuture::~DecodingResultFuture() {
+MultipleDecodingResult::~MultipleDecodingResult() {
   delete pimpl;
 }
 
-auto DecodingResultFuture::get() -> DecodingResultFuture::ResultType {
+std::vector<ResultType> MultipleDecodingResult::get() {
   return pimpl->get();
 }
 
@@ -103,14 +106,13 @@ SingleDecodingResult::~SingleDecodingResult() {
   delete pimpl;
 }
 
-auto SingleDecodingResult::get() -> SingleDecodingResult::ResultType {
+ResultType SingleDecodingResult::get() {
   return pimpl->get();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Actual implementation of decoding task;
 ////////////////////////////////////////////////////////////////////////////////
-using ResultType = std::unique_ptr<DecodedFrames>;
 namespace {
 folly::coro::Task<std::vector<ResultType>> check_futures(
     const std::string& src,
@@ -289,7 +291,7 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
 ////////////////////////////////////////////////////////////////////////////////
 // async_decode wrapper
 ////////////////////////////////////////////////////////////////////////////////
-DecodingResultFuture async_decode(
+MultipleDecodingResult async_decode(
     const enum MediaType type,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -299,13 +301,13 @@ DecodingResultFuture async_decode(
     const std::string& filter_desc) {
   auto task = stream_decode_task(
       type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
-  return DecodingResultFuture{new DecodingResultFuture::Impl{
+  return MultipleDecodingResult{new MultipleDecodingResult::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
 }
 
-DecodingResultFuture async_batch_decode_image(
+MultipleDecodingResult async_batch_decode_image(
     const std::vector<std::string>& srcs,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
@@ -313,7 +315,7 @@ DecodingResultFuture async_batch_decode_image(
     const std::string& filter_desc) {
   auto task =
       image_batch_decode_task(srcs, adoptor, io_cfg, decode_cfg, filter_desc);
-  return DecodingResultFuture{new DecodingResultFuture::Impl{
+  return MultipleDecodingResult{new MultipleDecodingResult::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
@@ -382,7 +384,7 @@ void init_cuda() {
 } // namespace
 #endif
 
-DecodingResultFuture async_decode_nvdec(
+MultipleDecodingResult async_decode_nvdec(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const int cuda_device_index,
@@ -421,7 +423,7 @@ DecodingResultFuture async_decode_nvdec(
       width,
       height,
       pix_fmt);
-  return DecodingResultFuture{new DecodingResultFuture::Impl{
+  return MultipleDecodingResult{new MultipleDecodingResult::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};

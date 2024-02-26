@@ -40,8 +40,6 @@ ASYNC_DECODE_IMAGE;
 ASYNC_DECODE_IMAGE_NVDEC;
 
 class SingleDecodingResult {
-  using ResultType = std::unique_ptr<DecodedFrames>;
-
   struct Impl;
 
   Impl* pimpl = nullptr;
@@ -56,7 +54,7 @@ class SingleDecodingResult {
   SingleDecodingResult& operator=(SingleDecodingResult&&) noexcept;
   ~SingleDecodingResult();
 
-  ResultType get();
+  std::unique_ptr<DecodedFrames> get();
 
   friend ASYNC_DECODE_IMAGE;
   friend ASYNC_DECODE_IMAGE_NVDEC;
@@ -68,10 +66,10 @@ class SingleDecodingResult {
 ////////////////////////////////////////////////////////////////////////////////
 // Audio / Video
 ////////////////////////////////////////////////////////////////////////////////
-class DecodingResultFuture;
+class MultipleDecodingResult;
 
 #define ASYNC_BATCH_DECODE_IMAGE                     \
-  DecodingResultFuture async_batch_decode_image(     \
+  MultipleDecodingResult async_batch_decode_image(   \
       const std::vector<std::string>& srcs,          \
       const std::shared_ptr<SourceAdoptor>& adoptor, \
       const IOConfig& io_cfg,                        \
@@ -81,7 +79,7 @@ class DecodingResultFuture;
 ASYNC_BATCH_DECODE_IMAGE;
 
 #define ASYNC_DECODE                                             \
-  DecodingResultFuture async_decode(                             \
+  MultipleDecodingResult async_decode(                           \
       const enum MediaType type,                                 \
       const std::string& src,                                    \
       const std::vector<std::tuple<double, double>>& timestamps, \
@@ -93,7 +91,7 @@ ASYNC_BATCH_DECODE_IMAGE;
 ASYNC_DECODE;
 
 #define ASYNC_DECODE_NVDEC                                       \
-  DecodingResultFuture async_decode_nvdec(                       \
+  MultipleDecodingResult async_decode_nvdec(                     \
       const std::string& src,                                    \
       const std::vector<std::tuple<double, double>>& timestamps, \
       const int cuda_device_index,                               \
@@ -109,24 +107,22 @@ ASYNC_DECODE;
 
 ASYNC_DECODE_NVDEC;
 
-class DecodingResultFuture {
-  using ResultType = std::vector<std::unique_ptr<DecodedFrames>>;
-
+class MultipleDecodingResult {
   struct Impl;
 
   Impl* pimpl = nullptr;
 
-  DecodingResultFuture(Impl* impl);
+  MultipleDecodingResult(Impl* impl);
 
  public:
-  DecodingResultFuture() = delete;
-  DecodingResultFuture(const DecodingResultFuture&) = delete;
-  DecodingResultFuture& operator=(const DecodingResultFuture&) = delete;
-  DecodingResultFuture(DecodingResultFuture&&) noexcept;
-  DecodingResultFuture& operator=(DecodingResultFuture&&) noexcept;
-  ~DecodingResultFuture();
+  MultipleDecodingResult() = delete;
+  MultipleDecodingResult(const MultipleDecodingResult&) = delete;
+  MultipleDecodingResult& operator=(const MultipleDecodingResult&) = delete;
+  MultipleDecodingResult(MultipleDecodingResult&&) noexcept;
+  MultipleDecodingResult& operator=(MultipleDecodingResult&&) noexcept;
+  ~MultipleDecodingResult();
 
-  ResultType get();
+  std::vector<std::unique_ptr<DecodedFrames>> get();
 
   friend ASYNC_DECODE;
   friend ASYNC_DECODE_NVDEC;

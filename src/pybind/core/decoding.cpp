@@ -24,13 +24,13 @@ std::optional<std::tuple<int, int>> get_frame_rate(
 } // namespace
 
 void register_pybind(py::module& m) {
-  auto _DecodingResultFuture = py::class_<DecodingResultFuture>(
-      m, "DecodingResultFuture", py::module_local());
+  auto _MultipleDecodingResult = py::class_<MultipleDecodingResult>(
+      m, "MultipleDecodingResult", py::module_local());
 
   auto _SingleDecodingResult = py::class_<SingleDecodingResult>(
       m, "SingleDecodingResult", py::module_local());
 
-  _DecodingResultFuture.def("get", &DecodingResultFuture::get);
+  _MultipleDecodingResult.def("get", &MultipleDecodingResult::get);
 
   _SingleDecodingResult.def("get", &SingleDecodingResult::get);
 
