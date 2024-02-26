@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
       std::shared_ptr<MMapAdoptor>(new MMapAdoptor())};
 
   XLOG(INFO) << "Executing the coroutine";
-  std::vector<DecodingResultFuture> futures;
+  std::vector<MultipleDecodingResult> futures;
   for (auto& adoptor : adoptors) {
     for (int i = 0; i < 10; ++i) {
       std::vector<std::tuple<double, double>> ts{{10 * i, 10 * (i + 1)}};
