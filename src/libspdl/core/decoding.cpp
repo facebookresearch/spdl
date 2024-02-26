@@ -18,27 +18,92 @@
 #include <cstddef>
 #include <cstdint>
 
+using folly::SemiFuture;
 using folly::coro::collectAllTryRange;
+using folly::coro::Task;
 
 namespace spdl::core {
-using ResultType = std::unique_ptr<DecodedFrames>;
+
+using Output = std::unique_ptr<DecodedFrames>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MultipleDecodingResult::Impl
 ////////////////////////////////////////////////////////////////////////////////
+namespace {
+Task<std::vector<Output>> check_futures(
+    SemiFuture<std::vector<SemiFuture<Output>>>&& future,
+    const enum MediaType type,
+    const std::vector<std::string>& srcs,
+    const std::vector<std::tuple<double, double>>& timestamps) {
+  auto futures = co_await std::move(future);
+
+  std::vector<Output> results;
+  size_t i = 0, num_failures = 0;
+  for (auto& result : co_await collectAllTryRange(std::move(futures))) {
+    if (result.hasValue()) {
+      results.emplace_back(std::move(result.value()));
+    } else {
+      ++num_failures;
+      switch (type) {
+        case MediaType::Audio:
+          XLOG(ERR) << fmt::format(
+              "Failed to decode audio clip. (Source: {} {}-{}) {})",
+              srcs[0],
+              std::get<0>(timestamps[i]),
+              std::get<1>(timestamps[i]),
+              result.exception().what());
+          break;
+        case MediaType::Video:
+          XLOG(ERR) << fmt::format(
+              "Failed to decode video clip. (Source: {} {}-{}) {})",
+              srcs[0],
+              std::get<0>(timestamps[i]),
+              std::get<1>(timestamps[i]),
+              result.exception().what());
+          break;
+        case MediaType::Image:
+          XLOG(ERR) << fmt::format(
+              "Failed to decode image. (Source: {}) {})",
+              srcs[i],
+              result.exception().what());
+          break;
+      }
+    }
+    ++i;
+  };
+  if (num_failures > 0) {
+    SPDL_FAIL("Failed to decode some video clips. Check the error log.");
+  }
+  co_return results;
+}
+} // namespace
+
 struct MultipleDecodingResult::Impl {
+  enum MediaType type;
+  std::vector<std::string> srcs;
+  std::vector<std::tuple<double, double>> timestamps;
+
+  SemiFuture<std::vector<SemiFuture<Output>>> future;
+
   bool fetched{false};
-  folly::SemiFuture<std::vector<ResultType>> future;
 
-  Impl(folly::SemiFuture<std::vector<ResultType>>&& fut)
-      : future(std::move(fut)){};
+  Impl(
+      const enum MediaType type_,
+      std::vector<std::string> srcs_,
+      std::vector<std::tuple<double, double>> ts_,
+      SemiFuture<std::vector<SemiFuture<Output>>>&& future_)
+      : type(type_),
+        srcs(std::move(srcs_)),
+        timestamps(std::move(ts_)),
+        future(std::move(future_)){};
 
-  std::vector<ResultType> get() {
+  std::vector<Output> get() {
     if (fetched) {
       SPDL_FAIL("The decoding result is already fetched.");
     }
     fetched = true;
-    return folly::coro::blockingWait(std::move(future));
+    return folly::coro::blockingWait(
+        check_futures(std::move(future), type, srcs, timestamps));
   }
 };
 
@@ -63,7 +128,7 @@ MultipleDecodingResult::~MultipleDecodingResult() {
   delete pimpl;
 }
 
-std::vector<ResultType> MultipleDecodingResult::get() {
+std::vector<Output> MultipleDecodingResult::get() {
   return pimpl->get();
 }
 
@@ -72,11 +137,11 @@ std::vector<ResultType> MultipleDecodingResult::get() {
 ////////////////////////////////////////////////////////////////////////////////
 struct SingleDecodingResult::Impl {
   bool fetched{false};
-  folly::SemiFuture<ResultType> future;
+  SemiFuture<Output> future;
 
-  Impl(folly::SemiFuture<ResultType>&& fut) : future(std::move(fut)){};
+  Impl(SemiFuture<Output>&& fut) : future(std::move(fut)){};
 
-  ResultType get() {
+  Output get() {
     if (fetched) {
       SPDL_FAIL("The decoding result is already fetched.");
     }
@@ -106,7 +171,7 @@ SingleDecodingResult::~SingleDecodingResult() {
   delete pimpl;
 }
 
-ResultType SingleDecodingResult::get() {
+Output SingleDecodingResult::get() {
   return pimpl->get();
 }
 
@@ -114,54 +179,7 @@ ResultType SingleDecodingResult::get() {
 // Actual implementation of decoding task;
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-folly::coro::Task<std::vector<ResultType>> check_futures(
-    const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    std::vector<folly::SemiFuture<ResultType>> futures) {
-  std::vector<ResultType> results;
-  size_t i = 0;
-  for (auto& result : co_await collectAllTryRange(std::move(futures))) {
-    if (result.hasValue()) {
-      results.emplace_back(std::move(result.value()));
-    } else {
-      XLOG(ERR) << fmt::format(
-          "Failed to decode video clip. (Source: {} {}-{}) Error: {})",
-          src,
-          std::get<0>(timestamps[i]),
-          std::get<1>(timestamps[i]),
-          result.exception().what());
-    }
-    ++i;
-  };
-  if (results.size() != timestamps.size()) {
-    SPDL_FAIL("Failed to decode some video clips. Check the error log.");
-  }
-  co_return results;
-}
-
-folly::coro::Task<std::vector<ResultType>> check_futures(
-    std::vector<folly::SemiFuture<ResultType>> futures,
-    const std::vector<std::string>& srcs) {
-  std::vector<ResultType> results;
-  size_t i = 0;
-  for (auto& result : co_await collectAllTryRange(std::move(futures))) {
-    if (result.hasValue()) {
-      results.emplace_back(std::move(result.value()));
-    } else {
-      XLOG(ERR) << fmt::format(
-          "Failed to decode image (Source: {}, Error: {})",
-          srcs[i],
-          result.exception().what());
-    }
-    ++i;
-  };
-  if (results.size() != srcs.size()) {
-    SPDL_FAIL("Failed to decode some images. Check the error log.");
-  }
-  co_return results;
-}
-
-folly::coro::Task<std::vector<ResultType>> stream_decode_task(
+Task<std::vector<SemiFuture<Output>>> stream_decode_task(
     const enum MediaType type,
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -169,7 +187,7 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task(
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc) {
-  std::vector<folly::SemiFuture<ResultType>> futures;
+  std::vector<SemiFuture<Output>> futures;
   {
     auto exec = detail::getDecoderThreadPoolExecutor();
     auto demuxer = detail::stream_demux(
@@ -180,16 +198,16 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task(
       futures.emplace_back(std::move(task).scheduleOn(exec).start());
     }
   }
-  co_return co_await check_futures(src, timestamps, std::move(futures));
+  co_return std::move(futures);
 }
 
-folly::coro::Task<std::vector<ResultType>> image_batch_decode_task(
+Task<std::vector<SemiFuture<Output>>> image_batch_decode_task(
     const std::vector<std::string> srcs,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc) {
-  std::vector<folly::SemiFuture<ResultType>> futures;
+  std::vector<SemiFuture<Output>> futures;
   {
     auto exec = detail::getDecoderThreadPoolExecutor();
     for (auto& src : srcs) {
@@ -200,10 +218,10 @@ folly::coro::Task<std::vector<ResultType>> image_batch_decode_task(
       futures.emplace_back(std::move(task).scheduleOn(exec).start());
     }
   }
-  co_return co_await check_futures(std::move(futures), srcs);
+  co_return std::move(futures);
 }
 
-folly::coro::Task<ResultType> image_decode_task(
+Task<Output> image_decode_task(
     const std::string src,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
@@ -214,13 +232,12 @@ folly::coro::Task<ResultType> image_decode_task(
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
   auto task = detail::decode_packets(
       std::move(packet), std::move(decode_cfg), std::move(filter_desc));
-  folly::SemiFuture<ResultType> future =
-      std::move(task).scheduleOn(exec).start();
+  SemiFuture<Output> future = std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
 }
 
 #ifdef SPDL_USE_NVDEC
-folly::coro::Task<ResultType> image_decode_task_nvdec(
+Task<Output> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -246,12 +263,11 @@ folly::coro::Task<ResultType> image_decode_task_nvdec(
       height,
       pix_fmt,
       /*is_image*/ true);
-  folly::SemiFuture<ResultType> future =
-      std::move(task).scheduleOn(exec).start();
+  SemiFuture<Output> future = std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
 }
 
-folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
+Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const int cuda_device_index,
@@ -264,7 +280,7 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
     int width,
     int height,
     const std::optional<std::string> pix_fmt) {
-  std::vector<folly::SemiFuture<ResultType>> futures;
+  std::vector<SemiFuture<Output>> futures;
   {
     auto exec = detail::getDecoderThreadPoolExecutor();
     auto demuxer = detail::stream_demux_nvdec(
@@ -283,7 +299,7 @@ folly::coro::Task<std::vector<ResultType>> stream_decode_task_nvdec(
       futures.emplace_back(std::move(task).scheduleOn(exec).start());
     }
   }
-  co_return co_await check_futures(src, timestamps, std::move(futures));
+  co_return std::move(futures);
 }
 #endif
 } // namespace
@@ -302,6 +318,9 @@ MultipleDecodingResult async_decode(
   auto task = stream_decode_task(
       type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
+      type,
+      {src},
+      timestamps,
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
@@ -316,6 +335,9 @@ MultipleDecodingResult async_batch_decode_image(
   auto task =
       image_batch_decode_task(srcs, adoptor, io_cfg, decode_cfg, filter_desc);
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
+      MediaType::Image,
+      srcs,
+      {},
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
@@ -424,6 +446,9 @@ MultipleDecodingResult async_decode_nvdec(
       height,
       pix_fmt);
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
+      MediaType::Video,
+      {src},
+      timestamps,
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
