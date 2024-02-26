@@ -50,7 +50,7 @@ void register_pybind(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt) {
-        return async_decode(
+        return decoding::async_decode(
             MediaType::Video,
             src,
             timestamps,
@@ -86,7 +86,7 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc) {
-        return async_decode(
+        return decoding::async_decode(
             MediaType::Video,
             src,
             timestamps,
@@ -118,7 +118,7 @@ void register_pybind(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt) {
-        return async_decode_image(
+        return decoding::async_decode_image(
             src,
             adoptor,
             {format, format_options, buffer_size},
@@ -147,7 +147,7 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc) {
-        return async_decode_image(
+        return decoding::async_decode_image(
             src,
             adoptor,
             {format, format_options, buffer_size},
@@ -176,7 +176,7 @@ void register_pybind(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt) {
-        return async_batch_decode_image(
+        return decoding::async_batch_decode_image(
             srcs,
             adoptor,
             {format, format_options, buffer_size},
@@ -205,7 +205,7 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc) {
-        return async_batch_decode_image(
+        return decoding::async_batch_decode_image(
             srcs,
             adoptor,
             {format, format_options, buffer_size},
@@ -235,7 +235,7 @@ void register_pybind(py::module& m) {
          const std::optional<int>& sample_rate,
          const std::optional<int>& num_channels,
          const std::optional<std::string>& sample_fmt) {
-        return async_decode(
+        return decoding::async_decode(
             MediaType::Audio,
             src,
             timestamps,
@@ -268,7 +268,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const std::string& filter_desc) {
-        return async_decode(
+        return decoding::async_decode(
             MediaType::Audio,
             src,
             timestamps,
@@ -303,7 +303,7 @@ void register_pybind(py::module& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt) {
-        return async_decode_nvdec(
+        return decoding::async_decode_nvdec(
             src,
             timestamps,
             cuda_device_index,
@@ -347,7 +347,7 @@ void register_pybind(py::module& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt) {
-        return async_decode_image_nvdec(
+        return decoding::async_decode_image_nvdec(
             src,
             cuda_device_index,
             adoptor,

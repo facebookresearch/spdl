@@ -22,7 +22,9 @@ set(srcs
   libspdl/core/detail/ffmpeg/package.cpp
   libspdl/core/buffers.cpp
   libspdl/core/conversion.cpp
-  libspdl/core/decoding.cpp
+  libspdl/core/decoding/audio_visual.cpp
+  libspdl/core/decoding/results.cpp
+  libspdl/core/decoding/image.cpp
   libspdl/core/frames.cpp
   libspdl/core/adoptor/basic.cpp
   libspdl/core/adoptor/bytes.cpp
