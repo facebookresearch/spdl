@@ -34,7 +34,8 @@ namespace {
 Task<std::vector<Output>> check(
     SemiFuture<std::vector<SemiFuture<Output>>>&& future,
     const std::string& src,
-    const std::vector<std::tuple<double, double>>& timestamps) {
+    const std::vector<std::tuple<double, double>>& timestamps,
+    bool strict) {
   auto futures = co_await std::move(future);
 
   std::vector<Output> results;
@@ -53,7 +54,7 @@ Task<std::vector<Output>> check(
         std::get<1>(timestamps[i]),
         result.exception().what());
   }
-  if (num_failures > 0) {
+  if (results.size() == 0 || (strict && num_failures > 0)) {
     SPDL_FAIL("Failed to decode some video clips. Check the error log.");
   }
   co_return results;
@@ -61,7 +62,8 @@ Task<std::vector<Output>> check(
 
 Task<std::vector<Output>> check_image(
     SemiFuture<std::vector<SemiFuture<Output>>>&& future,
-    const std::vector<std::string>& srcs) {
+    const std::vector<std::string>& srcs,
+    bool strict) {
   auto futures = co_await std::move(future);
 
   std::vector<Output> results;
@@ -78,8 +80,8 @@ Task<std::vector<Output>> check_image(
         srcs[i],
         result.exception().what());
   }
-  if (num_failures > 0) {
-    SPDL_FAIL("Failed to decode some video clips. Check the error log.");
+  if (results.size() == 0 || (strict && num_failures > 0)) {
+    SPDL_FAIL("Failed to decode some images. Check the error log.");
   }
   co_return results;
 }
@@ -105,15 +107,15 @@ struct MultipleDecodingResult::Impl {
         timestamps(std::move(ts_)),
         future(std::move(future_)){};
 
-  std::vector<Output> get() {
+  std::vector<Output> get(bool strict) {
     if (fetched) {
       SPDL_FAIL("The decoding result is already fetched.");
     }
     fetched = true;
     if (type == MediaType::Image) {
-      return blockingWait(check_image(std::move(future), srcs));
+      return blockingWait(check_image(std::move(future), srcs, strict));
     }
-    return blockingWait(check(std::move(future), srcs[0], timestamps));
+    return blockingWait(check(std::move(future), srcs[0], timestamps, strict));
   }
 };
 
@@ -138,8 +140,8 @@ MultipleDecodingResult::~MultipleDecodingResult() {
   delete pimpl;
 }
 
-std::vector<Output> MultipleDecodingResult::get() {
-  return pimpl->get();
+std::vector<Output> MultipleDecodingResult::get(bool strict) {
+  return pimpl->get(strict);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -211,26 +213,6 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task(
   co_return std::move(futures);
 }
 
-Task<std::vector<SemiFuture<Output>>> image_batch_decode_task(
-    const std::vector<std::string> srcs,
-    const std::shared_ptr<SourceAdoptor> adoptor,
-    const IOConfig io_cfg,
-    const DecodeConfig decode_cfg,
-    const std::string filter_desc) {
-  std::vector<SemiFuture<Output>> futures;
-  {
-    auto exec = detail::getDecoderThreadPoolExecutor();
-    for (auto& src : srcs) {
-      auto packet = co_await detail::demux_image(
-          src, std::move(adoptor), std::move(io_cfg));
-      auto task = detail::decode_packets(
-          std::move(packet), std::move(decode_cfg), std::move(filter_desc));
-      futures.emplace_back(std::move(task).scheduleOn(exec).start());
-    }
-  }
-  co_return std::move(futures);
-}
-
 Task<Output> image_decode_task(
     const std::string src,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -242,8 +224,23 @@ Task<Output> image_decode_task(
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
   auto task = detail::decode_packets(
       std::move(packet), std::move(decode_cfg), std::move(filter_desc));
-  SemiFuture<Output> future = std::move(task).scheduleOn(exec).start();
-  co_return co_await std::move(future);
+  co_return co_await std::move(task).scheduleOn(exec);
+}
+
+Task<std::vector<SemiFuture<Output>>> image_batch_decode_task(
+    const std::vector<std::string> srcs,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    const DecodeConfig decode_cfg,
+    const std::string filter_desc) {
+  std::vector<SemiFuture<Output>> futures;
+  for (auto& src : srcs) {
+    futures.emplace_back(
+        image_decode_task(src, adoptor, io_cfg, decode_cfg, filter_desc)
+            .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+            .start());
+  }
+  co_return std::move(futures);
 }
 
 #ifdef SPDL_USE_NVDEC
@@ -325,6 +322,9 @@ MultipleDecodingResult async_decode(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc) {
+  if (timestamps.size() == 0) {
+    SPDL_FAIL("At least one timestamp must be provided.");
+  }
   auto task = stream_decode_task(
       type, src, timestamps, adoptor, io_cfg, decode_cfg, filter_desc);
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
@@ -342,6 +342,9 @@ MultipleDecodingResult async_batch_decode_image(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc) {
+  if (srcs.size() == 0) {
+    SPDL_FAIL("At least one image source must be provided.");
+  }
   auto task =
       image_batch_decode_task(srcs, adoptor, io_cfg, decode_cfg, filter_desc);
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
@@ -432,6 +435,10 @@ MultipleDecodingResult async_decode_nvdec(
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
+  if (timestamps.size() == 0) {
+    SPDL_FAIL("At least one timestamp must be provided.");
+  }
+
   validate_nvdec_params(
       cuda_device_index,
       crop_left,

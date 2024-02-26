@@ -1,6 +1,8 @@
 import numpy as np
 from spdl import libspdl
 
+import pytest
+
 
 def test_decode_image_gray_black(get_sample):
     """PNG image (gray) can be decoded."""
@@ -170,3 +172,26 @@ def test_batch_decode_image_rgb24(get_samples):
         assert np.all(array[:, 64:, 0] == 0)
         assert np.all(array[:, 64:, 1] == 0)
         assert np.all(array[:, 64:, 2] >= 253)
+
+
+def test_batch_decode_image_strict(get_samples):
+    # fmt: off
+    cmd = """
+    ffmpeg -hide_banner -y                          \
+        -f lavfi -i color=color=0xff0000:size=32x64 \
+        -f lavfi -i color=color=0x00ff00:size=32x64 \
+        -f lavfi -i color=color=0x0000ff:size=32x64 \
+        -filter_complex hstack=inputs=3             \
+        -frames:v 32 sample_%03d.png
+    """
+    height, width = 64, 96
+    # fmt: on
+    flist = get_samples(cmd)
+    flist.append("foo.png")
+
+    with pytest.raises(RuntimeError):
+        libspdl.batch_decode_image(flist).get(strict=True)
+
+    frames = libspdl.batch_decode_image(flist).get(strict=False)
+
+    assert len(frames) == 32
