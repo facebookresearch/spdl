@@ -175,7 +175,7 @@ FFmpegVideoFrames FFmpegVideoFrames::slice(int start, int stop, int step)
   const int numel = frames.size();
   int len = adjust_indices(numel, &start, &stop, step);
 
-  auto out = FFmpegVideoFrames{0};
+  auto out = FFmpegVideoFrames{id};
   if (!len) {
     return out;
   }
@@ -200,7 +200,7 @@ FFmpegImageFrames FFmpegVideoFrames::slice(int i) const {
   }
   assert(0 <= i && i < numel);
 
-  auto out = FFmpegImageFrames{0};
+  auto out = FFmpegImageFrames{id};
   AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
   CHECK_AVERROR(
       av_frame_ref(dst, frames[i]),
