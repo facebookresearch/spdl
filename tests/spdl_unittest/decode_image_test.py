@@ -184,7 +184,6 @@ def test_batch_decode_image_strict(get_samples):
         -filter_complex hstack=inputs=3             \
         -frames:v 32 sample_%03d.png
     """
-    height, width = 64, 96
     # fmt: on
     flist = get_samples(cmd)
     flist.append("foo.png")
