@@ -8,37 +8,77 @@
 #include <vector>
 
 namespace spdl::core {
-////////////////////////////////////////////////////////////////////////////////
-// Image
-////////////////////////////////////////////////////////////////////////////////
 class SingleDecodingResult;
+class MultipleDecodingResult;
 
-#define ASYNC_DECODE_IMAGE                           \
-  SingleDecodingResult async_decode_image(           \
-      const std::string& src,                        \
-      const std::shared_ptr<SourceAdoptor>& adoptor, \
-      const IOConfig& io_cfg,                        \
-      const DecodeConfig& decode_cfg,                \
+// Putting all the decoding functions into this utility, static-only class
+// so that we can make the whole thing friend of result classes without having
+// to repeat the signatures.
+//
+// This is not really used as a class, so we use lower case for the name.
+struct decoding {
+  decoding() = delete;
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Image
+  ////////////////////////////////////////////////////////////////////////////////
+  static SingleDecodingResult async_decode_image(
+      const std::string& src,
+      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const IOConfig& io_cfg,
+      const DecodeConfig& decode_cfg,
       const std::string& filter_desc);
 
-ASYNC_DECODE_IMAGE;
+  static SingleDecodingResult async_decode_image_nvdec(
+      const std::string& src,
+      const int cuda_device_index,
+      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const IOConfig& io_cfg,
+      int crop_left,
+      int crop_top,
+      int crop_right,
+      int crop_bottom,
+      int width,
+      int height,
+      const std::optional<std::string>& pix_fmt);
 
-#define ASYNC_DECODE_IMAGE_NVDEC                     \
-  SingleDecodingResult async_decode_image_nvdec(     \
-      const std::string& src,                        \
-      const int cuda_device_index,                   \
-      const std::shared_ptr<SourceAdoptor>& adoptor, \
-      const IOConfig& io_cfg,                        \
-      int crop_left,                                 \
-      int crop_top,                                  \
-      int crop_right,                                \
-      int crop_bottom,                               \
-      int width,                                     \
-      int height,                                    \
-      const std::optional<std::string>& pix_fmt)
+  static MultipleDecodingResult async_batch_decode_image(
+      const std::vector<std::string>& srcs,
+      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const IOConfig& io_cfg,
+      const DecodeConfig& decode_cfg,
+      const std::string& filter_desc);
 
-ASYNC_DECODE_IMAGE_NVDEC;
+  ////////////////////////////////////////////////////////////////////////////////
+  // Audio / Video
+  ////////////////////////////////////////////////////////////////////////////////
+  static MultipleDecodingResult async_decode(
+      const enum MediaType type,
+      const std::string& src,
+      const std::vector<std::tuple<double, double>>& timestamps,
+      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const IOConfig& io_cfg,
+      const DecodeConfig& decode_cfg,
+      const std::string& filter_desc);
 
+  static MultipleDecodingResult async_decode_nvdec(
+      const std::string& src,
+      const std::vector<std::tuple<double, double>>& timestamps,
+      const int cuda_device_index,
+      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const IOConfig& io_cfg,
+      int crop_left,
+      int crop_top,
+      int crop_right,
+      int crop_bottom,
+      int width,
+      int height,
+      const std::optional<std::string>& pix_fmt);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Future for single decoding result
+////////////////////////////////////////////////////////////////////////////////
 class SingleDecodingResult {
   struct Impl;
 
@@ -56,57 +96,12 @@ class SingleDecodingResult {
 
   std::unique_ptr<DecodedFrames> get();
 
-  friend ASYNC_DECODE_IMAGE;
-  friend ASYNC_DECODE_IMAGE_NVDEC;
+  friend decoding;
 };
 
-#undef ASYNC_DECODE_IMAGE
-#undef ASYNC_DECODE_IMAGE_NVDEC
-
 ////////////////////////////////////////////////////////////////////////////////
-// Audio / Video
+// Future for multiple decoding result
 ////////////////////////////////////////////////////////////////////////////////
-class MultipleDecodingResult;
-
-#define ASYNC_BATCH_DECODE_IMAGE                     \
-  MultipleDecodingResult async_batch_decode_image(   \
-      const std::vector<std::string>& srcs,          \
-      const std::shared_ptr<SourceAdoptor>& adoptor, \
-      const IOConfig& io_cfg,                        \
-      const DecodeConfig& decode_cfg,                \
-      const std::string& filter_desc);
-
-ASYNC_BATCH_DECODE_IMAGE;
-
-#define ASYNC_DECODE                                             \
-  MultipleDecodingResult async_decode(                           \
-      const enum MediaType type,                                 \
-      const std::string& src,                                    \
-      const std::vector<std::tuple<double, double>>& timestamps, \
-      const std::shared_ptr<SourceAdoptor>& adoptor,             \
-      const IOConfig& io_cfg,                                    \
-      const DecodeConfig& decode_cfg,                            \
-      const std::string& filter_desc);
-
-ASYNC_DECODE;
-
-#define ASYNC_DECODE_NVDEC                                       \
-  MultipleDecodingResult async_decode_nvdec(                     \
-      const std::string& src,                                    \
-      const std::vector<std::tuple<double, double>>& timestamps, \
-      const int cuda_device_index,                               \
-      const std::shared_ptr<SourceAdoptor>& adoptor,             \
-      const IOConfig& io_cfg,                                    \
-      int crop_left,                                             \
-      int crop_top,                                              \
-      int crop_right,                                            \
-      int crop_bottom,                                           \
-      int width,                                                 \
-      int height,                                                \
-      const std::optional<std::string>& pix_fmt)
-
-ASYNC_DECODE_NVDEC;
-
 class MultipleDecodingResult {
   struct Impl;
 
@@ -124,13 +119,7 @@ class MultipleDecodingResult {
 
   std::vector<std::unique_ptr<DecodedFrames>> get(bool strict = true);
 
-  friend ASYNC_DECODE;
-  friend ASYNC_DECODE_NVDEC;
-  friend ASYNC_BATCH_DECODE_IMAGE;
+  friend decoding;
 };
-
-#undef ASYNC_DECODE
-#undef ASYNC_DECODE_NVDEC
-#undef ASYNC_BATCH_DECODE_IMAGE
 
 } // namespace spdl::core
