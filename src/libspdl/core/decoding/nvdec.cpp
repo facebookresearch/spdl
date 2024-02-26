@@ -51,6 +51,38 @@ Task<Output> image_decode_task_nvdec(
   co_return co_await std::move(future);
 }
 
+Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
+    const std::vector<std::string> srcs,
+    const int cuda_device_index,
+    const std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg,
+    int crop_left,
+    int crop_top,
+    int crop_right,
+    int crop_bottom,
+    int width,
+    int height,
+    const std::optional<std::string> pix_fmt) {
+  std::vector<SemiFuture<Output>> futures;
+  for (auto& src : srcs) {
+    futures.emplace_back(image_decode_task_nvdec(
+                             src,
+                             cuda_device_index,
+                             adoptor,
+                             io_cfg,
+                             crop_left,
+                             crop_top,
+                             crop_right,
+                             crop_bottom,
+                             width,
+                             height,
+                             pix_fmt)
+                             .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+                             .start());
+  }
+  co_return std::move(futures);
+}
+
 Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -207,27 +239,76 @@ MultipleDecodingResult decoding::async_decode_nvdec(
       height);
   init_cuda();
 
-  auto task = stream_decode_task_nvdec(
-      src,
-      timestamps,
-      cuda_device_index,
-      adoptor,
-      io_cfg,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
-      width,
-      height,
-      pix_fmt);
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
       MediaType::Video,
       {src},
       timestamps,
-      std::move(task)
+      stream_decode_task_nvdec(
+          src,
+          timestamps,
+          cuda_device_index,
+          adoptor,
+          io_cfg,
+          crop_left,
+          crop_top,
+          crop_right,
+          crop_bottom,
+          width,
+          height,
+          pix_fmt)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
           .start()}};
 #endif
 }
 
+MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
+    const std::vector<std::string>& srcs,
+    const int cuda_device_index,
+    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const IOConfig& io_cfg,
+    int crop_left,
+    int crop_top,
+    int crop_right,
+    int crop_bottom,
+    int width,
+    int height,
+    const std::optional<std::string>& pix_fmt) {
+#ifndef SPDL_USE_NVDEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+  if (srcs.size() == 0) {
+    SPDL_FAIL("At least one source must be provided.");
+  }
+
+  validate_nvdec_params(
+      cuda_device_index,
+      crop_left,
+      crop_top,
+      crop_right,
+      crop_bottom,
+      width,
+      height);
+  init_cuda();
+
+  return MultipleDecodingResult{new MultipleDecodingResult::Impl{
+      MediaType::Image,
+      srcs,
+      {},
+      batch_image_decode_task_nvdec(
+          srcs,
+          cuda_device_index,
+          adoptor,
+          io_cfg,
+          crop_left,
+          crop_top,
+          crop_right,
+          crop_bottom,
+          width,
+          height,
+          pix_fmt)
+          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .start()}};
+
+#endif
+}
 } // namespace spdl::core

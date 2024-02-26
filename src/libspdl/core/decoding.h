@@ -42,12 +42,28 @@ struct decoding {
       int height,
       const std::optional<std::string>& pix_fmt);
 
+  ////////////////////////////////////////////////////////////////////////////////
+  // Batch image
+  ////////////////////////////////////////////////////////////////////////////////
   static MultipleDecodingResult async_batch_decode_image(
       const std::vector<std::string>& srcs,
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
       const std::string& filter_desc);
+
+  static MultipleDecodingResult async_batch_decode_image_nvdec(
+      const std::vector<std::string>& srcs,
+      const int cuda_device_index,
+      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const IOConfig& io_cfg,
+      int crop_left,
+      int crop_top,
+      int crop_right,
+      int crop_bottom,
+      int width,
+      int height,
+      const std::optional<std::string>& pix_fmt);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Audio / Video
