@@ -100,7 +100,7 @@ __global__ static void nv12_to_planar_rgb32(
   uint8_t* u = yuv_ptr + ((height + y / 2) * yuv_pitch) + x;
   uint8_t* v = u + 1;
 
-  if (matrix_coefficients > 10) {
+  if (matrix_coefficients <= 0 || 10 < matrix_coefficients) {
     matrix_coefficients = 1;
   }
   auto mat = yuv2rgb[matrix_coefficients - 1];
