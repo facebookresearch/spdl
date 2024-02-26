@@ -122,7 +122,7 @@ class MultipleDecodingResult {
   MultipleDecodingResult& operator=(MultipleDecodingResult&&) noexcept;
   ~MultipleDecodingResult();
 
-  std::vector<std::unique_ptr<DecodedFrames>> get();
+  std::vector<std::unique_ptr<DecodedFrames>> get(bool strict = true);
 
   friend ASYNC_DECODE;
   friend ASYNC_DECODE_NVDEC;

@@ -30,7 +30,8 @@ void register_pybind(py::module& m) {
   auto _SingleDecodingResult = py::class_<SingleDecodingResult>(
       m, "SingleDecodingResult", py::module_local());
 
-  _MultipleDecodingResult.def("get", &MultipleDecodingResult::get);
+  _MultipleDecodingResult.def(
+      "get", &MultipleDecodingResult::get, py::arg("strict") = true);
 
   _SingleDecodingResult.def("get", &SingleDecodingResult::get);
 
