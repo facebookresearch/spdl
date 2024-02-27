@@ -85,9 +85,6 @@ class PyDecodedFrames : public DecodedFrames {
  public:
   using DecodedFrames::DecodedFrames;
 
-  std::string get_media_format() const override {
-    PYBIND11_OVERLOAD_PURE(std::string, DecodedFrames, get_media_format);
-  }
   std::string get_media_type() const override {
     PYBIND11_OVERLOAD_PURE(std::string, DecodedFrames, get_media_type);
   }
@@ -183,8 +180,6 @@ void register_frames_and_buffers(py::module& m) {
 #endif
 
   _FFmpegAudioFrames
-      .def_property_readonly(
-          "media_format", &FFmpegAudioFrames::get_media_format)
       .def_property_readonly("media_type", &FFmpegAudioFrames::get_media_type)
       .def_property_readonly("is_cuda", &FFmpegAudioFrames::is_cuda)
       .def_property_readonly("num_frames", &FFmpegAudioFrames::get_num_frames)
@@ -194,8 +189,6 @@ void register_frames_and_buffers(py::module& m) {
       .def("__len__", &FFmpegAudioFrames::get_num_frames);
 
   _FFmpegVideoFrames
-      .def_property_readonly(
-          "media_format", &FFmpegVideoFrames::get_media_format)
       .def_property_readonly("media_type", &FFmpegVideoFrames::get_media_type)
       .def_property_readonly("is_cuda", &FFmpegVideoFrames::is_cuda)
       .def_property_readonly("num_frames", &FFmpegVideoFrames::get_num_frames)
@@ -221,8 +214,6 @@ void register_frames_and_buffers(py::module& m) {
       });
 
   _FFmpegImageFrames
-      .def_property_readonly(
-          "media_format", &FFmpegImageFrames::get_media_format)
       .def_property_readonly("media_type", &FFmpegImageFrames::get_media_type)
       .def_property_readonly("is_cuda", &FFmpegImageFrames::is_cuda)
       .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
@@ -231,8 +222,6 @@ void register_frames_and_buffers(py::module& m) {
 
 #ifdef SPDL_USE_NVDEC
   _NvDecVideoFrames
-      .def_property_readonly(
-          "media_format", &NvDecVideoFrames::get_media_format)
       .def_property_readonly("media_type", &NvDecVideoFrames::get_media_type)
       .def_property_readonly("is_cuda", &NvDecVideoFrames::is_cuda)
       // TODO:

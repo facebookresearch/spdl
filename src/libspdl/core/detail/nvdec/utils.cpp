@@ -3,7 +3,6 @@
 #include <libspdl/core/detail/cuda.h>
 #include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
-#include <libspdl/core/types.h>
 
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
