@@ -50,12 +50,12 @@ if (SPDL_DEBUG_REFCOUNT)
   list(APPEND defs SPDL_DEBUG_REFCOUNT)
 endif()
 
-install(
-  DIRECTORY libspdl
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN "detail" EXCLUDE)
+# install(
+#   DIRECTORY libspdl
+#   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#   FILES_MATCHING
+#   PATTERN "*.h"
+#   PATTERN "detail" EXCLUDE)
 
 function(add_libspdl ffmpeg_version)
   set(name "spdl_ffmpeg${ffmpeg_version}")
