@@ -15,18 +15,6 @@ extern "C" {
 }
 
 namespace spdl::core {
-namespace {
-std::string get_type_string(MediaType type) {
-  switch (type) {
-    case MediaType::Audio:
-      return "audio";
-    case MediaType::Video:
-      return "video";
-    case MediaType::Image:
-      return "image";
-  }
-}
-} // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg Common
@@ -64,8 +52,8 @@ FFmpegFrames::~FFmpegFrames() {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Audio
 ////////////////////////////////////////////////////////////////////////////////
-std::string FFmpegAudioFrames::get_media_type() const {
-  return get_type_string(MediaType::Audio);
+enum MediaType FFmpegAudioFrames::get_media_type() const {
+  return MediaType::Audio;
 }
 
 bool FFmpegAudioFrames::is_cuda() const {
@@ -91,8 +79,8 @@ int FFmpegAudioFrames::get_num_channels() const {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Video
 ////////////////////////////////////////////////////////////////////////////////
-std::string FFmpegVideoFrames::get_media_type() const {
-  return get_type_string(MediaType::Video);
+enum MediaType FFmpegVideoFrames::get_media_type() const {
+  return MediaType::Video;
 }
 
 bool FFmpegVideoFrames::is_cuda() const {
@@ -198,8 +186,8 @@ FFmpegImageFrames FFmpegVideoFrames::slice(int i) const {
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Image
 ////////////////////////////////////////////////////////////////////////////////
-std::string FFmpegImageFrames::get_media_type() const {
-  return get_type_string(MediaType::Image);
+enum MediaType FFmpegImageFrames::get_media_type() const {
+  return MediaType::Image;
 }
 
 bool FFmpegImageFrames::is_cuda() const {
@@ -231,8 +219,8 @@ bool NvDecVideoFrames::is_cuda() const {
   return true;
 }
 
-std::string NvDecVideoFrames::get_media_type() const {
-  return get_type_string(media_type);
+enum MediaType NvDecVideoFrames::get_media_type() const {
+  return media_type;
 }
 #endif
 
