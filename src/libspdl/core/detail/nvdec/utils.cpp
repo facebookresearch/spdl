@@ -627,4 +627,133 @@ std::string print(const CUVIDDECODECREATEINFO* p) {
       p->enableHistogram);
 }
 
+std::string get_diff(
+    const CUVIDDECODECREATEINFO& i1,
+    const CUVIDDECODECREATEINFO& i2) {
+  std::vector<std::string> diffs;
+  if (i1.CodecType != i2.CodecType) {
+    diffs.emplace_back(fmt::format(
+        "CodecType: {} -> {}",
+        get_codec_name(i1.CodecType),
+        get_codec_name(i2.CodecType)));
+  }
+  if (i1.DeinterlaceMode != i2.DeinterlaceMode) {
+    diffs.emplace_back(fmt::format(
+        "DeinterlaceMode: {} -> {}", i1.DeinterlaceMode, i2.DeinterlaceMode));
+  }
+  if (i1.bitDepthMinus8 != i2.bitDepthMinus8) {
+    diffs.emplace_back(fmt::format(
+        "BitDepth: {} -> {}", i1.bitDepthMinus8 + 8, i2.bitDepthMinus8 + 8));
+  }
+  if (i1.ChromaFormat != i2.ChromaFormat) {
+    diffs.emplace_back(fmt::format(
+        "ChromaFormat: {} -> {}",
+        get_chroma_name(i1.ChromaFormat),
+        get_chroma_name(i2.ChromaFormat)));
+  }
+  if (i1.OutputFormat != i2.OutputFormat) {
+    diffs.emplace_back(fmt::format(
+        "OutputFormat: {} -> {}",
+        get_surface_format_name(i1.OutputFormat),
+        get_surface_format_name(i2.OutputFormat)));
+  }
+  if (i1.ulCreationFlags != i2.ulCreationFlags) {
+    diffs.emplace_back(fmt::format(
+        "ulCreationFlags: {} -> {}", i1.ulCreationFlags, i2.ulCreationFlags));
+  }
+  if (i1.ulIntraDecodeOnly != i2.ulIntraDecodeOnly) {
+    diffs.emplace_back(fmt::format(
+        "ulIntraDecodeOnly: {} -> {}",
+        i1.ulIntraDecodeOnly,
+        i2.ulIntraDecodeOnly));
+  }
+  if (i1.ulNumOutputSurfaces != i2.ulNumOutputSurfaces) {
+    diffs.emplace_back(fmt::format(
+        "ulNumOutputSurfaces: {} -> {}",
+        i1.ulNumOutputSurfaces,
+        i2.ulNumOutputSurfaces));
+  }
+  if (i1.enableHistogram != i2.enableHistogram) {
+    diffs.emplace_back(fmt::format(
+        "enableHistogram: {} -> {}", i1.enableHistogram, i2.enableHistogram));
+  }
+  if (i1.ulMaxWidth < i2.ulWidth) {
+    diffs.emplace_back(
+        fmt::format("ulMaxWidth: {} -> {}", i1.ulMaxWidth, i2.ulWidth));
+  }
+  if (i1.ulMaxHeight < i2.ulHeight) {
+    diffs.emplace_back(
+        fmt::format("ulMaxHeight: {} -> {}", i1.ulMaxHeight, i2.ulHeight));
+  }
+  if (i1.ulWidth != i2.ulWidth) {
+    diffs.emplace_back(
+        fmt::format("ulWidth: {} -> {}", i1.ulWidth, i2.ulWidth));
+  }
+  if (i1.ulHeight != i2.ulHeight) {
+    diffs.emplace_back(
+        fmt::format("ulHeight: {} -> {}", i1.ulHeight, i2.ulHeight));
+  }
+  if (i1.ulTargetWidth != i2.ulTargetWidth) {
+    diffs.emplace_back(fmt::format(
+        "ulTargetWidth: {} -> {}", i1.ulTargetWidth, i2.ulTargetWidth));
+  }
+  if (i1.ulTargetHeight != i2.ulTargetHeight) {
+    diffs.emplace_back(fmt::format(
+        "ulTargetHeight: {} -> {}", i1.ulTargetHeight, i2.ulTargetHeight));
+  }
+  if (i1.ulNumDecodeSurfaces != i2.ulNumDecodeSurfaces) {
+    diffs.emplace_back(fmt::format(
+        "ulNumDecodeSurfaces: {} -> {}",
+        i1.ulNumDecodeSurfaces,
+        i2.ulNumDecodeSurfaces));
+  }
+  if (i1.display_area.left != i2.display_area.left) {
+    diffs.emplace_back(fmt::format(
+        "display_area.left: {} -> {}",
+        i1.display_area.left,
+        i2.display_area.left));
+  }
+  if (i1.display_area.top != i2.display_area.top) {
+    diffs.emplace_back(fmt::format(
+        "display_area.top: {} -> {}",
+        i1.display_area.top,
+        i2.display_area.top));
+  }
+  if (i1.display_area.right != i2.display_area.right) {
+    diffs.emplace_back(fmt::format(
+        "display_area.right: {} -> {}",
+        i1.display_area.right,
+        i2.display_area.right));
+  }
+  if (i1.display_area.bottom != i2.display_area.bottom) {
+    diffs.emplace_back(fmt::format(
+        "display_area.bottom: {} -> {}",
+        i1.display_area.bottom,
+        i2.display_area.bottom));
+  }
+  if (i1.target_rect.left == i2.target_rect.left) {
+    diffs.emplace_back(fmt::format(
+        "target_rect.left: {} -> {}",
+        i1.target_rect.left,
+        i2.target_rect.left));
+  }
+  if (i1.target_rect.top != i2.target_rect.top) {
+    diffs.emplace_back(fmt::format(
+        "target_rect.top: {} -> {}", i1.target_rect.top, i2.target_rect.top));
+  }
+  if (i1.target_rect.right == i2.target_rect.right) {
+    diffs.emplace_back(fmt::format(
+        "target_rect.right: {} -> {}",
+        i1.target_rect.right,
+        i2.target_rect.right));
+  }
+  if (i1.target_rect.bottom != i2.target_rect.bottom) {
+    diffs.emplace_back(fmt::format(
+        "target_rect.bottom: {} -> {}",
+        i1.target_rect.bottom,
+        i2.target_rect.bottom));
+  }
+  return fmt::format("{}", fmt::join(diffs, "\n    "));
+}
+
 } // namespace spdl::core::detail

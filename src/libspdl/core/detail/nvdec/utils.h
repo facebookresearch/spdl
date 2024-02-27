@@ -60,4 +60,8 @@ std::string print(const CUVIDPARSERDISPINFO*);
 std::string print(const CUVIDSEIMESSAGEINFO*);
 std::string print(const CUVIDDECODECREATEINFO*);
 
+std::string get_diff(
+    const CUVIDDECODECREATEINFO& i1,
+    const CUVIDDECODECREATEINFO& i2);
+
 } // namespace spdl::core::detail
