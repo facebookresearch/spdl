@@ -238,6 +238,17 @@ std::unique_ptr<Buffer> convert_video_frames_cuda(
 std::unique_ptr<Buffer> convert_video_frames_cpu(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
+  if (frames.size() == 0) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  int height = frames[0]->height, width = frames[0]->width;
+  for (auto* f : frames) {
+    if (f->height != height || f->width != width) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frame to batch as the frames do not have the same size."));
+    }
+  }
+
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   switch (pix_fmt) {
     case AV_PIX_FMT_GRAY8: {
@@ -374,6 +385,23 @@ std::unique_ptr<Buffer> convert_image_frames(
   // Trim the first dim
   buf->shape.erase(buf->shape.begin());
   return buf;
+}
+
+std::unique_ptr<Buffer> convert_batch_image_frames(
+    const std::vector<FFmpegImageFrames*>& batch_frames,
+    const std::optional<int>& index) {
+  if (!batch_frames.size()) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  std::vector<AVFrame*> fs;
+  for (auto& frame : batch_frames) {
+    if (frame->frames.size() != 1) {
+      SPDL_FAIL(
+          "Unexpected number of frames are found one of the batch frames.");
+    }
+    fs.push_back(frame->frames[0]);
+  }
+  return convert_video_frames_cpu(fs, index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
