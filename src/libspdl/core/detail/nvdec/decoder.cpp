@@ -79,6 +79,8 @@ inline RECON update_type(
       i1.enableHistogram != i2.enableHistogram ||
       // Exceeded the previous maximum width/height
       i1.ulMaxWidth < i2.ulWidth || i1.ulMaxHeight < i2.ulHeight) {
+    // XLOG(DBG9) << "Recreating the decoder object.\n    "
+    //            << detail::get_diff(i1, i2);
     return RECREATE;
   }
   if (i1.ulWidth == i2.ulWidth && i1.ulHeight == i2.ulHeight &&
@@ -95,6 +97,7 @@ inline RECON update_type(
       i1.target_rect.bottom == i2.target_rect.bottom) {
     return RECON::RETAIN;
   }
+  // XLOG(DBG9) << "Reconfiguring the decoder object.";
   return RECON::RECONFIGURE;
 }
 
