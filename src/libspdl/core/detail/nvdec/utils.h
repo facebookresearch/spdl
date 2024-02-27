@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libspdl/core/types.h>
+
 #include <cuviddec.h>
 #include <nvcuvid.h>
 
@@ -31,10 +33,7 @@ CUVIDDECODECREATEINFO get_create_info(
     cudaVideoSurfaceFormat surface_fmt,
     unsigned int max_width,
     unsigned int max_height,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea& crop,
     int target_width,
     int target_height);
 

@@ -125,27 +125,25 @@ void NvDecDecoder::init(
     CUDABuffer2DPitch* buffer_,
     AVRational timebase_,
     std::tuple<double, double> timestamp_,
-    int crop_l,
-    int crop_t,
-    int crop_r,
-    int crop_b,
+    CropArea crop_,
     int tgt_w,
     int tgt_h,
     const std::optional<std::string>& pix_fmt_) {
-  if (crop_l < 0) {
-    SPDL_FAIL(fmt::format("crop_left must be non-negative. Found: {}", crop_l));
-  }
-  if (crop_t < 0) {
+  if (crop_.left < 0) {
     SPDL_FAIL(
-        fmt::format("crop_top must be non-negative. Found: {}", crop_top));
+        fmt::format("crop_left must be non-negative. Found: {}", crop_.left));
   }
-  if (crop_r < 0) {
+  if (crop_.top < 0) {
     SPDL_FAIL(
-        fmt::format("crop_right must be non-negative. Found: {}", crop_right));
+        fmt::format("crop_top must be non-negative. Found: {}", crop_.top));
   }
-  if (crop_b < 0) {
+  if (crop_.right < 0) {
+    SPDL_FAIL(
+        fmt::format("crop_right must be non-negative. Found: {}", crop_.right));
+  }
+  if (crop_.bottom < 0) {
     SPDL_FAIL(fmt::format(
-        "crop_bottom must be non-negative. Found: {}", crop_bottom));
+        "crop_bottom must be non-negative. Found: {}", crop_.bottom));
   }
   if (tgt_w > 0 && tgt_w % 2) {
     SPDL_FAIL(fmt::format("target_width must be positive. Found: {}", tgt_w));
@@ -178,10 +176,7 @@ void NvDecDecoder::init(
   timebase = timebase_;
   std::tie(start_time, end_time) = timestamp_;
 
-  crop_left = crop_l;
-  crop_top = crop_t;
-  crop_right = crop_r;
-  crop_bottom = crop_b;
+  crop = crop_;
   target_width = tgt_w;
   target_height = tgt_h;
   pix_fmt = pix_fmt_;
@@ -232,10 +227,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
       output_fmt,
       max_width,
       max_height,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
+      crop,
       target_width,
       target_height);
 

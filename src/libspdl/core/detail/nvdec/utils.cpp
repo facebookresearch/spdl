@@ -3,6 +3,7 @@
 #include <libspdl/core/detail/cuda.h>
 #include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
+#include <libspdl/core/types.h>
 
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
@@ -125,34 +126,31 @@ CUVIDDECODECREATEINFO get_create_info(
     cudaVideoSurfaceFormat output_fmt,
     unsigned int max_width,
     unsigned int max_height,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea& crop,
     int target_width,
     int target_height) {
   // XLOG(INFO) << fmt::format(
   //    "Output sufrace format: {}", get_surface_format_name(output_fmt));
 
   int width = video_fmt->display_area.right - video_fmt->display_area.left -
-      crop_left - crop_right;
+      crop.left - crop.right;
   int height = video_fmt->display_area.bottom - video_fmt->display_area.top -
-      crop_top - crop_bottom;
+      crop.top - crop.bottom;
   if (width <= 0) {
     SPDL_FAIL(fmt::format(
-        "Invalid image width: {} (source width: {}, crop_left: {}, crop_right: {})",
+        "Invalid image width: {} (source width: {}, crop.left: {}, crop.right: {})",
         width,
         video_fmt->display_area.right - video_fmt->display_area.left,
-        crop_left,
-        crop_right));
+        crop.left,
+        crop.right));
   }
   if (height <= 0) {
     SPDL_FAIL(fmt::format(
-        "Invalid image height: {} (source height: {}, crop_top: {}, crop_bottom: {})",
+        "Invalid image height: {} (source height: {}, crop.top: {}, crop.bottom: {})",
         height,
         video_fmt->display_area.bottom - video_fmt->display_area.top,
-        crop_top,
-        crop_bottom));
+        crop.top,
+        crop.bottom));
   }
 
   // Note: The frame is first cropped then resized to target_width/height
@@ -189,10 +187,10 @@ CUVIDDECODECREATEINFO get_create_info(
       .ulMaxWidth = max_width,
       .ulMaxHeight = max_height,
       .display_area =
-          {.left = (short)(video_fmt->display_area.left + crop_left),
-           .top = (short)(video_fmt->display_area.top + crop_top),
-           .right = (short)(video_fmt->display_area.right - crop_right),
-           .bottom = (short)(video_fmt->display_area.bottom - crop_bottom)},
+          {.left = (short)(video_fmt->display_area.left + crop.left),
+           .top = (short)(video_fmt->display_area.top + crop.top),
+           .right = (short)(video_fmt->display_area.right - crop.right),
+           .bottom = (short)(video_fmt->display_area.bottom - crop.bottom)},
       .OutputFormat = output_fmt,
       .DeinterlaceMode = video_fmt->progressive_sequence
           ? cudaVideoDeinterlaceMode_Weave
