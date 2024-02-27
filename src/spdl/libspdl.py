@@ -80,7 +80,10 @@ def to_numpy(
             (``"NCHW"`` and ``"NHWC"`` can be  respectively used alias for
              ``"channel_first"`` and ``"channel_last"`` in case of video frames.)
     """
-    if frames.is_cuda:
+    if isinstance(frames, list):
+        if any(f.is_cuda for f in frames):
+            raise RuntimeError("CUDA frames cannot be converted to numpy array.")
+    elif frames.is_cuda:
         raise RuntimeError("CUDA frames cannot be converted to numpy array.")
 
     buffer = _to_buffer(frames, index)

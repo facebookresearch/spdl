@@ -137,6 +137,25 @@ def test_decode_image_rgb24_blue(get_sample):
     assert np.all(array[..., 2] == 254)
 
 
+def test_batch_decode_image_slice(get_samples):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.png"
+    n, h, w = 32, 240, 320
+    flist = get_samples(cmd)
+
+    frames = libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
+    assert len(frames) == n
+
+    arrays = libspdl.to_numpy(frames)
+    assert arrays.shape == (n, h, w, 3)
+    for i in range(n):
+        arr = libspdl.to_numpy(frames[i])
+        assert np.all(arr == arrays[i])
+
+        for j in range(i + 1, n):
+            arr = libspdl.to_numpy(frames[i:j])
+            assert np.all(arr == arrays[i:j])
+
+
 def test_batch_decode_image_rgb24(get_samples):
     # fmt: off
     cmd = """
@@ -152,9 +171,12 @@ def test_batch_decode_image_rgb24(get_samples):
     flist = get_samples(cmd)
 
     frames = libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
-    arrays = [libspdl.to_numpy(f) for f in frames]
+    assert len(frames) == 32
+    arrays = libspdl.to_numpy(frames)
 
-    for array in arrays:
+    for i in range(32):
+        array = arrays[i]
+
         assert array.dtype == np.uint8
         assert array.shape == (height, width, 3)
 

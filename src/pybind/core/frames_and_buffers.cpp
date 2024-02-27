@@ -121,8 +121,7 @@ void register_frames_and_buffers(py::module& m) {
 #endif
 
   auto _DecodedFrames =
-      py::class_<DecodedFrames, std::shared_ptr<DecodedFrames>>(
-          m, "DecodedFrames", py::module_local());
+      py::class_<DecodedFrames>(m, "DecodedFrames", py::module_local());
 
   auto _FFmpegAudioFrames =
       py::class_<FFmpegAudioFrames>(m, "FFmpegAudioFrames", py::module_local());
@@ -255,5 +254,6 @@ void register_frames_and_buffers(py::module& m) {
   m.def("convert_frames", &convert_audio_frames);
   m.def("convert_frames", &convert_video_frames);
   m.def("convert_frames", &convert_image_frames);
+  m.def("convert_frames", &convert_batch_image_frames);
 }
 } // namespace spdl::core
