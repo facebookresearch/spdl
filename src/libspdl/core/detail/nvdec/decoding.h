@@ -28,10 +28,7 @@ stream_demux_nvdec(
 folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
     std::unique_ptr<PackagedAVPackets> packets,
     int cuda_device_index,
-    int crop_left = 0,
-    int crop_top = 0,
-    int crop_right = 0,
-    int crop_bottom = 0,
+    const CropArea crop,
     int target_width = -1,
     int target_height = -1,
     const std::optional<std::string> pix_fmt = std::nullopt,

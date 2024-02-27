@@ -26,10 +26,7 @@ Task<Output> image_decode_task_nvdec(
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea crop,
     int width,
     int height,
     const std::optional<std::string> pix_fmt) {
@@ -39,10 +36,7 @@ Task<Output> image_decode_task_nvdec(
   auto task = detail::decode_packets_nvdec(
       std::move(packet),
       cuda_device_index,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
+      crop,
       width,
       height,
       pix_fmt,
@@ -56,10 +50,7 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea crop,
     int width,
     int height,
     const std::optional<std::string> pix_fmt) {
@@ -70,10 +61,7 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
                              cuda_device_index,
                              adoptor,
                              io_cfg,
-                             crop_left,
-                             crop_top,
-                             crop_right,
-                             crop_bottom,
+                             crop,
                              width,
                              height,
                              pix_fmt)
@@ -89,10 +77,7 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea crop,
     int width,
     int height,
     const std::optional<std::string> pix_fmt) {
@@ -103,15 +88,7 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
         src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
       auto task = detail::decode_packets_nvdec(
-          *std::move(result),
-          cuda_device_index,
-          crop_left,
-          crop_top,
-          crop_right,
-          crop_bottom,
-          width,
-          height,
-          pix_fmt);
+          *std::move(result), cuda_device_index, crop, width, height, pix_fmt);
       futures.emplace_back(std::move(task).scheduleOn(exec).start());
     }
   }
@@ -120,10 +97,7 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
 
 void validate_nvdec_params(
     int cuda_device_index,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea& crop,
     int width,
     int height) {
   if (cuda_device_index < 0) {
@@ -131,21 +105,21 @@ void validate_nvdec_params(
         "cuda_device_index must be non-negative. Found: {}",
         cuda_device_index));
   }
-  if (crop_left < 0) {
+  if (crop.left < 0) {
     SPDL_FAIL(
-        fmt::format("crop_left must be non-negative. Found: {}", crop_left));
+        fmt::format("crop.left must be non-negative. Found: {}", crop.left));
   }
-  if (crop_top < 0) {
+  if (crop.top < 0) {
     SPDL_FAIL(
-        fmt::format("crop_top must be non-negative. Found: {}", crop_top));
+        fmt::format("crop.top must be non-negative. Found: {}", crop.top));
   }
-  if (crop_right < 0) {
+  if (crop.right < 0) {
     SPDL_FAIL(
-        fmt::format("crop_right must be non-negative. Found: {}", crop_right));
+        fmt::format("crop.right must be non-negative. Found: {}", crop.right));
   }
-  if (crop_bottom < 0) {
+  if (crop.bottom < 0) {
     SPDL_FAIL(fmt::format(
-        "crop_bottom must be non-negative. Found: {}", crop_bottom));
+        "crop.bottom must be non-negative. Found: {}", crop.bottom));
   }
   if (width > 0 && width % 2) {
     SPDL_FAIL(fmt::format("width must be positive and even. Found: {}", width));
@@ -171,37 +145,17 @@ SingleDecodingResult decoding::async_decode_image_nvdec(
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea& crop,
     int width,
     int height,
     const std::optional<std::string>& pix_fmt) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
-  validate_nvdec_params(
-      cuda_device_index,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
-      width,
-      height);
+  validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
   auto task = image_decode_task_nvdec(
-      src,
-      cuda_device_index,
-      adoptor,
-      io_cfg,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
-      width,
-      height,
-      pix_fmt);
+      src, cuda_device_index, adoptor, io_cfg, crop, width, height, pix_fmt);
   return SingleDecodingResult{new SingleDecodingResult::Impl{
       std::move(task)
           .scheduleOn(detail::getDemuxerThreadPoolExecutor())
@@ -215,10 +169,7 @@ MultipleDecodingResult decoding::async_decode_nvdec(
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea& crop,
     int width,
     int height,
     const std::optional<std::string>& pix_fmt) {
@@ -229,14 +180,7 @@ MultipleDecodingResult decoding::async_decode_nvdec(
     SPDL_FAIL("At least one timestamp must be provided.");
   }
 
-  validate_nvdec_params(
-      cuda_device_index,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
-      width,
-      height);
+  validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
 
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
@@ -249,10 +193,7 @@ MultipleDecodingResult decoding::async_decode_nvdec(
           cuda_device_index,
           adoptor,
           io_cfg,
-          crop_left,
-          crop_top,
-          crop_right,
-          crop_bottom,
+          crop,
           width,
           height,
           pix_fmt)
@@ -266,10 +207,7 @@ MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea& crop,
     int width,
     int height,
     const std::optional<std::string>& pix_fmt) {
@@ -280,14 +218,7 @@ MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
     SPDL_FAIL("At least one source must be provided.");
   }
 
-  validate_nvdec_params(
-      cuda_device_index,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
-      width,
-      height);
+  validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
 
   return MultipleDecodingResult{new MultipleDecodingResult::Impl{
@@ -299,10 +230,7 @@ MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
           cuda_device_index,
           adoptor,
           io_cfg,
-          crop_left,
-          crop_top,
-          crop_right,
-          crop_bottom,
+          crop,
           width,
           height,
           pix_fmt)

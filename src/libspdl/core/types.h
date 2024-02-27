@@ -34,4 +34,11 @@ struct DecodeConfig {
 // Used to construct Dtype when converting buffer to array
 enum class ElemClass { Int, UInt, Float };
 
+struct CropArea {
+  short left = 0;
+  short top = 0;
+  short right = 0;
+  short bottom = 0;
+};
+
 } // namespace spdl::core

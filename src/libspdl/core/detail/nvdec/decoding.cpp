@@ -30,10 +30,7 @@ CUstream get_stream() {
 folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
     std::unique_ptr<PackagedAVPackets> packets,
     int cuda_device_index,
-    int crop_left,
-    int crop_top,
-    int crop_right,
-    int crop_bottom,
+    const CropArea crop,
     int target_width,
     int target_height,
     const std::optional<std::string> pix_fmt,
@@ -58,10 +55,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
       frames->buffer.get(),
       packets->time_base,
       packets->timestamp,
-      crop_left,
-      crop_top,
-      crop_right,
-      crop_bottom,
+      crop,
       target_width,
       target_height,
       pix_fmt);

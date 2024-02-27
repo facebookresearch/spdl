@@ -62,10 +62,7 @@ class NvDecDecoder {
   int target_width = -1;
   int target_height = -1;
   // Cropping options
-  int crop_left = 0;
-  int crop_top = 0;
-  int crop_right = 0;
-  int crop_bottom = 0;
+  CropArea crop;
   // Color conversion
   std::optional<std::string> pix_fmt;
 
@@ -84,10 +81,7 @@ class NvDecDecoder {
       CUDABuffer2DPitch* buffer,
       AVRational timebase,
       std::tuple<double, double> timestamp,
-      int crop_left = 0,
-      int crop_top = 0,
-      int crop_right = 0,
-      int crop_bottom = 0,
+      CropArea crop,
       int target_width = -1,
       int target_height = -1,
       const std::optional<std::string>& pix_fmt = std::nullopt);
