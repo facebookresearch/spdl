@@ -78,18 +78,21 @@ py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
 }
 #endif
 
+template <typename T>
+std::string get_type_string(const T& self) {
+  switch (self.get_media_type()) {
+    case MediaType::Audio:
+      return "audio";
+    case MediaType::Video:
+      return "video";
+    case MediaType::Image:
+      return "image";
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Trampoline class for registering abstract DecodedFrames
 ////////////////////////////////////////////////////////////////////////////////
-class PyDecodedFrames : public DecodedFrames {
- public:
-  using DecodedFrames::DecodedFrames;
-
-  std::string get_media_type() const override {
-    PYBIND11_OVERLOAD_PURE(std::string, DecodedFrames, get_media_type);
-  }
-};
-
 class PyBuffer : public Buffer {
  public:
   using Buffer::Buffer;
@@ -117,8 +120,8 @@ void register_frames_and_buffers(py::module& m) {
           m, "CUDABuffer2DPitch", py::module_local());
 #endif
 
-  auto _DecodedFrames = py::
-      class_<DecodedFrames, PyDecodedFrames, std::shared_ptr<DecodedFrames>>(
+  auto _DecodedFrames =
+      py::class_<DecodedFrames, std::shared_ptr<DecodedFrames>>(
           m, "DecodedFrames", py::module_local());
 
   auto _FFmpegAudioFrames =
@@ -180,7 +183,7 @@ void register_frames_and_buffers(py::module& m) {
 #endif
 
   _FFmpegAudioFrames
-      .def_property_readonly("media_type", &FFmpegAudioFrames::get_media_type)
+      .def_property_readonly("media_type", &get_type_string<FFmpegAudioFrames>)
       .def_property_readonly("is_cuda", &FFmpegAudioFrames::is_cuda)
       .def_property_readonly("num_frames", &FFmpegAudioFrames::get_num_frames)
       .def_property_readonly("sample_rate", &FFmpegAudioFrames::get_sample_rate)
@@ -189,7 +192,7 @@ void register_frames_and_buffers(py::module& m) {
       .def("__len__", &FFmpegAudioFrames::get_num_frames);
 
   _FFmpegVideoFrames
-      .def_property_readonly("media_type", &FFmpegVideoFrames::get_media_type)
+      .def_property_readonly("media_type", &get_type_string<FFmpegVideoFrames>)
       .def_property_readonly("is_cuda", &FFmpegVideoFrames::is_cuda)
       .def_property_readonly("num_frames", &FFmpegVideoFrames::get_num_frames)
       .def_property_readonly("num_planes", &FFmpegVideoFrames::get_num_planes)
@@ -214,7 +217,7 @@ void register_frames_and_buffers(py::module& m) {
       });
 
   _FFmpegImageFrames
-      .def_property_readonly("media_type", &FFmpegImageFrames::get_media_type)
+      .def_property_readonly("media_type", &get_type_string<FFmpegImageFrames>)
       .def_property_readonly("is_cuda", &FFmpegImageFrames::is_cuda)
       .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
       .def_property_readonly("width", &FFmpegImageFrames::get_width)
@@ -222,7 +225,7 @@ void register_frames_and_buffers(py::module& m) {
 
 #ifdef SPDL_USE_NVDEC
   _NvDecVideoFrames
-      .def_property_readonly("media_type", &NvDecVideoFrames::get_media_type)
+      .def_property_readonly("media_type", &get_type_string<NvDecVideoFrames>)
       .def_property_readonly("is_cuda", &NvDecVideoFrames::is_cuda)
       // TODO:
       // Clean up the buffer's public methods

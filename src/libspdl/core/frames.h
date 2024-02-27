@@ -16,7 +16,7 @@ namespace spdl::core {
 struct DecodedFrames {
   virtual ~DecodedFrames() = default;
 
-  virtual std::string get_media_type() const = 0;
+  virtual enum MediaType get_media_type() const = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -46,7 +46,7 @@ struct FFmpegFrames : public DecodedFrames {
 struct FFmpegAudioFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
-  std::string get_media_type() const override;
+  enum MediaType get_media_type() const override;
 
   bool is_cuda() const;
   int get_sample_rate() const;
@@ -60,7 +60,7 @@ struct FFmpegAudioFrames : public FFmpegFrames {
 struct FFmpegImageFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
-  std::string get_media_type() const override;
+  enum MediaType get_media_type() const override;
 
   bool is_cuda() const;
   int get_num_planes() const;
@@ -74,7 +74,7 @@ struct FFmpegImageFrames : public FFmpegFrames {
 struct FFmpegVideoFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
-  std::string get_media_type() const override;
+  enum MediaType get_media_type() const override;
 
   bool is_cuda() const;
   int get_num_frames() const;
@@ -100,7 +100,7 @@ struct NvDecVideoFrames : public DecodedFrames {
   std::shared_ptr<CUDABuffer2DPitch> buffer;
 
   bool is_cuda() const;
-  std::string get_media_type() const override;
+  enum MediaType get_media_type() const override;
 
   NvDecVideoFrames(uint64_t id, MediaType media_type, int media_format);
   NvDecVideoFrames(const NvDecVideoFrames&) = delete;
