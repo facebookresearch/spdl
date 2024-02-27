@@ -16,7 +16,6 @@ namespace spdl::core {
 struct DecodedFrames {
   virtual ~DecodedFrames() = default;
 
-  virtual std::string get_media_format() const = 0;
   virtual std::string get_media_type() const = 0;
 };
 
@@ -48,7 +47,6 @@ struct FFmpegAudioFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
   std::string get_media_type() const override;
-  std::string get_media_format() const override;
 
   bool is_cuda() const;
   int get_sample_rate() const;
@@ -63,7 +61,6 @@ struct FFmpegImageFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
   std::string get_media_type() const override;
-  std::string get_media_format() const override;
 
   bool is_cuda() const;
   int get_num_planes() const;
@@ -78,7 +75,6 @@ struct FFmpegVideoFrames : public FFmpegFrames {
   using FFmpegFrames::FFmpegFrames;
 
   std::string get_media_type() const override;
-  std::string get_media_format() const override;
 
   bool is_cuda() const;
   int get_num_frames() const;
@@ -104,7 +100,6 @@ struct NvDecVideoFrames : public DecodedFrames {
   std::shared_ptr<CUDABuffer2DPitch> buffer;
 
   bool is_cuda() const;
-  std::string get_media_format() const override;
   std::string get_media_type() const override;
 
   NvDecVideoFrames(uint64_t id, MediaType media_type, int media_format);
