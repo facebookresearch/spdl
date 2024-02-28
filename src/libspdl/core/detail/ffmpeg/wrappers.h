@@ -85,6 +85,9 @@ struct AVFrameAutoUnref {
   ~AVFrameAutoUnref();
 };
 
+// Create a new reference to an existing frame.
+AVFrame* make_reference(AVFrame* src);
+
 } // namespace spdl::core::detail
 
 // RAII wrapper for objects that require clean up, but need to expose double

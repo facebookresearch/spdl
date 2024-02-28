@@ -156,11 +156,7 @@ FFmpegVideoFrames FFmpegVideoFrames::slice(int start, int stop, int step)
 
   for (int i = start; i < stop; i += step) {
     assert(0 <= i && i < numel);
-    AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
-    CHECK_AVERROR(
-        av_frame_ref(dst, frames[i]),
-        "Failed to create a new reference to an AVFrame.");
-    out.frames.push_back(dst);
+    out.frames.push_back(detail::make_reference(frames[i]));
   }
   return out;
 }
@@ -172,14 +168,9 @@ FFmpegImageFrames FFmpegVideoFrames::slice(int i) const {
     throw std::out_of_range(
         fmt::format("Index {} is outside of [0, {})", i, frames.size()));
   }
-  assert(0 <= i && i < numel);
-
   auto out = FFmpegImageFrames{id};
-  AVFrame* dst = CHECK_AVALLOCATE(av_frame_alloc());
-  CHECK_AVERROR(
-      av_frame_ref(dst, frames[i]),
-      "Failed to create a new reference to an AVFrame.");
-  out.frames.push_back(dst);
+  assert(0 <= i && i < numel);
+  out.frames.push_back(detail::make_reference(frames[i]));
   return out;
 }
 

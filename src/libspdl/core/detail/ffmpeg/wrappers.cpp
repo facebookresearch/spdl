@@ -1,3 +1,4 @@
+#include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
 
 #include <libspdl/core/detail/tracing.h>
@@ -63,6 +64,17 @@ AVFrameAutoUnref::AVFrameAutoUnref(AVFrame* p_) : p(p_){};
 AVFrameAutoUnref::~AVFrameAutoUnref() {
   av_frame_unref(p);
 }
+
+AVFrame* make_reference(AVFrame* src) {
+  AVFrame* dst{CHECK_AVALLOCATE(av_frame_alloc())};
+  auto err = av_frame_ref(dst, src);
+  if (err < 0) {
+    av_frame_free(&dst);
+  }
+  CHECK_AVERROR(err, "Failed to create a new reference to an AVFrame.");
+  return dst;
+}
+
 } // namespace spdl::core::detail
 
 #ifdef SPDL_DEBUG_REFCOUNT
