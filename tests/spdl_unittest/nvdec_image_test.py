@@ -7,7 +7,6 @@ DEFAULT_CUDA = 0
 
 
 def _to_array(frame):
-    cuda.select_device(DEFAULT_CUDA)  # temp
     return cuda.as_cuda_array(libspdl._BufferWrapper(frame)).copy_to_host()
 
 
