@@ -46,7 +46,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
 
   AVCodecParameters* codecpar = packets->codecpar;
   auto frames = std::make_unique<NvDecVideoFrames>(
-      packets->id, MediaType::Video, codecpar->format);
+      packets->id, cuda_device_index, MediaType::Video, codecpar->format);
   frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets, is_image);
 
   decoder.init(
