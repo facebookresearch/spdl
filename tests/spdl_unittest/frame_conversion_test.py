@@ -1,5 +1,4 @@
 import gc
-import itertools
 import sys
 
 import numpy as np
