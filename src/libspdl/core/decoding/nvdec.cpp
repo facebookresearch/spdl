@@ -7,6 +7,7 @@
 #include <libspdl/core/logging.h>
 
 #ifdef SPDL_USE_NVDEC
+#include <libspdl/core/detail/cuda.h>
 #include <libspdl/core/detail/nvdec/decoding.h>
 #endif
 
@@ -133,8 +134,12 @@ void validate_nvdec_params(
 void init_cuda() {
   static std::once_flag flag;
   std::call_once(flag, []() {
-    TRACE_EVENT("nvdec", "cuInit");
-    cuInit(0);
+    TRACE_EVENT("nvdec", "cudaGetDeviceCount");
+    int count;
+    CHECK_CUDA(cudaGetDeviceCount(&count), "Failed to fetch the device count.");
+    if (count == 0) {
+      SPDL_FAIL("No CUDA device was found.");
+    }
   });
 }
 #endif

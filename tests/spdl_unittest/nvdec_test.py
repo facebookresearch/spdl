@@ -56,8 +56,6 @@ def _save(array, prefix):
 
 
 def _to_arrays(results):
-    # temporarily needed as CUDA device context is not set in the main thread
-    cuda.select_device(DEFAULT_CUDA)
     buffers = [libspdl._BufferWrapper(res) for res in results]
     frames = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
     return frames
