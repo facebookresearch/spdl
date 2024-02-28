@@ -1,11 +1,8 @@
 #include <libspdl/core/conversion.h>
 
-#include <libspdl/core/detail/tracing.h>
+#include <libspdl/core/detail/ffmpeg/conversion.h>
 #include <libspdl/core/logging.h>
 #include <libspdl/core/types.h>
-#ifdef SPDL_USE_CUDA
-#include <libspdl/core/detail/cuda.h>
-#endif
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
@@ -14,353 +11,35 @@
 
 extern "C" {
 #include <libavutil/frame.h>
-#include <libavutil/hwcontext.h>
-#include <libavutil/pixdesc.h>
-
-#ifdef SPDL_USE_CUDA
-#include <libavutil/hwcontext_cuda.h>
-#endif
 }
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
+// Audio
+////////////////////////////////////////////////////////////////////////////////
+std::unique_ptr<Buffer> convert_audio_frames(
+    const FFmpegAudioFrames* frames,
+    const std::optional<int>& i) {
+  return detail::convert_audio_frames(frames, i);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Video
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-void copy_2d(
-    uint8_t* src,
-    int height,
-    int width,
-    int src_linesize,
-    uint8_t** dst,
-    int dst_linesize) {
-  TRACE_EVENT("decoding", "conversion::copy_2d");
-  for (int h = 0; h < height; ++h) {
-    memcpy(*dst, src, width);
-    src += src_linesize;
-    *dst += dst_linesize;
-  }
-}
 
-std::unique_ptr<Buffer> convert_interleaved(
-    const std::vector<AVFrame*>& frames,
-    unsigned int num_channels = 3) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-
-  auto buf = cpu_buffer({frames.size(), h, w, num_channels}, true);
-  size_t wc = num_channels * w;
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc);
-  }
-  return buf;
-}
-
-std::unique_ptr<Buffer> convert_planer(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-
-  auto buf = cpu_buffer({frames.size(), 3, h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    for (int c = 0; c < 3; ++c) {
-      copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
-    }
-  }
-  return buf;
-}
-
-std::unique_ptr<Buffer> convert_plane(
-    const std::vector<AVFrame*>& frames,
-    int plane) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-
-  auto buf = cpu_buffer({frames.size(), 1, h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    copy_2d(f->data[plane], h, w, f->linesize[plane], &dst, w);
-  }
-  return buf;
-}
-
-std::unique_ptr<Buffer> convert_yuv420p(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2, w2 = w / 2;
-
-  auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    // Y
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // UV
-    uint8_t* dst2 = dst + w2;
-    copy_2d(f->data[1], h2, w2, f->linesize[1], &dst, w);
-    copy_2d(f->data[2], h2, w2, f->linesize[2], &dst2, w);
-  }
-  return buf;
-}
-
-std::unique_ptr<Buffer> convert_yuv422p(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(w % 2 == 0);
-  size_t w2 = w / 2;
-
-  auto buf = cpu_buffer({frames.size(), 1, h + h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    // Y
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // UV
-    uint8_t* dst2 = dst + w2;
-    copy_2d(f->data[1], h, w2, f->linesize[1], &dst, w);
-    copy_2d(f->data[2], h, w2, f->linesize[2], &dst2, w);
-  }
-  return buf;
-}
-
-/// YUV420 -> half_h = true
-/// YUV422 -> half_h = false
-std::unique_ptr<Buffer>
-convert_u_or_v(const std::vector<AVFrame*>& frames, int plane, bool half_h) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(w % 2 == 0);
-  w /= 2;
-  if (half_h) {
-    assert(h % 2 == 0);
-    h /= 2;
-  }
-
-  auto buf = cpu_buffer({frames.size(), 1, h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    copy_2d(f->data[plane], h, w, f->linesize[plane], &dst, w);
-  }
-  return buf;
-}
-
-std::unique_ptr<Buffer> convert_nv12(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2;
-
-  auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    // Y
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // UV
-    copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
-  }
-  return buf;
-}
-
-std::unique_ptr<Buffer> convert_nv12_uv(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2, w2 = w / 2;
-
-  auto buf = cpu_buffer({frames.size(), h2, w2, 2}, true);
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
-  }
-  return buf;
-}
-
-#ifdef SPDL_USE_CUDA
-std::unique_ptr<Buffer> convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2;
-
-  auto hw_frames_ctx = (AVHWFramesContext*)frames[0]->hw_frames_ctx->data;
-  auto hw_device_ctx = (AVHWDeviceContext*)hw_frames_ctx->device_ctx;
-  auto cuda_device_ctx = (AVCUDADeviceContext*)hw_device_ctx->hwctx;
-  auto stream = cuda_device_ctx->stream;
-  XLOG(DBG9) << "CUcontext: " << cuda_device_ctx->cuda_ctx;
-  XLOG(DBG9) << "CUstream: " << cuda_device_ctx->stream;
-
-  XLOG(DBG) << "creating cuda buffer";
-  auto buf = cuda_buffer({frames.size(), 1, h + h2, w}, stream);
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    // Y
-    CHECK_CUDA(
-        cudaMemcpy2DAsync(
-            dst,
-            w,
-            f->data[0],
-            f->linesize[0],
-            w,
-            h,
-            cudaMemcpyDeviceToDevice,
-            stream),
-        "Failed to copy Y plane.");
-    dst += h * w;
-    // UV
-    CHECK_CUDA(
-        cudaMemcpy2DAsync(
-            dst,
-            w,
-            f->data[1],
-            f->linesize[1],
-            w,
-            h2,
-            cudaMemcpyDeviceToDevice,
-            stream),
-        "Failed to copy UV plane.");
-    dst += h2 * w;
-  }
-  return buf;
-}
-#endif
-
-std::unique_ptr<Buffer> convert_avframes_cuda(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
-#ifndef SPDL_USE_CUDA
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#else
-  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
-  if (pix_fmt != AV_PIX_FMT_CUDA) {
-    SPDL_FAIL("The input frames are not CUDA frames.");
-  }
-  auto frames_ctx = (AVHWFramesContext*)(frames[0]->hw_frames_ctx->data);
-  auto sw_pix_fmt = frames_ctx->sw_format;
-  switch (sw_pix_fmt) {
-    case AV_PIX_FMT_NV12:
-      if (index) {
-        SPDL_FAIL(fmt::format(
-            "Selecting a plane from CUDA frame ({}) is not supported.",
-            av_get_pix_fmt_name(sw_pix_fmt)));
-      }
-      return convert_nv12_cuda(frames);
-    default:
-      SPDL_FAIL(fmt::format(
-          "CUDA frame ({}) is not supported.",
-          av_get_pix_fmt_name(sw_pix_fmt)));
-  }
-#endif
-}
-
-std::unique_ptr<Buffer> convert_avframes_cpu(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
-  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
-  if (pix_fmt == AV_PIX_FMT_CUDA) {
-    SPDL_FAIL("The input frames are not CPU frames.");
-  }
-  switch (pix_fmt) {
-    case AV_PIX_FMT_GRAY8: {
-      if (auto plane = index.value_or(0); plane != 0) {
-        SPDL_FAIL(fmt::format(
-            "Valid `plane` values for GRAY8 is 0. (Found: {})", plane));
-      }
-      return convert_plane(frames, 0);
-    }
-    case AV_PIX_FMT_RGBA: {
-      if (auto plane = index.value_or(0); plane != 0) {
-        SPDL_FAIL(fmt::format(
-            "Valid `plane` values for RGBA is 0. (Found: {})", plane));
-      }
-      return convert_interleaved(frames, 4);
-    }
-    case AV_PIX_FMT_RGB24: {
-      if (auto plane = index.value_or(0); plane != 0) {
-        SPDL_FAIL(fmt::format(
-            "Valid `plane` value for RGB24 is 0. (Found: {})", plane));
-      }
-      return convert_interleaved(frames);
-    }
-    case AV_PIX_FMT_YUV444P: {
-      if (!index) {
-        return convert_planer(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-        case 1:
-        case 2:
-          return convert_plane(frames, plane);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for YUV444P are [0, 1, 2]. (Found: {})",
-              plane));
-      }
-    }
-    case AV_PIX_FMT_YUV420P: {
-      if (!index) {
-        return convert_yuv420p(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-          return convert_plane(frames, plane);
-        case 1:
-        case 2:
-          return convert_u_or_v(frames, plane, /*half_h=*/true);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for YUV420P are [0, 1, 2]. (Found: {})",
-              plane));
-      }
-    }
-    case AV_PIX_FMT_YUVJ422P: {
-      if (!index) {
-        // Note:
-        //
-        // YUVJ420P == YUV420P + AVCOL_RANGE_JPEG
-        //
-        // AVCOL_RANGE_JPEG has slight different value range for Chroma.
-        // (1 - 255 instead of 0 - 255)
-        // https://ffmpeg.org/doxygen/5.1/pixfmt_8h.html#a3da0bf691418bc22c4bcbe6583ad589a
-        return convert_yuv422p(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-          return convert_plane(frames, plane);
-        case 1:
-        case 2:
-          return convert_u_or_v(frames, plane, /*half_h=*/false);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for YUV422P are [0, 1, 2]. (Found: {})",
-              plane));
-      }
-    }
-    case AV_PIX_FMT_NV12: {
-      if (!index) {
-        return convert_nv12(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-          return convert_plane(frames, plane);
-        case 1:
-          return convert_nv12_uv(frames);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for NV12 are [0, 1]. (Found: {})", plane));
-      }
-    }
-    default:
-      SPDL_FAIL(fmt::format(
-          "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
-  }
-}
-
-void check_consistency(
-    const std::vector<AVFrame*>& frames,
-    bool single_image = false) {
+template <bool single_image>
+void check_consistency(const std::vector<AVFrame*>& frames) {
   auto numel = frames.size();
   if (numel == 0) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
-  if (single_image && numel != 1) {
-    SPDL_FAIL_INTERNAL(fmt::format(
-        "There must be exactly one frame to convert to buffer. Found: {}",
-        numel));
+  if constexpr (single_image) {
+    if (numel != 1) {
+      SPDL_FAIL_INTERNAL(fmt::format(
+          "There must be exactly one frame to convert to buffer. Found: {}",
+          numel));
+    }
   }
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   int height = frames[0]->height, width = frames[0]->width;
@@ -376,24 +55,36 @@ void check_consistency(
   }
 }
 
-enum class TARGET { CPU, CUDA, NATIVE };
+enum class TARGET { TO_CPU, TO_CUDA, TO_NATIVE };
 
-std::unique_ptr<Buffer> convert_avframes(
+using TARGET::TO_CPU;
+using TARGET::TO_CUDA;
+using TARGET::TO_NATIVE;
+
+template <TARGET target = TO_NATIVE, bool single_image = false>
+std::unique_ptr<Buffer> convert_video(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index,
-    enum TARGET target) {
+    const std::optional<int>& index) {
+  check_consistency<single_image>(frames);
   bool is_cuda =
       static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
-  if (is_cuda) {
-    if (target == TARGET::CPU) {
+  if constexpr (target == TO_CPU) {
+    if (is_cuda) {
       SPDL_FAIL("The input frames are not CPU frames.");
     }
-    return convert_avframes_cuda(frames, index);
-  } else {
-    if (target == TARGET::CUDA) {
+    return detail::convert_video_frames_cpu(frames, index);
+  }
+  if constexpr (target == TO_CUDA) {
+    if (!is_cuda) {
       SPDL_FAIL("The input frames are not CUDA frames.");
     }
-    return convert_avframes_cpu(frames, index);
+    return detail::convert_video_frames_cuda(frames, index);
+  }
+  if constexpr (target == TO_NATIVE) {
+    if (is_cuda) {
+      return detail::convert_video_frames_cuda(frames, index);
+    }
+    return detail::convert_video_frames_cpu(frames, index);
   }
 }
 } // namespace
@@ -401,31 +92,30 @@ std::unique_ptr<Buffer> convert_avframes(
 std::unique_ptr<Buffer> convert_video_frames(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
-  check_consistency(frames->frames);
-  return convert_avframes(frames->frames, index, TARGET::NATIVE);
+  return convert_video<>(frames->frames, index);
 }
 
 std::unique_ptr<Buffer> convert_video_frames_to_cpu_buffer(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
-  check_consistency(frames->frames);
-  return convert_avframes(frames->frames, index, TARGET::CPU);
+  return convert_video<TO_CPU>(frames->frames, index);
 }
 
 std::unique_ptr<Buffer> convert_video_frames_to_cuda_buffer(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
-  check_consistency(frames->frames);
-  return convert_avframes(frames->frames, index, TARGET::CUDA);
+  return convert_video<TO_CUDA>(frames->frames, index);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Image
+////////////////////////////////////////////////////////////////////////////////
 namespace {
-std::unique_ptr<Buffer> convert_image_frames(
-    const FFmpegImageFrames* frames,
-    const std::optional<int>& index,
-    enum TARGET target) {
-  check_consistency(frames->frames, true);
-  auto buf = convert_avframes(frames->frames, index, target);
+template <TARGET t = TO_NATIVE>
+std::unique_ptr<Buffer> convert_image(
+    const std::vector<AVFrame*>& frames,
+    const std::optional<int>& index) {
+  auto buf = convert_video<t, /*single_image=*/true>(frames, index);
   buf->shape.erase(buf->shape.begin()); // Trim the first dim
   return buf;
 }
@@ -434,21 +124,24 @@ std::unique_ptr<Buffer> convert_image_frames(
 std::unique_ptr<Buffer> convert_image_frames(
     const FFmpegImageFrames* frames,
     const std::optional<int>& index) {
-  return convert_image_frames(frames, index, TARGET::NATIVE);
+  return convert_image<>(frames->frames, index);
 }
 
 std::unique_ptr<Buffer> convert_image_frames_to_cpu_buffer(
     const FFmpegImageFrames* frames,
     const std::optional<int>& index) {
-  return convert_image_frames(frames, index, TARGET::CPU);
+  return convert_image<TO_CPU>(frames->frames, index);
 }
 
 std::unique_ptr<Buffer> convert_image_frames_to_cuda_buffer(
     const FFmpegImageFrames* frames,
     const std::optional<int>& index) {
-  return convert_image_frames(frames, index, TARGET::CUDA);
+  return convert_image<TO_CUDA>(frames->frames, index);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Batch Image
+////////////////////////////////////////////////////////////////////////////////
 namespace {
 std::vector<AVFrame*> merge_frames(
     const std::vector<FFmpegImageFrames*>& batch) {
@@ -469,123 +162,19 @@ std::vector<AVFrame*> merge_frames(
 std::unique_ptr<Buffer> convert_batch_image_frames(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
-  auto frames = merge_frames(batch);
-  check_consistency(frames);
-  return convert_avframes(frames, index, TARGET::NATIVE);
+  return convert_video<>(merge_frames(batch), index);
 }
 
 std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
-  auto frames = merge_frames(batch);
-  check_consistency(frames);
-  return convert_avframes(frames, index, TARGET::CPU);
+  return convert_video<TO_CPU>(merge_frames(batch), index);
 }
 
 std::unique_ptr<Buffer> convert_batch_image_frames_to_cuda_buffer(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
-  auto frames = merge_frames(batch);
-  check_consistency(frames);
-  return convert_avframes(frames, index, TARGET::CUDA);
+  return convert_video<TO_CUDA>(merge_frames(batch), index);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Audio
-////////////////////////////////////////////////////////////////////////////////
-namespace {
-template <size_t depth, ElemClass type, bool is_planar>
-std::unique_ptr<Buffer> convert_avframes(
-    const FFmpegAudioFrames* frames,
-    const std::optional<int>& index) {
-  size_t num_frames = frames->get_num_frames();
-  size_t num_channels = frames->frames[0]->channels;
-
-  if (index) {
-    auto c = index.value();
-    if (c < 0 || c >= num_channels) {
-      SPDL_FAIL(fmt::format("Channel index must be [0, {})", num_channels));
-    }
-    num_channels = 1;
-  }
-
-  if constexpr (is_planar) {
-    auto buf = cpu_buffer({num_channels, num_frames}, !is_planar, type, depth);
-    uint8_t* dst = static_cast<uint8_t*>(buf->data());
-    for (int i = 0; i < num_channels; ++i) {
-      if (index && index.value() != i) {
-        continue;
-      }
-      for (auto frame : frames->frames) {
-        int plane_size = depth * frame->nb_samples;
-        memcpy(dst, frame->extended_data[i], plane_size);
-        dst += plane_size;
-      }
-    }
-    return buf;
-  } else {
-    if (index) {
-      SPDL_FAIL("Cannot select channel from non-planar audio.");
-    }
-    auto buf = cpu_buffer({num_frames, num_channels}, !is_planar, type, depth);
-    uint8_t* dst = static_cast<uint8_t*>(buf->data());
-    for (auto frame : frames->frames) {
-      int plane_size = depth * frame->nb_samples * num_channels;
-      memcpy(dst, frame->extended_data[0], plane_size);
-      dst += plane_size;
-    }
-    return buf;
-  }
-}
-} // namespace
-
-std::unique_ptr<Buffer> convert_audio_frames(
-    const FFmpegAudioFrames* frames,
-    const std::optional<int>& i) {
-  const auto& fs = frames->frames;
-  if (!fs.size()) {
-    SPDL_FAIL("No audio frame to convert to buffer.");
-  }
-
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_avframes",
-      perfetto::Flow::ProcessScoped(frames->id));
-  // NOTE:
-  // This conversion converts all the samples in underlying frames.
-  // This does not take the time stamp of each sample into account.
-  //
-  // TODO:
-  // Check time stamp here?
-  auto sample_fmt = static_cast<AVSampleFormat>(fs[0]->format);
-  switch (sample_fmt) {
-    case AV_SAMPLE_FMT_U8:
-      return convert_avframes<1, ElemClass::UInt, false>(frames, i);
-    case AV_SAMPLE_FMT_U8P:
-      return convert_avframes<1, ElemClass::UInt, true>(frames, i);
-    case AV_SAMPLE_FMT_S16:
-      return convert_avframes<2, ElemClass::Int, false>(frames, i);
-    case AV_SAMPLE_FMT_S16P:
-      return convert_avframes<2, ElemClass::Int, true>(frames, i);
-    case AV_SAMPLE_FMT_S32:
-      return convert_avframes<4, ElemClass::Int, false>(frames, i);
-    case AV_SAMPLE_FMT_S32P:
-      return convert_avframes<4, ElemClass::Int, true>(frames, i);
-    case AV_SAMPLE_FMT_FLT:
-      return convert_avframes<4, ElemClass::Float, false>(frames, i);
-    case AV_SAMPLE_FMT_FLTP:
-      return convert_avframes<4, ElemClass::Float, true>(frames, i);
-    case AV_SAMPLE_FMT_S64:
-      return convert_avframes<8, ElemClass::Int, false>(frames, i);
-    case AV_SAMPLE_FMT_S64P:
-      return convert_avframes<8, ElemClass::Int, true>(frames, i);
-    case AV_SAMPLE_FMT_DBL:
-      return convert_avframes<8, ElemClass::Float, false>(frames, i);
-    case AV_SAMPLE_FMT_DBLP:
-      return convert_avframes<8, ElemClass::Float, true>(frames, i);
-    default:
-      SPDL_FAIL_INTERNAL(fmt::format(
-          "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt)));
-  }
-}
 } // namespace spdl::core
