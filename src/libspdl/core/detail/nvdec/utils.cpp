@@ -10,7 +10,7 @@
 #include <span>
 
 extern "C" {
-#include <libavcodec/codec_id.h>
+#include <libavcodec/avcodec.h>
 }
 
 namespace spdl::core::detail {
