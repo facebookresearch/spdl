@@ -63,10 +63,6 @@ def _to_cpu_buffer(frames, index=None):
     return _BufferWrapper(_libspdl.convert_to_cpu_buffer(frames, index))
 
 
-def _to_cuda_buffer(frames, index=None):
-    return _BufferWrapper(_libspdl.convert_to_cuda_buffer(frames, index))
-
-
 def to_numpy(
     frames, format: Optional[str] = None, index: Optional[int] = None
 ) -> NDArray:
