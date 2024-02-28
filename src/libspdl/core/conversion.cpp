@@ -152,4 +152,14 @@ std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
   return convert_video<TO_CPU>(merge_frames(batch), index);
 }
 
+std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
+    const NvDecVideoFrames* frames,
+    const std::optional<int>& index) {
+  if (index.has_value()) {
+    SPDL_FAIL_INTERNAL(
+        "Fetching an index from NvDecVideoFrames is not supported.");
+  }
+  return frames->buffer;
+}
+
 } // namespace spdl::core
