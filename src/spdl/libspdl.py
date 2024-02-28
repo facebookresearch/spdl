@@ -63,43 +63,14 @@ def _to_cpu_buffer(frames, index=None):
     return _BufferWrapper(_libspdl.convert_to_cpu_buffer(frames, index))
 
 
-def to_numpy(
-    frames, format: Optional[str] = None, index: Optional[int] = None
-) -> NDArray:
+def to_numpy(frames, index: Optional[int] = None) -> NDArray:
     """Convert to numpy array.
 
     Args:
         frames (DecodedFrames): Decoded frames.
 
-        format (str or None): Channel order.
-            Valid values are ``"channel_first"``, ``"channel_last"`` or ``None``.
-            If ``None`` no conversion is performed and native format is returned.
-            If ``"channel_first"``, the returned video data is "NCHW".
-            If ``"channel_last"``, the returned video data is "NHWC".
-
-            (``"NCHW"`` and ``"NHWC"`` can be  respectively used alias for
-             ``"channel_first"`` and ``"channel_last"`` in case of video frames.)
+        index (int or None): The index of plane to be included in the output.
+            For formats like YUV420, in which chroma planes have different sizes
+            than luma plane, this argument can be used to select a specific plane.
     """
-    buffer = _to_cpu_buffer(frames, index)
-    array = np.array(buffer, copy=False)
-    match format:
-        case "channel_first" | "NCHW":
-            if buffer.channel_last:
-                if frames.media_type == "video":
-                    array = np.moveaxis(array, -1, -3)
-                else:
-                    array = np.moveaxis(array, -1, -2)
-        case "channel_last" | "NHWC":
-            if not buffer.channel_last:
-                if frames.media_type == "video":
-                    array = np.moveaxis(array, -3, -1)
-                else:
-                    array = np.moveaxis(array, -2, -1)
-        case None:
-            pass
-        case _:
-            raise ValueError(
-                'Expected `format` argument to be one of ``"channel_first"``, '
-                f'``"channel_last"``, ``None``. Found: {format}'
-            )
-    return array
+    return np.array(_to_cpu_buffer(frames, index), copy=False)
