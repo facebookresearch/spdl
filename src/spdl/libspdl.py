@@ -59,8 +59,12 @@ class _BufferWrapper:
         return getattr(self._buffer, name)
 
 
-def _to_buffer(frames, index=None):
-    return _BufferWrapper(_libspdl.convert_frames(frames, index))
+def _to_cpu_buffer(frames, index=None):
+    return _BufferWrapper(_libspdl.convert_to_cpu_buffer(frames, index))
+
+
+def _to_cuda_buffer(frames, index=None):
+    return _BufferWrapper(_libspdl.convert_to_cuda_buffer(frames, index))
 
 
 def to_numpy(
@@ -80,13 +84,7 @@ def to_numpy(
             (``"NCHW"`` and ``"NHWC"`` can be  respectively used alias for
              ``"channel_first"`` and ``"channel_last"`` in case of video frames.)
     """
-    if isinstance(frames, list):
-        if any(f.is_cuda for f in frames):
-            raise RuntimeError("CUDA frames cannot be converted to numpy array.")
-    elif frames.is_cuda:
-        raise RuntimeError("CUDA frames cannot be converted to numpy array.")
-
-    buffer = _to_buffer(frames, index)
+    buffer = _to_cpu_buffer(frames, index)
     array = np.array(buffer, copy=False)
     match format:
         case "channel_first" | "NCHW":

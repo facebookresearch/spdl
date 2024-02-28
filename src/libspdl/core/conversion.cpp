@@ -213,10 +213,18 @@ std::unique_ptr<Buffer> convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
   }
   return buf;
 }
+#endif
 
-std::unique_ptr<Buffer> convert_video_frames_cuda(
+std::unique_ptr<Buffer> convert_avframes_cuda(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
+#ifndef SPDL_USE_CUDA
+  SPDL_FAIL("SPDL is not compiled with CUDA support.");
+#else
+  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+  if (pix_fmt != AV_PIX_FMT_CUDA) {
+    SPDL_FAIL("The input frames are not CUDA frames.");
+  }
   auto frames_ctx = (AVHWFramesContext*)(frames[0]->hw_frames_ctx->data);
   auto sw_pix_fmt = frames_ctx->sw_format;
   switch (sw_pix_fmt) {
@@ -232,24 +240,16 @@ std::unique_ptr<Buffer> convert_video_frames_cuda(
           "CUDA frame ({}) is not supported.",
           av_get_pix_fmt_name(sw_pix_fmt)));
   }
-}
 #endif
+}
 
-std::unique_ptr<Buffer> convert_video_frames_cpu(
+std::unique_ptr<Buffer> convert_avframes_cpu(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
-  if (frames.size() == 0) {
-    SPDL_FAIL("No frame to convert to buffer.");
-  }
-  int height = frames[0]->height, width = frames[0]->width;
-  for (auto* f : frames) {
-    if (f->height != height || f->width != width) {
-      SPDL_FAIL(fmt::format(
-          "Cannot convert the frame to batch as the frames do not have the same size."));
-    }
-  }
-
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+  if (pix_fmt == AV_PIX_FMT_CUDA) {
+    SPDL_FAIL("The input frames are not CPU frames.");
+  }
   switch (pix_fmt) {
     case AV_PIX_FMT_GRAY8: {
       if (auto plane = index.value_or(0); plane != 0) {
@@ -349,59 +349,145 @@ std::unique_ptr<Buffer> convert_video_frames_cpu(
           "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
+
+void check_consistency(
+    const std::vector<AVFrame*>& frames,
+    bool single_image = false) {
+  auto numel = frames.size();
+  if (numel == 0) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  if (single_image && numel != 1) {
+    SPDL_FAIL_INTERNAL(fmt::format(
+        "There must be exactly one frame to convert to buffer. Found: {}",
+        numel));
+  }
+  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+  int height = frames[0]->height, width = frames[0]->width;
+  for (auto* f : frames) {
+    if (f->height != height || f->width != width) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frames as the frames do not have the same size."));
+    }
+    if (static_cast<AVPixelFormat>(f->format) != pix_fmt) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frames as the frames do not have the same pixel format."));
+    }
+  }
+}
+
+enum class TARGET { CPU, CUDA, NATIVE };
+
+std::unique_ptr<Buffer> convert_avframes(
+    const std::vector<AVFrame*>& frames,
+    const std::optional<int>& index,
+    enum TARGET target) {
+  bool is_cuda =
+      static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
+  if (is_cuda) {
+    if (target == TARGET::CPU) {
+      SPDL_FAIL("The input frames are not CPU frames.");
+    }
+    return convert_avframes_cuda(frames, index);
+  } else {
+    if (target == TARGET::CUDA) {
+      SPDL_FAIL("The input frames are not CUDA frames.");
+    }
+    return convert_avframes_cpu(frames, index);
+  }
+}
 } // namespace
 
 std::unique_ptr<Buffer> convert_video_frames(
-    const FFmpegVideoFrames& frames,
+    const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
-  const auto& fs = frames.frames;
-  if (!fs.size()) {
-    SPDL_FAIL("No video frame to convert to buffer.");
-  }
-  auto pix_fmt = static_cast<AVPixelFormat>(fs[0]->format);
-  if (pix_fmt == AV_PIX_FMT_CUDA) {
-#ifdef SPDL_USE_CUDA
-    return convert_video_frames_cuda(fs, index);
-#else
-    SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#endif
-  }
-  return convert_video_frames_cpu(fs, index);
+  check_consistency(frames->frames);
+  return convert_avframes(frames->frames, index, TARGET::NATIVE);
 }
 
-std::unique_ptr<Buffer> convert_image_frames(
-    const FFmpegImageFrames& frames,
+std::unique_ptr<Buffer> convert_video_frames_to_cpu_buffer(
+    const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
-  const auto& fs = frames.frames;
-  if (!fs.size()) {
-    SPDL_FAIL("No frame to convert to buffer.");
-  }
-  if (fs.size() != 1) {
-    SPDL_FAIL_INTERNAL(fmt::format(
-        "There must be exactly one frame to convert to buffer. Found: {}",
-        fs.size()));
-  }
-  auto buf = convert_video_frames_cpu(fs, index);
-  // Trim the first dim
-  buf->shape.erase(buf->shape.begin());
+  check_consistency(frames->frames);
+  return convert_avframes(frames->frames, index, TARGET::CPU);
+}
+
+std::unique_ptr<Buffer> convert_video_frames_to_cuda_buffer(
+    const FFmpegVideoFrames* frames,
+    const std::optional<int>& index) {
+  check_consistency(frames->frames);
+  return convert_avframes(frames->frames, index, TARGET::CUDA);
+}
+
+namespace {
+std::unique_ptr<Buffer> convert_image_frames(
+    const FFmpegImageFrames* frames,
+    const std::optional<int>& index,
+    enum TARGET target) {
+  check_consistency(frames->frames, true);
+  auto buf = convert_avframes(frames->frames, index, target);
+  buf->shape.erase(buf->shape.begin()); // Trim the first dim
   return buf;
 }
+} // namespace
+
+std::unique_ptr<Buffer> convert_image_frames(
+    const FFmpegImageFrames* frames,
+    const std::optional<int>& index) {
+  return convert_image_frames(frames, index, TARGET::NATIVE);
+}
+
+std::unique_ptr<Buffer> convert_image_frames_to_cpu_buffer(
+    const FFmpegImageFrames* frames,
+    const std::optional<int>& index) {
+  return convert_image_frames(frames, index, TARGET::CPU);
+}
+
+std::unique_ptr<Buffer> convert_image_frames_to_cuda_buffer(
+    const FFmpegImageFrames* frames,
+    const std::optional<int>& index) {
+  return convert_image_frames(frames, index, TARGET::CUDA);
+}
+
+namespace {
+std::vector<AVFrame*> merge_frames(
+    const std::vector<FFmpegImageFrames*>& batch) {
+  std::vector<AVFrame*> ret;
+  ret.reserve(batch.size());
+  for (auto& frame : batch) {
+    if (frame->frames.size() != 1) {
+      SPDL_FAIL_INTERNAL(
+          "Unexpected number of frames are found in one of the image frames.");
+    }
+    ret.push_back(frame->frames[0]);
+  }
+  return ret;
+}
+
+} // namespace
 
 std::unique_ptr<Buffer> convert_batch_image_frames(
-    const std::vector<FFmpegImageFrames*>& batch_frames,
+    const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
-  if (!batch_frames.size()) {
-    SPDL_FAIL("No frame to convert to buffer.");
-  }
-  std::vector<AVFrame*> fs;
-  for (auto& frame : batch_frames) {
-    if (frame->frames.size() != 1) {
-      SPDL_FAIL(
-          "Unexpected number of frames are found one of the batch frames.");
-    }
-    fs.push_back(frame->frames[0]);
-  }
-  return convert_video_frames_cpu(fs, index);
+  auto frames = merge_frames(batch);
+  check_consistency(frames);
+  return convert_avframes(frames, index, TARGET::NATIVE);
+}
+
+std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
+    const std::vector<FFmpegImageFrames*>& batch,
+    const std::optional<int>& index) {
+  auto frames = merge_frames(batch);
+  check_consistency(frames);
+  return convert_avframes(frames, index, TARGET::CPU);
+}
+
+std::unique_ptr<Buffer> convert_batch_image_frames_to_cuda_buffer(
+    const std::vector<FFmpegImageFrames*>& batch,
+    const std::optional<int>& index) {
+  auto frames = merge_frames(batch);
+  check_consistency(frames);
+  return convert_avframes(frames, index, TARGET::CUDA);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -409,11 +495,11 @@ std::unique_ptr<Buffer> convert_batch_image_frames(
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 template <size_t depth, ElemClass type, bool is_planar>
-std::unique_ptr<Buffer> convert_audio_frames(
-    const FFmpegAudioFrames& frames,
+std::unique_ptr<Buffer> convert_avframes(
+    const FFmpegAudioFrames* frames,
     const std::optional<int>& index) {
-  size_t num_frames = frames.get_num_frames();
-  size_t num_channels = frames.frames[0]->channels;
+  size_t num_frames = frames->get_num_frames();
+  size_t num_channels = frames->frames[0]->channels;
 
   if (index) {
     auto c = index.value();
@@ -430,7 +516,7 @@ std::unique_ptr<Buffer> convert_audio_frames(
       if (index && index.value() != i) {
         continue;
       }
-      for (auto frame : frames.frames) {
+      for (auto frame : frames->frames) {
         int plane_size = depth * frame->nb_samples;
         memcpy(dst, frame->extended_data[i], plane_size);
         dst += plane_size;
@@ -443,7 +529,7 @@ std::unique_ptr<Buffer> convert_audio_frames(
     }
     auto buf = cpu_buffer({num_frames, num_channels}, !is_planar, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
-    for (auto frame : frames.frames) {
+    for (auto frame : frames->frames) {
       int plane_size = depth * frame->nb_samples * num_channels;
       memcpy(dst, frame->extended_data[0], plane_size);
       dst += plane_size;
@@ -454,17 +540,17 @@ std::unique_ptr<Buffer> convert_audio_frames(
 } // namespace
 
 std::unique_ptr<Buffer> convert_audio_frames(
-    const FFmpegAudioFrames& frames,
+    const FFmpegAudioFrames* frames,
     const std::optional<int>& i) {
-  const auto& fs = frames.frames;
+  const auto& fs = frames->frames;
   if (!fs.size()) {
     SPDL_FAIL("No audio frame to convert to buffer.");
   }
 
   TRACE_EVENT(
       "decoding",
-      "core::convert_audio_frames",
-      perfetto::Flow::ProcessScoped(frames.id));
+      "core::convert_avframes",
+      perfetto::Flow::ProcessScoped(frames->id));
   // NOTE:
   // This conversion converts all the samples in underlying frames.
   // This does not take the time stamp of each sample into account.
@@ -474,29 +560,29 @@ std::unique_ptr<Buffer> convert_audio_frames(
   auto sample_fmt = static_cast<AVSampleFormat>(fs[0]->format);
   switch (sample_fmt) {
     case AV_SAMPLE_FMT_U8:
-      return convert_audio_frames<1, ElemClass::UInt, false>(frames, i);
+      return convert_avframes<1, ElemClass::UInt, false>(frames, i);
     case AV_SAMPLE_FMT_U8P:
-      return convert_audio_frames<1, ElemClass::UInt, true>(frames, i);
+      return convert_avframes<1, ElemClass::UInt, true>(frames, i);
     case AV_SAMPLE_FMT_S16:
-      return convert_audio_frames<2, ElemClass::Int, false>(frames, i);
+      return convert_avframes<2, ElemClass::Int, false>(frames, i);
     case AV_SAMPLE_FMT_S16P:
-      return convert_audio_frames<2, ElemClass::Int, true>(frames, i);
+      return convert_avframes<2, ElemClass::Int, true>(frames, i);
     case AV_SAMPLE_FMT_S32:
-      return convert_audio_frames<4, ElemClass::Int, false>(frames, i);
+      return convert_avframes<4, ElemClass::Int, false>(frames, i);
     case AV_SAMPLE_FMT_S32P:
-      return convert_audio_frames<4, ElemClass::Int, true>(frames, i);
+      return convert_avframes<4, ElemClass::Int, true>(frames, i);
     case AV_SAMPLE_FMT_FLT:
-      return convert_audio_frames<4, ElemClass::Float, false>(frames, i);
+      return convert_avframes<4, ElemClass::Float, false>(frames, i);
     case AV_SAMPLE_FMT_FLTP:
-      return convert_audio_frames<4, ElemClass::Float, true>(frames, i);
+      return convert_avframes<4, ElemClass::Float, true>(frames, i);
     case AV_SAMPLE_FMT_S64:
-      return convert_audio_frames<8, ElemClass::Int, false>(frames, i);
+      return convert_avframes<8, ElemClass::Int, false>(frames, i);
     case AV_SAMPLE_FMT_S64P:
-      return convert_audio_frames<8, ElemClass::Int, true>(frames, i);
+      return convert_avframes<8, ElemClass::Int, true>(frames, i);
     case AV_SAMPLE_FMT_DBL:
-      return convert_audio_frames<8, ElemClass::Float, false>(frames, i);
+      return convert_avframes<8, ElemClass::Float, false>(frames, i);
     case AV_SAMPLE_FMT_DBLP:
-      return convert_audio_frames<8, ElemClass::Float, true>(frames, i);
+      return convert_avframes<8, ElemClass::Float, true>(frames, i);
     default:
       SPDL_FAIL_INTERNAL(fmt::format(
           "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt)));

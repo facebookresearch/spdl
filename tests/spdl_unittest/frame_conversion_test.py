@@ -23,7 +23,7 @@ def test_video_buffer_conversion_refcount(yuv420p):
         pix_fmt="rgb24",
     ).get()[0]
 
-    buf = libspdl._to_buffer(decoded_frames, None)
+    buf = libspdl._to_cpu_buffer(decoded_frames, None)
     assert hasattr(buf, "__array_interface__")
     print(f"{buf.__array_interface__=}")
 
