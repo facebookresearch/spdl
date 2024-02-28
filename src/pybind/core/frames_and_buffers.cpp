@@ -90,22 +90,10 @@ std::string get_type_string(const T& self) {
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Trampoline class for registering abstract DecodedFrames
-////////////////////////////////////////////////////////////////////////////////
-class PyBuffer : public Buffer {
- public:
-  using Buffer::Buffer;
-
-  bool is_cuda() const override {
-    PYBIND11_OVERLOAD_PURE(bool, Buffer, is_cuda);
-  }
-};
 } // namespace
 
 void register_frames_and_buffers(py::module& m) {
-  auto _Buffer = py::class_<Buffer, PyBuffer, std::shared_ptr<Buffer>>(
-      m, "Buffer", py::module_local());
+  auto _Buffer = py::class_<Buffer>(m, "Buffer", py::module_local());
 
   auto _CPUBuffer = py::class_<CPUBuffer>(m, "CPUBuffer", py::module_local());
 
@@ -123,18 +111,18 @@ void register_frames_and_buffers(py::module& m) {
   auto _DecodedFrames =
       py::class_<DecodedFrames>(m, "DecodedFrames", py::module_local());
 
-  auto _FFmpegAudioFrames =
-      py::class_<FFmpegAudioFrames>(m, "FFmpegAudioFrames", py::module_local());
+  auto _FFmpegAudioFrames = py::class_<FFmpegAudioFrames, DecodedFrames>(
+      m, "FFmpegAudioFrames", py::module_local());
 
-  auto _FFmpegVideoFrames =
-      py::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames", py::module_local());
+  auto _FFmpegVideoFrames = py::class_<FFmpegVideoFrames, DecodedFrames>(
+      m, "FFmpegVideoFrames", py::module_local());
 
-  auto _FFmpegImageFrames =
-      py::class_<FFmpegImageFrames>(m, "FFmpegImageFrames", py::module_local());
+  auto _FFmpegImageFrames = py::class_<FFmpegImageFrames, DecodedFrames>(
+      m, "FFmpegImageFrames", py::module_local());
 
 #ifdef SPDL_USE_NVDEC
-  auto _NvDecVideoFrames =
-      py::class_<NvDecVideoFrames>(m, "NvDecVideoFrames", py::module_local());
+  auto _NvDecVideoFrames = py::class_<NvDecVideoFrames, DecodedFrames>(
+      m, "NvDecVideoFrames", py::module_local());
 #endif
 
   _CPUBuffer
