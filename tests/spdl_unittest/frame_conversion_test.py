@@ -52,56 +52,49 @@ def test_video_buffer_conversion_refcount(yuv420p):
     assert vals == vals2
 
 
-@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_rgb24(format, get_sample):
+def test_video_buffer_conversion_rgb24(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=rgb24 -frames:v 100 sample.mp4"
     h, w = 240, 320
     sample = get_sample(cmd, width=w, height=h)
 
     frames = libspdl.decode_video(
         src=sample.path,
-        timestamps=[(0.0, 0.5)],
+        timestamps=[(0.0, 1.0)],
         pix_fmt="rgb24",
     ).get()[0]
 
     for index in [None, 0]:
-        array = libspdl.to_numpy(frames, index=index, format=format)
-        expected_shape = (3, h, w) if format == "channel_first" else (h, w, 3)
-        assert array.shape[1:4] == expected_shape
+        array = libspdl.to_numpy(frames, index=index)
+        assert array.shape[1:4] == (h, w, 3)
 
     # plane 1 & 2 are not defined
     for i in [1, 2]:
         with pytest.raises(RuntimeError):
-            libspdl.to_numpy(frames, index=i, format=format)
+            libspdl.to_numpy(frames, index=i)
 
 
-@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_yuv420(format, yuv420p):
+def test_video_buffer_conversion_yuv420(yuv420p):
     h, w = yuv420p.height, yuv420p.width
     h2, w2 = h // 2, w // 2
 
     frames = libspdl.decode_video(
         src=yuv420p.path,
-        timestamps=[(0.0, 0.5)],
+        timestamps=[(0.0, 1.0)],
     ).get()[0]
 
     # combined
-    array = libspdl.to_numpy(frames, format=format)
-    expected_shape = (1, h + h2, w) if format == "channel_first" else (h + h2, w, 1)
-    assert array.shape[1:4] == expected_shape
+    array = libspdl.to_numpy(frames)
+    assert array.shape[1:4] == (1, h + h2, w)
     # individual - Y
-    array = libspdl.to_numpy(frames, index=0, format=format)
-    expected_shape = (1, h, w) if format == "channel_first" else (h, w, 1)
-    assert array.shape[1:4] == expected_shape
+    array = libspdl.to_numpy(frames, index=0)
+    assert array.shape[1:4] == (1, h, w)
     # individual - U, V
     for i in range(1, 3):
-        array = libspdl.to_numpy(frames, index=i, format=format)
-        expected_shape = (1, h2, w2) if format == "channel_first" else (h2, w2, 1)
-        assert array.shape[1:4] == expected_shape
+        array = libspdl.to_numpy(frames, index=i)
+        assert array.shape[1:4] == (1, h2, w2)
 
 
-@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_yuv444(format, get_sample):
+def test_video_buffer_conversion_yuv444(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample.mp4"
     h, w = 240, 320
 
@@ -109,23 +102,20 @@ def test_video_buffer_conversion_yuv444(format, get_sample):
 
     frames = libspdl.decode_video(
         src=sample.path,
-        timestamps=[(0.0, 0.5)],
+        timestamps=[(0.0, 1.0)],
         pix_fmt="yuv444p",
     ).get()[0]
 
     # combined
-    array = libspdl.to_numpy(frames, format=format)
-    expected_shape = (3, h, w) if format == "channel_first" else (h, w, 3)
-    assert array.shape[1:4] == expected_shape
+    array = libspdl.to_numpy(frames)
+    assert array.shape[1:4] == (3, h, w)
     # individual
     for i in range(0, 3):
-        array = libspdl.to_numpy(frames, index=i, format=format)
-        expected_shape = (1, h, w) if format == "channel_first" else (h, w, 1)
-        assert array.shape[1:4] == expected_shape
+        array = libspdl.to_numpy(frames, index=i)
+        assert array.shape[1:4] == (1, h, w)
 
 
-@pytest.mark.parametrize("format", ["channel_first", "channel_last"])
-def test_video_buffer_conversion_nv12(format, get_sample):
+def test_video_buffer_conversion_nv12(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample.mp4"
     h, w = 240, 320
     h2, w2 = h // 2, w // 2
@@ -138,29 +128,23 @@ def test_video_buffer_conversion_nv12(format, get_sample):
     ).get()[0]
 
     # combined
-    array = libspdl.to_numpy(frames, format=format)
-    expected_shape = (1, h + h2, w) if format == "channel_first" else (h + h2, w, 1)
-    assert array.shape[1:4] == expected_shape
+    array = libspdl.to_numpy(frames)
+    assert array.shape[1:4] == (1, h + h2, w)
     # individual - Y
-    array = libspdl.to_numpy(frames, index=0, format=format)
-    expected_shape = (1, h, w) if format == "channel_first" else (h, w, 1)
-    assert array.shape[1:4] == expected_shape
+    array = libspdl.to_numpy(frames, index=0)
+    assert array.shape[1:4] == (1, h, w)
     # individual - UV
-    array = libspdl.to_numpy(frames, index=1, format=format)
-    expected_shape = (2, h2, w2) if format == "channel_first" else (h2, w2, 2)
-    assert array.shape[1:4] == expected_shape
+    array = libspdl.to_numpy(frames, index=1)
+    assert array.shape[1:4] == (h2, w2, 2)
 
 
 @pytest.mark.parametrize(
-    "format,sample_fmts",
-    itertools.product(
-        ["channel_first", "channel_last"],
-        [("s16p", "int16"), ("s16", "int16"), ("fltp", "float32"), ("flt", "float32")],
-    ),
+    "sample_fmts",
+    [("s16p", "int16"), ("s16", "int16"), ("fltp", "float32"), ("flt", "float32")],
 )
-def test_audio_buffer_conversion_s16p(format, sample_fmts, get_sample):
+def test_audio_buffer_conversion_s16p(sample_fmts, get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=305:duration=5' -f lavfi -i 'sine=frequency=300:duration=5'  -filter_complex amerge  -c:a pcm_s16le sample.wav"
-    sample = get_sample(cmd, num_channels=2)
+    sample = get_sample(cmd)
 
     sample_fmt, expected = sample_fmts
     frames = libspdl.decode_audio(
@@ -169,10 +153,10 @@ def test_audio_buffer_conversion_s16p(format, sample_fmts, get_sample):
         sample_fmt=sample_fmt,
     ).get()[0]
 
-    array = libspdl.to_numpy(frames, format=format)
+    array = libspdl.to_numpy(frames)
     assert array.ndim == 2
     assert array.dtype == np.dtype(expected)
-    if format == "channel_first":
-        assert array.shape[0] == sample.num_channels
-    if format == "channel_last":
-        assert array.shape[1] == sample.num_channels
+    if sample_fmt.endswith("p"):
+        assert array.shape[0] == 2
+    else:
+        assert array.shape[1] == 2
