@@ -249,9 +249,5 @@ void register_frames_and_buffers(py::module& m) {
   m.def("convert_to_cpu_buffer", &convert_video_frames_to_cpu_buffer);
   m.def("convert_to_cpu_buffer", &convert_image_frames_to_cpu_buffer);
   m.def("convert_to_cpu_buffer", &convert_batch_image_frames_to_cpu_buffer);
-
-  m.def("convert_to_cuda_buffer", &convert_video_frames_to_cuda_buffer);
-  m.def("convert_to_cuda_buffer", &convert_image_frames_to_cuda_buffer);
-  m.def("convert_to_cuda_buffer", &convert_batch_image_frames_to_cuda_buffer);
 }
 } // namespace spdl::core

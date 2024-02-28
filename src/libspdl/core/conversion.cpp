@@ -55,10 +55,9 @@ void check_consistency(const std::vector<AVFrame*>& frames) {
   }
 }
 
-enum class TARGET { TO_CPU, TO_CUDA, TO_NATIVE };
+enum class TARGET { TO_CPU, TO_NATIVE };
 
 using TARGET::TO_CPU;
-using TARGET::TO_CUDA;
 using TARGET::TO_NATIVE;
 
 template <TARGET target = TO_NATIVE, bool single_image = false>
@@ -73,12 +72,6 @@ std::unique_ptr<Buffer> convert_video(
       SPDL_FAIL("The input frames are not CPU frames.");
     }
     return detail::convert_video_frames_cpu(frames, index);
-  }
-  if constexpr (target == TO_CUDA) {
-    if (!is_cuda) {
-      SPDL_FAIL("The input frames are not CUDA frames.");
-    }
-    return detail::convert_video_frames_cuda(frames, index);
   }
   if constexpr (target == TO_NATIVE) {
     if (is_cuda) {
@@ -99,12 +92,6 @@ std::unique_ptr<Buffer> convert_video_frames_to_cpu_buffer(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
   return convert_video<TO_CPU>(frames->frames, index);
-}
-
-std::unique_ptr<Buffer> convert_video_frames_to_cuda_buffer(
-    const FFmpegVideoFrames* frames,
-    const std::optional<int>& index) {
-  return convert_video<TO_CUDA>(frames->frames, index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -131,12 +118,6 @@ std::unique_ptr<Buffer> convert_image_frames_to_cpu_buffer(
     const FFmpegImageFrames* frames,
     const std::optional<int>& index) {
   return convert_image<TO_CPU>(frames->frames, index);
-}
-
-std::unique_ptr<Buffer> convert_image_frames_to_cuda_buffer(
-    const FFmpegImageFrames* frames,
-    const std::optional<int>& index) {
-  return convert_image<TO_CUDA>(frames->frames, index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -169,12 +150,6 @@ std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
   return convert_video<TO_CPU>(merge_frames(batch), index);
-}
-
-std::unique_ptr<Buffer> convert_batch_image_frames_to_cuda_buffer(
-    const std::vector<FFmpegImageFrames*>& batch,
-    const std::optional<int>& index) {
-  return convert_video<TO_CUDA>(merge_frames(batch), index);
 }
 
 } // namespace spdl::core
