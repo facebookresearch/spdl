@@ -1,6 +1,7 @@
 import numpy as np
 
 import pytest
+import spdl
 from spdl import libspdl
 
 
@@ -12,7 +13,7 @@ def test_decode_image_gray_black(get_sample):
 
     frame = libspdl.decode_image(sample.path).get()
 
-    gray = libspdl.to_numpy(frame)
+    gray = spdl.to_numpy(frame)
     assert gray.dtype == np.uint8
     assert gray.shape == (1, sample.height, sample.width)
     assert np.all(gray == 16)
@@ -26,7 +27,7 @@ def test_decode_image_gray_white(get_sample):
 
     frame = libspdl.decode_image(sample.path).get()
 
-    gray = libspdl.to_numpy(frame)
+    gray = spdl.to_numpy(frame)
     assert gray.dtype == np.uint8
     assert gray.shape == (1, sample.height, sample.width)
     assert np.all(gray == 235)
@@ -42,20 +43,20 @@ def test_decode_image_yuv422(get_sample):
     h, w = sample.height, sample.width
     w2 = w // 2
 
-    yuv = libspdl.to_numpy(frame)
+    yuv = spdl.to_numpy(frame)
     assert yuv.dtype == np.uint8
     assert yuv.shape == (1, h + h, w)
 
-    y = libspdl.to_numpy(frame, index=0)
+    y = spdl.to_numpy(frame, index=0)
     assert y.dtype == np.uint8
     assert y.shape == (1, h, w)
 
-    u = libspdl.to_numpy(frame, index=1)
+    u = spdl.to_numpy(frame, index=1)
     assert u.dtype == np.uint8
     assert u.shape == (1, h, w2)
     assert np.array_equal(u, yuv[..., h:, :w2])
 
-    v = libspdl.to_numpy(frame, index=2)
+    v = spdl.to_numpy(frame, index=2)
     assert v.dtype == np.uint8
     assert v.shape == (1, h, w2)
     assert np.array_equal(v, yuv[..., h:, w2:])
@@ -71,20 +72,20 @@ def test_decode_image_yuv420p(get_sample):
     sample = get_sample(cmd, width=w, height=h)
     frame = libspdl.decode_image(sample.path, pix_fmt="yuv420p").get()
 
-    yuv = libspdl.to_numpy(frame)
+    yuv = spdl.to_numpy(frame)
     assert yuv.dtype == np.uint8
     assert yuv.shape == (1, h + h2, w)
 
-    y = libspdl.to_numpy(frame, index=0)
+    y = spdl.to_numpy(frame, index=0)
     assert y.dtype == np.uint8
     assert y.shape == (1, h, w)
 
-    u = libspdl.to_numpy(frame, index=1)
+    u = spdl.to_numpy(frame, index=1)
     assert u.dtype == np.uint8
     assert u.shape == (1, h2, w2)
     assert np.array_equal(u, yuv[..., h:, :w2])
 
-    v = libspdl.to_numpy(frame, index=2)
+    v = spdl.to_numpy(frame, index=2)
     assert v.dtype == np.uint8
     assert v.shape == (1, h2, w2)
     assert np.array_equal(v, yuv[..., h:, w2:])
@@ -97,7 +98,7 @@ def test_decode_image_rgb24_red(get_sample):
 
     frame = libspdl.decode_image(red.path, pix_fmt="rgb24").get()
 
-    array = libspdl.to_numpy(frame)
+    array = spdl.to_numpy(frame)
     assert array.dtype == np.uint8
     assert array.shape == (red.height, red.width, 3)
     assert np.all(array[..., 0] == 254)
@@ -113,7 +114,7 @@ def test_decode_image_rgb24_green(get_sample):
 
     frame = libspdl.decode_image(sample.path, pix_fmt="rgb24").get()
 
-    array = libspdl.to_numpy(frame)
+    array = spdl.to_numpy(frame)
     assert array.dtype == np.uint8
     assert array.shape == (sample.height, sample.width, 3)
     assert np.all(array[..., 0] == 0)
@@ -128,7 +129,7 @@ def test_decode_image_rgb24_blue(get_sample):
 
     frame = libspdl.decode_image(sample.path, pix_fmt="rgb24").get()
 
-    array = libspdl.to_numpy(frame)
+    array = spdl.to_numpy(frame)
     assert array.dtype == np.uint8
     assert array.shape == (sample.height, sample.width, 3)
     assert np.all(array[..., 0] == 0)
@@ -145,14 +146,14 @@ def test_batch_decode_image_slice(get_samples):
     frames = libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
     assert len(frames) == n
 
-    arrays = libspdl.to_numpy(frames)
+    arrays = spdl.to_numpy(frames)
     assert arrays.shape == (n, h, w, 3)
     for i in range(n):
-        arr = libspdl.to_numpy(frames[i])
+        arr = spdl.to_numpy(frames[i])
         assert np.all(arr == arrays[i])
 
         for j in range(i + 1, n):
-            arr = libspdl.to_numpy(frames[i:j])
+            arr = spdl.to_numpy(frames[i:j])
             assert np.all(arr == arrays[i:j])
 
 
@@ -172,7 +173,7 @@ def test_batch_decode_image_rgb24(get_samples):
 
     frames = libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
     assert len(frames) == 32
-    arrays = libspdl.to_numpy(frames)
+    arrays = spdl.to_numpy(frames)
 
     for i in range(32):
         array = arrays[i]

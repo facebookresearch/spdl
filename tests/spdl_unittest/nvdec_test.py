@@ -3,6 +3,9 @@ import pytest
 from numba import cuda
 from spdl import libspdl
 
+# temp
+from spdl._convert import _BufferWrapper
+
 DEFAULT_CUDA = 0
 
 
@@ -56,7 +59,7 @@ def _save(array, prefix):
 
 
 def _to_arrays(results):
-    buffers = [libspdl._BufferWrapper(res) for res in results]
+    buffers = [_BufferWrapper(res) for res in results]
     frames = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
     return frames
 

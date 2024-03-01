@@ -9,7 +9,6 @@ import atexit
 import importlib
 import importlib.resources
 import logging
-from types import ModuleType
 from typing import Any, List
 
 _LG = logging.getLogger(__name__)
@@ -25,42 +24,10 @@ def __dir__() -> List[str]:
 
 def __getattr__(name: str) -> Any:
     if name == "libspdl":
+        from spdl._internal.import_utils import _LazilyImportedModule
+
         return _LazilyImportedModule(name, _import_libspdl)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-class _LazilyImportedModule(ModuleType):
-    """Delay module import until its attribute is accessed."""
-
-    def __init__(self, name, import_func):
-        super().__init__(name)
-        self.import_func = import_func
-        self.module = None
-
-    # Note:
-    # Python caches what was retrieved with `__getattr__`, so this method will not be
-    # called again for the same item.
-    def __getattr__(self, item):
-        self._import_once()
-        return getattr(self.module, item)
-
-    def __repr__(self):
-        if self.module is None:
-            return f"<module '{self.__module__}.{self.__class__.__name__}(\"{self.name}\")'>"
-        return repr(self.module)
-
-    def __dir__(self):
-        self._import_once()
-        return dir(self.module)
-
-    def _import_once(self):
-        if self.module is None:
-            self.module = self.import_func()
-            # Note:
-            # By attaching the module attributes to self,
-            # module attributes are directly accessible.
-            # This allows to avoid calling __getattr__ for every attribute access.
-            self.__dict__.update(self.module.__dict__)
 
 
 def _import_libspdl():
