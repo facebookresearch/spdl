@@ -3,11 +3,14 @@ import pytest
 from numba import cuda
 from spdl import libspdl
 
+# temp
+from spdl._convert import _BufferWrapper
+
 DEFAULT_CUDA = 0
 
 
 def _to_array(frame):
-    return cuda.as_cuda_array(libspdl._BufferWrapper(frame)).copy_to_host()
+    return cuda.as_cuda_array(_BufferWrapper(frame)).copy_to_host()
 
 
 def test_decode_image_yuv422(get_sample):

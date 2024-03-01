@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import pytest
+import spdl
 from spdl import libspdl
 
 
@@ -22,7 +23,7 @@ def test_video_buffer_conversion_refcount(yuv420p):
         pix_fmt="rgb24",
     ).get()[0]
 
-    buf = libspdl._to_cpu_buffer(decoded_frames, None)
+    buf = spdl._convert._to_cpu_buffer(decoded_frames, None)
     assert hasattr(buf, "__array_interface__")
     print(f"{buf.__array_interface__=}")
 
@@ -63,13 +64,13 @@ def test_video_buffer_conversion_rgb24(get_sample):
     ).get()[0]
 
     for index in [None, 0]:
-        array = libspdl.to_numpy(frames, index=index)
+        array = spdl.to_numpy(frames, index=index)
         assert array.shape[1:4] == (h, w, 3)
 
     # plane 1 & 2 are not defined
     for i in [1, 2]:
         with pytest.raises(RuntimeError):
-            libspdl.to_numpy(frames, index=i)
+            spdl.to_numpy(frames, index=i)
 
 
 def test_video_buffer_conversion_yuv420(yuv420p):
@@ -82,14 +83,14 @@ def test_video_buffer_conversion_yuv420(yuv420p):
     ).get()[0]
 
     # combined
-    array = libspdl.to_numpy(frames)
+    array = spdl.to_numpy(frames)
     assert array.shape[1:4] == (1, h + h2, w)
     # individual - Y
-    array = libspdl.to_numpy(frames, index=0)
+    array = spdl.to_numpy(frames, index=0)
     assert array.shape[1:4] == (1, h, w)
     # individual - U, V
     for i in range(1, 3):
-        array = libspdl.to_numpy(frames, index=i)
+        array = spdl.to_numpy(frames, index=i)
         assert array.shape[1:4] == (1, h2, w2)
 
 
@@ -106,11 +107,11 @@ def test_video_buffer_conversion_yuv444(get_sample):
     ).get()[0]
 
     # combined
-    array = libspdl.to_numpy(frames)
+    array = spdl.to_numpy(frames)
     assert array.shape[1:4] == (3, h, w)
     # individual
     for i in range(0, 3):
-        array = libspdl.to_numpy(frames, index=i)
+        array = spdl.to_numpy(frames, index=i)
         assert array.shape[1:4] == (1, h, w)
 
 
@@ -127,13 +128,13 @@ def test_video_buffer_conversion_nv12(get_sample):
     ).get()[0]
 
     # combined
-    array = libspdl.to_numpy(frames)
+    array = spdl.to_numpy(frames)
     assert array.shape[1:4] == (1, h + h2, w)
     # individual - Y
-    array = libspdl.to_numpy(frames, index=0)
+    array = spdl.to_numpy(frames, index=0)
     assert array.shape[1:4] == (1, h, w)
     # individual - UV
-    array = libspdl.to_numpy(frames, index=1)
+    array = spdl.to_numpy(frames, index=1)
     assert array.shape[1:4] == (h2, w2, 2)
 
 
@@ -152,7 +153,7 @@ def test_audio_buffer_conversion_s16p(sample_fmts, get_sample):
         sample_fmt=sample_fmt,
     ).get()[0]
 
-    array = libspdl.to_numpy(frames)
+    array = spdl.to_numpy(frames)
     assert array.ndim == 2
     assert array.dtype == np.dtype(expected)
     if sample_fmt.endswith("p"):
