@@ -39,7 +39,7 @@ class _LazilyImportedModule(ModuleType):
 def lazy_import(name):
     """Import module lazily.
 
-    Example:
+    Example
 
         >>> foo = lazy_import("foo")  # not imported yet
         >>> foo.something  # Now "foo" is imported.

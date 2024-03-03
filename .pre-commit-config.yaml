@@ -43,4 +43,4 @@ repos:
     rev: 6.3.0
     hooks:
       - id: pydocstyle
-        exclude: 'build|test|env|setup.py|src/prototypes'
+        exclude: 'build|test|env|setup.py|src/prototypes|src/spdl/_internal'
