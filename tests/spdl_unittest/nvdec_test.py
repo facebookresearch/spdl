@@ -1,10 +1,7 @@
 import numpy as np
 import pytest
-from numba import cuda
+import spdl
 from spdl import libspdl
-
-# temp
-from spdl._convert import _BufferWrapper
 
 DEFAULT_CUDA = 0
 
@@ -58,10 +55,8 @@ def _save(array, prefix):
         Image.fromarray(arr[0]).save(f"{prefix}_{i}.png")
 
 
-def _to_arrays(results):
-    buffers = [_BufferWrapper(res) for res in results]
-    frames = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
-    return frames
+def _to_arrays(frames):
+    return [spdl.to_torch(f).cpu().numpy() for f in frames]
 
 
 def split_nv12(array):
