@@ -64,10 +64,13 @@ def to_torch(frames, index: Optional[int] = None):
     buffer = _BufferWrapper(libspdl.convert_frames(frames, index))
 
     if frames.is_cuda:
-        index = libspdl.get_cuda_device_index(
-            buffer.__cuda_array_interface__["data"][0]
-        )
-        return torch.as_tensor(buffer, device=f"cuda:{index}")
+        data_ptr = buffer.__cuda_array_interface__["data"][0]
+        index = libspdl.get_cuda_device_index(data_ptr)
+        tensor = torch.as_tensor(buffer, device=f"cuda:{index}")
+        assert (
+            tensor.data_ptr() == data_ptr
+        ), "[INTERNAL ERROR] Failed to perform zero-copy conversion to PyTorch Tensor."
+        return tensor
 
     # Not sure how to make as_tensor work with __array_interface__.
     # Using numpy as intermediate.
