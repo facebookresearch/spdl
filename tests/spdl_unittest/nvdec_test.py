@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 import spdl
 from spdl import libspdl
 
@@ -56,7 +57,12 @@ def _save(array, prefix):
 
 
 def _to_arrays(frames):
-    return [spdl.to_torch(f).cpu().numpy() for f in frames]
+    ret = []
+    for f in frames:
+        array = spdl.to_torch(f)
+        assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
+        ret.append(array.cpu().numpy())
+    return ret
 
 
 def split_nv12(array):

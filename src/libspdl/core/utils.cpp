@@ -5,6 +5,10 @@
 #include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/logging.h>
 
+#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVDEC)
+#include <libspdl/core/detail/cuda.h>
+#endif
+
 #include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
 
@@ -31,6 +35,14 @@ void clear_ffmpeg_cuda_context_cache() {
 
 void create_cuda_context(int index, bool use_primary_context) {
   detail::create_cuda_context(index, use_primary_context);
+}
+
+int get_cuda_device_index(unsigned long long ptr) {
+#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVDEC)
+  return detail::get_cuda_device_index(ptr);
+#else
+  SPDL_FAIL("SPDL is not compiled with CUDA support.");
+#endif
 }
 
 std::string get_video_filter_description(

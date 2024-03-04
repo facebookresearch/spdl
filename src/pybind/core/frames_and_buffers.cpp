@@ -215,9 +215,6 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly("media_type", &get_type_string<NvDecVideoFrames>)
       .def_property_readonly("is_cuda", &NvDecVideoFrames::is_cuda)
       .def_property_readonly(
-          "device_index",
-          [](const NvDecVideoFrames& self) { return self.device_index; })
-      .def_property_readonly(
           "channel_last",
           [](const NvDecVideoFrames& self) {
             return self.buffer->channel_last;
