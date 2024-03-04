@@ -152,6 +152,7 @@ std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
   return convert_video<TO_CPU>(merge_frames(batch), index);
 }
 
+#ifdef SPDL_USE_NVDEC
 std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
     const NvDecVideoFrames* frames,
     const std::optional<int>& index) {
@@ -161,5 +162,5 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
   }
   return frames->buffer;
 }
-
+#endif
 } // namespace spdl::core
