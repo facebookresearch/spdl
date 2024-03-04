@@ -92,7 +92,6 @@ struct FFmpegVideoFrames : public FFmpegFrames {
 ////////////////////////////////////////////////////////////////////////////////
 struct NvDecVideoFrames : public DecodedFrames {
   uint64_t id{0};
-  int device_index;
   MediaType media_type{0};
 
   // enum AVPixelFormat but using int so as not to include FFmpeg header
@@ -103,11 +102,7 @@ struct NvDecVideoFrames : public DecodedFrames {
   bool is_cuda() const;
   enum MediaType get_media_type() const override;
 
-  NvDecVideoFrames(
-      uint64_t id,
-      int device_index,
-      MediaType media_type,
-      int media_format);
+  NvDecVideoFrames(uint64_t id, MediaType media_type, int media_format);
   NvDecVideoFrames(const NvDecVideoFrames&) = delete;
   NvDecVideoFrames& operator=(const NvDecVideoFrames&) = delete;
   NvDecVideoFrames(NvDecVideoFrames&&) noexcept;

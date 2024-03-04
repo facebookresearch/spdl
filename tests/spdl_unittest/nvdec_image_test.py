@@ -9,7 +9,10 @@ DEFAULT_CUDA = 0
 
 
 def _to_array(frame):
-    return spdl.to_torch(frame).cpu().numpy()
+    array = spdl.to_torch(frame)
+
+    assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
+    return array.cpu().numpy()
 
 
 def test_decode_image_yuv422(get_sample):

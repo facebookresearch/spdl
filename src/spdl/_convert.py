@@ -64,7 +64,10 @@ def to_torch(frames, index: Optional[int] = None):
     buffer = _BufferWrapper(libspdl.convert_frames(frames, index))
 
     if frames.is_cuda:
-        return torch.as_tensor(buffer, device=f"cuda:{frames.device_index}")
+        index = libspdl.get_cuda_device_index(
+            buffer.__cuda_array_interface__["data"][0]
+        )
+        return torch.as_tensor(buffer, device=f"cuda:{index}")
 
     # Not sure how to make as_tensor work with __array_interface__.
     # Using numpy as intermediate.

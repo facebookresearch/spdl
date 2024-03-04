@@ -69,4 +69,24 @@ CUcontext get_cucontext(CUdevice device) {
   return CUCONTEXT_CACHE.at(device);
 }
 
+CUdevice get_cuda_device_index(CUdeviceptr ptr) {
+  CUcontext data;
+  CHECK_CU(
+      cuPointerGetAttribute(&data, CU_POINTER_ATTRIBUTE_CONTEXT, ptr),
+      "Failed to fetch the CUDA context associated with a pointer.");
+  CHECK_CU(
+      cuCtxPushCurrent(data),
+      "Failed to push the CUDA context associated with a pointer.");
+
+  CUdevice device;
+  auto result = cuCtxGetDevice(&device);
+
+  CHECK_CU(
+      cuCtxPopCurrent(&data),
+      "Failed to pop the CUDA context associated with a pointer.");
+
+  CHECK_CU(result, "Failed to fetch the CUDA device index from a pointer.");
+  return device;
+}
+
 } // namespace spdl::core::detail

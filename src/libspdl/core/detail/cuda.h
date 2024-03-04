@@ -45,4 +45,7 @@ namespace spdl::core::detail {
 // TODO: Test if this works if there is a context already created by others
 CUcontext get_cucontext(CUdevice device);
 
+// Get the index of cuda device from allocated pointer
+CUdevice get_cuda_device_index(CUdeviceptr ptr);
+
 } // namespace spdl::core::detail
