@@ -63,7 +63,7 @@ def to_torch(frames, index: Optional[int] = None):
     """
     buffer = _BufferWrapper(libspdl.convert_frames(frames, index))
 
-    if frames.is_cuda:
+    if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
         index = libspdl.get_cuda_device_index(data_ptr)
         tensor = torch.as_tensor(buffer, device=f"cuda:{index}")
@@ -89,7 +89,7 @@ def to_numba(frames, index: Optional[int] = None):
     """
     buffer = _BufferWrapper(libspdl.convert_frames(frames, index))
 
-    if frames.is_cuda:
+    if buffer.is_cuda:
         return cuda.as_cuda_array(buffer)
 
     return np.array(buffer, copy=False)
