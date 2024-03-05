@@ -6,7 +6,9 @@ import time
 from functools import partial
 from queue import Queue
 from threading import Thread
+from typing import Optional
 
+import spdl
 from spdl import libspdl
 
 _LG = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ def _iter_flist(flist, batch_size):
         yield paths
 
 
-def _batch_decode(flist, adoptor, batch_size, queue, nvdec: bool, gpu: int):
+def _batch_decode(flist, adoptor, batch_size, queue, nvdec: bool, gpu: int, **kwargs):
     decode_fun = (
         partial(libspdl.batch_decode_image_nvdec, cuda_device_index=gpu)
         if nvdec
@@ -57,9 +59,7 @@ def _batch_decode(flist, adoptor, batch_size, queue, nvdec: bool, gpu: int):
     )
 
     for paths in _iter_flist(flist, batch_size):
-        future = decode_fun(
-            paths, adoptor=adoptor, pix_fmt="rgba", width=222, height=222
-        )
+        future = decode_fun(paths, adoptor=adoptor, **kwargs)
         queue.put(future)
     queue.put(None)
 
@@ -88,6 +88,7 @@ class BackgroundDecoder:
                 self.nvdec,
                 self.gpu,
             ),
+            kwargs={"pix_fmt": "rgba", "width": 222, "height": 222},
         )
         self.thread.start()
 
@@ -100,18 +101,42 @@ class BackgroundDecoder:
         self.thread.join()
 
 
-def _test(
-    input_flist, adoptor_type, prefix, batch_size, queue_size, nvdec: bool, gpu: int
-):
+def _test_nvdec(input_flist, adoptor_type, prefix, batch_size, queue_size, gpu: int):
     adoptor = getattr(libspdl, adoptor_type)(prefix)
 
-    bgd = BackgroundDecoder(input_flist, adoptor, batch_size, queue_size, nvdec, gpu)
+    bgd = BackgroundDecoder(input_flist, adoptor, batch_size, queue_size, True, gpu)
 
     num_decoded = 0
     t0 = time.monotonic()
     for i, future in enumerate(bgd):
         frames = future.get(strict=False)
-        num_decoded += len(frames)
+        tensor = spdl.to_torch(frames)
+        num_decoded += tensor.shape[0]
+
+        if i % 1000 == 0:
+            elapsed = time.monotonic() - t0
+            print(f"Decode {num_decoded} frames. QPS: {num_decoded / elapsed}")
+    elapsed = time.monotonic() - t0
+    print(
+        f"{elapsed} seconds to decode {num_decoded} frames. QPS: {num_decoded / elapsed}"
+    )
+
+
+def _test_cpu(
+    input_flist, adoptor_type, prefix, batch_size, queue_size, gpu: Optional[int]
+):
+    adoptor = getattr(libspdl, adoptor_type)(prefix)
+
+    bgd = BackgroundDecoder(input_flist, adoptor, batch_size, queue_size, False, gpu)
+
+    device = "cpu" if gpu is None else f"cuda:{gpu}"
+
+    num_decoded = 0
+    t0 = time.monotonic()
+    for i, future in enumerate(bgd):
+        frames = future.get(strict=False)
+        tensor = spdl.to_torch(frames).to(device)
+        num_decoded += tensor.shape[0]
 
         if i % 1000 == 0:
             elapsed = time.monotonic() - t0
@@ -126,15 +151,24 @@ def _main():
     args = _parse_args()
     _init(args.debug, args.num_demuxing_threads, args.num_decoding_threads)
 
-    _test(
-        args.input_flist,
-        args.adoptor,
-        args.prefix,
-        args.batch_size,
-        args.queue_size,
-        args.nvdec,
-        args.gpu,
-    )
+    if args.nvdec:
+        _test_nvdec(
+            args.input_flist,
+            args.adoptor,
+            args.prefix,
+            args.batch_size,
+            args.queue_size,
+            args.gpu,
+        )
+    else:
+        _test_cpu(
+            args.input_flist,
+            args.adoptor,
+            args.prefix,
+            args.batch_size,
+            args.queue_size,
+            args.gpu,
+        )
 
 
 def _init(debug, num_demuxing_threads, num_decoding_threads):
