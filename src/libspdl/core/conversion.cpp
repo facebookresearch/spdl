@@ -4,6 +4,10 @@
 #include <libspdl/core/logging.h>
 #include <libspdl/core/types.h>
 
+#ifdef SPDL_USE_NVDEC
+#include <libspdl/core/detail/cuda.h>
+#endif
+
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
@@ -161,6 +165,72 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
         "Fetching an index from NvDecVideoFrames is not supported.");
   }
   return frames->buffer;
+}
+
+namespace {
+
+bool same_shape(const std::vector<size_t>& a, const std::vector<size_t>& b) {
+  if (a.size() != b.size()) {
+    return false;
+  }
+  for (int i = 0; i < a.size(); ++i) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void check_consistency(const std::vector<NvDecVideoFrames*>& frames) {
+  auto numel = frames.size();
+  if (numel == 0) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->media_format);
+  auto shape = frames[0]->buffer->get_shape();
+  for (auto* f : frames) {
+    if (auto shape_ = f->buffer->get_shape(); !same_shape(shape, shape_)) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frames as the frames do not have the same size."));
+    }
+    if (static_cast<AVPixelFormat>(f->media_format) != pix_fmt) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frames as the frames do not have the same pixel format."));
+    }
+  }
+}
+
+} // namespace
+
+std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
+    const std::vector<NvDecVideoFrames*>& batch_frames,
+    const std::optional<int>& index) {
+  check_consistency(batch_frames);
+  auto& buf0 = batch_frames[0]->buffer;
+
+  detail::set_current_cuda_context(batch_frames[0]->buffer->p);
+  auto ret = std::make_shared<CUDABuffer2DPitch>(batch_frames.size());
+  ret->allocate(buf0->c, buf0->h, buf0->w, buf0->bpp, buf0->channel_last);
+
+  cudaStream_t stream = 0;
+  for (auto& frame : batch_frames) {
+    CHECK_CUDA(
+        cudaMemcpy2DAsync(
+            ret->get_next_frame(),
+            ret->pitch,
+            (void*)frame->buffer->p,
+            frame->buffer->pitch,
+            frame->buffer->width_in_bytes,
+            frame->buffer->h,
+            cudaMemcpyDefault,
+            stream),
+        "Failed to launch cudaMemcpy2DAsync.");
+    ret->n += 1;
+  }
+  CHECK_CUDA(
+      cudaStreamSynchronize(stream),
+      "Failed to synchronize the stream after copying the data.");
+  return ret;
 }
 #endif
 } // namespace spdl::core

@@ -89,4 +89,14 @@ CUdevice get_cuda_device_index(CUdeviceptr ptr) {
   return device;
 }
 
+void set_current_cuda_context(CUdeviceptr ptr) {
+  CUcontext data;
+  CHECK_CU(
+      cuPointerGetAttribute(&data, CU_POINTER_ATTRIBUTE_CONTEXT, ptr),
+      "Failed to fetch the CUDA context associated with a pointer.");
+  CHECK_CU(
+      cuCtxPushCurrent(data),
+      "Failed to push the CUDA context associated with a pointer.");
+}
+
 } // namespace spdl::core::detail

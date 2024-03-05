@@ -48,4 +48,7 @@ CUcontext get_cucontext(CUdevice device);
 // Get the index of cuda device from allocated pointer
 CUdevice get_cuda_device_index(CUdeviceptr ptr);
 
+// Set the CUDA context to what the given device pointer belongs to
+void set_current_cuda_context(CUdeviceptr ptr);
+
 } // namespace spdl::core::detail

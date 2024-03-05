@@ -243,6 +243,7 @@ void register_frames_and_buffers(py::module& m) {
   m.def("convert_frames", &convert_batch_image_frames);
 #ifdef SPDL_USE_NVDEC
   m.def("convert_frames", &convert_nvdec_video_frames);
+  m.def("convert_frames", &convert_nvdec_batch_image_frames);
 #endif
 
   m.def("convert_to_cpu_buffer", &convert_audio_frames);
