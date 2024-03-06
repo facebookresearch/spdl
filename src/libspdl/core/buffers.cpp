@@ -123,8 +123,10 @@ uint8_t* CUDABuffer2DPitch::get_next_frame() {
     SPDL_FAIL_INTERNAL("Memory is not allocated.");
   }
   if (n >= max_frames) {
-    SPDL_FAIL_INTERNAL(
-        "Attempted to write beyond the maximum number of frames.");
+    SPDL_FAIL_INTERNAL(fmt::format(
+        "Attempted to write beyond the maximum number of frames. max_frames={}, n={}",
+        max_frames,
+        n));
   }
   if (is_image && n == 1) {
     SPDL_FAIL_INTERNAL("Attempted to write multiple frames for image buffer.");
