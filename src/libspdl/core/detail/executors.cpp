@@ -1,6 +1,6 @@
 #include <libspdl/core/detail/executors.h>
 
-#include <libspdl/core/logging.h>
+#include <libspdl/core/detail/logging.h>
 
 #include <folly/Singleton.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>

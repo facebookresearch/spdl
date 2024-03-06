@@ -3,8 +3,8 @@
 #include <libspdl/core/decoding/results.h>
 #include <libspdl/core/detail/executors.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
+#include <libspdl/core/detail/logging.h>
 #include <libspdl/core/detail/tracing.h>
-#include <libspdl/core/logging.h>
 
 #ifdef SPDL_USE_NVDEC
 #include <libspdl/core/detail/cuda.h>

@@ -1,7 +1,7 @@
 #include <libspdl/core/decoding.h>
 
 #include <libspdl/core/decoding/results.h>
-#include <libspdl/core/logging.h>
+#include <libspdl/core/detail/logging.h>
 
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/Collect.h>

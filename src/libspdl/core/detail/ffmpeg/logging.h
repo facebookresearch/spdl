@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/logging.h>
+#include <libspdl/core/detail/logging.h>
 
 #include <fmt/core.h>
 

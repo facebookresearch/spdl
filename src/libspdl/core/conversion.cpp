@@ -1,7 +1,7 @@
 #include <libspdl/core/conversion.h>
 
 #include <libspdl/core/detail/ffmpeg/conversion.h>
-#include <libspdl/core/logging.h>
+#include <libspdl/core/detail/logging.h>
 #include <libspdl/core/types.h>
 
 #ifdef SPDL_USE_NVDEC
