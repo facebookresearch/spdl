@@ -49,6 +49,11 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
       packets->id, MediaType::Video, codecpar->format);
   frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets, is_image);
 
+  // When the previous decoding ended with an error, if the new input data is
+  // the same format, then handle_video_sequence might not be called because
+  // NVDEC decoder thinks that incoming frames are from the same sequence. This
+  // can cause strange decoder behavior. So we need to reset the decoder.
+  decoder.flush();
   decoder.init(
       cuda_device_index,
       covert_codec_id(codecpar->codec_id),
