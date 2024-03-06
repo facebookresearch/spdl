@@ -1,3 +1,4 @@
+#include <libspdl/core/types.h>
 #include <libspdl/core/utils.h>
 
 #include <pybind11/pybind11.h>
@@ -45,6 +46,9 @@ std::vector<std::string> init_folly_init(
 } // namespace
 
 void register_utils(py::module& m) {
+  py::register_exception<spdl::core::InternalError>(
+      m, "InternalError", PyExc_AssertionError);
+
   m.def("init_folly", &init_folly_init);
   m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
   m.def("set_ffmpeg_log_level", &set_ffmpeg_log_level);
