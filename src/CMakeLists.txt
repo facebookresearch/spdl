@@ -21,6 +21,7 @@ set(srcs
   libspdl/core/detail/ffmpeg/filter_graph.cpp
   libspdl/core/detail/ffmpeg/wrappers.cpp
   libspdl/core/detail/ffmpeg/package.cpp
+  libspdl/core/detail/logging.cpp
   libspdl/core/buffers.cpp
   libspdl/core/conversion.cpp
   libspdl/core/decoding/audio_visual.cpp
@@ -31,7 +32,6 @@ set(srcs
   libspdl/core/adoptor/basic.cpp
   libspdl/core/adoptor/bytes.cpp
   libspdl/core/adoptor/mmap.cpp
-  libspdl/core/logging.cpp
   libspdl/core/storage.cpp
   libspdl/core/utils.cpp
   )
