@@ -301,11 +301,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // * 0: fail
   // * >=1: succeess
 
-  // disp_info is null for the last call back when decoding is performed
-  // with CUVID_PKT_NOTIFY_EOS flag.
-  if (!disp_info) {
-    return 1;
-  }
+  // XLOG(INFO) << "Received display pictures.";
   // XLOG(INFO) << print(disp_info);
   double ts = double(disp_info->timestamp) * timebase.num / timebase.den;
 
