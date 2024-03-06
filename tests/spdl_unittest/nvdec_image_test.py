@@ -132,3 +132,32 @@ def test_batch_decode_image_strict(get_samples):
     ).get(strict=False)
 
     assert len(frames) == 32
+
+
+def test_decode_multiple_invalid_input(get_sample):
+    """When multiple identical invalid inputs are provided, the decoder must throw RuntimeError
+    instead of InternalError (AssertionError).
+
+    Fixed by: https://github.com/mthrok/spdl/commit/dcea39a736fdaf523c2622bf8ec1b1688fc575f0
+
+    Before the fix, the decoder did not call `handle_video_sequence` callback for the second time,
+    because these inputs are identical. However, the first time `handle_video_sequence` was called,
+    the callback throws an exception because the size is not supported by NVDEC.
+    This leaves the decoder in a bad state where the decoder is not properly initialized, but the
+    decoding continues for the subsequent inputs.
+    """
+    # Valid JPEG but its size is not supported by NVDEC.
+    cmd = (
+        "ffmpeg -hide_banner -y -f lavfi -i testsrc=size=16x16 -frames:v 1 sample.jpeg"
+    )
+    sample = get_sample(cmd, width=16, height=16)
+
+    # Because currently we cannot configure the thread pool size on-the-fly, so we run this many
+    # times so that decoder threads receive the input at least twice.
+    # TODO: make thread pool configurable and udpate test with single thread pool for better reproducibility.
+    srcs = [sample.path] * 128
+    for _ in range(10):
+        with pytest.raises(RuntimeError):
+            libspdl.batch_decode_image_nvdec(
+                srcs, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
+            ).get()
