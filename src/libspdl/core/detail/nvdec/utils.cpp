@@ -1,8 +1,8 @@
 #include <libspdl/core/detail/nvdec/utils.h>
 
 #include <libspdl/core/detail/cuda.h>
+#include <libspdl/core/detail/logging.h>
 #include <libspdl/core/detail/tracing.h>
-#include <libspdl/core/logging.h>
 
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>

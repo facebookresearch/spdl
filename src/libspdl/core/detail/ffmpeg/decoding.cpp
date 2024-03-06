@@ -5,8 +5,8 @@
 #include <libspdl/core/detail/ffmpeg/filter_graph.h>
 #include <libspdl/core/detail/ffmpeg/logging.h>
 #include <libspdl/core/detail/ffmpeg/wrappers.h>
+#include <libspdl/core/detail/logging.h>
 #include <libspdl/core/detail/tracing.h>
-#include <libspdl/core/logging.h>
 #include <libspdl/core/types.h>
 
 #include <folly/logging/xlog.h>

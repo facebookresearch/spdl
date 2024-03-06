@@ -1,10 +1,10 @@
 #include <libspdl/core/detail/nvdec/decoder.h>
 
 #include <libspdl/core/detail/cuda.h>
+#include <libspdl/core/detail/logging.h>
 #include <libspdl/core/detail/nvdec/converter.h>
 #include <libspdl/core/detail/nvdec/utils.h>
 #include <libspdl/core/detail/tracing.h>
-#include <libspdl/core/logging.h>
 
 #include <folly/logging/xlog.h>
 

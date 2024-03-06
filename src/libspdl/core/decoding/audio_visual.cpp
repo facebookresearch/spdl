@@ -3,7 +3,7 @@
 #include <libspdl/core/decoding/results.h>
 #include <libspdl/core/detail/executors.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
-#include <libspdl/core/logging.h>
+#include <libspdl/core/detail/logging.h>
 
 #ifdef SPDL_USE_NVDEC
 #include <libspdl/core/detail/nvdec/decoding.h>
