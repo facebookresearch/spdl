@@ -209,6 +209,9 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   // resolutions of input/output sizes (including rescaling and cropping).
   // What is reconfiguable is defined in CUVIDRECONFIGUREDECODERINFO in
   // `cuviddec.h` header file.
+  if (cb_disabled) {
+    return 1;
+  }
 
   XLOG(DBG9) << print(video_fmt);
 
@@ -273,6 +276,10 @@ int NvDecDecoder::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   // * 0: fail
   // * >=1: succeess
 
+  if (cb_disabled) {
+    return 1;
+  }
+
   // XLOG(INFO) << "Received decoded pictures.";
   // XLOG(INFO) << print(pic_params);
   if (!decoder) {
@@ -300,6 +307,10 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // Return values
   // * 0: fail
   // * >=1: succeess
+
+  if (cb_disabled) {
+    return 1;
+  }
 
   // XLOG(INFO) << "Received display pictures.";
   // XLOG(INFO) << print(disp_info);
@@ -343,6 +354,10 @@ int NvDecDecoder::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
   //    - bit 10-10: outputAllLayers
   //    - bit 11-30: reserved
 
+  if (cb_disabled) {
+    return 1;
+  }
+
   // XLOG(INFO) << "Received operating points.";
 
   // Not implemented yet.
@@ -353,6 +368,10 @@ int NvDecDecoder::handle_sei_msg(CUVIDSEIMESSAGEINFO* msg_info) {
   // Return values:
   // * 0: fail
   // * >=1: succeeded
+
+  if (cb_disabled) {
+    return 1;
+  }
 
   // XLOG(INFO) << "Received SEI messages.";
   // XLOG(INFO) << print(msg_info);
@@ -375,10 +394,12 @@ void NvDecDecoder::decode(
       "Failed to parse video data.");
 }
 
-void NvDecDecoder::flush() {
+void NvDecDecoder::reset() {
   if (!parser) {
     return;
   }
+
+  cb_disabled = true;
 
   const unsigned char data{};
   CUVIDSOURCEDATAPACKET packet{
@@ -390,6 +411,8 @@ void NvDecDecoder::flush() {
   CHECK_CU(
       cuvidParseVideoData(parser.get(), &packet),
       "Failed to parse video data.");
+
+  cb_disabled = false;
 }
 
 } // namespace spdl::core::detail
