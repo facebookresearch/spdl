@@ -1,4 +1,5 @@
 """Decode multiple videos using GPU."""
+
 import logging
 import time
 

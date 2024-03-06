@@ -1,4 +1,5 @@
 """Top-level module for SPDL."""
+
 from typing import Any, List
 
 _convert_funcs = [
