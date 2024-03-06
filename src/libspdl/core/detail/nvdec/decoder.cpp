@@ -375,4 +375,21 @@ void NvDecDecoder::decode(
       "Failed to parse video data.");
 }
 
+void NvDecDecoder::flush() {
+  if (!parser) {
+    return;
+  }
+
+  const unsigned char data{};
+  CUVIDSOURCEDATAPACKET packet{
+      .payload = &data,
+      .payload_size = 0,
+      .flags = CUVID_PKT_ENDOFSTREAM,
+      .timestamp = 0};
+  TRACE_EVENT("nvdec", "cuvidParseVideoData");
+  CHECK_CU(
+      cuvidParseVideoData(parser.get(), &packet),
+      "Failed to parse video data.");
+}
+
 } // namespace spdl::core::detail
