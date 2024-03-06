@@ -1,4 +1,5 @@
 """Utility functions."""
+
 import sys
 from contextlib import contextmanager
 from typing import Optional
