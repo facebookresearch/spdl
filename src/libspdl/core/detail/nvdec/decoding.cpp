@@ -92,7 +92,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
     decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
   }
   auto pkt = _PKT(it);
-  flags |= CUVID_PKT_ENDOFSTREAM | CUVID_PKT_NOTIFY_EOS;
+  flags |= CUVID_PKT_ENDOFSTREAM;
   decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
 
   XLOG(DBG5) << fmt::format(
