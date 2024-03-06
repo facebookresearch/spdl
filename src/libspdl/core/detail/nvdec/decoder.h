@@ -66,6 +66,9 @@ class NvDecDecoder {
   // Color conversion
   std::optional<std::string> pix_fmt;
 
+  // Used to disable all the callbacks just in case.
+  bool cb_disabled = false;
+
  public:
   NvDecDecoder() = default;
   NvDecDecoder(const NvDecDecoder&) = delete;
@@ -92,7 +95,7 @@ class NvDecDecoder {
       int64_t pts,
       unsigned long flags);
 
-  void flush();
+  void reset();
 
   ////////////////////////////////////////////////////////////////////////////
   // Callbacks required by CUVID API

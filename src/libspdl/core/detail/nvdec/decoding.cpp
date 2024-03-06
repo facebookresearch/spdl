@@ -43,17 +43,20 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
   // which gives us opportunity to reuse the decoder and avoid destruction and
   // recreation ops, which are very expensive (~300ms).
   static thread_local NvDecDecoder decoder{};
+  static thread_local bool decoding_ongoing = false;
 
   AVCodecParameters* codecpar = packets->codecpar;
   auto frames = std::make_unique<NvDecVideoFrames>(
       packets->id, MediaType::Video, codecpar->format);
   frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets, is_image);
 
-  // When the previous decoding ended with an error, if the new input data is
-  // the same format, then handle_video_sequence might not be called because
-  // NVDEC decoder thinks that incoming frames are from the same sequence. This
-  // can cause strange decoder behavior. So we need to reset the decoder.
-  decoder.flush();
+  if (decoding_ongoing) {
+    // When the previous decoding ended with an error, if the new input data is
+    // the same format, then handle_video_sequence might not be called because
+    // NVDEC decoder thinks that incoming frames are from the same sequence.
+    // This can cause strange decoder behavior. So we need to reset the decoder.
+    decoder.reset();
+  }
   decoder.init(
       cuda_device_index,
       covert_codec_id(codecpar->codec_id),
@@ -65,6 +68,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
       target_height,
       pix_fmt);
 
+  decoding_ongoing = true;
 #define _PKT(i) packets->packets[i]
 #define _PTS(pkt)                                           \
   (static_cast<double>(pkt->pts) * packets->time_base.num / \
@@ -99,6 +103,8 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
   auto pkt = _PKT(it);
   flags |= CUVID_PKT_ENDOFSTREAM;
   decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
+
+  decoding_ongoing = false;
 
   XLOG(DBG5) << fmt::format(
       "Decoded {} frames from {} packets.",
