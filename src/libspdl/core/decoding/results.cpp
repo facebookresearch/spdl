@@ -69,23 +69,24 @@ Task<std::vector<Output>> check(
   auto futures = co_await std::move(future);
 
   std::vector<Output> results;
-  int i = -1, num_failures = 0;
+  int i = -1;
+  folly::exception_wrapper e;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
     ++i;
     if (result.hasValue()) {
       results.emplace_back(std::move(result.value()));
       continue;
     }
-    ++num_failures;
+    e = result.exception();
     XLOG(ERR) << fmt::format(
-        "Failed to decode a clip. (Source: {} {}-{}) {})",
+        "Failed to decode {} ({}-{}) {}",
         src,
         std::get<0>(timestamps[i]),
         std::get<1>(timestamps[i]),
-        result.exception().what());
+        e.get_exception()->what());
   }
-  if (results.size() == 0 || (strict && num_failures > 0)) {
-    SPDL_FAIL("Failed to decode some video clips. Check the error log.");
+  if (results.size() == 0 || (e.type() != nullptr && strict)) {
+    e.throw_exception();
   }
   co_return results;
 }
@@ -97,21 +98,20 @@ Task<std::vector<Output>> check_image(
   auto futures = co_await std::move(future);
 
   std::vector<Output> results;
-  int i = -1, num_failures = 0;
+  int i = -1;
+  folly::exception_wrapper e;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
     ++i;
     if (result.hasValue()) {
       results.emplace_back(std::move(result.value()));
       continue;
     }
-    ++num_failures;
+    e = result.exception();
     XLOG(ERR) << fmt::format(
-        "Failed to decode an image. (Source: {}) {})",
-        srcs[i],
-        result.exception().what());
+        "Failed to decode {}. {}", srcs[i], e.get_exception()->what());
   }
-  if (results.size() == 0 || (strict && num_failures > 0)) {
-    SPDL_FAIL("Failed to decode some images. Check the error log.");
+  if (results.size() == 0 || (e.type() != nullptr && strict)) {
+    e.throw_exception();
   }
   co_return results;
 }
