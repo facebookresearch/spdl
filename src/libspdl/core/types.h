@@ -2,6 +2,7 @@
 
 #include <map>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -39,6 +40,11 @@ struct CropArea {
   short top = 0;
   short right = 0;
   short bottom = 0;
+};
+
+// Thrown when unexpected internal error occurs.
+class InternalError : public std::logic_error {
+  using std::logic_error::logic_error;
 };
 
 } // namespace spdl::core
