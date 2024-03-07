@@ -42,7 +42,8 @@ FOLLY_GFLAGS_DEFINE_uint32(
     "If --spdl_decoder_executor_use_throttled_lifo_sem is true, use this "
     "wake-up interval (in microseconds) in ThrottledLifoSem");
 
-namespace spdl::core::detail {
+namespace spdl::core {
+namespace detail {
 namespace {
 
 class DemuxerTag {};
@@ -96,4 +97,30 @@ Executor::KeepAlive<> get_default_decode_executor() {
   return getKeepAliveToken(executorPtrPtr->get());
 }
 
-} // namespace spdl::core::detail
+folly::Executor::KeepAlive<> get_demux_executor(
+    std::shared_ptr<ThreadPoolExecutor>& exe) {
+  return exe ? exe->impl->get() : get_default_demux_executor();
+}
+
+folly::Executor::KeepAlive<> get_decode_executor(
+    std::shared_ptr<ThreadPoolExecutor>& exe) {
+  XLOG(INFO) << "get_decode_executor: exe=" << exe.get();
+  return exe ? exe->impl->get() : get_default_decode_executor();
+}
+
+} // namespace detail
+
+ThreadPoolExecutor::Impl::Impl(
+    size_t num_threads,
+    const std::string& thread_name_prefix,
+    int throttle_interval)
+    : exec(detail::get_executor(
+          num_threads,
+          throttle_interval,
+          thread_name_prefix)) {}
+
+folly::Executor::KeepAlive<> ThreadPoolExecutor::Impl::get() {
+  return getKeepAliveToken(exec.get());
+}
+
+} // namespace spdl::core

@@ -30,8 +30,9 @@ Task<Output> image_decode_task_nvdec(
     const CropArea crop,
     int width,
     int height,
-    const std::optional<std::string> pix_fmt) {
-  auto exec = detail::get_default_decode_executor();
+    const std::optional<std::string> pix_fmt,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+  auto exec = detail::get_decode_executor(decode_executor);
   auto packet =
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
   auto task = detail::decode_packets_nvdec(
@@ -54,20 +55,24 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
     const CropArea crop,
     int width,
     int height,
-    const std::optional<std::string> pix_fmt) {
+    const std::optional<std::string> pix_fmt,
+    std::shared_ptr<ThreadPoolExecutor> demux_executor,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
   std::vector<SemiFuture<Output>> futures;
   for (auto& src : srcs) {
-    futures.emplace_back(image_decode_task_nvdec(
-                             src,
-                             cuda_device_index,
-                             adoptor,
-                             io_cfg,
-                             crop,
-                             width,
-                             height,
-                             pix_fmt)
-                             .scheduleOn(detail::get_default_demux_executor())
-                             .start());
+    futures.emplace_back(
+        image_decode_task_nvdec(
+            src,
+            cuda_device_index,
+            adoptor,
+            io_cfg,
+            crop,
+            width,
+            height,
+            pix_fmt,
+            decode_executor)
+            .scheduleOn(detail::get_demux_executor(demux_executor))
+            .start());
   }
   co_return std::move(futures);
 }
@@ -81,10 +86,11 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
     const CropArea crop,
     int width,
     int height,
-    const std::optional<std::string> pix_fmt) {
+    const std::optional<std::string> pix_fmt,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
   std::vector<SemiFuture<Output>> futures;
   {
-    auto exec = detail::get_default_decode_executor();
+    auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux_nvdec(
         src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
@@ -153,17 +159,26 @@ SingleDecodingResult decoding::async_decode_image_nvdec(
     const CropArea& crop,
     int width,
     int height,
-    const std::optional<std::string>& pix_fmt) {
+    const std::optional<std::string>& pix_fmt,
+    std::shared_ptr<ThreadPoolExecutor> demux_executor,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
   validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
-  auto task = image_decode_task_nvdec(
-      src, cuda_device_index, adoptor, io_cfg, crop, width, height, pix_fmt);
   return SingleDecodingResult{new SingleDecodingResult::Impl{
-      std::move(task)
-          .scheduleOn(detail::get_default_demux_executor())
+      image_decode_task_nvdec(
+          src,
+          cuda_device_index,
+          adoptor,
+          io_cfg,
+          crop,
+          width,
+          height,
+          pix_fmt,
+          decode_executor)
+          .scheduleOn(detail::get_demux_executor(demux_executor))
           .start()}};
 #endif
 }
@@ -177,7 +192,9 @@ MultipleDecodingResult decoding::async_decode_nvdec(
     const CropArea& crop,
     int width,
     int height,
-    const std::optional<std::string>& pix_fmt) {
+    const std::optional<std::string>& pix_fmt,
+    std::shared_ptr<ThreadPoolExecutor> demux_executor,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
@@ -201,8 +218,9 @@ MultipleDecodingResult decoding::async_decode_nvdec(
           crop,
           width,
           height,
-          pix_fmt)
-          .scheduleOn(detail::get_default_demux_executor())
+          pix_fmt,
+          decode_executor)
+          .scheduleOn(detail::get_demux_executor(demux_executor))
           .start()}};
 #endif
 }
@@ -215,7 +233,9 @@ MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
     const CropArea& crop,
     int width,
     int height,
-    const std::optional<std::string>& pix_fmt) {
+    const std::optional<std::string>& pix_fmt,
+    std::shared_ptr<ThreadPoolExecutor> demux_executor,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
@@ -238,8 +258,10 @@ MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
           crop,
           width,
           height,
-          pix_fmt)
-          .scheduleOn(detail::get_default_demux_executor())
+          pix_fmt,
+          demux_executor,
+          decode_executor)
+          .scheduleOn(detail::get_demux_executor(demux_executor))
           .start()}};
 
 #endif

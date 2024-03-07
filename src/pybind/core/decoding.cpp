@@ -1,4 +1,5 @@
 #include <libspdl/core/decoding.h>
+#include <libspdl/core/executor.h>
 
 #include <libspdl/core/utils.h>
 
@@ -24,11 +25,21 @@ std::optional<std::tuple<int, int>> get_frame_rate(
 } // namespace
 
 void register_pybind(py::module& m) {
+  auto _ThreadPoolExecutor =
+      py::class_<ThreadPoolExecutor, std::shared_ptr<ThreadPoolExecutor>>(
+          m, "ThreadPoolExecutor", py::module_local());
+
   auto _MultipleDecodingResult = py::class_<MultipleDecodingResult>(
       m, "MultipleDecodingResult", py::module_local());
 
   auto _SingleDecodingResult = py::class_<SingleDecodingResult>(
       m, "SingleDecodingResult", py::module_local());
+
+  _ThreadPoolExecutor.def(
+      py::init<size_t, const std::string&, int>(),
+      py::arg("num_threads"),
+      py::arg("thread_name_prefix"),
+      py::arg("throttle_interval") = 0);
 
   _MultipleDecodingResult.def(
       "get", &MultipleDecodingResult::get, py::arg("strict") = true);
@@ -49,7 +60,9 @@ void register_pybind(py::module& m) {
          const py::object& frame_rate,
          const std::optional<int>& width,
          const std::optional<int>& height,
-         const std::optional<std::string>& pix_fmt) {
+         const std::optional<std::string>& pix_fmt,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode(
             MediaType::Video,
             src,
@@ -58,7 +71,9 @@ void register_pybind(py::module& m) {
             {format, format_options, buffer_size},
             {decoder, decoder_options, cuda_device_index},
             get_video_filter_description(
-                get_frame_rate(frame_rate), width, height, pix_fmt));
+                get_frame_rate(frame_rate), width, height, pix_fmt),
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("timestamps"),
@@ -72,7 +87,9 @@ void register_pybind(py::module& m) {
       py::arg("frame_rate") = py::none(),
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
-      py::arg("pix_fmt") = py::none());
+      py::arg("pix_fmt") = py::none(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_video",
@@ -85,7 +102,9 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
-         const std::string& filter_desc) {
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode(
             MediaType::Video,
             src,
@@ -93,7 +112,9 @@ void register_pybind(py::module& m) {
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options, cuda_device_index},
-            filter_desc);
+            filter_desc,
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("timestamps"),
@@ -104,7 +125,9 @@ void register_pybind(py::module& m) {
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
-      py::arg("filter_desc") = std::string());
+      py::arg("filter_desc") = std::string(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_image",
@@ -117,13 +140,17 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const std::optional<int>& width,
          const std::optional<int>& height,
-         const std::optional<std::string>& pix_fmt) {
+         const std::optional<std::string>& pix_fmt,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode_image(
             src,
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            get_video_filter_description(std::nullopt, width, height, pix_fmt));
+            get_video_filter_description(std::nullopt, width, height, pix_fmt),
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("adoptor") = nullptr,
@@ -134,7 +161,9 @@ void register_pybind(py::module& m) {
       py::arg("decoder_options") = py::none(),
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
-      py::arg("pix_fmt") = py::none());
+      py::arg("pix_fmt") = py::none(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_image",
@@ -146,13 +175,17 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
-         const std::string& filter_desc) {
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode_image(
             src,
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            filter_desc);
+            filter_desc,
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("adoptor") = nullptr,
@@ -162,7 +195,9 @@ void register_pybind(py::module& m) {
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
-      py::arg("filter_desc") = std::string());
+      py::arg("filter_desc") = std::string(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "batch_decode_image",
@@ -175,13 +210,17 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const std::optional<int>& width,
          const std::optional<int>& height,
-         const std::optional<std::string>& pix_fmt) {
+         const std::optional<std::string>& pix_fmt,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_batch_decode_image(
             srcs,
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            get_video_filter_description(std::nullopt, width, height, pix_fmt));
+            get_video_filter_description(std::nullopt, width, height, pix_fmt),
+            demux_executor,
+            decode_executor);
       },
       py::arg("srcs"),
       py::arg("adoptor") = nullptr,
@@ -192,7 +231,9 @@ void register_pybind(py::module& m) {
       py::arg("decoder_options") = py::none(),
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
-      py::arg("pix_fmt") = py::none());
+      py::arg("pix_fmt") = py::none(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "batch_decode_image",
@@ -204,13 +245,17 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
-         const std::string& filter_desc) {
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_batch_decode_image(
             srcs,
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            filter_desc);
+            filter_desc,
+            demux_executor,
+            decode_executor);
       },
       py::arg("srcs"),
       py::arg("adoptor") = nullptr,
@@ -220,7 +265,9 @@ void register_pybind(py::module& m) {
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
-      py::arg("filter_desc") = std::string());
+      py::arg("filter_desc") = std::string(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_audio",
@@ -234,7 +281,9 @@ void register_pybind(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const std::optional<int>& sample_rate,
          const std::optional<int>& num_channels,
-         const std::optional<std::string>& sample_fmt) {
+         const std::optional<std::string>& sample_fmt,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode(
             MediaType::Audio,
             src,
@@ -242,8 +291,9 @@ void register_pybind(py::module& m) {
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            get_audio_filter_description(
-                sample_rate, num_channels, sample_fmt));
+            get_audio_filter_description(sample_rate, num_channels, sample_fmt),
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("timestamps"),
@@ -255,7 +305,9 @@ void register_pybind(py::module& m) {
       py::arg("decoder_options") = py::none(),
       py::arg("sample_rate") = py::none(),
       py::arg("num_channels") = py::none(),
-      py::arg("sample_fmt") = py::none());
+      py::arg("sample_fmt") = py::none(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_audio",
@@ -267,7 +319,9 @@ void register_pybind(py::module& m) {
          int buffer_size,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
-         const std::string& filter_desc) {
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode(
             MediaType::Audio,
             src,
@@ -275,7 +329,9 @@ void register_pybind(py::module& m) {
             adoptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            filter_desc);
+            filter_desc,
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("timestamps"),
@@ -285,7 +341,9 @@ void register_pybind(py::module& m) {
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
-      py::arg("filter_desc") = std::string());
+      py::arg("filter_desc") = std::string(),
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_video_nvdec",
@@ -302,7 +360,9 @@ void register_pybind(py::module& m) {
          int crop_bottom,
          int width,
          int height,
-         const std::optional<std::string>& pix_fmt) {
+         const std::optional<std::string>& pix_fmt,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode_nvdec(
             src,
             timestamps,
@@ -315,7 +375,9 @@ void register_pybind(py::module& m) {
              static_cast<short>(crop_bottom)},
             width,
             height,
-            pix_fmt);
+            pix_fmt,
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("timestamps"),
@@ -330,7 +392,9 @@ void register_pybind(py::module& m) {
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
       py::arg("height") = -1,
-      py::arg("pix_fmt") = "rgba");
+      py::arg("pix_fmt") = "rgba",
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_image_nvdec",
@@ -346,7 +410,9 @@ void register_pybind(py::module& m) {
          int crop_bottom,
          int width,
          int height,
-         const std::optional<std::string>& pix_fmt) {
+         const std::optional<std::string>& pix_fmt,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_decode_image_nvdec(
             src,
             cuda_device_index,
@@ -358,7 +424,9 @@ void register_pybind(py::module& m) {
              static_cast<short>(crop_bottom)},
             width,
             height,
-            pix_fmt);
+            pix_fmt,
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("cuda_device_index"),
@@ -372,7 +440,9 @@ void register_pybind(py::module& m) {
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
       py::arg("height") = -1,
-      py::arg("pix_fmt") = "rgba");
+      py::arg("pix_fmt") = "rgba",
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "batch_decode_image_nvdec",
@@ -388,7 +458,9 @@ void register_pybind(py::module& m) {
          int crop_bottom,
          int width,
          int height,
-         const std::optional<std::string>& pix_fmt) {
+         const std::optional<std::string>& pix_fmt,
+         std::shared_ptr<ThreadPoolExecutor> demux_executor,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         return decoding::async_batch_decode_image_nvdec(
             srcs,
             cuda_device_index,
@@ -400,7 +472,9 @@ void register_pybind(py::module& m) {
              static_cast<short>(crop_bottom)},
             width,
             height,
-            pix_fmt);
+            pix_fmt,
+            demux_executor,
+            decode_executor);
       },
       py::arg("src"),
       py::arg("cuda_device_index"),
@@ -414,6 +488,8 @@ void register_pybind(py::module& m) {
       py::arg("crop_bottom") = 0,
       py::arg("width") = -1,
       py::arg("height") = -1,
-      py::arg("pix_fmt") = "rgba");
+      py::arg("pix_fmt") = "rgba",
+      py::arg("demux_executor") = nullptr,
+      py::arg("decode_executor") = nullptr);
 }
 } // namespace spdl::core
