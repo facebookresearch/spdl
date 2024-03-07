@@ -1,10 +1,12 @@
 #pragma once
 
 #include <libspdl/core/adoptor/base.h>
+#include <libspdl/core/executor.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/types.h>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace spdl::core {
@@ -27,7 +29,9 @@ struct decoding {
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
-      const std::string& filter_desc);
+      const std::string& filter_desc,
+      std::shared_ptr<ThreadPoolExecutor> demux_executor,
+      std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
   static SingleDecodingResult async_decode_image_nvdec(
       const std::string& src,
@@ -37,7 +41,9 @@ struct decoding {
       const CropArea& crop,
       int width,
       int height,
-      const std::optional<std::string>& pix_fmt);
+      const std::optional<std::string>& pix_fmt,
+      std::shared_ptr<ThreadPoolExecutor> demux_executor,
+      std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Batch image
@@ -47,7 +53,9 @@ struct decoding {
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
-      const std::string& filter_desc);
+      const std::string& filter_desc,
+      std::shared_ptr<ThreadPoolExecutor> demux_executor,
+      std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
   static MultipleDecodingResult async_batch_decode_image_nvdec(
       const std::vector<std::string>& srcs,
@@ -57,7 +65,9 @@ struct decoding {
       const CropArea& crop,
       int width,
       int height,
-      const std::optional<std::string>& pix_fmt);
+      const std::optional<std::string>& pix_fmt,
+      std::shared_ptr<ThreadPoolExecutor> demux_executor,
+      std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Audio / Video
@@ -69,7 +79,9 @@ struct decoding {
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
-      const std::string& filter_desc);
+      const std::string& filter_desc,
+      std::shared_ptr<ThreadPoolExecutor> demux_executor,
+      std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
   static MultipleDecodingResult async_decode_nvdec(
       const std::string& src,
@@ -80,7 +92,9 @@ struct decoding {
       const CropArea& crop,
       int width,
       int height,
-      const std::optional<std::string>& pix_fmt);
+      const std::optional<std::string>& pix_fmt,
+      std::shared_ptr<ThreadPoolExecutor> demux_executor,
+      std::shared_ptr<ThreadPoolExecutor> decode_executor);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

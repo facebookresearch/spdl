@@ -152,12 +152,12 @@ def test_decode_multiple_invalid_input(get_sample):
     )
     sample = get_sample(cmd, width=16, height=16)
 
-    # Because currently we cannot configure the thread pool size on-the-fly, so we run this many
-    # times so that decoder threads receive the input at least twice.
-    # TODO: make thread pool configurable and udpate test with single thread pool for better reproducibility.
-    srcs = [sample.path] * 128
-    for _ in range(10):
+    decode_executor = libspdl.ThreadPoolExecutor(1, "SingleDecoderExecutor")
+    for _ in range(2):
         with pytest.raises(RuntimeError):
             libspdl.batch_decode_image_nvdec(
-                srcs, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
+                [sample.path],
+                cuda_device_index=DEFAULT_CUDA,
+                pix_fmt=None,
+                decode_executor=decode_executor,
             ).get()

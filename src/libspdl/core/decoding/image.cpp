@@ -20,12 +20,13 @@ Task<Output> image_decode_task(
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
-    const std::string filter_desc) {
+    const std::string filter_desc,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
   co_return co_await detail::decode_packets(
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg)),
       std::move(decode_cfg),
       std::move(filter_desc))
-      .scheduleOn(detail::get_default_decode_executor());
+      .scheduleOn(detail::get_decode_executor(decode_executor));
 }
 
 Task<std::vector<SemiFuture<Output>>> batch_image_decode_task(
@@ -33,12 +34,15 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task(
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
-    const std::string filter_desc) {
+    const std::string filter_desc,
+    std::shared_ptr<ThreadPoolExecutor> demux_executor,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
   std::vector<SemiFuture<Output>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
-        image_decode_task(src, adoptor, io_cfg, decode_cfg, filter_desc)
-            .scheduleOn(detail::get_default_demux_executor())
+        image_decode_task(
+            src, adoptor, io_cfg, decode_cfg, filter_desc, decode_executor)
+            .scheduleOn(detail::get_demux_executor(demux_executor))
             .start());
   }
   co_return std::move(futures);
@@ -50,11 +54,14 @@ SingleDecodingResult decoding::async_decode_image(
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
-    const std::string& filter_desc) {
-  auto task = image_decode_task(src, adoptor, io_cfg, decode_cfg, filter_desc);
+    const std::string& filter_desc,
+    std::shared_ptr<ThreadPoolExecutor> demux_executor,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+  auto task = image_decode_task(
+      src, adoptor, io_cfg, decode_cfg, filter_desc, decode_executor);
   return SingleDecodingResult{new SingleDecodingResult::Impl{
       std::move(task)
-          .scheduleOn(detail::get_default_demux_executor())
+          .scheduleOn(detail::get_demux_executor(demux_executor))
           .start()}};
 }
 
@@ -63,7 +70,9 @@ MultipleDecodingResult decoding::async_batch_decode_image(
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
-    const std::string& filter_desc) {
+    const std::string& filter_desc,
+    std::shared_ptr<ThreadPoolExecutor> demux_executor,
+    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
   if (srcs.size() == 0) {
     SPDL_FAIL("At least one image source must be provided.");
   }
@@ -71,8 +80,15 @@ MultipleDecodingResult decoding::async_batch_decode_image(
       MediaType::Image,
       srcs,
       {},
-      batch_image_decode_task(srcs, adoptor, io_cfg, decode_cfg, filter_desc)
-          .scheduleOn(detail::get_default_demux_executor())
+      batch_image_decode_task(
+          srcs,
+          adoptor,
+          io_cfg,
+          decode_cfg,
+          filter_desc,
+          demux_executor,
+          decode_executor)
+          .scheduleOn(detail::get_demux_executor(demux_executor))
           .start()}};
 }
 } // namespace spdl::core
