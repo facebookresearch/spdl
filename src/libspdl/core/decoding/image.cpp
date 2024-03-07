@@ -1,7 +1,7 @@
 #include <libspdl/core/decoding.h>
 
 #include <libspdl/core/decoding/results.h>
-#include <libspdl/core/detail/executors.h>
+#include <libspdl/core/detail/executor.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
 #include <libspdl/core/detail/logging.h>
 
@@ -25,7 +25,7 @@ Task<Output> image_decode_task(
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg)),
       std::move(decode_cfg),
       std::move(filter_desc))
-      .scheduleOn(detail::getDecoderThreadPoolExecutor());
+      .scheduleOn(detail::get_default_decode_executor());
 }
 
 Task<std::vector<SemiFuture<Output>>> batch_image_decode_task(
@@ -38,7 +38,7 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task(
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task(src, adoptor, io_cfg, decode_cfg, filter_desc)
-            .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+            .scheduleOn(detail::get_default_demux_executor())
             .start());
   }
   co_return std::move(futures);
@@ -54,7 +54,7 @@ SingleDecodingResult decoding::async_decode_image(
   auto task = image_decode_task(src, adoptor, io_cfg, decode_cfg, filter_desc);
   return SingleDecodingResult{new SingleDecodingResult::Impl{
       std::move(task)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .scheduleOn(detail::get_default_demux_executor())
           .start()}};
 }
 
@@ -72,7 +72,7 @@ MultipleDecodingResult decoding::async_batch_decode_image(
       srcs,
       {},
       batch_image_decode_task(srcs, adoptor, io_cfg, decode_cfg, filter_desc)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .scheduleOn(detail::get_default_demux_executor())
           .start()}};
 }
 } // namespace spdl::core

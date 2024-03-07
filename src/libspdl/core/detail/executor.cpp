@@ -1,4 +1,4 @@
-#include <libspdl/core/detail/executors.h>
+#include <libspdl/core/detail/executor.h>
 
 #include <libspdl/core/detail/logging.h>
 
@@ -45,43 +45,42 @@ FOLLY_GFLAGS_DEFINE_uint32(
 namespace spdl::core::detail {
 namespace {
 
-class DemuxTag {};
+class DemuxerTag {};
 class DecoderTag {};
 
-using DemuxExecutor = CPUThreadPoolExecutor;
-using DecoderExecutor = CPUThreadPoolExecutor;
+CPUThreadPoolExecutor* get_executor(
+    size_t num_threads,
+    int throttle_interval,
+    const std::string& thread_name_prefix) {
+  return new CPUThreadPoolExecutor(
+      num_threads ? num_threads : hardware_concurrency(),
+      throttle_interval >= 0 ? CPUThreadPoolExecutor::makeThrottledLifoSemQueue(
+                                   std::chrono::microseconds{throttle_interval})
+                             : CPUThreadPoolExecutor::makeDefaultQueue(),
+      std::make_shared<NamedThreadFactory>(thread_name_prefix));
+}
 
-Singleton<std::shared_ptr<Executor>, DemuxTag> DEMUX_EXECUTOR([] {
-  size_t nthreads = FLAGS_spdl_demuxer_executor_threads;
-  nthreads = nthreads ? nthreads : hardware_concurrency();
-  XLOG(DBG9) << "Demux executor #threads: " << nthreads;
-  return new std::shared_ptr<Executor>(new DemuxExecutor(
-      nthreads,
+Singleton<std::shared_ptr<Executor>, DemuxerTag> DEMUX_EXECUTOR([] {
+  return new std::shared_ptr<Executor>(get_executor(
+      FLAGS_spdl_demuxer_executor_threads,
       FLAGS_spdl_demuxer_executor_use_throttled_lifo_sem
-          ? CPUThreadPoolExecutor::makeThrottledLifoSemQueue(
-                std::chrono::microseconds{
-                    FLAGS_spdl_demuxer_executor_wake_up_interval_us})
-          : CPUThreadPoolExecutor::makeDefaultQueue(),
-      std::make_shared<NamedThreadFactory>("DemuxerThreadPool")));
+          ? FLAGS_spdl_demuxer_executor_wake_up_interval_us
+          : -1,
+      "DefaultDemuxThreadPoolExecutor"));
 });
 
-Singleton<std::shared_ptr<Executor>, DecoderTag> DECODER_EXECUTOR([] {
-  size_t nthreads = FLAGS_spdl_decoder_executor_threads;
-  nthreads = nthreads ? nthreads : hardware_concurrency();
-  XLOG(DBG9) << "Decoder executor #threads: " << nthreads;
-  return new std::shared_ptr<Executor>(new DemuxExecutor(
-      nthreads,
+Singleton<std::shared_ptr<Executor>, DecoderTag> DECODE_EXECUTOR([] {
+  return new std::shared_ptr<Executor>(get_executor(
+      FLAGS_spdl_decoder_executor_threads,
       FLAGS_spdl_decoder_executor_use_throttled_lifo_sem
-          ? CPUThreadPoolExecutor::makeThrottledLifoSemQueue(
-                std::chrono::microseconds{
-                    FLAGS_spdl_decoder_executor_wake_up_interval_us})
-          : CPUThreadPoolExecutor::makeDefaultQueue(),
-      std::make_shared<NamedThreadFactory>("DecoderThreadPool")));
+          ? FLAGS_spdl_decoder_executor_wake_up_interval_us
+          : -1,
+      "DefaultDecodeThreadPoolExecutor"));
 });
 
 } // namespace
 
-Executor::KeepAlive<> getDemuxerThreadPoolExecutor() {
+Executor::KeepAlive<> get_default_demux_executor() {
   auto executorPtrPtr = DEMUX_EXECUTOR.try_get();
   if (!executorPtrPtr) {
     SPDL_FAIL("Requested Demuxer executor during shutdown.");
@@ -89,8 +88,8 @@ Executor::KeepAlive<> getDemuxerThreadPoolExecutor() {
   return getKeepAliveToken(executorPtrPtr->get());
 }
 
-Executor::KeepAlive<> getDecoderThreadPoolExecutor() {
-  auto executorPtrPtr = DECODER_EXECUTOR.try_get();
+Executor::KeepAlive<> get_default_decode_executor() {
+  auto executorPtrPtr = DECODE_EXECUTOR.try_get();
   if (!executorPtrPtr) {
     SPDL_FAIL("Requested Demuxer executor during shutdown.");
   }
