@@ -8,7 +8,7 @@
 
 #include <cuda.h>
 
-#define WAN_IF_NOT_SUCCESS(expr, msg)                    \
+#define WARN_IF_NOT_SUCCESS(expr, msg)                   \
   do {                                                   \
     auto __status = expr;                                \
     if (__status != CUDA_SUCCESS) {                      \
@@ -23,18 +23,18 @@
 namespace spdl::core::detail {
 
 void CUvideoparserDeleter::operator()(CUvideoparser p) {
-  WAN_IF_NOT_SUCCESS(
+  WARN_IF_NOT_SUCCESS(
       cuvidDestroyVideoParser(p), "Failed to destroy CUvideoparser.");
 }
 
 void CUvideodecoderDeleter::operator()(void* p) {
-  WAN_IF_NOT_SUCCESS(
+  WARN_IF_NOT_SUCCESS(
       cuvidDestroyDecoder((CUvideodecoder)p),
       "Failed to destroy CUvideodecoder.");
 };
 
 void CUvideoctxlockDeleter::operator()(void* p) {
-  WAN_IF_NOT_SUCCESS(
+  WARN_IF_NOT_SUCCESS(
       cuvidCtxLockDestroy((CUvideoctxlock)p),
       "Failed to create CUvideoctxlock.");
 }
