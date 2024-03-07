@@ -1,7 +1,6 @@
 set(src
   pybind.cpp
   core/adoptors.cpp
-  core/executor.cpp
   core/decoding.cpp
   core/frames_and_buffers.cpp
   core/tracing.cpp
