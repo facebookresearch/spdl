@@ -14,7 +14,7 @@ endif()
 set(defs)
 set(deps folly)
 set(srcs
-  libspdl/core/detail/executors.cpp
+  libspdl/core/detail/executor.cpp
   libspdl/core/detail/ffmpeg/conversion.cpp
   libspdl/core/detail/ffmpeg/ctx_utils.cpp
   libspdl/core/detail/ffmpeg/decoding.cpp

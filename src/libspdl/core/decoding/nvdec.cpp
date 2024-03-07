@@ -1,7 +1,7 @@
 #include <libspdl/core/decoding.h>
 
 #include <libspdl/core/decoding/results.h>
-#include <libspdl/core/detail/executors.h>
+#include <libspdl/core/detail/executor.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
 #include <libspdl/core/detail/logging.h>
 #include <libspdl/core/detail/tracing.h>
@@ -31,7 +31,7 @@ Task<Output> image_decode_task_nvdec(
     int width,
     int height,
     const std::optional<std::string> pix_fmt) {
-  auto exec = detail::getDecoderThreadPoolExecutor();
+  auto exec = detail::get_default_decode_executor();
   auto packet =
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
   auto task = detail::decode_packets_nvdec(
@@ -66,7 +66,7 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
                              width,
                              height,
                              pix_fmt)
-                             .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+                             .scheduleOn(detail::get_default_demux_executor())
                              .start());
   }
   co_return std::move(futures);
@@ -84,7 +84,7 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
     const std::optional<std::string> pix_fmt) {
   std::vector<SemiFuture<Output>> futures;
   {
-    auto exec = detail::getDecoderThreadPoolExecutor();
+    auto exec = detail::get_default_decode_executor();
     auto demuxer = detail::stream_demux_nvdec(
         src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
@@ -163,7 +163,7 @@ SingleDecodingResult decoding::async_decode_image_nvdec(
       src, cuda_device_index, adoptor, io_cfg, crop, width, height, pix_fmt);
   return SingleDecodingResult{new SingleDecodingResult::Impl{
       std::move(task)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .scheduleOn(detail::get_default_demux_executor())
           .start()}};
 #endif
 }
@@ -202,7 +202,7 @@ MultipleDecodingResult decoding::async_decode_nvdec(
           width,
           height,
           pix_fmt)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .scheduleOn(detail::get_default_demux_executor())
           .start()}};
 #endif
 }
@@ -239,7 +239,7 @@ MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
           width,
           height,
           pix_fmt)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .scheduleOn(detail::get_default_demux_executor())
           .start()}};
 
 #endif

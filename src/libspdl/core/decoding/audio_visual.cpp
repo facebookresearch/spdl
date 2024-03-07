@@ -1,7 +1,7 @@
 #include <libspdl/core/decoding.h>
 
 #include <libspdl/core/decoding/results.h>
-#include <libspdl/core/detail/executors.h>
+#include <libspdl/core/detail/executor.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
 #include <libspdl/core/detail/logging.h>
 
@@ -32,7 +32,7 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task(
     const std::string filter_desc) {
   std::vector<SemiFuture<Output>> futures;
   {
-    auto exec = detail::getDecoderThreadPoolExecutor();
+    auto exec = detail::get_default_decode_executor();
     auto demuxer = detail::stream_demux(
         type, src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
@@ -63,7 +63,7 @@ MultipleDecodingResult decoding::async_decode(
       {src},
       timestamps,
       std::move(task)
-          .scheduleOn(detail::getDemuxerThreadPoolExecutor())
+          .scheduleOn(detail::get_default_demux_executor())
           .start()}};
 }
 
