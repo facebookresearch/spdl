@@ -59,9 +59,7 @@ struct CPUBuffer : Buffer {
 /// Contiguous array data on a CUDA device.
 /// This class is used to hold data decoded with FFmpeg hardware acceleration.
 struct CUDABuffer : Buffer {
-#ifndef SPDL_USE_CUDA
-  void fail() const;
-#else
+#ifdef SPDL_USE_CUDA
   CUDABuffer(
       std::vector<size_t> shape,
       bool channel_last,
@@ -76,9 +74,7 @@ struct CUDABuffer : Buffer {
 /// Contiguous array data on a CUDA device.
 /// This class is used to hold data decoded with NVDEC.
 struct CUDABuffer2DPitch {
-#ifndef SPDL_USE_NVDEC
-  void fail() const;
-#else
+#ifdef SPDL_USE_NVDEC
   ///
   /// information to track the stateo f memory
   size_t max_frames;
