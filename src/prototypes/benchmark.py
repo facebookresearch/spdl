@@ -44,7 +44,7 @@ def _test(
 ):
     adoptor = getattr(libspdl, adoptor)(prefix)
 
-    timestamps = [(i, i + 0.5) for i in range(num_ts)]
+    timestamps = [(60 + i, 60.5 + i) for i in range(num_ts)]
     futures = []
 
     if gpu == -1:
@@ -80,15 +80,24 @@ def _test(
         futures.append(func(**cfg))
 
     _LG.info("Checking decoding results")
-    result = []
+    frames = []
     for future in futures:
         try:
-            result.append(future.get())
+            frames.extend(future.get())
         except Exception as e:
             _LG.exception(e)
             continue
-    elapsed = time.monotonic() - t0
-    _LG.info(f"{elapsed} [sec]")
+    t1 = time.monotonic()
+    buffers = []
+    for frame in frames:
+        buffers.append(libspdl.convert_frames(frame, None))
+    t2 = time.monotonic()
+    elapsed = t2 - t0
+    num_frames = sum(b.shape[0] for b in buffers)
+    print(buffers[0].shape)
+    _LG.info(
+        f"Decoded {num_frames} frames. Elapsed {elapsed} [sec]. QPS: {num_frames/elapsed}"
+    )
 
 
 def _main():
