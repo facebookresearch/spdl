@@ -47,10 +47,6 @@ CPUBuffer::CPUBuffer(
           depth_,
           (Storage*)storage_) {}
 
-bool CPUBuffer::is_cuda() const {
-  return false;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // CUDABuffer
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,10 +67,6 @@ CUDABuffer::CUDABuffer(
           elem_class_,
           depth_,
           (Storage*)storage_) {}
-
-bool CUDABuffer::is_cuda() const {
-  return true;
-}
 
 uintptr_t CUDABuffer::get_cuda_stream() const {
   return (uintptr_t)(((CUDAStorage*)(storage.get()))->stream);

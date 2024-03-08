@@ -43,10 +43,6 @@ struct Buffer {
   ///
   /// Returns the pointer to the head of the data buffer.
   void* data();
-
-  ///
-  /// True if the data is on a CUDA device.
-  virtual bool is_cuda() const = 0;
 };
 
 ///
@@ -58,9 +54,6 @@ struct CPUBuffer : Buffer {
       ElemClass elem_class,
       size_t depth,
       CPUStorage* storage);
-
-  /// Always false.
-  bool is_cuda() const override;
 };
 
 /// Contiguous array data on a CUDA device.
@@ -76,7 +69,6 @@ struct CUDABuffer : Buffer {
       size_t depth,
       CUDAStorage* storage);
 
-  bool is_cuda() const override;
   uintptr_t get_cuda_stream() const;
 #endif
 };

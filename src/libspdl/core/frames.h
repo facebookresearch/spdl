@@ -78,10 +78,6 @@ struct FFmpegAudioFrames : public FFmpegFrames {
   enum MediaType get_media_type() const override;
 
   ///
-  /// True if the data is on a CUDA device. Always false for audio.
-  bool is_cuda() const;
-
-  ///
   /// Get the sample rate
   int get_sample_rate() const;
 
