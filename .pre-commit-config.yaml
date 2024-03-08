@@ -9,6 +9,8 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
+        exclude_types:
+          - "svg"
 
   - repo: https://github.com/omnilib/ufmt
     rev: v1.3.2
