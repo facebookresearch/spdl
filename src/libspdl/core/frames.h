@@ -173,9 +173,7 @@ struct FFmpegVideoFrames : public FFmpegFrames {
 /// Class that holds media frames decoded with NVDEC decoder.
 /// The decoded media can be video or image.
 struct NvDecVideoFrames : public DecodedFrames {
-#ifndef SPDL_USE_NVDEC
-  void fail() const;
-#else
+#ifdef SPDL_USE_NVDEC
   ///
   /// Used for tracking the lifetime in tracing.
   uint64_t id{0};

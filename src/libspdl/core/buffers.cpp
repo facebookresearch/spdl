@@ -50,11 +50,7 @@ CPUBuffer::CPUBuffer(
 ////////////////////////////////////////////////////////////////////////////////
 // CUDABuffer
 ////////////////////////////////////////////////////////////////////////////////
-#ifndef SPDL_USE_CUDA
-void CUDABuffer::fail() const {
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-}
-#else
+#ifdef SPDL_USE_CUDA
 CUDABuffer::CUDABuffer(
     std::vector<size_t> shape_,
     bool channel_last_,
@@ -73,11 +69,7 @@ uintptr_t CUDABuffer::get_cuda_stream() const {
 }
 #endif
 
-#ifndef SPDL_USE_NVDEC
-void CUDABuffer2DPitch::fail() const {
-  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-}
-#else
+#ifdef SPDL_USE_NVDEC
 CUDABuffer2DPitch::CUDABuffer2DPitch(size_t max_frames_, bool is_image_)
     : max_frames(max_frames_), is_image(is_image_) {}
 
