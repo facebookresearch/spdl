@@ -86,11 +86,13 @@ struct FFmpegVideoFrames : public FFmpegFrames {
   FFmpegImageFrames slice(int index) const;
 };
 
-#ifdef SPDL_USE_NVDEC
 ////////////////////////////////////////////////////////////////////////////////
 // NVDEC - Video
 ////////////////////////////////////////////////////////////////////////////////
 struct NvDecVideoFrames : public DecodedFrames {
+#ifndef SPDL_USE_NVDEC
+  void fail() const;
+#else
   uint64_t id{0};
   MediaType media_type{0};
 
@@ -109,6 +111,6 @@ struct NvDecVideoFrames : public DecodedFrames {
   NvDecVideoFrames& operator=(NvDecVideoFrames&&) noexcept;
   // Destructor releases AVFrame* resources
   ~NvDecVideoFrames() = default;
-};
 #endif
+};
 } // namespace spdl::core

@@ -89,7 +89,6 @@ std::string get_type_string(const T& self) {
       return "image";
   }
 }
-
 } // namespace
 
 void register_frames_and_buffers(py::module& m) {
@@ -97,16 +96,12 @@ void register_frames_and_buffers(py::module& m) {
 
   auto _CPUBuffer = py::class_<CPUBuffer>(m, "CPUBuffer", py::module_local());
 
-#ifdef SPDL_USE_CUDA
   auto _CUDABuffer =
       py::class_<CUDABuffer>(m, "CUDABuffer", py::module_local());
-#endif
 
-#ifdef SPDL_USE_NVDEC
   auto _CUDABuffer2DPitch =
       py::class_<CUDABuffer2DPitch, std::shared_ptr<CUDABuffer2DPitch>>(
           m, "CUDABuffer2DPitch", py::module_local());
-#endif
 
   auto _DecodedFrames =
       py::class_<DecodedFrames>(m, "DecodedFrames", py::module_local());
@@ -120,10 +115,8 @@ void register_frames_and_buffers(py::module& m) {
   auto _FFmpegImageFrames = py::class_<FFmpegImageFrames, DecodedFrames>(
       m, "FFmpegImageFrames", py::module_local());
 
-#ifdef SPDL_USE_NVDEC
   auto _NvDecVideoFrames = py::class_<NvDecVideoFrames, DecodedFrames>(
       m, "NvDecVideoFrames", py::module_local());
-#endif
 
   _CPUBuffer
       .def_property_readonly(
@@ -138,8 +131,8 @@ void register_frames_and_buffers(py::module& m) {
         return get_array_interface(self);
       });
 
-#ifdef SPDL_USE_CUDA
   _CUDABuffer
+#ifdef SPDL_USE_CUDA
       .def_property_readonly(
           "channel_last",
           [](const CUDABuffer& self) { return self.channel_last; })
@@ -148,13 +141,20 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly(
           "shape", [](const CUDABuffer& self) { return self.shape; })
       .def_property_readonly("is_cuda", &CUDABuffer::is_cuda)
-      .def("get_cuda_array_interface", [](CUDABuffer& self) {
-        return get_cuda_array_interface(self);
-      });
+      .def(
+          "get_cuda_array_interface",
+          [](CUDABuffer& self) { return get_cuda_array_interface(self); })
+#else
+      .def_property_readonly("channel_last", &CUDABuffer::fail)
+      .def_property_readonly("ndim", &CUDABuffer::fail)
+      .def_property_readonly("shape", &CUDABuffer::fail)
+      .def_property_readonly("is_cuda", &CUDABuffer::fail)
+      .def("get_cuda_array_interface", &CUDABuffer::fail)
 #endif
+      ;
 
-#ifdef SPDL_USE_NVDEC
   _CUDABuffer2DPitch
+#ifdef SPDL_USE_NVDEC
       .def_property_readonly(
           "channel_last",
           [](const CUDABuffer2DPitch& self) { return self.channel_last; })
@@ -164,10 +164,19 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly("shape", &CUDABuffer2DPitch::get_shape)
       .def_property_readonly(
           "is_cuda", [](const CUDABuffer2DPitch& self) { return true; })
-      .def("get_cuda_array_interface", [](CUDABuffer2DPitch& self) {
-        return get_cuda_array_interface(self);
-      });
+      .def(
+          "get_cuda_array_interface",
+          [](CUDABuffer2DPitch& self) {
+            return get_cuda_array_interface(self);
+          })
+#else
+      .def_property_readonly("channel_last", &CUDABuffer2DPitch::fail)
+      .def_property_readonly("ndim", &CUDABuffer2DPitch::fail)
+      .def_property_readonly("shape", &CUDABuffer2DPitch::fail)
+      .def_property_readonly("is_cuda", &CUDABuffer2DPitch::fail)
+      .def("get_cuda_array_interface", &CUDABuffer2DPitch::fail)
 #endif
+      ;
 
   _FFmpegAudioFrames
       .def_property_readonly("media_type", &get_type_string<FFmpegAudioFrames>)
@@ -210,8 +219,8 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly("width", &FFmpegImageFrames::get_width)
       .def_property_readonly("height", &FFmpegImageFrames::get_height);
 
-#ifdef SPDL_USE_NVDEC
   _NvDecVideoFrames
+#ifdef SPDL_USE_NVDEC
       .def_property_readonly("media_type", &get_type_string<NvDecVideoFrames>)
       .def_property_readonly("is_cuda", &NvDecVideoFrames::is_cuda)
       .def_property_readonly(
@@ -232,19 +241,28 @@ void register_frames_and_buffers(py::module& m) {
           [](NvDecVideoFrames& self) {
             return get_cuda_array_interface(*self.buffer);
           })
-      .def("__len__", [](const NvDecVideoFrames& self) {
-        return self.buffer->get_shape()[0];
-      });
+      .def(
+          "__len__",
+          [](const NvDecVideoFrames& self) {
+            return self.buffer->get_shape()[0];
+          })
+#else
+      .def_property_readonly("media_type", &NvDecVideoFrames::fail)
+      .def_property_readonly("is_cuda", &NvDecVideoFrames::fail)
+      .def_property_readonly("channel_last", &NvDecVideoFrames::fail)
+      .def_property_readonly("ndim", &NvDecVideoFrames::fail)
+      .def_property_readonly("shape", &NvDecVideoFrames::fail)
+      .def("get_cuda_array_interface", &NvDecVideoFrames::fail)
+      .def("__len__", &NvDecVideoFrames::fail)
 #endif
+      ;
 
   m.def("convert_frames", &convert_audio_frames);
   m.def("convert_frames", &convert_video_frames);
   m.def("convert_frames", &convert_image_frames);
   m.def("convert_frames", &convert_batch_image_frames);
-#ifdef SPDL_USE_NVDEC
   m.def("convert_frames", &convert_nvdec_video_frames);
   m.def("convert_frames", &convert_nvdec_batch_image_frames);
-#endif
 
   m.def("convert_to_cpu_buffer", &convert_audio_frames);
   m.def("convert_to_cpu_buffer", &convert_video_frames_to_cpu_buffer);

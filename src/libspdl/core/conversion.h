@@ -43,7 +43,6 @@ std::unique_ptr<Buffer> convert_batch_image_frames(
     const std::vector<FFmpegImageFrames*>& batch_frames,
     const std::optional<int>& index = std::nullopt);
 
-#ifdef SPDL_USE_NVDEC
 std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
     const NvDecVideoFrames* frames,
     const std::optional<int>& index = std::nullopt);
@@ -51,6 +50,5 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
 std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
     const std::vector<NvDecVideoFrames*>& batch_frames,
     const std::optional<int>& index = std::nullopt);
-#endif
 
 } // namespace spdl::core
