@@ -2,6 +2,7 @@
 
 #include <libspdl/core/detail/ffmpeg/conversion.h>
 #include <libspdl/core/detail/logging.h>
+#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/types.h>
 
 #ifdef SPDL_USE_NVDEC
@@ -24,6 +25,10 @@ namespace spdl::core {
 std::unique_ptr<Buffer> convert_audio_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& i) {
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_audio_frames",
+      perfetto::Flow::ProcessScoped(frames->id));
   return detail::convert_audio_frames(frames, i);
 }
 
@@ -89,12 +94,20 @@ std::unique_ptr<Buffer> convert_video(
 std::unique_ptr<Buffer> convert_video_frames(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_video_frames",
+      perfetto::Flow::ProcessScoped(frames->id));
   return convert_video<>(frames->frames, index);
 }
 
 std::unique_ptr<Buffer> convert_video_frames_to_cpu_buffer(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index) {
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_video_frames_to_cpu_buffer",
+      perfetto::Flow::ProcessScoped(frames->id));
   return convert_video<TO_CPU>(frames->frames, index);
 }
 
@@ -115,12 +128,20 @@ std::unique_ptr<Buffer> convert_image(
 std::unique_ptr<Buffer> convert_image_frames(
     const FFmpegImageFrames* frames,
     const std::optional<int>& index) {
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_image_frames",
+      perfetto::Flow::ProcessScoped(frames->id));
   return convert_image<>(frames->frames, index);
 }
 
 std::unique_ptr<Buffer> convert_image_frames_to_cpu_buffer(
     const FFmpegImageFrames* frames,
     const std::optional<int>& index) {
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_image_frames_to_cpu_buffer",
+      perfetto::Flow::ProcessScoped(frames->id));
   return convert_image<TO_CPU>(frames->frames, index);
 }
 
@@ -147,12 +168,14 @@ std::vector<AVFrame*> merge_frames(
 std::unique_ptr<Buffer> convert_batch_image_frames(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
+  TRACE_EVENT("decoding", "core::convert_batch_image_frames");
   return convert_video<>(merge_frames(batch), index);
 }
 
 std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
+  TRACE_EVENT("decoding", "core::convert_batch_image_frames_to_cpu_buffer");
   return convert_video<TO_CPU>(merge_frames(batch), index);
 }
 
@@ -162,6 +185,10 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_nvdec_video_frames",
+      perfetto::Flow::ProcessScoped(frames->id));
   if (index.has_value()) {
     SPDL_FAIL_INTERNAL(
         "Fetching an index from NvDecVideoFrames is not supported.");
@@ -211,6 +238,7 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
+  TRACE_EVENT("decoding", "core::convert_nvdec_batch_image_frames");
   check_consistency(batch_frames);
   auto& buf0 = batch_frames[0]->buffer;
 

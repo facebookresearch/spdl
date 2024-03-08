@@ -28,11 +28,6 @@ template <size_t depth, ElemClass type, bool is_planar>
 std::unique_ptr<Buffer> convert_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& index) {
-  TRACE_EVENT(
-      "decoding",
-      "core::detail::convert_audio_frames",
-      perfetto::Flow::ProcessScoped(frames->id));
-
   size_t num_frames = frames->get_num_frames();
   size_t num_channels = frames->frames[0]->channels;
 
