@@ -1,0 +1,54 @@
+site_name: SPDL Documentation
+
+theme:
+  name: "material"
+
+plugins:
+  - search
+  - mkdoxy:
+      projects:
+        libspdl:
+          src-dirs: src/libspdl
+          full-doc: True
+          doxy-cfg:
+            FILE_PATTERNS: "*.cpp *.h"
+            RECURSIVE: YES
+            SEPARATE_MEMBER_PAGES: YES
+            EXCLUDE_SYMBOLS: std,spdl::core::detail,folly
+            PREDEFINED: SPDL_USE_CUDA SPDL_USE_NVDEC
+            SOURCE_BROWSER: YES
+            VERBATIM_HEADERS: NO
+
+nav:
+  - "LibSPDL (C++)":
+      - Links: libspdl/links.md
+      - Classes:
+          - "Class List": "libspdl/annotated.md"
+          - "Class Index": "libspdl/classes.md"
+          - "Class Hierarchy": "libspdl/hierarchy.md"
+          - "Class Members": "libspdl/class_members.md"
+          - "Class Member Functions": "libspdl/class_member_functions.md"
+          - "Class Member Variables": "libspdl/class_member_variables.md"
+          - "Class Member Typedefs": "libspdl/class_member_typedefs.md"
+          - "Class Member Enumerations": "libspdl/class_member_enums.md"
+      - Namespaces:
+          - "Namespace List": "libspdl/namespaces.md"
+          - "Namespace Members": "libspdl/namespace_members.md"
+          - "Namespace Member Functions": "libspdl/namespace_member_functions.md"
+          - "Namespace Member Variables": "libspdl/namespace_member_variables.md"
+          - "Namespace Member Typedefs": "libspdl/namespace_member_typedefs.md"
+          - "Namespace Member Enumerations": "libspdl/namespace_member_enums.md"
+      - Functions: "libspdl/functions.md"
+      - Variables: "libspdl/variables.md"
+      - Macros: "libspdl/macros.md"
+      - Files: "libspdl/files.md"
+      - Pages: "libspdl/pages.md"
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
