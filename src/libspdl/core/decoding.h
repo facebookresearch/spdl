@@ -24,6 +24,10 @@ struct decoding {
   ////////////////////////////////////////////////////////////////////////////////
   // Image
   ////////////////////////////////////////////////////////////////////////////////
+
+  ///
+  /// Decode one single image asynchronously using FFmpeg.
+  ///
   static SingleDecodingResult async_decode_image(
       const std::string& src,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -33,6 +37,9 @@ struct decoding {
       std::shared_ptr<ThreadPoolExecutor> demux_executor,
       std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
+  ///
+  /// Decode one single image asynchronously using NVDEC.
+  ///
   static SingleDecodingResult async_decode_image_nvdec(
       const std::string& src,
       const int cuda_device_index,
@@ -48,6 +55,10 @@ struct decoding {
   ////////////////////////////////////////////////////////////////////////////////
   // Batch image
   ////////////////////////////////////////////////////////////////////////////////
+
+  ///
+  /// Decode multiple images asynchronously using FFmpeg.
+  ///
   static MultipleDecodingResult async_batch_decode_image(
       const std::vector<std::string>& srcs,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -57,6 +68,9 @@ struct decoding {
       std::shared_ptr<ThreadPoolExecutor> demux_executor,
       std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
+  ///
+  /// Decode multiple images asynchronously using NVDEC.
+  ///
   static MultipleDecodingResult async_batch_decode_image_nvdec(
       const std::vector<std::string>& srcs,
       const int cuda_device_index,
@@ -72,6 +86,11 @@ struct decoding {
   ////////////////////////////////////////////////////////////////////////////////
   // Audio / Video
   ////////////////////////////////////////////////////////////////////////////////
+
+  ///
+  /// Decode multiple clips of the given video/audio asynchronously using
+  /// FFmpeg.
+  ///
   static MultipleDecodingResult async_decode(
       const enum MediaType type,
       const std::string& src,
@@ -83,6 +102,9 @@ struct decoding {
       std::shared_ptr<ThreadPoolExecutor> demux_executor,
       std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
+  ///
+  /// Decode multiple clips of the given video/audio asynchronously using NVDEC.
+  ///
   static MultipleDecodingResult async_decode_nvdec(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
@@ -100,6 +122,9 @@ struct decoding {
 ////////////////////////////////////////////////////////////////////////////////
 // Future for single decoding result
 ////////////////////////////////////////////////////////////////////////////////
+
+/// Future-like object that holds the result of single asynchronous decoding
+/// operation. Used for decoding images.
 class SingleDecodingResult {
   struct Impl;
 
@@ -115,6 +140,8 @@ class SingleDecodingResult {
   SingleDecodingResult& operator=(SingleDecodingResult&&) noexcept;
   ~SingleDecodingResult();
 
+  /// Blocks until the decoding is completed and the frame data is ready.
+  /// If the decoding operation fails, throws an exception.
   std::unique_ptr<DecodedFrames> get();
 
   friend decoding;
@@ -123,6 +150,9 @@ class SingleDecodingResult {
 ////////////////////////////////////////////////////////////////////////////////
 // Future for multiple decoding result
 ////////////////////////////////////////////////////////////////////////////////
+
+/// Future-like object that holds the results of multiple asynchronous decoding
+/// operation. Used for decoding audio and video clips.
 class MultipleDecodingResult {
   struct Impl;
 
@@ -138,6 +168,15 @@ class MultipleDecodingResult {
   MultipleDecodingResult& operator=(MultipleDecodingResult&&) noexcept;
   ~MultipleDecodingResult();
 
+  /// Blocks until all the decoding operations are completed and the frame
+  /// data are ready.
+  ///
+  /// If a decoding operation fails, and ``strict==true``, then throws one of
+  /// the exception thrown from the failed operation.
+  ///
+  /// If ``strict==false``, then exceptions are not propagated. However, if
+  /// there is no decoding result to return, (all the decoding operations fail)
+  /// it throws an exception.
   std::vector<std::unique_ptr<DecodedFrames>> get(bool strict = true);
 
   friend decoding;
