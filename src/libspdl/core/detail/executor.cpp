@@ -104,7 +104,6 @@ folly::Executor::KeepAlive<> get_demux_executor(
 
 folly::Executor::KeepAlive<> get_decode_executor(
     std::shared_ptr<ThreadPoolExecutor>& exe) {
-  XLOG(INFO) << "get_decode_executor: exe=" << exe.get();
   return exe ? exe->impl->get() : get_default_decode_executor();
 }
 
