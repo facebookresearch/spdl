@@ -156,19 +156,22 @@ std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
   return convert_video<TO_CPU>(merge_frames(batch), index);
 }
 
-#ifdef SPDL_USE_NVDEC
 std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
     const NvDecVideoFrames* frames,
     const std::optional<int>& index) {
+#ifndef SPDL_USE_NVDEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
   if (index.has_value()) {
     SPDL_FAIL_INTERNAL(
         "Fetching an index from NvDecVideoFrames is not supported.");
   }
   return frames->buffer;
+#endif
 }
 
+#ifdef SPDL_USE_NVDEC
 namespace {
-
 bool same_shape(const std::vector<size_t>& a, const std::vector<size_t>& b) {
   if (a.size() != b.size()) {
     return false;
@@ -199,12 +202,15 @@ void check_consistency(const std::vector<NvDecVideoFrames*>& frames) {
     }
   }
 }
-
 } // namespace
+#endif
 
 std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
     const std::vector<NvDecVideoFrames*>& batch_frames,
     const std::optional<int>& index) {
+#ifndef SPDL_USE_NVDEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
   check_consistency(batch_frames);
   auto& buf0 = batch_frames[0]->buffer;
 
@@ -231,6 +237,6 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
       cudaStreamSynchronize(stream),
       "Failed to synchronize the stream after copying the data.");
   return ret;
-}
 #endif
+}
 } // namespace spdl::core

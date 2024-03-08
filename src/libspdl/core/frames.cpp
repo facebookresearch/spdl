@@ -199,10 +199,14 @@ int FFmpegImageFrames::get_height() const {
   return frames.size() ? frames[0]->height : -1;
 }
 
-#ifdef SPDL_USE_NVDEC
 ////////////////////////////////////////////////////////////////////////////////
 // NvDec - Video
 ////////////////////////////////////////////////////////////////////////////////
+#ifndef SPDL_USE_NVDEC
+void NvDecVideoFrames::fail() const {
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+}
+#else
 NvDecVideoFrames::NvDecVideoFrames(uint64_t id_, MediaType type_, int format_)
     : id(id_), media_type(type_), media_format(format_) {}
 

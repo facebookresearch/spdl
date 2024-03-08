@@ -42,8 +42,10 @@ struct CPUBuffer : Buffer {
   bool is_cuda() const override;
 };
 
-#ifdef SPDL_USE_CUDA
 struct CUDABuffer : Buffer {
+#ifndef SPDL_USE_CUDA
+  void fail() const;
+#else
   CUDABuffer(
       std::vector<size_t> shape,
       bool channel_last,
@@ -53,11 +55,13 @@ struct CUDABuffer : Buffer {
 
   bool is_cuda() const override;
   uintptr_t get_cuda_stream() const;
-};
 #endif
+};
 
-#ifdef SPDL_USE_NVDEC
 struct CUDABuffer2DPitch {
+#ifndef SPDL_USE_NVDEC
+  void fail() const;
+#else
   // information to track the stateo f memory
   size_t max_frames;
   bool is_image = false;
@@ -80,8 +84,8 @@ struct CUDABuffer2DPitch {
   void allocate(size_t c, size_t h, size_t w, size_t bpp, bool channel_last);
   std::vector<size_t> get_shape() const;
   uint8_t* get_next_frame();
-};
 #endif
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // Factory functions
