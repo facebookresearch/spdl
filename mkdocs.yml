@@ -5,6 +5,7 @@ theme:
 
 plugins:
   - search
+  - inline-svg
   - mkdoxy:
       projects:
         libspdl:
@@ -44,6 +45,9 @@ nav:
       - Files: "libspdl/files.md"
       - Pages: "libspdl/pages.md"
   - "Development Note":
+      - "Design Principles":
+          - "Understanding I/O Bottleneck": "dev_notes/bottleneck.md"
+          - "Design Principles of LibSPDL": "dev_notes/spdl_design.md"
       - "dev_notes/structure_of_packets_and_frames.md"
       - "dev_notes/async.md"
 
