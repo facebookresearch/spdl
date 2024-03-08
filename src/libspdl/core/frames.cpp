@@ -56,10 +56,6 @@ enum MediaType FFmpegAudioFrames::get_media_type() const {
   return MediaType::Audio;
 }
 
-bool FFmpegAudioFrames::is_cuda() const {
-  return false;
-}
-
 int FFmpegAudioFrames::get_sample_rate() const {
   return frames.size() ? frames[0]->sample_rate : -1;
 }

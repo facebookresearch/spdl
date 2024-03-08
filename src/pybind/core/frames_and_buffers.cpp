@@ -126,7 +126,7 @@ void register_frames_and_buffers(py::module& m) {
           "ndim", [](const CPUBuffer& self) { return self.shape.size(); })
       .def_property_readonly(
           "shape", [](const CPUBuffer& self) { return self.shape; })
-      .def_property_readonly("is_cuda", &CPUBuffer::is_cuda)
+      .def_property_readonly("is_cuda", [](const CPUBuffer&) { return false; })
       .def("get_array_interface", [](CPUBuffer& self) {
         return get_array_interface(self);
       });
@@ -140,7 +140,7 @@ void register_frames_and_buffers(py::module& m) {
           "ndim", [](const CUDABuffer& self) { return self.shape.size(); })
       .def_property_readonly(
           "shape", [](const CUDABuffer& self) { return self.shape; })
-      .def_property_readonly("is_cuda", &CUDABuffer::is_cuda)
+      .def_property_readonly("is_cuda", [](const CUDABuffer&) { return true; })
       .def(
           "get_cuda_array_interface",
           [](CUDABuffer& self) { return get_cuda_array_interface(self); })
@@ -180,7 +180,8 @@ void register_frames_and_buffers(py::module& m) {
 
   _FFmpegAudioFrames
       .def_property_readonly("media_type", &get_type_string<FFmpegAudioFrames>)
-      .def_property_readonly("is_cuda", &FFmpegAudioFrames::is_cuda)
+      .def_property_readonly(
+          "is_cuda", [](const FFmpegAudioFrames&) { return false; })
       .def_property_readonly("num_frames", &FFmpegAudioFrames::get_num_frames)
       .def_property_readonly("sample_rate", &FFmpegAudioFrames::get_sample_rate)
       .def_property_readonly(
