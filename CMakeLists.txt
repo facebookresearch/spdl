@@ -3,7 +3,12 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 project(spdl)
 
 option(SPDL_USE_CUDA "Enable CUDA support" OFF)
+option(SPDL_USE_NVDEC "Enable NVDEC support" OFF)
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
+
+if (SPDL_USE_NVDEC)
+  set(SPDL_USE_CUDA ON)
+endif()
 
 if (SPDL_USE_CUDA)
   enable_language(CUDA)
