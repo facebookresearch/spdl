@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVDEC)
+#ifdef SPDL_USE_CUDA
 #include <cuda.h>
 #endif
 
@@ -31,8 +31,8 @@ struct CPUStorage : Storage {
   ~CPUStorage();
 };
 
-#ifdef SPDL_USE_CUDA
 struct CUDAStorage : Storage {
+#ifdef SPDL_USE_CUDA
   void* data_ = nullptr;
   CUstream stream = 0;
 
@@ -48,7 +48,7 @@ struct CUDAStorage : Storage {
   CUDAStorage& operator=(CUDAStorage&&) noexcept;
 
   ~CUDAStorage();
-};
 #endif
+};
 
 } // namespace spdl::core
