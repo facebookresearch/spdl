@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/buffers.h>
+#include <libspdl/core/buffer.h>
 
 #include <cuviddec.h>
 

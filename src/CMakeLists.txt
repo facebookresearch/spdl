@@ -22,7 +22,7 @@ set(srcs
   libspdl/core/detail/ffmpeg/wrappers.cpp
   libspdl/core/detail/ffmpeg/package.cpp
   libspdl/core/detail/logging.cpp
-  libspdl/core/buffers.cpp
+  libspdl/core/buffer/cpu.cpp
   libspdl/core/conversion.cpp
   libspdl/core/decoding/audio_visual.cpp
   libspdl/core/decoding/results.cpp
@@ -41,6 +41,18 @@ if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
   list(APPEND deps CUDA::cudart CUDA::cuda_driver)
   list(APPEND srcs libspdl/core/detail/cuda.cpp)
+  list(APPEND srcs libspdl/core/buffer/cuda.cpp)
+endif()
+
+if (SPDL_USE_NVDEC)
+  list(APPEND defs SPDL_USE_NVDEC)
+  list(APPEND srcs
+    libspdl/core/detail/nvdec/converter.cpp
+    libspdl/core/detail/nvdec/decoder.cpp
+    libspdl/core/detail/nvdec/decoding.cpp
+    libspdl/core/detail/nvdec/utils.cpp
+    libspdl/core/detail/nvdec/wrapper.cpp
+    )
 endif()
 
 if(SPDL_ENABLE_TRACING)
