@@ -29,7 +29,8 @@ std::unique_ptr<Buffer> convert_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& index) {
   size_t num_frames = frames->get_num_frames();
-  size_t num_channels = frames->frames[0]->channels;
+  const auto& fs = frames->get_frames();
+  size_t num_channels = fs[0]->channels;
 
   if (index) {
     auto c = index.value();
@@ -46,7 +47,7 @@ std::unique_ptr<Buffer> convert_frames(
       if (index && index.value() != i) {
         continue;
       }
-      for (auto frame : frames->frames) {
+      for (auto frame : fs) {
         int plane_size = depth * frame->nb_samples;
         memcpy(dst, frame->extended_data[i], plane_size);
         dst += plane_size;
@@ -59,7 +60,7 @@ std::unique_ptr<Buffer> convert_frames(
     }
     auto buf = cpu_buffer({num_frames, num_channels}, !is_planar, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
-    for (auto frame : frames->frames) {
+    for (auto frame : fs) {
       int plane_size = depth * frame->nb_samples * num_channels;
       memcpy(dst, frame->extended_data[0], plane_size);
       dst += plane_size;
@@ -71,7 +72,7 @@ std::unique_ptr<Buffer> convert_frames(
 std::unique_ptr<Buffer> convert_audio_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& i) {
-  const auto& fs = frames->frames;
+  const auto& fs = frames->get_frames();
   if (!fs.size()) {
     SPDL_FAIL("No audio frame to convert to buffer.");
   }

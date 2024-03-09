@@ -212,7 +212,7 @@ void register_frames_and_buffers(py::module& m) {
           [](const FFmpegVideoFrames& self, const py::slice& slice) {
             py::ssize_t start = 0, stop = 0, step = 0, len = 0;
             if (!slice.compute(
-                    self.frames.size(), &start, &stop, &step, &len)) {
+                    self.get_num_frames(), &start, &stop, &step, &len)) {
               throw py::error_already_set();
             }
             return self.slice(
