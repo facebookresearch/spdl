@@ -17,15 +17,13 @@ def test_video_buffer_conversion_refcount(yuv420p):
     """NumPy array created from Buffer should increment a reference to the buffer
     so that array keeps working after the original Buffer variable is deleted.
     """
-    from spdl._convert import _to_cpu_buffer
-
     decoded_frames = libspdl.decode_video(
         src=yuv420p.path,
         timestamps=[(0.0, 0.5)],
         pix_fmt="rgb24",
     ).get()[0]
 
-    buf = _to_cpu_buffer(decoded_frames, None)
+    buf = libspdl.convert_to_cpu_buffer(decoded_frames, None)
     assert hasattr(buf, "__array_interface__")
     print(f"{buf.__array_interface__=}")
 

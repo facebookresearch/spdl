@@ -25,7 +25,7 @@ __all__ = [  # noqa: F822
     "batch_decode_image",
     "batch_decode_image_nvdec",
     "clear_ffmpeg_cuda_context_cache",
-    "convert_frames",
+    "convert_to_buffer",
     "convert_to_cpu_buffer",
     "create_cuda_context",
     "decode_audio",
