@@ -127,7 +127,7 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly(
           "shape", [](const CPUBuffer& self) { return self.shape; })
       .def_property_readonly("is_cuda", [](const CPUBuffer&) { return false; })
-      .def("get_array_interface", [](CPUBuffer& self) {
+      .def_property_readonly("__array_interface__", [](CPUBuffer& self) {
         return get_array_interface(self);
       });
 
@@ -154,8 +154,8 @@ void register_frames_and_buffers(py::module& m) {
             return self.shape;
           }))
       .def_property_readonly("is_cuda", [](const CUDABuffer&) { return true; })
-      .def(
-          "get_cuda_array_interface",
+      .def_property_readonly(
+          "__cuda_array_interface__",
           IF_CUDABUFFER_ENABLED(
               [](CUDABuffer& self) { return get_cuda_array_interface(self); }));
 
@@ -183,8 +183,8 @@ void register_frames_and_buffers(py::module& m) {
           "is_cuda", IF_CUDABUFFER2_ENABLED([](const CUDABuffer2DPitch& self) {
             return true;
           }))
-      .def(
-          "get_cuda_array_interface",
+      .def_property_readonly(
+          "__cuda_array_interface__",
           IF_CUDABUFFER2_ENABLED([](CUDABuffer2DPitch& self) {
             return get_cuda_array_interface(self);
           }));
@@ -262,8 +262,8 @@ void register_frames_and_buffers(py::module& m) {
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
             return self.buffer->get_shape();
           }))
-      .def(
-          "get_cuda_array_interface",
+      .def_property_readonly(
+          "__cuda_array_interface__",
           IF_NVDECVIDEOFRAMES_ENABLED([](NvDecVideoFrames& self) {
             return get_cuda_array_interface(*self.buffer);
           }))
@@ -273,12 +273,12 @@ void register_frames_and_buffers(py::module& m) {
             return self.buffer->get_shape()[0];
           }));
 
-  m.def("convert_frames", &convert_audio_frames);
-  m.def("convert_frames", &convert_video_frames);
-  m.def("convert_frames", &convert_image_frames);
-  m.def("convert_frames", &convert_batch_image_frames);
-  m.def("convert_frames", &convert_nvdec_video_frames);
-  m.def("convert_frames", &convert_nvdec_batch_image_frames);
+  m.def("convert_to_buffer", &convert_audio_frames);
+  m.def("convert_to_buffer", &convert_video_frames);
+  m.def("convert_to_buffer", &convert_image_frames);
+  m.def("convert_to_buffer", &convert_batch_image_frames);
+  m.def("convert_to_buffer", &convert_nvdec_video_frames);
+  m.def("convert_to_buffer", &convert_nvdec_batch_image_frames);
 
   m.def("convert_to_cpu_buffer", &convert_audio_frames);
   m.def("convert_to_cpu_buffer", &convert_video_frames_to_cpu_buffer);

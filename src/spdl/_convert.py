@@ -20,24 +20,6 @@ __all__ = [
 ]
 
 
-class _BufferWrapper:
-    def __init__(self, buffer):
-        self._buffer = buffer
-
-    def __getattr__(self, name):
-        if name == "__array_interface__":
-            if not self._buffer.is_cuda:
-                return self._buffer.get_array_interface()
-        if name == "__cuda_array_interface__":
-            if self._buffer.is_cuda:
-                return self._buffer.get_cuda_array_interface()
-        return getattr(self._buffer, name)
-
-
-def _to_cpu_buffer(frames, index=None):
-    return _BufferWrapper(libspdl.convert_to_cpu_buffer(frames, index))
-
-
 def to_numpy(frames, index: Optional[int] = None) -> NDArray:
     """Convert to NumPy NDArray.
 
@@ -48,7 +30,7 @@ def to_numpy(frames, index: Optional[int] = None) -> NDArray:
             For formats like YUV420, in which chroma planes have different sizes
             than luma plane, this argument can be used to select a specific plane.
     """
-    return np.array(_to_cpu_buffer(frames, index), copy=False)
+    return np.array(libspdl.convert_to_cpu_buffer(frames, index), copy=False)
 
 
 def to_torch(frames, index: Optional[int] = None):
@@ -61,7 +43,7 @@ def to_torch(frames, index: Optional[int] = None):
             For formats like YUV420, in which chroma planes have different sizes
             than luma plane, this argument can be used to select a specific plane.
     """
-    buffer = _BufferWrapper(libspdl.convert_frames(frames, index))
+    buffer = libspdl.convert_to_buffer(frames, index)
 
     if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
@@ -87,7 +69,7 @@ def to_numba(frames, index: Optional[int] = None):
             For formats like YUV420, in which chroma planes have different sizes
             than luma plane, this argument can be used to select a specific plane.
     """
-    buffer = _BufferWrapper(libspdl.convert_frames(frames, index))
+    buffer = libspdl.convert_to_buffer(frames, index)
 
     if buffer.is_cuda:
         return cuda.as_cuda_array(buffer)
