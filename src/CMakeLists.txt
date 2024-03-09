@@ -33,15 +33,18 @@ set(srcs
   libspdl/core/adoptor/basic.cpp
   libspdl/core/adoptor/bytes.cpp
   libspdl/core/adoptor/mmap.cpp
-  libspdl/core/storage.cpp
+  libspdl/core/storage/cpu.cpp
   libspdl/core/utils.cpp
   )
 
 if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
   list(APPEND deps CUDA::cudart CUDA::cuda_driver)
-  list(APPEND srcs libspdl/core/detail/cuda.cpp)
-  list(APPEND srcs libspdl/core/buffer/cuda.cpp)
+  list(APPEND srcs
+    libspdl/core/detail/cuda.cpp
+    libspdl/core/buffer/cuda.cpp
+    libspdl/core/storage/cpu.cpp
+    )
 endif()
 
 if (SPDL_USE_NVDEC)
