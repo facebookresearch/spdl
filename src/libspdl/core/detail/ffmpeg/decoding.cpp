@@ -363,7 +363,7 @@ folly::coro::Task<void> decode_pkts(
         if (start <= ts && ts <= end) {
           XLOG(DBG9) << fmt::format(
               "{:21s} {:.3f} ({})", " --- raw frame:", ts, f->pts);
-          frames->frames.push_back(f.release());
+          frames->push_back(f.release());
         }
       }
     }
@@ -420,7 +420,7 @@ folly::coro::Task<void> decode_pkts_with_filter(
             XLOG(DBG9) << fmt::format(
                 "{:21s} {:.3f} ({})", " ---- filtered frame:", ts, f->pts);
 
-            frames->frames.push_back(f.release());
+            frames->push_back(f.release());
           }
         }
       }

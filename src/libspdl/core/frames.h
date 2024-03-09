@@ -30,7 +30,8 @@ struct DecodedFrames {
 
 ///
 /// Base class that holds media frames decoded with FFmpeg.
-struct FFmpegFrames : public DecodedFrames {
+class FFmpegFrames : public DecodedFrames {
+ protected:
   ///
   /// Used for tracking the lifetime in tracing.
   uint64_t id{0};
@@ -47,6 +48,7 @@ struct FFmpegFrames : public DecodedFrames {
   /// pointers
   std::vector<AVFrame*> frames{};
 
+ public:
   FFmpegFrames(uint64_t id);
   ///
   /// No copy constructor
@@ -63,6 +65,22 @@ struct FFmpegFrames : public DecodedFrames {
   ///
   /// Destructor releases ``AVFrame`` resources
   ~FFmpegFrames();
+
+  ///
+  /// Get the ID used for tracing.
+  uint64_t get_id() const;
+
+  ///
+  /// Get the number of frames.
+  virtual int get_num_frames() const;
+
+  ///
+  /// Push a new frame into the container.
+  virtual void push_back(AVFrame* frame);
+
+  ///
+  /// Get the list of frames.
+  const std::vector<AVFrame*>& get_frames() const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +101,7 @@ struct FFmpegAudioFrames : public FFmpegFrames {
 
   ///
   /// Get the number of total frames.
-  int get_num_frames() const;
+  int get_num_frames() const override;
 
   ///
   /// Get the number of audio channels.
@@ -120,6 +138,10 @@ struct FFmpegImageFrames : public FFmpegFrames {
   ///
   /// Get the height of the image.
   int get_height() const;
+
+  ///
+  /// Push a new frame into the container.
+  void push_back(AVFrame* frame) override;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -137,10 +159,6 @@ struct FFmpegVideoFrames : public FFmpegFrames {
   ///
   /// True if the underlying image frame is on CUDA device.
   bool is_cuda() const;
-
-  ///
-  /// Get the number of frames.
-  int get_num_frames() const;
 
   /// Get the number of planes in the image.
   ///

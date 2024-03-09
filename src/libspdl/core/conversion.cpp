@@ -28,7 +28,7 @@ std::unique_ptr<Buffer> convert_audio_frames(
   TRACE_EVENT(
       "decoding",
       "core::convert_audio_frames",
-      perfetto::Flow::ProcessScoped(frames->id));
+      perfetto::Flow::ProcessScoped(frames->get_id()));
   return detail::convert_audio_frames(frames, i);
 }
 
@@ -97,8 +97,8 @@ std::unique_ptr<Buffer> convert_video_frames(
   TRACE_EVENT(
       "decoding",
       "core::convert_video_frames",
-      perfetto::Flow::ProcessScoped(frames->id));
-  return convert_video<>(frames->frames, index);
+      perfetto::Flow::ProcessScoped(frames->get_id()));
+  return convert_video<>(frames->get_frames(), index);
 }
 
 std::unique_ptr<Buffer> convert_video_frames_to_cpu_buffer(
@@ -107,8 +107,8 @@ std::unique_ptr<Buffer> convert_video_frames_to_cpu_buffer(
   TRACE_EVENT(
       "decoding",
       "core::convert_video_frames_to_cpu_buffer",
-      perfetto::Flow::ProcessScoped(frames->id));
-  return convert_video<TO_CPU>(frames->frames, index);
+      perfetto::Flow::ProcessScoped(frames->get_id()));
+  return convert_video<TO_CPU>(frames->get_frames(), index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -131,8 +131,8 @@ std::unique_ptr<Buffer> convert_image_frames(
   TRACE_EVENT(
       "decoding",
       "core::convert_image_frames",
-      perfetto::Flow::ProcessScoped(frames->id));
-  return convert_image<>(frames->frames, index);
+      perfetto::Flow::ProcessScoped(frames->get_id()));
+  return convert_image<>(frames->get_frames(), index);
 }
 
 std::unique_ptr<Buffer> convert_image_frames_to_cpu_buffer(
@@ -141,8 +141,8 @@ std::unique_ptr<Buffer> convert_image_frames_to_cpu_buffer(
   TRACE_EVENT(
       "decoding",
       "core::convert_image_frames_to_cpu_buffer",
-      perfetto::Flow::ProcessScoped(frames->id));
-  return convert_image<TO_CPU>(frames->frames, index);
+      perfetto::Flow::ProcessScoped(frames->get_id()));
+  return convert_image<TO_CPU>(frames->get_frames(), index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -154,11 +154,11 @@ std::vector<AVFrame*> merge_frames(
   std::vector<AVFrame*> ret;
   ret.reserve(batch.size());
   for (auto& frame : batch) {
-    if (frame->frames.size() != 1) {
+    if (frame->get_num_frames() != 1) {
       SPDL_FAIL_INTERNAL(
           "Unexpected number of frames are found in one of the image frames.");
     }
-    ret.push_back(frame->frames[0]);
+    ret.push_back(frame->get_frames()[0]);
   }
   return ret;
 }

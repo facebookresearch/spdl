@@ -45,6 +45,22 @@ FFmpegFrames::~FFmpegFrames() {
   });
 }
 
+uint64_t FFmpegFrames::get_id() const {
+  return id;
+}
+
+void FFmpegFrames::push_back(AVFrame* frame) {
+  frames.push_back(frame);
+}
+
+int FFmpegFrames::get_num_frames() const {
+  return frames.size();
+}
+
+const std::vector<AVFrame*>& FFmpegFrames::get_frames() const {
+  return frames;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Audio
 ////////////////////////////////////////////////////////////////////////////////
@@ -80,10 +96,6 @@ bool FFmpegVideoFrames::is_cuda() const {
     return false;
   }
   return static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
-}
-
-int FFmpegVideoFrames::get_num_frames() const {
-  return frames.size();
 }
 
 int FFmpegVideoFrames::get_num_planes() const {
@@ -162,7 +174,7 @@ FFmpegImageFrames FFmpegVideoFrames::slice(int i) const {
   }
   auto out = FFmpegImageFrames{id};
   assert(0 <= i && i < numel);
-  out.frames.push_back(detail::make_reference(frames[i]));
+  out.push_back(detail::make_reference(frames[i]));
   return out;
 }
 
@@ -189,6 +201,14 @@ int FFmpegImageFrames::get_width() const {
 
 int FFmpegImageFrames::get_height() const {
   return frames.size() ? frames[0]->height : -1;
+}
+
+void FFmpegImageFrames::push_back(AVFrame* frame) {
+  if (frames.size() > 0) {
+    SPDL_FAIL_INTERNAL(
+        "Attempted to store multiple frames to FFmpegImageFrames");
+  }
+  FFmpegFrames::push_back(frame);
 }
 
 } // namespace spdl::core
