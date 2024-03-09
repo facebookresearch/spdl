@@ -1,4 +1,4 @@
-#include <libspdl/core/buffers.h>
+#include <libspdl/core/buffer.h>
 #include <libspdl/core/conversion.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/types.h>
