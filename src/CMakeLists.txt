@@ -29,7 +29,7 @@ set(srcs
   libspdl/core/decoding/image.cpp
   libspdl/core/decoding/nvdec.cpp
   libspdl/core/executor.cpp
-  libspdl/core/frames.cpp
+  libspdl/core/frames/ffmpeg.cpp
   libspdl/core/adoptor/basic.cpp
   libspdl/core/adoptor/bytes.cpp
   libspdl/core/adoptor/mmap.cpp
@@ -47,6 +47,8 @@ endif()
 if (SPDL_USE_NVDEC)
   list(APPEND defs SPDL_USE_NVDEC)
   list(APPEND srcs
+    libspdl/core/buffer/nvdec.cpp
+    libspdl/core/frames/nvdec.cpp
     libspdl/core/detail/nvdec/converter.cpp
     libspdl/core/detail/nvdec/decoder.cpp
     libspdl/core/detail/nvdec/decoding.cpp

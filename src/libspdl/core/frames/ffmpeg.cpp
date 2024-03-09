@@ -5,10 +5,6 @@
 #include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/types.h>
 
-#ifdef SPDL_USE_NVDEC
-#include <libspdl/core/detail/cuda.h>
-#endif
-
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/pixdesc.h>
@@ -194,21 +190,5 @@ int FFmpegImageFrames::get_width() const {
 int FFmpegImageFrames::get_height() const {
   return frames.size() ? frames[0]->height : -1;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// NvDec - Video
-////////////////////////////////////////////////////////////////////////////////
-#ifdef SPDL_USE_NVDEC
-NvDecVideoFrames::NvDecVideoFrames(uint64_t id_, MediaType type_, int format_)
-    : id(id_), media_type(type_), media_format(format_) {}
-
-bool NvDecVideoFrames::is_cuda() const {
-  return true;
-}
-
-enum MediaType NvDecVideoFrames::get_media_type() const {
-  return media_type;
-}
-#endif
 
 } // namespace spdl::core
