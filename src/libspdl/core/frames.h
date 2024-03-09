@@ -192,10 +192,6 @@ struct NvDecVideoFrames : public DecodedFrames {
   std::shared_ptr<CUDABuffer2DPitch> buffer;
 
   ///
-  /// True if data is on a CUDA device. Always true for NVDEC.
-  bool is_cuda() const;
-
-  ///
   /// Video or Image
   enum MediaType get_media_type() const override;
 
