@@ -13,6 +13,10 @@
 #include <cuda.h>
 #include <cuviddec.h>
 
+extern "C" {
+#include <libavutil/pixdesc.h>
+}
+
 namespace spdl::core::detail {
 namespace {
 CUstream get_stream() {
@@ -47,7 +51,9 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
 
   AVCodecParameters* codecpar = packets->codecpar;
   auto frames = std::make_unique<NvDecVideoFrames>(
-      packets->id, MediaType::Video, codecpar->format);
+      packets->id,
+      MediaType::Video,
+      pix_fmt ? av_get_pix_fmt(pix_fmt.value().c_str()) : codecpar->format);
   frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets, is_image);
 
   if (decoding_ongoing) {
