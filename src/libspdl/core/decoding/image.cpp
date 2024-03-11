@@ -1,9 +1,9 @@
 #include <libspdl/core/decoding.h>
 
-#include <libspdl/core/decoding/results.h>
 #include <libspdl/core/detail/executor.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
 #include <libspdl/core/detail/logging.h>
+#include <libspdl/core/detail/result.h>
 
 #include <folly/experimental/coro/Task.h>
 #include <folly/futures/Future.h>
@@ -15,7 +15,7 @@ using folly::SemiFuture;
 using folly::coro::Task;
 
 namespace {
-Task<Output> image_decode_task(
+Task<std::unique_ptr<DecodedFrames>> image_decode_task(
     const std::string src,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
@@ -29,7 +29,8 @@ Task<Output> image_decode_task(
       .scheduleOn(detail::get_decode_executor(decode_executor));
 }
 
-Task<std::vector<SemiFuture<Output>>> batch_image_decode_task(
+Task<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>
+batch_image_decode_task(
     const std::vector<std::string> srcs,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
@@ -37,7 +38,7 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task(
     const std::string filter_desc,
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<Output>> futures;
+  std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task(
@@ -49,7 +50,7 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task(
 }
 } // namespace
 
-SingleDecodingResult decoding::async_decode_image(
+DecodeImageResult decoding::async_decode_image(
     const std::string& src,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
@@ -59,13 +60,13 @@ SingleDecodingResult decoding::async_decode_image(
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
   auto task = image_decode_task(
       src, adoptor, io_cfg, decode_cfg, filter_desc, decode_executor);
-  return SingleDecodingResult{new SingleDecodingResult::Impl{
+  return DecodeImageResult{new DecodeImageResult::Impl{
       std::move(task)
           .scheduleOn(detail::get_demux_executor(demux_executor))
           .start()}};
 }
 
-MultipleDecodingResult decoding::async_batch_decode_image(
+BatchDecodeImageResult decoding::async_batch_decode_image(
     const std::vector<std::string>& srcs,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
@@ -76,8 +77,7 @@ MultipleDecodingResult decoding::async_batch_decode_image(
   if (srcs.size() == 0) {
     SPDL_FAIL("At least one image source must be provided.");
   }
-  return MultipleDecodingResult{new MultipleDecodingResult::Impl{
-      MediaType::Image,
+  return BatchDecodeImageResult{new BatchDecodeImageResult::Impl{
       srcs,
       {},
       batch_image_decode_task(

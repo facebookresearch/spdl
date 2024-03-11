@@ -1,7 +1,8 @@
-#include <libspdl/core/decoding.h>
+#include <libspdl/core/frames.h>
+#include <libspdl/core/result.h>
 
-#include <libspdl/core/decoding/results.h>
 #include <libspdl/core/detail/logging.h>
+#include <libspdl/core/detail/result.h>
 
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/Collect.h>
@@ -16,15 +17,15 @@ using folly::coro::blockingWait;
 using folly::coro::collectAllTryRange;
 using folly::coro::Task;
 
-using Output = std::unique_ptr<DecodedFrames>;
-
 ////////////////////////////////////////////////////////////////////////////////
-// SingleDecodingResult::Impl
+// Result::Impl
 ////////////////////////////////////////////////////////////////////////////////
-SingleDecodingResult::Impl::Impl(SemiFuture<Output>&& f)
+template <typename ResultType, MediaType media_type>
+Result<ResultType, media_type>::Impl::Impl(SemiFuture<ResultType>&& f)
     : future(std::move(f)){};
 
-Output SingleDecodingResult::Impl::get() {
+template <typename ResultType, MediaType media_type>
+ResultType Result<ResultType, media_type>::Impl::get() {
   if (fetched) {
     SPDL_FAIL("The decoding result is already fetched.");
   }
@@ -33,42 +34,47 @@ Output SingleDecodingResult::Impl::get() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// SingleDecodingResult
+// Result
 ////////////////////////////////////////////////////////////////////////////////
-SingleDecodingResult::SingleDecodingResult(Impl* i) : pimpl(i) {}
+template <typename ResultType, MediaType media_type>
+Result<ResultType, media_type>::Result(Impl* i) : pimpl(i) {}
 
-SingleDecodingResult::SingleDecodingResult(
-    SingleDecodingResult&& other) noexcept {
+template <typename ResultType, MediaType media_type>
+Result<ResultType, media_type>::Result(Result&& other) noexcept {
   *this = std::move(other);
 }
 
-SingleDecodingResult& SingleDecodingResult::operator=(
-    SingleDecodingResult&& other) noexcept {
+template <typename ResultType, MediaType media_type>
+Result<ResultType, media_type>& Result<ResultType, media_type>::operator=(
+    Result&& other) noexcept {
   using std::swap;
   swap(pimpl, other.pimpl);
   return *this;
 }
 
-SingleDecodingResult::~SingleDecodingResult() {
+template <typename ResultType, MediaType media_type>
+Result<ResultType, media_type>::~Result() {
   delete pimpl;
 }
 
-Output SingleDecodingResult::get() {
+template <typename ResultType, MediaType media_type>
+ResultType Result<ResultType, media_type>::get() {
   return pimpl->get();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// MultipleDecodingResult::Impl
+// Results::Impl
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-Task<std::vector<Output>> check(
-    SemiFuture<std::vector<SemiFuture<Output>>>&& future,
+Task<std::vector<std::unique_ptr<DecodedFrames>>> check(
+    SemiFuture<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>&&
+        future,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     bool strict) {
   auto futures = co_await std::move(future);
 
-  std::vector<Output> results;
+  std::vector<std::unique_ptr<DecodedFrames>> results;
   int i = -1;
   folly::exception_wrapper e;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
@@ -91,13 +97,14 @@ Task<std::vector<Output>> check(
   co_return results;
 }
 
-Task<std::vector<Output>> check_image(
-    SemiFuture<std::vector<SemiFuture<Output>>>&& future,
+Task<std::vector<std::unique_ptr<DecodedFrames>>> check_image(
+    SemiFuture<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>&&
+        future,
     const std::vector<std::string>& srcs,
     bool strict) {
   auto futures = co_await std::move(future);
 
-  std::vector<Output> results;
+  std::vector<std::unique_ptr<DecodedFrames>> results;
   int i = -1;
   folly::exception_wrapper e;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
@@ -118,50 +125,63 @@ Task<std::vector<Output>> check_image(
 
 } // namespace
 
-MultipleDecodingResult::Impl::Impl(
-    const enum MediaType type_,
+template <typename ResultType, MediaType media_type>
+Results<ResultType, media_type>::Impl::Impl(
     std::vector<std::string> srcs_,
     std::vector<std::tuple<double, double>> ts_,
-    SemiFuture<std::vector<SemiFuture<Output>>>&& future_)
-    : type(type_),
-      srcs(std::move(srcs_)),
+    SemiFuture<std::vector<SemiFuture<ResultType>>>&& future_)
+    : srcs(std::move(srcs_)),
       timestamps(std::move(ts_)),
       future(std::move(future_)){};
 
-std::vector<Output> MultipleDecodingResult::Impl::get(bool strict) {
+template <typename ResultType, MediaType media_type>
+std::vector<ResultType> Results<ResultType, media_type>::Impl::get(
+    bool strict) {
   if (fetched) {
     SPDL_FAIL("The decoding result is already fetched.");
   }
   fetched = true;
-  if (type == MediaType::Image) {
+  if constexpr (media_type == MediaType::Image) {
     return blockingWait(check_image(std::move(future), srcs, strict));
+  } else {
+    return blockingWait(check(std::move(future), srcs[0], timestamps, strict));
   }
-  return blockingWait(check(std::move(future), srcs[0], timestamps, strict));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// MultipleDecodingResult
+// Results
 ////////////////////////////////////////////////////////////////////////////////
-MultipleDecodingResult::MultipleDecodingResult(Impl* i) : pimpl(i) {}
+template <typename ResultType, MediaType media_type>
+Results<ResultType, media_type>::Results(Impl* i) : pimpl(i) {}
 
-MultipleDecodingResult::MultipleDecodingResult(
-    MultipleDecodingResult&& other) noexcept {
+template <typename ResultType, MediaType media_type>
+Results<ResultType, media_type>::Results(Results&& other) noexcept {
   *this = std::move(other);
 }
 
-MultipleDecodingResult& MultipleDecodingResult::operator=(
-    MultipleDecodingResult&& other) noexcept {
+template <typename ResultType, MediaType media_type>
+Results<ResultType, media_type>& Results<ResultType, media_type>::operator=(
+    Results&& other) noexcept {
   using std::swap;
   swap(pimpl, other.pimpl);
   return *this;
 }
 
-MultipleDecodingResult::~MultipleDecodingResult() {
+template <typename ResultType, MediaType media_type>
+Results<ResultType, media_type>::~Results() {
   delete pimpl;
 }
 
-std::vector<Output> MultipleDecodingResult::get(bool strict) {
+template <typename ResultType, MediaType media_type>
+std::vector<ResultType> Results<ResultType, media_type>::get(bool strict) {
   return pimpl->get(strict);
 }
+
+// Explicit instantiation
+template class Result<std::unique_ptr<DecodedFrames>, MediaType::Image>;
+
+template class Results<std::unique_ptr<DecodedFrames>, MediaType::Audio>;
+template class Results<std::unique_ptr<DecodedFrames>, MediaType::Video>;
+template class Results<std::unique_ptr<DecodedFrames>, MediaType::Image>;
 
 } // namespace spdl::core

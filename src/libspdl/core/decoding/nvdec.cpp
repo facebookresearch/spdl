@@ -1,9 +1,9 @@
 #include <libspdl/core/decoding.h>
 
-#include <libspdl/core/decoding/results.h>
 #include <libspdl/core/detail/executor.h>
 #include <libspdl/core/detail/ffmpeg/decoding.h>
 #include <libspdl/core/detail/logging.h>
+#include <libspdl/core/detail/result.h>
 #include <libspdl/core/detail/tracing.h>
 
 #ifdef SPDL_USE_NVDEC
@@ -22,7 +22,7 @@ using folly::coro::Task;
 
 namespace {
 #ifdef SPDL_USE_NVDEC
-Task<Output> image_decode_task_nvdec(
+Task<std::unique_ptr<DecodedFrames>> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -43,11 +43,13 @@ Task<Output> image_decode_task_nvdec(
       height,
       pix_fmt,
       /*is_image*/ true);
-  SemiFuture<Output> future = std::move(task).scheduleOn(exec).start();
+  SemiFuture<std::unique_ptr<DecodedFrames>> future =
+      std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
 }
 
-Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
+Task<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>
+batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -58,7 +60,7 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
     const std::optional<std::string> pix_fmt,
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<Output>> futures;
+  std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task_nvdec(
@@ -77,7 +79,8 @@ Task<std::vector<SemiFuture<Output>>> batch_image_decode_task_nvdec(
   co_return std::move(futures);
 }
 
-Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
+Task<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>
+stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const int cuda_device_index,
@@ -88,7 +91,7 @@ Task<std::vector<SemiFuture<Output>>> stream_decode_task_nvdec(
     int height,
     const std::optional<std::string> pix_fmt,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<Output>> futures;
+  std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux_nvdec(
@@ -151,7 +154,7 @@ void init_cuda() {
 #endif
 } // namespace
 
-SingleDecodingResult decoding::async_decode_image_nvdec(
+DecodeImageResult decoding::async_decode_image_nvdec(
     const std::string& src,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -167,7 +170,7 @@ SingleDecodingResult decoding::async_decode_image_nvdec(
 #else
   validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
-  return SingleDecodingResult{new SingleDecodingResult::Impl{
+  return DecodeImageResult{new DecodeImageResult::Impl{
       image_decode_task_nvdec(
           src,
           cuda_device_index,
@@ -183,7 +186,7 @@ SingleDecodingResult decoding::async_decode_image_nvdec(
 #endif
 }
 
-MultipleDecodingResult decoding::async_decode_nvdec(
+BatchDecodeVideoResult decoding::async_decode_nvdec(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const int cuda_device_index,
@@ -205,8 +208,7 @@ MultipleDecodingResult decoding::async_decode_nvdec(
   validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
 
-  return MultipleDecodingResult{new MultipleDecodingResult::Impl{
-      MediaType::Video,
+  return BatchDecodeVideoResult{new BatchDecodeVideoResult::Impl{
       {src},
       timestamps,
       stream_decode_task_nvdec(
@@ -225,7 +227,7 @@ MultipleDecodingResult decoding::async_decode_nvdec(
 #endif
 }
 
-MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
+BatchDecodeImageResult decoding::async_batch_decode_image_nvdec(
     const std::vector<std::string>& srcs,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -246,8 +248,7 @@ MultipleDecodingResult decoding::async_batch_decode_image_nvdec(
   validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
 
-  return MultipleDecodingResult{new MultipleDecodingResult::Impl{
-      MediaType::Image,
+  return BatchDecodeImageResult{new BatchDecodeImageResult::Impl{
       srcs,
       {},
       batch_image_decode_task_nvdec(

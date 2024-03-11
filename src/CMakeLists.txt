@@ -22,10 +22,10 @@ set(srcs
   libspdl/core/detail/ffmpeg/wrappers.cpp
   libspdl/core/detail/ffmpeg/package.cpp
   libspdl/core/detail/logging.cpp
+  libspdl/core/detail/result.cpp
   libspdl/core/buffer/cpu.cpp
   libspdl/core/conversion.cpp
   libspdl/core/decoding/audio_visual.cpp
-  libspdl/core/decoding/results.cpp
   libspdl/core/decoding/image.cpp
   libspdl/core/decoding/nvdec.cpp
   libspdl/core/executor.cpp

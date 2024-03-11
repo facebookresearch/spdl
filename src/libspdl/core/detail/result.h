@@ -1,41 +1,39 @@
-#include <libspdl/core/decoding.h>
+#include <libspdl/core/result.h>
 
 #include <folly/futures/Future.h>
 
 namespace spdl::core {
-using Output = std::unique_ptr<DecodedFrames>;
-
 ////////////////////////////////////////////////////////////////////////////////
-// SingleDecodingResult::Impl
+// Result::Impl
 ////////////////////////////////////////////////////////////////////////////////
-struct SingleDecodingResult::Impl {
+template <typename ResultType, MediaType media_type>
+struct Result<ResultType, media_type>::Impl {
   bool fetched{false};
-  folly::SemiFuture<Output> future;
+  folly::SemiFuture<ResultType> future;
 
-  Impl(folly::SemiFuture<Output>&& future);
+  Impl(folly::SemiFuture<ResultType>&& future);
 
-  Output get();
+  ResultType get();
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// MultipleDecodingResult::Impl
+// Results::Impl
 ////////////////////////////////////////////////////////////////////////////////
-struct MultipleDecodingResult::Impl {
-  enum MediaType type;
+template <typename ResultType, MediaType media_type>
+struct Results<ResultType, media_type>::Impl {
   std::vector<std::string> srcs;
   std::vector<std::tuple<double, double>> timestamps;
 
-  folly::SemiFuture<std::vector<folly::SemiFuture<Output>>> future;
+  folly::SemiFuture<std::vector<folly::SemiFuture<ResultType>>> future;
 
   bool fetched{false};
 
   Impl(
-      const enum MediaType type,
       std::vector<std::string> srcs,
       std::vector<std::tuple<double, double>> timestamps,
-      folly::SemiFuture<std::vector<folly::SemiFuture<Output>>>&& future);
+      folly::SemiFuture<std::vector<folly::SemiFuture<ResultType>>>&& future);
 
-  std::vector<Output> get(bool strict);
+  std::vector<ResultType> get(bool strict);
 };
 
 } // namespace spdl::core
