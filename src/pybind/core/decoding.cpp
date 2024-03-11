@@ -1,10 +1,12 @@
 #include <libspdl/core/decoding.h>
 #include <libspdl/core/executor.h>
+#include <libspdl/core/result.h>
 
 #include <libspdl/core/utils.h>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include "libspdl/core/types.h"
 
 namespace py = pybind11;
 
@@ -29,11 +31,17 @@ void register_pybind(py::module& m) {
       py::class_<ThreadPoolExecutor, std::shared_ptr<ThreadPoolExecutor>>(
           m, "ThreadPoolExecutor", py::module_local());
 
-  auto _MultipleDecodingResult = py::class_<MultipleDecodingResult>(
-      m, "MultipleDecodingResult", py::module_local());
+  auto _DecodeImageResult =
+      py::class_<DecodeImageResult>(m, "DecodeImageResult", py::module_local());
 
-  auto _SingleDecodingResult = py::class_<SingleDecodingResult>(
-      m, "SingleDecodingResult", py::module_local());
+  auto _BatchDecodeAudioResult = py::class_<BatchDecodeAudioResult>(
+      m, "BatchDecodeAudioResult", py::module_local());
+
+  auto _BatchDecodeVideoResult = py::class_<BatchDecodeVideoResult>(
+      m, "BatchDecodeVideoResult", py::module_local());
+
+  auto _BatchDecodeImageResult = py::class_<BatchDecodeImageResult>(
+      m, "BatchDecodeImageResult", py::module_local());
 
   _ThreadPoolExecutor.def(
       py::init<size_t, const std::string&, int>(),
@@ -41,10 +49,16 @@ void register_pybind(py::module& m) {
       py::arg("thread_name_prefix"),
       py::arg("throttle_interval") = 0);
 
-  _MultipleDecodingResult.def(
-      "get", &MultipleDecodingResult::get, py::arg("strict") = true);
+  _DecodeImageResult.def("get", &DecodeImageResult::get);
 
-  _SingleDecodingResult.def("get", &SingleDecodingResult::get);
+  _BatchDecodeAudioResult.def(
+      "get", &BatchDecodeAudioResult::get, py::arg("strict") = true);
+
+  _BatchDecodeVideoResult.def(
+      "get", &BatchDecodeVideoResult::get, py::arg("strict") = true);
+
+  _BatchDecodeImageResult.def(
+      "get", &BatchDecodeImageResult::get, py::arg("strict") = true);
 
   m.def(
       "decode_video",
@@ -63,8 +77,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode(
-            MediaType::Video,
+        return decoding::async_decode<MediaType::Video>(
             src,
             timestamps,
             adoptor,
@@ -106,8 +119,7 @@ void register_pybind(py::module& m) {
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode(
-            MediaType::Video,
+        return decoding::async_decode<MediaType::Video>(
             src,
             timestamps,
             adoptor,
@@ -290,8 +302,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& sample_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode(
-            MediaType::Audio,
+        return decoding::async_decode<MediaType::Audio>(
             src,
             timestamps,
             adoptor,
@@ -329,8 +340,7 @@ void register_pybind(py::module& m) {
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode(
-            MediaType::Audio,
+        return decoding::async_decode<MediaType::Audio>(
             src,
             timestamps,
             adoptor,
