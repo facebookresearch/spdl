@@ -15,7 +15,7 @@ using folly::SemiFuture;
 using folly::coro::Task;
 
 namespace {
-Task<std::unique_ptr<DecodedFrames>> image_decode_task(
+Task<FramesPtr> image_decode_task(
     const std::string src,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
@@ -29,7 +29,7 @@ Task<std::unique_ptr<DecodedFrames>> image_decode_task(
       .scheduleOn(detail::get_decode_executor(decode_executor));
 }
 
-Task<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>
+Task<std::vector<SemiFuture<FramesPtr>>>
 batch_image_decode_task(
     const std::vector<std::string> srcs,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -38,7 +38,7 @@ batch_image_decode_task(
     const std::string filter_desc,
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>> futures;
+  std::vector<SemiFuture<FramesPtr>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task(

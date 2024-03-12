@@ -29,7 +29,7 @@ folly::coro::Task<std::unique_ptr<PackagedAVPackets>> demux_image(
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
-folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets(
+folly::coro::Task<FramesPtr> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
     const DecodeConfig cfg = {},
     const std::string filter_desc = {});

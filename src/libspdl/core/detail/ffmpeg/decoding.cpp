@@ -429,7 +429,7 @@ folly::coro::Task<void> decode_pkts_with_filter(
 }
 } // namespace
 
-folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets(
+folly::coro::Task<FramesPtr> decode_packets(
     std::unique_ptr<PackagedAVPackets> packets,
     const DecodeConfig cfg,
     std::string filter_desc) {

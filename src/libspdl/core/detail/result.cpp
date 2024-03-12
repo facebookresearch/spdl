@@ -66,15 +66,15 @@ ResultType Result<ResultType, media_type>::get() {
 // Results::Impl
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-Task<std::vector<std::unique_ptr<DecodedFrames>>> check(
-    SemiFuture<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>&&
+Task<std::vector<FramesPtr>> check(
+    SemiFuture<std::vector<SemiFuture<FramesPtr>>>&&
         future,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     bool strict) {
   auto futures = co_await std::move(future);
 
-  std::vector<std::unique_ptr<DecodedFrames>> results;
+  std::vector<FramesPtr> results;
   int i = -1;
   folly::exception_wrapper e;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
@@ -97,14 +97,14 @@ Task<std::vector<std::unique_ptr<DecodedFrames>>> check(
   co_return results;
 }
 
-Task<std::vector<std::unique_ptr<DecodedFrames>>> check_image(
-    SemiFuture<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>&&
+Task<std::vector<FramesPtr>> check_image(
+    SemiFuture<std::vector<SemiFuture<FramesPtr>>>&&
         future,
     const std::vector<std::string>& srcs,
     bool strict) {
   auto futures = co_await std::move(future);
 
-  std::vector<std::unique_ptr<DecodedFrames>> results;
+  std::vector<FramesPtr> results;
   int i = -1;
   folly::exception_wrapper e;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
@@ -178,10 +178,10 @@ std::vector<ResultType> Results<ResultType, media_type>::get(bool strict) {
 }
 
 // Explicit instantiation
-template class Result<std::unique_ptr<DecodedFrames>, MediaType::Image>;
+template class Result<FramesPtr, MediaType::Image>;
 
-template class Results<std::unique_ptr<DecodedFrames>, MediaType::Audio>;
-template class Results<std::unique_ptr<DecodedFrames>, MediaType::Video>;
-template class Results<std::unique_ptr<DecodedFrames>, MediaType::Image>;
+template class Results<FramesPtr, MediaType::Audio>;
+template class Results<FramesPtr, MediaType::Video>;
+template class Results<FramesPtr, MediaType::Image>;
 
 } // namespace spdl::core

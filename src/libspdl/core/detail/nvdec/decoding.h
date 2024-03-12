@@ -25,7 +25,7 @@ stream_demux_nvdec(
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
-folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
+folly::coro::Task<FramesPtr> decode_packets_nvdec(
     std::unique_ptr<PackagedAVPackets> packets,
     int cuda_device_index,
     const CropArea crop,

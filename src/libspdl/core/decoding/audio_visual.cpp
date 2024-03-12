@@ -24,7 +24,7 @@ using folly::coro::Task;
 namespace {
 
 template <MediaType media_type>
-Task<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>
+Task<std::vector<SemiFuture<FramesPtr>>>
 stream_decode_task(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -33,7 +33,7 @@ stream_decode_task(
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>> futures;
+  std::vector<SemiFuture<FramesPtr>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux(
@@ -49,7 +49,7 @@ stream_decode_task(
 } // namespace
 
 template <MediaType media_type>
-Results<std::unique_ptr<DecodedFrames>, media_type> decoding::async_decode(
+Results<FramesPtr, media_type> decoding::async_decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -61,8 +61,8 @@ Results<std::unique_ptr<DecodedFrames>, media_type> decoding::async_decode(
   if (timestamps.size() == 0) {
     SPDL_FAIL("At least one timestamp must be provided.");
   }
-  return Results<std::unique_ptr<DecodedFrames>, media_type>{
-      new typename Results<std::unique_ptr<DecodedFrames>, media_type>::Impl{
+  return Results<FramesPtr, media_type>{
+      new typename Results<FramesPtr, media_type>::Impl{
           {src},
           timestamps,
           stream_decode_task<media_type>(
@@ -78,7 +78,7 @@ Results<std::unique_ptr<DecodedFrames>, media_type> decoding::async_decode(
 }
 
 // Explicit instantiations
-template Results<std::unique_ptr<DecodedFrames>, MediaType::Video>
+template Results<FramesPtr, MediaType::Video>
 decoding::async_decode<MediaType::Video>(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -89,7 +89,7 @@ decoding::async_decode<MediaType::Video>(
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
-template Results<std::unique_ptr<DecodedFrames>, MediaType::Audio>
+template Results<FramesPtr, MediaType::Audio>
 decoding::async_decode<MediaType::Audio>(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
