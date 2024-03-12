@@ -22,7 +22,7 @@ using folly::coro::Task;
 
 namespace {
 #ifdef SPDL_USE_NVDEC
-Task<std::unique_ptr<DecodedFrames>> image_decode_task_nvdec(
+Task<FramesPtr> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -43,12 +43,12 @@ Task<std::unique_ptr<DecodedFrames>> image_decode_task_nvdec(
       height,
       pix_fmt,
       /*is_image*/ true);
-  SemiFuture<std::unique_ptr<DecodedFrames>> future =
+  SemiFuture<FramesPtr> future =
       std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
 }
 
-Task<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>
+Task<std::vector<SemiFuture<FramesPtr>>>
 batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
@@ -60,7 +60,7 @@ batch_image_decode_task_nvdec(
     const std::optional<std::string> pix_fmt,
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>> futures;
+  std::vector<SemiFuture<FramesPtr>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task_nvdec(
@@ -79,7 +79,7 @@ batch_image_decode_task_nvdec(
   co_return std::move(futures);
 }
 
-Task<std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>>>
+Task<std::vector<SemiFuture<FramesPtr>>>
 stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -91,7 +91,7 @@ stream_decode_task_nvdec(
     int height,
     const std::optional<std::string> pix_fmt,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<std::unique_ptr<DecodedFrames>>> futures;
+  std::vector<SemiFuture<FramesPtr>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux_nvdec(

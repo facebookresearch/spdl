@@ -31,7 +31,7 @@ CUstream get_stream() {
 
 } // namespace
 
-folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
+folly::coro::Task<FramesPtr> decode_packets_nvdec(
     std::unique_ptr<PackagedAVPackets> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -117,7 +117,7 @@ folly::coro::Task<std::unique_ptr<DecodedFrames>> decode_packets_nvdec(
       frames->buffer->n,
       packets->packets.size());
 
-  co_return std::unique_ptr<DecodedFrames>(frames.release());
+  co_return FramesPtr(frames.release());
 }
 
 } // namespace spdl::core::detail

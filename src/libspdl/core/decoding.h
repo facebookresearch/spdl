@@ -12,17 +12,10 @@
 
 namespace spdl::core {
 
-using DecodeImageResult =
-    Result<std::unique_ptr<DecodedFrames>, MediaType::Image>;
-
-using BatchDecodeAudioResult =
-    Results<std::unique_ptr<DecodedFrames>, MediaType::Audio>;
-
-using BatchDecodeVideoResult =
-    Results<std::unique_ptr<DecodedFrames>, MediaType::Video>;
-
-using BatchDecodeImageResult =
-    Results<std::unique_ptr<DecodedFrames>, MediaType::Image>;
+using DecodeImageResult = Result<FramesPtr, MediaType::Image>;
+using BatchDecodeAudioResult = Results<FramesPtr, MediaType::Audio>;
+using BatchDecodeVideoResult = Results<FramesPtr, MediaType::Video>;
+using BatchDecodeImageResult = Results<FramesPtr, MediaType::Image>;
 
 // Putting all the decoding functions into this utility, static-only class
 // so that we can make the whole thing friend of result classes without having
@@ -103,7 +96,7 @@ struct decoding {
   /// FFmpeg.
   ///
   template <MediaType media_type>
-  static Results<std::unique_ptr<DecodedFrames>, media_type> async_decode(
+  static Results<FramesPtr, media_type> async_decode(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
       const std::shared_ptr<SourceAdoptor>& adoptor,
