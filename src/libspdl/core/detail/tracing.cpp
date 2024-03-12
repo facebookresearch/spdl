@@ -1,4 +1,4 @@
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/tracing.h"
 
 #ifdef SPDL_ENABLE_TRACING
 

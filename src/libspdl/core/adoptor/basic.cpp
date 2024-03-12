@@ -1,6 +1,6 @@
 #include <libspdl/core/adoptor/basic.h>
 
-#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
+#include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
 #include <folly/logging/xlog.h>
 

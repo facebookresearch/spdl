@@ -1,6 +1,6 @@
 #include <libspdl/core/adoptor/mmap.h>
 
-#include <libspdl/core/detail/ffmpeg/logging.h>
+#include "libspdl/core/detail/ffmpeg/logging.h"
 
 #include <folly/logging/xlog.h>
 

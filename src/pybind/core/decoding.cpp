@@ -1,12 +1,11 @@
 #include <libspdl/core/decoding.h>
 #include <libspdl/core/executor.h>
 #include <libspdl/core/result.h>
-
+#include <libspdl/core/types.h>
 #include <libspdl/core/utils.h>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "libspdl/core/types.h"
 
 namespace py = pybind11;
 

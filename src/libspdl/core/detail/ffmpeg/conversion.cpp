@@ -1,10 +1,10 @@
-#include <libspdl/core/detail/ffmpeg/conversion.h>
+#include "libspdl/core/detail/ffmpeg/conversion.h"
 
-#include <libspdl/core/detail/logging.h>
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/logging.h"
+#include "libspdl/core/detail/tracing.h"
 
 #ifdef SPDL_USE_CUDA
-#include <libspdl/core/detail/cuda.h>
+#include "libspdl/core/detail/cuda.h"
 #endif
 
 #include <fmt/core.h>

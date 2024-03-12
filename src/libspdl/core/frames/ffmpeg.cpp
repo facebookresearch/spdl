@@ -1,9 +1,10 @@
 #include <libspdl/core/frames.h>
 
-#include <libspdl/core/detail/ffmpeg/logging.h>
-#include <libspdl/core/detail/ffmpeg/wrappers.h>
-#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/types.h>
+
+#include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/ffmpeg/wrappers.h"
+#include "libspdl/core/detail/tracing.h"
 
 extern "C" {
 #include <libavutil/frame.h>

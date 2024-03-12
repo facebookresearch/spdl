@@ -1,7 +1,7 @@
-#include <libspdl/core/detail/ffmpeg/logging.h>
-#include <libspdl/core/detail/ffmpeg/wrappers.h>
+#include "libspdl/core/detail/ffmpeg/wrappers.h"
 
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/tracing.h"
 
 namespace spdl::core::detail {
 

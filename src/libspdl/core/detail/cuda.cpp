@@ -1,6 +1,5 @@
-#include <libspdl/core/detail/cuda.h>
-
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/cuda.h"
+#include "libspdl/core/detail/tracing.h"
 
 #include <folly/logging/xlog.h>
 

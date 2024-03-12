@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/detail/ffmpeg/package.h>
+#include "libspdl/core/detail/ffmpeg/package.h"
 
 #include <libspdl/core/adoptor/base.h>
 #include <libspdl/core/frames.h>

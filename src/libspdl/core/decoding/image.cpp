@@ -1,9 +1,9 @@
 #include <libspdl/core/decoding.h>
 
-#include <libspdl/core/detail/executor.h>
-#include <libspdl/core/detail/ffmpeg/decoding.h>
-#include <libspdl/core/detail/logging.h>
-#include <libspdl/core/detail/result.h>
+#include "libspdl/core/detail/executor.h"
+#include "libspdl/core/detail/ffmpeg/decoding.h"
+#include "libspdl/core/detail/logging.h"
+#include "libspdl/core/detail/result.h"
 
 #include <folly/experimental/coro/Task.h>
 #include <folly/futures/Future.h>

@@ -1,6 +1,6 @@
 #include <libspdl/core/adoptor/bytes.h>
 
-#include <libspdl/core/detail/logging.h>
+#include "libspdl/core/detail/logging.h"
 
 #include <folly/logging/xlog.h>
 

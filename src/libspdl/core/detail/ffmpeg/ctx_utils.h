@@ -1,7 +1,8 @@
 #pragma once
 
-#include <libspdl/core/detail/ffmpeg/wrappers.h>
 #include <libspdl/core/types.h>
+
+#include "libspdl/core/detail/ffmpeg/wrappers.h"
 
 #include <map>
 #include <optional>

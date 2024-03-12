@@ -1,6 +1,6 @@
 #include <libspdl/core/storage.h>
 
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/tracing.h"
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////

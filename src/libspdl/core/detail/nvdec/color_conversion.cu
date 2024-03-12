@@ -1,5 +1,5 @@
-#include <libspdl/core/detail/nvdec/color_conversion.h>
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/nvdec/color_conversion.h"
+#include "libspdl/core/detail/tracing.h"
 
 #include <cstdint>
 

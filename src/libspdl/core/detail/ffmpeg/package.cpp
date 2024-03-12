@@ -1,7 +1,7 @@
-#include <libspdl/core/detail/ffmpeg/package.h>
+#include "libspdl/core/detail/ffmpeg/package.h"
 
-#include <libspdl/core/detail/ffmpeg/logging.h>
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/tracing.h"
 
 #include <folly/logging/xlog.h>
 

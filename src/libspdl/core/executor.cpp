@@ -1,6 +1,6 @@
 #include <libspdl/core/executor.h>
 
-#include <libspdl/core/detail/executor.h>
+#include "libspdl/core/detail/executor.h"
 
 namespace spdl::core {
 
