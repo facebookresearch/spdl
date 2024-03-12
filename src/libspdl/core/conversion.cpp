@@ -1,9 +1,10 @@
 #include <libspdl/core/conversion.h>
 
-#include <libspdl/core/detail/ffmpeg/conversion.h>
-#include <libspdl/core/detail/logging.h>
-#include <libspdl/core/detail/tracing.h>
 #include <libspdl/core/types.h>
+
+#include "libspdl/core/detail/ffmpeg/conversion.h"
+#include "libspdl/core/detail/logging.h"
+#include "libspdl/core/detail/tracing.h"
 
 #ifdef SPDL_USE_NVDEC
 #include <libspdl/core/detail/cuda.h>

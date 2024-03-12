@@ -1,6 +1,6 @@
 #include <libspdl/core/storage.h>
 
-#include <libspdl/core/detail/cuda.h>
+#include "libspdl/core/detail/cuda.h"
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>

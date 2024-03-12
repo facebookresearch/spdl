@@ -1,7 +1,7 @@
-#include <libspdl/core/detail/nvdec/wrapper.h>
+#include "libspdl/core/detail/nvdec/wrapper.h"
 
-#include <libspdl/core/detail/cuda.h>
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/cuda.h"
+#include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>

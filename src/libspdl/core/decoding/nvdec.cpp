@@ -1,14 +1,14 @@
 #include <libspdl/core/decoding.h>
 
-#include <libspdl/core/detail/executor.h>
-#include <libspdl/core/detail/ffmpeg/decoding.h>
-#include <libspdl/core/detail/logging.h>
-#include <libspdl/core/detail/result.h>
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/executor.h"
+#include "libspdl/core/detail/ffmpeg/decoding.h"
+#include "libspdl/core/detail/logging.h"
+#include "libspdl/core/detail/result.h"
+#include "libspdl/core/detail/tracing.h"
 
 #ifdef SPDL_USE_NVDEC
-#include <libspdl/core/detail/cuda.h>
-#include <libspdl/core/detail/nvdec/decoding.h>
+#include "libspdl/core/detail/cuda.h"
+#include "libspdl/core/detail/nvdec/decoding.h"
 #endif
 
 #include <folly/experimental/coro/Task.h>

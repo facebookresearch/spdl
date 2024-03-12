@@ -1,7 +1,7 @@
-#include <libspdl/core/detail/ffmpeg/filter_graph.h>
+#include "libspdl/core/detail/ffmpeg/filter_graph.h"
 
-#include <libspdl/core/detail/ffmpeg/logging.h>
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/tracing.h"
 
 #include <fmt/format.h>
 

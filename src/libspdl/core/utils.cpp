@@ -1,12 +1,12 @@
 #include <libspdl/core/utils.h>
 
-#include <libspdl/core/detail/ffmpeg/ctx_utils.h>
-#include <libspdl/core/detail/ffmpeg/filter_graph.h>
-#include <libspdl/core/detail/logging.h>
-#include <libspdl/core/detail/tracing.h>
+#include "libspdl/core/detail/ffmpeg/ctx_utils.h"
+#include "libspdl/core/detail/ffmpeg/filter_graph.h"
+#include "libspdl/core/detail/logging.h"
+#include "libspdl/core/detail/tracing.h"
 
 #if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVDEC)
-#include <libspdl/core/detail/cuda.h>
+#include "libspdl/core/detail/cuda.h"
 #endif
 
 #include <folly/init/Init.h>

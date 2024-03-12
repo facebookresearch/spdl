@@ -1,6 +1,6 @@
 #include <libspdl/core/buffer.h>
 
-#include <libspdl/core/detail/logging.h>
+#include "libspdl/core/detail/logging.h"
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>

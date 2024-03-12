@@ -1,9 +1,10 @@
 #pragma once
 
 #include <libspdl/core/buffer.h>
-#include <libspdl/core/detail/nvdec/converter.h>
-#include <libspdl/core/detail/nvdec/utils.h>
-#include <libspdl/core/detail/nvdec/wrapper.h>
+
+#include "libspdl/core/detail/nvdec/converter.h"
+#include "libspdl/core/detail/nvdec/utils.h"
+#include "libspdl/core/detail/nvdec/wrapper.h"
 
 #include <cuda.h>
 #include <nvcuvid.h>

@@ -1,8 +1,8 @@
 #include <libspdl/core/frames.h>
 #include <libspdl/core/result.h>
 
-#include <libspdl/core/detail/logging.h>
-#include <libspdl/core/detail/result.h>
+#include "libspdl/core/detail/logging.h"
+#include "libspdl/core/detail/result.h"
 
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/Collect.h>
@@ -67,8 +67,7 @@ ResultType Result<ResultType, media_type>::get() {
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 Task<std::vector<FramesPtr>> check(
-    SemiFuture<std::vector<SemiFuture<FramesPtr>>>&&
-        future,
+    SemiFuture<std::vector<SemiFuture<FramesPtr>>>&& future,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     bool strict) {
@@ -98,8 +97,7 @@ Task<std::vector<FramesPtr>> check(
 }
 
 Task<std::vector<FramesPtr>> check_image(
-    SemiFuture<std::vector<SemiFuture<FramesPtr>>>&&
-        future,
+    SemiFuture<std::vector<SemiFuture<FramesPtr>>>&& future,
     const std::vector<std::string>& srcs,
     bool strict) {
   auto futures = co_await std::move(future);
