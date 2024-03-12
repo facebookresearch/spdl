@@ -24,8 +24,7 @@ using folly::coro::Task;
 namespace {
 
 template <MediaType media_type>
-Task<std::vector<SemiFuture<FramesPtr>>>
-stream_decode_task(
+Task<std::vector<SemiFuture<FramesPtr>>> stream_decode_task(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -49,7 +48,7 @@ stream_decode_task(
 } // namespace
 
 template <MediaType media_type>
-Results<FramesPtr, media_type> decoding::async_decode(
+Results<FramesPtr, media_type> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -79,7 +78,7 @@ Results<FramesPtr, media_type> decoding::async_decode(
 
 // Explicit instantiations
 template Results<FramesPtr, MediaType::Video>
-decoding::async_decode<MediaType::Video>(
+decoding::decode<MediaType::Video>(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -90,7 +89,7 @@ decoding::async_decode<MediaType::Video>(
     std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
 template Results<FramesPtr, MediaType::Audio>
-decoding::async_decode<MediaType::Audio>(
+decoding::decode<MediaType::Audio>(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,

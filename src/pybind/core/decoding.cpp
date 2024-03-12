@@ -77,7 +77,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode<MediaType::Video>(
+        return decoding::decode<MediaType::Video>(
             src,
             timestamps,
             adoptor,
@@ -119,7 +119,7 @@ void register_pybind(py::module& m) {
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode<MediaType::Video>(
+        return decoding::decode<MediaType::Video>(
             src,
             timestamps,
             adoptor,
@@ -157,7 +157,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode_image(
+        return decoding::decode_image(
             src,
             adoptor,
             {format, format_options, buffer_size},
@@ -193,7 +193,7 @@ void register_pybind(py::module& m) {
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode_image(
+        return decoding::decode_image(
             src,
             adoptor,
             {format, format_options, buffer_size},
@@ -229,7 +229,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_batch_decode_image(
+        return decoding::batch_decode_image(
             srcs,
             adoptor,
             {format, format_options, buffer_size},
@@ -265,7 +265,7 @@ void register_pybind(py::module& m) {
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_batch_decode_image(
+        return decoding::batch_decode_image(
             srcs,
             adoptor,
             {format, format_options, buffer_size},
@@ -302,7 +302,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& sample_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode<MediaType::Audio>(
+        return decoding::decode<MediaType::Audio>(
             src,
             timestamps,
             adoptor,
@@ -340,7 +340,7 @@ void register_pybind(py::module& m) {
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode<MediaType::Audio>(
+        return decoding::decode<MediaType::Audio>(
             src,
             timestamps,
             adoptor,
@@ -381,7 +381,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode_nvdec(
+        return decoding::decode_nvdec(
             src,
             timestamps,
             cuda_device_index,
@@ -432,7 +432,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_decode_image_nvdec(
+        return decoding::decode_image_nvdec(
             src,
             cuda_device_index,
             adoptor,
@@ -481,7 +481,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::async_batch_decode_image_nvdec(
+        return decoding::batch_decode_image_nvdec(
             srcs,
             cuda_device_index,
             adoptor,
