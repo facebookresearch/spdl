@@ -29,8 +29,7 @@ Task<FramesPtr> image_decode_task(
       .scheduleOn(detail::get_decode_executor(decode_executor));
 }
 
-Task<std::vector<SemiFuture<FramesPtr>>>
-batch_image_decode_task(
+Task<std::vector<SemiFuture<FramesPtr>>> batch_image_decode_task(
     const std::vector<std::string> srcs,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
@@ -50,7 +49,7 @@ batch_image_decode_task(
 }
 } // namespace
 
-DecodeImageResult decoding::async_decode_image(
+DecodeImageResult decoding::decode_image(
     const std::string& src,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
@@ -66,7 +65,7 @@ DecodeImageResult decoding::async_decode_image(
           .start()}};
 }
 
-BatchDecodeImageResult decoding::async_batch_decode_image(
+BatchDecodeImageResult decoding::batch_decode_image(
     const std::vector<std::string>& srcs,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,

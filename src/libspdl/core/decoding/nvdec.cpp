@@ -43,13 +43,11 @@ Task<FramesPtr> image_decode_task_nvdec(
       height,
       pix_fmt,
       /*is_image*/ true);
-  SemiFuture<FramesPtr> future =
-      std::move(task).scheduleOn(exec).start();
+  SemiFuture<FramesPtr> future = std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
 }
 
-Task<std::vector<SemiFuture<FramesPtr>>>
-batch_image_decode_task_nvdec(
+Task<std::vector<SemiFuture<FramesPtr>>> batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -79,8 +77,7 @@ batch_image_decode_task_nvdec(
   co_return std::move(futures);
 }
 
-Task<std::vector<SemiFuture<FramesPtr>>>
-stream_decode_task_nvdec(
+Task<std::vector<SemiFuture<FramesPtr>>> stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const int cuda_device_index,
@@ -154,7 +151,7 @@ void init_cuda() {
 #endif
 } // namespace
 
-DecodeImageResult decoding::async_decode_image_nvdec(
+DecodeImageResult decoding::decode_image_nvdec(
     const std::string& src,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -186,7 +183,7 @@ DecodeImageResult decoding::async_decode_image_nvdec(
 #endif
 }
 
-BatchDecodeVideoResult decoding::async_decode_nvdec(
+BatchDecodeVideoResult decoding::decode_nvdec(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const int cuda_device_index,
@@ -227,7 +224,7 @@ BatchDecodeVideoResult decoding::async_decode_nvdec(
 #endif
 }
 
-BatchDecodeImageResult decoding::async_batch_decode_image_nvdec(
+BatchDecodeImageResult decoding::batch_decode_image_nvdec(
     const std::vector<std::string>& srcs,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,

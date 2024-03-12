@@ -32,7 +32,7 @@ struct decoding {
   ///
   /// Decode one single image asynchronously using FFmpeg.
   ///
-  static DecodeImageResult async_decode_image(
+  static DecodeImageResult decode_image(
       const std::string& src,
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
@@ -44,7 +44,7 @@ struct decoding {
   ///
   /// Decode one single image asynchronously using NVDEC.
   ///
-  static DecodeImageResult async_decode_image_nvdec(
+  static DecodeImageResult decode_image_nvdec(
       const std::string& src,
       const int cuda_device_index,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -63,7 +63,7 @@ struct decoding {
   ///
   /// Decode multiple images asynchronously using FFmpeg.
   ///
-  static BatchDecodeImageResult async_batch_decode_image(
+  static BatchDecodeImageResult batch_decode_image(
       const std::vector<std::string>& srcs,
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
@@ -75,7 +75,7 @@ struct decoding {
   ///
   /// Decode multiple images asynchronously using NVDEC.
   ///
-  static BatchDecodeImageResult async_batch_decode_image_nvdec(
+  static BatchDecodeImageResult batch_decode_image_nvdec(
       const std::vector<std::string>& srcs,
       const int cuda_device_index,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -96,7 +96,7 @@ struct decoding {
   /// FFmpeg.
   ///
   template <MediaType media_type>
-  static Results<FramesPtr, media_type> async_decode(
+  static Results<FramesPtr, media_type> decode(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -109,7 +109,7 @@ struct decoding {
   ///
   /// Decode multiple clips of the given video asynchronously using NVDEC.
   ///
-  static BatchDecodeVideoResult async_decode_nvdec(
+  static BatchDecodeVideoResult decode_nvdec(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
       const int cuda_device_index,
