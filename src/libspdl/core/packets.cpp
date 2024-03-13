@@ -1,4 +1,4 @@
-#include "libspdl/core/detail/ffmpeg/package.h"
+#include <libspdl/core/packets.h>
 
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
@@ -7,7 +7,11 @@
 
 #include <random>
 
-namespace spdl::core::detail {
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavutil/avutil.h>
+}
+namespace spdl::core {
 namespace {
 inline AVCodecParameters* copy(const AVCodecParameters* src) {
   auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
@@ -24,13 +28,13 @@ uint64_t random() {
 }
 } // namespace
 
-PackagedAVPackets::PackagedAVPackets(
+DemuxedPackets::DemuxedPackets(
     MediaType media_type_,
     std::string src_,
     std::tuple<double, double> timestamp_,
     AVCodecParameters* codecpar_,
-    AVRational time_base_,
-    AVRational frame_rate_)
+    Rational time_base_,
+    Rational frame_rate_)
     : id(random()),
       media_type(media_type_),
       src(src_),
@@ -40,16 +44,15 @@ PackagedAVPackets::PackagedAVPackets(
       frame_rate(frame_rate_) {
   TRACE_EVENT(
       "decoding",
-      "PackagedAVPackets::PackagedAVPackets",
+      "DemuxedPackets::DemuxedPackets",
       perfetto::Flow::ProcessScoped(id));
 };
 
-PackagedAVPackets::PackagedAVPackets(PackagedAVPackets&& other) noexcept {
+DemuxedPackets::DemuxedPackets(DemuxedPackets&& other) noexcept {
   *this = std::move(other);
 };
 
-PackagedAVPackets& PackagedAVPackets::operator=(
-    PackagedAVPackets&& other) noexcept {
+DemuxedPackets& DemuxedPackets::operator=(DemuxedPackets&& other) noexcept {
   using std::swap;
   swap(id, other.id);
   swap(media_type, other.media_type);
@@ -62,10 +65,10 @@ PackagedAVPackets& PackagedAVPackets::operator=(
   return *this;
 };
 
-PackagedAVPackets::~PackagedAVPackets() {
+DemuxedPackets::~DemuxedPackets() {
   TRACE_EVENT(
       "decoding",
-      "PackagedAVPackets::~PackagedAVPackets",
+      "DemuxedPackets::~DemuxedPackets",
       perfetto::Flow::ProcessScoped(id));
   std::for_each(packets.begin(), packets.end(), [](AVPacket* p) {
     if (p) {
@@ -76,4 +79,4 @@ PackagedAVPackets::~PackagedAVPackets() {
   avcodec_parameters_free(&codecpar);
 };
 
-} // namespace spdl::core::detail
+} // namespace spdl::core

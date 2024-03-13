@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libspdl/core/detail/ffmpeg/package.h"
+#include <libspdl/core/packets.h>
 
 #include <libspdl/core/adoptor/base.h>
 #include <libspdl/core/frames.h>
@@ -18,15 +18,14 @@
 namespace spdl::core::detail {
 
 // Apply some bit-stream-filtering for certain video formats
-folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>>
-stream_demux_nvdec(
+folly::coro::AsyncGenerator<std::unique_ptr<DemuxedPackets>> stream_demux_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
 folly::coro::Task<FramesPtr> decode_packets_nvdec(
-    std::unique_ptr<PackagedAVPackets> packets,
+    std::unique_ptr<DemuxedPackets> packets,
     int cuda_device_index,
     const CropArea crop,
     int target_width = -1,

@@ -6,16 +6,14 @@
 #include <tuple>
 #include <vector>
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
-}
+struct AVCodecParameters;
+struct AVPacket;
 
-namespace spdl::core::detail {
+namespace spdl::core {
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
-struct PackagedAVPackets {
+struct DemuxedPackets {
   uint64_t id;
   // Source information
   MediaType media_type;
@@ -24,29 +22,29 @@ struct PackagedAVPackets {
 
   //
   AVCodecParameters* codecpar = nullptr;
-  AVRational time_base = {0, 1};
+  Rational time_base = {0, 1};
 
   // frame rate for video
-  AVRational frame_rate = {0, 1};
+  Rational frame_rate = {0, 1};
 
   // Sliced raw packets
   std::vector<AVPacket*> packets = {};
 
-  PackagedAVPackets(
+  DemuxedPackets(
       MediaType type,
       std::string src,
       std::tuple<double, double> timestamp,
       AVCodecParameters* codecpar,
-      AVRational time_base,
-      AVRational frame_rate);
+      Rational time_base,
+      Rational frame_rate);
 
   // No copy constructors
-  PackagedAVPackets(const PackagedAVPackets&) = delete;
-  PackagedAVPackets& operator=(const PackagedAVPackets&) = delete;
+  DemuxedPackets(const DemuxedPackets&) = delete;
+  DemuxedPackets& operator=(const DemuxedPackets&) = delete;
   // Move constructor to support AsyncGenerator
-  PackagedAVPackets(PackagedAVPackets&& other) noexcept;
-  PackagedAVPackets& operator=(PackagedAVPackets&& other) noexcept;
+  DemuxedPackets(DemuxedPackets&& other) noexcept;
+  DemuxedPackets& operator=(DemuxedPackets&& other) noexcept;
   // Destructor releases AVPacket* resources
-  ~PackagedAVPackets();
+  ~DemuxedPackets();
 };
-} // namespace spdl::core::detail
+} // namespace spdl::core

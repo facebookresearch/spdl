@@ -56,7 +56,7 @@ class NvDecDecoder {
   std::unique_ptr<Converter> converter{nullptr};
 
   // Timebase of the incomding packets/decoded frames
-  AVRational timebase;
+  Rational timebase;
   double start_time, end_time;
 
   // Resize option
@@ -83,7 +83,7 @@ class NvDecDecoder {
       CUdevice device_index,
       cudaVideoCodec codec,
       CUDABuffer2DPitch* buffer,
-      AVRational timebase,
+      Rational timebase,
       std::tuple<double, double> timestamp,
       CropArea crop,
       int target_width = -1,

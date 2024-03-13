@@ -107,7 +107,7 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
 
 } // namespace
 
-folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
+folly::coro::AsyncGenerator<std::unique_ptr<DemuxedPackets>> stream_demux(
     const enum MediaType type,
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -120,13 +120,13 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
 
   for (auto& timestamp : timestamps) {
-    auto package = std::make_unique<PackagedAVPackets>(
+    auto package = std::make_unique<DemuxedPackets>(
         type,
         fmt_ctx->url,
         timestamp,
         stream->codecpar,
-        stream->time_base,
-        frame_rate);
+        Rational{stream->time_base.num, stream->time_base.den},
+        Rational{frame_rate.num, frame_rate.den});
     auto task = demux_window(fmt_ctx, stream, timestamp);
     while (auto packet = co_await task.next()) {
       package->packets.push_back(packet->release());
@@ -137,7 +137,7 @@ folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>> stream_demux(
   }
 }
 
-folly::coro::Task<std::unique_ptr<PackagedAVPackets>> demux_image(
+folly::coro::Task<std::unique_ptr<DemuxedPackets>> demux_image(
     const std::string src,
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg) {
@@ -146,13 +146,13 @@ folly::coro::Task<std::unique_ptr<PackagedAVPackets>> demux_image(
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
 
-  auto package = std::make_unique<PackagedAVPackets>(
+  auto package = std::make_unique<DemuxedPackets>(
       MediaType::Image,
       fmt_ctx->url,
       std::tuple<double, double>{0., 1000.},
       stream->codecpar,
-      AVRational{1, 1},
-      AVRational{1, 1});
+      Rational{1, 1},
+      Rational{1, 1});
 
   int ite = 0;
   do {
@@ -234,8 +234,7 @@ AVPacketPtr apply_bsf(AVBSFContext* bsf_ctx, AVPacket* packet) {
 }
 } // namespace
 
-folly::coro::AsyncGenerator<std::unique_ptr<PackagedAVPackets>>
-stream_demux_nvdec(
+folly::coro::AsyncGenerator<std::unique_ptr<DemuxedPackets>> stream_demux_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
@@ -249,13 +248,13 @@ stream_demux_nvdec(
   auto bsf_ctx = init_bsf(stream->codecpar);
 
   for (auto& timestamp : timestamps) {
-    auto package = std::make_unique<PackagedAVPackets>(
+    auto package = std::make_unique<DemuxedPackets>(
         MediaType::Video,
         fmt_ctx->url,
         timestamp,
         bsf_ctx ? bsf_ctx->par_out : stream->codecpar,
-        stream->time_base,
-        frame_rate);
+        Rational{stream->time_base.num, stream->time_base.den},
+        Rational{frame_rate.num, frame_rate.den});
     auto task = demux_window(fmt_ctx, stream, timestamp);
     while (auto packet = co_await task.next()) {
       if (bsf_ctx) {
@@ -351,7 +350,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
 }
 
 folly::coro::Task<void> decode_pkts(
-    std::unique_ptr<PackagedAVPackets> packets,
+    std::unique_ptr<DemuxedPackets> packets,
     AVCodecContextPtr codec_ctx,
     FFmpegFrames* frames) {
   auto [start, end] = packets->timestamp;
@@ -372,7 +371,7 @@ folly::coro::Task<void> decode_pkts(
 }
 
 folly::coro::Task<void> decode_pkts_with_filter(
-    std::unique_ptr<PackagedAVPackets> packets,
+    std::unique_ptr<DemuxedPackets> packets,
     AVCodecContextPtr codec_ctx,
     std::string filter_desc,
     FFmpegFrames* frames) {
@@ -431,14 +430,14 @@ folly::coro::Task<void> decode_pkts_with_filter(
 } // namespace
 
 folly::coro::Task<FramesPtr> decode_packets(
-    std::unique_ptr<PackagedAVPackets> packets,
+    std::unique_ptr<DemuxedPackets> packets,
     const DecodeConfig cfg,
     std::string filter_desc) {
   TRACE_EVENT(
       "decoding", "decode_packets", perfetto::Flow::ProcessScoped(packets->id));
   auto codec_ctx = get_codec_ctx_ptr(
       packets->codecpar,
-      packets->time_base,
+      AVRational{packets->time_base.num, packets->time_base.den},
       cfg.decoder,
       cfg.decoder_options,
       cfg.cuda_device_index);

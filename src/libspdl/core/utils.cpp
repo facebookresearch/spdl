@@ -1,5 +1,7 @@
 #include <libspdl/core/utils.h>
 
+#include <libspdl/core/types.h>
+
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
@@ -46,7 +48,7 @@ int get_cuda_device_index(unsigned long long ptr) {
 }
 
 std::string get_video_filter_description(
-    const std::optional<std::tuple<int, int>>& frame_rate,
+    const std::optional<Rational>& frame_rate,
     const std::optional<int>& width,
     const std::optional<int>& height,
     const std::optional<std::string>& pix_fmt) {
