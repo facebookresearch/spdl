@@ -14,7 +14,10 @@ namespace spdl::core {
 using OptionDict = std::map<std::string, std::string>;
 
 // alternative for AVRational so that we can avoid exposing FFmpeg headers
-using Rational = std::tuple<int, int>;
+struct Rational {
+  int num;
+  int den;
+};
 
 // simplified version of AVMediaType so that public headers do not
 // include ffmpeg headers

@@ -20,7 +20,6 @@ set(srcs
   libspdl/core/detail/ffmpeg/decoding.cpp
   libspdl/core/detail/ffmpeg/filter_graph.cpp
   libspdl/core/detail/ffmpeg/wrappers.cpp
-  libspdl/core/detail/ffmpeg/package.cpp
   libspdl/core/detail/logging.cpp
   libspdl/core/detail/result.cpp
   libspdl/core/buffer/cpu.cpp
@@ -34,6 +33,7 @@ set(srcs
   libspdl/core/adoptor/bytes.cpp
   libspdl/core/adoptor/mmap.cpp
   libspdl/core/storage/cpu.cpp
+  libspdl/core/packets.cpp
   libspdl/core/utils.cpp
   )
 

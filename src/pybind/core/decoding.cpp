@@ -14,14 +14,14 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Helper functions
 ////////////////////////////////////////////////////////////////////////////////
-std::optional<std::tuple<int, int>> get_frame_rate(
-    const py::object& frame_rate) {
+std::optional<Rational> get_frame_rate(const py::object& frame_rate) {
   if (frame_rate.is(py::none())) {
     return std::nullopt;
   }
   py::object Fraction = py::module_::import("fractions").attr("Fraction");
   py::object r = Fraction(frame_rate);
-  return {{r.attr("numerator").cast<int>(), r.attr("denominator").cast<int>()}};
+  return {Rational{
+      r.attr("numerator").cast<int>(), r.attr("denominator").cast<int>()}};
 }
 } // namespace
 

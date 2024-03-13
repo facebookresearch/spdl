@@ -123,7 +123,7 @@ void NvDecDecoder::init(
     CUdevice device_index_,
     cudaVideoCodec codec_,
     CUDABuffer2DPitch* buffer_,
-    AVRational timebase_,
+    Rational timebase_,
     std::tuple<double, double> timestamp_,
     CropArea crop_,
     int tgt_w,

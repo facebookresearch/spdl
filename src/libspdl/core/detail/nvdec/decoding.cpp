@@ -33,7 +33,7 @@ CUstream get_stream() {
 } // namespace
 
 folly::coro::Task<FramesPtr> decode_packets_nvdec(
-    std::unique_ptr<PackagedAVPackets> packets,
+    std::unique_ptr<DemuxedPackets> packets,
     int cuda_device_index,
     const CropArea crop,
     int target_width,

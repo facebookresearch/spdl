@@ -14,7 +14,7 @@ AVFilterGraphPtr get_audio_filter(
 AVFilterGraphPtr get_video_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx,
-    std::optional<AVRational> frame_rate = std::nullopt);
+    std::optional<Rational> frame_rate = std::nullopt);
 
 std::string get_video_filter_description(
     const std::optional<Rational>& frame_rate,
