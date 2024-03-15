@@ -5,6 +5,7 @@ set(src
   core/executor.cpp
   core/frames_and_buffers.cpp
   core/future.cpp
+  core/packets.cpp
   core/tracing.cpp
   core/utils.cpp)
 
