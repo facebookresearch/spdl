@@ -78,18 +78,6 @@ py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
 }
 #endif
 
-template <MediaType media_type>
-std::string get_type_string() {
-  if constexpr (media_type == MediaType::Audio) {
-    return "audio";
-  }
-  if constexpr (media_type == MediaType::Video) {
-    return "video";
-  }
-  if constexpr (media_type == MediaType::Image) {
-    return "image";
-  }
-}
 } // namespace
 
 void register_frames_and_buffers(py::module& m) {
@@ -104,23 +92,20 @@ void register_frames_and_buffers(py::module& m) {
       py::class_<CUDABuffer2DPitch, std::shared_ptr<CUDABuffer2DPitch>>(
           m, "CUDABuffer2DPitch", py::module_local());
 
-  auto _DecodedFrames =
-      py::class_<DecodedFrames>(m, "DecodedFrames", py::module_local());
+  auto _FFmpegAudioFrames =
+      py::class_<FFmpegAudioFrames>(m, "FFmpegAudioFrames", py::module_local());
 
-  auto _FFmpegAudioFrames = py::class_<FFmpegAudioFrames, DecodedFrames>(
-      m, "FFmpegAudioFrames", py::module_local());
+  auto _FFmpegVideoFrames =
+      py::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames", py::module_local());
 
-  auto _FFmpegVideoFrames = py::class_<FFmpegVideoFrames, DecodedFrames>(
-      m, "FFmpegVideoFrames", py::module_local());
+  auto _FFmpegImageFrames =
+      py::class_<FFmpegImageFrames>(m, "FFmpegImageFrames", py::module_local());
 
-  auto _FFmpegImageFrames = py::class_<FFmpegImageFrames, DecodedFrames>(
-      m, "FFmpegImageFrames", py::module_local());
+  auto _NvDecVideoFrames =
+      py::class_<NvDecVideoFrames>(m, "NvDecVideoFrames", py::module_local());
 
-  auto _NvDecVideoFrames = py::class_<NvDecVideoFrames, DecodedFrames>(
-      m, "NvDecVideoFrames", py::module_local());
-
-  auto _NvDecImageFrames = py::class_<NvDecImageFrames, DecodedFrames>(
-      m, "NvDecImageFrames", py::module_local());
+  auto _NvDecImageFrames =
+      py::class_<NvDecImageFrames>(m, "NvDecImageFrames", py::module_local());
 
   _CPUBuffer
       .def_property_readonly(
@@ -194,7 +179,6 @@ void register_frames_and_buffers(py::module& m) {
           }));
 
   _FFmpegAudioFrames
-      .def_property_readonly("media_type", &get_type_string<MediaType::Audio>)
       .def_property_readonly(
           "is_cuda", [](const FFmpegAudioFrames&) { return false; })
       .def_property_readonly("num_frames", &FFmpegAudioFrames::get_num_frames)
@@ -204,7 +188,6 @@ void register_frames_and_buffers(py::module& m) {
       .def("__len__", &FFmpegAudioFrames::get_num_frames);
 
   _FFmpegVideoFrames
-      .def_property_readonly("media_type", &get_type_string<MediaType::Video>)
       .def_property_readonly("is_cuda", &FFmpegVideoFrames::is_cuda)
       .def_property_readonly("num_frames", &FFmpegVideoFrames::get_num_frames)
       .def_property_readonly("num_planes", &FFmpegVideoFrames::get_num_planes)
@@ -229,7 +212,6 @@ void register_frames_and_buffers(py::module& m) {
       });
 
   _FFmpegImageFrames
-      .def_property_readonly("media_type", &get_type_string<MediaType::Image>)
       .def_property_readonly("is_cuda", &FFmpegImageFrames::is_cuda)
       .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
       .def_property_readonly("width", &FFmpegImageFrames::get_width)
@@ -245,9 +227,6 @@ void register_frames_and_buffers(py::module& m) {
 #endif
 
   _NvDecVideoFrames
-      .def_property_readonly(
-          "media_type",
-          IF_NVDECVIDEOFRAMES_ENABLED(&get_type_string<MediaType::Video>))
       .def_property_readonly(
           "is_cuda", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames&) {
             return true;
@@ -278,9 +257,6 @@ void register_frames_and_buffers(py::module& m) {
           }));
 
   _NvDecImageFrames
-      .def_property_readonly(
-          "media_type",
-          IF_NVDECVIDEOFRAMES_ENABLED(&get_type_string<MediaType::Image>))
       .def_property_readonly(
           "is_cuda", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames&) {
             return true;

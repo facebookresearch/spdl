@@ -11,20 +11,6 @@ struct AVFrame;
 namespace spdl::core {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Base
-////////////////////////////////////////////////////////////////////////////////
-
-///
-/// Abstract class that represents the decoded media frames.
-struct DecodedFrames {
-  virtual ~DecodedFrames() = default;
-
-  ///
-  /// Type of stored media, such as Audio, Video and Image.
-  virtual enum MediaType get_media_type() const = 0;
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // FFmpeg Frames
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -42,7 +28,7 @@ using FFmpegImageFrames = FFmpegFrames<MediaType::Image>;
 ///
 /// Base class that holds media frames decoded with FFmpeg.
 template <MediaType media_type>
-class FFmpegFrames : public DecodedFrames {
+class FFmpegFrames {
  private:
   ///
   /// Used for tracking the lifetime in tracing.
@@ -85,11 +71,6 @@ class FFmpegFrames : public DecodedFrames {
   ///
   /// Get the list of frames.
   const std::vector<AVFrame*>& get_frames() const;
-
-  ///
-  enum MediaType get_media_type() const override {
-    return media_type;
-  };
 
   //////////////////////////////////////////////////////////////////////////////
   // Common
@@ -165,7 +146,7 @@ class FFmpegFrames : public DecodedFrames {
 /// Class that holds media frames decoded with NVDEC decoder.
 /// The decoded media can be video or image.
 template <MediaType media_type>
-struct NvDecFrames : public DecodedFrames {
+struct NvDecFrames {
 #ifdef SPDL_USE_NVDEC
   ///
   /// Used for tracking the lifetime in tracing.
@@ -179,10 +160,6 @@ struct NvDecFrames : public DecodedFrames {
   /// copy the decoded frame from decoder's output buffer, we use a continuous
   /// memory buffer to store the data.
   std::shared_ptr<CUDABuffer2DPitch> buffer;
-
-  ///
-  /// Video or Image
-  enum MediaType get_media_type() const override;
 
   NvDecFrames(uint64_t id, int media_format);
   NvDecFrames(const NvDecFrames&) = delete;
