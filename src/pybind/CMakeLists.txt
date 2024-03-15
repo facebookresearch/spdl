@@ -2,6 +2,7 @@ set(src
   pybind.cpp
   core/adoptors.cpp
   core/decoding.cpp
+  core/demuxing.cpp
   core/executor.cpp
   core/frames_and_buffers.cpp
   core/future.cpp
