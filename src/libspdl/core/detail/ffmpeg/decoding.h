@@ -30,8 +30,7 @@ folly::coro::Task<PacketsPtr<MediaType::Image>> demux_image(
     const IOConfig io_cfg);
 
 template <MediaType media_type>
-folly::coro::Task<std::unique_ptr<FFmpegFrames<media_type>>>
-decode_packets_ffmpeg(
+folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
     const DecodeConfig cfg = {},
     const std::string filter_desc = {});

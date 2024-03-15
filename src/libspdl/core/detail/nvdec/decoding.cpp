@@ -32,7 +32,7 @@ CUstream get_stream() {
 } // namespace
 
 template <MediaType media_type>
-folly::coro::Task<std::unique_ptr<NvDecFrames<media_type>>> decode_nvdec(
+folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     PacketsPtr<media_type> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -120,8 +120,7 @@ folly::coro::Task<std::unique_ptr<NvDecFrames<media_type>>> decode_nvdec(
   co_return frames;
 }
 
-template folly::coro::Task<std::unique_ptr<NvDecFrames<MediaType::Video>>>
-decode_nvdec(
+template folly::coro::Task<NvDecFramesPtr<MediaType::Video>> decode_nvdec(
     PacketsPtr<MediaType::Video> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -130,8 +129,7 @@ decode_nvdec(
     const std::optional<std::string> pix_fmt,
     bool is_image);
 
-template folly::coro::Task<std::unique_ptr<NvDecFrames<MediaType::Image>>>
-decode_nvdec(
+template folly::coro::Task<NvDecFramesPtr<MediaType::Image>> decode_nvdec(
     PacketsPtr<MediaType::Image> packets,
     int cuda_device_index,
     const CropArea crop,

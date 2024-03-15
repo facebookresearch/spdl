@@ -30,26 +30,32 @@ void register_pybind(py::module& m) {
       py::class_<ThreadPoolExecutor, std::shared_ptr<ThreadPoolExecutor>>(
           m, "ThreadPoolExecutor", py::module_local());
 
-  auto _DecodeImageResult =
-      py::class_<DecodeImageResult>(m, "DecodeImageResult", py::module_local());
+  auto _DecodeImageResult = py::class_<DecodeResult<MediaType::Image>>(
+      m, "DecodeImageResult", py::module_local());
 
-  auto _DecodeImageNvDecResult = py::class_<DecodeImageNvDecResult>(
-      m, "DecodeImageNvDecResult", py::module_local());
+  auto _DecodeImageNvDecResult =
+      py::class_<DecodeNvDecResult<MediaType::Image>>(
+          m, "DecodeImageNvDecResult", py::module_local());
 
-  auto _BatchDecodeAudioResult = py::class_<BatchDecodeAudioResult>(
-      m, "BatchDecodeAudioResult", py::module_local());
+  auto _BatchDecodeAudioResult =
+      py::class_<BatchDecodeResult<MediaType::Audio>>(
+          m, "BatchDecodeAudioResult", py::module_local());
 
-  auto _BatchDecodeVideoResult = py::class_<BatchDecodeVideoResult>(
-      m, "BatchDecodeVideoResult", py::module_local());
+  auto _BatchDecodeVideoResult =
+      py::class_<BatchDecodeResult<MediaType::Video>>(
+          m, "BatchDecodeVideoResult", py::module_local());
 
-  auto _BatchDecodeImageResult = py::class_<BatchDecodeImageResult>(
-      m, "BatchDecodeImageResult", py::module_local());
+  auto _BatchDecodeImageResult =
+      py::class_<BatchDecodeResult<MediaType::Image>>(
+          m, "BatchDecodeImageResult", py::module_local());
 
-  auto _BatchDecodeVideoNvDecResult = py::class_<BatchDecodeVideoNvDecResult>(
-      m, "BatchDecodeVideoNvDecResult", py::module_local());
+  auto _BatchDecodeVideoNvDecResult =
+      py::class_<BatchDecodeNvDecResult<MediaType::Video>>(
+          m, "BatchDecodeVideoNvDecResult", py::module_local());
 
-  auto _BatchDecodeImageNvDecResult = py::class_<BatchDecodeImageNvDecResult>(
-      m, "BatchDecodeImageNvDecResult", py::module_local());
+  auto _BatchDecodeImageNvDecResult =
+      py::class_<BatchDecodeNvDecResult<MediaType::Image>>(
+          m, "BatchDecodeImageNvDecResult", py::module_local());
 
   _ThreadPoolExecutor.def(
       py::init<size_t, const std::string&, int>(),
@@ -57,24 +63,34 @@ void register_pybind(py::module& m) {
       py::arg("thread_name_prefix"),
       py::arg("throttle_interval") = 0);
 
-  _DecodeImageResult.def("get", &DecodeImageResult::get);
+  _DecodeImageResult.def("get", &DecodeResult<MediaType::Image>::get);
 
-  _DecodeImageNvDecResult.def("get", &DecodeImageNvDecResult::get);
+  _DecodeImageNvDecResult.def("get", &DecodeNvDecResult<MediaType::Image>::get);
 
   _BatchDecodeAudioResult.def(
-      "get", &BatchDecodeAudioResult::get, py::arg("strict") = true);
+      "get",
+      &BatchDecodeResult<MediaType::Audio>::get,
+      py::arg("strict") = true);
 
   _BatchDecodeVideoResult.def(
-      "get", &BatchDecodeVideoResult::get, py::arg("strict") = true);
+      "get",
+      &BatchDecodeResult<MediaType::Video>::get,
+      py::arg("strict") = true);
 
   _BatchDecodeImageResult.def(
-      "get", &BatchDecodeImageResult::get, py::arg("strict") = true);
+      "get",
+      &BatchDecodeResult<MediaType::Image>::get,
+      py::arg("strict") = true);
 
   _BatchDecodeVideoNvDecResult.def(
-      "get", &BatchDecodeVideoNvDecResult::get, py::arg("strict") = true);
+      "get",
+      &BatchDecodeNvDecResult<MediaType::Video>::get,
+      py::arg("strict") = true);
 
   _BatchDecodeImageNvDecResult.def(
-      "get", &BatchDecodeImageNvDecResult::get, py::arg("strict") = true);
+      "get",
+      &BatchDecodeNvDecResult<MediaType::Image>::get,
+      py::arg("strict") = true);
 
   m.def(
       "decode_video",
