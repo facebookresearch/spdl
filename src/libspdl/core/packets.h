@@ -2,6 +2,7 @@
 
 #include <libspdl/core/types.h>
 
+#include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -10,6 +11,11 @@ struct AVCodecParameters;
 struct AVPacket;
 
 namespace spdl::core {
+
+struct DemuxedPackets;
+
+using PacketsPtr = std::unique_ptr<DemuxedPackets>;
+
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
