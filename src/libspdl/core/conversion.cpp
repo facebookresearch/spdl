@@ -180,15 +180,16 @@ std::unique_ptr<Buffer> convert_batch_image_frames_to_cpu_buffer(
   return convert_video<TO_CPU>(merge_frames(batch), index);
 }
 
-std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
-    const NvDecVideoFrames* frames,
+template <MediaType media_type>
+std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_frames(
+    const NvDecFrames<media_type>* frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
   TRACE_EVENT(
       "decoding",
-      "core::convert_nvdec_video_frames",
+      "core::convert_nvdec_frames",
       perfetto::Flow::ProcessScoped(frames->id));
   if (index.has_value()) {
     SPDL_FAIL_INTERNAL(
@@ -197,6 +198,16 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_video_frames(
   return frames->buffer;
 #endif
 }
+
+template std::shared_ptr<CUDABuffer2DPitch>
+convert_nvdec_frames<MediaType::Image>(
+    const NvDecFrames<MediaType::Image>* frames,
+    const std::optional<int>& index);
+
+template std::shared_ptr<CUDABuffer2DPitch>
+convert_nvdec_frames<MediaType::Video>(
+    const NvDecFrames<MediaType::Video>* frames,
+    const std::optional<int>& index);
 
 #ifdef SPDL_USE_NVDEC
 namespace {
@@ -212,7 +223,8 @@ bool same_shape(const std::vector<size_t>& a, const std::vector<size_t>& b) {
   return true;
 }
 
-void check_consistency(const std::vector<NvDecVideoFrames*>& frames) {
+template <MediaType media_type>
+void check_consistency(const std::vector<NvDecFrames<media_type>*>& frames) {
   auto numel = frames.size();
   if (numel == 0) {
     SPDL_FAIL("No frame to convert to buffer.");
@@ -234,7 +246,7 @@ void check_consistency(const std::vector<NvDecVideoFrames*>& frames) {
 #endif
 
 std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
-    const std::vector<NvDecVideoFrames*>& batch_frames,
+    const std::vector<NvDecImageFrames*>& batch_frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");

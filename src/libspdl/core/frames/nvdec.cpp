@@ -4,10 +4,15 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // NvDec - Video
 ////////////////////////////////////////////////////////////////////////////////
-NvDecVideoFrames::NvDecVideoFrames(uint64_t id_, MediaType type_, int format_)
-    : id(id_), media_type(type_), media_format(format_) {}
+template <MediaType media_type>
+NvDecFrames<media_type>::NvDecFrames(uint64_t id_, int format_)
+    : id(id_), media_format(format_) {}
 
-enum MediaType NvDecVideoFrames::get_media_type() const {
+template <MediaType media_type>
+enum MediaType NvDecFrames<media_type>::get_media_type() const {
   return media_type;
 }
+
+template struct NvDecFrames<MediaType::Video>;
+template struct NvDecFrames<MediaType::Image>;
 } // namespace spdl::core

@@ -6,8 +6,8 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Result::Impl
 ////////////////////////////////////////////////////////////////////////////////
-template <typename ResultType, MediaType media_type>
-struct Result<ResultType, media_type>::Impl {
+template <typename ResultType>
+struct Result<ResultType>::Impl {
   bool fetched{false};
   folly::SemiFuture<ResultType> future;
 
@@ -19,8 +19,8 @@ struct Result<ResultType, media_type>::Impl {
 ////////////////////////////////////////////////////////////////////////////////
 // Results::Impl
 ////////////////////////////////////////////////////////////////////////////////
-template <typename ResultType, MediaType media_type>
-struct Results<ResultType, media_type>::Impl {
+template <typename ResultType>
+struct Results<ResultType>::Impl {
   std::vector<std::string> srcs;
   std::vector<std::tuple<double, double>> timestamps;
 

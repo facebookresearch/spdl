@@ -29,10 +29,10 @@ CUstream get_stream() {
   XLOG(DBG5) << "CUDA stream: " << (void*)stream;
   return stream;
 }
-
 } // namespace
 
-folly::coro::Task<FramesPtr> decode_packets_nvdec(
+template <MediaType media_type>
+folly::coro::Task<std::unique_ptr<NvDecFrames<media_type>>> decode_nvdec(
     std::unique_ptr<DemuxedPackets> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -51,9 +51,8 @@ folly::coro::Task<FramesPtr> decode_packets_nvdec(
   static thread_local bool decoding_ongoing = false;
 
   AVCodecParameters* codecpar = packets->codecpar;
-  auto frames = std::make_unique<NvDecVideoFrames>(
+  auto frames = std::make_unique<NvDecFrames<media_type>>(
       packets->id,
-      MediaType::Video,
       pix_fmt ? av_get_pix_fmt(pix_fmt.value().c_str()) : codecpar->format);
   frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets, is_image);
 
@@ -118,8 +117,28 @@ folly::coro::Task<FramesPtr> decode_packets_nvdec(
       frames->buffer->n,
       packets->packets.size());
 
-  co_return FramesPtr(frames.release());
+  co_return frames;
 }
+
+template folly::coro::Task<std::unique_ptr<NvDecFrames<MediaType::Video>>>
+decode_nvdec(
+    std::unique_ptr<DemuxedPackets> packets,
+    int cuda_device_index,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string> pix_fmt,
+    bool is_image);
+
+template folly::coro::Task<std::unique_ptr<NvDecFrames<MediaType::Image>>>
+decode_nvdec(
+    std::unique_ptr<DemuxedPackets> packets,
+    int cuda_device_index,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string> pix_fmt,
+    bool is_image);
 
 } // namespace spdl::core::detail
 
