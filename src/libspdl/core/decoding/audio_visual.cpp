@@ -32,8 +32,8 @@ stream_decode_task(
   std::vector<SemiFuture<std::unique_ptr<FFmpegFrames<media_type>>>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
-    auto demuxer = detail::stream_demux(
-        media_type, src, timestamps, std::move(adoptor), std::move(io_cfg));
+    auto demuxer = detail::stream_demux<media_type>(
+        src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
       auto task = detail::decode_packets_ffmpeg<media_type>(
           *std::move(result), std::move(decode_cfg), std::move(filter_desc));

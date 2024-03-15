@@ -18,7 +18,8 @@
 namespace spdl::core::detail {
 
 // Apply some bit-stream-filtering for certain video formats
-folly::coro::AsyncGenerator<PacketsPtr> stream_demux_nvdec(
+template <MediaType media_type>
+folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
@@ -26,7 +27,7 @@ folly::coro::AsyncGenerator<PacketsPtr> stream_demux_nvdec(
 
 template <MediaType media_type>
 folly::coro::Task<std::unique_ptr<NvDecFrames<media_type>>> decode_nvdec(
-    PacketsPtr packets,
+    PacketsPtr<media_type> packets,
     int cuda_device_index,
     const CropArea crop,
     int target_width = -1,

@@ -28,15 +28,14 @@ uint64_t random() {
 }
 } // namespace
 
-DemuxedPackets::DemuxedPackets(
-    MediaType media_type_,
+template <MediaType media_type>
+DemuxedPackets<media_type>::DemuxedPackets(
     std::string src_,
     std::tuple<double, double> timestamp_,
     AVCodecParameters* codecpar_,
     Rational time_base_,
     Rational frame_rate_)
     : id(random()),
-      media_type(media_type_),
       src(src_),
       timestamp(timestamp_),
       codecpar(copy(codecpar_)),
@@ -48,14 +47,17 @@ DemuxedPackets::DemuxedPackets(
       perfetto::Flow::ProcessScoped(id));
 };
 
-DemuxedPackets::DemuxedPackets(DemuxedPackets&& other) noexcept {
+template <MediaType media_type>
+DemuxedPackets<media_type>::DemuxedPackets(
+    DemuxedPackets<media_type>&& other) noexcept {
   *this = std::move(other);
 };
 
-DemuxedPackets& DemuxedPackets::operator=(DemuxedPackets&& other) noexcept {
+template <MediaType media_type>
+DemuxedPackets<media_type>& DemuxedPackets<media_type>::operator=(
+    DemuxedPackets<media_type>&& other) noexcept {
   using std::swap;
   swap(id, other.id);
-  swap(media_type, other.media_type);
   swap(src, other.src);
   swap(timestamp, other.timestamp);
   swap(codecpar, other.codecpar);
@@ -65,7 +67,8 @@ DemuxedPackets& DemuxedPackets::operator=(DemuxedPackets&& other) noexcept {
   return *this;
 };
 
-DemuxedPackets::~DemuxedPackets() {
+template <MediaType media_type>
+DemuxedPackets<media_type>::~DemuxedPackets() {
   TRACE_EVENT(
       "decoding",
       "DemuxedPackets::~DemuxedPackets",
@@ -78,5 +81,9 @@ DemuxedPackets::~DemuxedPackets() {
   });
   avcodec_parameters_free(&codecpar);
 };
+
+template struct DemuxedPackets<MediaType::Audio>;
+template struct DemuxedPackets<MediaType::Video>;
+template struct DemuxedPackets<MediaType::Image>;
 
 } // namespace spdl::core
