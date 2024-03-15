@@ -94,7 +94,7 @@ stream_decode_task_nvdec(
   std::vector<SemiFuture<std::unique_ptr<NvDecVideoFrames>>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
-    auto demuxer = detail::stream_demux_nvdec(
+    auto demuxer = detail::stream_demux_nvdec<MediaType::Video>(
         src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
       auto task = detail::decode_nvdec<MediaType::Video>(

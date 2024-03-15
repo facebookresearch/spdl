@@ -16,15 +16,15 @@
 
 namespace spdl::core::detail {
 
-folly::coro::AsyncGenerator<PacketsPtr> stream_demux(
-    const enum MediaType type,
+template <MediaType media_type>
+folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
 // Demuxer for a single image
-folly::coro::Task<PacketsPtr> demux_image(
+folly::coro::Task<PacketsPtr<MediaType::Image>> demux_image(
     const std::string src,
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
@@ -32,7 +32,7 @@ folly::coro::Task<PacketsPtr> demux_image(
 template <MediaType media_type>
 folly::coro::Task<std::unique_ptr<FFmpegFrames<media_type>>>
 decode_packets_ffmpeg(
-    PacketsPtr packets,
+    PacketsPtr<media_type> packets,
     const DecodeConfig cfg = {},
     const std::string filter_desc = {});
 

@@ -107,8 +107,8 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
 
 } // namespace
 
-folly::coro::AsyncGenerator<PacketsPtr> stream_demux(
-    const enum MediaType type,
+template <MediaType media_type>
+folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
@@ -116,12 +116,11 @@ folly::coro::AsyncGenerator<PacketsPtr> stream_demux(
   TRACE_EVENT("demuxing", "detail::stream_demux");
   auto interface = get_interface(src, adoptor, io_cfg);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
-  AVStream* stream = init_fmt_ctx(fmt_ctx, type);
+  AVStream* stream = init_fmt_ctx(fmt_ctx, media_type);
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
 
   for (auto& timestamp : timestamps) {
-    auto package = std::make_unique<DemuxedPackets>(
-        type,
+    auto package = std::make_unique<DemuxedPackets<media_type>>(
         fmt_ctx->url,
         timestamp,
         stream->codecpar,
@@ -137,7 +136,21 @@ folly::coro::AsyncGenerator<PacketsPtr> stream_demux(
   }
 }
 
-folly::coro::Task<PacketsPtr> demux_image(
+template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Audio>>
+stream_demux<MediaType::Audio>(
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg);
+
+template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Video>>
+stream_demux<MediaType::Video>(
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg);
+
+folly::coro::Task<PacketsPtr<MediaType::Image>> demux_image(
     const std::string src,
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg) {
@@ -146,8 +159,7 @@ folly::coro::Task<PacketsPtr> demux_image(
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
 
-  auto package = std::make_unique<DemuxedPackets>(
-      MediaType::Image,
+  auto package = std::make_unique<DemuxedPackets<MediaType::Image>>(
       fmt_ctx->url,
       std::tuple<double, double>{0., 1000.},
       stream->codecpar,
@@ -234,7 +246,8 @@ AVPacketPtr apply_bsf(AVBSFContext* bsf_ctx, AVPacket* packet) {
 }
 } // namespace
 
-folly::coro::AsyncGenerator<PacketsPtr> stream_demux_nvdec(
+template <MediaType media_type>
+folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     std::shared_ptr<SourceAdoptor> adoptor,
@@ -248,8 +261,7 @@ folly::coro::AsyncGenerator<PacketsPtr> stream_demux_nvdec(
   auto bsf_ctx = init_bsf(stream->codecpar);
 
   for (auto& timestamp : timestamps) {
-    auto package = std::make_unique<DemuxedPackets>(
-        MediaType::Video,
+    auto package = std::make_unique<DemuxedPackets<media_type>>(
         fmt_ctx->url,
         timestamp,
         bsf_ctx ? bsf_ctx->par_out : stream->codecpar,
@@ -268,6 +280,20 @@ folly::coro::AsyncGenerator<PacketsPtr> stream_demux_nvdec(
     co_yield std::move(package);
   }
 }
+
+template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Video>>
+stream_demux_nvdec<MediaType::Video>(
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg);
+
+template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Image>>
+stream_demux_nvdec<MediaType::Image>(
+    const std::string src,
+    const std::vector<std::tuple<double, double>> timestamps,
+    std::shared_ptr<SourceAdoptor> adoptor,
+    const IOConfig io_cfg);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Decoder
@@ -351,7 +377,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
 
 template <MediaType media_type>
 folly::coro::Task<void> decode_pkts(
-    PacketsPtr packets,
+    PacketsPtr<media_type> packets,
     AVCodecContextPtr codec_ctx,
     FFmpegFrames<media_type>* frames) {
   auto [start, end] = packets->timestamp;
@@ -373,23 +399,20 @@ folly::coro::Task<void> decode_pkts(
 
 template <MediaType media_type>
 folly::coro::Task<void> decode_pkts_with_filter(
-    PacketsPtr packets,
+    PacketsPtr<media_type> packets,
     AVCodecContextPtr codec_ctx,
     std::string filter_desc,
     FFmpegFrames<media_type>* frames) {
   auto filter_graph = [&]() {
-    switch (packets->media_type) {
-      case MediaType::Audio:
-        return get_audio_filter(filter_desc, codec_ctx.get());
-      case MediaType::Video:
-        return get_video_filter(
-            filter_desc, codec_ctx.get(), packets->frame_rate);
-      case MediaType::Image:
-        return get_video_filter(filter_desc, codec_ctx.get());
-      default:
-        SPDL_FAIL_INTERNAL(fmt::format(
-            "Unexpected media type was given: {}",
-            av_get_media_type_string(codec_ctx->codec_type)));
+    if constexpr (media_type == MediaType::Audio) {
+      return get_audio_filter(filter_desc, codec_ctx.get());
+    }
+    if constexpr (media_type == MediaType::Video) {
+      return get_video_filter(
+          filter_desc, codec_ctx.get(), packets->frame_rate);
+    }
+    if constexpr (media_type == MediaType::Image) {
+      return get_video_filter(filter_desc, codec_ctx.get());
     }
   }();
   AVFilterContext* src_ctx = filter_graph->filters[0];
@@ -434,7 +457,7 @@ folly::coro::Task<void> decode_pkts_with_filter(
 template <MediaType media_type>
 folly::coro::Task<std::unique_ptr<FFmpegFrames<media_type>>>
 decode_packets_ffmpeg(
-    PacketsPtr packets,
+    PacketsPtr<media_type> packets,
     const DecodeConfig cfg,
     std::string filter_desc) {
   TRACE_EVENT(
@@ -463,19 +486,19 @@ decode_packets_ffmpeg(
 
 template folly::coro::Task<std::unique_ptr<FFmpegFrames<MediaType::Audio>>>
 decode_packets_ffmpeg(
-    PacketsPtr packets,
+    PacketsPtr<MediaType::Audio> packets,
     const DecodeConfig cfg,
     std::string filter_desc);
 
 template folly::coro::Task<std::unique_ptr<FFmpegFrames<MediaType::Video>>>
 decode_packets_ffmpeg(
-    PacketsPtr packets,
+    PacketsPtr<MediaType::Video> packets,
     const DecodeConfig cfg,
     std::string filter_desc);
 
 template folly::coro::Task<std::unique_ptr<FFmpegFrames<MediaType::Image>>>
 decode_packets_ffmpeg(
-    PacketsPtr packets,
+    PacketsPtr<MediaType::Image> packets,
     const DecodeConfig cfg,
     std::string filter_desc);
 

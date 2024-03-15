@@ -12,17 +12,19 @@ struct AVPacket;
 
 namespace spdl::core {
 
+template <MediaType media_type>
 struct DemuxedPackets;
 
-using PacketsPtr = std::unique_ptr<DemuxedPackets>;
+template <MediaType media_type>
+using PacketsPtr = std::unique_ptr<DemuxedPackets<media_type>>;
 
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
+template <MediaType media_type>
 struct DemuxedPackets {
   uint64_t id;
   // Source information
-  MediaType media_type;
   std::string src;
   std::tuple<double, double> timestamp;
 
@@ -37,7 +39,6 @@ struct DemuxedPackets {
   std::vector<AVPacket*> packets = {};
 
   DemuxedPackets(
-      MediaType type,
       std::string src,
       std::tuple<double, double> timestamp,
       AVCodecParameters* codecpar,
