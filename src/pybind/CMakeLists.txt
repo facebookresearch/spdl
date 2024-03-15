@@ -3,6 +3,7 @@ set(src
   core/adoptors.cpp
   core/decoding.cpp
   core/frames_and_buffers.cpp
+  core/future.cpp
   core/tracing.cpp
   core/utils.cpp)
 

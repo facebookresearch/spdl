@@ -66,6 +66,7 @@ set(
   "${base_dir}/folly/Singleton.cpp"
   "${base_dir}/folly/SingletonThreadLocal.cpp"
   "${base_dir}/folly/String.cpp"
+  "${base_dir}/folly/Try.cpp"
   "${base_dir}/folly/Unicode.cpp"
   "${base_dir}/folly/json.cpp"
   "${base_dir}/folly/json_pointer.cpp"
