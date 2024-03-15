@@ -2,8 +2,8 @@ message(STATUS "########################################")
 message(STATUS "# Configuring folly")
 message(STATUS "########################################")
 
-set(url https://github.com/facebook/folly/releases/download/v2024.02.05.00/folly-v2024.02.05.00.tar.gz)
-set(hash SHA256=729a1f167a154774cc588b1c0c3f5cbb0ff79f404eaff13d582ca69dd5ecd8ad)
+set(url https://github.com/facebook/folly/releases/download/v2024.03.11.00/folly-v2024.03.11.00.tar.gz)
+set(hash SHA256=2083b59fb00ef99a1e3ea01c49998735d784d31cd5dfbea86cbbf553308590f2)
 
 if (APPLE)
 FetchContent_Declare(
@@ -54,7 +54,6 @@ set(
   "${base_dir}/folly/CancellationToken.cpp"
   "${base_dir}/folly/Conv.cpp"
   "${base_dir}/folly/Demangle.cpp"
-  "${base_dir}/folly/dynamic.cpp"
   "${base_dir}/folly/Executor.cpp"
   "${base_dir}/folly/ExceptionString.cpp"
   "${base_dir}/folly/ExceptionWrapper.cpp"
@@ -68,8 +67,9 @@ set(
   "${base_dir}/folly/String.cpp"
   "${base_dir}/folly/Try.cpp"
   "${base_dir}/folly/Unicode.cpp"
-  "${base_dir}/folly/json.cpp"
-  "${base_dir}/folly/json_pointer.cpp"
+  "${base_dir}/folly/json/dynamic.cpp"
+  "${base_dir}/folly/json/json.cpp"
+  "${base_dir}/folly/json/json_pointer.cpp"
 
   "${base_dir}/folly/concurrency/CacheLocality.cpp"
   "${base_dir}/folly/concurrency/ProcessLocalUniqueId.cpp"
