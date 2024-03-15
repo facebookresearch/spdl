@@ -33,6 +33,9 @@ void register_pybind(py::module& m) {
   auto _DecodeImageResult =
       py::class_<DecodeImageResult>(m, "DecodeImageResult", py::module_local());
 
+  auto _DecodeImageNvDecResult = py::class_<DecodeImageNvDecResult>(
+      m, "DecodeImageNvDecResult", py::module_local());
+
   auto _BatchDecodeAudioResult = py::class_<BatchDecodeAudioResult>(
       m, "BatchDecodeAudioResult", py::module_local());
 
@@ -42,6 +45,12 @@ void register_pybind(py::module& m) {
   auto _BatchDecodeImageResult = py::class_<BatchDecodeImageResult>(
       m, "BatchDecodeImageResult", py::module_local());
 
+  auto _BatchDecodeVideoNvDecResult = py::class_<BatchDecodeVideoNvDecResult>(
+      m, "BatchDecodeVideoNvDecResult", py::module_local());
+
+  auto _BatchDecodeImageNvDecResult = py::class_<BatchDecodeImageNvDecResult>(
+      m, "BatchDecodeImageNvDecResult", py::module_local());
+
   _ThreadPoolExecutor.def(
       py::init<size_t, const std::string&, int>(),
       py::arg("num_threads"),
@@ -49,6 +58,8 @@ void register_pybind(py::module& m) {
       py::arg("throttle_interval") = 0);
 
   _DecodeImageResult.def("get", &DecodeImageResult::get);
+
+  _DecodeImageNvDecResult.def("get", &DecodeImageNvDecResult::get);
 
   _BatchDecodeAudioResult.def(
       "get", &BatchDecodeAudioResult::get, py::arg("strict") = true);
@@ -58,6 +69,12 @@ void register_pybind(py::module& m) {
 
   _BatchDecodeImageResult.def(
       "get", &BatchDecodeImageResult::get, py::arg("strict") = true);
+
+  _BatchDecodeVideoNvDecResult.def(
+      "get", &BatchDecodeVideoNvDecResult::get, py::arg("strict") = true);
+
+  _BatchDecodeImageNvDecResult.def(
+      "get", &BatchDecodeImageNvDecResult::get, py::arg("strict") = true);
 
   m.def(
       "decode_video",
@@ -380,7 +397,7 @@ void register_pybind(py::module& m) {
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> demux_executor,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decoding::decode_nvdec(
+        return decoding::decode_video_nvdec(
             src,
             timestamps,
             cuda_device_index,

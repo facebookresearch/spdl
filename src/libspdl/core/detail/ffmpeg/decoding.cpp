@@ -349,10 +349,11 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
   }
 }
 
+template <MediaType media_type>
 folly::coro::Task<void> decode_pkts(
     std::unique_ptr<DemuxedPackets> packets,
     AVCodecContextPtr codec_ctx,
-    FFmpegFrames* frames) {
+    FFmpegFrames<media_type>* frames) {
   auto [start, end] = packets->timestamp;
   for (auto& packet : packets->packets) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
@@ -370,11 +371,12 @@ folly::coro::Task<void> decode_pkts(
   }
 }
 
+template <MediaType media_type>
 folly::coro::Task<void> decode_pkts_with_filter(
     std::unique_ptr<DemuxedPackets> packets,
     AVCodecContextPtr codec_ctx,
     std::string filter_desc,
-    FFmpegFrames* frames) {
+    FFmpegFrames<media_type>* frames) {
   auto filter_graph = [&]() {
     switch (packets->media_type) {
       case MediaType::Audio:
@@ -429,35 +431,23 @@ folly::coro::Task<void> decode_pkts_with_filter(
 }
 } // namespace
 
-folly::coro::Task<FramesPtr> decode_packets(
+template <MediaType media_type>
+folly::coro::Task<std::unique_ptr<FFmpegFrames<media_type>>>
+decode_packets_ffmpeg(
     std::unique_ptr<DemuxedPackets> packets,
     const DecodeConfig cfg,
     std::string filter_desc) {
   TRACE_EVENT(
-      "decoding", "decode_packets", perfetto::Flow::ProcessScoped(packets->id));
+      "decoding",
+      "decode_packets_ffmpeg",
+      perfetto::Flow::ProcessScoped(packets->id));
   auto codec_ctx = get_codec_ctx_ptr(
       packets->codecpar,
       AVRational{packets->time_base.num, packets->time_base.den},
       cfg.decoder,
       cfg.decoder_options,
       cfg.cuda_device_index);
-  auto frames = [&]() -> std::unique_ptr<FFmpegFrames> {
-    switch (packets->media_type) {
-      case MediaType::Audio:
-        return std::unique_ptr<FFmpegFrames>{
-            new FFmpegAudioFrames{packets->id}};
-      case MediaType::Video:
-        return std::unique_ptr<FFmpegFrames>{
-            new FFmpegVideoFrames{packets->id}};
-      case MediaType::Image:
-        return std::unique_ptr<FFmpegFrames>{
-            new FFmpegImageFrames{packets->id}};
-      default:
-        SPDL_FAIL_INTERNAL(fmt::format(
-            "Unsupported media type: {}",
-            av_get_media_type_string(codec_ctx->codec_type)));
-    }
-  }();
+  auto frames = std::make_unique<FFmpegFrames<media_type>>(packets->id);
   if (filter_desc.empty()) {
     co_await decode_pkts(
         std::move(packets), std::move(codec_ctx), frames.get());
@@ -470,4 +460,23 @@ folly::coro::Task<FramesPtr> decode_packets(
   }
   co_return std::move(frames);
 }
+
+template folly::coro::Task<std::unique_ptr<FFmpegFrames<MediaType::Audio>>>
+decode_packets_ffmpeg(
+    std::unique_ptr<DemuxedPackets> packets,
+    const DecodeConfig cfg,
+    std::string filter_desc);
+
+template folly::coro::Task<std::unique_ptr<FFmpegFrames<MediaType::Video>>>
+decode_packets_ffmpeg(
+    std::unique_ptr<DemuxedPackets> packets,
+    const DecodeConfig cfg,
+    std::string filter_desc);
+
+template folly::coro::Task<std::unique_ptr<FFmpegFrames<MediaType::Image>>>
+decode_packets_ffmpeg(
+    std::unique_ptr<DemuxedPackets> packets,
+    const DecodeConfig cfg,
+    std::string filter_desc);
+
 } // namespace spdl::core::detail

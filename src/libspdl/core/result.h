@@ -14,7 +14,7 @@ struct decoding;
 
 /// Future-like object that holds the result of single asynchronous decoding
 /// operation. Used for decoding images.
-template <typename ResultType, MediaType media_type>
+template <typename ResultType>
 class Result {
   struct Impl;
 
@@ -43,7 +43,7 @@ class Result {
 
 /// Future-like object that holds the results of multiple asynchronous decoding
 /// operation. Used for decoding audio and video clips.
-template <typename ResultType, MediaType media_type>
+template <typename ResultType>
 class Results {
   struct Impl;
 

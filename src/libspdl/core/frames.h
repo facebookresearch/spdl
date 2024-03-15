@@ -24,16 +24,26 @@ struct DecodedFrames {
   virtual enum MediaType get_media_type() const = 0;
 };
 
-using FramesPtr = std::unique_ptr<DecodedFrames>;
+////////////////////////////////////////////////////////////////////////////////
+// FFmpeg Frames
+////////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////
-// FFmpeg Common
-////////////////////////////////////////////////////////////////////////////////
+template <MediaType media_type>
+class FFmpegFrames;
+
+using FFmpegAudioFrames = FFmpegFrames<MediaType::Audio>;
+using FFmpegVideoFrames = FFmpegFrames<MediaType::Video>;
+using FFmpegImageFrames = FFmpegFrames<MediaType::Image>;
+
+#define _IS_AUDIO (media_type == MediaType::Audio)
+#define _IS_VIDEO (media_type == MediaType::Video)
+#define _IS_IMAGE (media_type == MediaType::Image)
 
 ///
 /// Base class that holds media frames decoded with FFmpeg.
+template <MediaType media_type>
 class FFmpegFrames : public DecodedFrames {
- protected:
+ private:
   ///
   /// Used for tracking the lifetime in tracing.
   uint64_t id{0};
@@ -73,118 +83,80 @@ class FFmpegFrames : public DecodedFrames {
   uint64_t get_id() const;
 
   ///
+  /// Get the list of frames.
+  const std::vector<AVFrame*>& get_frames() const;
+
+  ///
+  enum MediaType get_media_type() const override {
+    return media_type;
+  };
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Common
+  //////////////////////////////////////////////////////////////////////////////
+
+  ///
   /// Get the number of frames.
-  virtual int get_num_frames() const;
+  int get_num_frames() const;
+  // the behavior is different for audio
 
   ///
   /// Push a new frame into the container.
-  virtual void push_back(AVFrame* frame);
+  void push_back(AVFrame* frame);
+  // the behavior is different for image
 
-  ///
-  /// Get the list of frames.
-  const std::vector<AVFrame*>& get_frames() const;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// FFmpeg - Audio
-////////////////////////////////////////////////////////////////////////////////
-
-/// Holds audio frames decoded with FFmpeg.
-struct FFmpegAudioFrames : public FFmpegFrames {
-  using FFmpegFrames::FFmpegFrames;
-
-  ///
-  /// Audio
-  enum MediaType get_media_type() const override;
+  //////////////////////////////////////////////////////////////////////////////
+  // Audio specific
+  //////////////////////////////////////////////////////////////////////////////
 
   ///
   /// Get the sample rate
-  int get_sample_rate() const;
-
-  ///
-  /// Get the number of total frames.
-  int get_num_frames() const override;
+  int get_sample_rate() const requires _IS_AUDIO;
 
   ///
   /// Get the number of audio channels.
-  int get_num_channels() const;
-};
+  int get_num_channels() const requires _IS_AUDIO;
 
-////////////////////////////////////////////////////////////////////////////////
-// FFmpeg - Image
-////////////////////////////////////////////////////////////////////////////////
-
-/// Holds single image frame decoded with FFmpeg.
-struct FFmpegImageFrames : public FFmpegFrames {
-  using FFmpegFrames::FFmpegFrames;
-
-  ///
-  /// Image
-  enum MediaType get_media_type() const override;
+  //////////////////////////////////////////////////////////////////////////////
+  // Common to Image/Video
+  //////////////////////////////////////////////////////////////////////////////
 
   ///
   /// True if the underlying image frame is on CUDA device.
-  bool is_cuda() const;
+  bool is_cuda() const requires(_IS_IMAGE || _IS_VIDEO);
 
   /// Get the number of planes in the image.
   ///
   /// Note: The number of planes and the number of color channels do not match.
   /// For example, NV12 has 3 channels, YUV, but U and V are interleaved in the
   /// same plane.
-  int get_num_planes() const;
+  int get_num_planes() const requires(_IS_IMAGE || _IS_VIDEO);
 
   ///
   /// Get the width of the image.
-  int get_width() const;
+  int get_width() const requires(_IS_IMAGE || _IS_VIDEO);
 
   ///
   /// Get the height of the image.
-  int get_height() const;
+  int get_height() const requires(_IS_IMAGE || _IS_VIDEO);
 
-  ///
-  /// Push a new frame into the container.
-  void push_back(AVFrame* frame) override;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// FFmpeg - Video
-////////////////////////////////////////////////////////////////////////////////
-
-/// Holds video frame decoded with FFmpeg.
-struct FFmpegVideoFrames : public FFmpegFrames {
-  using FFmpegFrames::FFmpegFrames;
-
-  ///
-  /// Video
-  enum MediaType get_media_type() const override;
-
-  ///
-  /// True if the underlying image frame is on CUDA device.
-  bool is_cuda() const;
-
-  /// Get the number of planes in the image.
-  ///
-  /// Note: The number of planes and the number of color channels do not match.
-  /// For example, NV12 has 3 channels, YUV, but U and V are interleaved in the
-  /// same plane.
-  int get_num_planes() const;
-
-  ///
-  /// Get the width of the image
-  int get_width() const;
-
-  ///
-  /// Get the height of the image
-  int get_height() const;
+  //////////////////////////////////////////////////////////////////////////////
+  // Video specific
+  //////////////////////////////////////////////////////////////////////////////
 
   ///
   /// Range slice operation, using Python's slice notation.
-  FFmpegVideoFrames slice(int start, int stop, int step) const;
+  FFmpegVideoFrames slice(int start, int stop, int step)
+      const requires _IS_VIDEO;
 
   ///
   /// Slice (`__getitem__`) operation.
-  FFmpegImageFrames slice(int index) const;
+  FFmpegImageFrames slice(int index) const requires _IS_VIDEO;
 };
+
+#undef _IS_AUDIO
+#undef _IS_VIDEO
+#undef _IS_IMAGE
 
 ////////////////////////////////////////////////////////////////////////////////
 // NVDEC - Video
@@ -192,15 +164,12 @@ struct FFmpegVideoFrames : public FFmpegFrames {
 
 /// Class that holds media frames decoded with NVDEC decoder.
 /// The decoded media can be video or image.
-struct NvDecVideoFrames : public DecodedFrames {
+template <MediaType media_type>
+struct NvDecFrames : public DecodedFrames {
 #ifdef SPDL_USE_NVDEC
   ///
   /// Used for tracking the lifetime in tracing.
   uint64_t id{0};
-
-  ///
-  /// Video or Image
-  MediaType media_type{0};
 
   /// ``enum AVPixelFormat`` but using ``int`` so as to avoid including FFmpeg
   /// header.
@@ -215,12 +184,16 @@ struct NvDecVideoFrames : public DecodedFrames {
   /// Video or Image
   enum MediaType get_media_type() const override;
 
-  NvDecVideoFrames(uint64_t id, MediaType media_type, int media_format);
-  NvDecVideoFrames(const NvDecVideoFrames&) = delete;
-  NvDecVideoFrames& operator=(const NvDecVideoFrames&) = delete;
-  NvDecVideoFrames(NvDecVideoFrames&&) noexcept;
-  NvDecVideoFrames& operator=(NvDecVideoFrames&&) noexcept;
-  ~NvDecVideoFrames() = default;
+  NvDecFrames(uint64_t id, int media_format);
+  NvDecFrames(const NvDecFrames&) = delete;
+  NvDecFrames& operator=(const NvDecFrames&) = delete;
+  NvDecFrames(NvDecFrames&&) noexcept;
+  NvDecFrames& operator=(NvDecFrames&&) noexcept;
+  ~NvDecFrames() = default;
 #endif
 };
+
+using NvDecVideoFrames = NvDecFrames<MediaType::Video>;
+using NvDecImageFrames = NvDecFrames<MediaType::Image>;
+
 } // namespace spdl::core

@@ -24,7 +24,8 @@ folly::coro::AsyncGenerator<std::unique_ptr<DemuxedPackets>> stream_demux_nvdec(
     std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg);
 
-folly::coro::Task<FramesPtr> decode_packets_nvdec(
+template <MediaType media_type>
+folly::coro::Task<std::unique_ptr<NvDecFrames<media_type>>> decode_nvdec(
     std::unique_ptr<DemuxedPackets> packets,
     int cuda_device_index,
     const CropArea crop,

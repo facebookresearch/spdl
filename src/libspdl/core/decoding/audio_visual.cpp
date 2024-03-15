@@ -20,7 +20,8 @@ using folly::coro::Task;
 namespace {
 
 template <MediaType media_type>
-Task<std::vector<SemiFuture<FramesPtr>>> stream_decode_task(
+Task<std::vector<SemiFuture<std::unique_ptr<FFmpegFrames<media_type>>>>>
+stream_decode_task(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -28,13 +29,13 @@ Task<std::vector<SemiFuture<FramesPtr>>> stream_decode_task(
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<FramesPtr>> futures;
+  std::vector<SemiFuture<std::unique_ptr<FFmpegFrames<media_type>>>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux(
         media_type, src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
-      auto task = detail::decode_packets(
+      auto task = detail::decode_packets_ffmpeg<media_type>(
           *std::move(result), std::move(decode_cfg), std::move(filter_desc));
       futures.emplace_back(std::move(task).scheduleOn(exec).start());
     }
@@ -44,7 +45,7 @@ Task<std::vector<SemiFuture<FramesPtr>>> stream_decode_task(
 } // namespace
 
 template <MediaType media_type>
-Results<FramesPtr, media_type> decoding::decode(
+Results<std::unique_ptr<FFmpegFrames<media_type>>> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -56,8 +57,8 @@ Results<FramesPtr, media_type> decoding::decode(
   if (timestamps.size() == 0) {
     SPDL_FAIL("At least one timestamp must be provided.");
   }
-  return Results<FramesPtr, media_type>{
-      new typename Results<FramesPtr, media_type>::Impl{
+  return Results<std::unique_ptr<FFmpegFrames<media_type>>>{
+      new typename Results<std::unique_ptr<FFmpegFrames<media_type>>>::Impl{
           {src},
           timestamps,
           stream_decode_task<media_type>(
@@ -72,9 +73,8 @@ Results<FramesPtr, media_type> decoding::decode(
               .start()}};
 }
 
-// Explicit instantiations
-template Results<FramesPtr, MediaType::Video>
-decoding::decode<MediaType::Video>(
+template Results<std::unique_ptr<FFmpegFrames<MediaType::Audio>>>
+decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -84,8 +84,8 @@ decoding::decode<MediaType::Video>(
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor);
 
-template Results<FramesPtr, MediaType::Audio>
-decoding::decode<MediaType::Audio>(
+template Results<std::unique_ptr<FFmpegFrames<MediaType::Video>>>
+decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,

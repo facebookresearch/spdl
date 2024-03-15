@@ -15,21 +15,22 @@ using folly::SemiFuture;
 using folly::coro::Task;
 
 namespace {
-Task<FramesPtr> image_decode_task(
+Task<std::unique_ptr<FFmpegImageFrames>> image_decode_task(
     const std::string src,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  co_return co_await detail::decode_packets(
+  co_return co_await detail::decode_packets_ffmpeg<MediaType::Image>(
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg)),
       std::move(decode_cfg),
       std::move(filter_desc))
       .scheduleOn(detail::get_decode_executor(decode_executor));
 }
 
-Task<std::vector<SemiFuture<FramesPtr>>> batch_image_decode_task(
+Task<std::vector<SemiFuture<std::unique_ptr<FFmpegImageFrames>>>>
+batch_image_decode_task(
     const std::vector<std::string> srcs,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
@@ -37,7 +38,7 @@ Task<std::vector<SemiFuture<FramesPtr>>> batch_image_decode_task(
     const std::string filter_desc,
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<FramesPtr>> futures;
+  std::vector<SemiFuture<std::unique_ptr<FFmpegImageFrames>>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task(
