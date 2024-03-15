@@ -21,6 +21,18 @@ using FFmpegAudioFrames = FFmpegFrames<MediaType::Audio>;
 using FFmpegVideoFrames = FFmpegFrames<MediaType::Video>;
 using FFmpegImageFrames = FFmpegFrames<MediaType::Image>;
 
+template <MediaType media_type>
+using FFmpegFramesPtr = std::unique_ptr<FFmpegFrames<media_type>>;
+
+template <MediaType media_type>
+struct NvDecFrames;
+
+using NvDecVideoFrames = NvDecFrames<MediaType::Video>;
+using NvDecImageFrames = NvDecFrames<MediaType::Image>;
+
+template <MediaType media_type>
+using NvDecFramesPtr = std::unique_ptr<NvDecFrames<media_type>>;
+
 #define _IS_AUDIO (media_type == MediaType::Audio)
 #define _IS_VIDEO (media_type == MediaType::Video)
 #define _IS_IMAGE (media_type == MediaType::Image)
@@ -169,8 +181,5 @@ struct NvDecFrames {
   ~NvDecFrames() = default;
 #endif
 };
-
-using NvDecVideoFrames = NvDecFrames<MediaType::Video>;
-using NvDecImageFrames = NvDecFrames<MediaType::Image>;
 
 } // namespace spdl::core

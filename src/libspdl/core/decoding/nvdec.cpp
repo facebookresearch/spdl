@@ -22,7 +22,7 @@ using folly::coro::Task;
 
 namespace {
 #ifdef SPDL_USE_NVDEC
-Task<std::unique_ptr<NvDecImageFrames>> image_decode_task_nvdec(
+Task<NvDecFramesPtr<MediaType::Image>> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -43,12 +43,12 @@ Task<std::unique_ptr<NvDecImageFrames>> image_decode_task_nvdec(
       height,
       pix_fmt,
       /*is_image*/ true);
-  SemiFuture<std::unique_ptr<NvDecImageFrames>> future =
+  SemiFuture<NvDecFramesPtr<MediaType::Image>> future =
       std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
 }
 
-Task<std::vector<SemiFuture<std::unique_ptr<NvDecImageFrames>>>>
+Task<std::vector<SemiFuture<NvDecFramesPtr<MediaType::Image>>>>
 batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
@@ -60,7 +60,7 @@ batch_image_decode_task_nvdec(
     const std::optional<std::string> pix_fmt,
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<std::unique_ptr<NvDecImageFrames>>> futures;
+  std::vector<SemiFuture<NvDecFramesPtr<MediaType::Image>>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task_nvdec(
@@ -79,7 +79,7 @@ batch_image_decode_task_nvdec(
   co_return std::move(futures);
 }
 
-Task<std::vector<SemiFuture<std::unique_ptr<NvDecVideoFrames>>>>
+Task<std::vector<SemiFuture<NvDecFramesPtr<MediaType::Video>>>>
 stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
@@ -91,7 +91,7 @@ stream_decode_task_nvdec(
     int height,
     const std::optional<std::string> pix_fmt,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<std::unique_ptr<NvDecVideoFrames>>> futures;
+  std::vector<SemiFuture<NvDecFramesPtr<MediaType::Video>>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux_nvdec<MediaType::Video>(
@@ -154,7 +154,7 @@ void init_cuda() {
 #endif
 } // namespace
 
-DecodeImageNvDecResult decoding::decode_image_nvdec(
+DecodeNvDecResult<MediaType::Image> decoding::decode_image_nvdec(
     const std::string& src,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -170,23 +170,24 @@ DecodeImageNvDecResult decoding::decode_image_nvdec(
 #else
   validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
-  return DecodeImageNvDecResult{new DecodeImageNvDecResult::Impl{
-      image_decode_task_nvdec(
-          src,
-          cuda_device_index,
-          adoptor,
-          io_cfg,
-          crop,
-          width,
-          height,
-          pix_fmt,
-          decode_executor)
-          .scheduleOn(detail::get_demux_executor(demux_executor))
-          .start()}};
+  return DecodeNvDecResult<MediaType::Image>{
+      new DecodeNvDecResult<MediaType::Image>::Impl{
+          image_decode_task_nvdec(
+              src,
+              cuda_device_index,
+              adoptor,
+              io_cfg,
+              crop,
+              width,
+              height,
+              pix_fmt,
+              decode_executor)
+              .scheduleOn(detail::get_demux_executor(demux_executor))
+              .start()}};
 #endif
 }
 
-BatchDecodeVideoNvDecResult decoding::decode_video_nvdec(
+BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const int cuda_device_index,
@@ -208,26 +209,27 @@ BatchDecodeVideoNvDecResult decoding::decode_video_nvdec(
   validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
 
-  return BatchDecodeVideoNvDecResult{new BatchDecodeVideoNvDecResult::Impl{
-      {src},
-      timestamps,
-      stream_decode_task_nvdec(
-          src,
+  return BatchDecodeNvDecResult<MediaType::Video>{
+      new BatchDecodeNvDecResult<MediaType::Video>::Impl{
+          {src},
           timestamps,
-          cuda_device_index,
-          adoptor,
-          io_cfg,
-          crop,
-          width,
-          height,
-          pix_fmt,
-          decode_executor)
-          .scheduleOn(detail::get_demux_executor(demux_executor))
-          .start()}};
+          stream_decode_task_nvdec(
+              src,
+              timestamps,
+              cuda_device_index,
+              adoptor,
+              io_cfg,
+              crop,
+              width,
+              height,
+              pix_fmt,
+              decode_executor)
+              .scheduleOn(detail::get_demux_executor(demux_executor))
+              .start()}};
 #endif
 }
 
-BatchDecodeImageNvDecResult decoding::batch_decode_image_nvdec(
+BatchDecodeNvDecResult<MediaType::Image> decoding::batch_decode_image_nvdec(
     const std::vector<std::string>& srcs,
     const int cuda_device_index,
     const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -248,22 +250,23 @@ BatchDecodeImageNvDecResult decoding::batch_decode_image_nvdec(
   validate_nvdec_params(cuda_device_index, crop, width, height);
   init_cuda();
 
-  return BatchDecodeImageNvDecResult{new BatchDecodeImageNvDecResult::Impl{
-      srcs,
-      {},
-      batch_image_decode_task_nvdec(
+  return BatchDecodeNvDecResult<MediaType::Image>{
+      new BatchDecodeNvDecResult<MediaType::Image>::Impl{
           srcs,
-          cuda_device_index,
-          adoptor,
-          io_cfg,
-          crop,
-          width,
-          height,
-          pix_fmt,
-          demux_executor,
-          decode_executor)
-          .scheduleOn(detail::get_demux_executor(demux_executor))
-          .start()}};
+          {},
+          batch_image_decode_task_nvdec(
+              srcs,
+              cuda_device_index,
+              adoptor,
+              io_cfg,
+              crop,
+              width,
+              height,
+              pix_fmt,
+              demux_executor,
+              decode_executor)
+              .scheduleOn(detail::get_demux_executor(demux_executor))
+              .start()}};
 
 #endif
 }

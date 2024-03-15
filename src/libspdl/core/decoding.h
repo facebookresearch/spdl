@@ -12,14 +12,17 @@
 
 namespace spdl::core {
 
-using DecodeImageResult = Result<std::unique_ptr<FFmpegImageFrames>>;
-using DecodeImageNvDecResult = Result<std::unique_ptr<NvDecImageFrames>>;
+template <MediaType media_type>
+using DecodeResult = Result<FFmpegFramesPtr<media_type>>;
 
-using BatchDecodeAudioResult = Results<std::unique_ptr<FFmpegAudioFrames>>;
-using BatchDecodeVideoResult = Results<std::unique_ptr<FFmpegVideoFrames>>;
-using BatchDecodeImageResult = Results<std::unique_ptr<FFmpegImageFrames>>;
-using BatchDecodeVideoNvDecResult = Results<std::unique_ptr<NvDecVideoFrames>>;
-using BatchDecodeImageNvDecResult = Results<std::unique_ptr<NvDecImageFrames>>;
+template <MediaType media_type>
+using DecodeNvDecResult = Result<NvDecFramesPtr<media_type>>;
+
+template <MediaType media_type>
+using BatchDecodeResult = Results<FFmpegFramesPtr<media_type>>;
+
+template <MediaType media_type>
+using BatchDecodeNvDecResult = Results<NvDecFramesPtr<media_type>>;
 
 // Putting all the decoding functions into this utility, static-only class
 // so that we can make the whole thing friend of result classes without having
@@ -36,7 +39,7 @@ struct decoding {
   ///
   /// Decode one single image asynchronously using FFmpeg.
   ///
-  static DecodeImageResult decode_image(
+  static DecodeResult<MediaType::Image> decode_image(
       const std::string& src,
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
@@ -48,7 +51,7 @@ struct decoding {
   ///
   /// Decode one single image asynchronously using NVDEC.
   ///
-  static DecodeImageNvDecResult decode_image_nvdec(
+  static DecodeNvDecResult<MediaType::Image> decode_image_nvdec(
       const std::string& src,
       const int cuda_device_index,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -67,7 +70,7 @@ struct decoding {
   ///
   /// Decode multiple images asynchronously using FFmpeg.
   ///
-  static BatchDecodeImageResult batch_decode_image(
+  static BatchDecodeResult<MediaType::Image> batch_decode_image(
       const std::vector<std::string>& srcs,
       const std::shared_ptr<SourceAdoptor>& adoptor,
       const IOConfig& io_cfg,
@@ -79,7 +82,7 @@ struct decoding {
   ///
   /// Decode multiple images asynchronously using NVDEC.
   ///
-  static BatchDecodeImageNvDecResult batch_decode_image_nvdec(
+  static BatchDecodeNvDecResult<MediaType::Image> batch_decode_image_nvdec(
       const std::vector<std::string>& srcs,
       const int cuda_device_index,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -100,7 +103,7 @@ struct decoding {
   /// FFmpeg.
   ///
   template <MediaType media_type>
-  static Results<std::unique_ptr<FFmpegFrames<media_type>>> decode(
+  static Results<FFmpegFramesPtr<media_type>> decode(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
       const std::shared_ptr<SourceAdoptor>& adoptor,
@@ -113,7 +116,7 @@ struct decoding {
   ///
   /// Decode multiple clips of the given video asynchronously using NVDEC.
   ///
-  static BatchDecodeVideoNvDecResult decode_video_nvdec(
+  static BatchDecodeNvDecResult<MediaType::Video> decode_video_nvdec(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
       const int cuda_device_index,

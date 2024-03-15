@@ -140,8 +140,8 @@ std::vector<ResultType> Results<ResultType>::Impl::get(bool strict) {
   }
   fetched = true;
   if constexpr (
-      std::is_same<ResultType, std::unique_ptr<FFmpegImageFrames>>::value ||
-      std::is_same<ResultType, std::unique_ptr<NvDecImageFrames>>::value) {
+      std::is_same<ResultType, FFmpegFramesPtr<MediaType::Image>>::value ||
+      std::is_same<ResultType, NvDecFramesPtr<MediaType::Image>>::value) {
     return blockingWait(
         check_image<ResultType>(std::move(future), srcs, strict));
   } else {
@@ -178,13 +178,13 @@ std::vector<ResultType> Results<ResultType>::get(bool strict) {
 }
 
 // Explicit instantiation
-template class Result<std::unique_ptr<FFmpegImageFrames>>;
-template class Result<std::unique_ptr<NvDecImageFrames>>;
+template class Result<FFmpegFramesPtr<MediaType::Image>>;
+template class Result<NvDecFramesPtr<MediaType::Image>>;
 
-template class Results<std::unique_ptr<FFmpegAudioFrames>>;
-template class Results<std::unique_ptr<FFmpegVideoFrames>>;
-template class Results<std::unique_ptr<FFmpegImageFrames>>;
-template class Results<std::unique_ptr<NvDecVideoFrames>>;
-template class Results<std::unique_ptr<NvDecImageFrames>>;
+template class Results<FFmpegFramesPtr<MediaType::Audio>>;
+template class Results<FFmpegFramesPtr<MediaType::Video>>;
+template class Results<FFmpegFramesPtr<MediaType::Image>>;
+template class Results<NvDecFramesPtr<MediaType::Video>>;
+template class Results<NvDecFramesPtr<MediaType::Image>>;
 
 } // namespace spdl::core

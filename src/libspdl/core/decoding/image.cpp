@@ -15,7 +15,7 @@ using folly::SemiFuture;
 using folly::coro::Task;
 
 namespace {
-Task<std::unique_ptr<FFmpegImageFrames>> image_decode_task(
+Task<FFmpegFramesPtr<MediaType::Image>> image_decode_task(
     const std::string src,
     const std::shared_ptr<SourceAdoptor> adoptor,
     const IOConfig io_cfg,
@@ -29,7 +29,7 @@ Task<std::unique_ptr<FFmpegImageFrames>> image_decode_task(
       .scheduleOn(detail::get_decode_executor(decode_executor));
 }
 
-Task<std::vector<SemiFuture<std::unique_ptr<FFmpegImageFrames>>>>
+Task<std::vector<SemiFuture<FFmpegFramesPtr<MediaType::Image>>>>
 batch_image_decode_task(
     const std::vector<std::string> srcs,
     const std::shared_ptr<SourceAdoptor> adoptor,
@@ -38,7 +38,7 @@ batch_image_decode_task(
     const std::string filter_desc,
     std::shared_ptr<ThreadPoolExecutor> demux_executor,
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-  std::vector<SemiFuture<std::unique_ptr<FFmpegImageFrames>>> futures;
+  std::vector<SemiFuture<FFmpegFramesPtr<MediaType::Image>>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task(
@@ -50,7 +50,7 @@ batch_image_decode_task(
 }
 } // namespace
 
-DecodeImageResult decoding::decode_image(
+DecodeResult<MediaType::Image> decoding::decode_image(
     const std::string& src,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
@@ -60,13 +60,14 @@ DecodeImageResult decoding::decode_image(
     std::shared_ptr<ThreadPoolExecutor> decode_executor) {
   auto task = image_decode_task(
       src, adoptor, io_cfg, decode_cfg, filter_desc, decode_executor);
-  return DecodeImageResult{new DecodeImageResult::Impl{
-      std::move(task)
-          .scheduleOn(detail::get_demux_executor(demux_executor))
-          .start()}};
+  return DecodeResult<MediaType::Image>{
+      new DecodeResult<MediaType::Image>::Impl{
+          std::move(task)
+              .scheduleOn(detail::get_demux_executor(demux_executor))
+              .start()}};
 }
 
-BatchDecodeImageResult decoding::batch_decode_image(
+BatchDecodeResult<MediaType::Image> decoding::batch_decode_image(
     const std::vector<std::string>& srcs,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
@@ -77,18 +78,19 @@ BatchDecodeImageResult decoding::batch_decode_image(
   if (srcs.size() == 0) {
     SPDL_FAIL("At least one image source must be provided.");
   }
-  return BatchDecodeImageResult{new BatchDecodeImageResult::Impl{
-      srcs,
-      {},
-      batch_image_decode_task(
+  return BatchDecodeResult<MediaType::Image>{
+      new BatchDecodeResult<MediaType::Image>::Impl{
           srcs,
-          adoptor,
-          io_cfg,
-          decode_cfg,
-          filter_desc,
-          demux_executor,
-          decode_executor)
-          .scheduleOn(detail::get_demux_executor(demux_executor))
-          .start()}};
+          {},
+          batch_image_decode_task(
+              srcs,
+              adoptor,
+              io_cfg,
+              decode_cfg,
+              filter_desc,
+              demux_executor,
+              decode_executor)
+              .scheduleOn(detail::get_demux_executor(demux_executor))
+              .start()}};
 }
 } // namespace spdl::core
