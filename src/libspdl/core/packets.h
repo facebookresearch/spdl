@@ -15,6 +15,7 @@ namespace spdl::core {
 template <MediaType media_type>
 struct DemuxedPackets;
 
+// This structure will be exchanged between C++ and Python,
 template <MediaType media_type>
 using PacketsPtr = std::unique_ptr<DemuxedPackets<media_type>>;
 
@@ -22,7 +23,8 @@ using PacketsPtr = std::unique_ptr<DemuxedPackets<media_type>>;
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
 template <MediaType media_type>
-struct DemuxedPackets {
+class DemuxedPackets {
+ public:
   uint64_t id;
   // Source information
   std::string src;
@@ -35,9 +37,11 @@ struct DemuxedPackets {
   // frame rate for video
   Rational frame_rate = {0, 1};
 
+ private:
   // Sliced raw packets
   std::vector<AVPacket*> packets = {};
 
+ public:
   DemuxedPackets(
       std::string src,
       std::tuple<double, double> timestamp,
@@ -45,13 +49,16 @@ struct DemuxedPackets {
       Rational time_base,
       Rational frame_rate);
 
-  // No copy constructors
-  DemuxedPackets(const DemuxedPackets&) = delete;
-  DemuxedPackets& operator=(const DemuxedPackets&) = delete;
-  // Move constructor to support AsyncGenerator
-  DemuxedPackets(DemuxedPackets&& other) noexcept;
-  DemuxedPackets& operator=(DemuxedPackets&& other) noexcept;
   // Destructor releases AVPacket* resources
   ~DemuxedPackets();
+  // No copy/move constructors
+  DemuxedPackets(const DemuxedPackets&) = delete;
+  DemuxedPackets& operator=(const DemuxedPackets&) = delete;
+  DemuxedPackets(DemuxedPackets&& other) noexcept = delete;
+  DemuxedPackets& operator=(DemuxedPackets&& other) noexcept = delete;
+
+  void push(AVPacket*);
+  size_t num_packets() const;
+  const std::vector<AVPacket*>& get_packets() const;
 };
 } // namespace spdl::core

@@ -48,26 +48,6 @@ DemuxedPackets<media_type>::DemuxedPackets(
 };
 
 template <MediaType media_type>
-DemuxedPackets<media_type>::DemuxedPackets(
-    DemuxedPackets<media_type>&& other) noexcept {
-  *this = std::move(other);
-};
-
-template <MediaType media_type>
-DemuxedPackets<media_type>& DemuxedPackets<media_type>::operator=(
-    DemuxedPackets<media_type>&& other) noexcept {
-  using std::swap;
-  swap(id, other.id);
-  swap(src, other.src);
-  swap(timestamp, other.timestamp);
-  swap(codecpar, other.codecpar);
-  swap(time_base, other.time_base);
-  swap(frame_rate, other.frame_rate);
-  swap(packets, other.packets);
-  return *this;
-};
-
-template <MediaType media_type>
 DemuxedPackets<media_type>::~DemuxedPackets() {
   TRACE_EVENT(
       "decoding",
@@ -81,6 +61,27 @@ DemuxedPackets<media_type>::~DemuxedPackets() {
   });
   avcodec_parameters_free(&codecpar);
 };
+
+template <MediaType media_type>
+void DemuxedPackets<media_type>::push(AVPacket* p) {
+  if constexpr (media_type == MediaType::Image) {
+    if (packets.size() > 0) {
+      SPDL_FAIL_INTERNAL(
+          "Multiple AVPacket is being pushed, but the expected number of AVPacket when decoding an image is one.");
+    }
+  }
+  packets.push_back(p);
+}
+
+template <MediaType media_type>
+size_t DemuxedPackets<media_type>::num_packets() const {
+  return packets.size();
+}
+
+template <MediaType media_type>
+const std::vector<AVPacket*>& DemuxedPackets<media_type>::get_packets() const {
+  return packets;
+}
 
 template struct DemuxedPackets<MediaType::Audio>;
 template struct DemuxedPackets<MediaType::Video>;

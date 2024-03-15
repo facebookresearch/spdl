@@ -40,7 +40,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     int target_height,
     const std::optional<std::string> pix_fmt,
     bool is_image) {
-  size_t num_packets = packets->packets.size();
+  size_t num_packets = packets->num_packets();
   assert(num_packets > 0);
 
   TRACE_EVENT("nvdec", "decode_packets");
@@ -75,7 +75,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
       pix_fmt);
 
   decoding_ongoing = true;
-#define _PKT(i) packets->packets[i]
+#define _PKT(i) packets->get_packets()[i]
 #define _PTS(pkt)                                           \
   (static_cast<double>(pkt->pts) * packets->time_base.num / \
    packets->time_base.den)
@@ -115,7 +115,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   XLOG(DBG5) << fmt::format(
       "Decoded {} frames from {} packets.",
       frames->buffer->n,
-      packets->packets.size());
+      packets->num_packets());
 
   co_return frames;
 }
