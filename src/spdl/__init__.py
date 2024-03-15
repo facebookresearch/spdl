@@ -2,26 +2,17 @@
 
 from typing import Any, List
 
-from . import _async
+from . import _async, _convert
 
-_convert_funcs = [
-    "to_numpy",
-    "to_torch",
-    "to_numba",
-]
-
-
-__all__ = _convert_funcs + _async.__all__
+__all__ = sorted(_convert.__all__ + _async.__all__)
 
 
 def __dir__() -> List[str]:
-    return sorted(__all__)
+    return __all__
 
 
 def __getattr__(name: str) -> Any:
-    if name in _convert_funcs:
-        from . import _convert
-
+    if name in _convert.__all__:
         return getattr(_convert, name)
 
     if name in _async.__all__:
