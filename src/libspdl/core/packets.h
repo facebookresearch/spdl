@@ -17,7 +17,7 @@ struct DemuxedPackets;
 
 // This structure will be exchanged between C++ and Python,
 template <MediaType media_type>
-using PacketsPtr = std::unique_ptr<DemuxedPackets<media_type>>;
+using PacketsPtr = std::shared_ptr<DemuxedPackets<media_type>>;
 
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.
