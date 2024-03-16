@@ -51,4 +51,7 @@ CUdevice get_cuda_device_index(CUdeviceptr ptr);
 // Set the CUDA context to what the given device pointer belongs to
 void set_current_cuda_context(CUdeviceptr ptr);
 
+// Initialize CUDA driver
+void init_cuda();
+
 } // namespace spdl::core::detail

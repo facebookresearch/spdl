@@ -9,6 +9,7 @@
 #ifdef SPDL_USE_NVDEC
 #include "libspdl/core/detail/cuda.h"
 #include "libspdl/core/detail/nvdec/decoding.h"
+#include "libspdl/core/detail/nvdec/utils.h"
 #endif
 
 #include <folly/experimental/coro/Task.h>
@@ -98,53 +99,6 @@ Task<std::vector<SemiFuture<NvDecVideoFramesPtr>>> stream_decode_task_nvdec(
   }
   co_return std::move(futures);
 }
-
-void validate_nvdec_params(
-    int cuda_device_index,
-    const CropArea& crop,
-    int width,
-    int height) {
-  if (cuda_device_index < 0) {
-    SPDL_FAIL(fmt::format(
-        "cuda_device_index must be non-negative. Found: {}",
-        cuda_device_index));
-  }
-  if (crop.left < 0) {
-    SPDL_FAIL(
-        fmt::format("crop.left must be non-negative. Found: {}", crop.left));
-  }
-  if (crop.top < 0) {
-    SPDL_FAIL(
-        fmt::format("crop.top must be non-negative. Found: {}", crop.top));
-  }
-  if (crop.right < 0) {
-    SPDL_FAIL(
-        fmt::format("crop.right must be non-negative. Found: {}", crop.right));
-  }
-  if (crop.bottom < 0) {
-    SPDL_FAIL(fmt::format(
-        "crop.bottom must be non-negative. Found: {}", crop.bottom));
-  }
-  if (width > 0 && width % 2) {
-    SPDL_FAIL(fmt::format("width must be positive and even. Found: {}", width));
-  }
-  if (height > 0 && height % 2) {
-    SPDL_FAIL(
-        fmt::format("height must be positive and even. Found: {}", height));
-  }
-}
-
-void init_cuda() {
-  static std::once_flag flag;
-  std::call_once(flag, []() {
-    TRACE_EVENT("nvdec", "cudaGetDeviceCount");
-    int count;
-    CHECK_CUDA(cudaGetDeviceCount(&count), "Failed to fetch the device count.");
-    if (count == 0) {
-      SPDL_FAIL("No CUDA device was found.");
-    }
-  });
-}
 #endif
 } // namespace
 
@@ -162,8 +116,8 @@ DecodeNvDecResult<MediaType::Image> decoding::decode_image_nvdec(
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
-  validate_nvdec_params(cuda_device_index, crop, width, height);
-  init_cuda();
+  detail::validate_nvdec_params(cuda_device_index, crop, width, height);
+  detail::init_cuda();
   return DecodeNvDecResult<MediaType::Image>{
       new DecodeNvDecResult<MediaType::Image>::Impl{
           image_decode_task_nvdec(
@@ -200,8 +154,8 @@ BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
     SPDL_FAIL("At least one timestamp must be provided.");
   }
 
-  validate_nvdec_params(cuda_device_index, crop, width, height);
-  init_cuda();
+  detail::validate_nvdec_params(cuda_device_index, crop, width, height);
+  detail::init_cuda();
 
   return BatchDecodeNvDecResult<MediaType::Video>{
       new BatchDecodeNvDecResult<MediaType::Video>::Impl{
@@ -241,8 +195,8 @@ BatchDecodeNvDecResult<MediaType::Image> decoding::batch_decode_image_nvdec(
     SPDL_FAIL("At least one source must be provided.");
   }
 
-  validate_nvdec_params(cuda_device_index, crop, width, height);
-  init_cuda();
+  detail::validate_nvdec_params(cuda_device_index, crop, width, height);
+  detail::init_cuda();
 
   return BatchDecodeNvDecResult<MediaType::Image>{
       new BatchDecodeNvDecResult<MediaType::Image>::Impl{

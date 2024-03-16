@@ -15,6 +15,41 @@ extern "C" {
 
 namespace spdl::core::detail {
 
+void validate_nvdec_params(
+    int cuda_device_index,
+    const CropArea& crop,
+    int width,
+    int height) {
+  if (cuda_device_index < 0) {
+    SPDL_FAIL(fmt::format(
+        "cuda_device_index must be non-negative. Found: {}",
+        cuda_device_index));
+  }
+  if (crop.left < 0) {
+    SPDL_FAIL(
+        fmt::format("crop.left must be non-negative. Found: {}", crop.left));
+  }
+  if (crop.top < 0) {
+    SPDL_FAIL(
+        fmt::format("crop.top must be non-negative. Found: {}", crop.top));
+  }
+  if (crop.right < 0) {
+    SPDL_FAIL(
+        fmt::format("crop.right must be non-negative. Found: {}", crop.right));
+  }
+  if (crop.bottom < 0) {
+    SPDL_FAIL(fmt::format(
+        "crop.bottom must be non-negative. Found: {}", crop.bottom));
+  }
+  if (width > 0 && width % 2) {
+    SPDL_FAIL(fmt::format("width must be positive and even. Found: {}", width));
+  }
+  if (height > 0 && height % 2) {
+    SPDL_FAIL(
+        fmt::format("height must be positive and even. Found: {}", height));
+  }
+}
+
 cudaVideoCodec covert_codec_id(AVCodecID id) {
   switch (id) {
     case AV_CODEC_ID_MPEG1VIDEO:

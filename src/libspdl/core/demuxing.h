@@ -37,4 +37,11 @@ FuturePtr demux_image_async(
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
+/// Apply bit stream filtering for NVDEC decoding
+FuturePtr apply_bsf(
+    std::function<void(VideoPacketsPtr)> set_result,
+    std::function<void()> notify_exception,
+    VideoPacketsPtr packets,
+    ThreadPoolExecutorPtr demux_executor);
+
 } // namespace spdl::core

@@ -25,6 +25,19 @@ FuturePtr decode_async(
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
+/// Decode video or image
+template <MediaType media_type>
+FuturePtr decode_nvdec_async(
+    std::function<void(std::optional<NvDecFramesPtr<media_type>>)> set_result,
+    std::function<void()> notify_exception,
+    PacketsPtr<media_type> packets,
+    int cuda_device_index,
+    const CropArea& crop,
+    int width,
+    int height,
+    const std::optional<std::string>& pix_fmt,
+    ThreadPoolExecutorPtr demux_executor);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronous decodings
 ////////////////////////////////////////////////////////////////////////////////
