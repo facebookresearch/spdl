@@ -19,7 +19,7 @@ struct Future::Impl {
 namespace detail {
 
 template <typename ValueType>
-std::unique_ptr<Future> execute_task_with_callback(
+FuturePtr execute_task_with_callback(
     folly::coro::Task<ValueType>&& task,
     std::function<void(ValueType)> set_result,
     std::function<void()> notify_exception,
@@ -41,7 +41,7 @@ std::unique_ptr<Future> execute_task_with_callback(
 }
 
 template <typename ValueType>
-std::unique_ptr<Future> execute_generator_with_callback(
+FuturePtr execute_generator_with_callback(
     folly::coro::AsyncGenerator<ValueType>&& generator,
     std::function<void(std::optional<ValueType>)> set_result,
     std::function<void()> notify_exception,

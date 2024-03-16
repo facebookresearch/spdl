@@ -8,7 +8,7 @@ namespace py = pybind11;
 namespace spdl::core {
 
 void register_future(py::module& m) {
-  auto _Future = py::class_<Future>(m, "Future", py::module_local());
+  auto _Future = py::class_<Future, FuturePtr>(m, "Future", py::module_local());
 
   _Future.def("rethrow", &Future::rethrow);
 }

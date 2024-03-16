@@ -1,8 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <utility>
 
 namespace spdl::core {
+
+struct Future;
+
+using FuturePtr = std::unique_ptr<Future>;
 
 // Simple wrapper around
 // `folly::SemiFuture<folly::Unit>` (task without return)

@@ -7,7 +7,7 @@
 namespace spdl::core {
 
 template <MediaType media_type>
-std::unique_ptr<Future> demux_async(
+FuturePtr demux_async(
     std::function<void(std::optional<PacketsPtr<media_type>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -23,7 +23,7 @@ std::unique_ptr<Future> demux_async(
       detail::get_demux_executor(demux_executor));
 }
 
-template std::unique_ptr<Future> demux_async<MediaType::Audio>(
+template FuturePtr demux_async<MediaType::Audio>(
     std::function<void(std::optional<PacketsPtr<MediaType::Audio>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -32,7 +32,7 @@ template std::unique_ptr<Future> demux_async<MediaType::Audio>(
     const IOConfig& io_cfg,
     std::shared_ptr<ThreadPoolExecutor> demux_executor);
 
-template std::unique_ptr<Future> demux_async<MediaType::Video>(
+template FuturePtr demux_async<MediaType::Video>(
     std::function<void(std::optional<PacketsPtr<MediaType::Video>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -41,7 +41,7 @@ template std::unique_ptr<Future> demux_async<MediaType::Video>(
     const IOConfig& io_cfg,
     std::shared_ptr<ThreadPoolExecutor> demux_executor);
 
-std::unique_ptr<Future> demux_image_async(
+FuturePtr demux_image_async(
     std::function<void(std::optional<PacketsPtr<MediaType::Image>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
