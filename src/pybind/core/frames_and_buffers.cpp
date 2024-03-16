@@ -92,20 +92,20 @@ void register_frames_and_buffers(py::module& m) {
       py::class_<CUDABuffer2DPitch, std::shared_ptr<CUDABuffer2DPitch>>(
           m, "CUDABuffer2DPitch", py::module_local());
 
-  auto _FFmpegAudioFrames =
-      py::class_<FFmpegAudioFrames>(m, "FFmpegAudioFrames", py::module_local());
+  auto _FFmpegAudioFrames = py::class_<FFmpegAudioFrames, FFmpegAudioFramesPtr>(
+      m, "FFmpegAudioFrames", py::module_local());
 
-  auto _FFmpegVideoFrames =
-      py::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames", py::module_local());
+  auto _FFmpegVideoFrames = py::class_<FFmpegVideoFrames, FFmpegVideoFramesPtr>(
+      m, "FFmpegVideoFrames", py::module_local());
 
-  auto _FFmpegImageFrames =
-      py::class_<FFmpegImageFrames>(m, "FFmpegImageFrames", py::module_local());
+  auto _FFmpegImageFrames = py::class_<FFmpegImageFrames, FFmpegImageFramesPtr>(
+      m, "FFmpegImageFrames", py::module_local());
 
-  auto _NvDecVideoFrames =
-      py::class_<NvDecVideoFrames>(m, "NvDecVideoFrames", py::module_local());
+  auto _NvDecVideoFrames = py::class_<NvDecVideoFrames, NvDecVideoFramesPtr>(
+      m, "NvDecVideoFrames", py::module_local());
 
-  auto _NvDecImageFrames =
-      py::class_<NvDecImageFrames>(m, "NvDecImageFrames", py::module_local());
+  auto _NvDecImageFrames = py::class_<NvDecImageFrames, NvDecImageFramesPtr>(
+      m, "NvDecImageFrames", py::module_local());
 
   _CPUBuffer
       .def_property_readonly(

@@ -22,7 +22,7 @@ using folly::coro::Task;
 
 namespace {
 #ifdef SPDL_USE_NVDEC
-Task<NvDecFramesPtr<MediaType::Image>> image_decode_task_nvdec(
+Task<NvDecImageFramesPtr> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
     const SourceAdoptorPtr adoptor,
@@ -43,12 +43,12 @@ Task<NvDecFramesPtr<MediaType::Image>> image_decode_task_nvdec(
       height,
       pix_fmt,
       /*is_image*/ true);
-  SemiFuture<NvDecFramesPtr<MediaType::Image>> future =
+  SemiFuture<NvDecImageFramesPtr> future =
       std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
 }
 
-Task<std::vector<SemiFuture<NvDecFramesPtr<MediaType::Image>>>>
+Task<std::vector<SemiFuture<NvDecImageFramesPtr>>>
 batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
@@ -60,7 +60,7 @@ batch_image_decode_task_nvdec(
     const std::optional<std::string> pix_fmt,
     ThreadPoolExecutorPtr demux_executor,
     ThreadPoolExecutorPtr decode_executor) {
-  std::vector<SemiFuture<NvDecFramesPtr<MediaType::Image>>> futures;
+  std::vector<SemiFuture<NvDecImageFramesPtr>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task_nvdec(
@@ -79,8 +79,7 @@ batch_image_decode_task_nvdec(
   co_return std::move(futures);
 }
 
-Task<std::vector<SemiFuture<NvDecFramesPtr<MediaType::Video>>>>
-stream_decode_task_nvdec(
+Task<std::vector<SemiFuture<NvDecVideoFramesPtr>>> stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const int cuda_device_index,
@@ -91,7 +90,7 @@ stream_decode_task_nvdec(
     int height,
     const std::optional<std::string> pix_fmt,
     ThreadPoolExecutorPtr decode_executor) {
-  std::vector<SemiFuture<NvDecFramesPtr<MediaType::Video>>> futures;
+  std::vector<SemiFuture<NvDecVideoFramesPtr>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux_nvdec<MediaType::Video>(
