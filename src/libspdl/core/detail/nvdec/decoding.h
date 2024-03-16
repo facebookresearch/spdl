@@ -32,7 +32,6 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     const CropArea crop,
     int target_width = -1,
     int target_height = -1,
-    const std::optional<std::string> pix_fmt = std::nullopt,
-    bool is_image = false);
+    const std::optional<std::string> pix_fmt = std::nullopt);
 
 } // namespace spdl::core::detail

@@ -36,13 +36,7 @@ Task<NvDecImageFramesPtr> image_decode_task_nvdec(
   auto packet =
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
   auto task = detail::decode_nvdec<MediaType::Image>(
-      std::move(packet),
-      cuda_device_index,
-      crop,
-      width,
-      height,
-      pix_fmt,
-      /*is_image*/ true);
+      std::move(packet), cuda_device_index, crop, width, height, pix_fmt);
   SemiFuture<NvDecImageFramesPtr> future =
       std::move(task).scheduleOn(exec).start();
   co_return co_await std::move(future);
