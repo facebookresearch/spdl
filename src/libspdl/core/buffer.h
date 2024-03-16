@@ -12,6 +12,10 @@ namespace spdl::core {
 // Buffer
 ////////////////////////////////////////////////////////////////////////////////
 
+struct Buffer;
+
+using BufferPtr = std::unique_ptr<Buffer>;
+
 /// Abstract base buffer class (to be exposed to Python)
 /// Represents contiguous array memory.
 struct Buffer {
