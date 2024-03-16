@@ -29,6 +29,9 @@ folly::coro::Task<ImagePacketsPtr> demux_image(
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
+// Apply bitstream filter for NVDEC video decoding
+folly::coro::Task<VideoPacketsPtr> apply_bsf(VideoPacketsPtr packets);
+
 template <MediaType media_type>
 folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,

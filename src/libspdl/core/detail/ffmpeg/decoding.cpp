@@ -191,6 +191,9 @@ folly::coro::Task<ImagePacketsPtr> demux_image(
   co_return std::move(package);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Bit Stream Filtering for NVDEC
+////////////////////////////////////////////////////////////////////////////////
 namespace {
 AVBSFContextPtr init_bsf(AVCodecParameters* codecpar) {
   // Note
@@ -246,54 +249,27 @@ AVPacketPtr apply_bsf(AVBSFContext* bsf_ctx, AVPacket* packet) {
 }
 } // namespace
 
-template <MediaType media_type>
-folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux_nvdec(
-    const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    SourceAdoptorPtr adoptor,
-    const IOConfig io_cfg) {
-  TRACE_EVENT("demuxing", "detail::stream_demux_nvdec");
-  auto interface = get_interface(src, adoptor, io_cfg);
-  AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
-  AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
-  auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-
-  auto bsf_ctx = init_bsf(stream->codecpar);
-
-  for (auto& timestamp : timestamps) {
-    auto package = std::make_unique<DemuxedPackets<media_type>>(
-        fmt_ctx->url,
-        timestamp,
-        bsf_ctx ? bsf_ctx->par_out : stream->codecpar,
-        Rational{stream->time_base.num, stream->time_base.den},
-        Rational{frame_rate.num, frame_rate.den});
-    auto task = demux_window(fmt_ctx, stream, timestamp);
-    while (auto packet = co_await task.next()) {
-      if (bsf_ctx) {
-        AVPacketPtr filtered = apply_bsf(bsf_ctx.get(), packet->get());
-        package->push(filtered.release());
-      } else {
-        package->push(packet->release());
-      }
-    }
-    XLOG(DBG9) << fmt::format(" - Sliced {} packets", package->num_packets());
-    co_yield std::move(package);
+folly::coro::Task<VideoPacketsPtr> apply_bsf(VideoPacketsPtr packets) {
+  TRACE_EVENT("demuxing", "apply_bsf");
+  AVBSFContextPtr bsf_ctx = init_bsf(packets->codecpar);
+  if (!bsf_ctx) {
+    co_return packets;
   }
+
+  auto package = std::make_unique<DemuxedPackets<MediaType::Video>>(
+      packets->src,
+      packets->timestamp,
+      bsf_ctx->par_out,
+      packets->time_base,
+      packets->frame_rate);
+  for (auto& packet : packets->get_packets()) {
+    if (packet) {
+      AVPacketPtr filtered = apply_bsf(bsf_ctx.get(), packet);
+      package->push(filtered.release());
+    }
+  }
+  co_return package;
 }
-
-template folly::coro::AsyncGenerator<VideoPacketsPtr>
-stream_demux_nvdec<MediaType::Video>(
-    const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    SourceAdoptorPtr adoptor,
-    const IOConfig io_cfg);
-
-template folly::coro::AsyncGenerator<ImagePacketsPtr>
-stream_demux_nvdec<MediaType::Image>(
-    const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    SourceAdoptorPtr adoptor,
-    const IOConfig io_cfg);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Decoder
