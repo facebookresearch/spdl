@@ -141,7 +141,7 @@ std::vector<ResultType> Results<ResultType>::Impl::get(bool strict) {
   fetched = true;
   if constexpr (
       std::is_same<ResultType, FFmpegImageFramesPtr>::value ||
-      std::is_same<ResultType, NvDecFramesPtr<MediaType::Image>>::value) {
+      std::is_same<ResultType, NvDecImageFramesPtr>::value) {
     return blockingWait(
         check_image<ResultType>(std::move(future), srcs, strict));
   } else {
@@ -179,12 +179,12 @@ std::vector<ResultType> Results<ResultType>::get(bool strict) {
 
 // Explicit instantiation
 template class Result<FFmpegImageFramesPtr>;
-template class Result<NvDecFramesPtr<MediaType::Image>>;
+template class Result<NvDecImageFramesPtr>;
 
 template class Results<FFmpegAudioFramesPtr>;
 template class Results<FFmpegVideoFramesPtr>;
 template class Results<FFmpegImageFramesPtr>;
-template class Results<NvDecFramesPtr<MediaType::Video>>;
-template class Results<NvDecFramesPtr<MediaType::Image>>;
+template class Results<NvDecVideoFramesPtr>;
+template class Results<NvDecImageFramesPtr>;
 
 } // namespace spdl::core

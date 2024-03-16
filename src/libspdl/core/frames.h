@@ -37,6 +37,9 @@ using NvDecImageFrames = NvDecFrames<MediaType::Image>;
 template <MediaType media_type>
 using NvDecFramesPtr = std::unique_ptr<NvDecFrames<media_type>>;
 
+using NvDecVideoFramesPtr = NvDecFramesPtr<MediaType::Video>;
+using NvDecImageFramesPtr = NvDecFramesPtr<MediaType::Image>;
+
 #define _IS_AUDIO (media_type == MediaType::Audio)
 #define _IS_VIDEO (media_type == MediaType::Video)
 #define _IS_IMAGE (media_type == MediaType::Image)

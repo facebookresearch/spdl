@@ -120,7 +120,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   co_return frames;
 }
 
-template folly::coro::Task<NvDecFramesPtr<MediaType::Video>> decode_nvdec(
+template folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     PacketsPtr<MediaType::Video> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -129,7 +129,7 @@ template folly::coro::Task<NvDecFramesPtr<MediaType::Video>> decode_nvdec(
     const std::optional<std::string> pix_fmt,
     bool is_image);
 
-template folly::coro::Task<NvDecFramesPtr<MediaType::Image>> decode_nvdec(
+template folly::coro::Task<NvDecImageFramesPtr> decode_nvdec(
     PacketsPtr<MediaType::Image> packets,
     int cuda_device_index,
     const CropArea crop,
