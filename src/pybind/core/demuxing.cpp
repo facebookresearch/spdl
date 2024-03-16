@@ -13,6 +13,14 @@ namespace spdl::core {
 
 void register_demuxing(py::module& m) {
   m.def(
+      "apply_bsf",
+      &apply_bsf,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::arg("demux_executor") = nullptr);
+
+  m.def(
       "demux_audio_async",
       [](std::function<void(std::optional<AudioPacketsPtr>)> set_result,
          std::function<void()> notify_exception,

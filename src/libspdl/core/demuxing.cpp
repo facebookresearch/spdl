@@ -55,4 +55,16 @@ FuturePtr demux_image_async(
       detail::get_demux_executor(demux_executor));
 }
 
+FuturePtr apply_bsf(
+    std::function<void(VideoPacketsPtr)> set_result,
+    std::function<void()> notify_exception,
+    VideoPacketsPtr packets,
+    ThreadPoolExecutorPtr demux_executor) {
+  return detail::execute_task_with_callback(
+      detail::apply_bsf(std::move(packets)),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor(demux_executor));
+}
+
 } // namespace spdl::core

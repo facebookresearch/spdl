@@ -6,9 +6,12 @@ from typing import Any
 import spdl.libspdl
 
 _task = [
+    "apply_bsf",
     "decode_audio_async",
     "decode_video_async",
     "decode_image_async",
+    "decode_video_nvdec_async",
+    "decode_image_nvdec_async",
     "demux_image_async",
 ]
 

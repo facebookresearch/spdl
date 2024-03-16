@@ -27,6 +27,9 @@ std::optional<Rational> get_frame_rate(const py::object& frame_rate) {
 } // namespace
 
 void register_decoding(py::module& m) {
+  ////////////////////////////////////////////////////////////////////////////////
+  // Async decoding - FFMPEG
+  ////////////////////////////////////////////////////////////////////////////////
   m.def(
       "decode_audio_async",
       [](std::function<void(std::optional<FFmpegAudioFramesPtr>)> set_result,
@@ -109,6 +112,96 @@ void register_decoding(py::module& m) {
       py::arg("filter_desc") = std::string(),
       py::arg("decode_executor") = nullptr);
 
+  ////////////////////////////////////////////////////////////////////////////////
+  // Synchronous decoding - NVDEC
+  ////////////////////////////////////////////////////////////////////////////////
+  m.def(
+      "decode_video_nvdec_async",
+      [](std::function<void(std::optional<NvDecVideoFramesPtr>)> set_result,
+         std::function<void()> notify_exception,
+         VideoPacketsPtr packets,
+         const int cuda_device_index,
+         int crop_left,
+         int crop_top,
+         int crop_right,
+         int crop_bottom,
+         int width,
+         int height,
+         const std::optional<std::string>& pix_fmt,
+         ThreadPoolExecutorPtr decode_executor) {
+        return decode_nvdec_async<MediaType::Video>(
+            set_result,
+            notify_exception,
+            packets,
+            cuda_device_index,
+            {static_cast<short>(crop_left),
+             static_cast<short>(crop_top),
+             static_cast<short>(crop_right),
+             static_cast<short>(crop_bottom)},
+            width,
+            height,
+            pix_fmt,
+            decode_executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::arg("cuda_device_index"),
+      py::kw_only(),
+      py::arg("crop_left") = 0,
+      py::arg("crop_top") = 0,
+      py::arg("crop_right") = 0,
+      py::arg("crop_bottom") = 0,
+      py::arg("width") = -1,
+      py::arg("height") = -1,
+      py::arg("pix_fmt") = "rgba",
+      py::arg("decode_executor") = nullptr);
+
+  m.def(
+      "decode_image_nvdec_async",
+      [](std::function<void(std::optional<NvDecImageFramesPtr>)> set_result,
+         std::function<void()> notify_exception,
+         ImagePacketsPtr packets,
+         const int cuda_device_index,
+         int crop_left,
+         int crop_top,
+         int crop_right,
+         int crop_bottom,
+         int width,
+         int height,
+         const std::optional<std::string>& pix_fmt,
+         ThreadPoolExecutorPtr decode_executor) {
+        return decode_nvdec_async<MediaType::Image>(
+            set_result,
+            notify_exception,
+            packets,
+            cuda_device_index,
+            {static_cast<short>(crop_left),
+             static_cast<short>(crop_top),
+             static_cast<short>(crop_right),
+             static_cast<short>(crop_bottom)},
+            width,
+            height,
+            pix_fmt,
+            decode_executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::arg("cuda_device_index"),
+      py::kw_only(),
+      py::arg("crop_left") = 0,
+      py::arg("crop_top") = 0,
+      py::arg("crop_right") = 0,
+      py::arg("crop_bottom") = 0,
+      py::arg("width") = -1,
+      py::arg("height") = -1,
+      py::arg("pix_fmt") = "rgba",
+      py::arg("decode_executor") = nullptr);
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Synchronous decoding
+  ////////////////////////////////////////////////////////////////////////////////
   m.def(
       "decode_video",
       [](const std::string& src,

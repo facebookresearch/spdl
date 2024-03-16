@@ -5,10 +5,6 @@ import pytest
 import spdl
 
 
-# TODO:
-# Add smoke test with other asyncio patterns like `asyncio.wait` and `asyncio.gather`
-
-
 def test_failure():
     """demux async functoins fails normally if the input does not exist"""
 
