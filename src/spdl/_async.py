@@ -6,7 +6,6 @@ from typing import Any
 import spdl.libspdl
 
 _task = [
-    "decode_image_async",
     "demux_image_async",
 ]
 
