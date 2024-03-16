@@ -97,8 +97,8 @@ void register_decoding(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode<MediaType::Video>(
             src,
             timestamps,
@@ -139,8 +139,8 @@ void register_decoding(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode<MediaType::Video>(
             src,
             timestamps,
@@ -177,8 +177,8 @@ void register_decoding(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode_image(
             src,
             adoptor,
@@ -213,8 +213,8 @@ void register_decoding(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode_image(
             src,
             adoptor,
@@ -249,8 +249,8 @@ void register_decoding(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::batch_decode_image(
             srcs,
             adoptor,
@@ -285,8 +285,8 @@ void register_decoding(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
          const std::string& filter_desc,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::batch_decode_image(
             srcs,
             adoptor,
@@ -322,8 +322,8 @@ void register_decoding(py::module& m) {
          const std::optional<int>& sample_rate,
          const std::optional<int>& num_channels,
          const std::optional<std::string>& sample_fmt,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode<MediaType::Audio>(
             src,
             timestamps,
@@ -360,8 +360,8 @@ void register_decoding(py::module& m) {
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const std::string& filter_desc,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode<MediaType::Audio>(
             src,
             timestamps,
@@ -401,8 +401,8 @@ void register_decoding(py::module& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode_video_nvdec(
             src,
             timestamps,
@@ -452,8 +452,8 @@ void register_decoding(py::module& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::decode_image_nvdec(
             src,
             cuda_device_index,
@@ -501,8 +501,8 @@ void register_decoding(py::module& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr decode_executor) {
         return decoding::batch_decode_image_nvdec(
             srcs,
             cuda_device_index,

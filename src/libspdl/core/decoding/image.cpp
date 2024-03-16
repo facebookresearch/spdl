@@ -21,7 +21,7 @@ Task<FFmpegFramesPtr<MediaType::Image>> image_decode_task(
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr decode_executor) {
   co_return co_await detail::decode_packets_ffmpeg<MediaType::Image>(
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg)),
       std::move(decode_cfg),
@@ -36,8 +36,8 @@ batch_image_decode_task(
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
   std::vector<SemiFuture<FFmpegFramesPtr<MediaType::Image>>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
@@ -56,8 +56,8 @@ DecodeResult<MediaType::Image> decoding::decode_image(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
   auto task = image_decode_task(
       src, adoptor, io_cfg, decode_cfg, filter_desc, decode_executor);
   return DecodeResult<MediaType::Image>{
@@ -73,8 +73,8 @@ BatchDecodeResult<MediaType::Image> decoding::batch_decode_image(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
   if (srcs.size() == 0) {
     SPDL_FAIL("At least one image source must be provided.");
   }

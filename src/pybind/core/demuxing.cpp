@@ -23,7 +23,7 @@ void register_demuxing(py::module& m) {
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor) {
+         ThreadPoolExecutorPtr demux_executor) {
         return demux_async<MediaType::Audio>(
             std::move(set_result),
             std::move(notify_exception),
@@ -55,7 +55,7 @@ void register_demuxing(py::module& m) {
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor) {
+         ThreadPoolExecutorPtr demux_executor) {
         return demux_async<MediaType::Video>(
             std::move(set_result),
             std::move(notify_exception),
@@ -86,7 +86,7 @@ void register_demuxing(py::module& m) {
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
-         std::shared_ptr<ThreadPoolExecutor> demux_executor) {
+         ThreadPoolExecutorPtr demux_executor) {
         return demux_image_async(
             std::move(set_result),
             std::move(notify_exception),

@@ -8,7 +8,7 @@ namespace py = pybind11;
 namespace spdl::core {
 void register_executor(py::module& m) {
   auto _ThreadPoolExecutor =
-      py::class_<ThreadPoolExecutor, std::shared_ptr<ThreadPoolExecutor>>(
+      py::class_<ThreadPoolExecutor, ThreadPoolExecutorPtr>(
           m, "ThreadPoolExecutor", py::module_local());
 
   _ThreadPoolExecutor.def(

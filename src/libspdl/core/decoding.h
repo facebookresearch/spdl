@@ -45,8 +45,8 @@ struct decoding {
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
       const std::string& filter_desc,
-      std::shared_ptr<ThreadPoolExecutor> demux_executor,
-      std::shared_ptr<ThreadPoolExecutor> decode_executor);
+      ThreadPoolExecutorPtr demux_executor,
+      ThreadPoolExecutorPtr decode_executor);
 
   ///
   /// Decode one single image asynchronously using NVDEC.
@@ -60,8 +60,8 @@ struct decoding {
       int width,
       int height,
       const std::optional<std::string>& pix_fmt,
-      std::shared_ptr<ThreadPoolExecutor> demux_executor,
-      std::shared_ptr<ThreadPoolExecutor> decode_executor);
+      ThreadPoolExecutorPtr demux_executor,
+      ThreadPoolExecutorPtr decode_executor);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Batch image
@@ -76,8 +76,8 @@ struct decoding {
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
       const std::string& filter_desc,
-      std::shared_ptr<ThreadPoolExecutor> demux_executor,
-      std::shared_ptr<ThreadPoolExecutor> decode_executor);
+      ThreadPoolExecutorPtr demux_executor,
+      ThreadPoolExecutorPtr decode_executor);
 
   ///
   /// Decode multiple images asynchronously using NVDEC.
@@ -91,8 +91,8 @@ struct decoding {
       int width,
       int height,
       const std::optional<std::string>& pix_fmt,
-      std::shared_ptr<ThreadPoolExecutor> demux_executor,
-      std::shared_ptr<ThreadPoolExecutor> decode_executor);
+      ThreadPoolExecutorPtr demux_executor,
+      ThreadPoolExecutorPtr decode_executor);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Audio / Video
@@ -110,8 +110,8 @@ struct decoding {
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
       const std::string& filter_desc,
-      std::shared_ptr<ThreadPoolExecutor> demux_executor,
-      std::shared_ptr<ThreadPoolExecutor> decode_executor);
+      ThreadPoolExecutorPtr demux_executor,
+      ThreadPoolExecutorPtr decode_executor);
 
   ///
   /// Decode multiple clips of the given video asynchronously using NVDEC.
@@ -126,8 +126,8 @@ struct decoding {
       int width,
       int height,
       const std::optional<std::string>& pix_fmt,
-      std::shared_ptr<ThreadPoolExecutor> demux_executor,
-      std::shared_ptr<ThreadPoolExecutor> decode_executor);
+      ThreadPoolExecutorPtr demux_executor,
+      ThreadPoolExecutorPtr decode_executor);
 };
 
 } // namespace spdl::core
