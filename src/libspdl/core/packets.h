@@ -15,9 +15,17 @@ namespace spdl::core {
 template <MediaType media_type>
 struct DemuxedPackets;
 
+using AudioPackets = DemuxedPackets<MediaType::Audio>;
+using VideoPackets = DemuxedPackets<MediaType::Video>;
+using ImagePackets = DemuxedPackets<MediaType::Image>;
+
 // This structure will be exchanged between C++ and Python,
 template <MediaType media_type>
 using PacketsPtr = std::shared_ptr<DemuxedPackets<media_type>>;
+
+using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
+using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
+using ImagePacketsPtr = PacketsPtr<MediaType::Image>;
 
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.

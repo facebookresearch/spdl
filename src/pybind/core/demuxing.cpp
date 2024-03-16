@@ -14,8 +14,7 @@ namespace spdl::core {
 void register_demuxing(py::module& m) {
   m.def(
       "demux_audio_async",
-      [](std::function<void(std::optional<PacketsPtr<MediaType::Audio>>)>
-             set_result,
+      [](std::function<void(std::optional<AudioPacketsPtr>)> set_result,
          std::function<void()> notify_exception,
          const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
@@ -46,8 +45,7 @@ void register_demuxing(py::module& m) {
 
   m.def(
       "demux_video_async",
-      [](std::function<void(std::optional<PacketsPtr<MediaType::Video>>)>
-             set_result,
+      [](std::function<void(std::optional<VideoPacketsPtr>)> set_result,
          std::function<void()> notify_exception,
          const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
@@ -78,8 +76,7 @@ void register_demuxing(py::module& m) {
 
   m.def(
       "demux_image_async",
-      [](std::function<void(std::optional<PacketsPtr<MediaType::Image>>)>
-             set_result,
+      [](std::function<void(std::optional<ImagePacketsPtr>)> set_result,
          std::function<void()> notify_exception,
          const std::string& src,
          const SourceAdoptorPtr& adoptor,

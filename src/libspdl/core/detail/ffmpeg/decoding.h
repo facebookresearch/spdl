@@ -24,7 +24,7 @@ folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     const IOConfig io_cfg);
 
 // Demuxer for a single image
-folly::coro::Task<PacketsPtr<MediaType::Image>> demux_image(
+folly::coro::Task<ImagePacketsPtr> demux_image(
     const std::string src,
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
