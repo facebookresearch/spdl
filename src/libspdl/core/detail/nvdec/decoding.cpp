@@ -38,8 +38,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt,
-    bool is_image) {
+    const std::optional<std::string> pix_fmt) {
   size_t num_packets = packets->num_packets();
   assert(num_packets > 0);
 
@@ -54,7 +53,8 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   auto frames = std::make_unique<NvDecFrames<media_type>>(
       packets->id,
       pix_fmt ? av_get_pix_fmt(pix_fmt.value().c_str()) : codecpar->format);
-  frames->buffer = std::make_shared<CUDABuffer2DPitch>(num_packets, is_image);
+  frames->buffer = std::make_shared<CUDABuffer2DPitch>(
+      num_packets, media_type == MediaType::Image);
 
   if (decoding_ongoing) {
     // When the previous decoding ended with an error, if the new input data is
@@ -126,8 +126,7 @@ template folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt,
-    bool is_image);
+    const std::optional<std::string> pix_fmt);
 
 template folly::coro::Task<NvDecImageFramesPtr> decode_nvdec(
     ImagePacketsPtr packets,
@@ -135,8 +134,7 @@ template folly::coro::Task<NvDecImageFramesPtr> decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt,
-    bool is_image);
+    const std::optional<std::string> pix_fmt);
 
 } // namespace spdl::core::detail
 
