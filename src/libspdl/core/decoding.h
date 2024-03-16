@@ -3,14 +3,31 @@
 #include <libspdl/core/adoptor/base.h>
 #include <libspdl/core/executor.h>
 #include <libspdl/core/frames.h>
+#include <libspdl/core/future.h>
+#include <libspdl/core/packets.h>
 #include <libspdl/core/result.h>
 #include <libspdl/core/types.h>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
 
 namespace spdl::core {
+
+/// Decode audio, video or image
+template <MediaType media_type>
+FuturePtr decode_async(
+    std::function<void(std::optional<FFmpegFramesPtr<media_type>>)> set_result,
+    std::function<void()> notify_exception,
+    PacketsPtr<media_type> packets,
+    DecodeConfig decode_cfg,
+    std::string filter_desc,
+    ThreadPoolExecutorPtr decode_executor);
+
+////////////////////////////////////////////////////////////////////////////////
+// Synchronous decodings
+////////////////////////////////////////////////////////////////////////////////
 
 template <MediaType media_type>
 using DecodeResult = Result<FFmpegFramesPtr<media_type>>;

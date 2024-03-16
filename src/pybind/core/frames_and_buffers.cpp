@@ -185,7 +185,14 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly("sample_rate", &FFmpegAudioFrames::get_sample_rate)
       .def_property_readonly(
           "num_channels", &FFmpegAudioFrames::get_num_channels)
-      .def("__len__", &FFmpegAudioFrames::get_num_frames);
+      .def("__len__", &FFmpegAudioFrames::get_num_frames)
+      .def("__repr__", [](const FFmpegAudioFrames& self) {
+        return fmt::format(
+            "FFmpegAudioFrames<num_frames={}, sample_rate={}, num_channels={}>",
+            self.get_num_frames(),
+            self.get_sample_rate(),
+            self.get_num_channels());
+      });
 
   _FFmpegVideoFrames
       .def_property_readonly("is_cuda", &FFmpegVideoFrames::is_cuda)
@@ -207,15 +214,32 @@ void register_frames_and_buffers(py::module& m) {
                 static_cast<int>(stop),
                 static_cast<int>(step));
           })
-      .def("__getitem__", [](const FFmpegVideoFrames& self, int i) {
-        return self.slice(i);
+      .def(
+          "__getitem__",
+          [](const FFmpegVideoFrames& self, int i) { return self.slice(i); })
+      .def("__repr__", [](const FFmpegVideoFrames& self) {
+        return fmt::format(
+            "FFmpegVideoFrames<num_frames={}, num_planes={}, width={}, height={}, is_cuda={}>",
+            self.get_num_frames(),
+            self.get_num_planes(),
+            self.get_width(),
+            self.get_height(),
+            self.is_cuda());
       });
 
   _FFmpegImageFrames
       .def_property_readonly("is_cuda", &FFmpegImageFrames::is_cuda)
       .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
       .def_property_readonly("width", &FFmpegImageFrames::get_width)
-      .def_property_readonly("height", &FFmpegImageFrames::get_height);
+      .def_property_readonly("height", &FFmpegImageFrames::get_height)
+      .def("__repr__", [](const FFmpegImageFrames& self) {
+        return fmt::format(
+            "FFmpegImageFrames<num_planes={}, width={}, height={}, is_cuda={}>",
+            self.get_num_planes(),
+            self.get_width(),
+            self.get_height(),
+            self.is_cuda());
+      });
 
 #ifdef SPDL_USE_NVDEC
 #define IF_NVDECVIDEOFRAMES_ENABLED(x) x

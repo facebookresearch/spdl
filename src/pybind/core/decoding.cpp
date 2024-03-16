@@ -4,6 +4,7 @@
 #include <libspdl/core/types.h>
 #include <libspdl/core/utils.h>
 
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -81,6 +82,88 @@ void register_decoding(py::module& m) {
       "get",
       &BatchDecodeNvDecResult<MediaType::Image>::get,
       py::arg("strict") = true);
+
+  m.def(
+      "decode_audio_async",
+      [](std::function<void(std::optional<FFmpegAudioFramesPtr>)> set_result,
+         std::function<void()> notify_exception,
+         AudioPacketsPtr packets,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+        return decode_async<MediaType::Audio>(
+            std::move(set_result),
+            std::move(notify_exception),
+            packets,
+            {decoder, decoder_options},
+            filter_desc,
+            decode_executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::kw_only(),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("filter_desc") = std::string(),
+      py::arg("decode_executor") = nullptr);
+
+  m.def(
+      "decode_video_async",
+      [](std::function<void(std::optional<FFmpegVideoFramesPtr>)> set_result,
+         std::function<void()> notify_exception,
+         VideoPacketsPtr packets,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+        return decode_async<MediaType::Video>(
+            std::move(set_result),
+            std::move(notify_exception),
+            packets,
+            {decoder, decoder_options, cuda_device_index},
+            filter_desc,
+            decode_executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::kw_only(),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("filter_desc") = std::string(),
+      py::arg("decode_executor") = nullptr);
+
+  m.def(
+      "decode_image_async",
+      [](std::function<void(std::optional<FFmpegImageFramesPtr>)> set_result,
+         std::function<void()> notify_exception,
+         ImagePacketsPtr packets,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+        return decode_async<MediaType::Image>(
+            std::move(set_result),
+            std::move(notify_exception),
+            packets,
+            {decoder, decoder_options, cuda_device_index},
+            filter_desc,
+            decode_executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::kw_only(),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("filter_desc") = std::string(),
+      py::arg("decode_executor") = nullptr);
 
   m.def(
       "decode_video",
