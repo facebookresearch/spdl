@@ -19,7 +19,7 @@ namespace spdl::core {
 
 /// Demux audio or video
 template <MediaType media_type>
-std::unique_ptr<Future> demux_async(
+FuturePtr demux_async(
     std::function<void(std::optional<PacketsPtr<media_type>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -29,7 +29,7 @@ std::unique_ptr<Future> demux_async(
     std::shared_ptr<ThreadPoolExecutor> demux_executor);
 
 /// Demux single image
-std::unique_ptr<Future> demux_image_async(
+FuturePtr demux_image_async(
     std::function<void(std::optional<PacketsPtr<MediaType::Image>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
