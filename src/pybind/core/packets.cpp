@@ -59,18 +59,17 @@ void register_packets(py::module& m) {
   auto _ImagePackets = py::class_<ImagePackets, ImagePacketsPtr>(
       m, "ImagePackets", py::module_local());
 
-  _AudioPackets.def(
-      "__repr__", [](const DemuxedPackets<MediaType::Audio>& self) {
-        return fmt::format(
-            "AudioPackets<id={}, src={}, timestamp=({}, {}), {}>",
-            self.id,
-            self.src,
-            std::get<0>(self.timestamp),
-            std::get<1>(self.timestamp),
-            get_codec_info<MediaType::Audio>(self.codecpar));
-      });
+  _AudioPackets.def("__repr__", [](const AudioPackets& self) {
+    return fmt::format(
+        "AudioPackets<id={}, src={}, timestamp=({}, {}), {}>",
+        self.id,
+        self.src,
+        std::get<0>(self.timestamp),
+        std::get<1>(self.timestamp),
+        get_codec_info<MediaType::Audio>(self.codecpar));
+  });
 
-  _VideoPackets.def("__repr__", [](const DemuxedPackets<MediaType::Video>& self) {
+  _VideoPackets.def("__repr__", [](const VideoPackets& self) {
     return fmt::format(
         "VideoPackets<id={}, src={}, timestamp=({}, {}), frame_rate=({}/{}), num_packets={}, {}>",
         self.id,
@@ -83,13 +82,12 @@ void register_packets(py::module& m) {
         get_codec_info<MediaType::Video>(self.codecpar));
   });
 
-  _ImagePackets.def(
-      "__repr__", [](const DemuxedPackets<MediaType::Image>& self) {
-        return fmt::format(
-            "ImagePackets<id={}, src={}, {}>",
-            self.id,
-            self.src,
-            get_codec_info<MediaType::Image>(self.codecpar));
-      });
+  _ImagePackets.def("__repr__", [](const ImagePackets& self) {
+    return fmt::format(
+        "ImagePackets<id={}, src={}, {}>",
+        self.id,
+        self.src,
+        get_codec_info<MediaType::Image>(self.codecpar));
+  });
 }
 } // namespace spdl::core

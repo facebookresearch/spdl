@@ -27,6 +27,7 @@ set(srcs
   libspdl/core/decoding/audio_visual.cpp
   libspdl/core/decoding/image.cpp
   libspdl/core/decoding/nvdec.cpp
+  libspdl/core/decoding/ffmpeg_async.cpp
   libspdl/core/executor.cpp
   libspdl/core/demuxing.cpp
   libspdl/core/future.cpp
