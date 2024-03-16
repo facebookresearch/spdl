@@ -52,15 +52,12 @@ std::string get_codec_info(AVCodecParameters* codecpar) {
 } // namespace
 
 void register_packets(py::module& m) {
-  auto _AudioPackets = py::
-      class_<DemuxedPackets<MediaType::Audio>, PacketsPtr<MediaType::Audio>>(
-          m, "AudioPackets", py::module_local());
-  auto _VideoPackets = py::
-      class_<DemuxedPackets<MediaType::Video>, PacketsPtr<MediaType::Video>>(
-          m, "VideoPackets", py::module_local());
-  auto _ImagePackets = py::
-      class_<DemuxedPackets<MediaType::Image>, PacketsPtr<MediaType::Image>>(
-          m, "ImagePackets", py::module_local());
+  auto _AudioPackets = py::class_<AudioPackets, AudioPacketsPtr>(
+      m, "AudioPackets", py::module_local());
+  auto _VideoPackets = py::class_<VideoPackets, VideoPacketsPtr>(
+      m, "VideoPackets", py::module_local());
+  auto _ImagePackets = py::class_<ImagePackets, ImagePacketsPtr>(
+      m, "ImagePackets", py::module_local());
 
   _AudioPackets.def(
       "__repr__", [](const DemuxedPackets<MediaType::Audio>& self) {
