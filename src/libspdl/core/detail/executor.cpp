@@ -97,13 +97,11 @@ Executor::KeepAlive<> get_default_decode_executor() {
   return getKeepAliveToken(executorPtrPtr->get());
 }
 
-folly::Executor::KeepAlive<> get_demux_executor(
-    ThreadPoolExecutorPtr& exe) {
+folly::Executor::KeepAlive<> get_demux_executor(ThreadPoolExecutorPtr& exe) {
   return exe ? exe->impl->get() : get_default_demux_executor();
 }
 
-folly::Executor::KeepAlive<> get_decode_executor(
-    ThreadPoolExecutorPtr& exe) {
+folly::Executor::KeepAlive<> get_decode_executor(ThreadPoolExecutorPtr& exe) {
   return exe ? exe->impl->get() : get_default_decode_executor();
 }
 

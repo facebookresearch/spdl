@@ -23,7 +23,7 @@ template <MediaType media_type>
 Task<std::vector<SemiFuture<FFmpegFramesPtr<media_type>>>> stream_decode_task(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    const std::shared_ptr<SourceAdoptor> adoptor,
+    const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
@@ -47,7 +47,7 @@ template <MediaType media_type>
 Results<FFmpegFramesPtr<media_type>> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
@@ -75,7 +75,7 @@ Results<FFmpegFramesPtr<media_type>> decoding::decode(
 template Results<FFmpegFramesPtr<MediaType::Audio>> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
@@ -85,7 +85,7 @@ template Results<FFmpegFramesPtr<MediaType::Audio>> decoding::decode(
 template Results<FFmpegFramesPtr<MediaType::Video>> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,

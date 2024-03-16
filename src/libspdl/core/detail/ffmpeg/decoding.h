@@ -20,13 +20,13 @@ template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 // Demuxer for a single image
 folly::coro::Task<PacketsPtr<MediaType::Image>> demux_image(
     const std::string src,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 template <MediaType media_type>

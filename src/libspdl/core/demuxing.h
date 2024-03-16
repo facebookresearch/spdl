@@ -24,7 +24,7 @@ FuturePtr demux_async(
     std::function<void()> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
@@ -33,7 +33,7 @@ FuturePtr demux_image_async(
     std::function<void(std::optional<PacketsPtr<MediaType::Image>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 

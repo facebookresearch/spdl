@@ -2,9 +2,15 @@
 
 #include <libspdl/core/types.h>
 
+#include <memory>
+
 struct AVFormatContext;
 
 namespace spdl::core {
+
+struct SourceAdoptor;
+
+using SourceAdoptorPtr = std::shared_ptr<SourceAdoptor>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // DataInterface

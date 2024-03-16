@@ -53,7 +53,7 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
 
 std::unique_ptr<DataInterface> get_interface(
     const std::string& src,
-    std::shared_ptr<SourceAdoptor>& adoptor,
+    SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg) {
   if (!adoptor) {
     adoptor.reset(static_cast<SourceAdoptor*>(new BasicAdoptor{}));
@@ -111,7 +111,7 @@ template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg) {
   TRACE_EVENT("demuxing", "detail::stream_demux");
   auto interface = get_interface(src, adoptor, io_cfg);
@@ -140,19 +140,19 @@ template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Audio>>
 stream_demux<MediaType::Audio>(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Video>>
 stream_demux<MediaType::Video>(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 folly::coro::Task<PacketsPtr<MediaType::Image>> demux_image(
     const std::string src,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg) {
   TRACE_EVENT("demuxing", "detail::demux");
   auto interface = get_interface(src, adoptor, io_cfg);
@@ -250,7 +250,7 @@ template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg) {
   TRACE_EVENT("demuxing", "detail::stream_demux_nvdec");
   auto interface = get_interface(src, adoptor, io_cfg);
@@ -285,14 +285,14 @@ template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Video>>
 stream_demux_nvdec<MediaType::Video>(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 template folly::coro::AsyncGenerator<PacketsPtr<MediaType::Image>>
 stream_demux_nvdec<MediaType::Image>(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 ////////////////////////////////////////////////////////////////////////////////
