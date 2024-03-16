@@ -81,7 +81,7 @@ py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
 } // namespace
 
 void register_frames_and_buffers(py::module& m) {
-  auto _Buffer = py::class_<Buffer>(m, "Buffer", py::module_local());
+  auto _Buffer = py::class_<Buffer, BufferPtr>(m, "Buffer", py::module_local());
 
   auto _CPUBuffer = py::class_<CPUBuffer>(m, "CPUBuffer", py::module_local());
 

@@ -8,15 +8,15 @@
 
 namespace spdl::core::detail {
 
-std::unique_ptr<Buffer> convert_audio_frames(
+BufferPtr convert_audio_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& index);
 
-std::unique_ptr<Buffer> convert_video_frames_cpu(
+BufferPtr convert_video_frames_cpu(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index);
 
-std::unique_ptr<Buffer> convert_video_frames_cuda(
+BufferPtr convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index);
 

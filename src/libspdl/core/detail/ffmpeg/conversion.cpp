@@ -25,7 +25,7 @@ namespace spdl::core::detail {
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
 template <size_t depth, ElemClass type, bool is_planar>
-std::unique_ptr<Buffer> convert_frames(
+BufferPtr convert_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& index) {
   size_t num_frames = frames->get_num_frames();
@@ -69,7 +69,7 @@ std::unique_ptr<Buffer> convert_frames(
   }
 }
 
-std::unique_ptr<Buffer> convert_audio_frames(
+BufferPtr convert_audio_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& i) {
   const auto& fs = frames->get_frames();
@@ -133,7 +133,7 @@ void copy_2d(
   }
 }
 
-std::unique_ptr<Buffer> convert_interleaved(
+BufferPtr convert_interleaved(
     const std::vector<AVFrame*>& frames,
     unsigned int num_channels = 3) {
   size_t h = frames[0]->height, w = frames[0]->width;
@@ -147,7 +147,7 @@ std::unique_ptr<Buffer> convert_interleaved(
   return buf;
 }
 
-std::unique_ptr<Buffer> convert_planer(const std::vector<AVFrame*>& frames) {
+BufferPtr convert_planer(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
   auto buf = cpu_buffer({frames.size(), 3, h, w});
@@ -160,9 +160,7 @@ std::unique_ptr<Buffer> convert_planer(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-std::unique_ptr<Buffer> convert_plane(
-    const std::vector<AVFrame*>& frames,
-    int plane) {
+BufferPtr convert_plane(const std::vector<AVFrame*>& frames, int plane) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
   auto buf = cpu_buffer({frames.size(), 1, h, w});
@@ -173,7 +171,7 @@ std::unique_ptr<Buffer> convert_plane(
   return buf;
 }
 
-std::unique_ptr<Buffer> convert_yuv420p(const std::vector<AVFrame*>& frames) {
+BufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2, w2 = w / 2;
@@ -191,7 +189,7 @@ std::unique_ptr<Buffer> convert_yuv420p(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-std::unique_ptr<Buffer> convert_yuv422p(const std::vector<AVFrame*>& frames) {
+BufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(w % 2 == 0);
   size_t w2 = w / 2;
@@ -211,7 +209,7 @@ std::unique_ptr<Buffer> convert_yuv422p(const std::vector<AVFrame*>& frames) {
 
 /// YUV420 -> half_h = true
 /// YUV422 -> half_h = false
-std::unique_ptr<Buffer>
+BufferPtr
 convert_u_or_v(const std::vector<AVFrame*>& frames, int plane, bool half_h) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(w % 2 == 0);
@@ -229,7 +227,7 @@ convert_u_or_v(const std::vector<AVFrame*>& frames, int plane, bool half_h) {
   return buf;
 }
 
-std::unique_ptr<Buffer> convert_nv12(const std::vector<AVFrame*>& frames) {
+BufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
@@ -245,7 +243,7 @@ std::unique_ptr<Buffer> convert_nv12(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-std::unique_ptr<Buffer> convert_nv12_uv(const std::vector<AVFrame*>& frames) {
+BufferPtr convert_nv12_uv(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2, w2 = w / 2;
@@ -259,7 +257,7 @@ std::unique_ptr<Buffer> convert_nv12_uv(const std::vector<AVFrame*>& frames) {
 }
 
 #ifdef SPDL_USE_CUDA
-std::unique_ptr<Buffer> convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
+BufferPtr convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
@@ -307,7 +305,7 @@ std::unique_ptr<Buffer> convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
 #endif
 } // namespace
 
-std::unique_ptr<Buffer> convert_video_frames_cuda(
+BufferPtr convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_CUDA
@@ -335,7 +333,7 @@ std::unique_ptr<Buffer> convert_video_frames_cuda(
 #endif
 }
 
-std::unique_ptr<Buffer> convert_video_frames_cpu(
+BufferPtr convert_video_frames_cpu(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
