@@ -23,8 +23,7 @@ FuturePtr decode_async(
 }
 
 template FuturePtr decode_async(
-    std::function<void(std::optional<FFmpegAudioFramesPtr>)>
-        set_result,
+    std::function<void(std::optional<FFmpegAudioFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     AudioPacketsPtr packets,
     DecodeConfig decode_cfg,
@@ -32,8 +31,7 @@ template FuturePtr decode_async(
     ThreadPoolExecutorPtr decode_executor);
 
 template FuturePtr decode_async(
-    std::function<void(std::optional<FFmpegVideoFramesPtr>)>
-        set_result,
+    std::function<void(std::optional<FFmpegVideoFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     VideoPacketsPtr packets,
     DecodeConfig decode_cfg,
@@ -41,8 +39,7 @@ template FuturePtr decode_async(
     ThreadPoolExecutorPtr decode_executor);
 
 template FuturePtr decode_async(
-    std::function<void(std::optional<FFmpegImageFramesPtr>)>
-        set_result,
+    std::function<void(std::optional<FFmpegImageFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     ImagePacketsPtr packets,
     DecodeConfig decode_cfg,
