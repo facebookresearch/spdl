@@ -1,8 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 namespace spdl::core {
+
+struct ThreadPoolExecutor;
+
+using ThreadPoolExecutorPtr = std::shared_ptr<ThreadPoolExecutor>;
 
 // Abstraction of folly Executor.
 struct ThreadPoolExecutor {

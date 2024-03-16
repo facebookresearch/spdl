@@ -26,7 +26,7 @@ FuturePtr demux_async(
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor);
+    ThreadPoolExecutorPtr demux_executor);
 
 /// Demux single image
 FuturePtr demux_image_async(
@@ -35,6 +35,6 @@ FuturePtr demux_image_async(
     const std::string& src,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor);
+    ThreadPoolExecutorPtr demux_executor);
 
 } // namespace spdl::core

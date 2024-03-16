@@ -27,7 +27,7 @@ Task<std::vector<SemiFuture<FFmpegFramesPtr<media_type>>>> stream_decode_task(
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr decode_executor) {
   std::vector<SemiFuture<FFmpegFramesPtr<media_type>>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
@@ -51,8 +51,8 @@ Results<FFmpegFramesPtr<media_type>> decoding::decode(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
   if (timestamps.size() == 0) {
     SPDL_FAIL("At least one timestamp must be provided.");
   }
@@ -79,8 +79,8 @@ template Results<FFmpegFramesPtr<MediaType::Audio>> decoding::decode(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor);
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor);
 
 template Results<FFmpegFramesPtr<MediaType::Video>> decoding::decode(
     const std::string& src,
@@ -89,7 +89,7 @@ template Results<FFmpegFramesPtr<MediaType::Video>> decoding::decode(
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor);
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor);
 
 } // namespace spdl::core

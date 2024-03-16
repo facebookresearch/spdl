@@ -14,7 +14,7 @@ FuturePtr demux_async(
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor) {
+    ThreadPoolExecutorPtr demux_executor) {
   return detail::execute_generator_with_callback<PacketsPtr<media_type>>(
       detail::stream_demux<media_type>(
           src, timestamps, std::move(adoptor), std::move(io_cfg)),
@@ -30,7 +30,7 @@ template FuturePtr demux_async<MediaType::Audio>(
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor);
+    ThreadPoolExecutorPtr demux_executor);
 
 template FuturePtr demux_async<MediaType::Video>(
     std::function<void(std::optional<PacketsPtr<MediaType::Video>>)> set_result,
@@ -39,7 +39,7 @@ template FuturePtr demux_async<MediaType::Video>(
     const std::vector<std::tuple<double, double>>& timestamps,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor);
+    ThreadPoolExecutorPtr demux_executor);
 
 FuturePtr demux_image_async(
     std::function<void(std::optional<PacketsPtr<MediaType::Image>>)> set_result,
@@ -47,7 +47,7 @@ FuturePtr demux_image_async(
     const std::string& src,
     const std::shared_ptr<SourceAdoptor>& adoptor,
     const IOConfig& io_cfg,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor) {
+    ThreadPoolExecutorPtr demux_executor) {
   return detail::execute_task_with_callback<PacketsPtr<MediaType::Image>>(
       detail::demux_image(src, std::move(adoptor), std::move(io_cfg)),
       std::move(set_result),

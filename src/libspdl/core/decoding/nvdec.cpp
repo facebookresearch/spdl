@@ -31,7 +31,7 @@ Task<NvDecFramesPtr<MediaType::Image>> image_decode_task_nvdec(
     int width,
     int height,
     const std::optional<std::string> pix_fmt,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr decode_executor) {
   auto exec = detail::get_decode_executor(decode_executor);
   auto packet =
       co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
@@ -58,8 +58,8 @@ batch_image_decode_task_nvdec(
     int width,
     int height,
     const std::optional<std::string> pix_fmt,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
   std::vector<SemiFuture<NvDecFramesPtr<MediaType::Image>>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
@@ -90,7 +90,7 @@ stream_decode_task_nvdec(
     int width,
     int height,
     const std::optional<std::string> pix_fmt,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr decode_executor) {
   std::vector<SemiFuture<NvDecFramesPtr<MediaType::Video>>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
@@ -163,8 +163,8 @@ DecodeNvDecResult<MediaType::Image> decoding::decode_image_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
@@ -197,8 +197,8 @@ BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
@@ -238,8 +238,8 @@ BatchDecodeNvDecResult<MediaType::Image> decoding::batch_decode_image_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
-    std::shared_ptr<ThreadPoolExecutor> demux_executor,
-    std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+    ThreadPoolExecutorPtr demux_executor,
+    ThreadPoolExecutorPtr decode_executor) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else

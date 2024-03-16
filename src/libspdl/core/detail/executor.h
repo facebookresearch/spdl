@@ -11,10 +11,10 @@ namespace spdl::core {
 namespace detail {
 
 folly::Executor::KeepAlive<> get_demux_executor(
-    std::shared_ptr<ThreadPoolExecutor>& exe);
+    ThreadPoolExecutorPtr& exe);
 
 folly::Executor::KeepAlive<> get_decode_executor(
-    std::shared_ptr<ThreadPoolExecutor>& exe);
+    ThreadPoolExecutorPtr& exe);
 
 } // namespace detail
 
