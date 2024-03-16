@@ -41,7 +41,7 @@ struct decoding {
   ///
   static DecodeResult<MediaType::Image> decode_image(
       const std::string& src,
-      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const SourceAdoptorPtr& adoptor,
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
       const std::string& filter_desc,
@@ -54,7 +54,7 @@ struct decoding {
   static DecodeNvDecResult<MediaType::Image> decode_image_nvdec(
       const std::string& src,
       const int cuda_device_index,
-      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const SourceAdoptorPtr& adoptor,
       const IOConfig& io_cfg,
       const CropArea& crop,
       int width,
@@ -72,7 +72,7 @@ struct decoding {
   ///
   static BatchDecodeResult<MediaType::Image> batch_decode_image(
       const std::vector<std::string>& srcs,
-      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const SourceAdoptorPtr& adoptor,
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
       const std::string& filter_desc,
@@ -85,7 +85,7 @@ struct decoding {
   static BatchDecodeNvDecResult<MediaType::Image> batch_decode_image_nvdec(
       const std::vector<std::string>& srcs,
       const int cuda_device_index,
-      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const SourceAdoptorPtr& adoptor,
       const IOConfig& io_cfg,
       const CropArea& crop,
       int width,
@@ -106,7 +106,7 @@ struct decoding {
   static Results<FFmpegFramesPtr<media_type>> decode(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
-      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const SourceAdoptorPtr& adoptor,
       const IOConfig& io_cfg,
       const DecodeConfig& decode_cfg,
       const std::string& filter_desc,
@@ -120,7 +120,7 @@ struct decoding {
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
       const int cuda_device_index,
-      const std::shared_ptr<SourceAdoptor>& adoptor,
+      const SourceAdoptorPtr& adoptor,
       const IOConfig& io_cfg,
       const CropArea& crop,
       int width,

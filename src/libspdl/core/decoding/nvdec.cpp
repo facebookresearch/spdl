@@ -25,7 +25,7 @@ namespace {
 Task<NvDecFramesPtr<MediaType::Image>> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
-    const std::shared_ptr<SourceAdoptor> adoptor,
+    const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
     const CropArea crop,
     int width,
@@ -52,7 +52,7 @@ Task<std::vector<SemiFuture<NvDecFramesPtr<MediaType::Image>>>>
 batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
-    const std::shared_ptr<SourceAdoptor> adoptor,
+    const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
     const CropArea crop,
     int width,
@@ -84,7 +84,7 @@ stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const int cuda_device_index,
-    const std::shared_ptr<SourceAdoptor> adoptor,
+    const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
     const CropArea crop,
     int width,
@@ -157,7 +157,7 @@ void init_cuda() {
 DecodeNvDecResult<MediaType::Image> decoding::decode_image_nvdec(
     const std::string& src,
     const int cuda_device_index,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const CropArea& crop,
     int width,
@@ -191,7 +191,7 @@ BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const int cuda_device_index,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const CropArea& crop,
     int width,
@@ -232,7 +232,7 @@ BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
 BatchDecodeNvDecResult<MediaType::Image> decoding::batch_decode_image_nvdec(
     const std::vector<std::string>& srcs,
     const int cuda_device_index,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const CropArea& crop,
     int width,

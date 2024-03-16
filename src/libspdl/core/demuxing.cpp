@@ -12,7 +12,7 @@ FuturePtr demux_async(
     std::function<void()> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor) {
   return detail::execute_generator_with_callback<PacketsPtr<media_type>>(
@@ -28,7 +28,7 @@ template FuturePtr demux_async<MediaType::Audio>(
     std::function<void()> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
@@ -37,7 +37,7 @@ template FuturePtr demux_async<MediaType::Video>(
     std::function<void()> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
@@ -45,7 +45,7 @@ FuturePtr demux_image_async(
     std::function<void(std::optional<PacketsPtr<MediaType::Image>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor) {
   return detail::execute_task_with_callback<PacketsPtr<MediaType::Image>>(

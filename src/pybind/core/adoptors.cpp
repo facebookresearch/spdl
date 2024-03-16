@@ -30,8 +30,8 @@ void register_adoptors(py::module& m) {
   // SourceAdoptor is used by external libraries to provide customized source.
   // This registeration is global.
   // To reduce the possibilty of name colision, suffixing with `_SPDL_GLOBAL`.
-  auto _SourceAdoptor = py::
-      class_<SourceAdoptor, PySourceAdoptor, std::shared_ptr<SourceAdoptor>>(
+  auto _SourceAdoptor =
+      py::class_<SourceAdoptor, PySourceAdoptor, SourceAdoptorPtr>(
           m, "SourceAdoptor_SPDL_GLOBAL");
 
   auto _BasicAdoptor =

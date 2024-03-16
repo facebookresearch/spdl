@@ -22,7 +22,7 @@ template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    std::shared_ptr<SourceAdoptor> adoptor,
+    SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 template <MediaType media_type>

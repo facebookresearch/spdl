@@ -17,7 +17,7 @@ using folly::coro::Task;
 namespace {
 Task<FFmpegFramesPtr<MediaType::Image>> image_decode_task(
     const std::string src,
-    const std::shared_ptr<SourceAdoptor> adoptor,
+    const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
@@ -32,7 +32,7 @@ Task<FFmpegFramesPtr<MediaType::Image>> image_decode_task(
 Task<std::vector<SemiFuture<FFmpegFramesPtr<MediaType::Image>>>>
 batch_image_decode_task(
     const std::vector<std::string> srcs,
-    const std::shared_ptr<SourceAdoptor> adoptor,
+    const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
@@ -52,7 +52,7 @@ batch_image_decode_task(
 
 DecodeResult<MediaType::Image> decoding::decode_image(
     const std::string& src,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
@@ -69,7 +69,7 @@ DecodeResult<MediaType::Image> decoding::decode_image(
 
 BatchDecodeResult<MediaType::Image> decoding::batch_decode_image(
     const std::vector<std::string>& srcs,
-    const std::shared_ptr<SourceAdoptor>& adoptor,
+    const SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
