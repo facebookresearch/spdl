@@ -483,20 +483,17 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
   co_return std::move(frames);
 }
 
-template folly::coro::Task<FFmpegFramesPtr<MediaType::Audio>>
-decode_packets_ffmpeg(
+template folly::coro::Task<FFmpegAudioFramesPtr> decode_packets_ffmpeg(
     PacketsPtr<MediaType::Audio> packets,
     const DecodeConfig cfg,
     std::string filter_desc);
 
-template folly::coro::Task<FFmpegFramesPtr<MediaType::Video>>
-decode_packets_ffmpeg(
+template folly::coro::Task<FFmpegVideoFramesPtr> decode_packets_ffmpeg(
     PacketsPtr<MediaType::Video> packets,
     const DecodeConfig cfg,
     std::string filter_desc);
 
-template folly::coro::Task<FFmpegFramesPtr<MediaType::Image>>
-decode_packets_ffmpeg(
+template folly::coro::Task<FFmpegImageFramesPtr> decode_packets_ffmpeg(
     PacketsPtr<MediaType::Image> packets,
     const DecodeConfig cfg,
     std::string filter_desc);

@@ -15,7 +15,7 @@ using folly::SemiFuture;
 using folly::coro::Task;
 
 namespace {
-Task<FFmpegFramesPtr<MediaType::Image>> image_decode_task(
+Task<FFmpegImageFramesPtr> image_decode_task(
     const std::string src,
     const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
@@ -29,8 +29,7 @@ Task<FFmpegFramesPtr<MediaType::Image>> image_decode_task(
       .scheduleOn(detail::get_decode_executor(decode_executor));
 }
 
-Task<std::vector<SemiFuture<FFmpegFramesPtr<MediaType::Image>>>>
-batch_image_decode_task(
+Task<std::vector<SemiFuture<FFmpegImageFramesPtr>>> batch_image_decode_task(
     const std::vector<std::string> srcs,
     const SourceAdoptorPtr adoptor,
     const IOConfig io_cfg,
@@ -38,7 +37,7 @@ batch_image_decode_task(
     const std::string filter_desc,
     ThreadPoolExecutorPtr demux_executor,
     ThreadPoolExecutorPtr decode_executor) {
-  std::vector<SemiFuture<FFmpegFramesPtr<MediaType::Image>>> futures;
+  std::vector<SemiFuture<FFmpegImageFramesPtr>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task(

@@ -140,7 +140,7 @@ std::vector<ResultType> Results<ResultType>::Impl::get(bool strict) {
   }
   fetched = true;
   if constexpr (
-      std::is_same<ResultType, FFmpegFramesPtr<MediaType::Image>>::value ||
+      std::is_same<ResultType, FFmpegImageFramesPtr>::value ||
       std::is_same<ResultType, NvDecFramesPtr<MediaType::Image>>::value) {
     return blockingWait(
         check_image<ResultType>(std::move(future), srcs, strict));
@@ -178,12 +178,12 @@ std::vector<ResultType> Results<ResultType>::get(bool strict) {
 }
 
 // Explicit instantiation
-template class Result<FFmpegFramesPtr<MediaType::Image>>;
+template class Result<FFmpegImageFramesPtr>;
 template class Result<NvDecFramesPtr<MediaType::Image>>;
 
-template class Results<FFmpegFramesPtr<MediaType::Audio>>;
-template class Results<FFmpegFramesPtr<MediaType::Video>>;
-template class Results<FFmpegFramesPtr<MediaType::Image>>;
+template class Results<FFmpegAudioFramesPtr>;
+template class Results<FFmpegVideoFramesPtr>;
+template class Results<FFmpegImageFramesPtr>;
 template class Results<NvDecFramesPtr<MediaType::Video>>;
 template class Results<NvDecFramesPtr<MediaType::Image>>;
 

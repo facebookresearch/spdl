@@ -24,6 +24,10 @@ using FFmpegImageFrames = FFmpegFrames<MediaType::Image>;
 template <MediaType media_type>
 using FFmpegFramesPtr = std::unique_ptr<FFmpegFrames<media_type>>;
 
+using FFmpegAudioFramesPtr = FFmpegFramesPtr<MediaType::Audio>;
+using FFmpegVideoFramesPtr = FFmpegFramesPtr<MediaType::Video>;
+using FFmpegImageFramesPtr = FFmpegFramesPtr<MediaType::Image>;
+
 template <MediaType media_type>
 struct NvDecFrames;
 

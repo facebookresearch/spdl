@@ -72,7 +72,7 @@ Results<FFmpegFramesPtr<media_type>> decoding::decode(
               .start()}};
 }
 
-template Results<FFmpegFramesPtr<MediaType::Audio>> decoding::decode(
+template Results<FFmpegAudioFramesPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdoptorPtr& adoptor,
@@ -82,7 +82,7 @@ template Results<FFmpegFramesPtr<MediaType::Audio>> decoding::decode(
     ThreadPoolExecutorPtr demux_executor,
     ThreadPoolExecutorPtr decode_executor);
 
-template Results<FFmpegFramesPtr<MediaType::Video>> decoding::decode(
+template Results<FFmpegVideoFramesPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdoptorPtr& adoptor,
