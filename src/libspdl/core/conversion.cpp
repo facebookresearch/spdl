@@ -2,7 +2,9 @@
 
 #include <libspdl/core/types.h>
 
+#include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/ffmpeg/conversion.h"
+#include "libspdl/core/detail/future.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -273,4 +275,49 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
   return ret;
 #endif
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Async - FFmpeg
+////////////////////////////////////////////////////////////////////////////////
+template <MediaType media_type>
+FuturePtr convert_frames_to_cpu_buffer_async(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<media_type>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
+    if constexpr (media_type == MediaType::Audio) {
+      co_return convert_audio_frames(frames, index);
+    }
+    co_return convert_visual_frames_to_cpu_buffer<media_type>(frames, index);
+  });
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor(executor));
+}
+
+template FuturePtr convert_frames_to_cpu_buffer_async(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<MediaType::Audio>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+
+template FuturePtr convert_frames_to_cpu_buffer_async(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<MediaType::Video>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+
+template FuturePtr convert_frames_to_cpu_buffer_async(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<MediaType::Image>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+
 } // namespace spdl::core

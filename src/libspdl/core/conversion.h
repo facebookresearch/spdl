@@ -1,9 +1,11 @@
 #pragma once
 
 #include <libspdl/core/buffer.h>
+#include <libspdl/core/executor.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/future.h>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -13,6 +15,14 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Device-specific conversion functions (will fail if wrong device)
 ////////////////////////////////////////////////////////////////////////////////
+template <MediaType media_type>
+FuturePtr convert_frames_to_cpu_buffer_async(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<media_type>* frames,
+    const std::optional<int>& index = std::nullopt,
+    ThreadPoolExecutorPtr demux_executor = nullptr);
+
 template <MediaType media_type>
 CPUBufferPtr convert_visual_frames_to_cpu_buffer(
     const FFmpegFrames<media_type>* frames,
