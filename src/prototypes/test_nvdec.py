@@ -47,16 +47,14 @@ def decode(src_path, type, gpu):
             timestamps=[(1, 1.05), (10, 10.05), (20, 20.05)],
             cuda_device_index=gpu,
         )
-        buffers = [libspdl._BufferWrapper(fut) for fut in future.get()]
-        frames = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
+        frames = [cuda.as_cuda_array(fut).copy_to_host() for fut in future.get()]
         return frames
     if type == "image":
         future = libspdl.decode_image_nvdec(
             src=src,
             cuda_device_index=gpu,
         )
-        buffer = libspdl._BufferWrapper(future.get())
-        frames = [[cuda.as_cuda_array(buffer).copy_to_host()]]
+        frames = [[cuda.as_cuda_array(future.get()).copy_to_host()]]
         return frames
 
 
