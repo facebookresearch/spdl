@@ -185,10 +185,13 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly("sample_rate", &FFmpegAudioFrames::get_sample_rate)
       .def_property_readonly(
           "num_channels", &FFmpegAudioFrames::get_num_channels)
+      .def_property_readonly(
+          "format", &FFmpegAudioFrames::get_media_format_name)
       .def("__len__", &FFmpegAudioFrames::get_num_frames)
       .def("__repr__", [](const FFmpegAudioFrames& self) {
         return fmt::format(
-            "FFmpegAudioFrames<num_frames={}, sample_rate={}, num_channels={}>",
+            "FFmpegAudioFrames<num_frames={}, sample_format={}, sample_rate={}, num_channels={}>",
+            self.get_media_format_name(),
             self.get_num_frames(),
             self.get_sample_rate(),
             self.get_num_channels());
@@ -200,6 +203,8 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly("num_planes", &FFmpegVideoFrames::get_num_planes)
       .def_property_readonly("width", &FFmpegVideoFrames::get_width)
       .def_property_readonly("height", &FFmpegVideoFrames::get_height)
+      .def_property_readonly(
+          "format", &FFmpegVideoFrames::get_media_format_name)
       .def("__len__", &FFmpegVideoFrames::get_num_frames)
       .def(
           "__getitem__",
@@ -219,8 +224,9 @@ void register_frames_and_buffers(py::module& m) {
           [](const FFmpegVideoFrames& self, int i) { return self.slice(i); })
       .def("__repr__", [](const FFmpegVideoFrames& self) {
         return fmt::format(
-            "FFmpegVideoFrames<num_frames={}, num_planes={}, width={}, height={}, is_cuda={}>",
+            "FFmpegVideoFrames<num_frames={}, pixel_format={}, num_planes={}, width={}, height={}, is_cuda={}>",
             self.get_num_frames(),
+            self.get_media_format_name(),
             self.get_num_planes(),
             self.get_width(),
             self.get_height(),
@@ -232,9 +238,12 @@ void register_frames_and_buffers(py::module& m) {
       .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
       .def_property_readonly("width", &FFmpegImageFrames::get_width)
       .def_property_readonly("height", &FFmpegImageFrames::get_height)
+      .def_property_readonly(
+          "format", &FFmpegImageFrames::get_media_format_name)
       .def("__repr__", [](const FFmpegImageFrames& self) {
         return fmt::format(
-            "FFmpegImageFrames<num_planes={}, width={}, height={}, is_cuda={}>",
+            "FFmpegImageFrames<pixel_format={}, num_planes={}, width={}, height={}, is_cuda={}>",
+            self.get_media_format_name(),
             self.get_num_planes(),
             self.get_width(),
             self.get_height(),
@@ -250,6 +259,7 @@ void register_frames_and_buffers(py::module& m) {
   }
 #endif
 
+  // TODO: Add __repr__
   _NvDecVideoFrames
       .def_property_readonly(
           "is_cuda", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames&) {
@@ -270,6 +280,11 @@ void register_frames_and_buffers(py::module& m) {
             return self.buffer->get_shape();
           }))
       .def_property_readonly(
+          "format",
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
+            return self.get_media_format_name();
+          }))
+      .def_property_readonly(
           "__cuda_array_interface__",
           IF_NVDECVIDEOFRAMES_ENABLED([](NvDecVideoFrames& self) {
             return get_cuda_array_interface(*self.buffer);
@@ -280,6 +295,7 @@ void register_frames_and_buffers(py::module& m) {
             return self.buffer->get_shape()[0];
           }));
 
+  // TODO: Add __repr__
   _NvDecImageFrames
       .def_property_readonly(
           "is_cuda", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames&) {
@@ -298,6 +314,11 @@ void register_frames_and_buffers(py::module& m) {
           "shape",
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
             return self.buffer->get_shape();
+          }))
+      .def_property_readonly(
+          "format",
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
+            return self.get_media_format_name();
           }))
       .def_property_readonly(
           "__cuda_array_interface__",

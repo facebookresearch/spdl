@@ -68,5 +68,6 @@ class DemuxedPackets {
   void push(AVPacket*);
   size_t num_packets() const;
   const std::vector<AVPacket*>& get_packets() const;
+  const char* get_media_format_name() const;
 };
 } // namespace spdl::core

@@ -72,6 +72,14 @@ void FFmpegFrames<media_type>::push_back(AVFrame* frame) {
 }
 
 template <MediaType media_type>
+const char* FFmpegFrames<media_type>::get_media_format_name() const {
+  if (frames.size() == 0) {
+    return "n/a";
+  }
+  return detail::get_media_format_name<media_type>(frames[0]->format);
+}
+
+template <MediaType media_type>
 int FFmpegFrames<media_type>::get_num_frames() const {
   if constexpr (_IS_AUDIO) {
     int ret = 0;
