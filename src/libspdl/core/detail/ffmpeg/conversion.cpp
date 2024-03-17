@@ -362,6 +362,7 @@ CPUBufferPtr convert_video_frames_cpu(
       }
       return convert_interleaved(frames);
     }
+    case AV_PIX_FMT_YUVJ444P:
     case AV_PIX_FMT_YUV444P: {
       if (!index) {
         return convert_planer(frames);
