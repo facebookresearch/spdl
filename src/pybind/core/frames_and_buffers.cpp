@@ -351,7 +351,7 @@ void register_frames_and_buffers(py::module& m) {
 
   m.def(
       "async_convert_cpu",
-      &convert_frames_to_cpu_buffer_async<MediaType::Audio>,
+      &async_convert_frames_to_cpu<MediaType::Audio>,
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("frames"),
@@ -360,7 +360,7 @@ void register_frames_and_buffers(py::module& m) {
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_cpu",
-      &convert_frames_to_cpu_buffer_async<MediaType::Video>,
+      &async_convert_frames_to_cpu<MediaType::Video>,
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("frames"),
@@ -369,7 +369,7 @@ void register_frames_and_buffers(py::module& m) {
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_cpu",
-      &convert_frames_to_cpu_buffer_async<MediaType::Image>,
+      &async_convert_frames_to_cpu<MediaType::Image>,
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("frames"),

@@ -280,7 +280,7 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
 // Async - FFmpeg
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
-FuturePtr convert_frames_to_cpu_buffer_async(
+FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     const FFmpegFrames<media_type>* frames,
@@ -299,21 +299,21 @@ FuturePtr convert_frames_to_cpu_buffer_async(
       detail::get_demux_executor(executor));
 }
 
-template FuturePtr convert_frames_to_cpu_buffer_async(
+template FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     const FFmpegFrames<MediaType::Audio>* frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr demux_executor);
 
-template FuturePtr convert_frames_to_cpu_buffer_async(
+template FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     const FFmpegFrames<MediaType::Video>* frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr demux_executor);
 
-template FuturePtr convert_frames_to_cpu_buffer_async(
+template FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     const FFmpegFrames<MediaType::Image>* frames,
