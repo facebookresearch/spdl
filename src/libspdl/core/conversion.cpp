@@ -38,13 +38,14 @@ CPUBufferPtr convert_audio_frames(
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 
-template <bool single_image>
-void check_consistency(const std::vector<AVFrame*>& frames) {
+template <MediaType media_type>
+void check_consistency(const std::vector<AVFrame*>& frames) requires(
+    media_type != MediaType::Audio) {
   auto numel = frames.size();
   if (numel == 0) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
-  if constexpr (single_image) {
+  if constexpr (media_type == MediaType::Image) {
     if (numel != 1) {
       SPDL_FAIL_INTERNAL(fmt::format(
           "There must be exactly one frame to convert to buffer. Found: {}",
@@ -65,94 +66,78 @@ void check_consistency(const std::vector<AVFrame*>& frames) {
   }
 }
 
-template <bool single_image = false>
+template <MediaType media_type>
 BufferPtr convert_video(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
-  check_consistency<single_image>(frames);
+    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
+  check_consistency<media_type>(frames);
   bool is_cuda =
       static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
   if (is_cuda) {
     return detail::convert_video_frames_cuda(frames, index);
   }
-  return detail::convert_video_frames_cpu(frames, index);
+  auto buf = detail::convert_video_frames_cpu(frames, index);
+  if constexpr (media_type == MediaType::Image) {
+    buf->shape.erase(buf->shape.begin()); // Trim the first dim
+  }
+  return buf;
 }
 
-template <bool single_image = false>
+template <MediaType media_type>
 CPUBufferPtr convert_video_to_cpu(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
-  check_consistency<single_image>(frames);
+    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
+  check_consistency<media_type>(frames);
   bool is_cuda =
       static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
   if (is_cuda) {
     SPDL_FAIL("The input frames are not CPU frames.");
   }
-  return detail::convert_video_frames_cpu(frames, index);
+  auto buf = detail::convert_video_frames_cpu(frames, index);
+  if constexpr (media_type == MediaType::Image) {
+    buf->shape.erase(buf->shape.begin()); // Trim the first dim
+  }
+  return buf;
 }
 } // namespace
 
-BufferPtr convert_video_frames(
-    const FFmpegVideoFrames* frames,
-    const std::optional<int>& index) {
+template <MediaType media_type>
+BufferPtr convert_visual_frames(
+    const FFmpegFrames<media_type>* frames,
+    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
   TRACE_EVENT(
       "decoding",
-      "core::convert_video_frames",
+      "core::convert_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video<>(frames->get_frames(), index);
+  return convert_video<media_type>(frames->get_frames(), index);
 }
 
-CPUBufferPtr convert_video_frames_to_cpu_buffer(
-    const FFmpegVideoFrames* frames,
-    const std::optional<int>& index) {
+template BufferPtr convert_visual_frames(
+    const FFmpegFrames<MediaType::Video>* frames,
+    const std::optional<int>& index);
+
+template BufferPtr convert_visual_frames(
+    const FFmpegFrames<MediaType::Image>* frames,
+    const std::optional<int>& index);
+
+template <MediaType media_type>
+CPUBufferPtr convert_visual_frames_to_cpu_buffer(
+    const FFmpegFrames<media_type>* frames,
+    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
   TRACE_EVENT(
       "decoding",
       "core::convert_video_frames_to_cpu_buffer",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video_to_cpu(frames->get_frames(), index);
+  return convert_video_to_cpu<media_type>(frames->get_frames(), index);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Image
-////////////////////////////////////////////////////////////////////////////////
-namespace {
+template CPUBufferPtr convert_visual_frames_to_cpu_buffer(
+    const FFmpegFrames<MediaType::Video>* frames,
+    const std::optional<int>& index);
 
-BufferPtr convert_image(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
-  auto buf = convert_video</*single_image=*/true>(frames, index);
-  buf->shape.erase(buf->shape.begin()); // Trim the first dim
-  return buf;
-}
-
-CPUBufferPtr convert_image_to_cpu(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
-  auto buf = convert_video_to_cpu</*single_image=*/true>(frames, index);
-  buf->shape.erase(buf->shape.begin()); // Trim the first dim
-  return buf;
-}
-} // namespace
-
-BufferPtr convert_image_frames(
-    const FFmpegImageFrames* frames,
-    const std::optional<int>& index) {
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_image_frames",
-      perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_image(frames->get_frames(), index);
-}
-
-CPUBufferPtr convert_image_frames_to_cpu_buffer(
-    const FFmpegImageFrames* frames,
-    const std::optional<int>& index) {
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_image_frames_to_cpu_buffer",
-      perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_image_to_cpu(frames->get_frames(), index);
-}
+template CPUBufferPtr convert_visual_frames_to_cpu_buffer(
+    const FFmpegFrames<MediaType::Image>* frames,
+    const std::optional<int>& index);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Batch Image
@@ -178,14 +163,14 @@ BufferPtr convert_batch_image_frames(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
-  return convert_video<>(merge_frames(batch), index);
+  return convert_video<MediaType::Video>(merge_frames(batch), index);
 }
 
 CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
     const std::vector<FFmpegImageFrames*>& batch,
     const std::optional<int>& index) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames_to_cpu_buffer");
-  return convert_video_to_cpu(merge_frames(batch), index);
+  return convert_video_to_cpu<MediaType::Video>(merge_frames(batch), index);
 }
 
 template <MediaType media_type>

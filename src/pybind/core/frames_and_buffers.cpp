@@ -332,16 +332,20 @@ void register_frames_and_buffers(py::module& m) {
           }));
 
   m.def("convert_to_buffer", &convert_audio_frames);
-  m.def("convert_to_buffer", &convert_video_frames);
-  m.def("convert_to_buffer", &convert_image_frames);
+  m.def("convert_to_buffer", &convert_visual_frames<MediaType::Video>);
+  m.def("convert_to_buffer", &convert_visual_frames<MediaType::Image>);
   m.def("convert_to_buffer", &convert_batch_image_frames);
   m.def("convert_to_buffer", &convert_nvdec_frames<MediaType::Video>);
   m.def("convert_to_buffer", &convert_nvdec_frames<MediaType::Image>);
   m.def("convert_to_buffer", &convert_nvdec_batch_image_frames);
 
   m.def("convert_to_cpu_buffer", &convert_audio_frames);
-  m.def("convert_to_cpu_buffer", &convert_video_frames_to_cpu_buffer);
-  m.def("convert_to_cpu_buffer", &convert_image_frames_to_cpu_buffer);
+  m.def(
+      "convert_to_cpu_buffer",
+      &convert_visual_frames_to_cpu_buffer<MediaType::Video>);
+  m.def(
+      "convert_to_cpu_buffer",
+      &convert_visual_frames_to_cpu_buffer<MediaType::Image>);
   m.def("convert_to_cpu_buffer", &convert_batch_image_frames_to_cpu_buffer);
 }
 } // namespace spdl::core
