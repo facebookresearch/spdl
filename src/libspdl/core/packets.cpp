@@ -1,6 +1,7 @@
 #include <libspdl/core/packets.h>
 
 #include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <folly/logging/xlog.h>
@@ -81,6 +82,11 @@ size_t DemuxedPackets<media_type>::num_packets() const {
 template <MediaType media_type>
 const std::vector<AVPacket*>& DemuxedPackets<media_type>::get_packets() const {
   return packets;
+}
+
+template <MediaType media_type>
+const char* DemuxedPackets<media_type>::get_media_format_name() const {
+  return detail::get_media_format_name<media_type>(codecpar->format);
 }
 
 template struct DemuxedPackets<MediaType::Audio>;

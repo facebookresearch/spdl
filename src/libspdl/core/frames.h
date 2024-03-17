@@ -96,6 +96,10 @@ class FFmpegFrames {
   //////////////////////////////////////////////////////////////////////////////
 
   ///
+  /// Get the format of the frames.
+  const char* get_media_format_name() const;
+
+  ///
   /// Get the number of frames.
   int get_num_frames() const;
   // the behavior is different for audio
@@ -186,6 +190,8 @@ struct NvDecFrames {
   NvDecFrames(NvDecFrames&&) noexcept;
   NvDecFrames& operator=(NvDecFrames&&) noexcept;
   ~NvDecFrames() = default;
+
+  const char* get_media_format_name() const;
 #endif
 };
 

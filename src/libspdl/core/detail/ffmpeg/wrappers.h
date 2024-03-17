@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libspdl/core/types.h>
+
 #include <memory>
 
 extern "C" {
@@ -11,6 +13,7 @@ extern "C" {
 #include <libavfilter/avfilter.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
+#include <libavutil/pixdesc.h>
 }
 
 namespace spdl::core::detail {
@@ -87,6 +90,21 @@ struct AVFrameAutoUnref {
 
 // Create a new reference to an existing frame.
 AVFrame* make_reference(AVFrame* src);
+
+// Get the name of the format
+template <MediaType media_type>
+const char* get_media_format_name(int media_format) {
+  if constexpr (media_type == MediaType::Audio) {
+    AVSampleFormat smp_fmt = static_cast<AVSampleFormat>(media_format);
+    return (smp_fmt == AV_SAMPLE_FMT_NONE) ? "unknown"
+                                           : av_get_sample_fmt_name(smp_fmt);
+  } else if constexpr (
+      media_type == MediaType::Video || media_type == MediaType::Image) {
+    AVPixelFormat pix_fmt = static_cast<AVPixelFormat>(media_format);
+    return (pix_fmt == AV_PIX_FMT_NONE) ? "unknown"
+                                        : av_get_pix_fmt_name(pix_fmt);
+  }
+}
 
 } // namespace spdl::core::detail
 
