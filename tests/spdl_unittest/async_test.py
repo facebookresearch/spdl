@@ -39,15 +39,23 @@ def test_failure():
 
 async def _test_async_decode(generator):
     decode_tasks = []
-    conversion_tasks = []
+    conversions = []
+    conversions_cpu = []
     async for packets in generator:
         print(packets)
         decode_tasks.append(spdl.async_decode(packets))
     results = await asyncio.gather(*decode_tasks)
     for frames in results:
         print(frames)
-        conversion_tasks.append(spdl.async_convert_cpu(frames))
-    results = await asyncio.gather(*conversion_tasks)
+        conversions.append(spdl.async_convert(frames))
+        conversions_cpu.append(spdl.async_convert_cpu(frames))
+
+    results = await asyncio.gather(*conversions)
+    for buffer in results:
+        array = np.array(buffer, copy=False)
+        print(array.shape, array.dtype)
+
+    results = await asyncio.gather(*conversions_cpu)
     for buffer in results:
         array = np.array(buffer, copy=False)
         print(array.shape, array.dtype)
@@ -61,7 +69,8 @@ def test_decode_audio_clips(get_sample):
     timestamps = [(i, i + 1) for i in range(10)]
 
     coro = _test_async_decode(
-        spdl.async_demux_audio(sample.path, timestamps=timestamps))
+        spdl.async_demux_audio(sample.path, timestamps=timestamps)
+    )
 
     asyncio.run(coro)
 
@@ -74,7 +83,8 @@ def test_decode_video_clips(get_sample):
     timestamps = [(i, i + 1) for i in range(10)]
 
     coro = _test_async_decode(
-        spdl.async_demux_video(sample.path, timestamps=timestamps))
+        spdl.async_demux_video(sample.path, timestamps=timestamps)
+    )
 
     asyncio.run(coro)
 

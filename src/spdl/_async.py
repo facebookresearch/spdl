@@ -7,6 +7,7 @@ import spdl.libspdl
 
 _task = [
     "async_apply_bsf",
+    "async_convert",
     "async_convert_cpu",
     "async_decode",
     "async_decode_nvdec",
