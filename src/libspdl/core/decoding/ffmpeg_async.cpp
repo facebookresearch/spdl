@@ -7,7 +7,7 @@
 namespace spdl::core {
 
 template <MediaType media_type>
-FuturePtr decode_async(
+FuturePtr async_decode(
     std::function<void(std::optional<FFmpegFramesPtr<media_type>>)> set_result,
     std::function<void()> notify_exception,
     PacketsPtr<media_type> packets,
@@ -22,7 +22,7 @@ FuturePtr decode_async(
       detail::get_decode_executor(decode_executor));
 }
 
-template FuturePtr decode_async(
+template FuturePtr async_decode(
     std::function<void(std::optional<FFmpegAudioFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     AudioPacketsPtr packets,
@@ -30,7 +30,7 @@ template FuturePtr decode_async(
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
-template FuturePtr decode_async(
+template FuturePtr async_decode(
     std::function<void(std::optional<FFmpegVideoFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     VideoPacketsPtr packets,
@@ -38,7 +38,7 @@ template FuturePtr decode_async(
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
-template FuturePtr decode_async(
+template FuturePtr async_decode(
     std::function<void(std::optional<FFmpegImageFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     ImagePacketsPtr packets,

@@ -13,15 +13,15 @@ namespace spdl::core {
 
 void register_demuxing(py::module& m) {
   m.def(
-      "apply_bsf",
-      &apply_bsf,
+      "async_apply_bsf",
+      &async_apply_bsf,
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("packets"),
-      py::arg("demux_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
-      "demux_audio_async",
+      "async_demux_audio",
       [](std::function<void(std::optional<AudioPacketsPtr>)> set_result,
          std::function<void()> notify_exception,
          const std::string& src,
@@ -31,7 +31,7 @@ void register_demuxing(py::module& m) {
          const std::optional<OptionDict>& format_options,
          int buffer_size,
          ThreadPoolExecutorPtr demux_executor) {
-        return demux_async<MediaType::Audio>(
+        return async_demux<MediaType::Audio>(
             std::move(set_result),
             std::move(notify_exception),
             src,
@@ -52,7 +52,7 @@ void register_demuxing(py::module& m) {
       py::arg("demux_executor") = nullptr);
 
   m.def(
-      "demux_video_async",
+      "async_demux_video",
       [](std::function<void(std::optional<VideoPacketsPtr>)> set_result,
          std::function<void()> notify_exception,
          const std::string& src,
@@ -62,7 +62,7 @@ void register_demuxing(py::module& m) {
          const std::optional<OptionDict>& format_options,
          int buffer_size,
          ThreadPoolExecutorPtr demux_executor) {
-        return demux_async<MediaType::Video>(
+        return async_demux<MediaType::Video>(
             std::move(set_result),
             std::move(notify_exception),
             src,
@@ -83,7 +83,7 @@ void register_demuxing(py::module& m) {
       py::arg("demux_executor") = nullptr);
 
   m.def(
-      "demux_image_async",
+      "async_demux_image",
       [](std::function<void(std::optional<ImagePacketsPtr>)> set_result,
          std::function<void()> notify_exception,
          const std::string& src,
@@ -92,7 +92,7 @@ void register_demuxing(py::module& m) {
          const std::optional<OptionDict>& format_options,
          int buffer_size,
          ThreadPoolExecutorPtr demux_executor) {
-        return demux_image_async(
+        return async_demux_image(
             std::move(set_result),
             std::move(notify_exception),
             src,

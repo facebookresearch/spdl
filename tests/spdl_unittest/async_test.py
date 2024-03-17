@@ -13,19 +13,19 @@ def test_failure():
     ts = [(0, 1)]
 
     async def _test_audio():
-        async for packets in spdl.demux_audio_async(
+        async for packets in spdl.async_demux_audio(
             "FOO.mp3", timestamps=ts, _exception_backoff=1
         ):
             pass
 
     async def _test_video():
-        async for packets in spdl.demux_video_async(
+        async for packets in spdl.async_demux_video(
             "FOOBAR.mp4", timestamps=ts, _exception_backoff=1
         ):
             pass
 
     async def _test_image():
-        await spdl.demux_image_async("FOO.jpg", _exception_backoff=1)
+        await spdl.async_demux_image("FOO.jpg", _exception_backoff=1)
 
     with pytest.raises(RuntimeError, match="Failed to open the input"):
         asyncio.run(_test_audio())
@@ -37,6 +37,22 @@ def test_failure():
         asyncio.run(_test_image())
 
 
+async def _test_async_decode(generator):
+    decode_tasks = []
+    conversion_tasks = []
+    async for packets in generator:
+        print(packets)
+        decode_tasks.append(spdl.async_decode(packets))
+    results = await asyncio.gather(*decode_tasks)
+    for frames in results:
+        print(frames)
+        conversion_tasks.append(spdl.async_convert_cpu(frames))
+    results = await asyncio.gather(*conversion_tasks)
+    for buffer in results:
+        array = np.array(buffer, copy=False)
+        print(array.shape, array.dtype)
+
+
 def test_decode_audio_clips(get_sample):
     """Can decode audio clips."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
@@ -44,22 +60,10 @@ def test_decode_audio_clips(get_sample):
 
     timestamps = [(i, i + 1) for i in range(10)]
 
-    async def _test():
-        decode_tasks = []
-        async for packets in spdl.demux_audio_async(sample.path, timestamps=timestamps):
-            print(packets)
-            decode_tasks.append(spdl.decode_audio_async(packets))
-        results = await asyncio.gather(*decode_tasks)
-        conversion_tasks = []
-        for frames in results:
-            print(frames)
-            conversion_tasks.append(spdl.convert_to_cpu_buffer_async(frames))
-        results = await asyncio.gather(*conversion_tasks)
-        for buffer in results:
-            array = np.array(buffer, copy=False)
-            print(array.shape, array.dtype)
+    coro = _test_async_decode(
+        spdl.async_demux_audio(sample.path, timestamps=timestamps))
 
-    asyncio.run(_test())
+    asyncio.run(coro)
 
 
 def test_decode_video_clips(get_sample):
@@ -69,22 +73,10 @@ def test_decode_video_clips(get_sample):
 
     timestamps = [(i, i + 1) for i in range(10)]
 
-    async def _test():
-        decode_tasks = []
-        async for packets in spdl.demux_video_async(sample.path, timestamps=timestamps):
-            print(packets)
-            decode_tasks.append(spdl.decode_video_async(packets))
-        results = await asyncio.gather(*decode_tasks)
-        conversion_tasks = []
-        for frames in results:
-            print(frames)
-            conversion_tasks.append(spdl.convert_to_cpu_buffer_async(frames))
-        results = await asyncio.gather(*conversion_tasks)
-        for buffer in results:
-            array = np.array(buffer, copy=False)
-            print(array.shape, array.dtype)
+    coro = _test_async_decode(
+        spdl.async_demux_video(sample.path, timestamps=timestamps))
 
-    asyncio.run(_test())
+    asyncio.run(coro)
 
 
 def test_decode_image(get_sample):
@@ -93,11 +85,11 @@ def test_decode_image(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test():
-        packets = await spdl.demux_image_async(sample.path)
+        packets = await spdl.async_demux_image(sample.path)
         print(packets)
-        frames = await spdl.decode_image_async(packets)
+        frames = await spdl.async_decode(packets)
         print(frames)
-        buffer = await spdl.convert_to_cpu_buffer_async(frames)
+        buffer = await spdl.async_convert_cpu(frames)
         array = np.array(buffer, copy=False)
         print(array.shape, array.dtype)
 
@@ -112,14 +104,15 @@ def test_batch_decode_image(get_samples):
     flist = samples + ["NON_EXISTING_FILE.JPG"]
 
     async def _test():
-        demuxing = [spdl.demux_image_async(path) for path in flist]
+        demuxing = [spdl.async_demux_image(path) for path in flist]
         decoding = []
+        conversion = []
         for result in await asyncio.gather(*demuxing, return_exceptions=True):
             if isinstance(result, Exception):
                 print(f"@@@ Demuxing failed! {type(result).__name__}:{result}")
                 continue
             print(f"    {result}")
-            decoding.append(asyncio.create_task(spdl.decode_image_async(result)))
+            decoding.append(asyncio.create_task(spdl.async_decode(result)))
 
         done, _ = await asyncio.wait(decoding, return_when=asyncio.ALL_COMPLETED)
         for result in done:
@@ -127,5 +120,9 @@ def test_batch_decode_image(get_samples):
                 print(f"    Task: {result.get_name()} failed with error: {err}")
             else:
                 print(f"    Task: {result.get_name()}: {result.result()}")
+                conversion.append(spdl.async_convert_cpu(result.result()))
+
+        for result in await asyncio.gather(*conversion):
+            print(f"    {result}")
 
     asyncio.run(_test())
