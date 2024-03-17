@@ -6,19 +6,16 @@ from typing import Any
 import spdl.libspdl
 
 _task = [
-    "apply_bsf",
-    "convert_to_cpu_buffer_async",
-    "decode_audio_async",
-    "decode_video_async",
-    "decode_image_async",
-    "decode_video_nvdec_async",
-    "decode_image_nvdec_async",
-    "demux_image_async",
+    "async_apply_bsf",
+    "async_convert_cpu",
+    "async_decode",
+    "async_decode_nvdec",
+    "async_demux_image",
 ]
 
 _generator = [
-    "demux_video_async",
-    "demux_audio_async",
+    "async_demux_audio",
+    "async_demux_video",
 ]
 
 __all__ = _task + _generator

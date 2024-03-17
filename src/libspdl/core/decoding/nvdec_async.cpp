@@ -13,7 +13,7 @@
 namespace spdl::core {
 
 template <MediaType media_type>
-FuturePtr decode_nvdec_async(
+FuturePtr async_decode_nvdec(
     std::function<void(std::optional<NvDecFramesPtr<media_type>>)> set_result,
     std::function<void()> notify_exception,
     PacketsPtr<media_type> packets,
@@ -38,7 +38,7 @@ FuturePtr decode_nvdec_async(
 #endif
 }
 
-template FuturePtr decode_nvdec_async(
+template FuturePtr async_decode_nvdec(
     std::function<void(std::optional<NvDecVideoFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     VideoPacketsPtr packets,
@@ -49,7 +49,7 @@ template FuturePtr decode_nvdec_async(
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr demux_executor);
 
-template FuturePtr decode_nvdec_async(
+template FuturePtr async_decode_nvdec(
     std::function<void(std::optional<NvDecImageFramesPtr>)> set_result,
     std::function<void()> notify_exception,
     ImagePacketsPtr packets,

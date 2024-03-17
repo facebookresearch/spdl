@@ -17,7 +17,7 @@ namespace spdl::core {
 
 /// Decode audio, video or image
 template <MediaType media_type>
-FuturePtr decode_async(
+FuturePtr async_decode(
     std::function<void(std::optional<FFmpegFramesPtr<media_type>>)> set_result,
     std::function<void()> notify_exception,
     PacketsPtr<media_type> packets,
@@ -27,7 +27,7 @@ FuturePtr decode_async(
 
 /// Decode video or image
 template <MediaType media_type>
-FuturePtr decode_nvdec_async(
+FuturePtr async_decode_nvdec(
     std::function<void(std::optional<NvDecFramesPtr<media_type>>)> set_result,
     std::function<void()> notify_exception,
     PacketsPtr<media_type> packets,

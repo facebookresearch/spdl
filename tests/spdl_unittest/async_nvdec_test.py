@@ -14,16 +14,16 @@ def test_decode_video_nvdec(get_sample):
 
     async def _test():
         decode_tasks = []
-        async for packets in spdl.demux_video_async(sample.path, timestamps=timestamps):
+        async for packets in spdl.async_demux_video(sample.path, timestamps=timestamps):
             print(packets)
-            filtered = await spdl.apply_bsf(packets)
+            filtered = await spdl.async_apply_bsf(packets)
             print(filtered)
             decode_tasks.append(
-                spdl.decode_video_nvdec_async(filtered, cuda_device_index=DEFAULT_CUDA)
+                spdl.async_decode_nvdec(filtered, cuda_device_index=DEFAULT_CUDA)
             )
         results = await asyncio.gather(*decode_tasks)
-        for r in results:
-            print(r)
+        for frames in results:
+            print(frames)
 
     asyncio.run(_test())
 
@@ -34,11 +34,9 @@ def test_decode_image_nvdec(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test():
-        packets = await spdl.demux_image_async(sample.path)
+        packets = await spdl.async_demux_image(sample.path)
         print(packets)
-        result = await spdl.decode_image_nvdec_async(
-            packets, cuda_device_index=DEFAULT_CUDA
-        )
-        print(result)
+        frames = await spdl.async_decode_nvdec(packets, cuda_device_index=DEFAULT_CUDA)
+        print(frames)
 
     asyncio.run(_test())

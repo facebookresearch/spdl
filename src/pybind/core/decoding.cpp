@@ -31,7 +31,7 @@ void register_decoding(py::module& m) {
   // Async decoding - FFMPEG
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
-      "decode_audio_async",
+      "async_decode",
       [](std::function<void(std::optional<FFmpegAudioFramesPtr>)> set_result,
          std::function<void()> notify_exception,
          AudioPacketsPtr packets,
@@ -39,7 +39,7 @@ void register_decoding(py::module& m) {
          const std::optional<OptionDict>& decoder_options,
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decode_async<MediaType::Audio>(
+        return async_decode<MediaType::Audio>(
             std::move(set_result),
             std::move(notify_exception),
             packets,
@@ -57,7 +57,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "decode_video_async",
+      "async_decode",
       [](std::function<void(std::optional<FFmpegVideoFramesPtr>)> set_result,
          std::function<void()> notify_exception,
          VideoPacketsPtr packets,
@@ -66,7 +66,7 @@ void register_decoding(py::module& m) {
          const int cuda_device_index,
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decode_async<MediaType::Video>(
+        return async_decode<MediaType::Video>(
             std::move(set_result),
             std::move(notify_exception),
             packets,
@@ -85,7 +85,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "decode_image_async",
+      "async_decode",
       [](std::function<void(std::optional<FFmpegImageFramesPtr>)> set_result,
          std::function<void()> notify_exception,
          ImagePacketsPtr packets,
@@ -94,7 +94,7 @@ void register_decoding(py::module& m) {
          const int cuda_device_index,
          const std::string& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return decode_async<MediaType::Image>(
+        return async_decode<MediaType::Image>(
             std::move(set_result),
             std::move(notify_exception),
             packets,
@@ -113,10 +113,10 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   ////////////////////////////////////////////////////////////////////////////////
-  // Synchronous decoding - NVDEC
+  // Asynchronous decoding - NVDEC
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
-      "decode_video_nvdec_async",
+      "async_decode_nvdec",
       [](std::function<void(std::optional<NvDecVideoFramesPtr>)> set_result,
          std::function<void()> notify_exception,
          VideoPacketsPtr packets,
@@ -129,7 +129,7 @@ void register_decoding(py::module& m) {
          int height,
          const std::optional<std::string>& pix_fmt,
          ThreadPoolExecutorPtr decode_executor) {
-        return decode_nvdec_async<MediaType::Video>(
+        return async_decode_nvdec<MediaType::Video>(
             set_result,
             notify_exception,
             packets,
@@ -146,8 +146,8 @@ void register_decoding(py::module& m) {
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("packets"),
-      py::arg("cuda_device_index"),
       py::kw_only(),
+      py::arg("cuda_device_index"),
       py::arg("crop_left") = 0,
       py::arg("crop_top") = 0,
       py::arg("crop_right") = 0,
@@ -158,7 +158,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "decode_image_nvdec_async",
+      "async_decode_nvdec",
       [](std::function<void(std::optional<NvDecImageFramesPtr>)> set_result,
          std::function<void()> notify_exception,
          ImagePacketsPtr packets,
@@ -171,7 +171,7 @@ void register_decoding(py::module& m) {
          int height,
          const std::optional<std::string>& pix_fmt,
          ThreadPoolExecutorPtr decode_executor) {
-        return decode_nvdec_async<MediaType::Image>(
+        return async_decode_nvdec<MediaType::Image>(
             set_result,
             notify_exception,
             packets,
@@ -188,8 +188,8 @@ void register_decoding(py::module& m) {
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("packets"),
-      py::arg("cuda_device_index"),
       py::kw_only(),
+      py::arg("cuda_device_index"),
       py::arg("crop_left") = 0,
       py::arg("crop_top") = 0,
       py::arg("crop_right") = 0,

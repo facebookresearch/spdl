@@ -7,7 +7,7 @@
 namespace spdl::core {
 
 template <MediaType media_type>
-FuturePtr demux_async(
+FuturePtr async_demux(
     std::function<void(std::optional<PacketsPtr<media_type>>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -23,7 +23,7 @@ FuturePtr demux_async(
       detail::get_demux_executor(demux_executor));
 }
 
-template FuturePtr demux_async<MediaType::Audio>(
+template FuturePtr async_demux<MediaType::Audio>(
     std::function<void(std::optional<AudioPacketsPtr>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -32,7 +32,7 @@ template FuturePtr demux_async<MediaType::Audio>(
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
-template FuturePtr demux_async<MediaType::Video>(
+template FuturePtr async_demux<MediaType::Video>(
     std::function<void(std::optional<VideoPacketsPtr>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -41,7 +41,7 @@ template FuturePtr demux_async<MediaType::Video>(
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
-FuturePtr demux_image_async(
+FuturePtr async_demux_image(
     std::function<void(std::optional<ImagePacketsPtr>)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
@@ -55,7 +55,7 @@ FuturePtr demux_image_async(
       detail::get_demux_executor(demux_executor));
 }
 
-FuturePtr apply_bsf(
+FuturePtr async_apply_bsf(
     std::function<void(VideoPacketsPtr)> set_result,
     std::function<void()> notify_exception,
     VideoPacketsPtr packets,
