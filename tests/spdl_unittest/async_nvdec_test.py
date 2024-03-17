@@ -1,6 +1,7 @@
 import asyncio
 
 import spdl
+import spdl._convert
 
 DEFAULT_CUDA = 0
 
@@ -14,6 +15,7 @@ def test_decode_video_nvdec(get_sample):
 
     async def _test():
         decode_tasks = []
+        conversion_tasks = []
         async for packets in spdl.async_demux_video(sample.path, timestamps=timestamps):
             print(packets)
             filtered = await spdl.async_apply_bsf(packets)
@@ -24,6 +26,11 @@ def test_decode_video_nvdec(get_sample):
         results = await asyncio.gather(*decode_tasks)
         for frames in results:
             print(frames)
+            conversion_tasks.append(spdl.async_convert(frames))
+        results = await asyncio.gather(*conversion_tasks)
+        for buffer in results:
+            tensor = spdl._convert._to_torch(buffer)
+            print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
 
     asyncio.run(_test())
 
@@ -38,5 +45,8 @@ def test_decode_image_nvdec(get_sample):
         print(packets)
         frames = await spdl.async_decode_nvdec(packets, cuda_device_index=DEFAULT_CUDA)
         print(frames)
+        buffer = await spdl.async_convert(frames)
+        tensor = spdl._convert._to_torch(buffer)
+        print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
 
     asyncio.run(_test())

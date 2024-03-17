@@ -176,7 +176,7 @@ CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
 }
 
 template <MediaType media_type>
-std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_frames(
+CUDABuffer2DPitchPtr convert_nvdec_frames(
     const NvDecFrames<media_type>* frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_NVDEC
@@ -194,13 +194,11 @@ std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_frames(
 #endif
 }
 
-template std::shared_ptr<CUDABuffer2DPitch>
-convert_nvdec_frames<MediaType::Image>(
+template CUDABuffer2DPitchPtr convert_nvdec_frames<MediaType::Image>(
     const NvDecFrames<MediaType::Image>* frames,
     const std::optional<int>& index);
 
-template std::shared_ptr<CUDABuffer2DPitch>
-convert_nvdec_frames<MediaType::Video>(
+template CUDABuffer2DPitchPtr convert_nvdec_frames<MediaType::Video>(
     const NvDecFrames<MediaType::Video>* frames,
     const std::optional<int>& index);
 
@@ -240,7 +238,7 @@ void check_consistency(const std::vector<NvDecFrames<media_type>*>& frames) {
 } // namespace
 #endif
 
-std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
+CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
     const std::vector<NvDecImageFrames*>& batch_frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_NVDEC
@@ -289,8 +287,9 @@ FuturePtr async_convert_frames_to_cpu(
   auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
     if constexpr (media_type == MediaType::Audio) {
       co_return convert_audio_frames(frames, index);
+    } else {
+      co_return convert_visual_frames_to_cpu_buffer<media_type>(frames, index);
     }
-    co_return convert_visual_frames_to_cpu_buffer<media_type>(frames, index);
   });
   return detail::execute_task_with_callback(
       std::move(task),
@@ -317,6 +316,79 @@ template FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     const FFmpegFrames<MediaType::Image>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+
+template <MediaType media_type>
+FuturePtr async_convert_frames(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<media_type>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
+    if constexpr (media_type == MediaType::Audio) {
+      co_return convert_audio_frames(frames, index);
+    } else {
+      co_return convert_visual_frames<media_type>(frames, index);
+    }
+  });
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor(executor));
+}
+
+template FuturePtr async_convert_frames(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<MediaType::Audio>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+
+template FuturePtr async_convert_frames(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<MediaType::Video>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+
+template FuturePtr async_convert_frames(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<MediaType::Image>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+
+template <MediaType media_type>
+FuturePtr async_convert_nvdec_frames(
+    std::function<void(CUDABuffer2DPitchPtr)> set_result,
+    std::function<void()> notify_exception,
+    const NvDecFrames<media_type>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr executor) {
+  auto task =
+      folly::coro::co_invoke([=]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
+        co_return convert_nvdec_frames<media_type>(frames, index);
+      });
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor(executor));
+}
+
+template FuturePtr async_convert_nvdec_frames(
+    std::function<void(CUDABuffer2DPitchPtr)> set_result,
+    std::function<void()> notify_exception,
+    const NvDecFrames<MediaType::Video>* frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr demux_executor);
+template FuturePtr async_convert_nvdec_frames(
+    std::function<void(CUDABuffer2DPitchPtr)> set_result,
+    std::function<void()> notify_exception,
+    const NvDecFrames<MediaType::Image>* frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr demux_executor);
 

@@ -16,14 +16,6 @@ namespace spdl::core {
 // Device-specific conversion functions (will fail if wrong device)
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
-FuturePtr async_convert_frames_to_cpu(
-    std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
-    const FFmpegFrames<media_type>* frames,
-    const std::optional<int>& index = std::nullopt,
-    ThreadPoolExecutorPtr demux_executor = nullptr);
-
-template <MediaType media_type>
 CPUBufferPtr convert_visual_frames_to_cpu_buffer(
     const FFmpegFrames<media_type>* frames,
     const std::optional<int>& index = std::nullopt);
@@ -51,12 +43,39 @@ BufferPtr convert_batch_image_frames(
     const std::optional<int>& index = std::nullopt);
 
 template <MediaType media_type>
-std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_frames(
+CUDABuffer2DPitchPtr convert_nvdec_frames(
     const NvDecFrames<media_type>* frames,
     const std::optional<int>& index = std::nullopt);
 
-std::shared_ptr<CUDABuffer2DPitch> convert_nvdec_batch_image_frames(
+CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
     const std::vector<NvDecImageFrames*>& batch_frames,
     const std::optional<int>& index = std::nullopt);
+
+////////////////////////////////////////////////////////////////////////////////
+// Async wrapper
+////////////////////////////////////////////////////////////////////////////////
+template <MediaType media_type>
+FuturePtr async_convert_frames_to_cpu(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<media_type>* frames,
+    const std::optional<int>& index = std::nullopt,
+    ThreadPoolExecutorPtr demux_executor = nullptr);
+
+template <MediaType media_type>
+FuturePtr async_convert_frames(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    const FFmpegFrames<media_type>* frames,
+    const std::optional<int>& index = std::nullopt,
+    ThreadPoolExecutorPtr demux_executor = nullptr);
+
+template <MediaType media_type>
+FuturePtr async_convert_nvdec_frames(
+    std::function<void(CUDABuffer2DPitchPtr)> set_result,
+    std::function<void()> notify_exception,
+    const NvDecFrames<media_type>* frames,
+    const std::optional<int>& index = std::nullopt,
+    ThreadPoolExecutorPtr demux_executor = nullptr);
 
 } // namespace spdl::core

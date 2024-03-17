@@ -33,18 +33,7 @@ def to_numpy(frames, index: Optional[int] = None) -> NDArray:
     return np.array(libspdl.convert_to_cpu_buffer(frames, index), copy=False)
 
 
-def to_torch(frames, index: Optional[int] = None):
-    """Convert to PyTorch Tensor.
-
-    Args:
-        frames (DecodedFrames): Decoded frames.
-
-        index (int or None): The index of plane to be included in the output.
-            For formats like YUV420, in which chroma planes have different sizes
-            than luma plane, this argument can be used to select a specific plane.
-    """
-    buffer = libspdl.convert_to_buffer(frames, index)
-
+def _to_torch(buffer):
     if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
         index = libspdl.get_cuda_device_index(data_ptr)
@@ -57,6 +46,19 @@ def to_torch(frames, index: Optional[int] = None):
     # Not sure how to make as_tensor work with __array_interface__.
     # Using numpy as intermediate.
     return torch.as_tensor(np.array(buffer, copy=False))
+
+
+def to_torch(frames, index: Optional[int] = None):
+    """Convert to PyTorch Tensor.
+
+    Args:
+        frames (DecodedFrames): Decoded frames.
+
+        index (int or None): The index of plane to be included in the output.
+            For formats like YUV420, in which chroma planes have different sizes
+            than luma plane, this argument can be used to select a specific plane.
+    """
+    return _to_torch(libspdl.convert_to_buffer(frames, index))
 
 
 def to_numba(frames, index: Optional[int] = None):

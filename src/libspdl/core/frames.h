@@ -182,7 +182,7 @@ struct NvDecFrames {
   /// The data buffer. Because when using NVDEC decoder, we need to directly
   /// copy the decoded frame from decoder's output buffer, we use a continuous
   /// memory buffer to store the data.
-  std::shared_ptr<CUDABuffer2DPitch> buffer;
+  CUDABuffer2DPitchPtr buffer;
 
   NvDecFrames(uint64_t id, int media_format);
   NvDecFrames(const NvDecFrames&) = delete;
