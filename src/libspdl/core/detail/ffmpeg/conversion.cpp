@@ -25,7 +25,7 @@ namespace spdl::core::detail {
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
 template <size_t depth, ElemClass type, bool is_planar>
-BufferPtr convert_frames(
+CPUBufferPtr convert_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& index) {
   size_t num_frames = frames->get_num_frames();
@@ -69,7 +69,7 @@ BufferPtr convert_frames(
   }
 }
 
-BufferPtr convert_audio_frames(
+CPUBufferPtr convert_audio_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& i) {
   const auto& fs = frames->get_frames();
@@ -133,7 +133,7 @@ void copy_2d(
   }
 }
 
-BufferPtr convert_interleaved(
+CPUBufferPtr convert_interleaved(
     const std::vector<AVFrame*>& frames,
     unsigned int num_channels = 3) {
   size_t h = frames[0]->height, w = frames[0]->width;
@@ -147,7 +147,7 @@ BufferPtr convert_interleaved(
   return buf;
 }
 
-BufferPtr convert_planer(const std::vector<AVFrame*>& frames) {
+CPUBufferPtr convert_planer(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
   auto buf = cpu_buffer({frames.size(), 3, h, w});
@@ -160,7 +160,7 @@ BufferPtr convert_planer(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-BufferPtr convert_plane(const std::vector<AVFrame*>& frames, int plane) {
+CPUBufferPtr convert_plane(const std::vector<AVFrame*>& frames, int plane) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
   auto buf = cpu_buffer({frames.size(), 1, h, w});
@@ -171,7 +171,7 @@ BufferPtr convert_plane(const std::vector<AVFrame*>& frames, int plane) {
   return buf;
 }
 
-BufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
+CPUBufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2, w2 = w / 2;
@@ -189,7 +189,7 @@ BufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-BufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
+CPUBufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(w % 2 == 0);
   size_t w2 = w / 2;
@@ -209,7 +209,7 @@ BufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
 
 /// YUV420 -> half_h = true
 /// YUV422 -> half_h = false
-BufferPtr
+CPUBufferPtr
 convert_u_or_v(const std::vector<AVFrame*>& frames, int plane, bool half_h) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(w % 2 == 0);
@@ -227,7 +227,7 @@ convert_u_or_v(const std::vector<AVFrame*>& frames, int plane, bool half_h) {
   return buf;
 }
 
-BufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
+CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
@@ -243,7 +243,7 @@ BufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
   return buf;
 }
 
-BufferPtr convert_nv12_uv(const std::vector<AVFrame*>& frames) {
+CPUBufferPtr convert_nv12_uv(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2, w2 = w / 2;
@@ -257,7 +257,7 @@ BufferPtr convert_nv12_uv(const std::vector<AVFrame*>& frames) {
 }
 
 #ifdef SPDL_USE_CUDA
-BufferPtr convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
+CUDABufferPtr convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
@@ -305,7 +305,7 @@ BufferPtr convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
 #endif
 } // namespace
 
-BufferPtr convert_video_frames_cuda(
+CUDABufferPtr convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_CUDA
@@ -333,7 +333,7 @@ BufferPtr convert_video_frames_cuda(
 #endif
 }
 
-BufferPtr convert_video_frames_cpu(
+CPUBufferPtr convert_video_frames_cpu(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
