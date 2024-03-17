@@ -2,6 +2,7 @@
 
 #include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/future.h"
+#include "libspdl/core/detail/logging.h"
 
 #ifdef SPDL_USE_NVDEC
 #include "libspdl/core/detail/cuda.h"
@@ -22,6 +23,9 @@ FuturePtr decode_nvdec_async(
     int height,
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr executor) {
+#ifndef SPDL_USE_NVDEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
   detail::validate_nvdec_params(cuda_device_index, crop, width, height);
   detail::init_cuda();
 
@@ -31,6 +35,7 @@ FuturePtr decode_nvdec_async(
       std::move(set_result),
       std::move(notify_exception),
       detail::get_decode_executor(executor));
+#endif
 }
 
 template FuturePtr decode_nvdec_async(
