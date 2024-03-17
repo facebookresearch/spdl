@@ -87,7 +87,6 @@ def _test(
         except Exception as e:
             _LG.exception(e)
             continue
-    t1 = time.monotonic()
     buffers = []
     for frame in frames:
         buffers.append(libspdl.convert_frames(frame, None))
