@@ -5,6 +5,7 @@
 
 #include <fmt/core.h>
 
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -347,5 +348,33 @@ void register_frames_and_buffers(py::module& m) {
       "convert_to_cpu_buffer",
       &convert_visual_frames_to_cpu_buffer<MediaType::Image>);
   m.def("convert_to_cpu_buffer", &convert_batch_image_frames_to_cpu_buffer);
+
+  m.def(
+      "convert_to_cpu_buffer_async",
+      &convert_frames_to_cpu_buffer_async<MediaType::Audio>,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("frames"),
+      py::kw_only(),
+      py::arg("index") = py::none(),
+      py::arg("executor") = nullptr);
+  m.def(
+      "convert_to_cpu_buffer_async",
+      &convert_frames_to_cpu_buffer_async<MediaType::Video>,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("frames"),
+      py::kw_only(),
+      py::arg("index") = py::none(),
+      py::arg("executor") = nullptr);
+  m.def(
+      "convert_to_cpu_buffer_async",
+      &convert_frames_to_cpu_buffer_async<MediaType::Image>,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("frames"),
+      py::kw_only(),
+      py::arg("index") = py::none(),
+      py::arg("executor") = nullptr);
 }
 } // namespace spdl::core

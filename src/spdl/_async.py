@@ -7,6 +7,7 @@ import spdl.libspdl
 
 _task = [
     "apply_bsf",
+    "convert_to_cpu_buffer_async",
     "decode_audio_async",
     "decode_video_async",
     "decode_image_async",

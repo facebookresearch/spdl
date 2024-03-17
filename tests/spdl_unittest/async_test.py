@@ -1,5 +1,7 @@
 import asyncio
 
+import numpy as np
+
 import pytest
 
 import spdl
@@ -48,8 +50,14 @@ def test_decode_audio_clips(get_sample):
             print(packets)
             decode_tasks.append(spdl.decode_audio_async(packets))
         results = await asyncio.gather(*decode_tasks)
-        for r in results:
-            print(r)
+        conversion_tasks = []
+        for frames in results:
+            print(frames)
+            conversion_tasks.append(spdl.convert_to_cpu_buffer_async(frames))
+        results = await asyncio.gather(*conversion_tasks)
+        for buffer in results:
+            array = np.array(buffer, copy=False)
+            print(array.shape, array.dtype)
 
     asyncio.run(_test())
 
@@ -67,8 +75,14 @@ def test_decode_video_clips(get_sample):
             print(packets)
             decode_tasks.append(spdl.decode_video_async(packets))
         results = await asyncio.gather(*decode_tasks)
-        for r in results:
-            print(r)
+        conversion_tasks = []
+        for frames in results:
+            print(frames)
+            conversion_tasks.append(spdl.convert_to_cpu_buffer_async(frames))
+        results = await asyncio.gather(*conversion_tasks)
+        for buffer in results:
+            array = np.array(buffer, copy=False)
+            print(array.shape, array.dtype)
 
     asyncio.run(_test())
 
@@ -81,8 +95,11 @@ def test_decode_image(get_sample):
     async def _test():
         packets = await spdl.demux_image_async(sample.path)
         print(packets)
-        result = await spdl.decode_image_async(packets)
-        print(result)
+        frames = await spdl.decode_image_async(packets)
+        print(frames)
+        buffer = await spdl.convert_to_cpu_buffer_async(frames)
+        array = np.array(buffer, copy=False)
+        print(array.shape, array.dtype)
 
     asyncio.run(_test())
 
