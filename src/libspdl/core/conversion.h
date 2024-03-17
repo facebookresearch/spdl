@@ -2,6 +2,7 @@
 
 #include <libspdl/core/buffer.h>
 #include <libspdl/core/frames.h>
+#include <libspdl/core/future.h>
 
 #include <memory>
 #include <optional>
@@ -12,25 +13,26 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Device-specific conversion functions (will fail if wrong device)
 ////////////////////////////////////////////////////////////////////////////////
-BufferPtr convert_video_frames_to_cpu_buffer(
+CPUBufferPtr convert_video_frames_to_cpu_buffer(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index = std::nullopt);
 
-BufferPtr convert_image_frames_to_cpu_buffer(
+CPUBufferPtr convert_image_frames_to_cpu_buffer(
     const FFmpegImageFrames* frames,
     const std::optional<int>& index = std::nullopt);
 
-BufferPtr convert_batch_image_frames_to_cpu_buffer(
+CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
     const std::vector<FFmpegImageFrames*>& batch_frames,
     const std::optional<int>& index = std::nullopt);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Device-agnostic conversion functions (device is picked accordingly
 ////////////////////////////////////////////////////////////////////////////////
-BufferPtr convert_audio_frames(
+CPUBufferPtr convert_audio_frames(
     const FFmpegAudioFrames* frames,
     const std::optional<int>& index = std::nullopt);
 
+// FFmpeg video/image could be on CUDA
 BufferPtr convert_video_frames(
     const FFmpegVideoFrames* frames,
     const std::optional<int>& index = std::nullopt);
