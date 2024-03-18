@@ -214,8 +214,6 @@ void register_frames_and_buffers(py::module& m) {
           }));
 
   _FFmpegAudioFrames
-      .def_property_readonly(
-          "is_cuda", [](const FFmpegAudioFrames&) { return false; })
       .def_property_readonly("num_frames", &FFmpegAudioFrames::get_num_frames)
       .def_property_readonly("sample_rate", &FFmpegAudioFrames::get_sample_rate)
       .def_property_readonly(
@@ -233,7 +231,6 @@ void register_frames_and_buffers(py::module& m) {
       });
 
   _FFmpegVideoFrames
-      .def_property_readonly("is_cuda", &FFmpegVideoFrames::is_cuda)
       .def_property_readonly("num_frames", &FFmpegVideoFrames::get_num_frames)
       .def_property_readonly("num_planes", &FFmpegVideoFrames::get_num_planes)
       .def_property_readonly("width", &FFmpegVideoFrames::get_width)
@@ -269,7 +266,6 @@ void register_frames_and_buffers(py::module& m) {
       });
 
   _FFmpegImageFrames
-      .def_property_readonly("is_cuda", &FFmpegImageFrames::is_cuda)
       .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
       .def_property_readonly("width", &FFmpegImageFrames::get_width)
       .def_property_readonly("height", &FFmpegImageFrames::get_height)
@@ -296,10 +292,6 @@ void register_frames_and_buffers(py::module& m) {
 
   // TODO: Add __repr__
   _NvDecVideoFrames
-      .def_property_readonly(
-          "is_cuda", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames&) {
-            return true;
-          }))
       .def_property_readonly(
           "channel_last",
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
@@ -332,10 +324,6 @@ void register_frames_and_buffers(py::module& m) {
 
   // TODO: Add __repr__
   _NvDecImageFrames
-      .def_property_readonly(
-          "is_cuda", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames&) {
-            return true;
-          }))
       .def_property_readonly(
           "channel_last",
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
