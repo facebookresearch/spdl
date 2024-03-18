@@ -8,7 +8,7 @@ namespace spdl::core {
 
 template <MediaType media_type>
 FuturePtr async_decode(
-    std::function<void(std::optional<FFmpegFramesPtr<media_type>>)> set_result,
+    std::function<void(FFmpegFramesPtr<media_type>)> set_result,
     std::function<void()> notify_exception,
     PacketsPtr<media_type> packets,
     DecodeConfig decode_cfg,
@@ -23,7 +23,7 @@ FuturePtr async_decode(
 }
 
 template FuturePtr async_decode(
-    std::function<void(std::optional<FFmpegAudioFramesPtr>)> set_result,
+    std::function<void(FFmpegAudioFramesPtr)> set_result,
     std::function<void()> notify_exception,
     AudioPacketsPtr packets,
     DecodeConfig decode_cfg,
@@ -31,7 +31,7 @@ template FuturePtr async_decode(
     ThreadPoolExecutorPtr decode_executor);
 
 template FuturePtr async_decode(
-    std::function<void(std::optional<FFmpegVideoFramesPtr>)> set_result,
+    std::function<void(FFmpegVideoFramesPtr)> set_result,
     std::function<void()> notify_exception,
     VideoPacketsPtr packets,
     DecodeConfig decode_cfg,
@@ -39,7 +39,7 @@ template FuturePtr async_decode(
     ThreadPoolExecutorPtr decode_executor);
 
 template FuturePtr async_decode(
-    std::function<void(std::optional<FFmpegImageFramesPtr>)> set_result,
+    std::function<void(FFmpegImageFramesPtr)> set_result,
     std::function<void()> notify_exception,
     ImagePacketsPtr packets,
     DecodeConfig decode_cfg,
