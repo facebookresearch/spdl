@@ -30,7 +30,7 @@ FuturePtr async_demux(
 
 /// Demux single image
 FuturePtr async_demux_image(
-    std::function<void(std::optional<ImagePacketsPtr>)> set_result,
+    std::function<void(ImagePacketsPtr)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
     const SourceAdoptorPtr& adoptor,
