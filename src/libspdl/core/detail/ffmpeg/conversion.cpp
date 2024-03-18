@@ -333,6 +333,23 @@ CUDABufferPtr convert_video_frames_cuda(
 #endif
 }
 
+// Note:
+//
+// YUV is a limited range (16 - 235), while YUVJ is a full range. (0-255).
+//
+// YUVJ == YUV + AVCOL_RANGE_JPEG
+//
+// AVCOL_RANGE_JPEG has slight different value range for Chroma.
+// (1 - 255 instead of 0 - 255)
+// https://ffmpeg.org/doxygen/5.1/pixfmt_8h.html#a3da0bf691418bc22c4bcbe6583ad589a
+//
+// FFmpeg emits a warning like
+// `deprecated pixel format used, make sure you did set range correctly`
+//
+// See also: https://superuser.com/a/1273941
+//
+// It might be more appropriate to convert the limited range to the full range
+// for YUV, but for now, it copies data as-is for both YUV and YUVJ.
 CPUBufferPtr convert_video_frames_cpu(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) {
@@ -379,6 +396,7 @@ CPUBufferPtr convert_video_frames_cpu(
               plane));
       }
     }
+    case AV_PIX_FMT_YUVJ420P:
     case AV_PIX_FMT_YUV420P: {
       if (!index) {
         return convert_yuv420p(frames);
@@ -396,15 +414,9 @@ CPUBufferPtr convert_video_frames_cpu(
               plane));
       }
     }
-    case AV_PIX_FMT_YUVJ422P: {
+    case AV_PIX_FMT_YUVJ422P:
+    case AV_PIX_FMT_YUV422P: {
       if (!index) {
-        // Note:
-        //
-        // YUVJ420P == YUV420P + AVCOL_RANGE_JPEG
-        //
-        // AVCOL_RANGE_JPEG has slight different value range for Chroma.
-        // (1 - 255 instead of 0 - 255)
-        // https://ffmpeg.org/doxygen/5.1/pixfmt_8h.html#a3da0bf691418bc22c4bcbe6583ad589a
         return convert_yuv422p(frames);
       }
       auto plane = index.value();
