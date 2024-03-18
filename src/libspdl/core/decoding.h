@@ -18,9 +18,9 @@ namespace spdl::core {
 /// Decode audio, video or image
 template <MediaType media_type>
 FuturePtr async_decode(
-    std::function<void(FFmpegFramesPtr<media_type>)> set_result,
+    std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
     std::function<void()> notify_exception,
-    PacketsPtr<media_type> packets,
+    PacketsWrapperPtr<media_type> packets,
     DecodeConfig decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
@@ -28,15 +28,15 @@ FuturePtr async_decode(
 /// Decode video or image
 template <MediaType media_type>
 FuturePtr async_decode_nvdec(
-    std::function<void(NvDecFramesPtr<media_type>)> set_result,
+    std::function<void(NvDecFramesWrapperPtr<media_type>)> set_result,
     std::function<void()> notify_exception,
-    PacketsPtr<media_type> packets,
+    PacketsWrapperPtr<media_type> packets,
     int cuda_device_index,
     const CropArea& crop,
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr decode_executor);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronous decodings

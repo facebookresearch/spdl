@@ -40,6 +40,40 @@ using NvDecFramesPtr = std::unique_ptr<NvDecFrames<media_type>>;
 using NvDecVideoFramesPtr = NvDecFramesPtr<MediaType::Video>;
 using NvDecImageFramesPtr = NvDecFramesPtr<MediaType::Image>;
 
+// Wrapper for Python
+template <MediaType media_type, template <MediaType> typename FramesPtr>
+class FramesWrapper;
+
+template <MediaType media_type>
+using FFmpegFramesWrapper = FramesWrapper<media_type, FFmpegFramesPtr>;
+
+using FFmpegAudioFramesWrapper = FFmpegFramesWrapper<MediaType::Audio>;
+using FFmpegVideoFramesWrapper = FFmpegFramesWrapper<MediaType::Video>;
+using FFmpegImageFramesWrapper = FFmpegFramesWrapper<MediaType::Image>;
+
+template <MediaType media_type>
+using NvDecFramesWrapper = FramesWrapper<media_type, NvDecFramesPtr>;
+
+using NvDecAudioFramesWrapper = NvDecFramesWrapper<MediaType::Audio>;
+using NvDecVideoFramesWrapper = NvDecFramesWrapper<MediaType::Video>;
+using NvDecImageFramesWrapper = NvDecFramesWrapper<MediaType::Image>;
+
+template <MediaType media_type, template <MediaType> typename FramesPtr>
+using FramesWrapperPtr = std::shared_ptr<FramesWrapper<media_type, FramesPtr>>;
+
+template <MediaType media_type>
+using FFmpegFramesWrapperPtr = FramesWrapperPtr<media_type, FFmpegFramesPtr>;
+
+using FFmpegAudioFramesWrapperPtr = FFmpegFramesWrapperPtr<MediaType::Audio>;
+using FFmpegVideoFramesWrapperPtr = FFmpegFramesWrapperPtr<MediaType::Video>;
+using FFmpegImageFramesWrapperPtr = FFmpegFramesWrapperPtr<MediaType::Image>;
+
+template <MediaType media_type>
+using NvDecFramesWrapperPtr = FramesWrapperPtr<media_type, NvDecFramesPtr>;
+
+using NvDecVideoFramesWrapperPtr = NvDecFramesWrapperPtr<MediaType::Video>;
+using NvDecImageFramesWrapperPtr = NvDecFramesWrapperPtr<MediaType::Image>;
+
 #define _IS_AUDIO (media_type == MediaType::Audio)
 #define _IS_VIDEO (media_type == MediaType::Video)
 #define _IS_IMAGE (media_type == MediaType::Image)
@@ -194,5 +228,23 @@ struct NvDecFrames {
   const char* get_media_format_name() const;
 #endif
 };
+
+template <MediaType media_type, template <MediaType> typename FramesPtr>
+class FramesWrapper {
+  FramesPtr<media_type> frames;
+
+ public:
+  FramesWrapper(FramesPtr<media_type>&& p) : frames(std::move(p)){};
+
+  FramesPtr<media_type> unwrap() {
+    return std::move(frames);
+  }
+};
+
+template <MediaType media_type, template <MediaType> typename FramesPtr>
+FramesWrapperPtr<media_type, FramesPtr> wrap(FramesPtr<media_type>&& frames) {
+  return std::make_shared<FramesWrapper<media_type, FramesPtr>>(
+      std::move(frames));
+}
 
 } // namespace spdl::core

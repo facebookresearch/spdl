@@ -58,7 +58,7 @@ template <MediaType media_type>
 FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<media_type>* frames,
+    FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
@@ -66,7 +66,7 @@ template <MediaType media_type>
 FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<media_type>* frames,
+    FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
@@ -74,7 +74,7 @@ template <MediaType media_type>
 FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void()> notify_exception,
-    const NvDecFrames<media_type>* frames,
+    NvDecFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 

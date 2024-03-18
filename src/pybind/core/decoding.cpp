@@ -32,9 +32,9 @@ void register_decoding(py::module& m) {
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
       "async_decode",
-      [](std::function<void(FFmpegAudioFramesPtr)> set_result,
+      [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
-         AudioPacketsPtr packets,
+         AudioPacketsWrapperPtr packets,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const std::string& filter_desc,
@@ -58,9 +58,9 @@ void register_decoding(py::module& m) {
 
   m.def(
       "async_decode",
-      [](std::function<void(FFmpegVideoFramesPtr)> set_result,
+      [](std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
-         VideoPacketsPtr packets,
+         VideoPacketsWrapperPtr packets,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
@@ -86,9 +86,9 @@ void register_decoding(py::module& m) {
 
   m.def(
       "async_decode",
-      [](std::function<void(FFmpegImageFramesPtr)> set_result,
+      [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
-         ImagePacketsPtr packets,
+         ImagePacketsWrapperPtr packets,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
@@ -117,9 +117,9 @@ void register_decoding(py::module& m) {
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
       "async_decode_nvdec",
-      [](std::function<void(NvDecVideoFramesPtr)> set_result,
+      [](std::function<void(NvDecVideoFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
-         VideoPacketsPtr packets,
+         VideoPacketsWrapperPtr packets,
          const int cuda_device_index,
          int crop_left,
          int crop_top,
@@ -159,9 +159,9 @@ void register_decoding(py::module& m) {
 
   m.def(
       "async_decode_nvdec",
-      [](std::function<void(NvDecImageFramesPtr)> set_result,
+      [](std::function<void(NvDecImageFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
-         ImagePacketsPtr packets,
+         ImagePacketsWrapperPtr packets,
          const int cuda_device_index,
          int crop_left,
          int crop_top,
