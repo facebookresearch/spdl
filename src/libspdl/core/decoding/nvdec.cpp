@@ -91,7 +91,7 @@ Task<std::vector<SemiFuture<NvDecVideoFramesPtr>>> stream_decode_task_nvdec(
     auto demuxer = detail::stream_demux<MediaType::Video>(
         src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
-      auto filtered = co_await detail::apply_bsf(*result);
+      auto filtered = co_await detail::apply_bsf(std::move(*result));
       auto task = detail::decode_nvdec<MediaType::Video>(
           std::move(filtered), cuda_device_index, crop, width, height, pix_fmt);
       futures.emplace_back(std::move(task).scheduleOn(exec).start());

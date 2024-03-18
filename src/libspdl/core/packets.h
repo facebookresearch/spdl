@@ -19,13 +19,32 @@ using AudioPackets = DemuxedPackets<MediaType::Audio>;
 using VideoPackets = DemuxedPackets<MediaType::Video>;
 using ImagePackets = DemuxedPackets<MediaType::Image>;
 
-// This structure will be exchanged between C++ and Python,
 template <MediaType media_type>
-using PacketsPtr = std::shared_ptr<DemuxedPackets<media_type>>;
+using PacketsPtr = std::unique_ptr<DemuxedPackets<media_type>>;
 
 using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
 using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
 using ImagePacketsPtr = PacketsPtr<MediaType::Image>;
+
+// Packets are generated in C++, passed to Python and back to C++ again.
+// But we want to be able to release the memory in C++.
+// To do this, we need to take the ownership of DemuxedPackets instances.
+// So we use wrapper to disconnect the Python object and the lifetime of
+// the actual DemuxedPackets.
+
+template <MediaType media_type>
+class PacketsWrapper;
+
+using AudioPacketsWrapper = PacketsWrapper<MediaType::Audio>;
+using VideoPacketsWrapper = PacketsWrapper<MediaType::Video>;
+using ImagePacketsWrapper = PacketsWrapper<MediaType::Image>;
+
+template <MediaType media_type>
+using PacketsWrapperPtr = std::shared_ptr<PacketsWrapper<media_type>>;
+
+using AudioPacketsWrapperPtr = PacketsWrapperPtr<MediaType::Audio>;
+using VideoPacketsWrapperPtr = PacketsWrapperPtr<MediaType::Video>;
+using ImagePacketsWrapperPtr = PacketsWrapperPtr<MediaType::Image>;
 
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.
@@ -70,4 +89,22 @@ class DemuxedPackets {
   const std::vector<AVPacket*>& get_packets() const;
   const char* get_media_format_name() const;
 };
+
+template <MediaType media_type>
+class PacketsWrapper {
+  PacketsPtr<media_type> packets;
+
+ public:
+  PacketsWrapper(PacketsPtr<media_type>&& p) : packets(std::move(p)){};
+
+  PacketsPtr<media_type> unwrap() {
+    return std::move(packets);
+  }
+};
+
+template <MediaType media_type>
+PacketsWrapperPtr<media_type> wrap(PacketsPtr<media_type>&& packets) {
+  return std::make_shared<PacketsWrapper<media_type>>(std::move(packets));
+}
+
 } // namespace spdl::core

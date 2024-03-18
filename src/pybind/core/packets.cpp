@@ -48,6 +48,16 @@ void register_packets(py::module& m) {
   auto _ImagePackets = py::class_<ImagePackets, ImagePacketsPtr>(
       m, "ImagePackets", py::module_local());
 
+  auto _AudioPacketsWrapper =
+      py::class_<AudioPacketsWrapper, AudioPacketsWrapperPtr>(
+          m, "AudioPacketsWrapper", py::module_local());
+  auto _VideoPacketsWrapper =
+      py::class_<VideoPacketsWrapper, VideoPacketsWrapperPtr>(
+          m, "VideoPacketsWrapper", py::module_local());
+  auto _ImagePacketsWrapper =
+      py::class_<ImagePacketsWrapper, ImagePacketsWrapperPtr>(
+          m, "ImagePacketsWrapper", py::module_local());
+
   _AudioPackets.def("__repr__", [](const AudioPackets& self) {
     return fmt::format(
         "AudioPackets<id={}, src={}, timestamp=({}, {}), sample_format={}, {}>",

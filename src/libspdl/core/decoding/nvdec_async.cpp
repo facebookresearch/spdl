@@ -14,9 +14,9 @@ namespace spdl::core {
 
 template <MediaType media_type>
 FuturePtr async_decode_nvdec(
-    std::function<void(NvDecFramesPtr<media_type>)> set_result,
+    std::function<void(NvDecFramesWrapperPtr<media_type>)> set_result,
     std::function<void()> notify_exception,
-    PacketsPtr<media_type> packets,
+    PacketsWrapperPtr<media_type> packets,
     int cuda_device_index,
     const CropArea& crop,
     int width,
@@ -29,9 +29,17 @@ FuturePtr async_decode_nvdec(
   detail::validate_nvdec_params(cuda_device_index, crop, width, height);
   detail::init_cuda();
 
-  return detail::execute_task_with_callback<NvDecFramesPtr<media_type>>(
-      detail::decode_nvdec<media_type>(
-          std::move(packets), cuda_device_index, crop, width, height, pix_fmt),
+  auto task = folly::coro::co_invoke(
+      [=](PacketsPtr<media_type>&& pkts)
+          -> folly::coro::Task<NvDecFramesWrapperPtr<media_type>> {
+        auto frames = co_await detail::decode_nvdec<media_type>(
+            std::move(pkts), cuda_device_index, crop, width, height, pix_fmt);
+        co_return wrap<media_type, NvDecFramesPtr>(std::move(frames));
+      },
+      packets->unwrap());
+
+  return detail::execute_task_with_callback<NvDecFramesWrapperPtr<media_type>>(
+      std::move(task),
       std::move(set_result),
       std::move(notify_exception),
       detail::get_decode_executor(executor));
@@ -39,9 +47,9 @@ FuturePtr async_decode_nvdec(
 }
 
 template FuturePtr async_decode_nvdec(
-    std::function<void(NvDecVideoFramesPtr)> set_result,
+    std::function<void(NvDecFramesWrapperPtr<MediaType::Video>)> set_result,
     std::function<void()> notify_exception,
-    VideoPacketsPtr packets,
+    PacketsWrapperPtr<MediaType::Video> packets,
     int cuda_device_index,
     const CropArea& crop,
     int width,
@@ -50,14 +58,13 @@ template FuturePtr async_decode_nvdec(
     ThreadPoolExecutorPtr demux_executor);
 
 template FuturePtr async_decode_nvdec(
-    std::function<void(NvDecImageFramesPtr)> set_result,
+    std::function<void(NvDecFramesWrapperPtr<MediaType::Image>)> set_result,
     std::function<void()> notify_exception,
-    ImagePacketsPtr packets,
+    PacketsWrapperPtr<MediaType::Image> packets,
     int cuda_device_index,
     const CropArea& crop,
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr demux_executor);
-
 } // namespace spdl::core

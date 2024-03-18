@@ -281,16 +281,23 @@ template <MediaType media_type>
 FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<media_type>* frames,
+    FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
-    if constexpr (media_type == MediaType::Audio) {
-      co_return convert_audio_frames(frames, index);
-    } else {
-      co_return convert_visual_frames_to_cpu_buffer<media_type>(frames, index);
-    }
-  });
+  auto task = folly::coro::co_invoke(
+      [=](FFmpegFramesPtr<media_type>&& frms) -> folly::coro::Task<BufferPtr> {
+        if (!frms) {
+          SPDL_FAIL(
+              "The frames object is in invalid state. Perhaps it has been already converted?");
+        }
+        if constexpr (media_type == MediaType::Audio) {
+          co_return convert_audio_frames(frms.get(), index);
+        } else {
+          co_return convert_visual_frames_to_cpu_buffer<media_type>(
+              frms.get(), index);
+        }
+      },
+      frames->unwrap());
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -301,38 +308,44 @@ FuturePtr async_convert_frames_to_cpu(
 template FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<MediaType::Audio>* frames,
+    FFmpegFramesWrapperPtr<MediaType::Audio> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<MediaType::Video>* frames,
+    FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames_to_cpu(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<MediaType::Image>* frames,
+    FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
 
 template <MediaType media_type>
 FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<media_type>* frames,
+    FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
-    if constexpr (media_type == MediaType::Audio) {
-      co_return convert_audio_frames(frames, index);
-    } else {
-      co_return convert_visual_frames<media_type>(frames, index);
-    }
-  });
+  auto task = folly::coro::co_invoke(
+      [=](FFmpegFramesPtr<media_type>&& frms) -> folly::coro::Task<BufferPtr> {
+        if (!frms) {
+          SPDL_FAIL(
+              "The frames object is in invalid state. Perhaps it has been already converted?");
+        }
+        if constexpr (media_type == MediaType::Audio) {
+          co_return convert_audio_frames(frms.get(), index);
+        } else {
+          co_return convert_visual_frames<media_type>(frms.get(), index);
+        }
+      },
+      frames->unwrap());
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -343,35 +356,44 @@ FuturePtr async_convert_frames(
 template FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<MediaType::Audio>* frames,
+    FFmpegFramesWrapperPtr<MediaType::Audio> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<MediaType::Video>* frames,
+    FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
-    const FFmpegFrames<MediaType::Image>* frames,
+    FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
 
+////////////////////////////////////////////////////////////////////////////////
+// Async - NVDEC
+////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void()> notify_exception,
-    const NvDecFrames<media_type>* frames,
+    NvDecFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task =
-      folly::coro::co_invoke([=]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
-        co_return convert_nvdec_frames<media_type>(frames, index);
-      });
+  auto task = folly::coro::co_invoke(
+      [=](NvDecFramesPtr<media_type>&& frms)
+          -> folly::coro::Task<CUDABuffer2DPitchPtr> {
+        if (!frms) {
+          SPDL_FAIL(
+              "The frames object is in invalid state. Perhaps it has been already converted?");
+        }
+        co_return convert_nvdec_frames<media_type>(frms.get(), index);
+      },
+      frames->unwrap());
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -382,14 +404,15 @@ FuturePtr async_convert_nvdec_frames(
 template FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void()> notify_exception,
-    const NvDecFrames<MediaType::Video>* frames,
+    NvDecFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
+
 template FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void()> notify_exception,
-    const NvDecFrames<MediaType::Image>* frames,
+    NvDecFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
-    ThreadPoolExecutorPtr demux_executor);
+    ThreadPoolExecutorPtr executor);
 
 } // namespace spdl::core

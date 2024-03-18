@@ -108,6 +108,26 @@ void register_frames_and_buffers(py::module& m) {
   auto _NvDecImageFrames = py::class_<NvDecImageFrames, NvDecImageFramesPtr>(
       m, "NvDecImageFrames", py::module_local());
 
+  auto _FFmpegAudioFramesWrapper =
+      py::class_<FFmpegAudioFramesWrapper, FFmpegAudioFramesWrapperPtr>(
+          m, "FFmpegAudioFramesWrapper", py::module_local());
+
+  auto _FFmpegVideoFramesWrapper =
+      py::class_<FFmpegVideoFramesWrapper, FFmpegVideoFramesWrapperPtr>(
+          m, "FFmpegVideoFramesWrapper", py::module_local());
+
+  auto _FFmpegImageFramesWrapper =
+      py::class_<FFmpegImageFramesWrapper, FFmpegImageFramesWrapperPtr>(
+          m, "FFmpegImageFramesWrapper", py::module_local());
+
+  auto _NvDecVideoFramesWrapper =
+      py::class_<NvDecVideoFramesWrapper, NvDecVideoFramesWrapperPtr>(
+          m, "NvDecVideoFramesWrapper", py::module_local());
+
+  auto _NvDecImageFramesWrapper =
+      py::class_<NvDecImageFramesWrapper, NvDecImageFramesWrapperPtr>(
+          m, "NvDecImageFramesWrapper", py::module_local());
+
   _CPUBuffer
       .def_property_readonly(
           "channel_last",
@@ -349,6 +369,9 @@ void register_frames_and_buffers(py::module& m) {
       &convert_visual_frames_to_cpu_buffer<MediaType::Image>);
   m.def("convert_to_cpu_buffer", &convert_batch_image_frames_to_cpu_buffer);
 
+  /////////////////////////////////////////////////////////////////////////////
+  // Async conversion
+  /////////////////////////////////////////////////////////////////////////////
   m.def(
       "async_convert_cpu",
       &async_convert_frames_to_cpu<MediaType::Audio>,

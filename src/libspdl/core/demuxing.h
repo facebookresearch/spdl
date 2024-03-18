@@ -20,7 +20,8 @@ namespace spdl::core {
 /// Demux audio or video
 template <MediaType media_type>
 FuturePtr async_demux(
-    std::function<void(std::optional<PacketsPtr<media_type>>)> set_result,
+    std::function<void(std::optional<PacketsWrapperPtr<media_type>>)>
+        set_result,
     std::function<void()> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -30,7 +31,7 @@ FuturePtr async_demux(
 
 /// Demux single image
 FuturePtr async_demux_image(
-    std::function<void(ImagePacketsPtr)> set_result,
+    std::function<void(ImagePacketsWrapperPtr)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
     const SourceAdoptorPtr& adoptor,
@@ -39,9 +40,9 @@ FuturePtr async_demux_image(
 
 /// Apply bit stream filtering for NVDEC decoding
 FuturePtr async_apply_bsf(
-    std::function<void(VideoPacketsPtr)> set_result,
+    std::function<void(VideoPacketsWrapperPtr)> set_result,
     std::function<void()> notify_exception,
-    VideoPacketsPtr packets,
+    VideoPacketsWrapperPtr packets,
     ThreadPoolExecutorPtr executor);
 
 } // namespace spdl::core
