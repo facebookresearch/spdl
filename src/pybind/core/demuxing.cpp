@@ -84,7 +84,7 @@ void register_demuxing(py::module& m) {
 
   m.def(
       "async_demux_image",
-      [](std::function<void(std::optional<ImagePacketsPtr>)> set_result,
+      [](std::function<void(ImagePacketsPtr)> set_result,
          std::function<void()> notify_exception,
          const std::string& src,
          const SourceAdoptorPtr& adoptor,
