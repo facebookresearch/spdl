@@ -41,12 +41,9 @@ std::string get_codec_info(AVCodecParameters* codecpar) {
 } // namespace
 
 void register_packets(py::module& m) {
-  auto _AudioPackets = py::class_<AudioPackets, AudioPacketsPtr>(
-      m, "AudioPackets", py::module_local());
-  auto _VideoPackets = py::class_<VideoPackets, VideoPacketsPtr>(
-      m, "VideoPackets", py::module_local());
-  auto _ImagePackets = py::class_<ImagePackets, ImagePacketsPtr>(
-      m, "ImagePackets", py::module_local());
+  using AudioPacketsWrapper = PacketsWrapper<MediaType::Audio>;
+  using VideoPacketsWrapper = PacketsWrapper<MediaType::Video>;
+  using ImagePacketsWrapper = PacketsWrapper<MediaType::Image>;
 
   auto _AudioPacketsWrapper =
       py::class_<AudioPacketsWrapper, AudioPacketsWrapperPtr>(
@@ -58,38 +55,38 @@ void register_packets(py::module& m) {
       py::class_<ImagePacketsWrapper, ImagePacketsWrapperPtr>(
           m, "ImagePacketsWrapper", py::module_local());
 
-  _AudioPackets.def("__repr__", [](const AudioPackets& self) {
+  _AudioPacketsWrapper.def("__repr__", [](const AudioPacketsWrapper& self) {
     return fmt::format(
         "AudioPackets<id={}, src={}, timestamp=({}, {}), sample_format={}, {}>",
-        self.id,
-        self.src,
-        std::get<0>(self.timestamp),
-        std::get<1>(self.timestamp),
-        self.get_media_format_name(),
-        get_codec_info<MediaType::Audio>(self.codecpar));
+        self.get_packets()->id,
+        self.get_packets()->src,
+        std::get<0>(self.get_packets()->timestamp),
+        std::get<1>(self.get_packets()->timestamp),
+        self.get_packets()->get_media_format_name(),
+        get_codec_info<MediaType::Audio>(self.get_packets()->codecpar));
   });
 
-  _VideoPackets.def("__repr__", [](const VideoPackets& self) {
+  _VideoPacketsWrapper.def("__repr__", [](const VideoPacketsWrapper& self) {
     return fmt::format(
         "VideoPackets<id={}, src={}, timestamp=({}, {}), frame_rate=({}/{}), num_packets={}, pixel_format={}, {}>",
-        self.id,
-        self.src,
-        std::get<0>(self.timestamp),
-        std::get<1>(self.timestamp),
-        self.frame_rate.num,
-        self.frame_rate.den,
-        self.num_packets(),
-        self.get_media_format_name(),
-        get_codec_info<MediaType::Video>(self.codecpar));
+        self.get_packets()->id,
+        self.get_packets()->src,
+        std::get<0>(self.get_packets()->timestamp),
+        std::get<1>(self.get_packets()->timestamp),
+        self.get_packets()->frame_rate.num,
+        self.get_packets()->frame_rate.den,
+        self.get_packets()->num_packets(),
+        self.get_packets()->get_media_format_name(),
+        get_codec_info<MediaType::Video>(self.get_packets()->codecpar));
   });
 
-  _ImagePackets.def("__repr__", [](const ImagePackets& self) {
+  _ImagePacketsWrapper.def("__repr__", [](const ImagePacketsWrapper& self) {
     return fmt::format(
         "ImagePackets<id={}, src={}, pixel_format={}, {}>",
-        self.id,
-        self.src,
-        self.get_media_format_name(),
-        get_codec_info<MediaType::Image>(self.codecpar));
+        self.get_packets()->id,
+        self.get_packets()->src,
+        self.get_packets()->get_media_format_name(),
+        get_codec_info<MediaType::Image>(self.get_packets()->codecpar));
   });
 }
 } // namespace spdl::core

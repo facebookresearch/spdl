@@ -44,20 +44,6 @@ using NvDecImageFramesPtr = NvDecFramesPtr<MediaType::Image>;
 template <MediaType media_type, template <MediaType> typename FramesPtr>
 class FramesWrapper;
 
-template <MediaType media_type>
-using FFmpegFramesWrapper = FramesWrapper<media_type, FFmpegFramesPtr>;
-
-using FFmpegAudioFramesWrapper = FFmpegFramesWrapper<MediaType::Audio>;
-using FFmpegVideoFramesWrapper = FFmpegFramesWrapper<MediaType::Video>;
-using FFmpegImageFramesWrapper = FFmpegFramesWrapper<MediaType::Image>;
-
-template <MediaType media_type>
-using NvDecFramesWrapper = FramesWrapper<media_type, NvDecFramesPtr>;
-
-using NvDecAudioFramesWrapper = NvDecFramesWrapper<MediaType::Audio>;
-using NvDecVideoFramesWrapper = NvDecFramesWrapper<MediaType::Video>;
-using NvDecImageFramesWrapper = NvDecFramesWrapper<MediaType::Image>;
-
 template <MediaType media_type, template <MediaType> typename FramesPtr>
 using FramesWrapperPtr = std::shared_ptr<FramesWrapper<media_type, FramesPtr>>;
 
@@ -231,6 +217,7 @@ struct NvDecFrames {
 
 template <MediaType media_type, template <MediaType> typename FramesPtr>
 class FramesWrapper {
+ protected:
   FramesPtr<media_type> frames;
 
  public:

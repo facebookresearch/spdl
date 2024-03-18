@@ -81,6 +81,20 @@ py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
 
 } // namespace
 
+template <MediaType media_type>
+using FFmpegFramesWrapper = FramesWrapper<media_type, FFmpegFramesPtr>;
+
+using FFmpegAudioFramesWrapper = FFmpegFramesWrapper<MediaType::Audio>;
+using FFmpegVideoFramesWrapper = FFmpegFramesWrapper<MediaType::Video>;
+using FFmpegImageFramesWrapper = FFmpegFramesWrapper<MediaType::Image>;
+
+template <MediaType media_type>
+using NvDecFramesWrapper = FramesWrapper<media_type, NvDecFramesPtr>;
+
+using NvDecAudioFramesWrapper = NvDecFramesWrapper<MediaType::Audio>;
+using NvDecVideoFramesWrapper = NvDecFramesWrapper<MediaType::Video>;
+using NvDecImageFramesWrapper = NvDecFramesWrapper<MediaType::Image>;
+
 void register_frames_and_buffers(py::module& m) {
   auto _Buffer = py::class_<Buffer, BufferPtr>(m, "Buffer", py::module_local());
 
