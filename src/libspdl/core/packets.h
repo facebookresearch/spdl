@@ -35,10 +35,6 @@ using ImagePacketsPtr = PacketsPtr<MediaType::Image>;
 template <MediaType media_type>
 class PacketsWrapper;
 
-using AudioPacketsWrapper = PacketsWrapper<MediaType::Audio>;
-using VideoPacketsWrapper = PacketsWrapper<MediaType::Video>;
-using ImagePacketsWrapper = PacketsWrapper<MediaType::Image>;
-
 template <MediaType media_type>
 using PacketsWrapperPtr = std::shared_ptr<PacketsWrapper<media_type>>;
 
@@ -99,6 +95,10 @@ class PacketsWrapper {
 
   PacketsPtr<media_type> unwrap() {
     return std::move(packets);
+  }
+
+  const PacketsPtr<media_type>& get_packets() const {
+    return packets;
   }
 };
 
