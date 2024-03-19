@@ -57,4 +57,11 @@ class TracingSession {
 
 std::unique_ptr<TracingSession> init_tracing();
 
+// These utilities are for adding custom tracing on Python side
+template <typename Number>
+void trace_counter(int i, Number counter);
+
+void trace_event_begin(const std::string& name);
+void trace_event_end();
+
 } // namespace spdl::core

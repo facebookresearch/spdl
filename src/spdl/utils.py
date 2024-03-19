@@ -2,9 +2,22 @@
 
 import sys
 from contextlib import contextmanager
-from typing import Optional
+from typing import Any, Optional
 
 from spdl import libspdl
+
+__all__ = [  # noqa: F822
+    "tracing",
+    "trace_counter",
+    "trace_event",
+]
+
+
+def __getattr__(name: str) -> Any:
+    """Get the attribute from the library."""
+    if name in __all__:
+        return getattr(libspdl, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 @contextmanager
@@ -23,3 +36,11 @@ def tracing(output: int | str, process_name: Optional[str] = None, enable: bool 
             yield
         finally:
             session.stop()
+
+
+@contextmanager
+def trace_event(name: str):
+    """Trace the decoding operations."""
+    libspdl.trace_event_begin(name)
+    yield
+    libspdl.trace_event_end()

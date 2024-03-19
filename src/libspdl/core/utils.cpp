@@ -137,4 +137,47 @@ std::unique_ptr<TracingSession> init_tracing() {
   return std::make_unique<TracingSession>();
 }
 
+template <typename Number>
+void trace_counter(int i, Number val) {
+#ifdef SPDL_ENABLE_TRACING
+
+#define _CASE(i)                                \
+  case i: {                                     \
+    TRACE_COUNTER("other", "Counter " #i, val); \
+    return;                                     \
+  }
+
+  switch (i) {
+    _CASE(0);
+    _CASE(1);
+    _CASE(2);
+    _CASE(3);
+    _CASE(4);
+    _CASE(5);
+    _CASE(6);
+    _CASE(7);
+    default:
+      SPDL_FAIL(fmt::format(
+          "Counter {} is not supported. The valid value range is [0, 7].", i));
+  }
+#undef _CASE
+
+#endif
+}
+
+template void trace_counter<int>(int i, int counter);
+template void trace_counter<double>(int i, double counter);
+
+void trace_event_begin(const std::string& name) {
+#ifdef SPDL_ENABLE_TRACING
+  TRACE_EVENT_BEGIN("other", perfetto::DynamicString{name});
+#endif
+}
+
+void trace_event_end() {
+#ifdef SPDL_ENABLE_TRACING
+  TRACE_EVENT_END("other");
+#endif
+}
+
 } // namespace spdl::core
