@@ -6,6 +6,7 @@
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/Task.h>
 #include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
 
 #include <memory>
 
@@ -29,6 +30,10 @@ FuturePtr execute_task_with_callback(
         try {
           set_result(co_await std::move(t));
           co_return;
+        } catch (std::exception& e) {
+          XLOG(ERR) << e.what();
+          notify_exception();
+          throw;
         } catch (...) {
           notify_exception();
           throw;
@@ -57,6 +62,10 @@ FuturePtr execute_generator_with_callback(
           }
           set_result(std::nullopt);
           co_return;
+        } catch (std::exception& e) {
+          XLOG(ERR) << e.what();
+          notify_exception();
+          throw;
         } catch (...) {
           notify_exception();
           throw;
