@@ -1,6 +1,7 @@
 set(src
   pybind.cpp
   core/adoptors.cpp
+  core/conversion.cpp
   core/decoding.cpp
   core/demuxing.cpp
   core/executor.cpp
