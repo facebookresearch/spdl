@@ -12,29 +12,29 @@ using namespace folly;
 
 FOLLY_GFLAGS_DEFINE_uint32(
     spdl_demuxer_executor_threads,
-    0,
-    "Number of threads global CPUThreadPoolExecutor will create");
+    4,
+    "The number of threads the default demux executor creates.");
 
 FOLLY_GFLAGS_DEFINE_bool(
     spdl_demuxer_executor_use_throttled_lifo_sem,
     true,
-    "Use ThrottledLifoSem in global CPUThreadPoolExecutor");
+    "Use throttled LIFO semaphore in the default demux executor thread pool.");
 
 FOLLY_GFLAGS_DEFINE_uint32(
     spdl_demuxer_executor_wake_up_interval_us,
-    0,
+    500,
     "If --spdl_demuxer_executor_use_throttled_lifo_sem is true, use this "
     "wake-up interval (in microseconds) in ThrottledLifoSem");
 
 FOLLY_GFLAGS_DEFINE_uint32(
     spdl_decoder_executor_threads,
-    0,
-    "Number of threads global CPUThreadPoolExecutor will create");
+    8,
+    "The number of threads the default decode executor creates.");
 
 FOLLY_GFLAGS_DEFINE_bool(
     spdl_decoder_executor_use_throttled_lifo_sem,
-    true,
-    "Use ThrottledLifoSem in global CPUThreadPoolExecutor");
+    false,
+    "Use throttled LIFO semaphore in the default decode executor thread pool.");
 
 FOLLY_GFLAGS_DEFINE_uint32(
     spdl_decoder_executor_wake_up_interval_us,
