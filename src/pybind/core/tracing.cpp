@@ -16,7 +16,11 @@ void register_tracing(py::module& m) {
       .def("start", &TracingSession::start)
       .def("stop", &TracingSession::stop);
 
-  m.def("init_tracing", init_tracing);
+  m.def("init_tracing", &init_tracing);
+  m.def("trace_counter", &trace_counter<int>);
+  m.def("trace_counter", &trace_counter<double>);
+  m.def("trace_event_begin", &trace_event_begin);
+  m.def("trace_event_end", &trace_event_end);
 }
 
 } // namespace spdl::core

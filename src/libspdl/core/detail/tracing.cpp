@@ -4,9 +4,6 @@
 
 #include <folly/logging/xlog.h>
 
-// temp
-#include <fstream>
-
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace spdl::core::detail {
