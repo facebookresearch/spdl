@@ -111,28 +111,27 @@ def test_batch_decode_image(get_samples):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
     samples = get_samples(cmd)
 
-    flist = samples + ["NON_EXISTING_FILE.JPG"]
+    flist = ["NON_EXISTING_FILE.JPG"] + samples
 
     async def _test():
         demuxing = [spdl.async_demux_image(path) for path in flist]
         decoding = []
-        conversion = []
-        for result in await asyncio.gather(*demuxing, return_exceptions=True):
-            if isinstance(result, Exception):
-                print(f"@@@ Demuxing failed! {type(result).__name__}:{result}")
+        frames = []
+        for i, result in enumerate(
+            await asyncio.gather(*demuxing, return_exceptions=True)
+        ):
+            print(result)
+            if i == 0:
+                assert isinstance(result, Exception)
                 continue
-            print(f"    {result}")
             decoding.append(asyncio.create_task(spdl.async_decode(result)))
 
         done, _ = await asyncio.wait(decoding, return_when=asyncio.ALL_COMPLETED)
         for result in done:
-            if err := result.exception():
-                print(f"    Task: {result.get_name()} failed with error: {err}")
-            else:
-                print(f"    Task: {result.get_name()}: {result.result()}")
-                conversion.append(spdl.async_convert_cpu(result.result()))
+            print(result)
+            frames.append(result.result())
 
-        for result in await asyncio.gather(*conversion):
-            print(f"    {result}")
+        buffer = await spdl.async_convert(frames)
+        assert buffer.shape == [250, 3, 240, 320]
 
     asyncio.run(_test())

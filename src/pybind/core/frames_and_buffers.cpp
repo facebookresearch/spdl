@@ -447,5 +447,23 @@ void register_frames_and_buffers(py::module& m) {
       py::kw_only(),
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
+  m.def(
+      "async_convert",
+      &async_batch_convert_frames,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("frames"),
+      py::kw_only(),
+      py::arg("index") = py::none(),
+      py::arg("executor") = nullptr);
+  m.def(
+      "async_convert",
+      &async_batch_convert_nvdec_frames,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("frames"),
+      py::kw_only(),
+      py::arg("index") = py::none(),
+      py::arg("executor") = nullptr);
 }
 } // namespace spdl::core

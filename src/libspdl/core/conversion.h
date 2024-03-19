@@ -78,4 +78,22 @@ FuturePtr async_convert_nvdec_frames(
     const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
+////////////////////////////////////////////////////////////////////////////////
+// Async batch conversion
+////////////////////////////////////////////////////////////////////////////////
+
+FuturePtr async_batch_convert_frames(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    std::vector<FFmpegImageFramesWrapperPtr> frames,
+    const std::optional<int>& index = std::nullopt,
+    ThreadPoolExecutorPtr demux_executor = nullptr);
+
+FuturePtr async_batch_convert_nvdec_frames(
+    std::function<void(CUDABuffer2DPitchPtr)> set_result,
+    std::function<void()> notify_exception,
+    std::vector<NvDecImageFramesWrapperPtr> frames,
+    const std::optional<int>& index = std::nullopt,
+    ThreadPoolExecutorPtr demux_executor = nullptr);
+
 } // namespace spdl::core

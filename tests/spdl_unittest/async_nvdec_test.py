@@ -50,3 +50,37 @@ def test_decode_image_nvdec(get_sample):
         print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
 
     asyncio.run(_test())
+
+
+def test_batch_decode_image(get_samples):
+    """Can decode an image."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
+    samples = get_samples(cmd)
+
+    flist = ["NON_EXISTING_FILE.JPG"] + samples
+
+    async def _test():
+        demuxing = [spdl.async_demux_image(path) for path in flist]
+        decoding = []
+        frames = []
+        for i, result in enumerate(
+            await asyncio.gather(*demuxing, return_exceptions=True)
+        ):
+            print(result)
+            if i == 0:
+                assert isinstance(result, Exception)
+                continue
+            coro = spdl.async_decode_nvdec(
+                result, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba"
+            )
+            decoding.append(asyncio.create_task(coro))
+
+        done, _ = await asyncio.wait(decoding, return_when=asyncio.ALL_COMPLETED)
+        for result in done:
+            print(result)
+            frames.append(result.result())
+
+        buffer = await spdl.async_convert(frames)
+        assert buffer.shape == [250, 4, 240, 320]
+
+    asyncio.run(_test())
