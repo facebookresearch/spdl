@@ -415,4 +415,85 @@ template FuturePtr async_convert_nvdec_frames(
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
+////////////////////////////////////////////////////////////////////////////////
+// Async batch conversion
+////////////////////////////////////////////////////////////////////////////////
+
+namespace {
+std::vector<FFmpegImageFramesPtr> unwrap(
+    std::vector<FFmpegImageFramesWrapperPtr> frames) {
+  std::vector<FFmpegImageFramesPtr> ret;
+  ret.reserve(frames.size());
+  for (auto& frame : frames) {
+    ret.push_back(frame->unwrap());
+  }
+  return ret;
+}
+
+std::vector<NvDecImageFramesPtr> unwrap(
+    std::vector<NvDecImageFramesWrapperPtr> frames) {
+  std::vector<NvDecImageFramesPtr> ret;
+  ret.reserve(frames.size());
+  for (auto& frame : frames) {
+    ret.push_back(frame->unwrap());
+  }
+  return ret;
+}
+} // namespace
+
+FuturePtr async_batch_convert_frames(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    std::vector<FFmpegImageFramesWrapperPtr> frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=](std::vector<FFmpegImageFramesPtr>&& frms)
+          -> folly::coro::Task<BufferPtr> {
+        if (frms.empty()) {
+          SPDL_FAIL("No frame to convert.");
+        }
+
+        std::vector<FFmpegImageFrames*> _frms;
+        for (auto& f : frms) {
+          _frms.push_back(f.get());
+        }
+
+        co_return convert_batch_image_frames(_frms, index);
+      },
+      unwrap(frames));
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor(executor));
+}
+
+FuturePtr async_batch_convert_nvdec_frames(
+    std::function<void(CUDABuffer2DPitchPtr)> set_result,
+    std::function<void()> notify_exception,
+    std::vector<NvDecImageFramesWrapperPtr> frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=](std::vector<NvDecImageFramesPtr>&& frms)
+          -> folly::coro::Task<CUDABuffer2DPitchPtr> {
+        if (frms.empty()) {
+          SPDL_FAIL("No frame to convert.");
+        }
+
+        std::vector<NvDecImageFrames*> _frms;
+        for (auto& f : frms) {
+          _frms.push_back(f.get());
+        }
+
+        co_return convert_nvdec_batch_image_frames(_frms, index);
+      },
+      unwrap(frames));
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor(executor));
+}
 } // namespace spdl::core
