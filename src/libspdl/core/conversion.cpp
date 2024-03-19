@@ -59,7 +59,12 @@ void check_consistency(const std::vector<AVFrame*>& frames) requires(
   for (auto* f : frames) {
     if (f->height != height || f->width != width) {
       SPDL_FAIL(fmt::format(
-          "Cannot convert the frames as the frames do not have the same size."));
+          "Cannot convert the frames as the frames do not have the same size. "
+          "Reference WxH = {}x{}, found {}x{}.",
+          height,
+          width,
+          f->height,
+          f->width));
     }
     if (static_cast<AVPixelFormat>(f->format) != pix_fmt) {
       SPDL_FAIL(fmt::format(

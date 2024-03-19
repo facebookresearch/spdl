@@ -1,6 +1,7 @@
 """Experiment for running asyncio.loop in background thread and decode media"""
 
 import asyncio
+import functools
 import logging
 import threading
 import time
@@ -28,6 +29,7 @@ def _parse_args(args):
     parser.add_argument("--num-decode-threads", type=int, required=True)
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--num-workers", type=int, required=True)
+    parser.add_argument("--nvdec", action="store_true")
     return parser.parse_args(args)
 
 
@@ -53,13 +55,29 @@ async def _batch_decode_image(
     paths,
     adoptor,
     batch_size,
+    *,
+    width=222,
+    height=222,
+    cuda_device_index=None,
 ):
     demuxing_done = False
     demuxing = set()
     decoding = set()
     frames = []
     conversion = set()
-    filter_desc = "scale=width=221:height=221,format=pix_fmts=rgb24"
+
+    filter_desc = f"scale=width={width}:height={height},format=pix_fmts=rgb24"
+    async_decode_func = (
+        functools.partial(spdl.async_decode, filter_desc=filter_desc)
+        if cuda_device_index is None
+        else functools.partial(
+            spdl.async_decode_nvdec,
+            cuda_device_index=cuda_device_index,
+            width=width,
+            height=height,
+            pix_fmt="rgba",
+        )
+    )
     while True:
         # Handle the process from downstream to upstream for better performance.
 
@@ -110,7 +128,7 @@ async def _batch_decode_image(
                     if err := result.exception():
                         _LG.error("Failed to demux: %s: %s", type(err).__name__, err)
                         continue
-                    coro = spdl.async_decode(result.result(), filter_desc=filter_desc)
+                    coro = async_decode_func(result.result())
                     decoding.add(asyncio.create_task(coro))
             spdl.utils.trace_counter(_DEMUX_INDEX, len(demuxing))
             spdl.utils.trace_counter(_DECODE_INDEX, len(decoding))
@@ -140,13 +158,15 @@ async def _batch_decode_image(
         yield await spdl.async_convert(frames)
 
 
-async def _process_flist(flist, adoptor, batch_size):
+async def _process_flist(flist, adoptor, batch_size, cuda_device_index):
     num_processed = 0
     t0 = time.monotonic()
 
     t_int = t0
     num_processed_int = 0
-    async for buffers in _batch_decode_image(flist, adoptor, batch_size):
+    async for buffers in _batch_decode_image(
+        flist, adoptor, batch_size, cuda_device_index=cuda_device_index
+    ):
         num_processed += buffers.shape[0]
         spdl.utils.trace_counter(_PROCESSED_INDEX, num_processed)
 
@@ -167,9 +187,10 @@ async def _process_flist(flist, adoptor, batch_size):
     return num_processed
 
 
-def bg_worker(flist, adoptor, batch_size, worker_id, num_workers, loop=None):
+def bg_worker(flist, adoptor, batch_size, worker_id, num_workers, use_nvdec, loop=None):
     asyncio.set_event_loop(loop or asyncio.new_event_loop())
-    asyncio.run(_process_flist(flist, adoptor, batch_size))
+    cuda_device_index = worker_id if use_nvdec else None
+    asyncio.run(_process_flist(flist, adoptor, batch_size, cuda_device_index))
 
 
 def _benchmark(args):
@@ -188,7 +209,14 @@ def _benchmark(args):
     with spdl.utils.tracing(trace_path, enable=args.trace is not None):
         thread = threading.Thread(
             target=bg_worker,
-            args=(flist, adoptor, args.batch_size, args.worker_id, args.num_workers),
+            args=(
+                flist,
+                adoptor,
+                args.batch_size,
+                args.worker_id,
+                args.num_workers,
+                args.nvdec,
+            ),
         )
         thread.start()
         thread.join()
