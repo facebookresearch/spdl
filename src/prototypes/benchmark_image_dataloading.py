@@ -108,18 +108,19 @@ def _test_nvdec(input_flist, adoptor_type, prefix, batch_size, queue_size, gpu: 
 
     num_decoded = 0
     t0 = time.monotonic()
-    for i, future in enumerate(bgd):
+    t1 = t0
+    for future in bgd:
         frames = future.get(strict=False)
         tensor = spdl.to_torch(frames)
         num_decoded += tensor.shape[0]
 
-        if i % 1000 == 0:
-            elapsed = time.monotonic() - t0
-            print(f"Decode {num_decoded} frames. QPS: {num_decoded / elapsed}")
+        t2 = time.monotonic()
+        if t2 - t1 > 10:
+            elapsed = t2 - t0
+            t1 = t2
+            _LG.info(f"QPS={num_decoded / elapsed} ({num_decoded} / {elapsed:.2f})")
     elapsed = time.monotonic() - t0
-    print(
-        f"{elapsed} seconds to decode {num_decoded} frames. QPS: {num_decoded / elapsed}"
-    )
+    _LG.info(f"QPS={num_decoded / elapsed} ({num_decoded} / {elapsed:.2f})")
 
 
 def _test_cpu(
@@ -133,18 +134,19 @@ def _test_cpu(
 
     num_decoded = 0
     t0 = time.monotonic()
-    for i, future in enumerate(bgd):
+    t1 = t0
+    for future in bgd:
         frames = future.get(strict=False)
         tensor = spdl.to_torch(frames).to(device)
         num_decoded += tensor.shape[0]
 
-        if i % 1000 == 0:
-            elapsed = time.monotonic() - t0
-            print(f"Decode {num_decoded} frames. QPS: {num_decoded / elapsed}")
+        t2 = time.monotonic()
+        if t2 - t1 > 5:
+            elapsed = t2 - t0
+            t1 = t2
+            _LG.info(f"QPS={num_decoded / elapsed} ({num_decoded} / {elapsed:.2f})")
     elapsed = time.monotonic() - t0
-    print(
-        f"{elapsed} seconds to decode {num_decoded} frames. QPS: {num_decoded / elapsed}"
-    )
+    _LG.info(f"QPS={num_decoded / elapsed} ({num_decoded} / {elapsed:.2f})")
 
 
 def _main():
