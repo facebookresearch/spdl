@@ -69,13 +69,9 @@ void register_adoptors(py::module& m) {
             "MMapAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
       });
 
-  _BytesAdoptor
-      .def(
-          py::init<const std::optional<std::string>&>(),
-          py::arg("prefix") = py::none())
+  _BytesAdoptor.def(py::init<>())
       .def("__repr__", [](const BytesAdoptor& self) -> std::string {
-        return fmt::format(
-            "BytesAdoptor(prefix=\"{}\")", self.prefix.value_or(""));
+        return "BytesAdoptor()";
       });
 }
 
