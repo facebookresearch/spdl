@@ -1,7 +1,6 @@
 """Experiment for running asyncio.loop in background thread and decode media"""
 
 import asyncio
-import functools
 import logging
 import threading
 import time
@@ -41,14 +40,58 @@ def _iter_flist(flist, id, N):
                 yield path
 
 
-_TIMEOUT = 1 / 1000.0
+def _iter_batch(gen, batch_size):
+    batch = []
+    for item in gen:
+        batch.append(item)
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
-_QPS_INDEX = 0
-_PROCESSED_INDEX = 1
-_CONVERT_INDEX = 2
-_FRAME_INDEX = 3
-_DECODE_INDEX = 4
-_DEMUX_INDEX = 5
+
+async def async_decode_image(
+    path,
+    adoptor,
+    *,
+    width=222,
+    height=222,
+    cuda_device_index=None,
+):
+    filter_desc = f"scale=width={width}:height={height},format=pix_fmts=rgb24"
+    packets = await spdl.async_demux_image(path, adoptor=adoptor)
+    if cuda_device_index is None:
+        frames = await spdl.async_decode(packets, filter_desc=filter_desc)
+    else:
+        frames = await spdl.async_decode_nvdec(
+            packets,
+            cuda_device_index=cuda_device_index,
+            width=width,
+            height=height,
+            pix_fmt="rgba",
+        )
+    return frames
+
+
+async def async_batch_decode_image(
+    paths, adoptor, *, width=222, height=222, cuda_device_index=None
+):
+    decodings = [
+        async_decode_image(
+            p, adoptor, width=width, height=height, cuda_device_index=cuda_device_index
+        )
+        for p in paths
+    ]
+    frames = []
+    for i, result in enumerate(
+        await asyncio.gather(*decodings, return_exceptions=True)
+    ):
+        if isinstance(result, Exception):
+            _LG.exception("Failed to decode %s", paths[i], exc_info=result)
+            continue
+        frames.append(result)
+    return await spdl.async_convert(frames)
 
 
 async def _batch_decode_image(
@@ -60,102 +103,37 @@ async def _batch_decode_image(
     height=222,
     cuda_device_index=None,
 ):
-    demuxing_done = False
-    demuxing = set()
+    paths_gen = _iter_batch(paths, batch_size)
+    path_exhausted = False
     decoding = set()
-    frames = []
-    conversion = set()
 
-    filter_desc = f"scale=width={width}:height={height},format=pix_fmts=rgb24"
-    async_decode_func = (
-        functools.partial(spdl.async_decode, filter_desc=filter_desc)
-        if cuda_device_index is None
-        else functools.partial(
-            spdl.async_decode_nvdec,
-            cuda_device_index=cuda_device_index,
-            width=width,
-            height=height,
-            pix_fmt="rgba",
+    while not path_exhausted or decoding:
+        # 1. Queue demuxing
+        while not path_exhausted and len(decoding) < 3:
+            try:
+                paths = next(paths_gen)
+            except StopIteration:
+                path_exhausted = True
+                break
+            else:
+                coro = async_batch_decode_image(
+                    paths,
+                    adoptor,
+                    width=width,
+                    height=height,
+                    cuda_device_index=cuda_device_index,
+                )
+                decoding.add(asyncio.create_task(coro))
+
+        # 2. Check the state of decoding and queue conversion
+        done, decoding = await asyncio.wait(
+            decoding, return_when=asyncio.FIRST_COMPLETED
         )
-    )
-    while True:
-        # Handle the process from downstream to upstream for better performance.
-
-        # 5. Check the state of buffer conversion
-        if conversion:
-            with spdl.utils.trace_event("conversion - await"):
-                done, conversion = await asyncio.wait(
-                    conversion, timeout=_TIMEOUT, return_when=asyncio.FIRST_COMPLETED
-                )
-                for result in done:
-                    if err := result.exception():
-                        _LG.error("Failed to convert: %s: %s", type(err).__name__, err)
-                        continue
-                    yield result.result()
-            spdl.utils.trace_counter(_CONVERT_INDEX, len(conversion))
-
-        # 4. Queue buffer conversion
-        if frames:
-            while len(frames) > batch_size:
-                with spdl.utils.trace_event("conversion - push"):
-                    coro = spdl.async_convert(frames[:batch_size])
-                    conversion.add(asyncio.create_task(coro))
-                    frames = frames[batch_size:]
-            spdl.utils.trace_counter(_FRAME_INDEX, len(frames))
-            spdl.utils.trace_counter(_CONVERT_INDEX, len(conversion))
-
-        # 3. Check the state of decoding
-        if decoding:
-            with spdl.utils.trace_event("decoding - await"):
-                done, decoding = await asyncio.wait(
-                    decoding, timeout=_TIMEOUT, return_when=asyncio.FIRST_COMPLETED
-                )
-                for result in done:
-                    if err := result.exception():
-                        _LG.error("Failed to decode: %s: %s", type(err).__name__, err)
-                        continue
-                    frames.append(result.result())
-            spdl.utils.trace_counter(_DECODE_INDEX, len(decoding))
-            spdl.utils.trace_counter(_FRAME_INDEX, len(frames))
-
-        # 2. Check the state of demuxing and queue decoding
-        if demuxing:
-            with spdl.utils.trace_event("demuxing - await"):
-                done, demuxing = await asyncio.wait(
-                    demuxing, timeout=_TIMEOUT, return_when=asyncio.FIRST_COMPLETED
-                )
-                for result in done:
-                    if err := result.exception():
-                        _LG.error("Failed to demux: %s: %s", type(err).__name__, err)
-                        continue
-                    coro = async_decode_func(result.result())
-                    decoding.add(asyncio.create_task(coro))
-            spdl.utils.trace_counter(_DEMUX_INDEX, len(demuxing))
-            spdl.utils.trace_counter(_DECODE_INDEX, len(decoding))
-
-        # 2. Queue demuxing
-        if not demuxing_done and len(demuxing) < batch_size * 3:
-            with spdl.utils.trace_event("demuxing - push"):
-                num_push = batch_size if not demuxing else 3
-                for _ in range(num_push):
-                    try:
-                        path = next(paths)
-                    except StopIteration:
-                        demuxing_done = True
-                        break
-                    else:
-                        coro = spdl.async_demux_image(
-                            path,
-                            adoptor=adoptor,
-                        )
-                        demuxing.add(asyncio.create_task(coro))
-            spdl.utils.trace_counter(_DEMUX_INDEX, len(demuxing))
-
-        if demuxing_done and not demuxing and not decoding and not conversion:
-            break
-
-    if frames:
-        yield await spdl.async_convert(frames)
+        for result in done:
+            if err := result.exception():
+                _LG.exception("Failed to batch decode images.", exc_info=err)
+            else:
+                yield result.result()
 
 
 async def _process_flist(flist, adoptor, batch_size, cuda_device_index):
@@ -168,7 +146,6 @@ async def _process_flist(flist, adoptor, batch_size, cuda_device_index):
         flist, adoptor, batch_size, cuda_device_index=cuda_device_index
     ):
         num_processed += buffers.shape[0]
-        spdl.utils.trace_counter(_PROCESSED_INDEX, num_processed)
 
         t2 = time.monotonic()
         if t2 - t_int > 10:
