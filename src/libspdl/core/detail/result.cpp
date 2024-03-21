@@ -146,7 +146,7 @@ std::vector<ResultType<media_type>> Results<media_type, ResultType>::Impl::get(
     return blockingWait(
         check_image<ResultType>(std::move(future), srcs, strict));
   } else {
-    return blockingWait(check(std::move(future), srcs[0], timestamps, strict));
+    return blockingWait(check(std::move(future), srcs.at(0), timestamps, strict));
   }
 }
 
