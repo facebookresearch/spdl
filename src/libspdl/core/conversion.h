@@ -17,38 +17,38 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 CPUBufferPtr convert_visual_frames_to_cpu_buffer(
-    const FFmpegFrames<media_type>* frames,
+    const FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index = std::nullopt);
 
 CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
-    const std::vector<FFmpegImageFrames*>& batch_frames,
+    const std::vector<FFmpegImageFramesWrapperPtr>& batch_frames,
     const std::optional<int>& index = std::nullopt);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Device-agnostic conversion functions (device is picked accordingly
 ////////////////////////////////////////////////////////////////////////////////
 CPUBufferPtr convert_audio_frames(
-    const FFmpegAudioFrames* frames,
+    const FFmpegAudioFramesWrapperPtr frames,
     const std::optional<int>& index = std::nullopt);
 
 // FFmpeg video/image could be on CUDA
 template <MediaType media_type>
 BufferPtr convert_visual_frames(
-    const FFmpegFrames<media_type>* frames,
+    const FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index =
         std::nullopt) requires(media_type != MediaType::Audio);
 
 BufferPtr convert_batch_image_frames(
-    const std::vector<FFmpegImageFrames*>& batch_frames,
+    const std::vector<FFmpegImageFramesWrapperPtr>& batch_frames,
     const std::optional<int>& index = std::nullopt);
 
 template <MediaType media_type>
 CUDABuffer2DPitchPtr convert_nvdec_frames(
-    const NvDecFrames<media_type>* frames,
+    const NvDecFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index = std::nullopt);
 
 CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
-    const std::vector<NvDecImageFrames*>& batch_frames,
+    const std::vector<NvDecImageFramesWrapperPtr>& batch_frames,
     const std::optional<int>& index = std::nullopt);
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -170,12 +170,12 @@ class FFmpegFrames {
 
   ///
   /// Range slice operation, using Python's slice notation.
-  FFmpegVideoFrames slice(int start, int stop, int step)
+  FFmpegVideoFramesPtr slice(int start, int stop, int step)
       const requires _IS_VIDEO;
 
   ///
   /// Slice (`__getitem__`) operation.
-  FFmpegImageFrames slice(int index) const requires _IS_VIDEO;
+  FFmpegImageFramesPtr slice(int index) const requires _IS_VIDEO;
 };
 
 #undef _IS_AUDIO
@@ -191,10 +191,12 @@ class FFmpegFrames {
 template <MediaType media_type>
 struct NvDecFrames {
 #ifdef SPDL_USE_NVDEC
+ private:
   ///
   /// Used for tracking the lifetime in tracing.
   uint64_t id{0};
 
+ public:
   /// ``enum AVPixelFormat`` but using ``int`` so as to avoid including FFmpeg
   /// header.
   int media_format;
@@ -212,6 +214,10 @@ struct NvDecFrames {
   ~NvDecFrames() = default;
 
   const char* get_media_format_name() const;
+
+  uint64_t get_id() const {
+    return id;
+  }
 #endif
 };
 
@@ -224,7 +230,27 @@ class FramesWrapper {
   FramesWrapper(FramesPtr<media_type>&& p) : frames(std::move(p)){};
 
   FramesPtr<media_type> unwrap() {
+    if (!frames) {
+      throw std::runtime_error(
+          "Frames is in invalid state. Perhaps it's already released?");
+    }
     return std::move(frames);
+  }
+
+  int get_id() const {
+    if (!frames) {
+      throw std::runtime_error(
+          "Frames is in invalid state. Perhaps it's already released?");
+    }
+    return frames->get_id();
+  }
+
+  const FramesPtr<media_type>& get_frames_ref() const {
+    if (!frames) {
+      throw std::runtime_error(
+          "Frames is in invalid state. Perhaps it's already released?");
+    }
+    return frames;
   }
 };
 
@@ -234,4 +260,14 @@ FramesWrapperPtr<media_type, FramesPtr> wrap(FramesPtr<media_type>&& frames) {
       std::move(frames));
 }
 
+template <MediaType media_type, template <MediaType> typename FramesPtr>
+std::vector<FramesWrapperPtr<media_type, FramesPtr>> wrap(
+    std::vector<FramesPtr<media_type>>&& frames) {
+  std::vector<FramesWrapperPtr<media_type, FramesPtr>> ret;
+
+  for (auto& frame : frames) {
+    ret.push_back(wrap<media_type, FramesPtr>(std::move(frame)));
+  }
+  return ret;
+}
 } // namespace spdl::core
