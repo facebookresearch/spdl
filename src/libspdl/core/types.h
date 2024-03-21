@@ -15,8 +15,8 @@ using OptionDict = std::map<std::string, std::string>;
 
 // alternative for AVRational so that we can avoid exposing FFmpeg headers
 struct Rational {
-  int num;
-  int den;
+  int num = 0;
+  int den = 1;
 };
 
 // simplified version of AVMediaType so that public headers do not
