@@ -14,18 +14,20 @@ def test_failure():
 
     async def _test_audio():
         async for packets in spdl.async_demux_audio(
-            "FOO.mp3", timestamps=ts, _exception_backoff=1
+            "FOO.mp3",
+            timestamps=ts,
         ):
             pass
 
     async def _test_video():
         async for packets in spdl.async_demux_video(
-            "FOOBAR.mp4", timestamps=ts, _exception_backoff=1
+            "FOOBAR.mp4",
+            timestamps=ts,
         ):
             pass
 
     async def _test_image():
-        await spdl.async_demux_image("FOO.jpg", _exception_backoff=1)
+        await spdl.async_demux_image("FOO.jpg")
 
     with pytest.raises(RuntimeError, match="Failed to open the input"):
         asyncio.run(_test_audio())
