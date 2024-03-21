@@ -131,7 +131,6 @@ folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
       package->push(packet->release());
     }
     XLOG(DBG9) << fmt::format(" - Sliced {} packets", package->num_packets());
-    package->push(nullptr); // For downstream flushing
     co_yield std::move(package);
   }
 }
@@ -263,10 +262,8 @@ folly::coro::Task<VideoPacketsPtr> apply_bsf(VideoPacketsPtr packets) {
       packets->time_base,
       packets->frame_rate);
   for (auto& packet : packets->get_packets()) {
-    if (packet) {
-      AVPacketPtr filtered = apply_bsf(bsf_ctx.get(), packet);
-      package->push(filtered.release());
-    }
+    AVPacketPtr filtered = apply_bsf(bsf_ctx.get(), packet);
+    package->push(filtered.release());
   }
   co_return package;
 }
@@ -446,6 +443,9 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
       cfg.decoder_options,
       cfg.cuda_device_index);
   auto frames = std::make_unique<FFmpegFrames<media_type>>(packets->id);
+  if constexpr (media_type != MediaType::Image) {
+    packets->push(nullptr); // For flushing
+  }
   if (filter_desc.empty()) {
     co_await decode_pkts(
         std::move(packets), std::move(codec_ctx), frames.get());
