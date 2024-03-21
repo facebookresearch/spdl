@@ -106,21 +106,6 @@ void register_frames_and_buffers(py::module& m) {
       py::class_<CUDABuffer2DPitch, std::shared_ptr<CUDABuffer2DPitch>>(
           m, "CUDABuffer2DPitch", py::module_local());
 
-  auto _FFmpegAudioFrames = py::class_<FFmpegAudioFrames, FFmpegAudioFramesPtr>(
-      m, "FFmpegAudioFrames", py::module_local());
-
-  auto _FFmpegVideoFrames = py::class_<FFmpegVideoFrames, FFmpegVideoFramesPtr>(
-      m, "FFmpegVideoFrames", py::module_local());
-
-  auto _FFmpegImageFrames = py::class_<FFmpegImageFrames, FFmpegImageFramesPtr>(
-      m, "FFmpegImageFrames", py::module_local());
-
-  auto _NvDecVideoFrames = py::class_<NvDecVideoFrames, NvDecVideoFramesPtr>(
-      m, "NvDecVideoFrames", py::module_local());
-
-  auto _NvDecImageFrames = py::class_<NvDecImageFrames, NvDecImageFramesPtr>(
-      m, "NvDecImageFrames", py::module_local());
-
   auto _FFmpegAudioFramesWrapper =
       py::class_<FFmpegAudioFramesWrapper, FFmpegAudioFramesWrapperPtr>(
           m, "FFmpegAudioFramesWrapper", py::module_local());
@@ -212,145 +197,210 @@ void register_frames_and_buffers(py::module& m) {
             return get_cuda_array_interface(self);
           }));
 
-  _FFmpegAudioFrames
-      .def_property_readonly("num_frames", &FFmpegAudioFrames::get_num_frames)
-      .def_property_readonly("sample_rate", &FFmpegAudioFrames::get_sample_rate)
+  _FFmpegAudioFramesWrapper
       .def_property_readonly(
-          "num_channels", &FFmpegAudioFrames::get_num_channels)
+          "num_frames",
+          [](FFmpegAudioFramesWrapper& self) {
+            return self.get_frames_ref()->get_num_frames();
+          })
       .def_property_readonly(
-          "format", &FFmpegAudioFrames::get_media_format_name)
-      .def("__len__", &FFmpegAudioFrames::get_num_frames)
-      .def("__repr__", [](const FFmpegAudioFrames& self) {
+          "sample_rate",
+          [](FFmpegAudioFramesWrapper& self) {
+            return self.get_frames_ref()->get_sample_rate();
+          })
+      .def_property_readonly(
+          "num_channels",
+          [](FFmpegAudioFramesWrapper& self) {
+            return self.get_frames_ref()->get_num_channels();
+          })
+      .def_property_readonly(
+          "format",
+          [](FFmpegAudioFramesWrapper& self) {
+            return self.get_frames_ref()->get_media_format_name();
+          })
+      .def(
+          "__len__",
+          [](FFmpegAudioFramesWrapper& self) {
+            return self.get_frames_ref()->get_num_frames();
+          })
+      .def("__repr__", [](const FFmpegAudioFramesWrapper& self) {
+        auto& ref = self.get_frames_ref();
         return fmt::format(
             "FFmpegAudioFrames<num_frames={}, sample_format={}, sample_rate={}, num_channels={}>",
-            self.get_media_format_name(),
-            self.get_num_frames(),
-            self.get_sample_rate(),
-            self.get_num_channels());
+            ref->get_media_format_name(),
+            ref->get_num_frames(),
+            ref->get_sample_rate(),
+            ref->get_num_channels());
       });
 
-  _FFmpegVideoFrames
-      .def_property_readonly("num_frames", &FFmpegVideoFrames::get_num_frames)
-      .def_property_readonly("num_planes", &FFmpegVideoFrames::get_num_planes)
-      .def_property_readonly("width", &FFmpegVideoFrames::get_width)
-      .def_property_readonly("height", &FFmpegVideoFrames::get_height)
+  _FFmpegVideoFramesWrapper
       .def_property_readonly(
-          "format", &FFmpegVideoFrames::get_media_format_name)
-      .def("__len__", &FFmpegVideoFrames::get_num_frames)
+          "num_frames",
+          [](FFmpegVideoFramesWrapper& self) {
+            return self.get_frames_ref()->get_num_frames();
+          })
+      .def_property_readonly(
+          "num_planes",
+          [](FFmpegVideoFramesWrapper& self) {
+            return self.get_frames_ref()->get_num_planes();
+          })
+      .def_property_readonly(
+          "width",
+          [](FFmpegVideoFramesWrapper& self) {
+            return self.get_frames_ref()->get_width();
+          })
+      .def_property_readonly(
+          "height",
+          [](FFmpegVideoFramesWrapper& self) {
+            return self.get_frames_ref()->get_height();
+          })
+      .def_property_readonly(
+          "format",
+          [](FFmpegVideoFramesWrapper& self) {
+            return self.get_frames_ref()->get_media_format_name();
+          })
       .def(
-          "__getitem__",
-          [](const FFmpegVideoFrames& self, const py::slice& slice) {
-            py::ssize_t start = 0, stop = 0, step = 0, len = 0;
-            if (!slice.compute(
-                    self.get_num_frames(), &start, &stop, &step, &len)) {
-              throw py::error_already_set();
-            }
-            return self.slice(
-                static_cast<int>(start),
-                static_cast<int>(stop),
-                static_cast<int>(step));
+          "__len__",
+          [](FFmpegVideoFramesWrapper& self) {
+            return self.get_frames_ref()->get_num_frames();
           })
       .def(
           "__getitem__",
-          [](const FFmpegVideoFrames& self, int i) { return self.slice(i); })
-      .def("__repr__", [](const FFmpegVideoFrames& self) {
+          [](const FFmpegVideoFramesWrapper& self, const py::slice& slice) {
+            auto& ref = self.get_frames_ref();
+            py::ssize_t start = 0, stop = 0, step = 0, len = 0;
+            if (!slice.compute(
+                    ref->get_num_frames(), &start, &stop, &step, &len)) {
+              throw py::error_already_set();
+            }
+            return wrap<MediaType::Video, FFmpegFramesPtr>(ref->slice(
+                static_cast<int>(start),
+                static_cast<int>(stop),
+                static_cast<int>(step)));
+          })
+      .def(
+          "__getitem__",
+          [](const FFmpegVideoFramesWrapper& self, int i) {
+            return wrap<MediaType::Image, FFmpegFramesPtr>(
+                self.get_frames_ref()->slice(i));
+          })
+      .def("__repr__", [](const FFmpegVideoFramesWrapper& self) {
+        auto& ref = self.get_frames_ref();
         return fmt::format(
             "FFmpegVideoFrames<num_frames={}, pixel_format={}, num_planes={}, width={}, height={}, is_cuda={}>",
-            self.get_num_frames(),
-            self.get_media_format_name(),
-            self.get_num_planes(),
-            self.get_width(),
-            self.get_height(),
-            self.is_cuda());
+            ref->get_num_frames(),
+            ref->get_media_format_name(),
+            ref->get_num_planes(),
+            ref->get_width(),
+            ref->get_height(),
+            ref->is_cuda());
       });
 
-  _FFmpegImageFrames
-      .def_property_readonly("num_planes", &FFmpegImageFrames::get_num_planes)
-      .def_property_readonly("width", &FFmpegImageFrames::get_width)
-      .def_property_readonly("height", &FFmpegImageFrames::get_height)
+  _FFmpegImageFramesWrapper
       .def_property_readonly(
-          "format", &FFmpegImageFrames::get_media_format_name)
-      .def("__repr__", [](const FFmpegImageFrames& self) {
+          "num_planes",
+          [](const FFmpegImageFramesWrapper& self) {
+            return self.get_frames_ref()->get_num_planes();
+          })
+      .def_property_readonly(
+          "width",
+          [](const FFmpegImageFramesWrapper& self) {
+            return self.get_frames_ref()->get_width();
+          })
+      .def_property_readonly(
+          "height",
+          [](const FFmpegImageFramesWrapper& self) {
+            return self.get_frames_ref()->get_height();
+          })
+      .def_property_readonly(
+          "format",
+          [](const FFmpegImageFramesWrapper& self) {
+            return self.get_frames_ref()->get_media_format_name();
+          })
+      .def("__repr__", [](const FFmpegImageFramesWrapper& self) {
+        auto& ref = self.get_frames_ref();
         return fmt::format(
             "FFmpegImageFrames<pixel_format={}, num_planes={}, width={}, height={}, is_cuda={}>",
-            self.get_media_format_name(),
-            self.get_num_planes(),
-            self.get_width(),
-            self.get_height(),
-            self.is_cuda());
+            ref->get_media_format_name(),
+            ref->get_num_planes(),
+            ref->get_width(),
+            ref->get_height(),
+            ref->is_cuda());
       });
 
 #ifdef SPDL_USE_NVDEC
 #define IF_NVDECVIDEOFRAMES_ENABLED(x) x
 #else
 #define IF_NVDECVIDEOFRAMES_ENABLED(x)                                    \
-  [](const NvDecVideoFrames&) {                                           \
+  [](const NvDecVideoFramesWrapper&) {                                    \
     throw std::runtime_error("SPDL is not compiled with NVDEC support."); \
   }
 #endif
 
   // TODO: Add __repr__
-  _NvDecVideoFrames
+  _NvDecVideoFramesWrapper
       .def_property_readonly(
           "channel_last",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->channel_last;
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->channel_last;
           }))
       .def_property_readonly(
-          "ndim", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->get_shape().size();
+          "ndim",
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->get_shape().size();
           }))
       .def_property_readonly(
           "shape",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->get_shape();
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->get_shape();
           }))
       .def_property_readonly(
           "format",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.get_media_format_name();
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFramesWrapper& self) {
+            return self.get_frames_ref()->get_media_format_name();
           }))
       .def_property_readonly(
           "__cuda_array_interface__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](NvDecVideoFrames& self) {
-            return get_cuda_array_interface(*self.buffer);
+          IF_NVDECVIDEOFRAMES_ENABLED([](NvDecVideoFramesWrapper& self) {
+            return get_cuda_array_interface(*self.get_frames_ref()->buffer);
           }))
       .def(
           "__len__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->get_shape()[0];
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->get_shape()[0];
           }));
 
   // TODO: Add __repr__
-  _NvDecImageFrames
+  _NvDecImageFramesWrapper
       .def_property_readonly(
           "channel_last",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->channel_last;
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->channel_last;
           }))
       .def_property_readonly(
-          "ndim", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->get_shape().size();
+          "ndim",
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->get_shape().size();
           }))
       .def_property_readonly(
           "shape",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->get_shape();
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->get_shape();
           }))
       .def_property_readonly(
           "format",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.get_media_format_name();
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFramesWrapper& self) {
+            return self.get_frames_ref()->get_media_format_name();
           }))
       .def_property_readonly(
           "__cuda_array_interface__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](NvDecImageFrames& self) {
-            return get_cuda_array_interface(*self.buffer);
+          IF_NVDECVIDEOFRAMES_ENABLED([](NvDecImageFramesWrapper& self) {
+            return get_cuda_array_interface(*self.get_frames_ref()->buffer);
           }))
       .def(
           "__len__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->get_shape()[0];
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFramesWrapper& self) {
+            return self.get_frames_ref()->buffer->get_shape()[0];
           }));
 }
 } // namespace spdl::core

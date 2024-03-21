@@ -23,7 +23,7 @@ using folly::coro::Task;
 
 namespace {
 #ifdef SPDL_USE_NVDEC
-Task<NvDecImageFramesPtr> image_decode_task_nvdec(
+Task<NvDecImageFramesWrapperPtr> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
     const SourceAdoptorPtr adoptor,
@@ -40,10 +40,10 @@ Task<NvDecImageFramesPtr> image_decode_task_nvdec(
       std::move(packet), cuda_device_index, crop, width, height, pix_fmt);
   SemiFuture<NvDecImageFramesPtr> future =
       std::move(task).scheduleOn(exec).start();
-  co_return co_await std::move(future);
+  co_return wrap<MediaType::Image, NvDecFramesPtr>(co_await std::move(future));
 }
 
-Task<std::vector<SemiFuture<NvDecImageFramesPtr>>>
+Task<std::vector<SemiFuture<NvDecImageFramesWrapperPtr>>>
 batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
@@ -55,7 +55,7 @@ batch_image_decode_task_nvdec(
     const std::optional<std::string> pix_fmt,
     ThreadPoolExecutorPtr demux_executor,
     ThreadPoolExecutorPtr decode_executor) {
-  std::vector<SemiFuture<NvDecImageFramesPtr>> futures;
+  std::vector<SemiFuture<NvDecImageFramesWrapperPtr>> futures;
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task_nvdec(
@@ -74,7 +74,25 @@ batch_image_decode_task_nvdec(
   co_return std::move(futures);
 }
 
-Task<std::vector<SemiFuture<NvDecVideoFramesPtr>>> stream_decode_task_nvdec(
+Task<NvDecVideoFramesWrapperPtr> video_decode_task_nvdec(
+    PacketsPtr<MediaType::Video> packets,
+    const int cuda_device_index,
+    const CropArea crop,
+    int width,
+    int height,
+    const std::optional<std::string> pix_fmt) {
+  co_return wrap<MediaType::Video, NvDecFramesPtr>(
+      co_await detail::decode_nvdec<MediaType::Video>(
+          co_await detail::apply_bsf(std::move(packets)),
+          cuda_device_index,
+          crop,
+          width,
+          height,
+          pix_fmt));
+}
+
+Task<std::vector<SemiFuture<NvDecVideoFramesWrapperPtr>>>
+stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const int cuda_device_index,
@@ -85,15 +103,14 @@ Task<std::vector<SemiFuture<NvDecVideoFramesPtr>>> stream_decode_task_nvdec(
     int height,
     const std::optional<std::string> pix_fmt,
     ThreadPoolExecutorPtr decode_executor) {
-  std::vector<SemiFuture<NvDecVideoFramesPtr>> futures;
+  std::vector<SemiFuture<NvDecVideoFramesWrapperPtr>> futures;
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux<MediaType::Video>(
         src, timestamps, std::move(adoptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
-      auto filtered = co_await detail::apply_bsf(std::move(*result));
-      auto task = detail::decode_nvdec<MediaType::Video>(
-          std::move(filtered), cuda_device_index, crop, width, height, pix_fmt);
+      auto task = video_decode_task_nvdec(
+          std::move(*result), cuda_device_index, crop, width, height, pix_fmt);
       futures.emplace_back(std::move(task).scheduleOn(exec).start());
     }
   }

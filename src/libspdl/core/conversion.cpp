@@ -26,13 +26,13 @@ namespace spdl::core {
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
 CPUBufferPtr convert_audio_frames(
-    const FFmpegAudioFrames* frames,
+    const FFmpegAudioFramesWrapperPtr frames,
     const std::optional<int>& i) {
   TRACE_EVENT(
       "decoding",
       "core::convert_audio_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  return detail::convert_audio_frames(frames, i);
+  return detail::convert_audio_frames(frames->get_frames_ref().get(), i);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -110,40 +110,42 @@ CPUBufferPtr convert_video_to_cpu(
 
 template <MediaType media_type>
 BufferPtr convert_visual_frames(
-    const FFmpegFrames<media_type>* frames,
+    const FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index) requires(media_type != MediaType::Audio) {
   TRACE_EVENT(
       "decoding",
       "core::convert_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video<media_type>(frames->get_frames(), index);
+  return convert_video<media_type>(
+      frames->get_frames_ref()->get_frames(), index);
 }
 
 template BufferPtr convert_visual_frames(
-    const FFmpegFrames<MediaType::Video>* frames,
+    const FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index);
 
 template BufferPtr convert_visual_frames(
-    const FFmpegFrames<MediaType::Image>* frames,
+    const FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index);
 
 template <MediaType media_type>
 CPUBufferPtr convert_visual_frames_to_cpu_buffer(
-    const FFmpegFrames<media_type>* frames,
+    const FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index) requires(media_type != MediaType::Audio) {
   TRACE_EVENT(
       "decoding",
       "core::convert_video_frames_to_cpu_buffer",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video_to_cpu<media_type>(frames->get_frames(), index);
+  return convert_video_to_cpu<media_type>(
+      frames->get_frames_ref()->get_frames(), index);
 }
 
 template CPUBufferPtr convert_visual_frames_to_cpu_buffer(
-    const FFmpegFrames<MediaType::Video>* frames,
+    const FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index);
 
 template CPUBufferPtr convert_visual_frames_to_cpu_buffer(
-    const FFmpegFrames<MediaType::Image>* frames,
+    const FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -151,15 +153,16 @@ template CPUBufferPtr convert_visual_frames_to_cpu_buffer(
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 std::vector<AVFrame*> merge_frames(
-    const std::vector<FFmpegImageFrames*>& batch) {
+    const std::vector<FFmpegImageFramesWrapperPtr>& batch) {
   std::vector<AVFrame*> ret;
   ret.reserve(batch.size());
   for (auto& frame : batch) {
-    if (frame->get_num_frames() != 1) {
+    auto& ref = frame->get_frames_ref();
+    if (ref->get_num_frames() != 1) {
       SPDL_FAIL_INTERNAL(
           "Unexpected number of frames are found in one of the image frames.");
     }
-    ret.push_back(frame->get_frames()[0]);
+    ret.push_back(ref->get_frames()[0]);
   }
   return ret;
 }
@@ -167,14 +170,14 @@ std::vector<AVFrame*> merge_frames(
 } // namespace
 
 BufferPtr convert_batch_image_frames(
-    const std::vector<FFmpegImageFrames*>& batch,
+    const std::vector<FFmpegImageFramesWrapperPtr>& batch,
     const std::optional<int>& index) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
   return convert_video<MediaType::Video>(merge_frames(batch), index);
 }
 
 CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
-    const std::vector<FFmpegImageFrames*>& batch,
+    const std::vector<FFmpegImageFramesWrapperPtr>& batch,
     const std::optional<int>& index) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames_to_cpu_buffer");
   return convert_video_to_cpu<MediaType::Video>(merge_frames(batch), index);
@@ -182,7 +185,7 @@ CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
 
 template <MediaType media_type>
 CUDABuffer2DPitchPtr convert_nvdec_frames(
-    const NvDecFrames<media_type>* frames,
+    const NvDecFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
@@ -190,21 +193,21 @@ CUDABuffer2DPitchPtr convert_nvdec_frames(
   TRACE_EVENT(
       "decoding",
       "core::convert_nvdec_frames",
-      perfetto::Flow::ProcessScoped(frames->id));
+      perfetto::Flow::ProcessScoped(frames->get_id()));
   if (index.has_value()) {
     SPDL_FAIL_INTERNAL(
         "Fetching an index from NvDecVideoFrames is not supported.");
   }
-  return frames->buffer;
+  return frames->get_frames_ref()->buffer;
 #endif
 }
 
 template CUDABuffer2DPitchPtr convert_nvdec_frames<MediaType::Image>(
-    const NvDecFrames<MediaType::Image>* frames,
+    const NvDecFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index);
 
 template CUDABuffer2DPitchPtr convert_nvdec_frames<MediaType::Video>(
-    const NvDecFrames<MediaType::Video>* frames,
+    const NvDecFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index);
 
 #ifdef SPDL_USE_NVDEC
@@ -222,14 +225,17 @@ bool same_shape(const std::vector<size_t>& a, const std::vector<size_t>& b) {
 }
 
 template <MediaType media_type>
-void check_consistency(const std::vector<NvDecFrames<media_type>*>& frames) {
+void check_consistency(
+    const std::vector<NvDecFramesWrapperPtr<media_type>>& frames) {
   auto numel = frames.size();
   if (numel == 0) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
-  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->media_format);
-  auto shape = frames[0]->buffer->get_shape();
-  for (auto* f : frames) {
+  auto& f0 = frames[0]->get_frames_ref();
+  auto pix_fmt = static_cast<AVPixelFormat>(f0->media_format);
+  auto shape = f0->buffer->get_shape();
+  for (auto& frm : frames) {
+    auto& f = frm->get_frames_ref();
     if (auto shape_ = f->buffer->get_shape(); !same_shape(shape, shape_)) {
       SPDL_FAIL(fmt::format(
           "Cannot convert the frames as the frames do not have the same size."));
@@ -244,29 +250,30 @@ void check_consistency(const std::vector<NvDecFrames<media_type>*>& frames) {
 #endif
 
 CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
-    const std::vector<NvDecImageFrames*>& batch_frames,
+    const std::vector<NvDecImageFramesWrapperPtr>& batch_frames,
     const std::optional<int>& index) {
 #ifndef SPDL_USE_NVDEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
   TRACE_EVENT("decoding", "core::convert_nvdec_batch_image_frames");
   check_consistency(batch_frames);
-  auto& buf0 = batch_frames[0]->buffer;
+  auto& buf0 = batch_frames[0]->get_frames_ref()->buffer;
 
-  detail::set_current_cuda_context(batch_frames[0]->buffer->p);
+  detail::set_current_cuda_context(buf0->p);
   auto ret = std::make_shared<CUDABuffer2DPitch>(batch_frames.size());
   ret->allocate(buf0->c, buf0->h, buf0->w, buf0->bpp, buf0->channel_last);
 
   cudaStream_t stream = 0;
   for (auto& frame : batch_frames) {
+    auto& buf = frame->get_frames_ref()->buffer;
     CHECK_CUDA(
         cudaMemcpy2DAsync(
             ret->get_next_frame(),
             ret->pitch,
-            (void*)frame->buffer->p,
-            frame->buffer->pitch,
-            frame->buffer->width_in_bytes,
-            frame->buffer->h,
+            (void*)buf->p,
+            buf->pitch,
+            buf->width_in_bytes,
+            buf->h,
             cudaMemcpyDefault,
             stream),
         "Failed to launch cudaMemcpy2DAsync.");
@@ -289,20 +296,15 @@ FuturePtr async_convert_frames_to_cpu(
     FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [=](FFmpegFramesPtr<media_type>&& frms) -> folly::coro::Task<BufferPtr> {
-        if (!frms) {
-          SPDL_FAIL(
-              "The frames object is in invalid state. Perhaps it has been already converted?");
-        }
-        if constexpr (media_type == MediaType::Audio) {
-          co_return convert_audio_frames(frms.get(), index);
-        } else {
-          co_return convert_visual_frames_to_cpu_buffer<media_type>(
-              frms.get(), index);
-        }
-      },
-      frames->unwrap());
+  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
+    if constexpr (media_type == MediaType::Audio) {
+      co_return convert_audio_frames(frames, index);
+    } else {
+      co_return convert_visual_frames_to_cpu_buffer<media_type>(frames, index);
+    }
+    // deallocate in executor thread
+    frames->unwrap();
+  });
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -338,19 +340,15 @@ FuturePtr async_convert_frames(
     FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [=](FFmpegFramesPtr<media_type>&& frms) -> folly::coro::Task<BufferPtr> {
-        if (!frms) {
-          SPDL_FAIL(
-              "The frames object is in invalid state. Perhaps it has been already converted?");
-        }
-        if constexpr (media_type == MediaType::Audio) {
-          co_return convert_audio_frames(frms.get(), index);
-        } else {
-          co_return convert_visual_frames<media_type>(frms.get(), index);
-        }
-      },
-      frames->unwrap());
+  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
+    if constexpr (media_type == MediaType::Audio) {
+      co_return convert_audio_frames(frames, index);
+    } else {
+      co_return convert_visual_frames<media_type>(frames, index);
+    }
+    // Deallocate in executor thread
+    frames->unwrap();
+  });
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -389,16 +387,13 @@ FuturePtr async_convert_nvdec_frames(
     NvDecFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [=](NvDecFramesPtr<media_type>&& frms)
-          -> folly::coro::Task<CUDABuffer2DPitchPtr> {
-        if (!frms) {
-          SPDL_FAIL(
-              "The frames object is in invalid state. Perhaps it has been already converted?");
-        }
-        co_return convert_nvdec_frames<media_type>(frms.get(), index);
-      },
-      frames->unwrap());
+  auto task =
+      folly::coro::co_invoke([=]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
+        // CUDABuffer2DPitchPtr uses shared_ptr, and the CUDA buffer is shared
+        // among Frames class and Buffer class, so unlike CPU case, we do not
+        // need to deallocate here.
+        co_return convert_nvdec_frames<media_type>(frames, index);
+      });
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -425,24 +420,10 @@ template FuturePtr async_convert_nvdec_frames(
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-std::vector<FFmpegImageFramesPtr> unwrap(
-    std::vector<FFmpegImageFramesWrapperPtr> frames) {
-  std::vector<FFmpegImageFramesPtr> ret;
-  ret.reserve(frames.size());
+void unwrap(std::vector<FFmpegImageFramesWrapperPtr> frames) {
   for (auto& frame : frames) {
-    ret.push_back(frame->unwrap());
+    frame->unwrap();
   }
-  return ret;
-}
-
-std::vector<NvDecImageFramesPtr> unwrap(
-    std::vector<NvDecImageFramesWrapperPtr> frames) {
-  std::vector<NvDecImageFramesPtr> ret;
-  ret.reserve(frames.size());
-  for (auto& frame : frames) {
-    ret.push_back(frame->unwrap());
-  }
-  return ret;
 }
 } // namespace
 
@@ -452,21 +433,12 @@ FuturePtr async_batch_convert_frames(
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [=](std::vector<FFmpegImageFramesPtr>&& frms)
-          -> folly::coro::Task<BufferPtr> {
-        if (frms.empty()) {
-          SPDL_FAIL("No frame to convert.");
-        }
-
-        std::vector<FFmpegImageFrames*> _frms;
-        for (auto& f : frms) {
-          _frms.push_back(f.get());
-        }
-
-        co_return convert_batch_image_frames(_frms, index);
-      },
-      unwrap(frames));
+  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
+    auto ret = convert_batch_image_frames(frames, index);
+    // deallocate in executor thread
+    unwrap(frames);
+    co_return ret;
+  });
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -480,21 +452,10 @@ FuturePtr async_batch_convert_nvdec_frames(
     std::vector<NvDecImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [=](std::vector<NvDecImageFramesPtr>&& frms)
-          -> folly::coro::Task<CUDABuffer2DPitchPtr> {
-        if (frms.empty()) {
-          SPDL_FAIL("No frame to convert.");
-        }
-
-        std::vector<NvDecImageFrames*> _frms;
-        for (auto& f : frms) {
-          _frms.push_back(f.get());
-        }
-
-        co_return convert_nvdec_batch_image_frames(_frms, index);
-      },
-      unwrap(frames));
+  auto task =
+      folly::coro::co_invoke([=]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
+        co_return convert_nvdec_batch_image_frames(frames, index);
+      });
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,

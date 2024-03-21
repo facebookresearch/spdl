@@ -183,25 +183,27 @@ namespace {
 } // namespace
 
 template <MediaType media_type>
-FFmpegVideoFrames FFmpegFrames<media_type>::slice(int start, int stop, int step)
-    const requires _IS_VIDEO {
+FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
+    int start,
+    int stop,
+    int step) const requires _IS_VIDEO {
   const int numel = frames.size();
   int len = adjust_indices(numel, &start, &stop, step);
 
-  auto out = FFmpegVideoFrames{id};
+  auto out = std::make_unique<FFmpegVideoFrames>(id);
   if (!len) {
     return out;
   }
 
   for (int i = start; i < stop; i += step) {
     assert(0 <= i && i < numel);
-    out.frames.push_back(detail::make_reference(frames[i]));
+    out->frames.push_back(detail::make_reference(frames[i]));
   }
   return out;
 }
 
 template <MediaType media_type>
-FFmpegImageFrames FFmpegFrames<media_type>::slice(
+FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(
     int i) const requires _IS_VIDEO {
   const int numel = frames.size();
   int stop = i + 1, step = 1;
@@ -209,9 +211,9 @@ FFmpegImageFrames FFmpegFrames<media_type>::slice(
     throw std::out_of_range(
         fmt::format("Index {} is outside of [0, {})", i, frames.size()));
   }
-  auto out = FFmpegFrames<MediaType::Image>{id};
+  auto out = std::make_unique<FFmpegFrames<MediaType::Image>>(id);
   assert(0 <= i && i < numel);
-  out.push_back(detail::make_reference(frames[i]));
+  out->push_back(detail::make_reference(frames[i]));
   return out;
 }
 template struct FFmpegFrames<MediaType::Audio>;
