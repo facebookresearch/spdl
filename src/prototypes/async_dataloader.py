@@ -57,19 +57,24 @@ async def async_decode_image(
     *,
     width=222,
     height=222,
+    pix_fmt="rgba",
     cuda_device_index=None,
 ):
-    filter_desc = f"scale=width={width}:height={height},format=pix_fmts=rgb24"
     packets = await spdl.async_demux_image(path, adoptor=adoptor)
     if cuda_device_index is None:
-        frames = await spdl.async_decode(packets, filter_desc=filter_desc)
+        frames = await spdl.async_decode(
+            packets,
+            width=width,
+            height=height,
+            pix_fmt=pix_fmt,
+        )
     else:
         frames = await spdl.async_decode_nvdec(
             packets,
             cuda_device_index=cuda_device_index,
             width=width,
             height=height,
-            pix_fmt="rgba",
+            pix_fmt=pix_fmt,
         )
     return frames
 
