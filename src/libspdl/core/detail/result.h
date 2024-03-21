@@ -6,34 +6,36 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Result::Impl
 ////////////////////////////////////////////////////////////////////////////////
-template <typename ResultType>
-struct Result<ResultType>::Impl {
+template <MediaType media_type, template <MediaType> typename ResultType>
+struct Result<media_type, ResultType>::Impl {
   bool fetched{false};
-  folly::SemiFuture<ResultType> future;
+  folly::SemiFuture<ResultType<media_type>> future;
 
-  Impl(folly::SemiFuture<ResultType>&& future);
+  Impl(folly::SemiFuture<ResultType<media_type>>&& future);
 
-  ResultType get();
+  ResultType<media_type> get();
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Results::Impl
 ////////////////////////////////////////////////////////////////////////////////
-template <typename ResultType>
-struct Results<ResultType>::Impl {
+template <MediaType media_type, template <MediaType> typename ResultType>
+struct Results<media_type, ResultType>::Impl {
   std::vector<std::string> srcs;
   std::vector<std::tuple<double, double>> timestamps;
 
-  folly::SemiFuture<std::vector<folly::SemiFuture<ResultType>>> future;
+  folly::SemiFuture<std::vector<folly::SemiFuture<ResultType<media_type>>>>
+      future;
 
   bool fetched{false};
 
   Impl(
       std::vector<std::string> srcs,
       std::vector<std::tuple<double, double>> timestamps,
-      folly::SemiFuture<std::vector<folly::SemiFuture<ResultType>>>&& future);
+      folly::SemiFuture<
+          std::vector<folly::SemiFuture<ResultType<media_type>>>>&& future);
 
-  std::vector<ResultType> get(bool strict);
+  std::vector<ResultType<media_type>> get(bool strict);
 };
 
 } // namespace spdl::core
