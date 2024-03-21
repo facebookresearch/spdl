@@ -20,12 +20,13 @@ using folly::coro::Task;
 ////////////////////////////////////////////////////////////////////////////////
 // Result::Impl
 ////////////////////////////////////////////////////////////////////////////////
-template <typename ResultType>
-Result<ResultType>::Impl::Impl(SemiFuture<ResultType>&& f)
+template <MediaType media_type, template <MediaType> typename ResultType>
+Result<media_type, ResultType>::Impl::Impl(
+    SemiFuture<ResultType<media_type>>&& f)
     : future(std::move(f)){};
 
-template <typename ResultType>
-ResultType Result<ResultType>::Impl::get() {
+template <MediaType media_type, template <MediaType> typename ResultType>
+ResultType<media_type> Result<media_type, ResultType>::Impl::get() {
   if (fetched) {
     SPDL_FAIL("The decoding result is already fetched.");
   }
@@ -36,28 +37,29 @@ ResultType Result<ResultType>::Impl::get() {
 ////////////////////////////////////////////////////////////////////////////////
 // Result
 ////////////////////////////////////////////////////////////////////////////////
-template <typename ResultType>
-Result<ResultType>::Result(Impl* i) : pimpl(i) {}
+template <MediaType media_type, template <MediaType> typename ResultType>
+Result<media_type, ResultType>::Result(Impl* i) : pimpl(i) {}
 
-template <typename ResultType>
-Result<ResultType>::Result(Result&& other) noexcept {
+template <MediaType media_type, template <MediaType> typename ResultType>
+Result<media_type, ResultType>::Result(Result&& other) noexcept {
   *this = std::move(other);
 }
 
-template <typename ResultType>
-Result<ResultType>& Result<ResultType>::operator=(Result&& other) noexcept {
+template <MediaType media_type, template <MediaType> typename ResultType>
+Result<media_type, ResultType>& Result<media_type, ResultType>::operator=(
+    Result&& other) noexcept {
   using std::swap;
   swap(pimpl, other.pimpl);
   return *this;
 }
 
-template <typename ResultType>
-Result<ResultType>::~Result() {
+template <MediaType media_type, template <MediaType> typename ResultType>
+Result<media_type, ResultType>::~Result() {
   delete pimpl;
 }
 
-template <typename ResultType>
-ResultType Result<ResultType>::get() {
+template <MediaType media_type, template <MediaType> typename ResultType>
+ResultType<media_type> Result<media_type, ResultType>::get() {
   return pimpl->get();
 }
 
@@ -96,14 +98,14 @@ Task<std::vector<ResultType>> check(
   co_return results;
 }
 
-template <typename ResultType>
-Task<std::vector<ResultType>> check_image(
-    SemiFuture<std::vector<SemiFuture<ResultType>>>&& future,
+template <template <MediaType> typename ResultType>
+Task<std::vector<ResultType<MediaType::Image>>> check_image(
+    SemiFuture<std::vector<SemiFuture<ResultType<MediaType::Image>>>>&& future,
     const std::vector<std::string>& srcs,
     bool strict) {
   auto futures = co_await std::move(future);
 
-  std::vector<ResultType> results;
+  std::vector<ResultType<MediaType::Image>> results;
   int i = -1;
   folly::exception_wrapper e;
   for (auto& result : co_await collectAllTryRange(std::move(futures))) {
@@ -124,24 +126,23 @@ Task<std::vector<ResultType>> check_image(
 
 } // namespace
 
-template <typename ResultType>
-Results<ResultType>::Impl::Impl(
+template <MediaType media_type, template <MediaType> typename ResultType>
+Results<media_type, ResultType>::Impl::Impl(
     std::vector<std::string> srcs_,
     std::vector<std::tuple<double, double>> ts_,
-    SemiFuture<std::vector<SemiFuture<ResultType>>>&& future_)
+    SemiFuture<std::vector<SemiFuture<ResultType<media_type>>>>&& future_)
     : srcs(std::move(srcs_)),
       timestamps(std::move(ts_)),
       future(std::move(future_)){};
 
-template <typename ResultType>
-std::vector<ResultType> Results<ResultType>::Impl::get(bool strict) {
+template <MediaType media_type, template <MediaType> typename ResultType>
+std::vector<ResultType<media_type>> Results<media_type, ResultType>::Impl::get(
+    bool strict) {
   if (fetched) {
     SPDL_FAIL("The decoding result is already fetched.");
   }
   fetched = true;
-  if constexpr (
-      std::is_same<ResultType, FFmpegImageFramesWrapperPtr>::value ||
-      std::is_same<ResultType, NvDecImageFramesWrapperPtr>::value) {
+  if constexpr (media_type == MediaType::Image) {
     return blockingWait(
         check_image<ResultType>(std::move(future), srcs, strict));
   } else {
@@ -152,39 +153,41 @@ std::vector<ResultType> Results<ResultType>::Impl::get(bool strict) {
 ////////////////////////////////////////////////////////////////////////////////
 // Results
 ////////////////////////////////////////////////////////////////////////////////
-template <typename ResultType>
-Results<ResultType>::Results(Impl* i) : pimpl(i) {}
+template <MediaType media_type, template <MediaType> typename ResultType>
+Results<media_type, ResultType>::Results(Impl* i) : pimpl(i) {}
 
-template <typename ResultType>
-Results<ResultType>::Results(Results&& other) noexcept {
+template <MediaType media_type, template <MediaType> typename ResultType>
+Results<media_type, ResultType>::Results(Results&& other) noexcept {
   *this = std::move(other);
 }
 
-template <typename ResultType>
-Results<ResultType>& Results<ResultType>::operator=(Results&& other) noexcept {
+template <MediaType media_type, template <MediaType> typename ResultType>
+Results<media_type, ResultType>& Results<media_type, ResultType>::operator=(
+    Results&& other) noexcept {
   using std::swap;
   swap(pimpl, other.pimpl);
   return *this;
 }
 
-template <typename ResultType>
-Results<ResultType>::~Results() {
+template <MediaType media_type, template <MediaType> typename ResultType>
+Results<media_type, ResultType>::~Results() {
   delete pimpl;
 }
 
-template <typename ResultType>
-std::vector<ResultType> Results<ResultType>::get(bool strict) {
+template <MediaType media_type, template <MediaType> typename ResultType>
+std::vector<ResultType<media_type>> Results<media_type, ResultType>::get(
+    bool strict) {
   return pimpl->get(strict);
 }
 
 // Explicit instantiation
-template class Result<FFmpegImageFramesWrapperPtr>;
-template class Result<NvDecImageFramesWrapperPtr>;
+template class Result<MediaType::Image, FFmpegFramesWrapperPtr>;
+template class Result<MediaType::Image, NvDecFramesWrapperPtr>;
 
-template class Results<FFmpegAudioFramesWrapperPtr>;
-template class Results<FFmpegVideoFramesWrapperPtr>;
-template class Results<FFmpegImageFramesWrapperPtr>;
-template class Results<NvDecVideoFramesWrapperPtr>;
-template class Results<NvDecImageFramesWrapperPtr>;
+template class Results<MediaType::Audio, FFmpegFramesWrapperPtr>;
+template class Results<MediaType::Video, FFmpegFramesWrapperPtr>;
+template class Results<MediaType::Image, FFmpegFramesWrapperPtr>;
+template class Results<MediaType::Video, NvDecFramesWrapperPtr>;
+template class Results<MediaType::Image, NvDecFramesWrapperPtr>;
 
 } // namespace spdl::core

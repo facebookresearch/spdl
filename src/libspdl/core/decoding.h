@@ -43,16 +43,16 @@ FuturePtr async_decode_nvdec(
 ////////////////////////////////////////////////////////////////////////////////
 
 template <MediaType media_type>
-using DecodeResult = Result<FFmpegFramesWrapperPtr<media_type>>;
+using DecodeResult = Result<media_type, FFmpegFramesWrapperPtr>;
 
 template <MediaType media_type>
-using DecodeNvDecResult = Result<NvDecFramesWrapperPtr<media_type>>;
+using DecodeNvDecResult = Result<media_type, NvDecFramesWrapperPtr>;
 
 template <MediaType media_type>
-using BatchDecodeResult = Results<FFmpegFramesWrapperPtr<media_type>>;
+using BatchDecodeResult = Results<media_type, FFmpegFramesWrapperPtr>;
 
 template <MediaType media_type>
-using BatchDecodeNvDecResult = Results<NvDecFramesWrapperPtr<media_type>>;
+using BatchDecodeNvDecResult = Results<media_type, NvDecFramesWrapperPtr>;
 
 // Putting all the decoding functions into this utility, static-only class
 // so that we can make the whole thing friend of result classes without having
@@ -133,7 +133,7 @@ struct decoding {
   /// FFmpeg.
   ///
   template <MediaType media_type>
-  static Results<FFmpegFramesWrapperPtr<media_type>> decode(
+  static Results<media_type, FFmpegFramesWrapperPtr> decode(
       const std::string& src,
       const std::vector<std::tuple<double, double>>& timestamps,
       const SourceAdoptorPtr& adoptor,

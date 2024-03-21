@@ -14,7 +14,7 @@ struct decoding;
 
 /// Future-like object that holds the result of single asynchronous decoding
 /// operation. Used for decoding images.
-template <typename ResultType>
+template <MediaType media_type, template <MediaType> typename ResultType>
 class Result {
   struct Impl;
 
@@ -32,7 +32,7 @@ class Result {
 
   /// Blocks until the decoding is completed and the frame data is ready.
   /// If the decoding operation fails, throws an exception.
-  ResultType get();
+  ResultType<media_type> get();
 
   friend decoding;
 };
@@ -43,7 +43,7 @@ class Result {
 
 /// Future-like object that holds the results of multiple asynchronous decoding
 /// operation. Used for decoding audio and video clips.
-template <typename ResultType>
+template <MediaType media_type, template <MediaType> typename ResultType>
 class Results {
   struct Impl;
 
@@ -68,7 +68,7 @@ class Results {
   /// If ``strict==false``, then exceptions are not propagated. However, if
   /// there is no decoding result to return, (all the decoding operations fail)
   /// it throws an exception.
-  std::vector<ResultType> get(bool strict = true);
+  std::vector<ResultType<media_type>> get(bool strict = true);
 
   friend decoding;
 };

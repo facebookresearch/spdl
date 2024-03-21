@@ -55,7 +55,7 @@ stream_decode_task(
 } // namespace
 
 template <MediaType media_type>
-Results<FFmpegFramesWrapperPtr<media_type>> decoding::decode(
+Results<media_type, FFmpegFramesWrapperPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdoptorPtr& adoptor,
@@ -67,8 +67,8 @@ Results<FFmpegFramesWrapperPtr<media_type>> decoding::decode(
   if (timestamps.size() == 0) {
     SPDL_FAIL("At least one timestamp must be provided.");
   }
-  return Results<FFmpegFramesWrapperPtr<media_type>>{
-      new typename Results<FFmpegFramesWrapperPtr<media_type>>::Impl{
+  return Results<media_type, FFmpegFramesWrapperPtr>{
+      new typename Results<media_type, FFmpegFramesWrapperPtr>::Impl{
           {src},
           timestamps,
           stream_decode_task<media_type>(
@@ -83,7 +83,7 @@ Results<FFmpegFramesWrapperPtr<media_type>> decoding::decode(
               .start()}};
 }
 
-template Results<FFmpegAudioFramesWrapperPtr> decoding::decode(
+template Results<MediaType::Audio, FFmpegFramesWrapperPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdoptorPtr& adoptor,
@@ -93,7 +93,7 @@ template Results<FFmpegAudioFramesWrapperPtr> decoding::decode(
     ThreadPoolExecutorPtr demux_executor,
     ThreadPoolExecutorPtr decode_executor);
 
-template Results<FFmpegVideoFramesWrapperPtr> decoding::decode(
+template Results<MediaType::Video, FFmpegFramesWrapperPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdoptorPtr& adoptor,
