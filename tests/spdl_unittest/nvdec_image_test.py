@@ -9,7 +9,7 @@ DEFAULT_CUDA = 0
 
 
 def _to_array(frame):
-    array = spdl.to_torch(frame)
+    array = spdl.to_torch(libspdl.convert_to_buffer(frame, None))
 
     assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
     return array.cpu().numpy()
