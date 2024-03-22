@@ -32,12 +32,17 @@ def _parse_args(args):
     return parser.parse_args(args)
 
 
-def _iter_flist(flist, id, N):
+def _iter_flist(flist, id, N, max=-1):
     with open(flist, "r") as f:
+        n = 0
         for i, line in enumerate(f):
             path = line.strip()
             if path and i % N == id:
                 yield path
+                n += 1
+
+                if max > 0 and n >= max:
+                    return
 
 
 def _iter_batch(gen, batch_size):
@@ -149,15 +154,19 @@ async def _batch_decode_image(
         libspdl.trace_default_decode_executor_queue_size()
 
 
-async def _process_flist(flist, adoptor, batch_size, cuda_device_index):
+async def _process_flist(flist, adoptor, batch_size, worker_id, use_nvdec):
     num_processed = 0
     t0 = time.monotonic()
+
+    cuda_device_index = worker_id if use_nvdec else None
+    device = f"cuda:{worker_id}"
 
     t_int = t0
     num_processed_int = 0
     async for buffers in _batch_decode_image(
         flist, adoptor, batch_size, cuda_device_index=cuda_device_index
     ):
+        _ = spdl.to_torch(buffers).to(device=device)
         num_processed += buffers.shape[0]
 
         t2 = time.monotonic()
@@ -179,8 +188,7 @@ async def _process_flist(flist, adoptor, batch_size, cuda_device_index):
 
 def bg_worker(flist, adoptor, batch_size, worker_id, num_workers, use_nvdec, loop=None):
     asyncio.set_event_loop(loop or asyncio.new_event_loop())
-    cuda_device_index = worker_id if use_nvdec else None
-    asyncio.run(_process_flist(flist, adoptor, batch_size, cuda_device_index))
+    asyncio.run(_process_flist(flist, adoptor, batch_size, worker_id, use_nvdec))
 
 
 def _benchmark(args):
@@ -194,8 +202,30 @@ def _benchmark(args):
 
     adoptor = spdl.libspdl.BasicAdoptor(args.prefix)
 
+    ################################################################################
+    # Warm up
+    import torch
+
+    torch.zeros([1, 1], device=torch.device(f"cuda:{args.worker_id}"))
+
+    flist = _iter_flist(args.input_flist, args.worker_id, args.num_workers, max=1000)
+    thread = threading.Thread(
+        target=bg_worker,
+        args=(
+            flist,
+            adoptor,
+            args.batch_size,
+            args.worker_id,
+            args.num_workers,
+            args.nvdec,
+        ),
+    )
+    thread.start()
+    thread.join()
+    ################################################################################
+
     flist = _iter_flist(args.input_flist, args.worker_id, args.num_workers)
-    trace_path = f"{args.trace}.{args.worker_id}"
+    trace_path = f"{args.trace}.{args.worker_id}{'.nvdec' if args.nvdec else ''}"
     with spdl.utils.tracing(trace_path, enable=args.trace is not None):
         thread = threading.Thread(
             target=bg_worker,
@@ -215,7 +245,7 @@ def _benchmark(args):
 def _init_logging(debug=False, worker_id=None):
     fmt = "%(asctime)s [%(levelname)s] %(message)s"
     if worker_id is not None:
-        fmt = f"[{worker_id}] {fmt}"
+        fmt = f"[{worker_id}:%(thread)d] {fmt}"
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(format=fmt, level=level)
 
