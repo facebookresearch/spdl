@@ -59,7 +59,7 @@ def _save(array, prefix):
 def _to_arrays(frames):
     ret = []
     for f in frames:
-        array = spdl.to_torch(f)
+        array = spdl.to_torch(libspdl.convert_to_buffer(f, None))
         assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
         ret.append(array.cpu().numpy())
     return ret

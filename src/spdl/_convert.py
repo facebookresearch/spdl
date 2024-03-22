@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 
 from spdl import libspdl
@@ -20,20 +18,27 @@ __all__ = [
 ]
 
 
-def to_numpy(frames, index: Optional[int] = None) -> NDArray:
+def to_numpy(buffer) -> NDArray:
     """Convert to NumPy NDArray.
 
     Args:
-        frames (DecodedFrames): Decoded frames.
+        frames (Buffer): Object implements the array interface protocol.
 
-        index (int or None): The index of plane to be included in the output.
-            For formats like YUV420, in which chroma planes have different sizes
-            than luma plane, this argument can be used to select a specific plane.
+    See also:
+        https://numpy.org/doc/stable/reference/arrays.interface.html
     """
-    return np.array(libspdl.convert_to_cpu_buffer(frames, index), copy=False)
+    return np.array(buffer, copy=False)
 
 
-def _to_torch(buffer):
+def to_torch(buffer):
+    """Convert to PyTorch Tensor.
+
+    Args:
+        buffer (Buffer): Object implements the (CUDA) array interface protocol.
+
+    Returns:
+        torch.Tensor: A PyTorch Tensor.
+    """
     if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
         index = libspdl.get_cuda_device_index(data_ptr)
@@ -48,31 +53,15 @@ def _to_torch(buffer):
     return torch.as_tensor(np.array(buffer, copy=False))
 
 
-def to_torch(frames, index: Optional[int] = None):
-    """Convert to PyTorch Tensor.
-
-    Args:
-        frames (DecodedFrames): Decoded frames.
-
-        index (int or None): The index of plane to be included in the output.
-            For formats like YUV420, in which chroma planes have different sizes
-            than luma plane, this argument can be used to select a specific plane.
-    """
-    return _to_torch(libspdl.convert_to_buffer(frames, index))
-
-
-def to_numba(frames, index: Optional[int] = None):
+def to_numba(buffer):
     """Convert to Numba DeviceNDArray or NumPy NDArray.
 
     Args:
-        frames (DecodedFrames): Decoded frames.
+        buffer (Buffer): Object implements the (CUDA) array interface protocol.
 
-        index (int or None): The index of plane to be included in the output.
-            For formats like YUV420, in which chroma planes have different sizes
-            than luma plane, this argument can be used to select a specific plane.
+    Returns:
+        DeviceNDArray or NDArray: A Numba DeviceNDArray or NumPy NDArray.
     """
-    buffer = libspdl.convert_to_buffer(frames, index)
-
     if buffer.is_cuda:
         return cuda.as_cuda_array(buffer)
 
