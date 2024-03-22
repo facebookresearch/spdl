@@ -91,13 +91,26 @@ class PacketsWrapper {
   PacketsPtr<media_type> packets;
 
  public:
-  PacketsWrapper(PacketsPtr<media_type>&& p) : packets(std::move(p)){};
+  PacketsWrapper(PacketsPtr<media_type>&& p) : packets(std::move(p)) {
+    if (!packets) {
+      throw std::runtime_error(
+          "[INTERNAL ERROR] Empty packet is passed to wrap().");
+    }
+  };
 
   PacketsPtr<media_type> unwrap() {
+    if (!packets) {
+      throw std::runtime_error(
+          "Packets is in invalid state. Perhaps it's already released?");
+    }
     return std::move(packets);
   }
 
   const PacketsPtr<media_type>& get_packets() const {
+    if (!packets) {
+      throw std::runtime_error(
+          "Packets is in invalid state. Perhaps it's already released?");
+    }
     return packets;
   }
 };
