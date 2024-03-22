@@ -64,4 +64,7 @@ void trace_counter(int i, Number counter);
 void trace_event_begin(const std::string& name);
 void trace_event_end();
 
+void trace_default_demux_executor_queue_size();
+void trace_default_decode_executor_queue_size();
+
 } // namespace spdl::core

@@ -112,33 +112,41 @@ async def _batch_decode_image(
     path_exhausted = False
     decoding = set()
 
+    timeout = 3 / 1000
     while not path_exhausted or decoding:
         # 1. Queue demuxing
-        while not path_exhausted and len(decoding) < 3:
-            try:
-                paths = next(paths_gen)
-            except StopIteration:
-                path_exhausted = True
-                break
-            else:
-                coro = async_batch_decode_image(
-                    paths,
-                    adoptor,
-                    width=width,
-                    height=height,
-                    cuda_device_index=cuda_device_index,
-                )
-                decoding.add(asyncio.create_task(coro))
+        if not path_exhausted and len(decoding) < 10:
+            for _ in range(3 if decoding else 10):
+                try:
+                    paths = next(paths_gen)
+                except StopIteration:
+                    path_exhausted = True
+                    break
+                else:
+                    coro = async_batch_decode_image(
+                        paths,
+                        adoptor,
+                        width=width,
+                        height=height,
+                        cuda_device_index=cuda_device_index,
+                    )
+                    decoding.add(asyncio.create_task(coro))
+
+        libspdl.trace_default_demux_executor_queue_size()
+        libspdl.trace_default_decode_executor_queue_size()
 
         # 2. Check the state of decoding and queue conversion
         done, decoding = await asyncio.wait(
-            decoding, return_when=asyncio.FIRST_COMPLETED
+            decoding, timeout=timeout, return_when=asyncio.FIRST_COMPLETED
         )
         for result in done:
             if err := result.exception():
                 _LG.exception("Failed to batch decode images.", exc_info=err)
             else:
                 yield result.result()
+
+        libspdl.trace_default_demux_executor_queue_size()
+        libspdl.trace_default_decode_executor_queue_size()
 
 
 async def _process_flist(flist, adoptor, batch_size, cuda_device_index):

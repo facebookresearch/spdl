@@ -28,6 +28,8 @@ struct ThreadPoolExecutor {
       const std::string& thread_name_prefix,
       int throttle_interval);
   ~ThreadPoolExecutor();
+
+  size_t get_task_queue_size() const;
 };
 
 } // namespace spdl::core

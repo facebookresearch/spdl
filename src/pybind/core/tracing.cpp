@@ -21,6 +21,13 @@ void register_tracing(py::module& m) {
   m.def("trace_counter", &trace_counter<double>);
   m.def("trace_event_begin", &trace_event_begin);
   m.def("trace_event_end", &trace_event_end);
+
+  m.def(
+      "trace_default_demux_executor_queue_size",
+      &trace_default_demux_executor_queue_size);
+  m.def(
+      "trace_default_decode_executor_queue_size",
+      &trace_default_decode_executor_queue_size);
 }
 
 } // namespace spdl::core
