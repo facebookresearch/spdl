@@ -5,6 +5,7 @@
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 
+#include <cstddef>
 #include <memory>
 
 namespace spdl::core {
@@ -25,6 +26,8 @@ struct ThreadPoolExecutor::Impl {
       int throttle_interval);
 
   folly::Executor::KeepAlive<> get();
+
+  size_t get_task_queue_size() const;
 };
 
 } // namespace spdl::core

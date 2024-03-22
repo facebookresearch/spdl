@@ -14,4 +14,8 @@ ThreadPoolExecutor::~ThreadPoolExecutor() {
   delete impl;
 }
 
+size_t ThreadPoolExecutor::get_task_queue_size() const {
+  return impl->get_task_queue_size();
+}
+
 } // namespace spdl::core
