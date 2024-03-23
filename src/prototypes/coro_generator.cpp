@@ -1,3 +1,4 @@
+#include <folly/CancellationToken.h>
 #include <folly/experimental/coro/AsyncGenerator.h>
 #include <folly/experimental/coro/BlockingWait.h>
 #include <folly/experimental/coro/Task.h>
@@ -17,7 +18,7 @@ struct Foo {
 
 struct Deleter {
   void operator()(Foo* p) {
-    XLOG(ERR) << "Deleting Foo* " << p << std::endl;
+    XLOG(ERR) << "  Deleting Foo* " << p;
     delete p;
   }
 };
@@ -37,7 +38,10 @@ struct Bar {
   std::vector<Foo*> foos{};
   ~Bar() {
     XLOG(ERR) << "Deleting Bar: " << foos.size();
-    std::for_each(foos.begin(), foos.end(), [](Foo* p) { delete p; });
+    std::for_each(foos.begin(), foos.end(), [](Foo* p) {
+      XLOG(ERR) << "Foo* = " << p;
+      delete p;
+    });
   }
   Bar(Bar&& other) = default;
 };
@@ -45,6 +49,7 @@ struct Bar {
 folly::coro::AsyncGenerator<Bar&&> gen_move2() {
   co_yield Bar(1);
   co_yield Bar(2);
+  co_await folly::coro::co_safe_point;
   co_yield Bar(3);
 }
 
@@ -56,10 +61,28 @@ folly::coro::Task<void> run_gen() {
   co_return;
 }
 
+template <typename T>
+folly::coro::Task<T> run_task(folly::coro::Task<T>&& task) {
+  auto cs = folly::CancellationSource{};
+
+  auto result = co_await folly::coro::co_invoke(
+      [&](folly::CancellationSource cs_, folly::coro::Task<T>&& task_)
+          -> folly::coro::Task<folly::Try<folly::Unit>> {
+        cs_.requestCancellation();
+        co_return co_await folly::coro::co_awaitTry(
+            folly::coro::co_withCancellation(cs_.getToken(), std::move(task_)));
+      },
+      cs,
+      std::move(task));
+  if (const std::exception* ex = result.tryGetExceptionObject()) {
+    LOG(ERROR) << "Failed with error: " << ex->what();
+  }
+}
+
 int main(int nargs, char** argv) {
   {
     folly::Init init{&nargs, &argv};
-    folly::coro::blockingWait(
-        run_gen().scheduleOn(folly::getGlobalCPUExecutor().get()));
+    folly::coro::blockingWait(run_task<void>(run_gen()).scheduleOn(
+        folly::getGlobalCPUExecutor().get()));
   }
 }
