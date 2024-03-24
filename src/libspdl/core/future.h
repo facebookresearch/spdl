@@ -30,6 +30,8 @@ struct Future {
   /// Does nothing if there was no internal error.
   /// If the future is not complete, it will throw `FutureNotReady` exception.
   void rethrow();
+
+  void cancel();
 };
 
 } // namespace spdl::core

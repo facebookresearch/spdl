@@ -4,8 +4,14 @@
 
 namespace spdl::core {
 
-Future::Impl::Impl(folly::SemiFuture<folly::Unit>&& fut)
-    : future(std::move(fut)) {}
+Future::Impl::Impl(
+    folly::SemiFuture<folly::Unit>&& fut,
+    folly::CancellationSource&& cs_)
+    : future(std::move(fut)), cs(std::move(cs_)) {}
+
+void Future::Impl::cancel() {
+  cs.requestCancellation();
+}
 
 Future::Future(Future::Impl* p) : pimpl(p) {}
 
@@ -29,6 +35,10 @@ void Future::rethrow() {
   if (pimpl->future.hasException()) {
     pimpl->future.value();
   }
+}
+
+void Future::cancel() {
+  pimpl->cancel();
 }
 
 } // namespace spdl::core

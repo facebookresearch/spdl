@@ -137,3 +137,51 @@ def test_batch_decode_image(get_samples):
         assert buffer.shape == [250, 3, 240, 320]
 
     asyncio.run(_test())
+
+
+def test_cancellation():
+    """Async task is cancellable"""
+
+    async def _test():
+        loop = asyncio.get_running_loop()
+
+        task = loop.create_task(spdl.async_sleep(3000))
+        await asyncio.sleep(0)
+        task.cancel()
+        with pytest.raises(RuntimeError, match="coroutine operation cancelled"):
+            await task
+
+    asyncio.run(_test())
+
+
+def test_cancellation_wait_for():
+    """Multiple tasks awaited with `wait` are cancelled simultaneously"""
+
+    async def _test():
+        loop = asyncio.get_running_loop()
+
+        task = loop.create_task(spdl.async_sleep(1000))
+        with pytest.raises(RuntimeError, match="coroutine operation cancelled"):
+            await asyncio.wait_for(task, timeout=0.1)
+
+    asyncio.run(_test())
+
+
+def test_cancellation_multi_gather():
+    """Multiple tasks awaited with `gather` are cancelled simultaneously"""
+
+    async def _test(N: int):
+        loop = asyncio.get_running_loop()
+
+        tasks = [loop.create_task(spdl.async_sleep(3000)) for _ in range(N)]
+        task = asyncio.gather(*tasks, return_exceptions=True)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        assert len(tasks) == N
+        for t in tasks:
+            with pytest.raises(asyncio.CancelledError):
+                await t
+
+    asyncio.run(_test(3))

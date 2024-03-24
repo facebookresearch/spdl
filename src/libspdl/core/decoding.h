@@ -38,6 +38,13 @@ FuturePtr async_decode_nvdec(
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr decode_executor);
 
+// Function for test
+FuturePtr async_sleep(
+    std::function<void(int)> set_result,
+    std::function<void()> notify_exception,
+    int milliseconds,
+    ThreadPoolExecutorPtr executor);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Synchronous decodings
 ////////////////////////////////////////////////////////////////////////////////

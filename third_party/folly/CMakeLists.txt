@@ -92,9 +92,13 @@ set(
   "${base_dir}/folly/fibers/Semaphore.cpp"
 
   "${base_dir}/folly/futures/detail/Core.cpp"
+  "${base_dir}/folly/futures/Future.cpp"
+  "${base_dir}/folly/futures/HeapTimekeeper.cpp"
+  "${base_dir}/folly/futures/ThreadWheelTimekeeper.cpp"
 
   "${base_dir}/folly/executors/GlobalExecutor.cpp"
   "${base_dir}/folly/executors/GlobalThreadPoolList.cpp"
+  "${base_dir}/folly/executors/InlineExecutor.cpp"
   "${base_dir}/folly/executors/IOThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/ThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/CPUThreadPoolExecutor.cpp"
