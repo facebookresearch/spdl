@@ -1,5 +1,6 @@
 #include "libspdl/core/detail/ffmpeg/decoding.h"
 
+#include <folly/experimental/coro/CurrentExecutor.h>
 #include <libspdl/core/adoptor/basic.h>
 #include <libspdl/core/types.h>
 
@@ -87,6 +88,7 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
 
   double packet_ts = -1;
   do {
+    co_await folly::coro::co_safe_point;
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
     int errnum;
     {
@@ -120,6 +122,7 @@ folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
 
   for (auto& timestamp : timestamps) {
+    co_await folly::coro::co_safe_point;
     auto package = std::make_unique<DemuxedPackets<media_type>>(
         fmt_ctx->url,
         timestamp,
@@ -167,6 +170,7 @@ folly::coro::Task<ImagePacketsPtr> demux_image(
 
   int ite = 0;
   do {
+    co_await folly::coro::co_safe_point;
     ++ite;
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
     int errnum;
@@ -262,6 +266,7 @@ folly::coro::Task<VideoPacketsPtr> apply_bsf(VideoPacketsPtr packets) {
       packets->time_base,
       packets->frame_rate);
   for (auto& packet : packets->get_packets()) {
+    co_await folly::coro::co_safe_point;
     AVPacketPtr filtered = apply_bsf(bsf_ctx.get(), packet);
     package->push(filtered.release());
   }
@@ -290,6 +295,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
 
   AVFrameAutoUnref frame_ref{frame};
   while (errnum >= 0) {
+    co_await folly::coro::co_safe_point;
     AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
     {
       TRACE_EVENT("decoding", "av_buffersrc_get_frame");
@@ -326,6 +332,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
     errnum = avcodec_send_packet(codec_ctx, packet);
   }
   while (errnum >= 0) {
+    co_await folly::coro::co_safe_point;
     AVFramePtr frame{CHECK_AVALLOCATE(av_frame_alloc())};
     {
       TRACE_EVENT("decoding", "avcodec_receive_frame");
@@ -357,6 +364,7 @@ folly::coro::Task<void> decode_pkts(
   for (auto& packet : packets->get_packets()) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto frame = co_await decoding.next()) {
+      co_await folly::coro::co_safe_point;
       AVFramePtr f = *frame;
       if (f) {
         double ts = TS(f, codec_ctx->pkt_timebase);
@@ -399,6 +407,7 @@ folly::coro::Task<void> decode_pkts_with_filter(
   for (auto& packet : packets->get_packets()) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
+      co_await folly::coro::co_safe_point;
       AVFramePtr rf = *raw_frame;
 
       XLOG(DBG9)
