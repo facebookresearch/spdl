@@ -5,6 +5,7 @@
 
 #include <folly/Singleton.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/ExecutorWithPriority.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <folly/system/HardwareConcurrency.h>
@@ -30,10 +31,13 @@ class DecoderTag {};
 
 CPUThreadPoolExecutor* get_executor(
     size_t num_threads,
-    const std::string& thread_name_prefix) {
+    const std::string& thread_name_prefix,
+    int num_priorities = 1) {
   return new CPUThreadPoolExecutor(
       num_threads ? num_threads : hardware_concurrency(),
-      CPUThreadPoolExecutor::makeDefaultQueue(),
+      num_priorities == 1
+          ? CPUThreadPoolExecutor::makeDefaultQueue()
+          : CPUThreadPoolExecutor::makeDefaultPriorityQueue(num_priorities),
       std::make_shared<NamedThreadFactory>(thread_name_prefix));
 }
 
@@ -41,7 +45,8 @@ Singleton<std::shared_ptr<CPUThreadPoolExecutor>, DemuxerTag> DEMUX_EXECUTOR(
     [] {
       return new std::shared_ptr<CPUThreadPoolExecutor>(get_executor(
           FLAGS_spdl_demuxer_executor_threads,
-          "DefaultDemuxThreadPoolExecutor"));
+          "DefaultDemuxThreadPoolExecutor",
+          2));
     });
 
 Singleton<std::shared_ptr<CPUThreadPoolExecutor>, DecoderTag> DECODE_EXECUTOR(
@@ -51,14 +56,22 @@ Singleton<std::shared_ptr<CPUThreadPoolExecutor>, DecoderTag> DECODE_EXECUTOR(
           "DefaultDecodeThreadPoolExecutor"));
     });
 
-} // namespace
-
 Executor::KeepAlive<> get_default_demux_executor() {
   auto executorPtrPtr = DEMUX_EXECUTOR.try_get();
   if (!executorPtrPtr) {
     SPDL_FAIL("Requested Demuxer executor during shutdown.");
   }
   return getKeepAliveToken(executorPtrPtr->get());
+}
+
+Executor::KeepAlive<> get_default_demux_executor_high_prio() {
+  return ExecutorWithPriority::create(
+      get_default_demux_executor(), Executor::HI_PRI);
+}
+
+Executor::KeepAlive<> get_default_demux_executor_low_prio() {
+  return ExecutorWithPriority::create(
+      get_default_demux_executor(), Executor::LO_PRI);
 }
 
 Executor::KeepAlive<> get_default_decode_executor() {
@@ -69,8 +82,15 @@ Executor::KeepAlive<> get_default_decode_executor() {
   return getKeepAliveToken(executorPtrPtr->get());
 }
 
+} // namespace
+
 folly::Executor::KeepAlive<> get_demux_executor(ThreadPoolExecutorPtr& exe) {
-  return exe ? exe->impl->get() : get_default_demux_executor();
+  return exe ? exe->impl->get() : get_default_demux_executor_low_prio();
+}
+
+folly::Executor::KeepAlive<> get_demux_executor_high_prio(
+    ThreadPoolExecutorPtr& exe) {
+  return exe ? exe->impl->get() : get_default_demux_executor_high_prio();
 }
 
 folly::Executor::KeepAlive<> get_decode_executor(ThreadPoolExecutorPtr& exe) {

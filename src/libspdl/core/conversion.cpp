@@ -309,7 +309,7 @@ FuturePtr async_convert_frames_to_cpu(
       std::move(task),
       set_result,
       notify_exception,
-      detail::get_demux_executor(executor));
+      detail::get_demux_executor_high_prio(executor));
 }
 
 template FuturePtr async_convert_frames_to_cpu(
@@ -353,7 +353,7 @@ FuturePtr async_convert_frames(
       std::move(task),
       set_result,
       notify_exception,
-      detail::get_demux_executor(executor));
+      detail::get_demux_executor_high_prio(executor));
 }
 
 template FuturePtr async_convert_frames(
@@ -398,7 +398,7 @@ FuturePtr async_convert_nvdec_frames(
       std::move(task),
       set_result,
       notify_exception,
-      detail::get_demux_executor(executor));
+      detail::get_demux_executor_high_prio(executor));
 }
 
 template FuturePtr async_convert_nvdec_frames(
@@ -443,7 +443,7 @@ FuturePtr async_batch_convert_frames(
       std::move(task),
       set_result,
       notify_exception,
-      detail::get_demux_executor(executor));
+      detail::get_demux_executor_high_prio(executor));
 }
 
 FuturePtr async_batch_convert_nvdec_frames(
@@ -460,6 +460,6 @@ FuturePtr async_batch_convert_nvdec_frames(
       std::move(task),
       set_result,
       notify_exception,
-      detail::get_demux_executor(executor));
+      detail::get_demux_executor_high_prio(executor));
 }
 } // namespace spdl::core
