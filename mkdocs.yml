@@ -43,6 +43,9 @@ nav:
       - Macros: "libspdl/macros.md"
       - Files: "libspdl/files.md"
       - Pages: "libspdl/pages.md"
+  - "Development Note":
+      - "dev_notes/structure_of_packets_and_frames.md"
+      - "dev_notes/async.md"
 
 markdown_extensions:
   - admonition
