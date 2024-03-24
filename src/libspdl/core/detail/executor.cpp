@@ -16,32 +16,10 @@ FOLLY_GFLAGS_DEFINE_uint32(
     4,
     "The number of threads the default demux executor creates.");
 
-FOLLY_GFLAGS_DEFINE_bool(
-    spdl_demuxer_executor_use_throttled_lifo_sem,
-    true,
-    "Use throttled LIFO semaphore in the default demux executor thread pool.");
-
-FOLLY_GFLAGS_DEFINE_uint32(
-    spdl_demuxer_executor_wake_up_interval_us,
-    500,
-    "If --spdl_demuxer_executor_use_throttled_lifo_sem is true, use this "
-    "wake-up interval (in microseconds) in ThrottledLifoSem");
-
 FOLLY_GFLAGS_DEFINE_uint32(
     spdl_decoder_executor_threads,
     8,
     "The number of threads the default decode executor creates.");
-
-FOLLY_GFLAGS_DEFINE_bool(
-    spdl_decoder_executor_use_throttled_lifo_sem,
-    false,
-    "Use throttled LIFO semaphore in the default decode executor thread pool.");
-
-FOLLY_GFLAGS_DEFINE_uint32(
-    spdl_decoder_executor_wake_up_interval_us,
-    0,
-    "If --spdl_decoder_executor_use_throttled_lifo_sem is true, use this "
-    "wake-up interval (in microseconds) in ThrottledLifoSem");
 
 namespace spdl::core {
 namespace detail {
@@ -52,13 +30,10 @@ class DecoderTag {};
 
 CPUThreadPoolExecutor* get_executor(
     size_t num_threads,
-    int throttle_interval,
     const std::string& thread_name_prefix) {
   return new CPUThreadPoolExecutor(
       num_threads ? num_threads : hardware_concurrency(),
-      throttle_interval >= 0 ? CPUThreadPoolExecutor::makeThrottledLifoSemQueue(
-                                   std::chrono::microseconds{throttle_interval})
-                             : CPUThreadPoolExecutor::makeDefaultQueue(),
+      CPUThreadPoolExecutor::makeDefaultQueue(),
       std::make_shared<NamedThreadFactory>(thread_name_prefix));
 }
 
@@ -66,9 +41,6 @@ Singleton<std::shared_ptr<CPUThreadPoolExecutor>, DemuxerTag> DEMUX_EXECUTOR(
     [] {
       return new std::shared_ptr<CPUThreadPoolExecutor>(get_executor(
           FLAGS_spdl_demuxer_executor_threads,
-          FLAGS_spdl_demuxer_executor_use_throttled_lifo_sem
-              ? FLAGS_spdl_demuxer_executor_wake_up_interval_us
-              : -1,
           "DefaultDemuxThreadPoolExecutor"));
     });
 
@@ -76,9 +48,6 @@ Singleton<std::shared_ptr<CPUThreadPoolExecutor>, DecoderTag> DECODE_EXECUTOR(
     [] {
       return new std::shared_ptr<CPUThreadPoolExecutor>(get_executor(
           FLAGS_spdl_decoder_executor_threads,
-          FLAGS_spdl_decoder_executor_use_throttled_lifo_sem
-              ? FLAGS_spdl_decoder_executor_wake_up_interval_us
-              : -1,
           "DefaultDecodeThreadPoolExecutor"));
     });
 
@@ -112,12 +81,8 @@ folly::Executor::KeepAlive<> get_decode_executor(ThreadPoolExecutorPtr& exe) {
 
 ThreadPoolExecutor::Impl::Impl(
     size_t num_threads,
-    const std::string& thread_name_prefix,
-    int throttle_interval)
-    : exec(detail::get_executor(
-          num_threads,
-          throttle_interval,
-          thread_name_prefix)) {}
+    const std::string& thread_name_prefix)
+    : exec(detail::get_executor(num_threads, thread_name_prefix)) {}
 
 folly::Executor::KeepAlive<> ThreadPoolExecutor::Impl::get() {
   return getKeepAliveToken(exec.get());

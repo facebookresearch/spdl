@@ -13,10 +13,9 @@ void register_executor(py::module& m) {
 
   _ThreadPoolExecutor
       .def(
-          py::init<size_t, const std::string&, int>(),
+          py::init<size_t, const std::string&>(),
           py::arg("num_threads"),
-          py::arg("thread_name_prefix"),
-          py::arg("throttle_interval") = 0)
+          py::arg("thread_name_prefix"))
       .def("get_task_queue_size", &ThreadPoolExecutor::get_task_queue_size);
 }
 } // namespace spdl::core
