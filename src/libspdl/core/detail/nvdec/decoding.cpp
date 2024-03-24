@@ -39,6 +39,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     int target_width,
     int target_height,
     const std::optional<std::string> pix_fmt) {
+  co_await folly::coro::co_safe_point;
   size_t num_packets = packets->num_packets();
   assert(num_packets > 0);
 
@@ -100,6 +101,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
 
   flags |= CUVID_PKT_ENDOFPICTURE;
   for (; it < num_packets - 1; ++it) {
+    co_await folly::coro::co_safe_point;
     auto pkt = _PKT(it);
     XLOG(DBG9) << fmt::format(
         " -- packet  PTS={:.3f} ({})", _PTS(pkt), pkt->pts);
