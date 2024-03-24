@@ -14,7 +14,9 @@ namespace spdl::core {
 
 struct Future::Impl {
   folly::SemiFuture<folly::Unit> future;
-  Impl(folly::SemiFuture<folly::Unit>&&);
+  folly::CancellationSource cs;
+  Impl(folly::SemiFuture<folly::Unit>&&, folly::CancellationSource&&);
+  void cancel();
 };
 
 namespace detail {
@@ -25,10 +27,13 @@ FuturePtr execute_task_with_callback(
     std::function<void(ValueType)> set_result,
     std::function<void()> notify_exception,
     folly::Executor::KeepAlive<> executor) {
+  auto cs = folly::CancellationSource{};
   auto task_cb = folly::coro::co_invoke(
-      [=](folly::coro::Task<ValueType>&& t) -> folly::coro::Task<void> {
+      [=](folly::coro::Task<ValueType>&& task,
+          folly::CancellationToken&& token) -> folly::coro::Task<void> {
         try {
-          set_result(co_await std::move(t));
+          set_result(co_await folly::coro::co_withCancellation(
+              token, std::move(task)));
           co_return;
         } catch (std::exception& e) {
           XLOG(ERR) << e.what();
@@ -39,10 +44,12 @@ FuturePtr execute_task_with_callback(
           throw;
         }
       },
-      std::move(task));
+      std::move(task),
+      cs.getToken());
 
   auto future = std::move(task_cb).scheduleOn(executor).start();
-  return std::make_unique<Future>(new Future::Impl(std::move(future)));
+  return std::make_unique<Future>(
+      new Future::Impl(std::move(future), std::move(cs)));
 }
 
 template <typename ValueType>
@@ -54,8 +61,10 @@ FuturePtr execute_generator_with_callback(
   using folly::coro::AsyncGenerator;
   using folly::coro::Task;
 
+  auto cs = folly::CancellationSource{};
   auto task_cb = folly::coro::co_invoke(
-      [=](AsyncGenerator<ValueType>&& gen) -> Task<void> {
+      [=](AsyncGenerator<ValueType>&& gen,
+          folly::CancellationToken&& token) -> Task<void> {
         try {
           while (auto val = co_await gen.next()) {
             set_result({*val});
@@ -71,10 +80,12 @@ FuturePtr execute_generator_with_callback(
           throw;
         }
       },
-      std::move(generator));
+      std::move(generator),
+      cs.getToken());
 
   auto future = std::move(task_cb).scheduleOn(executor).start();
-  return std::make_unique<Future>(new Future::Impl(std::move(future)));
+  return std::make_unique<Future>(
+      new Future::Impl(std::move(future), std::move(cs)));
 }
 
 } // namespace detail

@@ -12,6 +12,7 @@ _task = [
     "async_decode",
     "async_decode_nvdec",
     "async_demux_image",
+    "async_sleep",
 ]
 
 _generator = [
@@ -30,6 +31,12 @@ def __getattr__(name: str) -> Any:
         if name in _generator:
             return _to_async_generator(func)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+# Exception class used to signal the failure of C++ op to Python.
+# Not exposed to user code.
+class _AsyncOpFailed(Exception):
+    pass
 
 
 # The time it waits before rethrowing the async exception.
@@ -113,14 +120,31 @@ def _to_async_task(func):
         assert future.set_running_or_notify_cancel()
 
         def nofify_exception():
-            future.set_exception(RuntimeError("Async operation failed."))
+            future.set_exception(_AsyncOpFailed())
 
         sf = func(future.set_result, nofify_exception, *args, **kwargs)
 
         try:
             return await asyncio.futures.wrap_future(future)
-        except RuntimeError:
+        except _AsyncOpFailed:
             pass
+        except asyncio.CancelledError:
+            sf.cancel()
+            # Wait till the cancellation is completed, then
+            # move to the rethrow part
+            try:
+                await asyncio.futures.wrap_future(future)
+            except _AsyncOpFailed:
+                pass
+        except Exception:
+            sf.cancel()
+            # Wait till the cancellation is completed, then
+            # re-raise the original error
+            try:
+                await asyncio.futures.wrap_future(future)
+            except _AsyncOpFailed:
+                pass
+            raise
 
         await asyncio.sleep(_EXCEPTION_BACKOFF)
         sf.rethrow()
@@ -145,17 +169,31 @@ def _to_async_generator(func):
                 futures.append(future)
 
         def notify_exception():
-            futures[-1].set_exception(RuntimeError("Async operation failed."))
+            futures[-1].set_exception(_AsyncOpFailed())
 
         sf = func(set_result, notify_exception, *args, **kwargs)
         while futures:
             try:
                 val = await asyncio.futures.wrap_future(futures[0])
-            except RuntimeError:
-                # The error here is the one from notify_exception function, so
-                # we absorb it. The actual error will be thrown from the underlying
-                # `folly::SemiFuture` in the next phase.
+            except _AsyncOpFailed:
                 break
+            except asyncio.CancelledError:
+                sf.cancel()
+                # Wait till the cancellation is completed, then
+                # move to the rethrow part
+                try:
+                    await asyncio.futures.wrap_future(futures[0])
+                except _AsyncOpFailed:
+                    pass
+            except Exception:
+                sf.cancel()
+                # Wait till the cancellation is completed, then
+                # re-raise the original error
+                try:
+                    await asyncio.futures.wrap_future(futures[0])
+                except _AsyncOpFailed:
+                    pass
+                raise
             else:
                 if val is None:
                     return

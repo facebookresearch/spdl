@@ -31,6 +31,14 @@ void register_decoding(py::module& m) {
   // Async decoding - FFMPEG
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
+      "async_sleep",
+      &async_sleep,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("duration"),
+      py::arg("decode_executor") = nullptr);
+
+  m.def(
       "async_decode",
       [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,

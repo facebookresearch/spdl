@@ -29,6 +29,7 @@ set(srcs
   libspdl/core/decoding/nvdec.cpp
   libspdl/core/decoding/nvdec_async.cpp
   libspdl/core/decoding/ffmpeg_async.cpp
+  libspdl/core/decoding/sleep.cpp
   libspdl/core/executor.cpp
   libspdl/core/demuxing.cpp
   libspdl/core/future.cpp
