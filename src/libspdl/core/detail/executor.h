@@ -20,10 +20,7 @@ folly::Executor::KeepAlive<> get_decode_executor(ThreadPoolExecutorPtr& exe);
 struct ThreadPoolExecutor::Impl {
   std::shared_ptr<folly::CPUThreadPoolExecutor> exec;
 
-  Impl(
-      size_t num_threads,
-      const std::string& thread_name_prefix,
-      int throttle_interval);
+  Impl(size_t num_threads, const std::string& thread_name_prefix);
 
   folly::Executor::KeepAlive<> get();
 
