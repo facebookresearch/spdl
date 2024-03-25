@@ -212,6 +212,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   if (cb_disabled) {
     return 1;
   }
+  TRACE_EVENT("nvdec", "handle_video_sequence");
 
   XLOG(DBG9) << print(video_fmt);
 
@@ -279,6 +280,7 @@ int NvDecDecoder::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   if (cb_disabled) {
     return 1;
   }
+  TRACE_EVENT("nvdec", "handle_decode_picture");
 
   // XLOG(INFO) << "Received decoded pictures.";
   // XLOG(INFO) << print(pic_params);
@@ -311,6 +313,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   if (cb_disabled) {
     return 1;
   }
+  TRACE_EVENT("nvdec", "handle_display_picture");
 
   // XLOG(INFO) << "Received display pictures.";
   // XLOG(INFO) << print(disp_info);
@@ -357,6 +360,7 @@ int NvDecDecoder::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
   if (cb_disabled) {
     return 1;
   }
+  TRACE_EVENT("nvdec", "handle_operating_point");
 
   // XLOG(INFO) << "Received operating points.";
 
