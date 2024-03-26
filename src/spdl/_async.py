@@ -7,8 +7,16 @@ import spdl.libspdl
 
 _task = [
     "async_apply_bsf",
-    "async_convert",
-    "async_convert_cpu",
+    "async_convert_audio",
+    "async_convert_image",
+    "async_convert_video",
+    "async_convert_audio_cpu",
+    "async_convert_image_cpu",
+    "async_convert_video_cpu",
+    "async_convert_image_nvdec",
+    "async_convert_video_nvdec",
+    "async_convert_batch_image",
+    "async_convert_batch_image_nvdec",
     "async_decode",
     "async_decode_nvdec",
     "async_demux_image",

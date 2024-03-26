@@ -101,7 +101,10 @@ async def async_batch_decode_image(
             _LG.exception("Failed to decode %s", paths[i], exc_info=result)
             continue
         frames.append(result)
-    return await spdl.async_convert(frames)
+    if cuda_device_index is None:
+        return await spdl.async_convert_batch_image(frames)
+    else:
+        return await spdl.async_convert_batch_image_nvdec(frames)
 
 
 async def _batch_decode_image(
