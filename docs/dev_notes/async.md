@@ -229,7 +229,7 @@ catch `asyncio.CancelledError` when awaiting the `asyncio.Future` object.
         return await asyncio.futures.wrap_future(future)
     except _CustomError:
         pass
-    except asyncio.CancelledError:
+    except asyncio.CancelledError as e:
         // call cancel on C++ side
         semi_future.cancel()
         try:
@@ -237,8 +237,12 @@ catch `asyncio.CancelledError` when awaiting the `asyncio.Future` object.
             await asyncio.futures.wrap_future(future)
         except _CustomError:
             pass
+        // Raise the original exception.
+        // It is not recommended to swallow the cancellation.
+        // https://docs.python.org/3.12/library/asyncio-task.html#task-cancellation
+        raise e
 
-    semi_future.get() // throw cancelled error from folly
+    semi_future.get()
 ```
 
 !!! note
