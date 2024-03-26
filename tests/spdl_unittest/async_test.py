@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import spdl
+from spdl import libspdl
 
 
 def test_failure():
@@ -49,8 +50,14 @@ async def _test_async_decode(generator):
     results = await asyncio.gather(*decode_tasks)
     for frames in results:
         print(frames)
-        conversions.append(spdl.async_convert(frames))
-        conversions_cpu.append(spdl.async_convert_cpu(frames))
+        match (type(frames)):
+            case libspdl.FFmpegAudioFramesWrapper:
+                coro = spdl.async_convert_audio(frames)
+            case libspdl.FFmpegVideoFramesWrapper:
+                coro = spdl.async_convert_video(frames)
+            case _:
+                raise NotImplementedError()
+        conversions.append(coro)
 
     results = await asyncio.gather(*conversions)
     for buffer in results:
@@ -101,7 +108,7 @@ def test_decode_image(get_sample):
         print(packets)
         frames = await spdl.async_decode(packets)
         print(frames)
-        buffer = await spdl.async_convert_cpu(frames)
+        buffer = await spdl.async_convert_image_cpu(frames)
         array = np.array(buffer, copy=False)
         print(array.shape, array.dtype)
 
@@ -133,7 +140,7 @@ def test_batch_decode_image(get_samples):
             print(result)
             frames.append(result.result())
 
-        buffer = await spdl.async_convert(frames)
+        buffer = await spdl.async_convert_batch_image(frames)
         assert buffer.shape == [250, 3, 240, 320]
 
     asyncio.run(_test())

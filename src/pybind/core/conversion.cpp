@@ -32,7 +32,7 @@ void register_conversion(py::module& m) {
   // Async conversion
   /////////////////////////////////////////////////////////////////////////////
   m.def(
-      "async_convert_cpu",
+      "async_convert_audio_cpu",
       &async_convert_frames_to_cpu<MediaType::Audio>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -41,7 +41,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert_cpu",
+      "async_convert_video_cpu",
       &async_convert_frames_to_cpu<MediaType::Video>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -50,7 +50,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert_cpu",
+      "async_convert_image_cpu",
       &async_convert_frames_to_cpu<MediaType::Image>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -60,7 +60,7 @@ void register_conversion(py::module& m) {
       py::arg("executor") = nullptr);
 
   m.def(
-      "async_convert",
+      "async_convert_audio",
       &async_convert_frames<MediaType::Audio>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -69,7 +69,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert",
+      "async_convert_video",
       &async_convert_frames<MediaType::Video>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -78,7 +78,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert",
+      "async_convert_image",
       &async_convert_frames<MediaType::Image>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -87,7 +87,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert",
+      "async_convert_video_nvdec",
       &async_convert_nvdec_frames<MediaType::Video>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -96,7 +96,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert",
+      "async_convert_image_nvdec",
       &async_convert_nvdec_frames<MediaType::Image>,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -105,7 +105,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert",
+      "async_convert_batch_image",
       &async_batch_convert_frames,
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -114,7 +114,7 @@ void register_conversion(py::module& m) {
       py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
-      "async_convert",
+      "async_convert_batch_image_nvdec",
       &async_batch_convert_nvdec_frames,
       py::arg("set_result"),
       py::arg("notify_exception"),

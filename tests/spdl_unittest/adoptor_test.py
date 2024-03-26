@@ -15,7 +15,7 @@ def test_demux_image_bytes(get_sample):
         print(packets)
         frames = await spdl.async_decode(packets)
         print(frames)
-        buffer = await spdl.async_convert(frames)
+        buffer = await spdl.async_convert_image(frames)
         return np.array(buffer, copy=False)
 
     async def _test(path):

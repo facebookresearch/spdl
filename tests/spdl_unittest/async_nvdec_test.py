@@ -26,7 +26,7 @@ def test_decode_video_nvdec(get_sample):
         results = await asyncio.gather(*decode_tasks)
         for frames in results:
             print(frames)
-            conversion_tasks.append(spdl.async_convert(frames))
+            conversion_tasks.append(spdl.async_convert_video_nvdec(frames))
         results = await asyncio.gather(*conversion_tasks)
         for buffer in results:
             tensor = spdl._convert.to_torch(buffer)
@@ -45,7 +45,7 @@ def test_decode_image_nvdec(get_sample):
         print(packets)
         frames = await spdl.async_decode_nvdec(packets, cuda_device_index=DEFAULT_CUDA)
         print(frames)
-        buffer = await spdl.async_convert(frames)
+        buffer = await spdl.async_convert_image_nvdec(frames)
         tensor = spdl._convert.to_torch(buffer)
         print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
 
@@ -80,7 +80,7 @@ def test_batch_decode_image(get_samples):
             print(result)
             frames.append(result.result())
 
-        buffer = await spdl.async_convert(frames)
+        buffer = await spdl.async_convert_batch_image_nvdec(frames)
         assert buffer.shape == [250, 4, 240, 320]
 
     asyncio.run(_test())
