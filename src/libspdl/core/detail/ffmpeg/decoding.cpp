@@ -24,9 +24,12 @@ namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
-  CHECK_AVERROR(
-      avformat_find_stream_info(fmt_ctx, nullptr),
-      "Failed to find stream information.");
+  {
+    TRACE_EVENT("demuxing", "avformat_find_stream_info");
+    CHECK_AVERROR(
+        avformat_find_stream_info(fmt_ctx, nullptr),
+        "Failed to find stream information.");
+  }
 
   AVMediaType type = [&]() {
     switch (type_) {
@@ -38,7 +41,11 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
         return AVMEDIA_TYPE_VIDEO;
     }
   }();
-  int idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
+  int idx;
+  {
+    TRACE_EVENT("demuxing", "av_find_best_stream");
+    idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
+  }
   if (idx < 0) {
     SPDL_FAIL(
         fmt::format("No {} stream was found.", av_get_media_type_string(type)));
