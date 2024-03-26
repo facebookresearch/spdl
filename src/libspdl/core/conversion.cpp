@@ -296,15 +296,19 @@ FuturePtr async_convert_frames_to_cpu(
     FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
-    if constexpr (media_type == MediaType::Audio) {
-      co_return convert_audio_frames(frames, index);
-    } else {
-      co_return convert_visual_frames_to_cpu_buffer<media_type>(frames, index);
-    }
-    // deallocate in executor thread
-    frames->unwrap();
-  });
+  auto task = folly::coro::co_invoke(
+      [=](FFmpegFramesWrapperPtr<media_type>&& frm)
+          -> folly::coro::Task<BufferPtr> {
+        if constexpr (media_type == MediaType::Audio) {
+          co_return convert_audio_frames(std::move(frm), index);
+        } else {
+          co_return convert_visual_frames_to_cpu_buffer<media_type>(
+              std::move(frm), index);
+        }
+      },
+      // Pass the ownership of FramePtr to executor thread, so that it is
+      // deallocated there, instead of the main thread.
+      wrap<media_type, FFmpegFramesPtr>(frames->unwrap()));
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -340,15 +344,18 @@ FuturePtr async_convert_frames(
     FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
-    if constexpr (media_type == MediaType::Audio) {
-      co_return convert_audio_frames(frames, index);
-    } else {
-      co_return convert_visual_frames<media_type>(frames, index);
-    }
-    // Deallocate in executor thread
-    frames->unwrap();
-  });
+  auto task = folly::coro::co_invoke(
+      [=](FFmpegFramesWrapperPtr<media_type>&& frm)
+          -> folly::coro::Task<BufferPtr> {
+        if constexpr (media_type == MediaType::Audio) {
+          co_return convert_audio_frames(std::move(frm), index);
+        } else {
+          co_return convert_visual_frames<media_type>(std::move(frm), index);
+        }
+      },
+      // Pass the ownership of FramePtr to executor thread, so that it is
+      // deallocated there, instead of the main thread.
+      wrap<media_type, FFmpegFramesPtr>(frames->unwrap()));
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -420,10 +427,14 @@ template FuturePtr async_convert_nvdec_frames(
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-void unwrap(std::vector<FFmpegImageFramesWrapperPtr> frames) {
+std::vector<FFmpegImageFramesWrapperPtr> rewrap(
+    std::vector<FFmpegImageFramesWrapperPtr>&& frames) {
+  std::vector<FFmpegImageFramesWrapperPtr> ret;
+  ret.reserve(frames.size());
   for (auto& frame : frames) {
-    frame->unwrap();
+    ret.emplace_back(wrap<MediaType::Image, FFmpegFramesPtr>(frame->unwrap()));
   }
+  return ret;
 }
 } // namespace
 
@@ -433,12 +444,14 @@ FuturePtr async_batch_convert_frames(
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<BufferPtr> {
-    auto ret = convert_batch_image_frames(frames, index);
-    // deallocate in executor thread
-    unwrap(frames);
-    co_return ret;
-  });
+  auto task = folly::coro::co_invoke(
+      [=](std::vector<FFmpegImageFramesWrapperPtr>&& frms)
+          -> folly::coro::Task<BufferPtr> {
+        co_return convert_batch_image_frames(frms, index);
+      },
+      // Pass the ownership of FramePtrs to executor thread, so that they are
+      // deallocated there, instead of the main thread.
+      rewrap(std::move(frames)));
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
