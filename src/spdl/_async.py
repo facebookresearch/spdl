@@ -126,25 +126,19 @@ def _to_async_task(func):
 
         try:
             return await asyncio.futures.wrap_future(future)
+        # Handle the case where the async op failed
         except _AsyncOpFailed:
             pass
-        except asyncio.CancelledError:
+        # Handle the case where unexpected/external thing happens
+        except (asyncio.CancelledError, Exception) as e:
             sf.cancel()
-            # Wait till the cancellation is completed, then
-            # move to the rethrow part
+            # Wait till the cancellation is completed
             try:
                 await asyncio.futures.wrap_future(future)
             except _AsyncOpFailed:
                 pass
-        except Exception:
-            sf.cancel()
-            # Wait till the cancellation is completed, then
-            # re-raise the original error
-            try:
-                await asyncio.futures.wrap_future(future)
-            except _AsyncOpFailed:
-                pass
-            raise
+            # Propagate the error.
+            raise e
 
         await asyncio.sleep(_EXCEPTION_BACKOFF)
         sf.rethrow()
@@ -175,25 +169,19 @@ def _to_async_generator(func):
         while futures:
             try:
                 val = await asyncio.futures.wrap_future(futures[0])
+            # Handle the case where the async op failed
             except _AsyncOpFailed:
                 break
-            except asyncio.CancelledError:
+            # Handle the case where unexpected/external thing happens
+            except (asyncio.CancelledError, Exception) as e:
                 sf.cancel()
-                # Wait till the cancellation is completed, then
-                # move to the rethrow part
+                # Wait till the cancellation is completed
                 try:
                     await asyncio.futures.wrap_future(futures[0])
                 except _AsyncOpFailed:
                     pass
-            except Exception:
-                sf.cancel()
-                # Wait till the cancellation is completed, then
-                # re-raise the original error
-                try:
-                    await asyncio.futures.wrap_future(futures[0])
-                except _AsyncOpFailed:
-                    pass
-                raise
+                # Propagate the error.
+                raise e
             else:
                 if val is None:
                     return

@@ -148,20 +148,21 @@ def test_cancellation():
         task = loop.create_task(spdl.async_sleep(3000))
         await asyncio.sleep(0)
         task.cancel()
-        with pytest.raises(RuntimeError, match="coroutine operation cancelled"):
+        with pytest.raises(asyncio.CancelledError):
             await task
 
     asyncio.run(_test())
 
 
 def test_cancellation_wait_for():
-    """Multiple tasks awaited with `wait` are cancelled simultaneously"""
+    """Task awaited with `wait_for` are cancelled simultaneously"""
 
     async def _test():
         loop = asyncio.get_running_loop()
 
-        task = loop.create_task(spdl.async_sleep(1000))
-        with pytest.raises(RuntimeError, match="coroutine operation cancelled"):
+        future = spdl.async_sleep(1000)
+        task = loop.create_task(future)
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await asyncio.wait_for(task, timeout=0.1)
 
     asyncio.run(_test())
