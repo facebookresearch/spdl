@@ -114,7 +114,7 @@ BufferPtr convert_visual_frames(
     const std::optional<int>& index) requires(media_type != MediaType::Audio) {
   TRACE_EVENT(
       "decoding",
-      "core::convert_frames",
+      "core::convert_visual_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
   return convert_video<media_type>(
       frames->get_frames_ref()->get_frames(), index);
