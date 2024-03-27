@@ -69,6 +69,9 @@ CUcontext get_cucontext(CUdevice device) {
 }
 
 CUdevice get_cuda_device_index(CUdeviceptr ptr) {
+  if (!ptr) {
+    SPDL_FAIL("Attempted to get the CUDA device index from a null pointer.");
+  }
   CUcontext data;
   CHECK_CU(
       cuPointerGetAttribute(&data, CU_POINTER_ATTRIBUTE_CONTEXT, ptr),
