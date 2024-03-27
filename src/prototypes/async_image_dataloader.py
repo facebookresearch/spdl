@@ -12,6 +12,8 @@ from spdl import libspdl
 
 _LG = logging.getLogger(__name__)
 
+_TIMEOUT = 1 / 1000
+
 
 def _parse_args(args):
     import argparse
@@ -32,16 +34,154 @@ def _parse_args(args):
     return parser.parse_args(args)
 
 
-def _iter_flist(flist, id, N, max=-1):
-    with open(flist, "r") as f:
-        n = 0
+async def wait_and_check(tasks, num_tasks=0):
+    while len(tasks) > num_tasks:
+        done, tasks = await asyncio.wait(
+            tasks, timeout=_TIMEOUT, return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done:
+            if err := task.exception():
+                _LG.error("Failed to process task %s: %s", task.get_name(), err)
+        await asyncio.sleep(0)
+    return tasks
+
+
+class BulkImageProcessor:
+    def __init__(self, queue, *, cuda_device_index, use_nvdec=False):
+        self.queue = queue
+        self.cuda_device_index = cuda_device_index
+        self.use_nvdec = use_nvdec
+
+        self.width = 222
+        self.height = 222
+        self.pix_fmt = "rgba"
+
+    async def __call__(self, path_gen, adoptor, *, max_tasks=10):
+        tasks = set()
+        for i, paths in enumerate(path_gen):
+            tasks = await wait_and_check(tasks, max_tasks)
+
+            coro = self._batch_decode(paths, adoptor)
+            tasks.add(asyncio.create_task(coro, name=f"batch_decode_{i}"))
+
+        tasks = await wait_and_check(tasks)
+
+    async def _batch_decode(self, paths, adoptor):
+        decoding = [asyncio.create_task(self._decode(path, adoptor)) for path in paths]
+
+        await asyncio.wait(decoding)
+
+        frames = []
+        for path, task in zip(paths, decoding):
+            if err := task.exception():
+                _LG.error("Failed to decode an image %s: %s", path, err)
+                continue
+            frames.append(task.result())
+
+        buffer = await (
+            spdl.async_convert_batch_image_nvdec(frames)
+            if self.use_nvdec
+            else spdl.async_convert_batch_image(frames)
+        )
+
+        tensor = spdl.to_torch(buffer).to(device=f"cuda:{self.cuda_device_index}")
+
+        await self.queue.put(tensor)
+
+    async def _decode(self, path, adoptor):
+        packets = await spdl.async_demux_image(path, adoptor=adoptor)
+        return await (
+            spdl.async_decode_nvdec(
+                packets,
+                cuda_device_index=self.cuda_device_index,
+                width=self.width,
+                height=self.height,
+                pix_fmt=self.pix_fmt,
+            )
+            if self.use_nvdec
+            else spdl.async_decode(
+                packets,
+                width=self.width,
+                height=self.height,
+                pix_fmt=self.pix_fmt,
+            )
+        )
+
+
+async def _track(queue):
+    while True:
+        await asyncio.sleep(3 / 1000)
+        libspdl.trace_default_demux_executor_queue_size()
+        libspdl.trace_default_decode_executor_queue_size()
+        spdl.utils.trace_counter(0, queue.qsize())
+
+
+async def _batch_decode_image(
+    paths_gen,
+    prefix,
+    *,
+    cuda_device_index,
+    use_nvdec=False,
+):
+    queue = asyncio.Queue(maxsize=100)
+    bip = BulkImageProcessor(
+        queue=queue,
+        cuda_device_index=cuda_device_index,
+        use_nvdec=use_nvdec,
+    )
+    adoptor = spdl.libspdl.BasicAdoptor(prefix)
+    task = asyncio.create_task(bip(paths_gen, adoptor))
+
+    tracker = asyncio.create_task(_track(queue))
+
+    while not (task.done() and queue.empty()):
+        try:
+            yield await asyncio.wait_for(queue.get(), _TIMEOUT)
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            await asyncio.sleep(0)
+
+    tracker.cancel()
+
+
+async def _process_flist(paths_gen, prefix, worker_id, use_nvdec):
+    t_int = t0 = time.monotonic()
+    num_processed_int = num_processed = 0
+    async for batch in _batch_decode_image(
+        paths_gen, prefix, cuda_device_index=worker_id, use_nvdec=use_nvdec
+    ):
+        num_processed += batch.shape[0]
+
+        t1 = time.monotonic()
+        if (elapsed := t1 - t_int) > 10:
+            n = num_processed - num_processed_int
+            qps = n / elapsed
+            _LG.info(
+                f"Interval QPS={qps:.2f} (= {n} / {elapsed:.2f}), (Done {num_processed})"
+            )
+
+            t_int = t1
+            num_processed_int = num_processed
+
+    elapsed = time.monotonic() - t0
+    qps = num_processed / elapsed
+    _LG.info(f"QPS={qps:.2f} ({num_processed} / {elapsed:.2f}), (Done {num_processed})")
+    return num_processed
+
+
+def _iter_file(path, offset=0, every_n=1, max=None):
+    offset = offset % every_n
+
+    with open(path, "r") as f:
+        num_read = 0
         for i, line in enumerate(f):
             path = line.strip()
-            if path and i % N == id:
+            if path and i % every_n == offset:
                 yield path
-                n += 1
+                num_read += 1
 
-                if max > 0 and n >= max:
+                if max is not None and num_read >= max:
                     return
 
 
@@ -56,142 +196,24 @@ def _iter_batch(gen, batch_size):
         yield batch
 
 
-async def async_decode_image(
-    path,
-    adoptor,
-    *,
-    width=222,
-    height=222,
-    pix_fmt="rgba",
-    cuda_device_index=None,
-):
-    packets = await spdl.async_demux_image(path, adoptor=adoptor)
-    if cuda_device_index is None:
-        frames = await spdl.async_decode(
-            packets,
-            width=width,
-            height=height,
-            pix_fmt=pix_fmt,
-        )
-    else:
-        frames = await spdl.async_decode_nvdec(
-            packets,
-            cuda_device_index=cuda_device_index,
-            width=width,
-            height=height,
-            pix_fmt=pix_fmt,
-        )
-    return frames
+def _iter_flist(path, batch_size, *, n=0, N=1, max=None):
+    return _iter_batch(_iter_file(path, n, N, max), batch_size)
 
 
-async def async_batch_decode_image(
-    paths, adoptor, *, width=222, height=222, cuda_device_index=None
-):
-    decodings = [
-        async_decode_image(
-            p, adoptor, width=width, height=height, cuda_device_index=cuda_device_index
-        )
-        for p in paths
-    ]
-    frames = []
-    for i, result in enumerate(
-        await asyncio.gather(*decodings, return_exceptions=True)
-    ):
-        if isinstance(result, Exception):
-            _LG.exception("Failed to decode %s", paths[i], exc_info=result)
-            continue
-        frames.append(result)
-    if cuda_device_index is None:
-        return await spdl.async_convert_batch_image(frames)
-    else:
-        return await spdl.async_convert_batch_image_nvdec(frames)
+def bg_worker(flist_path, prefix, batch_size, worker_id, num_workers, use_nvdec, trace):
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
+    # ------------------------------------------------------------------------------
+    # Warm up 2
+    if use_nvdec:
+        paths_gen = _iter_flist(flist_path, batch_size, max=1000)
+        asyncio.run(_process_flist(paths_gen, prefix, worker_id, use_nvdec))
+    # ------------------------------------------------------------------------------
 
-async def _batch_decode_image(
-    paths,
-    adoptor,
-    batch_size,
-    *,
-    width=222,
-    height=222,
-    cuda_device_index=None,
-):
-    paths_gen = _iter_batch(paths, batch_size)
-    path_exhausted = False
-    decoding = set()
-
-    timeout = 3 / 1000
-    while not path_exhausted or decoding:
-        # 1. Queue demuxing
-        if not path_exhausted and len(decoding) < 10:
-            for _ in range(3 if decoding else 10):
-                try:
-                    paths = next(paths_gen)
-                except StopIteration:
-                    path_exhausted = True
-                    break
-                else:
-                    coro = async_batch_decode_image(
-                        paths,
-                        adoptor,
-                        width=width,
-                        height=height,
-                        cuda_device_index=cuda_device_index,
-                    )
-                    decoding.add(asyncio.create_task(coro))
-
-        libspdl.trace_default_demux_executor_queue_size()
-        libspdl.trace_default_decode_executor_queue_size()
-
-        # 2. Check the state of decoding and queue conversion
-        done, decoding = await asyncio.wait(
-            decoding, timeout=timeout, return_when=asyncio.FIRST_COMPLETED
-        )
-        for result in done:
-            if err := result.exception():
-                _LG.exception("Failed to batch decode images.", exc_info=err)
-            else:
-                yield result.result()
-
-        libspdl.trace_default_demux_executor_queue_size()
-        libspdl.trace_default_decode_executor_queue_size()
-
-
-async def _process_flist(flist, adoptor, batch_size, worker_id, use_nvdec):
-    num_processed = 0
-    t0 = time.monotonic()
-
-    cuda_device_index = worker_id if use_nvdec else None
-    device = f"cuda:{worker_id}"
-
-    t_int = t0
-    num_processed_int = 0
-    async for buffers in _batch_decode_image(
-        flist, adoptor, batch_size, cuda_device_index=cuda_device_index
-    ):
-        _ = spdl.to_torch(buffers).to(device=device)
-        num_processed += buffers.shape[0]
-
-        t2 = time.monotonic()
-        if t2 - t_int > 10:
-            elapsed = t2 - t_int
-            n = num_processed - num_processed_int
-            qps = n / elapsed
-            _LG.info(
-                f"Interval QPS={qps:.2f} (= {n} / {elapsed:.2f}), (Done {num_processed})"
-            )
-
-            t_int = t2
-            num_processed_int = num_processed
-
-    elapsed = time.monotonic() - t0
-    _LG.info(f"QPS={num_processed / elapsed} ({num_processed} / {elapsed:.2f})")
-    return num_processed
-
-
-def bg_worker(flist, adoptor, batch_size, worker_id, num_workers, use_nvdec, loop=None):
-    asyncio.set_event_loop(loop or asyncio.new_event_loop())
-    asyncio.run(_process_flist(flist, adoptor, batch_size, worker_id, use_nvdec))
+    trace_path = f"{trace}.{worker_id}{'.nvdec' if use_nvdec else ''}"
+    paths_gen = _iter_flist(flist_path, batch_size, n=worker_id, N=num_workers)
+    with spdl.utils.tracing(trace_path, enable=trace is not None):
+        asyncio.run(_process_flist(paths_gen, prefix, worker_id, use_nvdec))
 
 
 def _benchmark(args):
@@ -203,46 +225,30 @@ def _benchmark(args):
         args.worker_id,
     )
 
-    adoptor = spdl.libspdl.BasicAdoptor(args.prefix)
-
-    ################################################################################
-    # Warm up
+    # ------------------------------------------------------------------------------
+    # Warm up 1
+    # ------------------------------------------------------------------------------
     import torch
 
     torch.zeros([1, 1], device=torch.device(f"cuda:{args.worker_id}"))
+    # ------------------------------------------------------------------------------
 
-    flist = _iter_flist(args.input_flist, args.worker_id, args.num_workers, max=1000)
+    _LG.info(args)
+
     thread = threading.Thread(
         target=bg_worker,
         args=(
-            flist,
-            adoptor,
+            args.input_flist,
+            args.prefix,
             args.batch_size,
             args.worker_id,
             args.num_workers,
             args.nvdec,
+            args.trace,
         ),
     )
     thread.start()
     thread.join()
-    ################################################################################
-
-    flist = _iter_flist(args.input_flist, args.worker_id, args.num_workers)
-    trace_path = f"{args.trace}.{args.worker_id}{'.nvdec' if args.nvdec else ''}"
-    with spdl.utils.tracing(trace_path, enable=args.trace is not None):
-        thread = threading.Thread(
-            target=bg_worker,
-            args=(
-                flist,
-                adoptor,
-                args.batch_size,
-                args.worker_id,
-                args.num_workers,
-                args.nvdec,
-            ),
-        )
-        thread.start()
-        thread.join()
 
 
 def _init_logging(debug=False, worker_id=None):
