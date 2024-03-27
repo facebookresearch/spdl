@@ -35,6 +35,14 @@ FuturePtr execute_task_with_callback(
           set_result(co_await folly::coro::co_withCancellation(
               token, std::move(task)));
           co_return;
+        } catch (folly::OperationCancelled& e) {
+          // Do not log cancellation exceptions.
+          // It is good to know that the cancellation working,
+          // but the message is same, and it floods the log
+          // when tasks are bulk-cancelled.
+          XLOG(DBG5) << e.what();
+          notify_exception();
+          throw;
         } catch (std::exception& e) {
           XLOG(ERR) << e.what();
           notify_exception();
@@ -71,6 +79,14 @@ FuturePtr execute_generator_with_callback(
           }
           set_result(std::nullopt);
           co_return;
+        } catch (folly::OperationCancelled& e) {
+          // Do not log cancellation exceptions.
+          // It is good to know that the cancellation working,
+          // but the message is same, and it floods the log
+          // when tasks are bulk-cancelled.
+          XLOG(DBG5) << e.what();
+          notify_exception();
+          throw;
         } catch (std::exception& e) {
           XLOG(ERR) << e.what();
           notify_exception();
