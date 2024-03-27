@@ -41,7 +41,9 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     const std::optional<std::string> pix_fmt) {
   co_await folly::coro::co_safe_point;
   size_t num_packets = packets->num_packets();
-  assert(num_packets > 0);
+  if (num_packets == 0) {
+    SPDL_FAIL("No packets to decode.");
+  }
 
   TRACE_EVENT("nvdec", "decode_packets");
   // Decoder objects are thread local so that they survive each decoding job,

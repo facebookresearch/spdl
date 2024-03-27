@@ -198,7 +198,11 @@ CUDABuffer2DPitchPtr convert_nvdec_frames(
     SPDL_FAIL_INTERNAL(
         "Fetching an index from NvDecVideoFrames is not supported.");
   }
-  return frames->get_frames_ref()->buffer;
+  auto ret = frames->get_frames_ref()->buffer;
+  if (!ret) {
+    SPDL_FAIL("Attempted to convert an empty NvDecVideoFrames.");
+  }
+  return ret;
 #endif
 }
 
