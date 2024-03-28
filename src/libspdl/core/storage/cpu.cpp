@@ -6,14 +6,13 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Storage
 ////////////////////////////////////////////////////////////////////////////////
-namespace {
-void* _get_buffer(size_t size) {
-  TRACE_EVENT("decoding", "storage::_get_buffer");
-  return operator new(size);
+CPUStorage::CPUStorage(size_t size) {
+  TRACE_EVENT(
+      "decoding",
+      "CPUStorage::CPUStorage",
+      perfetto::Flow::ProcessScoped(reinterpret_cast<intptr_t>(this)));
+  data_ = operator new(size);
 }
-} // namespace
-
-CPUStorage::CPUStorage(size_t size) : data_(_get_buffer(size)) {}
 CPUStorage::CPUStorage(CPUStorage&& other) noexcept {
   *this = std::move(other);
 }
@@ -24,6 +23,10 @@ CPUStorage& CPUStorage::operator=(CPUStorage&& other) noexcept {
 }
 CPUStorage::~CPUStorage() {
   if (data_) {
+    TRACE_EVENT(
+        "decoding",
+        "CPUStorage::~CPUStorage",
+        perfetto::Flow::ProcessScoped(reinterpret_cast<intptr_t>(this)));
     operator delete(data_);
   }
 }
