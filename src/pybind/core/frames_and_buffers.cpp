@@ -58,6 +58,9 @@ py::dict get_cuda_array_interface(CUDABuffer& b) {
 
 #ifdef SPDL_USE_NVDEC
 py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
+  if (!b.p) {
+    throw std::runtime_error("CUDA buffer is empty.");
+  }
   auto typestr = get_typestr(ElemClass::UInt, 1);
   py::dict ret;
   ret["version"] = 2;
