@@ -96,6 +96,7 @@ set(
   "${base_dir}/folly/futures/HeapTimekeeper.cpp"
   "${base_dir}/folly/futures/ThreadWheelTimekeeper.cpp"
 
+  "${base_dir}/folly/executors/ExecutorWithPriority.cpp"
   "${base_dir}/folly/executors/GlobalExecutor.cpp"
   "${base_dir}/folly/executors/GlobalThreadPoolList.cpp"
   "${base_dir}/folly/executors/InlineExecutor.cpp"
