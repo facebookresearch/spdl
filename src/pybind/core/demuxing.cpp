@@ -18,6 +18,7 @@ void register_demuxing(py::module& m) {
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("packets"),
+      py::kw_only(),
       py::arg("executor") = nullptr);
 
   m.def(
@@ -49,7 +50,7 @@ void register_demuxing(py::module& m) {
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("demux_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_demux_video",
@@ -80,7 +81,7 @@ void register_demuxing(py::module& m) {
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("demux_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_demux_image",
@@ -108,6 +109,6 @@ void register_demuxing(py::module& m) {
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("demux_executor") = nullptr);
+      py::arg("executor") = nullptr);
 }
 } // namespace spdl::core

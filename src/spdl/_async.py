@@ -1,38 +1,31 @@
 import asyncio
 import concurrent.futures
 import functools
-from typing import Any
+from typing import Any, List, Tuple
 
 from spdl import libspdl
 
-_task = [
+__all__ = [
+    # TODO: Merge async_apply_bsf with async_decode_nvdec(video)
     "async_apply_bsf",
-    "async_demux_image",
-    "async_sleep",
-]
-
-_generator = [
-    "async_demux_audio",
-    "async_demux_video",
-]
-
-_others = [
     "async_convert_cpu",
     "async_convert",
     "async_decode",
     "async_decode_nvdec",
+    "async_demux_audio",
+    "async_demux_video",
+    "async_demux_image",
 ]
 
-__all__ = _task + _generator + _others
+_debug_task = [
+    "async_sleep",
+]
 
 
 def __getattr__(name: str) -> Any:
-    if name in __all__:
+    if name in _debug_task:
         func = getattr(libspdl, name)
-        if name in _task:
-            return _to_async_task(func)
-        if name in _generator:
-            return _to_async_generator(func)
+        return functools.partial(_async_task, func)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -61,7 +54,7 @@ class _AsyncOpFailed(Exception):
 _EXCEPTION_BACKOFF = 1.00
 
 
-async def _async_task_wrapper(func, *args, **kwargs):
+async def _async_task(func, *args, **kwargs):
     future = concurrent.futures.Future()
     assert future.set_running_or_notify_cancel()
 
@@ -90,7 +83,7 @@ async def _async_task_wrapper(func, *args, **kwargs):
     sf.rethrow()
 
 
-async def _async_generator_wrapper(func, *args, **kwargs):
+async def _async_gen(func, *args, **kwargs):
     future = concurrent.futures.Future()
     assert future.set_running_or_notify_cancel()
 
@@ -136,14 +129,74 @@ async def _async_generator_wrapper(func, *args, **kwargs):
     sf.rethrow()
 
 
-def _to_async_task(func):
-    wrapper = functools.partial(_async_task_wrapper, func)
-    return functools.update_wrapper(wrapper, func)
+def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
+    """Demux the audio stream.
+
+    Args:
+        src: Source identifier, such as path or URL.
+        timestamps (List[Tuple[float, float]]): List of timestamps.
+        adoptor (Optional[libspdl.SourceAdoptor]): Adoptor to apply to the `src`.
+        format (str): Overwrite the format detection.
+            Can be used to demux headerless format.
+        format_options (Dict[str, str]): Format options.
+        buffer_size (int): Buffer size in bytes.
+        executor (Optional[libspdl.ThreadPoolExecutor]): Executor to perform the demuxing.
+
+    Returns:
+        AsyncGenerator[AudioPackets]: Generator of AudioPackets.
+    """
+    return _async_gen(libspdl.async_demux_audio, src, timestamps, **kwargs)
 
 
-def _to_async_generator(func):
-    wrapper = functools.partial(_async_generator_wrapper, func)
-    return functools.update_wrapper(wrapper, func)
+def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
+    """Demux the video stream.
+
+    Args:
+        src: Source identifier, such as path or URL.
+        timestamps (List[Tuple[float, float]]): List of timestamps.
+        adoptor (Optional[libspdl.SourceAdoptor]): Adoptor to apply to the `src`.
+        format (str): Overwrite the format detection.
+            Can be used to demux headerless format.
+        format_options (Dict[str, str]): Format options.
+        buffer_size (int): Buffer size in bytes.
+        executor (Optional[libspdl.ThreadPoolExecutor]): Executor to perform the demuxing.
+
+    Returns:
+        AsyncGenerator[VideoPackets]: Generator of VideoPackets.
+    """
+    return _async_gen(libspdl.async_demux_video, src, timestamps, **kwargs)
+
+
+def async_demux_image(src, *args, **kwargs):
+    """Demux the image stream.
+
+    Args:
+        src: Source identifier, such as path or URL.
+        adoptor (Optional[libspdl.SourceAdoptor]): Adoptor to apply to the `src`.
+        format (str): Overwrite the format detection.
+            Can be used to demux headerless format.
+        format_options (Dict[str, str]): Format options.
+        buffer_size (int): Buffer size in bytes.
+        executor (Optional[libspdl.ThreadPoolExecutor]): Executor to perform the demuxing.
+
+    Returns:
+        Awaitable: Awaitable which returns an ImagePackets object.
+    """
+    return _async_task(libspdl.async_demux_image, src, *args, **kwargs)
+
+
+# TODO: Merge this with async_decode_nvdec
+def async_apply_bsf(packets, *args, **kwargs):
+    """Apply the bitstream filters.
+
+    Args:
+        packets (Packet): Packets object.
+        executor (Optional[libspdl.Executor])
+
+    Returns:
+        Awaitable: Awaitable which returns the filtered Packets object.
+    """
+    return _async_task(libspdl.async_apply_bsf, packets, *args, **kwargs)
 
 
 def _get_decoding_name(packets):
@@ -159,18 +212,17 @@ def _get_decoding_name(packets):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-async def async_decode(packets, *args, **kwargs):
+def async_decode(packets, *args, **kwargs):
     """Decode the packets to frames.
 
     Args:
         packets (Packet): Packets object.
 
     Returns:
-        Frames: Frames object.
+        Awaitable: Awaitable which returns a Frame object.
     """
-    name = _get_decoding_name(packets)
-    func = _to_async_task(getattr(libspdl, name))
-    return await func(packets, *args, **kwargs)
+    func = getattr(libspdl, _get_decoding_name(packets))
+    return _async_task(func, packets, *args, **kwargs)
 
 
 def _get_nvdec_decoding_name(packets):
@@ -184,18 +236,17 @@ def _get_nvdec_decoding_name(packets):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-async def async_decode_nvdec(packets, *args, **kwargs):
+def async_decode_nvdec(packets, *args, **kwargs):
     """Decode the packets to frames with NVDEC.
 
     Args:
         packets (Packet): Packets object.
 
     Returns:
-        Frames: Frames object.
+        Awaitable: Awaitable which returns a Frame object.
     """
-    name = _get_nvdec_decoding_name(packets)
-    func = _to_async_task(getattr(libspdl, name))
-    return await func(packets, *args, **kwargs)
+    func = getattr(libspdl, _get_nvdec_decoding_name(packets))
+    return _async_task(func, packets, *args, **kwargs)
 
 
 def _get_cpu_conversion_name(frames):
@@ -211,7 +262,7 @@ def _get_cpu_conversion_name(frames):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-async def async_convert_cpu(frames, executor=None):
+def async_convert_cpu(frames, executor=None):
     """Convert the frames to buffer.
 
     Args:
@@ -225,11 +276,10 @@ async def async_convert_cpu(frames, executor=None):
             Executor to run the conversion.
 
     Returns:
-        Buffer: Buffer object.
+        Awaitable: Awaitable which returns a Buffer object.
     """
-    name = _get_cpu_conversion_name(frames)
-    func = _to_async_task(getattr(libspdl, name))
-    return await func(frames, index=None, executor=executor)
+    func = getattr(libspdl, _get_cpu_conversion_name(frames))
+    return _async_task(func, frames, index=None, executor=executor)
 
 
 def _get_conversion_name(frames):
@@ -253,7 +303,7 @@ def _get_conversion_name(frames):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-async def async_convert(frames, executor=None):
+def async_convert(frames, executor=None):
     """Convert the frames to buffer.
 
     Args:
@@ -272,8 +322,7 @@ async def async_convert(frames, executor=None):
             Executor to run the conversion.
 
     Returns:
-        Buffer: Buffer object.
+        Awaitable: Awaitable which returns a Buffer object.
     """
-    name = _get_conversion_name(frames)
-    func = _to_async_task(getattr(libspdl, name))
-    return await func(frames, index=None, executor=executor)
+    func = getattr(libspdl, _get_conversion_name(frames))
+    return _async_task(func, frames, index=None, executor=executor)
