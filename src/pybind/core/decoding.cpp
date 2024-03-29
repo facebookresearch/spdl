@@ -36,7 +36,7 @@ void register_decoding(py::module& m) {
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("duration"),
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_decode_audio",
@@ -62,7 +62,7 @@ void register_decoding(py::module& m) {
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none(),
       py::arg("filter_desc") = std::string(),
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_decode_audio",
@@ -92,7 +92,7 @@ void register_decoding(py::module& m) {
       py::arg("sample_rate") = py::none(),
       py::arg("num_channels") = py::none(),
       py::arg("sample_fmt") = py::none(),
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_decode_video",
@@ -120,7 +120,7 @@ void register_decoding(py::module& m) {
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
       py::arg("filter_desc") = std::string(),
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_decode_video",
@@ -154,7 +154,7 @@ void register_decoding(py::module& m) {
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none(),
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_decode_image",
@@ -182,7 +182,7 @@ void register_decoding(py::module& m) {
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
       py::arg("filter_desc") = std::string(),
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_decode_image",
@@ -216,7 +216,7 @@ void register_decoding(py::module& m) {
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none(),
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC
@@ -261,7 +261,7 @@ void register_decoding(py::module& m) {
       py::arg("width") = -1,
       py::arg("height") = -1,
       py::arg("pix_fmt") = "rgba",
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   m.def(
       "async_decode_image_nvdec",
@@ -303,7 +303,7 @@ void register_decoding(py::module& m) {
       py::arg("width") = -1,
       py::arg("height") = -1,
       py::arg("pix_fmt") = "rgba",
-      py::arg("decode_executor") = nullptr);
+      py::arg("executor") = nullptr);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Synchronous decoding

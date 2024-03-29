@@ -140,7 +140,9 @@ def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
         buffer_size (int): Buffer size in bytes.
-        executor (Optional[libspdl.ThreadPoolExecutor]): Executor to perform the demuxing.
+        executor (Optional[libspdl.ThreadPoolExecutor]):
+            Executor to run the conversion. By default, the conversion is performed on
+            demuxer thread pool.
 
     Returns:
         AsyncGenerator[AudioPackets]: Generator of AudioPackets.
@@ -159,7 +161,9 @@ def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
         buffer_size (int): Buffer size in bytes.
-        executor (Optional[libspdl.ThreadPoolExecutor]): Executor to perform the demuxing.
+        executor (Optional[libspdl.ThreadPoolExecutor]):
+            Executor to run the conversion. By default, the conversion is performed on
+            demuxer thread pool.
 
     Returns:
         AsyncGenerator[VideoPackets]: Generator of VideoPackets.
@@ -177,7 +181,9 @@ def async_demux_image(src, *args, **kwargs):
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
         buffer_size (int): Buffer size in bytes.
-        executor (Optional[libspdl.ThreadPoolExecutor]): Executor to perform the demuxing.
+        executor (Optional[libspdl.ThreadPoolExecutor]):
+            Executor to run the conversion. By default, the conversion is performed on
+            demuxer thread pool.
 
     Returns:
         Awaitable: Awaitable which returns an ImagePackets object.
@@ -191,7 +197,9 @@ def async_apply_bsf(packets, *args, **kwargs):
 
     Args:
         packets (Packet): Packets object.
-        executor (Optional[libspdl.Executor])
+        executor (Optional[libspdl.Executor]):
+            Executor to run the conversion. By default, the conversion is performed on
+            demuxer thread pool.
 
     Returns:
         Awaitable: Awaitable which returns the filtered Packets object.
@@ -273,7 +281,8 @@ def async_convert_cpu(frames, executor=None):
             If the frame data are not CPU, then the conversion will fail.
 
         executor (Optional[libspdl.ThreadPoolExecutor]):
-            Executor to run the conversion.
+            Executor to run the conversion. By default, the conversion is performed on
+            demuxer thread pool with higher priority than demuxing.
 
     Returns:
         Awaitable: Awaitable which returns a Buffer object.
@@ -319,7 +328,8 @@ def async_convert(frames, executor=None):
             If the buffer will be created on the device where the frame data are.
 
         executor (Optional[libspdl.ThreadPoolExecutor]):
-            Executor to run the conversion.
+            Executor to run the conversion. By default, the conversion is performed on
+            demuxer thread pool with higher priority than demuxing.
 
     Returns:
         Awaitable: Awaitable which returns a Buffer object.
