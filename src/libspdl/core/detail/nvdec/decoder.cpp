@@ -7,11 +7,24 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <folly/logging/xlog.h>
+#include <folly/portability/GFlags.h>
 
 #include <sys/types.h>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLOCKRATE 1
+
+FOLLY_GFLAGS_DEFINE_uint32(
+    spdl_initial_nvdec_surface_width,
+    1280,
+    "The initial width of the NVDEC decoder buffer. "
+    "It will be increased if an image larger than this is passed and the decoder is recreated.");
+
+FOLLY_GFLAGS_DEFINE_uint32(
+    spdl_initial_nvdec_surface_height,
+    720,
+    "The initial height of the NVDEC decoder buffer. "
+    "It will be increased when an image larger than this is passed and the decoder is recreated.");
 
 namespace spdl::core::detail {
 namespace {
@@ -169,8 +182,8 @@ void NvDecDecoder::init(
     codec = codec_;
     parser = get_parser(this, codec);
     decoder = nullptr;
-    decoder_param.ulMaxHeight = 0;
-    decoder_param.ulMaxWidth = 0;
+    decoder_param.ulMaxHeight = FLAGS_spdl_initial_nvdec_surface_height;
+    decoder_param.ulMaxWidth = FLAGS_spdl_initial_nvdec_surface_width;
   }
   buffer = buffer_;
   timebase = timebase_;
@@ -220,7 +233,6 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   CUVIDDECODECAPS caps = check_capacity(video_fmt, cap_cache);
   auto output_fmt = get_output_sufrace_format(video_fmt, &caps);
 
-  // TODO: make the following configurable.
   auto max_width = MAX(video_fmt->coded_width, decoder_param.ulMaxWidth);
   auto max_height = MAX(video_fmt->coded_height, decoder_param.ulMaxHeight);
 
