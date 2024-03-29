@@ -145,7 +145,7 @@ def test_cancellation():
     async def _test():
         loop = asyncio.get_running_loop()
 
-        task = loop.create_task(spdl.async_sleep(3000))
+        task = loop.create_task(spdl._async.async_sleep(3000))
         await asyncio.sleep(0)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -160,7 +160,7 @@ def test_cancellation_wait_for():
     async def _test():
         loop = asyncio.get_running_loop()
 
-        future = spdl.async_sleep(1000)
+        future = spdl._async.async_sleep(1000)
         task = loop.create_task(future)
         with pytest.raises(asyncio.exceptions.TimeoutError):
             await asyncio.wait_for(task, timeout=0.1)
@@ -174,7 +174,7 @@ def test_cancellation_multi_gather():
     async def _test(N: int):
         loop = asyncio.get_running_loop()
 
-        tasks = [loop.create_task(spdl.async_sleep(3000)) for _ in range(N)]
+        tasks = [loop.create_task(spdl._async.async_sleep(3000)) for _ in range(N)]
         task = asyncio.gather(*tasks, return_exceptions=True)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
