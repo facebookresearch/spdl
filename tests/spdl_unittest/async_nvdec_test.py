@@ -1,7 +1,8 @@
 import asyncio
 
+import pytest
+
 import spdl
-import spdl._convert
 
 DEFAULT_CUDA = 0
 
@@ -26,13 +27,21 @@ def test_decode_video_nvdec(get_sample):
         results = await asyncio.gather(*decode_tasks)
         for frames in results:
             print(frames)
-            conversion_tasks.append(spdl.async_convert_video_nvdec(frames))
+            conversion_tasks.append(spdl.async_convert(frames))
         results = await asyncio.gather(*conversion_tasks)
         for buffer in results:
-            tensor = spdl._convert.to_torch(buffer)
+            tensor = spdl.to_torch(buffer)
             print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
 
     asyncio.run(_test())
+
+
+async def _decode_image(path):
+    packets = await spdl.async_demux_image(path)
+    print(packets)
+    frames = await spdl.async_decode_nvdec(packets, cuda_device_index=DEFAULT_CUDA)
+    print(frames)
+    return frames
 
 
 def test_decode_image_nvdec(get_sample):
@@ -41,13 +50,15 @@ def test_decode_image_nvdec(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test():
-        packets = await spdl.async_demux_image(sample.path)
-        print(packets)
-        frames = await spdl.async_decode_nvdec(packets, cuda_device_index=DEFAULT_CUDA)
-        print(frames)
-        buffer = await spdl.async_convert_image_nvdec(frames)
-        tensor = spdl._convert.to_torch(buffer)
+        import torch
+
+        frames = await _decode_image(sample.path)
+        buffer = await spdl.async_convert(frames)
+        tensor = spdl.to_torch(buffer)
         print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
+        assert tensor.shape == torch.Size([4, 240, 320])
+        assert tensor.dtype == torch.uint8
+        assert tensor.device == torch.device("cuda", DEFAULT_CUDA)
 
     asyncio.run(_test())
 
@@ -80,7 +91,59 @@ def test_batch_decode_image(get_samples):
             print(result)
             frames.append(result.result())
 
-        buffer = await spdl.async_convert_batch_image_nvdec(frames)
+        buffer = await spdl.async_convert(frames)
         assert buffer.shape == [250, 4, 240, 320]
+
+    asyncio.run(_test())
+
+
+def test_convert_cpu_video_fail(get_sample):
+    """Can decode video with NVDEC"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 1000 sample.mp4"
+    sample = get_sample(cmd, width=320, height=240)
+
+    timestamps = [(0, float("inf"))]
+
+    async def _test():
+        packets = None
+        async for packets in spdl.async_demux_video(sample.path, timestamps=timestamps):
+            print(packets)
+            break
+        filtered = await spdl.async_apply_bsf(packets)
+        print(filtered)
+        frames = await spdl.async_decode_nvdec(filtered, cuda_device_index=DEFAULT_CUDA)
+        print(frames)
+        with pytest.raises(TypeError):
+            await spdl.async_convert_cpu(frames)
+
+    asyncio.run(_test())
+
+
+def test_convert_cpu_image_fail(get_sample):
+    """Passing NVDEC frames to async_convert_cpu should fail"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    sample = get_sample(cmd, width=320, height=240)
+
+    async def _test():
+        frames = await _decode_image(sample.path)
+
+        with pytest.raises(TypeError):
+            await spdl.async_convert_cpu(frames)
+
+    asyncio.run(_test())
+
+
+def test_convert_cpu_batch_image_fail(get_samples):
+    """Passing NVDEC frames to async_convert_cpu should fail"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
+    samples = get_samples(cmd)
+
+    flist = samples
+
+    async def _test():
+        frames = await asyncio.gather(*[_decode_image(path) for path in flist])
+
+        with pytest.raises(TypeError):
+            await spdl.async_convert_cpu(frames)
 
     asyncio.run(_test())
