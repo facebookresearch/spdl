@@ -9,9 +9,18 @@
 namespace spdl::core {
 
 CUDABuffer2DPitch::CUDABuffer2DPitch(size_t max_frames_, bool is_image_)
-    : max_frames(max_frames_), is_image(is_image_) {}
+    : max_frames(max_frames_), is_image(is_image_) {
+  TRACE_EVENT(
+      "decoding",
+      "CUDABuffer2DPitch::CUDABuffer2DPitch",
+      perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
+}
 
 CUDABuffer2DPitch::~CUDABuffer2DPitch() {
+  TRACE_EVENT(
+      "decoding",
+      "CUDABuffer2DPitch::~CUDABuffer2DPitch",
+      perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
   if (p) {
     TRACE_EVENT("nvdec", "cuMemFree");
     CHECK_CU(cuMemFree(p), "Failed to free memory.");
