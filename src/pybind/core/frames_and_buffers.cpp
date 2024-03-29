@@ -230,8 +230,8 @@ void register_frames_and_buffers(py::module& m) {
         auto& ref = self.get_frames_ref();
         return fmt::format(
             "FFmpegAudioFrames<num_frames={}, sample_format={}, sample_rate={}, num_channels={}>",
-            ref->get_media_format_name(),
             ref->get_num_frames(),
+            ref->get_media_format_name(),
             ref->get_sample_rate(),
             ref->get_num_channels());
       });
