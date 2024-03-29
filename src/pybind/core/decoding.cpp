@@ -39,7 +39,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "async_decode",
+      "async_decode_audio",
       [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          AudioPacketsWrapperPtr packets,
@@ -65,7 +65,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "async_decode",
+      "async_decode_audio",
       [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          AudioPacketsWrapperPtr packets,
@@ -95,7 +95,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "async_decode",
+      "async_decode_video",
       [](std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          VideoPacketsWrapperPtr packets,
@@ -123,7 +123,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "async_decode",
+      "async_decode_video",
       [](std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          VideoPacketsWrapperPtr packets,
@@ -157,7 +157,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "async_decode",
+      "async_decode_image",
       [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          ImagePacketsWrapperPtr packets,
@@ -185,7 +185,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "async_decode",
+      "async_decode_image",
       [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          ImagePacketsWrapperPtr packets,
@@ -222,7 +222,7 @@ void register_decoding(py::module& m) {
   // Asynchronous decoding - NVDEC
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
-      "async_decode_nvdec",
+      "async_decode_video_nvdec",
       [](std::function<void(NvDecVideoFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          VideoPacketsWrapperPtr packets,
@@ -264,7 +264,7 @@ void register_decoding(py::module& m) {
       py::arg("decode_executor") = nullptr);
 
   m.def(
-      "async_decode_nvdec",
+      "async_decode_image_nvdec",
       [](std::function<void(NvDecImageFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          ImagePacketsWrapperPtr packets,

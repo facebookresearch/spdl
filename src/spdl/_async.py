@@ -7,8 +7,6 @@ from spdl import libspdl
 
 _task = [
     "async_apply_bsf",
-    "async_decode",
-    "async_decode_nvdec",
     "async_demux_image",
     "async_sleep",
 ]
@@ -21,6 +19,8 @@ _generator = [
 _others = [
     "async_convert_cpu",
     "async_convert",
+    "async_decode",
+    "async_decode_nvdec",
 ]
 
 __all__ = _task + _generator + _others
@@ -144,6 +144,58 @@ def _to_async_task(func):
 def _to_async_generator(func):
     wrapper = functools.partial(_async_generator_wrapper, func)
     return functools.update_wrapper(wrapper, func)
+
+
+def _get_decoding_name(packets):
+    match t := type(packets):
+        case libspdl.AudioPacketsWrapper:
+            return "async_decode_audio"
+        case libspdl.VideoPacketsWrapper:
+            return "async_decode_video"
+        case libspdl.ImagePacketsWrapper:
+            return "async_decode_image"
+        # TODO: Add support for batch image
+        case _:
+            raise TypeError(f"Unexpected type: {t}.")
+
+
+async def async_decode(packets, *args, **kwargs):
+    """Decode the packets to frames.
+
+    Args:
+        packets (Packet): Packets object.
+
+    Returns:
+        Frames: Frames object.
+    """
+    name = _get_decoding_name(packets)
+    func = _to_async_task(getattr(libspdl, name))
+    return await func(packets, *args, **kwargs)
+
+
+def _get_nvdec_decoding_name(packets):
+    match t := type(packets):
+        case libspdl.VideoPacketsWrapper:
+            return "async_decode_video_nvdec"
+        case libspdl.ImagePacketsWrapper:
+            return "async_decode_image_nvdec"
+        # TODO: Add support for batch image
+        case _:
+            raise TypeError(f"Unexpected type: {t}.")
+
+
+async def async_decode_nvdec(packets, *args, **kwargs):
+    """Decode the packets to frames with NVDEC.
+
+    Args:
+        packets (Packet): Packets object.
+
+    Returns:
+        Frames: Frames object.
+    """
+    name = _get_nvdec_decoding_name(packets)
+    func = _to_async_task(getattr(libspdl, name))
+    return await func(packets, *args, **kwargs)
 
 
 def _get_cpu_conversion_name(frames):
