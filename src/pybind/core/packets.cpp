@@ -46,17 +46,14 @@ void register_packets(py::module& m) {
   using VideoPacketsWrapper = PacketsWrapper<MediaType::Video>;
   using ImagePacketsWrapper = PacketsWrapper<MediaType::Image>;
 
-  auto _AudioPacketsWrapper =
-      py::class_<AudioPacketsWrapper, AudioPacketsWrapperPtr>(
-          m, "AudioPacketsWrapper", py::module_local());
-  auto _VideoPacketsWrapper =
-      py::class_<VideoPacketsWrapper, VideoPacketsWrapperPtr>(
-          m, "VideoPacketsWrapper", py::module_local());
-  auto _ImagePacketsWrapper =
-      py::class_<ImagePacketsWrapper, ImagePacketsWrapperPtr>(
-          m, "ImagePacketsWrapper", py::module_local());
+  auto _AudioPackets = py::class_<AudioPacketsWrapper, AudioPacketsWrapperPtr>(
+      m, "AudioPackets", py::module_local());
+  auto _VideoPackets = py::class_<VideoPacketsWrapper, VideoPacketsWrapperPtr>(
+      m, "VideoPackets", py::module_local());
+  auto _ImagePackets = py::class_<ImagePacketsWrapper, ImagePacketsWrapperPtr>(
+      m, "ImagePackets", py::module_local());
 
-  _AudioPacketsWrapper.def("__repr__", [](const AudioPacketsWrapper& self) {
+  _AudioPackets.def("__repr__", [](const AudioPacketsWrapper& self) {
     return fmt::format(
         "AudioPackets<id={}, src={}, timestamp=({}, {}), sample_format={}, {}>",
         self.get_packets()->id,
@@ -67,7 +64,7 @@ void register_packets(py::module& m) {
         get_codec_info<MediaType::Audio>(self.get_packets()->codecpar));
   });
 
-  _VideoPacketsWrapper
+  _VideoPackets
       .def_property_readonly(
           "pts",
           [](const VideoPacketsWrapper& self) -> std::vector<double> {
@@ -93,7 +90,7 @@ void register_packets(py::module& m) {
             get_codec_info<MediaType::Video>(self.get_packets()->codecpar));
       });
 
-  _ImagePacketsWrapper
+  _ImagePackets
       .def_property_readonly(
           "pts",
           [](const ImagePacketsWrapper& self) {

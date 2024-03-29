@@ -189,7 +189,7 @@ def test_cancellation_multi_gather():
 
 
 def test_async_convert_audio_cpu(get_sample):
-    """async_convert_cpu can convert FFmpegAudioFramesWrapper to Buffer"""
+    """async_convert_cpu can convert FFmpegAudioFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
@@ -201,7 +201,7 @@ def test_async_convert_audio_cpu(get_sample):
             break
         frames = await spdl.async_decode(packets)
         print(frames)
-        assert type(frames) is libspdl.FFmpegAudioFramesWrapper
+        assert type(frames) is libspdl.FFmpegAudioFrames
         buffer = await spdl.async_convert_cpu(frames)
         print(buffer)
         arr = spdl.to_numpy(buffer)
@@ -212,7 +212,7 @@ def test_async_convert_audio_cpu(get_sample):
 
 
 def test_async_convert_video_cpu(get_sample):
-    """async_convert_cpu can convert FFmpegVideoFramesWrapper to Buffer"""
+    """async_convert_cpu can convert FFmpegVideoFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd, width=320, height=240)
 
@@ -224,7 +224,7 @@ def test_async_convert_video_cpu(get_sample):
             break
         frames = await spdl.async_decode(packets)
         print(frames)
-        assert type(frames) is libspdl.FFmpegVideoFramesWrapper
+        assert type(frames) is libspdl.FFmpegVideoFrames
         buffer = await spdl.async_convert_cpu(frames)
         print(buffer)
         arr = spdl.to_numpy(buffer)
@@ -235,7 +235,7 @@ def test_async_convert_video_cpu(get_sample):
 
 
 def test_async_convert_image_cpu(get_sample):
-    """async_convert_cpu can convert FFmpegImageFramesWrapper to Buffer"""
+    """async_convert_cpu can convert FFmpegImageFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd, width=320, height=240)
 
@@ -244,7 +244,7 @@ def test_async_convert_image_cpu(get_sample):
         print(packets)
         frames = await spdl.async_decode(packets)
         print(frames)
-        assert type(frames) is libspdl.FFmpegImageFramesWrapper
+        assert type(frames) is libspdl.FFmpegImageFrames
         buffer = await spdl.async_convert_cpu(frames)
         print(buffer)
         arr = spdl.to_numpy(buffer)

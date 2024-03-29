@@ -109,25 +109,25 @@ void register_frames_and_buffers(py::module& m) {
       py::class_<CUDABuffer2DPitch, std::shared_ptr<CUDABuffer2DPitch>>(
           m, "CUDABuffer2DPitch", py::module_local());
 
-  auto _FFmpegAudioFramesWrapper =
+  auto _FFmpegAudioFrames =
       py::class_<FFmpegAudioFramesWrapper, FFmpegAudioFramesWrapperPtr>(
-          m, "FFmpegAudioFramesWrapper", py::module_local());
+          m, "FFmpegAudioFrames", py::module_local());
 
-  auto _FFmpegVideoFramesWrapper =
+  auto _FFmpegVideoFrames =
       py::class_<FFmpegVideoFramesWrapper, FFmpegVideoFramesWrapperPtr>(
-          m, "FFmpegVideoFramesWrapper", py::module_local());
+          m, "FFmpegVideoFrames", py::module_local());
 
-  auto _FFmpegImageFramesWrapper =
+  auto _FFmpegImageFrames =
       py::class_<FFmpegImageFramesWrapper, FFmpegImageFramesWrapperPtr>(
-          m, "FFmpegImageFramesWrapper", py::module_local());
+          m, "FFmpegImageFrames", py::module_local());
 
-  auto _NvDecVideoFramesWrapper =
+  auto _NvDecVideoFrames =
       py::class_<NvDecVideoFramesWrapper, NvDecVideoFramesWrapperPtr>(
-          m, "NvDecVideoFramesWrapper", py::module_local());
+          m, "NvDecVideoFrames", py::module_local());
 
-  auto _NvDecImageFramesWrapper =
+  auto _NvDecImageFrames =
       py::class_<NvDecImageFramesWrapper, NvDecImageFramesWrapperPtr>(
-          m, "NvDecImageFramesWrapper", py::module_local());
+          m, "NvDecImageFrames", py::module_local());
 
   _CPUBuffer
       .def_property_readonly(
@@ -200,7 +200,7 @@ void register_frames_and_buffers(py::module& m) {
             return get_cuda_array_interface(self);
           }));
 
-  _FFmpegAudioFramesWrapper
+  _FFmpegAudioFrames
       .def_property_readonly(
           "num_frames",
           [](FFmpegAudioFramesWrapper& self) {
@@ -236,7 +236,7 @@ void register_frames_and_buffers(py::module& m) {
             ref->get_num_channels());
       });
 
-  _FFmpegVideoFramesWrapper
+  _FFmpegVideoFrames
       .def_property_readonly(
           "num_frames",
           [](FFmpegVideoFramesWrapper& self) {
@@ -299,7 +299,7 @@ void register_frames_and_buffers(py::module& m) {
             ref->is_cuda());
       });
 
-  _FFmpegImageFramesWrapper
+  _FFmpegImageFrames
       .def_property_readonly(
           "num_planes",
           [](const FFmpegImageFramesWrapper& self) {
@@ -341,7 +341,7 @@ void register_frames_and_buffers(py::module& m) {
 #endif
 
   // TODO: Add __repr__
-  _NvDecVideoFramesWrapper
+  _NvDecVideoFrames
       .def_property_readonly(
           "channel_last",
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFramesWrapper& self) {
@@ -374,7 +374,7 @@ void register_frames_and_buffers(py::module& m) {
           }));
 
   // TODO: Add __repr__
-  _NvDecImageFramesWrapper
+  _NvDecImageFrames
       .def_property_readonly(
           "channel_last",
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFramesWrapper& self) {
