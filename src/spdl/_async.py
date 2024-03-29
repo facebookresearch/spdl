@@ -3,17 +3,10 @@ import concurrent.futures
 import functools
 from typing import Any
 
-import spdl.libspdl
+from spdl import libspdl
 
 _task = [
     "async_apply_bsf",
-    "async_convert_audio",
-    "async_convert_image",
-    "async_convert_video",
-    "async_convert_image_nvdec",
-    "async_convert_video_nvdec",
-    "async_convert_batch_image",
-    "async_convert_batch_image_nvdec",
     "async_decode",
     "async_decode_nvdec",
     "async_demux_image",
@@ -27,6 +20,7 @@ _generator = [
 
 _others = [
     "async_convert_cpu",
+    "async_convert",
 ]
 
 __all__ = _task + _generator + _others
@@ -34,7 +28,7 @@ __all__ = _task + _generator + _others
 
 def __getattr__(name: str) -> Any:
     if name in __all__:
-        func = getattr(spdl.libspdl, name)
+        func = getattr(libspdl, name)
         if name in _task:
             return _to_async_task(func)
         if name in _generator:
@@ -150,12 +144,27 @@ def _to_async_generator(func):
     return async_wrapper
 
 
+def _get_cpu_conversion_name(frames):
+    match t := type(frames):
+        case libspdl.FFmpegAudioFramesWrapper:
+            return "async_convert_audio_cpu"
+        case libspdl.FFmpegVideoFramesWrapper:
+            return "async_convert_video_cpu"
+        case libspdl.FFmpegImageFramesWrapper:
+            return "async_convert_image_cpu"
+        # TODO: Add support for batch image
+        case _:
+            raise TypeError(f"Unexpected type: {t}.")
+
+
 async def async_convert_cpu(frames, executor=None):
     """Convert the frames to buffer.
 
     Args:
-        frames : Frames object. One of ``FFmpegAudioFramesWrapper``,
-            ``FFmpegVideoFramesWrapper`` or `` FFmpegImageFramesWrapper``.
+        frames : Frames object. The following types are supported.
+            - ``FFmpegAudioFramesWrapper``
+            - ``FFmpegVideoFramesWrapper``
+            - ``FFmpegImageFramesWrapper``
             If the frame data are not CPU, then the conversion will fail.
 
         executor (Optional[libspdl.ThreadPoolExecutor]):
@@ -164,16 +173,53 @@ async def async_convert_cpu(frames, executor=None):
     Returns:
         Buffer: Buffer object.
     """
+    name = _get_cpu_conversion_name(frames)
+    func = _to_async_task(getattr(libspdl, name))
+    return await func(frames, index=None, executor=executor)
+
+
+def _get_conversion_name(frames):
     match t := type(frames):
-        case spdl.libspdl.FFmpegAudioFramesWrapper:
-            name = "async_convert_audio_cpu"
-        case spdl.libspdl.FFmpegVideoFramesWrapper:
-            name = "async_convert_video_cpu"
-        case spdl.libspdl.FFmpegImageFramesWrapper:
-            name = "async_convert_image_cpu"
-        # TODO: Add support for batch image
+        case libspdl.FFmpegAudioFramesWrapper:
+            return "async_convert_audio"
+        case libspdl.FFmpegVideoFramesWrapper:
+            return "async_convert_video"
+        case libspdl.FFmpegImageFramesWrapper:
+            return "async_convert_image"
+        case libspdl.NvDecVideoFramesWrapper:
+            return "async_convert_video_nvdec"
+        case libspdl.NvDecImageFramesWrapper:
+            return "async_convert_image_nvdec"
         case _:
+            if isinstance(frames, list):
+                if all(isinstance(f, libspdl.FFmpegImageFramesWrapper) for f in frames):
+                    return "async_convert_batch_image"
+                if all(isinstance(f, libspdl.NvDecImageFramesWrapper) for f in frames):
+                    return "async_convert_batch_image_nvdec"
             raise TypeError(f"Unexpected type: {t}.")
 
-    func = _to_async_task(getattr(spdl.libspdl, name))
+
+async def async_convert(frames, executor=None):
+    """Convert the frames to buffer.
+
+    Args:
+        frames : Frames object.
+            - ``FFmpegAudioFramesWrapper``
+            - ``FFmpegVideoFramesWrapper``
+            - ``FFmpegImageFramesWrapper``
+            - ``NvDecVideoFramesWrapper``
+            - ``NvDecImageFramesWrapper``
+            - ``List[FFmpegImageFramesWrapper]``
+            - ``List[NvDecImageFramesWrapper]``
+
+            If the buffer will be created on the device where the frame data are.
+
+        executor (Optional[libspdl.ThreadPoolExecutor]):
+            Executor to run the conversion.
+
+    Returns:
+        Buffer: Buffer object.
+    """
+    name = _get_conversion_name(frames)
+    func = _to_async_task(getattr(libspdl, name))
     return await func(frames, index=None, executor=executor)
