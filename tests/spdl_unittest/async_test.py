@@ -108,7 +108,7 @@ def test_decode_image(get_sample):
         print(packets)
         frames = await spdl.async_decode(packets)
         print(frames)
-        buffer = await spdl.async_convert_image_cpu(frames)
+        buffer = await spdl.async_convert_image(frames)
         array = np.array(buffer, copy=False)
         print(array.shape, array.dtype)
 
@@ -193,3 +193,69 @@ def test_cancellation_multi_gather():
                 await t
 
     asyncio.run(_test(3))
+
+
+def test_async_convert_audio_cpu(get_sample):
+    """async_convert_cpu can convert FFmpegAudioFramesWrapper to Buffer"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        ts = [(0, float("inf"))]
+        packets = None
+        async for packets in spdl.async_demux_audio(sample.path, timestamps=ts):
+            print(packets)
+            break
+        frames = await spdl.async_decode(packets)
+        print(frames)
+        assert type(frames) is libspdl.FFmpegAudioFramesWrapper
+        buffer = await spdl.async_convert_cpu(frames)
+        print(buffer)
+        arr = spdl.to_numpy(buffer)
+        print(arr.dtype, arr.shape)
+        assert arr.shape == (480000, 1)
+
+    asyncio.run(_test(sample.path))
+
+
+def test_async_convert_video_cpu(get_sample):
+    """async_convert_cpu can convert FFmpegVideoFramesWrapper to Buffer"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+    sample = get_sample(cmd, width=320, height=240)
+
+    async def _test(src):
+        ts = [(0, float("inf"))]
+        packets = None
+        async for packets in spdl.async_demux_video(sample.path, timestamps=ts):
+            print(packets)
+            break
+        frames = await spdl.async_decode(packets)
+        print(frames)
+        assert type(frames) is libspdl.FFmpegVideoFramesWrapper
+        buffer = await spdl.async_convert_cpu(frames)
+        print(buffer)
+        arr = spdl.to_numpy(buffer)
+        print(arr.dtype, arr.shape)
+        assert arr.shape == (1000, 3, 240, 320)
+
+    asyncio.run(_test(sample.path))
+
+
+def test_async_convert_image_cpu(get_sample):
+    """async_convert_cpu can convert FFmpegImageFramesWrapper to Buffer"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    sample = get_sample(cmd, width=320, height=240)
+
+    async def _test(src):
+        packets = await spdl.async_demux_image(sample.path)
+        print(packets)
+        frames = await spdl.async_decode(packets)
+        print(frames)
+        assert type(frames) is libspdl.FFmpegImageFramesWrapper
+        buffer = await spdl.async_convert_cpu(frames)
+        print(buffer)
+        arr = spdl.to_numpy(buffer)
+        print(arr.dtype, arr.shape)
+        assert arr.shape == (3, 240, 320)
+
+    asyncio.run(_test(sample.path))
