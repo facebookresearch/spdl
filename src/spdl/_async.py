@@ -10,9 +10,6 @@ _task = [
     "async_convert_audio",
     "async_convert_image",
     "async_convert_video",
-    "async_convert_audio_cpu",
-    "async_convert_image_cpu",
-    "async_convert_video_cpu",
     "async_convert_image_nvdec",
     "async_convert_video_nvdec",
     "async_convert_batch_image",
@@ -28,7 +25,11 @@ _generator = [
     "async_demux_video",
 ]
 
-__all__ = _task + _generator
+_others = [
+    "async_convert_cpu",
+]
+
+__all__ = _task + _generator + _others
 
 
 def __getattr__(name: str) -> Any:
@@ -147,3 +148,32 @@ def _to_async_generator(func):
         sf.rethrow()
 
     return async_wrapper
+
+
+async def async_convert_cpu(frames, executor=None):
+    """Convert the frames to buffer.
+
+    Args:
+        frames : Frames object. One of ``FFmpegAudioFramesWrapper``,
+            ``FFmpegVideoFramesWrapper`` or `` FFmpegImageFramesWrapper``.
+            If the frame data are not CPU, then the conversion will fail.
+
+        executor (Optional[libspdl.ThreadPoolExecutor]):
+            Executor to run the conversion.
+
+    Returns:
+        Buffer: Buffer object.
+    """
+    match t := type(frames):
+        case spdl.libspdl.FFmpegAudioFramesWrapper:
+            name = "async_convert_audio_cpu"
+        case spdl.libspdl.FFmpegVideoFramesWrapper:
+            name = "async_convert_video_cpu"
+        case spdl.libspdl.FFmpegImageFramesWrapper:
+            name = "async_convert_image_cpu"
+        # TODO: Add support for batch image
+        case _:
+            raise TypeError(f"Unexpected type: {t}.")
+
+    func = _to_async_task(getattr(spdl.libspdl, name))
+    return await func(frames, index=None, executor=executor)
