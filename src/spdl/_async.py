@@ -148,11 +148,11 @@ def _to_async_generator(func):
 
 def _get_decoding_name(packets):
     match t := type(packets):
-        case libspdl.AudioPacketsWrapper:
+        case libspdl.AudioPackets:
             return "async_decode_audio"
-        case libspdl.VideoPacketsWrapper:
+        case libspdl.VideoPackets:
             return "async_decode_video"
-        case libspdl.ImagePacketsWrapper:
+        case libspdl.ImagePackets:
             return "async_decode_image"
         # TODO: Add support for batch image
         case _:
@@ -175,9 +175,9 @@ async def async_decode(packets, *args, **kwargs):
 
 def _get_nvdec_decoding_name(packets):
     match t := type(packets):
-        case libspdl.VideoPacketsWrapper:
+        case libspdl.VideoPackets:
             return "async_decode_video_nvdec"
-        case libspdl.ImagePacketsWrapper:
+        case libspdl.ImagePackets:
             return "async_decode_image_nvdec"
         # TODO: Add support for batch image
         case _:
@@ -200,11 +200,11 @@ async def async_decode_nvdec(packets, *args, **kwargs):
 
 def _get_cpu_conversion_name(frames):
     match t := type(frames):
-        case libspdl.FFmpegAudioFramesWrapper:
+        case libspdl.FFmpegAudioFrames:
             return "async_convert_audio_cpu"
-        case libspdl.FFmpegVideoFramesWrapper:
+        case libspdl.FFmpegVideoFrames:
             return "async_convert_video_cpu"
-        case libspdl.FFmpegImageFramesWrapper:
+        case libspdl.FFmpegImageFrames:
             return "async_convert_image_cpu"
         # TODO: Add support for batch image
         case _:
@@ -216,9 +216,9 @@ async def async_convert_cpu(frames, executor=None):
 
     Args:
         frames : Frames object. The following types are supported.
-            - ``FFmpegAudioFramesWrapper``
-            - ``FFmpegVideoFramesWrapper``
-            - ``FFmpegImageFramesWrapper``
+            - ``FFmpegAudioFrames``
+            - ``FFmpegVideoFrames``
+            - ``FFmpegImageFrames``
             If the frame data are not CPU, then the conversion will fail.
 
         executor (Optional[libspdl.ThreadPoolExecutor]):
@@ -234,21 +234,21 @@ async def async_convert_cpu(frames, executor=None):
 
 def _get_conversion_name(frames):
     match t := type(frames):
-        case libspdl.FFmpegAudioFramesWrapper:
+        case libspdl.FFmpegAudioFrames:
             return "async_convert_audio"
-        case libspdl.FFmpegVideoFramesWrapper:
+        case libspdl.FFmpegVideoFrames:
             return "async_convert_video"
-        case libspdl.FFmpegImageFramesWrapper:
+        case libspdl.FFmpegImageFrames:
             return "async_convert_image"
-        case libspdl.NvDecVideoFramesWrapper:
+        case libspdl.NvDecVideoFrames:
             return "async_convert_video_nvdec"
-        case libspdl.NvDecImageFramesWrapper:
+        case libspdl.NvDecImageFrames:
             return "async_convert_image_nvdec"
         case _:
             if isinstance(frames, list):
-                if all(isinstance(f, libspdl.FFmpegImageFramesWrapper) for f in frames):
+                if all(isinstance(f, libspdl.FFmpegImageFrames) for f in frames):
                     return "async_convert_batch_image"
-                if all(isinstance(f, libspdl.NvDecImageFramesWrapper) for f in frames):
+                if all(isinstance(f, libspdl.NvDecImageFrames) for f in frames):
                     return "async_convert_batch_image_nvdec"
             raise TypeError(f"Unexpected type: {t}.")
 
@@ -258,13 +258,13 @@ async def async_convert(frames, executor=None):
 
     Args:
         frames : Frames object.
-            - ``FFmpegAudioFramesWrapper``
-            - ``FFmpegVideoFramesWrapper``
-            - ``FFmpegImageFramesWrapper``
-            - ``NvDecVideoFramesWrapper``
-            - ``NvDecImageFramesWrapper``
-            - ``List[FFmpegImageFramesWrapper]``
-            - ``List[NvDecImageFramesWrapper]``
+            - ``FFmpegAudioFrames``
+            - ``FFmpegVideoFrames``
+            - ``FFmpegImageFrames``
+            - ``NvDecVideoFrames``
+            - ``NvDecImageFrames``
+            - ``List[FFmpegImageFrames]``
+            - ``List[NvDecImageFrames]``
 
             If the buffer will be created on the device where the frame data are.
 
