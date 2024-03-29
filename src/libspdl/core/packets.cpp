@@ -6,8 +6,6 @@
 
 #include <folly/logging/xlog.h>
 
-#include <random>
-
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/avutil.h>
@@ -20,13 +18,6 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
       avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
   return dst;
 }
-
-uint64_t random() {
-  static thread_local std::random_device rd;
-  static thread_local std::mt19937_64 gen(rd());
-  std::uniform_int_distribution<uint64_t> dis;
-  return dis(gen);
-}
 } // namespace
 
 template <MediaType media_type>
@@ -36,7 +27,7 @@ DemuxedPackets<media_type>::DemuxedPackets(
     AVCodecParameters* codecpar_,
     Rational time_base_,
     Rational frame_rate_)
-    : id(random()),
+    : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
       timestamp(timestamp_),
       codecpar(copy(codecpar_)),

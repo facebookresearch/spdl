@@ -10,7 +10,7 @@ CPUStorage::CPUStorage(size_t size) {
   TRACE_EVENT(
       "decoding",
       "CPUStorage::CPUStorage",
-      perfetto::Flow::ProcessScoped(reinterpret_cast<intptr_t>(this)));
+      perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
   data_ = operator new(size);
 }
 CPUStorage::CPUStorage(CPUStorage&& other) noexcept {
@@ -26,7 +26,7 @@ CPUStorage::~CPUStorage() {
     TRACE_EVENT(
         "decoding",
         "CPUStorage::~CPUStorage",
-        perfetto::Flow::ProcessScoped(reinterpret_cast<intptr_t>(this)));
+        perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
     operator delete(data_);
   }
 }
