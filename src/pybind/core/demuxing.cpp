@@ -1,4 +1,4 @@
-#include <libspdl/core/adoptor/bytes.h>
+#include <libspdl/core/adoptor.h>
 #include <libspdl/core/demuxing.h>
 #include <libspdl/core/result.h>
 #include <libspdl/core/types.h>

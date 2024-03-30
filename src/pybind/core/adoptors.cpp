@@ -1,6 +1,4 @@
-#include <libspdl/core/adoptor/basic.h>
-#include <libspdl/core/adoptor/bytes.h>
-#include <libspdl/core/adoptor/mmap.h>
+#include <libspdl/core/adoptor.h>
 
 #include <fmt/core.h>
 
@@ -19,8 +17,9 @@ class PySourceAdoptor : public SourceAdoptor {
  public:
   using SourceAdoptor::SourceAdoptor;
 
-  void* get(std::string_view url, const IOConfig& io_cfg) const override {
-    PYBIND11_OVERLOAD_PURE(void*, SourceAdoptor, get, url, io_cfg);
+  DataInterface* get(std::string_view url, const IOConfig& io_cfg)
+      const override {
+    PYBIND11_OVERLOAD_PURE(DataInterface*, SourceAdoptor, get, url, io_cfg);
   }
 };
 

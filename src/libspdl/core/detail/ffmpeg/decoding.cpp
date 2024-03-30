@@ -1,7 +1,7 @@
 #include "libspdl/core/detail/ffmpeg/decoding.h"
 
 #include <folly/experimental/coro/CurrentExecutor.h>
-#include <libspdl/core/adoptor/basic.h>
+#include <libspdl/core/adoptor.h>
 #include <libspdl/core/types.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
@@ -66,8 +66,7 @@ std::unique_ptr<DataInterface> get_interface(
   if (!adoptor) {
     adoptor.reset(static_cast<SourceAdoptor*>(new BasicAdoptor{}));
   }
-  return std::unique_ptr<DataInterface>(
-      static_cast<DataInterface*>(adoptor->get(src, io_cfg)));
+  return std::unique_ptr<DataInterface>(adoptor->get(src, io_cfg));
 }
 
 folly::coro::AsyncGenerator<AVPacketPtr> demux_window(

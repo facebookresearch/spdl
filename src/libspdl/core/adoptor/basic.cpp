@@ -1,4 +1,4 @@
-#include <libspdl/core/adoptor/basic.h>
+#include <libspdl/core/adoptor.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
@@ -28,7 +28,8 @@ class BasicInterface : public DataInterface {
 BasicAdoptor::BasicAdoptor(const std::optional<std::string>& prefix_)
     : prefix(prefix_) {}
 
-void* BasicAdoptor::get(std::string_view url, const IOConfig& io_cfg) const {
+DataInterface* BasicAdoptor::get(std::string_view url, const IOConfig& io_cfg)
+    const {
   return new BasicInterface(
       prefix ? prefix.value() + std::string(url) : std::string(url), io_cfg);
 }

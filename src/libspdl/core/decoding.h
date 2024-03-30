@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/adoptor/base.h>
+#include <libspdl/core/adoptor.h>
 #include <libspdl/core/executor.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/future.h>
