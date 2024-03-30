@@ -104,6 +104,7 @@ async def _async_gen(func, *args, **kwargs):
     while futures:
         try:
             val = await asyncio.futures.wrap_future(futures[0])
+            print(f"{val=}")
         # Handle the case where the async op failed
         except _AsyncOpFailed:
             break
@@ -147,7 +148,11 @@ def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
     Returns:
         AsyncGenerator[AudioPackets]: Generator of AudioPackets.
     """
-    return _async_gen(libspdl.async_demux_audio, src, timestamps, **kwargs)
+    func = getattr(
+        libspdl,
+        "async_demux_audio_bytes" if isinstance(src, bytes) else "async_demux_audio",
+    )
+    return _async_gen(func, src, timestamps, **kwargs)
 
 
 def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
@@ -168,7 +173,11 @@ def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
     Returns:
         AsyncGenerator[VideoPackets]: Generator of VideoPackets.
     """
-    return _async_gen(libspdl.async_demux_video, src, timestamps, **kwargs)
+    func = getattr(
+        libspdl,
+        "async_demux_video_bytes" if isinstance(src, bytes) else "async_demux_video",
+    )
+    return _async_gen(func, src, timestamps, **kwargs)
 
 
 def async_demux_image(src, *args, **kwargs):
@@ -188,7 +197,11 @@ def async_demux_image(src, *args, **kwargs):
     Returns:
         Awaitable: Awaitable which returns an ImagePackets object.
     """
-    return _async_task(libspdl.async_demux_image, src, *args, **kwargs)
+    func = getattr(
+        libspdl,
+        "async_demux_image_bytes" if isinstance(src, bytes) else "async_demux_image",
+    )
+    return _async_task(func, src, **kwargs)
 
 
 # TODO: Merge this with async_decode_nvdec
@@ -197,7 +210,7 @@ def async_apply_bsf(packets, *args, **kwargs):
 
     Args:
         packets (Packet): Packets object.
-        executor (Optional[libspdl.Executor]):
+        executor (Optional[libspdl.ThreadPoolExecutor]):
             Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool.
 

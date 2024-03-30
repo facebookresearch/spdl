@@ -18,7 +18,7 @@ struct BasicAdoptor : public SourceAdoptor {
   BasicAdoptor(const std::optional<std::string>& prefix = std::nullopt);
 
   // note; buffer_size is not used.
-  void* get(const std::string& url, const IOConfig& io_cfg) const override;
+  void* get(std::string_view url, const IOConfig& io_cfg) const override;
 };
 
 } // namespace spdl::core

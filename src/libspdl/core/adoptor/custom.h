@@ -67,8 +67,9 @@ struct CustomAdoptor : public SourceAdoptor {
   CustomAdoptor(const std::optional<std::string>& prefix_ = std::nullopt)
       : prefix(prefix_) {}
 
-  void* get(const std::string& url, const IOConfig& io_cfg) const override {
-    return new CustomInterface(prefix ? prefix.value() + url : url, io_cfg);
+  void* get(std::string_view url, const IOConfig& io_cfg) const override {
+    return new CustomInterface(
+        prefix ? prefix.value() + std::string(url) : std::string(url), io_cfg);
   };
 };
 

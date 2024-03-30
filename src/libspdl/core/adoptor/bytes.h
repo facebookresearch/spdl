@@ -10,6 +10,6 @@ struct BytesAdoptor : public SourceAdoptor {
   BytesAdoptor() = default;
   ~BytesAdoptor() = default;
 
-  void* get(const std::string& data, const IOConfig& io_cfg) const override;
+  void* get(std::string_view data, const IOConfig& io_cfg) const override;
 };
 } // namespace spdl::core

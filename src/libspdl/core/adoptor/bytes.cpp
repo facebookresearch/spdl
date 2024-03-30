@@ -15,7 +15,7 @@ class Bytes {
   int64_t pos = 0;
 
  public:
-  Bytes(const std::string& data) : buffer(data.c_str(), data.size()) {}
+  Bytes(std::string_view data) : buffer(std::move(data)) {}
 
   Bytes(const Bytes&) = delete;
   Bytes& operator=(const Bytes&) = delete;
@@ -82,7 +82,7 @@ class BytesInterface : public DataInterface {
   AVFormatContext* fmt_ctx;
 
  public:
-  BytesInterface(const std::string& data, const IOConfig& io_cfg)
+  BytesInterface(std::string_view data, const IOConfig& io_cfg)
       : obj(data),
         io_ctx(detail::get_io_ctx(
             &obj,
@@ -104,7 +104,7 @@ class BytesInterface : public DataInterface {
 };
 } // namespace
 
-void* BytesAdoptor::get(const std::string& data, const IOConfig& io_cfg) const {
+void* BytesAdoptor::get(std::string_view data, const IOConfig& io_cfg) const {
   return new BytesInterface{data, io_cfg};
 }
 
