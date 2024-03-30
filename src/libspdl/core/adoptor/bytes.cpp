@@ -1,4 +1,6 @@
-#include <libspdl/core/adoptor/bytes.h>
+#include <libspdl/core/adoptor.h>
+
+#include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
 #include <folly/logging/xlog.h>
 
@@ -8,8 +10,11 @@ extern "C" {
 }
 
 namespace spdl::core {
-namespace {
+namespace detail {
+void free_av_io_ctx(AVIOContext* p);
+void free_av_fmt_ctx(AVFormatContext* p);
 
+namespace {
 class Bytes {
   std::string_view buffer;
   int64_t pos = 0;
@@ -19,19 +24,8 @@ class Bytes {
 
   Bytes(const Bytes&) = delete;
   Bytes& operator=(const Bytes&) = delete;
-
-  Bytes(Bytes&& other) noexcept {
-    *this = std::move(other);
-  }
-
-  Bytes& operator=(Bytes&& other) noexcept {
-    using std::swap;
-    swap(buffer, other.buffer);
-    swap(pos, other.pos);
-    return *this;
-  }
-
-  ~Bytes() = default;
+  Bytes(Bytes&& other) noexcept = delete;
+  Bytes& operator=(Bytes&& other) noexcept = delete;
 
  private:
   int read_packet(uint8_t* buf, int buf_size) {
@@ -84,28 +78,30 @@ class BytesInterface : public DataInterface {
  public:
   BytesInterface(std::string_view data, const IOConfig& io_cfg)
       : obj(data),
-        io_ctx(detail::get_io_ctx(
+        io_ctx(get_io_ctx(
             &obj,
             io_cfg.buffer_size,
             Bytes::read_packet,
             Bytes::seek)),
-        fmt_ctx(detail::get_input_format_ctx(
+        fmt_ctx(get_input_format_ctx(
             io_ctx,
             io_cfg.format,
             io_cfg.format_options)) {}
 
   ~BytesInterface() {
-    detail::free_av_io_ctx(io_ctx);
-    detail::free_av_fmt_ctx(fmt_ctx);
+    free_av_io_ctx(io_ctx);
+    free_av_fmt_ctx(fmt_ctx);
   };
   AVFormatContext* get_fmt_ctx() override {
     return fmt_ctx;
   }
 };
 } // namespace
+} // namespace detail
 
-void* BytesAdoptor::get(std::string_view data, const IOConfig& io_cfg) const {
-  return new BytesInterface{data, io_cfg};
+DataInterface* BytesAdoptor::get(std::string_view data, const IOConfig& io_cfg)
+    const {
+  return new detail::BytesInterface{data, io_cfg};
 }
 
 } // namespace spdl::core

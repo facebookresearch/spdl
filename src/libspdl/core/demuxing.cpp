@@ -1,6 +1,5 @@
 #include <libspdl/core/demuxing.h>
 
-#include <libspdl/core/adoptor/bytes.h>
 #include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/ffmpeg/decoding.h"
 #include "libspdl/core/detail/future.h"
