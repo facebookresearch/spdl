@@ -227,7 +227,6 @@ def _get_decoding_name(packets):
             return "async_decode_video"
         case libspdl.ImagePackets:
             return "async_decode_image"
-        # TODO: Add support for batch image
         case _:
             raise TypeError(f"Unexpected type: {t}.")
 
@@ -251,7 +250,6 @@ def _get_nvdec_decoding_name(packets):
             return "async_decode_video_nvdec"
         case libspdl.ImagePackets:
             return "async_decode_image_nvdec"
-        # TODO: Add support for batch image
         case _:
             raise TypeError(f"Unexpected type: {t}.")
 
@@ -277,8 +275,10 @@ def _get_cpu_conversion_name(frames):
             return "async_convert_video_cpu"
         case libspdl.FFmpegImageFrames:
             return "async_convert_image_cpu"
-        # TODO: Add support for batch image
         case _:
+            if isinstance(frames, list):
+                if all(isinstance(f, libspdl.FFmpegImageFrames) for f in frames):
+                    return "async_convert_batch_image_cpu"
             raise TypeError(f"Unexpected type: {t}.")
 
 
@@ -290,6 +290,8 @@ def async_convert_cpu(frames, executor=None):
             - ``FFmpegAudioFrames``
             - ``FFmpegVideoFrames``
             - ``FFmpegImageFrames``
+            - ``List[FFmpegImageFrames]``
+
             If the frame data are not CPU, then the conversion will fail.
 
         executor (Optional[libspdl.ThreadPoolExecutor]):
