@@ -11,33 +11,21 @@
 #include <vector>
 
 namespace spdl::core {
-
 ////////////////////////////////////////////////////////////////////////////////
-// Device-specific conversion functions (will fail if wrong device)
+// Conversion functions
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-CPUBufferPtr convert_visual_frames_to_cpu_buffer(
-    const FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index = std::nullopt);
-
-CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
-    const std::vector<FFmpegImageFramesWrapperPtr>& batch_frames,
-    const std::optional<int>& index = std::nullopt);
-
-////////////////////////////////////////////////////////////////////////////////
-// Device-agnostic conversion functions (device is picked accordingly
-////////////////////////////////////////////////////////////////////////////////
-CPUBufferPtr convert_audio_frames(
+BufferPtr convert_audio_frames(
     const FFmpegAudioFramesWrapperPtr frames,
     const std::optional<int>& index = std::nullopt);
 
 // FFmpeg video/image could be on CUDA
-template <MediaType media_type>
+template <MediaType media_type, bool cpu_only = false>
 BufferPtr convert_visual_frames(
     const FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index =
         std::nullopt) requires(media_type != MediaType::Audio);
 
+template <bool cpu_only = false>
 BufferPtr convert_batch_image_frames(
     const std::vector<FFmpegImageFramesWrapperPtr>& batch_frames,
     const std::optional<int>& index = std::nullopt);
@@ -54,15 +42,7 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
 ////////////////////////////////////////////////////////////////////////////////
 // Async wrapper
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-FuturePtr async_convert_frames_to_cpu(
-    std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
-    FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index = std::nullopt,
-    ThreadPoolExecutorPtr demux_executor = nullptr);
-
-template <MediaType media_type>
+template <MediaType media_type, bool cpu_only = false>
 FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,

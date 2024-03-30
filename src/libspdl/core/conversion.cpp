@@ -25,7 +25,7 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
-CPUBufferPtr convert_audio_frames(
+BufferPtr convert_audio_frames(
     const FFmpegAudioFramesWrapperPtr frames,
     const std::optional<int>& i) {
   TRACE_EVENT(
@@ -73,7 +73,7 @@ void check_consistency(const std::vector<AVFrame*>& frames) requires(
   }
 }
 
-template <MediaType media_type>
+template <MediaType media_type, bool cpu_only>
 BufferPtr convert_video(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& index) requires(media_type != MediaType::Audio) {
@@ -81,24 +81,10 @@ BufferPtr convert_video(
   bool is_cuda =
       static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
   if (is_cuda) {
+    if constexpr (cpu_only) {
+      SPDL_FAIL("The input frames are not CPU frames.");
+    }
     return detail::convert_video_frames_cuda(frames, index);
-  }
-  auto buf = detail::convert_video_frames_cpu(frames, index);
-  if constexpr (media_type == MediaType::Image) {
-    buf->shape.erase(buf->shape.begin()); // Trim the first dim
-  }
-  return buf;
-}
-
-template <MediaType media_type>
-CPUBufferPtr convert_video_to_cpu(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
-  check_consistency<media_type>(frames);
-  bool is_cuda =
-      static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
-  if (is_cuda) {
-    SPDL_FAIL("The input frames are not CPU frames.");
   }
   auto buf = detail::convert_video_frames_cpu(frames, index);
   if constexpr (media_type == MediaType::Image) {
@@ -108,7 +94,7 @@ CPUBufferPtr convert_video_to_cpu(
 }
 } // namespace
 
-template <MediaType media_type>
+template <MediaType media_type, bool cpu_only>
 BufferPtr convert_visual_frames(
     const FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index) requires(media_type != MediaType::Audio) {
@@ -116,35 +102,23 @@ BufferPtr convert_visual_frames(
       "decoding",
       "core::convert_visual_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video<media_type>(
+  return convert_video<media_type, cpu_only>(
       frames->get_frames_ref()->get_frames(), index);
 }
 
-template BufferPtr convert_visual_frames(
+template BufferPtr convert_visual_frames<MediaType::Video, true>(
     const FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index);
 
-template BufferPtr convert_visual_frames(
+template BufferPtr convert_visual_frames<MediaType::Video, false>(
+    const FFmpegFramesWrapperPtr<MediaType::Video> frames,
+    const std::optional<int>& index);
+
+template BufferPtr convert_visual_frames<MediaType::Image, true>(
     const FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index);
 
-template <MediaType media_type>
-CPUBufferPtr convert_visual_frames_to_cpu_buffer(
-    const FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_video_frames_to_cpu_buffer",
-      perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video_to_cpu<media_type>(
-      frames->get_frames_ref()->get_frames(), index);
-}
-
-template CPUBufferPtr convert_visual_frames_to_cpu_buffer(
-    const FFmpegFramesWrapperPtr<MediaType::Video> frames,
-    const std::optional<int>& index);
-
-template CPUBufferPtr convert_visual_frames_to_cpu_buffer(
+template BufferPtr convert_visual_frames<MediaType::Image, false>(
     const FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index);
 
@@ -169,19 +143,21 @@ std::vector<AVFrame*> merge_frames(
 
 } // namespace
 
+template <bool cpu_only>
 BufferPtr convert_batch_image_frames(
     const std::vector<FFmpegImageFramesWrapperPtr>& batch,
     const std::optional<int>& index) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
-  return convert_video<MediaType::Video>(merge_frames(batch), index);
+  return convert_video<MediaType::Video, false>(merge_frames(batch), index);
 }
 
-CPUBufferPtr convert_batch_image_frames_to_cpu_buffer(
+template BufferPtr convert_batch_image_frames<true>(
     const std::vector<FFmpegImageFramesWrapperPtr>& batch,
-    const std::optional<int>& index) {
-  TRACE_EVENT("decoding", "core::convert_batch_image_frames_to_cpu_buffer");
-  return convert_video_to_cpu<MediaType::Video>(merge_frames(batch), index);
-}
+    const std::optional<int>& index);
+
+template BufferPtr convert_batch_image_frames<false>(
+    const std::vector<FFmpegImageFramesWrapperPtr>& batch,
+    const std::optional<int>& index);
 
 template <MediaType media_type>
 CUDABuffer2DPitchPtr convert_nvdec_frames(
@@ -293,55 +269,7 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
 ////////////////////////////////////////////////////////////////////////////////
 // Async - FFmpeg
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-FuturePtr async_convert_frames_to_cpu(
-    std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
-    FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index,
-    ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [=](FFmpegFramesWrapperPtr<media_type>&& frm)
-          -> folly::coro::Task<BufferPtr> {
-        if constexpr (media_type == MediaType::Audio) {
-          co_return convert_audio_frames(std::move(frm), index);
-        } else {
-          co_return convert_visual_frames_to_cpu_buffer<media_type>(
-              std::move(frm), index);
-        }
-      },
-      // Pass the ownership of FramePtr to executor thread, so that it is
-      // deallocated there, instead of the main thread.
-      wrap<media_type, FFmpegFramesPtr>(frames->unwrap()));
-  return detail::execute_task_with_callback(
-      std::move(task),
-      set_result,
-      notify_exception,
-      detail::get_demux_executor_high_prio(executor));
-}
-
-template FuturePtr async_convert_frames_to_cpu(
-    std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
-    FFmpegFramesWrapperPtr<MediaType::Audio> frames,
-    const std::optional<int>& index,
-    ThreadPoolExecutorPtr executor);
-
-template FuturePtr async_convert_frames_to_cpu(
-    std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
-    FFmpegFramesWrapperPtr<MediaType::Video> frames,
-    const std::optional<int>& index,
-    ThreadPoolExecutorPtr executor);
-
-template FuturePtr async_convert_frames_to_cpu(
-    std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
-    FFmpegFramesWrapperPtr<MediaType::Image> frames,
-    const std::optional<int>& index,
-    ThreadPoolExecutorPtr executor);
-
-template <MediaType media_type>
+template <MediaType media_type, bool cpu_only>
 FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
@@ -367,21 +295,35 @@ FuturePtr async_convert_frames(
       detail::get_demux_executor_high_prio(executor));
 }
 
-template FuturePtr async_convert_frames(
+template FuturePtr async_convert_frames<MediaType::Audio, true>(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Audio> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
-template FuturePtr async_convert_frames(
+template FuturePtr async_convert_frames<MediaType::Video, true>(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
-template FuturePtr async_convert_frames(
+template FuturePtr async_convert_frames<MediaType::Video, false>(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    FFmpegFramesWrapperPtr<MediaType::Video> frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_convert_frames<MediaType::Image, true>(
+    std::function<void(BufferPtr)> set_result,
+    std::function<void()> notify_exception,
+    FFmpegFramesWrapperPtr<MediaType::Image> frames,
+    const std::optional<int>& index,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_convert_frames<MediaType::Image, false>(
     std::function<void(BufferPtr)> set_result,
     std::function<void()> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Image> frames,
