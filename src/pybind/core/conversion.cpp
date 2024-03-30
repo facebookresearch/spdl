@@ -12,9 +12,13 @@ void register_conversion(py::module& m) {
   // Synchronous conversion
   /////////////////////////////////////////////////////////////////////////////
   m.def("convert_to_buffer", &convert_audio_frames);
-  m.def("convert_to_buffer", &convert_visual_frames<MediaType::Video>);
-  m.def("convert_to_buffer", &convert_visual_frames<MediaType::Image>);
-  m.def("convert_to_buffer", &convert_batch_image_frames<>);
+  m.def(
+      "convert_to_buffer",
+      &convert_vision_frames<MediaType::Video, /*cpu_only=*/false>);
+  m.def(
+      "convert_to_buffer",
+      &convert_vision_frames<MediaType::Image, /*cpu_only=*/false>);
+  m.def("convert_to_buffer", &convert_batch_image_frames</*cpu_only=*/false>);
   m.def("convert_to_buffer", &convert_nvdec_frames<MediaType::Video>);
   m.def("convert_to_buffer", &convert_nvdec_frames<MediaType::Image>);
   m.def("convert_to_buffer", &convert_nvdec_batch_image_frames);
@@ -22,10 +26,10 @@ void register_conversion(py::module& m) {
   m.def("convert_to_cpu_buffer", &convert_audio_frames);
   m.def(
       "convert_to_cpu_buffer",
-      &convert_visual_frames<MediaType::Video, /*cpu_only=*/true>);
+      &convert_vision_frames<MediaType::Video, /*cpu_only=*/true>);
   m.def(
       "convert_to_cpu_buffer",
-      &convert_visual_frames<MediaType::Image, /*cpu_only=*/true>);
+      &convert_vision_frames<MediaType::Image, /*cpu_only=*/true>);
   m.def(
       "convert_to_cpu_buffer", &convert_batch_image_frames</*cpu_only=*/true>);
 
@@ -107,7 +111,16 @@ void register_conversion(py::module& m) {
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image",
-      &async_batch_convert_frames,
+      &async_batch_convert_frames</*cpu_only=*/false>,
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("frames"),
+      py::kw_only(),
+      py::arg("index") = py::none(),
+      py::arg("executor") = nullptr);
+  m.def(
+      "async_convert_batch_image_cpu",
+      &async_batch_convert_frames</*cpu_only=*/true>,
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("frames"),

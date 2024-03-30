@@ -14,6 +14,10 @@ endif()
 set(defs)
 set(deps folly)
 set(srcs
+  libspdl/core/conversion/async.cpp
+  libspdl/core/conversion/audio.cpp
+  libspdl/core/conversion/nvdec.cpp
+  libspdl/core/conversion/vision.cpp
   libspdl/core/detail/executor.cpp
   libspdl/core/detail/ffmpeg/conversion.cpp
   libspdl/core/detail/ffmpeg/ctx_utils.cpp
@@ -23,7 +27,6 @@ set(srcs
   libspdl/core/detail/logging.cpp
   libspdl/core/detail/result.cpp
   libspdl/core/buffer/cpu.cpp
-  libspdl/core/conversion.cpp
   libspdl/core/decoding/audio_visual.cpp
   libspdl/core/decoding/image.cpp
   libspdl/core/decoding/nvdec.cpp

@@ -115,6 +115,10 @@ async def _decode_image(path):
     return frames
 
 
+async def _batch_decode_image(paths):
+    return await asyncio.gather(*[_decode_image(path) for path in paths])
+
+
 def test_decode_image(get_sample):
     """Can decode an image."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
@@ -314,3 +318,19 @@ def test_demux_image_bytes(get_sample):
         assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))
+
+
+def test_async_convert_batch_image_cpu(get_samples):
+    """async_convert_cpu can convert List[FFmpegImageFrames] to Buffer"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
+    flist = get_samples(cmd)
+
+    async def _test(flist):
+        frames = await _batch_decode_image(flist)
+        buffer = await spdl.async_convert_cpu(frames)
+        print(buffer)
+        arr = spdl.to_numpy(buffer)
+        print(arr.dtype, arr.shape)
+        assert arr.shape == (4, 3, 240, 320)
+
+    asyncio.run(_test(flist))
