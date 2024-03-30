@@ -2,7 +2,7 @@
 
 #include <libspdl/core/packets.h>
 
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/types.h>
 
@@ -20,13 +20,13 @@ template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
-    SourceAdoptorPtr adoptor,
+    SourceAdaptorPtr adaptor,
     const IOConfig io_cfg);
 
 // Demuxer for a single image
 folly::coro::Task<ImagePacketsPtr> demux_image(
     std::string_view src,
-    SourceAdoptorPtr adoptor,
+    SourceAdaptorPtr adaptor,
     const IOConfig io_cfg);
 
 // Apply bitstream filter for NVDEC video decoding

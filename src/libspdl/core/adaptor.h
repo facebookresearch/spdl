@@ -3,14 +3,17 @@
 #include <libspdl/core/types.h>
 
 #include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 
 struct AVFormatContext;
 
 namespace spdl::core {
 
-struct SourceAdoptor;
+struct SourceAdaptor;
 
-using SourceAdoptorPtr = std::shared_ptr<SourceAdoptor>;
+using SourceAdaptorPtr = std::shared_ptr<SourceAdaptor>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // DataInterface
@@ -30,17 +33,33 @@ struct DataInterface {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// Adoptor
+// Adaptor
 ////////////////////////////////////////////////////////////////////////////////
-
-// Adoptor optionally modifies the intput resource indicator, and create
+// Adaptor optionally modifies the intput resource indicator, and create
 // DataInterface from the result.
-struct SourceAdoptor {
-  virtual ~SourceAdoptor() = default;
+struct SourceAdaptor {
+  virtual ~SourceAdaptor() = default;
 
   // This returns a pointer to DataInterface classes, but for the sake of
   // exposing this via PyBind11, we use void*
-  virtual void* get(std::string_view url, const IOConfig& io_cfg) const = 0;
+  virtual DataInterface* get(std::string_view url, const IOConfig& io_cfg)
+      const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// MMap
+////////////////////////////////////////////////////////////////////////////////
+struct MMapAdaptor : public SourceAdaptor {
+  DataInterface* get(std::string_view url, const IOConfig& io_cfg)
+      const override;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Bytes
+////////////////////////////////////////////////////////////////////////////////
+struct BytesAdaptor : public SourceAdaptor {
+  DataInterface* get(std::string_view data, const IOConfig& io_cfg)
+      const override;
 };
 
 } // namespace spdl::core

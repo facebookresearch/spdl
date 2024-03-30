@@ -34,9 +34,9 @@ set(srcs
   libspdl/core/demuxing.cpp
   libspdl/core/future.cpp
   libspdl/core/frames/ffmpeg.cpp
-  libspdl/core/adoptor/basic.cpp
-  libspdl/core/adoptor/bytes.cpp
-  libspdl/core/adoptor/mmap.cpp
+  libspdl/core/adaptor/adaptor.cpp
+  libspdl/core/adaptor/bytes.cpp
+  libspdl/core/adaptor/mmap.cpp
   libspdl/core/storage/cpu.cpp
   libspdl/core/packets.cpp
   libspdl/core/utils.cpp

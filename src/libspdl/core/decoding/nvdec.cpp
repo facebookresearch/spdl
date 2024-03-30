@@ -26,7 +26,7 @@ namespace {
 Task<NvDecImageFramesWrapperPtr> image_decode_task_nvdec(
     const std::string src,
     const int cuda_device_index,
-    const SourceAdoptorPtr adoptor,
+    const SourceAdaptorPtr adaptor,
     const IOConfig io_cfg,
     const CropArea crop,
     int width,
@@ -35,7 +35,7 @@ Task<NvDecImageFramesWrapperPtr> image_decode_task_nvdec(
     ThreadPoolExecutorPtr decode_executor) {
   auto exec = detail::get_decode_executor(decode_executor);
   auto packet =
-      co_await detail::demux_image(src, std::move(adoptor), std::move(io_cfg));
+      co_await detail::demux_image(src, std::move(adaptor), std::move(io_cfg));
   auto task = detail::decode_nvdec<MediaType::Image>(
       std::move(packet), cuda_device_index, crop, width, height, pix_fmt);
   SemiFuture<NvDecImageFramesPtr> future =
@@ -47,7 +47,7 @@ Task<std::vector<SemiFuture<NvDecImageFramesWrapperPtr>>>
 batch_image_decode_task_nvdec(
     const std::vector<std::string> srcs,
     const int cuda_device_index,
-    const SourceAdoptorPtr adoptor,
+    const SourceAdaptorPtr adaptor,
     const IOConfig io_cfg,
     const CropArea crop,
     int width,
@@ -61,7 +61,7 @@ batch_image_decode_task_nvdec(
         image_decode_task_nvdec(
             src,
             cuda_device_index,
-            adoptor,
+            adaptor,
             io_cfg,
             crop,
             width,
@@ -96,7 +96,7 @@ stream_decode_task_nvdec(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
     const int cuda_device_index,
-    const SourceAdoptorPtr adoptor,
+    const SourceAdaptorPtr adaptor,
     const IOConfig io_cfg,
     const CropArea crop,
     int width,
@@ -107,7 +107,7 @@ stream_decode_task_nvdec(
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux<MediaType::Video>(
-        src, timestamps, std::move(adoptor), std::move(io_cfg));
+        src, timestamps, std::move(adaptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
       auto task = video_decode_task_nvdec(
           std::move(*result), cuda_device_index, crop, width, height, pix_fmt);
@@ -122,7 +122,7 @@ stream_decode_task_nvdec(
 DecodeNvDecResult<MediaType::Image> decoding::decode_image_nvdec(
     const std::string& src,
     const int cuda_device_index,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const CropArea& crop,
     int width,
@@ -140,7 +140,7 @@ DecodeNvDecResult<MediaType::Image> decoding::decode_image_nvdec(
           image_decode_task_nvdec(
               src,
               cuda_device_index,
-              adoptor,
+              adaptor,
               io_cfg,
               crop,
               width,
@@ -156,7 +156,7 @@ BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const int cuda_device_index,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const CropArea& crop,
     int width,
@@ -182,7 +182,7 @@ BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
               src,
               timestamps,
               cuda_device_index,
-              adoptor,
+              adaptor,
               io_cfg,
               crop,
               width,
@@ -197,7 +197,7 @@ BatchDecodeNvDecResult<MediaType::Video> decoding::decode_video_nvdec(
 BatchDecodeNvDecResult<MediaType::Image> decoding::batch_decode_image_nvdec(
     const std::vector<std::string>& srcs,
     const int cuda_device_index,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const CropArea& crop,
     int width,
@@ -222,7 +222,7 @@ BatchDecodeNvDecResult<MediaType::Image> decoding::batch_decode_image_nvdec(
           batch_image_decode_task_nvdec(
               srcs,
               cuda_device_index,
-              adoptor,
+              adaptor,
               io_cfg,
               crop,
               width,

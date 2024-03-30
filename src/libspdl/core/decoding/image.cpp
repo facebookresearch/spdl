@@ -17,7 +17,7 @@ using folly::coro::Task;
 namespace {
 Task<FFmpegImageFramesWrapperPtr> image_decode_task(
     const std::string src,
-    const SourceAdoptorPtr adoptor,
+    const SourceAdaptorPtr adaptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
@@ -25,7 +25,7 @@ Task<FFmpegImageFramesWrapperPtr> image_decode_task(
   co_return wrap<MediaType::Image, FFmpegFramesPtr>(
       co_await detail::decode_packets_ffmpeg<MediaType::Image>(
           co_await detail::demux_image(
-              src, std::move(adoptor), std::move(io_cfg)),
+              src, std::move(adaptor), std::move(io_cfg)),
           std::move(decode_cfg),
           std::move(filter_desc))
           .scheduleOn(detail::get_decode_executor(decode_executor)));
@@ -34,7 +34,7 @@ Task<FFmpegImageFramesWrapperPtr> image_decode_task(
 Task<std::vector<SemiFuture<FFmpegImageFramesWrapperPtr>>>
 batch_image_decode_task(
     const std::vector<std::string> srcs,
-    const SourceAdoptorPtr adoptor,
+    const SourceAdaptorPtr adaptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
@@ -44,7 +44,7 @@ batch_image_decode_task(
   for (auto& src : srcs) {
     futures.emplace_back(
         image_decode_task(
-            src, adoptor, io_cfg, decode_cfg, filter_desc, decode_executor)
+            src, adaptor, io_cfg, decode_cfg, filter_desc, decode_executor)
             .scheduleOn(detail::get_demux_executor(demux_executor))
             .start());
   }
@@ -54,14 +54,14 @@ batch_image_decode_task(
 
 DecodeResult<MediaType::Image> decoding::decode_image(
     const std::string& src,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
     ThreadPoolExecutorPtr demux_executor,
     ThreadPoolExecutorPtr decode_executor) {
   auto task = image_decode_task(
-      src, adoptor, io_cfg, decode_cfg, filter_desc, decode_executor);
+      src, adaptor, io_cfg, decode_cfg, filter_desc, decode_executor);
   return DecodeResult<MediaType::Image>{
       new DecodeResult<MediaType::Image>::Impl{
           std::move(task)
@@ -71,7 +71,7 @@ DecodeResult<MediaType::Image> decoding::decode_image(
 
 BatchDecodeResult<MediaType::Image> decoding::batch_decode_image(
     const std::vector<std::string>& srcs,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
@@ -86,7 +86,7 @@ BatchDecodeResult<MediaType::Image> decoding::batch_decode_image(
           {},
           batch_image_decode_task(
               srcs,
-              adoptor,
+              adaptor,
               io_cfg,
               decode_cfg,
               filter_desc,

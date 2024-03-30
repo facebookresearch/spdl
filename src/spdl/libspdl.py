@@ -6,9 +6,9 @@ from typing import Any, List
 from spdl.lib import libspdl as _libspdl
 
 __all__ = [  # noqa: F822
-    "BasicAdoptor",
+    "BasicAdaptor",
     "Buffer",
-    "BytesAdoptor",
+    "BytesAdaptor",
     "CPUBuffer",
     "CUDABuffer",
     "CUDABuffer2DPitch",
@@ -16,9 +16,9 @@ __all__ = [  # noqa: F822
     "FFmpegAudioFrames",
     "FFmpegImageFrames",
     "FFmpegVideoFrames",
-    "MMapAdoptor",
+    "MMapAdaptor",
     "NvDecVideoFrames",
-    "SourceAdoptor",
+    "SourceAdaptor",
     "TracingSession",
     "batch_decode_image",
     "batch_decode_image_nvdec",
@@ -43,8 +43,8 @@ def __dir__() -> List[str]:
 
 
 def __getattr__(name: str) -> Any:
-    if name == "SourceAdoptor":
-        return _libspdl.SourceAdoptor_SPDL_GLOBAL
+    if name == "SourceAdaptor":
+        return _libspdl.SourceAdaptor_SPDL_GLOBAL
     return getattr(_libspdl, name)
 
 
