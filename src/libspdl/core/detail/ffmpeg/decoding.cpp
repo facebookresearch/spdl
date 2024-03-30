@@ -60,7 +60,7 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
 }
 
 std::unique_ptr<DataInterface> get_interface(
-    const std::string& src,
+    std::string_view src,
     SourceAdoptorPtr& adoptor,
     const IOConfig& io_cfg) {
   if (!adoptor) {
@@ -118,7 +118,7 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
 
 template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
-    const std::string src,
+    std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg) {
@@ -147,20 +147,20 @@ folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
 
 template folly::coro::AsyncGenerator<AudioPacketsPtr>
 stream_demux<MediaType::Audio>(
-    const std::string src,
+    std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 template folly::coro::AsyncGenerator<VideoPacketsPtr>
 stream_demux<MediaType::Video>(
-    const std::string src,
+    std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 folly::coro::Task<ImagePacketsPtr> demux_image(
-    const std::string src,
+    std::string_view src,
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg) {
   TRACE_EVENT("demuxing", "detail::demux");

@@ -14,9 +14,9 @@ class BasicInterface : public DataInterface {
   detail::AVFormatInputContextPtr fmt_ctx;
 
  public:
-  BasicInterface(const std::string& url, const IOConfig& io_cfg)
+  BasicInterface(std::string url, const IOConfig& io_cfg)
       : fmt_ctx(get_input_format_ctx_ptr(
-            url,
+            std::move(url),
             io_cfg.format,
             io_cfg.format_options)) {}
   ~BasicInterface() = default;
@@ -28,7 +28,8 @@ class BasicInterface : public DataInterface {
 BasicAdoptor::BasicAdoptor(const std::optional<std::string>& prefix_)
     : prefix(prefix_) {}
 
-void* BasicAdoptor::get(const std::string& url, const IOConfig& io_cfg) const {
-  return new BasicInterface(prefix ? prefix.value() + url : url, io_cfg);
+void* BasicAdoptor::get(std::string_view url, const IOConfig& io_cfg) const {
+  return new BasicInterface(
+      prefix ? prefix.value() + std::string(url) : std::string(url), io_cfg);
 }
 } // namespace spdl::core

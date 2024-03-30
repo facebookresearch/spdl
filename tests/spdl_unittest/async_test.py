@@ -40,55 +40,79 @@ def test_failure():
         asyncio.run(_test_image())
 
 
-async def _test_async_decode(generator):
-    decode_tasks = []
-    conversions = []
-    conversions_cpu = []
+async def _decode_packet(packets):
+    frames = await spdl.async_decode(packets)
+    print(frames)
+    buffer = await spdl.async_convert(frames)
+    print(buffer)
+    array = spdl.to_numpy(buffer)
+    print(array.shape, array.dtype)
+    return array
+
+
+async def _test_async_decode(generator, N):
+    # There was a case where the underlying file device was delayed, and the
+    # generated sample file is not ready when the test is started, so
+    # sleeping here for 1 second to make sure the file is ready.
+    await asyncio.sleep(1)
+
+    tasks = []
     async for packets in generator:
         print(packets)
-        decode_tasks.append(spdl.async_decode(packets))
-    results = await asyncio.gather(*decode_tasks)
-    for frames in results:
-        print(frames)
-        conversions.append(spdl.async_convert(frames))
+        tasks.append(asyncio.create_task(_decode_packet(packets)))
+    assert len(tasks) == N
 
-    results = await asyncio.gather(*conversions)
-    for buffer in results:
-        array = np.array(buffer, copy=False)
-        print(array.shape, array.dtype)
-
-    results = await asyncio.gather(*conversions_cpu)
-    for buffer in results:
-        array = np.array(buffer, copy=False)
-        print(array.shape, array.dtype)
+    done, pending = await asyncio.wait(tasks)
+    assert len(pending) == 0
+    assert len(done) == len(tasks) == N
+    return [t.result() for t in tasks]
 
 
 def test_decode_audio_clips(get_sample):
     """Can decode audio clips."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=12' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
+    N = 10
 
-    timestamps = [(i, i + 1) for i in range(10)]
+    async def _test():
+        timestamps = [(i, i + 1) for i in range(N)]
+        gen = spdl.async_demux_audio(sample.path, timestamps=timestamps)
+        arrays = await _test_async_decode(gen, N)
+        assert len(arrays) == N
+        for i, arr in enumerate(arrays):
+            print(i, arr.shape, arr.dtype)
+            assert arr.shape == (49152, 1)
+            assert arr.dtype == np.int16
 
-    coro = _test_async_decode(
-        spdl.async_demux_audio(sample.path, timestamps=timestamps)
-    )
-
-    asyncio.run(coro)
+    asyncio.run(_test())
 
 
 def test_decode_video_clips(get_sample):
     """Can decode video clips."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd, width=320, height=240)
+    N = 10
 
-    timestamps = [(i, i + 1) for i in range(10)]
+    async def _test():
+        timestamps = [(i, i + 1) for i in range(N)]
+        gen = spdl.async_demux_video(sample.path, timestamps=timestamps)
+        arrays = await _test_async_decode(gen, N)
+        assert len(arrays) == N
+        for i, arr in enumerate(arrays):
+            print(i, arr.shape, arr.dtype)
+            assert arr.shape == (26, 3, 240, 320)
+            assert arr.dtype == np.uint8
 
-    coro = _test_async_decode(
-        spdl.async_demux_video(sample.path, timestamps=timestamps)
-    )
+    asyncio.run(_test())
 
-    asyncio.run(coro)
+
+async def _decode_image(path):
+    packets = await spdl.async_demux_image(path)
+    print(packets)
+    frames = await spdl.async_decode(packets)
+    print(frames)
+    assert type(frames) is libspdl.FFmpegImageFrames
+    return frames
 
 
 def test_decode_image(get_sample):
@@ -96,16 +120,16 @@ def test_decode_image(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd, width=320, height=240)
 
-    async def _test():
-        packets = await spdl.async_demux_image(sample.path)
-        print(packets)
-        frames = await spdl.async_decode(packets)
+    async def _test(src):
+        frames = await _decode_image(src)
         print(frames)
         buffer = await spdl.async_convert(frames)
-        array = np.array(buffer, copy=False)
+        array = spdl.to_numpy(buffer)
         print(array.shape, array.dtype)
+        assert array.dtype == np.uint8
+        assert array.shape == (3, 240, 320)
 
-    asyncio.run(_test())
+    asyncio.run(_test(sample.path))
 
 
 def test_batch_decode_image(get_samples):
@@ -116,22 +140,14 @@ def test_batch_decode_image(get_samples):
     flist = ["NON_EXISTING_FILE.JPG"] + samples
 
     async def _test():
-        demuxing = [spdl.async_demux_image(path) for path in flist]
-        decoding = []
+        decoding = [asyncio.create_task(_decode_image(path)) for path in flist]
         frames = []
-        for i, result in enumerate(
-            await asyncio.gather(*demuxing, return_exceptions=True)
-        ):
-            print(result)
+        await asyncio.wait(decoding)
+        for i, result in enumerate(decoding):
             if i == 0:
-                assert isinstance(result, Exception)
-                continue
-            decoding.append(asyncio.create_task(spdl.async_decode(result)))
-
-        done, _ = await asyncio.wait(decoding, return_when=asyncio.ALL_COMPLETED)
-        for result in done:
-            print(result)
-            frames.append(result.result())
+                assert result.exception() is not None
+            else:
+                frames.append(result.result())
 
         buffer = await spdl.async_convert(frames)
         assert buffer.shape == [250, 3, 240, 320]
@@ -143,9 +159,7 @@ def test_cancellation():
     """Async task is cancellable"""
 
     async def _test():
-        loop = asyncio.get_running_loop()
-
-        task = loop.create_task(spdl._async.async_sleep(3000))
+        task = asyncio.create_task(spdl._async.async_sleep(3000))
         await asyncio.sleep(0)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -158,10 +172,7 @@ def test_cancellation_wait_for():
     """Task awaited with `wait_for` are cancelled simultaneously"""
 
     async def _test():
-        loop = asyncio.get_running_loop()
-
-        future = spdl._async.async_sleep(1000)
-        task = loop.create_task(future)
+        task = asyncio.create_task(spdl._async.async_sleep(1000))
         with pytest.raises(asyncio.exceptions.TimeoutError):
             await asyncio.wait_for(task, timeout=0.1)
 
@@ -172,9 +183,7 @@ def test_cancellation_multi_gather():
     """Multiple tasks awaited with `gather` are cancelled simultaneously"""
 
     async def _test(N: int):
-        loop = asyncio.get_running_loop()
-
-        tasks = [loop.create_task(spdl._async.async_sleep(3000)) for _ in range(N)]
+        tasks = [asyncio.create_task(spdl._async.async_sleep(3000)) for _ in range(N)]
         task = asyncio.gather(*tasks, return_exceptions=True)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -195,18 +204,34 @@ def test_async_convert_audio_cpu(get_sample):
 
     async def _test(src):
         ts = [(0, float("inf"))]
-        packets = None
-        async for packets in spdl.async_demux_audio(sample.path, timestamps=ts):
-            print(packets)
-            break
-        frames = await spdl.async_decode(packets)
-        print(frames)
-        assert type(frames) is libspdl.FFmpegAudioFrames
-        buffer = await spdl.async_convert_cpu(frames)
-        print(buffer)
-        arr = spdl.to_numpy(buffer)
-        print(arr.dtype, arr.shape)
-        assert arr.shape == (480000, 1)
+        gen = spdl.async_demux_audio(src, timestamps=ts)
+        arrays = await _test_async_decode(gen, 1)
+        array = arrays[0]
+        print(array.dtype, array.shape)
+        assert array.shape == (480000, 1)
+
+    asyncio.run(_test(sample.path))
+
+
+def test_async_decode_audio_bytes(get_sample):
+    """audio can be decoded from bytes."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
+    sample = get_sample(cmd)
+
+    async def _decode(src):
+        ts = [(0, float("inf"))]
+        gen = spdl.async_demux_audio(src, timestamps=ts)
+        arrays = await _test_async_decode(gen, 1)
+        return arrays[0]
+
+    async def _test(path):
+        ref = await _decode(path)
+        with open(path, "rb") as f:
+            buffer = f.read()
+        hyp = await _decode(buffer)
+
+        assert hyp.shape == (480000, 1)
+        assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))
 
@@ -218,18 +243,34 @@ def test_async_convert_video_cpu(get_sample):
 
     async def _test(src):
         ts = [(0, float("inf"))]
-        packets = None
-        async for packets in spdl.async_demux_video(sample.path, timestamps=ts):
-            print(packets)
-            break
-        frames = await spdl.async_decode(packets)
-        print(frames)
-        assert type(frames) is libspdl.FFmpegVideoFrames
-        buffer = await spdl.async_convert_cpu(frames)
-        print(buffer)
-        arr = spdl.to_numpy(buffer)
-        print(arr.dtype, arr.shape)
-        assert arr.shape == (1000, 3, 240, 320)
+        gen = spdl.async_demux_video(src, timestamps=ts)
+        arrays = await _test_async_decode(gen, 1)
+        array = arrays[0]
+        print(array.dtype, array.shape)
+        assert array.shape == (1000, 3, 240, 320)
+
+    asyncio.run(_test(sample.path))
+
+
+def test_async_decode_video_bytes(get_sample):
+    """video can be decoded from bytes."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+    sample = get_sample(cmd, width=320, height=240)
+
+    async def _decode(src):
+        ts = [(0, float("inf"))]
+        gen = spdl.async_demux_video(src, timestamps=ts)
+        arrays = await _test_async_decode(gen, 1)
+        return arrays[0]
+
+    async def _test(path):
+        ref = await _decode(path)
+        with open(path, "rb") as f:
+            buffer = f.read()
+        hyp = await _decode(buffer)
+
+        assert hyp.shape == (1000, 3, 240, 320)
+        assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))
 
@@ -240,15 +281,36 @@ def test_async_convert_image_cpu(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test(src):
-        packets = await spdl.async_demux_image(sample.path)
-        print(packets)
-        frames = await spdl.async_decode(packets)
-        print(frames)
-        assert type(frames) is libspdl.FFmpegImageFrames
+        frames = await _decode_image(src)
         buffer = await spdl.async_convert_cpu(frames)
         print(buffer)
         arr = spdl.to_numpy(buffer)
         print(arr.dtype, arr.shape)
         assert arr.shape == (3, 240, 320)
+
+    asyncio.run(_test(sample.path))
+
+
+def test_demux_image_bytes(get_sample):
+    """Image (gray) can be decoded from bytes."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
+    sample = get_sample(cmd, width=320, height=240)
+
+    async def _decode(src):
+        frames = await _decode_image(src)
+        buffer = await spdl.async_convert(frames)
+        print(buffer)
+        arr = spdl.to_numpy(buffer)
+        print(arr.dtype, arr.shape)
+        return arr
+
+    async def _test(path):
+        ref = await _decode(path)
+        with open(sample.path, "rb") as f:
+            buffer = f.read()
+        hyp = await _decode(buffer)
+
+        assert hyp.shape == (1, 240, 320)
+        assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))

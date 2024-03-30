@@ -18,14 +18,14 @@ namespace spdl::core::detail {
 
 template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
-    const std::string src,
+    std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
 // Demuxer for a single image
 folly::coro::Task<ImagePacketsPtr> demux_image(
-    const std::string src,
+    std::string_view src,
     SourceAdoptorPtr adoptor,
     const IOConfig io_cfg);
 
