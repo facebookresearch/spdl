@@ -222,17 +222,24 @@ def test_async_decode_audio_bytes(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
+    ts = [(0, float("inf"))]
+
     async def _decode(src):
-        ts = [(0, float("inf"))]
         gen = spdl.async_demux_audio(src, timestamps=ts)
         arrays = await _test_async_decode(gen, 1)
+        return arrays[0]
+
+    async def _decode_bytes(src):
+        assert src != b"\x00" * len(src)
+        gen = spdl.async_demux_audio(src, timestamps=ts, _zero_clear=True)
+        arrays = await _test_async_decode(gen, 1)
+        assert src == b"\x00" * len(src)
         return arrays[0]
 
     async def _test(path):
         ref = await _decode(path)
         with open(path, "rb") as f:
-            buffer = f.read()
-        hyp = await _decode(buffer)
+            hyp = await _decode_bytes(f.read())
 
         assert hyp.shape == (480000, 1)
         assert np.all(ref == hyp)
@@ -261,17 +268,25 @@ def test_async_decode_video_bytes(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd, width=320, height=240)
 
+    ts = [(0, float("inf"))]
+
     async def _decode(src):
-        ts = [(0, float("inf"))]
         gen = spdl.async_demux_video(src, timestamps=ts)
         arrays = await _test_async_decode(gen, 1)
+        return arrays[0]
+
+    async def _decode_bytes(data):
+        assert data
+        assert data != b"\x00" * len(data)
+        gen = spdl.async_demux_video(data, timestamps=ts, _zero_clear=True)
+        arrays = await _test_async_decode(gen, 1)
+        assert data == b"\x00" * len(data)
         return arrays[0]
 
     async def _test(path):
         ref = await _decode(path)
         with open(path, "rb") as f:
-            buffer = f.read()
-        hyp = await _decode(buffer)
+            hyp = await _decode_bytes(f.read())
 
         assert hyp.shape == (1000, 3, 240, 320)
         assert np.all(ref == hyp)
@@ -301,18 +316,23 @@ def test_demux_image_bytes(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _decode(src):
-        frames = await _decode_image(src)
+        packets = await spdl.async_demux_image(src)
+        frames = await spdl.async_decode(packets)
         buffer = await spdl.async_convert(frames)
-        print(buffer)
-        arr = spdl.to_numpy(buffer)
-        print(arr.dtype, arr.shape)
-        return arr
+        return spdl.to_numpy(buffer)
+
+    async def _decode_bytes(data):
+        assert data != b"\x00" * len(data)
+        packets = await spdl.async_demux_image(data, _zero_clear=True)
+        assert data == b"\x00" * len(data)
+        frames = await spdl.async_decode(packets)
+        buffer = await spdl.async_convert(frames)
+        return spdl.to_numpy(buffer)
 
     async def _test(path):
         ref = await _decode(path)
         with open(sample.path, "rb") as f:
-            buffer = f.read()
-        hyp = await _decode(buffer)
+            hyp = await _decode_bytes(f.read())
 
         assert hyp.shape == (1, 240, 320)
         assert np.all(ref == hyp)

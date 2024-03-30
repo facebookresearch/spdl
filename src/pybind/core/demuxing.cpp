@@ -62,14 +62,16 @@ void register_demuxing(py::module& m) {
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
-         ThreadPoolExecutorPtr demux_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         bool _zero_clear) {
         return async_demux_bytes<MediaType::Audio>(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string_view>(data),
             timestamps,
             {format, format_options, buffer_size},
-            demux_executor);
+            demux_executor,
+            _zero_clear);
       },
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -79,7 +81,8 @@ void register_demuxing(py::module& m) {
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("executor") = nullptr);
+      py::arg("executor") = nullptr,
+      py::arg("_zero_clear") = false);
 
   m.def(
       "async_demux_video",
@@ -121,14 +124,16 @@ void register_demuxing(py::module& m) {
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
-         ThreadPoolExecutorPtr demux_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         bool _zero_clear) {
         return async_demux_bytes<MediaType::Video>(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string_view>(data),
             timestamps,
             {format, format_options, buffer_size},
-            demux_executor);
+            demux_executor,
+            _zero_clear);
       },
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -138,7 +143,8 @@ void register_demuxing(py::module& m) {
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("executor") = nullptr);
+      py::arg("executor") = nullptr,
+      py::arg("_zero_clear") = false);
 
   m.def(
       "async_demux_image",
@@ -176,13 +182,15 @@ void register_demuxing(py::module& m) {
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
-         ThreadPoolExecutorPtr demux_executor) {
+         ThreadPoolExecutorPtr demux_executor,
+         bool _zero_clear) {
         return async_demux_image_bytes(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string_view>(data),
             {format, format_options, buffer_size},
-            demux_executor);
+            demux_executor,
+            _zero_clear);
       },
       py::arg("set_result"),
       py::arg("notify_exception"),
@@ -191,6 +199,7 @@ void register_demuxing(py::module& m) {
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("executor") = nullptr);
+      py::arg("executor") = nullptr,
+      py::arg("_zero_clear") = false);
 }
 } // namespace spdl::core
