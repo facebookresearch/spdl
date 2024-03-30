@@ -104,7 +104,6 @@ async def _async_gen(func, *args, **kwargs):
     while futures:
         try:
             val = await asyncio.futures.wrap_future(futures[0])
-            print(f"{val=}")
         # Handle the case where the async op failed
         except _AsyncOpFailed:
             break
