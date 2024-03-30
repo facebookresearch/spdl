@@ -41,7 +41,8 @@ FuturePtr async_demux_bytes(
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& io_cfg,
-    ThreadPoolExecutorPtr executor);
+    ThreadPoolExecutorPtr executor,
+    bool _zero_clear = false);
 
 /// Demux single image from source URI
 FuturePtr async_demux_image(
@@ -61,7 +62,8 @@ FuturePtr async_demux_image_bytes(
     std::function<void()> notify_exception,
     std::string_view data,
     const IOConfig& io_cfg,
-    ThreadPoolExecutorPtr executor);
+    ThreadPoolExecutorPtr executor,
+    bool _zero_clear = false);
 
 /// Apply bit stream filtering for NVDEC decoding
 FuturePtr async_apply_bsf(

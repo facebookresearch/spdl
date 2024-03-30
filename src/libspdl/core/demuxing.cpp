@@ -60,7 +60,8 @@ FuturePtr async_demux_bytes(
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& io_cfg,
-    ThreadPoolExecutorPtr executor) {
+    ThreadPoolExecutorPtr executor,
+    bool _zero_clear) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<PacketsWrapperPtr<media_type>> {
         auto generator = detail::stream_demux<media_type>(
@@ -70,6 +71,9 @@ FuturePtr async_demux_bytes(
             std::move(io_cfg));
         while (auto result = co_await generator.next()) {
           co_yield wrap(std::move(*result));
+        }
+        if (_zero_clear) {
+          std::memset((void*)data.data(), 0, data.size());
         }
       });
   return detail::execute_generator_with_callback<PacketsWrapperPtr<media_type>>(
@@ -86,7 +90,8 @@ template FuturePtr async_demux_bytes(
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& io_cfg,
-    ThreadPoolExecutorPtr executor);
+    ThreadPoolExecutorPtr executor,
+    bool _zero_clear);
 
 template FuturePtr async_demux_bytes(
     std::function<void(std::optional<PacketsWrapperPtr<MediaType::Audio>>)>
@@ -95,7 +100,8 @@ template FuturePtr async_demux_bytes(
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& io_cfg,
-    ThreadPoolExecutorPtr executor);
+    ThreadPoolExecutorPtr executor,
+    bool _zero_clear);
 
 FuturePtr async_demux_image(
     std::function<void(ImagePacketsWrapperPtr)> set_result,
@@ -122,13 +128,17 @@ FuturePtr async_demux_image_bytes(
     std::function<void()> notify_exception,
     std::string_view data,
     const IOConfig& io_cfg,
-    ThreadPoolExecutorPtr executor) {
+    ThreadPoolExecutorPtr executor,
+    bool _zero_clear) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::Task<ImagePacketsWrapperPtr> {
         auto result = co_await detail::demux_image(
             data,
             std::unique_ptr<SourceAdaptor>(new BytesAdaptor()),
             std::move(io_cfg));
+        if (_zero_clear) {
+          std::memset((void*)data.data(), 0, data.size());
+        }
         co_return wrap(std::move(result));
       });
   return detail::execute_task_with_callback<ImagePacketsWrapperPtr>(
