@@ -25,7 +25,7 @@ def _parse_args():
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--queue-size", type=int, default=16)
     parser.add_argument("--prefix")
-    parser.add_argument("--adoptor", default="BasicAdoptor")
+    parser.add_argument("--adaptor", default="BasicAdaptor")
     parser.add_argument("--nvdec", action="store_true")
     parser.add_argument("--gpu", type=int)
     parser.add_argument("--num-demuxing-threads", type=int)
@@ -51,7 +51,7 @@ def _iter_flist(flist, batch_size):
         yield paths
 
 
-def _batch_decode(flist, adoptor, batch_size, queue, nvdec: bool, gpu: int, **kwargs):
+def _batch_decode(flist, adaptor, batch_size, queue, nvdec: bool, gpu: int, **kwargs):
     decode_fun = (
         partial(libspdl.batch_decode_image_nvdec, cuda_device_index=gpu)
         if nvdec
@@ -59,15 +59,15 @@ def _batch_decode(flist, adoptor, batch_size, queue, nvdec: bool, gpu: int, **kw
     )
 
     for paths in _iter_flist(flist, batch_size):
-        future = decode_fun(paths, adoptor=adoptor, **kwargs)
+        future = decode_fun(paths, adaptor=adaptor, **kwargs)
         queue.put(future)
     queue.put(None)
 
 
 class BackgroundDecoder:
-    def __init__(self, flist, adoptor, batch_size, queue_size, nvdec: bool, gpu: int):
+    def __init__(self, flist, adaptor, batch_size, queue_size, nvdec: bool, gpu: int):
         self.flist = flist
-        self.adoptor = adoptor
+        self.adaptor = adaptor
         self.batch_size = batch_size
         self.queue_size = queue_size
         self.nvdec = nvdec
@@ -82,7 +82,7 @@ class BackgroundDecoder:
             target=_batch_decode,
             args=(
                 self.flist,
-                self.adoptor,
+                self.adaptor,
                 self.batch_size,
                 self.queue,
                 self.nvdec,
@@ -101,10 +101,10 @@ class BackgroundDecoder:
         self.thread.join()
 
 
-def _test_nvdec(input_flist, adoptor_type, prefix, batch_size, queue_size, gpu: int):
-    adoptor = getattr(libspdl, adoptor_type)(prefix)
+def _test_nvdec(input_flist, adaptor_type, prefix, batch_size, queue_size, gpu: int):
+    adaptor = getattr(libspdl, adaptor_type)(prefix)
 
-    bgd = BackgroundDecoder(input_flist, adoptor, batch_size, queue_size, True, gpu)
+    bgd = BackgroundDecoder(input_flist, adaptor, batch_size, queue_size, True, gpu)
 
     num_decoded = 0
     t0 = time.monotonic()
@@ -124,11 +124,11 @@ def _test_nvdec(input_flist, adoptor_type, prefix, batch_size, queue_size, gpu: 
 
 
 def _test_cpu(
-    input_flist, adoptor_type, prefix, batch_size, queue_size, gpu: Optional[int]
+    input_flist, adaptor_type, prefix, batch_size, queue_size, gpu: Optional[int]
 ):
-    adoptor = getattr(libspdl, adoptor_type)(prefix)
+    adaptor = getattr(libspdl, adaptor_type)(prefix)
 
-    bgd = BackgroundDecoder(input_flist, adoptor, batch_size, queue_size, False, gpu)
+    bgd = BackgroundDecoder(input_flist, adaptor, batch_size, queue_size, False, gpu)
 
     device = "cpu" if gpu is None else f"cuda:{gpu}"
 
@@ -156,7 +156,7 @@ def _main():
     if args.nvdec:
         _test_nvdec(
             args.input_flist,
-            args.adoptor,
+            args.adaptor,
             args.prefix,
             args.batch_size,
             args.queue_size,
@@ -165,7 +165,7 @@ def _main():
     else:
         _test_cpu(
             args.input_flist,
-            args.adoptor,
+            args.adaptor,
             args.prefix,
             args.batch_size,
             args.queue_size,

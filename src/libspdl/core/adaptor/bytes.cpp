@@ -1,4 +1,4 @@
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
@@ -99,7 +99,7 @@ class BytesInterface : public DataInterface {
 } // namespace
 } // namespace detail
 
-DataInterface* BytesAdoptor::get(std::string_view data, const IOConfig& io_cfg)
+DataInterface* BytesAdaptor::get(std::string_view data, const IOConfig& io_cfg)
     const {
   return new detail::BytesInterface{data, io_cfg};
 }

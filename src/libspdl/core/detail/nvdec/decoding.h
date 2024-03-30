@@ -2,7 +2,7 @@
 
 #include <libspdl/core/packets.h>
 
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/types.h>
 

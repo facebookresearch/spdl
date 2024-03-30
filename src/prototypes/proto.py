@@ -14,7 +14,7 @@ def _parse_python_args():
     parser.add_argument("-i", "--input-video", help="Input video file.", required=True)
     parser.add_argument("--plot", action="store_true")
     parser.add_argument("--gpu", action="store_true")
-    parser.add_argument("--adoptor", default="BasicAdoptor")
+    parser.add_argument("--adaptor", default="BasicAdaptor")
     parser.add_argument("--prefix")
     parser.add_argument("others", nargs="*")
     return parser.parse_args()
@@ -64,26 +64,26 @@ def _main():
 def test_audio(args):
     src = args.input_video
 
-    Adoptor = getattr(libspdl, args.adoptor)
-    adoptor = Adoptor(prefix=args.prefix)
+    Adaptor = getattr(libspdl, args.adaptor)
+    adaptor = Adaptor(prefix=args.prefix)
 
     configs = [
         {
             "src": src,
             "timestamps": [(5.0, 10.0)],
-            "adoptor": adoptor,
+            "adaptor": adaptor,
             "filter_desc": "flanger",
         },
         {
             "src": src,
             "timestamps": [(5.0, 10.0)],
-            "adoptor": adoptor,
+            "adaptor": adaptor,
             "sample_rate": 8000,
         },
         {
             "src": src,
             "timestamps": [(5.0, 10.0)],
-            "adoptor": adoptor,
+            "adaptor": adaptor,
             "sample_rate": 8000,
             "sample_fmt": "s16p",
         },
@@ -108,26 +108,26 @@ def test_audio(args):
 def test_video(args):
     src = args.input_video
 
-    Adoptor = getattr(libspdl, args.adoptor)
-    adoptor = Adoptor(prefix=args.prefix)
+    Adaptor = getattr(libspdl, args.adaptor)
+    adaptor = Adaptor(prefix=args.prefix)
 
     configs = [
         {
             "src": src,
             "timestamps": [(0.0, 1.0), (10.0, 11.0)],
-            "adoptor": adoptor,
+            "adaptor": adaptor,
             "frame_rate": 2,
         },
         {
             "src": src,
             "timestamps": [(0.0, 0.5)],
-            "adoptor": adoptor,
+            "adaptor": adaptor,
             "filter_desc": "vflip",
         },
         {
             "src": src,
             "timestamps": [(10.0, 10.2)],
-            "adoptor": adoptor,
+            "adaptor": adaptor,
             "frame_rate": "30000/1001",
             "width": 36,
             "height": 48,

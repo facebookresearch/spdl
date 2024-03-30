@@ -1,4 +1,4 @@
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
@@ -24,7 +24,7 @@ class MemoryMappedFile {
   int64_t pos_ = 0;
 
  public:
-  MemoryMappedFile(const std::string& path) {
+  MemoryMappedFile(std::string&& path) {
     CHECK_AVERROR(
         av_file_map(path.data(), &buffer_, &buffer_size_, 0, NULL),
         "Failed to map file ({}).",
@@ -87,8 +87,8 @@ class MMapInterface : public DataInterface {
   AVFormatContext* fmt_ctx;
 
  public:
-  MMapInterface(const std::string& url, const IOConfig& io_cfg)
-      : obj(url),
+  MMapInterface(std::string_view url, const IOConfig& io_cfg)
+      : obj(std::string{url}),
         io_ctx(get_io_ctx(
             &obj,
             io_cfg.buffer_size,
@@ -110,13 +110,9 @@ class MMapInterface : public DataInterface {
 } // namespace
 } // namespace detail
 
-MMapAdoptor::MMapAdoptor(const std::optional<std::string>& prefix_)
-    : prefix(prefix_) {}
-
-DataInterface* MMapAdoptor::get(std::string_view url, const IOConfig& io_cfg)
+DataInterface* MMapAdaptor::get(std::string_view url, const IOConfig& io_cfg)
     const {
-  return new detail::MMapInterface(
-      prefix ? prefix.value() + std::string(url) : std::string(url), io_cfg);
+  return new detail::MMapInterface(url, io_cfg);
 };
 
 } // namespace spdl::core

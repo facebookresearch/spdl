@@ -1,7 +1,7 @@
 #include "libspdl/core/detail/ffmpeg/decoding.h"
 
 #include <folly/experimental/coro/CurrentExecutor.h>
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 #include <libspdl/core/types.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
@@ -61,12 +61,13 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
 
 std::unique_ptr<DataInterface> get_interface(
     std::string_view src,
-    SourceAdoptorPtr& adoptor,
+    SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg) {
-  if (!adoptor) {
-    adoptor.reset(static_cast<SourceAdoptor*>(new BasicAdoptor{}));
+  if (!adaptor) {
+    thread_local auto p = std::make_shared<SourceAdaptor>();
+    adaptor = p;
   }
-  return std::unique_ptr<DataInterface>(adoptor->get(src, io_cfg));
+  return std::unique_ptr<DataInterface>(adaptor->get(src, io_cfg));
 }
 
 folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
@@ -119,10 +120,10 @@ template <MediaType media_type>
 folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
-    SourceAdoptorPtr adoptor,
+    SourceAdaptorPtr adaptor,
     const IOConfig io_cfg) {
   TRACE_EVENT("demuxing", "detail::stream_demux");
-  auto interface = get_interface(src, adoptor, io_cfg);
+  auto interface = get_interface(src, adaptor, io_cfg);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   AVStream* stream = init_fmt_ctx(fmt_ctx, media_type);
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
@@ -148,22 +149,22 @@ template folly::coro::AsyncGenerator<AudioPacketsPtr>
 stream_demux<MediaType::Audio>(
     std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
-    SourceAdoptorPtr adoptor,
+    SourceAdaptorPtr adaptor,
     const IOConfig io_cfg);
 
 template folly::coro::AsyncGenerator<VideoPacketsPtr>
 stream_demux<MediaType::Video>(
     std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
-    SourceAdoptorPtr adoptor,
+    SourceAdaptorPtr adaptor,
     const IOConfig io_cfg);
 
 folly::coro::Task<ImagePacketsPtr> demux_image(
     std::string_view src,
-    SourceAdoptorPtr adoptor,
+    SourceAdaptorPtr adaptor,
     const IOConfig io_cfg) {
   TRACE_EVENT("demuxing", "detail::demux");
-  auto interface = get_interface(src, adoptor, io_cfg);
+  auto interface = get_interface(src, adaptor, io_cfg);
   AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
   AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
 

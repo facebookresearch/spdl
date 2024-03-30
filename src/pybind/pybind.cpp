@@ -7,7 +7,7 @@
 namespace py = pybind11;
 
 namespace spdl::core {
-void register_adoptors(py::module&);
+void register_adaptors(py::module&);
 void register_conversion(py::module& m);
 void register_tracing(py::module&);
 void register_utils(py::module&);
@@ -22,7 +22,7 @@ void register_decoding(py::module&);
 
 namespace {
 PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
-  spdl::core::register_adoptors(m);
+  spdl::core::register_adaptors(m);
   spdl::core::register_conversion(m);
   spdl::core::register_tracing(m);
   spdl::core::register_utils(m);

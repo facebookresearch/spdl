@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 #include <libspdl/core/executor.h>
 #include <libspdl/core/future.h>
 #include <libspdl/core/packets.h>
@@ -25,7 +25,7 @@ FuturePtr async_demux(
     std::function<void()> notify_exception,
     const std::string& uri,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr executor);
 
@@ -48,7 +48,7 @@ FuturePtr async_demux_image(
     std::function<void(ImagePacketsWrapperPtr)> set_result,
     std::function<void()> notify_exception,
     const std::string& src,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr executor);
 

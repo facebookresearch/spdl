@@ -135,7 +135,7 @@ def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
     Args:
         src: Source identifier, such as path or URL.
         timestamps (List[Tuple[float, float]]): List of timestamps.
-        adoptor (Optional[libspdl.SourceAdoptor]): Adoptor to apply to the `src`.
+        adaptor (Optional[libspdl.SourceAdaptor]): Adaptor to apply to the `src`.
         format (str): Overwrite the format detection.
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
@@ -160,7 +160,7 @@ def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
     Args:
         src: Source identifier, such as path or URL.
         timestamps (List[Tuple[float, float]]): List of timestamps.
-        adoptor (Optional[libspdl.SourceAdoptor]): Adoptor to apply to the `src`.
+        adaptor (Optional[libspdl.SourceAdaptor]): Adaptor to apply to the `src`.
         format (str): Overwrite the format detection.
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
@@ -184,7 +184,7 @@ def async_demux_image(src, *args, **kwargs):
 
     Args:
         src: Source identifier, such as path or URL.
-        adoptor (Optional[libspdl.SourceAdoptor]): Adoptor to apply to the `src`.
+        adaptor (Optional[libspdl.SourceAdaptor]): Adaptor to apply to the `src`.
         format (str): Overwrite the format detection.
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.

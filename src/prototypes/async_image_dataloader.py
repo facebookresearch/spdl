@@ -56,18 +56,18 @@ class BulkImageProcessor:
         self.height = 222
         self.pix_fmt = "rgba"
 
-    async def __call__(self, path_gen, adoptor, *, max_tasks=10):
+    async def __call__(self, path_gen, *, max_tasks=10):
         tasks = set()
         for i, paths in enumerate(path_gen):
             tasks = await wait_and_check(tasks, max_tasks)
 
-            coro = self._batch_decode(paths, adoptor)
+            coro = self._batch_decode(paths)
             tasks.add(asyncio.create_task(coro, name=f"batch_decode_{i}"))
 
         tasks = await wait_and_check(tasks)
 
-    async def _batch_decode(self, paths, adoptor):
-        decoding = [asyncio.create_task(self._decode(path, adoptor)) for path in paths]
+    async def _batch_decode(self, paths):
+        decoding = [asyncio.create_task(self._decode(path)) for path in paths]
 
         await asyncio.wait(decoding)
 
@@ -79,17 +79,17 @@ class BulkImageProcessor:
             frames.append(task.result())
 
         buffer = await (
-            spdl.async_convert_batch_image_nvdec(frames)
+            spdl.async_convert_nvdec(frames)
             if self.use_nvdec
-            else spdl.async_convert_batch_image(frames)
+            else spdl.async_convert(frames)
         )
 
         tensor = spdl.to_torch(buffer).to(device=f"cuda:{self.cuda_device_index}")
 
         await self.queue.put(tensor)
 
-    async def _decode(self, path, adoptor):
-        packets = await spdl.async_demux_image(path, adoptor=adoptor)
+    async def _decode(self, path):
+        packets = await spdl.async_demux_image(path)
         return await (
             spdl.async_decode_nvdec(
                 packets,
@@ -118,21 +118,20 @@ async def _track(queue):
 
 async def _batch_decode_image(
     paths_gen,
-    prefix,
     *,
     cuda_device_index,
     use_nvdec=False,
 ):
     queue = asyncio.Queue(maxsize=100)
+    tracker = asyncio.create_task(_track(queue))
+
     bip = BulkImageProcessor(
         queue=queue,
         cuda_device_index=cuda_device_index,
         use_nvdec=use_nvdec,
     )
-    adoptor = spdl.libspdl.BasicAdoptor(prefix)
-    task = asyncio.create_task(bip(paths_gen, adoptor))
-
-    tracker = asyncio.create_task(_track(queue))
+    task = asyncio.create_task(bip(paths_gen))
+    _LG.info("Started decoding job.")
 
     while not (task.done() and queue.empty()):
         try:
@@ -145,11 +144,11 @@ async def _batch_decode_image(
     tracker.cancel()
 
 
-async def _process_flist(paths_gen, prefix, worker_id, use_nvdec):
+async def _process_flist(paths_gen, worker_id, use_nvdec):
     t_int = t0 = time.monotonic()
     num_processed_int = num_processed = 0
     async for batch in _batch_decode_image(
-        paths_gen, prefix, cuda_device_index=worker_id, use_nvdec=use_nvdec
+        paths_gen, cuda_device_index=worker_id, use_nvdec=use_nvdec
     ):
         num_processed += batch.shape[0]
 
@@ -170,22 +169,27 @@ async def _process_flist(paths_gen, prefix, worker_id, use_nvdec):
     return num_processed
 
 
-def _iter_file(path, offset=0, every_n=1, max=None):
+def _iter_file(path, prefix):
+    with open(path, "r") as f:
+        for line in f:
+            if path := line.strip():
+                yield prefix + path
+
+
+def _sample(gen, offset=0, every_n=1, max=None):
     offset = offset % every_n
 
-    with open(path, "r") as f:
-        num_read = 0
-        for i, line in enumerate(f):
-            path = line.strip()
-            if path and i % every_n == offset:
-                yield path
-                num_read += 1
+    num = 0
+    for i, item in enumerate(gen):
+        if i % every_n == offset:
+            yield item
+            num += 1
 
-                if max is not None and num_read >= max:
-                    return
+            if max is not None and num >= max:
+                return
 
 
-def _iter_batch(gen, batch_size):
+def _batch(gen, batch_size):
     batch = []
     for item in gen:
         batch.append(item)
@@ -196,8 +200,8 @@ def _iter_batch(gen, batch_size):
         yield batch
 
 
-def _iter_flist(path, batch_size, *, n=0, N=1, max=None):
-    return _iter_batch(_iter_file(path, n, N, max), batch_size)
+def _iter_flist(path, prefix, batch_size, *, n=0, N=1, max=None):
+    return _batch(_sample(_iter_file(path, prefix), n, N, max), batch_size)
 
 
 def bg_worker(flist_path, prefix, batch_size, worker_id, num_workers, use_nvdec, trace):
@@ -206,14 +210,14 @@ def bg_worker(flist_path, prefix, batch_size, worker_id, num_workers, use_nvdec,
     # ------------------------------------------------------------------------------
     # Warm up 2
     if use_nvdec:
-        paths_gen = _iter_flist(flist_path, batch_size, max=1000)
-        asyncio.run(_process_flist(paths_gen, prefix, worker_id, use_nvdec))
+        paths_gen = _iter_flist(flist_path, prefix, batch_size, max=1000)
+        asyncio.run(_process_flist(paths_gen, worker_id, use_nvdec))
     # ------------------------------------------------------------------------------
 
     trace_path = f"{trace}.{worker_id}{'.nvdec' if use_nvdec else ''}"
-    paths_gen = _iter_flist(flist_path, batch_size, n=worker_id, N=num_workers)
+    paths_gen = _iter_flist(flist_path, prefix, batch_size, n=worker_id, N=num_workers)
     with spdl.utils.tracing(trace_path, enable=trace is not None):
-        asyncio.run(_process_flist(paths_gen, prefix, worker_id, use_nvdec))
+        asyncio.run(_process_flist(paths_gen, worker_id, use_nvdec))
 
 
 def _benchmark(args):

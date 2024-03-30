@@ -34,7 +34,7 @@ Task<std::vector<SemiFuture<FFmpegFramesWrapperPtr<media_type>>>>
 stream_decode_task(
     const std::string src,
     const std::vector<std::tuple<double, double>> timestamps,
-    const SourceAdoptorPtr adoptor,
+    const SourceAdaptorPtr adaptor,
     const IOConfig io_cfg,
     const DecodeConfig decode_cfg,
     const std::string filter_desc,
@@ -43,7 +43,7 @@ stream_decode_task(
   {
     auto exec = detail::get_decode_executor(decode_executor);
     auto demuxer = detail::stream_demux<media_type>(
-        src, timestamps, std::move(adoptor), std::move(io_cfg));
+        src, timestamps, std::move(adaptor), std::move(io_cfg));
     while (auto result = co_await demuxer.next()) {
       auto task = decode_task<media_type>(
           *std::move(result), std::move(decode_cfg), std::move(filter_desc));
@@ -58,7 +58,7 @@ template <MediaType media_type>
 Results<media_type, FFmpegFramesWrapperPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
@@ -74,7 +74,7 @@ Results<media_type, FFmpegFramesWrapperPtr> decoding::decode(
           stream_decode_task<media_type>(
               src,
               timestamps,
-              adoptor,
+              adaptor,
               io_cfg,
               decode_cfg,
               filter_desc,
@@ -86,7 +86,7 @@ Results<media_type, FFmpegFramesWrapperPtr> decoding::decode(
 template Results<MediaType::Audio, FFmpegFramesWrapperPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,
@@ -96,7 +96,7 @@ template Results<MediaType::Audio, FFmpegFramesWrapperPtr> decoding::decode(
 template Results<MediaType::Video, FFmpegFramesWrapperPtr> decoding::decode(
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const SourceAdoptorPtr& adoptor,
+    const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
     const DecodeConfig& decode_cfg,
     const std::string& filter_desc,

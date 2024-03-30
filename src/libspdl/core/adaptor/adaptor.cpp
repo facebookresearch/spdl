@@ -1,4 +1,4 @@
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
@@ -14,9 +14,9 @@ class BasicInterface : public DataInterface {
   detail::AVFormatInputContextPtr fmt_ctx;
 
  public:
-  BasicInterface(std::string url, const IOConfig& io_cfg)
+  BasicInterface(std::string_view url, const IOConfig& io_cfg)
       : fmt_ctx(get_input_format_ctx_ptr(
-            std::move(url),
+            url,
             io_cfg.format,
             io_cfg.format_options)) {}
   ~BasicInterface() = default;
@@ -25,12 +25,8 @@ class BasicInterface : public DataInterface {
   }
 };
 
-BasicAdoptor::BasicAdoptor(const std::optional<std::string>& prefix_)
-    : prefix(prefix_) {}
-
-DataInterface* BasicAdoptor::get(std::string_view url, const IOConfig& io_cfg)
+DataInterface* SourceAdaptor::get(std::string_view url, const IOConfig& io_cfg)
     const {
-  return new BasicInterface(
-      prefix ? prefix.value() + std::string(url) : std::string(url), io_cfg);
+  return new BasicInterface(url, io_cfg);
 }
 } // namespace spdl::core

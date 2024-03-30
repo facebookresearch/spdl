@@ -22,7 +22,7 @@ def _parse_python_args():
         "-o", "--output-trace", help="Output trace file.", default="benchmark.pftrace"
     )
     parser.add_argument("--gpu", type=int, default=-1)
-    parser.add_argument("--adoptor", default="BasicAdoptor")
+    parser.add_argument("--adaptor", default="BasicAdaptor")
     parser.add_argument("--prefix")
     parser.add_argument("--decoder")
     parser.add_argument("--num-jobs", type=int, default=5)
@@ -37,12 +37,12 @@ def _test(
     input_video: str,
     decoder: str,
     gpu: int,
-    adoptor: str,
+    adaptor: str,
     prefix: str,
     num_jobs: int,
     num_ts: int,
 ):
-    adoptor = getattr(libspdl, adoptor)(prefix)
+    adaptor = getattr(libspdl, adaptor)(prefix)
 
     timestamps = [(60 + i, 60.5 + i) for i in range(num_ts)]
     futures = []
@@ -52,7 +52,7 @@ def _test(
         cfg = {
             "src": input_video,
             "timestamps": timestamps,
-            "adoptor": adoptor,
+            "adaptor": adaptor,
         }
     elif decoder is None:
         func = libspdl.decode_video_nvdec
@@ -60,7 +60,7 @@ def _test(
             "src": input_video,
             "timestamps": timestamps,
             "cuda_device_index": gpu,
-            "adoptor": adoptor,
+            "adaptor": adaptor,
         }
     else:
         func = libspdl.decode_video
@@ -70,7 +70,7 @@ def _test(
             "decoder": decoder,
             "decoder_options": {"gpu": f"{gpu}"},
             "cuda_device_index": gpu,
-            "adoptor": adoptor,
+            "adaptor": adaptor,
         }
     _LG.info("Config: %s", cfg)
 
@@ -111,7 +111,7 @@ def _main():
             args.input_video,
             args.decoder,
             args.gpu,
-            args.adoptor,
+            args.adaptor,
             args.prefix,
             args.num_jobs,
             args.num_ts,

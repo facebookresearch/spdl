@@ -1,4 +1,4 @@
-#include <libspdl/core/adoptor.h>
+#include <libspdl/core/adaptor.h>
 #include <libspdl/core/demuxing.h>
 #include <libspdl/core/result.h>
 #include <libspdl/core/types.h>
@@ -28,7 +28,7 @@ void register_demuxing(py::module& m) {
          std::function<void()> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const SourceAdoptorPtr& adoptor,
+         const SourceAdaptorPtr& adaptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
@@ -38,7 +38,7 @@ void register_demuxing(py::module& m) {
             std::move(notify_exception),
             static_cast<std::string>(src),
             timestamps,
-            adoptor,
+            adaptor,
             {format, format_options, buffer_size},
             demux_executor);
       },
@@ -47,7 +47,7 @@ void register_demuxing(py::module& m) {
       py::arg("src"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("adoptor") = nullptr,
+      py::arg("adaptor") = nullptr,
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
@@ -87,7 +87,7 @@ void register_demuxing(py::module& m) {
          std::function<void()> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const SourceAdoptorPtr& adoptor,
+         const SourceAdaptorPtr& adaptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
@@ -97,7 +97,7 @@ void register_demuxing(py::module& m) {
             std::move(notify_exception),
             static_cast<std::string>(src),
             timestamps,
-            adoptor,
+            adaptor,
             {format, format_options, buffer_size},
             demux_executor);
       },
@@ -106,7 +106,7 @@ void register_demuxing(py::module& m) {
       py::arg("src"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("adoptor") = nullptr,
+      py::arg("adaptor") = nullptr,
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
@@ -145,7 +145,7 @@ void register_demuxing(py::module& m) {
       [](std::function<void(ImagePacketsWrapperPtr)> set_result,
          std::function<void()> notify_exception,
          py::str src,
-         const SourceAdoptorPtr& adoptor,
+         const SourceAdaptorPtr& adaptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
          int buffer_size,
@@ -154,7 +154,7 @@ void register_demuxing(py::module& m) {
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string>(src),
-            adoptor,
+            adaptor,
             {format, format_options, buffer_size},
             demux_executor);
       },
@@ -162,7 +162,7 @@ void register_demuxing(py::module& m) {
       py::arg("notify_exception"),
       py::arg("src"),
       py::kw_only(),
-      py::arg("adoptor") = nullptr,
+      py::arg("adaptor") = nullptr,
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
       py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
