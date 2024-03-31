@@ -2,14 +2,14 @@ import numpy as np
 import pytest
 
 import spdl
-from spdl import libspdl
+from spdl.lib import _libspdl
 
 
 DEFAULT_CUDA = 0
 
 
 def _to_array(frame):
-    array = spdl.to_torch(libspdl.convert_to_buffer(frame, None))
+    array = spdl.to_torch(_libspdl.convert_to_buffer(frame, None))
 
     assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
     return array.cpu().numpy()
@@ -21,7 +21,7 @@ def test_decode_image_yuv422(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     yuv = _to_array(
-        libspdl.decode_image_nvdec(
+        _libspdl.decode_image_nvdec(
             sample.path, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
         ).get()
     )
@@ -41,7 +41,7 @@ def yuvj420p(get_sample):
 def test_decode_image_yuv420(yuvj420p):
     """JPEG image (yuvj420p) can be decoded."""
     yuv = _to_array(
-        libspdl.decode_image_nvdec(
+        _libspdl.decode_image_nvdec(
             yuvj420p.path, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
         ).get()
     )
@@ -55,7 +55,7 @@ def test_decode_image_yuv420(yuvj420p):
 def test_decode_image_convert_rgba(yuvj420p):
     """Providing pix_fmt="rgba" should produce (4,H,W) array."""
     array = _to_array(
-        libspdl.decode_image_nvdec(
+        _libspdl.decode_image_nvdec(
             yuvj420p.path,
             cuda_device_index=DEFAULT_CUDA,
             pix_fmt="rgba",
@@ -80,7 +80,7 @@ def test_batch_decode_image_rgba32(get_samples):
     # fmt: on
     flist = get_samples(cmd)
 
-    frames = libspdl.batch_decode_image_nvdec(
+    frames = _libspdl.batch_decode_image_nvdec(
         flist, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba"
     ).get()
     arrays = [_to_array(f) for f in frames]
@@ -123,11 +123,11 @@ def test_batch_decode_image_strict(get_samples):
     flist.append("foo.png")
 
     with pytest.raises(RuntimeError):
-        libspdl.batch_decode_image_nvdec(flist, cuda_device_index=DEFAULT_CUDA).get(
+        _libspdl.batch_decode_image_nvdec(flist, cuda_device_index=DEFAULT_CUDA).get(
             strict=True
         )
 
-    frames = libspdl.batch_decode_image_nvdec(
+    frames = _libspdl.batch_decode_image_nvdec(
         flist, cuda_device_index=DEFAULT_CUDA
     ).get(strict=False)
 
@@ -152,10 +152,10 @@ def test_decode_multiple_invalid_input(get_sample):
     )
     sample = get_sample(cmd, width=16, height=16)
 
-    decode_executor = libspdl.ThreadPoolExecutor(1, "SingleDecoderExecutor")
+    decode_executor = _libspdl.ThreadPoolExecutor(1, "SingleDecoderExecutor")
     for _ in range(2):
         with pytest.raises(RuntimeError):
-            libspdl.batch_decode_image_nvdec(
+            _libspdl.batch_decode_image_nvdec(
                 [sample.path],
                 cuda_device_index=DEFAULT_CUDA,
                 pix_fmt=None,

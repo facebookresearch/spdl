@@ -3,7 +3,7 @@ import concurrent.futures
 import functools
 from typing import Any, List, Tuple
 
-from spdl import libspdl
+from spdl.lib import _libspdl
 
 __all__ = [
     # TODO: Merge async_apply_bsf with async_decode_nvdec(video)
@@ -24,7 +24,7 @@ _debug_task = [
 
 def __getattr__(name: str) -> Any:
     if name in _debug_task:
-        func = getattr(libspdl, name)
+        func = getattr(_libspdl, name)
         return functools.partial(_async_task, func)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
@@ -135,12 +135,12 @@ def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
     Args:
         src: Source identifier, such as path or URL.
         timestamps (List[Tuple[float, float]]): List of timestamps.
-        adaptor (Optional[libspdl.SourceAdaptor]): Adaptor to apply to the `src`.
+        adaptor (Optional[spdl.SourceAdaptor]): Adaptor to apply to the `src`.
         format (str): Overwrite the format detection.
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
         buffer_size (int): Buffer size in bytes.
-        executor (Optional[libspdl.ThreadPoolExecutor]):
+        executor (Optional[spdl.ThreadPoolExecutor]):
             Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool.
 
@@ -148,7 +148,7 @@ def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
         AsyncGenerator[AudioPackets]: Generator of AudioPackets.
     """
     func = getattr(
-        libspdl,
+        _libspdl,
         "async_demux_audio_bytes" if isinstance(src, bytes) else "async_demux_audio",
     )
     return _async_gen(func, src, timestamps, **kwargs)
@@ -160,12 +160,12 @@ def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
     Args:
         src: Source identifier, such as path or URL.
         timestamps (List[Tuple[float, float]]): List of timestamps.
-        adaptor (Optional[libspdl.SourceAdaptor]): Adaptor to apply to the `src`.
+        adaptor (Optional[spdl.SourceAdaptor]): Adaptor to apply to the `src`.
         format (str): Overwrite the format detection.
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
         buffer_size (int): Buffer size in bytes.
-        executor (Optional[libspdl.ThreadPoolExecutor]):
+        executor (Optional[spdl.ThreadPoolExecutor]):
             Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool.
 
@@ -173,7 +173,7 @@ def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
         AsyncGenerator[VideoPackets]: Generator of VideoPackets.
     """
     func = getattr(
-        libspdl,
+        _libspdl,
         "async_demux_video_bytes" if isinstance(src, bytes) else "async_demux_video",
     )
     return _async_gen(func, src, timestamps, **kwargs)
@@ -184,12 +184,12 @@ def async_demux_image(src, *args, **kwargs):
 
     Args:
         src: Source identifier, such as path or URL.
-        adaptor (Optional[libspdl.SourceAdaptor]): Adaptor to apply to the `src`.
+        adaptor (Optional[spdl.SourceAdaptor]): Adaptor to apply to the `src`.
         format (str): Overwrite the format detection.
             Can be used to demux headerless format.
         format_options (Dict[str, str]): Format options.
         buffer_size (int): Buffer size in bytes.
-        executor (Optional[libspdl.ThreadPoolExecutor]):
+        executor (Optional[spdl.ThreadPoolExecutor]):
             Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool.
 
@@ -197,7 +197,7 @@ def async_demux_image(src, *args, **kwargs):
         Awaitable: Awaitable which returns an ImagePackets object.
     """
     func = getattr(
-        libspdl,
+        _libspdl,
         "async_demux_image_bytes" if isinstance(src, bytes) else "async_demux_image",
     )
     return _async_task(func, src, **kwargs)
@@ -209,23 +209,23 @@ def async_apply_bsf(packets, *args, **kwargs):
 
     Args:
         packets (Packet): Packets object.
-        executor (Optional[libspdl.ThreadPoolExecutor]):
+        executor (Optional[spdl.ThreadPoolExecutor]):
             Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool.
 
     Returns:
         Awaitable: Awaitable which returns the filtered Packets object.
     """
-    return _async_task(libspdl.async_apply_bsf, packets, *args, **kwargs)
+    return _async_task(_libspdl.async_apply_bsf, packets, *args, **kwargs)
 
 
 def _get_decoding_name(packets):
     match t := type(packets):
-        case libspdl.AudioPackets:
+        case _libspdl.AudioPackets:
             return "async_decode_audio"
-        case libspdl.VideoPackets:
+        case _libspdl.VideoPackets:
             return "async_decode_video"
-        case libspdl.ImagePackets:
+        case _libspdl.ImagePackets:
             return "async_decode_image"
         case _:
             raise TypeError(f"Unexpected type: {t}.")
@@ -240,15 +240,15 @@ def async_decode_packets(packets, *args, **kwargs):
     Returns:
         Awaitable: Awaitable which returns a Frame object.
     """
-    func = getattr(libspdl, _get_decoding_name(packets))
+    func = getattr(_libspdl, _get_decoding_name(packets))
     return _async_task(func, packets, *args, **kwargs)
 
 
 def _get_nvdec_decoding_name(packets):
     match t := type(packets):
-        case libspdl.VideoPackets:
+        case _libspdl.VideoPackets:
             return "async_decode_video_nvdec"
-        case libspdl.ImagePackets:
+        case _libspdl.ImagePackets:
             return "async_decode_image_nvdec"
         case _:
             raise TypeError(f"Unexpected type: {t}.")
@@ -263,21 +263,21 @@ def async_decode_packets_nvdec(packets, *args, **kwargs):
     Returns:
         Awaitable: Awaitable which returns a Frame object.
     """
-    func = getattr(libspdl, _get_nvdec_decoding_name(packets))
+    func = getattr(_libspdl, _get_nvdec_decoding_name(packets))
     return _async_task(func, packets, *args, **kwargs)
 
 
 def _get_cpu_conversion_name(frames):
     match t := type(frames):
-        case libspdl.FFmpegAudioFrames:
+        case _libspdl.FFmpegAudioFrames:
             return "async_convert_audio_cpu"
-        case libspdl.FFmpegVideoFrames:
+        case _libspdl.FFmpegVideoFrames:
             return "async_convert_video_cpu"
-        case libspdl.FFmpegImageFrames:
+        case _libspdl.FFmpegImageFrames:
             return "async_convert_image_cpu"
         case _:
             if isinstance(frames, list):
-                if all(isinstance(f, libspdl.FFmpegImageFrames) for f in frames):
+                if all(isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
                     return "async_convert_batch_image_cpu"
             raise TypeError(f"Unexpected type: {t}.")
 
@@ -294,34 +294,34 @@ def async_convert_frames_cpu(frames, executor=None):
 
             If the frame data are not CPU, then the conversion will fail.
 
-        executor (Optional[libspdl.ThreadPoolExecutor]):
+        executor (Optional[spdl.ThreadPoolExecutor]):
             Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool with higher priority than demuxing.
 
     Returns:
         Awaitable: Awaitable which returns a Buffer object.
     """
-    func = getattr(libspdl, _get_cpu_conversion_name(frames))
+    func = getattr(_libspdl, _get_cpu_conversion_name(frames))
     return _async_task(func, frames, index=None, executor=executor)
 
 
 def _get_conversion_name(frames):
     match t := type(frames):
-        case libspdl.FFmpegAudioFrames:
+        case _libspdl.FFmpegAudioFrames:
             return "async_convert_audio"
-        case libspdl.FFmpegVideoFrames:
+        case _libspdl.FFmpegVideoFrames:
             return "async_convert_video"
-        case libspdl.FFmpegImageFrames:
+        case _libspdl.FFmpegImageFrames:
             return "async_convert_image"
-        case libspdl.NvDecVideoFrames:
+        case _libspdl.NvDecVideoFrames:
             return "async_convert_video_nvdec"
-        case libspdl.NvDecImageFrames:
+        case _libspdl.NvDecImageFrames:
             return "async_convert_image_nvdec"
         case _:
             if isinstance(frames, list):
-                if all(isinstance(f, libspdl.FFmpegImageFrames) for f in frames):
+                if all(isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
                     return "async_convert_batch_image"
-                if all(isinstance(f, libspdl.NvDecImageFrames) for f in frames):
+                if all(isinstance(f, _libspdl.NvDecImageFrames) for f in frames):
                     return "async_convert_batch_image_nvdec"
             raise TypeError(f"Unexpected type: {t}.")
 
@@ -341,12 +341,12 @@ def async_convert_frames(frames, executor=None):
 
             If the buffer will be created on the device where the frame data are.
 
-        executor (Optional[libspdl.ThreadPoolExecutor]):
+        executor (Optional[spdl.ThreadPoolExecutor]):
             Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool with higher priority than demuxing.
 
     Returns:
         Awaitable: Awaitable which returns a Buffer object.
     """
-    func = getattr(libspdl, _get_conversion_name(frames))
+    func = getattr(_libspdl, _get_conversion_name(frames))
     return _async_task(func, frames, index=None, executor=executor)

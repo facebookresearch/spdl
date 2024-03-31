@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import spdl
-from spdl import libspdl
+from spdl.lib import _libspdl
 
 DEFAULT_CUDA = 0
 
@@ -16,12 +16,12 @@ def dummy(get_sample):
 def test_nvdec_odd_size(dummy):
     """Odd width/height must be rejected"""
     with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, width=121
         )
 
     with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, height=257
         )
 
@@ -29,22 +29,22 @@ def test_nvdec_odd_size(dummy):
 def test_nvdec_negative(dummy):
     """Negative options must be rejected"""
     with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_left=-1
         )
 
     with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_top=-1
         )
 
     with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_right=-1
         )
 
     with pytest.raises(RuntimeError):
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_bottom=-1
         )
 
@@ -59,7 +59,7 @@ def _save(array, prefix):
 def _to_arrays(frames):
     ret = []
     for f in frames:
-        array = spdl.to_torch(libspdl.convert_to_buffer(f, None))
+        array = spdl.to_torch(_libspdl.convert_to_buffer(f, None))
         assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
         ret.append(array.cpu().numpy())
     return ret
@@ -83,7 +83,7 @@ def h264(get_sample):
 
 def test_nvdec_decode_h264_420p_basic(h264):
     """NVDEC can decode YUV420P video."""
-    results = libspdl.decode_video_nvdec(
+    results = _libspdl.decode_video_nvdec(
         h264.path,
         timestamps=[(0, 1.0)],
         cuda_device_index=DEFAULT_CUDA,
@@ -116,7 +116,7 @@ def test_nvdec_decode_hevc_P010_basic(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
     sample = get_sample(cmd, width=320, height=240)
 
-    results = libspdl.decode_video_nvdec(
+    results = _libspdl.decode_video_nvdec(
         sample.path,
         timestamps=[(0, 1.0)],
         cuda_device_index=DEFAULT_CUDA,
@@ -133,7 +133,7 @@ def test_nvdec_decode_h264_420p_resize(h264):
     """Check NVDEC decoder with resizing."""
     width, height = 160, 120
 
-    results = libspdl.decode_video_nvdec(
+    results = _libspdl.decode_video_nvdec(
         h264.path,
         timestamps=[(0, 1.0)],
         cuda_device_index=DEFAULT_CUDA,
@@ -154,7 +154,7 @@ def test_nvdec_decode_h264_420p_crop(h264):
     h = h264.height - top - bottom
     w = h264.width - left - right
 
-    results = libspdl.decode_video_nvdec(
+    results = _libspdl.decode_video_nvdec(
         h264.path,
         timestamps=[(0, 1.0)],
         cuda_device_index=DEFAULT_CUDA,
@@ -168,7 +168,7 @@ def test_nvdec_decode_h264_420p_crop(h264):
     assert rgba.dtype == np.uint8
     assert rgba.shape == (25, 4, h, w)
 
-    results = libspdl.decode_video_nvdec(
+    results = _libspdl.decode_video_nvdec(
         h264.path,
         timestamps=[(0, 1.0)],
         cuda_device_index=DEFAULT_CUDA,
@@ -186,7 +186,7 @@ def test_nvdec_decode_crop_resize(h264):
     w = (h264.width - left - right) // 2
 
     array = _to_arrays(
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             h264.path,
             timestamps=[(0.0, 1.0)],
             cuda_device_index=DEFAULT_CUDA,
@@ -206,7 +206,7 @@ def test_nvdec_decode_crop_resize(h264):
 def test_num_frames_arithmetics(h264):
     """NVDEC with non-zero start time should produce proper number of frames."""
     ref = _to_arrays(
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             h264.path,
             timestamps=[(0, 1.0)],
             cuda_device_index=DEFAULT_CUDA,
@@ -235,7 +235,7 @@ def test_num_frames_arithmetics(h264):
     ]
     # fmt: on
     frames = _to_arrays(
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             h264.path,
             cuda_device_index=DEFAULT_CUDA,
             timestamps=[cfg[0] for cfg in cfgs],
@@ -268,7 +268,7 @@ def blue(get_sample):
 def test_color_conversion_rgba_red(red):
     """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
     array = _to_arrays(
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             red.path,
             timestamps=[(0, 1.0)],
             cuda_device_index=DEFAULT_CUDA,
@@ -287,7 +287,7 @@ def test_color_conversion_rgba_red(red):
 def test_color_conversion_rgba_green(green):
     """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
     array = _to_arrays(
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             green.path,
             timestamps=[(0, 1.0)],
             cuda_device_index=DEFAULT_CUDA,
@@ -306,7 +306,7 @@ def test_color_conversion_rgba_green(green):
 def test_color_conversion_rgba_blue(blue):
     """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
     array = _to_arrays(
-        libspdl.decode_video_nvdec(
+        _libspdl.decode_video_nvdec(
             blue.path,
             timestamps=[(0, 1.0)],
             cuda_device_index=DEFAULT_CUDA,
