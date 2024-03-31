@@ -28,7 +28,7 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
     TRACE_EVENT("demuxing", "avformat_find_stream_info");
     CHECK_AVERROR(
         avformat_find_stream_info(fmt_ctx, nullptr),
-        "Failed to find stream information.");
+        fmt::format("Failed to find stream information: {}.", fmt_ctx->url));
   }
 
   AVMediaType type = [&]() {
@@ -47,8 +47,10 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
     idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
   }
   if (idx < 0) {
-    SPDL_FAIL(
-        fmt::format("No {} stream was found.", av_get_media_type_string(type)));
+    SPDL_FAIL(fmt::format(
+        "No {} stream was found in {}.",
+        av_get_media_type_string(type),
+        fmt_ctx->url));
   }
   // Disable other streams
   for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
@@ -188,7 +190,8 @@ folly::coro::Task<ImagePacketsPtr> demux_image(
     if (errnum == AVERROR_EOF) {
       break;
     }
-    CHECK_AVERROR_NUM(errnum, "Failed to process packet.");
+    CHECK_AVERROR_NUM(
+        errnum, fmt::format("Failed to process packet. {}", fmt_ctx->url));
     if (packet->stream_index != stream->index) {
       continue;
     }
@@ -196,7 +199,8 @@ folly::coro::Task<ImagePacketsPtr> demux_image(
     break;
   } while (ite < 1000);
   if (!package->num_packets()) {
-    SPDL_FAIL(fmt::format("Failed to demux a sigle frame from {}", src));
+    SPDL_FAIL(
+        fmt::format("Failed to demux a sigle frame from {}", fmt_ctx->url));
   }
   co_return std::move(package);
 }

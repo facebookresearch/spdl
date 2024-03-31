@@ -196,18 +196,18 @@ void clear_cuda_context_cache() {
 ////////////////////////////////////////////////////////////////////////////////
 // AVIOContext
 ////////////////////////////////////////////////////////////////////////////////
-AVIOContext* get_io_ctx(
+AVIOContextPtr get_io_ctx(
     void* opaque,
     int buffer_size,
     int (*read_packet)(void* opaque, uint8_t* buf, int buf_size),
     int64_t (*seek)(void* opaque, int64_t offset, int whence)) {
   auto buffer =
       static_cast<unsigned char*>(CHECK_AVALLOCATE(av_malloc(buffer_size)));
-  AVIOContext* io_ctx;
+  AVIOContextPtr io_ctx;
   {
     TRACE_EVENT("decoding", "avio_alloc_context");
-    io_ctx = avio_alloc_context(
-        buffer, buffer_size, 0, opaque, read_packet, nullptr, seek);
+    io_ctx.reset(avio_alloc_context(
+        buffer, buffer_size, 0, opaque, read_packet, nullptr, seek));
   }
   if (!io_ctx) [[unlikely]] {
     av_freep(&buffer);
@@ -267,19 +267,18 @@ AVFormatInputContextPtr get_input_format_ctx(
 
 } // namespace
 
-AVFormatInputContextPtr get_input_format_ctx_ptr(
-    const std::string_view id,
+AVFormatInputContextPtr get_input_format_ctx(
+    const std::string url,
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options) {
-  return get_input_format_ctx(id.data(), format, format_options, nullptr);
+  return get_input_format_ctx(url.data(), format, format_options, nullptr);
 }
 
-AVFormatContext* get_input_format_ctx(
+AVFormatInputContextPtr get_input_format_ctx(
     AVIOContext* io_ctx,
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options) {
-  return get_input_format_ctx(nullptr, format, format_options, io_ctx)
-      .release();
+  return get_input_format_ctx(nullptr, format, format_options, io_ctx);
 }
 
 //////////////////////////////////////////////////////////////////////////////

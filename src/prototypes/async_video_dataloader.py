@@ -73,7 +73,7 @@ class BulkVideoProcessor:
             tasks = await wait_and_check(tasks, max_tasks)
 
             coro = self._demux(path)
-            tasks.add(asyncio.create_task(coro, name=f"decode={path}"))
+            tasks.add(asyncio.create_task(coro))
 
         await wait_and_check(tasks)
 
