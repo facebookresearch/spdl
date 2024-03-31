@@ -81,7 +81,7 @@ def test_decode_audio_clips(get_sample):
         assert len(arrays) == N
         for i, arr in enumerate(arrays):
             print(i, arr.shape, arr.dtype)
-            assert arr.shape == (49152, 1)
+            assert arr.shape == (48000, 1)
             assert arr.dtype == np.int16
 
     asyncio.run(_test())
@@ -203,26 +203,26 @@ def test_cancellation_multi_gather():
 
 def test_async_convert_audio_cpu(get_sample):
     """async_convert_frames_cpu can convert FFmpegAudioFrames to Buffer"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     async def _test(src):
-        ts = [(0, float("inf"))]
+        ts = [(1, 2)]
         gen = spdl.async_demux_audio(src, timestamps=ts)
         arrays = await _test_async_decode(gen, 1)
         array = arrays[0]
         print(array.dtype, array.shape)
-        assert array.shape == (480000, 1)
+        assert array.shape == (48000, 1)
 
     asyncio.run(_test(sample.path))
 
 
 def test_async_decode_audio_bytes(get_sample):
     """audio can be decoded from bytes."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
-    ts = [(0, float("inf"))]
+    ts = [(1, 2)]
 
     async def _decode(src):
         gen = spdl.async_demux_audio(src, timestamps=ts)
@@ -241,7 +241,7 @@ def test_async_decode_audio_bytes(get_sample):
         with open(path, "rb") as f:
             hyp = await _decode_bytes(f.read())
 
-        assert hyp.shape == (480000, 1)
+        assert hyp.shape == (48000, 1)
         assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))

@@ -25,7 +25,8 @@ std::string get_video_filter_description(
 std::string get_audio_filter_description(
     const std::optional<int>& sample_rate,
     const std::optional<int>& num_channels,
-    const std::optional<std::string>& sample_fmt);
+    const std::optional<std::string>& sample_fmt,
+    const std::optional<std::tuple<double, double>>& timestamp);
 
 // for debug
 std::string describe_graph(AVFilterGraph* graph);

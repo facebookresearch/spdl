@@ -112,7 +112,9 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
       continue;
     }
     packet_ts = packet->pts * av_q2d(stream->time_base);
-    co_yield std::move(packet);
+    if (packet_ts <= end) {
+      co_yield std::move(packet);
+    }
   } while (packet_ts < end);
 }
 

@@ -38,32 +38,8 @@ void register_decoding(py::module& m) {
       py::arg("duration"),
       py::arg("executor") = nullptr);
 
-  m.def(
-      "async_decode_audio",
-      [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
-         std::function<void()> notify_exception,
-         AudioPacketsWrapperPtr packets,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
-         const std::string& filter_desc,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return async_decode<MediaType::Audio>(
-            std::move(set_result),
-            std::move(notify_exception),
-            packets,
-            {decoder, decoder_options},
-            filter_desc,
-            decode_executor);
-      },
-      py::arg("set_result"),
-      py::arg("notify_exception"),
-      py::arg("packets"),
-      py::kw_only(),
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
-      py::arg("filter_desc") = std::string(),
-      py::arg("executor") = nullptr);
-
+  // NOTE: The order of registeration matters when PyBind11 resolve the overloads.
+  // Make sure that the ones with filter_desc are after the regular one.
   m.def(
       "async_decode_audio",
       [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
@@ -80,7 +56,11 @@ void register_decoding(py::module& m) {
             std::move(notify_exception),
             packets,
             {decoder, decoder_options},
-            get_audio_filter_description(sample_rate, num_channels, sample_fmt),
+            get_audio_filter_description(
+                sample_rate,
+                num_channels,
+                sample_fmt,
+                packets->get_packets()->timestamp),
             decode_executor);
       },
       py::arg("set_result"),
@@ -95,6 +75,66 @@ void register_decoding(py::module& m) {
       py::arg("executor") = nullptr);
 
   m.def(
+      "async_decode_audio",
+      [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
+         std::function<void()> notify_exception,
+         AudioPacketsWrapperPtr packets,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const std::string& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+        return async_decode<MediaType::Audio>(
+            std::move(set_result),
+            std::move(notify_exception),
+            packets,
+            {decoder, decoder_options},
+            filter_desc,
+            decode_executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::kw_only(),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("filter_desc") = std::string(),
+      py::arg("executor") = nullptr);
+
+  m.def(
+      "async_decode_video",
+      [](std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
+         std::function<void()> notify_exception,
+         VideoPacketsWrapperPtr packets,
+         const std::optional<std::string>& decoder,
+         const std::optional<OptionDict>& decoder_options,
+         const int cuda_device_index,
+         const std::optional<Rational>& frame_rate,
+         const std::optional<int>& width,
+         const std::optional<int>& height,
+         const std::optional<std::string>& pix_fmt,
+         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
+        return async_decode<MediaType::Video>(
+            std::move(set_result),
+            std::move(notify_exception),
+            packets,
+            {decoder, decoder_options, cuda_device_index},
+            get_video_filter_description(frame_rate, width, height, pix_fmt),
+            decode_executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("packets"),
+      py::kw_only(),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none(),
+      py::arg("cuda_device_index") = -1,
+      py::arg("frame_rate") = py::none(),
+      py::arg("width") = py::none(),
+      py::arg("height") = py::none(),
+      py::arg("pix_fmt") = py::none(),
+      py::arg("executor") = nullptr);
+
+  m.def(
       "async_decode_video",
       [](std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
@@ -123,10 +163,10 @@ void register_decoding(py::module& m) {
       py::arg("executor") = nullptr);
 
   m.def(
-      "async_decode_video",
-      [](std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
+      "async_decode_image",
+      [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
          std::function<void()> notify_exception,
-         VideoPacketsWrapperPtr packets,
+         ImagePacketsWrapperPtr packets,
          const std::optional<std::string>& decoder,
          const std::optional<OptionDict>& decoder_options,
          const int cuda_device_index,
@@ -135,7 +175,7 @@ void register_decoding(py::module& m) {
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return async_decode<MediaType::Video>(
+        return async_decode<MediaType::Image>(
             std::move(set_result),
             std::move(notify_exception),
             packets,
@@ -182,40 +222,6 @@ void register_decoding(py::module& m) {
       py::arg("decoder_options") = py::none(),
       py::arg("cuda_device_index") = -1,
       py::arg("filter_desc") = std::string(),
-      py::arg("executor") = nullptr);
-
-  m.def(
-      "async_decode_image",
-      [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
-         std::function<void()> notify_exception,
-         ImagePacketsWrapperPtr packets,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
-         const int cuda_device_index,
-         const std::optional<Rational>& frame_rate,
-         const std::optional<int>& width,
-         const std::optional<int>& height,
-         const std::optional<std::string>& pix_fmt,
-         std::shared_ptr<ThreadPoolExecutor> decode_executor) {
-        return async_decode<MediaType::Image>(
-            std::move(set_result),
-            std::move(notify_exception),
-            packets,
-            {decoder, decoder_options, cuda_device_index},
-            get_video_filter_description(frame_rate, width, height, pix_fmt),
-            decode_executor);
-      },
-      py::arg("set_result"),
-      py::arg("notify_exception"),
-      py::arg("packets"),
-      py::kw_only(),
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
-      py::arg("cuda_device_index") = -1,
-      py::arg("frame_rate") = py::none(),
-      py::arg("width") = py::none(),
-      py::arg("height") = py::none(),
-      py::arg("pix_fmt") = py::none(),
       py::arg("executor") = nullptr);
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -556,6 +562,7 @@ void register_decoding(py::module& m) {
             adaptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
+            // TODO: Incorporate the timestamps
             get_audio_filter_description(sample_rate, num_channels, sample_fmt),
             demux_executor,
             decode_executor);

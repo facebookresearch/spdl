@@ -5,6 +5,7 @@
 
 #include <fmt/format.h>
 
+#include <cmath>
 #include <stdexcept>
 
 extern "C" {
@@ -225,7 +226,8 @@ std::string get_video_filter_description(
 std::string get_audio_filter_description(
     const std::optional<int>& sample_rate,
     const std::optional<int>& num_channels,
-    const std::optional<std::string>& sample_fmt) {
+    const std::optional<std::string>& sample_fmt,
+    const std::optional<std::tuple<double, double>>& timestamp) {
   std::vector<std::string> parts;
   if (sample_rate) {
     parts.emplace_back(fmt::format("aresample={}", sample_rate.value()));
@@ -240,6 +242,16 @@ std::string get_audio_filter_description(
       aformat.emplace_back(fmt::format("sample_fmts={}", sample_fmt.value()));
     }
     parts.push_back(fmt::format("aformat={}", fmt::join(aformat, ":")));
+  }
+  if (timestamp) {
+    auto& ts = timestamp.value();
+    std::vector<std::string> atrim;
+    auto start = std::get<0>(ts), end = std::get<1>(ts);
+    atrim.emplace_back(fmt::format("start={}", start));
+    if (!std::isinf(end)) {
+      atrim.emplace_back(fmt::format("end={}", end));
+    }
+    parts.push_back(fmt::format("atrim={}", fmt::join(atrim, ":")));
   }
   return fmt::to_string(fmt::join(parts, ","));
 }
