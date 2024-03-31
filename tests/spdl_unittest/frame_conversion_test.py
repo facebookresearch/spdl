@@ -3,12 +3,13 @@ import sys
 
 import numpy as np
 import pytest
-import spdl
+
+import spdl.io
 from spdl.lib import _libspdl
 
 
 def _to_numpy(frames, index=None):
-    return spdl.to_numpy(_libspdl.convert_to_cpu_buffer(frames, index))
+    return spdl.io.to_numpy(_libspdl.convert_to_cpu_buffer(frames, index))
 
 
 @pytest.fixture
