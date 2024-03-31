@@ -96,9 +96,11 @@ class BytesInterface : public DataInterface {
 } // namespace
 } // namespace detail
 
-DataInterface* BytesAdaptor::get(std::string_view data, const IOConfig& io_cfg)
-    const {
-  return new detail::BytesInterface{data, io_cfg};
+std::unique_ptr<DataInterface> BytesAdaptor::get(
+    std::string_view data,
+    const IOConfig& io_cfg) const {
+  return std::unique_ptr<DataInterface>(
+      new detail::BytesInterface{data, io_cfg});
 }
 
 } // namespace spdl::core

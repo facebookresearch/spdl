@@ -69,7 +69,7 @@ std::unique_ptr<DataInterface> get_interface(
     thread_local auto p = std::make_shared<SourceAdaptor>();
     adaptor = p;
   }
-  return std::unique_ptr<DataInterface>(adaptor->get(src, io_cfg));
+  return adaptor->get(src, io_cfg);
 }
 
 folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
