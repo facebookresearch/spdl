@@ -6,7 +6,7 @@ import threading
 import time
 from pathlib import Path
 
-import spdl
+import spdl.io
 import spdl.utils
 
 _LG = logging.getLogger(__name__)
@@ -78,9 +78,9 @@ class BulkImageProcessor:
             frames.append(task.result())
 
         buffer = await (
-            spdl.async_convert_nvdec(frames)
+            spdl.io.async_convert_nvdec(frames)
             if self.use_nvdec
-            else spdl.async_convert_frames(frames)
+            else spdl.io.async_convert_frames(frames)
         )
 
         tensor = spdl.to_torch(buffer).to(device=f"cuda:{self.cuda_device_index}")
@@ -88,9 +88,9 @@ class BulkImageProcessor:
         await self.queue.put(tensor)
 
     async def _decode(self, path):
-        packets = await spdl.async_demux_image(path)
+        packets = await spdl.io.async_demux_image(path)
         return await (
-            spdl.async_decode_packets_nvdec(
+            spdl.io.async_decode_packets_nvdec(
                 packets,
                 cuda_device_index=self.cuda_device_index,
                 width=self.width,
@@ -98,7 +98,7 @@ class BulkImageProcessor:
                 pix_fmt=self.pix_fmt,
             )
             if self.use_nvdec
-            else spdl.async_decode_packets(
+            else spdl.io.async_decode_packets(
                 packets,
                 width=self.width,
                 height=self.height,

@@ -6,7 +6,7 @@ import threading
 import time
 from pathlib import Path
 
-import spdl
+import spdl.io
 import spdl.utils
 
 _LG = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class BulkVideoProcessor:
         timestamps = [(0, float("inf"))]
 
         tasks = set()
-        demuxer = spdl.async_demux_video(path, timestamps=timestamps)
+        demuxer = spdl.io.async_demux_video(path, timestamps=timestamps)
         i = -1
         async for packets in demuxer:
             i += 1
@@ -95,8 +95,8 @@ class BulkVideoProcessor:
         await wait_and_check(tasks)
 
     async def _decode(self, packets):
-        buffer = await spdl.async_convert_frames(
-            await spdl.async_decode_packets(
+        buffer = await spdl.io.async_convert_frames(
+            await spdl.io.async_decode_packets(
                 packets,
                 width=self.width,
                 height=self.height,
@@ -107,9 +107,9 @@ class BulkVideoProcessor:
         await self.queue.put(tensor)
 
     async def _decode_nvdec(self, packets, cuda_device_index):
-        buffer = await spdl.async_convert_frames(
-            await spdl.async_decode_packets_nvdec(
-                await spdl.async_apply_bsf(packets),
+        buffer = await spdl.io.async_convert_frames(
+            await spdl.io.async_decode_packets_nvdec(
+                await spdl.io.async_apply_bsf(packets),
                 cuda_device_index=cuda_device_index,
                 width=self.width,
                 height=self.height,

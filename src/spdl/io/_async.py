@@ -6,6 +6,7 @@ from typing import Any, List, Tuple
 from spdl.lib import _libspdl
 
 __all__ = [
+    "_async_sleep",
     # TODO: Merge async_apply_bsf with async_decode_nvdec(video)
     "async_apply_bsf",
     "async_convert_frames_cpu",
@@ -22,11 +23,8 @@ _debug_task = [
 ]
 
 
-def __getattr__(name: str) -> Any:
-    if name in _debug_task:
-        func = getattr(_libspdl, name)
-        return functools.partial(_async_task, func)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+def _async_sleep(time: int):
+    return _async_task(_libspdl.async_sleep, time)
 
 
 # Exception class used to signal the failure of C++ op to Python.

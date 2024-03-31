@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import spdl
+import spdl.io
 from spdl.lib import _libspdl
 
 DEFAULT_CUDA = 0
@@ -59,7 +59,7 @@ def _save(array, prefix):
 def _to_arrays(frames):
     ret = []
     for f in frames:
-        array = spdl.to_torch(_libspdl.convert_to_buffer(f, None))
+        array = spdl.io.to_torch(_libspdl.convert_to_buffer(f, None))
         assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
         ret.append(array.cpu().numpy())
     return ret
