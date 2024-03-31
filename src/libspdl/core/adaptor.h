@@ -42,24 +42,27 @@ struct SourceAdaptor {
 
   // This returns a pointer to DataInterface classes, but for the sake of
   // exposing this via PyBind11, we use void*
-  virtual DataInterface* get(std::string_view url, const IOConfig& io_cfg)
-      const;
+  virtual std::unique_ptr<DataInterface> get(
+      std::string_view url,
+      const IOConfig& io_cfg) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // MMap
 ////////////////////////////////////////////////////////////////////////////////
 struct MMapAdaptor : public SourceAdaptor {
-  DataInterface* get(std::string_view url, const IOConfig& io_cfg)
-      const override;
+  std::unique_ptr<DataInterface> get(
+      std::string_view url,
+      const IOConfig& io_cfg) const override;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Bytes
 ////////////////////////////////////////////////////////////////////////////////
 struct BytesAdaptor : public SourceAdaptor {
-  DataInterface* get(std::string_view data, const IOConfig& io_cfg)
-      const override;
+  std::unique_ptr<DataInterface> get(
+      std::string_view data,
+      const IOConfig& io_cfg) const override;
 };
 
 } // namespace spdl::core

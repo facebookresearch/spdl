@@ -106,9 +106,11 @@ class MMapInterface : public DataInterface {
 } // namespace
 } // namespace detail
 
-DataInterface* MMapAdaptor::get(std::string_view url, const IOConfig& io_cfg)
-    const {
-  return new detail::MMapInterface(std::string{url}, io_cfg);
+std::unique_ptr<DataInterface> MMapAdaptor::get(
+    std::string_view url,
+    const IOConfig& io_cfg) const {
+  return std::unique_ptr<DataInterface>(
+      new detail::MMapInterface(std::string{url}, io_cfg));
 };
 
 } // namespace spdl::core

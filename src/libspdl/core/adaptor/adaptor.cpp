@@ -25,8 +25,8 @@ class BasicInterface : public DataInterface {
   }
 };
 
-DataInterface* SourceAdaptor::get(std::string_view url, const IOConfig& io_cfg)
+std::unique_ptr<DataInterface> SourceAdaptor::get(std::string_view url, const IOConfig& io_cfg)
     const {
-  return new BasicInterface(url, io_cfg);
+  return std::unique_ptr<DataInterface>(new BasicInterface(url, io_cfg));
 }
 } // namespace spdl::core

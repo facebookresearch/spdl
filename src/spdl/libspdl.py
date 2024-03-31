@@ -77,8 +77,6 @@ def __dir__() -> List[str]:
 
 
 def __getattr__(name: str) -> Any:
-    if name == "SourceAdaptor":
-        return _libspdl.SourceAdaptor_SPDL_GLOBAL
     return getattr(_libspdl, name)
 
 
