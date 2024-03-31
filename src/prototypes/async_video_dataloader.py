@@ -96,8 +96,8 @@ class BulkVideoProcessor:
         await wait_and_check(tasks)
 
     async def _decode(self, packets):
-        buffer = await spdl.async_convert(
-            await spdl.async_decode(
+        buffer = await spdl.async_convert_frames(
+            await spdl.async_decode_packets(
                 packets,
                 width=self.width,
                 height=self.height,
@@ -108,8 +108,8 @@ class BulkVideoProcessor:
         await self.queue.put(tensor)
 
     async def _decode_nvdec(self, packets, cuda_device_index):
-        buffer = await spdl.async_convert(
-            await spdl.async_decode_nvdec(
+        buffer = await spdl.async_convert_frames(
+            await spdl.async_decode_packets_nvdec(
                 await spdl.async_apply_bsf(packets),
                 cuda_device_index=cuda_device_index,
                 width=self.width,
