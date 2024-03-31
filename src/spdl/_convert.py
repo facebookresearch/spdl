@@ -1,6 +1,7 @@
 import numpy as np
 
-from spdl import libspdl
+import spdl
+import spdl.utils
 from spdl._internal import import_utils
 
 try:
@@ -41,7 +42,7 @@ def to_torch(buffer):
     """
     if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
-        index = libspdl.get_cuda_device_index(data_ptr)
+        index = spdl.utils.get_cuda_device_index(data_ptr)
         tensor = torch.as_tensor(buffer, device=f"cuda:{index}")
         if tensor.data_ptr() == 0:
             raise RuntimeError(

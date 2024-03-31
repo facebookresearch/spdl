@@ -18,4 +18,9 @@ def __getattr__(name: str) -> Any:
     if name in _async.__all__:
         return getattr(_async, name)
 
+    if name == "utils":
+        from . import utils
+
+        return utils
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

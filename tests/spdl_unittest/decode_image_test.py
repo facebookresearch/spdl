@@ -2,11 +2,11 @@ import numpy as np
 
 import pytest
 import spdl
-from spdl import libspdl
+from spdl.lib import _libspdl
 
 
 def _to_numpy(frames, index=None):
-    return spdl.to_numpy(libspdl.convert_to_cpu_buffer(frames, index))
+    return spdl.to_numpy(_libspdl.convert_to_cpu_buffer(frames, index))
 
 
 def test_decode_image_gray_black(get_sample):
@@ -15,7 +15,7 @@ def test_decode_image_gray_black(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
     sample = get_sample(cmd, width=320, height=240)
 
-    frame = libspdl.decode_image(sample.path).get()
+    frame = _libspdl.decode_image(sample.path).get()
 
     gray = _to_numpy(frame)
     assert gray.dtype == np.uint8
@@ -29,7 +29,7 @@ def test_decode_image_gray_white(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xFFFFFF,format=gray -frames:v 1 sample.png"
     sample = get_sample(cmd, width=320, height=240)
 
-    frame = libspdl.decode_image(sample.path).get()
+    frame = _libspdl.decode_image(sample.path).get()
 
     gray = _to_numpy(frame)
     assert gray.dtype == np.uint8
@@ -42,7 +42,7 @@ def test_decode_image_yuv422(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj422p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd, width=320, height=240)
 
-    frame = libspdl.decode_image(sample.path).get()
+    frame = _libspdl.decode_image(sample.path).get()
 
     h, w = sample.height, sample.width
     w2 = w // 2
@@ -74,7 +74,7 @@ def test_decode_image_yuv420p(get_sample):
     h2, w2 = h // 2, w // 2
 
     sample = get_sample(cmd, width=w, height=h)
-    frame = libspdl.decode_image(sample.path, pix_fmt="yuv420p").get()
+    frame = _libspdl.decode_image(sample.path, pix_fmt="yuv420p").get()
 
     yuv = _to_numpy(frame)
     assert yuv.dtype == np.uint8
@@ -100,7 +100,7 @@ def test_decode_image_rgb24_red(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xff0000,format=yuvj420p -frames:v 1 sample.jpeg"
     red = get_sample(cmd, width=320, height=240)
 
-    frame = libspdl.decode_image(red.path, pix_fmt="rgb24").get()
+    frame = _libspdl.decode_image(red.path, pix_fmt="rgb24").get()
 
     array = _to_numpy(frame)
     assert array.dtype == np.uint8
@@ -116,7 +116,7 @@ def test_decode_image_rgb24_green(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x00ff00,format=yuvj420p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd, width=320, height=240)
 
-    frame = libspdl.decode_image(sample.path, pix_fmt="rgb24").get()
+    frame = _libspdl.decode_image(sample.path, pix_fmt="rgb24").get()
 
     array = _to_numpy(frame)
     assert array.dtype == np.uint8
@@ -131,7 +131,7 @@ def test_decode_image_rgb24_blue(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x0000ff,format=yuvj420p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd, width=320, height=240)
 
-    frame = libspdl.decode_image(sample.path, pix_fmt="rgb24").get()
+    frame = _libspdl.decode_image(sample.path, pix_fmt="rgb24").get()
 
     array = _to_numpy(frame)
     assert array.dtype == np.uint8
@@ -147,7 +147,7 @@ def test_batch_decode_image_slice(get_samples):
     n, h, w = 32, 240, 320
     flist = get_samples(cmd)
 
-    frames = libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
+    frames = _libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
     assert len(frames) == n
 
     arrays = _to_numpy(frames)
@@ -175,7 +175,7 @@ def test_batch_decode_image_rgb24(get_samples):
     # fmt: on
     flist = get_samples(cmd)
 
-    frames = libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
+    frames = _libspdl.batch_decode_image(flist, pix_fmt="rgb24").get()
     assert len(frames) == 32
     arrays = _to_numpy(frames)
 
@@ -216,8 +216,8 @@ def test_batch_decode_image_strict(get_samples):
     flist.append("foo.png")
 
     with pytest.raises(RuntimeError):
-        libspdl.batch_decode_image(flist).get(strict=True)
+        _libspdl.batch_decode_image(flist).get(strict=True)
 
-    frames = libspdl.batch_decode_image(flist).get(strict=False)
+    frames = _libspdl.batch_decode_image(flist).get(strict=False)
 
     assert len(frames) == 32

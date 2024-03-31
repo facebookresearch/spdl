@@ -1,11 +1,11 @@
 import numpy as np
 import pytest
 import spdl
-from spdl import libspdl
+from spdl.lib import _libspdl
 
 
 def _to_numpy(frames, index=None):
-    return spdl.to_numpy(libspdl.convert_to_cpu_buffer(frames, index))
+    return spdl.to_numpy(_libspdl.convert_to_cpu_buffer(frames, index))
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def yuv420p(get_sample):
 
 def test_video_frames_getitem_slice(yuv420p):
     """DecodedFrames.__getitem__ works for slice input"""
-    decoded_frames = libspdl.decode_video(
+    decoded_frames = _libspdl.decode_video(
         src=yuv420p.path,
         timestamps=[(0.0, 0.5)],
         pix_fmt="rgb24",
@@ -40,7 +40,7 @@ def test_video_frames_getitem_slice(yuv420p):
 
 def test_video_frames_getitem_int(yuv420p):
     """DecodedFrames.__getitem__ works for index input"""
-    decoded_frames = libspdl.decode_video(
+    decoded_frames = _libspdl.decode_video(
         src=yuv420p.path,
         timestamps=[(0.0, 0.5)],
         pix_fmt="rgb24",
@@ -57,7 +57,7 @@ def test_video_frames_getitem_int(yuv420p):
 
 def test_video_frames_iterate(yuv420p):
     """DecodedFrames works as iterator"""
-    decoded_frames = libspdl.decode_video(
+    decoded_frames = _libspdl.decode_video(
         src=yuv420p.path,
         timestamps=[(0.0, 0.5)],
         pix_fmt="rgb24",

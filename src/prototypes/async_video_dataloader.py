@@ -8,7 +8,6 @@ from pathlib import Path
 
 import spdl
 import spdl.utils
-from spdl import libspdl
 
 _LG = logging.getLogger(__name__)
 
@@ -124,8 +123,8 @@ class BulkVideoProcessor:
 async def _track(queue):
     while True:
         await asyncio.sleep(3 / 1000)
-        libspdl.trace_default_demux_executor_queue_size()
-        libspdl.trace_default_decode_executor_queue_size()
+        spdl.utils.trace_default_demux_executor_queue_size()
+        spdl.utils.trace_default_decode_executor_queue_size()
         spdl.utils.trace_counter(0, queue.qsize())
 
 
@@ -262,8 +261,8 @@ def _init_logging(debug=False, worker_id=None):
 def _init(debug, num_demux_threads, num_decode_threads, worker_id):
     _init_logging(debug, worker_id)
 
-    libspdl.set_ffmpeg_log_level(16)
-    libspdl.init_folly(
+    spdl.utils.set_ffmpeg_log_level(16)
+    spdl.utils.init_folly(
         [
             f"--spdl_demuxer_executor_threads={num_demux_threads}",
             f"--spdl_decoder_executor_threads={num_decode_threads}",

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 import spdl
-from spdl import libspdl
+from spdl.lib import _libspdl
 
 
 def test_failure():
@@ -111,7 +111,7 @@ async def _decode_image(path):
     print(packets)
     frames = await spdl.async_decode_packets(packets)
     print(frames)
-    assert type(frames) is libspdl.FFmpegImageFrames
+    assert type(frames) is _libspdl.FFmpegImageFrames
     return frames
 
 

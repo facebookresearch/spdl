@@ -4,11 +4,11 @@ import sys
 import numpy as np
 import pytest
 import spdl
-from spdl import libspdl
+from spdl.lib import _libspdl
 
 
 def _to_numpy(frames, index=None):
-    return spdl.to_numpy(libspdl.convert_to_cpu_buffer(frames, index))
+    return spdl.to_numpy(_libspdl.convert_to_cpu_buffer(frames, index))
 
 
 @pytest.fixture
@@ -21,13 +21,13 @@ def test_video_buffer_conversion_refcount(yuv420p):
     """NumPy array created from Buffer should increment a reference to the buffer
     so that array keeps working after the original Buffer variable is deleted.
     """
-    decoded_frames = libspdl.decode_video(
+    decoded_frames = _libspdl.decode_video(
         src=yuv420p.path,
         timestamps=[(0.0, 0.5)],
         pix_fmt="rgb24",
     ).get()[0]
 
-    buf = libspdl.convert_to_cpu_buffer(decoded_frames, None)
+    buf = _libspdl.convert_to_cpu_buffer(decoded_frames, None)
     assert hasattr(buf, "__array_interface__")
     print(f"{buf.__array_interface__=}")
 
@@ -61,7 +61,7 @@ def test_video_buffer_conversion_rgb24(get_sample):
     h, w = 240, 320
     sample = get_sample(cmd, width=w, height=h)
 
-    frames = libspdl.decode_video(
+    frames = _libspdl.decode_video(
         src=sample.path,
         timestamps=[(0.0, 1.0)],
         pix_fmt="rgb24",
@@ -81,7 +81,7 @@ def test_video_buffer_conversion_yuv420(yuv420p):
     h, w = yuv420p.height, yuv420p.width
     h2, w2 = h // 2, w // 2
 
-    frames = libspdl.decode_video(
+    frames = _libspdl.decode_video(
         src=yuv420p.path,
         timestamps=[(0.0, 1.0)],
     ).get()[0]
@@ -104,7 +104,7 @@ def test_video_buffer_conversion_yuv444(get_sample):
 
     sample = get_sample(cmd, width=w, height=h)
 
-    frames = libspdl.decode_video(
+    frames = _libspdl.decode_video(
         src=sample.path,
         timestamps=[(0.0, 1.0)],
         pix_fmt="yuv444p",
@@ -125,7 +125,7 @@ def test_video_buffer_conversion_nv12(get_sample):
     h2, w2 = h // 2, w // 2
 
     sample = get_sample(cmd, width=w, height=h)
-    frames = libspdl.decode_video(
+    frames = _libspdl.decode_video(
         src=sample.path,
         timestamps=[(0.0, 0.5)],
         pix_fmt="nv12",
@@ -151,7 +151,7 @@ def test_audio_buffer_conversion_s16p(sample_fmts, get_sample):
     sample = get_sample(cmd)
 
     sample_fmt, expected = sample_fmts
-    frames = libspdl.decode_audio(
+    frames = _libspdl.decode_audio(
         src=sample.path,
         timestamps=[(0.0, 0.5)],
         sample_fmt=sample_fmt,

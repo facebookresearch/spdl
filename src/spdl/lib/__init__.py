@@ -14,7 +14,7 @@ from typing import Any, List
 _LG = logging.getLogger(__name__)
 
 __all__ = [
-    "libspdl",
+    "_libspdl",
 ]
 
 
@@ -23,7 +23,7 @@ def __dir__() -> List[str]:
 
 
 def __getattr__(name: str) -> Any:
-    if name == "libspdl":
+    if name == "_libspdl":
         from spdl._internal.import_utils import _LazilyImportedModule
 
         return _LazilyImportedModule(name, _import_libspdl)
