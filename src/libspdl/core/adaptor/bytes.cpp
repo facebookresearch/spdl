@@ -11,8 +11,6 @@ extern "C" {
 
 namespace spdl::core {
 namespace detail {
-void free_av_io_ctx(AVIOContext* p);
-void free_av_fmt_ctx(AVFormatContext* p);
 
 namespace {
 class Bytes {
@@ -72,8 +70,8 @@ class Bytes {
 
 class BytesInterface : public DataInterface {
   Bytes obj;
-  AVIOContext* io_ctx;
-  AVFormatContext* fmt_ctx;
+  AVIOContextPtr io_ctx;
+  AVFormatInputContextPtr fmt_ctx;
 
  public:
   BytesInterface(std::string_view data, const IOConfig& io_cfg)
@@ -84,16 +82,15 @@ class BytesInterface : public DataInterface {
             Bytes::read_packet,
             Bytes::seek)),
         fmt_ctx(get_input_format_ctx(
-            io_ctx,
+            io_ctx.get(),
             io_cfg.format,
-            io_cfg.format_options)) {}
+            io_cfg.format_options)) {
+    std::string url = fmt::format("<Bytes: {}>", (void*)data.data());
+    fmt_ctx->url = av_strdup(url.data());
+  }
 
-  ~BytesInterface() {
-    free_av_io_ctx(io_ctx);
-    free_av_fmt_ctx(fmt_ctx);
-  };
   AVFormatContext* get_fmt_ctx() override {
-    return fmt_ctx;
+    return fmt_ctx.get();
   }
 };
 } // namespace

@@ -15,8 +15,8 @@ class BasicInterface : public DataInterface {
 
  public:
   BasicInterface(std::string_view url, const IOConfig& io_cfg)
-      : fmt_ctx(get_input_format_ctx_ptr(
-            url,
+      : fmt_ctx(get_input_format_ctx(
+            std::string{url},
             io_cfg.format,
             io_cfg.format_options)) {}
   ~BasicInterface() = default;

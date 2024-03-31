@@ -13,8 +13,6 @@ extern "C" {
 
 namespace spdl::core {
 namespace detail {
-void free_av_io_ctx(AVIOContext* p);
-void free_av_fmt_ctx(AVFormatContext* p);
 
 namespace {
 class MemoryMappedFile {
@@ -24,7 +22,7 @@ class MemoryMappedFile {
   int64_t pos_ = 0;
 
  public:
-  MemoryMappedFile(std::string&& path) {
+  MemoryMappedFile(const std::string& path) {
     CHECK_AVERROR(
         av_file_map(path.data(), &buffer_, &buffer_size_, 0, NULL),
         "Failed to map file ({}).",
@@ -83,28 +81,26 @@ class MemoryMappedFile {
 
 class MMapInterface : public DataInterface {
   MemoryMappedFile obj;
-  AVIOContext* io_ctx;
-  AVFormatContext* fmt_ctx;
+  AVIOContextPtr io_ctx;
+  AVFormatInputContextPtr fmt_ctx;
 
  public:
-  MMapInterface(std::string_view url, const IOConfig& io_cfg)
-      : obj(std::string{url}),
+  MMapInterface(std::string path, const IOConfig& io_cfg)
+      : obj(path),
         io_ctx(get_io_ctx(
             &obj,
             io_cfg.buffer_size,
             MemoryMappedFile::read_packet,
             MemoryMappedFile::seek)),
         fmt_ctx(get_input_format_ctx(
-            io_ctx,
+            io_ctx.get(),
             io_cfg.format,
-            io_cfg.format_options)) {}
+            io_cfg.format_options)) {
+    fmt_ctx->url = av_strdup(path.data());
+  }
 
-  ~MMapInterface() {
-    free_av_io_ctx(io_ctx);
-    free_av_fmt_ctx(fmt_ctx);
-  };
   AVFormatContext* get_fmt_ctx() override {
-    return fmt_ctx;
+    return fmt_ctx.get();
   }
 };
 } // namespace
@@ -112,7 +108,7 @@ class MMapInterface : public DataInterface {
 
 DataInterface* MMapAdaptor::get(std::string_view url, const IOConfig& io_cfg)
     const {
-  return new detail::MMapInterface(url, io_cfg);
+  return new detail::MMapInterface(std::string{url}, io_cfg);
 };
 
 } // namespace spdl::core
