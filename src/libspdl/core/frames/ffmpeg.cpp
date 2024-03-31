@@ -21,7 +21,8 @@ namespace spdl::core {
 // FFmpeg Common
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
-FFmpegFrames<media_type>::FFmpegFrames(uint64_t id_) : id(id_) {
+FFmpegFrames<media_type>::FFmpegFrames(uint64_t id_, Rational time_base_)
+    : id(id_), time_base(time_base_) {
   TRACE_EVENT(
       "decoding",
       "FFmpegFrames::FFmpegFrames",
@@ -71,6 +72,10 @@ void FFmpegFrames<media_type>::push_back(AVFrame* frame) {
   frames.push_back(frame);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Common
+////////////////////////////////////////////////////////////////////////////////
+
 template <MediaType media_type>
 const char* FFmpegFrames<media_type>::get_media_format_name() const {
   if (frames.size() == 0) {
@@ -95,6 +100,15 @@ int FFmpegFrames<media_type>::get_num_frames() const {
 template <MediaType media_type>
 const std::vector<AVFrame*>& FFmpegFrames<media_type>::get_frames() const {
   return frames;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Common to Audio/Video
+////////////////////////////////////////////////////////////////////////////////
+template <MediaType media_type>
+Rational FFmpegFrames<media_type>::get_time_base() const
+    requires(_IS_AUDIO || _IS_VIDEO) {
+  return time_base;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -190,7 +204,7 @@ FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
   const int numel = frames.size();
   int len = adjust_indices(numel, &start, &stop, step);
 
-  auto out = std::make_unique<FFmpegVideoFrames>(id);
+  auto out = std::make_unique<FFmpegVideoFrames>(id, time_base);
   if (!len) {
     return out;
   }
@@ -211,7 +225,7 @@ FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(
     throw std::out_of_range(
         fmt::format("Index {} is outside of [0, {})", i, frames.size()));
   }
-  auto out = std::make_unique<FFmpegFrames<MediaType::Image>>(id);
+  auto out = std::make_unique<FFmpegFrames<MediaType::Image>>(id, time_base);
   assert(0 <= i && i < numel);
   out->push_back(detail::make_reference(frames[i]));
   return out;
