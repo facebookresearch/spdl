@@ -41,9 +41,9 @@ def test_failure():
 
 
 async def _decode_packet(packets):
-    frames = await spdl.async_decode(packets)
+    frames = await spdl.async_decode_packets(packets)
     print(frames)
-    buffer = await spdl.async_convert(frames)
+    buffer = await spdl.async_convert_frames(frames)
     print(buffer)
     array = spdl.to_numpy(buffer)
     print(array.shape, array.dtype)
@@ -109,7 +109,7 @@ def test_decode_video_clips(get_sample):
 async def _decode_image(path):
     packets = await spdl.async_demux_image(path)
     print(packets)
-    frames = await spdl.async_decode(packets)
+    frames = await spdl.async_decode_packets(packets)
     print(frames)
     assert type(frames) is libspdl.FFmpegImageFrames
     return frames
@@ -127,7 +127,7 @@ def test_decode_image(get_sample):
     async def _test(src):
         frames = await _decode_image(src)
         print(frames)
-        buffer = await spdl.async_convert(frames)
+        buffer = await spdl.async_convert_frames(frames)
         array = spdl.to_numpy(buffer)
         print(array.shape, array.dtype)
         assert array.dtype == np.uint8
@@ -153,7 +153,7 @@ def test_batch_decode_image(get_samples):
             else:
                 frames.append(result.result())
 
-        buffer = await spdl.async_convert(frames)
+        buffer = await spdl.async_convert_frames(frames)
         assert buffer.shape == [250, 3, 240, 320]
 
     asyncio.run(_test())
@@ -202,7 +202,7 @@ def test_cancellation_multi_gather():
 
 
 def test_async_convert_audio_cpu(get_sample):
-    """async_convert_cpu can convert FFmpegAudioFrames to Buffer"""
+    """async_convert_frames_cpu can convert FFmpegAudioFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=10' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
@@ -248,7 +248,7 @@ def test_async_decode_audio_bytes(get_sample):
 
 
 def test_async_convert_video_cpu(get_sample):
-    """async_convert_cpu can convert FFmpegVideoFrames to Buffer"""
+    """async_convert_frames_cpu can convert FFmpegVideoFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd, width=320, height=240)
 
@@ -295,13 +295,13 @@ def test_async_decode_video_bytes(get_sample):
 
 
 def test_async_convert_image_cpu(get_sample):
-    """async_convert_cpu can convert FFmpegImageFrames to Buffer"""
+    """async_convert_frames_cpu can convert FFmpegImageFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test(src):
         frames = await _decode_image(src)
-        buffer = await spdl.async_convert_cpu(frames)
+        buffer = await spdl.async_convert_frames_cpu(frames)
         print(buffer)
         arr = spdl.to_numpy(buffer)
         print(arr.dtype, arr.shape)
@@ -317,16 +317,16 @@ def test_demux_image_bytes(get_sample):
 
     async def _decode(src):
         packets = await spdl.async_demux_image(src)
-        frames = await spdl.async_decode(packets)
-        buffer = await spdl.async_convert(frames)
+        frames = await spdl.async_decode_packets(packets)
+        buffer = await spdl.async_convert_frames(frames)
         return spdl.to_numpy(buffer)
 
     async def _decode_bytes(data):
         assert data != b"\x00" * len(data)
         packets = await spdl.async_demux_image(data, _zero_clear=True)
         assert data == b"\x00" * len(data)
-        frames = await spdl.async_decode(packets)
-        buffer = await spdl.async_convert(frames)
+        frames = await spdl.async_decode_packets(packets)
+        buffer = await spdl.async_convert_frames(frames)
         return spdl.to_numpy(buffer)
 
     async def _test(path):
@@ -341,13 +341,13 @@ def test_demux_image_bytes(get_sample):
 
 
 def test_async_convert_batch_image_cpu(get_samples):
-    """async_convert_cpu can convert List[FFmpegImageFrames] to Buffer"""
+    """async_convert_frames_cpu can convert List[FFmpegImageFrames] to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
     flist = get_samples(cmd)
 
     async def _test(flist):
         frames = await _batch_decode_image(flist)
-        buffer = await spdl.async_convert_cpu(frames)
+        buffer = await spdl.async_convert_frames_cpu(frames)
         print(buffer)
         arr = spdl.to_numpy(buffer)
         print(arr.dtype, arr.shape)

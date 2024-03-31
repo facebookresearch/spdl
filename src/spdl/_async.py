@@ -8,10 +8,10 @@ from spdl import libspdl
 __all__ = [
     # TODO: Merge async_apply_bsf with async_decode_nvdec(video)
     "async_apply_bsf",
-    "async_convert_cpu",
-    "async_convert",
-    "async_decode",
-    "async_decode_nvdec",
+    "async_convert_frames_cpu",
+    "async_convert_frames",
+    "async_decode_packets",
+    "async_decode_packets_nvdec",
     "async_demux_audio",
     "async_demux_video",
     "async_demux_image",
@@ -231,7 +231,7 @@ def _get_decoding_name(packets):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-def async_decode(packets, *args, **kwargs):
+def async_decode_packets(packets, *args, **kwargs):
     """Decode the packets to frames.
 
     Args:
@@ -254,7 +254,7 @@ def _get_nvdec_decoding_name(packets):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-def async_decode_nvdec(packets, *args, **kwargs):
+def async_decode_packets_nvdec(packets, *args, **kwargs):
     """Decode the packets to frames with NVDEC.
 
     Args:
@@ -282,7 +282,7 @@ def _get_cpu_conversion_name(frames):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-def async_convert_cpu(frames, executor=None):
+def async_convert_frames_cpu(frames, executor=None):
     """Convert the frames to buffer.
 
     Args:
@@ -326,7 +326,7 @@ def _get_conversion_name(frames):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-def async_convert(frames, executor=None):
+def async_convert_frames(frames, executor=None):
     """Convert the frames to buffer.
 
     Args:
