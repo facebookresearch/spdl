@@ -47,26 +47,6 @@ int get_cuda_device_index(unsigned long long ptr) {
 #endif
 }
 
-std::string get_video_filter_description(
-    const std::optional<Rational>& frame_rate,
-    const std::optional<int>& width,
-    const std::optional<int>& height,
-    const std::optional<std::string>& pix_fmt,
-    const std::optional<std::tuple<double, double>>& timestamp) {
-  return detail::get_video_filter_description(
-      frame_rate, width, height, pix_fmt, timestamp);
-}
-
-std::string get_audio_filter_description(
-    const std::optional<int>& sample_rate,
-    const std::optional<int>& num_channels,
-    const std::optional<std::string>& sample_fmt,
-    const std::optional<std::tuple<double, double>>& timestamp,
-    const std::optional<int>& num_frames) {
-  return detail::get_audio_filter_description(
-      sample_rate, num_channels, sample_fmt, timestamp, num_frames);
-}
-
 namespace {
 folly::Init* FOLLY_INIT = nullptr;
 
