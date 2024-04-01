@@ -1,6 +1,6 @@
 import asyncio
 import concurrent.futures
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from spdl.lib import _libspdl
 
@@ -120,23 +120,28 @@ async def _async_gen(func, *args, **kwargs):
     sf.rethrow()
 
 
-def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
-    """Demux the audio stream.
+def async_demux_audio(
+    src: Union[str, bytes], timestamps: List[Tuple[float, float]], **kwargs
+):
+    """Demux the audio stream of the given time windows.
 
     Args:
         src: Source identifier, such as path or URL.
-        timestamps (List[Tuple[float, float]]): List of timestamps.
-        adaptor (Optional[spdl.SourceAdaptor]): Adaptor to apply to the `src`.
-        format (str): Overwrite the format detection.
+        timestamps: List of timestamps.
+
+    Other args:
+        format (str): *Optional:* The format detection. Optional.
             Can be used to demux headerless format.
-        format_options (Dict[str, str]): Format options.
-        buffer_size (int): Buffer size in bytes.
-        executor (Optional[spdl.ThreadPoolExecutor]):
-            Executor to run the conversion. By default, the conversion is performed on
-            demuxer thread pool.
+        format_options (Dict[str, str]): *Optional:* Format options.
+        buffer_size (int, optional): *Optional:* Change the internal buffer size used to process
+            the data at a time.
+        adaptor (SourceAdaptor, optional): *Optional:* Adaptor to apply to the `src`.
+        executor (ThreadPoolExecutor, optional):
+            *Optional:* Custom executor to in which the task is performed.
+            By default the task is peformed in demuxer thread pool.
 
     Returns:
-        AsyncGenerator[AudioPackets]: Generator of AudioPackets.
+        (AsyncGenerator[AudioPackets]): Generator of AudioPackets.
     """
     func = getattr(
         _libspdl,
@@ -145,23 +150,26 @@ def async_demux_audio(src, timestamps: List[Tuple[float, float]], **kwargs):
     return _async_gen(func, src, timestamps, **kwargs)
 
 
-def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
+def async_demux_video(
+    src: Union[str, bytes], timestamps: List[Tuple[float, float]], **kwargs
+):
     """Demux the video stream.
 
     Args:
         src: Source identifier, such as path or URL.
-        timestamps (List[Tuple[float, float]]): List of timestamps.
-        adaptor (Optional[spdl.SourceAdaptor]): Adaptor to apply to the `src`.
-        format (str): Overwrite the format detection.
+        timestamps: List of timestamps.
+
+    Other args:
+        format (str): *Optional:* Overwrite the format detection.
             Can be used to demux headerless format.
-        format_options (Dict[str, str]): Format options.
-        buffer_size (int): Buffer size in bytes.
-        executor (Optional[spdl.ThreadPoolExecutor]):
-            Executor to run the conversion. By default, the conversion is performed on
-            demuxer thread pool.
+        format_options (Dict[str, str], optional): *Optional:* Format options.
+        buffer_size (int): *Optional:* Buffer size in bytes.
+        adaptor (SourceAdaptor): *Optional:* Adaptor to apply to the `src`.
+        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
+            By default the job is peformed in demuxer thread pool. Default: `None`.
 
     Returns:
-        AsyncGenerator[VideoPackets]: Generator of VideoPackets.
+        (AsyncGenerator[VideoPackets]): Generator of VideoPackets.
     """
     func = getattr(
         _libspdl,
@@ -170,22 +178,23 @@ def async_demux_video(src, timestamps: List[Tuple[float, float]], **kwargs):
     return _async_gen(func, src, timestamps, **kwargs)
 
 
-def async_demux_image(src, *args, **kwargs):
+def async_demux_image(src: Union[str, bytes], **kwargs):
     """Demux the image stream.
 
     Args:
         src: Source identifier, such as path or URL.
-        adaptor (Optional[spdl.SourceAdaptor]): Adaptor to apply to the `src`.
-        format (str): Overwrite the format detection.
+
+    Other args:
+        format (str): *Optional:* Overwrite the format detection.
             Can be used to demux headerless format.
-        format_options (Dict[str, str]): Format options.
-        buffer_size (int): Buffer size in bytes.
-        executor (Optional[spdl.ThreadPoolExecutor]):
-            Executor to run the conversion. By default, the conversion is performed on
-            demuxer thread pool.
+        format_options (Dict[str, str]): *Optional:* Format options.
+        buffer_size (int): *Optional:* Buffer size in bytes.
+        adaptor (SourceAdaptor): *Optional:* Adaptor to apply to the `src`.
+        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
+            By default the job is peformed in demuxer thread pool.
 
     Returns:
-        Awaitable: Awaitable which returns an ImagePackets object.
+        (Awaitable[ImagePackets]): Awaitable which returns an ImagePackets object.
     """
     func = getattr(
         _libspdl,
@@ -206,17 +215,45 @@ def _get_decoding_name(packets):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-def async_decode_packets(packets, *args, **kwargs):
+def async_decode_packets(packets, **kwargs):
     """Decode the packets to frames.
 
     Args:
-        packets (Packet): Packets object.
+        packets (Packets): Packets object.
+
+    Other args:
+        decoder (str): *Optional:* Overwrite the decoder.
+        decoder_options (Dict[str, str]): *Optional:* Decoder options.
+        sample_rate (int): *Optional, audio only:* Change the sample rate.
+        num_channels (int): *Optional, audio only:* Change the number of channels.
+        sample_fmt (str): *Optional, audio only:* Change the format of sample.
+            Valid values are (``"u8"``, ``"u8p"``, ``s16``, ``s16p``,
+            ``"s32"``, ``"s32p"``, ``"flt"``, ``"fltp"``, ``"s64"``,
+            ``"s64p"``, ``"dbl"``, ``"dblp"``).
+        frame_rate (int): *Optional, video only:* Change the frame rate.
+        width,height (int): *Optional, video/image only:* Change the resolution of the frame.
+        pix_fmt (str): *Optional, video/image only:* Change the pixel format.
+            Valid values are ().
+        num_frames (int): *Optional, audio/video only:* Fix the number of output frames by
+            dropping the exceeding frames or padding.
+            For audio, silence is added. For video, by default the last frame is
+            repeated.
+        pad_mode (str): *Optional, video only:* Change the padding frames to the given color.
+        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
+            By default the job is peformed in decode thread pool.
 
     Returns:
-        Awaitable: Awaitable which returns a Frame object.
+        (Awaitable[FFmpegFrames]): Awaitable which returns a Frames object.
+            The type of the returned object corresponds to the input Packets type.
+
+            - ``AudioPackets`` -> ``AudioFFmpegFrames``
+
+            - ``VideoPackets`` -> ``VideoFFmpegFrames``
+
+            - ``ImagePackets`` -> ``ImageFFmpegFrames``
     """
     func = getattr(_libspdl, _get_decoding_name(packets))
-    return _async_task(func, packets, *args, **kwargs)
+    return _async_task(func, packets, **kwargs)
 
 
 def _get_nvdec_decoding_name(packets):
@@ -229,17 +266,33 @@ def _get_nvdec_decoding_name(packets):
             raise TypeError(f"Unexpected type: {t}.")
 
 
-def async_decode_packets_nvdec(packets, *args, **kwargs):
+def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
     """Decode the packets to frames with NVDEC.
 
     Args:
         packets (Packet): Packets object.
+        cuda_device_index (int): The CUDA device to use for decoding.
+
+    Other args:
+        crop_left,crop_top,crop_right,crop_bottom (int):
+            *Optional:* Crop the given number of pixels from each side.
+        width,height (int): *Optional:* Resize the frame. Resizing is done after
+            cropping.
+        pix_fmt (str or ``None``): *Optional:* Change the format of the pixel.
+            Supported value is ``"rgba"``. Default: ``"rgba"``.
+        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
+            By default the job is peformed in decode thread pool.
 
     Returns:
-        Awaitable: Awaitable which returns a Frame object.
+        (Awaitable[NvDecFrames]): Awaitable which returns a Frame object.
+            The type of the returned object corresponds to the input Packets type.
+
+            - ``VideoPackets`` -> ``VideoNvDecFrames``
+
+            - ``ImagePackets`` -> ``ImageNvDecFrames``
     """
     func = getattr(_libspdl, _get_nvdec_decoding_name(packets))
-    return _async_task(func, packets, *args, **kwargs)
+    return _async_task(func, packets, cuda_device_index, **kwargs)
 
 
 def _get_cpu_conversion_name(frames):
@@ -261,20 +314,28 @@ def async_convert_frames_cpu(frames, executor=None):
     """Convert the frames to buffer.
 
     Args:
-        frames : Frames object. The following types are supported.
-            - ``FFmpegAudioFrames``
-            - ``FFmpegVideoFrames``
-            - ``FFmpegImageFrames``
-            - ``List[FFmpegImageFrames]``
-
+        frames (CPUFrames): Frames object.
             If the frame data are not CPU, then the conversion will fail.
 
-        executor (Optional[spdl.ThreadPoolExecutor]):
-            Executor to run the conversion. By default, the conversion is performed on
+    Other args:
+        executor (ThreadPoolExecutor):
+            *Optional:* Executor to run the conversion.
+            By default, the conversion is performed on
             demuxer thread pool with higher priority than demuxing.
 
     Returns:
-        Awaitable: Awaitable which returns a Buffer object.
+        (Awaitable[Buffer]): Awaitable which returns a Buffer object.
+            The type of the returned object corresponds to the input Packets type.
+
+            - ``FFmpegAudioFrames`` -> ``CPUBuffer``
+
+            - ``FFmpegVideoFrames`` -> ``CPUBuffer``
+
+            - ``FFmpegImageFrames`` -> ``CPUBuffer``
+
+            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer``
+
+
     """
     func = getattr(_libspdl, _get_cpu_conversion_name(frames))
     return _async_task(func, frames, index=None, executor=executor)
@@ -305,23 +366,31 @@ def async_convert_frames(frames, executor=None):
     """Convert the frames to buffer.
 
     Args:
-        frames : Frames object.
-            - ``FFmpegAudioFrames``
-            - ``FFmpegVideoFrames``
-            - ``FFmpegImageFrames``
-            - ``NvDecVideoFrames``
-            - ``NvDecImageFrames``
-            - ``List[FFmpegImageFrames]``
-            - ``List[NvDecImageFrames]``
+        frames (Frames): Frames object.
 
-            If the buffer will be created on the device where the frame data are.
-
-        executor (Optional[spdl.ThreadPoolExecutor]):
-            Executor to run the conversion. By default, the conversion is performed on
+    Other args:
+        executor (ThreadPoolExecutor):
+            *Optional:* Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool with higher priority than demuxing.
 
     Returns:
-        Awaitable: Awaitable which returns a Buffer object.
+        (Awaitable[Buffer]): Awaitable which returns a Buffer object.
+
+            The buffer will be created on the device where the frame data are.
+
+            - ``FFmpegAudioFrames`` -> ``CPUBuffer``
+
+            - ``FFmpegVideoFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
+
+            - ``FFmpegImageFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
+
+            - ``NvDecVideoFrames`` -> ``CUDABuffer``
+
+            - ``NvDecImageFrames`` -> ``CUDABuffer``
+
+            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer``
+
+            - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
     """
     func = getattr(_libspdl, _get_conversion_name(frames))
     return _async_task(func, frames, index=None, executor=executor)

@@ -22,7 +22,7 @@ void register_demuxing(py::module& m) {
          const SourceAdaptorPtr& adaptor,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<int>& buffer_size,
          ThreadPoolExecutorPtr demux_executor) {
         return async_demux<MediaType::Audio>(
             std::move(set_result),
@@ -30,7 +30,9 @@ void register_demuxing(py::module& m) {
             static_cast<std::string>(src),
             timestamps,
             adaptor,
-            {format, format_options, buffer_size},
+            {format,
+             format_options,
+             buffer_size.value_or(SPDL_DEFAULT_BUFFER_SIZE)},
             demux_executor);
       },
       py::arg("set_result"),
@@ -41,7 +43,7 @@ void register_demuxing(py::module& m) {
       py::arg("adaptor") = nullptr,
       py::arg("format") = py::none(),
       py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("buffer_size") = py::none(),
       py::arg("executor") = nullptr);
 
   m.def(
