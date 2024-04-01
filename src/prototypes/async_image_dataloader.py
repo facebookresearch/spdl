@@ -83,7 +83,7 @@ class BulkImageProcessor:
             else spdl.io.async_convert_frames(frames)
         )
 
-        tensor = spdl.to_torch(buffer).to(device=f"cuda:{self.cuda_device_index}")
+        tensor = spdl.io.to_torch(buffer).to(device=f"cuda:{self.cuda_device_index}")
 
         await self.queue.put(tensor)
 
