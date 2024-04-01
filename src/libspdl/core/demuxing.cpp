@@ -1,7 +1,7 @@
 #include <libspdl/core/demuxing.h>
 
 #include "libspdl/core/detail/executor.h"
-#include "libspdl/core/detail/ffmpeg/decoding.h"
+#include "libspdl/core/detail/ffmpeg/demuxing.h"
 #include "libspdl/core/detail/future.h"
 
 namespace spdl::core {
@@ -147,6 +147,7 @@ FuturePtr async_demux_image_bytes(
       std::move(notify_exception),
       detail::get_demux_executor(executor));
 }
+
 FuturePtr async_apply_bsf(
     std::function<void(VideoPacketsWrapperPtr)> set_result,
     std::function<void()> notify_exception,

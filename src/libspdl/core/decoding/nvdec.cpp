@@ -2,6 +2,7 @@
 
 #include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/ffmpeg/decoding.h"
+#include "libspdl/core/detail/ffmpeg/demuxing.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/result.h"
 #include "libspdl/core/detail/tracing.h"
