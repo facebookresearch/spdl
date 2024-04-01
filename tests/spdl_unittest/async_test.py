@@ -187,9 +187,7 @@ def test_cancellation_multi_gather():
     """Multiple tasks awaited with `gather` are cancelled simultaneously"""
 
     async def _test(N: int):
-        tasks = [
-            asyncio.create_task(spdl.io._async_sleep(3000)) for _ in range(N)
-        ]
+        tasks = [asyncio.create_task(spdl.io._async_sleep(3000)) for _ in range(N)]
         task = asyncio.gather(*tasks, return_exceptions=True)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
