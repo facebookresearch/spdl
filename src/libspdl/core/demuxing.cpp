@@ -163,7 +163,7 @@ FuturePtr async_apply_bsf(
       std::move(task),
       set_result,
       notify_exception,
-      detail::get_demux_executor(executor));
+      detail::get_demux_executor_high_prio(executor));
 }
 
 } // namespace spdl::core
