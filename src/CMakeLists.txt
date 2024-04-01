@@ -22,6 +22,7 @@ set(srcs
   libspdl/core/detail/ffmpeg/conversion.cpp
   libspdl/core/detail/ffmpeg/ctx_utils.cpp
   libspdl/core/detail/ffmpeg/decoding.cpp
+  libspdl/core/detail/ffmpeg/demuxing.cpp
   libspdl/core/detail/ffmpeg/filter_graph.cpp
   libspdl/core/detail/ffmpeg/wrappers.cpp
   libspdl/core/detail/logging.cpp
