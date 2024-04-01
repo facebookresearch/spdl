@@ -88,7 +88,7 @@ def test_decode_audio_clips(get_sample):
 
 
 def test_decode_audio_clips_num_frames(get_sample):
-    """Can decode audio clips."""
+    """Can decode audio clips with padding/dropping."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=1' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
@@ -136,6 +136,54 @@ def test_decode_video_clips(get_sample):
             assert arr.dtype == np.uint8
 
     asyncio.run(_test())
+
+
+def test_decode_video_clips_num_frames(get_sample):
+    """Can decode video clips with padding/dropping."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"
+    sample = get_sample(cmd)
+
+    async def _decode(src, pix_fmt="rgb24", **kwargs):
+        async for packets in spdl.io.async_demux_video(src, timestamps=[(0, 2)]):
+            frames = await spdl.io.async_decode_packets(
+                packets, pix_fmt=pix_fmt, **kwargs
+            )
+            buffer = await spdl.io.async_convert_frames_cpu(frames)
+            return spdl.io.to_numpy(buffer)
+
+    async def _test(src):
+        arr0 = await _decode(src)
+        assert arr0.dtype == np.uint8
+        assert arr0.shape == (50, 240, 320, 3)
+
+        num_frames = 25
+        arr1 = await _decode(src, num_frames=num_frames)
+        assert arr1.dtype == np.uint8
+        assert arr1.shape == (num_frames, 240, 320, 3)
+        assert np.all(arr1 == arr0[:num_frames])
+
+        num_frames = 100
+        arr2 = await _decode(src, num_frames=num_frames)
+        assert arr2.dtype == np.uint8
+        assert arr2.shape == (num_frames, 240, 320, 3)
+        assert np.all(arr2[:50] == arr0)
+        assert np.all(arr2[50:] == arr2[50])
+
+        num_frames = 100
+        arr2 = await _decode(src, num_frames=num_frames, pad_mode="black")
+        assert arr2.dtype == np.uint8
+        assert arr2.shape == (num_frames, 240, 320, 3)
+        assert np.all(arr2[:50] == arr0)
+        assert np.all(arr2[50:] == 0)
+
+        num_frames = 100
+        arr2 = await _decode(src, num_frames=num_frames, pad_mode="white")
+        assert arr2.dtype == np.uint8
+        assert arr2.shape == (num_frames, 240, 320, 3)
+        assert np.all(arr2[:50] == arr0)
+        assert np.all(arr2[50:] == 255)
+
+    asyncio.run(_test(sample.path))
 
 
 async def _decode_image(path):

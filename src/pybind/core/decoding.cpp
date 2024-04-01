@@ -10,6 +10,10 @@
 
 #include <fmt/format.h>
 
+extern "C" {
+#include <libavfilter/version.h>
+}
+
 namespace py = pybind11;
 
 namespace spdl::core {
@@ -61,8 +65,9 @@ std::string get_audio_filter_description(
     parts.push_back(fmt::format("atrim={}", fmt::join(atrim, ":")));
   }
   if (num_frames) {
+    // Add endless silence then drop samples after the given frame
+    parts.push_back("apad");
     parts.push_back(fmt::format("atrim=end_sample={}", num_frames.value()));
-    parts.push_back(fmt::format("apad=whole_len={}", num_frames.value()));
   }
   return fmt::to_string(fmt::join(parts, ","));
 }
@@ -75,7 +80,9 @@ std::string get_video_filter_description(
     const std::optional<int>& height,
     const std::optional<std::string>& pix_fmt,
     // TODO: remove the default value.
-    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt) {
+    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt,
+    const std::optional<int>& num_frames = std::nullopt,
+    const std::optional<std::string>& pad_mode = std::nullopt) {
   std::vector<std::string> parts;
   if (frame_rate) {
     auto fr = frame_rate.value();
@@ -103,6 +110,24 @@ std::string get_video_filter_description(
       atrim.emplace_back(fmt::format("end={}", end));
     }
     parts.push_back(fmt::format("trim={}", fmt::join(atrim, ":")));
+  }
+  if (num_frames) {
+    if (LIBAVFILTER_VERSION_INT < AV_VERSION_INT(7, 57, 100)) {
+      throw std::runtime_error(
+          "`num_frames` requires FFmpeg >= 4.2. "
+          "Please upgrade your FFmpeg.");
+    }
+    // Add endless frame
+    auto pad = [&]() -> std::string {
+      if (!pad_mode) {
+        return "tpad=stop=-1:stop_mode=clone";
+      }
+      return fmt::format(
+          "tpad=stop=-1:stop_mode=add:color={}", pad_mode.value());
+    }();
+    parts.push_back(pad);
+    // then drop frames after the given frame
+    parts.push_back(fmt::format("trim=end_frame={}", num_frames.value()));
   }
   return fmt::to_string(fmt::join(parts, ","));
 }
@@ -138,7 +163,7 @@ void register_decoding(py::module& m) {
           if (filter_desc) {
             if (sample_rate || num_channels || sample_fmt || num_frames) {
               throw std::runtime_error(
-                  "`sample_rate`, `num_channels`, and `sample_fmt` are "
+                  "`sample_rate`, `num_channels`, `sample_fmt` and `num_frames` are "
                   "mutually exclusive with `filter_desc`.");
             }
             return filter_desc.value();
@@ -183,13 +208,17 @@ void register_decoding(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
+         const std::optional<int>& num_frames,
+         const std::optional<std::string>& pad_mode,
          const std::optional<std::string>& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         auto filter = [&]() -> std::string {
           if (filter_desc) {
-            if (frame_rate || width || height || pix_fmt) {
+            if (frame_rate || width || height || pix_fmt || num_frames ||
+                pad_mode) {
               throw std::runtime_error(
-                  "`frame_rate`, `width`, `height`, and `pix_fmt` are "
+                  "`frame_rate`, `width`, `height`, `pix_fmt`, "
+                  "`num_frames` and `pad_mode` are "
                   "mutually exclusive with `filter_desc`.");
             }
             return filter_desc.value();
@@ -199,7 +228,9 @@ void register_decoding(py::module& m) {
               width,
               height,
               pix_fmt,
-              packets->get_packets()->timestamp);
+              packets->get_packets()->timestamp,
+              num_frames,
+              pad_mode);
         }();
         return async_decode<MediaType::Video>(
             std::move(set_result),
@@ -220,6 +251,8 @@ void register_decoding(py::module& m) {
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none(),
+      py::arg("num_frames") = py::none(),
+      py::arg("pad_mode") = py::none(),
       py::arg("filter_desc") = py::none(),
       py::arg("executor") = nullptr);
 
