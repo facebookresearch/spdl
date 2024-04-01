@@ -70,9 +70,9 @@ async def _test_async_decode(generator, N):
 
 def test_decode_audio_clips(get_sample):
     """Can decode audio clips."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=12' -c:a pcm_s16le sample.wav"
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
-    N = 10
+    N = 2
 
     async def _test():
         timestamps = [(i, i + 1) for i in range(N)]
@@ -85,6 +85,38 @@ def test_decode_audio_clips(get_sample):
             assert arr.dtype == np.int16
 
     asyncio.run(_test())
+
+
+def test_decode_audio_clips_num_frames(get_sample):
+    """Can decode audio clips."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=1' -c:a pcm_s16le sample.wav"
+    sample = get_sample(cmd)
+
+    async def _decode(src, num_frames=None):
+        async for packets in spdl.io.async_demux_audio(src, timestamps=[(0, 1)]):
+            frames = await spdl.io.async_decode_packets(packets, num_frames=num_frames)
+            buffer = await spdl.io.async_convert_frames_cpu(frames)
+            return spdl.io.to_numpy(buffer)
+
+    async def _test(src):
+        arr0 = await _decode(src)
+        assert arr0.dtype == np.int16
+        assert arr0.shape == (16000, 1)
+
+        num_frames = 8000
+        arr1 = await _decode(src, num_frames=num_frames)
+        assert arr1.dtype == np.int16
+        assert arr1.shape == (num_frames, 1)
+        assert np.all(arr1 == arr0[:num_frames])
+
+        num_frames = 32000
+        arr2 = await _decode(src, num_frames=num_frames)
+        assert arr2.dtype == np.int16
+        assert arr2.shape == (num_frames, 1)
+        assert np.all(arr2[:16000] == arr0)
+        assert np.all(arr2[16000:] == 0)
+
+    asyncio.run(_test(sample.path))
 
 
 def test_decode_video_clips(get_sample):

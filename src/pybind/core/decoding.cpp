@@ -8,6 +8,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <iostream>
+
 namespace py = pybind11;
 
 namespace spdl::core {
@@ -48,11 +50,12 @@ void register_decoding(py::module& m) {
          const std::optional<int>& sample_rate,
          const std::optional<int>& num_channels,
          const std::optional<std::string>& sample_fmt,
+         const std::optional<int>& num_frames,
          const std::optional<std::string>& filter_desc,
          std::shared_ptr<ThreadPoolExecutor> decode_executor) {
         auto filter = [&]() -> std::string {
           if (filter_desc) {
-            if (sample_rate || num_channels || sample_fmt) {
+            if (sample_rate || num_channels || sample_fmt || num_frames) {
               throw std::runtime_error(
                   "`sample_rate`, `num_channels`, and `sample_fmt` are "
                   "mutually exclusive with `filter_desc`.");
@@ -63,8 +66,10 @@ void register_decoding(py::module& m) {
               sample_rate,
               num_channels,
               sample_fmt,
-              packets->get_packets()->timestamp);
+              packets->get_packets()->timestamp,
+              num_frames);
         }();
+        std::cerr << "FILTER: " << filter << std::endl;
         return async_decode<MediaType::Audio>(
             std::move(set_result),
             std::move(notify_exception),
@@ -82,6 +87,7 @@ void register_decoding(py::module& m) {
       py::arg("sample_rate") = py::none(),
       py::arg("num_channels") = py::none(),
       py::arg("sample_fmt") = py::none(),
+      py::arg("num_frames") = py::none(),
       py::arg("filter_desc") = py::none(),
       py::arg("executor") = nullptr);
 

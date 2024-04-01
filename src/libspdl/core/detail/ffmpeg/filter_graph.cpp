@@ -238,7 +238,8 @@ std::string get_audio_filter_description(
     const std::optional<int>& sample_rate,
     const std::optional<int>& num_channels,
     const std::optional<std::string>& sample_fmt,
-    const std::optional<std::tuple<double, double>>& timestamp) {
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<int>& num_frames) {
   std::vector<std::string> parts;
   if (sample_rate) {
     parts.emplace_back(fmt::format("aresample={}", sample_rate.value()));
@@ -263,6 +264,10 @@ std::string get_audio_filter_description(
       atrim.emplace_back(fmt::format("end={}", end));
     }
     parts.push_back(fmt::format("atrim={}", fmt::join(atrim, ":")));
+  }
+  if (num_frames) {
+    parts.push_back(fmt::format("atrim=end_sample={}", num_frames.value()));
+    parts.push_back(fmt::format("apad=whole_len={}", num_frames.value()));
   }
   return fmt::to_string(fmt::join(parts, ","));
 }
