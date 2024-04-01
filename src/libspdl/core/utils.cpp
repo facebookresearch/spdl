@@ -51,9 +51,10 @@ std::string get_video_filter_description(
     const std::optional<Rational>& frame_rate,
     const std::optional<int>& width,
     const std::optional<int>& height,
-    const std::optional<std::string>& pix_fmt) {
+    const std::optional<std::string>& pix_fmt,
+    const std::optional<std::tuple<double, double>>& timestamp) {
   return detail::get_video_filter_description(
-      frame_rate, width, height, pix_fmt);
+      frame_rate, width, height, pix_fmt, timestamp);
 }
 
 std::string get_audio_filter_description(

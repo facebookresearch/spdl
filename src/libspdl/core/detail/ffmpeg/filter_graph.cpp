@@ -201,7 +201,8 @@ std::string get_video_filter_description(
     const std::optional<Rational>& frame_rate,
     const std::optional<int>& width,
     const std::optional<int>& height,
-    const std::optional<std::string>& pix_fmt) {
+    const std::optional<std::string>& pix_fmt,
+    const std::optional<std::tuple<double, double>>& timestamp) {
   std::vector<std::string> parts;
   if (frame_rate) {
     auto fr = frame_rate.value();
@@ -219,6 +220,16 @@ std::string get_video_filter_description(
   }
   if (pix_fmt) {
     parts.push_back(fmt::format("format=pix_fmts={}", pix_fmt.value()));
+  }
+  if (timestamp) {
+    auto& ts = timestamp.value();
+    std::vector<std::string> atrim;
+    auto start = std::get<0>(ts), end = std::get<1>(ts);
+    atrim.emplace_back(fmt::format("start={}", start));
+    if (!std::isinf(end)) {
+      atrim.emplace_back(fmt::format("end={}", end));
+    }
+    parts.push_back(fmt::format("trim={}", fmt::join(atrim, ":")));
   }
   return fmt::to_string(fmt::join(parts, ","));
 }

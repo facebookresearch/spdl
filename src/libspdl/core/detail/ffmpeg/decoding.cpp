@@ -373,7 +373,6 @@ folly::coro::Task<void> decode_pkts(
     PacketsPtr<media_type> packets,
     AVCodecContextPtr codec_ctx,
     FFmpegFrames<media_type>* frames) {
-  auto [start, end] = packets->timestamp;
   for (auto& packet : packets->get_packets()) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto frame = co_await decoding.next()) {
@@ -381,11 +380,9 @@ folly::coro::Task<void> decode_pkts(
       AVFramePtr f = *frame;
       if (f) {
         double ts = TS(f, codec_ctx->pkt_timebase);
-        if (start <= ts && ts <= end) {
-          XLOG(DBG9) << fmt::format(
-              "{:21s} {:.3f} ({})", " --- raw frame:", ts, f->pts);
-          frames->push_back(f.release());
-        }
+        XLOG(DBG9) << fmt::format(
+            "{:21s} {:.3f} ({})", " --- raw frame:", ts, f->pts);
+        frames->push_back(f.release());
       }
     }
   }
@@ -416,7 +413,6 @@ folly::coro::Task<void> decode_pkts_with_filter(
 
   XLOG(DBG5) << describe_graph(filter_graph.get());
 
-  auto [start, end] = packets->timestamp;
   for (auto& packet : packets->get_packets()) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
@@ -436,12 +432,9 @@ folly::coro::Task<void> decode_pkts_with_filter(
         AVFramePtr f = *frame;
         if (f) {
           double ts = TS(f, sink_ctx->inputs[0]->time_base);
-          if (start <= ts && ts <= end) {
-            XLOG(DBG9) << fmt::format(
-                "{:21s} {:.3f} ({})", " ---- filtered frame:", ts, f->pts);
-
-            frames->push_back(f.release());
-          }
+          XLOG(DBG9) << fmt::format(
+              "{:21s} {:.3f} ({})", " ---- filtered frame:", ts, f->pts);
+          frames->push_back(f.release());
         }
       }
     }
