@@ -46,14 +46,14 @@ async def wait_and_check(tasks, num_tasks=0):
 
 
 # def _to_tensor(buffer, cuda_device_index):
-#     return spdl.to_torch(buffer).to(f"cuda:{cuda_device_index}")
+#     return spdl.io.to_torch(buffer).to(f"cuda:{cuda_device_index}")
 
 
 def _to_tensor(buffer, cuda_device_index):
     import numba
 
     # return numba.cuda.to_device(spdl.to_numba(buffer), to=cuda_device_index)
-    return spdl.to_numba(buffer)
+    return spdl.io.to_numba(buffer)
 
 
 class BulkVideoProcessor:
