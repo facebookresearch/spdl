@@ -7,9 +7,6 @@ from typing import Any, List, Optional
 from spdl.lib import _libspdl
 
 _funcs = [
-    "clear_ffmpeg_cuda_context_cache",
-    "create_cuda_context",
-    "get_cuda_device_index",
     "get_ffmpeg_log_level",
     "set_ffmpeg_log_level",
     "trace_counter",
@@ -22,7 +19,6 @@ _funcs = [
 __all__ = [  # noqa: F822
     "init_folly",
     "tracing",
-    "trace_counter",
     "trace_event",
 ] + _funcs
 

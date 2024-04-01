@@ -23,7 +23,10 @@ def to_numpy(buffer) -> NDArray:
     """Convert to NumPy NDArray.
 
     Args:
-        frames (Buffer): Object implements the array interface protocol.
+        buffer (Buffer): Object implements the array interface protocol.
+
+    Returns:
+        (NDArray): A NumPy array.
 
     See also:
         https://numpy.org/doc/stable/reference/arrays.interface.html
@@ -38,7 +41,7 @@ def to_torch(buffer):
         buffer (Buffer): Object implements the (CUDA) array interface protocol.
 
     Returns:
-        torch.Tensor: A PyTorch Tensor.
+        (torch.Tensor): A PyTorch Tensor.
     """
     if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
@@ -68,7 +71,10 @@ def to_numba(buffer):
         buffer (Buffer): Object implements the (CUDA) array interface protocol.
 
     Returns:
-        DeviceNDArray or NDArray: A Numba DeviceNDArray or NumPy NDArray.
+        (DeviceNDArray or NDArray): A Numba DeviceNDArray or NumPy NDArray.
+
+    See Also:
+        https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html
     """
     if buffer.is_cuda:
         return cuda.as_cuda_array(buffer)
