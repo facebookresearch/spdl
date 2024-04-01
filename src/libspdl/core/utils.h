@@ -24,7 +24,9 @@ std::string get_video_filter_description(
     const std::optional<Rational>& frame_rate,
     const std::optional<int>& width,
     const std::optional<int>& height,
-    const std::optional<std::string>& pix_fmt);
+    const std::optional<std::string>& pix_fmt,
+    // TODO: remove the default value.
+    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt);
 
 std::string get_audio_filter_description(
     const std::optional<int>& sample_rate,

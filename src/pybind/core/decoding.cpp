@@ -109,7 +109,11 @@ void register_decoding(py::module& m) {
             return filter_desc.value();
           }
           return get_video_filter_description(
-              frame_rate, width, height, pix_fmt);
+              frame_rate,
+              width,
+              height,
+              pix_fmt,
+              packets->get_packets()->timestamp);
         }();
         return async_decode<MediaType::Video>(
             std::move(set_result),

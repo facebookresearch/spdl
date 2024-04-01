@@ -100,7 +100,7 @@ def test_decode_video_clips(get_sample):
         assert len(arrays) == N
         for i, arr in enumerate(arrays):
             print(i, arr.shape, arr.dtype)
-            assert arr.shape == (26, 3, 240, 320)
+            assert arr.shape == (25, 3, 240, 320)
             assert arr.dtype == np.uint8
 
     asyncio.run(_test())
