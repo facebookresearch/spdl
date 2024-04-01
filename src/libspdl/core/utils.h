@@ -20,22 +20,6 @@ void set_ffmpeg_log_level(int);
 void create_cuda_context(int index, bool use_primary_context = false);
 void clear_ffmpeg_cuda_context_cache();
 
-std::string get_video_filter_description(
-    const std::optional<Rational>& frame_rate,
-    const std::optional<int>& width,
-    const std::optional<int>& height,
-    const std::optional<std::string>& pix_fmt,
-    // TODO: remove the default value.
-    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt);
-
-std::string get_audio_filter_description(
-    const std::optional<int>& sample_rate,
-    const std::optional<int>& num_channels,
-    const std::optional<std::string>& sample_fmt,
-    // TODO: remove the default value.
-    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt,
-    const std::optional<int>& num_frames = std::nullopt);
-
 //////////////////////////////////////////////////////////////////////////////////
 // Utilities for CUDA
 //////////////////////////////////////////////////////////////////////////////////
