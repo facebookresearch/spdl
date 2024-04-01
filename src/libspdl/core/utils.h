@@ -33,7 +33,8 @@ std::string get_audio_filter_description(
     const std::optional<int>& num_channels,
     const std::optional<std::string>& sample_fmt,
     // TODO: remove the default value.
-    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt);
+    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt,
+    const std::optional<int>& num_frames = std::nullopt);
 
 //////////////////////////////////////////////////////////////////////////////////
 // Utilities for CUDA

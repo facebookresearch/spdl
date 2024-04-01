@@ -61,9 +61,10 @@ std::string get_audio_filter_description(
     const std::optional<int>& sample_rate,
     const std::optional<int>& num_channels,
     const std::optional<std::string>& sample_fmt,
-    const std::optional<std::tuple<double, double>>& timestamp) {
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<int>& num_frames) {
   return detail::get_audio_filter_description(
-      sample_rate, num_channels, sample_fmt, timestamp);
+      sample_rate, num_channels, sample_fmt, timestamp, num_frames);
 }
 
 namespace {
