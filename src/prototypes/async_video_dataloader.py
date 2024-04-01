@@ -109,7 +109,7 @@ class BulkVideoProcessor:
     async def _decode_nvdec(self, packets, cuda_device_index):
         buffer = await spdl.io.async_convert_frames(
             await spdl.io.async_decode_packets_nvdec(
-                await spdl.io.async_apply_bsf(packets),
+                packets,
                 cuda_device_index=cuda_device_index,
                 width=self.width,
                 height=self.height,

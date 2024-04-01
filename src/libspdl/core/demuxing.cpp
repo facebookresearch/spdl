@@ -147,23 +147,4 @@ FuturePtr async_demux_image_bytes(
       std::move(notify_exception),
       detail::get_demux_executor(executor));
 }
-
-FuturePtr async_apply_bsf(
-    std::function<void(VideoPacketsWrapperPtr)> set_result,
-    std::function<void()> notify_exception,
-    VideoPacketsWrapperPtr packets,
-    ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [=](VideoPacketsPtr&& pkts) -> folly::coro::Task<VideoPacketsWrapperPtr> {
-        auto filtered = co_await detail::apply_bsf(std::move(pkts));
-        co_return wrap<MediaType::Video>(std::move(filtered));
-      },
-      packets->unwrap());
-  return detail::execute_task_with_callback(
-      std::move(task),
-      set_result,
-      notify_exception,
-      detail::get_demux_executor_high_prio(executor));
-}
-
 } // namespace spdl::core
