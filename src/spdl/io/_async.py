@@ -1,14 +1,11 @@
 import asyncio
 import concurrent.futures
-import functools
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 from spdl.lib import _libspdl
 
 __all__ = [
     "_async_sleep",
-    # TODO: Merge async_apply_bsf with async_decode_nvdec(video)
-    "async_apply_bsf",
     "async_convert_frames_cpu",
     "async_convert_frames",
     "async_decode_packets",
@@ -16,10 +13,6 @@ __all__ = [
     "async_demux_audio",
     "async_demux_video",
     "async_demux_image",
-]
-
-_debug_task = [
-    "async_sleep",
 ]
 
 
@@ -199,22 +192,6 @@ def async_demux_image(src, *args, **kwargs):
         "async_demux_image_bytes" if isinstance(src, bytes) else "async_demux_image",
     )
     return _async_task(func, src, **kwargs)
-
-
-# TODO: Merge this with async_decode_nvdec
-def async_apply_bsf(packets, *args, **kwargs):
-    """Apply the bitstream filters.
-
-    Args:
-        packets (Packet): Packets object.
-        executor (Optional[spdl.ThreadPoolExecutor]):
-            Executor to run the conversion. By default, the conversion is performed on
-            demuxer thread pool.
-
-    Returns:
-        Awaitable: Awaitable which returns the filtered Packets object.
-    """
-    return _async_task(_libspdl.async_apply_bsf, packets, *args, **kwargs)
 
 
 def _get_decoding_name(packets):

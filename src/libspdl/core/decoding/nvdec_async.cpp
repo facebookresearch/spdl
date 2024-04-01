@@ -1,6 +1,7 @@
 #include <libspdl/core/decoding.h>
 
 #include "libspdl/core/detail/executor.h"
+#include "libspdl/core/detail/ffmpeg/demuxing.h"
 #include "libspdl/core/detail/future.h"
 #include "libspdl/core/detail/logging.h"
 
@@ -29,9 +30,14 @@ FuturePtr async_decode_nvdec(
   detail::validate_nvdec_params(cuda_device_index, crop, width, height);
   detail::init_cuda();
 
+  ThreadPoolExecutorPtr e;
+  auto exe = detail::get_demux_executor_high_prio(e);
   auto task = folly::coro::co_invoke(
       [=](PacketsPtr<media_type>&& pkts)
           -> folly::coro::Task<NvDecFramesWrapperPtr<media_type>> {
+        if constexpr (media_type == MediaType::Video) {
+          pkts = co_await detail::apply_bsf(std::move(pkts)).scheduleOn(exe);
+        }
         auto frames = co_await detail::decode_nvdec<media_type>(
             std::move(pkts), cuda_device_index, crop, width, height, pix_fmt);
         co_return wrap<media_type, NvDecFramesPtr>(std::move(frames));
