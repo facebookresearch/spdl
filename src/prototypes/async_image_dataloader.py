@@ -77,11 +77,7 @@ class BulkImageProcessor:
                 continue
             frames.append(task.result())
 
-        buffer = await (
-            spdl.io.async_convert_nvdec(frames)
-            if self.use_nvdec
-            else spdl.io.async_convert_frames(frames)
-        )
+        buffer = await spdl.io.async_convert_frames(frames)
 
         tensor = spdl.io.to_torch(buffer).to(device=f"cuda:{self.cuda_device_index}")
 
