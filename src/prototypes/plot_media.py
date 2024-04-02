@@ -31,6 +31,10 @@ def _parse_python_args():
         default="video",
     )
     parser.add_argument(
+        "--pix-fmt",
+        default="rgba",
+    )
+    parser.add_argument(
         "-o", "--output-dir", help="Output directory.", type=Path, required=True
     )
     parser.add_argument("--gpu", type=int)
@@ -38,57 +42,67 @@ def _parse_python_args():
     return parser.parse_args()
 
 
-async def decode_packets(packets, gpu):
+async def decode_packets(packets, gpu, pix_fmt):
     if gpu is None:
-        frames = await spdl.io.async_decode_packets(packets)
+        frames = await spdl.io.async_decode_packets(packets, pix_fmt=pix_fmt)
         buffer = await spdl.io.async_convert_frames(frames)
         return spdl.io.to_numpy(buffer)
     frames = await spdl.io.async_decode_packets_nvdec(
-        packets, cuda_device_index=gpu, pix_fmt=None
+        packets, cuda_device_index=gpu, pix_fmt=pix_fmt
     )
     buffer = await spdl.io.async_convert_frames(frames)
     return spdl.io.to_numba(buffer).copy_to_host()
 
 
-async def decode_video(src, gpu):
+async def decode_video(src, gpu, pix_fmt):
     ts = [(1, 1.05), (10, 10.05), (20, 20.05)]
     gen = spdl.io.async_demux_video(src, timestamps=ts)
-    aws = [decode_packets(packets, gpu) async for packets in gen]
+    aws = [decode_packets(packets, gpu, pix_fmt) async for packets in gen]
     return await asyncio.gather(*aws)
 
 
-async def decode_image(src, gpu):
+async def decode_image(src, gpu, pix_fmt):
     packets = await spdl.io.async_demux_image(src)
-    array = await decode_packets(packets, gpu)
+    array = await decode_packets(packets, gpu, pix_fmt)
     return [array[None]]
 
 
-def decode(src_path, type, gpu):
+def decode(src_path, type, gpu, pix_fmt):
     """Test the python wrapper of SPDL"""
 
-    numba.cuda.select_device(gpu)
+    if gpu is not None:
+        numba.cuda.select_device(gpu)
 
     src = str(src_path.resolve())
     if type == "video":
-        coro = decode_video(src, gpu)
+        coro = decode_video(src, gpu, pix_fmt)
     if type == "image":
-        coro = decode_image(src, gpu)
+        coro = decode_image(src, gpu, pix_fmt)
     return asyncio.run(coro)
 
 
-def _plot(frameset, output_dir):
+def _plot(frameset, gpu, pix_fmt, output_dir):
     from PIL import Image
+
+    device = "cpu" if gpu is None else "nvdec"
+
+    mode = None
+    match pix_fmt:
+        case "rgba" | "bgra":
+            mode = pix_fmt.upper()
+        case _:
+            pass
 
     for i, frames in enumerate(frameset):
         for j, array in enumerate(frames):
             print(array.shape)  # CHW
             if array.shape[0] == 1:
                 array = array[0]
-            else:
+            elif array.shape[0] <= 4:
                 array = np.moveaxis(array, 0, 2)
-            path = output_dir / f"{i}_{j}.png"
+            path = output_dir / f"{i}_{j}_{pix_fmt}_{device}.png"
             print(f"Saving {path}", flush=True)
-            Image.fromarray(array).save(path)
+            Image.fromarray(array, mode=mode).save(path)
 
 
 def _main():
@@ -102,9 +116,10 @@ def _main():
         args.input,
         args.type,
         args.gpu,
+        args.pix_fmt,
     )
 
-    _plot(frames, output_dir)
+    _plot(frames, args.gpu, args.pix_fmt, output_dir)
 
 
 def _init(debug, demuxer_threads=1, decoder_threads=1):
