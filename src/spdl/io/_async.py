@@ -292,7 +292,7 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
             - ``ImagePackets`` -> ``ImageNvDecFrames``
     """
     func = getattr(_libspdl, _get_nvdec_decoding_name(packets))
-    return _async_task(func, packets, cuda_device_index, **kwargs)
+    return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
 
 
 def _get_cpu_conversion_name(frames):
