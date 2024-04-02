@@ -21,11 +21,9 @@ def test_decode_video_nvdec(get_sample):
             sample.path, timestamps=timestamps
         ):
             print(packets)
-            filtered = await spdl.io.async_apply_bsf(packets)
-            print(filtered)
             decode_tasks.append(
                 spdl.io.async_decode_packets_nvdec(
-                    filtered, cuda_device_index=DEFAULT_CUDA
+                    packets, cuda_device_index=DEFAULT_CUDA
                 )
             )
         results = await asyncio.gather(*decode_tasks)
@@ -117,10 +115,8 @@ def test_convert_cpu_video_fail(get_sample):
         ):
             print(packets)
             break
-        filtered = await spdl.io.async_apply_bsf(packets)
-        print(filtered)
         frames = await spdl.io.async_decode_packets_nvdec(
-            filtered, cuda_device_index=DEFAULT_CUDA
+            packets, cuda_device_index=DEFAULT_CUDA
         )
         print(frames)
         with pytest.raises(TypeError):
