@@ -30,7 +30,7 @@ def test_failure():
             pass
 
     async def _test_image():
-        await spdl.io.async_demux_image("FOO.jpg")
+        await spdl.io.async_demux("FOO.jpg", "image")
 
     with pytest.raises(RuntimeError, match="Failed to open the input"):
         asyncio.run(_test_audio())
@@ -193,7 +193,7 @@ def test_decode_video_clips_num_frames(get_sample):
 
 
 async def _decode_image(path):
-    packets = await spdl.io.async_demux_image(path)
+    packets = await spdl.io.async_demux(path, "image")
     print(packets)
     frames = await spdl.io.async_decode_packets(packets)
     print(frames)
@@ -341,10 +341,10 @@ def test_async_convert_video_cpu(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test(src):
-        ts = [(0, float("inf"))]
-        gen = spdl.io.async_streaming_demux(src, "video", timestamps=ts)
-        arrays = await _test_async_decode(gen, 1)
-        array = arrays[0]
+        packets = await spdl.io.async_demux(src, "video")
+        frames = await spdl.io.async_decode_packets(packets)
+        buffer = await spdl.io.async_convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
         print(array.dtype, array.shape)
         assert array.shape == (1000, 3, 240, 320)
 
@@ -356,22 +356,20 @@ def test_async_decode_video_bytes(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd, width=320, height=240)
 
-    ts = [(0, float("inf"))]
-
     async def _decode(src):
-        gen = spdl.io.async_streaming_demux(src, "video", timestamps=ts)
-        arrays = await _test_async_decode(gen, 1)
-        return arrays[0]
+        packets = await spdl.io.async_demux(src, "video")
+        frames = await spdl.io.async_decode_packets(packets)
+        buffer = await spdl.io.async_convert_frames(frames)
+        return spdl.io.to_numpy(buffer)
 
     async def _decode_bytes(data):
         assert data
         assert data != b"\x00" * len(data)
-        gen = spdl.io.async_streaming_demux(
-            data, "video", timestamps=ts, _zero_clear=True
-        )
-        arrays = await _test_async_decode(gen, 1)
+        packets = await spdl.io.async_demux(data, "video", _zero_clear=True)
         assert data == b"\x00" * len(data)
-        return arrays[0]
+        frames = await spdl.io.async_decode_packets(packets)
+        buffer = await spdl.io.async_convert_frames(frames)
+        return spdl.io.to_numpy(buffer)
 
     async def _test(path):
         ref = await _decode(path)
@@ -406,14 +404,14 @@ def test_demux_image_bytes(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _decode(src):
-        packets = await spdl.io.async_demux_image(src)
+        packets = await spdl.io.async_demux(src, "image")
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)
         return spdl.io.to_numpy(buffer)
 
     async def _decode_bytes(data):
         assert data != b"\x00" * len(data)
-        packets = await spdl.io.async_demux_image(data, _zero_clear=True)
+        packets = await spdl.io.async_demux(data, "image", _zero_clear=True)
         assert data == b"\x00" * len(data)
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)

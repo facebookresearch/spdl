@@ -39,7 +39,7 @@ def test_decode_video_nvdec(get_sample):
 
 
 async def _decode_image(path):
-    packets = await spdl.io.async_demux_image(path)
+    packets = await spdl.io.async_demux(path, "image")
     print(packets)
     frames = await spdl.io.async_decode_packets_nvdec(
         packets, cuda_device_index=DEFAULT_CUDA
@@ -75,7 +75,7 @@ def test_batch_decode_image(get_samples):
     flist = ["NON_EXISTING_FILE.JPG"] + samples
 
     async def _test():
-        demuxing = [spdl.io.async_demux_image(path) for path in flist]
+        demuxing = [spdl.io.async_demux(path, "image") for path in flist]
         decoding = []
         frames = []
         for i, result in enumerate(
@@ -106,15 +106,8 @@ def test_convert_cpu_video_fail(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 1000 sample.mp4"
     sample = get_sample(cmd, width=320, height=240)
 
-    timestamps = [(0, float("inf"))]
-
     async def _test():
-        packets = None
-        async for packets in spdl.io.async_streaming_demux(
-            sample.path, "video", timestamps=timestamps
-        ):
-            print(packets)
-            break
+        packets = await spdl.io.async_demux(sample.path, "video")
         frames = await spdl.io.async_decode_packets_nvdec(
             packets, cuda_device_index=DEFAULT_CUDA
         )
