@@ -5,8 +5,6 @@ import logging
 
 from pathlib import Path
 
-import numba.cuda
-
 import numpy as np
 
 import spdl.io
@@ -51,7 +49,7 @@ async def decode_packets(packets, gpu, pix_fmt):
         packets, cuda_device_index=gpu, pix_fmt=pix_fmt
     )
     buffer = await spdl.io.async_convert_frames(frames)
-    return spdl.io.to_numba(buffer).copy_to_host()
+    return spdl.io.to_torch(buffer).cpu().numpy()
 
 
 async def decode_video(src, gpu, pix_fmt):
@@ -69,9 +67,6 @@ async def decode_image(src, gpu, pix_fmt):
 
 def decode(src_path, type, gpu, pix_fmt):
     """Test the python wrapper of SPDL"""
-
-    if gpu is not None:
-        numba.cuda.select_device(gpu)
 
     src = str(src_path.resolve())
     if type == "video":
