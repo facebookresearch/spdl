@@ -17,8 +17,8 @@ def test_decode_video_nvdec(get_sample):
     async def _test():
         decode_tasks = []
         conversion_tasks = []
-        async for packets in spdl.io.async_demux_video(
-            sample.path, timestamps=timestamps
+        async for packets in spdl.io.async_streaming_demux(
+            sample.path, "video", timestamps=timestamps
         ):
             print(packets)
             decode_tasks.append(
@@ -110,8 +110,8 @@ def test_convert_cpu_video_fail(get_sample):
 
     async def _test():
         packets = None
-        async for packets in spdl.io.async_demux_video(
-            sample.path, timestamps=timestamps
+        async for packets in spdl.io.async_streaming_demux(
+            sample.path, "video", timestamps=timestamps
         ):
             print(packets)
             break
