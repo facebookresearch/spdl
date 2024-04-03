@@ -45,15 +45,8 @@ async def wait_and_check(tasks, num_tasks=0):
     return tasks
 
 
-# def _to_tensor(buffer, cuda_device_index):
-#     return spdl.io.to_torch(buffer).to(f"cuda:{cuda_device_index}")
-
-
 def _to_tensor(buffer, cuda_device_index):
-    import numba
-
-    # return numba.cuda.to_device(spdl.to_numba(buffer), to=cuda_device_index)
-    return spdl.io.to_numba(buffer)
+    return spdl.io.to_torch(buffer).to(f"cuda:{cuda_device_index}")
 
 
 class BulkMediaProcessor:
@@ -208,9 +201,6 @@ def bg_worker(flist_path, prefix, worker_id, num_workers, use_nvdec, trace):
 
     # ------------------------------------------------------------------------------
     # Warm up 2
-    import numba.cuda
-
-    numba.cuda.select_device(worker_id)
     if use_nvdec:
         path_gen = _sample(_iter_file(flist_path, prefix), max=100)
         asyncio.run(_process_flist(path_gen, worker_id, use_nvdec))
@@ -234,9 +224,8 @@ def _benchmark(args):
     # ------------------------------------------------------------------------------
     # Warm up 1
     # ------------------------------------------------------------------------------
-    # import torch
-    #
-    # torch.zeros([1, 1], device=torch.device(f"cuda:{args.worker_id}"))
+    import torch
+    torch.zeros([1, 1], device=torch.device(f"cuda:{args.worker_id}"))
     # ------------------------------------------------------------------------------
 
     _LG.info(args)
