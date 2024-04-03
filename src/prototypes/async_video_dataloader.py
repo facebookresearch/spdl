@@ -82,7 +82,7 @@ class BulkMediaProcessor:
 
         tasks = set()
         demuxer = spdl.io.async_streaming_demux(
-            path, self.media_type, timestamps=timestamps
+            self.media_type, path, timestamps=timestamps
         )
         i = -1
         async for packets in demuxer:

@@ -56,13 +56,13 @@ async def decode_packets(packets, gpu, pix_fmt):
 
 async def decode_video(src, gpu, pix_fmt):
     ts = [(1, 1.05), (10, 10.05), (20, 20.05)]
-    gen = spdl.io.async_streaming_demux(src, "video", timestamps=ts)
+    gen = spdl.io.async_streaming_demux("video", src, timestamps=ts)
     aws = [decode_packets(packets, gpu, pix_fmt) async for packets in gen]
     return await asyncio.gather(*aws)
 
 
 async def decode_image(src, gpu, pix_fmt):
-    packets = await spdl.io.async_demux(src, "image")
+    packets = await spdl.io.async_demux("image", src)
     array = await decode_packets(packets, gpu, pix_fmt)
     return [array[None]]
 

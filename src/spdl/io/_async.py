@@ -136,16 +136,16 @@ def _get_demux_func(media_type, src):
 
 
 def async_streaming_demux(
-    src: Union[str, bytes],
     media_type: str,
+    src: Union[str, bytes],
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ):
     """Demux the given time windows from the source.
 
     Args:
-        src (str or bytes): Source identifier, such as path or URL.
         media_type: ``"audio"`` or ``"video"``.
+        src (str or bytes): Source identifier, such as path or URL.
         timestamps: List of timestamps.
 
     Other args:
@@ -181,16 +181,16 @@ async def _fetch_one(gen):
 
 
 def async_demux(
-    src: Union[str, bytes],
     media_type: str,
+    src: Union[str, bytes],
     timestamp: Optional[Tuple[float, float]] = None,
     **kwargs,
 ):
     """Demux image or one chunk of audio/video region from the source.
 
     Args:
-        src (str or bytes): Source identifier, such as path or URL.
         media_type: ``"audio"``, ``"video"`` or ``"image"``.
+        src (str or bytes): Source identifier, such as path or URL.
         timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
 
     Other args:
@@ -212,7 +212,7 @@ def async_demux(
         timestamps = [(0.0, float("inf"))]
     else:
         timestamps = [timestamp]
-    return _fetch_one(async_streaming_demux(src, media_type, timestamps, **kwargs))
+    return _fetch_one(async_streaming_demux(media_type, src, timestamps, **kwargs))
 
 
 def _get_decoding_name(packets):
