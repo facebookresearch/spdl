@@ -23,7 +23,7 @@ namespace spdl::core {
 template <MediaType media_type>
 FuturePtr async_decode(
     std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     PacketsWrapperPtr<media_type> packets,
     DecodeConfig decode_cfg,
     std::string filter_desc,
@@ -33,7 +33,7 @@ FuturePtr async_decode(
 template <MediaType media_type>
 FuturePtr async_decode_nvdec(
     std::function<void(NvDecFramesWrapperPtr<media_type>)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     PacketsWrapperPtr<media_type> packets,
     int cuda_device_index,
     const CropArea& crop,
@@ -45,7 +45,7 @@ FuturePtr async_decode_nvdec(
 // Function for test
 FuturePtr async_sleep(
     std::function<void(int)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     int milliseconds,
     ThreadPoolExecutorPtr executor);
 

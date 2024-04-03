@@ -16,7 +16,7 @@ namespace spdl::core {
 template <MediaType media_type>
 FuturePtr async_decode_nvdec(
     std::function<void(NvDecFramesWrapperPtr<media_type>)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     PacketsWrapperPtr<media_type> packets,
     int cuda_device_index,
     const CropArea& crop,
@@ -54,7 +54,7 @@ FuturePtr async_decode_nvdec(
 
 template FuturePtr async_decode_nvdec(
     std::function<void(NvDecFramesWrapperPtr<MediaType::Video>)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     PacketsWrapperPtr<MediaType::Video> packets,
     int cuda_device_index,
     const CropArea& crop,
@@ -65,7 +65,7 @@ template FuturePtr async_decode_nvdec(
 
 template FuturePtr async_decode_nvdec(
     std::function<void(NvDecFramesWrapperPtr<MediaType::Image>)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     PacketsWrapperPtr<MediaType::Image> packets,
     int cuda_device_index,
     const CropArea& crop,

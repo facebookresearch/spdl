@@ -21,7 +21,7 @@ def _async_sleep(time: int):
 
 # Exception class used to signal the failure of C++ op to Python.
 # Not exposed to user code.
-class _AsyncOpFailed(Exception):
+class _AsyncOpFailed(RuntimeError):
     pass
 
 
@@ -48,8 +48,8 @@ async def _async_task(func, *args, **kwargs):
     future = concurrent.futures.Future()
     assert future.set_running_or_notify_cancel()
 
-    def nofify_exception():
-        future.set_exception(_AsyncOpFailed())
+    def nofify_exception(msg: str):
+        future.set_exception(_AsyncOpFailed(msg))
 
     sf = func(future.set_result, nofify_exception, *args, **kwargs)
 
@@ -87,8 +87,8 @@ async def _async_gen(func, *args, **kwargs):
             assert future.set_running_or_notify_cancel()
             futures.append(future)
 
-    def notify_exception():
-        futures[-1].set_exception(_AsyncOpFailed())
+    def notify_exception(msg: str):
+        futures[-1].set_exception(_AsyncOpFailed(msg))
 
     sf = func(set_result, notify_exception, *args, **kwargs)
     while futures:

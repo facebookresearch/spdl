@@ -25,7 +25,7 @@ template <typename ValueType>
 FuturePtr execute_task_with_callback(
     folly::coro::Task<ValueType>&& task,
     std::function<void(ValueType)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     folly::Executor::KeepAlive<> executor) {
   auto cs = folly::CancellationSource{};
   auto task_cb = folly::coro::co_invoke(
@@ -41,14 +41,15 @@ FuturePtr execute_task_with_callback(
           // but the message is same, and it floods the log
           // when tasks are bulk-cancelled.
           XLOG(DBG5) << e.what();
-          notify_exception();
+          notify_exception(e.what());
           throw;
         } catch (std::exception& e) {
-          XLOG(ERR) << e.what();
-          notify_exception();
+          XLOG(DBG5) << e.what();
+          notify_exception(e.what());
           throw;
         } catch (...) {
-          notify_exception();
+          XLOG(CRITICAL) << "Unexpected exception was caught.";
+          notify_exception("Unexpected exception.");
           throw;
         }
       },
@@ -64,7 +65,7 @@ template <typename ValueType>
 FuturePtr execute_generator_with_callback(
     folly::coro::AsyncGenerator<ValueType>&& generator,
     std::function<void(std::optional<ValueType>)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     folly::Executor::KeepAlive<> executor) {
   using folly::coro::AsyncGenerator;
   using folly::coro::Task;
@@ -85,14 +86,15 @@ FuturePtr execute_generator_with_callback(
           // but the message is same, and it floods the log
           // when tasks are bulk-cancelled.
           XLOG(DBG5) << e.what();
-          notify_exception();
+          notify_exception(e.what());
           throw;
         } catch (std::exception& e) {
-          XLOG(ERR) << e.what();
-          notify_exception();
+          XLOG(DBG5) << e.what();
+          notify_exception(e.what());
           throw;
         } catch (...) {
-          notify_exception();
+          XLOG(CRITICAL) << "Unexpected exception was caught.";
+          notify_exception("Unexpected exception.");
           throw;
         }
       },

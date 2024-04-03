@@ -11,7 +11,7 @@ namespace spdl::core {
 
 FuturePtr async_sleep(
     std::function<void(int)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     int milliseconds,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<int> {
