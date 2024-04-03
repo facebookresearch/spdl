@@ -62,7 +62,7 @@ async def decode_video(src, gpu, pix_fmt):
 
 
 async def decode_image(src, gpu, pix_fmt):
-    packets = await spdl.io.async_demux_image(src)
+    packets = await spdl.io.async_demux(src, "image")
     array = await decode_packets(packets, gpu, pix_fmt)
     return [array[None]]
 

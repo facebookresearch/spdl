@@ -31,7 +31,7 @@ the execution status and make the tasks are executed efficiently.
 ```python
 async def load_image(src):
     # Demux image
-    packets = await spdl.io.async_demux_image(src):
+    packets = await spdl.io.async_demux(src, "image"):
 
     # Decode packets into frames
     frames = await spdl.io.async_decode_packets(packets)
@@ -71,7 +71,7 @@ import spdl.io
 
 # Define a coroutine that decodes a single image into frames
 async def decode_image(src, width=112, height=112, pix_fmt="rgb24"):
-    packets = await spdl.io.async_demux_image(src):
+    packets = await spdl.io.async_demux(src, "image"):
     return await spdl.io.async_decode_packets(
         packets, width=width, height=height, pix_fmt=pix_fmt)
 
@@ -93,7 +93,7 @@ array = await batch_decode_image(["foo.jpg", "bar.png"])
       show_source: false
       members:
       - async_streaming_demux
-      - async_demux_image
+      - async_demux
 
 ## Decoding
 

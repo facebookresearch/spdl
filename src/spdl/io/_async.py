@@ -1,6 +1,6 @@
 import asyncio
 import concurrent.futures
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from spdl.lib import _libspdl
 
@@ -11,7 +11,7 @@ __all__ = [
     "async_decode_packets",
     "async_decode_packets_nvdec",
     "async_streaming_demux",
-    "async_demux_image",
+    "async_demux",
 ]
 
 
@@ -144,7 +144,7 @@ def async_streaming_demux(
     """Demux the given time windows from the source.
 
     Args:
-        src: Source identifier, such as path or URL.
+        src (str or bytes): Source identifier, such as path or URL.
         media_type: ``"audio"`` or ``"video"``.
         timestamps: List of timestamps.
 
@@ -167,11 +167,31 @@ def async_streaming_demux(
     return _async_gen(func, src, timestamps, **kwargs)
 
 
-def async_demux_image(src: Union[str, bytes], **kwargs):
-    """Demux the image stream.
+def _async_demux_image(src, **kwargs):
+    func = getattr(
+        _libspdl,
+        "async_demux_image_bytes" if isinstance(src, bytes) else "async_demux_image",
+    )
+    return _async_task(func, src, **kwargs)
+
+
+async def _fetch_one(gen):
+    async for packets in gen:
+        return packets
+
+
+def async_demux(
+    src: Union[str, bytes],
+    media_type: str,
+    timestamp: Optional[Tuple[float, float]] = None,
+    **kwargs,
+):
+    """Demux image or one chunk of audio/video region from the source.
 
     Args:
-        src: Source identifier, such as path or URL.
+        src (str or bytes): Source identifier, such as path or URL.
+        media_type: ``"audio"``, ``"video"`` or ``"image"``.
+        timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
 
     Other args:
         format (str): *Optional:* Overwrite the format detection.
@@ -185,11 +205,14 @@ def async_demux_image(src: Union[str, bytes], **kwargs):
     Returns:
         (Awaitable[ImagePackets]): Awaitable which returns an ImagePackets object.
     """
-    func = getattr(
-        _libspdl,
-        "async_demux_image_bytes" if isinstance(src, bytes) else "async_demux_image",
-    )
-    return _async_task(func, src, **kwargs)
+    if media_type == "image":
+        return _async_demux_image(src, **kwargs)
+
+    if timestamp is None:
+        timestamps = [(0.0, float("inf"))]
+    else:
+        timestamps = [timestamp]
+    return _fetch_one(async_streaming_demux(src, media_type, timestamps, **kwargs))
 
 
 def _get_decoding_name(packets):
