@@ -1,3 +1,4 @@
+#include "libspdl/core/detail/cuda.h"
 #include "libspdl/core/detail/nvdec/color_conversion.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -149,6 +150,9 @@ void nv12_to_planar_rgba(
   TRACE_EVENT("nvdec", "nv12_to_planar_rgba");
   nv12_to_planar_rgb32<RGBA32><<<dimGrid, dimBlock, 0, stream>>>(
       src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
+  CHECK_CUDA(
+      cudaPeekAtLastError(),
+      "Failed to launch kernel nv12_to_planar_rgb32<RGBA32>");
 }
 
 void nv12_to_planar_bgra(
@@ -165,5 +169,8 @@ void nv12_to_planar_bgra(
   TRACE_EVENT("nvdec", "nv12_to_planar_bgra");
   nv12_to_planar_rgb32<BGRA32><<<dimGrid, dimBlock, 0, stream>>>(
       src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
+  CHECK_CUDA(
+      cudaPeekAtLastError(),
+      "Failed to launch kernel nv12_to_planar_rgb32<BGRA32>");
 }
 } // namespace spdl::core::detail
