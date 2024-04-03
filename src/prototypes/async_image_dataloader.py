@@ -84,7 +84,7 @@ class BulkImageProcessor:
         await self.queue.put(tensor)
 
     async def _decode(self, path):
-        packets = await spdl.io.async_demux_image(path)
+        packets = await spdl.io.async_demux("image", path)
         return await (
             spdl.io.async_decode_packets_nvdec(
                 packets,
