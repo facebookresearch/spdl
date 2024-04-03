@@ -10,7 +10,7 @@ namespace spdl::core {
 template <MediaType media_type, bool cpu_only>
 FuturePtr async_convert_frames(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
@@ -36,35 +36,35 @@ FuturePtr async_convert_frames(
 
 template FuturePtr async_convert_frames<MediaType::Audio, true>(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Audio> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Video, true>(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Video, false>(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Image, true>(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Image, false>(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
@@ -84,7 +84,7 @@ std::vector<FFmpegImageFramesWrapperPtr> rewrap(
 template <bool cpu_only>
 FuturePtr async_batch_convert_frames(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
@@ -105,14 +105,14 @@ FuturePtr async_batch_convert_frames(
 
 template FuturePtr async_batch_convert_frames<true>(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_batch_convert_frames<false>(
     std::function<void(BufferPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
@@ -123,7 +123,7 @@ template FuturePtr async_batch_convert_frames<false>(
 template <MediaType media_type>
 FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     NvDecFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
@@ -143,21 +143,21 @@ FuturePtr async_convert_nvdec_frames(
 
 template FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     NvDecFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     NvDecFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 FuturePtr async_batch_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::vector<NvDecImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {

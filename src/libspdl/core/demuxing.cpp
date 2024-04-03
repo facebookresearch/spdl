@@ -11,7 +11,7 @@ template <MediaType media_type>
 FuturePtr async_demux(
     std::function<void(std::optional<PacketsWrapperPtr<media_type>>)>
         set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdaptorPtr& adaptor,
@@ -35,7 +35,7 @@ FuturePtr async_demux(
 template FuturePtr async_demux(
     std::function<void(std::optional<PacketsWrapperPtr<MediaType::Audio>>)>
         set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdaptorPtr& adaptor,
@@ -45,7 +45,7 @@ template FuturePtr async_demux(
 template FuturePtr async_demux(
     std::function<void(std::optional<PacketsWrapperPtr<MediaType::Video>>)>
         set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdaptorPtr& adaptor,
@@ -56,7 +56,7 @@ template <MediaType media_type>
 FuturePtr async_demux_bytes(
     std::function<void(std::optional<PacketsWrapperPtr<media_type>>)>
         set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& io_cfg,
@@ -86,7 +86,7 @@ FuturePtr async_demux_bytes(
 template FuturePtr async_demux_bytes(
     std::function<void(std::optional<PacketsWrapperPtr<MediaType::Video>>)>
         set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& io_cfg,
@@ -96,7 +96,7 @@ template FuturePtr async_demux_bytes(
 template FuturePtr async_demux_bytes(
     std::function<void(std::optional<PacketsWrapperPtr<MediaType::Audio>>)>
         set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
     const IOConfig& io_cfg,
@@ -105,7 +105,7 @@ template FuturePtr async_demux_bytes(
 
 FuturePtr async_demux_image(
     std::function<void(ImagePacketsWrapperPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     const std::string& src,
     const SourceAdaptorPtr& adaptor,
     const IOConfig& io_cfg,
@@ -125,7 +125,7 @@ FuturePtr async_demux_image(
 
 FuturePtr async_demux_image_bytes(
     std::function<void(ImagePacketsWrapperPtr)> set_result,
-    std::function<void()> notify_exception,
+    std::function<void(std::string)> notify_exception,
     std::string_view data,
     const IOConfig& io_cfg,
     ThreadPoolExecutorPtr executor,
