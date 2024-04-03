@@ -16,7 +16,7 @@ plugins:
             heading_level: 3
             show_root_toc_entry: false
             extensions:
-            - docs/spdl_dynamic_resolver.py:SPDLDynamicResolver:
+            - docs/custom_resolver.py:SPDLDynamicResolver:
 
   - mkdoxy:
       projects:
