@@ -56,11 +56,12 @@ def _to_tensor(buffer, cuda_device_index):
     return spdl.io.to_numba(buffer)
 
 
-class BulkVideoProcessor:
-    def __init__(self, queue, *, cuda_device_index, use_nvdec=False):
+class BulkMediaProcessor:
+    def __init__(self, queue, *, media_type, cuda_device_index, use_nvdec=False):
         self.queue = queue
         self.cuda_device_index = cuda_device_index
         self.use_nvdec = use_nvdec
+        self.media_type = media_type
 
         self.width = 222
         self.height = 222
@@ -80,7 +81,9 @@ class BulkVideoProcessor:
         timestamps = [(0, float("inf"))]
 
         tasks = set()
-        demuxer = spdl.io.async_demux_video(path, timestamps=timestamps)
+        demuxer = spdl.io.async_streaming_demux(
+            path, self.media_type, timestamps=timestamps
+        )
         i = -1
         async for packets in demuxer:
             i += 1
@@ -130,8 +133,11 @@ async def _track(queue):
 
 async def _batch_decode_video(path_gen, *, cuda_device_index=None, use_nvdec=False):
     queue = asyncio.Queue(maxsize=100)
-    bmp = BulkVideoProcessor(
-        queue=queue, cuda_device_index=cuda_device_index, use_nvdec=use_nvdec
+    bmp = BulkMediaProcessor(
+        queue=queue,
+        media_type="video",
+        cuda_device_index=cuda_device_index,
+        use_nvdec=use_nvdec,
     )
     task = asyncio.create_task(bmp(path_gen))
 

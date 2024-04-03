@@ -54,7 +54,7 @@ import spdl.io
 src, ts = "foo.wav", [(0, 1), (1, 2)]
 
 # Use `spdl.io.async_demux_video` for demuxing video
-async for packets in spdl.io.async_demux_audio("foo.wav", ts):
+async for packets in spdl.io.async_streaming_demux("foo.wav", "audio", ts):
 
     # The rest is the same as image decoding
     frames = await spdl.io.async_decode_packets(packets)
@@ -92,8 +92,7 @@ array = await batch_decode_image(["foo.jpg", "bar.png"])
     options:
       show_source: false
       members:
-      - async_demux_audio
-      - async_demux_video
+      - async_streaming_demux
       - async_demux_image
 
 ## Decoding

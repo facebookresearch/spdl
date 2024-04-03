@@ -10,8 +10,7 @@ __all__ = [
     "async_convert_frames",
     "async_decode_packets",
     "async_decode_packets_nvdec",
-    "async_demux_audio",
-    "async_demux_video",
+    "async_streaming_demux",
     "async_demux_image",
 ]
 
@@ -120,13 +119,33 @@ async def _async_gen(func, *args, **kwargs):
     sf.rethrow()
 
 
-def async_demux_audio(
-    src: Union[str, bytes], timestamps: List[Tuple[float, float]], **kwargs
+def _get_demux_func(media_type, src):
+    match media_type:
+        case "audio":
+            if isinstance(src, bytes):
+                return "async_demux_audio_bytes"
+            else:
+                return "async_demux_audio"
+        case "video":
+            if isinstance(src, bytes):
+                return "async_demux_video_bytes"
+            else:
+                return "async_demux_video"
+        case _:
+            raise ValueError(f"Unexpected media type: {media_type}.")
+
+
+def async_streaming_demux(
+    src: Union[str, bytes],
+    media_type: str,
+    timestamps: List[Tuple[float, float]],
+    **kwargs,
 ):
-    """Demux the audio stream of the given time windows.
+    """Demux the given time windows from the source.
 
     Args:
         src: Source identifier, such as path or URL.
+        media_type: ``"audio"`` or ``"video"``.
         timestamps: List of timestamps.
 
     Other args:
@@ -141,40 +160,10 @@ def async_demux_audio(
             By default the task is peformed in demuxer thread pool.
 
     Returns:
-        (AsyncGenerator[AudioPackets]): Generator of AudioPackets.
+        (AsyncGenerator[Packets]): Audio or video Packets generator.
     """
-    func = getattr(
-        _libspdl,
-        "async_demux_audio_bytes" if isinstance(src, bytes) else "async_demux_audio",
-    )
-    return _async_gen(func, src, timestamps, **kwargs)
-
-
-def async_demux_video(
-    src: Union[str, bytes], timestamps: List[Tuple[float, float]], **kwargs
-):
-    """Demux the video stream.
-
-    Args:
-        src: Source identifier, such as path or URL.
-        timestamps: List of timestamps.
-
-    Other args:
-        format (str): *Optional:* Overwrite the format detection.
-            Can be used to demux headerless format.
-        format_options (Dict[str, str], optional): *Optional:* Format options.
-        buffer_size (int): *Optional:* Buffer size in bytes.
-        adaptor (SourceAdaptor): *Optional:* Adaptor to apply to the `src`.
-        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
-            By default the job is peformed in demuxer thread pool. Default: `None`.
-
-    Returns:
-        (AsyncGenerator[VideoPackets]): Generator of VideoPackets.
-    """
-    func = getattr(
-        _libspdl,
-        "async_demux_video_bytes" if isinstance(src, bytes) else "async_demux_video",
-    )
+    name = _get_demux_func(media_type, src)
+    func = getattr(_libspdl, name)
     return _async_gen(func, src, timestamps, **kwargs)
 
 
