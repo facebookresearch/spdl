@@ -409,16 +409,39 @@ void register_decoding(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
+         const std::optional<int>& num_frames,
+         const std::optional<std::string>& pad_mode,
+         const std::optional<std::string>& filter_desc,
          ThreadPoolExecutorPtr demux_executor,
          ThreadPoolExecutorPtr decode_executor) {
+        auto filter = [&]() -> std::string {
+          if (filter_desc) {
+            if (frame_rate || width || height || pix_fmt || num_frames ||
+                pad_mode) {
+              throw std::runtime_error(
+                  "`frame_rate`, `width`, `height`, `pix_fmt`, "
+                  "`num_frames` and `pad_mode` are "
+                  "mutually exclusive with `filter_desc`.");
+            }
+            return filter_desc.value();
+          }
+          return get_video_filter_description(
+              get_frame_rate(frame_rate),
+              width,
+              height,
+              pix_fmt,
+              // TODO: Incorporate the timestamps
+              std::nullopt,
+              num_frames,
+              pad_mode);
+        }();
         return decoding::decode<MediaType::Video>(
             src,
             timestamps,
             adaptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options, cuda_device_index},
-            get_video_filter_description(
-                get_frame_rate(frame_rate), width, height, pix_fmt),
+            filter,
             demux_executor,
             decode_executor);
       },
@@ -436,44 +459,9 @@ void register_decoding(py::module& m) {
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none(),
-      py::arg("demux_executor") = nullptr,
-      py::arg("decode_executor") = nullptr);
-
-  m.def(
-      "decode_video",
-      [](const std::string& src,
-         const std::vector<std::tuple<double, double>>& timestamps,
-         const SourceAdaptorPtr& adaptor,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
-         const int cuda_device_index,
-         const std::string& filter_desc,
-         ThreadPoolExecutorPtr demux_executor,
-         ThreadPoolExecutorPtr decode_executor) {
-        return decoding::decode<MediaType::Video>(
-            src,
-            timestamps,
-            adaptor,
-            {format, format_options, buffer_size},
-            {decoder, decoder_options, cuda_device_index},
-            filter_desc,
-            demux_executor,
-            decode_executor);
-      },
-      py::arg("src"),
-      py::arg("timestamps"),
-      py::kw_only(),
-      py::arg("adaptor") = nullptr,
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
-      py::arg("cuda_device_index") = -1,
-      py::arg("filter_desc") = std::string(),
+      py::arg("num_frames") = py::none(),
+      py::arg("pad_mode") = py::none(),
+      py::arg("filter_desc") = py::none(),
       py::arg("demux_executor") = nullptr,
       py::arg("decode_executor") = nullptr);
 
@@ -489,14 +477,28 @@ void register_decoding(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
+         const std::optional<std::string>& filter_desc,
          ThreadPoolExecutorPtr demux_executor,
          ThreadPoolExecutorPtr decode_executor) {
+        auto filter = [&]() -> std::string {
+          if (filter_desc) {
+            if (width || height || pix_fmt) {
+              throw std::runtime_error(
+                  "`width`, `height`, `pix_fmt`, `num_frames` and "
+                  "`pad_mode` are mutually exclusive with "
+                  "`filter_desc`.");
+            }
+            return filter_desc.value();
+          }
+          return get_video_filter_description(
+              std::nullopt, width, height, pix_fmt);
+        }();
         return decoding::decode_image(
             src,
             adaptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            get_video_filter_description(std::nullopt, width, height, pix_fmt),
+            filter,
             demux_executor,
             decode_executor);
       },
@@ -511,41 +513,7 @@ void register_decoding(py::module& m) {
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none(),
-      py::arg("demux_executor") = nullptr,
-      py::arg("decode_executor") = nullptr);
-
-  m.def(
-      "decode_image",
-      [](const std::string& src,
-         const SourceAdaptorPtr& adaptor,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
-         const int cuda_device_index,
-         const std::string& filter_desc,
-         ThreadPoolExecutorPtr demux_executor,
-         ThreadPoolExecutorPtr decode_executor) {
-        return decoding::decode_image(
-            src,
-            adaptor,
-            {format, format_options, buffer_size},
-            {decoder, decoder_options},
-            filter_desc,
-            demux_executor,
-            decode_executor);
-      },
-      py::arg("src"),
-      py::kw_only(),
-      py::arg("adaptor") = nullptr,
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
-      py::arg("cuda_device_index") = -1,
-      py::arg("filter_desc") = std::string(),
+      py::arg("filter_desc") = py::none(),
       py::arg("demux_executor") = nullptr,
       py::arg("decode_executor") = nullptr);
 
@@ -561,14 +529,28 @@ void register_decoding(py::module& m) {
          const std::optional<int>& width,
          const std::optional<int>& height,
          const std::optional<std::string>& pix_fmt,
+         const std::optional<std::string>& filter_desc,
          ThreadPoolExecutorPtr demux_executor,
          ThreadPoolExecutorPtr decode_executor) {
+        auto filter = [&]() -> std::string {
+          if (filter_desc) {
+            if (width || height || pix_fmt) {
+              throw std::runtime_error(
+                  "`width`, `height`, `pix_fmt`, `num_frames` and "
+                  "`pad_mode` are mutually exclusive with "
+                  "`filter_desc`.");
+            }
+            return filter_desc.value();
+          }
+          return get_video_filter_description(
+              std::nullopt, width, height, pix_fmt);
+        }();
         return decoding::batch_decode_image(
             srcs,
             adaptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            get_video_filter_description(std::nullopt, width, height, pix_fmt),
+            filter,
             demux_executor,
             decode_executor);
       },
@@ -583,41 +565,7 @@ void register_decoding(py::module& m) {
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none(),
-      py::arg("demux_executor") = nullptr,
-      py::arg("decode_executor") = nullptr);
-
-  m.def(
-      "batch_decode_image",
-      [](const std::vector<std::string>& srcs,
-         const SourceAdaptorPtr& adaptor,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
-         const int cuda_device_index,
-         const std::string& filter_desc,
-         ThreadPoolExecutorPtr demux_executor,
-         ThreadPoolExecutorPtr decode_executor) {
-        return decoding::batch_decode_image(
-            srcs,
-            adaptor,
-            {format, format_options, buffer_size},
-            {decoder, decoder_options},
-            filter_desc,
-            demux_executor,
-            decode_executor);
-      },
-      py::arg("srcs"),
-      py::kw_only(),
-      py::arg("adaptor") = nullptr,
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
-      py::arg("cuda_device_index") = -1,
-      py::arg("filter_desc") = std::string(),
+      py::arg("filter_desc") = py::none(),
       py::arg("demux_executor") = nullptr,
       py::arg("decode_executor") = nullptr);
 
@@ -634,16 +582,34 @@ void register_decoding(py::module& m) {
          const std::optional<int>& sample_rate,
          const std::optional<int>& num_channels,
          const std::optional<std::string>& sample_fmt,
+         const std::optional<int>& num_frames,
+         const std::optional<std::string>& filter_desc,
          ThreadPoolExecutorPtr demux_executor,
          ThreadPoolExecutorPtr decode_executor) {
+        auto filter = [&]() -> std::string {
+          if (filter_desc) {
+            if (sample_rate || num_channels || sample_fmt || num_frames) {
+              throw std::runtime_error(
+                  "`sample_rate`, `num_channels`, `sample_fmt` and `num_frames` are "
+                  "mutually exclusive with `filter_desc`.");
+            }
+            return filter_desc.value();
+          }
+          return get_audio_filter_description(
+              sample_rate,
+              num_channels,
+              sample_fmt,
+              // TODO: Incorporate the timestamps
+              std::nullopt,
+              num_frames);
+        }();
         return decoding::decode<MediaType::Audio>(
             src,
             timestamps,
             adaptor,
             {format, format_options, buffer_size},
             {decoder, decoder_options},
-            // TODO: Incorporate the timestamps
-            get_audio_filter_description(sample_rate, num_channels, sample_fmt),
+            filter,
             demux_executor,
             decode_executor);
       },
@@ -659,42 +625,8 @@ void register_decoding(py::module& m) {
       py::arg("sample_rate") = py::none(),
       py::arg("num_channels") = py::none(),
       py::arg("sample_fmt") = py::none(),
-      py::arg("demux_executor") = nullptr,
-      py::arg("decode_executor") = nullptr);
-
-  m.def(
-      "decode_audio",
-      [](const std::string& src,
-         const std::vector<std::tuple<double, double>>& timestamps,
-         const SourceAdaptorPtr& adaptor,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
-         const std::string& filter_desc,
-         ThreadPoolExecutorPtr demux_executor,
-         ThreadPoolExecutorPtr decode_executor) {
-        return decoding::decode<MediaType::Audio>(
-            src,
-            timestamps,
-            adaptor,
-            {format, format_options, buffer_size},
-            {decoder, decoder_options},
-            filter_desc,
-            demux_executor,
-            decode_executor);
-      },
-      py::arg("src"),
-      py::arg("timestamps"),
-      py::kw_only(),
-      py::arg("adaptor") = nullptr,
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
-      py::arg("filter_desc") = std::string(),
+      py::arg("num_frames") = py::none(),
+      py::arg("filter_desc") = py::none(),
       py::arg("demux_executor") = nullptr,
       py::arg("decode_executor") = nullptr);
 
