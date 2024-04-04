@@ -12,7 +12,9 @@ def test_h264_cuvid(get_sample):
 
     async def _test():
         packets = await spdl.io.async_demux("video", sample.path)
-        frames = await spdl.io.async_decode_packets(packets, cuda_device_index=DEFAULT_CUDA, decoder="h264_cuvid")
+        frames = await spdl.io.async_decode_packets(
+            packets, cuda_device_index=DEFAULT_CUDA, decoder="h264_cuvid"
+        )
         buffer = await spdl.io.async_convert_frames(frames)
         array = spdl.io.to_numba(buffer)
         assert array.shape == (1000, 1, 360, 320)
