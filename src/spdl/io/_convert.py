@@ -1,8 +1,7 @@
 import numpy as np
 
-import spdl
-import spdl.lib
 from spdl._internal import import_utils
+from spdl.lib import _libspdl
 
 try:
     from numpy.typing import NDArray
@@ -45,18 +44,22 @@ def to_torch(buffer):
     """
     if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
-        index = spdl.lib._libspdl.get_cuda_device_index(data_ptr)
+        index = buffer.device_index
         tensor = torch.as_tensor(buffer, device=f"cuda:{index}")
         if tensor.data_ptr() == 0:
             raise RuntimeError(
                 "Failed to convert to PyTorch Tensor. "
                 f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
             )
-        if tensor.data_ptr() != data_ptr:
-            raise RuntimeError(
-                "[INTERNAL ERROR] Failed to perform zero-copy conversion to PyTorch Tensor. "
-                f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
-            )
+        # If NvDEC, assert that no copy was made.
+        # FFmpeg CUDA buffer could be on a different cuda context, so copy could have
+        # been made.
+        if isinstance(buffer, _libspdl.CUDABuffer2DPitch):
+            if tensor.data_ptr() != data_ptr:
+                raise RuntimeError(
+                    "[INTERNAL ERROR] Failed to perform zero-copy conversion to PyTorch Tensor. "
+                    f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
+                )
         return tensor
 
     # Not sure how to make as_tensor work with __array_interface__.

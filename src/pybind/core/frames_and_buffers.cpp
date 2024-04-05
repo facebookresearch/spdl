@@ -166,6 +166,9 @@ void register_frames_and_buffers(py::module& m) {
           }))
       .def_property_readonly("is_cuda", [](const CUDABuffer&) { return true; })
       .def_property_readonly(
+          "device_index",
+          [](const CUDABuffer& self) { return self.device_index; })
+      .def_property_readonly(
           "__cuda_array_interface__",
           IF_CUDABUFFER_ENABLED(
               [](CUDABuffer& self) { return get_cuda_array_interface(self); }));
@@ -194,6 +197,10 @@ void register_frames_and_buffers(py::module& m) {
           "is_cuda", IF_CUDABUFFER2_ENABLED([](const CUDABuffer2DPitch& self) {
             return true;
           }))
+      .def_property_readonly(
+          "device_index",
+          IF_CUDABUFFER2_ENABLED(
+              [](const CUDABuffer2DPitch& self) { return self.device_index; }))
       .def_property_readonly(
           "__cuda_array_interface__",
           IF_CUDABUFFER2_ENABLED([](CUDABuffer2DPitch& self) {

@@ -58,7 +58,6 @@ void register_utils(py::module& m) {
       &create_cuda_context,
       py::arg("index"),
       py::arg("use_primary_context") = false);
-  m.def("get_cuda_device_index", &get_cuda_device_index);
 }
 
 } // namespace spdl::core

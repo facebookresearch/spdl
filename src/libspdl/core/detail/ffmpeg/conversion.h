@@ -18,6 +18,7 @@ CPUBufferPtr convert_video_frames_cpu(
 
 CUDABufferPtr convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index);
+    const std::optional<int>& plane_index,
+    int device_index);
 
 } // namespace spdl::core::detail

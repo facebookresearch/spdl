@@ -10,13 +10,15 @@ CUDABuffer::CUDABuffer(
     bool channel_last_,
     ElemClass elem_class_,
     size_t depth_,
-    CUDAStorage* storage_)
+    CUDAStorage* storage_,
+    int device_index_)
     : Buffer(
           std::move(shape_),
           channel_last_,
           elem_class_,
           depth_,
-          (Storage*)storage_) {}
+          (Storage*)storage_),
+      device_index(device_index_) {}
 
 uintptr_t CUDABuffer::get_cuda_stream() const {
   return (uintptr_t)(((CUDAStorage*)(storage.get()))->stream);
@@ -38,13 +40,15 @@ inline size_t prod(const std::vector<size_t>& shape) {
 std::unique_ptr<CUDABuffer> cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
+    int device_index,
     bool channel_last) {
   return std::make_unique<CUDABuffer>(
       std::move(shape),
       channel_last,
       ElemClass::UInt,
       sizeof(uint8_t),
-      new CUDAStorage{prod(shape), stream});
+      new CUDAStorage{prod(shape), stream},
+      device_index);
 }
 
 } // namespace spdl::core

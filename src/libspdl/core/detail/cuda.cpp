@@ -68,37 +68,9 @@ CUcontext get_cucontext(CUdevice device) {
   return CUCONTEXT_CACHE.at(device);
 }
 
-CUdevice get_cuda_device_index(CUdeviceptr ptr) {
-  if (!ptr) {
-    SPDL_FAIL("Attempted to get the CUDA device index from a null pointer.");
-  }
-  CUcontext data;
-  CHECK_CU(
-      cuPointerGetAttribute(&data, CU_POINTER_ATTRIBUTE_CONTEXT, ptr),
-      "Failed to fetch the CUDA context associated with a pointer.");
-  CHECK_CU(
-      cuCtxPushCurrent(data),
-      "Failed to push the CUDA context associated with a pointer.");
-
-  CUdevice device;
-  auto result = cuCtxGetDevice(&device);
-
-  CHECK_CU(
-      cuCtxPopCurrent(&data),
-      "Failed to pop the CUDA context associated with a pointer.");
-
-  CHECK_CU(result, "Failed to fetch the CUDA device index from a pointer.");
-  return device;
-}
-
-void set_current_cuda_context(CUdeviceptr ptr) {
-  CUcontext data;
-  CHECK_CU(
-      cuPointerGetAttribute(&data, CU_POINTER_ATTRIBUTE_CONTEXT, ptr),
-      "Failed to fetch the CUDA context associated with a pointer.");
-  CHECK_CU(
-      cuCtxPushCurrent(data),
-      "Failed to push the CUDA context associated with a pointer.");
+void set_cuda_primary_context(int device_index) {
+  CUcontext ctx = get_cucontext(device_index);
+  CHECK_CU(cuCtxPushCurrent(ctx), "Failed to push the CUDA context.");
 }
 
 void init_cuda() {

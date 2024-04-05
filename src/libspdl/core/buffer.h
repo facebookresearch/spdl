@@ -70,12 +70,15 @@ struct CPUBuffer : Buffer {
 /// This class is used to hold data decoded with FFmpeg hardware acceleration.
 struct CUDABuffer : Buffer {
 #ifdef SPDL_USE_CUDA
+  int device_index;
+
   CUDABuffer(
       std::vector<size_t> shape,
       bool channel_last,
       ElemClass elem_class,
       size_t depth,
-      CUDAStorage* storage);
+      CUDAStorage* storage,
+      int device_index);
 
   uintptr_t get_cuda_stream() const;
 #endif
@@ -85,6 +88,8 @@ struct CUDABuffer : Buffer {
 /// This class is used to hold data decoded with NVDEC.
 struct CUDABuffer2DPitch {
 #ifdef SPDL_USE_NVDEC
+  int device_index;
+
   ///
   /// information to track the stateo f memory
   size_t max_frames;
@@ -108,7 +113,7 @@ struct CUDABuffer2DPitch {
   /// Pitch size, set by CUDA API
   size_t pitch{0};
 
-  CUDABuffer2DPitch(size_t max_frames, bool is_image = false);
+  CUDABuffer2DPitch(int device_index, size_t max_frames, bool is_image = false);
   ~CUDABuffer2DPitch();
 
   /// Allocate the memory big enough to hold data for ``(max_frames, c, h, w)``
@@ -140,6 +145,7 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
 std::unique_ptr<CUDABuffer> cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
+    int device_index,
     bool channel_last = false);
 #endif
 } // namespace spdl::core
