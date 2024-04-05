@@ -8,8 +8,11 @@
 
 namespace spdl::core {
 
-CUDABuffer2DPitch::CUDABuffer2DPitch(size_t max_frames_, bool is_image_)
-    : max_frames(max_frames_), is_image(is_image_) {
+CUDABuffer2DPitch::CUDABuffer2DPitch(
+    int index,
+    size_t max_frames_,
+    bool is_image_)
+    : device_index(index), max_frames(max_frames_), is_image(is_image_) {
   TRACE_EVENT(
       "decoding",
       "CUDABuffer2DPitch::CUDABuffer2DPitch",

@@ -251,7 +251,9 @@ CPUBufferPtr convert_nv12_uv(const std::vector<AVFrame*>& frames) {
 }
 
 #ifdef SPDL_USE_CUDA
-CUDABufferPtr convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
+CUDABufferPtr convert_nv12_cuda(
+    const std::vector<AVFrame*>& frames,
+    int device_index) {
   size_t h = frames[0]->height, w = frames[0]->width;
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
@@ -264,7 +266,7 @@ CUDABufferPtr convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
   XLOG(DBG9) << "CUstream: " << cuda_device_ctx->stream;
 
   XLOG(DBG) << "creating cuda buffer";
-  auto buf = cuda_buffer({frames.size(), 1, h + h2, w}, stream);
+  auto buf = cuda_buffer({frames.size(), 1, h + h2, w}, stream, device_index);
   uint8_t* dst = static_cast<uint8_t*>(buf->data());
   for (const auto& f : frames) {
     // Y
@@ -301,7 +303,8 @@ CUDABufferPtr convert_nv12_cuda(const std::vector<AVFrame*>& frames) {
 
 CUDABufferPtr convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
+    const std::optional<int>& plane_index,
+    int cuda_device_index) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
@@ -313,12 +316,12 @@ CUDABufferPtr convert_video_frames_cuda(
   auto sw_pix_fmt = frames_ctx->sw_format;
   switch (sw_pix_fmt) {
     case AV_PIX_FMT_NV12:
-      if (index) {
+      if (plane_index) {
         SPDL_FAIL(fmt::format(
             "Selecting a plane from CUDA frame ({}) is not supported.",
             av_get_pix_fmt_name(sw_pix_fmt)));
       }
-      return convert_nv12_cuda(frames);
+      return convert_nv12_cuda(frames, cuda_device_index);
     default:
       SPDL_FAIL(fmt::format(
           "CUDA frame ({}) is not supported.",

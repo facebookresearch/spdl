@@ -90,6 +90,11 @@ class FFmpegFrames {
 
  public:
   FFmpegFrames(uint64_t id, Rational time_base);
+
+  FFmpegFrames(
+      uint64_t id,
+      Rational time_base,
+      std::optional<int> cuda_device_index) requires(_IS_VIDEO || _IS_IMAGE);
   ///
   /// No copy constructor
   FFmpegFrames(const FFmpegFrames&) = delete;
@@ -105,6 +110,9 @@ class FFmpegFrames {
   ///
   /// Destructor releases ``AVFrame`` resources
   ~FFmpegFrames();
+
+  ///
+  std::optional<int> cuda_device_index = std::nullopt;
 
   ///
   /// Get the ID used for tracing.

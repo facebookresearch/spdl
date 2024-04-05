@@ -45,11 +45,8 @@ namespace spdl::core::detail {
 // TODO: Test if this works if there is a context already created by others
 CUcontext get_cucontext(CUdevice device);
 
-// Get the index of cuda device from allocated pointer
-CUdevice get_cuda_device_index(CUdeviceptr ptr);
-
-// Set the CUDA context to what the given device pointer belongs to
-void set_current_cuda_context(CUdeviceptr ptr);
+// Set the current context to the primary context of the given device
+void set_cuda_primary_context(int device_index);
 
 // Initialize CUDA driver
 void init_cuda();

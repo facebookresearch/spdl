@@ -30,6 +30,18 @@ FFmpegFrames<media_type>::FFmpegFrames(uint64_t id_, Rational time_base_)
 }
 
 template <MediaType media_type>
+FFmpegFrames<media_type>::FFmpegFrames(
+    uint64_t id_,
+    Rational time_base_,
+    std::optional<int> cuda_device) requires(_IS_VIDEO || _IS_IMAGE)
+    : id(id_), time_base(time_base_), cuda_device_index(cuda_device) {
+  TRACE_EVENT(
+      "decoding",
+      "FFmpegFrames::FFmpegFrames",
+      perfetto::Flow::ProcessScoped(id));
+}
+
+template <MediaType media_type>
 FFmpegFrames<media_type>::FFmpegFrames(FFmpegFrames&& other) noexcept {
   *this = std::move(other);
 }

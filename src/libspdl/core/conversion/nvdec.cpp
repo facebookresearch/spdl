@@ -68,6 +68,7 @@ void check_consistency(
   }
   auto& f0 = frames[0]->get_frames_ref();
   auto pix_fmt = static_cast<AVPixelFormat>(f0->media_format);
+  int device_index = f0->buffer->device_index;
   auto shape = f0->buffer->get_shape();
   for (auto& frm : frames) {
     auto& f = frm->get_frames_ref();
@@ -78,6 +79,10 @@ void check_consistency(
     if (static_cast<AVPixelFormat>(f->media_format) != pix_fmt) {
       SPDL_FAIL(fmt::format(
           "Cannot convert the frames as the frames do not have the same pixel format."));
+    }
+    if (device_index != f->buffer->device_index) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frames as the frames are not on the same device index."));
     }
   }
 }
@@ -94,8 +99,9 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
   check_consistency(batch_frames);
   auto& buf0 = batch_frames[0]->get_frames_ref()->buffer;
 
-  detail::set_current_cuda_context(buf0->p);
-  auto ret = std::make_shared<CUDABuffer2DPitch>(batch_frames.size());
+  detail::set_cuda_primary_context(buf0->device_index);
+  auto ret = std::make_shared<CUDABuffer2DPitch>(
+      buf0->device_index, batch_frames.size());
   ret->allocate(buf0->c, buf0->h, buf0->w, buf0->bpp, buf0->channel_last);
 
   cudaStream_t stream = 0;

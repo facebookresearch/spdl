@@ -39,14 +39,6 @@ void create_cuda_context(int index, bool use_primary_context) {
   detail::create_cuda_context(index, use_primary_context);
 }
 
-int get_cuda_device_index(unsigned long long ptr) {
-#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVDEC)
-  return detail::get_cuda_device_index(ptr);
-#else
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#endif
-}
-
 namespace {
 folly::Init* FOLLY_INIT = nullptr;
 

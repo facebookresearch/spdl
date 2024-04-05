@@ -53,7 +53,9 @@ void check_consistency(const std::vector<AVFrame*>& frames) requires(
 template <MediaType media_type, bool cpu_only>
 BufferPtr convert_video(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
+    const std::optional<int>& plane_index,
+    const std::optional<int>&
+        cuda_device_index) requires(media_type != MediaType::Audio) {
   check_consistency<media_type>(frames);
   bool is_cuda =
       static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
@@ -61,9 +63,14 @@ BufferPtr convert_video(
     if constexpr (cpu_only) {
       SPDL_FAIL("The input frames are not CPU frames.");
     }
-    return detail::convert_video_frames_cuda(frames, index);
+    if (!cuda_device_index) {
+      SPDL_FAIL_INTERNAL(
+          "CUDA frames are found, but cuda device index is not set.");
+    }
+    return detail::convert_video_frames_cuda(
+        frames, plane_index, cuda_device_index.value());
   }
-  auto buf = detail::convert_video_frames_cpu(frames, index);
+  auto buf = detail::convert_video_frames_cpu(frames, plane_index);
   if constexpr (media_type == MediaType::Image) {
     buf->shape.erase(buf->shape.begin()); // Trim the first dim
   }
@@ -74,13 +81,15 @@ BufferPtr convert_video(
 template <MediaType media_type, bool cpu_only>
 BufferPtr convert_vision_frames(
     const FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index) requires(media_type != MediaType::Audio) {
+    const std::optional<int>&
+        plane_index) requires(media_type != MediaType::Audio) {
   TRACE_EVENT(
       "decoding",
       "core::convert_vision_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
+  auto& frames_ref = frames->get_frames_ref();
   return convert_video<media_type, cpu_only>(
-      frames->get_frames_ref()->get_frames(), index);
+      frames_ref->get_frames(), plane_index, frames_ref->cuda_device_index);
 }
 
 template BufferPtr convert_vision_frames<MediaType::Video, true>(
@@ -124,7 +133,10 @@ BufferPtr convert_batch_image_frames(
     const std::vector<FFmpegImageFramesWrapperPtr>& batch,
     const std::optional<int>& index) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
-  return convert_video<MediaType::Video, false>(merge_frames(batch), index);
+  return convert_video<MediaType::Video, false>(
+      merge_frames(batch),
+      index,
+      batch[0]->get_frames_ref()->cuda_device_index);
 }
 
 template BufferPtr convert_batch_image_frames<true>(

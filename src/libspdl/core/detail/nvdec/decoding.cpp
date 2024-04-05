@@ -57,7 +57,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
       packets->id,
       pix_fmt ? av_get_pix_fmt(pix_fmt.value().c_str()) : codecpar->format);
   frames->buffer = std::make_shared<CUDABuffer2DPitch>(
-      num_packets, media_type == MediaType::Image);
+      cuda_device_index, num_packets, media_type == MediaType::Image);
 
   if (decoding_ongoing) {
     // When the previous decoding ended with an error, if the new input data is
