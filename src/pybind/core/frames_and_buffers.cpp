@@ -166,8 +166,9 @@ void register_frames_and_buffers(py::module& m) {
           }))
       .def_property_readonly("is_cuda", [](const CUDABuffer&) { return true; })
       .def_property_readonly(
-          "device_index",
-          [](const CUDABuffer& self) { return self.device_index; })
+          "device_index", IF_CUDABUFFER_ENABLED([](const CUDABuffer& self) {
+            return self.device_index;
+          }))
       .def_property_readonly(
           "__cuda_array_interface__",
           IF_CUDABUFFER_ENABLED(
