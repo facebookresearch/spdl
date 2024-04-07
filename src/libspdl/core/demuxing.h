@@ -20,8 +20,7 @@ namespace spdl::core {
 /// Demux audio or video from source URI
 template <MediaType media_type>
 FuturePtr async_demux(
-    std::function<void(std::optional<PacketsWrapperPtr<media_type>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<media_type>)> set_result,
     std::function<void(std::string)> notify_exception,
     const std::string& uri,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -35,8 +34,7 @@ FuturePtr async_demux(
 /// returned Future is destroyed.
 template <MediaType media_type>
 FuturePtr async_demux_bytes(
-    std::function<void(std::optional<PacketsWrapperPtr<media_type>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<media_type>)> set_result,
     std::function<void(std::string)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,

@@ -15,7 +15,7 @@ namespace spdl::core {
 void register_demuxing(py::module& m) {
   m.def(
       "async_demux_audio",
-      [](std::function<void(std::optional<AudioPacketsWrapperPtr>)> set_result,
+      [](std::function<void(AudioPacketsWrapperPtr)> set_result,
          std::function<void(std::string)> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
@@ -48,7 +48,7 @@ void register_demuxing(py::module& m) {
 
   m.def(
       "async_demux_audio_bytes",
-      [](std::function<void(std::optional<AudioPacketsWrapperPtr>)> set_result,
+      [](std::function<void(AudioPacketsWrapperPtr)> set_result,
          std::function<void(std::string)> notify_exception,
          py::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
@@ -79,7 +79,7 @@ void register_demuxing(py::module& m) {
 
   m.def(
       "async_demux_video",
-      [](std::function<void(std::optional<VideoPacketsWrapperPtr>)> set_result,
+      [](std::function<void(VideoPacketsWrapperPtr)> set_result,
          std::function<void(std::string)> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
@@ -110,7 +110,7 @@ void register_demuxing(py::module& m) {
 
   m.def(
       "async_demux_video_bytes",
-      [](std::function<void(std::optional<VideoPacketsWrapperPtr>)> set_result,
+      [](std::function<void(VideoPacketsWrapperPtr)> set_result,
          std::function<void(std::string)> notify_exception,
          py::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,

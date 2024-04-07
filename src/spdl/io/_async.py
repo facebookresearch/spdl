@@ -73,23 +73,22 @@ async def _async_task(func, *args, **kwargs):
     sf.rethrow()
 
 
-async def _async_gen(func, *args, **kwargs):
-    future = concurrent.futures.Future()
-    assert future.set_running_or_notify_cancel()
-
-    futures = [future]
+async def _async_gen(func, num_items, *args, **kwargs):
+    futures = [concurrent.futures.Future()]
 
     def set_result(val):
         futures[-1].set_result(val)
 
-        if val is not None:
+        nonlocal num_items
+        if num_items := num_items - 1:
             future = concurrent.futures.Future()
-            assert future.set_running_or_notify_cancel()
+            future.set_running_or_notify_cancel()
             futures.append(future)
 
     def notify_exception(msg: str):
         futures[-1].set_exception(_AsyncOpFailed(msg))
 
+    futures[0].set_running_or_notify_cancel()
     sf = func(set_result, notify_exception, *args, **kwargs)
     while futures:
         try:
@@ -164,7 +163,7 @@ def async_streaming_demux(
     """
     name = _get_demux_func(media_type, src)
     func = getattr(_libspdl, name)
-    return _async_gen(func, src, timestamps, **kwargs)
+    return _async_gen(func, len(timestamps), src, timestamps, **kwargs)
 
 
 def _async_demux_image(src, **kwargs):
