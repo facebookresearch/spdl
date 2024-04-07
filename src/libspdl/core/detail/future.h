@@ -64,7 +64,7 @@ FuturePtr execute_task_with_callback(
 template <typename ValueType>
 FuturePtr execute_generator_with_callback(
     folly::coro::AsyncGenerator<ValueType>&& generator,
-    std::function<void(std::optional<ValueType>)> set_result,
+    std::function<void(ValueType)> set_result,
     std::function<void(std::string)> notify_exception,
     folly::Executor::KeepAlive<> executor) {
   using folly::coro::AsyncGenerator;
@@ -78,7 +78,6 @@ FuturePtr execute_generator_with_callback(
           while (auto val = co_await gen.next()) {
             set_result({*val});
           }
-          set_result(std::nullopt);
           co_return;
         } catch (folly::OperationCancelled& e) {
           // Do not log cancellation exceptions.

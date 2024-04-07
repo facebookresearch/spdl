@@ -9,8 +9,7 @@ namespace spdl::core {
 /// Demux audio or video
 template <MediaType media_type>
 FuturePtr async_demux(
-    std::function<void(std::optional<PacketsWrapperPtr<media_type>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<media_type>)> set_result,
     std::function<void(std::string)> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -33,8 +32,7 @@ FuturePtr async_demux(
 }
 
 template FuturePtr async_demux(
-    std::function<void(std::optional<PacketsWrapperPtr<MediaType::Audio>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<MediaType::Audio>)> set_result,
     std::function<void(std::string)> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -43,8 +41,7 @@ template FuturePtr async_demux(
     ThreadPoolExecutorPtr demux_executor);
 
 template FuturePtr async_demux(
-    std::function<void(std::optional<PacketsWrapperPtr<MediaType::Video>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<MediaType::Video>)> set_result,
     std::function<void(std::string)> notify_exception,
     const std::string& src,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -54,8 +51,7 @@ template FuturePtr async_demux(
 
 template <MediaType media_type>
 FuturePtr async_demux_bytes(
-    std::function<void(std::optional<PacketsWrapperPtr<media_type>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<media_type>)> set_result,
     std::function<void(std::string)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -84,8 +80,7 @@ FuturePtr async_demux_bytes(
 }
 
 template FuturePtr async_demux_bytes(
-    std::function<void(std::optional<PacketsWrapperPtr<MediaType::Video>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<MediaType::Video>)> set_result,
     std::function<void(std::string)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
@@ -94,8 +89,7 @@ template FuturePtr async_demux_bytes(
     bool _zero_clear);
 
 template FuturePtr async_demux_bytes(
-    std::function<void(std::optional<PacketsWrapperPtr<MediaType::Audio>>)>
-        set_result,
+    std::function<void(PacketsWrapperPtr<MediaType::Audio>)> set_result,
     std::function<void(std::string)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
