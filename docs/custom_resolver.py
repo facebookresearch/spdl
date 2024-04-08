@@ -1,10 +1,6 @@
 import logging
 
-from griffe import (
-    Extension,
-    get_logger,
-    Module,
-)
+from griffe import Extension, get_logger, Module
 from griffe.dataclasses import Alias
 
 logger = get_logger(__name__)
@@ -42,6 +38,7 @@ class SPDLDynamicResolver(Extension):
 
 def _test():
     import logging
+
     import griffe
 
     logging.basicConfig(level=logging.DEBUG, format="[%(funcName)20s()] %(message)s")
