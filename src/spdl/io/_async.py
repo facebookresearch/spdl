@@ -1,5 +1,4 @@
 import asyncio
-import concurrent.futures
 from typing import List, Optional, Tuple, Union
 
 from spdl.lib import _libspdl
@@ -13,19 +12,13 @@ __all__ = [
     "async_convert_frames",
     "async_decode_packets",
     "async_decode_packets_nvdec",
-    "async_streaming_demux",
     "async_demux",
+    "async_streaming_demux",
 ]
 
 
 def _async_sleep(time: int):
     return _async_task(_libspdl.async_sleep, time)
-
-
-# Exception class used to signal the failure of C++ op to Python.
-# Not exposed to user code.
-class _AsyncOpFailed(RuntimeError):
-    pass
 
 
 # The time it waits before rethrowing the async exception.
@@ -48,77 +41,51 @@ _EXCEPTION_BACKOFF = 1.00
 
 
 async def _async_task(func, *args, **kwargs):
-    future = concurrent.futures.Future()
-    assert future.set_running_or_notify_cancel()
-
-    def nofify_exception(msg: str):
-        future.set_exception(_AsyncOpFailed(msg))
-
-    sf = func(future.set_result, nofify_exception, *args, **kwargs)
+    future = _common._futurize_task(func, *args, **kwargs)
 
     try:
         return await asyncio.futures.wrap_future(future)
     # Handle the case where the async op failed
-    except _AsyncOpFailed:
+    except _common._AsyncOpFailed:
         pass
     # Handle the case where unexpected/external thing happens
     except (asyncio.CancelledError, Exception) as e:
-        sf.cancel()
+        future.__spdl_future.cancel()
         # Wait till the cancellation is completed
         try:
             await asyncio.futures.wrap_future(future)
-        except _AsyncOpFailed:
+        except _common._AsyncOpFailed:
             pass
         # Propagate the error.
         raise e
 
     await asyncio.sleep(_EXCEPTION_BACKOFF)
-    sf.rethrow()
+    future.__spdl_future.rethrow()
 
 
 async def _async_gen(func, num_items, *args, **kwargs):
-    futures = [concurrent.futures.Future()]
+    futures = _common._futurize_generator(func, num_items, *args, **kwargs)
 
-    def set_result(val):
-        futures[-1].set_result(val)
-
-        nonlocal num_items
-        if num_items := num_items - 1:
-            future = concurrent.futures.Future()
-            future.set_running_or_notify_cancel()
-            futures.append(future)
-
-    def notify_exception(msg: str):
-        futures[-1].set_exception(_AsyncOpFailed(msg))
-
-    futures[0].set_running_or_notify_cancel()
-    sf = func(set_result, notify_exception, *args, **kwargs)
-    while futures:
+    for future in futures:
+        await asyncio.sleep(0)
         try:
-            val = await asyncio.futures.wrap_future(futures[0])
+            yield await asyncio.futures.wrap_future(future)
         # Handle the case where the async op failed
-        except _AsyncOpFailed:
+        except _common._AsyncOpFailed:
             break
         # Handle the case where unexpected/external thing happens
         except (asyncio.CancelledError, Exception) as e:
-            sf.cancel()
+            future.__spdl_future.cancel()
             # Wait till the cancellation is completed
             try:
-                await asyncio.futures.wrap_future(futures[0])
-            except _AsyncOpFailed:
+                await asyncio.futures.wrap_future(future)
+            except _common._AsyncOpFailed:
                 pass
             # Propagate the error.
             raise e
-        else:
-            if val is None:
-                return
-            yield val
-            futures.pop(0)
-        finally:
-            await asyncio.sleep(0)
 
     await asyncio.sleep(_EXCEPTION_BACKOFF)
-    sf.rethrow()
+    future.__spdl_future.rethrow()
 
 
 def async_streaming_demux(
@@ -180,21 +147,18 @@ def async_demux(
             By default the job is peformed in demuxer thread pool.
 
     Returns:
-        (Awaitable[ImagePackets]): Awaitable which returns an ImagePackets object.
+        (Awaitable[Packets]): Awaitable which returns an audio/video/image Packets object.
     """
     if media_type == "image":
         func = _common._get_demux_func(media_type, src)
         return _async_task(func, src, **kwargs)
 
-    if timestamp is None:
-        timestamps = [(0.0, float("inf"))]
-    else:
-        timestamps = [timestamp]
+    timestamps = [(0.0, float("inf")) if timestamp is None else timestamp]
     return _fetch_one(async_streaming_demux(media_type, src, timestamps, **kwargs))
 
 
 def async_decode_packets(packets, **kwargs):
-    """Decode the packets to frames.
+    """Decode packets.
 
     Args:
         packets (Packets): Packets object.
@@ -235,7 +199,7 @@ def async_decode_packets(packets, **kwargs):
 
 
 def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
-    """Decode the packets to frames with NVDEC.
+    """Decode packets with NVDEC.
 
     Args:
         packets (Packet): Packets object.
@@ -324,5 +288,5 @@ def async_convert_frames(frames, executor=None):
 
             - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
     """
-    func = _common._get_conversion_name(frames)
+    func = _common._get_conversion_func(frames)
     return _async_task(func, frames, index=None, executor=executor)

@@ -1,3 +1,5 @@
+import concurrent.futures
+
 from spdl.lib import _libspdl
 
 
@@ -66,7 +68,7 @@ def _get_cpu_conversion_func(frames):
     return getattr(_libspdl, name)
 
 
-def _get_conversion_name(frames):
+def _get_conversion_func(frames):
     match t := type(frames):
         case _libspdl.FFmpegAudioFrames:
             name = "async_convert_audio"
@@ -90,3 +92,51 @@ def _get_conversion_name(frames):
                     f"Unexpected type: {t}. When the container type is list, all frames must be either FFmpegImageFrames or NvDecImageFrames."
                 )
     return getattr(_libspdl, name)
+
+
+# Exception class used to signal the failure of C++ op to Python.
+# Not exposed to user code.
+class _AsyncOpFailed(RuntimeError):
+    pass
+
+
+def _futurize_task(func, *args, **kwargs):
+    future = concurrent.futures.Future()
+
+    def nofify_exception(msg: str):
+        future.set_exception(_AsyncOpFailed(msg))
+
+    future.set_running_or_notify_cancel()
+    sf = func(future.set_result, nofify_exception, *args, **kwargs)
+    future.__spdl_future = sf
+    return future
+
+
+def _futurize_generator(func, num_items, *args, **kwargs):
+    futures = [concurrent.futures.Future() for _ in range(num_items)]
+
+    index = 0
+
+    def set_result(val):
+        nonlocal index
+        futures[index].set_result(val)
+        index += 1
+
+        if index < num_items:
+            futures[index].set_running_or_notify_cancel()
+
+    def nofify_exception(msg: str):
+        nonlocal index
+        futures[index].set_exception(RuntimeError(msg))
+        index += 1
+
+        for fut in futures[index:]:
+            fut.cancel()
+
+    futures[index].set_running_or_notify_cancel()
+    sf = func(set_result, nofify_exception, *args, **kwargs)
+
+    for future in futures:
+        future.__spdl_future = sf
+
+    return futures
