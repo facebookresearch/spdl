@@ -12,7 +12,7 @@ def decode_video_h264_cuvid(get_sample):
 
     def decode_func(cuda_device_index):
         async def _test(cuda_device_index):
-            packets = await spdl.io.async_demux("video", sample.path)
+            packets = await spdl.io.async_demux_media("video", sample.path)
             frames = await spdl.io.async_decode_packets(
                 packets, cuda_device_index=cuda_device_index, decoder="h264_cuvid"
             )

@@ -30,7 +30,7 @@ def test_failure():
             pass
 
     async def _test_image():
-        await spdl.io.async_demux("image", "FOO.jpg")
+        await spdl.io.async_demux_media("image", "FOO.jpg")
 
     with pytest.raises(RuntimeError, match="Failed to open the input"):
         asyncio.run(_test_audio())
@@ -193,7 +193,7 @@ def test_decode_video_clips_num_frames(get_sample):
 
 
 async def _decode_image(path):
-    packets = await spdl.io.async_demux("image", path)
+    packets = await spdl.io.async_demux_media("image", path)
     print(packets)
     frames = await spdl.io.async_decode_packets(packets)
     print(frames)
@@ -341,7 +341,7 @@ def test_async_convert_video_cpu(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test(src):
-        packets = await spdl.io.async_demux("video", src)
+        packets = await spdl.io.async_demux_media("video", src)
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)
         array = spdl.io.to_numpy(buffer)
@@ -357,7 +357,7 @@ def test_async_decode_video_bytes(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _decode(src):
-        packets = await spdl.io.async_demux("video", src)
+        packets = await spdl.io.async_demux_media("video", src)
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)
         return spdl.io.to_numpy(buffer)
@@ -365,7 +365,7 @@ def test_async_decode_video_bytes(get_sample):
     async def _decode_bytes(data):
         assert data
         assert data != b"\x00" * len(data)
-        packets = await spdl.io.async_demux("video", data, _zero_clear=True)
+        packets = await spdl.io.async_demux_media("video", data, _zero_clear=True)
         assert data == b"\x00" * len(data)
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)
@@ -404,14 +404,14 @@ def test_demux_image_bytes(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _decode(src):
-        packets = await spdl.io.async_demux("image", src)
+        packets = await spdl.io.async_demux_media("image", src)
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)
         return spdl.io.to_numpy(buffer)
 
     async def _decode_bytes(data):
         assert data != b"\x00" * len(data)
-        packets = await spdl.io.async_demux("image", data, _zero_clear=True)
+        packets = await spdl.io.async_demux_media("image", data, _zero_clear=True)
         assert data == b"\x00" * len(data)
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)

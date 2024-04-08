@@ -12,7 +12,7 @@ __all__ = [
     "async_convert_frames",
     "async_decode_packets",
     "async_decode_packets_nvdec",
-    "async_demux",
+    "async_demux_media",
     "async_streaming_demux",
 ]
 
@@ -124,7 +124,7 @@ async def _fetch_one(gen):
         return packets
 
 
-def async_demux(
+def async_demux_media(
     media_type: str,
     src: Union[str, bytes],
     timestamp: Optional[Tuple[float, float]] = None,
@@ -136,6 +136,7 @@ def async_demux(
         media_type: ``"audio"``, ``"video"`` or ``"image"``.
         src (str or bytes): Source identifier, such as path or URL.
         timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
+            If omitted, the entire data are demuxed.
 
     Other args:
         format (str): *Optional:* Overwrite the format detection.

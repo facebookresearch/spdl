@@ -32,7 +32,7 @@ the execution status and make the tasks are executed efficiently.
 ```python
 async def load_image(src):
     # Demux image
-    packets = await spdl.io.async_demux("image", src):
+    packets = await spdl.io.async_demux_media("image", src):
 
     # Decode packets into frames
     frames = await spdl.io.async_decode_packets(packets)
@@ -54,7 +54,7 @@ import spdl.io
 # Demux the first 1 second, then next 1 second of the audio.
 src, ts = "foo.wav", [(0, 1), (1, 2)]
 
-# Use `spdl.io.async_demux_video` for demuxing video
+# Use `spdl.io.async_streaming_demux("video", ...)` for demuxing video
 async for packets in spdl.io.async_streaming_demux("audio", "foo.wav", ts):
 
     # The rest is the same as image decoding
@@ -72,7 +72,7 @@ import spdl.io
 
 # Define a coroutine that decodes a single image into frames
 async def decode_image(src, width=112, height=112, pix_fmt="rgb24"):
-    packets = await spdl.io.async_demux("image", src):
+    packets = await spdl.io.async_demux_media("image", src):
     return await spdl.io.async_decode_packets(
         packets, width=width, height=height, pix_fmt=pix_fmt)
 
@@ -94,7 +94,7 @@ array = await batch_decode_image(["foo.jpg", "bar.png"])
       show_source: false
       members:
       - async_streaming_demux
-      - async_demux
+      - async_demux_media
 
 ## Decoding
 
