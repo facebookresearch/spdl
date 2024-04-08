@@ -4,6 +4,9 @@ from typing import List, Optional, Tuple, Union
 
 from spdl.lib import _libspdl
 
+from . import _common
+
+
 __all__ = [
     "_async_sleep",
     "async_convert_frames_cpu",
@@ -118,22 +121,6 @@ async def _async_gen(func, num_items, *args, **kwargs):
     sf.rethrow()
 
 
-def _get_demux_func(media_type, src):
-    match media_type:
-        case "audio":
-            if isinstance(src, bytes):
-                return "async_demux_audio_bytes"
-            else:
-                return "async_demux_audio"
-        case "video":
-            if isinstance(src, bytes):
-                return "async_demux_video_bytes"
-            else:
-                return "async_demux_video"
-        case _:
-            raise ValueError(f"Unexpected media type: {media_type}.")
-
-
 def async_streaming_demux(
     media_type: str,
     src: Union[str, bytes],
@@ -161,17 +148,8 @@ def async_streaming_demux(
     Returns:
         (AsyncGenerator[Packets]): Audio or video Packets generator.
     """
-    name = _get_demux_func(media_type, src)
-    func = getattr(_libspdl, name)
+    func = _common._get_demux_func(media_type, src)
     return _async_gen(func, len(timestamps), src, timestamps, **kwargs)
-
-
-def _async_demux_image(src, **kwargs):
-    func = getattr(
-        _libspdl,
-        "async_demux_image_bytes" if isinstance(src, bytes) else "async_demux_image",
-    )
-    return _async_task(func, src, **kwargs)
 
 
 async def _fetch_one(gen):
@@ -205,25 +183,14 @@ def async_demux(
         (Awaitable[ImagePackets]): Awaitable which returns an ImagePackets object.
     """
     if media_type == "image":
-        return _async_demux_image(src, **kwargs)
+        func = _common._get_demux_func(media_type, src)
+        return _async_task(func, src, **kwargs)
 
     if timestamp is None:
         timestamps = [(0.0, float("inf"))]
     else:
         timestamps = [timestamp]
     return _fetch_one(async_streaming_demux(media_type, src, timestamps, **kwargs))
-
-
-def _get_decoding_name(packets):
-    match t := type(packets):
-        case _libspdl.AudioPackets:
-            return "async_decode_audio"
-        case _libspdl.VideoPackets:
-            return "async_decode_video"
-        case _libspdl.ImagePackets:
-            return "async_decode_image"
-        case _:
-            raise TypeError(f"Unexpected type: {t}.")
 
 
 def async_decode_packets(packets, **kwargs):
@@ -263,18 +230,8 @@ def async_decode_packets(packets, **kwargs):
 
             - ``ImagePackets`` -> ``ImageFFmpegFrames``
     """
-    func = getattr(_libspdl, _get_decoding_name(packets))
+    func = _common._get_decoding_func(packets)
     return _async_task(func, packets, **kwargs)
-
-
-def _get_nvdec_decoding_name(packets):
-    match t := type(packets):
-        case _libspdl.VideoPackets:
-            return "async_decode_video_nvdec"
-        case _libspdl.ImagePackets:
-            return "async_decode_image_nvdec"
-        case _:
-            raise TypeError(f"Unexpected type: {t}.")
 
 
 def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
@@ -302,23 +259,8 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
 
             - ``ImagePackets`` -> ``ImageNvDecFrames``
     """
-    func = getattr(_libspdl, _get_nvdec_decoding_name(packets))
+    func = _common._get_nvdec_decoding_func(packets)
     return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
-
-
-def _get_cpu_conversion_name(frames):
-    match t := type(frames):
-        case _libspdl.FFmpegAudioFrames:
-            return "async_convert_audio_cpu"
-        case _libspdl.FFmpegVideoFrames:
-            return "async_convert_video_cpu"
-        case _libspdl.FFmpegImageFrames:
-            return "async_convert_image_cpu"
-        case _:
-            if isinstance(frames, list):
-                if all(isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
-                    return "async_convert_batch_image_cpu"
-            raise TypeError(f"Unexpected type: {t}.")
 
 
 def async_convert_frames_cpu(frames, executor=None):
@@ -348,29 +290,8 @@ def async_convert_frames_cpu(frames, executor=None):
 
 
     """
-    func = getattr(_libspdl, _get_cpu_conversion_name(frames))
+    func = _common._get_cpu_conversion_func(frames)
     return _async_task(func, frames, index=None, executor=executor)
-
-
-def _get_conversion_name(frames):
-    match t := type(frames):
-        case _libspdl.FFmpegAudioFrames:
-            return "async_convert_audio"
-        case _libspdl.FFmpegVideoFrames:
-            return "async_convert_video"
-        case _libspdl.FFmpegImageFrames:
-            return "async_convert_image"
-        case _libspdl.NvDecVideoFrames:
-            return "async_convert_video_nvdec"
-        case _libspdl.NvDecImageFrames:
-            return "async_convert_image_nvdec"
-        case _:
-            if isinstance(frames, list):
-                if all(isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
-                    return "async_convert_batch_image"
-                if all(isinstance(f, _libspdl.NvDecImageFrames) for f in frames):
-                    return "async_convert_batch_image_nvdec"
-            raise TypeError(f"Unexpected type: {t}.")
 
 
 def async_convert_frames(frames, executor=None):
@@ -403,5 +324,5 @@ def async_convert_frames(frames, executor=None):
 
             - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
     """
-    func = getattr(_libspdl, _get_conversion_name(frames))
+    func = _common._get_conversion_name(frames)
     return _async_task(func, frames, index=None, executor=executor)
