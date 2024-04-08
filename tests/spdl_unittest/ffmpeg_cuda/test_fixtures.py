@@ -11,7 +11,6 @@ def decode_video_h264_cuvid(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     def decode_func(cuda_device_index):
-
         async def _test(cuda_device_index):
             packets = await spdl.io.async_demux("video", sample.path)
             frames = await spdl.io.async_decode_packets(
