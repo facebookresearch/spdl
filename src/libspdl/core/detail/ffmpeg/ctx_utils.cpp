@@ -394,11 +394,6 @@ void configure_codec_context(
       "Failed to set CodecContext parameter.");
   XLOG(DBG9) << "Codec: " << codec_ctx->codec->name;
 
-  if (!codec_ctx->channel_layout) {
-    codec_ctx->channel_layout =
-        av_get_default_channel_layout(codec_ctx->channels);
-  }
-
   if (cuda_device_index >= 0) {
 #ifndef SPDL_USE_CUDA
     SPDL_FAIL("SPDL is not compiled with CUDA support.");

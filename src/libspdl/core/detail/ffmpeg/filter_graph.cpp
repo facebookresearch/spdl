@@ -61,14 +61,14 @@ std::string get_abuffer_arg(
     AVRational time_base,
     int sample_rate,
     const char* sample_fmt_name,
-    uint64_t channel_layout) {
+    int nb_channels) {
   return fmt::format(
-      "time_base={}/{}:sample_rate={}:sample_fmt={}:channel_layout={:x}",
+      "time_base={}/{}:sample_rate={}:sample_fmt={}:channel_layout={}c",
       time_base.num,
       time_base.den,
       sample_rate,
       sample_fmt_name,
-      channel_layout);
+      nb_channels);
 }
 
 /// @brief Create a new filter context given its description and options.
@@ -161,11 +161,17 @@ AVFilterGraphPtr get_audio_filter(
     TRACE_EVENT("decoding", "avfilter_get_by_name(abuffersink)");
     sink = avfilter_get_by_name("abuffersink");
   }
+
   auto arg = get_abuffer_arg(
       codec_ctx->pkt_timebase,
       codec_ctx->sample_rate,
       av_get_sample_fmt_name(codec_ctx->sample_fmt),
-      codec_ctx->channel_layout);
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+      codec_ctx->ch_layout.nb_channels
+#else
+      codec_ctx->channels
+#endif
+  );
   return get_filter(filter_description.c_str(), src, arg.c_str(), sink);
 }
 
