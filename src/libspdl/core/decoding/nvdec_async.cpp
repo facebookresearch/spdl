@@ -25,16 +25,18 @@ FuturePtr async_decode_nvdec(
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr executor) {
 #ifndef SPDL_USE_NVDEC
-  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+  auto task = folly::coro::co_invoke(
+      []() -> folly::coro::Task<NvDecFramesWrapperPtr<media_type>> {
+        SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+      });
 #else
-  detail::validate_nvdec_params(cuda_device_index, crop, width, height);
-  detail::init_cuda();
-
   ThreadPoolExecutorPtr e;
   auto exe = detail::get_demux_executor_high_prio(e);
   auto task = folly::coro::co_invoke(
       [=](PacketsPtr<media_type>&& pkts)
           -> folly::coro::Task<NvDecFramesWrapperPtr<media_type>> {
+        detail::validate_nvdec_params(cuda_device_index, crop, width, height);
+        detail::init_cuda();
         if constexpr (media_type == MediaType::Video) {
           pkts = co_await detail::apply_bsf(std::move(pkts)).scheduleOn(exe);
         }
@@ -43,13 +45,13 @@ FuturePtr async_decode_nvdec(
         co_return wrap<media_type, NvDecFramesPtr>(std::move(frames));
       },
       packets->unwrap());
+#endif
 
   return detail::execute_task_with_callback<NvDecFramesWrapperPtr<media_type>>(
       std::move(task),
       std::move(set_result),
       std::move(notify_exception),
       detail::get_decode_executor(executor));
-#endif
 }
 
 template FuturePtr async_decode_nvdec(
