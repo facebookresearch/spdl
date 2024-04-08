@@ -30,7 +30,13 @@ CPUBufferPtr convert_frames(
     const std::optional<int>& index) {
   size_t num_frames = frames->get_num_frames();
   const auto& fs = frames->get_frames();
-  size_t num_channels = fs[0]->channels;
+  size_t num_channels =
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+      fs[0]->ch_layout.nb_channels
+#else
+      fs[0]->channels
+#endif
+      ;
 
   if (index) {
     auto c = index.value();

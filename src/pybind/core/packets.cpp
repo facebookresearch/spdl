@@ -29,7 +29,14 @@ std::string get_codec_info(AVCodecParameters* codecpar) {
 
   if constexpr (media_type == MediaType::Audio) {
     parts.emplace_back(fmt::format("sample_rate: {}", codecpar->sample_rate));
-    parts.emplace_back(fmt::format("num_channels: {}", codecpar->channels));
+    parts.emplace_back(fmt::format(
+        "num_channels: {}",
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+        codecpar->ch_layout.nb_channels
+#else
+        codecpar->channels
+#endif
+        ));
   }
   if constexpr (
       media_type == MediaType::Video || media_type == MediaType::Image) {
