@@ -17,9 +17,11 @@ ext_modules = [
     Extension("spdl.lib.libspdl_ffmpeg4", sources=[]),
     Extension("spdl.lib.libspdl_ffmpeg5", sources=[]),
     Extension("spdl.lib.libspdl_ffmpeg6", sources=[]),
+    Extension("spdl.lib.libspdl_ffmpeg7", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg4", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg5", sources=[]),
     Extension("spdl.lib._spdl_ffmpeg6", sources=[]),
+    Extension("spdl.lib._spdl_ffmpeg7", sources=[]),
 ]
 
 
