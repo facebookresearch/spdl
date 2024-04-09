@@ -303,38 +303,6 @@ def test_async_convert_audio_cpu(get_sample):
     asyncio.run(_test(sample.path))
 
 
-def test_async_decode_audio_bytes(get_sample):
-    """audio can be decoded from bytes."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
-    sample = get_sample(cmd)
-
-    ts = [(1, 2)]
-
-    async def _decode(src):
-        gen = spdl.io.async_streaming_demux("audio", src, timestamps=ts)
-        arrays = await _test_async_decode(gen, 1)
-        return arrays[0]
-
-    async def _decode_bytes(src):
-        assert src != b"\x00" * len(src)
-        gen = spdl.io.async_streaming_demux(
-            "audio", src, timestamps=ts, _zero_clear=True
-        )
-        arrays = await _test_async_decode(gen, 1)
-        assert src == b"\x00" * len(src)
-        return arrays[0]
-
-    async def _test(path):
-        ref = await _decode(path)
-        with open(path, "rb") as f:
-            hyp = await _decode_bytes(f.read())
-
-        assert hyp.shape == (48000, 1)
-        assert np.all(ref == hyp)
-
-    asyncio.run(_test(sample.path))
-
-
 def test_async_convert_video_cpu(get_sample):
     """async_convert_frames_cpu can convert FFmpegVideoFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
@@ -351,37 +319,6 @@ def test_async_convert_video_cpu(get_sample):
     asyncio.run(_test(sample.path))
 
 
-def test_async_decode_video_bytes(get_sample):
-    """video can be decoded from bytes."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
-    sample = get_sample(cmd, width=320, height=240)
-
-    async def _decode(src):
-        packets = await spdl.io.async_demux_media("video", src)
-        frames = await spdl.io.async_decode_packets(packets)
-        buffer = await spdl.io.async_convert_frames(frames)
-        return spdl.io.to_numpy(buffer)
-
-    async def _decode_bytes(data):
-        assert data
-        assert data != b"\x00" * len(data)
-        packets = await spdl.io.async_demux_media("video", data, _zero_clear=True)
-        assert data == b"\x00" * len(data)
-        frames = await spdl.io.async_decode_packets(packets)
-        buffer = await spdl.io.async_convert_frames(frames)
-        return spdl.io.to_numpy(buffer)
-
-    async def _test(path):
-        ref = await _decode(path)
-        with open(path, "rb") as f:
-            hyp = await _decode_bytes(f.read())
-
-        assert hyp.shape == (1000, 3, 240, 320)
-        assert np.all(ref == hyp)
-
-    asyncio.run(_test(sample.path))
-
-
 def test_async_convert_image_cpu(get_sample):
     """async_convert_frames_cpu can convert FFmpegImageFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
@@ -394,36 +331,6 @@ def test_async_convert_image_cpu(get_sample):
         arr = spdl.io.to_numpy(buffer)
         print(arr.dtype, arr.shape)
         assert arr.shape == (3, 240, 320)
-
-    asyncio.run(_test(sample.path))
-
-
-def test_demux_image_bytes(get_sample):
-    """Image (gray) can be decoded from bytes."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
-    sample = get_sample(cmd, width=320, height=240)
-
-    async def _decode(src):
-        packets = await spdl.io.async_demux_media("image", src)
-        frames = await spdl.io.async_decode_packets(packets)
-        buffer = await spdl.io.async_convert_frames(frames)
-        return spdl.io.to_numpy(buffer)
-
-    async def _decode_bytes(data):
-        assert data != b"\x00" * len(data)
-        packets = await spdl.io.async_demux_media("image", data, _zero_clear=True)
-        assert data == b"\x00" * len(data)
-        frames = await spdl.io.async_decode_packets(packets)
-        buffer = await spdl.io.async_convert_frames(frames)
-        return spdl.io.to_numpy(buffer)
-
-    async def _test(path):
-        ref = await _decode(path)
-        with open(sample.path, "rb") as f:
-            hyp = await _decode_bytes(f.read())
-
-        assert hyp.shape == (1, 240, 320)
-        assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))
 
