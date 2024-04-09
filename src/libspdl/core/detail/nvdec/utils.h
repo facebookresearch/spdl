@@ -15,12 +15,6 @@ extern "C" {
 
 namespace spdl::core::detail {
 
-void validate_nvdec_params(
-    int cuda_device_index,
-    const CropArea& crop,
-    int width,
-    int height);
-
 cudaVideoCodec covert_codec_id(AVCodecID);
 
 void check_support(CUVIDEOFORMAT* fmt, CUVIDDECODECAPS caps);
