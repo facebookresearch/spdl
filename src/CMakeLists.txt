@@ -26,11 +26,7 @@ set(srcs
   libspdl/core/detail/ffmpeg/filter_graph.cpp
   libspdl/core/detail/ffmpeg/wrappers.cpp
   libspdl/core/detail/logging.cpp
-  libspdl/core/detail/result.cpp
   libspdl/core/buffer/cpu.cpp
-  libspdl/core/decoding/audio_visual.cpp
-  libspdl/core/decoding/image.cpp
-  libspdl/core/decoding/nvdec.cpp
   libspdl/core/decoding/nvdec_async.cpp
   libspdl/core/decoding/ffmpeg_async.cpp
   libspdl/core/decoding/sleep.cpp

@@ -9,7 +9,6 @@ set(src
   core/future.cpp
   core/packets.cpp
   core/tracing.cpp
-  core/results.cpp
   core/utils.cpp)
 
 # This adds the library directory to search path

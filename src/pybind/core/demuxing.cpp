@@ -1,6 +1,5 @@
 #include <libspdl/core/adaptor.h>
 #include <libspdl/core/demuxing.h>
-#include <libspdl/core/result.h>
 #include <libspdl/core/types.h>
 #include <libspdl/core/utils.h>
 
