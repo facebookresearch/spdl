@@ -2,9 +2,9 @@
 
 from typing import Any, List
 
-from . import _async, _convert
+from . import _async, _convert, _sync
 
-__all__ = sorted(_convert.__all__ + _async.__all__)
+__all__ = sorted(_convert.__all__ + _async.__all__ + _sync.__all__)
 
 
 def __dir__() -> List[str]:
@@ -17,5 +17,8 @@ def __getattr__(name: str) -> Any:
 
     if name in _async.__all__:
         return getattr(_async, name)
+
+    if name in _sync.__all__:
+        return getattr(_sync, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -12,14 +12,18 @@ Loading media data are consisted of 4 phases.
 The individual functionalities are implemented in C++ with multi-threading, so they can
 run free from Python's GIL contention.
 
-The `spdl.io` module exposes these funtionalities as asynchronous functions, a.k.a coroutines.
-With coroutines, one can execute multiple tasks of different kinds (including the ones from
-other packages) concurrently.
+The `spdl.io` module exposes these funtionalities as asynchronous functions of two types.
+One as coroutines using asyncio and the other as parallel tasks utilizing
+`concurrent.futures.Future`.
 
-You can combine multiple coroutines to create a complex task, and the event loop will monitor
-the execution status and make the tasks are executed efficiently.
+Concurrency based on corourines and asyncio is more flexible. It is easy to compose multiple
+coroutines and create a complex task. You can mix different kinds of coroutines, including
+ones from other packages. However, coroutines are executable only inside of async loop.
 
-## Example:
+Future-based asynchronous functions can be used in regular Python code without async loop,
+however composition of tasks is tricky and less flexible compared to coroutine-based equivalent.
+
+## Examples:
 
 !!! note
 
@@ -29,8 +33,10 @@ the execution status and make the tasks are executed efficiently.
 
 ### Loading an image
 
+* Async IO
+
 ```python
-async def load_image(src):
+async def load_image(src: src):
     # Demux image
     packets = await spdl.io.async_demux_media("image", src):
 
@@ -44,6 +50,130 @@ async def load_image(src):
     return spdl.io.to_numpy(buffer)
 
 array = await load_image("foo.jpg")
+```
+
+* Concurrent Future
+
+The concurrent version of demux/decode/convert functions return an object of
+`concurrent.futures.Future` type. Usually, the client code must call
+`Future.result()` to wait until the result is ready before moving on to the
+next step, but this makes it cumbersome to chain the subsequent operations,
+and makes it difficult to perfom multiple operations concurrently from Python.
+
+So we implemented two helper functions which facilitate chaining the
+concurrent operations.
+
+* ``spdl.io.chain_futures`` can be used to sequentiall execute concurrent operations.
+  It uses the callback of ``Future`` class to invoke the subsequent operations.
+* ``spdl.io.wait_futures`` can be used when the client code need to wait for multiple
+  ``Future`` objects to fullfill before moving onto the next operation.
+
+
+```python
+def load_image(src):
+    # Chain demux, decode and buffer conversion.
+    # The result is `concurrent.futures.Future` object
+    return spdl.io.chain_futures(
+        spdl.io.demux_media("image", src),
+        spdl.io.decode_packets,
+        spdl.io.convert_frames,
+    )
+
+# Kick off the task
+future = load_image(src)
+
+# Wait until the result is ready
+buffer = future.result()
+
+# Convert the buffer into NumPy array.
+array = spdl.io.to_numpy(buffer)
+```
+
+### Loading a batch of images
+
+Loading a batch of images consists of the following steps.
+
+1. Start decoding images.
+2. Wait till all the decodings are done.
+3. Gather the result (and check errors).
+4. Convert the frames to buffer.
+
+As you can see, one has to wait for the image decoding to be complete
+before the frames can be converted to buffer.
+
+When a task has a waiting step in the middle, it becomes difficult to
+write the procedure in an efficient and elegant manner, even using
+concurrent future, because unless the program execution returns from the
+function call, the client code cannot perform other tasks while waiting.
+The most performant way is to breakdown the task into smaller functions,
+each of which returns a Future object, and let the application code
+assemble these functions and Future objects.
+
+* Async IO
+
+```python
+# Define a coroutine that decodes a single image into frames (but not to buffer)
+async def decode_image(src: str, width: int, height: int, pix_fmt="rgb24"):
+    packets = await spdl.io.async_demux_media("image", src):
+    # Decode, format and resize
+    frames = await spdl.io.async_decode_packets(
+        packets, width=width, height=height, pix_fmt=pix_fmt)
+    return frames
+
+
+async def load_image_batch(srcs: List[str], width: int, height: int):
+    tasks = [asyncio.create_task(decode_image(src, width, height)) for src in srcs]
+    await asyncio.wait(tasks)
+
+    frames = []
+    for task, src in zip(tasks, srcs):
+        # Error handling. Log the failed job and skip.
+        if exception := task.exception():
+            print(f"Failed to decode image {src}. Reason: {exception}")
+            continue
+        frames.append(task.result())
+
+    # Convert a list of image frames into a single buffer as a batch
+    buffer = await spdl.io.async_convert_frames(frames)
+    return spdl.io.to_numpy(buffer)
+
+
+array = await load_image_batch(["foo.jpg", "bar.png"], width=121, height=121)
+```
+
+* Concurrent
+
+```python
+import spdl.io
+from functools import partial
+
+
+def batch_decode_image(srcs: List[str], width: int = 121, height: int = 121):
+    futures = []
+    for src in srcs:
+        future = spdl.io.chain_futures(
+            spdl.io.demux_media("image", src),
+            partial(spdl.io.decode_packets, width=width, height=height),
+        )
+        futures.append(future)
+
+    future = spdl.io.chain_futures(
+        # Currently wait_futures can only skip the failing ones.
+        # TODO: add option to fail if any future fails
+        spdl.io.wait_futures(futures),
+        spdl.io.convert_frames,
+    )
+    return future
+
+
+# Kick off the task
+futures = batch_decode_image(["foo.jpg", "bar.png"])
+
+# Wait
+buffer = future.result()
+
+# Convert the buffer into NumPy array.
+array = spdl.io.to_numpy(buffer)
 ```
 
 ### Loading audio/video clips from a source
@@ -63,56 +193,69 @@ async for packets in spdl.io.async_streaming_demux("audio", "foo.wav", ts):
     array = spdl.io.to_numpy(buffer)
 ```
 
-### Loading images into a batch
+## Async API
 
-```python
-import asyncio
-import spdl.io
-
-
-# Define a coroutine that decodes a single image into frames
-async def decode_image(src, width=112, height=112, pix_fmt="rgb24"):
-    packets = await spdl.io.async_demux_media("image", src):
-    return await spdl.io.async_decode_packets(
-        packets, width=width, height=height, pix_fmt=pix_fmt)
-
-
-async def batch_decode_image(srcs):
-    frames = await asyncio.gather(*[decode_image(src) for src in srcs])
-    batch = await spdl.io.async_convert_frames(frames)
-    return spdl.io.to_numpy(batch)
-
-
-array = await batch_decode_image(["foo.jpg", "bar.png"])
-# Array with shape [2, 112, 112, 3]
-```
-
-## Demuxing
+### Demuxing
 
 ::: spdl.io
     options:
       show_source: false
+      heading_level: 4
       members:
       - async_streaming_demux
       - async_demux_media
 
-## Decoding
+### Decoding
 
 ::: spdl.io
     options:
       show_source: false
+      heading_level: 4
       members:
       - async_decode_packets
       - async_decode_packets_nvdec
 
-## Buffer conversion
+### Buffer conversion
 
 ::: spdl.io
     options:
       show_source: false
+      heading_level: 4
       members:
       - async_convert_frames_cpu
       - async_convert_frames
+
+## Concurrent API
+
+### Demuxing
+
+::: spdl.io
+    options:
+      show_source: false
+      heading_level: 4
+      members:
+      - streaming_demux
+      - demux_media
+
+### Decoding
+
+::: spdl.io
+    options:
+      show_source: false
+      heading_level: 4
+      members:
+      - decode_packets
+      - decode_packets_nvdec
+
+### Buffer conversion
+
+::: spdl.io
+    options:
+      show_source: false
+      heading_level: 4
+      members:
+      - convert_frames_cpu
+      - convert_frames
 
 ## Array conversion
 
