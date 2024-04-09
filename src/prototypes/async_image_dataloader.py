@@ -271,7 +271,7 @@ def _init(debug, num_demux_threads, num_decode_threads, worker_id):
     )
 
 
-def _parse_process_args():
+def _parse_process_args(args):
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -281,8 +281,8 @@ def _parse_process_args():
     return parser.parse_known_args()
 
 
-def _main():
-    ns, args = _parse_process_args()
+def _main(args=None):
+    ns, args = _parse_process_args(args)
 
     args_set = [
         args + [f"--worker-id={i}", f"--num-workers={ns.num_workers}"]
