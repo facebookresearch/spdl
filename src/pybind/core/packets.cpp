@@ -21,16 +21,17 @@ std::string get_codec_info(AVCodecParameters* codecpar) {
 
   std::vector<std::string> parts;
 
-  parts.emplace_back(fmt::format("bit_rate: {}", codecpar->bit_rate));
+  parts.emplace_back(fmt::format("bit_rate={}", codecpar->bit_rate));
   parts.emplace_back(
-      fmt::format("bits_per_sample: {}", codecpar->bits_per_raw_sample));
+      fmt::format("bits_per_sample={}", codecpar->bits_per_raw_sample));
   const AVCodecDescriptor* desc = avcodec_descriptor_get(codecpar->codec_id);
-  parts.emplace_back(fmt::format("codec: {}", desc ? desc->name : "unknown"));
+  parts.emplace_back(
+      fmt::format("codec=\"{}\"", desc ? desc->name : "unknown"));
 
   if constexpr (media_type == MediaType::Audio) {
-    parts.emplace_back(fmt::format("sample_rate: {}", codecpar->sample_rate));
+    parts.emplace_back(fmt::format("sample_rate={}", codecpar->sample_rate));
     parts.emplace_back(fmt::format(
-        "num_channels: {}",
+        "num_channels={}",
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
         codecpar->ch_layout.nb_channels
 #else
@@ -40,8 +41,8 @@ std::string get_codec_info(AVCodecParameters* codecpar) {
   }
   if constexpr (
       media_type == MediaType::Video || media_type == MediaType::Image) {
-    parts.emplace_back(fmt::format(
-        "width: {}, height: {}", codecpar->width, codecpar->height));
+    parts.emplace_back(
+        fmt::format("width={}, height={}", codecpar->width, codecpar->height));
   }
   return fmt::format("{}", fmt::join(parts, ", "));
 }
@@ -62,8 +63,7 @@ void register_packets(py::module& m) {
 
   _AudioPackets.def("__repr__", [](const AudioPacketsWrapper& self) {
     return fmt::format(
-        "AudioPackets<id={}, src={}, timestamp=({}, {}), sample_format={}, {}>",
-        self.get_packets()->id,
+        "AudioPackets<src=\"{}\", timestamp=({}, {}), sample_format=\"{}\", {}>",
         self.get_packets()->src,
         std::get<0>(self.get_packets()->timestamp),
         std::get<1>(self.get_packets()->timestamp),
@@ -90,8 +90,7 @@ void register_packets(py::module& m) {
           })
       .def("__repr__", [](const VideoPacketsWrapper& self) {
         return fmt::format(
-            "VideoPackets<id={}, src={}, timestamp=({}, {}), frame_rate=({}/{}), num_packets={}, pixel_format={}, {}>",
-            self.get_packets()->id,
+            "VideoPackets<src=\"{}\", timestamp=({}, {}), frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
             self.get_packets()->src,
             std::get<0>(self.get_packets()->timestamp),
             std::get<1>(self.get_packets()->timestamp),
@@ -113,8 +112,7 @@ void register_packets(py::module& m) {
           })
       .def("__repr__", [](const ImagePacketsWrapper& self) {
         return fmt::format(
-            "ImagePackets<id={}, src={}, pixel_format={}, {}>",
-            self.get_packets()->id,
+            "ImagePackets<src=\"{}\", pixel_format=\"{}\", {}>",
             self.get_packets()->src,
             self.get_packets()->get_media_format_name(),
             get_codec_info<MediaType::Image>(self.get_packets()->codecpar));
