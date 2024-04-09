@@ -1,18 +1,27 @@
-import numpy as np
+from functools import partial
+
 import pytest
 
 import spdl.io
+import torch
 from spdl.lib import _libspdl
 
 
 DEFAULT_CUDA = 0
 
 
-def _to_array(frame):
-    array = spdl.io.to_torch(_libspdl.convert_to_buffer(frame, None))
-
-    assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
-    return array.cpu().numpy()
+def _decode_image(path, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba", executor=None):
+    buffer = spdl.io.chain_futures(
+        spdl.io.demux_media("image", path),
+        partial(
+            spdl.io.decode_packets_nvdec,
+            cuda_device_index=cuda_device_index,
+            pix_fmt=pix_fmt,
+            executor=executor,
+        ),
+        spdl.io.convert_frames,
+    ).result()
+    return spdl.io.to_torch(buffer)
 
 
 def test_decode_image_yuv422(get_sample):
@@ -20,53 +29,38 @@ def test_decode_image_yuv422(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv422p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd, width=320, height=240)
 
-    yuv = _to_array(
-        _libspdl.decode_image_nvdec(
-            sample.path, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
-        ).get()
-    )
+    yuv = _decode_image(sample.path, pix_fmt=None)
 
     height = sample.height + sample.height // 2
 
-    assert yuv.dtype == np.uint8
+    assert yuv.dtype == torch.uint8
     assert yuv.shape == (1, height, sample.width)
 
+    rgba = _decode_image(sample.path, pix_fmt="rgba")
 
-@pytest.fixture
-def yuvj420p(get_sample):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj420p -frames:v 1 sample.jpeg"
-    return get_sample(cmd, width=320, height=240)
+    assert rgba.dtype == torch.uint8
+    assert rgba.shape == (4, sample.height, sample.width)
 
 
-def test_decode_image_yuv420(yuvj420p):
+def test_decode_image_yuv420(get_sample):
     """JPEG image (yuvj420p) can be decoded."""
-    yuv = _to_array(
-        _libspdl.decode_image_nvdec(
-            yuvj420p.path, cuda_device_index=DEFAULT_CUDA, pix_fmt=None
-        ).get()
-    )
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj420p -frames:v 1 sample.jpeg"
+    sample = get_sample(cmd, width=320, height=240)
 
-    height = yuvj420p.height + yuvj420p.height // 2
+    yuv = _decode_image(sample.path, pix_fmt=None)
 
-    assert yuv.dtype == np.uint8
-    assert yuv.shape == (1, height, yuvj420p.width)
+    height = sample.height + sample.height // 2
 
+    assert yuv.dtype == torch.uint8
+    assert yuv.shape == (1, height, sample.width)
 
-def test_decode_image_convert_rgba(yuvj420p):
-    """Providing pix_fmt="rgba" should produce (4,H,W) array."""
-    array = _to_array(
-        _libspdl.decode_image_nvdec(
-            yuvj420p.path,
-            cuda_device_index=DEFAULT_CUDA,
-            pix_fmt="rgba",
-        ).get()
-    )
+    rgba = _decode_image(sample.path, pix_fmt="rgba")
 
-    assert array.dtype == np.uint8
-    assert array.shape == (4, yuvj420p.height, yuvj420p.width)
+    assert rgba.dtype == torch.uint8
+    assert rgba.shape == (4, sample.height, sample.width)
 
 
-def test_batch_decode_image_rgba32(get_samples):
+def test_decode_image_rgba32(get_sample):
     # fmt: off
     cmd = """
     ffmpeg -hide_banner -y                          \
@@ -74,64 +68,33 @@ def test_batch_decode_image_rgba32(get_samples):
         -f lavfi -i color=color=0x00ff00:size=32x64 \
         -f lavfi -i color=color=0x0000ff:size=32x64 \
         -filter_complex hstack=inputs=3             \
-        -frames:v 32 sample_%03d.jpeg
+        -frames:v 1 sample_%03d.jpeg
     """
-    height, width = 64, 96
+    height, width = 64, 32
     # fmt: on
-    flist = get_samples(cmd)
+    sample = get_sample(cmd, width=3 * width, height=height)
 
-    frames = _libspdl.batch_decode_image_nvdec(
-        flist, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba"
-    ).get()
-    arrays = [_to_array(f) for f in frames]
+    array = _decode_image(sample.path, pix_fmt="rgba")
+    assert array.dtype == torch.uint8
+    assert array.shape == (4, sample.height, sample.width)
 
-    for array in arrays:
-        assert array.dtype == np.uint8
-        assert array.shape == (4, height, width)
+    # Red
+    assert torch.all(array[0, :, :32] == 255)
+    assert torch.all(array[1, :, :32] == 10)
+    assert torch.all(array[2, :, :32] == 0)
 
-        # Red
-        assert np.all(array[0, :, :32] == 255)
-        assert np.all(array[1, :, :32] == 10)
-        assert np.all(array[2, :, :32] == 0)
+    # Green
+    assert torch.all(array[0, :, 32:64] == 0)
+    assert torch.all(array[1, :, 32:64] == 232)
+    assert torch.all(array[2, :, 32:64] == 0)
 
-        # Green
-        assert np.all(array[0, :, 32:64] == 0)
-        assert np.all(array[1, :, 32:64] == 232)
-        assert np.all(array[2, :, 32:64] == 0)
+    # Blue
+    assert torch.all(array[0, :, 64:] == 0)
+    assert torch.all(array[1, :, 64:] == 0)
+    assert torch.all(array[2, :, 64:] == 255)
 
-        # Blue
-        assert np.all(array[0, :, 64:] == 0)
-        assert np.all(array[1, :, 64:] == 0)
-        assert np.all(array[2, :, 64:] == 255)
-
-        # alpha
-        assert np.all(array[3] == 255)
-
-
-def test_batch_decode_image_strict(get_samples):
-    # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y                          \
-        -f lavfi -i color=color=0xff0000:size=32x64 \
-        -f lavfi -i color=color=0x00ff00:size=32x64 \
-        -f lavfi -i color=color=0x0000ff:size=32x64 \
-        -filter_complex hstack=inputs=3             \
-        -frames:v 32 sample_%03d.jpeg
-    """
-    # fmt: on
-    flist = get_samples(cmd)
-    flist.append("foo.png")
-
-    with pytest.raises(RuntimeError):
-        _libspdl.batch_decode_image_nvdec(flist, cuda_device_index=DEFAULT_CUDA).get(
-            strict=True
-        )
-
-    frames = _libspdl.batch_decode_image_nvdec(
-        flist, cuda_device_index=DEFAULT_CUDA
-    ).get(strict=False)
-
-    assert len(frames) == 32
+    # alpha
+    assert torch.all(array[3] == 255)
 
 
 def test_decode_multiple_invalid_input(get_sample):
@@ -152,12 +115,10 @@ def test_decode_multiple_invalid_input(get_sample):
     )
     sample = get_sample(cmd, width=16, height=16)
 
-    decode_executor = _libspdl.ThreadPoolExecutor(1, "SingleDecoderExecutor")
+    executor = _libspdl.ThreadPoolExecutor(1, "SingleDecoderExecutor")
     for _ in range(2):
         with pytest.raises(RuntimeError):
-            _libspdl.batch_decode_image_nvdec(
-                [sample.path],
-                cuda_device_index=DEFAULT_CUDA,
-                pix_fmt=None,
-                decode_executor=decode_executor,
+            _decode_image(
+                sample.path,
+                executor=executor,
             ).get()

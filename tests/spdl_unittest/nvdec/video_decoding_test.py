@@ -1,10 +1,38 @@
-import numpy as np
+from functools import partial
+
 import pytest
 
 import spdl.io
-from spdl.lib import _libspdl
+import torch
 
 DEFAULT_CUDA = 0
+
+
+def _decode_video(src, timestamp=None, **kwargs):
+    buffer = spdl.io.chain_futures(
+        spdl.io.demux_media("video", src, timestamp=timestamp),
+        partial(spdl.io.decode_packets_nvdec, cuda_device_index=DEFAULT_CUDA, **kwargs),
+        spdl.io.convert_frames,
+    ).result()
+    return spdl.io.to_torch(buffer)
+
+
+def _decode_videos(src, timestamps, **kwargs):
+    futures = []
+    for fut in spdl.io.streaming_demux("video", src, timestamps=timestamps):
+        futures.append(
+            spdl.io.chain_futures(
+                fut,
+                partial(
+                    spdl.io.decode_packets_nvdec,
+                    cuda_device_index=DEFAULT_CUDA,
+                    **kwargs,
+                ),
+                spdl.io.convert_frames,
+            )
+        )
+
+    return [spdl.io.to_torch(f.result()) for f in futures]
 
 
 @pytest.fixture
@@ -16,37 +44,25 @@ def dummy(get_sample):
 def test_nvdec_odd_size(dummy):
     """Odd width/height must be rejected"""
     with pytest.raises(RuntimeError):
-        _libspdl.decode_video_nvdec(
-            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, width=121
-        )
+        _decode_video(dummy.path, width=121)
 
     with pytest.raises(RuntimeError):
-        _libspdl.decode_video_nvdec(
-            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, height=257
-        )
+        _decode_video(dummy.path, height=257)
 
 
 def test_nvdec_negative(dummy):
     """Negative options must be rejected"""
     with pytest.raises(RuntimeError):
-        _libspdl.decode_video_nvdec(
-            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_left=-1
-        )
+        _decode_video(dummy.path, crop_left=-1)
 
     with pytest.raises(RuntimeError):
-        _libspdl.decode_video_nvdec(
-            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_top=-1
-        )
+        _decode_video(dummy.path, crop_top=-1)
 
     with pytest.raises(RuntimeError):
-        _libspdl.decode_video_nvdec(
-            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_right=-1
-        )
+        _decode_video(dummy.path, crop_right=-1)
 
     with pytest.raises(RuntimeError):
-        _libspdl.decode_video_nvdec(
-            dummy.path, timestamps=[(0, 0.1)], cuda_device_index=0, crop_bottom=-1
-        )
+        _decode_video(dummy.path, crop_bottom=-1)
 
 
 def _save(array, prefix):
@@ -54,15 +70,6 @@ def _save(array, prefix):
 
     for i, arr in enumerate(array):
         Image.fromarray(arr[0]).save(f"{prefix}_{i}.png")
-
-
-def _to_arrays(frames):
-    ret = []
-    for f in frames:
-        array = spdl.io.to_torch(_libspdl.convert_to_buffer(f, None))
-        assert str(array.device) == f"cuda:{DEFAULT_CUDA}"
-        ret.append(array.cpu().numpy())
-    return ret
 
 
 def split_nv12(array):
@@ -83,12 +90,7 @@ def h264(get_sample):
 
 def test_nvdec_decode_h264_420p_basic(h264):
     """NVDEC can decode YUV420P video."""
-    results = _libspdl.decode_video_nvdec(
-        h264.path,
-        timestamps=[(0, 1.0)],
-        cuda_device_index=DEFAULT_CUDA,
-    ).get()
-    array = _to_arrays(results)[0]
+    array = _decode_video(h264.path, timestamp=(0, 1.0))
 
     # y, u, v = split_nv12(array)
     # _save(array, "./base")
@@ -96,7 +98,7 @@ def test_nvdec_decode_h264_420p_basic(h264):
     # _save(u, "./base_u")
     # _save(v, "./base_v")
 
-    assert array.dtype == np.uint8
+    assert array.dtype == torch.uint8
     assert array.shape == (25, 4, h264.height, h264.width)
 
 
@@ -116,16 +118,14 @@ def test_nvdec_decode_hevc_P010_basic(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
     sample = get_sample(cmd, width=320, height=240)
 
-    results = _libspdl.decode_video_nvdec(
+    array = _decode_video(
         sample.path,
-        timestamps=[(0, 1.0)],
-        cuda_device_index=DEFAULT_CUDA,
-    ).get()
-    array = _to_arrays(results)[0]
+        timestamp=(0, 1.0),
+    )
 
     height = sample.height + sample.height // 2
 
-    assert array.dtype == np.uint8
+    assert array.dtype == torch.uint8
     assert array.shape == (25, 1, height, h264.width)
 
 
@@ -133,18 +133,16 @@ def test_nvdec_decode_h264_420p_resize(h264):
     """Check NVDEC decoder with resizing."""
     width, height = 160, 120
 
-    results = _libspdl.decode_video_nvdec(
+    array = _decode_video(
         h264.path,
-        timestamps=[(0, 1.0)],
-        cuda_device_index=DEFAULT_CUDA,
+        timestamp=(0, 1.0),
         width=width,
         height=height,
-    ).get()
-    array = _to_arrays(results)[0]
+    )
 
     # _save(array, "./resize")
 
-    assert array.dtype == np.uint8
+    assert array.dtype == torch.uint8
     assert array.shape == (25, 4, height, width)
 
 
@@ -154,29 +152,25 @@ def test_nvdec_decode_h264_420p_crop(h264):
     h = h264.height - top - bottom
     w = h264.width - left - right
 
-    results = _libspdl.decode_video_nvdec(
+    rgba = _decode_video(
         h264.path,
-        timestamps=[(0, 1.0)],
-        cuda_device_index=DEFAULT_CUDA,
+        timestamp=(0, 1.0),
         crop_top=top,
         crop_bottom=bottom,
         crop_left=left,
         crop_right=right,
-    ).get()
-    rgba = _to_arrays(results)[0]
+    )
 
-    assert rgba.dtype == np.uint8
+    assert rgba.dtype == torch.uint8
     assert rgba.shape == (25, 4, h, w)
 
-    results = _libspdl.decode_video_nvdec(
+    rgba0 = _decode_video(
         h264.path,
-        timestamps=[(0, 1.0)],
-        cuda_device_index=DEFAULT_CUDA,
-    ).get()
-    rgba0 = _to_arrays(results)[0]
+        timestamp=(0, 1.0),
+    )
 
     for i in range(4):
-        assert np.array_equal(rgba[:, i], rgba0[:, i, top : top + h, left : left + w])
+        assert torch.equal(rgba[:, i], rgba0[:, i, top : top + h, left : left + w])
 
 
 def test_nvdec_decode_crop_resize(h264):
@@ -185,33 +179,27 @@ def test_nvdec_decode_crop_resize(h264):
     h = (h264.height - top - bottom) // 2
     w = (h264.width - left - right) // 2
 
-    array = _to_arrays(
-        _libspdl.decode_video_nvdec(
-            h264.path,
-            timestamps=[(0.0, 1.0)],
-            cuda_device_index=DEFAULT_CUDA,
-            crop_top=top,
-            crop_bottom=bottom,
-            crop_left=left,
-            crop_right=right,
-            width=w,
-            height=h,
-        ).get()
-    )[0]
+    array = _decode_video(
+        h264.path,
+        timestamp=(0.0, 1.0),
+        crop_top=top,
+        crop_bottom=bottom,
+        crop_left=left,
+        crop_right=right,
+        width=w,
+        height=h,
+    )
 
-    assert array.dtype == np.uint8
+    assert array.dtype == torch.uint8
     assert array.shape == (25, 4, h, w)
 
 
 def test_num_frames_arithmetics(h264):
     """NVDEC with non-zero start time should produce proper number of frames."""
-    ref = _to_arrays(
-        _libspdl.decode_video_nvdec(
-            h264.path,
-            timestamps=[(0, 1.0)],
-            cuda_device_index=DEFAULT_CUDA,
-        ).get()
-    )[0]
+    ref = _decode_video(
+        h264.path,
+        timestamp=(0, 1.0),
+    )
 
     # NOTE: The source video has 25 FPS.
     # fmt: off
@@ -234,89 +222,46 @@ def test_num_frames_arithmetics(h264):
         ((0.8, 1.0), [20, 25]),
     ]
     # fmt: on
-    frames = _to_arrays(
-        _libspdl.decode_video_nvdec(
-            h264.path,
-            cuda_device_index=DEFAULT_CUDA,
-            timestamps=[cfg[0] for cfg in cfgs],
-        ).get()
+    frames = _decode_videos(
+        h264.path,
+        timestamps=[cfg[0] for cfg in cfgs],
     )
 
     for (ts, slice_args), fs in zip(cfgs, frames, strict=True):
         print(f"{fs.shape}, {ts=}, {slice_args=}")
-        assert np.array_equal(fs, ref[slice(*slice_args)])
+        assert torch.equal(fs, ref[slice(*slice_args)])
 
 
-@pytest.fixture
-def red(get_sample):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xFF0000 -frames:v 100 sample.mp4"
-    return get_sample(cmd, width=320, height=240)
-
-
-@pytest.fixture
-def green(get_sample):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x00FF00 -frames:v 100 sample.mp4"
-    return get_sample(cmd, width=320, height=240)
-
-
-@pytest.fixture
-def blue(get_sample):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x0000FF -frames:v 100 sample.mp4"
-    return get_sample(cmd, width=320, height=240)
-
-
-def test_color_conversion_rgba_red(red):
+def test_color_conversion_rgba(get_sample):
     """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
-    array = _to_arrays(
-        _libspdl.decode_video_nvdec(
-            red.path,
-            timestamps=[(0, 1.0)],
-            cuda_device_index=DEFAULT_CUDA,
-            pix_fmt="rgba",
-        ).get()
-    )[0]
+    # fmt: off
+    cmd = """
+    ffmpeg -hide_banner -y                          \
+        -f lavfi -i color=color=0xff0000:size=32x64 \
+        -f lavfi -i color=color=0x00ff00:size=32x64 \
+        -f lavfi -i color=color=0x0000ff:size=32x64 \
+        -filter_complex hstack=inputs=3             \
+        -frames:v 25 sample.mp4
+    """
+    height, width = 64, 32
+    sample = get_sample(cmd, height=height, width=3 * width)
 
-    assert array.dtype == np.uint8
-    assert array.shape == (25, 4, red.height, red.width)
+    array = _decode_video(sample.path, pix_fmt="rgba")
 
-    assert np.all(array[:, 0, ...] == 255)
-    assert np.all(array[:, 1, ...] == 22)  # TODO: investivate if this is correct.
-    assert np.all(array[:, 2, ...] == 0)
+    assert array.dtype == torch.uint8
+    assert array.shape == (25, 4, sample.height, sample.width)
 
+    # Red
+    assert torch.all(array[:, 0, :, :width] == 255)
+    assert torch.all(array[:, 1, :, :width] == 22)  # TODO: investivate if this is correct.
+    assert torch.all(array[:, 2, :, :width] == 0)
 
-def test_color_conversion_rgba_green(green):
-    """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
-    array = _to_arrays(
-        _libspdl.decode_video_nvdec(
-            green.path,
-            timestamps=[(0, 1.0)],
-            cuda_device_index=DEFAULT_CUDA,
-            pix_fmt="rgba",
-        ).get()
-    )[0]
+    # Green
+    assert torch.all(array[:, 0, :, width:2*width] == 0)
+    assert torch.all(array[:, 1, :, width:2*width] == 217)  # TODO: investivate if this is correct.
+    assert torch.all(array[:, 2, :, width:2*width] == 0)
 
-    assert array.dtype == np.uint8
-    assert array.shape == (25, 4, green.height, green.width)
-
-    assert np.all(array[:, 0, ...] == 0)
-    assert np.all(array[:, 1, ...] == 217)  # TODO: investivate if this is correct.
-    assert np.all(array[:, 2, ...] == 0)
-
-
-def test_color_conversion_rgba_blue(blue):
-    """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
-    array = _to_arrays(
-        _libspdl.decode_video_nvdec(
-            blue.path,
-            timestamps=[(0, 1.0)],
-            cuda_device_index=DEFAULT_CUDA,
-            pix_fmt="rgba",
-        ).get()
-    )[0]
-
-    assert array.dtype == np.uint8
-    assert array.shape == (25, 4, blue.height, blue.width)
-
-    assert np.all(array[:, 0, ...] == 0)
-    assert np.all(array[:, 1, ...] == 14)  # TODO: investivate if this is correct.
-    assert np.all(array[:, 2, ...] == 255)
+    # Blue
+    assert torch.all(array[:, 0, :, 2*width:] == 0)
+    assert torch.all(array[:, 1, :, 2*width:] == 14)  # TODO: investivate if this is correct.
+    assert torch.all(array[:, 2, :, 2*width:] == 255)
