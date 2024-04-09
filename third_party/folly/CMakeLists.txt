@@ -2,8 +2,8 @@ message(STATUS "########################################")
 message(STATUS "# Configuring folly")
 message(STATUS "########################################")
 
-set(url https://github.com/facebook/folly/releases/download/v2024.03.11.00/folly-v2024.03.11.00.tar.gz)
-set(hash SHA256=2083b59fb00ef99a1e3ea01c49998735d784d31cd5dfbea86cbbf553308590f2)
+set(url https://github.com/facebook/folly/releases/download/v2024.04.08.00/folly-v2024.04.08.00.tar.gz)
+set(hash SHA256=20ecf85e3c4616e7b67d6d17f5833957729b2f82f1cd893efe13cf5875df16b0)
 
 if (APPLE)
 FetchContent_Declare(
@@ -97,10 +97,8 @@ set(
   "${base_dir}/folly/futures/ThreadWheelTimekeeper.cpp"
 
   "${base_dir}/folly/executors/ExecutorWithPriority.cpp"
-  "${base_dir}/folly/executors/GlobalExecutor.cpp"
   "${base_dir}/folly/executors/GlobalThreadPoolList.cpp"
   "${base_dir}/folly/executors/InlineExecutor.cpp"
-  "${base_dir}/folly/executors/IOThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/ThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/CPUThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/QueueObserver.cpp"
