@@ -72,8 +72,8 @@ void register_packets(py::module& m) {
   });
 
   _VideoPackets
-      .def_property_readonly(
-          "pts",
+      .def(
+          "_get_pts",
           [](const VideoPacketsWrapper& self) -> std::vector<double> {
             std::vector<double> ret;
             auto& packets = self.get_packets();
@@ -82,6 +82,11 @@ void register_packets(py::module& m) {
               ret.push_back(double(packet->pts) * base.num / base.den);
             }
             return ret;
+          })
+      .def(
+          "__len__",
+          [](const VideoPacketsWrapper& self) {
+            return self.get_packets()->num_packets();
           })
       .def("__repr__", [](const VideoPacketsWrapper& self) {
         return fmt::format(
@@ -98,8 +103,8 @@ void register_packets(py::module& m) {
       });
 
   _ImagePackets
-      .def_property_readonly(
-          "pts",
+      .def(
+          "_get_pts",
           [](const ImagePacketsWrapper& self) {
             auto& packets = self.get_packets();
             auto base = packets->time_base;

@@ -8,6 +8,10 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+extern "C" {
+#include <libavutil/frame.h>
+}
+
 namespace py = pybind11;
 
 namespace spdl::core {
@@ -294,6 +298,17 @@ void register_frames_and_buffers(py::module& m) {
           [](const FFmpegVideoFramesWrapper& self, int i) {
             return wrap<MediaType::Image, FFmpegFramesPtr>(
                 self.get_frames_ref()->slice(i));
+          })
+      .def(
+          "_get_pts",
+          [](const FFmpegVideoFramesWrapper& self) -> std::vector<double> {
+            std::vector<double> ret;
+            auto& frames = self.get_frames_ref();
+            auto base = frames->time_base;
+            for (auto& frame : frames->get_frames()) {
+              ret.push_back(double(frame->pts) * base.num / base.den);
+            }
+            return ret;
           })
       .def("__repr__", [](const FFmpegVideoFramesWrapper& self) {
         auto& ref = self.get_frames_ref();
