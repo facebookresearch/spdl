@@ -1,3 +1,4 @@
+"""Custom resolver to make dynamic attributes available."""
 from griffe import Extension, get_logger, Module
 from griffe.dataclasses import Alias
 
@@ -11,7 +12,10 @@ def _print_members(pkg):
 
 
 class SPDLDynamicResolver(Extension):
+    """Add the entries for dynamically retrieved attributes."""
+
     def on_package_loaded(self, pkg: Module) -> None:
+        """Add the entries for dynamically retrieved attributes."""
         import spdl
         import spdl.io
 
@@ -21,6 +25,10 @@ class SPDLDynamicResolver(Extension):
         _print_members(pkg["lib"]["_libspdl"])
 
         # Populate dynamic attributes
+        for attr in spdl.io._common.__all__:
+            logger.info("Setting: %s", attr)
+            pkg["io"].set_member(attr, Alias(attr, pkg["io"]["_common"][attr]))
+
         for attr in spdl.io._async.__all__:
             if attr.startswith("_"):
                 continue

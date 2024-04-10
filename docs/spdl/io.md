@@ -266,3 +266,11 @@ async for packets in spdl.io.async_streaming_demux("audio", "foo.wav", ts):
       - to_numpy
       - to_torch
       - to_numba
+
+## Exception
+
+::: spdl.io
+    options:
+      show_root_toc_entry: false
+      members:
+      - AsyncIOFailure
