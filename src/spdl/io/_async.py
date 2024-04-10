@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import List, Optional, Tuple, Union
 
 from spdl.lib import _libspdl
@@ -8,6 +9,7 @@ from . import _common
 
 __all__ = [
     "_async_sleep",
+    "_async_sleep_multi",
     "async_convert_frames_cpu",
     "async_convert_frames",
     "async_decode_packets",
@@ -16,9 +18,28 @@ __all__ = [
     "async_streaming_demux",
 ]
 
+_LG = logging.getLogger(__name__)
+
 
 def _async_sleep(time: int):
-    return _async_task(_libspdl.async_sleep, time)
+    """Sleep the given time [millisecond] then throw an error.
+
+    Function for testing cancellation.
+    """
+    future = _common._futurize_task(_libspdl.async_sleep, time)
+    return _handle_future(future), future.__spdl_future
+
+
+def _async_sleep_multi(time: int, count: int):
+    """Sleep the given time [millisecond] given count times then throw an error.
+
+    Function for testing cancellation.
+    """
+    assert count > 0
+    futures = _common._futurize_generator(
+        _libspdl.async_sleep_multi, count + 1, time, count
+    )
+    return _handle_futures(futures), futures[0].__spdl_future
 
 
 # The time it waits before rethrowing the async exception.
@@ -40,52 +61,53 @@ def _async_sleep(time: int):
 _EXCEPTION_BACKOFF = 1.00
 
 
-async def _async_task(func, *args, **kwargs):
-    future = _common._futurize_task(func, *args, **kwargs)
-
+async def _handle_future(future):
     try:
         return await asyncio.futures.wrap_future(future)
-    # Handle the case where the async op failed
-    except _common._AsyncOpFailed:
-        pass
     # Handle the case where unexpected/external thing happens
-    except (asyncio.CancelledError, Exception) as e:
+    except asyncio.CancelledError as e:
         future.__spdl_future.cancel()
-        # Wait till the cancellation is completed
         try:
+            # Wait till the cancellation is completed
             await asyncio.futures.wrap_future(future)
-        except _common._AsyncOpFailed:
+        except asyncio.CancelledError:
             pass
+        except Exception:
+            _LG.exception(
+                "An exception was raised while waiting for the task to be cancelled."
+            )
         # Propagate the error.
         raise e
 
-    await asyncio.sleep(_EXCEPTION_BACKOFF)
-    future.__spdl_future.rethrow()
+
+async def _async_task(func, *args, **kwargs):
+    future = _common._futurize_task(func, *args, **kwargs)
+    return await _handle_future(future)
+
+
+async def _handle_futures(futures):
+    try:
+        for future in futures:
+            yield await asyncio.futures.wrap_future(future)
+    except asyncio.CancelledError as ce:
+        future.__spdl_future.cancel()
+        try:
+            # Wait till the cancellation is completed
+            await asyncio.futures.wrap_future(futures[-1])
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            _LG.exception(
+                "An exception was raised while waiting for the task to be cancelled."
+            )
+        # Propagate the error.
+        raise ce
 
 
 async def _async_gen(func, num_items, *args, **kwargs):
     futures = _common._futurize_generator(func, num_items, *args, **kwargs)
-
-    for future in futures:
-        await asyncio.sleep(0)
-        try:
-            yield await asyncio.futures.wrap_future(future)
-        # Handle the case where the async op failed
-        except _common._AsyncOpFailed:
-            break
-        # Handle the case where unexpected/external thing happens
-        except (asyncio.CancelledError, Exception) as e:
-            future.__spdl_future.cancel()
-            # Wait till the cancellation is completed
-            try:
-                await asyncio.futures.wrap_future(future)
-            except _common._AsyncOpFailed:
-                pass
-            # Propagate the error.
-            raise e
-
-    await asyncio.sleep(_EXCEPTION_BACKOFF)
-    future.__spdl_future.rethrow()
+    async for item in _handle_futures(futures):
+        yield item
 
 
 def async_streaming_demux(

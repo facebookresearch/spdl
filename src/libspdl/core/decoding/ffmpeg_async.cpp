@@ -9,7 +9,7 @@ namespace spdl::core {
 template <MediaType media_type>
 FuturePtr async_decode(
     std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
-    std::function<void(std::string)> notify_exception,
+    std::function<void(std::string, bool)> notify_exception,
     PacketsWrapperPtr<media_type> packets,
     DecodeConfig decode_cfg,
     std::string filter_desc,
@@ -32,7 +32,7 @@ FuturePtr async_decode(
 
 template FuturePtr async_decode(
     std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
-    std::function<void(std::string)> notify_exception,
+    std::function<void(std::string, bool)> notify_exception,
     AudioPacketsWrapperPtr packets,
     DecodeConfig decode_cfg,
     std::string filter_desc,
@@ -40,7 +40,7 @@ template FuturePtr async_decode(
 
 template FuturePtr async_decode(
     std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
-    std::function<void(std::string)> notify_exception,
+    std::function<void(std::string, bool)> notify_exception,
     VideoPacketsWrapperPtr packets,
     DecodeConfig decode_cfg,
     std::string filter_desc,
@@ -48,7 +48,7 @@ template FuturePtr async_decode(
 
 template FuturePtr async_decode(
     std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
-    std::function<void(std::string)> notify_exception,
+    std::function<void(std::string, bool)> notify_exception,
     ImagePacketsWrapperPtr packets,
     DecodeConfig decode_cfg,
     std::string filter_desc,
