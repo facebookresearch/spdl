@@ -9,24 +9,13 @@ __all__ = [
 
 
 def _get_demux_func(media_type, src):
-    match media_type:
-        case "audio":
-            if isinstance(src, bytes):
-                name = "async_demux_audio_bytes"
-            else:
-                name = "async_demux_audio"
-        case "video":
-            if isinstance(src, bytes):
-                name = "async_demux_video_bytes"
-            else:
-                name = "async_demux_video"
-        case "image":
-            if isinstance(src, bytes):
-                name = "async_demux_image_bytes"
-            else:
-                name = "async_demux_image"
-        case _:
-            raise ValueError(f"Unexpected media type: {media_type}.")
+    if media_type not in ["audio", "video", "image"]:
+        raise ValueError(f"Unexpected media type: {media_type}.")
+
+    if isinstance(src, bytes):
+        name = f"async_demux_{media_type}_bytes"
+    else:
+        name = f"async_demux_{media_type}"
     return getattr(_libspdl, name)
 
 
