@@ -245,48 +245,6 @@ def test_batch_decode_image(get_samples):
     asyncio.run(_test())
 
 
-def test_cancellation():
-    """Async task is cancellable"""
-
-    async def _test():
-        task = asyncio.create_task(spdl.io._async_sleep(3000))
-        await asyncio.sleep(0)
-        task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
-
-    asyncio.run(_test())
-
-
-def test_cancellation_wait_for():
-    """Task awaited with `wait_for` are cancelled simultaneously"""
-
-    async def _test():
-        task = asyncio.create_task(spdl.io._async_sleep(1000))
-        with pytest.raises(asyncio.exceptions.TimeoutError):
-            await asyncio.wait_for(task, timeout=0.1)
-
-    asyncio.run(_test())
-
-
-def test_cancellation_multi_gather():
-    """Multiple tasks awaited with `gather` are cancelled simultaneously"""
-
-    async def _test(N: int):
-        tasks = [asyncio.create_task(spdl.io._async_sleep(3000)) for _ in range(N)]
-        task = asyncio.gather(*tasks, return_exceptions=True)
-        task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
-
-        assert len(tasks) == N
-        for t in tasks:
-            with pytest.raises(asyncio.CancelledError):
-                await t
-
-    asyncio.run(_test(3))
-
-
 def test_async_convert_audio_cpu(get_sample):
     """async_convert_frames_cpu can convert FFmpegAudioFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"

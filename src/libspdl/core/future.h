@@ -26,10 +26,7 @@ struct Future {
   Future& operator=(Future&&) noexcept;
   ~Future();
 
-  /// Rethrow the internal error.
-  /// Does nothing if there was no internal error.
-  /// If the future is not complete, it will throw `FutureNotReady` exception.
-  void rethrow();
+  bool cancelled() const;
 
   void cancel();
 };

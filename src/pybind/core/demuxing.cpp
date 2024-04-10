@@ -15,7 +15,7 @@ void register_demuxing(py::module& m) {
   m.def(
       "async_demux_audio",
       [](std::function<void(AudioPacketsWrapperPtr)> set_result,
-         std::function<void(std::string)> notify_exception,
+         std::function<void(std::string, bool)> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
          const SourceAdaptorPtr& adaptor,
@@ -48,7 +48,7 @@ void register_demuxing(py::module& m) {
   m.def(
       "async_demux_audio_bytes",
       [](std::function<void(AudioPacketsWrapperPtr)> set_result,
-         std::function<void(std::string)> notify_exception,
+         std::function<void(std::string, bool)> notify_exception,
          py::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
          const std::optional<std::string>& format,
@@ -79,7 +79,7 @@ void register_demuxing(py::module& m) {
   m.def(
       "async_demux_video",
       [](std::function<void(VideoPacketsWrapperPtr)> set_result,
-         std::function<void(std::string)> notify_exception,
+         std::function<void(std::string, bool)> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
          const SourceAdaptorPtr& adaptor,
@@ -110,7 +110,7 @@ void register_demuxing(py::module& m) {
   m.def(
       "async_demux_video_bytes",
       [](std::function<void(VideoPacketsWrapperPtr)> set_result,
-         std::function<void(std::string)> notify_exception,
+         std::function<void(std::string, bool)> notify_exception,
          py::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
          const std::optional<std::string>& format,
@@ -141,7 +141,7 @@ void register_demuxing(py::module& m) {
   m.def(
       "async_demux_image",
       [](std::function<void(ImagePacketsWrapperPtr)> set_result,
-         std::function<void(std::string)> notify_exception,
+         std::function<void(std::string, bool)> notify_exception,
          py::str src,
          const SourceAdaptorPtr& adaptor,
          const std::optional<std::string>& format,
@@ -169,7 +169,7 @@ void register_demuxing(py::module& m) {
   m.def(
       "async_demux_image_bytes",
       [](std::function<void(ImagePacketsWrapperPtr)> set_result,
-         std::function<void(std::string)> notify_exception,
+         std::function<void(std::string, bool)> notify_exception,
          py::bytes data,
          const std::optional<std::string>& format,
          const std::optional<OptionDict>& format_options,

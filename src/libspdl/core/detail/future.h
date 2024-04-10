@@ -16,7 +16,6 @@ struct Future::Impl {
   folly::SemiFuture<folly::Unit> future;
   folly::CancellationSource cs;
   Impl(folly::SemiFuture<folly::Unit>&&, folly::CancellationSource&&);
-  void cancel();
 };
 
 namespace detail {
@@ -25,7 +24,7 @@ template <typename ValueType>
 FuturePtr execute_task_with_callback(
     folly::coro::Task<ValueType>&& task,
     std::function<void(ValueType)> set_result,
-    std::function<void(std::string)> notify_exception,
+    std::function<void(std::string, bool)> notify_exception,
     folly::Executor::KeepAlive<> executor) {
   auto cs = folly::CancellationSource{};
   auto task_cb = folly::coro::co_invoke(
@@ -41,15 +40,15 @@ FuturePtr execute_task_with_callback(
           // but the message is same, and it floods the log
           // when tasks are bulk-cancelled.
           XLOG(DBG5) << e.what();
-          notify_exception(e.what());
+          notify_exception(e.what(), true);
           throw;
         } catch (std::exception& e) {
           XLOG(DBG5) << e.what();
-          notify_exception(e.what());
+          notify_exception(e.what(), false);
           throw;
         } catch (...) {
           XLOG(CRITICAL) << "Unexpected exception was caught.";
-          notify_exception("Unexpected exception.");
+          notify_exception("Unexpected exception.", false);
           throw;
         }
       },
@@ -65,7 +64,7 @@ template <typename ValueType>
 FuturePtr execute_generator_with_callback(
     folly::coro::AsyncGenerator<ValueType>&& generator,
     std::function<void(ValueType)> set_result,
-    std::function<void(std::string)> notify_exception,
+    std::function<void(std::string, bool)> notify_exception,
     folly::Executor::KeepAlive<> executor) {
   using folly::coro::AsyncGenerator;
   using folly::coro::Task;
@@ -75,7 +74,8 @@ FuturePtr execute_generator_with_callback(
       [=](AsyncGenerator<ValueType>&& gen,
           folly::CancellationToken&& token) -> Task<void> {
         try {
-          while (auto val = co_await gen.next()) {
+          while (auto val = co_await folly::coro::co_withCancellation(
+                     token, gen.next())) {
             set_result({*val});
           }
           co_return;
@@ -85,15 +85,15 @@ FuturePtr execute_generator_with_callback(
           // but the message is same, and it floods the log
           // when tasks are bulk-cancelled.
           XLOG(DBG5) << e.what();
-          notify_exception(e.what());
+          notify_exception(e.what(), true);
           throw;
         } catch (std::exception& e) {
           XLOG(DBG5) << e.what();
-          notify_exception(e.what());
+          notify_exception(e.what(), false);
           throw;
         } catch (...) {
           XLOG(CRITICAL) << "Unexpected exception was caught.";
-          notify_exception("Unexpected exception.");
+          notify_exception("Unexpected exception.", false);
           throw;
         }
       },

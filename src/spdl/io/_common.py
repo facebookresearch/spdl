@@ -1,4 +1,4 @@
-import concurrent.futures
+from concurrent.futures import CancelledError, Future
 
 from spdl.lib import _libspdl
 
@@ -101,10 +101,11 @@ class _AsyncOpFailed(RuntimeError):
 
 
 def _futurize_task(func, *args, **kwargs):
-    future = concurrent.futures.Future()
+    future = Future()
 
-    def nofify_exception(msg: str):
-        future.set_exception(_AsyncOpFailed(msg))
+    def nofify_exception(msg: str, cancelled: bool):
+        err = CancelledError() if cancelled else _AsyncOpFailed(msg)
+        future.set_exception(err)
 
     future.set_running_or_notify_cancel()
     sf = func(future.set_result, nofify_exception, *args, **kwargs)
@@ -113,7 +114,7 @@ def _futurize_task(func, *args, **kwargs):
 
 
 def _futurize_generator(func, num_items, *args, **kwargs):
-    futures = [concurrent.futures.Future() for _ in range(num_items)]
+    futures = [Future() for _ in range(num_items)]
 
     index = 0
 
@@ -125,9 +126,11 @@ def _futurize_generator(func, num_items, *args, **kwargs):
         if index < num_items:
             futures[index].set_running_or_notify_cancel()
 
-    def nofify_exception(msg: str):
+    def nofify_exception(msg: str, cancelled: bool):
+        err = CancelledError() if cancelled else _AsyncOpFailed(msg)
+
         nonlocal index
-        futures[index].set_exception(RuntimeError(msg))
+        futures[index].set_exception(err)
         index += 1
 
         for fut in futures[index:]:

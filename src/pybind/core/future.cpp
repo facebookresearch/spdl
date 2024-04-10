@@ -10,6 +10,6 @@ namespace spdl::core {
 void register_future(py::module& m) {
   auto _Future = py::class_<Future, FuturePtr>(m, "Future", py::module_local());
 
-  _Future.def("rethrow", &Future::rethrow).def("cancel", &Future::cancel);
+  _Future.def("cancelled", &Future::cancelled).def("cancel", &Future::cancel);
 }
 } // namespace spdl::core

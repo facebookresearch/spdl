@@ -9,10 +9,6 @@ Future::Impl::Impl(
     folly::CancellationSource&& cs_)
     : future(std::move(fut)), cs(std::move(cs_)) {}
 
-void Future::Impl::cancel() {
-  cs.requestCancellation();
-}
-
 Future::Future(Future::Impl* p) : pimpl(p) {}
 
 Future::Future(Future&& other) noexcept {
@@ -29,16 +25,12 @@ Future::~Future() {
   delete pimpl;
 }
 
-void Future::rethrow() {
-  // Note: If the future is not complete, the
-  // `hasException` method throws `FutureNotReady`.
-  if (pimpl->future.hasException()) {
-    pimpl->future.value();
-  }
+bool Future::cancelled() const {
+  return pimpl->cs.isCancellationRequested();
 }
 
 void Future::cancel() {
-  pimpl->cancel();
+  pimpl->cs.requestCancellation();
 }
 
 } // namespace spdl::core
