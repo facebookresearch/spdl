@@ -32,7 +32,7 @@ def test_demux_bytes_without_copy(media_type, get_sample):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_demux_bytesio_without_copy(media_type, get_sample):
+def test_demux_bytes_without_copy(media_type, get_sample):
     """Data passed from BytesIO.getvalue() must be passed without copy."""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)

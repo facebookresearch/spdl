@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import List, Optional, Tuple, Union
 
+import spdl.io
 from spdl.lib import _libspdl
 
 from . import _common
@@ -22,19 +23,11 @@ _LG = logging.getLogger(__name__)
 
 
 def _async_sleep(time: int):
-    """Sleep the given time [millisecond] then throw an error.
-
-    Function for testing cancellation.
-    """
     future = _common._futurize_task(_libspdl.async_sleep, time)
     return _handle_future(future), future.__spdl_future
 
 
 def _async_sleep_multi(time: int, count: int):
-    """Sleep the given time [millisecond] given count times then throw an error.
-
-    Function for testing cancellation.
-    """
     assert count > 0
     futures = _common._futurize_generator(
         _libspdl.async_sleep_multi, count + 1, time, count
@@ -68,9 +61,9 @@ async def _handle_future(future):
     except asyncio.CancelledError as e:
         future.__spdl_future.cancel()
         try:
-            # Wait till the cancellation is completed
+            # Wait till the cancel request is fullfilled or job finishes
             await asyncio.futures.wrap_future(future)
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, spdl.io.AsyncIOFailure):
             pass
         except Exception:
             _LG.exception(
@@ -92,9 +85,9 @@ async def _handle_futures(futures):
     except asyncio.CancelledError as ce:
         future.__spdl_future.cancel()
         try:
-            # Wait till the cancellation is completed
+            # Wait till the cancel request is fullfilled or job finishes
             await asyncio.futures.wrap_future(futures[-1])
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, spdl.io.AsyncIOFailure):
             pass
         except Exception:
             _LG.exception(

@@ -1,6 +1,11 @@
 from concurrent.futures import CancelledError, Future
 
+import spdl.io
 from spdl.lib import _libspdl
+
+__all__ = [
+    "AsyncIOFailure",
+]
 
 
 def _get_demux_func(media_type, src):
@@ -96,7 +101,9 @@ def _get_conversion_func(frames):
 
 # Exception class used to signal the failure of C++ op to Python.
 # Not exposed to user code.
-class _AsyncOpFailed(RuntimeError):
+class AsyncIOFailure(RuntimeError):
+    """Exception type used to pass the error message from libspdl."""
+
     pass
 
 
@@ -104,7 +111,7 @@ def _futurize_task(func, *args, **kwargs):
     future = Future()
 
     def nofify_exception(msg: str, cancelled: bool):
-        err = CancelledError() if cancelled else _AsyncOpFailed(msg)
+        err = CancelledError() if cancelled else spdl.io.AsyncIOFailure(msg)
         future.set_exception(err)
 
     future.set_running_or_notify_cancel()
@@ -127,7 +134,7 @@ def _futurize_generator(func, num_items, *args, **kwargs):
             futures[index].set_running_or_notify_cancel()
 
     def nofify_exception(msg: str, cancelled: bool):
-        err = CancelledError() if cancelled else _AsyncOpFailed(msg)
+        err = CancelledError() if cancelled else spdl.io.AsyncIOFailure(msg)
 
         nonlocal index
         futures[index].set_exception(err)
