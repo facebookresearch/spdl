@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import spdl.io
 from spdl.lib import _libspdl
@@ -17,6 +17,8 @@ __all__ = [
     "async_decode_packets_nvdec",
     "async_demux_media",
     "async_streaming_demux",
+    "async_load_media",
+    "async_batch_load_image",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -306,3 +308,125 @@ def async_convert_frames(frames, executor=None):
     """
     func = _common._get_conversion_func(frames)
     return _async_task(func, frames, index=None, executor=executor)
+
+
+async def async_load_media(
+    media_type: str,
+    src: Union[str, bytes],
+    demux_options: Optional[Dict[str, Any]] = None,
+    decode_options: Optional[Dict[str, Any]] = None,
+    convert_options: Optional[Dict[str, Any]] = None,
+):
+    """Perform demuxing/decoding/frame conversion
+
+    Args:
+        media_type: ``"audio"``, ``"video"`` or ``"image"``.
+
+        src (str or bytes): Source identifier, such as path or URL.
+
+        demux_options (Dict[str, Any]):
+            *Optional:* Demux options passed to ``async_demux_media``.
+
+        decode_options (Dict[str, Any]):
+            *Optional:* Decode options passed to ``async_decode_packets``.
+
+        convert_options (Dict[str, Any]):
+            *Optional:* Convert options passed to ``async_convert_frames``.
+
+    Returns:
+        (Buffer): Buffer object.
+    """
+    demux_options = demux_options or {}
+    decode_options = decode_options or {}
+    convert_options = convert_options or {}
+    packets = await async_demux_media(media_type, src, **demux_options)
+    frames = await async_decode_packets(packets, **decode_options)
+    buffer = await async_convert_frames(frames, **convert_options)
+    return buffer
+
+
+async def _decode(media_type, src, demux_options, decode_options):
+    packets = await async_demux_media(media_type, src, **demux_options)
+    return await async_decode_packets(packets, **decode_options)
+
+
+def _get_err_msg(src, err):
+    src_ = f"bytes object at {id(src)}" if isinstance(src, bytes) else src
+    return f"Failed to decode an image from {src_}: {err}."
+
+
+def _check_arg(var, key, decode_options):
+    if var is not None:
+        if key in decode_options:
+            raise ValueError(
+                f"`{key}` is given but also specified in `decode_options`."
+            )
+        decode_options[key] = var
+
+
+async def async_batch_load_image(
+    srcs: List[Union[str, bytes]],
+    width: int | None,
+    height: int | None,
+    pix_fmt: str | None = "rgb24",
+    demux_options: Optional[Dict[str, Any]] = None,
+    decode_options: Optional[Dict[str, Any]] = None,
+    convert_options: Optional[Dict[str, Any]] = None,
+    strict: bool = True,
+):
+    """Batch load images.
+
+    Args:
+        srcs: List of source identifiers.
+
+        width: *Optional:* Resize the frame.
+
+        height: *Optional:* Resize the frame.
+
+        pix_fmt:
+            *Optional:* Change the format of the pixel.
+
+        demux_options (Dict[str, Any]):
+            *Optional:* Demux options passed to ``async_demux_media``.
+
+        decode_options (Dict[str, Any]):
+            *Optional:* Decode options passed to ``async_decode_packets``.
+
+        convert_options (Dict[str, Any]):
+            *Optional:* Convert options passed to ``async_convert_frames``.
+
+        strict:
+            *Optional:* If True, raise an error if any of the images failed to load.
+    """
+    if not srcs:
+        raise ValueError("`srcs` must not be empty.")
+
+    demux_options = demux_options or {}
+    decode_options = decode_options or {}
+    convert_options = convert_options or {}
+
+    _check_arg(width, "width", decode_options)
+    _check_arg(height, "height", decode_options)
+    _check_arg(pix_fmt, "pix_fmt", decode_options)
+
+    decoding = []
+    for src in srcs:
+        coro = _decode("image", src, demux_options, decode_options)
+        decoding.append(asyncio.create_task(coro))
+
+    await asyncio.wait(decoding)
+
+    frames = []
+    for src, task in zip(srcs, decoding):
+        if err := task.exception():
+            _LG.error(_get_err_msg(src, err))
+            continue
+        frames.append(task.result())
+
+    if len(frames) != len(srcs) and strict:
+        raise RuntimeError("Failed to load some images.")
+
+    if not frames:
+        raise RuntimeError("Failed to load all the images.")
+
+    return await async_convert_frames(frames, **convert_options)

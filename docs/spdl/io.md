@@ -195,67 +195,11 @@ async for packets in spdl.io.async_streaming_demux("audio", "foo.wav", ts):
 
 ## Async API
 
-### Demuxing
-
 ::: spdl.io
     options:
-      show_source: false
-      heading_level: 4
       members:
-      - async_streaming_demux
-      - async_demux_media
-
-### Decoding
-
-::: spdl.io
-    options:
-      show_source: false
-      heading_level: 4
-      members:
-      - async_decode_packets
-      - async_decode_packets_nvdec
-
-### Buffer conversion
-
-::: spdl.io
-    options:
-      show_source: false
-      heading_level: 4
-      members:
-      - async_convert_frames_cpu
-      - async_convert_frames
-
-## Concurrent API
-
-### Demuxing
-
-::: spdl.io
-    options:
-      show_source: false
-      heading_level: 4
-      members:
-      - streaming_demux
-      - demux_media
-
-### Decoding
-
-::: spdl.io
-    options:
-      show_source: false
-      heading_level: 4
-      members:
-      - decode_packets
-      - decode_packets_nvdec
-
-### Buffer conversion
-
-::: spdl.io
-    options:
-      show_source: false
-      heading_level: 4
-      members:
-      - convert_frames_cpu
-      - convert_frames
+      - async_load_media
+      - async_batch_load_image
 
 ## Array conversion
 
@@ -274,3 +218,57 @@ async for packets in spdl.io.async_streaming_demux("audio", "foo.wav", ts):
       show_root_toc_entry: false
       members:
       - AsyncIOFailure
+
+## Low-level Async API - Demuxing
+
+::: spdl.io
+    options:
+      show_source: false
+      members:
+      - async_streaming_demux
+      - async_demux_media
+
+## Low-level Async API - Decoding
+
+::: spdl.io
+    options:
+      show_source: false
+      members:
+      - async_decode_packets
+      - async_decode_packets_nvdec
+
+## Low-level Async API - Buffer conversion
+
+::: spdl.io
+    options:
+      show_source: false
+      members:
+      - async_convert_frames_cpu
+      - async_convert_frames
+
+## Low-level Concurrent API - Demuxing
+
+::: spdl.io
+    options:
+      show_source: false
+      members:
+      - streaming_demux
+      - demux_media
+
+## Low-level Concurrent API - Decoding
+
+::: spdl.io
+    options:
+      show_source: false
+      members:
+      - decode_packets
+      - decode_packets_nvdec
+
+## Low-level Concurrent API - Buffer conversion
+
+::: spdl.io
+    options:
+      show_source: false
+      members:
+      - convert_frames_cpu
+      - convert_frames
