@@ -6,6 +6,8 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
 
+#include <cassert>
+
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/pixdesc.h>

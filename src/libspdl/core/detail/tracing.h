@@ -2,6 +2,7 @@
 
 #ifndef SPDL_ENABLE_TRACING
 
+#define TRACE_COUNTER(...)
 #define TRACE_EVENT(...)
 #define TRACE_EVENT_BEGIN(...)
 #define TRACE_EVENT_END(...)
