@@ -211,9 +211,7 @@ def test_decode_image(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test(src):
-        frames = await _decode_image(src)
-        print(frames)
-        buffer = await spdl.io.async_convert_frames(frames)
+        buffer = await spdl.io.async_load_media("image", src)
         array = spdl.io.to_numpy(buffer)
         print(array.shape, array.dtype)
         assert array.dtype == np.uint8
@@ -223,23 +221,16 @@ def test_decode_image(get_sample):
 
 
 def test_batch_decode_image(get_samples):
-    """Can decode an image."""
+    """Can decode a batch of images."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
     samples = get_samples(cmd)
 
     flist = ["NON_EXISTING_FILE.JPG"] + samples
 
     async def _test():
-        decoding = [asyncio.create_task(_decode_image(path)) for path in flist]
-        frames = []
-        await asyncio.wait(decoding)
-        for i, result in enumerate(decoding):
-            if i == 0:
-                assert result.exception() is not None
-            else:
-                frames.append(result.result())
-
-        buffer = await spdl.io.async_convert_frames(frames)
+        buffer = await spdl.io.async_batch_load_image(
+            flist, width=None, height=None, pix_fmt=None, strict=False
+        )
         assert buffer.shape == [250, 3, 240, 320]
 
     asyncio.run(_test())
