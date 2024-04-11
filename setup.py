@@ -66,6 +66,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-DCMAKE_VERBOSE_MAKEFILE=OFF",
             "-DCMAKE_INSTALL_MESSAGE=NEVER",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
+            "-DCMAKE_INSTALL_LIBDIR=lib",
             "-GNinja",
         ],
         [
@@ -86,6 +87,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DCMAKE_INSTALL_MESSAGE={'ALWAYS' if debug else 'LAZY'}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_PREFIX_PATH={install_dir}",
+            "-DCMAKE_INSTALL_LIBDIR=lib",
             "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=false",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DSPDL_ENABLE_TRACING={'ON' if _ENABLE_TRACING else 'OFF'}",
