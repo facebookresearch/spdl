@@ -51,7 +51,7 @@ if (SPDL_ENABLE_TRACING)
   add_subdirectory(third_party/perfetto)
 endif()
 if (SPDL_USE_NVDEC)
-  add_subdirectory(third_party/nvdec)
+  add_subdirectory(third_party/nvcodec)
 endif()
 
 add_subdirectory(src)
