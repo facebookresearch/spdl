@@ -6,7 +6,11 @@
 #include <string_view>
 #include <version>
 
-#if defined __cpp_lib_source_location
+// CUDA interferes with <source_location> header
+// https://forums.developer.nvidia.com/t/c-20s-source-location-compilation-error-when-using-nvcc-12-1/258026
+#if defined SPDL_USE_CUDA && __has_include(<experimental/source_location>)
+#include <experimental/source_location>
+#elif defined __cpp_lib_source_location
 #include <source_location>
 #elif __has_include(<experimental/source_location>)
 #include <experimental/source_location>
@@ -17,7 +21,9 @@
 
 namespace spdl::core::detail {
 
-#if defined __cpp_lib_source_location
+#if defined SPDL_USE_CUDA && __has_include(<experimental/source_location>)
+using std::experimental::source_location;
+#elif defined __cpp_lib_source_location
 using std::source_location;
 #else
 using std::experimental::source_location;

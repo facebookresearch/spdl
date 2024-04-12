@@ -13,22 +13,24 @@ class NV12Passthrough : public Converter {
   using Converter::Converter;
   void convert(uint8_t* src_ptr, unsigned int src_pitch) override {
     auto cfg = CUDA_MEMCPY2D{
-        .Height = buffer->h,
-        .WidthInBytes = buffer->width_in_bytes,
-        .dstArray = nullptr,
-        .dstDevice = (CUdeviceptr)buffer->get_next_frame(),
-        .dstHost = nullptr,
-        .dstMemoryType = CU_MEMORYTYPE_DEVICE,
-        .dstPitch = buffer->pitch,
-        .dstXInBytes = 0,
-        .dstY = 0,
-        .srcArray = nullptr,
-        .srcDevice = (CUdeviceptr)src_ptr,
-        .srcHost = nullptr,
-        .srcMemoryType = CU_MEMORYTYPE_DEVICE,
-        .srcPitch = src_pitch,
         .srcXInBytes = 0,
         .srcY = 0,
+        .srcMemoryType = CU_MEMORYTYPE_DEVICE,
+        .srcHost = nullptr,
+        .srcDevice = (CUdeviceptr)src_ptr,
+        .srcArray = nullptr,
+        .srcPitch = src_pitch,
+
+        .dstXInBytes = 0,
+        .dstY = 0,
+        .dstMemoryType = CU_MEMORYTYPE_DEVICE,
+        .dstHost = nullptr,
+        .dstDevice = (CUdeviceptr)buffer->get_next_frame(),
+        .dstArray = nullptr,
+        .dstPitch = buffer->pitch,
+
+        .WidthInBytes = buffer->width_in_bytes,
+        .Height = buffer->h,
     };
     TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
     CHECK_CU(

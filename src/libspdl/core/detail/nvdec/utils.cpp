@@ -14,6 +14,10 @@ extern "C" {
 }
 
 namespace spdl::core::detail {
+
+const char* get_codec_name(cudaVideoCodec codec);
+const char* get_chroma_name(cudaVideoChromaFormat chroma);
+
 cudaVideoCodec covert_codec_id(AVCodecID id) {
   switch (id) {
     case AV_CODEC_ID_MPEG1VIDEO:
@@ -222,6 +226,10 @@ cudaVideoSurfaceFormat get_output_sufrace_format(
       case cudaVideoChromaFormat_422:
         // YUV422 as output is not supported, so we use NV12
         return cudaVideoSurfaceFormat_NV12;
+      default:
+        SPDL_FAIL(fmt::format(
+            "Unsupported chroma format: {}",
+            get_chroma_name(video_fmt->chroma_format)));
     }
   }();
 
@@ -317,23 +325,6 @@ CUVIDDECODECAPS check_capacity(
   return caps;
 }
 
-const char* get_desc(cuvidDecodeStatus status) {
-  switch (status) {
-    case cuvidDecodeStatus_Invalid:
-      return "Decode status is not valid.";
-    case cuvidDecodeStatus_InProgress:
-      return "Decode is in progress.";
-    case cuvidDecodeStatus_Success:
-      return "Decode is completed without an error.";
-    case cuvidDecodeStatus_Error:
-      return "Decode is completed with an unconcealed error.";
-    case cuvidDecodeStatus_Error_Concealed:
-      return "Decode is completed with a concealed error.";
-    default:
-      return "Unkonwn decode status.";
-  }
-}
-
 const char* get_codec_name(cudaVideoCodec codec) {
   switch (codec) {
     case cudaVideoCodec_MPEG1:
@@ -372,6 +363,8 @@ const char* get_codec_name(cudaVideoCodec codec) {
       return "YUYV";
     case cudaVideoCodec_UYVY:
       return "UYVY";
+    default:
+      return "Unknown";
   }
 }
 
@@ -385,6 +378,8 @@ const char* get_chroma_name(cudaVideoChromaFormat chroma) {
       return "422";
     case cudaVideoChromaFormat_444:
       return "444";
+    default:
+      return "Unknown";
   }
 }
 
@@ -469,6 +464,8 @@ const char* get_surface_format_name(cudaVideoSurfaceFormat s) {
       return "YUV444";
     case cudaVideoSurfaceFormat_YUV444_16Bit:
       return "YUV444_16Bit";
+    default:
+      return "Unknown";
   }
 }
 
@@ -634,7 +631,7 @@ std::string print(const CUVIDDECODECREATEINFO* p) {
       p->display_area.right,
       p->display_area.bottom,
       get_surface_format_name(p->OutputFormat),
-      p->DeinterlaceMode,
+      int(p->DeinterlaceMode),
       p->ulTargetWidth,
       p->ulTargetHeight,
       p->ulNumOutputSurfaces,
@@ -657,7 +654,9 @@ std::string get_diff(
   }
   if (i1.DeinterlaceMode != i2.DeinterlaceMode) {
     diffs.emplace_back(fmt::format(
-        "DeinterlaceMode: {} -> {}", i1.DeinterlaceMode, i2.DeinterlaceMode));
+        "DeinterlaceMode: {} -> {}",
+        int(i1.DeinterlaceMode),
+        int(i2.DeinterlaceMode)));
   }
   if (i1.bitDepthMinus8 != i2.bitDepthMinus8) {
     diffs.emplace_back(fmt::format(

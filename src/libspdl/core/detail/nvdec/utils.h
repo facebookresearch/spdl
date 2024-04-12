@@ -45,12 +45,7 @@ CUVIDDECODECAPS check_capacity(
     CUVIDEOFORMAT* video_fmt,
     std::vector<CUVIDDECODECAPS>& cache);
 
-const char* get_desc(cuvidDecodeStatus);
-
 const char* get_surface_format_name(cudaVideoSurfaceFormat surface_fmt);
-const char* get_video_format_name(unsigned char video_fmt);
-const char* get_chroma_name(cudaVideoChromaFormat chroma);
-const char* get_codec_name(cudaVideoCodec codec);
 
 std::string print(const CUVIDEOFORMAT*);
 std::string print(const CUVIDDECODECAPS*);

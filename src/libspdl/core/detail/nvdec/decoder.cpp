@@ -66,7 +66,10 @@ CUvideoparserPtr get_parser(
       .pfnDecodePicture = cb_decode,
       .pfnDisplayPicture = cb_disp,
       .pfnGetOperatingPoint = cb_op,
-      .pfnGetSEIMsg = extract_sei_message ? cb_sei : NULL};
+      .pfnGetSEIMsg = extract_sei_message
+          ? cb_sei
+          : static_cast<PFNVIDSEIMSGCALLBACK>(nullptr),
+  };
   CUvideoparser parser;
   TRACE_EVENT("nvdec", "cuvidCreateVideoParser");
   CHECK_CU(
@@ -112,6 +115,23 @@ inline RECON update_type(
   }
   // XLOG(DBG9) << "Reconfiguring the decoder object.";
   return RECON::RECONFIGURE;
+}
+
+const char* get_desc(cuvidDecodeStatus status) {
+  switch (status) {
+    case cuvidDecodeStatus_Invalid:
+      return "Decode status is not valid.";
+    case cuvidDecodeStatus_InProgress:
+      return "Decode is in progress.";
+    case cuvidDecodeStatus_Success:
+      return "Decode is completed without an error.";
+    case cuvidDecodeStatus_Error:
+      return "Decode is completed with an unconcealed error.";
+    case cuvidDecodeStatus_Error_Concealed:
+      return "Decode is completed with a concealed error.";
+    default:
+      return "Unkonwn decode status.";
+  }
 }
 
 inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
@@ -403,7 +423,7 @@ void NvDecDecoder::decode(
     SPDL_FAIL_INTERNAL("Parser is not initialized.");
   }
   CUVIDSOURCEDATAPACKET packet{
-      .payload = data, .payload_size = size, .flags = flags, .timestamp = pts};
+      .flags = flags, .payload_size = size, .payload = data, .timestamp = pts};
   TRACE_EVENT("nvdec", "cuvidParseVideoData");
   CHECK_CU(
       cuvidParseVideoData(parser.get(), &packet),
@@ -419,9 +439,9 @@ void NvDecDecoder::reset() {
 
   const unsigned char data{};
   CUVIDSOURCEDATAPACKET packet{
-      .payload = &data,
-      .payload_size = 0,
       .flags = CUVID_PKT_ENDOFSTREAM,
+      .payload_size = 0,
+      .payload = &data,
       .timestamp = 0};
   TRACE_EVENT("nvdec", "cuvidParseVideoData");
   CHECK_CU(

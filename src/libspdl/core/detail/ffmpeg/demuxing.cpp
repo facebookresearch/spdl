@@ -28,6 +28,8 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
         [[fallthrough]];
       case MediaType::Video:
         return AVMEDIA_TYPE_VIDEO;
+      default:
+        SPDL_FAIL("Unexpected media type.");
     }
   }();
   int idx;
