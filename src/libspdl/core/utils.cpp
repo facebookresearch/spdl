@@ -7,7 +7,7 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVDEC)
+#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVCODEC)
 #include "libspdl/core/detail/cuda.h"
 #endif
 
@@ -73,7 +73,7 @@ TracingSession::~TracingSession() {
 void TracingSession::init() {
   static std::once_flag flag;
   std::call_once(flag, []() {
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
     detail::init_perfetto();
 #else
     XLOG(WARN) << "Tracing is not enabled.";
@@ -82,13 +82,13 @@ void TracingSession::init() {
 }
 
 void TracingSession::config(const std::string& process_name) {
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
   detail::configure_perfetto(process_name);
 #endif
 }
 
 void TracingSession::start(int fd) {
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
   if (sess) {
     SPDL_FAIL("Tracing session is avtive.");
   }
@@ -97,7 +97,7 @@ void TracingSession::start(int fd) {
 }
 
 void TracingSession::stop() {
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
   if (!sess) {
     SPDL_FAIL("Tracing session is not avtive.");
   }
@@ -114,7 +114,7 @@ std::unique_ptr<TracingSession> init_tracing() {
 
 template <typename Number>
 void trace_counter(int i, Number val) {
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
 
 #define _CASE(i)                                \
   case i: {                                     \
@@ -144,13 +144,13 @@ template void trace_counter<int>(int i, int counter);
 template void trace_counter<double>(int i, double counter);
 
 void trace_event_begin(const std::string& name) {
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
   TRACE_EVENT_BEGIN("other", perfetto::DynamicString{name});
 #endif
 }
 
 void trace_event_end() {
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
   TRACE_EVENT_END("other");
 #endif
 }

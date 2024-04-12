@@ -87,7 +87,7 @@ struct CUDABuffer : Buffer {
 /// Contiguous array data on a CUDA device.
 /// This class is used to hold data decoded with NVDEC.
 struct CUDABuffer2DPitch {
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
   int device_index;
 
   ///
