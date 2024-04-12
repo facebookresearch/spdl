@@ -65,6 +65,7 @@ if (SPDL_USE_NVDEC)
     libspdl/core/detail/nvdec/utils.cpp
     libspdl/core/detail/nvdec/wrapper.cpp
     )
+  list(APPEND deps nvcuvid-stub)
 endif()
 
 if(SPDL_ENABLE_TRACING)
