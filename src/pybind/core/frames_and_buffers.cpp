@@ -28,6 +28,9 @@ std::string get_typestr(const ElemClass elem_class, size_t depth) {
         return "i";
       case ElemClass::Float:
         return "f";
+      default:
+        throw std::runtime_error(
+            fmt::format("Unsupported class {}.", int(elem_class)));
     }
   }();
   return fmt::format("|{}{}", key, depth);

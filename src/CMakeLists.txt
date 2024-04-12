@@ -49,6 +49,7 @@ if (SPDL_USE_CUDA)
     libspdl/core/detail/cuda.cpp
     libspdl/core/buffer/cuda.cpp
     libspdl/core/storage/cpu.cpp
+    libspdl/core/storage/cuda.cpp
     )
 endif()
 
@@ -58,6 +59,7 @@ if (SPDL_USE_NVDEC)
     libspdl/core/buffer/nvdec.cpp
     libspdl/core/frames/nvdec.cpp
     libspdl/core/detail/nvdec/converter.cpp
+    libspdl/core/detail/nvdec/color_conversion.cu
     libspdl/core/detail/nvdec/decoder.cpp
     libspdl/core/detail/nvdec/decoding.cpp
     libspdl/core/detail/nvdec/utils.cpp
