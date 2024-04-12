@@ -4,7 +4,7 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
 #include <libspdl/core/detail/cuda.h>
 #endif
 
@@ -18,7 +18,7 @@ template <MediaType media_type>
 CUDABuffer2DPitchPtr convert_nvdec_frames(
     const NvDecFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index) {
-#ifndef SPDL_USE_NVDEC
+#ifndef SPDL_USE_NVCODEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
   TRACE_EVENT(
@@ -46,7 +46,7 @@ template CUDABuffer2DPitchPtr convert_nvdec_frames<MediaType::Video>(
     const std::optional<int>& index);
 
 namespace {
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
 bool same_shape(const std::vector<size_t>& a, const std::vector<size_t>& b) {
   if (a.size() != b.size()) {
     return false;
@@ -92,7 +92,7 @@ void check_consistency(
 CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
     const std::vector<NvDecImageFramesWrapperPtr>& batch_frames,
     const std::optional<int>& index) {
-#ifndef SPDL_USE_NVDEC
+#ifndef SPDL_USE_NVCODEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
   TRACE_EVENT("decoding", "core::convert_nvdec_batch_image_frames");

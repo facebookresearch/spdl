@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef SPDL_ENABLE_TRACING
+#ifndef SPDL_USE_TRACING
 
 #define TRACE_COUNTER(...)
 #define TRACE_EVENT(...)

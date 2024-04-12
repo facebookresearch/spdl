@@ -25,7 +25,7 @@ ext_modules = [
 ]
 
 
-def _get_build_env(var, default=False):
+def _env(var, default=False):
     if var not in os.environ:
         return default
 
@@ -40,14 +40,6 @@ def _get_build_env(var, default=False):
             f"Expected one of {trues + falses}"
         )
     return False
-
-
-_USE_CUDA = _get_build_env("USE_CUDA")
-_USE_NVDEC = _get_build_env("USE_NVDEC")
-_DEBUG_REFCOUNT = _get_build_env("DEBUG_REFCOUNT")
-_ENABLE_TRACING = _get_build_env("ENABLE_TRACING")
-_SKIP_FOLLY_DEPS = _get_build_env("SKIP_FOLLY_DEPS")
-_SPDL_BUILD_SAMPLES = _get_build_env("SPDL_BUILD_SAMPLES")
 
 
 def _get_cmake_commands(build_dir, install_dir, debug):
@@ -90,13 +82,17 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-DCMAKE_INSTALL_LIBDIR=lib",
             "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=false",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
-            f"-DSPDL_ENABLE_TRACING={'ON' if _ENABLE_TRACING else 'OFF'}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
-            f"-DSPDL_BUILD_SAMPLES={'ON' if _SPDL_BUILD_SAMPLES else 'OFF'}",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
-            f"-DSPDL_USE_CUDA={_b(_USE_CUDA)}",
-            f"-DSPDL_USE_NVDEC={_b(_USE_NVDEC)}",
-            f"-DSPDL_DEBUG_REFCOUNT={_b(_DEBUG_REFCOUNT)}",
+            ###################################################################
+            # Options based on env vars
+            ###################################################################
+            f"-DSPDL_USE_TRACING={_b(_env('SPDL_USE_TRACING'))}",
+            f"-DSPDL_USE_CUDA={_b(_env('SPDL_USE_CUDA'))}",
+            f"-DSPDL_USE_NVCODEC={_b(_env('SPDL_USE_NVCODEC'))}",
+            f"-DSPDL_DEBUG_REFCOUNT={_b(_env('SPDL_DEBUG_REFCOUNT'))}",
+            f"-DSPDL_BUILD_SAMPLES={_b(_env('SPDL_BUILD_SAMPLES'))}",
+            ###################################################################
             "-GNinja",
         ],
         [
@@ -107,7 +103,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         ],
         # fmt: on
     ]
-    if _SKIP_FOLLY_DEPS:
+    if _env("SKIP_FOLLY_DEPS"):
         return main_build_cmd
     return deps_cmd + main_build_cmd
 

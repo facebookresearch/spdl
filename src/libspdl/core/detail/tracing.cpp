@@ -1,6 +1,6 @@
 #include "libspdl/core/detail/tracing.h"
 
-#ifdef SPDL_ENABLE_TRACING
+#ifdef SPDL_USE_TRACING
 
 #include <folly/logging/xlog.h>
 

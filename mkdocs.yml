@@ -28,7 +28,7 @@ plugins:
             RECURSIVE: YES
             SEPARATE_MEMBER_PAGES: YES
             EXCLUDE_SYMBOLS: std,spdl::core::detail,folly
-            PREDEFINED: SPDL_USE_CUDA SPDL_USE_NVDEC
+            PREDEFINED: SPDL_USE_CUDA SPDL_USE_NVCODEC
             SOURCE_BROWSER: YES
             VERBATIM_HEADERS: NO
 

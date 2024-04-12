@@ -6,7 +6,7 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
 #include "libspdl/core/detail/cuda.h"
 #include "libspdl/core/detail/nvdec/decoding.h"
 #include "libspdl/core/detail/nvdec/utils.h"
@@ -14,7 +14,7 @@
 
 namespace spdl::core {
 namespace {
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
 void init_cuda() {
   static std::once_flag flag;
   std::call_once(flag, []() {
@@ -75,7 +75,7 @@ FuturePtr async_decode_nvdec(
     int height,
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr executor) {
-#ifndef SPDL_USE_NVDEC
+#ifndef SPDL_USE_NVCODEC
   auto task = folly::coro::co_invoke(
       []() -> folly::coro::Task<NvDecFramesWrapperPtr<media_type>> {
         SPDL_FAIL("SPDL is not compiled with NVDEC support.");

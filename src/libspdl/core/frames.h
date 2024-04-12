@@ -208,7 +208,7 @@ class FFmpegFrames {
 /// The decoded media can be video or image.
 template <MediaType media_type>
 struct NvDecFrames {
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
  private:
   ///
   /// Used for tracking the lifetime in tracing.

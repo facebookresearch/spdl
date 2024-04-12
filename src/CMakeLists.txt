@@ -53,8 +53,8 @@ if (SPDL_USE_CUDA)
     )
 endif()
 
-if (SPDL_USE_NVDEC)
-  list(APPEND defs SPDL_USE_NVDEC)
+if (SPDL_USE_NVCODEC)
+  list(APPEND defs SPDL_USE_NVCODEC)
   list(APPEND srcs
     libspdl/core/buffer/nvdec.cpp
     libspdl/core/frames/nvdec.cpp
@@ -68,9 +68,9 @@ if (SPDL_USE_NVDEC)
   list(APPEND deps nvcuvid-stub)
 endif()
 
-if(SPDL_ENABLE_TRACING)
+if(SPDL_USE_TRACING)
   list(APPEND deps perfetto)
-  list(APPEND defs SPDL_ENABLE_TRACING)
+  list(APPEND defs SPDL_USE_TRACING)
   list(APPEND srcs libspdl/core/detail/tracing.cpp)
 endif()
 

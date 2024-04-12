@@ -63,7 +63,7 @@ py::dict get_cuda_array_interface(CUDABuffer& b) {
 }
 #endif
 
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
 py::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
   if (!b.p) {
     throw std::runtime_error("CUDA buffer is empty.");
@@ -181,7 +181,7 @@ void register_frames_and_buffers(py::module& m) {
           IF_CUDABUFFER_ENABLED(
               [](CUDABuffer& self) { return get_cuda_array_interface(self); }));
 
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
 #define IF_CUDABUFFER2_ENABLED(x) x
 #else
 #define IF_CUDABUFFER2_ENABLED(x)                                         \
@@ -361,7 +361,7 @@ void register_frames_and_buffers(py::module& m) {
             ref->is_cuda());
       });
 
-#ifdef SPDL_USE_NVDEC
+#ifdef SPDL_USE_NVCODEC
 #define IF_NVDECVIDEOFRAMES_ENABLED(x) x
 #else
 #define IF_NVDECVIDEOFRAMES_ENABLED(x)                                    \
