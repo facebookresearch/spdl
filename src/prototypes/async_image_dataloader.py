@@ -1,16 +1,16 @@
 """Experiment for running asyncio.loop in background thread and decode media"""
 
-import asyncio
 import logging
-import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from queue import Queue
 
 import spdl.io
 import spdl.utils
 
 import torch
+from spdl.dataloader._task_runner import apply_async, BackgroundTaskRunner
+from spdl.dataloader._utils import _iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -33,120 +33,46 @@ def _parse_args(args):
     return parser.parse_args(args)
 
 
-class BulkImageProcessor:
-    def __init__(self, queue, decode_func):
-        self.queue = queue
-        self.decode_func = decode_func
-
-    def _cb(self, task):
-        if err := task.exception():
-            _LG.error("Failed to process task %s: %s", task.get_name(), err)
-        else:
-            self.queue.put(task.result())
-
-    async def __call__(self, path_gen, *, max_tasks=30):
-        _tasks = set()
-        for i, paths in enumerate(path_gen):
-            coro = self.decode_func(paths)
-            task = asyncio.create_task(coro, name=f"batch_{i}")
-            task.add_done_callback(self._cb)
-            task.add_done_callback(_tasks.discard)
-            _tasks.add(task)
-
-            while len(_tasks) > max_tasks:
-                await asyncio.sleep(0)
-
-        while len(_tasks):
-            await asyncio.sleep(0)
+# TODO: Think of a way to put this back
+# async def _track(queue):
+#     while True:
+#         await asyncio.sleep(3 / 1000)
+#         spdl.utils.trace_default_demux_executor_queue_size()
+#         spdl.utils.trace_default_decode_executor_queue_size()
+#         spdl.utils.trace_counter(0, queue.qsize())
 
 
-def _get_decode_func(width, height, pix_fmt="rgba"):
-    async def _func(srcs):
-        return await spdl.io.async_batch_load_image(
-            srcs,
-            width=width,
-            height=height,
-            pix_fmt=pix_fmt,
-            strict=False,
-        )
-
-    return _func
+@dataclass
+class PerfResult:
+    elapsed: float
+    num_batches: int
+    num_frames: int
 
 
-async def _track(queue):
-    while True:
-        await asyncio.sleep(3 / 1000)
-        spdl.utils.trace_default_demux_executor_queue_size()
-        spdl.utils.trace_default_decode_executor_queue_size()
-        spdl.utils.trace_counter(0, queue.qsize())
+def _iter_dataloader(dataloader, device):
+    t0 = t_int = time.monotonic()
+    num_frames = num_frames_int = 0
+    num_batches = 0
+    try:
+        for batch in dataloader:
+            batch = spdl.io.to_torch(batch).to(device)
+            num_frames += batch.shape[0]
+            num_batches += 1
 
+            t1 = time.monotonic()
+            if (elapsed := t1 - t_int) > 10:
+                n = num_frames - num_frames_int
+                _LG.info(f"Interval FPS={n / elapsed:.2f} (Done {num_batches=})")
 
-async def _process_flist(
-    queue,
-    paths_gen,
-    cuda_device_index,
-    width=222,
-    height=222,
-):
-    tracker = asyncio.create_task(_track(queue))
+                t_int = t1
+                num_frames_int = num_frames
 
-    bip = BulkImageProcessor(
-        queue,
-        _get_decode_func(width, height),
-    )
-    _LG.info("Starting decoding job.")
-    task = asyncio.create_task(bip(paths_gen))
-    await task
-    if err := task.exception():
-        _LG.error(f"Failed to process the flist: {err}")
+    finally:
+        elapsed = time.monotonic() - t0
+        fps = num_frames / elapsed
+        _LG.info(f"FPS={fps:.2f} ({num_frames} / {elapsed:.2f}), (Done {num_frames})")
 
-    tracker.cancel()
-
-
-def _iter_file(path, prefix):
-    with open(path, "r") as f:
-        for line in f:
-            if path := line.strip():
-                yield prefix + path
-
-
-def _sample(gen, offset=0, every_n=1, max=None):
-    offset = offset % every_n
-
-    num = 0
-    for i, item in enumerate(gen):
-        if i % every_n == offset:
-            yield item
-            num += 1
-
-            if max is not None and num >= max:
-                return
-
-
-def _batch(gen, batch_size):
-    batch = []
-    for item in gen:
-        batch.append(item)
-        if len(batch) >= batch_size:
-            yield batch
-            batch = []
-    if batch:
-        yield batch
-
-
-def _iter_flist(path, prefix, batch_size, *, n=0, N=1, max=None):
-    return _batch(_sample(_iter_file(path, prefix), n, N, max), batch_size)
-
-
-def bg_worker(queue, flist_path, prefix, batch_size, worker_id, num_workers, trace):
-    asyncio.set_event_loop(asyncio.new_event_loop())
-
-    trace_path = f"{trace}.{worker_id}"
-    paths_gen = _iter_flist(flist_path, prefix, batch_size, n=worker_id, N=num_workers)
-    with spdl.utils.tracing(trace_path, enable=trace is not None):
-        asyncio.run(_process_flist(queue, paths_gen, worker_id))
-
-    queue.put(None)
+    return PerfResult(elapsed, num_batches, num_frames)
 
 
 def _benchmark(args):
@@ -158,55 +84,45 @@ def _benchmark(args):
         args.worker_id,
     )
 
-    # Warm up
-    torch.zeros([1, 1], device=torch.device(f"cuda:{args.worker_id}"))
-
     _LG.info(args)
 
-    queue = Queue(maxsize=100)
-    device_index = args.worker_id
+    async def _decode_func(srcs):
+        return await spdl.io.async_batch_load_image(
+            srcs,
+            width=256,
+            height=256,
+            pix_fmt="rgb24",
+            strict=False,
+        )
 
-    thread = threading.Thread(
-        target=bg_worker,
-        args=(
-            queue,
-            args.input_flist,
-            args.prefix,
-            args.batch_size,
-            device_index,
-            args.num_workers,
-            args.trace,
-        ),
+    gen = _iter_flist(
+        args.input_flist,
+        prefix=args.prefix,
+        batch_size=args.batch_size,
+        n=args.worker_id,
+        N=args.num_workers,
     )
-    thread.start()
 
-    _LG.info("Waiting for the producers...")
-    device = torch.device(f"cuda:{device_index}")
-    t_int = t0 = time.monotonic()
-    num_processed_int = num_processed = 0
-    while (buffer := queue.get()) is not None:
-        batch = spdl.io.to_torch(buffer).to(device)
-        num_processed += batch.shape[0]
+    dataloader = BackgroundTaskRunner(apply_async(_decode_func, gen))
+    device = torch.device(f"cuda:{args.worker_id}")
 
-        t1 = time.monotonic()
-        if (elapsed := t1 - t_int) > 10:
-            n = num_processed - num_processed_int
-            qps = n / elapsed
-            _LG.info(
-                f"Interval QPS={qps:.2f} (= {n} / {elapsed:.2f}), (Done {num_processed})"
-            )
+    # Warm up
+    torch.zeros([1, 1], device=device)
 
-            t_int = t1
-            num_processed_int = num_processed
-    elapsed = time.monotonic() - t0
-    qps = num_processed / elapsed
-    _LG.info(f"QPS={qps:.2f} ({num_processed} / {elapsed:.2f}), (Done {num_processed})")
-
-    thread.join()
+    trace_path = f"{args.trace}.{args.worker_id}"
+    with spdl.utils.tracing(trace_path, enable=args.trace is not None):
+        try:
+            dataloader.start()
+            return _iter_dataloader(dataloader, device)
+        except (KeyboardInterrupt, Exception):
+            _LG.exception("Exception occured while going through the dataloader.")
+            dataloader.request_stop()
+        finally:
+            dataloader.join()
 
 
 def _init_logging(debug=False, worker_id=None):
-    fmt = "%(asctime)s [%(levelname)s] %(message)s"
+    fmt = "%(asctime)s [%(filename)s:%(lineno)d] [%(levelname)s] %(message)s"
     if worker_id is not None:
         fmt = f"[{worker_id}:%(thread)d] {fmt}"
     level = logging.DEBUG if debug else logging.INFO
@@ -250,10 +166,17 @@ def _main(args=None):
         _init_logging()
         _LG.info("Spawned: %d workers", ns.num_workers)
 
-        t0 = time.monotonic()
-        pool.map(_benchmark, args_set)
-        elapsed = time.monotonic() - t0
-    _LG.info("Elapsed: %.2f", elapsed)
+        vals = pool.map(_benchmark, args_set)
+
+    ave_time = sum(v.elapsed for v in vals) / len(vals)
+    total_frames = sum(v.num_frames for v in vals)
+    total_batches = sum(v.num_batches for v in vals)
+
+    _LG.info(f"{ave_time=:.2f}, {total_frames=}, {total_batches=}")
+
+    FPS = total_frames / ave_time
+    BPS = total_batches / ave_time
+    _LG.info(f"Aggregated {FPS=:.2f}, {BPS=:.2f}")
 
 
 if __name__ == "__main__":
