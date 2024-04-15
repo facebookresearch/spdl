@@ -6,6 +6,13 @@ from . import _async, _common, _convert, _sync
 
 __all__ = sorted(_convert.__all__ + _async.__all__ + _sync.__all__ + _common.__all__)
 
+_doc_submodules = [
+    "_common",
+    "_convert",
+    "_async",
+    "_sync",
+]
+
 
 def __dir__() -> List[str]:
     return __all__
