@@ -1,6 +1,7 @@
 import pytest
 
 import spdl.io
+import spdl.utils
 import torch
 from spdl.lib import _libspdl
 
@@ -9,7 +10,7 @@ DEFAULT_CUDA = 0
 
 
 def _decode_image(path, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba", executor=None):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _decode():
         packets = yield spdl.io.demux_media("image", path)
         frames = yield spdl.io.decode_packets_nvdec(

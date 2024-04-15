@@ -63,11 +63,11 @@ and makes it difficult to perfom multiple operations concurrently from Python.
 So we implemented two helper functions which facilitate chaining the
 concurrent operations.
 
-* ``spdl.io.chain_futures`` is a decorator which converts Future Generator to
+* ``spdl.utils.chain_futures`` is a decorator which converts Future Generator to
   a function that returns one Future, which is fullfilled when the Future Generator
   is exhausted. The intermediate Futures are automatically chained and called via
   callback function.
-* ``spdl.io.wait_futures`` can be used when the client code need to wait for multiple
+* ``spdl.utils.wait_futures`` can be used when the client code need to wait for multiple
   ``Future`` objects to fullfill before moving onto the next operation.
 
 
@@ -272,10 +272,3 @@ async for packets in spdl.io.async_streaming_demux("audio", "foo.wav", ts):
       members:
       - convert_frames_cpu
       - convert_frames
-
-## Concurrent API Helper functions
-
-::: spdl.io
-    options:
-      members:
-      - chain_futures

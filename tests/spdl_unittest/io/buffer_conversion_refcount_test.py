@@ -4,10 +4,11 @@ import sys
 import numpy as np
 
 import spdl.io
+import spdl.utils
 
 
 def _decode_video(src, pix_fmt=None):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _decode():
         packets = yield spdl.io.demux_media("video", src)
         frames = yield spdl.io.decode_packets(packets, pix_fmt=pix_fmt)

@@ -28,3 +28,12 @@
       members:
       - get_ffmpeg_log_level
       - set_ffmpeg_log_level
+
+## Future
+
+::: spdl.utils
+    options:
+      show_source: false
+      members:
+      - chain_futures
+      - wait_futures

@@ -2,10 +2,11 @@ import numpy as np
 import pytest
 
 import spdl.io
+import spdl.utils
 
 
 def _decode_audio(src, sample_fmt=None):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _decode():
         packets = yield spdl.io.demux_media("audio", src)
         frames = yield spdl.io.decode_packets(packets, sample_fmt=sample_fmt)
