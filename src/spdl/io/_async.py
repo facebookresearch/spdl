@@ -329,16 +329,18 @@ async def async_load_media(
         src (str or bytes): Source identifier, such as path or URL.
 
         demux_options (Dict[str, Any]):
-            *Optional:* Demux options passed to ``async_demux_media``.
+            *Optional:* Demux options passed to [spdl.io.async_demux_media][].
 
         decode_options (Dict[str, Any]):
-            *Optional:* Decode options passed to ``async_decode_packets``.
+            *Optional:* Decode options passed to [spdl.io.async_decode_packets][].
 
         convert_options (Dict[str, Any]):
-            *Optional:* Convert options passed to ``async_convert_frames``.
+            *Optional:* Convert options passed to [spdl.io.async_convert_frames][].
 
     Returns:
-        (Buffer): Buffer object.
+        (Buffer): An object implements buffer protocol.
+            To be passed to casting functions like [spdl.io.to_numpy][],
+            [spdl.io.to_torch][] or [spdl.io.to_numba][].
     """
     demux_options = demux_options or {}
     decode_options = decode_options or {}
@@ -391,16 +393,21 @@ async def async_batch_load_image(
             *Optional:* Change the format of the pixel.
 
         demux_options (Dict[str, Any]):
-            *Optional:* Demux options passed to ``async_demux_media``.
+            *Optional:* Demux options passed to [spdl.io.async_demux_media][].
 
         decode_options (Dict[str, Any]):
-            *Optional:* Decode options passed to ``async_decode_packets``.
+            *Optional:* Decode options passed to [spdl.io.async_decode_packets][].
 
         convert_options (Dict[str, Any]):
-            *Optional:* Convert options passed to ``async_convert_frames``.
+            *Optional:* Convert options passed to [spdl.io.async_convert_frames][].
 
         strict:
             *Optional:* If True, raise an error if any of the images failed to load.
+
+    Returns:
+        (Buffer): An object implements buffer protocol.
+            To be passed to casting functions like [spdl.io.to_numpy][],
+            [spdl.io.to_torch][] or [spdl.io.to_numba][].
     """
     if not srcs:
         raise ValueError("`srcs` must not be empty.")

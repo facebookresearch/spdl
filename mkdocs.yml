@@ -17,6 +17,7 @@ plugins:
             show_root_toc_entry: false
             extensions:
             - docs/custom_resolver.py:SPDLDynamicResolver:
+            show_object_full_path: true
 
   - mkdoxy:
       projects:
@@ -34,7 +35,10 @@ plugins:
 
 nav:
   - "SPDL (Python)":
-      - spdl/io.md
+      - spdl/examples.md
+      - "spdl.io (async)": spdl/io_async.md
+      - "spdl.io (concurrent)": spdl/io_concurrent.md
+      - "spdl.io (common)": spdl/io_common.md
       - spdl/utils.md
   - "LibSPDL (C++)":
       - Links: libspdl/links.md
