@@ -1,5 +1,13 @@
 # ``spdl.io``
 
+## High-level APIs
+
+::: spdl.io
+    options:
+      members:
+      - load_media
+      - batch_load_image
+
 ## Low-level APIs
 
 !!! note

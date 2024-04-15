@@ -9,12 +9,8 @@ def _to_numpy(frames):
 
 
 def _decode_video(src, pix_fmt=None):
-    @spdl.utils.chain_futures
-    def _decode():
-        packets = yield spdl.io.demux_media("video", src)
-        yield spdl.io.decode_packets(packets, pix_fmt=pix_fmt)
-
-    return _decode().result()
+    packets = spdl.io.demux_media("video", src).result()
+    return spdl.io.decode_packets(packets, pix_fmt=pix_fmt).result()
 
 
 def test_video_frames_getitem_slice(get_sample):

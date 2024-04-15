@@ -6,13 +6,8 @@ import spdl.utils
 
 
 def _decode_audio(src, sample_fmt=None):
-    @spdl.utils.chain_futures
-    def _decode():
-        packets = yield spdl.io.demux_media("audio", src)
-        frames = yield spdl.io.decode_packets(packets, sample_fmt=sample_fmt)
-        yield spdl.io.convert_frames_cpu(frames)
-
-    return spdl.io.to_numpy(_decode().result())
+    future = spdl.io.load_media("audio", src, decode_options={"sample_fmt": sample_fmt})
+    return spdl.io.to_numpy(future.result())
 
 
 @pytest.mark.parametrize(

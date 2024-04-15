@@ -1,22 +1,21 @@
 import pytest
 
 import spdl.io
-import spdl.utils
 import torch
 
 DEFAULT_CUDA = 0
 
 
-def _decode_video(src, timestamp=None, **kwargs):
-    @spdl.utils.chain_futures
-    def _decode():
-        packets = yield spdl.io.demux_media("video", src, timestamp=timestamp)
-        frames = yield spdl.io.decode_packets_nvdec(
-            packets, cuda_device_index=DEFAULT_CUDA, **kwargs
-        )
-        yield spdl.io.convert_frames(frames)
-
-    return spdl.io.to_torch(_decode().result())
+def _decode_video(src, timestamp=None, **decode_options):
+    decode_options["cuda_device_index"] = DEFAULT_CUDA
+    future = spdl.io.load_media(
+        "video",
+        src,
+        demux_options={"timestamp": timestamp},
+        decode_options=decode_options,
+        use_nvdec=True,
+    )
+    return spdl.io.to_torch(future.result())
 
 
 def _decode_videos(src, timestamps, **kwargs):

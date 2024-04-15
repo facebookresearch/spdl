@@ -9,19 +9,18 @@ from spdl.lib import _libspdl
 DEFAULT_CUDA = 0
 
 
-def _decode_image(path, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba", executor=None):
-    @spdl.utils.chain_futures
-    def _decode():
-        packets = yield spdl.io.demux_media("image", path)
-        frames = yield spdl.io.decode_packets_nvdec(
-            packets,
-            cuda_device_index=cuda_device_index,
-            pix_fmt=pix_fmt,
-            executor=executor,
-        )
-        yield spdl.io.convert_frames(frames)
-
-    return spdl.io.to_torch(_decode().result())
+def _decode_image(path, pix_fmt="rgba", executor=None):
+    future = spdl.io.load_media(
+        "image",
+        path,
+        decode_options={
+            "cuda_device_index": DEFAULT_CUDA,
+            "pix_fmt": pix_fmt,
+            "executor": executor,
+        },
+        use_nvdec=True,
+    )
+    return spdl.io.to_torch(future.result())
 
 
 def test_decode_image_yuv422(get_sample):
