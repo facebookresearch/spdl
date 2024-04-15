@@ -14,6 +14,10 @@ CMDS = {
 }
 
 
+def _is_all_zero(arr):
+    return all([int(v) == 0 for v in arr])
+
+
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
 def test_demux_bytes_without_copy(media_type, get_sample):
     """Data passed as bytes must be passed without copy."""
@@ -21,9 +25,9 @@ def test_demux_bytes_without_copy(media_type, get_sample):
     sample = get_sample(cmd)
 
     async def _test(src):
-        assert src != b"\x00" * len(src)
+        assert not _is_all_zero(src)
         _ = await spdl.io.async_demux_media(media_type, src, _zero_clear=True)
-        assert src == b"\x00" * len(src)
+        assert _is_all_zero(src)
 
     with open(sample.path, "rb") as f:
         data = f.read()
@@ -33,18 +37,18 @@ def test_demux_bytes_without_copy(media_type, get_sample):
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
 def test_demux_bytesio_without_copy(media_type, get_sample):
-    """Data passed from BytesIO.getvalue() must be passed without copy."""
+    """Data passed from BytesIO.getbuffer() must be passed without copy."""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
     async def _test(bytesio):
-        data = bytesio.getvalue()
-        zeros = b"\x00" * len(data)
-        assert data != zeros
+        data = bytesio.getbuffer()
+        assert not _is_all_zero(data)
         _ = await spdl.io.async_demux_media(
-            media_type, bytesio.getvalue(), _zero_clear=True
+            media_type, bytesio.getbuffer(), _zero_clear=True
         )
-        assert bytesio.getvalue() == data == zeros
+        assert _is_all_zero(data)
+        assert _is_all_zero(bytesio.getbuffer())
 
     with open(sample.path, "rb") as f:
         _bytesio = io.BytesIO(f.read())

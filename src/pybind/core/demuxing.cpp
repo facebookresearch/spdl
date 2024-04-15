@@ -77,6 +77,38 @@ void register_demuxing(py::module& m) {
       py::arg("_zero_clear") = false);
 
   m.def(
+      "async_demux_audio_buffer",
+      [](std::function<void(AudioPacketsWrapperPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         py::buffer data,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
+         ThreadPoolExecutorPtr demux_executor,
+         bool _zero_clear) {
+        auto buffer_info = data.request(/*writable=*/_zero_clear);
+        return async_demux_bytes<MediaType::Audio>(
+            std::move(set_result),
+            std::move(notify_exception),
+            std::string_view{(char*)buffer_info.ptr, (size_t)buffer_info.size},
+            timestamps,
+            {format, format_options, buffer_size},
+            demux_executor,
+            _zero_clear);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("data"),
+      py::arg("timestamps"),
+      py::kw_only(),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("executor") = nullptr,
+      py::arg("_zero_clear") = false);
+
+  m.def(
       "async_demux_video",
       [](std::function<void(VideoPacketsWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
@@ -139,6 +171,38 @@ void register_demuxing(py::module& m) {
       py::arg("_zero_clear") = false);
 
   m.def(
+      "async_demux_video_buffer",
+      [](std::function<void(VideoPacketsWrapperPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         py::buffer data,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
+         ThreadPoolExecutorPtr demux_executor,
+         bool _zero_clear) {
+        auto buffer_info = data.request(/*writable=*/_zero_clear);
+        return async_demux_bytes<MediaType::Video>(
+            std::move(set_result),
+            std::move(notify_exception),
+            std::string_view{(char*)buffer_info.ptr, (size_t)buffer_info.size},
+            timestamps,
+            {format, format_options, buffer_size},
+            demux_executor,
+            _zero_clear);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("data"),
+      py::arg("timestamps"),
+      py::kw_only(),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("executor") = nullptr,
+      py::arg("_zero_clear") = false);
+
+  m.def(
       "async_demux_image",
       [](std::function<void(ImagePacketsWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
@@ -180,6 +244,35 @@ void register_demuxing(py::module& m) {
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string_view>(data),
+            {format, format_options, buffer_size},
+            demux_executor,
+            _zero_clear);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("data"),
+      py::kw_only(),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("executor") = nullptr,
+      py::arg("_zero_clear") = false);
+
+  m.def(
+      "async_demux_image_buffer",
+      [](std::function<void(ImagePacketsWrapperPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         py::buffer data,
+         const std::optional<std::string>& format,
+         const std::optional<OptionDict>& format_options,
+         int buffer_size,
+         ThreadPoolExecutorPtr demux_executor,
+         bool _zero_clear) {
+        auto buffer_info = data.request(/*writable=*/_zero_clear);
+        return async_demux_image_bytes(
+            std::move(set_result),
+            std::move(notify_exception),
+            std::string_view{(char*)buffer_info.ptr, (size_t)buffer_info.size},
             {format, format_options, buffer_size},
             demux_executor,
             _zero_clear);
