@@ -35,6 +35,7 @@ plugins:
 nav:
   - "SPDL (Python)":
       - spdl/io.md
+      - spdl/utils.md
   - "LibSPDL (C++)":
       - Links: libspdl/links.md
       - Classes:
