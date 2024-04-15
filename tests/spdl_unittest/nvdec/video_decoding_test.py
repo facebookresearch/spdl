@@ -1,13 +1,14 @@
 import pytest
 
 import spdl.io
+import spdl.utils
 import torch
 
 DEFAULT_CUDA = 0
 
 
 def _decode_video(src, timestamp=None, **kwargs):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _decode():
         packets = yield spdl.io.demux_media("video", src, timestamp=timestamp)
         frames = yield spdl.io.decode_packets_nvdec(
@@ -19,7 +20,7 @@ def _decode_video(src, timestamp=None, **kwargs):
 
 
 def _decode_videos(src, timestamps, **kwargs):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _f(packets_future):
         packets = yield packets_future
         frames = yield spdl.io.decode_packets_nvdec(

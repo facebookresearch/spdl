@@ -7,7 +7,6 @@ from queue import Queue
 from threading import Thread
 
 import spdl.io
-
 import spdl.utils
 
 import torch
@@ -34,7 +33,7 @@ def _parse_args():
 
 
 def _batch_decode(srcs, use_nvdec, gpu, **kwargs):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _decode(src):
         packets = yield spdl.io.demux_media("image", src)
         if use_nvdec:
@@ -42,9 +41,9 @@ def _batch_decode(srcs, use_nvdec, gpu, **kwargs):
         else:
             yield spdl.io.decode_packets(packets, **kwargs)
 
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _convert(frames_futures):
-        frames = yield spdl.io.wait_futures(frames_futures, strict=False)
+        frames = yield spdl.utils.wait_futures(frames_futures, strict=False)
         yield spdl.io.convert_frames(frames)
 
     return _convert([_decode(src) for src in srcs])

@@ -1,10 +1,11 @@
 import numpy as np
 
 import spdl.io
+import spdl.utils
 
 
 def _decode_image(src, pix_fmt=None):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _decode():
         packets = yield spdl.io.demux_media("image", src)
         frames = yield spdl.io.decode_packets(packets, pix_fmt=pix_fmt)
@@ -14,14 +15,14 @@ def _decode_image(src, pix_fmt=None):
 
 
 def _batch_decode_image(srcs, pix_fmt=None):
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _decode(src):
         packet = yield spdl.io.demux_media("image", src)
         yield spdl.io.decode_packets(packet, pix_fmt=pix_fmt)
 
-    @spdl.io.chain_futures
+    @spdl.utils.chain_futures
     def _convert(decode_futures):
-        frames = yield spdl.io.wait_futures(decode_futures)
+        frames = yield spdl.utils.wait_futures(decode_futures)
         yield spdl.io.convert_frames_cpu(frames)
 
     decode_futures = [_decode(src) for src in srcs]
