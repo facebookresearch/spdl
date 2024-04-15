@@ -14,6 +14,8 @@ def _get_demux_func(media_type, src):
 
     if isinstance(src, bytes):
         name = f"async_demux_{media_type}_bytes"
+    elif isinstance(src, memoryview):
+        name = f"async_demux_{media_type}_buffer"
     else:
         name = f"async_demux_{media_type}"
     return getattr(_libspdl, name)

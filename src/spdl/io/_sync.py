@@ -132,7 +132,7 @@ def wait_futures(futures: List[Future], strict: bool = True) -> Future:
 
 def streaming_demux(
     media_type: str,
-    src: Union[str, bytes],
+    src: Union[str, bytes, memoryview],
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ) -> List[Future]:
@@ -140,7 +140,9 @@ def streaming_demux(
 
     Args:
         media_type: ``"audio"`` or ``"video"``.
-        src (str or bytes): Source identifier, such as path or URL.
+        src: Source identifier. If ``str`` type, it is interpreted as a source location,
+            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+            they are interpreted as in-memory data.
         timestamps: List of timestamps.
 
     Other args:
@@ -163,7 +165,7 @@ def streaming_demux(
 
 def demux_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: Union[str, bytes, memoryview],
     timestamp: Optional[Tuple[float, float]] = None,
     **kwargs,
 ) -> Future:
@@ -171,7 +173,9 @@ def demux_media(
 
     Args:
         media_type: ``"audio"``, ``"video"`` or ``"image"``.
-        src (str or bytes): Source identifier, such as path or URL.
+        src: Source identifier. If ``str`` type, it is interpreted as a source location,
+            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+            they are interpreted as in-memory data.
         timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
 
     Other args:

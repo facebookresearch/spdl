@@ -107,7 +107,7 @@ async def _async_gen(func, num_items, *args, **kwargs):
 
 def async_streaming_demux(
     media_type: str,
-    src: Union[str, bytes],
+    src: Union[str, bytes, memoryview],
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ):
@@ -115,7 +115,9 @@ def async_streaming_demux(
 
     Args:
         media_type: ``"audio"`` or ``"video"``.
-        src (str or bytes): Source identifier, such as path or URL.
+        src: Source identifier. If ``str`` type, it is interpreted as a source location,
+            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+            they are interpreted as in-memory data.
         timestamps: List of timestamps.
 
     Other args:
@@ -143,7 +145,7 @@ async def _fetch_one(gen):
 
 def async_demux_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: Union[str, bytes, memoryview],
     timestamp: Optional[Tuple[float, float]] = None,
     **kwargs,
 ):
@@ -151,7 +153,9 @@ def async_demux_media(
 
     Args:
         media_type: ``"audio"``, ``"video"`` or ``"image"``.
-        src (str or bytes): Source identifier, such as path or URL.
+        src: Source identifier. If ``str`` type, it is interpreted as a source location,
+            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+            they are interpreted as in-memory data.
         timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
             If omitted, the entire data are demuxed.
 
