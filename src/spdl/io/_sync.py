@@ -1,5 +1,9 @@
+import functools
+import logging
 from concurrent.futures import Future
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Any, Generator, List, Optional, Tuple, Union
+
+import spdl.io
 
 from . import _common
 
@@ -14,57 +18,108 @@ __all__ = [
     "streaming_demux",
 ]
 
-
-class _cb_chain:
-    def __init__(self, set_result, set_exception, *tasks):
-        self.set_result = set_result
-        self.set_exception = set_exception
-        self.tasks = list(tasks)
-
-        self._futures = set()
-
-    def _chain(self, future):
-        self._futures.add(future)
-        future.add_done_callback(self._cb)
-
-    def _cb(self, fut):
-        try:
-            result = fut.result()
-        except Exception as e:
-            self.set_exception(e)
-        else:
-            if self.tasks:
-                self._chain(self.tasks.pop(0)(result))
-            else:
-                self.set_result(result)
-        finally:
-            self._futures.discard(fut)
+_LG = logging.getLogger(__name__)
 
 
-def chain_futures(future: Future, *fn: Callable[..., Future]) -> Future:
+def _chain_futures(generator: Generator[Future, Any, None]) -> Future:
+    # The Future object that client code handles
     f = Future()
     f.set_running_or_notify_cancel()
 
+    # The Future object for the background task
+    _future = None
+
+    def _chain(result, cb):
+        nonlocal _future
+        try:
+            _future = generator.send(result)
+        except StopIteration:
+            f.set_result(result)
+        else:
+            _future.add_done_callback(cb)
+
+    def _cb(fut):
+        try:
+            _chain(fut.result(), _cb)
+        except Exception as e:
+            f.set_exception(e)
+
+    _chain(None, _cb)
+
     # pyre-ignore: [16]
-    f.__spdl_cb_chain = _cb_chain(f.set_result, f.set_exception, *fn)
-    f.__spdl_cb_chain._chain(future)
+    f.__spdl_future = _future
     return f
 
 
-def wait_futures(futures: List[Future]) -> Future:
+def chain_futures(func):
+    """Chain multiple Futures sequentially.
+
+    Args:
+        generator: Generator object that yields Future objects.
+            The result of each future is sent back to generator, and
+            generetor will use the result to launch the next future.
+
+    Example:
+        ```python
+        # Define Future generator
+        @spdl.io.chain_futures
+        def load_image(src):
+            '''demux, decode and convert a single image from src'''
+
+            # The object yielded here are all Future object.
+            # `chain_futures` function will fetch and send back the
+            # result object back to the generator through callback.
+            packets = yield spdl.io.demux_media("image", src)
+            frames = yield spdl.io.decode_packets(packets)
+            yield spdl.io.convert_buffer(frames)
+
+        # Chain the futures so that we only have one Future to track
+        future = load_image("foo.jpg")
+        # Blocking wait
+        buffer = future.result()
+        ```
+    """
+
+    @functools.wraps(func)
+    def _func(*args, **kwargs):
+        return _chain_futures(func(*args, **kwargs))
+
+    return _func
+
+
+def wait_futures(futures: List[Future], strict: bool = True) -> Future:
     f = Future()
     f.set_running_or_notify_cancel()
 
     num_futures = len(futures)
-    results = [None for _ in range(num_futures)]
+    sentinel = object()
+    results = [sentinel for _ in range(num_futures)]
+    error_occured = False
 
     def _cb(future):
-        i = futures.index(future)
-        results[i] = future.result()
+        nonlocal num_futures, error_occured, results
 
-        nonlocal num_futures
-        if (num_futures := num_futures - 1) == 0:
-            f.set_result(results)
+        try:
+            result = future.result()
+        except Exception as e:
+            _LG.error("%s", e)
+            error_occured = True
+        else:
+            i = futures.index(future)
+            results[i] = result
+        finally:
+            if (num_futures := num_futures - 1) == 0:
+                results = [r for r in results if r is not sentinel]
+                if error_occured and strict:
+                    f.set_exception(
+                        spdl.io.AsyncIOFailure("At least one of the futures failed.")
+                    )
+                elif not results:
+                    f.set_exception(
+                        spdl.io.AsyncIOFailure("All the futures have failed.")
+                    )
+                else:
+                    f.set_result(results)
 
     for future in futures:
         future.add_done_callback(_cb)

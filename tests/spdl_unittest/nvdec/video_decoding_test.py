@@ -1,5 +1,3 @@
-from functools import partial
-
 import pytest
 
 import spdl.io
@@ -9,28 +7,29 @@ DEFAULT_CUDA = 0
 
 
 def _decode_video(src, timestamp=None, **kwargs):
-    buffer = spdl.io.chain_futures(
-        spdl.io.demux_media("video", src, timestamp=timestamp),
-        partial(spdl.io.decode_packets_nvdec, cuda_device_index=DEFAULT_CUDA, **kwargs),
-        spdl.io.convert_frames,
-    ).result()
-    return spdl.io.to_torch(buffer)
+    @spdl.io.chain_futures
+    def _decode():
+        packets = yield spdl.io.demux_media("video", src, timestamp=timestamp)
+        frames = yield spdl.io.decode_packets_nvdec(
+            packets, cuda_device_index=DEFAULT_CUDA, **kwargs
+        )
+        yield spdl.io.convert_frames(frames)
+
+    return spdl.io.to_torch(_decode().result())
 
 
 def _decode_videos(src, timestamps, **kwargs):
+    @spdl.io.chain_futures
+    def _f(packets_future):
+        packets = yield packets_future
+        frames = yield spdl.io.decode_packets_nvdec(
+            packets, cuda_device_index=DEFAULT_CUDA, **kwargs
+        )
+        yield spdl.io.convert_frames(frames)
+
     futures = []
     for fut in spdl.io.streaming_demux("video", src, timestamps=timestamps):
-        futures.append(
-            spdl.io.chain_futures(
-                fut,
-                partial(
-                    spdl.io.decode_packets_nvdec,
-                    cuda_device_index=DEFAULT_CUDA,
-                    **kwargs,
-                ),
-                spdl.io.convert_frames,
-            )
-        )
+        futures.append((_f(fut)))
 
     return [spdl.io.to_torch(f.result()) for f in futures]
 

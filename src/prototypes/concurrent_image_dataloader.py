@@ -3,7 +3,6 @@
 
 import logging
 import time
-from functools import partial
 from queue import Queue
 from threading import Thread
 
@@ -35,24 +34,20 @@ def _parse_args():
 
 
 def _batch_decode(srcs, use_nvdec, gpu, **kwargs):
-    decode_func = (
-        partial(spdl.io.decode_packets_nvdec, cuda_device_index=gpu, **kwargs)
-        if use_nvdec
-        else partial(spdl.io.decode_packets, **kwargs)
-    )
+    @spdl.io.chain_futures
+    def _decode(src):
+        packets = yield spdl.io.demux_media("image", src)
+        if use_nvdec:
+            yield spdl.io.decode_packets_nvdec(packets, cuda_device_index=gpu, **kwargs)
+        else:
+            yield spdl.io.decode_packets(packets, **kwargs)
 
-    futures = []
-    for src in srcs:
-        future = spdl.io.chain_futures(
-            spdl.io.demux_media("image", src),
-            decode_func,
-        )
-        futures.append(future)
+    @spdl.io.chain_futures
+    def _convert(frames_futures):
+        frames = yield spdl.io.wait_futures(frames_futures, strict=False)
+        yield spdl.io.convert_frames(frames)
 
-    return spdl.io.chain_futures(
-        spdl.io.wait_futures(futures),
-        spdl.io.convert_frames,
-    )
+    return _convert([_decode(src) for src in srcs])
 
 
 def process_flist(flist, queue, nvdec: bool, gpu: int, **kwargs):
