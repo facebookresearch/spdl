@@ -5,30 +5,13 @@ import spdl.utils
 
 
 def _decode_image(src, pix_fmt=None):
-    @spdl.utils.chain_futures
-    def _decode():
-        packets = yield spdl.io.demux_media("image", src)
-        frames = yield spdl.io.decode_packets(packets, pix_fmt=pix_fmt)
-        yield spdl.io.convert_frames_cpu(frames)
-
-    return spdl.io.to_numpy(_decode().result())
+    future = spdl.io.load_media("image", src, decode_options={"pix_fmt": pix_fmt})
+    return spdl.io.to_numpy(future.result())
 
 
-def _batch_decode_image(srcs, pix_fmt=None):
-    @spdl.utils.chain_futures
-    def _decode(src):
-        packet = yield spdl.io.demux_media("image", src)
-        yield spdl.io.decode_packets(packet, pix_fmt=pix_fmt)
-
-    @spdl.utils.chain_futures
-    def _convert(decode_futures):
-        frames = yield spdl.utils.wait_futures(decode_futures)
-        yield spdl.io.convert_frames_cpu(frames)
-
-    decode_futures = [_decode(src) for src in srcs]
-    buffer_future = _convert(decode_futures)
-
-    return spdl.io.to_numpy(buffer_future.result())
+def _batch_load_image(srcs, pix_fmt="rgb24"):
+    future = spdl.io.batch_load_image(srcs, width=None, height=None, pix_fmt=pix_fmt)
+    return spdl.io.to_numpy(future.result())
 
 
 def test_decode_image_gray_black(get_sample):
@@ -130,7 +113,7 @@ def test_batch_decode_image_slice(get_samples):
     n, h, w = 32, 240, 320
     flist = get_samples(cmd)
 
-    array = _batch_decode_image(flist, pix_fmt="rgb24")
+    array = _batch_load_image(flist, pix_fmt="rgb24")
     print(array.shape)
     assert array.shape == (n, h, w, 3)
 
@@ -154,7 +137,7 @@ def test_batch_decode_image_rgb24(get_samples):
     # fmt: on
     flist = get_samples(cmd)
 
-    arrays = _batch_decode_image(flist, pix_fmt="rgb24")
+    arrays = _batch_load_image(flist, pix_fmt="rgb24")
     assert arrays.shape == (32, h, 3 * w, 3)
 
     for i in range(32):

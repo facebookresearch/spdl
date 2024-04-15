@@ -189,4 +189,3 @@ buffer = future.result()
 # Convert the buffer into NumPy array.
 array = spdl.io.to_numpy(buffer)
 ```
-

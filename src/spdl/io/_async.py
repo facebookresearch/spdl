@@ -1,4 +1,5 @@
 import asyncio
+import builtins
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -316,37 +317,63 @@ def async_convert_frames(frames, executor=None):
 
 async def async_load_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: Union[str, bytes, memoryview],
     demux_options: Optional[Dict[str, Any]] = None,
     decode_options: Optional[Dict[str, Any]] = None,
     convert_options: Optional[Dict[str, Any]] = None,
+    use_nvdec: bool = False,
 ):
-    """Perform demuxing/decoding/frame conversion
+    """Load the given media into buffer.
+
+    This function combines ``async_demux_media``, ``async_decode_packets`` (or
+    ``async_decode_packets_nvdec``) and ``async_convert_frames`` and load media
+    into buffer.
+
+    ??? example
+        ```python
+        buffer = await async_load_media(
+            "image",
+            "test.jpg",
+            deocde_options={
+                "width": 124,
+                "height": 96,
+                "pix_fmt": "rgb24",
+            })
+        array = spdl.io.to_numpy(buffer)
+        # An array with shape HWC==[96, 124, 3]
+        ```
 
     Args:
         media_type: ``"audio"``, ``"video"`` or ``"image"``.
 
-        src (str or bytes): Source identifier, such as path or URL.
+        src: Source identifier. If ``str`` type, it is interpreted as a source location,
+            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+            they are interpreted as in-memory data.
 
         demux_options (Dict[str, Any]):
             *Optional:* Demux options passed to [spdl.io.async_demux_media][].
 
         decode_options (Dict[str, Any]):
-            *Optional:* Decode options passed to [spdl.io.async_decode_packets][].
+            *Optional:* Decode options passed to [spdl.io.async_decode_packets][] or
+            [spdl.io.async_decode_packets_nvdec][].
 
         convert_options (Dict[str, Any]):
             *Optional:* Convert options passed to [spdl.io.async_convert_frames][].
 
+        use_nvdec:
+            *Optional:* If True, use NVDEC to decode the media.
+
     Returns:
         (Buffer): An object implements buffer protocol.
-            To be passed to casting functions like [spdl.io.to_numpy][],
-            [spdl.io.to_torch][] or [spdl.io.to_numba][].
     """
     demux_options = demux_options or {}
     decode_options = decode_options or {}
     convert_options = convert_options or {}
     packets = await async_demux_media(media_type, src, **demux_options)
-    frames = await async_decode_packets(packets, **decode_options)
+    if use_nvdec:
+        frames = await async_decode_packets_nvdec(packets, **decode_options)
+    else:
+        frames = await async_decode_packets(packets, **decode_options)
     buffer = await async_convert_frames(frames, **convert_options)
     return buffer
 
@@ -357,7 +384,13 @@ async def _decode(media_type, src, demux_options, decode_options):
 
 
 def _get_err_msg(src, err):
-    src_ = f"bytes object at {id(src)}" if isinstance(src, bytes) else src
+    match type(src):
+        case builtins.bytes:
+            src_ = f"bytes object at {id(src)}"
+        case builtins.memoryview:
+            src_ = f"memoryview object at {id(src)}"
+        case _:
+            src_ = f"'{src}'"
     return f"Failed to decode an image from {src_}: {err}."
 
 
@@ -371,7 +404,7 @@ def _check_arg(var, key, decode_options):
 
 
 async def async_batch_load_image(
-    srcs: List[Union[str, bytes]],
+    srcs: List[Union[str, bytes, memoryview]],
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
@@ -381,6 +414,22 @@ async def async_batch_load_image(
     strict: bool = True,
 ):
     """Batch load images.
+
+    ??? example
+        ```python
+        srcs = [
+            "test1.jpg",
+            "test1.png",
+        ]
+        buffer = await async_batch_load_image(
+            srcs,
+            width=124,
+            height=96,
+            pix_fmt="rgb24",
+        )
+        array = spdl.io.to_numpy(buffer)
+        # An array with shape HWC==[2, 96, 124, 3]
+        ```
 
     Args:
         srcs: List of source identifiers.

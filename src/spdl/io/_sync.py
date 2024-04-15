@@ -1,6 +1,8 @@
 import logging
 from concurrent.futures import Future
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import spdl.utils
 
 from . import _common
 
@@ -11,6 +13,8 @@ __all__ = [
     "decode_packets_nvdec",
     "demux_media",
     "streaming_demux",
+    "load_media",
+    "batch_load_image",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -222,3 +226,157 @@ def convert_frames(
     """
     func = _common._get_conversion_func(frames)
     return _common._futurize_task(func, frames, index=None, executor=executor)
+
+
+@spdl.utils.chain_futures
+def load_media(
+    media_type: str,
+    src: Union[str, bytes, memoryview],
+    demux_options: Optional[Dict[str, Any]] = None,
+    decode_options: Optional[Dict[str, Any]] = None,
+    convert_options: Optional[Dict[str, Any]] = None,
+    use_nvdec: bool = False,
+):
+    """Load the given media into buffer.
+
+    This function combines ``demux_media``, ``decode_packets`` (or
+    ``decode_packets_nvdec``) and ``convert_frames`` and load media
+    into buffer.
+
+    ??? example
+        ```python
+        future = load_media(
+            "image",
+            "test.jpg",
+            deocde_options={
+                "width": 124,
+                "height": 96,
+                "pix_fmt": "rgb24",
+            })
+        buffer = future.result()  # blocking wait
+        array = spdl.io.to_numpy(buffer)
+        # An array with shape HWC==[96, 124, 3]
+        ```
+
+    Args:
+        media_type: ``"audio"``, ``"video"`` or ``"image"``.
+
+        src: Source identifier. If ``str`` type, it is interpreted as a source location,
+            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+            they are interpreted as in-memory data.
+
+        demux_options (Dict[str, Any]):
+            *Optional:* Demux options passed to [spdl.io.async_demux_media][].
+
+        decode_options (Dict[str, Any]):
+            *Optional:* Decode options passed to [spdl.io.async_decode_packets][].
+
+        convert_options (Dict[str, Any]):
+            *Optional:* Convert options passed to [spdl.io.async_convert_frames][].
+
+        use_nvdec:
+            *Optional:* If True, use NVDEC to decode the media.
+
+    Returns:
+        (Buffer): An object implements buffer protocol.
+            To be passed to casting functions like [spdl.io.to_numpy][],
+            [spdl.io.to_torch][] or [spdl.io.to_numba][].
+    """
+    demux_options = demux_options or {}
+    decode_options = decode_options or {}
+    convert_options = convert_options or {}
+    packets = yield demux_media(media_type, src, **demux_options)
+    if use_nvdec:
+        frames = yield decode_packets_nvdec(packets, **decode_options)
+    else:
+        frames = yield decode_packets(packets, **decode_options)
+    yield convert_frames(frames, **convert_options)
+
+
+def _check_arg(var, key, decode_options):
+    if var is not None:
+        if key in decode_options:
+            raise ValueError(
+                f"`{key}` is given but also specified in `decode_options`."
+            )
+        decode_options[key] = var
+
+
+def batch_load_image(
+    srcs: List[Union[str, bytes]],
+    width: int | None,
+    height: int | None,
+    pix_fmt: str | None = "rgb24",
+    demux_options: Optional[Dict[str, Any]] = None,
+    decode_options: Optional[Dict[str, Any]] = None,
+    convert_options: Optional[Dict[str, Any]] = None,
+    strict: bool = True,
+):
+    """Batch load images.
+
+    ??? example
+        ```python
+        srcs = [
+            "test1.jpg",
+            "test1.png",
+        ]
+        future = batch_load_image(
+            srcs,
+            width=124,
+            height=96,
+            pix_fmt="rgb24",
+        )
+        buffer = future.result()  # blocking wait
+        array = spdl.io.to_numpy(buffer)
+        # An array with shape HWC==[2, 96, 124, 3]
+        ```
+
+    Args:
+        srcs: List of source identifiers.
+
+        width: *Optional:* Resize the frame.
+
+        height: *Optional:* Resize the frame.
+
+        pix_fmt:
+            *Optional:* Change the format of the pixel.
+
+        demux_options (Dict[str, Any]):
+            *Optional:* Demux options passed to [spdl.io.demux_media][].
+
+        decode_options (Dict[str, Any]):
+            *Optional:* Decode options passed to [spdl.io.decode_packets][].
+
+        convert_options (Dict[str, Any]):
+            *Optional:* Convert options passed to [spdl.io.convert_frames][].
+
+        strict:
+            *Optional:* If True, raise an error if any of the images failed to load.
+
+    Returns:
+        (Buffer): An object implements buffer protocol.
+            To be passed to casting functions like [spdl.io.to_numpy][],
+            [spdl.io.to_torch][] or [spdl.io.to_numba][].
+    """
+    if not srcs:
+        raise ValueError("`srcs` must not be empty.")
+
+    demux_options = demux_options or {}
+    decode_options = decode_options or {}
+    convert_options = convert_options or {}
+
+    _check_arg(width, "width", decode_options)
+    _check_arg(height, "height", decode_options)
+    _check_arg(pix_fmt, "pix_fmt", decode_options)
+
+    @spdl.utils.chain_futures
+    def _decode(src):
+        packets = yield demux_media("image", src, **demux_options)
+        yield decode_packets(packets, **decode_options)
+
+    @spdl.utils.chain_futures
+    def _convert(frames_futures):
+        frames = yield spdl.utils.wait_futures(frames_futures, strict=strict)
+        yield spdl.io.convert_frames(frames, **convert_options)
+
+    return _convert([_decode(src) for src in srcs])
