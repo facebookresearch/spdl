@@ -1,35 +1,33 @@
-from functools import partial
-
 import numpy as np
 
 import spdl.io
 
 
 def _decode_image(src, pix_fmt=None):
-    buffer = spdl.io.chain_futures(
-        spdl.io.demux_media("image", src),
-        partial(spdl.io.decode_packets, pix_fmt=pix_fmt),
-        spdl.io.convert_frames_cpu,
-    ).result()
-    return spdl.io.to_numpy(buffer)
+    @spdl.io.chain_futures
+    def _decode():
+        packets = yield spdl.io.demux_media("image", src)
+        frames = yield spdl.io.decode_packets(packets, pix_fmt=pix_fmt)
+        yield spdl.io.convert_frames_cpu(frames)
+
+    return spdl.io.to_numpy(_decode().result())
 
 
 def _batch_decode_image(srcs, pix_fmt=None):
-    futures = []
-    for src in srcs:
-        future = spdl.io.chain_futures(
-            spdl.io.demux_media("image", src),
-            partial(spdl.io.decode_packets, pix_fmt=pix_fmt),
-        )
-        futures.append(future)
+    @spdl.io.chain_futures
+    def _decode(src):
+        packet = yield spdl.io.demux_media("image", src)
+        yield spdl.io.decode_packets(packet, pix_fmt=pix_fmt)
 
-    buffer = spdl.io.chain_futures(
-        spdl.io.wait_futures(futures),
-        spdl.io.convert_frames_cpu,
-    ).result()
+    @spdl.io.chain_futures
+    def _convert(decode_futures):
+        frames = yield spdl.io.wait_futures(decode_futures)
+        yield spdl.io.convert_frames_cpu(frames)
 
-    print(buffer)
-    return spdl.io.to_numpy(buffer)
+    decode_futures = [_decode(src) for src in srcs]
+    buffer_future = _convert(decode_futures)
+
+    return spdl.io.to_numpy(buffer_future.result())
 
 
 def test_decode_image_gray_black(get_sample):

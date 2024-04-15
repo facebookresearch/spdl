@@ -63,21 +63,23 @@ and makes it difficult to perfom multiple operations concurrently from Python.
 So we implemented two helper functions which facilitate chaining the
 concurrent operations.
 
-* ``spdl.io.chain_futures`` can be used to sequentiall execute concurrent operations.
-  It uses the callback of ``Future`` class to invoke the subsequent operations.
+* ``spdl.io.chain_futures`` is a decorator which converts Future Generator to
+  a function that returns one Future, which is fullfilled when the Future Generator
+  is exhausted. The intermediate Futures are automatically chained and called via
+  callback function.
 * ``spdl.io.wait_futures`` can be used when the client code need to wait for multiple
   ``Future`` objects to fullfill before moving onto the next operation.
 
 
 ```python
+@spdl.io.chain_futures
 def load_image(src):
     # Chain demux, decode and buffer conversion.
     # The result is `concurrent.futures.Future` object
-    return spdl.io.chain_futures(
-        spdl.io.demux_media("image", src),
-        spdl.io.decode_packets,
-        spdl.io.convert_frames,
-    )
+    packets = yield spdl.io.demux_media("image", src)
+    frames = yield spdl.io.decode_packets(packets)
+    yield spdl.io.convert_frames(frames)
+
 
 # Kick off the task
 future = load_image(src)
@@ -148,22 +150,20 @@ import spdl.io
 from functools import partial
 
 
-def batch_decode_image(srcs: List[str], width: int = 121, height: int = 121):
-    futures = []
-    for src in srcs:
-        future = spdl.io.chain_futures(
-            spdl.io.demux_media("image", src),
-            partial(spdl.io.decode_packets, width=width, height=height),
-        )
-        futures.append(future)
+@spdl.io.chain_futures
+def _decode(src, width, height):
+    packets = yield spdl.io.demux_media("image", src)
+    yield spdl.io.decode_packets(packets, width=width, height=height)
 
-    future = spdl.io.chain_futures(
-        # Currently wait_futures can only skip the failing ones.
-        # TODO: add option to fail if any future fails
-        spdl.io.wait_futures(futures),
-        spdl.io.convert_frames,
-    )
-    return future
+
+@spdl.io.chain_futures
+def _convert(frames_futures):
+    frames = yield spd.io.wait_futures(frames_futures)
+    yield spdl.io.convert_frames(frames)
+
+
+def batch_decode_image(srcs: List[str], width: int = 121, height: int = 121):
+    return _convert([_decode(src, width, height) for src in srcs])
 
 
 # Kick off the task
@@ -272,3 +272,10 @@ async for packets in spdl.io.async_streaming_demux("audio", "foo.wav", ts):
       members:
       - convert_frames_cpu
       - convert_frames
+
+## Concurrent API Helper functions
+
+::: spdl.io
+    options:
+      members:
+      - chain_futures

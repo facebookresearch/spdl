@@ -7,11 +7,13 @@ import spdl.io
 
 
 def _decode_video(src, pix_fmt=None):
-    return spdl.io.chain_futures(
-        spdl.io.demux_media("video", src),
-        spdl.io.decode_packets,
-        spdl.io.convert_frames_cpu,
-    ).result()
+    @spdl.io.chain_futures
+    def _decode():
+        packets = yield spdl.io.demux_media("video", src)
+        frames = yield spdl.io.decode_packets(packets, pix_fmt=pix_fmt)
+        yield spdl.io.convert_frames_cpu(frames)
+
+    return _decode().result()
 
 
 def test_buffer_conversion_refcount(get_sample):

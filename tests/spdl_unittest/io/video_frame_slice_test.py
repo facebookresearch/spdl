@@ -1,5 +1,3 @@
-from functools import partial
-
 import numpy as np
 
 import spdl.io
@@ -10,10 +8,12 @@ def _to_numpy(frames):
 
 
 def _decode_video(src, pix_fmt=None):
-    return spdl.io.chain_futures(
-        spdl.io.demux_media("video", src),
-        partial(spdl.io.decode_packets, pix_fmt=pix_fmt),
-    ).result()
+    @spdl.io.chain_futures
+    def _decode():
+        packets = yield spdl.io.demux_media("video", src)
+        yield spdl.io.decode_packets(packets, pix_fmt=pix_fmt)
+
+    return _decode().result()
 
 
 def test_video_frames_getitem_slice(get_sample):
