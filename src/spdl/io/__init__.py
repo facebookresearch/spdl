@@ -2,15 +2,15 @@
 
 from typing import Any, List
 
-from . import _async, _common, _convert, _sync
+from . import _async, _common, _concurrent, _convert
 
-__all__ = sorted(_convert.__all__ + _async.__all__ + _sync.__all__ + _common.__all__)
+__all__ = sorted(_convert.__all__ + _async.__all__ + _concurrent.__all__ + _common.__all__)
 
 _doc_submodules = [
-    "_common",
-    "_convert",
     "_async",
-    "_sync",
+    "_common",
+    "_concurrent",
+    "_convert",
 ]
 
 
@@ -25,8 +25,8 @@ def __getattr__(name: str) -> Any:
     if name in _async.__all__:
         return getattr(_async, name)
 
-    if name in _sync.__all__:
-        return getattr(_sync, name)
+    if name in _concurrent.__all__:
+        return getattr(_concurrent, name)
 
     if name in _common.__all__:
         return getattr(_common, name)
