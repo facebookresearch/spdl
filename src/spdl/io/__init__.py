@@ -4,7 +4,9 @@ from typing import Any, List
 
 from . import _async, _common, _concurrent, _convert
 
-__all__ = sorted(_convert.__all__ + _async.__all__ + _concurrent.__all__ + _common.__all__)
+__all__ = sorted(
+    _convert.__all__ + _async.__all__ + _concurrent.__all__ + _common.__all__
+)
 
 _doc_submodules = [
     "_async",

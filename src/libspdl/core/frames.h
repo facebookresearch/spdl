@@ -96,7 +96,8 @@ class FFmpegFrames {
   FFmpegFrames(
       uint64_t id,
       Rational time_base,
-      std::optional<int> cuda_device_index) requires(_IS_VIDEO || _IS_IMAGE);
+      std::optional<int> cuda_device_index)
+    requires(_IS_VIDEO || _IS_IMAGE);
   ///
   /// No copy constructor
   FFmpegFrames(const FFmpegFrames&) = delete;
@@ -148,16 +149,19 @@ class FFmpegFrames {
 
   ///
   /// Get the sample rate
-  int get_sample_rate() const requires _IS_AUDIO;
+  int get_sample_rate() const
+    requires _IS_AUDIO;
 
   ///
   /// Get the number of audio channels.
-  int get_num_channels() const requires _IS_AUDIO;
+  int get_num_channels() const
+    requires _IS_AUDIO;
 
   //////////////////////////////////////////////////////////////////////////////
   // Common to Audio/Video
   //////////////////////////////////////////////////////////////////////////////
-  Rational get_time_base() const requires(_IS_AUDIO || _IS_VIDEO);
+  Rational get_time_base() const
+    requires(_IS_AUDIO || _IS_VIDEO);
 
   //////////////////////////////////////////////////////////////////////////////
   // Common to Image/Video
@@ -165,22 +169,26 @@ class FFmpegFrames {
 
   ///
   /// True if the underlying image frame is on CUDA device.
-  bool is_cuda() const requires(_IS_IMAGE || _IS_VIDEO);
+  bool is_cuda() const
+    requires(_IS_IMAGE || _IS_VIDEO);
 
   /// Get the number of planes in the image.
   ///
   /// Note: The number of planes and the number of color channels do not match.
   /// For example, NV12 has 3 channels, YUV, but U and V are interleaved in the
   /// same plane.
-  int get_num_planes() const requires(_IS_IMAGE || _IS_VIDEO);
+  int get_num_planes() const
+    requires(_IS_IMAGE || _IS_VIDEO);
 
   ///
   /// Get the width of the image.
-  int get_width() const requires(_IS_IMAGE || _IS_VIDEO);
+  int get_width() const
+    requires(_IS_IMAGE || _IS_VIDEO);
 
   ///
   /// Get the height of the image.
-  int get_height() const requires(_IS_IMAGE || _IS_VIDEO);
+  int get_height() const
+    requires(_IS_IMAGE || _IS_VIDEO);
 
   //////////////////////////////////////////////////////////////////////////////
   // Video specific
@@ -188,12 +196,13 @@ class FFmpegFrames {
 
   ///
   /// Range slice operation, using Python's slice notation.
-  FFmpegVideoFramesPtr slice(int start, int stop, int step)
-      const requires _IS_VIDEO;
+  FFmpegVideoFramesPtr slice(int start, int stop, int step) const
+    requires _IS_VIDEO;
 
   ///
   /// Slice (`__getitem__`) operation.
-  FFmpegImageFramesPtr slice(int index) const requires _IS_VIDEO;
+  FFmpegImageFramesPtr slice(int index) const
+    requires _IS_VIDEO;
 };
 
 #undef _IS_AUDIO
