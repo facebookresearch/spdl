@@ -21,8 +21,8 @@ BufferPtr convert_audio_frames(
 template <MediaType media_type, bool cpu_only>
 BufferPtr convert_vision_frames(
     const FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index =
-        std::nullopt) requires(media_type != MediaType::Audio);
+    const std::optional<int>& index = std::nullopt)
+  requires(media_type != MediaType::Audio);
 
 template <bool cpu_only>
 BufferPtr convert_batch_image_frames(

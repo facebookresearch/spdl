@@ -18,8 +18,9 @@ namespace spdl::core {
 namespace {
 
 template <MediaType media_type>
-void check_consistency(const std::vector<AVFrame*>& frames) requires(
-    media_type != MediaType::Audio) {
+void check_consistency(const std::vector<AVFrame*>& frames)
+  requires(media_type != MediaType::Audio)
+{
   auto numel = frames.size();
   if (numel == 0) {
     SPDL_FAIL("No frame to convert to buffer.");
@@ -54,8 +55,9 @@ template <MediaType media_type, bool cpu_only>
 BufferPtr convert_video(
     const std::vector<AVFrame*>& frames,
     const std::optional<int>& plane_index,
-    const std::optional<int>&
-        cuda_device_index) requires(media_type != MediaType::Audio) {
+    const std::optional<int>& cuda_device_index)
+  requires(media_type != MediaType::Audio)
+{
   check_consistency<media_type>(frames);
   bool is_cuda =
       static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
@@ -81,8 +83,9 @@ BufferPtr convert_video(
 template <MediaType media_type, bool cpu_only>
 BufferPtr convert_vision_frames(
     const FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>&
-        plane_index) requires(media_type != MediaType::Audio) {
+    const std::optional<int>& plane_index)
+  requires(media_type != MediaType::Audio)
+{
   TRACE_EVENT(
       "decoding",
       "core::convert_vision_frames",

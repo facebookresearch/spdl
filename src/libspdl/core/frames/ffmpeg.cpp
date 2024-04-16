@@ -35,7 +35,8 @@ template <MediaType media_type>
 FFmpegFrames<media_type>::FFmpegFrames(
     uint64_t id_,
     Rational time_base_,
-    std::optional<int> cuda_device) requires(_IS_VIDEO || _IS_IMAGE)
+    std::optional<int> cuda_device)
+  requires(_IS_VIDEO || _IS_IMAGE)
     : id(id_), time_base(time_base_), cuda_device_index(cuda_device) {
   TRACE_EVENT(
       "decoding",
@@ -121,7 +122,8 @@ const std::vector<AVFrame*>& FFmpegFrames<media_type>::get_frames() const {
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 Rational FFmpegFrames<media_type>::get_time_base() const
-    requires(_IS_AUDIO || _IS_VIDEO) {
+  requires(_IS_AUDIO || _IS_VIDEO)
+{
   return time_base;
 }
 
@@ -129,12 +131,16 @@ Rational FFmpegFrames<media_type>::get_time_base() const
 // FFmpeg - Audio
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
-int FFmpegFrames<media_type>::get_sample_rate() const requires _IS_AUDIO {
+int FFmpegFrames<media_type>::get_sample_rate() const
+  requires _IS_AUDIO
+{
   return frames.size() ? frames[0]->sample_rate : -1;
 }
 
 template <MediaType media_type>
-int FFmpegFrames<media_type>::get_num_channels() const requires _IS_AUDIO {
+int FFmpegFrames<media_type>::get_num_channels() const
+  requires _IS_AUDIO
+{
   return frames.size() ?
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
                        frames[0]->ch_layout.nb_channels
@@ -149,7 +155,8 @@ int FFmpegFrames<media_type>::get_num_channels() const requires _IS_AUDIO {
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 bool FFmpegFrames<media_type>::is_cuda() const
-    requires(_IS_IMAGE || _IS_VIDEO) {
+  requires(_IS_IMAGE || _IS_VIDEO)
+{
   if (!frames.size()) {
     return false;
   }
@@ -158,7 +165,8 @@ bool FFmpegFrames<media_type>::is_cuda() const
 
 template <MediaType media_type>
 int FFmpegFrames<media_type>::get_num_planes() const
-    requires(_IS_IMAGE || _IS_VIDEO) {
+  requires(_IS_IMAGE || _IS_VIDEO)
+{
   return frames.size()
       ? av_pix_fmt_count_planes((AVPixelFormat)frames[0]->format)
       : -1;
@@ -166,13 +174,15 @@ int FFmpegFrames<media_type>::get_num_planes() const
 
 template <MediaType media_type>
 int FFmpegFrames<media_type>::get_width() const
-    requires(_IS_IMAGE || _IS_VIDEO) {
+  requires(_IS_IMAGE || _IS_VIDEO)
+{
   return frames.size() ? frames[0]->width : -1;
 }
 
 template <MediaType media_type>
 int FFmpegFrames<media_type>::get_height() const
-    requires(_IS_IMAGE || _IS_VIDEO) {
+  requires(_IS_IMAGE || _IS_VIDEO)
+{
   return frames.size() ? frames[0]->height : -1;
 }
 
@@ -181,46 +191,46 @@ int FFmpegFrames<media_type>::get_height() const
 //////////////////////////////////////////////////////////////////////////////
 
 namespace {
-  int adjust_indices(const int length, int* start, int* stop, int step) {
-    if (step <= 0) {
-      SPDL_FAIL(fmt::format("Step must be larget than 0. Found: {}", step));
-    }
-    if (*start < 0) {
-      *start += length;
-      if (*start < 0) {
-        *start = (step < 0) ? -1 : 0;
-      }
-    } else if (*start >= length) {
-      *start = (step < 0) ? length - 1 : length;
-    }
-
-    if (*stop < 0) {
-      *stop += length;
-      if (*stop < 0) {
-        *stop = (step < 0) ? -1 : 0;
-      }
-    } else if (*stop >= length) {
-      *stop = (step < 0) ? length - 1 : length;
-    }
-
-    if (step < 0) {
-      if (*stop < *start) {
-        return (*start - *stop - 1) / (-step) + 1;
-      }
-    } else {
-      if (*start < *stop) {
-        return (*stop - *start - 1) / step + 1;
-      }
-    }
-    return 0;
+int adjust_indices(const int length, int* start, int* stop, int step) {
+  if (step <= 0) {
+    SPDL_FAIL(fmt::format("Step must be larget than 0. Found: {}", step));
   }
+  if (*start < 0) {
+    *start += length;
+    if (*start < 0) {
+      *start = (step < 0) ? -1 : 0;
+    }
+  } else if (*start >= length) {
+    *start = (step < 0) ? length - 1 : length;
+  }
+
+  if (*stop < 0) {
+    *stop += length;
+    if (*stop < 0) {
+      *stop = (step < 0) ? -1 : 0;
+    }
+  } else if (*stop >= length) {
+    *stop = (step < 0) ? length - 1 : length;
+  }
+
+  if (step < 0) {
+    if (*stop < *start) {
+      return (*start - *stop - 1) / (-step) + 1;
+    }
+  } else {
+    if (*start < *stop) {
+      return (*stop - *start - 1) / step + 1;
+    }
+  }
+  return 0;
+}
 } // namespace
 
 template <MediaType media_type>
-FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
-    int start,
-    int stop,
-    int step) const requires _IS_VIDEO {
+FFmpegVideoFramesPtr
+FFmpegFrames<media_type>::slice(int start, int stop, int step) const
+  requires _IS_VIDEO
+{
   const int numel = frames.size();
   int len = adjust_indices(numel, &start, &stop, step);
 
@@ -237,8 +247,9 @@ FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
 }
 
 template <MediaType media_type>
-FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(
-    int i) const requires _IS_VIDEO {
+FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int i) const
+  requires _IS_VIDEO
+{
   const int numel = frames.size();
   int stop = i + 1, step = 1;
   if (!adjust_indices(numel, &i, &stop, step)) {
