@@ -1,13 +1,13 @@
 import asyncio
 import logging
 from queue import Queue
-from threading import Event, Thread
+from threading import BoundedSemaphore, Event, Thread
 from typing import Any, AsyncIterable, Awaitable, Callable, Iterable, TypeVar
 
 _LG = logging.getLogger(__name__)
 
 __all__ = [
-    "BackgroundTaskRunner",
+    "BackgroundTaskProcessor",
     "apply_async",
 ]
 
@@ -15,9 +15,9 @@ T = TypeVar("T")
 
 
 ################################################################################
-# Impl for BackgroundTaskRunner
+# Impl for AsyncTaskRunner
 ################################################################################
-def _run_generator(aiterable, sentinel, queue, stop_request):
+def _run_async_gen(aiterable, sentinel, queue, stop_request):
     async def _generator_loop():
         async for item in aiterable:
             queue.put(item)
@@ -32,31 +32,65 @@ def _run_generator(aiterable, sentinel, queue, stop_request):
     asyncio.run(_generator_loop())
 
 
-class BackgroundTaskRunner:
-    """Run the given async generator in the background thread and yield the items.
+def _buffer(generator, max_concurrency=10):
+    semaphore = BoundedSemaphore(max_concurrency)
+
+    def _cb(_):
+        semaphore.release()
+
+    futs = []
+    for future in generator:
+        semaphore.acquire()
+        future.add_done_callback(_cb)
+        futs.append(future)
+
+        while len(futs) > 0 and futs[0].done():
+            yield futs.pop(0)
+
+    yield from futs
+
+
+def _run_gen(generator, sentinel, queue, stop_request):
+    for future in _buffer(generator):
+        try:
+            item = future.result()
+        except Exception as e:
+            _LG.error("%s", e)
+        else:
+            queue.put(item)
+
+        if stop_request.is_set():
+            _LG.debug("Stop requested.")
+            generator.close()
+            break
+        _LG.debug("exiting _generator_loop.")
+
+    queue.put(sentinel)
+
+
+class BackgroundTaskProcessor:
+    """Run generator in background and iterate the items.
 
     Args:
+        iterable: Generator to run in the background.
+
         max_queue_size: The size of the queue that is used to pass the
             generated items from the background thread to the main thread.
             If the queue is full, the background thread will be blocked.
     """
 
-    def __init__(self, aiterable: AsyncIterable[Any], max_queue_size: int = 10):
+    def __init__(self, iterable: AsyncIterable[Any], max_queue_size: int = 10):
         self._queue = Queue(maxsize=max_queue_size)
 
         self._sentinel = object()
         self._stop_request = Event()
         self._thread = Thread(
-            target=_run_generator,
-            args=(aiterable, self._sentinel, self._queue, self._stop_request),
+            target=(_run_async_gen if hasattr(iterable, "__aiter__") else _run_gen),
+            args=(iterable, self._sentinel, self._queue, self._stop_request),
         )
 
     def start(self):
-        """Start the background job that runs the given async generator.
-
-        Args:
-            aiterable: The async generator to run in the background.
-        """
+        """Start the background job that runs the given async generator."""
         self._thread.start()
 
     def __iter__(self):
@@ -100,7 +134,7 @@ def _check_exception(task, stacklevel=1):
 
 
 async def _apply_async(async_func, generator, max_concurrency):
-    semaphore = asyncio.Semaphore(max_concurrency)
+    semaphore = asyncio.BoundedSemaphore(max_concurrency)
 
     def _cb(task):
         semaphore.release()
@@ -130,7 +164,14 @@ async def apply_async(
 ):
     """Apply async function to the non-async generator.
 
-    Note: The order of the output may not be the same as generator.
+    This function iterates the items in the generator, and apply async function,
+    buffer the coroutines so that at any time, there are `max_concurrency`
+    coroutines running. Each coroutines put the resulting items to the internal
+    queue as soon as it's ready.
+
+    !!! note
+
+        The order of the output may not be the same as generator.
 
     Args:
         async_func: The async function to apply.
