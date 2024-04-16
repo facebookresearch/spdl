@@ -1,5 +1,6 @@
 """Test decoding with image classification"""
 
+import concurrent.futures
 import logging
 import time
 from pathlib import Path
@@ -10,7 +11,11 @@ import spdl.utils
 import timm
 import torch
 import torchvision.transforms
-from spdl.dataloader._task_runner import apply_async, BackgroundTaskProcessor
+from spdl.dataloader._task_runner import (
+    apply_async,
+    apply_concurrent,
+    BackgroundTaskProcessor,
+)
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.imagenet import get_mappings, parse_wnid
 
@@ -25,6 +30,7 @@ def _parse_args(args):
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
+    parser.add_argument("--mode", choices=["async", "concurrent"], default="async")
     parser.add_argument("--max-samples", type=int)
     parser.add_argument("--prefix", default="")
     parser.add_argument("--batch-size", type=int, default=32)
@@ -34,7 +40,10 @@ def _parse_args(args):
     parser.add_argument("--num-decode-threads", type=int, default=16)
     parser.add_argument("--worker-id", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=1)
-    return parser.parse_args(args)
+    args = parser.parse_args(args)
+    if args.trace:
+        args.max = args.batch_size * 10
+    return args
 
 
 def _get_model(device):
@@ -82,9 +91,9 @@ def _run_inference(dataloader, device, transform, model):
         elapsed = time.monotonic() - t0
         fps = num_frames / elapsed
         _LG.info(f"FPS={fps:.2f} ({num_frames}/{elapsed:.2f})")
-        acc1 = num_correct_top1 / num_frames
+        acc1 = 0 if num_frames == 0 else num_correct_top1 / num_frames
         _LG.info(f"Accuracy (top1)={acc1:.2%} ({num_correct_top1}/{num_frames})")
-        acc5 = num_correct_top5 / num_frames
+        acc5 = 0 if num_frames == 0 else num_correct_top5 / num_frames
         _LG.info(f"Accuracy (top5)={acc5:.2%} ({num_correct_top5}/{num_frames})")
 
 
@@ -100,7 +109,7 @@ def _get_batch_generator(args):
 
     class_mapping, _ = get_mappings()
 
-    async def _decode_func(paths):
+    async def _async_decode_func(paths):
         classes = [[class_mapping[parse_wnid(p)]] for p in paths]
         buffer = await spdl.io.async_batch_load_image(
             paths,
@@ -111,7 +120,25 @@ def _get_batch_generator(args):
         )
         return buffer, classes
 
-    return apply_async(_decode_func, srcs_gen)
+    @spdl.utils.chain_futures
+    def _decode_func(paths):
+        classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+        buffer = yield spdl.io.batch_load_image(
+            paths,
+            width=256,
+            height=256,
+            pix_fmt="rgb24",
+            strict=False,
+        )
+        f = concurrent.futures.Future()
+        f.set_result((buffer, classes))
+        yield f
+
+    match args.mode:
+        case "concurrent":
+            return apply_concurrent(_decode_func, srcs_gen)
+        case "async":
+            return apply_async(_async_decode_func, srcs_gen)
 
 
 def _main(args=None):
