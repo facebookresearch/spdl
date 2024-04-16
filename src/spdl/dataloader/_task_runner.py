@@ -150,17 +150,21 @@ def _check_exception(task, stacklevel=1):
         _LG.error("Task [%s] failed: %s", task.get_name(), err, stacklevel=stacklevel)
 
 
-async def _apply_async(func, generator, max_concurrency):
+async def _apply_async(async_func, generator, queue, sentinel, max_concurrency):
     semaphore = asyncio.BoundedSemaphore(max_concurrency)
 
     def _cb(task):
         semaphore.release()
         _check_exception(task, stacklevel=2)
 
+    async def _f(item):
+        result = await async_func(item)
+        await queue.put(result)
+
     tasks = set()
     for i, item in enumerate(generator):
         await semaphore.acquire()
-        task = asyncio.create_task(func(item), name=f"item_{i}")
+        task = asyncio.create_task(_f(item), name=f"item_{i}")
         task.add_done_callback(_cb)
         tasks.add(task)
 
@@ -172,6 +176,7 @@ async def _apply_async(func, generator, max_concurrency):
         await asyncio.wait(tasks)
 
     _LG.debug("_apply_async - done")
+    await queue.put(sentinel)
 
 
 async def apply_async(
@@ -241,14 +246,7 @@ async def apply_async(
     # We use sentinel to detect the end of the background job
     sentinel = object()
 
-    def _g():
-        yield from generator
-        yield sentinel
-
-    async def _f(v):
-        await queue.put(sentinel if v is sentinel else await async_func(v))
-
-    coro = _apply_async(_f, _g(), max_concurrency)
+    coro = _apply_async(async_func, generator, queue, sentinel, max_concurrency)
     task = asyncio.create_task(coro, name="_apply_async")
     task.add_done_callback(_check_exception)
 
