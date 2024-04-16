@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Experiment for running asyncio.loop in background thread and decode media"""
 
 import logging
@@ -9,7 +10,7 @@ import spdl.io
 import spdl.utils
 
 import torch
-from spdl.dataloader._task_runner import apply_async, BackgroundTaskRunner
+from spdl.dataloader._task_runner import apply_async, BackgroundTaskProcessor
 from spdl.dataloader._utils import _iter_flist
 
 _LG = logging.getLogger(__name__)
@@ -23,11 +24,12 @@ def _parse_args(args):
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
-    parser.add_argument("--prefix", default="")
+    parser.add_argument("--prefix")
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--trace", type=Path)
-    parser.add_argument("--num-demux-threads", type=int, required=True)
-    parser.add_argument("--num-decode-threads", type=int, required=True)
+    parser.add_argument("--queue-size", type=int, default=10)
+    parser.add_argument("--num-demux-threads", type=int, default=8)
+    parser.add_argument("--num-decode-threads", type=int, default=16)
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--num-workers", type=int, required=True)
     return parser.parse_args(args)
@@ -54,8 +56,8 @@ def _iter_dataloader(dataloader, device):
     num_frames = num_frames_int = 0
     num_batches = 0
     try:
-        for batch in dataloader:
-            batch = spdl.io.to_torch(batch).to(device)
+        for buffer in dataloader:
+            batch = spdl.io.to_torch(buffer).to(device)
             num_frames += batch.shape[0]
             num_batches += 1
 
@@ -77,25 +79,11 @@ def _iter_dataloader(dataloader, device):
 
 def _benchmark(args):
     args = _parse_args(args)
-    _init(
-        args.debug,
-        args.num_demux_threads,
-        args.num_decode_threads,
-        args.worker_id,
-    )
+    _init(args.debug, args.num_demux_threads, args.num_decode_threads, args.worker_id)
 
     _LG.info(args)
 
-    async def _decode_func(srcs):
-        return await spdl.io.async_batch_load_image(
-            srcs,
-            width=256,
-            height=256,
-            pix_fmt="rgb24",
-            strict=False,
-        )
-
-    gen = _iter_flist(
+    srcs_gen = _iter_flist(
         args.input_flist,
         prefix=args.prefix,
         batch_size=args.batch_size,
@@ -103,7 +91,14 @@ def _benchmark(args):
         N=args.num_workers,
     )
 
-    dataloader = BackgroundTaskRunner(apply_async(_decode_func, gen))
+    async def _decode_func(srcs):
+        return await spdl.io.async_batch_load_image(
+            srcs, width=256, height=256, pix_fmt="rgb24", strict=False
+        )
+
+    batch_gen = apply_async(_decode_func, srcs_gen)
+
+    dataloader = BackgroundTaskProcessor(batch_gen, args.queue_size)
     device = torch.device(f"cuda:{args.worker_id}")
 
     # Warm up
