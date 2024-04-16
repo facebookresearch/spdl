@@ -2,9 +2,11 @@
 """Benchmark loading image dataset"""
 
 import logging
+import signal
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event
 
 import spdl.io
 import spdl.utils
@@ -57,7 +59,7 @@ class PerfResult:
     num_frames: int
 
 
-def _iter_dataloader(dataloader, device):
+def _iter_dataloader(dataloader, device, ev):
     t0 = t_int = time.monotonic()
     num_frames = num_frames_int = 0
     num_batches = 0
@@ -74,6 +76,9 @@ def _iter_dataloader(dataloader, device):
 
                 t_int = t1
                 num_frames_int = num_frames
+
+            if ev.is_set():
+                break
 
     finally:
         elapsed = time.monotonic() - t0
@@ -125,6 +130,13 @@ def _benchmark(args):
     dataloader = BackgroundTaskProcessor(batch_gen, args.queue_size)
     device = torch.device(f"cuda:{args.worker_id}")
 
+    ev = Event()
+
+    def handler_stop_signals(signum, frame):
+        ev.set()
+
+    signal.signal(signal.SIGTERM, handler_stop_signals)
+
     # Warm up
     torch.zeros([1, 1], device=device)
 
@@ -132,7 +144,7 @@ def _benchmark(args):
     with spdl.utils.tracing(trace_path, enable=args.trace is not None):
         try:
             dataloader.start()
-            return _iter_dataloader(dataloader, device)
+            return _iter_dataloader(dataloader, device, ev)
         except (KeyboardInterrupt, Exception):
             _LG.exception("Exception occured while going through the dataloader.")
             dataloader.request_stop()
