@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from concurrent.futures import Future
 from queue import Queue
 from threading import BoundedSemaphore, Event, Thread
 from typing import Any, AsyncIterable, Awaitable, Callable, Iterable, TypeVar
@@ -9,6 +10,7 @@ _LG = logging.getLogger(__name__)
 __all__ = [
     "BackgroundTaskProcessor",
     "apply_async",
+    "apply_concurrent",
 ]
 
 T = TypeVar("T")
@@ -32,26 +34,8 @@ def _run_async_gen(aiterable, sentinel, queue, stop_request):
     asyncio.run(_generator_loop())
 
 
-def _buffer(generator, max_concurrency=10):
-    semaphore = BoundedSemaphore(max_concurrency)
-
-    def _cb(_):
-        semaphore.release()
-
-    futs = []
-    for future in generator:
-        semaphore.acquire()
-        future.add_done_callback(_cb)
-        futs.append(future)
-
-        while len(futs) > 0 and futs[0].done():
-            yield futs.pop(0)
-
-    yield from futs
-
-
 def _run_gen(generator, sentinel, queue, stop_request):
-    for future in _buffer(generator):
+    for future in generator:
         try:
             item = future.result()
         except Exception as e:
@@ -122,6 +106,39 @@ class BackgroundTaskProcessor:
 
 
 ################################################################################
+# Impl for apply_concurrent
+################################################################################
+def _apply_concurrent(generator, max_concurrency=10):
+    semaphore = BoundedSemaphore(max_concurrency)
+
+    def _cb(_):
+        semaphore.release()
+
+    futs = []
+    for future in generator:
+        semaphore.acquire()
+        future.add_done_callback(_cb)
+        futs.append(future)
+
+        while len(futs) > 0 and futs[0].done():
+            yield futs.pop(0)
+
+    yield from futs
+
+
+def apply_concurrent(
+    func: Callable[[T], Future[Any]],
+    generator: Iterable[T],
+    max_concurrency: int = 10,
+):
+    def gen():
+        for item in generator:
+            yield func(item)
+
+    yield from _apply_concurrent(gen(), max_concurrency)
+
+
+################################################################################
 # Impl for apply_async
 ################################################################################
 def _check_exception(task, stacklevel=1):
@@ -133,7 +150,7 @@ def _check_exception(task, stacklevel=1):
         _LG.error("Task [%s] failed: %s", task.get_name(), err, stacklevel=stacklevel)
 
 
-async def _apply_async(async_func, generator, max_concurrency):
+async def _apply_async(func, generator, max_concurrency):
     semaphore = asyncio.BoundedSemaphore(max_concurrency)
 
     def _cb(task):
@@ -143,7 +160,7 @@ async def _apply_async(async_func, generator, max_concurrency):
     tasks = set()
     for i, item in enumerate(generator):
         await semaphore.acquire()
-        task = asyncio.create_task(async_func(item), name=f"item_{i}")
+        task = asyncio.create_task(func(item), name=f"item_{i}")
         task.add_done_callback(_cb)
         tasks.add(task)
 
