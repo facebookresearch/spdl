@@ -5,6 +5,8 @@ from queue import Queue
 from threading import BoundedSemaphore, Event, Thread
 from typing import Any, AsyncIterable, Awaitable, Callable, Iterable, TypeVar
 
+import spdl.utils
+
 _LG = logging.getLogger(__name__)
 
 __all__ = [
@@ -35,21 +37,22 @@ def _run_async_gen(aiterable, sentinel, queue, stop_request):
 
 
 def _run_gen(generator, sentinel, queue, stop_request):
-    for future in generator:
-        try:
-            item = future.result()
-        except Exception as e:
-            _LG.error("%s", e)
-        else:
-            queue.put(item)
+    try:
+        for future in generator:
+            try:
+                item = future.result()
+            except Exception as e:
+                _LG.error("%s", e)
+            else:
+                queue.put(item)
 
-        if stop_request.is_set():
-            _LG.debug("Stop requested.")
-            generator.close()
-            break
-        _LG.debug("exiting _generator_loop.")
-
-    queue.put(sentinel)
+            if stop_request.is_set():
+                _LG.debug("Stop requested.")
+                generator.close()
+                break
+            _LG.debug("exiting _generator_loop.")
+    finally:
+        queue.put(sentinel)
 
 
 class BackgroundTaskProcessor:
@@ -115,15 +118,20 @@ def _apply_concurrent(generator, max_concurrency=10):
         semaphore.release()
 
     futs = []
-    for future in generator:
-        semaphore.acquire()
-        future.add_done_callback(_cb)
-        futs.append(future)
+    try:
+        for future in generator:
+            semaphore.acquire()
+            future.add_done_callback(_cb)
+            futs.append(future)
 
-        while len(futs) > 0 and futs[0].done():
-            yield futs.pop(0)
+            while len(futs) > 0 and futs[0].done():
+                yield futs.pop(0)
 
-    yield from futs
+        yield from futs
+    except GeneratorExit:
+        _LG.info("Generator exited - waiting for the ongoing futures to complete.")
+        spdl.utils.wait_futures(futs).result()
+        raise
 
 
 def apply_concurrent(
