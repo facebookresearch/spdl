@@ -12,6 +12,7 @@ import torch
 import torchvision.transforms
 from spdl.dataloader._task_runner import apply_async, BackgroundTaskProcessor
 from spdl.dataloader._utils import _iter_flist
+from spdl.dataset.imagenet import get_mappings, parse_wnid
 
 _LG = logging.getLogger(__name__)
 
@@ -24,14 +25,15 @@ def _parse_args(args):
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
+    parser.add_argument("--max-samples", type=int)
     parser.add_argument("--prefix", default="")
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--num-demux-threads", type=int, required=True)
-    parser.add_argument("--num-decode-threads", type=int, required=True)
+    parser.add_argument("--trace", type=Path)
+    parser.add_argument("--queue-size", type=int, default=16)
+    parser.add_argument("--num-demux-threads", type=int, default=8)
+    parser.add_argument("--num-decode-threads", type=int, default=16)
     parser.add_argument("--worker-id", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=1)
-    parser.add_argument("--max-samples", type=int)
-    parser.add_argument("--trace", type=Path)
     return parser.parse_args(args)
 
 
@@ -45,7 +47,6 @@ def _get_model(device):
 
     class to_float(torch.nn.Module):
         def forward(self, x):
-            # print(x.shape, x.dtype, x.device)
             return x.float() / 255.0
 
     transform = torch.nn.Sequential(
@@ -62,45 +63,33 @@ def _get_model(device):
 
 def _run_inference(dataloader, device, transform, model):
     t0 = time.monotonic()
-    num_frames = 0
+    num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
     try:
-        for buffer in dataloader:
+        for buffer, classes in dataloader:
             batch = spdl.io.to_torch(buffer)
-            # print(f"{batch.shape=}, {batch.dtype=}, {batch.device=}")
+            classes = torch.tensor(classes, dtype=torch.int64)
             num_frames += batch.shape[0]
 
             batch = batch.permute((0, 3, 1, 2)).to(device)
             batch = transform(batch)
 
             output = model(batch)
-            probabilities = torch.nn.functional.softmax(output, dim=-1)
-            top5_prob, top5_catid = torch.topk(probabilities, 5)
-            # print(f"{top5_prob.shape=}, {top5_catid.shape}")
+            probs = torch.nn.functional.softmax(output, dim=-1)
+            top_prob, top_catid = torch.topk(probs.cpu(), 5)
+            num_correct_top1 += (top_catid[:, :1] == classes).sum().item()
+            num_correct_top5 += (top_catid == classes).sum().item()
     finally:
         elapsed = time.monotonic() - t0
-        qps = num_frames / elapsed
-        _LG.info(f"QPS={qps:.2f} ({num_frames}/{elapsed:.2f})")
+        fps = num_frames / elapsed
+        _LG.info(f"FPS={fps:.2f} ({num_frames}/{elapsed:.2f})")
+        acc1 = num_correct_top1 / num_frames
+        _LG.info(f"Accuracy (top1)={acc1:.2%} ({num_correct_top1}/{num_frames})")
+        acc5 = num_correct_top5 / num_frames
+        _LG.info(f"Accuracy (top5)={acc5:.2%} ({num_correct_top5}/{num_frames})")
 
 
-def _main(args=None):
-    args = _parse_args(args)
-    _init(
-        args.debug,
-        args.num_demux_threads,
-        args.num_decode_threads,
-        args.worker_id,
-    )
-
-    async def _decode_func(paths):
-        return await spdl.io.async_batch_load_image(
-            paths,
-            width=256,
-            height=256,
-            pix_fmt="rgb24",
-            strict=False,
-        )
-
-    gen = _iter_flist(
+def _get_batch_generator(args):
+    srcs_gen = _iter_flist(
         args.input_flist,
         prefix=args.prefix,
         batch_size=args.batch_size,
@@ -109,20 +98,49 @@ def _main(args=None):
         max=args.max_samples,
     )
 
-    dataloader = BackgroundTaskProcessor(apply_async(_decode_func, gen))
+    class_mapping, _ = get_mappings()
+
+    async def _decode_func(paths):
+        classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+        buffer = await spdl.io.async_batch_load_image(
+            paths,
+            width=256,
+            height=256,
+            pix_fmt="rgb24",
+            strict=False,
+        )
+        return buffer, classes
+
+    return apply_async(_decode_func, srcs_gen)
+
+
+def _main(args=None):
+    args = _parse_args(args)
+    _init(args.debug, args.num_demux_threads, args.num_decode_threads, args.worker_id)
+
+    _LG.info(args)
+
+    batch_gen = _get_batch_generator(args)
+
+    dataloader = BackgroundTaskProcessor(batch_gen, args.queue_size)
     device = torch.device("cuda:0")
     model, transform = _get_model(device)
     print(transform)
 
-    dataloader.start()
-    try:
-        with torch.inference_mode():
-            _run_inference(dataloader, device, transform, model)
-    except (KeyboardInterrupt, Exception):
-        _LG.exception("Exception occured while running the inference.")
-        dataloader.request_stop()
-    finally:
-        dataloader.join()
+    # Warm up
+    torch.zeros([1, 1], device=device)
+
+    trace_path = f"{args.trace}.{args.worker_id}"
+    with spdl.utils.tracing(trace_path, enable=args.trace is not None):
+        try:
+            dataloader.start()
+            with torch.inference_mode():
+                _run_inference(dataloader, device, transform, model)
+        except (KeyboardInterrupt, Exception):
+            _LG.exception("Exception occured while running the inference.")
+            dataloader.request_stop()
+        finally:
+            dataloader.join()
 
 
 def _init(debug, num_demux_threads, num_decode_threads, worker_id):
