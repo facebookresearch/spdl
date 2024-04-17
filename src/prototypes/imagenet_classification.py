@@ -99,7 +99,7 @@ def _get_model(device, compile, use_bf16):
     return ModelBundle(device, model, transform, use_bf16)
 
 
-def _run_inference(dataloader, model):
+def _run_inference(dataloader, model, device):
     t0 = time.monotonic()
     num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
     try:
@@ -111,13 +111,13 @@ def _run_inference(dataloader, model):
 
             with torch.profiler.record_function(f"iter_{i}"):
                 batch = spdl.io.to_torch(buffer)
-                classes = torch.tensor(classes, dtype=torch.int64)
+                classes = torch.tensor(classes, dtype=torch.int64).to(device)
                 num_frames += batch.shape[0]
 
                 output = model(batch)
 
                 probs = torch.nn.functional.softmax(output, dim=-1)
-                top_prob, top_catid = torch.topk(probs.cpu(), 5)
+                top_prob, top_catid = torch.topk(probs, 5)
                 num_correct_top1 += (top_catid[:, :1] == classes).sum().item()
                 num_correct_top5 += (top_catid == classes).sum().item()
     finally:
@@ -192,7 +192,7 @@ def _main(args=None):
         profile() if args.trace else contextlib.nullcontext() as prof,
         BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
     ):
-        _run_inference(dataloader, model)
+        _run_inference(dataloader, model, device)
 
     if args.trace:
         trace_path = f"{args.trace}.{args.worker_id}"
