@@ -127,7 +127,6 @@ def _benchmark(args):
 
     batch_gen = _get_batch_generator(args)
 
-    dataloader = BackgroundTaskProcessor(batch_gen, args.queue_size)
     device = torch.device(f"cuda:{args.worker_id}")
 
     ev = Event()
@@ -141,15 +140,11 @@ def _benchmark(args):
     torch.zeros([1, 1], device=device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
-    with spdl.utils.tracing(trace_path, enable=args.trace is not None):
-        try:
-            dataloader.start()
-            return _iter_dataloader(dataloader, device, ev)
-        except (KeyboardInterrupt, Exception):
-            _LG.exception("Exception occured while going through the dataloader.")
-            dataloader.request_stop()
-        finally:
-            dataloader.join()
+    with (
+        BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
+        spdl.utils.tracing(trace_path, enable=args.trace is not None),
+    ):
+        return _iter_dataloader(dataloader, device, ev)
 
 
 def _init_logging(debug=False, worker_id=None):

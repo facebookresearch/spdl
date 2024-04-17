@@ -149,7 +149,6 @@ def _main(args=None):
 
     batch_gen = _get_batch_generator(args)
 
-    dataloader = BackgroundTaskProcessor(batch_gen, args.queue_size)
     device = torch.device("cuda:0")
     model, transform = _get_model(device)
     print(transform)
@@ -158,16 +157,12 @@ def _main(args=None):
     torch.zeros([1, 1], device=device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
-    with spdl.utils.tracing(trace_path, enable=args.trace is not None):
-        try:
-            dataloader.start()
-            with torch.inference_mode():
-                _run_inference(dataloader, device, transform, model)
-        except (KeyboardInterrupt, Exception):
-            _LG.exception("Exception occured while running the inference.")
-            dataloader.request_stop()
-        finally:
-            dataloader.join()
+    with (
+        torch.inference_mode(),
+        BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
+        spdl.utils.tracing(trace_path, enable=args.trace is not None),
+    ):
+        _run_inference(dataloader, device, transform, model)
 
 
 def _init(debug, num_demux_threads, num_decode_threads, worker_id):
