@@ -11,7 +11,6 @@ import spdl.utils
 
 import timm
 import torch
-import torchvision.transforms
 from spdl.dataloader._task_runner import (
     apply_async,
     apply_concurrent,
@@ -19,7 +18,7 @@ from spdl.dataloader._task_runner import (
 )
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.imagenet import get_mappings, parse_wnid
-from torch.profiler import profile, ProfilerActivity, record_function
+from torch.profiler import profile
 
 _LG = logging.getLogger(__name__)
 
@@ -53,19 +52,21 @@ def _get_model(device):
     model = model.to(device)
     model.eval()
 
-    class to_float(torch.nn.Module):
-        def forward(self, x):
-            return x.float() / 255.0
+    # Handrole the transforms so as to support `torch.compile`
+    class Transform(torch.nn.Module):
+        def __init__(self, mean, std):
+            super().__init__()
+            self.register_buffer("mean", torch.tensor(mean).view(1, 3, 1, 1))
+            self.register_buffer("std", torch.tensor(std).view(1, 3, 1, 1))
 
-    transform = torch.nn.Sequential(
-        torchvision.transforms.CenterCrop([224]),
-        to_float(),
-        torchvision.transforms.Normalize(
-            mean=[0.4850, 0.4560, 0.4060],
-            std=[0.2290, 0.2240, 0.2250],
-        ),
-    )
-    transform = transform.to(device)
+        def forward(self, x):
+            x = x.float() / 255.0
+            return (x - self.mean) / self.std
+
+    transform = Transform(
+        mean=[0.4850, 0.4560, 0.4060],
+        std=[0.2290, 0.2240, 0.2250],
+    ).to(device)
     return model, transform
 
 
@@ -110,6 +111,7 @@ def _get_batch_generator(args):
         n=args.worker_id,
         N=args.num_workers,
         max=args.max_samples,
+        drop_last=True,
     )
 
     class_mapping, _ = get_mappings()
@@ -119,8 +121,8 @@ def _get_batch_generator(args):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
             buffer = await spdl.io.async_batch_load_image(
                 paths,
-                width=256,
-                height=256,
+                width=224,
+                height=224,
                 pix_fmt="rgb24",
                 strict=False,
             )
@@ -132,8 +134,8 @@ def _get_batch_generator(args):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
             buffer = yield spdl.io.batch_load_image(
                 paths,
-                width=256,
-                height=256,
+                width=224,
+                height=224,
                 pix_fmt="rgb24",
                 strict=False,
             )
@@ -163,7 +165,7 @@ def _main(args=None):
     torch.zeros([1, 1], device=device)
 
     with (
-        torch.inference_mode(),
+        torch.no_grad(),
         profile() if args.trace else contextlib.nullcontext() as prof,
         BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
     ):
