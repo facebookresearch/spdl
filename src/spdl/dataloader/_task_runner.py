@@ -185,23 +185,19 @@ def _check_exception(task, stacklevel=1):
 async def _apply_async(async_func, generator, queue, sentinel, max_concurrency):
     semaphore = asyncio.BoundedSemaphore(max_concurrency)
 
-    def _cb(task):
-        semaphore.release()
-        _check_exception(task, stacklevel=2)
-
     async def _f(item):
-        result = await async_func(item)
-        await queue.put(result)
+        async with semaphore:
+            result = await async_func(item)
+            await queue.put(result)
 
     tasks = set()
     for i, item in enumerate(generator):
-        await semaphore.acquire()
         task = asyncio.create_task(_f(item), name=f"item_{i}")
-        task.add_done_callback(_cb)
+        task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
         tasks.add(task)
 
         # Occasionally remove the done tasks.
-        if len(tasks) >= 1000:
+        if len(tasks) >= 3 * max_concurrency:
             _, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
     if tasks:
