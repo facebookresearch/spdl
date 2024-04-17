@@ -3,8 +3,11 @@
 import concurrent.futures
 import contextlib
 import logging
+import os
 import time
 from pathlib import Path
+
+os.environ["TORCH_LOGS"] = "recompiles,graph_breaks"
 
 import spdl.io
 import spdl.utils
@@ -41,42 +44,68 @@ def _parse_args(args):
     parser.add_argument("--num-decode-threads", type=int, default=16)
     parser.add_argument("--worker-id", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=1)
+    parser.add_argument("--no-compile", action="store_false", dest="compile")
+    parser.add_argument("--no-bf16", action="store_false", dest="use_bf16")
     args = parser.parse_args(args)
     if args.trace:
         args.max_samples = args.batch_size * 40
     return args
 
 
-def _get_model(device):
+# Handrole the transforms so as to support `torch.compile`
+class Transform(torch.nn.Module):
+    def __init__(self, mean, std):
+        super().__init__()
+        self.register_buffer("mean", torch.tensor(mean).view(1, 3, 1, 1))
+        self.register_buffer("std", torch.tensor(std).view(1, 3, 1, 1))
+
+    def forward(self, x):
+        x = x.float() / 255.0
+        return (x - self.mean) / self.std
+
+
+def _get_model(device, compile, use_bf16):
     model = timm.create_model("mobilenetv3_large_100", pretrained=True)
-    model = model.to(device)
-    model.eval()
-
-    # Handrole the transforms so as to support `torch.compile`
-    class Transform(torch.nn.Module):
-        def __init__(self, mean, std):
-            super().__init__()
-            self.register_buffer("mean", torch.tensor(mean).view(1, 3, 1, 1))
-            self.register_buffer("std", torch.tensor(std).view(1, 3, 1, 1))
-
-        def forward(self, x):
-            x = x.float() / 255.0
-            return (x - self.mean) / self.std
+    model = model.eval().to(device=device)
+    if use_bf16:
+        model = model.to(dtype=torch.bfloat16)
+    if compile:
+        model = torch.compile(model, mode="max-autotune")
 
     transform = Transform(
         mean=[0.4850, 0.4560, 0.4060],
         std=[0.2290, 0.2240, 0.2250],
     ).to(device)
-    return model, transform
+    if compile:
+        transform = torch.compile(transform, mode="max-autotune")
+
+    class ModelBundle(torch.nn.Module):
+        def __init__(self, device, model, transform, use_bf16):
+            super().__init__()
+            self.device = device
+            self.model = model
+            self.transform = transform
+            self.use_bf16 = use_bf16
+
+        def forward(self, x):
+            x = x.permute((0, 3, 1, 2)).to(self.device)
+            x = self.transform(x)
+
+            if self.use_bf16:
+                x = x.to(torch.bfloat16)
+
+            return self.model(x)
+
+    return ModelBundle(device, model, transform, use_bf16)
 
 
-def _run_inference(dataloader, device, transform, model):
+def _run_inference(dataloader, model):
     t0 = time.monotonic()
     num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
     try:
         for i, (buffer, classes) in enumerate(dataloader):
             # Ignore the first batch.
-            if i == 1:
+            if i == 2:
                 t0 = time.monotonic()
                 num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
 
@@ -85,10 +114,8 @@ def _run_inference(dataloader, device, transform, model):
                 classes = torch.tensor(classes, dtype=torch.int64)
                 num_frames += batch.shape[0]
 
-                batch = batch.permute((0, 3, 1, 2)).to(device)
-                batch = transform(batch)
-
                 output = model(batch)
+
                 probs = torch.nn.functional.softmax(output, dim=-1)
                 top_prob, top_catid = torch.topk(probs.cpu(), 5)
                 num_correct_top1 += (top_catid[:, :1] == classes).sum().item()
@@ -158,18 +185,14 @@ def _main(args=None):
     batch_gen = _get_batch_generator(args)
 
     device = torch.device("cuda:0")
-    model, transform = _get_model(device)
-    print(transform)
-
-    # Warm up
-    torch.zeros([1, 1], device=device)
+    model = _get_model(device, args.compile, args.use_bf16)
 
     with (
         torch.no_grad(),
         profile() if args.trace else contextlib.nullcontext() as prof,
         BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
     ):
-        _run_inference(dataloader, device, transform, model)
+        _run_inference(dataloader, model)
 
     if args.trace:
         trace_path = f"{args.trace}.{args.worker_id}"
