@@ -42,7 +42,7 @@ def _parse_args(args):
     parser.add_argument("--num-workers", type=int, default=1)
     args = parser.parse_args(args)
     if args.trace:
-        args.max = args.batch_size * 10
+        args.max_samples = args.batch_size * 10
     return args
 
 
