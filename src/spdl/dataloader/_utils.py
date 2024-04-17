@@ -24,14 +24,14 @@ def _iter_sample_every_n(gen, offset=0, every_n=1, max=None):
                 return
 
 
-def _iter_batch(gen, batch_size):
+def _iter_batch(gen, batch_size, drop_last=False):
     batch = []
     for item in gen:
         batch.append(item)
         if len(batch) >= batch_size:
             yield batch
             batch = []
-    if batch:
+    if batch and not drop_last:
         yield batch
 
 
@@ -43,7 +43,10 @@ def _iter_flist(
     n: int = 0,
     N: int = 1,
     max: Optional[int] = None,
+    drop_last: bool = False,
 ):
     return _iter_batch(
-        _iter_sample_every_n(_iter_file(path, prefix), n, N, max), batch_size
+        _iter_sample_every_n(_iter_file(path, prefix), n, N, max),
+        batch_size,
+        drop_last=drop_last,
     )
