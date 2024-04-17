@@ -53,9 +53,6 @@ def _get_model(device):
     model = model.to(device)
     model.eval()
 
-    config = timm.data.resolve_data_config({}, model=model)
-    transform = timm.data.transforms_factory.create_transform(**config)
-
     class to_float(torch.nn.Module):
         def forward(self, x):
             return x.float() / 255.0
