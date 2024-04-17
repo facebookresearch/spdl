@@ -74,6 +74,11 @@ def _run_inference(dataloader, device, transform, model):
     num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
     try:
         for i, (buffer, classes) in enumerate(dataloader):
+            # Ignore the first batch.
+            if i == 1:
+                t0 = time.monotonic()
+                num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
+
             with torch.profiler.record_function(f"iter_{i}"):
                 batch = spdl.io.to_torch(buffer)
                 classes = torch.tensor(classes, dtype=torch.int64)
