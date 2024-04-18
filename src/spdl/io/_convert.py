@@ -30,6 +30,8 @@ def to_numpy(buffer) -> NDArray:
     See also:
         https://numpy.org/doc/stable/reference/arrays.interface.html
     """
+    if buffer.is_cuda:
+        raise RuntimeError("to_numpy() does not support CUDA buffers.")
     return np.array(buffer, copy=False)
 
 

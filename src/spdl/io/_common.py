@@ -47,25 +47,6 @@ def _get_nvdec_decoding_func(packets):
     return getattr(_libspdl, name)
 
 
-def _get_cpu_conversion_func(frames):
-    match t := type(frames):
-        case _libspdl.FFmpegAudioFrames:
-            name = "async_convert_audio_cpu"
-        case _libspdl.FFmpegVideoFrames:
-            name = "async_convert_video_cpu"
-        case _libspdl.FFmpegImageFrames:
-            name = "async_convert_image_cpu"
-        case _:
-            if not isinstance(frames, list):
-                raise TypeError(f"Unexpected type: {t}.")
-            if any(not isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
-                raise TypeError(
-                    f"Unexpected type: {t}. When the container type is list, all frames must be of type FFmpegImageFrames."
-                )
-            name = "async_convert_batch_image_cpu"
-    return getattr(_libspdl, name)
-
-
 def _get_conversion_func(frames):
     match t := type(frames):
         case _libspdl.FFmpegAudioFrames:

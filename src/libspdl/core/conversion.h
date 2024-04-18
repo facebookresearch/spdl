@@ -17,11 +17,10 @@ namespace spdl::core {
 BufferPtr convert_audio_frames(const FFmpegAudioFramesWrapperPtr frames);
 
 // FFmpeg video/image could be on CUDA
-template <MediaType media_type, bool cpu_only>
+template <MediaType media_type>
 BufferPtr convert_vision_frames(const FFmpegFramesWrapperPtr<media_type> frames)
   requires(media_type != MediaType::Audio);
 
-template <bool cpu_only>
 BufferPtr convert_batch_image_frames(
     const std::vector<FFmpegImageFramesWrapperPtr>& batch_frames);
 
@@ -47,14 +46,13 @@ FuturePtr async_convert_to_cuda(
 ////////////////////////////////////////////////////////////////////////////////
 // Async wrapper - FFmpeg
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type, bool cpu_only = false>
+template <MediaType media_type>
 FuturePtr async_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<media_type> frames,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
-template <bool cpu_only>
 FuturePtr async_batch_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,

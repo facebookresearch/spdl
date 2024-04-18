@@ -5,7 +5,7 @@ import spdl.utils
 
 
 def _to_numpy(frames):
-    return spdl.io.to_numpy(spdl.io.convert_frames_cpu(frames).result())
+    return spdl.io.to_numpy(spdl.io.convert_frames(frames).result())
 
 
 def _decode_video(src, pix_fmt=None):
