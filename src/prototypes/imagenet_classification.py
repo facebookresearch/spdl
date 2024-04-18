@@ -86,7 +86,6 @@ class ModelBundle(torch.nn.Module):
         self.use_bf16 = use_bf16
 
     def forward(self, x, classes):
-        x = x.permute((0, 3, 1, 2))
         x = self.transform(x)
 
         if self.use_bf16:
@@ -119,20 +118,18 @@ def _get_model(batch_size, device, compile, use_bf16):
     return ModelBundle(model, transform, classification, use_bf16)
 
 
-def _run_inference(dataloader, model, device):
+def _run_inference(dataloader, model):
     _LG.info("Running inference.")
     t0 = time.monotonic()
     num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
     try:
-        for i, (buffer, classes) in enumerate(dataloader):
+        for i, (batch, classes) in enumerate(dataloader):
             # Ignore the first batch.
             if i == 2:
                 t0 = time.monotonic()
                 num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
 
             with torch.profiler.record_function(f"iter_{i}"):
-                batch = spdl.io.to_torch(buffer)
-                classes = torch.tensor(classes, dtype=torch.int64).to(device)
 
                 top1, top5 = model(batch, classes)
 
@@ -151,7 +148,7 @@ def _run_inference(dataloader, model, device):
         _LG.info(f"Accuracy (top5)={acc5:.2%} ({num_correct_top5}/{num_frames})")
 
 
-def _get_batch_generator(args):
+def _get_batch_generator(args, device):
     srcs_gen = _iter_flist(
         args.input_flist,
         prefix=args.prefix,
@@ -167,6 +164,7 @@ def _get_batch_generator(args):
     async def _async_decode_func(paths):
         with torch.profiler.record_function("async_decode"):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+            classes = torch.tensor(classes, dtype=torch.int64).to(device)
             buffer = await spdl.io.async_batch_load_image(
                 paths,
                 width=224,
@@ -175,12 +173,15 @@ def _get_batch_generator(args):
                 strict=False,
                 convert_options={"cuda_device_index": 0},
             )
-            return buffer, classes
+            batch = spdl.io.to_torch(buffer)
+            batch = batch.permute((0, 3, 1, 2))
+            return batch, classes
 
     @spdl.utils.chain_futures
     def _decode_func(paths):
         with torch.profiler.record_function("decode"):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+            classes = torch.tensor(classes, dtype=torch.int64).to(device)
             buffer = yield spdl.io.batch_load_image(
                 paths,
                 width=224,
@@ -189,8 +190,10 @@ def _get_batch_generator(args):
                 strict=False,
                 convert_options={"cuda_device_index": 0},
             )
+            batch = spdl.io.to_torch(buffer)
+            batch = batch.permute((0, 3, 1, 2))
             f = concurrent.futures.Future()
-            f.set_result((buffer, classes))
+            f.set_result((batch, classes))
             yield f
 
     match args.mode:
@@ -205,17 +208,16 @@ def _main(args=None):
     _init(args.debug, args.num_demux_threads, args.num_decode_threads, args.worker_id)
     _LG.info(args)
 
-    batch_gen = _get_batch_generator(args)
-
     device = torch.device("cuda:0")
     model = _get_model(args.batch_size, device, args.compile, args.use_bf16)
+    batch_gen = _get_batch_generator(args, device)
 
     with (
         torch.no_grad(),
         profile() if args.trace else contextlib.nullcontext() as prof,
         BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
     ):
-        _run_inference(dataloader, model, device)
+        _run_inference(dataloader, model)
 
     if args.trace:
         trace_path = f"{args.trace}.{args.worker_id}"
