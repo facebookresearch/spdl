@@ -46,7 +46,7 @@ class TracingSession {
 
   void init();
   void config(const std::string& process_name);
-  void start(int fd);
+  void start(int fd, int buffer_size_in_kb);
   void stop();
 };
 

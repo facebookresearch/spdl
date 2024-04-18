@@ -15,11 +15,17 @@ __all__ = [
 
 
 @contextmanager
-def tracing(output: int | str, process_name: Optional[str] = None, enable: bool = True):
+def tracing(
+    output: int | str,
+    buffer_size: int = 4096,
+    process_name: Optional[str] = None,
+    enable: bool = True,
+):
     """Enable tracing.
 
     Args:
         output: The path to the trace file or file descriptor.
+        buffer_size: The size of the trace file write buffer in kilo-byte.
         process_name: The name of the tracing process.
         enable: Whether to enable tracing.
 
@@ -37,7 +43,7 @@ def tracing(output: int | str, process_name: Optional[str] = None, enable: bool 
     session.init()
     with open(output, "wb") as f:
         try:
-            session.start(f.fileno())
+            session.start(f.fileno(), buffer_size)
             session.config(sys.argv[0] if process_name is None else process_name)
             yield
         finally:
