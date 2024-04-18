@@ -16,8 +16,7 @@ namespace spdl::core {
 
 template <MediaType media_type>
 CUDABuffer2DPitchPtr convert_nvdec_frames(
-    const NvDecFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index) {
+    const NvDecFramesWrapperPtr<media_type> frames) {
 #ifndef SPDL_USE_NVCODEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
@@ -25,10 +24,6 @@ CUDABuffer2DPitchPtr convert_nvdec_frames(
       "decoding",
       "core::convert_nvdec_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  if (index.has_value()) {
-    SPDL_FAIL_INTERNAL(
-        "Fetching an index from NvDecVideoFrames is not supported.");
-  }
   auto ret = frames->get_frames_ref()->buffer;
   if (!ret) {
     SPDL_FAIL("Attempted to convert an empty NvDecVideoFrames.");
@@ -38,12 +33,10 @@ CUDABuffer2DPitchPtr convert_nvdec_frames(
 }
 
 template CUDABuffer2DPitchPtr convert_nvdec_frames<MediaType::Image>(
-    const NvDecFramesWrapperPtr<MediaType::Image> frames,
-    const std::optional<int>& index);
+    const NvDecFramesWrapperPtr<MediaType::Image> frames);
 
 template CUDABuffer2DPitchPtr convert_nvdec_frames<MediaType::Video>(
-    const NvDecFramesWrapperPtr<MediaType::Video> frames,
-    const std::optional<int>& index);
+    const NvDecFramesWrapperPtr<MediaType::Video> frames);
 
 namespace {
 #ifdef SPDL_USE_NVCODEC
@@ -90,8 +83,7 @@ void check_consistency(
 } // namespace
 
 CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
-    const std::vector<NvDecImageFramesWrapperPtr>& batch_frames,
-    const std::optional<int>& index) {
+    const std::vector<NvDecImageFramesWrapperPtr>& batch_frames) {
 #ifndef SPDL_USE_NVCODEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else

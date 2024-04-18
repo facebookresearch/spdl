@@ -8,17 +8,12 @@
 
 namespace spdl::core::detail {
 
-CPUBufferPtr convert_audio_frames(
-    const FFmpegAudioFrames* frames,
-    const std::optional<int>& index);
+CPUBufferPtr convert_audio_frames(const FFmpegAudioFrames* frames);
 
-CPUBufferPtr convert_video_frames_cpu(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index);
+CPUBufferPtr convert_video_frames_cpu(const std::vector<AVFrame*>& frames);
 
 CUDABufferPtr convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& plane_index,
     int device_index);
 
 } // namespace spdl::core::detail

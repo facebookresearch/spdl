@@ -279,7 +279,7 @@ def async_convert_frames_cpu(frames, executor=None):
 
     """
     func = _common._get_cpu_conversion_func(frames)
-    return _async_task(func, frames, index=None, executor=executor)
+    return _async_task(func, frames, executor=executor)
 
 
 def async_convert_frames(frames, executor=None):
@@ -313,7 +313,7 @@ def async_convert_frames(frames, executor=None):
             - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
     """
     func = _common._get_conversion_func(frames)
-    return _async_task(func, frames, index=None, executor=executor)
+    return _async_task(func, frames, executor=executor)
 
 
 def async_transfer_buffer_to_cuda(buffer, cuda_device_index: int):

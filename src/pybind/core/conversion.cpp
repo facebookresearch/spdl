@@ -8,34 +8,6 @@ namespace py = pybind11;
 
 namespace spdl::core {
 void register_conversion(py::module& m) {
-  /////////////////////////////////////////////////////////////////////////////
-  // Synchronous conversion
-  /////////////////////////////////////////////////////////////////////////////
-  m.def("convert_to_buffer", &convert_audio_frames);
-  m.def(
-      "convert_to_buffer",
-      &convert_vision_frames<MediaType::Video, /*cpu_only=*/false>);
-  m.def(
-      "convert_to_buffer",
-      &convert_vision_frames<MediaType::Image, /*cpu_only=*/false>);
-  m.def("convert_to_buffer", &convert_batch_image_frames</*cpu_only=*/false>);
-  m.def("convert_to_buffer", &convert_nvdec_frames<MediaType::Video>);
-  m.def("convert_to_buffer", &convert_nvdec_frames<MediaType::Image>);
-  m.def("convert_to_buffer", &convert_nvdec_batch_image_frames);
-
-  m.def("convert_to_cpu_buffer", &convert_audio_frames);
-  m.def(
-      "convert_to_cpu_buffer",
-      &convert_vision_frames<MediaType::Video, /*cpu_only=*/true>);
-  m.def(
-      "convert_to_cpu_buffer",
-      &convert_vision_frames<MediaType::Image, /*cpu_only=*/true>);
-  m.def(
-      "convert_to_cpu_buffer", &convert_batch_image_frames</*cpu_only=*/true>);
-
-  /////////////////////////////////////////////////////////////////////////////
-  // Async conversion
-  /////////////////////////////////////////////////////////////////////////////
   m.def(
       "async_convert_audio_cpu",
       &async_convert_frames<MediaType::Audio, /*cpu_only=*/true>,
@@ -43,7 +15,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_video_cpu",
@@ -52,7 +23,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_image_cpu",
@@ -61,7 +31,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
 
   m.def(
@@ -71,7 +40,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_video",
@@ -80,7 +48,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_image",
@@ -89,7 +56,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_video_nvdec",
@@ -98,7 +64,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_image_nvdec",
@@ -107,7 +72,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image",
@@ -116,7 +80,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image_cpu",
@@ -125,7 +88,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image_nvdec",
@@ -134,7 +96,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("index") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_to_cuda",
