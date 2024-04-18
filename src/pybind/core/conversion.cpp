@@ -9,33 +9,8 @@ namespace py = pybind11;
 namespace spdl::core {
 void register_conversion(py::module& m) {
   m.def(
-      "async_convert_audio_cpu",
-      &async_convert_frames<MediaType::Audio, /*cpu_only=*/true>,
-      py::arg("set_result"),
-      py::arg("notify_exception"),
-      py::arg("frames"),
-      py::kw_only(),
-      py::arg("executor") = nullptr);
-  m.def(
-      "async_convert_video_cpu",
-      &async_convert_frames<MediaType::Video, /*cpu_only=*/true>,
-      py::arg("set_result"),
-      py::arg("notify_exception"),
-      py::arg("frames"),
-      py::kw_only(),
-      py::arg("executor") = nullptr);
-  m.def(
-      "async_convert_image_cpu",
-      &async_convert_frames<MediaType::Image, /*cpu_only=*/true>,
-      py::arg("set_result"),
-      py::arg("notify_exception"),
-      py::arg("frames"),
-      py::kw_only(),
-      py::arg("executor") = nullptr);
-
-  m.def(
       "async_convert_audio",
-      &async_convert_frames<MediaType::Audio, /*cpu_only=*/true>,
+      &async_convert_frames<MediaType::Audio>,
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("frames"),
@@ -75,15 +50,7 @@ void register_conversion(py::module& m) {
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image",
-      &async_batch_convert_frames</*cpu_only=*/false>,
-      py::arg("set_result"),
-      py::arg("notify_exception"),
-      py::arg("frames"),
-      py::kw_only(),
-      py::arg("executor") = nullptr);
-  m.def(
-      "async_convert_batch_image_cpu",
-      &async_batch_convert_frames</*cpu_only=*/true>,
+      &async_batch_convert_frames,
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("frames"),

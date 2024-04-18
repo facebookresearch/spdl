@@ -8,7 +8,7 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Async - FFmpeg
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type, bool cpu_only>
+template <MediaType media_type>
 FuturePtr async_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
@@ -20,8 +20,7 @@ FuturePtr async_convert_frames(
         if constexpr (media_type == MediaType::Audio) {
           co_return wrap(convert_audio_frames(std::move(frm)));
         } else {
-          co_return wrap(
-              convert_vision_frames<media_type, cpu_only>(std::move(frm)));
+          co_return wrap(convert_vision_frames<media_type>(std::move(frm)));
         }
       },
       // Pass the ownership of FramePtr to executor thread, so that it is
@@ -34,31 +33,19 @@ FuturePtr async_convert_frames(
       detail::get_demux_executor_high_prio(executor));
 }
 
-template FuturePtr async_convert_frames<MediaType::Audio, true>(
+template FuturePtr async_convert_frames<MediaType::Audio>(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Audio> frames,
     ThreadPoolExecutorPtr executor);
 
-template FuturePtr async_convert_frames<MediaType::Video, true>(
+template FuturePtr async_convert_frames<MediaType::Video>(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Video> frames,
     ThreadPoolExecutorPtr executor);
 
-template FuturePtr async_convert_frames<MediaType::Video, false>(
-    std::function<void(BufferWrapperPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    FFmpegFramesWrapperPtr<MediaType::Video> frames,
-    ThreadPoolExecutorPtr executor);
-
-template FuturePtr async_convert_frames<MediaType::Image, true>(
-    std::function<void(BufferWrapperPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    FFmpegFramesWrapperPtr<MediaType::Image> frames,
-    ThreadPoolExecutorPtr executor);
-
-template FuturePtr async_convert_frames<MediaType::Image, false>(
+template FuturePtr async_convert_frames<MediaType::Image>(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Image> frames,
@@ -76,7 +63,6 @@ std::vector<FFmpegImageFramesWrapperPtr> rewrap(
 }
 } // namespace
 
-template <bool cpu_only>
 FuturePtr async_batch_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
@@ -85,7 +71,7 @@ FuturePtr async_batch_convert_frames(
   auto task = folly::coro::co_invoke(
       [=](std::vector<FFmpegImageFramesWrapperPtr>&& frms)
           -> folly::coro::Task<BufferWrapperPtr> {
-        co_return wrap(convert_batch_image_frames<cpu_only>(frms));
+        co_return wrap(convert_batch_image_frames(frms));
       },
       // Pass the ownership of FramePtrs to executor thread, so that they are
       // deallocated there, instead of the main thread.
@@ -96,18 +82,6 @@ FuturePtr async_batch_convert_frames(
       notify_exception,
       detail::get_demux_executor_high_prio(executor));
 }
-
-template FuturePtr async_batch_convert_frames<true>(
-    std::function<void(BufferWrapperPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegImageFramesWrapperPtr> frames,
-    ThreadPoolExecutorPtr executor);
-
-template FuturePtr async_batch_convert_frames<false>(
-    std::function<void(BufferWrapperPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegImageFramesWrapperPtr> frames,
-    ThreadPoolExecutorPtr executor);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Async - NVDEC

@@ -251,37 +251,6 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
     return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
 
 
-def async_convert_frames_cpu(frames, executor=None):
-    """Convert the frames to buffer.
-
-    Args:
-        frames (CPUFrames): Frames object.
-            If the frame data are not CPU, then the conversion will fail.
-
-    Other args:
-        executor (ThreadPoolExecutor):
-            *Optional:* Executor to run the conversion.
-            By default, the conversion is performed on
-            demuxer thread pool with higher priority than demuxing.
-
-    Returns:
-        (Awaitable[Buffer]): Awaitable which returns a Buffer object.
-            The type of the returned object corresponds to the input Packets type.
-
-            - ``FFmpegAudioFrames`` -> ``CPUBuffer``
-
-            - ``FFmpegVideoFrames`` -> ``CPUBuffer``
-
-            - ``FFmpegImageFrames`` -> ``CPUBuffer``
-
-            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer``
-
-
-    """
-    func = _common._get_cpu_conversion_func(frames)
-    return _async_task(func, frames, executor=executor)
-
-
 def async_convert_frames(frames, executor=None):
     """Convert the frames to buffer.
 
