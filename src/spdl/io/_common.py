@@ -143,3 +143,7 @@ def _futurize_generator(func, num_items, *args, **kwargs):
         future.__spdl_future = sf
 
     return futures
+
+
+def _get_convert_to_cuda_func():
+    return _libspdl.async_convert_to_cuda

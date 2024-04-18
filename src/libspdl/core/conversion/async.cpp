@@ -2,6 +2,7 @@
 
 #include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/future.h"
+#include "libspdl/core/detail/logging.h"
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
@@ -165,6 +166,33 @@ FuturePtr async_batch_convert_nvdec_frames(
       folly::coro::co_invoke([=]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
         co_return convert_nvdec_batch_image_frames(frames, index);
       });
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor_high_prio(executor));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Async - CPU to CUDA
+////////////////////////////////////////////////////////////////////////////////
+FuturePtr async_convert_to_cuda(
+    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    BufferWrapperPtr buffer,
+    int cuda_device_index,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [](BufferPtr&& b,
+         int device_index) -> folly::coro::Task<BufferWrapperPtr> {
+#ifndef SPDL_USE_CUDA
+        SPDL_FAIL("SPDL is not compiled with CUDA support.");
+#else
+        co_return wrap(convert_to_cuda(std::move(b), device_index));
+#endif
+      },
+      buffer->unwrap(),
+      cuda_device_index);
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,

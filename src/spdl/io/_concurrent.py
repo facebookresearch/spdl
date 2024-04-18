@@ -15,6 +15,7 @@ __all__ = [
     "streaming_demux",
     "load_media",
     "batch_load_image",
+    "transfer_buffer_to_cuda",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -226,6 +227,25 @@ def convert_frames(
     """
     func = _common._get_conversion_func(frames)
     return _common._futurize_task(func, frames, index=None, executor=executor)
+
+
+def transfer_buffer_to_cuda(buffer, cuda_device_index: int):
+    """Move the buffer data from CPU to CUDA.
+
+    Args:
+        buffer (Buffer): Buffer object.
+        cuda_device_index (int): The CUDA device to move the data to.
+
+    Returns:
+        (Future[Buffer]): Future which wraps a CUDABuffer object.
+    """
+    func = _common._get_convert_to_cuda_func()
+    return _common._futurize_task(func, buffer, cuda_device_index=cuda_device_index)
+
+
+################################################################################
+# High-level APIs
+################################################################################
 
 
 @spdl.utils.chain_futures
