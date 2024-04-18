@@ -157,7 +157,7 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
     const std::vector<size_t> shape,
     bool channel_last = false,
     ElemClass elem_class = ElemClass::UInt,
-    size_t size = sizeof(uint8_t));
+    size_t depth = sizeof(uint8_t));
 
 #ifdef SPDL_USE_CUDA
 ///
@@ -166,7 +166,9 @@ std::unique_ptr<CUDABuffer> cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
     int device_index,
-    bool channel_last = false);
+    bool channel_last = false,
+    ElemClass elem_class = ElemClass::UInt,
+    size_t depth = sizeof(uint8_t));
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
