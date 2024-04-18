@@ -1,5 +1,6 @@
 #include <libspdl/core/conversion.h>
 
+#include "libspdl/core/conversion/cuda.h"
 #include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/ffmpeg/conversion.h"
 #include "libspdl/core/detail/future.h"
@@ -94,11 +95,16 @@ FuturePtr async_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<media_type> frames,
+    const std::optional<int>& cuda_device_index,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [](FFmpegFramesPtr<media_type>&& frm)
+      [=](FFmpegFramesPtr<media_type>&& frm)
           -> folly::coro::Task<BufferWrapperPtr> {
-        co_return wrap(convert_vision_frames<media_type>(std::move(frm)));
+        auto ret = convert_vision_frames<media_type>(std::move(frm));
+        if (cuda_device_index) {
+          ret = convert_to_cuda(std::move(ret), *cuda_device_index);
+        }
+        co_return wrap(std::move(ret));
       },
       // Pass the ownership of FramePtr to executor thread, so that it is
       // deallocated there, instead of the main thread.
@@ -114,12 +120,14 @@ template FuturePtr async_convert_frames<MediaType::Video>(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Video> frames,
+    const std::optional<int>& cuda_device_index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Image>(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Image> frames,
+    const std::optional<int>& cuda_device_index,
     ThreadPoolExecutorPtr executor);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -163,11 +171,16 @@ FuturePtr async_batch_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
+    const std::optional<int>& cuda_device_index,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=](std::vector<FFmpegImageFramesWrapperPtr>&& frms)
           -> folly::coro::Task<BufferWrapperPtr> {
-        co_return wrap(convert_batch_image_frames(frms));
+        auto ret = convert_batch_image_frames(frms);
+        if (cuda_device_index) {
+          ret = convert_to_cuda(std::move(ret), *cuda_device_index);
+        }
+        co_return wrap(std::move(ret));
       },
       // Pass the ownership of FramePtrs to executor thread, so that they are
       // deallocated there, instead of the main thread.
