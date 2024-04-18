@@ -199,20 +199,6 @@ def convert_frames(frames, **kwargs) -> Future:
     return _common._futurize_task(func, frames, **kwargs)
 
 
-def transfer_buffer_to_cuda(buffer, cuda_device_index: int):
-    """Move the buffer data from CPU to CUDA.
-
-    Args:
-        buffer (Buffer): Buffer object.
-        cuda_device_index (int): The CUDA device to move the data to.
-
-    Returns:
-        (Future[Buffer]): Future which wraps a CUDABuffer object.
-    """
-    func = _common._get_convert_to_cuda_func()
-    return _common._futurize_task(func, buffer, cuda_device_index=cuda_device_index)
-
-
 ################################################################################
 # High-level APIs
 ################################################################################

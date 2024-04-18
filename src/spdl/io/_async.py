@@ -288,20 +288,6 @@ def async_convert_frames(frames, **kwargs):
     return _async_task(func, frames, **kwargs)
 
 
-def async_transfer_buffer_to_cuda(buffer, cuda_device_index: int):
-    """Move the buffer data from CPU to CUDA.
-
-    Args:
-        buffer (Buffer): Buffer object.
-        cuda_device_index (int): The CUDA device to move the data to.
-
-    Returns:
-        (Awaitable[Buffer]): Awaitable which returns a CUDABuffer object.
-    """
-    func = _common._get_convert_to_cuda_func()
-    return _async_task(func, buffer, cuda_device_index=cuda_device_index)
-
-
 ################################################################################
 # High-level APIs
 ################################################################################
