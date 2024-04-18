@@ -7,7 +7,10 @@ option(SPDL_USE_NVCODEC "Enable NVCODEC support" OFF)
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
 
 if (SPDL_USE_NVCODEC)
-  set(SPDL_USE_CUDA ON)
+  if (NOT SPDL_USE_CUDA)
+    unset(SPDL_USE_CUDA CACHE)
+    set(SPDL_USE_CUDA ON)
+  endif()
 endif()
 
 if (SPDL_USE_CUDA)
