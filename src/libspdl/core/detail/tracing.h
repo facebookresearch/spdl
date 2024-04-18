@@ -23,7 +23,9 @@ namespace spdl::core::detail {
 void init_perfetto();
 void configure_perfetto(const std::string& process_name);
 
-std::unique_ptr<perfetto::TracingSession> start_tracing_session(int fd);
+std::unique_ptr<perfetto::TracingSession> start_tracing_session(
+    int fd,
+    int buffer_size_in_kb);
 void stop_tracing_session(std::unique_ptr<perfetto::TracingSession> sess);
 
 } // namespace spdl::core::detail

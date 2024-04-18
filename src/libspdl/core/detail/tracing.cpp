@@ -23,13 +23,15 @@ void configure_perfetto(const std::string& name) {
   perfetto::TrackEvent::SetTrackDescriptor(process_track, desc);
 }
 
-std::unique_ptr<perfetto::TracingSession> start_tracing_session(int fd) {
+std::unique_ptr<perfetto::TracingSession> start_tracing_session(
+    int fd,
+    int buffer_size) {
   XLOG(INFO) << "Starting tracing";
   // The trace config defines which types of data sources are enabled for
   // recording. In this example we just need the "track_event" data source,
   // which corresponds to the TRACE_EVENT trace points.
   perfetto::TraceConfig cfg;
-  cfg.add_buffers()->set_size_kb(1024);
+  cfg.add_buffers()->set_size_kb(buffer_size);
   auto* ds_cfg = cfg.add_data_sources()->mutable_config();
   ds_cfg->set_name("track_event");
 

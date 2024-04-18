@@ -87,12 +87,13 @@ void TracingSession::config(const std::string& process_name) {
 #endif
 }
 
-void TracingSession::start(int fd) {
+void TracingSession::start(int fd, int buffer_size_in_kb) {
 #ifdef SPDL_USE_TRACING
   if (sess) {
     SPDL_FAIL("Tracing session is avtive.");
   }
-  sess = (void*)(detail::start_tracing_session(fd).release());
+  sess =
+      (void*)(detail::start_tracing_session(fd, buffer_size_in_kb).release());
 #endif
 }
 
