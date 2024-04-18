@@ -78,16 +78,15 @@ class Classification(torch.nn.Module):
 
 
 class ModelBundle(torch.nn.Module):
-    def __init__(self, model, transform, classification, device, use_bf16):
+    def __init__(self, model, transform, classification, use_bf16):
         super().__init__()
         self.model = model
         self.transform = transform
         self.classification = classification
-        self.device = device
         self.use_bf16 = use_bf16
 
     def forward(self, x, classes):
-        x = x.permute((0, 3, 1, 2)).to(self.device)
+        x = x.permute((0, 3, 1, 2))
         x = self.transform(x)
 
         if self.use_bf16:
@@ -117,7 +116,7 @@ def _get_model(batch_size, device, compile, use_bf16):
             model = torch.compile(model, mode=mode)
             transform = torch.compile(transform, mode=mode)
 
-    return ModelBundle(model, transform, classification, device, use_bf16)
+    return ModelBundle(model, transform, classification, use_bf16)
 
 
 def _run_inference(dataloader, model, device):
@@ -175,6 +174,7 @@ def _get_batch_generator(args):
                 pix_fmt="rgb24",
                 strict=False,
             )
+            buffer = await spdl.io.async_transfer_buffer_to_cuda(buffer, 0)
             return buffer, classes
 
     @spdl.utils.chain_futures
@@ -188,6 +188,7 @@ def _get_batch_generator(args):
                 pix_fmt="rgb24",
                 strict=False,
             )
+            buffer = yield spdl.io.transfer_buffer_to_cuda(buffer, 0)
             f = concurrent.futures.Future()
             f.set_result((buffer, classes))
             yield f
