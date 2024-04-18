@@ -185,7 +185,8 @@ def _main(args=None):
     batch_gen = _get_batch_generator(args)
 
     device = torch.device("cuda:0")
-    model = _get_model(device, args.compile, args.use_bf16)
+    with torch.no_grad():
+        model = _get_model(device, args.compile, args.use_bf16)
 
     with (
         torch.no_grad(),
