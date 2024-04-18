@@ -1,6 +1,8 @@
 #include <libspdl/core/conversion.h>
 
+#include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/ffmpeg/conversion.h"
+#include "libspdl/core/detail/future.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -73,26 +75,52 @@ BufferPtr convert_video(
   }
   return buf;
 }
-} // namespace
 
 template <MediaType media_type>
-BufferPtr convert_vision_frames(const FFmpegFramesWrapperPtr<media_type> frames)
+BufferPtr convert_vision_frames(const FFmpegFramesPtr<media_type> frames)
   requires(media_type != MediaType::Audio)
 {
   TRACE_EVENT(
       "decoding",
       "core::convert_vision_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  auto& frames_ref = frames->get_frames_ref();
   return convert_video<media_type>(
-      frames_ref->get_frames(), frames_ref->cuda_device_index);
+      frames->get_frames(), frames->cuda_device_index);
+}
+} // namespace
+
+template <MediaType media_type>
+FuturePtr async_convert_frames(
+    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesWrapperPtr<media_type> frames,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [](FFmpegFramesPtr<media_type>&& frm)
+          -> folly::coro::Task<BufferWrapperPtr> {
+        co_return wrap(convert_vision_frames<media_type>(std::move(frm)));
+      },
+      // Pass the ownership of FramePtr to executor thread, so that it is
+      // deallocated there, instead of the main thread.
+      frames->unwrap());
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor_high_prio(executor));
 }
 
-template BufferPtr convert_vision_frames<MediaType::Video>(
-    const FFmpegFramesWrapperPtr<MediaType::Video> frames);
+template FuturePtr async_convert_frames<MediaType::Video>(
+    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesWrapperPtr<MediaType::Video> frames,
+    ThreadPoolExecutorPtr executor);
 
-template BufferPtr convert_vision_frames<MediaType::Image>(
-    const FFmpegFramesWrapperPtr<MediaType::Image> frames);
+template FuturePtr async_convert_frames<MediaType::Image>(
+    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesWrapperPtr<MediaType::Image> frames,
+    ThreadPoolExecutorPtr executor);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Batch Image
@@ -112,13 +140,43 @@ std::vector<AVFrame*> merge_frames(
   }
   return ret;
 }
-} // namespace
 
 BufferPtr convert_batch_image_frames(
     const std::vector<FFmpegImageFramesWrapperPtr>& batch) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
   return convert_video<MediaType::Video>(
       merge_frames(batch), batch[0]->get_frames_ref()->cuda_device_index);
+}
+
+std::vector<FFmpegImageFramesWrapperPtr> rewrap(
+    std::vector<FFmpegImageFramesWrapperPtr>&& frames) {
+  std::vector<FFmpegImageFramesWrapperPtr> ret;
+  ret.reserve(frames.size());
+  for (auto& frame : frames) {
+    ret.emplace_back(wrap<MediaType::Image, FFmpegFramesPtr>(frame->unwrap()));
+  }
+  return ret;
+}
+} // namespace
+
+FuturePtr async_batch_convert_frames(
+    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegImageFramesWrapperPtr> frames,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=](std::vector<FFmpegImageFramesWrapperPtr>&& frms)
+          -> folly::coro::Task<BufferWrapperPtr> {
+        co_return wrap(convert_batch_image_frames(frms));
+      },
+      // Pass the ownership of FramePtrs to executor thread, so that they are
+      // deallocated there, instead of the main thread.
+      rewrap(std::move(frames)));
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor_high_prio(executor));
 }
 
 } // namespace spdl::core
