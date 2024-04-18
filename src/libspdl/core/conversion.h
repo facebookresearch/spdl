@@ -10,6 +10,7 @@
 #include <vector>
 
 namespace spdl::core {
+
 ////////////////////////////////////////////////////////////////////////////////
 // Conversion functions
 ////////////////////////////////////////////////////////////////////////////////
@@ -43,7 +44,7 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type, bool cpu_only = false>
 FuturePtr async_convert_frames(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index = std::nullopt,
@@ -51,7 +52,7 @@ FuturePtr async_convert_frames(
 
 template <bool cpu_only>
 FuturePtr async_batch_convert_frames(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index = std::nullopt,
