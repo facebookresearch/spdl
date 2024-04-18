@@ -173,8 +173,8 @@ def _get_batch_generator(args):
                 height=224,
                 pix_fmt="rgb24",
                 strict=False,
+                convert_options={"cuda_device_index": 0},
             )
-            buffer = await spdl.io.async_transfer_buffer_to_cuda(buffer, 0)
             return buffer, classes
 
     @spdl.utils.chain_futures
@@ -187,8 +187,8 @@ def _get_batch_generator(args):
                 height=224,
                 pix_fmt="rgb24",
                 strict=False,
+                convert_options={"cuda_device_index": 0},
             )
-            buffer = yield spdl.io.transfer_buffer_to_cuda(buffer, 0)
             f = concurrent.futures.Future()
             f.set_result((buffer, classes))
             yield f

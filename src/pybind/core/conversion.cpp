@@ -69,15 +69,5 @@ void register_conversion(py::module& m) {
       py::arg("frames"),
       py::kw_only(),
       py::arg("executor") = nullptr);
-
-  m.def(
-      "async_convert_to_cuda",
-      &async_convert_to_cuda,
-      py::arg("set_result"),
-      py::arg("notify_exception"),
-      py::arg("buffer"),
-      py::arg("cuda_device_index"),
-      py::kw_only(),
-      py::arg("executor") = nullptr);
 }
 } //  namespace spdl::core

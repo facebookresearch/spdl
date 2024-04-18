@@ -25,8 +25,9 @@ def test_async_transfer_buffer_to_cuda(media_type, get_sample):
         buffer = await spdl.io.async_load_media(media_type, src)
         cpu_tensor = spdl.io.to_torch(buffer)
 
-        buffer = await spdl.io.async_load_media(media_type, src)
-        buffer = await spdl.io.async_transfer_buffer_to_cuda(buffer, DEFAULT_CUDA)
+        buffer = await spdl.io.async_load_media(
+            media_type, src, convert_options={"cuda_device_index": DEFAULT_CUDA}
+        )
         cuda_tensor = spdl.io.to_torch(buffer)
 
         assert cuda_tensor.is_cuda
