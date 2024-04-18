@@ -12,6 +12,7 @@ CMDS = {
     "image": "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
 }
 
+
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
 def test_async_transfer_buffer_to_cuda(media_type, get_sample):
     """smoke test for transfer_buffer_to_cuda function"""
