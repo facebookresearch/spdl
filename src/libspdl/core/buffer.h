@@ -22,6 +22,16 @@ using CPUBufferPtr = std::unique_ptr<CPUBuffer>;
 using CUDABufferPtr = std::unique_ptr<CUDABuffer>;
 using CUDABuffer2DPitchPtr = std::shared_ptr<CUDABuffer2DPitch>;
 
+template <typename BPtr>
+class BufferWrapper;
+
+template <typename BPtr>
+using BufferWrapperPtr_ = std::shared_ptr<BufferWrapper<BPtr>>;
+
+using BufferWrapperPtr = BufferWrapperPtr_<BufferPtr>;
+using CPUBufferWrapperPtr = BufferWrapperPtr_<CPUBufferPtr>;
+using CUDABufferWrapperPtr = BufferWrapperPtr_<CUDABufferPtr>;
+
 /// Abstract base buffer class (to be exposed to Python)
 /// Represents contiguous array memory.
 struct Buffer {
@@ -53,17 +63,23 @@ struct Buffer {
   ///
   /// Returns the pointer to the head of the data buffer.
   void* data();
+
+  virtual bool is_cuda() const = 0;
 };
 
 ///
 /// Contiguous array data on CPU memory.
-struct CPUBuffer : Buffer {
+struct CPUBuffer : public Buffer {
   CPUBuffer(
       const std::vector<size_t> shape,
       bool channel_last,
       ElemClass elem_class,
       size_t depth,
       CPUStorage* storage);
+
+  bool is_cuda() const override {
+    return false;
+  }
 };
 
 /// Contiguous array data on a CUDA device.
@@ -81,7 +97,11 @@ struct CUDABuffer : Buffer {
       int device_index);
 
   uintptr_t get_cuda_stream() const;
+
 #endif
+  bool is_cuda() const override {
+    return true;
+  }
 };
 
 /// Contiguous array data on a CUDA device.
@@ -148,4 +168,38 @@ std::unique_ptr<CUDABuffer> cuda_buffer(
     int device_index,
     bool channel_last = false);
 #endif
+
+////////////////////////////////////////////////////////////////////////////////
+// Wrapper class
+////////////////////////////////////////////////////////////////////////////////
+template <typename BPtr>
+class BufferWrapper {
+ protected:
+  BPtr buffer;
+
+ public:
+  BufferWrapper(BPtr&& p) : buffer(std::move(p)){};
+
+  BPtr unwrap() {
+    if (!buffer) {
+      throw std::runtime_error(
+          "Buffer is in invalid state. Perhaps it's already released?");
+    }
+    return std::move(buffer);
+  }
+
+  const BPtr& get_buffer_ref() const {
+    if (!buffer) {
+      throw std::runtime_error(
+          "Buffer is in invalid state. Perhaps it's already released?");
+    }
+    return buffer;
+  }
+};
+
+template <typename BPtr>
+BufferWrapperPtr_<BPtr> wrap(BPtr&& buffer) {
+  return std::make_shared<BufferWrapper<BPtr>>(std::move(buffer));
+}
+
 } // namespace spdl::core

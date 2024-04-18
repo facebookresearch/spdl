@@ -9,19 +9,19 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type, bool cpu_only>
 FuturePtr async_convert_frames(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<media_type> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=](FFmpegFramesWrapperPtr<media_type>&& frm)
-          -> folly::coro::Task<BufferPtr> {
+          -> folly::coro::Task<BufferWrapperPtr> {
         if constexpr (media_type == MediaType::Audio) {
-          co_return convert_audio_frames(std::move(frm), index);
+          co_return wrap(convert_audio_frames(std::move(frm), index));
         } else {
-          co_return convert_vision_frames<media_type, cpu_only>(
-              std::move(frm), index);
+          co_return wrap(convert_vision_frames<media_type, cpu_only>(
+              std::move(frm), index));
         }
       },
       // Pass the ownership of FramePtr to executor thread, so that it is
@@ -35,35 +35,35 @@ FuturePtr async_convert_frames(
 }
 
 template FuturePtr async_convert_frames<MediaType::Audio, true>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Audio> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Video, true>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Video, false>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Video> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Image, true>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Image, false>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<MediaType::Image> frames,
     const std::optional<int>& index,
@@ -83,15 +83,15 @@ std::vector<FFmpegImageFramesWrapperPtr> rewrap(
 
 template <bool cpu_only>
 FuturePtr async_batch_convert_frames(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=](std::vector<FFmpegImageFramesWrapperPtr>&& frms)
-          -> folly::coro::Task<BufferPtr> {
-        co_return convert_batch_image_frames<cpu_only>(frms, index);
+          -> folly::coro::Task<BufferWrapperPtr> {
+        co_return wrap(convert_batch_image_frames<cpu_only>(frms, index));
       },
       // Pass the ownership of FramePtrs to executor thread, so that they are
       // deallocated there, instead of the main thread.
@@ -104,14 +104,14 @@ FuturePtr async_batch_convert_frames(
 }
 
 template FuturePtr async_batch_convert_frames<true>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_batch_convert_frames<false>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
     const std::optional<int>& index,

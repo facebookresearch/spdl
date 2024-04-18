@@ -36,13 +36,13 @@ std::string get_typestr(const ElemClass elem_class, size_t depth) {
   return fmt::format("|{}{}", key, depth);
 }
 
-py::dict get_array_interface(Buffer& b) {
-  auto typestr = get_typestr(b.elem_class, b.depth);
+py::dict get_array_interface(Buffer* b) {
+  auto typestr = get_typestr(b->elem_class, b->depth);
   py::dict ret;
   ret["version"] = 3;
-  ret["shape"] = py::tuple(py::cast(b.shape));
+  ret["shape"] = py::tuple(py::cast(b->shape));
   ret["typestr"] = typestr;
-  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
+  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b->data(), false};
   ret["strides"] = py::none();
   ret["descr"] =
       std::vector<std::tuple<std::string, std::string>>{{"", typestr}};
@@ -50,15 +50,15 @@ py::dict get_array_interface(Buffer& b) {
 }
 
 #ifdef SPDL_USE_CUDA
-py::dict get_cuda_array_interface(CUDABuffer& b) {
-  auto typestr = get_typestr(b.elem_class, b.depth);
+py::dict get_cuda_array_interface(CUDABuffer* b) {
+  auto typestr = get_typestr(b->elem_class, b->depth);
   py::dict ret;
   ret["version"] = 2;
-  ret["shape"] = py::tuple(py::cast(b.shape));
+  ret["shape"] = py::tuple(py::cast(b->shape));
   ret["typestr"] = typestr;
-  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
+  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b->data(), false};
   ret["strides"] = py::none();
-  ret["stream"] = b.get_cuda_stream();
+  ret["stream"] = b->get_cuda_stream();
   return ret;
 }
 #endif
@@ -105,12 +105,8 @@ using NvDecVideoFramesWrapper = NvDecFramesWrapper<MediaType::Video>;
 using NvDecImageFramesWrapper = NvDecFramesWrapper<MediaType::Image>;
 
 void register_frames_and_buffers(py::module& m) {
-  auto _Buffer = py::class_<Buffer, BufferPtr>(m, "Buffer", py::module_local());
-
-  auto _CPUBuffer = py::class_<CPUBuffer>(m, "CPUBuffer", py::module_local());
-
-  auto _CUDABuffer =
-      py::class_<CUDABuffer>(m, "CUDABuffer", py::module_local());
+  auto _Buffer = py::class_<BufferWrapper<BufferPtr>, BufferWrapperPtr>(
+      m, "Buffer", py::module_local());
 
   auto _CUDABuffer2DPitch =
       py::class_<CUDABuffer2DPitch, std::shared_ptr<CUDABuffer2DPitch>>(
@@ -136,19 +132,6 @@ void register_frames_and_buffers(py::module& m) {
       py::class_<NvDecImageFramesWrapper, NvDecImageFramesWrapperPtr>(
           m, "NvDecImageFrames", py::module_local());
 
-  _CPUBuffer
-      .def_property_readonly(
-          "channel_last",
-          [](const CPUBuffer& self) { return self.channel_last; })
-      .def_property_readonly(
-          "ndim", [](const CPUBuffer& self) { return self.shape.size(); })
-      .def_property_readonly(
-          "shape", [](const CPUBuffer& self) { return self.shape; })
-      .def_property_readonly("is_cuda", [](const CPUBuffer&) { return false; })
-      .def_property_readonly("__array_interface__", [](CPUBuffer& self) {
-        return get_array_interface(self);
-      });
-
 #ifdef SPDL_USE_CUDA
 #define IF_CUDABUFFER_ENABLED(x) x
 #else
@@ -158,28 +141,46 @@ void register_frames_and_buffers(py::module& m) {
   }
 #endif
 
-  _CUDABuffer
+  _Buffer
       .def_property_readonly(
-          "channel_last", IF_CUDABUFFER_ENABLED([](const CUDABuffer& self) {
-            return self.channel_last;
-          }))
+          "is_cuda",
+          [](const BufferWrapper<BufferPtr>& self) {
+            return self.get_buffer_ref()->is_cuda();
+          })
       .def_property_readonly(
-          "ndim", IF_CUDABUFFER_ENABLED([](const CUDABuffer& self) {
-            return self.shape.size();
-          }))
+          "shape",
+          [](const BufferWrapper<BufferPtr>& self) {
+            return self.get_buffer_ref()->shape;
+          })
       .def_property_readonly(
-          "shape", IF_CUDABUFFER_ENABLED([](const CUDABuffer& self) {
-            return self.shape;
-          }))
-      .def_property_readonly("is_cuda", [](const CUDABuffer&) { return true; })
-      .def_property_readonly(
-          "device_index", IF_CUDABUFFER_ENABLED([](const CUDABuffer& self) {
-            return self.device_index;
-          }))
+          "__array_interface__",
+          [](BufferWrapper<BufferPtr>& self) {
+            if (self.get_buffer_ref()->is_cuda()) {
+              throw std::runtime_error(
+                  "__array_interface__ is only available for CPU buffers.");
+            }
+            return get_array_interface(self.get_buffer_ref().get());
+          })
       .def_property_readonly(
           "__cuda_array_interface__",
-          IF_CUDABUFFER_ENABLED(
-              [](CUDABuffer& self) { return get_cuda_array_interface(self); }));
+          IF_CUDABUFFER_ENABLED([](BufferWrapper<BufferPtr>& self) {
+            if (!self.get_buffer_ref()->is_cuda()) {
+              throw std::runtime_error(
+                  "__cuda_array_interface__ is only available for CUDA buffers.");
+            }
+            return get_cuda_array_interface(
+                static_cast<CUDABuffer*>(self.get_buffer_ref().get()));
+          }))
+      .def_property_readonly(
+          "device_index",
+          IF_CUDABUFFER_ENABLED([](const BufferWrapper<BufferPtr>& self) {
+            if (!self.get_buffer_ref()->is_cuda()) {
+              throw std::runtime_error(
+                  "__cuda_array_interface__ is only available for CUDA buffers.");
+            }
+            return static_cast<CUDABuffer*>(self.get_buffer_ref().get())
+                ->device_index;
+          }));
 
 #ifdef SPDL_USE_NVCODEC
 #define IF_CUDABUFFER2_ENABLED(x) x
