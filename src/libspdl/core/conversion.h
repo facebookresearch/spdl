@@ -14,30 +14,23 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Conversion functions
 ////////////////////////////////////////////////////////////////////////////////
-BufferPtr convert_audio_frames(
-    const FFmpegAudioFramesWrapperPtr frames,
-    const std::optional<int>& index = std::nullopt);
+BufferPtr convert_audio_frames(const FFmpegAudioFramesWrapperPtr frames);
 
 // FFmpeg video/image could be on CUDA
 template <MediaType media_type, bool cpu_only>
-BufferPtr convert_vision_frames(
-    const FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index = std::nullopt)
+BufferPtr convert_vision_frames(const FFmpegFramesWrapperPtr<media_type> frames)
   requires(media_type != MediaType::Audio);
 
 template <bool cpu_only>
 BufferPtr convert_batch_image_frames(
-    const std::vector<FFmpegImageFramesWrapperPtr>& batch_frames,
-    const std::optional<int>& index = std::nullopt);
+    const std::vector<FFmpegImageFramesWrapperPtr>& batch_frames);
 
 template <MediaType media_type>
 CUDABuffer2DPitchPtr convert_nvdec_frames(
-    const NvDecFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index = std::nullopt);
+    const NvDecFramesWrapperPtr<media_type> frames);
 
 CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
-    const std::vector<NvDecImageFramesWrapperPtr>& batch_frames,
-    const std::optional<int>& index = std::nullopt);
+    const std::vector<NvDecImageFramesWrapperPtr>& batch_frames);
 
 ////////////////////////////////////////////////////////////////////////////////
 // CPU to CUDA conversion
@@ -59,7 +52,6 @@ FuturePtr async_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 template <bool cpu_only>
@@ -67,7 +59,6 @@ FuturePtr async_batch_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
-    const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -78,14 +69,12 @@ FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     NvDecFramesWrapperPtr<media_type> frames,
-    const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 FuturePtr async_batch_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<NvDecImageFramesWrapperPtr> frames,
-    const std::optional<int>& index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 } // namespace spdl::core

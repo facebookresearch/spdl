@@ -25,9 +25,7 @@ namespace spdl::core::detail {
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
 template <size_t depth, ElemClass type, bool is_planar>
-CPUBufferPtr convert_frames(
-    const FFmpegAudioFrames* frames,
-    const std::optional<int>& index) {
+CPUBufferPtr convert_frames(const FFmpegAudioFrames* frames) {
   size_t num_frames = frames->get_num_frames();
   const auto& fs = frames->get_frames();
   size_t num_channels =
@@ -38,21 +36,10 @@ CPUBufferPtr convert_frames(
 #endif
       ;
 
-  if (index) {
-    auto c = index.value();
-    if (c < 0 || c >= num_channels) {
-      SPDL_FAIL(fmt::format("Channel index must be [0, {})", num_channels));
-    }
-    num_channels = 1;
-  }
-
   if constexpr (is_planar) {
     auto buf = cpu_buffer({num_channels, num_frames}, !is_planar, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (int i = 0; i < num_channels; ++i) {
-      if (index && index.value() != i) {
-        continue;
-      }
       for (auto frame : fs) {
         int plane_size = depth * frame->nb_samples;
         memcpy(dst, frame->extended_data[i], plane_size);
@@ -61,10 +48,7 @@ CPUBufferPtr convert_frames(
     }
     return buf;
   } else {
-    if (index) {
-      SPDL_FAIL("Cannot select channel from non-planar audio.");
-    }
-    auto buf = cpu_buffer({num_frames, num_channels}, !is_planar, type, depth);
+    auto buf = cpu_buffer({num_frames, num_channels}, is_planar, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frame : fs) {
       int plane_size = depth * frame->nb_samples * num_channels;
@@ -75,9 +59,7 @@ CPUBufferPtr convert_frames(
   }
 }
 
-CPUBufferPtr convert_audio_frames(
-    const FFmpegAudioFrames* frames,
-    const std::optional<int>& i) {
+CPUBufferPtr convert_audio_frames(const FFmpegAudioFrames* frames) {
   const auto& fs = frames->get_frames();
   if (!fs.size()) {
     SPDL_FAIL("No audio frame to convert to buffer.");
@@ -85,29 +67,29 @@ CPUBufferPtr convert_audio_frames(
   auto sample_fmt = static_cast<AVSampleFormat>(fs[0]->format);
   switch (sample_fmt) {
     case AV_SAMPLE_FMT_U8:
-      return convert_frames<1, ElemClass::UInt, false>(frames, i);
+      return convert_frames<1, ElemClass::UInt, false>(frames);
     case AV_SAMPLE_FMT_U8P:
-      return convert_frames<1, ElemClass::UInt, true>(frames, i);
+      return convert_frames<1, ElemClass::UInt, true>(frames);
     case AV_SAMPLE_FMT_S16:
-      return convert_frames<2, ElemClass::Int, false>(frames, i);
+      return convert_frames<2, ElemClass::Int, false>(frames);
     case AV_SAMPLE_FMT_S16P:
-      return convert_frames<2, ElemClass::Int, true>(frames, i);
+      return convert_frames<2, ElemClass::Int, true>(frames);
     case AV_SAMPLE_FMT_S32:
-      return convert_frames<4, ElemClass::Int, false>(frames, i);
+      return convert_frames<4, ElemClass::Int, false>(frames);
     case AV_SAMPLE_FMT_S32P:
-      return convert_frames<4, ElemClass::Int, true>(frames, i);
+      return convert_frames<4, ElemClass::Int, true>(frames);
     case AV_SAMPLE_FMT_FLT:
-      return convert_frames<4, ElemClass::Float, false>(frames, i);
+      return convert_frames<4, ElemClass::Float, false>(frames);
     case AV_SAMPLE_FMT_FLTP:
-      return convert_frames<4, ElemClass::Float, true>(frames, i);
+      return convert_frames<4, ElemClass::Float, true>(frames);
     case AV_SAMPLE_FMT_S64:
-      return convert_frames<8, ElemClass::Int, false>(frames, i);
+      return convert_frames<8, ElemClass::Int, false>(frames);
     case AV_SAMPLE_FMT_S64P:
-      return convert_frames<8, ElemClass::Int, true>(frames, i);
+      return convert_frames<8, ElemClass::Int, true>(frames);
     case AV_SAMPLE_FMT_DBL:
-      return convert_frames<8, ElemClass::Float, false>(frames, i);
+      return convert_frames<8, ElemClass::Float, false>(frames);
     case AV_SAMPLE_FMT_DBLP:
-      return convert_frames<8, ElemClass::Float, true>(frames, i);
+      return convert_frames<8, ElemClass::Float, true>(frames);
     default:
       SPDL_FAIL_INTERNAL(fmt::format(
           "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt)));
@@ -147,26 +129,17 @@ CPUBufferPtr convert_interleaved(
   return buf;
 }
 
-CPUBufferPtr convert_planer(const std::vector<AVFrame*>& frames) {
+CPUBufferPtr convert_planer(
+    const std::vector<AVFrame*>& frames,
+    int num_planes) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
-  auto buf = cpu_buffer({frames.size(), 3, h, w});
+  auto buf = cpu_buffer({frames.size(), (size_t)num_planes, h, w});
   uint8_t* dst = static_cast<uint8_t*>(buf->data());
   for (const auto& f : frames) {
-    for (int c = 0; c < 3; ++c) {
+    for (int c = 0; c < num_planes; ++c) {
       copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
     }
-  }
-  return buf;
-}
-
-CPUBufferPtr convert_plane(const std::vector<AVFrame*>& frames, int plane) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-
-  auto buf = cpu_buffer({frames.size(), 1, h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    copy_2d(f->data[plane], h, w, f->linesize[plane], &dst, w);
   }
   return buf;
 }
@@ -203,26 +176,6 @@ CPUBufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
     uint8_t* dst2 = dst + w2;
     copy_2d(f->data[1], h, w2, f->linesize[1], &dst, w);
     copy_2d(f->data[2], h, w2, f->linesize[2], &dst2, w);
-  }
-  return buf;
-}
-
-/// YUV420 -> half_h = true
-/// YUV422 -> half_h = false
-CPUBufferPtr
-convert_u_or_v(const std::vector<AVFrame*>& frames, int plane, bool half_h) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(w % 2 == 0);
-  w /= 2;
-  if (half_h) {
-    assert(h % 2 == 0);
-    h /= 2;
-  }
-
-  auto buf = cpu_buffer({frames.size(), 1, h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    copy_2d(f->data[plane], h, w, f->linesize[plane], &dst, w);
   }
   return buf;
 }
@@ -309,7 +262,6 @@ CUDABufferPtr convert_nv12_cuda(
 
 CUDABufferPtr convert_video_frames_cuda(
     const std::vector<AVFrame*>& frames,
-    const std::optional<int>& plane_index,
     int cuda_device_index) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
@@ -322,11 +274,6 @@ CUDABufferPtr convert_video_frames_cuda(
   auto sw_pix_fmt = frames_ctx->sw_format;
   switch (sw_pix_fmt) {
     case AV_PIX_FMT_NV12:
-      if (plane_index) {
-        SPDL_FAIL(fmt::format(
-            "Selecting a plane from CUDA frame ({}) is not supported.",
-            av_get_pix_fmt_name(sw_pix_fmt)));
-      }
       return convert_nv12_cuda(frames, cuda_device_index);
     default:
       SPDL_FAIL(fmt::format(
@@ -353,107 +300,34 @@ CUDABufferPtr convert_video_frames_cuda(
 //
 // It might be more appropriate to convert the limited range to the full range
 // for YUV, but for now, it copies data as-is for both YUV and YUVJ.
-CPUBufferPtr convert_video_frames_cpu(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& index) {
+CPUBufferPtr convert_video_frames_cpu(const std::vector<AVFrame*>& frames) {
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   if (pix_fmt == AV_PIX_FMT_CUDA) {
     SPDL_FAIL("The input frames are not CPU frames.");
   }
   switch (pix_fmt) {
-    case AV_PIX_FMT_GRAY8: {
-      if (auto plane = index.value_or(0); plane != 0) {
-        SPDL_FAIL(fmt::format(
-            "Valid `plane` values for GRAY8 is 0. (Found: {})", plane));
-      }
-      return convert_plane(frames, 0);
-    }
-    case AV_PIX_FMT_RGBA: {
-      if (auto plane = index.value_or(0); plane != 0) {
-        SPDL_FAIL(fmt::format(
-            "Valid `plane` values for RGBA is 0. (Found: {})", plane));
-      }
+    case AV_PIX_FMT_GRAY8:
+      // Technically, not a planer format, but it's the same.
+      return convert_planer(frames, 1);
+    case AV_PIX_FMT_RGBA:
       return convert_interleaved(frames, 4);
-    }
-    case AV_PIX_FMT_RGB24: {
-      if (auto plane = index.value_or(0); plane != 0) {
-        SPDL_FAIL(fmt::format(
-            "Valid `plane` value for RGB24 is 0. (Found: {})", plane));
-      }
+    case AV_PIX_FMT_RGB24:
       return convert_interleaved(frames);
-    }
     case AV_PIX_FMT_YUVJ444P:
-    case AV_PIX_FMT_YUV444P: {
-      if (!index) {
-        return convert_planer(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-        case 1:
-        case 2:
-          return convert_plane(frames, plane);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for YUV444P are [0, 1, 2]. (Found: {})",
-              plane));
-      }
-    }
+    case AV_PIX_FMT_YUV444P:
+      return convert_planer(frames, 3);
     case AV_PIX_FMT_YUVJ420P:
-    case AV_PIX_FMT_YUV420P: {
-      if (!index) {
-        return convert_yuv420p(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-          return convert_plane(frames, plane);
-        case 1:
-        case 2:
-          return convert_u_or_v(frames, plane, /*half_h=*/true);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for YUV420P are [0, 1, 2]. (Found: {})",
-              plane));
-      }
-    }
+    case AV_PIX_FMT_YUV420P:
+      return convert_yuv420p(frames);
     case AV_PIX_FMT_YUVJ422P:
-    case AV_PIX_FMT_YUV422P: {
-      if (!index) {
-        return convert_yuv422p(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-          return convert_plane(frames, plane);
-        case 1:
-        case 2:
-          return convert_u_or_v(frames, plane, /*half_h=*/false);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for YUV422P are [0, 1, 2]. (Found: {})",
-              plane));
-      }
-    }
+    case AV_PIX_FMT_YUV422P:
+      return convert_yuv422p(frames);
     case AV_PIX_FMT_NV12: {
-      if (!index) {
-        return convert_nv12(frames);
-      }
-      auto plane = index.value();
-      switch (plane) {
-        case 0:
-          return convert_plane(frames, plane);
-        case 1:
-          return convert_nv12_uv(frames);
-        default:
-          SPDL_FAIL(fmt::format(
-              "Valid `plane` values for NV12 are [0, 1]. (Found: {})", plane));
-      }
+      return convert_nv12(frames);
+      default:
+        SPDL_FAIL(fmt::format(
+            "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
     }
-    default:
-      SPDL_FAIL(fmt::format(
-          "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
-
 } // namespace spdl::core::detail
