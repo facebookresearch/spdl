@@ -41,13 +41,15 @@ std::unique_ptr<CUDABuffer> cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
     int device_index,
-    bool channel_last) {
+    bool channel_last,
+    ElemClass elem_class,
+    size_t depth) {
   return std::make_unique<CUDABuffer>(
       std::move(shape),
       channel_last,
-      ElemClass::UInt,
-      sizeof(uint8_t),
-      new CUDAStorage{prod(shape), stream},
+      elem_class,
+      depth,
+      new CUDAStorage{depth * prod(shape), stream},
       device_index);
 }
 
