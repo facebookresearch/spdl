@@ -251,13 +251,16 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
     return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
 
 
-def async_convert_frames(frames, executor=None):
+def async_convert_frames(frames, **kwargs):
     """Convert the frames to buffer.
 
     Args:
         frames (Frames): Frames object.
 
     Other args:
+        cuda_device_index (int):
+            *Optional:* When provided, the buffer is moved to CUDA device.
+
         executor (ThreadPoolExecutor):
             *Optional:* Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool with higher priority than demuxing.
@@ -267,22 +270,22 @@ def async_convert_frames(frames, executor=None):
 
             The buffer will be created on the device where the frame data are.
 
-            - ``FFmpegAudioFrames`` -> ``CPUBuffer``
+            - ``FFmpegAudioFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
 
             - ``FFmpegVideoFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
 
             - ``FFmpegImageFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
 
+            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer`` or ``CUDABuffer``
+
             - ``NvDecVideoFrames`` -> ``CUDABuffer``
 
             - ``NvDecImageFrames`` -> ``CUDABuffer``
 
-            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer``
-
             - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
     """
     func = _common._get_conversion_func(frames)
-    return _async_task(func, frames, executor=executor)
+    return _async_task(func, frames, **kwargs)
 
 
 def async_transfer_buffer_to_cuda(buffer, cuda_device_index: int):

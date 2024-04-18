@@ -3,6 +3,7 @@ from concurrent.futures import Future
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import spdl.utils
+from spdl.lib import _libspdl
 
 from . import _common
 
@@ -160,16 +161,17 @@ def decode_packets_nvdec(packets, cuda_device_index, **kwargs) -> Future:
     )
 
 
-def convert_frames(
-    frames,
-    executor=None,
-) -> Future:
+def convert_frames(frames, **kwargs) -> Future:
     """Convert the frames to buffer.
 
     Args:
         frames (Frames): Frames object.
 
     Other args:
+        cuda_device_index (int):
+            *Optional:* When provided, if the input is FFmpegFrames,
+            the buffer is moved to CUDA device.
+
         executor (ThreadPoolExecutor):
             *Optional:* Executor to run the conversion. By default, the conversion is performed on
             demuxer thread pool with higher priority than demuxing.
@@ -179,22 +181,22 @@ def convert_frames(
 
             The buffer will be created on the device where the frame data are.
 
-            - ``FFmpegAudioFrames`` -> ``CPUBuffer``
+            - ``FFmpegAudioFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
 
             - ``FFmpegVideoFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
 
             - ``FFmpegImageFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
 
+            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer`` or ``CUDABuffer``
+
             - ``NvDecVideoFrames`` -> ``CUDABuffer``
 
             - ``NvDecImageFrames`` -> ``CUDABuffer``
 
-            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer``
-
             - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
     """
     func = _common._get_conversion_func(frames)
-    return _common._futurize_task(func, frames, executor=executor)
+    return _common._futurize_task(func, frames, **kwargs)
 
 
 def transfer_buffer_to_cuda(buffer, cuda_device_index: int):

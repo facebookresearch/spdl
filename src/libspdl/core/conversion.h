@@ -29,12 +29,14 @@ FuturePtr async_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesWrapperPtr<media_type> frames,
+    const std::optional<int>& cuda_device_index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 FuturePtr async_batch_convert_frames(
     std::function<void(BufferWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegImageFramesWrapperPtr> frames,
+    const std::optional<int>& cuda_device_index = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 ////////////////////////////////////////////////////////////////////////////////

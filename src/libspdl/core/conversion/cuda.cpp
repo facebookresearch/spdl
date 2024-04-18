@@ -10,7 +10,6 @@
 
 namespace spdl::core {
 namespace {
-#ifdef SPDL_USE_CUDA
 size_t prod(const std::vector<size_t>& shape) {
   size_t ret = 1;
   for (auto& v : shape) {
@@ -18,8 +17,12 @@ size_t prod(const std::vector<size_t>& shape) {
   }
   return ret;
 }
+} // namespace
 
 BufferPtr convert_to_cuda(BufferPtr buffer, int cuda_device_index) {
+#ifndef SPDL_USE_CUDA
+  SPDL_FAIL("SPDL is not compiled with CUDA support.");
+#else
   TRACE_EVENT("decoding", "core::convert_to_cuda");
   auto ret = cuda_buffer(
       buffer->shape,
@@ -40,10 +43,8 @@ BufferPtr convert_to_cuda(BufferPtr buffer, int cuda_device_index) {
       "Failed to copy data from host to device.");
 
   return ret;
-}
 #endif
-
-} // namespace
+}
 
 FuturePtr async_convert_to_cuda(
     std::function<void(BufferWrapperPtr)> set_result,
