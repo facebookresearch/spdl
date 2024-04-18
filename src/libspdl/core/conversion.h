@@ -40,6 +40,18 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
     const std::optional<int>& index = std::nullopt);
 
 ////////////////////////////////////////////////////////////////////////////////
+// CPU to CUDA conversion
+////////////////////////////////////////////////////////////////////////////////
+BufferPtr convert_to_cuda(BufferPtr buffer, int cuda_device_index);
+
+FuturePtr async_convert_to_cuda(
+    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    BufferWrapperPtr buffer,
+    int cuda_device_index,
+    ThreadPoolExecutorPtr demux_executor = nullptr);
+
+////////////////////////////////////////////////////////////////////////////////
 // Async wrapper - FFmpeg
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type, bool cpu_only = false>

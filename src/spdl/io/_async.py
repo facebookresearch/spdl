@@ -20,6 +20,7 @@ __all__ = [
     "async_streaming_demux",
     "async_load_media",
     "async_batch_load_image",
+    "async_transfer_buffer_to_cuda",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -313,6 +314,25 @@ def async_convert_frames(frames, executor=None):
     """
     func = _common._get_conversion_func(frames)
     return _async_task(func, frames, index=None, executor=executor)
+
+
+def async_transfer_buffer_to_cuda(buffer, cuda_device_index: int):
+    """Move the buffer data from CPU to CUDA.
+
+    Args:
+        buffer (Buffer): Buffer object.
+        cuda_device_index (int): The CUDA device to move the data to.
+
+    Returns:
+        (Awaitable[Buffer]): Awaitable which returns a CUDABuffer object.
+    """
+    func = _common._get_convert_to_cuda_func()
+    return _async_task(func, buffer, cuda_device_index=cuda_device_index)
+
+
+################################################################################
+# High-level APIs
+################################################################################
 
 
 async def async_load_media(
