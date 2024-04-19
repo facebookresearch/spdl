@@ -1,4 +1,5 @@
 import asyncio
+import gc
 
 import pytest
 import spdl.io
@@ -36,3 +37,54 @@ def test_async_transfer_buffer_to_cuda(media_type, get_sample):
         assert torch.allclose(cpu_tensor, cuda_tensor.cpu())
 
     asyncio.run(_test(sample.path))
+
+
+@pytest.mark.parametrize("media_type", ["audio", "video", "image"])
+def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sample):
+    """smoke test for transfer_buffer_to_cuda function"""
+    cmd = CMDS[media_type]
+    sample = get_sample(cmd)
+
+    allocator_called, deleter_called = False, False
+
+    def allocator(size, device, stream):
+        print("Calling allocator", flush=True)
+        ptr = torch.cuda.caching_allocator_alloc(size, device, stream)
+        nonlocal allocator_called
+        allocator_called = True
+        return ptr
+
+    def deleter(ptr):
+        print("Calling deleter", flush=True)
+        torch.cuda.caching_allocator_delete(ptr)
+        nonlocal deleter_called
+        deleter_called = True
+
+    async def _test(src):
+        assert not allocator_called
+        cuda_buffer = await spdl.io.async_load_media(
+            media_type,
+            src,
+            convert_options={
+                "cuda_device_index": DEFAULT_CUDA,
+                "cuda_allocator": allocator,
+                "cuda_deleter": deleter,
+            },
+        )
+        assert allocator_called
+        cuda_tensor = spdl.io.to_torch(cuda_buffer)
+
+        assert cuda_tensor.is_cuda
+        assert cuda_tensor.device == torch.device(f"cuda:{DEFAULT_CUDA}")
+
+        # Till we have a clone method, we decode twice. We need a clone method
+        cpu_buffer = await spdl.io.async_load_media(media_type, src)
+        cpu_tensor = spdl.io.to_torch(cpu_buffer)
+        assert torch.allclose(cpu_tensor, cuda_tensor.cpu())
+
+        assert not deleter_called
+
+    asyncio.run(_test(sample.path))
+
+    gc.collect()
+    assert deleter_called

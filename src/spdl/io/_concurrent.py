@@ -15,7 +15,6 @@ __all__ = [
     "streaming_demux",
     "load_media",
     "batch_load_image",
-    "transfer_buffer_to_cuda",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -162,15 +161,55 @@ def decode_packets_nvdec(packets, cuda_device_index, **kwargs) -> Future:
 
 
 def convert_frames(frames, **kwargs) -> Future:
-    """Convert the frames to buffer.
+    """Convert the decoded frames to buffer.
 
     Args:
         frames (Frames): Frames object.
 
     Other args:
         cuda_device_index (int):
-            *Optional:* When provided, if the input is FFmpegFrames,
-            the buffer is moved to CUDA device.
+            *Optional:* When provided, the buffer is moved to CUDA device.
+
+        cuda_stream (int (uintptr_t) ):
+            *Optional:* Pointer to a custom CUDA stream. By default, it uses the
+            per-thread default stream.
+
+            !!! warn
+
+                Host to device buffer transfer is performed in a thread different than
+                Python main thread.
+                Since the frame data are available only for the duration of the
+                background job, the transfer is performed with synchronization.
+
+            ??? note
+
+                It is possible to provide the same stream as the one used in Python's
+                main thread, but it might introduce undesired synchronization.
+
+                An example to fetch the default stream from PyTorch.
+
+                ```python
+                stream = torch.cuda.Stream()
+                cuda_stream = stream.cuda_stream
+                ```
+
+        cuda_allocator (Callable):
+            *Optional:* Custom CUDA memory allcoator, which takes the following arguments
+            and return the address of the allocated memory.
+
+            - Size: `int`
+            - CUDA device index: `int`
+            - CUDA stream address: `int` (`uintptr_t`)
+
+            An example of such function is
+            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_alloc].
+
+        cuda_deleter (Callable):
+            *Optional:* Custom CUDA memory deleter, which takes the address of memory allocated
+            by the ``cuda_allocator``.
+
+            An example of such function is
+            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
 
         executor (ThreadPoolExecutor):
             *Optional:* Executor to run the conversion. By default, the conversion is performed on

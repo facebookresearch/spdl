@@ -16,7 +16,9 @@ void register_conversion(py::module& m) {
       py::arg("frames"),
       py::kw_only(),
       py::arg("cuda_device_index") = py::none(),
-      py::arg("cuda_stream") = py::none(),
+      py::arg("cuda_stream") = 0,
+      py::arg("cuda_allocator") = py::none(),
+      py::arg("cuda_deleter") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_video",
@@ -26,7 +28,9 @@ void register_conversion(py::module& m) {
       py::arg("frames"),
       py::kw_only(),
       py::arg("cuda_device_index") = py::none(),
-      py::arg("cuda_stream") = py::none(),
+      py::arg("cuda_stream") = 0,
+      py::arg("cuda_allocator") = py::none(),
+      py::arg("cuda_deleter") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_image",
@@ -36,7 +40,9 @@ void register_conversion(py::module& m) {
       py::arg("frames"),
       py::kw_only(),
       py::arg("cuda_device_index") = py::none(),
-      py::arg("cuda_stream") = py::none(),
+      py::arg("cuda_stream") = 0,
+      py::arg("cuda_allocator") = py::none(),
+      py::arg("cuda_deleter") = py::none(),
       py::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image",
@@ -46,7 +52,9 @@ void register_conversion(py::module& m) {
       py::arg("frames"),
       py::kw_only(),
       py::arg("cuda_device_index") = py::none(),
-      py::arg("cuda_stream") = py::none(),
+      py::arg("cuda_stream") = 0,
+      py::arg("cuda_allocator") = py::none(),
+      py::arg("cuda_deleter") = py::none(),
       py::arg("executor") = nullptr);
 
   m.def(
