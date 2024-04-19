@@ -16,10 +16,6 @@ int get_ffmpeg_log_level();
 
 void set_ffmpeg_log_level(int);
 
-// These are for using NVDEC decoder via FFmpeg
-void create_cuda_context(int index, bool use_primary_context = false);
-void clear_ffmpeg_cuda_context_cache();
-
 //////////////////////////////////////////////////////////////////////////////////
 // Utilities for Folly
 //////////////////////////////////////////////////////////////////////////////////

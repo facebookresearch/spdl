@@ -32,7 +32,6 @@ struct IOConfig {
 struct DecodeConfig {
   std::optional<std::string> decoder = std::nullopt;
   std::optional<OptionDict> decoder_options = std::nullopt;
-  int cuda_device_index = -1;
 };
 
 // Used to construct Dtype when converting buffer to array

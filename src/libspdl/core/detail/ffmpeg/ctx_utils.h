@@ -11,14 +11,6 @@
 
 namespace spdl::core::detail {
 
-void clear_cuda_context_cache();
-
-int get_device_index_from_frame_context(const AVBufferRef* hw_frames_ctx);
-
-void create_cuda_context(
-    const int index,
-    const bool use_primary_context = false);
-
 AVIOContextPtr get_io_ctx(
     void* opaque,
     int buffer_size,
@@ -39,7 +31,6 @@ AVCodecContextPtr get_codec_ctx_ptr(
     const AVCodecParameters* params,
     AVRational pkt_timebase,
     const std::optional<std::string>& decoder = std::nullopt,
-    const std::optional<OptionDict>& decoder_options = std::nullopt,
-    const int cuda_device_index = -1);
+    const std::optional<OptionDict>& decoder_options = std::nullopt);
 
 } // namespace spdl::core::detail

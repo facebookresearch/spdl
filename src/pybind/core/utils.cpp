@@ -52,12 +52,6 @@ void register_utils(py::module& m) {
   m.def("init_folly", &init_folly_init);
   m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
   m.def("set_ffmpeg_log_level", &set_ffmpeg_log_level);
-  m.def("clear_ffmpeg_cuda_context_cache", &clear_ffmpeg_cuda_context_cache);
-  m.def(
-      "create_cuda_context",
-      &create_cuda_context,
-      py::arg("index"),
-      py::arg("use_primary_context") = false);
 }
 
 } // namespace spdl::core
