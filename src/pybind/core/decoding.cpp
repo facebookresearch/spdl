@@ -39,9 +39,6 @@ std::string get_audio_filter_description(
     const std::optional<int>& num_frames = std::nullopt,
     const std::optional<std::string>& filter_desc = std::nullopt) {
   std::vector<std::string> parts;
-  if (sample_rate) {
-    parts.emplace_back(fmt::format("aresample={}", sample_rate.value()));
-  }
   if (num_channels || sample_fmt) {
     std::vector<std::string> aformat;
     if (num_channels) {
@@ -52,6 +49,9 @@ std::string get_audio_filter_description(
       aformat.emplace_back(fmt::format("sample_fmts={}", sample_fmt.value()));
     }
     parts.push_back(fmt::format("aformat={}", fmt::join(aformat, ":")));
+  }
+  if (sample_rate) {
+    parts.emplace_back(fmt::format("aresample={}", sample_rate.value()));
   }
   if (timestamp) {
     auto& ts = timestamp.value();
@@ -90,19 +90,6 @@ std::string get_video_filter_description(
     auto fr = frame_rate.value();
     parts.emplace_back(fmt::format("fps={}/{}", fr.num, fr.den));
   }
-  if (width || height) {
-    std::vector<std::string> scale;
-    if (width) {
-      scale.emplace_back(fmt::format("width={}", width.value()));
-    }
-    if (height > 0) {
-      scale.emplace_back(fmt::format("height={}", height.value()));
-    }
-    parts.push_back(fmt::format("scale={}", fmt::join(scale, ":")));
-  }
-  if (pix_fmt) {
-    parts.push_back(fmt::format("format=pix_fmts={}", pix_fmt.value()));
-  }
   if (timestamp) {
     auto& ts = timestamp.value();
     std::vector<std::string> atrim;
@@ -131,6 +118,20 @@ std::string get_video_filter_description(
     // then drop frames after the given frame
     parts.push_back(fmt::format("trim=end_frame={}", num_frames.value()));
   }
+  if (width || height) {
+    std::vector<std::string> scale;
+    if (width) {
+      scale.emplace_back(fmt::format("width={}", width.value()));
+    }
+    if (height > 0) {
+      scale.emplace_back(fmt::format("height={}", height.value()));
+    }
+    parts.push_back(fmt::format("scale={}", fmt::join(scale, ":")));
+  }
+  if (pix_fmt) {
+    parts.push_back(fmt::format("format=pix_fmts={}", pix_fmt.value()));
+  }
+
   if (filter_desc) {
     parts.push_back(filter_desc.value());
   }
