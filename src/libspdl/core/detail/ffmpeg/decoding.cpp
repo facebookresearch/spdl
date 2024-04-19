@@ -184,17 +184,10 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
       packets->codecpar,
       AVRational{packets->time_base.num, packets->time_base.den},
       cfg.decoder,
-      cfg.decoder_options,
-      cfg.cuda_device_index);
-  auto frames = [&]() {
-    if constexpr (media_type == MediaType::Audio) {
-      return std::make_unique<FFmpegFrames<media_type>>(
-          packets->id, packets->time_base);
-    } else {
-      return std::make_unique<FFmpegFrames<media_type>>(
-          packets->id, packets->time_base, cfg.cuda_device_index);
-    }
-  }();
+      cfg.decoder_options);
+  auto frames = std::make_unique<FFmpegFrames<media_type>>(
+      packets->id, packets->time_base);
+
   if constexpr (media_type != MediaType::Image) {
     packets->push(nullptr); // For flushing
   }

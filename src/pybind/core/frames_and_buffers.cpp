@@ -319,15 +319,14 @@ void register_frames_and_buffers(py::module& m) {
       .def("__repr__", [](const FFmpegVideoFramesWrapper& self) {
         auto& ref = self.get_frames_ref();
         return fmt::format(
-            "FFmpegVideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, pts={}, is_cuda={}>",
+            "FFmpegVideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, pts={}>",
             ref->get_num_frames(),
             ref->get_media_format_name(),
             ref->get_num_planes(),
             ref->get_width(),
             ref->get_height(),
             double(ref->get_frames().front()->pts) * ref->time_base.num /
-                ref->time_base.den,
-            ref->is_cuda());
+                ref->time_base.den);
       });
 
   _FFmpegImageFrames
@@ -354,12 +353,11 @@ void register_frames_and_buffers(py::module& m) {
       .def("__repr__", [](const FFmpegImageFramesWrapper& self) {
         auto& ref = self.get_frames_ref();
         return fmt::format(
-            "FFmpegImageFrames<pixel_format=\"{}\", num_planes={}, width={}, height={}, is_cuda={}>",
+            "FFmpegImageFrames<pixel_format=\"{}\", num_planes={}, width={}, height={}>",
             ref->get_media_format_name(),
             ref->get_num_planes(),
             ref->get_width(),
-            ref->get_height(),
-            ref->is_cuda());
+            ref->get_height());
       });
 
 #ifdef SPDL_USE_NVCODEC

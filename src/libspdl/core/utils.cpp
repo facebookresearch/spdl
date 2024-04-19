@@ -7,10 +7,6 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#if defined(SPDL_USE_CUDA) || defined(SPDL_USE_NVCODEC)
-#include "libspdl/core/detail/cuda.h"
-#endif
-
 #include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
 
@@ -29,14 +25,6 @@ int get_ffmpeg_log_level() {
 
 void set_ffmpeg_log_level(int level) {
   av_log_set_level(level);
-}
-
-void clear_ffmpeg_cuda_context_cache() {
-  detail::clear_cuda_context_cache();
-}
-
-void create_cuda_context(int index, bool use_primary_context) {
-  detail::create_cuda_context(index, use_primary_context);
 }
 
 namespace {

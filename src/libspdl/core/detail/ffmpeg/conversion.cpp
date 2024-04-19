@@ -3,10 +3,6 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#ifdef SPDL_USE_CUDA
-#include "libspdl/core/detail/cuda.h"
-#endif
-
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
@@ -14,10 +10,6 @@ extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/pixdesc.h>
-
-#ifdef SPDL_USE_CUDA
-#include <libavutil/hwcontext_cuda.h>
-#endif
 }
 
 namespace spdl::core::detail {
@@ -208,80 +200,7 @@ CPUBufferPtr convert_nv12_uv(const std::vector<AVFrame*>& frames) {
   }
   return buf;
 }
-
-#ifdef SPDL_USE_CUDA
-CUDABufferPtr convert_nv12_cuda(
-    const std::vector<AVFrame*>& frames,
-    int device_index) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2;
-
-  auto hw_frames_ctx = (AVHWFramesContext*)frames[0]->hw_frames_ctx->data;
-  auto hw_device_ctx = (AVHWDeviceContext*)hw_frames_ctx->device_ctx;
-  auto cuda_device_ctx = (AVCUDADeviceContext*)hw_device_ctx->hwctx;
-  auto stream = cuda_device_ctx->stream;
-  XLOG(DBG9) << "CUcontext: " << cuda_device_ctx->cuda_ctx;
-  XLOG(DBG9) << "CUstream: " << cuda_device_ctx->stream;
-
-  XLOG(DBG) << "creating cuda buffer";
-  auto buf = cuda_buffer({frames.size(), 1, h + h2, w}, stream, device_index);
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    // Y
-    CHECK_CUDA(
-        cudaMemcpy2DAsync(
-            dst,
-            w,
-            f->data[0],
-            f->linesize[0],
-            w,
-            h,
-            cudaMemcpyDeviceToDevice,
-            stream),
-        "Failed to copy Y plane.");
-    dst += h * w;
-    // UV
-    CHECK_CUDA(
-        cudaMemcpy2DAsync(
-            dst,
-            w,
-            f->data[1],
-            f->linesize[1],
-            w,
-            h2,
-            cudaMemcpyDeviceToDevice,
-            stream),
-        "Failed to copy UV plane.");
-    dst += h2 * w;
-  }
-  return buf;
-}
-#endif
 } // namespace
-
-CUDABufferPtr convert_video_frames_cuda(
-    const std::vector<AVFrame*>& frames,
-    int cuda_device_index) {
-#ifndef SPDL_USE_CUDA
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#else
-  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
-  if (pix_fmt != AV_PIX_FMT_CUDA) {
-    SPDL_FAIL("The input frames are not CUDA frames.");
-  }
-  auto frames_ctx = (AVHWFramesContext*)(frames[0]->hw_frames_ctx->data);
-  auto sw_pix_fmt = frames_ctx->sw_format;
-  switch (sw_pix_fmt) {
-    case AV_PIX_FMT_NV12:
-      return convert_nv12_cuda(frames, cuda_device_index);
-    default:
-      SPDL_FAIL(fmt::format(
-          "CUDA frame ({}) is not supported.",
-          av_get_pix_fmt_name(sw_pix_fmt)));
-  }
-#endif
-}
 
 // Note:
 //

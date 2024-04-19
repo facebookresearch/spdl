@@ -32,19 +32,6 @@ FFmpegFrames<media_type>::FFmpegFrames(uint64_t id_, Rational time_base_)
 }
 
 template <MediaType media_type>
-FFmpegFrames<media_type>::FFmpegFrames(
-    uint64_t id_,
-    Rational time_base_,
-    std::optional<int> cuda_device)
-  requires(_IS_VIDEO || _IS_IMAGE)
-    : id(id_), time_base(time_base_), cuda_device_index(cuda_device) {
-  TRACE_EVENT(
-      "decoding",
-      "FFmpegFrames::FFmpegFrames",
-      perfetto::Flow::ProcessScoped(id));
-}
-
-template <MediaType media_type>
 FFmpegFrames<media_type>::FFmpegFrames(FFmpegFrames&& other) noexcept {
   *this = std::move(other);
 }
@@ -153,16 +140,6 @@ int FFmpegFrames<media_type>::get_num_channels() const
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Video
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-bool FFmpegFrames<media_type>::is_cuda() const
-  requires(_IS_IMAGE || _IS_VIDEO)
-{
-  if (!frames.size()) {
-    return false;
-  }
-  return static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
-}
-
 template <MediaType media_type>
 int FFmpegFrames<media_type>::get_num_planes() const
   requires(_IS_IMAGE || _IS_VIDEO)

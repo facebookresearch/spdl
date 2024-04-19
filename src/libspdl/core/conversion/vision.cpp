@@ -55,20 +55,12 @@ void check_consistency(const std::vector<AVFrame*>& frames)
 }
 
 template <MediaType media_type>
-BufferPtr convert_video(
-    const std::vector<AVFrame*>& frames,
-    const std::optional<int>& cuda_device_index)
+BufferPtr convert_video(const std::vector<AVFrame*>& frames)
   requires(media_type != MediaType::Audio)
 {
   check_consistency<media_type>(frames);
-  bool is_cuda =
-      static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA;
-  if (is_cuda) {
-    if (!cuda_device_index) {
-      SPDL_FAIL_INTERNAL(
-          "CUDA frames are found, but cuda device index is not set.");
-    }
-    return detail::convert_video_frames_cuda(frames, cuda_device_index.value());
+  if (static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA) {
+    SPDL_FAIL_INTERNAL("FFmpeg-native CUDA frames are not supported.");
   }
   auto buf = detail::convert_video_frames_cpu(frames);
   if constexpr (media_type == MediaType::Image) {
@@ -85,8 +77,7 @@ BufferPtr convert_vision_frames(const FFmpegFramesPtr<media_type> frames)
       "decoding",
       "core::convert_vision_frames",
       perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video<media_type>(
-      frames->get_frames(), frames->cuda_device_index);
+  return convert_video<media_type>(frames->get_frames());
 }
 } // namespace
 
@@ -166,8 +157,7 @@ std::vector<AVFrame*> merge_frames(
 BufferPtr convert_batch_image_frames(
     const std::vector<FFmpegImageFramesWrapperPtr>& batch) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
-  return convert_video<MediaType::Video>(
-      merge_frames(batch), batch[0]->get_frames_ref()->cuda_device_index);
+  return convert_video<MediaType::Video>(merge_frames(batch));
 }
 
 std::vector<FFmpegImageFramesWrapperPtr> rewrap(

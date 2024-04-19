@@ -48,7 +48,6 @@ if (SPDL_USE_CUDA)
   list(APPEND srcs
     libspdl/core/detail/cuda.cpp
     libspdl/core/buffer/cuda.cpp
-    libspdl/core/storage/cpu.cpp
     libspdl/core/storage/cuda.cpp
     )
 endif()
