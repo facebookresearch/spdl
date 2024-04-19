@@ -19,14 +19,25 @@ size_t prod(const std::vector<size_t>& shape) {
 }
 } // namespace
 
-BufferPtr convert_to_cuda(BufferPtr buffer, int cuda_device_index) {
+BufferPtr convert_to_cuda(
+    BufferPtr buffer,
+    int cuda_device_index,
+    const std::optional<uintptr_t>& cuda_stream) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
   TRACE_EVENT("decoding", "core::convert_to_cuda");
+  auto stream = [&]() -> CUstream {
+    if (cuda_stream) {
+      auto val = reinterpret_cast<void*>(cuda_stream.value());
+      return static_cast<CUstream>(val);
+    }
+    return 0;
+  }();
+  XLOG(DBG) << stream;
   auto ret = cuda_buffer(
       buffer->shape,
-      0,
+      stream,
       cuda_device_index,
       buffer->channel_last,
       buffer->elem_class,
@@ -38,9 +49,16 @@ BufferPtr convert_to_cuda(BufferPtr buffer, int cuda_device_index) {
 
   size_t size = buffer->depth * prod(buffer->shape);
 
-  CHECK_CUDA(
-      cudaMemcpy(ret->data(), buffer->data(), size, cudaMemcpyHostToDevice),
-      "Failed to copy data from host to device.");
+  if (cuda_stream) {
+    CHECK_CUDA(
+        cudaMemcpyAsync(
+            ret->data(), buffer->data(), size, cudaMemcpyHostToDevice),
+        "Failed to copy data from host to device.");
+  } else {
+    CHECK_CUDA(
+        cudaMemcpy(ret->data(), buffer->data(), size, cudaMemcpyHostToDevice),
+        "Failed to copy data from host to device.");
+  }
 
   return ret;
 #endif

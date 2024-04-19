@@ -161,6 +161,9 @@ def _get_batch_generator(args, device):
 
     class_mapping, _ = get_mappings()
 
+    s = torch.cuda.Stream(device=0)
+    _LG.info(f"stream={s}")
+
     async def _async_decode_func(paths):
         with torch.profiler.record_function("async_decode"):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
@@ -170,8 +173,8 @@ def _get_batch_generator(args, device):
                 width=224,
                 height=224,
                 pix_fmt="rgb24",
-                strict=False,
-                convert_options={"cuda_device_index": 0},
+                strict=True,
+                convert_options={"cuda_device_index": 0, "cuda_stream": s.cuda_stream},
             )
             batch = spdl.io.to_torch(buffer)
             batch = batch.permute((0, 3, 1, 2))
@@ -187,8 +190,8 @@ def _get_batch_generator(args, device):
                 width=224,
                 height=224,
                 pix_fmt="rgb24",
-                strict=False,
-                convert_options={"cuda_device_index": 0},
+                strict=True,
+                convert_options={"cuda_device_index": 0, "cuda_stream": s.cuda_stream},
             )
             batch = spdl.io.to_torch(buffer)
             batch = batch.permute((0, 3, 1, 2))
