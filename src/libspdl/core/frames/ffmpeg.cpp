@@ -242,4 +242,21 @@ template struct FFmpegFrames<MediaType::Audio>;
 template struct FFmpegFrames<MediaType::Video>;
 template struct FFmpegFrames<MediaType::Image>;
 
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> clone(const FFmpegFramesPtr<media_type>& src) {
+  auto other =
+      std::make_unique<FFmpegFrames<media_type>>(src->get_id(), src->time_base);
+  for (const AVFrame* f : src->get_frames()) {
+    other->push_back(CHECK_AVALLOCATE(av_frame_clone(f)));
+  }
+  return other;
+}
+
+template FFmpegFramesPtr<MediaType::Audio> clone(
+    const FFmpegFramesPtr<MediaType::Audio>&);
+template FFmpegFramesPtr<MediaType::Video> clone(
+    const FFmpegFramesPtr<MediaType::Video>&);
+template FFmpegFramesPtr<MediaType::Image> clone(
+    const FFmpegFramesPtr<MediaType::Image>&);
+
 } // namespace spdl::core
