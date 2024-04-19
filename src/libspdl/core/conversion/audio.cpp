@@ -21,12 +21,14 @@ FuturePtr async_convert_frames(
     std::function<void(std::string, bool)> notify_exception,
     FFmpegAudioFramesWrapperPtr frames,
     const std::optional<int>& cuda_device_index,
+    const std::optional<uintptr_t>& cuda_stream,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=](FFmpegAudioFramesPtr&& frm) -> folly::coro::Task<BufferWrapperPtr> {
         auto ret = convert_audio_frames(std::move(frm));
         if (cuda_device_index) {
-          ret = convert_to_cuda(std::move(ret), *cuda_device_index);
+          ret =
+              convert_to_cuda(std::move(ret), *cuda_device_index, cuda_stream);
         }
         co_return wrap(std::move(ret));
       },
