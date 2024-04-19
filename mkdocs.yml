@@ -18,6 +18,8 @@ plugins:
             extensions:
             - docs/custom_resolver.py:SPDLDynamicResolver:
             show_object_full_path: true
+          import:
+          - https://pytorch.org/docs/master/objects.inv
 
   - mkdoxy:
       projects:

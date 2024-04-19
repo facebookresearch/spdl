@@ -1,6 +1,7 @@
 #include <libspdl/core/storage.h>
 
 #include "libspdl/core/detail/cuda.h"
+#include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
@@ -10,24 +11,42 @@ namespace spdl::core {
 // CUDAStorage
 ////////////////////////////////////////////////////////////////////////////////
 CUDAStorage::CUDAStorage(size_t size, CUstream stream_) : stream(stream_) {
-  XLOG(DBG9) << fmt::format("Allocating CUDA memory ({} bytes)", size);
-  CHECK_CUDA(
-      cudaMallocAsync(&data_, size, 0), "Failed to allocate CUDA memory");
-  XLOG(DBG9) << fmt::format("Allocation queued {}", data_);
+  TRACE_EVENT("decoding", "cudaMalloc");
+  CHECK_CUDA(cudaMalloc(&data_, size), "Failed to allocate CUDA memory");
 }
+
+CUDAStorage::CUDAStorage(
+    size_t size,
+    int device,
+    uintptr_t stream_,
+    const cuda_allocator_fn& allocator,
+    cuda_deleter_fn deleter_)
+    : stream(static_cast<CUstream>((void*)stream_)),
+      deleter(std::move(deleter_)) {
+  TRACE_EVENT("decoding", "custom_cuda_allocator_fn");
+  data_ = reinterpret_cast<void*>(allocator(size, device, stream_));
+}
+
 CUDAStorage::CUDAStorage(CUDAStorage&& other) noexcept {
   *this = std::move(other);
 }
+
 CUDAStorage& CUDAStorage::operator=(CUDAStorage&& other) noexcept {
   using std::swap;
   swap(data_, other.data_);
   swap(stream, other.stream);
+  swap(deleter, other.deleter);
   return *this;
 }
 CUDAStorage::~CUDAStorage() {
   if (data_) {
+    TRACE_EVENT("decoding", "CUDAStorage::~CUDAStorage");
     XLOG(DBG9) << "Freeing CUDA memory " << data_;
-    CHECK_CUDA(cudaFreeAsync(data_, 0), "Failed to free CUDA memory");
+    if (deleter) {
+      deleter(reinterpret_cast<uintptr_t>(data_));
+    } else {
+      CHECK_CUDA(cudaFree(data_), "Failed to free CUDA memory");
+    }
   }
 }
 

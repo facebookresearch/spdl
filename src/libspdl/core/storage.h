@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 
 #ifdef SPDL_USE_CUDA
 #include <cuda.h>
@@ -31,15 +32,26 @@ struct CPUStorage : Storage {
   ~CPUStorage();
 };
 
+using cuda_allocator_fn = std::function<uintptr_t(int, int, uintptr_t)>;
+using cuda_deleter_fn = std::function<void(uintptr_t)>;
+
 struct CUDAStorage : Storage {
 #ifdef SPDL_USE_CUDA
   void* data_ = nullptr;
   CUstream stream = 0;
 
+  cuda_deleter_fn deleter;
+
   void* data() const override;
 
   CUDAStorage() = default;
   CUDAStorage(size_t size, CUstream stream);
+  CUDAStorage(
+      size_t size,
+      int device,
+      uintptr_t stream,
+      const cuda_allocator_fn& allocator,
+      cuda_deleter_fn deleter);
 
   CUDAStorage(const CUDAStorage&) = delete;
   CUDAStorage& operator=(const CUDAStorage&) = delete;

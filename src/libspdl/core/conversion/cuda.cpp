@@ -17,48 +17,58 @@ size_t prod(const std::vector<size_t>& shape) {
   }
   return ret;
 }
+
 } // namespace
 
 BufferPtr convert_to_cuda(
     BufferPtr buffer,
     int cuda_device_index,
-    const std::optional<uintptr_t>& cuda_stream) {
+    uintptr_t cuda_stream,
+    const std::optional<cuda_allocator_fn>& cuda_allocator,
+    const std::optional<cuda_deleter_fn>& cuda_deleter,
+    bool async) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
-  TRACE_EVENT("decoding", "core::convert_to_cuda");
-  auto stream = [&]() -> CUstream {
-    if (cuda_stream) {
-      auto val = reinterpret_cast<void*>(cuda_stream.value());
-      return static_cast<CUstream>(val);
-    }
-    return 0;
-  }();
-  XLOG(DBG) << stream;
-  auto ret = cuda_buffer(
-      buffer->shape,
-      stream,
-      cuda_device_index,
-      buffer->channel_last,
-      buffer->elem_class,
-      buffer->depth);
-
   if (buffer->is_cuda()) {
     return buffer;
   }
+  if (async) {
+    SPDL_FAIL("Async conversion is not supported.");
+  }
+
+  TRACE_EVENT("decoding", "core::convert_to_cuda");
+
+  std::unique_ptr<CUDABuffer> ret;
+
+  if (cuda_allocator) {
+    if (!cuda_deleter) {
+      SPDL_FAIL(
+          "When allocator is provided, deleter and stream must be provided as well.");
+    }
+    ret = cuda_buffer(
+        buffer->shape,
+        cuda_stream,
+        cuda_device_index,
+        buffer->channel_last,
+        buffer->elem_class,
+        buffer->depth,
+        cuda_allocator.value(),
+        cuda_deleter.value());
+  } else {
+    ret = cuda_buffer(
+        buffer->shape,
+        static_cast<CUstream>(reinterpret_cast<void*>(cuda_stream)),
+        cuda_device_index,
+        buffer->channel_last,
+        buffer->elem_class,
+        buffer->depth);
+  }
 
   size_t size = buffer->depth * prod(buffer->shape);
-
-  if (cuda_stream) {
-    CHECK_CUDA(
-        cudaMemcpyAsync(
-            ret->data(), buffer->data(), size, cudaMemcpyHostToDevice),
-        "Failed to copy data from host to device.");
-  } else {
-    CHECK_CUDA(
-        cudaMemcpy(ret->data(), buffer->data(), size, cudaMemcpyHostToDevice),
-        "Failed to copy data from host to device.");
-  }
+  CHECK_CUDA(
+      cudaMemcpy(ret->data(), buffer->data(), size, cudaMemcpyHostToDevice),
+      "Failed to copy data from host to device.");
 
   return ret;
 #endif

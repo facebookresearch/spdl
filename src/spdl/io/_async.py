@@ -12,7 +12,6 @@ from . import _common
 __all__ = [
     "_async_sleep",
     "_async_sleep_multi",
-    "async_convert_frames_cpu",
     "async_convert_frames",
     "async_decode_packets",
     "async_decode_packets_nvdec",
@@ -20,7 +19,6 @@ __all__ = [
     "async_streaming_demux",
     "async_load_media",
     "async_batch_load_image",
-    "async_transfer_buffer_to_cuda",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -252,7 +250,44 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
 
 
 def async_convert_frames(frames, **kwargs):
-    """Convert the frames to buffer.
+    """Convert the decoded frames to buffer.
+
+    ??? example
+        * Convert audio frames to a contiguous buffer, then cast it to NumPy Array
+        ```python
+        packets = await async_demux_media("audio", sample.mp3)
+        frames = await async_decode_packets(packets)
+        buffer = await async_convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
+        ```
+
+        * Convert video frames to a contiguous buffer and transfer it to
+        a CUDA device, then cast to Numba CUDA tensor.
+        ```python
+        packets = await async_demux_media("video", sample.mp4)
+        frames = await async_decode_packets(packets)
+        buffer = await async_convert_frames(frames, cuda_device_index=0)
+        tensor = spdl.io.to_numba(buffer)
+        ```
+
+        * Converting batch image frames to a contiguous buffer and transfer it to
+        a CUDA device using PyTorch's CUDA caching allocator, then cast to PyTorch
+        tensor.
+        ```python
+        frames = []
+        for src in srcs:
+            packets = await async_demux_media("image", src)
+            frames.append(await async_decode_packets(packets))
+
+        buffer = await async_convert_frames(
+            frames,
+            cuda_device_index=0,
+            cuda_allocator=torch.cuda.caching_allocator_allocate,
+            cuda_deleter=torch.cuda.caching_allocator_delete,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        ```
+
 
     Args:
         frames (Frames): Frames object.
@@ -260,6 +295,47 @@ def async_convert_frames(frames, **kwargs):
     Other args:
         cuda_device_index (int):
             *Optional:* When provided, the buffer is moved to CUDA device.
+
+        cuda_stream (int (uintptr_t) ):
+            *Optional:* Pointer to a custom CUDA stream. By default, it uses the
+            per-thread default stream.
+
+            !!! warn
+
+                Host to device buffer transfer is performed in a thread different than
+                Python main thread.
+                Since the frame data are available only for the duration of the
+                background job, the transfer is performed with synchronization.
+
+            ??? note
+
+                It is possible to provide the same stream as the one used in Python's
+                main thread, but it might introduce undesired synchronization.
+
+                An example to fetch the default stream from PyTorch.
+
+                ```python
+                stream = torch.cuda.Stream()
+                cuda_stream = stream.cuda_stream
+                ```
+
+        cuda_allocator (Callable):
+            *Optional:* Custom CUDA memory allcoator, which takes the following arguments
+            and return the address of the allocated memory.
+
+            - Size: `int`
+            - CUDA device index: `int`
+            - CUDA stream address: `int` (`uintptr_t`)
+
+            An example of such function is
+            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_alloc].
+
+        cuda_deleter (Callable):
+            *Optional:* Custom CUDA memory deleter, which takes the address of memory allocated
+            by the ``cuda_allocator``.
+
+            An example of such function is
+            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
 
         executor (ThreadPoolExecutor):
             *Optional:* Executor to run the conversion. By default, the conversion is performed on
@@ -283,6 +359,7 @@ def async_convert_frames(frames, **kwargs):
             - ``NvDecImageFrames`` -> ``CUDABuffer``
 
             - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
+
     """
     func = _common._get_conversion_func(frames)
     return _async_task(func, frames, **kwargs)

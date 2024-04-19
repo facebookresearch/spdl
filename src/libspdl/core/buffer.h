@@ -169,6 +169,17 @@ std::unique_ptr<CUDABuffer> cuda_buffer(
     bool channel_last = false,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t));
+
+std::unique_ptr<CUDABuffer> cuda_buffer(
+    const std::vector<size_t> shape,
+    uintptr_t stream,
+    int device_index,
+    bool channel_last,
+    ElemClass elem_class,
+    size_t depth,
+    const cuda_allocator_fn& allocator,
+    cuda_deleter_fn deleter);
+
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
