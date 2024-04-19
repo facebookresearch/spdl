@@ -22,14 +22,19 @@ def test_async_transfer_buffer_to_cuda(media_type, get_sample):
 
     async def _test(src):
         _ = torch.zeros([0], device=torch.device(f"cuda:{DEFAULT_CUDA}"))
-        # Till we have a clone method, we decode twice. We need a clone method
-        buffer = await spdl.io.async_load_media(media_type, src)
-        cpu_tensor = spdl.io.to_torch(buffer)
 
-        buffer = await spdl.io.async_load_media(
-            media_type, src, convert_options={"cuda_device_index": DEFAULT_CUDA}
+        frames = await spdl.io.async_decode_packets(
+            await spdl.io.async_demux_media(media_type, src)
         )
-        cuda_tensor = spdl.io.to_torch(buffer)
+        cpu_tensor = spdl.io.to_torch(
+            await spdl.io.async_convert_frames(frames.clone())
+        )
+        cuda_tensor = spdl.io.to_torch(
+            await spdl.io.async_convert_frames(
+                frames,
+                cuda_device_index=DEFAULT_CUDA,
+            )
+        )
 
         assert cuda_tensor.is_cuda
         assert cuda_tensor.device == torch.device(f"cuda:{DEFAULT_CUDA}")
@@ -61,25 +66,25 @@ def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sa
         deleter_called = True
 
     async def _test(src):
+        frames = await spdl.io.async_decode_packets(
+            await spdl.io.async_demux_media(media_type, src)
+        )
+        cpu_tensor = spdl.io.to_torch(
+            await spdl.io.async_convert_frames(frames.clone())
+        )
+
         assert not allocator_called
-        cuda_buffer = await spdl.io.async_load_media(
-            media_type,
-            src,
-            convert_options={
-                "cuda_device_index": DEFAULT_CUDA,
-                "cuda_allocator": allocator,
-                "cuda_deleter": deleter,
-            },
+        cuda_buffer = await spdl.io.async_convert_frames(
+            frames,
+            cuda_device_index=DEFAULT_CUDA,
+            cuda_allocator=allocator,
+            cuda_deleter=deleter,
         )
         assert allocator_called
         cuda_tensor = spdl.io.to_torch(cuda_buffer)
 
         assert cuda_tensor.is_cuda
         assert cuda_tensor.device == torch.device(f"cuda:{DEFAULT_CUDA}")
-
-        # Till we have a clone method, we decode twice. We need a clone method
-        cpu_buffer = await spdl.io.async_load_media(media_type, src)
-        cpu_tensor = spdl.io.to_torch(cpu_buffer)
         assert torch.allclose(cpu_tensor, cuda_tensor.cpu())
 
         assert not deleter_called

@@ -192,6 +192,9 @@ class FFmpegFrames {
     requires _IS_VIDEO;
 };
 
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> clone(const FFmpegFramesPtr<media_type>& src);
+
 #undef _IS_AUDIO
 #undef _IS_VIDEO
 #undef _IS_IMAGE
