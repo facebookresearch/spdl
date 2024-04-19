@@ -3,11 +3,8 @@
 import concurrent.futures
 import contextlib
 import logging
-import os
 import time
 from pathlib import Path
-
-os.environ["TORCH_LOGS"] = "recompiles,graph_breaks"
 
 import spdl.io
 import spdl.utils
@@ -215,15 +212,17 @@ def _main(args=None):
     model = _get_model(args.batch_size, device, args.compile, args.use_bf16)
     batch_gen = _get_batch_generator(args, device)
 
+    trace_path = f"{args.trace}.{args.worker_id}"
+
     with (
         torch.no_grad(),
         profile() if args.trace else contextlib.nullcontext() as prof,
+        spdl.utils.tracing(f"{trace_path}.pftrace", enable=args.trace is not None),
         BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
     ):
         _run_inference(dataloader, model)
 
     if args.trace:
-        trace_path = f"{args.trace}.{args.worker_id}"
         prof.export_chrome_trace(f"{trace_path}.json")
 
 
