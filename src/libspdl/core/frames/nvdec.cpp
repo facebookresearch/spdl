@@ -17,4 +17,18 @@ const char* NvDecFrames<media_type>::get_media_format_name() const {
 
 template struct NvDecFrames<MediaType::Video>;
 template struct NvDecFrames<MediaType::Image>;
+
+template <MediaType media_type>
+NvDecFramesPtr<media_type> clone(const NvDecFramesPtr<media_type>& src) {
+  auto ret = std::make_unique<NvDecFrames<media_type>>(
+      src->get_id(), src->media_format);
+  ret->buffer = src->buffer;
+  return ret;
+}
+
+template NvDecFramesPtr<MediaType::Video> clone(
+    const NvDecFramesPtr<MediaType::Video>& src);
+template NvDecFramesPtr<MediaType::Image> clone(
+    const NvDecFramesPtr<MediaType::Image>& src);
+
 } // namespace spdl::core

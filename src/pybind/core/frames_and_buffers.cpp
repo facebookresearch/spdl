@@ -418,7 +418,13 @@ void register_frames_and_buffers(py::module& m) {
           "__len__",
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFramesWrapper& self) {
             return self.get_frames_ref()->buffer->get_shape()[0];
-          }));
+          }))
+      .def(
+          "clone",
+          IF_NVDECVIDEOFRAMES_ENABLED(([](const NvDecVideoFramesWrapper& self) {
+            return wrap<MediaType::Video, NvDecFramesPtr>(
+                clone(self.get_frames_ref()));
+          })));
 
   // TODO: Add __repr__
   _NvDecImageFrames
@@ -451,6 +457,12 @@ void register_frames_and_buffers(py::module& m) {
           "__len__",
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFramesWrapper& self) {
             return self.get_frames_ref()->buffer->get_shape()[0];
-          }));
+          }))
+      .def(
+          "clone",
+          IF_NVDECVIDEOFRAMES_ENABLED(([](const NvDecImageFramesWrapper& self) {
+            return wrap<MediaType::Image, NvDecFramesPtr>(
+                clone(self.get_frames_ref()));
+          })));
 }
 } // namespace spdl::core
