@@ -61,15 +61,21 @@ void register_packets(py::module& m) {
   auto _ImagePackets = py::class_<ImagePacketsWrapper, ImagePacketsWrapperPtr>(
       m, "ImagePackets", py::module_local());
 
-  _AudioPackets.def("__repr__", [](const AudioPacketsWrapper& self) {
-    return fmt::format(
-        "AudioPackets<src=\"{}\", timestamp=({}, {}), sample_format=\"{}\", {}>",
-        self.get_packets()->src,
-        std::get<0>(self.get_packets()->timestamp),
-        std::get<1>(self.get_packets()->timestamp),
-        self.get_packets()->get_media_format_name(),
-        get_codec_info<MediaType::Audio>(self.get_packets()->codecpar));
-  });
+  _AudioPackets
+      .def(
+          "__repr__",
+          [](const AudioPacketsWrapper& self) {
+            return fmt::format(
+                "AudioPackets<src=\"{}\", timestamp=({}, {}), sample_format=\"{}\", {}>",
+                self.get_packets()->src,
+                std::get<0>(self.get_packets()->timestamp),
+                std::get<1>(self.get_packets()->timestamp),
+                self.get_packets()->get_media_format_name(),
+                get_codec_info<MediaType::Audio>(self.get_packets()->codecpar));
+          })
+      .def("clone", [](const AudioPacketsWrapper& self) {
+        return wrap(clone(self.get_packets()));
+      });
 
   _VideoPackets
       .def(
@@ -88,17 +94,22 @@ void register_packets(py::module& m) {
           [](const VideoPacketsWrapper& self) {
             return self.get_packets()->num_packets();
           })
-      .def("__repr__", [](const VideoPacketsWrapper& self) {
-        return fmt::format(
-            "VideoPackets<src=\"{}\", timestamp=({}, {}), frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
-            self.get_packets()->src,
-            std::get<0>(self.get_packets()->timestamp),
-            std::get<1>(self.get_packets()->timestamp),
-            self.get_packets()->frame_rate.num,
-            self.get_packets()->frame_rate.den,
-            self.get_packets()->num_packets(),
-            self.get_packets()->get_media_format_name(),
-            get_codec_info<MediaType::Video>(self.get_packets()->codecpar));
+      .def(
+          "__repr__",
+          [](const VideoPacketsWrapper& self) {
+            return fmt::format(
+                "VideoPackets<src=\"{}\", timestamp=({}, {}), frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
+                self.get_packets()->src,
+                std::get<0>(self.get_packets()->timestamp),
+                std::get<1>(self.get_packets()->timestamp),
+                self.get_packets()->frame_rate.num,
+                self.get_packets()->frame_rate.den,
+                self.get_packets()->num_packets(),
+                self.get_packets()->get_media_format_name(),
+                get_codec_info<MediaType::Video>(self.get_packets()->codecpar));
+          })
+      .def("clone", [](const VideoPacketsWrapper& self) {
+        return wrap(clone(self.get_packets()));
       });
 
   _ImagePackets
@@ -110,12 +121,17 @@ void register_packets(py::module& m) {
             auto pts = packets->get_packets().at(0)->pts;
             return pts * base.num / base.den;
           })
-      .def("__repr__", [](const ImagePacketsWrapper& self) {
-        return fmt::format(
-            "ImagePackets<src=\"{}\", pixel_format=\"{}\", {}>",
-            self.get_packets()->src,
-            self.get_packets()->get_media_format_name(),
-            get_codec_info<MediaType::Image>(self.get_packets()->codecpar));
+      .def(
+          "__repr__",
+          [](const ImagePacketsWrapper& self) {
+            return fmt::format(
+                "ImagePackets<src=\"{}\", pixel_format=\"{}\", {}>",
+                self.get_packets()->src,
+                self.get_packets()->get_media_format_name(),
+                get_codec_info<MediaType::Image>(self.get_packets()->codecpar));
+          })
+      .def("clone", [](const ImagePacketsWrapper& self) {
+        return wrap(clone(self.get_packets()));
       });
 }
 } // namespace spdl::core

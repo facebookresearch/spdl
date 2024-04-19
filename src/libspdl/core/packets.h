@@ -87,6 +87,9 @@ class DemuxedPackets {
 };
 
 template <MediaType media_type>
+PacketsPtr<media_type> clone(const PacketsPtr<media_type>& src);
+
+template <MediaType media_type>
 class PacketsWrapper {
   PacketsPtr<media_type> packets;
 
