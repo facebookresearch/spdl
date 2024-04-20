@@ -10,8 +10,34 @@
 namespace py = pybind11;
 
 namespace spdl::core {
+using IOConfigPtr = std::shared_ptr<spdl::core::IOConfig>;
+
+namespace {
+IOConfigPtr make_io_config(
+    const std::optional<std::string>& format,
+    const std::optional<OptionDict>& format_options,
+    const std::optional<int>& buffer_size) {
+  auto ret = std::make_shared<spdl::core::IOConfig>();
+  ret->format = format;
+  ret->format_options = format_options;
+  if (buffer_size) {
+    ret->buffer_size = buffer_size.value();
+  }
+  return ret;
+}
+
+} // namespace
 
 void register_demuxing(py::module& m) {
+  auto _IOConfig =
+      py::class_<IOConfig, IOConfigPtr>(m, "IOConfig", py::module_local());
+
+  _IOConfig.def(
+      py::init(&make_io_config),
+      py::arg("format") = py::none(),
+      py::arg("format_options") = py::none(),
+      py::arg("buffer_size") = py::none());
+
   m.def(
       "async_demux_audio",
       [](std::function<void(AudioPacketsWrapperPtr)> set_result,
@@ -19,9 +45,7 @@ void register_demuxing(py::module& m) {
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
          const SourceAdaptorPtr& adaptor,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         const std::optional<int>& buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor) {
         return async_demux<MediaType::Audio>(
             std::move(set_result),
@@ -29,9 +53,7 @@ void register_demuxing(py::module& m) {
             static_cast<std::string>(src),
             timestamps,
             adaptor,
-            {format,
-             format_options,
-             buffer_size.value_or(SPDL_DEFAULT_BUFFER_SIZE)},
+            io_config,
             demux_executor);
       },
       py::arg("set_result"),
@@ -40,9 +62,7 @@ void register_demuxing(py::module& m) {
       py::arg("timestamps"),
       py::kw_only(),
       py::arg("adaptor") = nullptr,
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = py::none(),
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr);
 
   m.def(
@@ -51,9 +71,7 @@ void register_demuxing(py::module& m) {
          std::function<void(std::string, bool)> notify_exception,
          py::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Audio>(
@@ -61,7 +79,7 @@ void register_demuxing(py::module& m) {
             std::move(notify_exception),
             static_cast<std::string_view>(data),
             timestamps,
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor,
             _zero_clear);
       },
@@ -70,9 +88,7 @@ void register_demuxing(py::module& m) {
       py::arg("data"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr,
       py::arg("_zero_clear") = false);
 
@@ -82,9 +98,7 @@ void register_demuxing(py::module& m) {
          std::function<void(std::string, bool)> notify_exception,
          py::buffer data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         auto buffer_info = data.request(/*writable=*/_zero_clear);
@@ -93,7 +107,7 @@ void register_demuxing(py::module& m) {
             std::move(notify_exception),
             std::string_view{(char*)buffer_info.ptr, (size_t)buffer_info.size},
             timestamps,
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor,
             _zero_clear);
       },
@@ -102,9 +116,7 @@ void register_demuxing(py::module& m) {
       py::arg("data"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr,
       py::arg("_zero_clear") = false);
 
@@ -115,9 +127,7 @@ void register_demuxing(py::module& m) {
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
          const SourceAdaptorPtr& adaptor,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor) {
         return async_demux<MediaType::Video>(
             std::move(set_result),
@@ -125,7 +135,7 @@ void register_demuxing(py::module& m) {
             static_cast<std::string>(src),
             timestamps,
             adaptor,
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor);
       },
       py::arg("set_result"),
@@ -134,9 +144,7 @@ void register_demuxing(py::module& m) {
       py::arg("timestamps"),
       py::kw_only(),
       py::arg("adaptor") = nullptr,
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr);
 
   m.def(
@@ -145,9 +153,7 @@ void register_demuxing(py::module& m) {
          std::function<void(std::string, bool)> notify_exception,
          py::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Video>(
@@ -155,7 +161,7 @@ void register_demuxing(py::module& m) {
             std::move(notify_exception),
             static_cast<std::string_view>(data),
             timestamps,
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor,
             _zero_clear);
       },
@@ -164,9 +170,7 @@ void register_demuxing(py::module& m) {
       py::arg("data"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr,
       py::arg("_zero_clear") = false);
 
@@ -176,9 +180,7 @@ void register_demuxing(py::module& m) {
          std::function<void(std::string, bool)> notify_exception,
          py::buffer data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         auto buffer_info = data.request(/*writable=*/_zero_clear);
@@ -187,7 +189,7 @@ void register_demuxing(py::module& m) {
             std::move(notify_exception),
             std::string_view{(char*)buffer_info.ptr, (size_t)buffer_info.size},
             timestamps,
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor,
             _zero_clear);
       },
@@ -196,9 +198,7 @@ void register_demuxing(py::module& m) {
       py::arg("data"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr,
       py::arg("_zero_clear") = false);
 
@@ -208,16 +208,14 @@ void register_demuxing(py::module& m) {
          std::function<void(std::string, bool)> notify_exception,
          py::str src,
          const SourceAdaptorPtr& adaptor,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor) {
         return async_demux_image(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string>(src),
             adaptor,
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor);
       },
       py::arg("set_result"),
@@ -225,9 +223,7 @@ void register_demuxing(py::module& m) {
       py::arg("src"),
       py::kw_only(),
       py::arg("adaptor") = nullptr,
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr);
 
   m.def(
@@ -235,16 +231,14 @@ void register_demuxing(py::module& m) {
       [](std::function<void(ImagePacketsWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          py::bytes data,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_image_bytes(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string_view>(data),
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor,
             _zero_clear);
       },
@@ -252,9 +246,7 @@ void register_demuxing(py::module& m) {
       py::arg("notify_exception"),
       py::arg("data"),
       py::kw_only(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr,
       py::arg("_zero_clear") = false);
 
@@ -263,9 +255,7 @@ void register_demuxing(py::module& m) {
       [](std::function<void(ImagePacketsWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          py::buffer data,
-         const std::optional<std::string>& format,
-         const std::optional<OptionDict>& format_options,
-         int buffer_size,
+         const std::optional<IOConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         auto buffer_info = data.request(/*writable=*/_zero_clear);
@@ -273,7 +263,7 @@ void register_demuxing(py::module& m) {
             std::move(set_result),
             std::move(notify_exception),
             std::string_view{(char*)buffer_info.ptr, (size_t)buffer_info.size},
-            {format, format_options, buffer_size},
+            io_config,
             demux_executor,
             _zero_clear);
       },
@@ -281,9 +271,7 @@ void register_demuxing(py::module& m) {
       py::arg("notify_exception"),
       py::arg("data"),
       py::kw_only(),
-      py::arg("format") = py::none(),
-      py::arg("format_options") = py::none(),
-      py::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE,
+      py::arg("io_config") = py::none(),
       py::arg("executor") = nullptr,
       py::arg("_zero_clear") = false);
 }
