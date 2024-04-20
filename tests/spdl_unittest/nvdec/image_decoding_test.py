@@ -3,7 +3,6 @@ import pytest
 import spdl.io
 import spdl.utils
 import torch
-from spdl.lib import _libspdl
 
 
 DEFAULT_CUDA = 0
@@ -114,7 +113,7 @@ def test_decode_multiple_invalid_input(get_sample):
     )
     sample = get_sample(cmd, width=16, height=16)
 
-    executor = _libspdl.ThreadPoolExecutor(1, "SingleDecoderExecutor")
+    executor = spdl.io.ThreadPoolExecutor(1, "SingleDecoderExecutor")
     for _ in range(2):
         with pytest.raises(RuntimeError):
             _decode_image(
