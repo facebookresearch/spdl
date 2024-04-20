@@ -121,11 +121,7 @@ def async_streaming_demux(
         timestamps: List of timestamps.
 
     Other args:
-        format (str): *Optional:* The format detection. Optional.
-            Can be used to demux headerless format.
-        format_options (Dict[str, str]): *Optional:* Format options.
-        buffer_size (int, optional): *Optional:* Change the internal buffer size used to process
-            the data at a time.
+        io_config (IOConfig): Custom I/O config.
         adaptor (SourceAdaptor, optional): *Optional:* Adaptor to apply to the `src`.
         executor (ThreadPoolExecutor, optional):
             *Optional:* Custom executor to in which the task is performed.
@@ -160,10 +156,7 @@ def async_demux_media(
             If omitted, the entire data are demuxed.
 
     Other args:
-        format (str): *Optional:* Overwrite the format detection.
-            Can be used to demux headerless format.
-        format_options (Dict[str, str]): *Optional:* Format options.
-        buffer_size (int): *Optional:* Buffer size in bytes.
+        io_config (IOConfig): Custom I/O config.
         adaptor (SourceAdaptor): *Optional:* Adaptor to apply to the `src`.
         executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
             By default the job is peformed in demuxer thread pool.

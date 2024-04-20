@@ -24,7 +24,7 @@ FuturePtr async_decode(
     std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     PacketsWrapperPtr<media_type> packets,
-    DecodeConfig decode_cfg,
+    const std::optional<DecodeConfig>& decode_config,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
