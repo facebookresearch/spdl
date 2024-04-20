@@ -2,15 +2,15 @@
 
 from typing import Any, List
 
-from . import _async, _common, _concurrent, _convert
+from . import _async, _concurrent, _convert, _types
 
 __all__ = sorted(
-    _convert.__all__ + _async.__all__ + _concurrent.__all__ + _common.__all__
+    _convert.__all__ + _async.__all__ + _concurrent.__all__ + _types.__all__
 )
 
 _doc_submodules = [
     "_async",
-    "_common",
+    "_types",
     "_concurrent",
     "_convert",
 ]
@@ -30,7 +30,7 @@ def __getattr__(name: str) -> Any:
     if name in _concurrent.__all__:
         return getattr(_concurrent, name)
 
-    if name in _common.__all__:
-        return getattr(_common, name)
+    if name in _types.__all__:
+        return getattr(_types, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

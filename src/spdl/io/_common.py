@@ -4,43 +4,6 @@ from concurrent.futures import CancelledError, Future
 import spdl.io
 from spdl.lib import _libspdl
 
-__all__ = [
-    "AsyncIOFailure",
-    "IOConfig",
-]
-
-
-# Exception class used to signal the failure of C++ op to Python.
-# Not exposed to user code.
-class AsyncIOFailure(RuntimeError):
-    """Exception type used to pass the error message from libspdl."""
-
-    pass
-
-
-try:
-    _IOConfig = _libspdl.IOConfig
-except AttributeError:
-    _IOConfig = object
-
-
-class IOConfig(_IOConfig):
-    """Custom IO config.
-
-    Other Args:
-        format (str):
-            *Optional* Overwrite format. Can be used if the source file does not have
-            a header.
-
-        format_options (Dict[str, str]):
-            *Optional* Provide demuxer options
-
-        buffer_size (int):
-            *Opitonal* Override the size of internal buffer used for demuxing.
-    """
-
-    pass
-
 
 def _get_demux_func(media_type, src):
     if media_type not in ["audio", "video", "image"]:

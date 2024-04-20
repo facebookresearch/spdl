@@ -13,6 +13,7 @@
 ::: spdl.io
     options:
       show_root_toc_entry: false
+      show_bases: false
       members:
       - IOConfig
 
