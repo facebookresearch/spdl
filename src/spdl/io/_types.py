@@ -4,15 +4,17 @@ __all__ = [
     "AsyncIOFailure",
     "IOConfig",
     "DecodeConfig",
-    ""
+    "ThreadPoolExecutor",
 ]
 
 try:
     _IOConfig = _libspdl.IOConfig
     _DecodeConfig = _libspdl.DecodeConfig
+    _ThreadPoolExecutor = _libspdl.ThreadPoolExecutor
 except Exception:
     _IOConfig = object
     _DecodeConfig = object
+    _ThreadPoolExecutor = object
 
 
 # Exception class used to signal the failure of C++ op to Python.
@@ -50,6 +52,20 @@ class DecodeConfig(_DecodeConfig):
 
         decoder_options (Dict[str, str]):
             *Optional* Provide decoder options
+    """
+
+    pass
+
+
+class ThreadPoolExecutor(_ThreadPoolExecutor):
+    """Custom thread pool executor to perform tasks.
+
+    Note:
+        This is mainly for testing.
+
+    Args:
+        num_threads (int): The number of threads.
+        thread_name_prefix (str): The prefix of the thread name.
     """
 
     pass
