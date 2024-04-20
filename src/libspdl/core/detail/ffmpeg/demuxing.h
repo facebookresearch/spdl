@@ -18,13 +18,13 @@ folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
     std::string_view src,
     const std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor,
-    const IOConfig io_cfg);
+    const std::optional<IOConfig> io_cfg);
 
 // Demuxer for a single image
 folly::coro::Task<ImagePacketsPtr> demux_image(
     std::string_view src,
     SourceAdaptorPtr adaptor,
-    const IOConfig io_cfg);
+    const std::optional<IOConfig> io_cfg);
 
 // Apply bitstream filter for NVDEC video decoding
 folly::coro::Task<VideoPacketsPtr> apply_bsf(VideoPacketsPtr packets);

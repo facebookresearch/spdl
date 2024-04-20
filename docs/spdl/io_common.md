@@ -8,6 +8,14 @@
       - to_torch
       - to_numba
 
+## Configs
+
+::: spdl.io
+    options:
+      show_root_toc_entry: false
+      members:
+      - IOConfig
+
 ## Exceptions
 
 ::: spdl.io

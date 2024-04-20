@@ -25,7 +25,7 @@ FuturePtr async_demux(
     const std::string& uri,
     const std::vector<std::tuple<double, double>>& timestamps,
     const SourceAdaptorPtr& adaptor,
-    const IOConfig& io_cfg,
+    const std::optional<IOConfig>& io_cfg,
     ThreadPoolExecutorPtr executor);
 
 /// Demux audio or video from byte string stored somewhere.
@@ -38,7 +38,7 @@ FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     const std::vector<std::tuple<double, double>>& timestamps,
-    const IOConfig& io_cfg,
+    const std::optional<IOConfig>& io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear = false);
 
@@ -48,7 +48,7 @@ FuturePtr async_demux_image(
     std::function<void(std::string, bool)> notify_exception,
     const std::string& src,
     const SourceAdaptorPtr& adaptor,
-    const IOConfig& io_cfg,
+    const std::optional<IOConfig>& io_cfg,
     ThreadPoolExecutorPtr executor);
 
 /// Demux image from byte string stored somewhere.
@@ -59,7 +59,7 @@ FuturePtr async_demux_image_bytes(
     std::function<void(ImagePacketsWrapperPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    const IOConfig& io_cfg,
+    const std::optional<IOConfig>& io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear = false);
 
