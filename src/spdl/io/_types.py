@@ -3,12 +3,16 @@ from spdl.lib import _libspdl
 __all__ = [
     "AsyncIOFailure",
     "IOConfig",
+    "DecodeConfig",
+    ""
 ]
 
 try:
     _IOConfig = _libspdl.IOConfig
-except AttributeError:
+    _DecodeConfig = _libspdl.DecodeConfig
+except Exception:
     _IOConfig = object
+    _DecodeConfig = object
 
 
 # Exception class used to signal the failure of C++ op to Python.
@@ -32,6 +36,20 @@ class IOConfig(_IOConfig):
 
         buffer_size (int):
             *Opitonal* Override the size of internal buffer used for demuxing.
+    """
+
+    pass
+
+
+class DecodeConfig(_DecodeConfig):
+    """Custom decode config.
+
+    Other Args:
+        decoder (str):
+            *Optional* Override decoder.
+
+        decoder_options (Dict[str, str]):
+            *Optional* Provide decoder options
     """
 
     pass

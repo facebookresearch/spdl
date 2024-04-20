@@ -20,6 +20,17 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Helper functions
 ////////////////////////////////////////////////////////////////////////////////
+using DecodeConfigPtr = std::shared_ptr<spdl::core::DecodeConfig>;
+
+DecodeConfigPtr make_decode_config(
+    const std::optional<std::string>& decoder,
+    const std::optional<OptionDict>& decoder_options) {
+  auto ret = std::make_shared<spdl::core::DecodeConfig>();
+  ret->decoder = decoder;
+  ret->decoder_options = decoder_options;
+  return ret;
+}
+
 std::optional<Rational> get_frame_rate(const py::object& frame_rate) {
   if (frame_rate.is(py::none())) {
     return std::nullopt;
@@ -141,6 +152,14 @@ std::string get_video_filter_description(
 } // namespace
 
 void register_decoding(py::module& m) {
+  auto _DecodeConfig = py::class_<DecodeConfig, DecodeConfigPtr>(
+      m, "DecodeConfig", py::module_local());
+
+  _DecodeConfig.def(
+      py::init(&make_decode_config),
+      py::arg("decoder") = py::none(),
+      py::arg("decoder_options") = py::none());
+
   ////////////////////////////////////////////////////////////////////////////////
   // Async decoding - FFMPEG
   ////////////////////////////////////////////////////////////////////////////////
@@ -166,8 +185,7 @@ void register_decoding(py::module& m) {
       [](std::function<void(FFmpegAudioFramesWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          AudioPacketsWrapperPtr packets,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
+         const std::optional<DecodeConfig>& decode_config,
          const std::optional<int>& sample_rate,
          const std::optional<int>& num_channels,
          const std::optional<std::string>& sample_fmt,
@@ -185,7 +203,7 @@ void register_decoding(py::module& m) {
             std::move(set_result),
             std::move(notify_exception),
             packets,
-            {decoder, decoder_options},
+            decode_config,
             std::move(filter),
             decode_executor);
       },
@@ -193,8 +211,7 @@ void register_decoding(py::module& m) {
       py::arg("notify_exception"),
       py::arg("packets"),
       py::kw_only(),
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
+      py::arg("decode_config") = py::none(),
       py::arg("sample_rate") = py::none(),
       py::arg("num_channels") = py::none(),
       py::arg("sample_fmt") = py::none(),
@@ -207,8 +224,7 @@ void register_decoding(py::module& m) {
       [](std::function<void(FFmpegVideoFramesWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          VideoPacketsWrapperPtr packets,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
+         const std::optional<DecodeConfig>& decode_config,
          const std::optional<Rational>& frame_rate,
          const std::optional<int>& width,
          const std::optional<int>& height,
@@ -230,7 +246,7 @@ void register_decoding(py::module& m) {
             std::move(set_result),
             std::move(notify_exception),
             packets,
-            {decoder, decoder_options},
+            decode_config,
             std::move(filter),
             decode_executor);
       },
@@ -238,8 +254,7 @@ void register_decoding(py::module& m) {
       py::arg("notify_exception"),
       py::arg("packets"),
       py::kw_only(),
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
+      py::arg("decode_config") = py::none(),
       py::arg("frame_rate") = py::none(),
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),
@@ -254,8 +269,7 @@ void register_decoding(py::module& m) {
       [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          ImagePacketsWrapperPtr packets,
-         const std::optional<std::string>& decoder,
-         const std::optional<OptionDict>& decoder_options,
+         const std::optional<DecodeConfig>& decode_config,
          const std::optional<Rational>& frame_rate,
          const std::optional<int>& width,
          const std::optional<int>& height,
@@ -275,7 +289,7 @@ void register_decoding(py::module& m) {
             std::move(set_result),
             std::move(notify_exception),
             packets,
-            {decoder, decoder_options},
+            decode_config,
             std::move(filter),
             decode_executor);
       },
@@ -283,8 +297,7 @@ void register_decoding(py::module& m) {
       py::arg("notify_exception"),
       py::arg("packets"),
       py::kw_only(),
-      py::arg("decoder") = py::none(),
-      py::arg("decoder_options") = py::none(),
+      py::arg("decode_config") = py::none(),
       py::arg("frame_rate") = py::none(),
       py::arg("width") = py::none(),
       py::arg("height") = py::none(),

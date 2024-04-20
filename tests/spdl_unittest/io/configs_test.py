@@ -1,7 +1,7 @@
 import asyncio
-import spdl.io
 
 import pytest
+import spdl.io
 
 
 def test_io_config_smoketest(get_sample):
@@ -36,5 +36,27 @@ def test_io_config_headless(get_sample):
 
         io_config = spdl.io.IOConfig(format="s16le")
         _ = await spdl.io.async_demux_media("audio", src, io_config=io_config)
+
+    asyncio.run(_test(sample.path))
+
+
+def test_decode_config_smoketest(get_sample):
+    """"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        packets = await spdl.io.async_demux_media("video", src)
+
+        cfg = spdl.io.DecodeConfig()
+        _ = await spdl.io.async_decode_packets(packets.clone(), decode_config=cfg)
+
+        cfg = spdl.io.DecodeConfig(decoder="h264")
+        _ = await spdl.io.async_decode_packets(packets.clone(), decode_config=cfg)
+
+        cfg = spdl.io.DecodeConfig(
+            decoder="h264", decoder_options={"nal_length_size": "4"}
+        )
+        _ = await spdl.io.async_decode_packets(packets.clone(), decode_config=cfg)
 
     asyncio.run(_test(sample.path))

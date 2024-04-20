@@ -174,7 +174,7 @@ folly::coro::Task<void> decode_pkts_with_filter(
 template <MediaType media_type>
 folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
-    const DecodeConfig cfg,
+    const std::optional<DecodeConfig>& cfg,
     std::string filter_desc) {
   TRACE_EVENT(
       "decoding",
@@ -183,8 +183,8 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
   auto codec_ctx = get_codec_ctx_ptr(
       packets->codecpar,
       AVRational{packets->time_base.num, packets->time_base.den},
-      cfg.decoder,
-      cfg.decoder_options);
+      cfg ? cfg->decoder : std::nullopt,
+      cfg ? cfg->decoder_options : std::nullopt);
   auto frames = std::make_unique<FFmpegFrames<media_type>>(
       packets->id, packets->time_base);
 
@@ -206,17 +206,17 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
 
 template folly::coro::Task<FFmpegAudioFramesPtr> decode_packets_ffmpeg(
     AudioPacketsPtr packets,
-    const DecodeConfig cfg,
+    const std::optional<DecodeConfig>& cfg,
     std::string filter_desc);
 
 template folly::coro::Task<FFmpegVideoFramesPtr> decode_packets_ffmpeg(
     VideoPacketsPtr packets,
-    const DecodeConfig cfg,
+    const std::optional<DecodeConfig>& cfg,
     std::string filter_desc);
 
 template folly::coro::Task<FFmpegImageFramesPtr> decode_packets_ffmpeg(
     ImagePacketsPtr packets,
-    const DecodeConfig cfg,
+    const std::optional<DecodeConfig>& cfg,
     std::string filter_desc);
 
 } // namespace spdl::core::detail

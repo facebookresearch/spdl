@@ -16,6 +16,7 @@
       show_bases: false
       members:
       - IOConfig
+      - DecodeConfig
 
 ## Exceptions
 
