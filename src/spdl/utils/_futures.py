@@ -50,7 +50,7 @@ def chain_futures(func: Callable[..., Generator[Future, Any, None]]):
             The result of each future is sent back to generator, and
             generetor will use the result to launch the next future.
 
-    ??? example
+    ??? note "Example"
         ```python
 
         @chain_futures
@@ -89,7 +89,7 @@ def wait_futures(futures: List[Future], strict: bool = True) -> Future:
         strict: If True and if any of the future did not complete, then
             raise an error.
 
-    ??? Example
+    ??? note "Example"
         ```python
         # Start batch demuxing
         futures = [spdl.io.demux_media("image", s) for s in srcs]

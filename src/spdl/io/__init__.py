@@ -1,4 +1,4 @@
-""""""
+"""Implements the core I/O functionalities."""
 
 from typing import Any, List
 
