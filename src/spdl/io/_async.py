@@ -124,10 +124,6 @@ def async_streaming_demux(
 
     Other args:
         io_config (IOConfig): Custom I/O config.
-        adaptor (SourceAdaptor, optional): *Optional:* Adaptor to apply to the `src`.
-        executor (ThreadPoolExecutor, optional):
-            *Optional:* Custom executor to in which the task is performed.
-            By default the task is peformed in demuxer thread pool.
 
     Returns:
         (AsyncGenerator[Packets]): Audio or video Packets generator.
@@ -159,9 +155,6 @@ def async_demux_media(
 
     Other args:
         io_config (IOConfig): Custom I/O config.
-        adaptor (SourceAdaptor): *Optional:* Adaptor to apply to the `src`.
-        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
-            By default the job is peformed in demuxer thread pool.
 
     Returns:
         (Awaitable[Packets]): Awaitable which returns an audio/video/image Packets object.
@@ -198,8 +191,6 @@ def async_decode_packets(packets, **kwargs):
             For audio, silence is added. For video, by default the last frame is
             repeated.
         pad_mode (str): *Optional, video only:* Change the padding frames to the given color.
-        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
-            By default the job is peformed in decode thread pool.
 
     Returns:
         (Awaitable[FFmpegFrames]): Awaitable which returns a Frames object.
@@ -229,8 +220,6 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
             cropping.
         pix_fmt (str or ``None``): *Optional:* Change the format of the pixel.
             Supported value is ``"rgba"``. Default: ``"rgba"``.
-        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
-            By default the job is peformed in decode thread pool.
 
     Returns:
         (Awaitable[NvDecFrames]): Awaitable which returns a Frame object.
@@ -295,10 +284,6 @@ def async_convert_frames(frames, **kwargs):
 
             An example of such function is
             [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
-
-        executor (ThreadPoolExecutor):
-            *Optional:* Executor to run the conversion. By default, the conversion is performed on
-            demuxer thread pool with higher priority than demuxing.
 
     Returns:
         (Awaitable[Buffer]): Awaitable which returns a Buffer object.

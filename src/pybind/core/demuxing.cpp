@@ -44,26 +44,26 @@ void register_demuxing(py::module& m) {
          std::function<void(std::string, bool)> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const SourceAdaptorPtr& adaptor,
          const std::optional<IOConfig>& io_config,
-         ThreadPoolExecutorPtr demux_executor) {
+         const SourceAdaptorPtr& _adaptor,
+         ThreadPoolExecutorPtr _executor) {
         return async_demux<MediaType::Audio>(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string>(src),
             timestamps,
-            adaptor,
+            _adaptor,
             io_config,
-            demux_executor);
+            _executor);
       },
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("src"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("adaptor") = nullptr,
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_adaptor") = nullptr,
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_demux_audio_bytes",
@@ -89,7 +89,7 @@ void register_demuxing(py::module& m) {
       py::arg("timestamps"),
       py::kw_only(),
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr,
+      py::arg("_executor") = nullptr,
       py::arg("_zero_clear") = false);
 
   m.def(
@@ -117,7 +117,7 @@ void register_demuxing(py::module& m) {
       py::arg("timestamps"),
       py::kw_only(),
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr,
+      py::arg("_executor") = nullptr,
       py::arg("_zero_clear") = false);
 
   m.def(
@@ -126,26 +126,26 @@ void register_demuxing(py::module& m) {
          std::function<void(std::string, bool)> notify_exception,
          py::str src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const SourceAdaptorPtr& adaptor,
          const std::optional<IOConfig>& io_config,
-         ThreadPoolExecutorPtr demux_executor) {
+         const SourceAdaptorPtr& _adaptor,
+         ThreadPoolExecutorPtr _executor) {
         return async_demux<MediaType::Video>(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string>(src),
             timestamps,
-            adaptor,
+            _adaptor,
             io_config,
-            demux_executor);
+            _executor);
       },
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("src"),
       py::arg("timestamps"),
       py::kw_only(),
-      py::arg("adaptor") = nullptr,
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_adaptor") = nullptr,
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_demux_video_bytes",
@@ -171,7 +171,7 @@ void register_demuxing(py::module& m) {
       py::arg("timestamps"),
       py::kw_only(),
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr,
+      py::arg("_executor") = nullptr,
       py::arg("_zero_clear") = false);
 
   m.def(
@@ -199,7 +199,7 @@ void register_demuxing(py::module& m) {
       py::arg("timestamps"),
       py::kw_only(),
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr,
+      py::arg("_executor") = nullptr,
       py::arg("_zero_clear") = false);
 
   m.def(
@@ -207,24 +207,24 @@ void register_demuxing(py::module& m) {
       [](std::function<void(ImagePacketsWrapperPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          py::str src,
-         const SourceAdaptorPtr& adaptor,
          const std::optional<IOConfig>& io_config,
-         ThreadPoolExecutorPtr demux_executor) {
+         const SourceAdaptorPtr& _adaptor,
+         ThreadPoolExecutorPtr _executor) {
         return async_demux_image(
             std::move(set_result),
             std::move(notify_exception),
             static_cast<std::string>(src),
-            adaptor,
+            _adaptor,
             io_config,
-            demux_executor);
+            _executor);
       },
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("src"),
       py::kw_only(),
-      py::arg("adaptor") = nullptr,
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_adaptor") = nullptr,
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_demux_image_bytes",
@@ -247,7 +247,7 @@ void register_demuxing(py::module& m) {
       py::arg("data"),
       py::kw_only(),
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr,
+      py::arg("_executor") = nullptr,
       py::arg("_zero_clear") = false);
 
   m.def(
@@ -272,7 +272,7 @@ void register_demuxing(py::module& m) {
       py::arg("data"),
       py::kw_only(),
       py::arg("io_config") = py::none(),
-      py::arg("executor") = nullptr,
+      py::arg("_executor") = nullptr,
       py::arg("_zero_clear") = false);
 }
 } // namespace spdl::core

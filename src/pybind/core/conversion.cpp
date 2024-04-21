@@ -19,7 +19,7 @@ void register_conversion(py::module& m) {
       py::arg("cuda_stream") = 0,
       py::arg("cuda_allocator") = py::none(),
       py::arg("cuda_deleter") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
   m.def(
       "async_convert_video",
       &async_convert_frames<MediaType::Video>,
@@ -31,7 +31,7 @@ void register_conversion(py::module& m) {
       py::arg("cuda_stream") = 0,
       py::arg("cuda_allocator") = py::none(),
       py::arg("cuda_deleter") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
   m.def(
       "async_convert_image",
       &async_convert_frames<MediaType::Image>,
@@ -43,7 +43,7 @@ void register_conversion(py::module& m) {
       py::arg("cuda_stream") = 0,
       py::arg("cuda_allocator") = py::none(),
       py::arg("cuda_deleter") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
   m.def(
       "async_convert_batch_image",
       &async_batch_convert_frames,
@@ -55,7 +55,7 @@ void register_conversion(py::module& m) {
       py::arg("cuda_stream") = 0,
       py::arg("cuda_allocator") = py::none(),
       py::arg("cuda_deleter") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_convert_video_nvdec",
@@ -64,7 +64,7 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
   m.def(
       "async_convert_image_nvdec",
       &async_convert_nvdec_frames<MediaType::Image>,
@@ -72,7 +72,7 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
   m.def(
       "async_convert_batch_image_nvdec",
       &async_batch_convert_nvdec_frames,
@@ -80,6 +80,6 @@ void register_conversion(py::module& m) {
       py::arg("notify_exception"),
       py::arg("frames"),
       py::kw_only(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 }
 } //  namespace spdl::core

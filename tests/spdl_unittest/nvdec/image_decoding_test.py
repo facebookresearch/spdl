@@ -1,6 +1,7 @@
 import pytest
 
 import spdl.io
+import spdl.lib
 import spdl.utils
 import torch
 
@@ -8,14 +9,14 @@ import torch
 DEFAULT_CUDA = 0
 
 
-def _decode_image(path, pix_fmt="rgba", executor=None):
+def _decode_image(path, pix_fmt="rgba", _executor=None):
     future = spdl.io.load_media(
         "image",
         path,
         decode_options={
             "cuda_device_index": DEFAULT_CUDA,
             "pix_fmt": pix_fmt,
-            "executor": executor,
+            "_executor": _executor,
         },
         use_nvdec=True,
     )
@@ -113,10 +114,10 @@ def test_decode_multiple_invalid_input(get_sample):
     )
     sample = get_sample(cmd, width=16, height=16)
 
-    executor = spdl.io.ThreadPoolExecutor(1, "SingleDecoderExecutor")
+    executor = spdl.lib._libspdl.ThreadPoolExecutor(1, "SingleDecoderExecutor")
     for _ in range(2):
         with pytest.raises(RuntimeError):
             _decode_image(
                 sample.path,
-                executor=executor,
+                _executor=executor,
             ).get()
