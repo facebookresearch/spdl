@@ -1,4 +1,5 @@
 """Custom resolver to make dynamic attributes available."""
+
 from typing import List
 
 import spdl

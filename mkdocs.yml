@@ -20,7 +20,7 @@ plugins:
             show_bases: false
             show_source: false
             extensions:
-            - docs/custom_resolver.py:SPDLDynamicResolver:
+            - docs/resolver.py:SPDLDynamicResolver:
           import:
           - https://pytorch.org/docs/master/objects.inv
 
@@ -89,4 +89,9 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
