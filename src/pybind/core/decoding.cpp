@@ -169,7 +169,7 @@ void register_decoding(py::module& m) {
       py::arg("set_result"),
       py::arg("notify_exception"),
       py::arg("duration"),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_sleep_multi",
@@ -178,7 +178,7 @@ void register_decoding(py::module& m) {
       py::arg("notify_exception"),
       py::arg("duration"),
       py::arg("count"),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_decode_audio",
@@ -217,7 +217,7 @@ void register_decoding(py::module& m) {
       py::arg("sample_fmt") = py::none(),
       py::arg("num_frames") = py::none(),
       py::arg("filter_desc") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_decode_video",
@@ -262,7 +262,7 @@ void register_decoding(py::module& m) {
       py::arg("num_frames") = py::none(),
       py::arg("pad_mode") = py::none(),
       py::arg("filter_desc") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_decode_image",
@@ -303,7 +303,7 @@ void register_decoding(py::module& m) {
       py::arg("height") = py::none(),
       py::arg("pix_fmt") = py::none(),
       py::arg("filter_desc") = py::none(),
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC
@@ -348,7 +348,7 @@ void register_decoding(py::module& m) {
       py::arg("width") = -1,
       py::arg("height") = -1,
       py::arg("pix_fmt") = "rgba",
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 
   m.def(
       "async_decode_image_nvdec",
@@ -390,6 +390,6 @@ void register_decoding(py::module& m) {
       py::arg("width") = -1,
       py::arg("height") = -1,
       py::arg("pix_fmt") = "rgba",
-      py::arg("executor") = nullptr);
+      py::arg("_executor") = nullptr);
 }
 } // namespace spdl::core

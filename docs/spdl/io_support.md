@@ -3,7 +3,6 @@
 ## Configs
 ::: spdl.io.IOConfig
 ::: spdl.io.DecodeConfig
-::: spdl.io.ThreadPoolExecutor
 
 ## Exceptions
 
