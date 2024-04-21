@@ -92,7 +92,7 @@ AVFormatInputContextPtr get_input_format_ctx(
   auto in_fmt = [&format]() {
     AVFORMAT_CONST AVInputFormat* fmt = nullptr;
     if (format) {
-      fmt = av_find_input_format(format.value().c_str());
+      fmt = av_find_input_format(format->c_str());
       if (!fmt) [[unlikely]] {
         SPDL_FAIL(fmt::format("Unsupported device/format: {}", format.value()));
       }
@@ -152,7 +152,7 @@ AVCodecContextPtr alloc_codec_context(
     const std::optional<std::string>& decoder_name) {
   auto codec = [&]() -> const AVCodec* {
     if (decoder_name) {
-      auto c = avcodec_find_decoder_by_name(decoder_name.value().c_str());
+      auto c = avcodec_find_decoder_by_name(decoder_name->c_str());
       if (!c) {
         SPDL_FAIL(fmt::format("Unsupported codec: {}", decoder_name.value()));
       }

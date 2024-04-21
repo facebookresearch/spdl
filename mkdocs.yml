@@ -14,10 +14,13 @@ plugins:
           paths: [src]
           options:
             heading_level: 3
-            show_root_toc_entry: false
+            separate_signature: true
+            show_object_full_path: true
+            show_root_heading: true
+            show_bases: false
+            show_source: false
             extensions:
             - docs/custom_resolver.py:SPDLDynamicResolver:
-            show_object_full_path: true
           import:
           - https://pytorch.org/docs/master/objects.inv
 
@@ -38,10 +41,15 @@ plugins:
 nav:
   - "SPDL (Python)":
       - spdl/examples.md
-      - "spdl.io (async)": spdl/io_async.md
-      - "spdl.io (concurrent)": spdl/io_concurrent.md
-      - "spdl.io (common)": spdl/io_common.md
-      - spdl/utils.md
+      - "spdl.io":
+          - "High-level APIs": spdl/io.md
+          - "Low-level APIs": spdl/io_core.md
+          - "Support Structures": spdl/io_support.md
+      - "spdl.utils":
+          - "Tracing": spdl/utils_tracing.md
+          - "Folly": spdl/utils_folly.md
+          - "FFmpeg": spdl/utils_ffmpeg.md
+          - "Futures": spdl/utils_futures.md
   - "LibSPDL (C++)":
       - Links: libspdl/links.md
       - Classes:

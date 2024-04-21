@@ -29,7 +29,7 @@ def tracing(
         process_name: The name of the tracing process.
         enable: Whether to enable tracing.
 
-    ??? example
+    ??? note "Example"
         ```python
         with tracing("/tmp/trace.pftrace"):
             do_operations()
@@ -57,7 +57,7 @@ def trace_event(name: str):
     Args:
         name: The name of the tracing slice.
 
-    ??? example
+    ??? note "Example"
         ```python
         with tracing():
             # Tracce `my_operation()` with the name "my_operation".
@@ -81,7 +81,7 @@ def trace_counter(i: int, val: Union[int, float]):
         i: The index of the counter. Must be [0, 7].
         val: The value of the counter.
 
-    ??? example
+    ??? note "Example"
         ```python
         with tracing():
             trace_counter(0, 2.5);
@@ -94,7 +94,7 @@ def trace_counter(i: int, val: Union[int, float]):
 def trace_default_decode_executor_queue_size():
     """Trace the number of queued items in the default decode executor queue.
 
-    ??? example
+    ??? note "Example"
         ```python
         with tracing():
             trace_default_decode_executor_queue_size()
@@ -108,7 +108,7 @@ def trace_default_decode_executor_queue_size():
 def trace_default_demux_executor_queue_size():
     """Trace the number of queued items in the default demux executor queue.
 
-    ??? example
+    ??? note "Example"
         ```python
         with tracing():
             trace_default_demux_executor_queue_size()

@@ -3,7 +3,6 @@ from concurrent.futures import Future
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import spdl.utils
-from spdl.lib import _libspdl
 
 from . import _common
 
@@ -26,24 +25,12 @@ def streaming_demux(
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ) -> List[Future]:
-    """Demux the given time windows from the source.
+    """Demux the media of given time windows.
 
-    Args:
-        media_type: ``"audio"`` or ``"video"``.
-        src: Source identifier. If ``str`` type, it is interpreted as a source location,
-            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
-            they are interpreted as in-memory data.
-        timestamps: List of timestamps.
-
-    Other args:
-        io_config (IOConfig): Custom I/O config.
-        adaptor (SourceAdaptor, optional): *Optional:* Adaptor to apply to the `src`.
-        executor (ThreadPoolExecutor, optional):
-            *Optional:* Custom executor to in which the task is performed.
-            By default the task is peformed in demuxer thread pool.
-
-    Returns:
-        (List[Future[Packets]]): Futures that wrap audio/video Packets.
+    The signature of this function is same as [spdl.io.async_streaming_demux][]
+    except the return type.
+    This function returns a list of `concurrent.futures.Future`s which in turn return
+    Packets objects when fullfilled.
     """
     func = _common._get_demux_func(media_type, src)
     return _common._futurize_generator(func, len(timestamps), src, timestamps, **kwargs)
@@ -57,21 +44,10 @@ def demux_media(
 ) -> Future:
     """Demux image or one chunk of audio/video region from the source.
 
-    Args:
-        media_type: ``"audio"``, ``"video"`` or ``"image"``.
-        src: Source identifier. If ``str`` type, it is interpreted as a source location,
-            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
-            they are interpreted as in-memory data.
-        timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
-
-    Other args:
-        io_config (IOConfig): Custom I/O config.
-        adaptor (SourceAdaptor): *Optional:* Adaptor to apply to the `src`.
-        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
-            By default the job is peformed in demuxer thread pool.
-
-    Returns:
-        (Future[Packets]): Future which wraps an audio/video/image Packets object.
+    The signature of this function is same as [spdl.io.async_demux_media][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    Packets object when fullfilled.
     """
     if media_type == "image":
         func = _common._get_demux_func(media_type, src)
@@ -84,39 +60,10 @@ def demux_media(
 def decode_packets(packets, **kwargs) -> Future:
     """Decode packets.
 
-    Args:
-        packets (Packets): Packets object.
-
-    Other args:
-        decoder (str): *Optional:* Overwrite the decoder.
-        decoder_options (Dict[str, str]): *Optional:* Decoder options.
-        sample_rate (int): *Optional, audio only:* Change the sample rate.
-        num_channels (int): *Optional, audio only:* Change the number of channels.
-        sample_fmt (str): *Optional, audio only:* Change the format of sample.
-            Valid values are (``"u8"``, ``"u8p"``, ``s16``, ``s16p``,
-            ``"s32"``, ``"s32p"``, ``"flt"``, ``"fltp"``, ``"s64"``,
-            ``"s64p"``, ``"dbl"``, ``"dblp"``).
-        frame_rate (int): *Optional, video only:* Change the frame rate.
-        width,height (int): *Optional, video/image only:* Change the resolution of the frame.
-        pix_fmt (str): *Optional, video/image only:* Change the pixel format.
-            Valid values are ().
-        num_frames (int): *Optional, audio/video only:* Fix the number of output frames by
-            dropping the exceeding frames or padding.
-            For audio, silence is added. For video, by default the last frame is
-            repeated.
-        pad_mode (str): *Optional, video only:* Change the padding frames to the given color.
-        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
-            By default the job is peformed in decode thread pool.
-
-    Returns:
-        (Future[FFmpegFrames]): Future which wraps a Frames object.
-            The type of the returned object corresponds to the input Packets type.
-
-            - ``AudioPackets`` -> ``AudioFFmpegFrames``
-
-            - ``VideoPackets`` -> ``VideoFFmpegFrames``
-
-            - ``ImagePackets`` -> ``ImageFFmpegFrames``
+    The signature of this function is same as [spdl.io.async_decode_packets][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    Frames object when fullfilled.
     """
     func = _common._get_decoding_func(packets)
     return _common._futurize_task(func, packets, **kwargs)
@@ -125,27 +72,10 @@ def decode_packets(packets, **kwargs) -> Future:
 def decode_packets_nvdec(packets, cuda_device_index, **kwargs) -> Future:
     """Decode packets with NVDEC.
 
-    Args:
-        packets (Packet): Packets object.
-        cuda_device_index (int): The CUDA device to use for decoding.
-
-    Other args:
-        crop_left,crop_top,crop_right,crop_bottom (int):
-            *Optional:* Crop the given number of pixels from each side.
-        width,height (int): *Optional:* Resize the frame. Resizing is done after
-            cropping.
-        pix_fmt (str or ``None``): *Optional:* Change the format of the pixel.
-            Supported value is ``"rgba"``. Default: ``"rgba"``.
-        executor (ThreadPoolExecutor): *Optional:* Executor to perform the job.
-            By default the job is peformed in decode thread pool.
-
-    Returns:
-        (Future[NvDecFrames]): Future that wraps a Frame object.
-            The type of the returned object corresponds to the input Packets type.
-
-            - ``VideoPackets`` -> ``VideoNvDecFrames``
-
-            - ``ImagePackets`` -> ``ImageNvDecFrames``
+    The signature of this function is same as [spdl.io.async_decode_packets_nvdec][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    Frames object when fullfilled.
     """
     func = _common._get_nvdec_decoding_func(packets)
     return _common._futurize_task(
@@ -156,76 +86,10 @@ def decode_packets_nvdec(packets, cuda_device_index, **kwargs) -> Future:
 def convert_frames(frames, **kwargs) -> Future:
     """Convert the decoded frames to buffer.
 
-    Args:
-        frames (Frames): Frames object.
-
-    Other args:
-        cuda_device_index (int):
-            *Optional:* When provided, the buffer is moved to CUDA device.
-
-        cuda_stream (int (uintptr_t) ):
-            *Optional:* Pointer to a custom CUDA stream. By default, it uses the
-            per-thread default stream.
-
-            !!! warn
-
-                Host to device buffer transfer is performed in a thread different than
-                Python main thread.
-                Since the frame data are available only for the duration of the
-                background job, the transfer is performed with synchronization.
-
-            ??? note
-
-                It is possible to provide the same stream as the one used in Python's
-                main thread, but it might introduce undesired synchronization.
-
-                An example to fetch the default stream from PyTorch.
-
-                ```python
-                stream = torch.cuda.Stream()
-                cuda_stream = stream.cuda_stream
-                ```
-
-        cuda_allocator (Callable):
-            *Optional:* Custom CUDA memory allcoator, which takes the following arguments
-            and return the address of the allocated memory.
-
-            - Size: `int`
-            - CUDA device index: `int`
-            - CUDA stream address: `int` (`uintptr_t`)
-
-            An example of such function is
-            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_alloc].
-
-        cuda_deleter (Callable):
-            *Optional:* Custom CUDA memory deleter, which takes the address of memory allocated
-            by the ``cuda_allocator``.
-
-            An example of such function is
-            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
-
-        executor (ThreadPoolExecutor):
-            *Optional:* Executor to run the conversion. By default, the conversion is performed on
-            demuxer thread pool with higher priority than demuxing.
-
-    Returns:
-        (Future[Buffer]): Future what wraps a Buffer object.
-
-            The buffer will be created on the device where the frame data are.
-
-            - ``FFmpegAudioFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
-
-            - ``FFmpegVideoFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
-
-            - ``FFmpegImageFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
-
-            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer`` or ``CUDABuffer``
-
-            - ``NvDecVideoFrames`` -> ``CUDABuffer``
-
-            - ``NvDecImageFrames`` -> ``CUDABuffer``
-
-            - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
+    The signature of this function is same as [spdl.io.async_convert_frames][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    Buffer object when fullfilled.
     """
     func = _common._get_conversion_func(frames)
     return _common._futurize_task(func, frames, **kwargs)
@@ -240,55 +104,18 @@ def convert_frames(frames, **kwargs) -> Future:
 def load_media(
     media_type: str,
     src: Union[str, bytes, memoryview],
+    *,
     demux_options: Optional[Dict[str, Any]] = None,
     decode_options: Optional[Dict[str, Any]] = None,
     convert_options: Optional[Dict[str, Any]] = None,
     use_nvdec: bool = False,
-):
-    """Load the given media into buffer.
+) -> Future:
+    """Load media from source.
 
-    This function combines ``demux_media``, ``decode_packets`` (or
-    ``decode_packets_nvdec``) and ``convert_frames`` and load media
-    into buffer.
-
-    ??? example
-        ```python
-        future = load_media(
-            "image",
-            "test.jpg",
-            deocde_options={
-                "width": 124,
-                "height": 96,
-                "pix_fmt": "rgb24",
-            })
-        buffer = future.result()  # blocking wait
-        array = spdl.io.to_numpy(buffer)
-        # An array with shape HWC==[96, 124, 3]
-        ```
-
-    Args:
-        media_type: ``"audio"``, ``"video"`` or ``"image"``.
-
-        src: Source identifier. If ``str`` type, it is interpreted as a source location,
-            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
-            they are interpreted as in-memory data.
-
-        demux_options (Dict[str, Any]):
-            *Optional:* Demux options passed to [spdl.io.async_demux_media][].
-
-        decode_options (Dict[str, Any]):
-            *Optional:* Decode options passed to [spdl.io.async_decode_packets][].
-
-        convert_options (Dict[str, Any]):
-            *Optional:* Convert options passed to [spdl.io.async_convert_frames][].
-
-        use_nvdec:
-            *Optional:* If True, use NVDEC to decode the media.
-
-    Returns:
-        (Buffer): An object implements buffer protocol.
-            To be passed to casting functions like [spdl.io.to_numpy][],
-            [spdl.io.to_torch][] or [spdl.io.to_numba][].
+    The signature of this function is same as [spdl.io.async_load_media][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    Buffer object when fullfilled.
     """
     demux_options = demux_options or {}
     decode_options = decode_options or {}
@@ -312,6 +139,7 @@ def _check_arg(var, key, decode_options):
 
 def batch_load_image(
     srcs: List[Union[str, bytes]],
+    *,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
@@ -320,9 +148,14 @@ def batch_load_image(
     convert_options: Optional[Dict[str, Any]] = None,
     strict: bool = True,
 ):
-    """Batch load images.
+    """Load media from source.
 
-    ??? example
+    The signature of this function is same as [spdl.io.async_batch_load_image][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    Buffer object when fullfilled.
+
+    ??? note "Example"
         ```python
         srcs = [
             "test1.jpg",
@@ -338,33 +171,6 @@ def batch_load_image(
         array = spdl.io.to_numpy(buffer)
         # An array with shape HWC==[2, 96, 124, 3]
         ```
-
-    Args:
-        srcs: List of source identifiers.
-
-        width: *Optional:* Resize the frame.
-
-        height: *Optional:* Resize the frame.
-
-        pix_fmt:
-            *Optional:* Change the format of the pixel.
-
-        demux_options (Dict[str, Any]):
-            *Optional:* Demux options passed to [spdl.io.demux_media][].
-
-        decode_options (Dict[str, Any]):
-            *Optional:* Decode options passed to [spdl.io.decode_packets][].
-
-        convert_options (Dict[str, Any]):
-            *Optional:* Convert options passed to [spdl.io.convert_frames][].
-
-        strict:
-            *Optional:* If True, raise an error if any of the images failed to load.
-
-    Returns:
-        (Buffer): An object implements buffer protocol.
-            To be passed to casting functions like [spdl.io.to_numpy][],
-            [spdl.io.to_torch][] or [spdl.io.to_numba][].
     """
     if not srcs:
         raise ValueError("`srcs` must not be empty.")

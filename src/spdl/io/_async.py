@@ -25,11 +25,13 @@ _LG = logging.getLogger(__name__)
 
 
 def _async_sleep(time: int):
+    """Sleep for a given duration (milliseconds)."""
     future = _common._futurize_task(_libspdl.async_sleep, time)
     return _handle_future(future), future.__spdl_future
 
 
 def _async_sleep_multi(time: int, count: int):
+    """Sleep for a given duration (milliseconds), for given times."""
     assert count > 0
     futures = _common._futurize_generator(
         _libspdl.async_sleep_multi, count + 1, time, count
@@ -111,7 +113,7 @@ def async_streaming_demux(
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ):
-    """Demux the given time windows from the source.
+    """Demux the media of given time windows.
 
     Args:
         media_type: ``"audio"`` or ``"video"``.
@@ -245,43 +247,6 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
 def async_convert_frames(frames, **kwargs):
     """Convert the decoded frames to buffer.
 
-    ??? example
-        * Convert audio frames to a contiguous buffer, then cast it to NumPy Array
-        ```python
-        packets = await async_demux_media("audio", sample.mp3)
-        frames = await async_decode_packets(packets)
-        buffer = await async_convert_frames(frames)
-        array = spdl.io.to_numpy(buffer)
-        ```
-
-        * Convert video frames to a contiguous buffer and transfer it to
-        a CUDA device, then cast to Numba CUDA tensor.
-        ```python
-        packets = await async_demux_media("video", sample.mp4)
-        frames = await async_decode_packets(packets)
-        buffer = await async_convert_frames(frames, cuda_device_index=0)
-        tensor = spdl.io.to_numba(buffer)
-        ```
-
-        * Converting batch image frames to a contiguous buffer and transfer it to
-        a CUDA device using PyTorch's CUDA caching allocator, then cast to PyTorch
-        tensor.
-        ```python
-        frames = []
-        for src in srcs:
-            packets = await async_demux_media("image", src)
-            frames.append(await async_decode_packets(packets))
-
-        buffer = await async_convert_frames(
-            frames,
-            cuda_device_index=0,
-            cuda_allocator=torch.cuda.caching_allocator_allocate,
-            cuda_deleter=torch.cuda.caching_allocator_delete,
-        )
-        tensor = spdl.io.to_torch(buffer)
-        ```
-
-
     Args:
         frames (Frames): Frames object.
 
@@ -293,17 +258,18 @@ def async_convert_frames(frames, **kwargs):
             *Optional:* Pointer to a custom CUDA stream. By default, it uses the
             per-thread default stream.
 
-            !!! warn
+            !!! note
 
                 Host to device buffer transfer is performed in a thread different than
                 Python main thread.
+
                 Since the frame data are available only for the duration of the
                 background job, the transfer is performed with synchronization.
 
-            ??? note
-
                 It is possible to provide the same stream as the one used in Python's
                 main thread, but it might introduce undesired synchronization.
+
+            ??? note "How to retrieve CUDA stream pointer on PyTorch"
 
                 An example to fetch the default stream from PyTorch.
 
@@ -353,6 +319,42 @@ def async_convert_frames(frames, **kwargs):
 
             - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
 
+    ??? note "Example: Convert audio frames to a contiguous buffer, then \
+        cast it to NumPy array."
+        ```python
+        packets = await async_demux_media("audio", sample.mp3)
+        frames = await async_decode_packets(packets)
+        buffer = await async_convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
+        ```
+
+    ??? note "Example: Convert video frames to a contiguous buffer, \
+        transfer it to a CUDA device, then cast the resulting buffer to \
+        Numba CUDA tensor."
+        ```python
+        packets = await async_demux_media("video", sample.mp4)
+        frames = await async_decode_packets(packets)
+        buffer = await async_convert_frames(frames, cuda_device_index=0)
+        tensor = spdl.io.to_numba(buffer)
+        ```
+
+    ??? note "Example: Convert batch image frames to a contiguous buffer, \
+        transfer it to a CUDA device using PyTorch's CUDA caching allocator, \
+        then cast the resulting buffer to PyTorch tensor."
+        ```python
+        frames = []
+        for src in srcs:
+            packets = await async_demux_media("image", src)
+            frames.append(await async_decode_packets(packets))
+
+        buffer = await async_convert_frames(
+            frames,
+            cuda_device_index=0,
+            cuda_allocator=torch.cuda.caching_allocator_allocate,
+            cuda_deleter=torch.cuda.caching_allocator_delete,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        ```
     """
     func = _common._get_conversion_func(frames)
     return _async_task(func, frames, **kwargs)
@@ -366,6 +368,7 @@ def async_convert_frames(frames, **kwargs):
 async def async_load_media(
     media_type: str,
     src: Union[str, bytes, memoryview],
+    *,
     demux_options: Optional[Dict[str, Any]] = None,
     decode_options: Optional[Dict[str, Any]] = None,
     convert_options: Optional[Dict[str, Any]] = None,
@@ -376,20 +379,6 @@ async def async_load_media(
     This function combines ``async_demux_media``, ``async_decode_packets`` (or
     ``async_decode_packets_nvdec``) and ``async_convert_frames`` and load media
     into buffer.
-
-    ??? example
-        ```python
-        buffer = await async_load_media(
-            "image",
-            "test.jpg",
-            deocde_options={
-                "width": 124,
-                "height": 96,
-                "pix_fmt": "rgb24",
-            })
-        array = spdl.io.to_numpy(buffer)
-        # An array with shape HWC==[96, 124, 3]
-        ```
 
     Args:
         media_type: ``"audio"``, ``"video"`` or ``"image"``.
@@ -413,6 +402,54 @@ async def async_load_media(
 
     Returns:
         (Buffer): An object implements buffer protocol.
+
+    ??? note "Example: Load an image frame, resize and convert to RGB HWC format."
+        ```python
+        buffer = await async_load_media(
+            "image",
+            "sample.jpg",
+            deocode_options={
+                "width": 124,
+                "height": 96,
+                "pix_fmt": "rgb24",
+            })
+
+        array = spdl.io.to_numpy(buffer)  # NumPy array with shape [96, 124, 3]
+        ```
+
+    ??? note "Example: Load audio frames from the given windows, resample and trim the samples."
+        ```python
+        buffers = await async_load_media(
+            "audio",
+            "sample.wav",
+            timestamps=[(0, 3), (5, 3)],
+            deocode_options={
+                "sample_rate": 16000,
+                "num_frames": 24000,
+            })
+
+        for buffer in buffers:
+            array = spdl.io.to_numpy(buffer)  # NumPy array with shape [24000, 2]
+        ```
+
+    ??? note "Example: Load video frames from the given window using NVDEC and resize."
+        ```python
+        buffer = await async_load_media(
+            "video",
+            "sample.mp4",
+            timestamps=[(10, 14)],
+            cuda_device_index=0,
+            decode_options={
+                "width": 124,
+                "height": 96,
+                "pix_fmt": "rgba"
+            },
+            use_nvdec=True,
+        )
+
+        for buffer in buffers:
+            tensor = spdl.io.to_torch(buffer)  # PyTorch CUDA tensor
+        ```
     """
     demux_options = demux_options or {}
     decode_options = decode_options or {}
@@ -453,6 +490,7 @@ def _check_arg(var, key, decode_options):
 
 async def async_batch_load_image(
     srcs: List[Union[str, bytes, memoryview]],
+    *,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
@@ -462,22 +500,6 @@ async def async_batch_load_image(
     strict: bool = True,
 ):
     """Batch load images.
-
-    ??? example
-        ```python
-        srcs = [
-            "test1.jpg",
-            "test1.png",
-        ]
-        buffer = await async_batch_load_image(
-            srcs,
-            width=124,
-            height=96,
-            pix_fmt="rgb24",
-        )
-        array = spdl.io.to_numpy(buffer)
-        # An array with shape HWC==[2, 96, 124, 3]
-        ```
 
     Args:
         srcs: List of source identifiers.
@@ -505,6 +527,23 @@ async def async_batch_load_image(
         (Buffer): An object implements buffer protocol.
             To be passed to casting functions like [spdl.io.to_numpy][],
             [spdl.io.to_torch][] or [spdl.io.to_numba][].
+
+    ??? note "Example"
+        ```python
+        srcs = [
+            "test1.jpg",
+            "test1.png",
+        ]
+        buffer = await async_batch_load_image(
+            srcs,
+            width=124,
+            height=96,
+            pix_fmt="rgb24",
+        )
+        array = spdl.io.to_numpy(buffer)
+        # An array with shape HWC==[2, 96, 124, 3]
+        ```
+
     """
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
