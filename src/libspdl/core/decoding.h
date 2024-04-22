@@ -47,7 +47,7 @@ FuturePtr async_decode_nvdec(
 
 /// Decode media from source
 template <MediaType media_type>
-FuturePtr async_decode(
+FuturePtr async_decode_from_source(
     std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string& uri,
@@ -58,7 +58,7 @@ FuturePtr async_decode(
     ThreadPoolExecutorPtr decode_executor);
 
 template <MediaType media_type>
-FuturePtr async_decode_bytes(
+FuturePtr async_decode_from_bytes(
     std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string_view data,

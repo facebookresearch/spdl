@@ -19,7 +19,7 @@ FuturePtr async_decode(
       [=](PacketsPtr<media_type> pkts)
           -> folly::coro::Task<FFmpegFramesWrapperPtr<media_type>> {
         auto frames = co_await detail::decode_packets_ffmpeg<media_type>(
-            std::move(pkts), decode_cfg, std::move(filter_desc));
+            std::move(pkts), std::move(decode_cfg), std::move(filter_desc));
         co_return wrap<media_type, FFmpegFramesPtr>(std::move(frames));
       },
       packets->unwrap());
@@ -60,7 +60,7 @@ template FuturePtr async_decode(
 //////////////////////////////////////////////////////////////////////////////
 
 template <>
-FuturePtr async_decode(
+FuturePtr async_decode_from_source(
     std::function<void(FFmpegFramesWrapperPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string& uri,
@@ -87,7 +87,7 @@ FuturePtr async_decode(
 }
 
 template <>
-FuturePtr async_decode_bytes(
+FuturePtr async_decode_from_bytes(
     std::function<void(FFmpegFramesWrapperPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string_view data,

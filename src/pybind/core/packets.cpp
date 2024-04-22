@@ -73,6 +73,11 @@ void register_packets(py::module& m) {
                 self.get_packets()->get_media_format_name(),
                 get_codec_info<MediaType::Audio>(self.get_packets()->codecpar));
           })
+      .def_property_readonly(
+          "timestamp",
+          [](const AudioPacketsWrapper& self) {
+            return self.get_packets()->timestamp;
+          })
       .def("clone", [](const AudioPacketsWrapper& self) {
         return wrap(clone(self.get_packets()));
       });
@@ -88,6 +93,11 @@ void register_packets(py::module& m) {
               ret.push_back(double(packet->pts) * base.num / base.den);
             }
             return ret;
+          })
+      .def_property_readonly(
+          "timestamp",
+          [](const VideoPacketsWrapper& self) {
+            return self.get_packets()->timestamp;
           })
       .def(
           "__len__",

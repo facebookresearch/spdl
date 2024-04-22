@@ -3,10 +3,15 @@ import pytest
 
 import spdl.io
 import spdl.utils
+from spdl.io.preprocessing import get_audio_filter_desc
 
 
 def _decode_audio(src, sample_fmt=None):
-    future = spdl.io.load_media("audio", src, decode_options={"sample_fmt": sample_fmt})
+    future = spdl.io.load_media(
+        "audio",
+        src,
+        decode_options={"filter_desc": get_audio_filter_desc(sample_fmt=sample_fmt)},
+    )
     return spdl.io.to_numpy(future.result())
 
 

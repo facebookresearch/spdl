@@ -2,6 +2,7 @@ import numpy as np
 
 import spdl.io
 import spdl.utils
+from spdl.io.preprocessing import get_video_filter_desc
 
 
 def _to_numpy(frames):
@@ -10,7 +11,9 @@ def _to_numpy(frames):
 
 def _decode_video(src, pix_fmt=None):
     packets = spdl.io.demux_media("video", src).result()
-    return spdl.io.decode_packets(packets, pix_fmt=pix_fmt).result()
+    return spdl.io.decode_packets(
+        packets, filter_desc=get_video_filter_desc(pix_fmt=pix_fmt)
+    ).result()
 
 
 def test_video_frames_getitem_slice(get_sample):

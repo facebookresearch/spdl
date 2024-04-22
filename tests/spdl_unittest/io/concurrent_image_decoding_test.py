@@ -2,10 +2,15 @@ import numpy as np
 
 import spdl.io
 import spdl.utils
+from spdl.io.preprocessing import get_video_filter_desc
 
 
 def _decode_image(src, pix_fmt=None):
-    future = spdl.io.load_media("image", src, decode_options={"pix_fmt": pix_fmt})
+    future = spdl.io.load_media(
+        "image",
+        src,
+        decode_options={"filter_desc": get_video_filter_desc(pix_fmt=pix_fmt)},
+    )
     return spdl.io.to_numpy(future.result())
 
 
