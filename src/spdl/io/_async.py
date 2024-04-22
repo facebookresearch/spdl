@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import spdl.io
 from spdl.lib import _libspdl
 
-from . import _common
+from . import _common, preprocessing
 
 
 __all__ = [
@@ -174,45 +174,11 @@ def async_decode_packets(packets, **kwargs):
         packets (Packets): Packets object.
 
     Other args:
-        decoder_config (DecodeConfig): *Optional:* Custom decode config.
+        decoder_config (DecodeConfig):
+            *Optional:* Custom decode config.
 
-    Other args:
-        sample_rate (int):
-            __Audio__: *Optional:* Change the sample rate.
-
-        num_channels (int):
-            __Audio__: *Optional:* Change the number of channels.
-
-        sample_fmt (str):
-            __Audio__: *Optional:* Change the format of sample.
-            Valid values are (`"u8"`, `"u8p"`, `s16`, `s16p`,
-            `"s32"`, `"s32p"`, `"flt"`, `"fltp"`, `"s64"`,
-            `"s64p"`, `"dbl"`, `"dblp"`).
-
-        num_frames (int):
-            __Audio__: *Optional:* Fix the number of output frames by
-            dropping the exceeding frames or padding with silence.
-
-    Other args:
-        frame_rate (int):
-            __Video__: *Optional:* Change the frame rate.
-
-        width,height (int):
-            __Video__, __Image__: *Optional:* Change the resolution of the frame.
-
-        pix_fmt (str):
-            __Video__, __Image__: *Optional:* Change the pixel format.
-            Valid values are (`"gray8"`, `"rgba"`, `"rgb24"`, `"yuv444p"`,
-            `yuv420p`, `yuv422p`, `nv12`).
-
-        num_frames (int):
-            __Video__, __Image__: *Optional:* Fix the number of output frames by
-            dropping the exceeding frames or padding.
-            The default behavior when padding is to repeat the last frame.
-            This can be changed to fixed color frame with `pad_mode` argument.
-
-        pad_mode (str):
-            __Video__, *Optional:* Change the padding frames to the given color.
+        filter_desc:
+            *Optional:* Custom filter applied after decoding.
 
     Returns:
         (Awaitable[FFmpegFrames]): Awaitable which returns a Frames object.
@@ -225,6 +191,8 @@ def async_decode_packets(packets, **kwargs):
             - `ImagePackets` -> `ImageFFmpegFrames`
     """
     func = _common._get_decoding_func(packets)
+    if "filter_desc" not in kwargs:
+        kwargs["filter_desc"] = preprocessing.get_filter_desc(packets)
     return _async_task(func, packets, **kwargs)
 
 
@@ -505,15 +473,6 @@ def _get_err_msg(src, err):
     return f"Failed to decode an image from {src_}: {err}."
 
 
-def _check_arg(var, key, decode_options):
-    if var is not None:
-        if key in decode_options:
-            raise ValueError(
-                f"`{key}` is given but also specified in `decode_options`."
-            )
-        decode_options[key] = var
-
-
 async def async_batch_load_image(
     srcs: List[Union[str, bytes, memoryview]],
     *,
@@ -578,9 +537,18 @@ async def async_batch_load_image(
     decode_options = decode_options or {}
     convert_options = convert_options or {}
 
-    _check_arg(width, "width", decode_options)
-    _check_arg(height, "height", decode_options)
-    _check_arg(pix_fmt, "pix_fmt", decode_options)
+    filter_desc = preprocessing.get_video_filter_desc(
+        width=width,
+        height=height,
+        pix_fmt=pix_fmt,
+    )
+
+    if filter_desc and "filter_desc" in decode_options:
+        raise ValueError(
+            "`width`, `height` or `pix_fmt` and `filter_desc` in `decode_options` cannot be present at the same time."
+        )
+    elif filter_desc:
+        decode_options["filter_desc"] = filter_desc
 
     decoding = []
     for src in srcs:

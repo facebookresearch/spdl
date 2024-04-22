@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import spdl.io
+from spdl.io.preprocessing import get_audio_filter_desc, get_video_filter_desc
 from spdl.lib import _libspdl
 
 
@@ -98,7 +99,10 @@ def test_decode_audio_clips_num_frames(get_sample):
         async for packets in spdl.io.async_streaming_demux(
             "audio", src, timestamps=[(0, 1)]
         ):
-            frames = await spdl.io.async_decode_packets(packets, num_frames=num_frames)
+            filter_desc = get_audio_filter_desc(timestamp=(0, 1), num_frames=num_frames)
+            frames = await spdl.io.async_decode_packets(
+                packets, filter_desc=filter_desc
+            )
             buffer = await spdl.io.async_convert_frames(frames)
             return spdl.io.to_numpy(buffer)
 
@@ -151,8 +155,11 @@ def test_decode_video_clips_num_frames(get_sample):
         async for packets in spdl.io.async_streaming_demux(
             "video", src, timestamps=[(0, 2)]
         ):
+            filter_desc = get_video_filter_desc(
+                timestamp=(0, 2), pix_fmt=pix_fmt, **kwargs
+            )
             frames = await spdl.io.async_decode_packets(
-                packets, pix_fmt=pix_fmt, **kwargs
+                packets, filter_desc=filter_desc
             )
             buffer = await spdl.io.async_convert_frames(frames)
             return spdl.io.to_numpy(buffer)

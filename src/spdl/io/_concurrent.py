@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import spdl.utils
 
-from . import _common
+from . import _common, preprocessing
 
 __all__ = [
     "convert_frames",
@@ -66,6 +66,8 @@ def decode_packets(packets, **kwargs) -> Future:
     Frames object when fullfilled.
     """
     func = _common._get_decoding_func(packets)
+    if "filter_desc" not in kwargs:
+        kwargs["filter_desc"] = preprocessing.get_filter_desc(packets)
     return _common._futurize_task(func, packets, **kwargs)
 
 
@@ -144,15 +146,6 @@ def load_media(
     yield convert_frames(frames, **convert_options)
 
 
-def _check_arg(var, key, decode_options):
-    if var is not None:
-        if key in decode_options:
-            raise ValueError(
-                f"`{key}` is given but also specified in `decode_options`."
-            )
-        decode_options[key] = var
-
-
 def batch_load_image(
     srcs: List[Union[str, bytes]],
     *,
@@ -195,9 +188,18 @@ def batch_load_image(
     decode_options = decode_options or {}
     convert_options = convert_options or {}
 
-    _check_arg(width, "width", decode_options)
-    _check_arg(height, "height", decode_options)
-    _check_arg(pix_fmt, "pix_fmt", decode_options)
+    filter_desc = preprocessing.get_video_filter_desc(
+        width=width,
+        height=height,
+        pix_fmt=pix_fmt,
+    )
+
+    if filter_desc and "filter_desc" in decode_options:
+        raise ValueError(
+            "`width`, `height` or `pix_fmt` and `filter_desc` in `decode_options` cannot be present at the same time."
+        )
+    elif filter_desc:
+        decode_options["filter_desc"] = filter_desc
 
     @spdl.utils.chain_futures
     def _decode(src):
