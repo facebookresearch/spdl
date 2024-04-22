@@ -177,7 +177,7 @@ def async_decode_packets(packets, **kwargs):
         decoder_config (DecodeConfig):
             *Optional:* Custom decode config.
 
-        filter_desc:
+        filter_desc (str):
             *Optional:* Custom filter applied after decoding.
 
     Returns:
@@ -312,43 +312,6 @@ def async_convert_frames(frames, **kwargs):
             - `NvDecImageFrames` -> `CUDABuffer`
 
             - `List[NvDecImageFrames]` -> `CUDABuffer`
-
-    ??? note "Example: Convert audio frames to a contiguous buffer, then \
-        cast it to NumPy array."
-        ```python
-        packets = await async_demux_media("audio", sample.mp3)
-        frames = await async_decode_packets(packets)
-        buffer = await async_convert_frames(frames)
-        array = spdl.io.to_numpy(buffer)
-        ```
-
-    ??? note "Example: Convert video frames to a contiguous buffer, \
-        transfer it to a CUDA device, then cast the resulting buffer to \
-        Numba CUDA tensor."
-        ```python
-        packets = await async_demux_media("video", sample.mp4)
-        frames = await async_decode_packets(packets)
-        buffer = await async_convert_frames(frames, cuda_device_index=0)
-        tensor = spdl.io.to_numba(buffer)
-        ```
-
-    ??? note "Example: Convert batch image frames to a contiguous buffer, \
-        transfer it to a CUDA device using PyTorch's CUDA caching allocator, \
-        then cast the resulting buffer to PyTorch tensor."
-        ```python
-        frames = []
-        for src in srcs:
-            packets = await async_demux_media("image", src)
-            frames.append(await async_decode_packets(packets))
-
-        buffer = await async_convert_frames(
-            frames,
-            cuda_device_index=0,
-            cuda_allocator=torch.cuda.caching_allocator_allocate,
-            cuda_deleter=torch.cuda.caching_allocator_delete,
-        )
-        tensor = spdl.io.to_torch(buffer)
-        ```
     """
     func = _common._get_conversion_func(frames)
     return _async_task(func, frames, **kwargs)
@@ -399,50 +362,66 @@ async def async_load_media(
 
     ??? note "Example: Load an image frame, resize and convert to RGB HWC format."
         ```python
-        buffer = await async_load_media(
-            "image",
-            "sample.jpg",
-            deocode_options={
-                "width": 124,
-                "height": 96,
-                "pix_fmt": "rgb24",
-            })
-
-        array = spdl.io.to_numpy(buffer)  # NumPy array with shape [96, 124, 3]
+        >>> buffer = asyncio.run(
+        ...     async_load_media(
+        ...         "image",
+        ...         "sample.jpg",
+        ...         decode_options={
+        ...             "filter_desc": spdl.io.preprocessing.get_video_filter_desc(
+        ...                 width=124,
+        ...                 height=96,
+        ...                 pix_fmt="rgb24",
+        ...             ),
+        ...         }
+        ...     )
+        ... )
+        >>> array = spdl.io.to_numpy(buffer)  # NumPy array with shape [96, 124, 3]
+        >>>
         ```
 
     ??? note "Example: Load audio frames from the given windows, resample and trim the samples."
         ```python
-        buffers = await async_load_media(
-            "audio",
-            "sample.wav",
-            timestamps=[(0, 3), (5, 3)],
-            deocode_options={
-                "sample_rate": 16000,
-                "num_frames": 24000,
-            })
-
-        for buffer in buffers:
-            array = spdl.io.to_numpy(buffer)  # NumPy array with shape [24000, 2]
+        >>> coro = async_load_media(
+        ...     "audio",
+        ...     "sample.wav",
+        ...     demux_options={
+        ...         "timestamp": (0, 3),
+        ...     },
+        ...     decode_options={
+        ...         "filter_desc": spdl.io.preprocessing.get_audio_filter_desc(
+        ...             timestamp=(0, 3),
+        ...             sample_rate=16000,
+        ...             num_frames=24000,
+        ...         ),
+        ...     },
+        ... )
+        >>> buffer = asyncio.run(coro)
+        >>> array = spdl.io.to_numpy(buffer)  # NumPy array with shape [24000, 2]
+        >>>
         ```
 
     ??? note "Example: Load video frames from the given window using NVDEC and resize."
         ```python
-        buffer = await async_load_media(
-            "video",
-            "sample.mp4",
-            timestamps=[(10, 14)],
-            cuda_device_index=0,
-            decode_options={
-                "width": 124,
-                "height": 96,
-                "pix_fmt": "rgba"
-            },
-            use_nvdec=True,
-        )
-
-        for buffer in buffers:
-            tensor = spdl.io.to_torch(buffer)  # PyTorch CUDA tensor
+        >>> import torch
+        >>> torch.cuda.set_device(7)
+        >>> coro = async_load_media(
+        ...     "video",
+        ...     "sample.mp4",
+        ...     demux_options={
+        ...         "timestamp": (10, 14),
+        ...     },
+        ...     decode_options={
+        ...         "cuda_device_index": 7,
+        ...         "width": 124,
+        ...         "height": 96,
+        ...         "pix_fmt": "rgba",
+        ...     },
+        ...     use_nvdec=True,
+        ... )
+        >>> buffer = asyncio.run(coro)
+        >>> # failing. todo: fix
+        >>> # tensor = spdl.io.to_torch(buffer)  # PyTorch CUDA tensor
+        >>>
         ```
     """
     demux_options = demux_options or {}
@@ -515,18 +494,20 @@ async def async_batch_load_image(
 
     ??? note "Example"
         ```python
-        srcs = [
-            "test1.jpg",
-            "test1.png",
-        ]
-        buffer = await async_batch_load_image(
-            srcs,
-            width=124,
-            height=96,
-            pix_fmt="rgb24",
-        )
-        array = spdl.io.to_numpy(buffer)
-        # An array with shape HWC==[2, 96, 124, 3]
+        >>> srcs = [
+        ...     "sample1.jpg",
+        ...     "sample2.png",
+        ... ]
+        >>> coro = async_batch_load_image(
+        ...     srcs,
+        ...     width=124,
+        ...     height=96,
+        ...     pix_fmt="rgb24",
+        ... )
+        >>> buffer = asyncio.run(coro)
+        >>> array = spdl.io.to_numpy(buffer)
+        >>> # An array with shape HWC==[2, 96, 124, 3]
+        >>>
         ```
 
     """

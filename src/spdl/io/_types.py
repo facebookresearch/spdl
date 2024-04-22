@@ -38,17 +38,21 @@ class IOConfig(_IOConfig):
 
     ??? note "Example: Loading headeless audio file (raw PCM)"
         ```python
-        # Say, this file contains raw PCM samples.
-        # One way to generate such a file is,
-        # ffmpeg -f lavfi -i 'sine=duration=3' -f s16le -c:a pcm_s16le sample.raw
-        src = "sample.raw"
-
-        # This won't work
-        packets = await spdl.io.async_demux_media("audio", src)
-
-        # This works.
-        cfg = IOConfig(format="s16le")
-        packets = await spdl.io.async_demux_media("audio", src, io_config=cfg)
+        >>> import asyncio
+        >>> import spdl.io
+        >>>
+        >>> # Say, this file contains raw PCM samples.
+        >>> # One way to generate such a file is,
+        >>> # ffmpeg -f lavfi -i 'sine=duration=3' -f s16le -c:a pcm_s16le sample.raw
+        >>> src = "sample.raw"
+        >>>
+        >>> # This won't work
+        >>> # packets = asyncio.run(spdl.io.async_demux_media("audio", src))
+        >>>
+        >>> # This works.
+        >>> cfg = IOConfig(format="s16le")
+        >>> packets = asyncio.run(spdl.io.async_demux_media("audio", src, io_config=cfg))
+        >>>
         ```
     """
 

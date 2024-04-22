@@ -166,19 +166,20 @@ def batch_load_image(
 
     ??? note "Example"
         ```python
-        srcs = [
-            "test1.jpg",
-            "test1.png",
-        ]
-        future = batch_load_image(
-            srcs,
-            width=124,
-            height=96,
-            pix_fmt="rgb24",
-        )
-        buffer = future.result()  # blocking wait
-        array = spdl.io.to_numpy(buffer)
-        # An array with shape HWC==[2, 96, 124, 3]
+        >>> srcs = [
+        ...     "sample1.jpg",
+        ...     "sample2.png",
+        ... ]
+        >>> future = batch_load_image(
+        ...     srcs,
+        ...     width=124,
+        ...     height=96,
+        ...     pix_fmt="rgb24",
+        ... )
+        >>> buffer = future.result()  # blocking wait
+        >>> array = spdl.io.to_numpy(buffer)
+        >>> # An array with shape HWC==[2, 96, 124, 3]
+        >>>
         ```
     """
     if not srcs:

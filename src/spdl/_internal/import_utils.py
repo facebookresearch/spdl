@@ -41,8 +41,9 @@ def lazy_import(name):
 
     Example
 
-        >>> foo = lazy_import("foo")  # not imported yet
-        >>> foo.something  # Now "foo" is imported.
+        >>> np = lazy_import("numpy")  # not imported yet
+        >>> np.__version__  # Now "numpy" is imported.
+        1.26.2
     """
 
     def _import():
