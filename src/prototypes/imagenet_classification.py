@@ -164,10 +164,13 @@ def _get_batch_generator(args, device):
             classes = torch.tensor(classes, dtype=torch.int64).to(device)
             buffer = await spdl.io.async_batch_load_image(
                 paths,
-                width=224,
-                height=224,
-                pix_fmt="rgb24",
+                width=None,
+                height=None,
+                pix_fmt=None,
                 strict=True,
+                decode_options={
+                    "filter_desc": "scale=width=256:height=256,crop=224:224,format=rgb24",
+                },
                 convert_options={
                     "cuda_device_index": 0,
                     "cuda_allocator": torch.cuda.caching_allocator_alloc,
@@ -185,10 +188,13 @@ def _get_batch_generator(args, device):
             classes = torch.tensor(classes, dtype=torch.int64).to(device)
             buffer = yield spdl.io.batch_load_image(
                 paths,
-                width=224,
-                height=224,
-                pix_fmt="rgb24",
+                width=None,
+                height=None,
+                pix_fmt=None,
                 strict=True,
+                decode_options={
+                    "filter_desc": "scale=width=256:height=256,crop=224:224,format=rgb24",
+                },
                 convert_options={
                     "cuda_device_index": 0,
                     "cuda_allocator": torch.cuda.caching_allocator_alloc,
