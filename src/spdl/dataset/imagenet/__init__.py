@@ -21,6 +21,7 @@ def get_mappings():
         636
         >>> print(label_mapping[636])
         ('mailbag', 'postbag')
+
         ```
     """
     class_mapping = {}
