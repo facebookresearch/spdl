@@ -116,9 +116,9 @@ def async_streaming_demux(
     """Demux the media of given time windows.
 
     Args:
-        media_type: ``"audio"`` or ``"video"``.
-        src: Source identifier. If ``str`` type, it is interpreted as a source location,
-            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+        media_type: `"audio"` or `"video"`.
+        src: Source identifier. If `str` type, it is interpreted as a source location,
+            such as local file path or URL. If `bytes` or `memoryview` type, then
             they are interpreted as in-memory data.
         timestamps: List of timestamps.
 
@@ -146,9 +146,9 @@ def async_demux_media(
     """Demux image or one chunk of audio/video region from the source.
 
     Args:
-        media_type: ``"audio"``, ``"video"`` or ``"image"``.
-        src: Source identifier. If ``str`` type, it is interpreted as a source location,
-            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+        media_type: `"audio"`, `"video"` or `"image"`.
+        src: Source identifier. If `str` type, it is interpreted as a source location,
+            such as local file path or URL. If `bytes` or `memoryview` type, then
             they are interpreted as in-memory data.
         timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
             If omitted, the entire data are demuxed.
@@ -174,33 +174,55 @@ def async_decode_packets(packets, **kwargs):
         packets (Packets): Packets object.
 
     Other args:
-        decoder (str): *Optional:* Overwrite the decoder.
-        decoder_options (Dict[str, str]): *Optional:* Decoder options.
-        sample_rate (int): *Optional, audio only:* Change the sample rate.
-        num_channels (int): *Optional, audio only:* Change the number of channels.
-        sample_fmt (str): *Optional, audio only:* Change the format of sample.
-            Valid values are (``"u8"``, ``"u8p"``, ``s16``, ``s16p``,
-            ``"s32"``, ``"s32p"``, ``"flt"``, ``"fltp"``, ``"s64"``,
-            ``"s64p"``, ``"dbl"``, ``"dblp"``).
-        frame_rate (int): *Optional, video only:* Change the frame rate.
-        width,height (int): *Optional, video/image only:* Change the resolution of the frame.
-        pix_fmt (str): *Optional, video/image only:* Change the pixel format.
-            Valid values are ().
-        num_frames (int): *Optional, audio/video only:* Fix the number of output frames by
+        decoder_config (DecodeConfig): *Optional:* Custom decode config.
+
+    Other args:
+        sample_rate (int):
+            __Audio__: *Optional:* Change the sample rate.
+
+        num_channels (int):
+            __Audio__: *Optional:* Change the number of channels.
+
+        sample_fmt (str):
+            __Audio__: *Optional:* Change the format of sample.
+            Valid values are (`"u8"`, `"u8p"`, `s16`, `s16p`,
+            `"s32"`, `"s32p"`, `"flt"`, `"fltp"`, `"s64"`,
+            `"s64p"`, `"dbl"`, `"dblp"`).
+
+        num_frames (int):
+            __Audio__: *Optional:* Fix the number of output frames by
+            dropping the exceeding frames or padding with silence.
+
+    Other args:
+        frame_rate (int):
+            __Video__: *Optional:* Change the frame rate.
+
+        width,height (int):
+            __Video__, __Image__: *Optional:* Change the resolution of the frame.
+
+        pix_fmt (str):
+            __Video__, __Image__: *Optional:* Change the pixel format.
+            Valid values are (`"gray8"`, `"rgba"`, `"rgb24"`, `"yuv444p"`,
+            `yuv420p`, `yuv422p`, `nv12`).
+
+        num_frames (int):
+            __Video__, __Image__: *Optional:* Fix the number of output frames by
             dropping the exceeding frames or padding.
-            For audio, silence is added. For video, by default the last frame is
-            repeated.
-        pad_mode (str): *Optional, video only:* Change the padding frames to the given color.
+            The default behavior when padding is to repeat the last frame.
+            This can be changed to fixed color frame with `pad_mode` argument.
+
+        pad_mode (str):
+            __Video__, *Optional:* Change the padding frames to the given color.
 
     Returns:
         (Awaitable[FFmpegFrames]): Awaitable which returns a Frames object.
             The type of the returned object corresponds to the input Packets type.
 
-            - ``AudioPackets`` -> ``AudioFFmpegFrames``
+            - `AudioPackets` -> `AudioFFmpegFrames`
 
-            - ``VideoPackets`` -> ``VideoFFmpegFrames``
+            - `VideoPackets` -> `VideoFFmpegFrames`
 
-            - ``ImagePackets`` -> ``ImageFFmpegFrames``
+            - `ImagePackets` -> `ImageFFmpegFrames`
     """
     func = _common._get_decoding_func(packets)
     return _async_task(func, packets, **kwargs)
@@ -216,18 +238,20 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
     Other args:
         crop_left,crop_top,crop_right,crop_bottom (int):
             *Optional:* Crop the given number of pixels from each side.
+
         width,height (int): *Optional:* Resize the frame. Resizing is done after
             cropping.
-        pix_fmt (str or ``None``): *Optional:* Change the format of the pixel.
-            Supported value is ``"rgba"``. Default: ``"rgba"``.
+
+        pix_fmt (str or `None`): *Optional:* Change the format of the pixel.
+            Supported value is `"rgba"`. Default: `"rgba"`.
 
     Returns:
         (Awaitable[NvDecFrames]): Awaitable which returns a Frame object.
             The type of the returned object corresponds to the input Packets type.
 
-            - ``VideoPackets`` -> ``VideoNvDecFrames``
+            - `VideoPackets` -> `VideoNvDecFrames`
 
-            - ``ImagePackets`` -> ``ImageNvDecFrames``
+            - `ImagePackets` -> `ImageNvDecFrames`
     """
     func = _common._get_nvdec_decoding_func(packets)
     return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
@@ -241,9 +265,9 @@ def async_decode_media(
     """Perform demuxing and decoding as one background job.
 
     Args:
-        media_type: ``"audio"`` or ``"video"``.
-        src: Source identifier. If ``str`` type, it is interpreted as a source location,
-            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+        media_type: `"audio"` or `"video"`.
+        src: Source identifier. If `str` type, it is interpreted as a source location,
+            such as local file path or URL. If `bytes` or `memoryview` type, then
             they are interpreted as in-memory data.
     """
     func = _common._get_decode_from_source_func(media_type, src)
@@ -297,7 +321,7 @@ def async_convert_frames(frames, **kwargs):
 
         cuda_deleter (Callable):
             *Optional:* Custom CUDA memory deleter, which takes the address of memory allocated
-            by the ``cuda_allocator``.
+            by the `cuda_allocator`.
 
             An example of such function is
             [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
@@ -307,19 +331,19 @@ def async_convert_frames(frames, **kwargs):
 
             The buffer will be created on the device where the frame data are.
 
-            - ``FFmpegAudioFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
+            - `FFmpegAudioFrames` -> `CPUBuffer` or `CUDABuffer`
 
-            - ``FFmpegVideoFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
+            - `FFmpegVideoFrames` -> `CPUBuffer` or `CUDABuffer`
 
-            - ``FFmpegImageFrames`` -> ``CPUBuffer`` or ``CUDABuffer``
+            - `FFmpegImageFrames` -> `CPUBuffer` or `CUDABuffer`
 
-            - ``List[FFmpegImageFrames]`` -> ``CPUBuffer`` or ``CUDABuffer``
+            - `List[FFmpegImageFrames]` -> `CPUBuffer` or `CUDABuffer`
 
-            - ``NvDecVideoFrames`` -> ``CUDABuffer``
+            - `NvDecVideoFrames` -> `CUDABuffer`
 
-            - ``NvDecImageFrames`` -> ``CUDABuffer``
+            - `NvDecImageFrames` -> `CUDABuffer`
 
-            - ``List[NvDecImageFrames]`` -> ``CUDABuffer``
+            - `List[NvDecImageFrames]` -> `CUDABuffer`
 
     ??? note "Example: Convert audio frames to a contiguous buffer, then \
         cast it to NumPy array."
@@ -378,15 +402,15 @@ async def async_load_media(
 ):
     """Load the given media into buffer.
 
-    This function combines ``async_demux_media``, ``async_decode_packets`` (or
-    ``async_decode_packets_nvdec``) and ``async_convert_frames`` and load media
+    This function combines `async_demux_media`, `async_decode_packets` (or
+    `async_decode_packets_nvdec`) and `async_convert_frames` and load media
     into buffer.
 
     Args:
-        media_type: ``"audio"``, ``"video"`` or ``"image"``.
+        media_type: `"audio"`, `"video"` or `"image"`.
 
-        src: Source identifier. If ``str`` type, it is interpreted as a source location,
-            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+        src: Source identifier. If `str` type, it is interpreted as a source location,
+            such as local file path or URL. If `bytes` or `memoryview` type, then
             they are interpreted as in-memory data.
 
         demux_options (Dict[str, Any]):
