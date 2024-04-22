@@ -88,7 +88,10 @@ def get_video_filter_desc(
             This has to match the value passed to demux functions.
             It can be retrieved from `timestamp` attribute of `Packets` object.
 
-        width,height (int):
+        width (int):
+            __Video__, __Image__: *Optional:* Change the resolution of the frame.
+
+        height (int):
             __Video__, __Image__: *Optional:* Change the resolution of the frame.
 
         pix_fmt (str):
@@ -147,10 +150,8 @@ def get_filter_desc(packets, filter_args: Dict[str, Any] | None = None):
     Args:
         packets (Packets): Packet to process.
 
-        filter_args: Passed to
-            [get_audio_filter_desc][spdl.io.preprocessing.get_audio_filter_desc]
-            or
-            [get_video_filter_desc][spdl.io.preprocessing.get_video_filter_desc].
+        filter_args: Passed to [spdl.io.get_audio_filter_desc][] or
+            [spdl.io.get_video_filter_desc][].
     """
     filter_args = filter_args or {}
     match type(packets):
