@@ -15,10 +15,10 @@
 namespace spdl::core {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Asynchronous decodings
+// Decode only
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Decode audio, video or image
+/// Decode media packets
 template <MediaType media_type>
 FuturePtr async_decode(
     std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
@@ -40,6 +40,35 @@ FuturePtr async_decode_nvdec(
     int height,
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr decode_executor);
+
+////////////////////////////////////////////////////////////////////////////////
+// Demux + decode in one step
+////////////////////////////////////////////////////////////////////////////////
+
+/// Decode media from source
+template <MediaType media_type>
+FuturePtr async_decode(
+    std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    const std::string& uri,
+    const SourceAdaptorPtr& adaptor,
+    const std::optional<IOConfig>& io_cfg,
+    const std::optional<DecodeConfig>& decode_config,
+    std::string filter_desc,
+    ThreadPoolExecutorPtr decode_executor);
+
+template <MediaType media_type>
+FuturePtr async_decode_bytes(
+    std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    const std::string_view data,
+    const std::optional<IOConfig>& io_cfg,
+    const std::optional<DecodeConfig>& decode_config,
+    std::string filter_desc,
+    ThreadPoolExecutorPtr decode_executor,
+    bool _zero_clear = false);
+
+////////////////////////////////////////////////////////////////////////////////
 
 // Function for test
 FuturePtr async_sleep(

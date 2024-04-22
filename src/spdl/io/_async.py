@@ -233,6 +233,23 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
     return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
 
 
+def async_decode_media(
+    media_type: str,
+    src: Union[str, bytes, memoryview],
+    **kwargs,
+):
+    """Perform demuxing and decoding as one background job.
+
+    Args:
+        media_type: ``"audio"`` or ``"video"``.
+        src: Source identifier. If ``str`` type, it is interpreted as a source location,
+            such as local file path or URL. If ``bytes`` or ``memoryview`` type, then
+            they are interpreted as in-memory data.
+    """
+    func = _common._get_decode_from_source_func(media_type, src)
+    return _async_task(func, src, **kwargs)
+
+
 def async_convert_frames(frames, **kwargs):
     """Convert the decoded frames to buffer.
 
@@ -543,7 +560,7 @@ async def async_batch_load_image(
 
     decoding = []
     for src in srcs:
-        coro = _decode("image", src, demux_options, decode_options)
+        coro = async_decode_media("image", src, **demux_options, **decode_options)
         decoding.append(asyncio.create_task(coro))
 
     await asyncio.wait(decoding)

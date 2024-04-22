@@ -69,6 +69,19 @@ def _get_conversion_func(frames):
     return getattr(_libspdl, name)
 
 
+def _get_decode_from_source_func(media_type, src):
+    match type(src):
+        case builtins.bytes:
+            t = "bytes"
+        case builtins.memoryview:
+            t = "buffer"
+        case _:
+            t = "source"
+
+    name = f"async_decode_{media_type}_from_{t}"
+    return getattr(_libspdl, name)
+
+
 def _futurize_task(func, *args, **kwargs):
     future = Future()
 
