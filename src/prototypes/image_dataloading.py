@@ -40,7 +40,10 @@ def _parse_args(args):
     parser.add_argument("--num-decode-threads", type=int, default=16)
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--num-workers", type=int, required=True)
-    return parser.parse_args(args)
+    args = parser.parse_args(args)
+    if args.trace:
+        args.max_samples = args.batch_size * 40
+    return args
 
 
 # TODO: Think of a way to put this back
@@ -59,13 +62,12 @@ class PerfResult:
     num_frames: int
 
 
-def _iter_dataloader(dataloader, device, ev):
+def _iter_dataloader(dataloader, ev):
     t0 = t_int = time.monotonic()
     num_frames = num_frames_int = 0
     num_batches = 0
     try:
-        for buffer in dataloader:
-            batch = spdl.io.to_torch(buffer).to(device)
+        for batch in dataloader:
             num_frames += batch.shape[0]
             num_batches += 1
 
@@ -88,18 +90,6 @@ def _iter_dataloader(dataloader, device, ev):
     return PerfResult(elapsed, num_batches, num_frames)
 
 
-def _decode_func(srcs):
-    return spdl.io.batch_load_image(
-        srcs, width=256, height=256, pix_fmt="rgb24", strict=False
-    )
-
-
-async def _async_decode_func(srcs):
-    return await spdl.io.async_batch_load_image(
-        srcs, width=256, height=256, pix_fmt="rgb24", strict=False
-    )
-
-
 def _get_batch_generator(args):
     srcs_gen = _iter_flist(
         args.input_flist,
@@ -109,6 +99,36 @@ def _get_batch_generator(args):
         N=args.num_workers,
         max=args.max_samples,
     )
+
+    def _decode_func(srcs):
+        buffer = spdl.io.batch_load_image(
+            srcs,
+            width=224,
+            height=224,
+            pix_fmt="rgb24",
+            strict=False,
+            convert_options={
+                "cuda_device_index": args.worker_id,
+                "cuda_allocator": torch.cuda.caching_allocator_alloc,
+                "cuda_deleter": torch.cuda.caching_allocator_delete,
+            },
+        )
+        return spdl.io.to_torch(buffer)
+
+    async def _async_decode_func(srcs):
+        buffer = await spdl.io.async_batch_load_image(
+            srcs,
+            width=256,
+            height=256,
+            pix_fmt="rgb24",
+            convert_options={
+                "cuda_device_index": args.worker_id,
+                "cuda_allocator": torch.cuda.caching_allocator_alloc,
+                "cuda_deleter": torch.cuda.caching_allocator_delete,
+            },
+            strict=False,
+        )
+        return spdl.io.to_torch(buffer)
 
     match args.mode:
         case "concurrent":
@@ -144,7 +164,7 @@ def _benchmark(args):
         BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
         spdl.utils.tracing(trace_path, enable=args.trace is not None),
     ):
-        return _iter_dataloader(dataloader, device, ev)
+        return _iter_dataloader(dataloader, ev)
 
 
 def _init_logging(debug=False, worker_id=None):
