@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import spdl.utils
 
-from . import _common, preprocessing
+from . import _common, _preprocessing
 
 __all__ = [
     "convert_frames",
@@ -67,7 +67,7 @@ def decode_packets(packets, **kwargs) -> Future:
     """
     func = _common._get_decoding_func(packets)
     if "filter_desc" not in kwargs:
-        kwargs["filter_desc"] = preprocessing.get_filter_desc(packets)
+        kwargs["filter_desc"] = _preprocessing.get_filter_desc(packets)
     return _common._futurize_task(func, packets, **kwargs)
 
 
@@ -189,7 +189,7 @@ def batch_load_image(
     decode_options = decode_options or {}
     convert_options = convert_options or {}
 
-    filter_desc = preprocessing.get_video_filter_desc(
+    filter_desc = _preprocessing.get_video_filter_desc(
         width=width,
         height=height,
         pix_fmt=pix_fmt,

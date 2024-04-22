@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import spdl.io
 from spdl.lib import _libspdl
 
-from . import _common, preprocessing
+from . import _common, _preprocessing
 
 
 __all__ = [
@@ -192,7 +192,7 @@ def async_decode_packets(packets, **kwargs):
     """
     func = _common._get_decoding_func(packets)
     if "filter_desc" not in kwargs:
-        kwargs["filter_desc"] = preprocessing.get_filter_desc(packets)
+        kwargs["filter_desc"] = _preprocessing.get_filter_desc(packets)
     return _async_task(func, packets, **kwargs)
 
 
@@ -367,7 +367,7 @@ async def async_load_media(
         ...         "image",
         ...         "sample.jpg",
         ...         decode_options={
-        ...             "filter_desc": spdl.io.preprocessing.get_video_filter_desc(
+        ...             "filter_desc": spdl.io.get_video_filter_desc(
         ...                 width=124,
         ...                 height=96,
         ...                 pix_fmt="rgb24",
@@ -518,7 +518,7 @@ async def async_batch_load_image(
     decode_options = decode_options or {}
     convert_options = convert_options or {}
 
-    filter_desc = preprocessing.get_video_filter_desc(
+    filter_desc = _preprocessing.get_video_filter_desc(
         width=width,
         height=height,
         pix_fmt=pix_fmt,
