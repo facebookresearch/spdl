@@ -16,38 +16,22 @@ extern "C" {
 namespace py = pybind11;
 
 namespace spdl::core {
-namespace {
-////////////////////////////////////////////////////////////////////////////////
-// Helper functions
-////////////////////////////////////////////////////////////////////////////////
 using DecodeConfigPtr = std::shared_ptr<spdl::core::DecodeConfig>;
-
-DecodeConfigPtr make_decode_config(
-    const std::optional<std::string>& decoder,
-    const std::optional<OptionDict>& decoder_options) {
-  auto ret = std::make_shared<spdl::core::DecodeConfig>();
-  ret->decoder = decoder;
-  ret->decoder_options = decoder_options;
-  return ret;
-}
-
-std::optional<Rational> get_frame_rate(const py::object& frame_rate) {
-  if (frame_rate.is(py::none())) {
-    return std::nullopt;
-  }
-  py::object Fraction = py::module_::import("fractions").attr("Fraction");
-  py::object r = Fraction(frame_rate);
-  return {Rational{
-      r.attr("numerator").cast<int>(), r.attr("denominator").cast<int>()}};
-}
-} // namespace
 
 void register_decoding(py::module& m) {
   auto _DecodeConfig = py::class_<DecodeConfig, DecodeConfigPtr>(
       m, "DecodeConfig", py::module_local());
 
   _DecodeConfig.def(
-      py::init(&make_decode_config),
+      py::init(
+          [](const std::optional<std::string>& decoder,
+             const std::optional<OptionDict>& decoder_options)
+              -> DecodeConfigPtr {
+            auto ret = std::make_shared<spdl::core::DecodeConfig>();
+            ret->decoder = decoder;
+            ret->decoder_options = decoder_options;
+            return ret;
+          }),
       py::arg("decoder") = py::none(),
       py::arg("decoder_options") = py::none());
 
