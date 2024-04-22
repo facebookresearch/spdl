@@ -28,7 +28,7 @@ The following functions implement each stage
 - [async_convert_frames][spdl.io.async_convert_frames] ([convert_frames][spdl.io.convert_frames])
 
 
-Please refer to [High-level I/O APIs](./io.html) for examples of APIs built from low-level APIs.
+Please refer to [High-level I/O APIs](./io.md) for examples of APIs built from low-level APIs.
 
 !!! note
 
