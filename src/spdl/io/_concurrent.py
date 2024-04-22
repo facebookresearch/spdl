@@ -83,6 +83,22 @@ def decode_packets_nvdec(packets, cuda_device_index, **kwargs) -> Future:
     )
 
 
+def decode_media(
+    media_type: str,
+    src: Union[str, bytes, memoryview],
+    **kwargs,
+):
+    """Demux and decode media from source.
+
+    The signature of this function is same as [spdl.io.async_decode_media][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    Frames object when fullfilled.
+    """
+    func = _common._get_decode_from_source_func(media_type, src)
+    return _common._futurize_task(func, src, **kwargs)
+
+
 def convert_frames(frames, **kwargs) -> Future:
     """Convert the decoded frames to buffer.
 

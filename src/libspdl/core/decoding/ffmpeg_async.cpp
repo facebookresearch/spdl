@@ -2,6 +2,7 @@
 
 #include "libspdl/core/detail/executor.h"
 #include "libspdl/core/detail/ffmpeg/decoding.h"
+#include "libspdl/core/detail/ffmpeg/demuxing.h"
 #include "libspdl/core/detail/future.h"
 
 namespace spdl::core {
@@ -53,5 +54,68 @@ template FuturePtr async_decode(
     const std::optional<DecodeConfig>& decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
+
+//////////////////////////////////////////////////////////////////////////////
+// Demuxing + decoding in one go
+//////////////////////////////////////////////////////////////////////////////
+
+template <>
+FuturePtr async_decode(
+    std::function<void(FFmpegFramesWrapperPtr<MediaType::Image>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    const std::string& uri,
+    const SourceAdaptorPtr& adaptor,
+    const std::optional<IOConfig>& io_cfg,
+    const std::optional<DecodeConfig>& decode_cfg,
+    std::string filter_desc,
+    ThreadPoolExecutorPtr decode_executor) {
+  auto task = folly::coro::co_invoke(
+      [=]() -> folly::coro::Task<FFmpegFramesWrapperPtr<MediaType::Image>> {
+        auto frames = co_await detail::decode_packets_ffmpeg<MediaType::Image>(
+            co_await detail::demux_image(uri, adaptor, io_cfg),
+            std::move(decode_cfg),
+            std::move(filter_desc));
+        co_return wrap<MediaType::Image, FFmpegFramesPtr>(std::move(frames));
+      });
+
+  return detail::execute_task_with_callback<
+      FFmpegFramesWrapperPtr<MediaType::Image>>(
+      std::move(task),
+      std::move(set_result),
+      std::move(notify_exception),
+      detail::get_decode_executor(decode_executor));
+}
+
+template <>
+FuturePtr async_decode_bytes(
+    std::function<void(FFmpegFramesWrapperPtr<MediaType::Image>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    const std::string_view data,
+    const std::optional<IOConfig>& io_cfg,
+    const std::optional<DecodeConfig>& decode_cfg,
+    std::string filter_desc,
+    ThreadPoolExecutorPtr executor,
+    bool _zero_clear) {
+  auto task = folly::coro::co_invoke(
+      [=]() -> folly::coro::Task<FFmpegFramesWrapperPtr<MediaType::Image>> {
+        auto packets = co_await detail::demux_image(
+            data,
+            std::unique_ptr<SourceAdaptor>(new BytesAdaptor()),
+            std::move(io_cfg));
+        if (_zero_clear) {
+          std::memset((void*)data.data(), 0, data.size());
+        }
+        auto frames = co_await detail::decode_packets_ffmpeg<MediaType::Image>(
+            std::move(packets), std::move(decode_cfg), std::move(filter_desc));
+        co_return wrap<MediaType::Image, FFmpegFramesPtr>(std::move(frames));
+      });
+
+  return detail::execute_task_with_callback<
+      FFmpegFramesWrapperPtr<MediaType::Image>>(
+      std::move(task),
+      std::move(set_result),
+      std::move(notify_exception),
+      detail::get_decode_executor(executor));
+}
 
 } // namespace spdl::core

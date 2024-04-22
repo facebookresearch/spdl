@@ -306,6 +306,152 @@ void register_decoding(py::module& m) {
       py::arg("_executor") = nullptr);
 
   ////////////////////////////////////////////////////////////////////////////////
+  // Async demuxing + decoding - FFMPEG
+  ////////////////////////////////////////////////////////////////////////////////
+
+  m.def(
+      "async_decode_image_from_source",
+      [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         const std::string& uri,
+         const std::optional<IOConfig>& io_config,
+         const std::optional<DecodeConfig>& decode_config,
+         const std::optional<Rational>& frame_rate,
+         const std::optional<int>& width,
+         const std::optional<int>& height,
+         const std::optional<std::string>& pix_fmt,
+         const std::optional<std::string>& filter_desc,
+         const SourceAdaptorPtr& _adaptor,
+         std::shared_ptr<ThreadPoolExecutor> _executor) {
+        auto filter = get_video_filter_description(
+            frame_rate,
+            width,
+            height,
+            pix_fmt,
+            std::nullopt,
+            std::nullopt,
+            std::nullopt,
+            filter_desc);
+        return async_decode<MediaType::Image>(
+            std::move(set_result),
+            std::move(notify_exception),
+            uri,
+            _adaptor,
+            io_config,
+            decode_config,
+            std::move(filter),
+            _executor);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("src"),
+      py::kw_only(),
+      py::arg("io_config") = py::none(),
+      py::arg("decoder_config") = py::none(),
+      py::arg("frame_rate") = py::none(),
+      py::arg("width") = py::none(),
+      py::arg("height") = py::none(),
+      py::arg("pix_fmt") = py::none(),
+      py::arg("filter_desc") = py::none(),
+      py::arg("_adaptor") = nullptr,
+      py::arg("_executor") = nullptr);
+
+  m.def(
+      "async_decode_image_from_bytes",
+      [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         py::bytes data,
+         const std::optional<IOConfig>& io_config,
+         const std::optional<DecodeConfig>& decode_config,
+         const std::optional<Rational>& frame_rate,
+         const std::optional<int>& width,
+         const std::optional<int>& height,
+         const std::optional<std::string>& pix_fmt,
+         const std::optional<std::string>& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> _executor,
+         bool _zero_clear) {
+        auto filter = get_video_filter_description(
+            frame_rate,
+            width,
+            height,
+            pix_fmt,
+            std::nullopt,
+            std::nullopt,
+            std::nullopt,
+            filter_desc);
+        return async_decode_bytes<MediaType::Image>(
+            std::move(set_result),
+            std::move(notify_exception),
+            static_cast<std::string_view>(data),
+            io_config,
+            decode_config,
+            std::move(filter),
+            _executor,
+            _zero_clear);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("data"),
+      py::kw_only(),
+      py::arg("io_config") = py::none(),
+      py::arg("decoder_config") = py::none(),
+      py::arg("frame_rate") = py::none(),
+      py::arg("width") = py::none(),
+      py::arg("height") = py::none(),
+      py::arg("pix_fmt") = py::none(),
+      py::arg("filter_desc") = py::none(),
+      py::arg("_executor") = nullptr,
+      py::arg("_zero_clear") = false);
+
+  m.def(
+      "async_decode_image_from_buffer",
+      [](std::function<void(FFmpegImageFramesWrapperPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         py::buffer data,
+         const std::optional<IOConfig>& io_config,
+         const std::optional<DecodeConfig>& decode_config,
+         const std::optional<Rational>& frame_rate,
+         const std::optional<int>& width,
+         const std::optional<int>& height,
+         const std::optional<std::string>& pix_fmt,
+         const std::optional<std::string>& filter_desc,
+         std::shared_ptr<ThreadPoolExecutor> _executor,
+         bool _zero_clear) {
+        auto buffer_info = data.request(/*writable=*/_zero_clear);
+        auto filter = get_video_filter_description(
+            frame_rate,
+            width,
+            height,
+            pix_fmt,
+            std::nullopt,
+            std::nullopt,
+            std::nullopt,
+            filter_desc);
+        return async_decode_bytes<MediaType::Image>(
+            std::move(set_result),
+            std::move(notify_exception),
+            std::string_view{(char*)buffer_info.ptr, (size_t)buffer_info.size},
+            io_config,
+            decode_config,
+            std::move(filter),
+            _executor,
+            _zero_clear);
+      },
+      py::arg("set_result"),
+      py::arg("notify_exception"),
+      py::arg("data"),
+      py::kw_only(),
+      py::arg("io_config") = py::none(),
+      py::arg("decoder_config") = py::none(),
+      py::arg("frame_rate") = py::none(),
+      py::arg("width") = py::none(),
+      py::arg("height") = py::none(),
+      py::arg("pix_fmt") = py::none(),
+      py::arg("filter_desc") = py::none(),
+      py::arg("_executor") = nullptr,
+      py::arg("_zero_clear") = false);
+
+  ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
