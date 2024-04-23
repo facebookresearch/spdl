@@ -42,8 +42,9 @@ nav:
   - "SPDL (Python)":
       - "spdl.io":
           - "Overview": spdl/io_overview.md
-          - "High-level APIs": spdl/io.md
           - "Low-level APIs": spdl/io_core.md
+          - "High-level APIs": spdl/io.md
+          - "Preprocessing": spdl/io_preprocessing.md
           - "Support Structures": spdl/io_support.md
       - "spdl.utils":
           - "Tracing": spdl/utils_tracing.md
