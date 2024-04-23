@@ -175,7 +175,7 @@ def apply_concurrent(
 ################################################################################
 def _check_exception(task, stacklevel=1):
     try:
-        task.exception()
+        task.result()
     except asyncio.exceptions.CancelledError:
         _LG.warning("Task [%s] was cancelled.", task.get_name(), stacklevel=stacklevel)
     except Exception as err:
@@ -211,6 +211,7 @@ async def apply_async(
     async_func: Callable[[T], Awaitable[Any]],
     generator: Iterable[T],
     max_concurrency: int = 10,
+    timeout: float = 300,
 ):
     """Apply async function to the non-async generator.
 
@@ -227,6 +228,7 @@ async def apply_async(
         async_func: The async function to apply.
         generator: The generator to apply the async function to.
         max_concurrency: The maximum number of concurrent async tasks.
+        timeout: The maximum time to wait for the async function. (Unit: second)
 
     Yields:
         The output of the async function.
@@ -278,7 +280,10 @@ async def apply_async(
     task = asyncio.create_task(coro, name="_apply_async")
     task.add_done_callback(_check_exception)
 
-    while (item := await queue.get()) is not sentinel:
+    while True:
+        item = await asyncio.wait_for(queue.get(), timeout)
+        if item is sentinel:
+            break
         yield item
 
     await task
