@@ -5,7 +5,11 @@ from typing import Any, List
 from . import _async, _concurrent, _convert, _preprocessing, _types
 
 __all__ = sorted(
-    _convert.__all__ + _async.__all__ + _concurrent.__all__ + _preprocessing.__all__ + _types.__all__
+    _convert.__all__
+    + _async.__all__
+    + _concurrent.__all__
+    + _preprocessing.__all__
+    + _types.__all__
 )
 
 _doc_submodules = [

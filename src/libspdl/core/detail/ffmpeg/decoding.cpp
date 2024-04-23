@@ -196,10 +196,7 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
         std::move(packets), std::move(codec_ctx), frames.get());
   } else {
     co_await decode_pkts_with_filter(
-        std::move(packets),
-        std::move(codec_ctx),
-        filter_desc,
-        frames.get());
+        std::move(packets), std::move(codec_ctx), filter_desc, frames.get());
   }
   co_return std::move(frames);
 }
