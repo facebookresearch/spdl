@@ -1,5 +1,8 @@
+import logging
 from pathlib import Path
 from typing import Optional, Union
+
+_LG = logging.getLogger(__name__)
 
 
 def _iter_file(path, prefix):
@@ -45,8 +48,15 @@ def _iter_flist(
     max: Optional[int] = None,
     drop_last: bool = False,
 ):
-    return _iter_batch(
+    gen = _iter_batch(
         _iter_sample_every_n(_iter_file(path, prefix), n, N, max),
         batch_size,
         drop_last=drop_last,
     )
+    try:
+        yield from gen
+    except Exception:
+        # Because this utility is intended to be used in background thread,
+        # we supress the error and exit
+        _LG.exception("Error while iterating over flist %s", path)
+        return
