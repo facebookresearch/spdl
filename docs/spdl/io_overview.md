@@ -22,19 +22,21 @@ graph LR
 The individual functionalities are implemented in C++ with multi-threading, so they can
 run free from Python's GIL contention.
 
-The [low-level APIs][./io_core.md] implements these individual functionalities, while the
-[high-level APIs][./io.md] implements high-level tasks such as loading media from source
-to buffer, using the low-level APIs.
+The [low-level APIs](./io_core.md) implements these individual functionalities.
+The [high-level APIs](./io.md) combine them to implement common use cases, such as
+creating a buffer object from source.
 
 ## Async and concurrent API
 
 The `spdl.io` module exposes these funtionalities as asynchronous functions of two types.
-One as coroutines using asyncio and the other as parallel tasks utilizing
+One as coroutines using `asyncio`, and the other as parallel tasks utilizing
 `concurrent.futures.Future`.
 
-The asyncio APIs are more flexible. It is easy to compose multiple coroutines and create
-a complex task. You can mix different kinds of coroutines, including
-ones from other packages. However, coroutines are executable only inside of async loop.
+The asyncio APIs are only usable with async loop, however it is more flexible than
+concurrent API. It is easy to compose multiple coroutines and build a complex task.
+You can also mix different kinds of coroutines, including ones from other packages.
+Since the async loop will manage the coroutine executions, they are highly resource
+efficient.
 
 ??? note "Example: Load an image using async API"
 
@@ -111,6 +113,7 @@ batch image loading. For the actual usage, please refer to
 
 
 ??? note "Example: Batch load images with async API"
+
     ```python
     >>> # Define a coroutine that decodes a single image into frames (but not to buffer)
     >>> async def decode_image(src: str, width: int, height: int, pix_fmt="rgb24"):
@@ -134,6 +137,7 @@ batch image loading. For the actual usage, please refer to
     ```
 
 ??? note "Example: Batch load images with async API"
+
     ```python
     >>> @spdl.utils.chain_futures
     ... def _decode(src, width, height):

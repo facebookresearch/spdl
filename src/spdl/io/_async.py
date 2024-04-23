@@ -419,8 +419,7 @@ async def async_load_media(
         ...     use_nvdec=True,
         ... )
         >>> buffer = asyncio.run(coro)
-        >>> # failing. todo: fix
-        >>> # tensor = spdl.io.to_torch(buffer)  # PyTorch CUDA tensor
+        >>> tensor = spdl.io.to_torch(buffer)  # PyTorch CUDA tensor
         >>>
         ```
     """
