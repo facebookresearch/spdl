@@ -15,7 +15,7 @@ The following fuctions help build filter parameter for common usecases.
 ## Custom Filtering
 
 Filter description is a simple `str` object. You can write custom filter description
-by your self or insert a part of filter descriptions to the previous helper functions.
+by yourself or insert a part of filter descriptions to the previous helper functions.
 
 !!! note
     Filter is also used for trimming the packets for the user-specified
@@ -34,7 +34,8 @@ by your self or insert a part of filter descriptions to the previous helper func
 Using filters like `hflip`, `vflip`, `rotate`, `scale` and `crop`, we can compose
 an augmentation pipeline.
 
-For the detail of each filter, please refer to https://ffmpeg.org/ffmpeg-filters.html.
+For the detail of each filter, please refer to
+(https://ffmpeg.org/ffmpeg-filters.html)[https://ffmpeg.org/ffmpeg-filters.html].
 
 ```python
 >>> import random
@@ -63,8 +64,6 @@ For the detail of each filter, please refer to https://ffmpeg.org/ffmpeg-filters
 ... 
 ...     filter_desc = ",".join(filters)
 ... 
-...     print(filter_desc)
-...     
 ...     return filter_desc
 ```
 

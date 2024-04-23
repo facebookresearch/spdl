@@ -107,7 +107,7 @@ The following example is equivalent of the previous async example.
     >>>
     ```
 
-For the sake of illustration purpose, the following examples show how to implement
+For illustration purpose, the following examples show how to implement
 batch image loading. For the actual usage, please refer to
 [spdl.io.async_batch_load_image][] and [spdl.io.batch_load_image][].
 
