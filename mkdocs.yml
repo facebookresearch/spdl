@@ -40,6 +40,7 @@ plugins:
 
 nav:
   - "SPDL (Python)":
+      - Installation: installation.md
       - "spdl.io":
           - "Overview": spdl/io_overview.md
           - "Low-level APIs": spdl/io_core.md

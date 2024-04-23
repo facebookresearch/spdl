@@ -193,7 +193,7 @@ def main():
         author="Moto Hira",
         author_email="moto",
         description="SPDL: Scalable and Performant Data Loading.",
-        long_description="Prototype data loader for fast multimedia processing.",
+        long_description="Fast multimedia data loading and processing.",
         packages=find_packages(where="src"),
         package_dir={"": "src"},
         ext_modules=ext_modules,
