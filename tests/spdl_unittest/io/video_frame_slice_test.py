@@ -1,5 +1,7 @@
 import numpy as np
 
+import pytest
+
 import spdl.io
 import spdl.utils
 from spdl.io.preprocessing import get_video_filter_desc
@@ -68,3 +70,60 @@ def test_video_frames_iterate(get_sample):
 
     for i in range(n):
         assert np.array_equal(array[i], arrs[i])
+
+
+def test_video_frames_list_slice(get_sample):
+    """FFmpegVideoFrames can be sliced with list of integers"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    n = 100
+    sample = get_sample(cmd, width=320, height=240)
+
+    frames = _decode_video(sample.path, pix_fmt="rgb24")
+
+    assert len(frames) == n
+
+    # The valid value range is [-n, n)
+    idx = [0, 99, 1, 3, -1, -100]
+
+    sampled_frames = frames[idx]
+
+    refs = _to_numpy(frames)
+    array = _to_numpy(sampled_frames)
+
+    for i in range(len(idx)):
+        assert np.array_equal(array[i], refs[idx[i]])
+
+
+def test_video_frames_list_slice_empty(get_sample):
+    """FFmpegVideoFrames can be sliced with an empty list"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    n = 100
+    sample = get_sample(cmd, width=320, height=240)
+
+    frames = _decode_video(sample.path, pix_fmt="rgb24")
+
+    assert len(frames) == n
+
+    # The valid value range is [-n, n)
+    sampled_frames = frames[[]]
+
+    assert len(sampled_frames) == 0
+
+
+def test_video_frames_list_slice_out_of_range(get_sample):
+    """Slicing FFmpegVideoFrames with an out-of-range value fails"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    n = 100
+    sample = get_sample(cmd, width=320, height=240)
+
+    frames = _decode_video(sample.path, pix_fmt="rgb24")
+
+    assert len(frames) == n
+
+    # The valid value range is [-n, n)
+    with pytest.raises(IndexError):
+        frames[[n]]
+
+    # The valid value range is [-n, n)
+    with pytest.raises(IndexError):
+        frames[[-n - 1]]

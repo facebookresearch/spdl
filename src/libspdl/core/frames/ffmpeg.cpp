@@ -7,6 +7,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <cassert>
+#include <exception>
 
 extern "C" {
 #include <libavutil/frame.h>
@@ -224,6 +225,31 @@ FFmpegFrames<media_type>::slice(int start, int stop, int step) const
 }
 
 template <MediaType media_type>
+FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
+    const std::vector<int64_t> index) const
+  requires _IS_VIDEO
+{
+  const int numel = frames.size();
+  for (const auto& i : index) {
+    if (i >= numel || i < -numel) {
+      throw std::out_of_range(
+          fmt::format("Index {} is outside of [0, {})", i, frames.size()));
+    }
+  }
+  auto out = std::make_unique<FFmpegVideoFrames>(id, time_base);
+  if (!index.size()) {
+    return out;
+  }
+  for (auto i : index) {
+    if (i < 0) {
+      i += numel;
+    }
+    out->frames.push_back(detail::make_reference(frames[i]));
+  }
+  return out;
+}
+
+template <MediaType media_type>
 FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int i) const
   requires _IS_VIDEO
 {
@@ -238,6 +264,7 @@ FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int i) const
   out->push_back(detail::make_reference(frames[i]));
   return out;
 }
+
 template struct FFmpegFrames<MediaType::Audio>;
 template struct FFmpegFrames<MediaType::Video>;
 template struct FFmpegFrames<MediaType::Image>;

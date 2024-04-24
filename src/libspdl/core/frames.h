@@ -188,6 +188,11 @@ class FFmpegFrames {
 
   ///
   /// Slice (`__getitem__`) operation.
+  FFmpegVideoFramesPtr slice(const std::vector<int64_t> index) const
+    requires _IS_VIDEO;
+
+  ///
+  /// Slice (`__getitem__`) operation.
   FFmpegImageFramesPtr slice(int index) const
     requires _IS_VIDEO;
 };
