@@ -7,16 +7,30 @@
 
 namespace spdl::core::detail {
 
-AVFilterGraphPtr get_audio_filter(
+class FilterGraph {
+  AVFilterGraphPtr graph;
+
+ public:
+  FilterGraph(AVFilterGraphPtr&& g) : graph(std::move(g)) {}
+  FilterGraph(const AVFilterGraphPtr&) = delete;
+  FilterGraph& operator=(const AVFilterGraphPtr&) = delete;
+
+  AVFilterContext* get_src_ctx();
+  AVFilterContext* get_sink_ctx();
+  Rational get_time_base() const;
+};
+
+FilterGraph get_audio_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx);
 
-AVFilterGraphPtr get_video_filter(
+FilterGraph get_video_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx,
-    std::optional<Rational> frame_rate = std::nullopt);
+    Rational frame_rate);
 
-// for debug
-std::string describe_graph(AVFilterGraph* graph);
+FilterGraph get_image_filter(
+    const std::string& filter_description,
+    AVCodecContext* codec_ctx);
 
 } // namespace spdl::core::detail

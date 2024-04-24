@@ -199,6 +199,27 @@ def test_decode_video_clips_num_frames(get_sample):
     asyncio.run(_test(sample.path))
 
 
+def test_decode_video_frame_rate_pts(get_sample):
+    """Applying frame rate outputs correct PTS."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -r 10 -frames:v 20 sample.mp4"
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        packets = await spdl.io.async_demux_media("video", src)
+        frames_ref = await spdl.io.async_decode_packets(packets.clone())
+        frames = await spdl.io.async_decode_packets(
+            packets, filter_desc=get_video_filter_desc(frame_rate=(5, 1))
+        )
+
+        pts_ref = frames_ref._get_pts()
+        pts = frames._get_pts()
+        print(pts_ref, pts)
+
+        assert np.all(pts_ref[::2] == pts)
+
+    asyncio.run(_test(sample.path))
+
+
 async def _decode_image(path):
     packets = await spdl.io.async_demux_media("image", path)
     print(packets)

@@ -121,27 +121,9 @@ template <MediaType media_type>
 folly::coro::Task<void> decode_pkts_with_filter(
     PacketsPtr<media_type> packets,
     AVCodecContextPtr codec_ctx,
-    std::string filter_desc,
+    AVFilterContext* src_ctx,
+    AVFilterContext* sink_ctx,
     FFmpegFrames<media_type>* frames) {
-  auto filter_graph = [&]() {
-    if constexpr (media_type == MediaType::Audio) {
-      return get_audio_filter(filter_desc, codec_ctx.get());
-    }
-    if constexpr (media_type == MediaType::Video) {
-      return get_video_filter(
-          filter_desc, codec_ctx.get(), packets->frame_rate);
-    }
-    if constexpr (media_type == MediaType::Image) {
-      return get_video_filter(filter_desc, codec_ctx.get());
-    }
-  }();
-  AVFilterContext* src_ctx = filter_graph->filters[0];
-  AVFilterContext* sink_ctx = filter_graph->filters[1];
-  assert(strcmp(src_ctx->name, "in") == 0);
-  assert(strcmp(sink_ctx->name, "out") == 0);
-
-  XLOG(DBG5) << describe_graph(filter_graph.get());
-
   for (auto& packet : packets->get_packets()) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
@@ -169,6 +151,23 @@ folly::coro::Task<void> decode_pkts_with_filter(
     }
   }
 }
+
+template <MediaType media_type>
+FilterGraph get_filter(
+    AVCodecContext* codec_ctx,
+    const std::string& filter_desc,
+    std::optional<Rational> frame_rate) {
+  if constexpr (media_type == MediaType::Audio) {
+    return get_audio_filter(filter_desc, codec_ctx);
+  }
+  if constexpr (media_type == MediaType::Video) {
+    return get_video_filter(filter_desc, codec_ctx, *frame_rate);
+  }
+  if constexpr (media_type == MediaType::Image) {
+    return get_image_filter(filter_desc, codec_ctx);
+  }
+}
+
 } // namespace
 
 template <MediaType media_type>
@@ -195,8 +194,15 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     co_await decode_pkts(
         std::move(packets), std::move(codec_ctx), frames.get());
   } else {
+    auto filter = get_filter<media_type>(
+        codec_ctx.get(), filter_desc, packets->frame_rate);
     co_await decode_pkts_with_filter(
-        std::move(packets), std::move(codec_ctx), filter_desc, frames.get());
+        std::move(packets),
+        std::move(codec_ctx),
+        filter.get_src_ctx(),
+        filter.get_sink_ctx(),
+        frames.get());
+    frames->time_base = filter.get_time_base();
   }
   co_return std::move(frames);
 }
