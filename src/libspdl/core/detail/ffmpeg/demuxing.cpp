@@ -7,6 +7,9 @@
 
 #include <folly/logging/xlog.h>
 
+#include <cmath>
+
+
 namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
@@ -77,13 +80,15 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
     end += 0.3;
   }
 
-  int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
-  {
-    TRACE_EVENT("demuxing", "av_seek_frame");
-    CHECK_AVERROR(
-        av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
-        "Failed to seek to the timestamp {} [sec]",
-        start);
+  if (!std::isinf(start)) {
+    int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
+    {
+      TRACE_EVENT("demuxing", "av_seek_frame");
+      CHECK_AVERROR(
+          av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
+          "Failed to seek to the timestamp {} [sec]",
+          start);
+    }
   }
 
   double packet_ts = -1;

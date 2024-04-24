@@ -50,10 +50,13 @@ def get_audio_filter_desc(
 
     if timestamp is not None:
         start, end = timestamp
-        ts = [f"start={start}"]
+        ts = []
+        if not math.isinf(start):
+            ts.append(f"start={start}")
         if not math.isinf(end):
             ts.append(f"end={end}")
-        parts.append(f"atrim={':'.join(ts)}")
+        if ts:
+            parts.append(f"atrim={':'.join(ts)}")
 
     if num_frames is not None:
         parts.append("apad")
@@ -117,10 +120,13 @@ def get_video_filter_desc(
 
     if timestamp is not None:
         start, end = timestamp
-        ts = [f"start={start}"]
+        ts = []
+        if not math.isinf(start):
+            ts.append(f"start={start}")
         if not math.isinf(end):
             ts.append(f"end={end}")
-        parts.append(f"trim={':'.join(ts)}")
+        if ts:
+            parts.append(f"trim={':'.join(ts)}")
 
     if num_frames is not None:
         pad = (
