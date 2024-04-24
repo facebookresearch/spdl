@@ -55,6 +55,23 @@ def test_video_frames_getitem_int(get_sample):
         assert np.array_equal(arr0, arr[i])
 
 
+def test_video_frames_getitem_negative_int(get_sample):
+    """FFmpegVideoFrames.__getitem__ works for negative index input"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    n = 100
+    sample = get_sample(cmd, width=320, height=240)
+
+    frames = _decode_video(sample.path, pix_fmt="rgb24")
+
+    assert len(frames) == n
+    frames_split = [frames[-i - 1] for i in range(n)]
+
+    arr = _to_numpy(frames)
+    for i in range(n):
+        arr0 = _to_numpy(frames_split[i])
+        assert np.array_equal(arr0, arr[-i - 1])
+
+
 def test_video_frames_iterate(get_sample):
     """FFmpegVideoFrames can be iterated"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
