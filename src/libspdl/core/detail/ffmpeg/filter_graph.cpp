@@ -106,8 +106,7 @@ AVFilterGraphPtr get_filter(
     const char* desc,
     const AVFilter* src,
     const char* src_arg,
-    const AVFilter* sink,
-    AVBufferRef* hw_frames_ctx = nullptr) {
+    const AVFilter* sink) {
   auto filter_graph = alloc_filter_graph();
   auto p = filter_graph.get();
 
@@ -127,10 +126,6 @@ AVFilterGraphPtr get_filter(
         avfilter_graph_parse_ptr(p, desc, out, in, nullptr),
         "Failed to create filter from: \"{}\"",
         desc);
-  }
-
-  if (hw_frames_ctx) {
-    src_ctx->outputs[0]->hw_frames_ctx = av_buffer_ref(hw_frames_ctx);
   }
 
   // 3. Create the filter graph
@@ -195,12 +190,7 @@ AVFilterGraphPtr get_video_filter(
       codec_ctx->pkt_timebase,
       frame_rate,
       codec_ctx->sample_aspect_ratio);
-  return get_filter(
-      filter_description.c_str(),
-      src,
-      arg.c_str(),
-      sink,
-      codec_ctx->hw_frames_ctx);
+  return get_filter(filter_description.c_str(), src, arg.c_str(), sink);
 }
 
 std::string describe_graph(AVFilterGraph* graph) {
