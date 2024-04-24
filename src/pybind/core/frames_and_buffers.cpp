@@ -312,6 +312,12 @@ void register_frames_and_buffers(py::module& m) {
                 self.get_frames_ref()->slice(i));
           })
       .def(
+          "__getitem__",
+          [](const FFmpegVideoFramesWrapper& self, std::vector<int64_t> idx) {
+            return wrap<MediaType::Video, FFmpegFramesPtr>(
+                self.get_frames_ref()->slice(idx));
+          })
+      .def(
           "_get_pts",
           [](const FFmpegVideoFramesWrapper& self) -> std::vector<double> {
             std::vector<double> ret;
@@ -373,10 +379,19 @@ void register_frames_and_buffers(py::module& m) {
                 ref->get_width(),
                 ref->get_height());
           })
-      .def("clone", [](const FFmpegImageFramesWrapper& self) {
-        return wrap<MediaType::Image, FFmpegFramesPtr>(
-            clone(self.get_frames_ref()));
-      });
+      .def(
+          "clone",
+          [](const FFmpegImageFramesWrapper& self) {
+            return wrap<MediaType::Image, FFmpegFramesPtr>(
+                clone(self.get_frames_ref()));
+          })
+      .def_property_readonly(
+          "pts", [](const FFmpegImageFramesWrapper& self) -> double {
+            auto& frames = self.get_frames_ref();
+            auto base = frames->time_base;
+            auto& frame = frames->get_frames().at(0);
+            return double(frame->pts) * base.num / base.den;
+          });
 
 #ifdef SPDL_USE_NVCODEC
 #define IF_NVDECVIDEOFRAMES_ENABLED(x) x
