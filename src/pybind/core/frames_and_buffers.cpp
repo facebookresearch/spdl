@@ -307,7 +307,7 @@ void register_frames_and_buffers(py::module& m) {
           })
       .def(
           "__getitem__",
-          [](const FFmpegVideoFramesWrapper& self, int i) {
+          [](const FFmpegVideoFramesWrapper& self, int64_t i) {
             return wrap<MediaType::Image, FFmpegFramesPtr>(
                 self.get_frames_ref()->slice(i));
           })

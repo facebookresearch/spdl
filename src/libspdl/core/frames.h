@@ -193,7 +193,7 @@ class FFmpegFrames {
 
   ///
   /// Slice (`__getitem__`) operation.
-  FFmpegImageFramesPtr slice(int index) const
+  FFmpegImageFramesPtr slice(int64_t index) const
     requires _IS_VIDEO;
 };
 

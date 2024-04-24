@@ -9,6 +9,8 @@
 #include <cassert>
 #include <exception>
 
+#include <folly/logging/xlog.h>
+
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/pixdesc.h>
@@ -250,17 +252,19 @@ FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
 }
 
 template <MediaType media_type>
-FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int i) const
+FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int64_t i) const
   requires _IS_VIDEO
 {
-  const int numel = frames.size();
-  int stop = i + 1, step = 1;
-  if (!adjust_indices(numel, &i, &stop, step)) {
+  const int numel = static_cast<int64_t>(frames.size());
+  if (i >= numel || i < -numel) {
     throw std::out_of_range(
-        fmt::format("Index {} is outside of [0, {})", i, frames.size()));
+        fmt::format("Index {} is outside of [0, {})", i, numel));
   }
-  auto out = std::make_unique<FFmpegFrames<MediaType::Image>>(id, time_base);
+  if (i < 0) {
+    i += numel;
+  }
   assert(0 <= i && i < numel);
+  auto out = std::make_unique<FFmpegFrames<MediaType::Image>>(id, time_base);
   out->push_back(detail::make_reference(frames[i]));
   return out;
 }
