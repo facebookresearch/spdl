@@ -53,7 +53,7 @@ def demux_media(
         func = _common._get_demux_func(media_type, src)
         return _common._futurize_task(func, src, **kwargs)
 
-    timestamps = [(0.0, float("inf")) if timestamp is None else timestamp]
+    timestamps = [(-float("inf"), float("inf")) if timestamp is None else timestamp]
     return streaming_demux(media_type, src, timestamps, **kwargs)[0]
 
 

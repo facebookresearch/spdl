@@ -163,7 +163,7 @@ def async_demux_media(
         func = _common._get_demux_func(media_type, src)
         return _async_task(func, src, **kwargs)
 
-    timestamps = [(0.0, float("inf")) if timestamp is None else timestamp]
+    timestamps = [(-float("inf"), float("inf")) if timestamp is None else timestamp]
     return _fetch_one(async_streaming_demux(media_type, src, timestamps, **kwargs))
 
 
