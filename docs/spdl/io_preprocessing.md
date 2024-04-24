@@ -111,3 +111,77 @@ vflip,rotate=angle=0.18,scale=256:256,crop=224:224:x=0.54*(iw-ow):y=0.34*(ih-oh)
 and here are the resulting images.
 
 ![Images modified with the augmentation pipeline](../assets/preprocessing_random_aug.png)
+
+## Video frame sampling
+
+When decoding audio or video, SPDL supports specifying the decoding window by timestamps,
+but it does not support specifying the window by sample index.
+
+This is because generally speaking, packets objects contain timestamp information, but it
+does not have metadata about how many frames there are in packets.
+
+So one cannot reliably know the number of frames, or frame index until decoding is complete.
+However, once the decoding is complete, SPDL provides ways to manipulate the frame objects,
+so that you can emulate sampling by indexing.
+
+The following code illustrates this;
+
+First we decode frames,
+
+```python
+
+>>> # Demux the first 20 seconds
+>>> packets = await spdl.io.async_demux_media("video", path, timestamp=(0, 20))
+>>>
+>>> # Decode and convert to RGB
+>>> frames = await spdl.io.async_decode_packets(
+...     packets,
+...     filter_desc=spdl.io.get_filter_desc(
+...         packets,
+...         filter_args={
+...             "pix_fmt": "rgb24",
+...         },
+...     ),
+... )
+>>> # Say this video is 29.97 FPS
+>>> num_frames = len(frames)
+600
+```
+
+Then we slice the frames object and convert the resulting frames to buffer.
+
+* Slicing at fixed interval
+
+```python
+sampled_frames = frames[::100]
+```
+
+* Uniform random sampling
+
+```python
+num_samples = 6
+
+idx = [random.randint(0, num_frames - 1) for _ in range(num_samples)]
+sampled_frames = frames[idx]
+```
+
+* Sequential sampling at random index
+
+```python
+i = random.randint(0, num_frames - num_samples - 1)
+idx = [i + j for j in range(num_samples)]
+
+sampled_frames = frames[idx]
+```
+
+Then convert the sampled frames to buffer, then cast to array.
+
+```python
+buffer = await spdl.io.async_convert_frames(sampled_frames)
+array = spdl.io.to_numpy(buffer)
+```
+
+The following figure illustrates the sampled frames.
+
+![Resulting frames](../assets/preprocessing_video_frame_sampling.png)
+> From top to bottom: 1. slicing at fixed interval, 2. uniform random samplg and 3&4 two executions of sequential sampling at random index.
