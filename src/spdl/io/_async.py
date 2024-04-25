@@ -109,7 +109,7 @@ async def _async_gen(func, num_items, *args, **kwargs):
 
 def async_streaming_demux(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ):
@@ -118,7 +118,7 @@ def async_streaming_demux(
     Args:
         media_type: `"audio"` or `"video"`.
         src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` or `memoryview` type, then
+            such as local file path or URL. If `bytes` type, then
             they are interpreted as in-memory data.
         timestamps: List of timestamps.
 
@@ -139,7 +139,7 @@ async def _fetch_one(gen):
 
 def async_demux_media(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     timestamp: Optional[Tuple[float, float]] = None,
     **kwargs,
 ):
@@ -148,7 +148,7 @@ def async_demux_media(
     Args:
         media_type: `"audio"`, `"video"` or `"image"`.
         src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` or `memoryview` type, then
+            such as local file path or URL. If `bytes` type, then
             they are interpreted as in-memory data.
         timestamp (Tuple[float, float]): *Audio/video only* Demux the given time window.
             If omitted, the entire data are demuxed.
@@ -227,7 +227,7 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
 
 def async_decode_media(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     **kwargs,
 ):
     """Perform demuxing and decoding as one background job.
@@ -235,7 +235,7 @@ def async_decode_media(
     Args:
         media_type: `"audio"` or `"video"`.
         src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` or `memoryview` type, then
+            such as local file path or URL. If `bytes` type, then
             they are interpreted as in-memory data.
     """
     func = _common._get_decode_from_source_func(media_type, src)
@@ -324,7 +324,7 @@ def async_convert_frames(frames, **kwargs):
 
 async def async_load_media(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     *,
     demux_options: Optional[Dict[str, Any]] = None,
     decode_options: Optional[Dict[str, Any]] = None,
@@ -341,7 +341,7 @@ async def async_load_media(
         media_type: `"audio"`, `"video"` or `"image"`.
 
         src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` or `memoryview` type, then
+            such as local file path or URL. If `bytes` type, then
             they are interpreted as in-memory data.
 
         demux_options (Dict[str, Any]):
@@ -444,15 +444,13 @@ def _get_err_msg(src, err):
     match type(src):
         case builtins.bytes:
             src_ = f"bytes object at {id(src)}"
-        case builtins.memoryview:
-            src_ = f"memoryview object at {id(src)}"
         case _:
             src_ = f"'{src}'"
     return f"Failed to decode an image from {src_}: {err}."
 
 
 async def async_batch_load_image(
-    srcs: List[Union[str, bytes, memoryview]],
+    srcs: List[Union[str, bytes]],
     *,
     width: int | None,
     height: int | None,

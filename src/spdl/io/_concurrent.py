@@ -21,7 +21,7 @@ _LG = logging.getLogger(__name__)
 
 def streaming_demux(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ) -> List[Future]:
@@ -38,7 +38,7 @@ def streaming_demux(
 
 def demux_media(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     timestamp: Optional[Tuple[float, float]] = None,
     **kwargs,
 ) -> Future:
@@ -87,7 +87,7 @@ def decode_packets_nvdec(packets, cuda_device_index, **kwargs) -> Future:
 
 def decode_media(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     **kwargs,
 ):
     """Demux and decode media from source.
@@ -121,7 +121,7 @@ def convert_frames(frames, **kwargs) -> Future:
 @spdl.utils.chain_futures
 def load_media(
     media_type: str,
-    src: Union[str, bytes, memoryview],
+    src: Union[str, bytes],
     *,
     demux_options: Optional[Dict[str, Any]] = None,
     decode_options: Optional[Dict[str, Any]] = None,
