@@ -97,7 +97,7 @@ FuturePtr async_decode_nvdec(
       std::move(packets));
 #endif
 
-  return detail::execute_task_with_callback<NvDecFramesPtr<media_type>>(
+  return detail::execute_task_with_callback(
       std::move(task),
       std::move(set_result),
       std::move(notify_exception),

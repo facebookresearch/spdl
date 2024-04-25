@@ -41,8 +41,8 @@ FuturePtr async_convert_frames(
       std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
-      set_result,
-      notify_exception,
+      std::move(set_result),
+      std::move(notify_exception),
       detail::get_demux_executor_high_prio(executor));
 }
 
