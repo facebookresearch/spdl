@@ -1,3 +1,7 @@
+message(STATUS "########################################")
+message(STATUS "# Configuring SPDL Python binding")
+message(STATUS "########################################")
+
 set(src
   bind.cpp
   core/adaptors.cpp
