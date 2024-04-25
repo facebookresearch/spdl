@@ -2,7 +2,6 @@
 
 from typing import List
 
-import spdl
 from griffe import Extension, get_logger, Module
 from griffe.dataclasses import Alias
 
@@ -22,6 +21,8 @@ def _get_module(pkg: Module, path: List[str]):
 
 
 def _get_spdl_module(path: List[str]):
+    import spdl
+
     mod = spdl
     for submod in path:
         mod = getattr(mod, submod)
@@ -45,19 +46,22 @@ class SPDLDynamicResolver(Extension):
 
     def on_package_loaded(self, pkg: Module) -> None:
         """Add the entries for dynamically retrieved attributes."""
-        import spdl.io
-        import spdl.utils
+        try:
+            import spdl.io
+            import spdl.utils
 
-        _print_members(pkg)
+            _print_members(pkg)
 
-        # Populate dynamic attributes
-        for mod in spdl.io._doc_submodules:
-            _assign(pkg, ["io", mod], ["io"])
+            # Populate dynamic attributes
+            for mod in spdl.io._doc_submodules:
+                _assign(pkg, ["io", mod], ["io"])
 
-        for mod in spdl.utils._doc_submodules:
-            _assign(pkg, ["utils", mod], ["utils"])
+            for mod in spdl.utils._doc_submodules:
+                _assign(pkg, ["utils", mod], ["utils"])
 
-        super().on_package_loaded(pkg=pkg)
+            super().on_package_loaded(pkg=pkg)
+        except Exception:
+            logger.info("Failed to import spdl.")
 
 
 def _test():
