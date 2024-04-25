@@ -14,6 +14,7 @@
 #include <mutex>
 
 extern "C" {
+#include <libavdevice/avdevice.h>
 #include <libavutil/log.h>
 }
 
@@ -25,6 +26,10 @@ int get_ffmpeg_log_level() {
 
 void set_ffmpeg_log_level(int level) {
   av_log_set_level(level);
+}
+
+void register_avdevices() {
+  avdevice_register_all();
 }
 
 namespace {

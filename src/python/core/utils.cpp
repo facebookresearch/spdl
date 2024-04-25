@@ -55,6 +55,7 @@ void register_utils(nb::module_& m) {
   m.def("init_folly", &init_folly_init);
   m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
   m.def("set_ffmpeg_log_level", &set_ffmpeg_log_level);
+  m.def("register_avdevices", &register_avdevices);
 }
 
 } // namespace spdl::core

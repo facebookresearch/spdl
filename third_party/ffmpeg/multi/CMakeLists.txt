@@ -177,7 +177,7 @@ if(APPLE)
     ${f4_SOURCE_DIR}/lib/libavutil.56.dylib
     ${f4_SOURCE_DIR}/lib/libavcodec.58.dylib
     ${f4_SOURCE_DIR}/lib/libavformat.58.dylib
-    # ${f4_SOURCE_DIR}/lib/libavdevice.58.dylib
+    ${f4_SOURCE_DIR}/lib/libavdevice.58.dylib
     ${f4_SOURCE_DIR}/lib/libavfilter.7.dylib
     )
   target_link_libraries(
@@ -186,7 +186,7 @@ if(APPLE)
     ${f5_SOURCE_DIR}/lib/libavutil.57.dylib
     ${f5_SOURCE_DIR}/lib/libavcodec.59.dylib
     ${f5_SOURCE_DIR}/lib/libavformat.59.dylib
-    # ${f5_SOURCE_DIR}/lib/libavdevice.59.dylib
+    ${f5_SOURCE_DIR}/lib/libavdevice.59.dylib
     ${f5_SOURCE_DIR}/lib/libavfilter.8.dylib
     )
   target_link_libraries(
@@ -195,7 +195,7 @@ if(APPLE)
     ${f6_SOURCE_DIR}/lib/libavutil.58.dylib
     ${f6_SOURCE_DIR}/lib/libavcodec.60.dylib
     ${f6_SOURCE_DIR}/lib/libavformat.60.dylib
-    # ${f6_SOURCE_DIR}/lib/libavdevice.60.dylib
+    ${f6_SOURCE_DIR}/lib/libavdevice.60.dylib
     ${f6_SOURCE_DIR}/lib/libavfilter.9.dylib
     )
   target_link_libraries(
@@ -204,7 +204,7 @@ if(APPLE)
     ${f7_SOURCE_DIR}/lib/libavutil.59.dylib
     ${f7_SOURCE_DIR}/lib/libavcodec.61.dylib
     ${f7_SOURCE_DIR}/lib/libavformat.61.dylib
-    # ${f7_SOURCE_DIR}/lib/libavdevice.61.dylib
+    ${f7_SOURCE_DIR}/lib/libavdevice.61.dylib
     ${f7_SOURCE_DIR}/lib/libavfilter.10.dylib
     )
 elseif (UNIX)
@@ -214,7 +214,7 @@ elseif (UNIX)
     ${f4_SOURCE_DIR}/lib/libavutil.so.56
     ${f4_SOURCE_DIR}/lib/libavcodec.so.58
     ${f4_SOURCE_DIR}/lib/libavformat.so.58
-    # ${f4_SOURCE_DIR}/lib/libavdevice.so.58
+    ${f4_SOURCE_DIR}/lib/libavdevice.so.58
     ${f4_SOURCE_DIR}/lib/libavfilter.so.7
     )
   target_link_libraries(
@@ -223,7 +223,7 @@ elseif (UNIX)
     ${f5_SOURCE_DIR}/lib/libavutil.so.57
     ${f5_SOURCE_DIR}/lib/libavcodec.so.59
     ${f5_SOURCE_DIR}/lib/libavformat.so.59
-    # ${f5_SOURCE_DIR}/lib/libavdevice.so.59
+    ${f5_SOURCE_DIR}/lib/libavdevice.so.59
     ${f5_SOURCE_DIR}/lib/libavfilter.so.8
     )
   target_link_libraries(
@@ -232,7 +232,7 @@ elseif (UNIX)
     ${f6_SOURCE_DIR}/lib/libavutil.so.58
     ${f6_SOURCE_DIR}/lib/libavcodec.so.60
     ${f6_SOURCE_DIR}/lib/libavformat.so.60
-    # ${f6_SOURCE_DIR}/lib/libavdevice.so.60
+    ${f6_SOURCE_DIR}/lib/libavdevice.so.60
     ${f6_SOURCE_DIR}/lib/libavfilter.so.9
     )
   target_link_libraries(
@@ -241,7 +241,7 @@ elseif (UNIX)
     ${f7_SOURCE_DIR}/lib/libavutil.so.59
     ${f7_SOURCE_DIR}/lib/libavcodec.so.61
     ${f7_SOURCE_DIR}/lib/libavformat.so.61
-    # ${f7_SOURCE_DIR}/lib/libavdevice.so.61
+    ${f7_SOURCE_DIR}/lib/libavdevice.so.61
     ${f7_SOURCE_DIR}/lib/libavfilter.so.10
     )
 elseif(MSVC)
@@ -251,7 +251,7 @@ elseif(MSVC)
     ${f4_SOURCE_DIR}/bin/avutil.lib
     ${f4_SOURCE_DIR}/bin/avcodec.lib
     ${f4_SOURCE_DIR}/bin/avformat.lib
-    # ${f4_SOURCE_DIR}/bin/avdevice.lib
+    ${f4_SOURCE_DIR}/bin/avdevice.lib
     ${f4_SOURCE_DIR}/bin/avfilter.lib
     )
   target_link_libraries(
@@ -260,7 +260,7 @@ elseif(MSVC)
     ${f5_SOURCE_DIR}/bin/avutil.lib
     ${f5_SOURCE_DIR}/bin/avcodec.lib
     ${f5_SOURCE_DIR}/bin/avformat.lib
-    # ${f5_SOURCE_DIR}/bin/avdevice.lib
+    ${f5_SOURCE_DIR}/bin/avdevice.lib
     ${f5_SOURCE_DIR}/bin/avfilter.lib
     )
   target_link_libraries(
@@ -269,7 +269,7 @@ elseif(MSVC)
     ${f6_SOURCE_DIR}/bin/avutil.lib
     ${f6_SOURCE_DIR}/bin/avcodec.lib
     ${f6_SOURCE_DIR}/bin/avformat.lib
-    # ${f6_SOURCE_DIR}/bin/avdevice.lib
+    ${f6_SOURCE_DIR}/bin/avdevice.lib
     ${f6_SOURCE_DIR}/bin/avfilter.lib
     )
   target_link_libraries(
@@ -278,7 +278,7 @@ elseif(MSVC)
     ${f7_SOURCE_DIR}/bin/avutil.lib
     ${f7_SOURCE_DIR}/bin/avcodec.lib
     ${f7_SOURCE_DIR}/bin/avformat.lib
-    # ${f7_SOURCE_DIR}/bin/avdevice.lib
+    ${f7_SOURCE_DIR}/bin/avdevice.lib
     ${f7_SOURCE_DIR}/bin/avfilter.lib
     )
 endif()
