@@ -88,15 +88,11 @@ FuturePtr async_decode_from_bytes(
     bool _zero_clear) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::Task<FFmpegFramesPtr<MediaType::Image>> {
-        auto packets = co_await detail::demux_image(
-            data,
-            std::unique_ptr<SourceAdaptor>(new BytesAdaptor()),
-            std::move(io_cfg));
-        if (_zero_clear) {
-          std::memset((void*)data.data(), 0, data.size());
-        }
         co_return co_await detail::decode_packets_ffmpeg<MediaType::Image>(
-            std::move(packets), std::move(decode_cfg), std::move(filter_desc));
+            co_await detail::demux_image(
+                std::move(data), std::move(io_cfg), _zero_clear),
+            std::move(decode_cfg),
+            std::move(filter_desc));
       });
 
   return detail::execute_task_with_callback<FFmpegFramesPtr<MediaType::Image>>(

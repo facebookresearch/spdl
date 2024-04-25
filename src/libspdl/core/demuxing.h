@@ -22,11 +22,11 @@ template <MediaType media_type>
 FuturePtr async_demux(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    const std::string src,
-    const std::vector<std::tuple<double, double>> timestamps,
-    const SourceAdaptorPtr adaptor,
-    const std::optional<IOConfig> io_cfg,
-    ThreadPoolExecutorPtr executor);
+    std::string uri,
+    std::vector<std::tuple<double, double>> timestamps,
+    SourceAdaptorPtr adaptor = nullptr,
+    std::optional<IOConfig> io_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr);
 
 /// Demux audio or video from byte string stored somewhere.
 ///
@@ -37,19 +37,19 @@ FuturePtr async_demux_bytes(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    const std::vector<std::tuple<double, double>>& timestamps,
-    const std::optional<IOConfig>& io_cfg,
-    ThreadPoolExecutorPtr executor,
+    std::vector<std::tuple<double, double>> timestamps,
+    std::optional<IOConfig> io_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);
 
 /// Demux single image from source URI
 FuturePtr async_demux_image(
     std::function<void(ImagePacketsPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    const std::string src,
-    const SourceAdaptorPtr adaptor,
-    const std::optional<IOConfig> io_cfg,
-    ThreadPoolExecutorPtr executor);
+    std::string uri,
+    SourceAdaptorPtr adaptor = nullptr,
+    std::optional<IOConfig> io_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr);
 
 /// Demux image from byte string stored somewhere.
 ///
@@ -59,8 +59,8 @@ FuturePtr async_demux_image_bytes(
     std::function<void(ImagePacketsPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    const std::optional<IOConfig>& io_cfg,
-    ThreadPoolExecutorPtr executor,
+    std::optional<IOConfig> io_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);
 
 } // namespace spdl::core
