@@ -49,6 +49,11 @@ def _import_libspdl():
         if hasattr(ext, "clear_ffmpeg_cuda_context_cache"):
             atexit.register(ext.clear_ffmpeg_cuda_context_cache)
 
+        try:
+            ext.register_avdevices()
+        except Exception:
+            _LG.debug("Failed to register avdevices.", exc_info=True)
+
         return ext
 
     raise RuntimeError(
