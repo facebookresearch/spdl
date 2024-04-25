@@ -1,7 +1,7 @@
 # SPDL /spiːdl/
 
 SPDL (Scalable and Performant Data Loading) is a library to provide fast
-audio/video data loading for machine learning training.
+audio/video/image data loading for machine learning training.
 
 ## Installation
 
@@ -31,18 +31,22 @@ The libspdl uses the following third party libraries.
    * [glog](https://github.com/google/glog) ([BSD-3](https://github.com/google/glog/blob/v0.5.0/COPYING))
    * [Libevent](https://github.com/libevent/libevent) ([BSD-3](https://github.com/mthrok/libevent/blob/release-2.1.12-stable-patch/LICENSE))
 
+* [nanobind](https://github.com/wjakob/nanobind) ([BSD-3](https://github.com/wjakob/nanobind/blob/v1.9.0/LICENSE))
+   * [robin-map](https://github.com/Tessil/robin-map/) ([MIT](https://github.com/Tessil/robin-map/blob/v1.3.0/LICENSE))
+
 * [FFmpeg](https://github.com/FFmpeg/FFmpeg) ([LGPL](https://github.com/FFmpeg/FFmpeg/blob/master/COPYING.LGPLv2.1)†)
 
-
-* [nanobind](https://github.com/wjakob/nanobind) ([BSD-3](https://github.com/wjakob/nanobind/blob/v1.9.0/LICENSE)
-   * [robin-map](https://github.com/Tessil/robin-map/) ([MIT](https://github.com/Tessil/robin-map/blob/v1.3.0/LICENSE))
+* Header files of [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk) ([MIT]())
 
 ### Optional Dependencies
 
 * [Perfetto](https://perfetto.dev/docs/instrumentation/tracing-sdk) ([Apache 2.0](https://github.com/google/perfetto/blob/v41.0/LICENSE))
 
-* [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk) ([NVIDIA DesignWorks SDK License](https://gitlab.com/nvidia/video/video-codec-sdk/-/blob/master/Video_Codec_SDK_12.1.14/LicenseAgreement.pdf))
-   Header files (`nvcuvid.h` and `cuviddec.h`) and corresponding library files from Video Codec SDK are required to use NVDEC-based decoder.
+* [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)    
+When building with CUDA integration or [NVIDIA Video Codec](https://developer.nvidia.com/video-codec-sdk), CUDA header files must be installed.
+
+* [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk) header files    
+The header files of video codec SDK (`nvcuvid.h` and `cuviddec.h`), which are distribtued under MIT license, is used when hardware video decoder is enabled.
 
 † FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.
 
