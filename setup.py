@@ -9,21 +9,24 @@ from setuptools.command.build_ext import build_ext
 ROOT_DIR = os.path.dirname(__file__)
 TP_DIR = os.path.join(ROOT_DIR, "third_party")
 
-ext_modules = [
-    Extension("spdl.lib.libdouble-conversion", sources=[]),
-    Extension("spdl.lib.libevent_core", sources=[]),
-    Extension("spdl.lib.libfmt", sources=[]),
-    Extension("spdl.lib.libgflags", sources=[]),
-    Extension("spdl.lib.libglog", sources=[]),
-    Extension("spdl.lib.libspdl_ffmpeg4", sources=[]),
-    Extension("spdl.lib.libspdl_ffmpeg5", sources=[]),
-    Extension("spdl.lib.libspdl_ffmpeg6", sources=[]),
-    Extension("spdl.lib.libspdl_ffmpeg7", sources=[]),
-    Extension("spdl.lib._spdl_ffmpeg4", sources=[]),
-    Extension("spdl.lib._spdl_ffmpeg5", sources=[]),
-    Extension("spdl.lib._spdl_ffmpeg6", sources=[]),
-    Extension("spdl.lib._spdl_ffmpeg7", sources=[]),
-]
+_SPDL_USE_FFMPEG_VERSION=os.environ.get('SPDL_USE_FFMPEG_VERSION', 'all')
+
+
+def _get_ext_modules():
+    ext_modules = [
+        Extension("spdl.lib.libdouble-conversion", sources=[]),
+        Extension("spdl.lib.libevent_core", sources=[]),
+        Extension("spdl.lib.libfmt", sources=[]),
+        Extension("spdl.lib.libgflags", sources=[]),
+        Extension("spdl.lib.libglog", sources=[]),
+    ]
+    for v in ["4", "5", "6", "7"]:
+        if _SPDL_USE_FFMPEG_VERSION == 'all' or _SPDL_USE_FFMPEG_VERSION == v:
+            ext_modules.extend([
+                Extension(f"spdl.lib.libspdl_ffmpeg{v}", sources=[]),
+                Extension(f"spdl.lib._spdl_ffmpeg{v}", sources=[]),
+            ])
+    return ext_modules
 
 
 def _env(var, default=False):
@@ -91,6 +94,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DSPDL_USE_TRACING={_b(_env('SPDL_USE_TRACING'))}",
             f"-DSPDL_USE_CUDA={_b(_env('SPDL_USE_CUDA'))}",
             f"-DSPDL_USE_NVCODEC={_b(_env('SPDL_USE_NVCODEC'))}",
+            f"-DSPDL_USE_FFMPEG_VERSION={_SPDL_USE_FFMPEG_VERSION}",
             f"-DSPDL_DEBUG_REFCOUNT={_b(_env('SPDL_DEBUG_REFCOUNT'))}",
             f"-DSPDL_BUILD_SAMPLES={_b(_env('SPDL_BUILD_SAMPLES'))}",
             ###################################################################
@@ -198,7 +202,7 @@ def main():
         long_description="Fast multimedia data loading and processing.",
         packages=find_packages(where="src"),
         package_dir={"": "src"},
-        ext_modules=ext_modules,
+        ext_modules=_get_ext_modules(),
         cmdclass={"build_ext": CMakeBuild},
         python_requires=">=3.10",
         install_requires=[
