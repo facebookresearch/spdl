@@ -49,7 +49,6 @@ endforeach()
 
 add_subdirectory(third_party/folly)
 add_subdirectory(third_party/ffmpeg/multi)
-add_subdirectory(third_party/pybind11)
 if (SPDL_USE_TRACING)
   add_subdirectory(third_party/perfetto)
 endif()
@@ -58,8 +57,10 @@ if (SPDL_USE_NVCODEC)
 endif()
 
 add_subdirectory(src)
+
 if (SPDL_BUILD_PYTHON_BINDING)
-  add_subdirectory(src/pybind)
+  add_subdirectory(third_party/nanobind)
+  add_subdirectory(src/python)
 endif()
 
 if (SPDL_BUILD_SAMPLES)

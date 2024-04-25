@@ -45,7 +45,7 @@ def test_clone_invalid_packets(media_type, get_sample):
     async def _test(src):
         packets = await spdl.io.async_demux_media(media_type, src)
         _ = await spdl.io.async_decode_packets(packets)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(TypeError):
             packets.clone()
 
     asyncio.run(_test(sample.path))

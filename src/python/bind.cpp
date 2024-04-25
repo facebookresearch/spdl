@@ -1,26 +1,26 @@
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 #ifndef SPDL_FFMPEG_EXT_NAME
 #error SPDL_FFMPEG_EXT_NAME must be defined.
 #endif
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace spdl::core {
-void register_adaptors(py::module&);
-void register_conversion(py::module& m);
-void register_tracing(py::module&);
-void register_utils(py::module&);
-void register_executor(py::module&);
-void register_frames_and_buffers(py::module&);
-void register_future(py::module&);
-void register_packets(py::module&);
-void register_demuxing(py::module&);
-void register_decoding(py::module&);
+void register_adaptors(nb::module_&);
+void register_conversion(nb::module_& m);
+void register_tracing(nb::module_&);
+void register_utils(nb::module_&);
+void register_executor(nb::module_&);
+void register_frames_and_buffers(nb::module_&);
+void register_future(nb::module_&);
+void register_packets(nb::module_&);
+void register_demuxing(nb::module_&);
+void register_decoding(nb::module_&);
 } // namespace spdl::core
 
 namespace {
-PYBIND11_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
+NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_adaptors(m);
   spdl::core::register_conversion(m);
   spdl::core::register_tracing(m);

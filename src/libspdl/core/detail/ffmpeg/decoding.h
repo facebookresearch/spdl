@@ -14,7 +14,7 @@ namespace spdl::core::detail {
 template <MediaType media_type>
 folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig>& cfg = std::nullopt,
+    const std::optional<DecodeConfig> cfg = std::nullopt,
     const std::string filter_desc = {});
 
 } // namespace spdl::core::detail

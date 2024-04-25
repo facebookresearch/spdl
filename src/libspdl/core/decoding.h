@@ -21,19 +21,19 @@ namespace spdl::core {
 /// Decode media packets
 template <MediaType media_type>
 FuturePtr async_decode(
-    std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
+    std::function<void(FFmpegFramesPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    PacketsWrapperPtr<media_type> packets,
-    const std::optional<DecodeConfig>& decode_config,
+    PacketsPtr<media_type> packets,
+    const std::optional<DecodeConfig> decode_config,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
 /// Decode video or image
 template <MediaType media_type>
 FuturePtr async_decode_nvdec(
-    std::function<void(NvDecFramesWrapperPtr<media_type>)> set_result,
+    std::function<void(NvDecFramesPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    PacketsWrapperPtr<media_type> packets,
+    PacketsPtr<media_type> packets,
     int cuda_device_index,
     const CropArea& crop,
     int width,
@@ -48,7 +48,7 @@ FuturePtr async_decode_nvdec(
 /// Decode media from source
 template <MediaType media_type>
 FuturePtr async_decode_from_source(
-    std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
+    std::function<void(FFmpegFramesPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string& uri,
     const SourceAdaptorPtr& adaptor,
@@ -59,7 +59,7 @@ FuturePtr async_decode_from_source(
 
 template <MediaType media_type>
 FuturePtr async_decode_from_bytes(
-    std::function<void(FFmpegFramesWrapperPtr<media_type>)> set_result,
+    std::function<void(FFmpegFramesPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string_view data,
     const std::optional<IOConfig>& io_cfg,

@@ -83,17 +83,16 @@ BufferPtr convert_vision_frames(const FFmpegFramesPtr<media_type> frames)
 
 template <MediaType media_type>
 FuturePtr async_convert_frames(
-    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    FFmpegFramesWrapperPtr<media_type> frames,
+    FFmpegFramesPtr<media_type> frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator_fn>& cuda_allocator,
     const std::optional<cuda_deleter_fn>& cuda_deleter,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [=](FFmpegFramesPtr<media_type>&& frm)
-          -> folly::coro::Task<BufferWrapperPtr> {
+      [=](FFmpegFramesPtr<media_type>&& frm) -> folly::coro::Task<BufferPtr> {
         auto ret = convert_vision_frames<media_type>(std::move(frm));
         if (cuda_device_index) {
           ret = convert_to_cuda(
@@ -103,11 +102,9 @@ FuturePtr async_convert_frames(
               cuda_allocator,
               cuda_deleter);
         }
-        co_return wrap(std::move(ret));
+        co_return std::move(ret);
       },
-      // Pass the ownership of FramePtr to executor thread, so that it is
-      // deallocated there, instead of the main thread.
-      frames->unwrap());
+      std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,
@@ -116,9 +113,9 @@ FuturePtr async_convert_frames(
 }
 
 template FuturePtr async_convert_frames<MediaType::Video>(
-    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    FFmpegFramesWrapperPtr<MediaType::Video> frames,
+    FFmpegFramesPtr<MediaType::Video> frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator_fn>& cuda_allocator,
@@ -126,9 +123,9 @@ template FuturePtr async_convert_frames<MediaType::Video>(
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Image>(
-    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    FFmpegFramesWrapperPtr<MediaType::Image> frames,
+    FFmpegFramesPtr<MediaType::Image> frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator_fn>& cuda_allocator,
@@ -140,49 +137,38 @@ template FuturePtr async_convert_frames<MediaType::Image>(
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 std::vector<AVFrame*> merge_frames(
-    const std::vector<FFmpegImageFramesWrapperPtr>& batch) {
+    const std::vector<FFmpegImageFramesPtr>& batch) {
   std::vector<AVFrame*> ret;
   ret.reserve(batch.size());
   for (auto& frame : batch) {
-    auto& ref = frame->get_frames_ref();
-    if (ref->get_num_frames() != 1) {
+    if (frame->get_num_frames() != 1) {
       SPDL_FAIL_INTERNAL(
           "Unexpected number of frames are found in one of the image frames.");
     }
-    ret.push_back(ref->get_frames()[0]);
+    ret.push_back(frame->get_frames()[0]);
   }
   return ret;
 }
 
 BufferPtr convert_batch_image_frames(
-    const std::vector<FFmpegImageFramesWrapperPtr>& batch) {
+    const std::vector<FFmpegImageFramesPtr>& batch) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
   return convert_video<MediaType::Video>(merge_frames(batch));
-}
-
-std::vector<FFmpegImageFramesWrapperPtr> rewrap(
-    std::vector<FFmpegImageFramesWrapperPtr>&& frames) {
-  std::vector<FFmpegImageFramesWrapperPtr> ret;
-  ret.reserve(frames.size());
-  for (auto& frame : frames) {
-    ret.emplace_back(wrap<MediaType::Image, FFmpegFramesPtr>(frame->unwrap()));
-  }
-  return ret;
 }
 } // namespace
 
 FuturePtr async_batch_convert_frames(
-    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegImageFramesWrapperPtr> frames,
+    std::vector<FFmpegImageFramesPtr>&& frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator_fn>& cuda_allocator,
     const std::optional<cuda_deleter_fn>& cuda_deleter,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [=](std::vector<FFmpegImageFramesWrapperPtr>&& frms)
-          -> folly::coro::Task<BufferWrapperPtr> {
+      [=](std::vector<FFmpegImageFramesPtr>&& frms)
+          -> folly::coro::Task<BufferPtr> {
         auto ret = convert_batch_image_frames(frms);
         if (cuda_device_index) {
           ret = convert_to_cuda(
@@ -192,11 +178,11 @@ FuturePtr async_batch_convert_frames(
               cuda_allocator,
               cuda_deleter);
         }
-        co_return wrap(std::move(ret));
+        co_return std::move(ret);
       },
       // Pass the ownership of FramePtrs to executor thread, so that they are
       // deallocated there, instead of the main thread.
-      rewrap(std::move(frames)));
+      std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,

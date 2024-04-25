@@ -85,24 +85,21 @@ template struct DemuxedPackets<MediaType::Video>;
 template struct DemuxedPackets<MediaType::Image>;
 
 template <MediaType media_type>
-PacketsPtr<media_type> clone(const PacketsPtr<media_type>& src) {
+PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
   auto other = std::make_unique<DemuxedPackets<media_type>>(
-      src->src,
-      src->timestamp,
-      copy(src->codecpar),
-      src->time_base,
-      src->frame_rate);
-  for (const AVPacket* src : src->get_packets()) {
+      src.src,
+      src.timestamp,
+      copy(src.codecpar),
+      src.time_base,
+      src.frame_rate);
+  for (const AVPacket* src : src.get_packets()) {
     other->push(CHECK_AVALLOCATE(av_packet_clone(src)));
   }
   return other;
 }
 
-template PacketsPtr<MediaType::Audio> clone(
-    const PacketsPtr<MediaType::Audio>& src);
-template PacketsPtr<MediaType::Video> clone(
-    const PacketsPtr<MediaType::Video>& src);
-template PacketsPtr<MediaType::Image> clone(
-    const PacketsPtr<MediaType::Image>& src);
+template PacketsPtr<MediaType::Audio> clone(const AudioPackets& src);
+template PacketsPtr<MediaType::Video> clone(const VideoPackets& src);
+template PacketsPtr<MediaType::Image> clone(const ImagePackets& src);
 
 } // namespace spdl::core
