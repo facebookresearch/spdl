@@ -16,7 +16,7 @@ FuturePtr async_demux(
     SourceAdaptorPtr adaptor,
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor) {
-  return detail::execute_generator_with_callback<PacketsPtr<media_type>>(
+  return detail::execute_generator_with_callback(
       detail::stream_demux<media_type>(
           std::move(uri),
           std::move(adaptor),
@@ -54,7 +54,7 @@ FuturePtr async_demux_bytes(
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
-  return detail::execute_generator_with_callback<PacketsPtr<media_type>>(
+  return detail::execute_generator_with_callback(
       detail::stream_demux<media_type>(
           std::move(data),
           std::move(io_cfg),
@@ -90,7 +90,7 @@ FuturePtr async_demux_image(
     SourceAdaptorPtr adaptor,
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor) {
-  return detail::execute_task_with_callback<ImagePacketsPtr>(
+  return detail::execute_task_with_callback(
       detail::demux_image(
           std::move(uri), std::move(adaptor), std::move(io_cfg)),
       std::move(set_result),
@@ -105,7 +105,7 @@ FuturePtr async_demux_image_bytes(
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
-  return detail::execute_task_with_callback<ImagePacketsPtr>(
+  return detail::execute_task_with_callback(
       detail::demux_image(std::move(data), std::move(io_cfg), _zero_clear),
       std::move(set_result),
       std::move(notify_exception),
