@@ -3,6 +3,20 @@
 SPDL (Scalable and Performant Data Loading) is a library to provide fast
 audio/video data loading for machine learning training.
 
+## Installation
+
+Please refer to [the documentation](./docs/installation.md).
+
+## Documentation
+
+Documentations are found in the [docs](./docs) directory.
+
+Please use mkdocs to build and browse the documentation after installing SPDL.
+
+```
+mkdoc serve
+```
+
 ## Dependencies
 
 ### Third party libraries
@@ -20,7 +34,8 @@ The libspdl uses the following third party libraries.
 * [FFmpeg](https://github.com/FFmpeg/FFmpeg) ([LGPL](https://github.com/FFmpeg/FFmpeg/blob/master/COPYING.LGPLv2.1)†)
 
 
-* [PyBind11](https://github.com/pybind/pybind11) ([BSD-style](https://github.com/pybind/pybind11/blob/v2.11.1/LICENSE))
+* [nanobind](https://github.com/wjakob/nanobind) ([BSD-3](https://github.com/wjakob/nanobind/blob/v1.9.0/LICENSE)
+   * [robin-map](https://github.com/Tessil/robin-map/) ([MIT](https://github.com/Tessil/robin-map/blob/v1.3.0/LICENSE))
 
 ### Optional Dependencies
 
@@ -29,5 +44,6 @@ The libspdl uses the following third party libraries.
 * [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk) ([NVIDIA DesignWorks SDK License](https://gitlab.com/nvidia/video/video-codec-sdk/-/blob/master/Video_Codec_SDK_12.1.14/LicenseAgreement.pdf))
    Header files (`nvcuvid.h` and `cuviddec.h`) and corresponding library files from Video Codec SDK are required to use NVDEC-based decoder.
 
-† FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.    
+† FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.
+
 Users are free to dynamically link GPL or non-distributable version of FFmpeg libraries. However, note that linking a non-LGPL binary might change of the condition for redistribution of your application.
