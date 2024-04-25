@@ -66,3 +66,7 @@ endif()
 if (SPDL_BUILD_SAMPLES)
   add_subdirectory(src/prototypes)
 endif (SPDL_BUILD_SAMPLES)
+
+message(STATUS "########################################")
+message(STATUS "# Configuration done!")
+message(STATUS "########################################")
