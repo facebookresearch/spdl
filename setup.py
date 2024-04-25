@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import sysconfig
 
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
@@ -93,6 +94,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DSPDL_DEBUG_REFCOUNT={_b(_env('SPDL_DEBUG_REFCOUNT'))}",
             f"-DSPDL_BUILD_SAMPLES={_b(_env('SPDL_BUILD_SAMPLES'))}",
             ###################################################################
+            f"-DPython_INCLUDE_DIR={sysconfig.get_paths()['include']}",
             "-GNinja",
         ],
         [

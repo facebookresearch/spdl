@@ -48,7 +48,7 @@ def test_clone_invalid_frames(media_type, get_sample):
             await spdl.io.async_demux_media(media_type, src)
         )
         _ = await spdl.io.async_convert_frames(frames)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(TypeError):
             frames.clone()
 
     asyncio.run(_test(sample.path))

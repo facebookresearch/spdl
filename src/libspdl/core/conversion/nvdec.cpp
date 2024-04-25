@@ -16,43 +16,30 @@ extern "C" {
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
-// Video/Image
-////////////////////////////////////////////////////////////////////////////////
-namespace {
-template <MediaType media_type>
-CUDABuffer2DPitchPtr convert_nvdec_frames(
-    const NvDecFramesWrapperPtr<media_type> frames) {
-#ifndef SPDL_USE_NVCODEC
-  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-#else
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_nvdec_frames",
-      perfetto::Flow::ProcessScoped(frames->get_id()));
-  auto ret = frames->get_frames_ref()->buffer;
-  if (!ret) {
-    SPDL_FAIL("Attempted to convert an empty NvDecVideoFrames.");
-  }
-  return ret;
-#endif
-}
-} // namespace
-
-////////////////////////////////////////////////////////////////////////////////
 // Video/Image - Async wrapper
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    NvDecFramesWrapperPtr<media_type> frames,
+    NvDecFramesPtr<media_type> frames,
     ThreadPoolExecutorPtr executor) {
-  auto task =
-      folly::coro::co_invoke([=]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
-        // CUDABuffer2DPitchPtr uses shared_ptr, and the CUDA buffer is shared
-        // among Frames class and Buffer class, so unlike CPU case, we do not
-        // need to deallocate here.
-        co_return convert_nvdec_frames<media_type>(frames);
+  auto task = folly::coro::co_invoke(
+      [frames =
+           std::move(frames)]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
+
+#ifndef SPDL_USE_NVCODEC
+        SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+        TRACE_EVENT(
+            "decoding",
+            "core::convert_nvdec_frames",
+            perfetto::Flow::ProcessScoped(frames->get_id()));
+        if (!frames->buffer) {
+          SPDL_FAIL("Attempted to convert an empty NvDecVideoFrames.");
+        }
+        co_return frames->buffer;
+#endif
       });
   return detail::execute_task_with_callback(
       std::move(task),
@@ -64,13 +51,13 @@ FuturePtr async_convert_nvdec_frames(
 template FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    NvDecFramesWrapperPtr<MediaType::Video> frames,
+    NvDecFramesPtr<MediaType::Video> frames,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    NvDecFramesWrapperPtr<MediaType::Image> frames,
+    NvDecFramesPtr<MediaType::Image> frames,
     ThreadPoolExecutorPtr executor);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -91,18 +78,16 @@ bool same_shape(const std::vector<size_t>& a, const std::vector<size_t>& b) {
 }
 
 template <MediaType media_type>
-void check_consistency(
-    const std::vector<NvDecFramesWrapperPtr<media_type>>& frames) {
+void check_consistency(const std::vector<NvDecFramesPtr<media_type>>& frames) {
   auto numel = frames.size();
   if (numel == 0) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
-  auto& f0 = frames[0]->get_frames_ref();
+  auto& f0 = frames[0];
   auto pix_fmt = static_cast<AVPixelFormat>(f0->media_format);
   int device_index = f0->buffer->device_index;
   auto shape = f0->buffer->get_shape();
-  for (auto& frm : frames) {
-    auto& f = frm->get_frames_ref();
+  for (auto& f : frames) {
     if (auto shape_ = f->buffer->get_shape(); !same_shape(shape, shape_)) {
       SPDL_FAIL(fmt::format(
           "Cannot convert the frames as the frames do not have the same size."));
@@ -120,13 +105,13 @@ void check_consistency(
 #endif
 
 CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
-    const std::vector<NvDecImageFramesWrapperPtr>& batch_frames) {
+    const std::vector<NvDecImageFramesPtr>& batch_frames) {
 #ifndef SPDL_USE_NVCODEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
   TRACE_EVENT("decoding", "core::convert_nvdec_batch_image_frames");
   check_consistency(batch_frames);
-  auto& buf0 = batch_frames[0]->get_frames_ref()->buffer;
+  auto& buf0 = batch_frames[0]->buffer;
 
   detail::set_cuda_primary_context(buf0->device_index);
   auto ret = std::make_shared<CUDABuffer2DPitch>(
@@ -135,7 +120,7 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
 
   cudaStream_t stream = 0;
   for (auto& frame : batch_frames) {
-    auto& buf = frame->get_frames_ref()->buffer;
+    auto& buf = frame->buffer;
     CHECK_CUDA(
         cudaMemcpy2DAsync(
             ret->get_next_frame(),
@@ -160,11 +145,12 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
 FuturePtr async_batch_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<NvDecImageFramesWrapperPtr> frames,
+    std::vector<NvDecImageFramesPtr>&& frames,
     ThreadPoolExecutorPtr executor) {
-  auto task =
-      folly::coro::co_invoke([=]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
-        co_return convert_nvdec_batch_image_frames(frames);
+  auto task = folly::coro::co_invoke(
+      [frames =
+           std::move(frames)]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
+        co_return convert_nvdec_batch_image_frames(std::move(frames));
       });
   return detail::execute_task_with_callback(
       std::move(task),

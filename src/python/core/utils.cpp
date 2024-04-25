@@ -1,13 +1,16 @@
 #include <libspdl/core/types.h>
 #include <libspdl/core/utils.h>
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/shared_ptr.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/unique_ptr.h>
+#include <nanobind/stl/vector.h>
 
 #include <string>
 #include <vector>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace spdl::core {
 namespace {
@@ -45,8 +48,8 @@ std::vector<std::string> init_folly_init(
 }
 } // namespace
 
-void register_utils(py::module& m) {
-  py::register_exception<spdl::core::InternalError>(
+void register_utils(nb::module_& m) {
+  nb::exception<spdl::core::InternalError>(
       m, "InternalError", PyExc_AssertionError);
 
   m.def("init_folly", &init_folly_init);

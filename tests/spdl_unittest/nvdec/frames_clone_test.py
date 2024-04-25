@@ -41,17 +41,7 @@ def test_clone_frames(media_type, get_sample):
 
 @pytest.mark.parametrize("media_type", ["video", "image"])
 def test_clone_frames_after_conversion(media_type, get_sample):
-    """NvDec frames can be cloned even after conversion
-
-    Unlike FFmpegFrames, NvDecFrames share the buffer between Buffer class
-    and Frames class, because NvDecFrames class allocates CUDA memory directly
-    during the decoding.
-    For this reason, `convert_frames` function does not disconnect the lifetime
-    of the buffer and frame Python variable.
-
-    This is just an implementation detail and not a spec, but testing it here
-    as a reminder just in case the behavior is changed.
-    """
+    """Attempt to clone already released frames raises RuntimeError instead of segfault"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
@@ -61,7 +51,8 @@ def test_clone_frames_after_conversion(media_type, get_sample):
             cuda_device_index=CUDA_DEFAULT,
         )
         _ = await spdl.io.async_convert_frames(frames)
-        frames.clone()  # does not raise
+        with pytest.raises(TypeError):
+            frames.clone()
 
     asyncio.run(_test(sample.path))
 

@@ -1,15 +1,14 @@
 #include <libspdl/core/utils.h>
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/shared_ptr.h>
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace spdl::core {
 
-void register_tracing(py::module& m) {
-  auto _TracingSession =
-      py::class_<TracingSession>(m, "TracingSession", py::module_local());
+void register_tracing(nb::module_& m) {
+  auto _TracingSession = nb::class_<TracingSession>(m, "TracingSession");
 
   _TracingSession.def("init", &TracingSession::init)
       .def("config", &TracingSession::config)

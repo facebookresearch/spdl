@@ -173,7 +173,7 @@ FilterGraph get_filter(
 template <MediaType media_type>
 folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig>& cfg,
+    const std::optional<DecodeConfig> cfg,
     std::string filter_desc) {
   TRACE_EVENT(
       "decoding",
@@ -209,17 +209,17 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
 
 template folly::coro::Task<FFmpegAudioFramesPtr> decode_packets_ffmpeg(
     AudioPacketsPtr packets,
-    const std::optional<DecodeConfig>& cfg,
+    const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
 
 template folly::coro::Task<FFmpegVideoFramesPtr> decode_packets_ffmpeg(
     VideoPacketsPtr packets,
-    const std::optional<DecodeConfig>& cfg,
+    const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
 
 template folly::coro::Task<FFmpegImageFramesPtr> decode_packets_ffmpeg(
     ImagePacketsPtr packets,
-    const std::optional<DecodeConfig>& cfg,
+    const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
 
 } // namespace spdl::core::detail

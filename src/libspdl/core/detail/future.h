@@ -76,7 +76,7 @@ FuturePtr execute_generator_with_callback(
         try {
           while (auto val = co_await folly::coro::co_withCancellation(
                      token, gen.next())) {
-            set_result({*val});
+            set_result(std::move(*val));
           }
           co_return;
         } catch (folly::OperationCancelled& e) {

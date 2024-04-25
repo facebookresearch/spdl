@@ -17,16 +17,16 @@ BufferPtr convert_audio_frames(const FFmpegAudioFramesPtr frames) {
 
 template <>
 FuturePtr async_convert_frames(
-    std::function<void(BufferWrapperPtr)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    FFmpegAudioFramesWrapperPtr frames,
+    FFmpegAudioFramesPtr frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator_fn>& cuda_allocator,
     const std::optional<cuda_deleter_fn>& cuda_deleter,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [=](FFmpegAudioFramesPtr&& frm) -> folly::coro::Task<BufferWrapperPtr> {
+      [=](FFmpegAudioFramesPtr&& frm) -> folly::coro::Task<BufferPtr> {
         auto ret = convert_audio_frames(std::move(frm));
         if (cuda_device_index) {
           ret = convert_to_cuda(
@@ -36,11 +36,9 @@ FuturePtr async_convert_frames(
               cuda_allocator,
               cuda_deleter);
         }
-        co_return wrap(std::move(ret));
+        co_return std::move(ret);
       },
-      // Pass the ownership of FramePtr to executor thread, so that it is
-      // deallocated there, instead of the main thread.
-      frames->unwrap());
+      std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
       set_result,

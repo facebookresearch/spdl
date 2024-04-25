@@ -1,5 +1,5 @@
 set(src
-  pybind.cpp
+  bind.cpp
   core/adaptors.cpp
   core/conversion.cpp
   core/decoding.cpp
@@ -34,9 +34,11 @@ function(add_spdl_extension ffmpeg_version)
     list(APPEND defs SPDL_USE_NVCODEC)
   endif ()
 
-  pybind11_add_module(${name} ${src})
+  nanobind_add_module(${name} ${src})
   target_compile_definitions(${name} PRIVATE "${defs}")
   target_link_libraries(${name} PRIVATE "spdl_ffmpeg${ffmpeg_version}")
+  target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
+  target_include_directories(nanobind-static PRIVATE "${Python_INCLUDE_DIR}")
 
   install(
     TARGETS ${name}

@@ -40,26 +40,6 @@ using NvDecFramesPtr = std::unique_ptr<NvDecFrames<media_type>>;
 using NvDecVideoFramesPtr = NvDecFramesPtr<MediaType::Video>;
 using NvDecImageFramesPtr = NvDecFramesPtr<MediaType::Image>;
 
-// Wrapper for Python
-template <MediaType media_type, template <MediaType> typename FramesPtr>
-class FramesWrapper;
-
-template <MediaType media_type, template <MediaType> typename FramesPtr>
-using FramesWrapperPtr = std::shared_ptr<FramesWrapper<media_type, FramesPtr>>;
-
-template <MediaType media_type>
-using FFmpegFramesWrapperPtr = FramesWrapperPtr<media_type, FFmpegFramesPtr>;
-
-using FFmpegAudioFramesWrapperPtr = FFmpegFramesWrapperPtr<MediaType::Audio>;
-using FFmpegVideoFramesWrapperPtr = FFmpegFramesWrapperPtr<MediaType::Video>;
-using FFmpegImageFramesWrapperPtr = FFmpegFramesWrapperPtr<MediaType::Image>;
-
-template <MediaType media_type>
-using NvDecFramesWrapperPtr = FramesWrapperPtr<media_type, NvDecFramesPtr>;
-
-using NvDecVideoFramesWrapperPtr = NvDecFramesWrapperPtr<MediaType::Video>;
-using NvDecImageFramesWrapperPtr = NvDecFramesWrapperPtr<MediaType::Image>;
-
 #define _IS_AUDIO (media_type == MediaType::Audio)
 #define _IS_VIDEO (media_type == MediaType::Video)
 #define _IS_IMAGE (media_type == MediaType::Image)
@@ -198,7 +178,7 @@ class FFmpegFrames {
 };
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> clone(const FFmpegFramesPtr<media_type>& src);
+FFmpegFramesPtr<media_type> clone(const FFmpegFrames<media_type>& src);
 
 #undef _IS_AUDIO
 #undef _IS_VIDEO
@@ -244,58 +224,6 @@ struct NvDecFrames {
 };
 
 template <MediaType media_type>
-NvDecFramesPtr<media_type> clone(const NvDecFramesPtr<media_type>& src);
+NvDecFramesPtr<media_type> clone(const NvDecFrames<media_type>& src);
 
-////////////////////////////////////////////////////////////////////////////////
-// FramesWrapper
-////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type, template <MediaType> typename FramesPtr>
-class FramesWrapper {
- protected:
-  FramesPtr<media_type> frames;
-
- public:
-  FramesWrapper(FramesPtr<media_type>&& p) : frames(std::move(p)){};
-
-  FramesPtr<media_type> unwrap() {
-    if (!frames) {
-      throw std::runtime_error(
-          "Frames is in invalid state. Perhaps it's already released?");
-    }
-    return std::move(frames);
-  }
-
-  int get_id() const {
-    if (!frames) {
-      throw std::runtime_error(
-          "Frames is in invalid state. Perhaps it's already released?");
-    }
-    return frames->get_id();
-  }
-
-  const FramesPtr<media_type>& get_frames_ref() const {
-    if (!frames) {
-      throw std::runtime_error(
-          "Frames is in invalid state. Perhaps it's already released?");
-    }
-    return frames;
-  }
-};
-
-template <MediaType media_type, template <MediaType> typename FramesPtr>
-FramesWrapperPtr<media_type, FramesPtr> wrap(FramesPtr<media_type>&& frames) {
-  return std::make_shared<FramesWrapper<media_type, FramesPtr>>(
-      std::move(frames));
-}
-
-template <MediaType media_type, template <MediaType> typename FramesPtr>
-std::vector<FramesWrapperPtr<media_type, FramesPtr>> wrap(
-    std::vector<FramesPtr<media_type>>&& frames) {
-  std::vector<FramesWrapperPtr<media_type, FramesPtr>> ret;
-
-  for (auto& frame : frames) {
-    ret.push_back(wrap<media_type, FramesPtr>(std::move(frame)));
-  }
-  return ret;
-}
 } // namespace spdl::core
