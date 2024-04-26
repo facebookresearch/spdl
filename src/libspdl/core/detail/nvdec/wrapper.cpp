@@ -52,8 +52,14 @@ MapGuard::MapGuard(
 
 MapGuard::~MapGuard() {
   TRACE_EVENT("nvdec", "cuvidUnmapVideoFrame");
-  CHECK_CU(
-      cuvidUnmapVideoFrame(decoder, frame), "Failed to unmap video frame.");
+  auto status = cuvidUnmapVideoFrame(decoder, frame);
+
+  if (status != CUDA_SUCCESS) {
+    XLOG(CRITICAL) << fmt::format(
+        "Failed to unmap video frame ({}: {})",
+        get_error_name(status),
+        get_error_desc(status));
+  }
 }
 
 } // namespace spdl::core::detail
