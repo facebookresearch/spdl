@@ -17,6 +17,9 @@ on:
 jobs:
   build-cpu:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
 
     steps:
       - uses: actions/checkout@v4
@@ -25,19 +28,17 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-environment: spdl
-          channels: conda-forge
           environment-file: .github/conda/env.yml
-      - run: |
+          miniforge-version: latest
+      - name: Check Conda env
+        run: |
           conda info
           conda list
           conda config --show-sources
           conda config --show
           printenv | sort
       - name: "Build SPDL"
-        run: |
-          pip install cmake ninja
-          pip install -v .
+        run: pip install -v .
       - name: "Smoke test"
         run: |
           cd ~
