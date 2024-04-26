@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+    branches:
+      - main
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+    branches:
+      - main
+
+jobs:
+  build-cpu:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: spdl
+          channels: conda-forge
+          environment-file: .github/conda/env.yml
+      - run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+          printenv | sort
+      - name: "Build SPDL"
+        run: |
+          pip install cmake ninja
+          pip install -v .
+      - name: "Smoke test"
+        run: |
+          cd ~
+          python -c "import logging;logging.basicConfig(level=logging.DEBUG);from spdl.lib import _libspdl;_libspdl.async_demux_audio;"
