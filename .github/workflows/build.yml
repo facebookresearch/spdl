@@ -28,8 +28,26 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          environment-file: .github/conda/env.yml
           miniforge-version: latest
+
+      - name: Get Date
+        id: get-date
+        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: Cache Conda env
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.CONDA }}/envs
+          key:
+            conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{hashFiles('.github/conda/env.yml') }}-${{ env.CACHE_NUMBER }}
+        env:
+          CACHE_NUMBER: 0
+        id: cache
+
+      - name: Update environment
+        run: conda env update --name test -f .github/conda/env.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+
       - name: Check Conda env
         run: |
           conda info
@@ -37,8 +55,10 @@ jobs:
           conda config --show-sources
           conda config --show
           printenv | sort
+
       - name: "Build SPDL"
         run: pip install -v .
+
       - name: "Smoke test"
         run: |
           cd ~
