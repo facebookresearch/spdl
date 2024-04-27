@@ -45,7 +45,13 @@ CUDAStorage::~CUDAStorage() {
     if (deleter) {
       deleter(reinterpret_cast<uintptr_t>(data_));
     } else {
-      CHECK_CUDA(cudaFree(data_), "Failed to free CUDA memory");
+      auto status = cudaFree(data_);
+      if (status != cudaSuccess) {
+        XLOG(CRITICAL) << fmt::format(
+            "Failed to free CUDA memory ({}: {})",
+            cudaGetErrorName(status),
+            cudaGetErrorString(status));
+      }
     }
   }
 }
