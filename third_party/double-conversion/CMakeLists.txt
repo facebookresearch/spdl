@@ -2,7 +2,7 @@ message(STATUS "########################################")
 message(STATUS "# Configuring double-conversion")
 message(STATUS "########################################")
 
-set(BUILD_SHARED_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_Declare(
   double-conversion

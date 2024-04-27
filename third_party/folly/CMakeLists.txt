@@ -206,7 +206,7 @@ target_compile_options(folly PUBLIC "-Wno-nullability-completeness")
 target_link_libraries(
   folly
   PRIVATE
-  gflags
+  gflags_static
   libevent::core
   PUBLIC
   double-conversion::double-conversion

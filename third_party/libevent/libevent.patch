@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 676727f..4341378 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -41,8 +41,10 @@ string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
+ # what? why would you get id of other useful build types? - Ellzey
+ set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Limited configurations" FORCE)
+ 
++if (NOT EVENT__LIBRARY_TYPE)
+ set(EVENT__LIBRARY_TYPE DEFAULT CACHE STRING
+     "Set library type to SHARED/STATIC/BOTH (default SHARED for MSVC, otherwise BOTH)")
++endif()
+ 
+ project(libevent C)
+ 

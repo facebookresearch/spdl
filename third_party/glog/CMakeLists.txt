@@ -6,7 +6,7 @@ message(STATUS "########################################")
 # but we do need, so just in case
 find_package(gflags 2.2.0 REQUIRED)
 
-set(BUILD_SHARED_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
 set(WITH_GFLAGS ON)
 set(WITH_GTEST OFF)
 set(gflags_NAMESPACE gflags)
