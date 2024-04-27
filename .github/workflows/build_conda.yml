@@ -15,10 +15,13 @@ on:
     branches:
       - main
 
-
 jobs:
   conda-build-cpu:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on:  ${{ matrix.os }}
     defaults:
       run:
         shell: bash -el {0}
@@ -34,12 +37,14 @@ jobs:
         run: conda install conda-build
 
       - name: Build SPDL
-        run: conda build ./conda_build
+        run: |
+          mkdir ~/package
+          conda build ./conda_build --output-folder ~/package
 
       - uses: actions/upload-artifact@v4
         with:
-          name: conda_package
-          path: /usr/share/miniconda/envs/test/conda-bld/
+          name: spdl.${{ matrix.os }}
+          path: ~/package
           if-no-files-found: error
           retention-days: 1
           overwrite: true
