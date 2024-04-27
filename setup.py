@@ -9,23 +9,19 @@ from setuptools.command.build_ext import build_ext
 ROOT_DIR = os.path.dirname(__file__)
 TP_DIR = os.path.join(ROOT_DIR, "third_party")
 
-_SPDL_USE_FFMPEG_VERSION=os.environ.get('SPDL_USE_FFMPEG_VERSION', 'all')
+_SPDL_USE_FFMPEG_VERSION = os.environ.get("SPDL_USE_FFMPEG_VERSION", "all")
 
 
 def _get_ext_modules():
-    ext_modules = [
-        Extension("spdl.lib.libdouble-conversion", sources=[]),
-        Extension("spdl.lib.libevent_core", sources=[]),
-        Extension("spdl.lib.libfmt", sources=[]),
-        Extension("spdl.lib.libgflags", sources=[]),
-        Extension("spdl.lib.libglog", sources=[]),
-    ]
+    ext_modules = []
     for v in ["4", "5", "6", "7"]:
-        if _SPDL_USE_FFMPEG_VERSION == 'all' or _SPDL_USE_FFMPEG_VERSION == v:
-            ext_modules.extend([
-                Extension(f"spdl.lib.libspdl_ffmpeg{v}", sources=[]),
-                Extension(f"spdl.lib._spdl_ffmpeg{v}", sources=[]),
-            ])
+        if _SPDL_USE_FFMPEG_VERSION == "all" or _SPDL_USE_FFMPEG_VERSION == v:
+            ext_modules.extend(
+                [
+                    Extension(f"spdl.lib.libspdl_ffmpeg{v}", sources=[]),
+                    Extension(f"spdl.lib._spdl_ffmpeg{v}", sources=[]),
+                ]
+            )
     return ext_modules
 
 
@@ -61,8 +57,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-B", deps_build_dir,
             "-DCMAKE_VERBOSE_MAKEFILE=OFF",
             "-DCMAKE_INSTALL_MESSAGE=NEVER",
-            f"-DCMAKE_INSTALL_PREFIX={install_dir}",
-            "-DCMAKE_INSTALL_LIBDIR=lib",
+            f"-DCMAKE_INSTALL_PREFIX={build_dir}",
             "-GNinja",
         ],
         [
@@ -81,9 +76,8 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-B", main_build_dir,
             f"-DCMAKE_VERBOSE_MAKEFILE={'ON' if debug else 'OFF'}",
             f"-DCMAKE_INSTALL_MESSAGE={'ALWAYS' if debug else 'LAZY'}",
-            f"-DCMAKE_INSTALL_PREFIX={install_dir}",
-            f"-DCMAKE_PREFIX_PATH={install_dir}",
-            "-DCMAKE_INSTALL_LIBDIR=lib",
+            f"-DCMAKE_INSTALL_PREFIX={build_dir}",
+            f"-DCMAKE_PREFIX_PATH={build_dir}",
             "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=false",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
@@ -112,43 +106,6 @@ def _get_cmake_commands(build_dir, install_dir, debug):
     if _env("SKIP_FOLLY_DEPS"):
         return main_build_cmd
     return deps_cmd + main_build_cmd
-
-
-def _fix_tp_library_name(path):
-    parts = path.split(".")
-    if sys.platform == "darwin":
-        # remove ABI or replace it with version number
-        if "gflags" in path:
-            parts[-2] = "2.2"
-        elif "glog" in path:
-            parts[-2] = "0"
-        elif "double-conversion" in path:
-            parts[-2] = "3"
-        elif "fmt" in path:
-            parts[-2] = "10"
-        elif "libevent" in path:
-            del parts[-2]
-            parts[-2] = f"{parts[-2]}-2.1.7"
-        else:
-            del parts[-2]
-        # replace suffix
-        parts[-1] = "dylib"
-    elif sys.platform.startswith("linux"):
-        # remove ABI
-        del parts[-2]
-        # append soversion
-        if "gflags" in path:
-            parts.append("2.2")
-        elif "glog" in path:
-            parts.append("0")
-        elif "double-conversion" in path:
-            parts.append("3")
-        elif "fmt" in path:
-            parts.append("10")
-        elif "libevent" in path:
-            parts[-2] += "-2.1"
-            parts.append("7")
-    return ".".join(parts)
 
 
 BUILT_ONCE = False
@@ -185,10 +142,18 @@ class CMakeBuild(build_ext):
         # print(src, dst)
         # shutil.copytree(src, dst, dirs_exist_ok=True)
 
-    def get_ext_filename(self, fullname):
-        ext_filename = super().get_ext_filename(fullname)
+    def get_ext_filename(self, filename):
+        ext_filename = super().get_ext_filename(filename)
+
+        # Fix the library name for libspdl
+        # linux: spdl/lib/libspdl_ffmpeg4.cpython-310-x86_64-linux-gnu.so -> spdl/lib/libspdl_ffmpeg4.so
+        # macOS: spdl/lib/libspdl_ffmpeg4.cpython-310-x86_64-linux-gnu.so -> spdl/lib/libspdl_ffmpeg4.dylib
         if "_spdl_ffmpeg" not in ext_filename:
-            ext_filename = _fix_tp_library_name(ext_filename)
+            parts = ext_filename.split(".")
+            del parts[-2]
+            if sys.platform == "darwin":
+                parts[-1] = "dylib"
+            ext_filename = ".".join(parts)
         return ext_filename
 
 

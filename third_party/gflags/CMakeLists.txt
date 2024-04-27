@@ -3,8 +3,8 @@ message(STATUS "# Configuring gflags")
 message(STATUS "########################################")
 
 set(GFLAGS_NAMESPACE gflags)
-set(GFLAGS_BUILD_STATIC_LIBS OFF)
-set(GFLAGS_BUILD_SHARED_LIBS ON)
+set(GFLAGS_BUILD_STATIC_LIBS ON)
+set(GFLAGS_BUILD_SHARED_LIBS OFF)
 set(GFLAGS_BUILD_gflags_LIB ON)
 set(GFLAGS_BUILD_gflags_nothreads_LIB OFF)
 
