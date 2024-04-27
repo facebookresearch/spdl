@@ -1,0 +1,48 @@
+package:
+  name: spdl
+  version: "{{ environ.get('SPDL_BUILD_VERSION', '0.0.0') }}"
+
+source:
+  path: ".."
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+
+  host:
+    - python
+    - setuptools
+    - cmake
+    - ninja
+    {{ environ.get('CONDA_CUDATOOLKIT_CONSTRAINT', '') }}
+
+  run:
+    - python
+    - numpy
+
+build:
+  string: py{{py}}_{{ environ.get('CU_VERSION', 'cpu') }}
+  script_env:
+    - SPDL_USE_CUDA
+    - SPDL_USE_NVCODEC
+
+test:
+  imports:
+    - spdl.io
+    - spdl.utils
+    - spdl.dataset
+    - spdl.dataloader
+
+  source_files:
+    - tests/spdl_unittest
+
+  requires:
+    - pytest
+    - numpy
+
+about:
+  home: https://github.com/mthrok/spdl
+  license: Apache 2
+  license_file: LICENSE
+  summary: Scalable and performant data loading for scientific computing
