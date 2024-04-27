@@ -15,6 +15,7 @@ on:
     branches:
       - main
 
+
 jobs:
   conda-build-cpu:
     runs-on: ubuntu-latest
@@ -33,4 +34,12 @@ jobs:
         run: conda install conda-build
 
       - name: Build SPDL
-        run: conda build conda_build
+        run: conda build ./conda_build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conda_package
+          path: /usr/share/miniconda/envs/test/conda-bld/
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true

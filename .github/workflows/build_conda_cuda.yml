@@ -33,9 +33,17 @@ jobs:
         run: conda install conda-build
 
       - name: Build SPDL
-        run: conda build -c nvidia/label/cuda-11.8.0 conda_build
+        run: conda build -c nvidia/label/cuda-11.8.0 ./conda_build
         env:
           CU_VERSION: 11.8
           CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-11.8.0::cuda-toolkit"
           SPDL_USE_CUDA: 1
           SPDL_USE_NVCODEC: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conda_package
+          path: /usr/share/miniconda/envs/test/conda-bld/
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
