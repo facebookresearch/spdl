@@ -10,7 +10,7 @@ FetchContent_Declare(
   folly_src
   URL "${url}"
   URL_HASH "${hash}"
-  PATCH_COMMAND patch < "${CMAKE_CURRENT_SOURCE_DIR}/m1_mac_memalign.patch"
+  PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_SOURCE_DIR}/m1_mac_memalign.patch"
   DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
   )
 else()
