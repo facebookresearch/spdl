@@ -7,8 +7,13 @@ source:
 
 requirements:
   build:
-    - {{ compiler('c') }}
-    - {{ compiler('cxx') }}
+    # NOTE on osx:
+    # Ideally, we use the compiler tool chain provided by Anaconda, but
+    # they do not provide clang v15 currently.
+    # https://anaconda.org/anaconda/clangxx
+    # So, we use the system compiler provided by GitHub Action.
+    - {{ compiler('c') }} # [not osx]
+    - {{ compiler('cxx') }} # [not osx]
 
   host:
     - python
