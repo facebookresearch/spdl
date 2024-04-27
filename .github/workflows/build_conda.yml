@@ -1,0 +1,36 @@
+name: "Build Conda: CPU"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+    branches:
+      - main
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+    branches:
+      - main
+
+jobs:
+  conda-build-cpu:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: conda-incubator/setup-miniconda@v3
+
+      - name: Install conda-build
+        run: conda install conda-build
+
+      - name: Build SPDL
+        run: conda build conda_build

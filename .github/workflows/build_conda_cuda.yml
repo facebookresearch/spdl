@@ -1,0 +1,41 @@
+name: "Build Conda: CUDA"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+    branches:
+      - main
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+    branches:
+      - main
+
+jobs:
+  conda-build-cuda:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: conda-incubator/setup-miniconda@v3
+
+      - name: Install conda-build
+        run: conda install conda-build
+
+      - name: Build SPDL
+        run: conda build -c nvidia/label/cuda-11.8.0 conda_build
+        env:
+          CU_VERSION: 11.8
+          CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-11.8.0::cuda-toolkit"
+          SPDL_USE_CUDA: 1
+          SPDL_USE_NVCODEC: 1
