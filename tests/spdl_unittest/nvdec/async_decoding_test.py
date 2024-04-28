@@ -1,8 +1,14 @@
 import asyncio
 
+import pytest
+
 import spdl.io
+import spdl.utils
 
 DEFAULT_CUDA = 0
+
+if not spdl.utils.is_nvcodec_available():
+    pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
 
 
 def test_decode_video_nvdec(get_sample):

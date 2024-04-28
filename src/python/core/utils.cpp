@@ -56,6 +56,9 @@ void register_utils(nb::module_& m) {
   m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
   m.def("set_ffmpeg_log_level", &set_ffmpeg_log_level);
   m.def("register_avdevices", &register_avdevices);
+
+  m.def("is_cuda_available", &is_cuda_available);
+  m.def("is_nvcodec_available", &is_nvcodec_available);
 }
 
 } // namespace spdl::core

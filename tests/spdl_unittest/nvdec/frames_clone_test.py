@@ -5,6 +5,11 @@ import spdl.io
 
 import torch
 
+
+if not spdl.utils.is_nvcodec_available():
+    pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
+
+
 CMDS = {
     "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 1000 sample.mp4",
     "image": "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.jpg",
