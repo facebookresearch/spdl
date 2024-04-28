@@ -21,6 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
+        python-version: [ "3.10" ]
         cu_version: [ "11.8.0", "12.1.0" ]
     runs-on: ${{ matrix.os }}
     defaults:
@@ -40,7 +41,7 @@ jobs:
       - name: Build SPDL
         run: |
           mkdir ~/package
-          conda build -c nvidia/label/cuda-${{ matrix.cu_version }} ./conda_build --output-folder ~/package
+          conda build -c nvidia/label/cuda-${{ matrix.cu_version }} ./conda_build --python=${{ matrix.python-version }} --output-folder ~/package
         env:
           CU_VERSION: ${{ matrix.cu_version }}
           CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-${{ matrix.cu_version }}::cuda-toolkit"
@@ -49,7 +50,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: spdl.${{ matrix.os }}
+          name: spdl.${{ matrix.os }}.${{ matrix.python-version }}.${{ matrix.cu_version }}
           path: ~/package
           if-no-files-found: error
           retention-days: 1

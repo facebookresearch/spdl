@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: spdl.${{ matrix.python-version }}.${{ matrix.os }}
+          name: spdl.${{ matrix.os }}.${{ matrix.python-version }}
           path: ~/package
           if-no-files-found: error
           retention-days: 1
