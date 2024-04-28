@@ -41,7 +41,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("duration"),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   m.def(
       "async_sleep_multi",
@@ -50,7 +50,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("notify_exception"),
       nb::arg("duration"),
       nb::arg("count"),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   m.def(
       "async_decode_audio",
@@ -61,7 +61,7 @@ void register_decoding(nb::module_& m) {
       // nb::kw_only(),
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "",
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   m.def(
       "async_decode_video",
@@ -72,7 +72,7 @@ void register_decoding(nb::module_& m) {
       // nb::kw_only(),
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "",
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   m.def(
       "async_decode_image",
@@ -83,7 +83,7 @@ void register_decoding(nb::module_& m) {
       // nb::kw_only(),
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "",
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Async demuxing + decoding - FFMPEG
@@ -100,7 +100,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("io_config") = nb::none(),
       nb::arg("decoder_config") = nb::none(),
       nb::arg("filter_desc") = "",
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   m.def(
       "async_decode_image_from_bytes",
@@ -112,7 +112,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("io_config") = nb::none(),
       nb::arg("decoder_config") = nb::none(),
       nb::arg("filter_desc") = "",
-      nb::arg("_executor") = nullptr,
+      nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
   m.def(
@@ -143,7 +143,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("io_config") = nb::none(),
       nb::arg("decoder_config") = nb::none(),
       nb::arg("filter_desc") = "",
-      nb::arg("_executor") = nullptr,
+      nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -189,7 +189,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("width") = -1,
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   m.def(
       "async_decode_image_nvdec",
@@ -231,6 +231,6 @@ void register_decoding(nb::module_& m) {
       nb::arg("width") = -1,
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 }
 } // namespace spdl::core
