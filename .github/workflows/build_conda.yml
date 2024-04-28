@@ -14,15 +14,14 @@ on:
       - "README.md"
     branches:
       - main
-      - ci
 
 jobs:
   conda-build-cpu:
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-latest ]  # ubuntu-latest ]
-        python-version: [ "3.10" ]  # , "3.11", "3.12" ]
+        os: [ macos-latest, ubuntu-latest ]
+        python-version: [ "3.10", "3.11", "3.12" ]
     runs-on:  ${{ matrix.os }}
     defaults:
       run:
