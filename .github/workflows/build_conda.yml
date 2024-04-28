@@ -21,8 +21,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        os: [ macos-latest ]  # ubuntu-latest ]
+        python-version: [ "3.10" ]  # , "3.11", "3.12" ]
     runs-on:  ${{ matrix.os }}
     defaults:
       run:
@@ -34,6 +34,8 @@ jobs:
           persist-credentials: false
 
       - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "3.10"
 
       - name: Install conda-build
         run: conda install conda-build
@@ -50,3 +52,11 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           overwrite: true
+
+      - name: Unit test
+        if: matrix.python-version == '3.10'
+        run: |
+          conda install -c file://${HOME}/package/ spdl
+          conda install -c conda-forge ffmpeg
+          conda install -c pytorch numpy pytest pytorch numba
+          pytest -v tests/spdl_unittest/io/
