@@ -14,10 +14,16 @@ on:
       - "README.md"
     branches:
       - main
+      - ci
 
 jobs:
   conda-build-cuda:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        cu_version: [ "11.8.0", "12.1.0" ]
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash -el {0}
@@ -35,10 +41,10 @@ jobs:
       - name: Build SPDL
         run: |
           mkdir ~/package
-          conda build -c nvidia/label/cuda-11.8.0 ./conda_build --output-folder ~/package
+          conda build -c nvidia/label/cuda-${{ matrix.cu_version }} ./conda_build --output-folder ~/package
         env:
-          CU_VERSION: 11.8
-          CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-11.8.0::cuda-toolkit"
+          CU_VERSION: ${{ matrix.cu_version }}
+          CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-${{ matrix.cu_version }}::cuda-toolkit"
           SPDL_USE_CUDA: 1
           SPDL_USE_NVCODEC: 1
 
