@@ -14,6 +14,7 @@ on:
       - "README.md"
     branches:
       - main
+      - ci
 
 jobs:
   conda-build-cpu:
@@ -21,6 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12"]
     runs-on:  ${{ matrix.os }}
     defaults:
       run:
@@ -39,11 +41,11 @@ jobs:
       - name: Build SPDL
         run: |
           mkdir ~/package
-          conda build ./conda_build --output-folder ~/package
+          conda build ./conda_build --python=${{ matrix.python-version }} --output-folder ~/package
 
       - uses: actions/upload-artifact@v4
         with:
-          name: spdl.${{ matrix.os }}
+          name: spdl.${{ matrix.python-version }}.${{ matrix.os }}
           path: ~/package
           if-no-files-found: error
           retention-days: 1
