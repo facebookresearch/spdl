@@ -24,7 +24,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("cuda_deleter") = nb::none(),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
   m.def(
       "async_convert_video",
       &async_convert_frames<MediaType::Video>,
@@ -36,7 +36,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("cuda_deleter") = nb::none(),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
   m.def(
       "async_convert_image",
       &async_convert_frames<MediaType::Image>,
@@ -48,7 +48,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("cuda_deleter") = nb::none(),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image",
       &async_batch_convert_frames,
@@ -60,7 +60,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("cuda_deleter") = nb::none(),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 
   m.def(
       "async_convert_video_nvdec",
@@ -69,7 +69,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("notify_exception"),
       nb::arg("frames"),
       // nb::kw_only(),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
   m.def(
       "async_convert_image_nvdec",
       &async_convert_nvdec_frames<MediaType::Image>,
@@ -77,7 +77,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("notify_exception"),
       nb::arg("frames"),
       // nb::kw_only(),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image_nvdec",
       &async_batch_convert_nvdec_frames,
@@ -85,6 +85,6 @@ void register_conversion(nb::module_& m) {
       nb::arg("notify_exception"),
       nb::arg("frames"),
       // nb::kw_only(),
-      nb::arg("_executor") = nullptr);
+      nb::arg("executor") = nullptr);
 }
 } //  namespace spdl::core
