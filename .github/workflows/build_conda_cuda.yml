@@ -14,7 +14,6 @@ on:
       - "README.md"
     branches:
       - main
-      - ci
 
 jobs:
   conda-build-cuda:
