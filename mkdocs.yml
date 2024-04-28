@@ -56,6 +56,7 @@ nav:
           - "Folly": spdl/utils_folly.md
           - "FFmpeg": spdl/utils_ffmpeg.md
           - "Futures": spdl/utils_futures.md
+          - "Misc": spdl/utils_misc.md
   - "LibSPDL (C++)":
       - Links: libspdl/links.md
       - Classes:

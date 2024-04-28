@@ -3,6 +3,10 @@ import pytest
 import spdl.io
 import torch
 
+if not spdl.utils.is_nvcodec_available():
+    pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
+
+
 DEFAULT_CUDA = 0
 
 
