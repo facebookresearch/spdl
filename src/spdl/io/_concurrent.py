@@ -14,6 +14,7 @@ __all__ = [
     "streaming_demux",
     "load_media",
     "batch_load_image",
+    "batch_load_image_nvdec",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -215,3 +216,37 @@ def batch_load_image(
         yield spdl.io.convert_frames(frames, **convert_options)
 
     return _convert([_decode(src) for src in srcs])
+
+
+@spdl.utils.chain_futures
+def batch_load_image_nvdec(
+    srcs: List[Union[str, bytes]],
+    *,
+    cuda_device_index: int,
+    width: int | None,
+    height: int | None,
+    pix_fmt: str | None = "rgba",
+    demux_options: Optional[Dict[str, Any]] = None,
+    decode_options: Optional[Dict[str, Any]] = None,
+    strict: bool = True,
+):
+    if not srcs:
+        raise ValueError("`srcs` must not be empty.")
+
+    demux_options = demux_options or {}
+    decode_options = decode_options or {}
+    width = -1 if width is None else width
+    height = -1 if height is None else height
+
+    packets = yield spdl.utils.wait_futures(
+        [demux_media("image", src, **demux_options) for src in srcs], strict=strict
+    )
+    yield spdl.io.decode_packets_nvdec(
+        packets,
+        cuda_device_index=cuda_device_index,
+        width=width,
+        height=height,
+        pix_fmt=pix_fmt,
+        strict=strict,
+        **decode_options,
+    )

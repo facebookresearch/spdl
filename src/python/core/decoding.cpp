@@ -246,6 +246,7 @@ void register_decoding(nb::module_& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt,
+         bool strict,
          ThreadPoolExecutorPtr decode_executor) {
         return async_batch_decode_image_nvdec(
             set_result,
@@ -259,6 +260,7 @@ void register_decoding(nb::module_& m) {
             width,
             height,
             pix_fmt,
+            strict,
             decode_executor);
       },
       nb::arg("set_result"),
@@ -273,6 +275,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("width") = -1,
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
+      nb::arg("strict") = true,
       nb::arg("executor") = nullptr);
 }
 } // namespace spdl::core

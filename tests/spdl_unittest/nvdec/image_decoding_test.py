@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 import spdl.io
@@ -124,3 +126,40 @@ def test_decode_multiple_invalid_input(get_sample):
                 sample.path,
                 executor=executor,
             ).get()
+
+
+def test_batch_decode_images_async(get_samples):
+    """Smoke test for batch decoding of images."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=rgba -frames:v 250 sample_%d.jpeg"
+    flist = get_samples(cmd)
+
+    async def _test(srcs):
+        buffer = await spdl.io.async_batch_load_image_nvdec(
+            srcs,
+            cuda_device_index=DEFAULT_CUDA,
+            width=None,
+            height=None,
+        )
+        batch = spdl.io.to_torch(buffer)
+        assert batch.shape == torch.Size([250, 4, 240, 320])
+        assert batch.dtype == torch.uint8
+        assert batch.device == torch.device("cuda", DEFAULT_CUDA)
+
+    asyncio.run(_test(flist))
+
+
+def test_batch_decode_images(get_samples):
+    """Smoke test for batch decoding of images."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=rgba -frames:v 250 sample_%d.jpeg"
+    flist = get_samples(cmd)
+
+    buffer = spdl.io.batch_load_image_nvdec(
+        flist,
+        cuda_device_index=DEFAULT_CUDA,
+        width=None,
+        height=None,
+    ).result()
+    batch = spdl.io.to_torch(buffer)
+    assert batch.shape == torch.Size([250, 4, 240, 320])
+    assert batch.dtype == torch.uint8
+    assert batch.device == torch.device("cuda", DEFAULT_CUDA)
