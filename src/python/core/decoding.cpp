@@ -232,5 +232,47 @@ void register_decoding(nb::module_& m) {
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
       nb::arg("executor") = nullptr);
+
+  m.def(
+      "async_batch_decode_image_nvdec",
+      [](std::function<void(NvDecVideoFramesPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         std::vector<ImagePacketsPtr>&& packets,
+         const int cuda_device_index,
+         int crop_left,
+         int crop_top,
+         int crop_right,
+         int crop_bottom,
+         int width,
+         int height,
+         const std::optional<std::string>& pix_fmt,
+         ThreadPoolExecutorPtr decode_executor) {
+        return async_batch_decode_image_nvdec(
+            set_result,
+            notify_exception,
+            std::move(packets),
+            cuda_device_index,
+            {static_cast<short>(crop_left),
+             static_cast<short>(crop_top),
+             static_cast<short>(crop_right),
+             static_cast<short>(crop_bottom)},
+            width,
+            height,
+            pix_fmt,
+            decode_executor);
+      },
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("packets"),
+      // nb::kw_only(),
+      nb::arg("cuda_device_index"),
+      nb::arg("crop_left") = 0,
+      nb::arg("crop_top") = 0,
+      nb::arg("crop_right") = 0,
+      nb::arg("crop_bottom") = 0,
+      nb::arg("width") = -1,
+      nb::arg("height") = -1,
+      nb::arg("pix_fmt").none() = "rgba",
+      nb::arg("executor") = nullptr);
 }
 } // namespace spdl::core

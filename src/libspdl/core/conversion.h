@@ -35,13 +35,4 @@ FuturePtr async_batch_convert_frames(
     const std::optional<cuda_deleter_fn>& cuda_deleter = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
-////////////////////////////////////////////////////////////////////////////////
-// NVDEC
-////////////////////////////////////////////////////////////////////////////////
-FuturePtr async_batch_convert_nvdec_frames(
-    std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    std::vector<NvDecImageFramesPtr>&& frames,
-    ThreadPoolExecutorPtr demux_executor = nullptr);
-
 } // namespace spdl::core

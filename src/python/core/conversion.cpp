@@ -61,14 +61,5 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("cuda_deleter") = nb::none(),
       nb::arg("executor") = nullptr);
-
-  m.def(
-      "async_convert_batch_image_nvdec",
-      &async_batch_convert_nvdec_frames,
-      nb::arg("set_result"),
-      nb::arg("notify_exception"),
-      nb::arg("frames"),
-      // nb::kw_only(),
-      nb::arg("executor") = nullptr);
 }
 } //  namespace spdl::core

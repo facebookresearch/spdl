@@ -125,4 +125,38 @@ template FuturePtr async_decode_nvdec(
     int height,
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr demux_executor);
+
+FuturePtr async_batch_decode_image_nvdec(
+    std::function<void(NvDecVideoFramesPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<ImagePacketsPtr>&& packets,
+    int cuda_device_index,
+    const CropArea& crop,
+    int width,
+    int height,
+    const std::optional<std::string>& pix_fmt,
+    ThreadPoolExecutorPtr executor) {
+#ifndef SPDL_USE_NVCODEC
+  auto task =
+      folly::coro::co_invoke([]() -> folly::coro::Task<NvDecVideoFramesPtr> {
+        SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+      });
+#else
+  auto task = folly::coro::co_invoke(
+      [=](std::vector<ImagePacketsPtr>&& pkts)
+          -> folly::coro::Task<NvDecVideoFramesPtr> {
+        validate_nvdec_params(cuda_device_index, crop, width, height);
+        init_cuda();
+        co_return co_await detail::decode_nvdec(
+            std::move(pkts), cuda_device_index, crop, width, height, pix_fmt);
+      },
+      std::move(packets));
+#endif
+
+  return detail::execute_task_with_callback(
+      std::move(task),
+      std::move(set_result),
+      std::move(notify_exception),
+      detail::get_decode_executor(executor));
+}
 } // namespace spdl::core

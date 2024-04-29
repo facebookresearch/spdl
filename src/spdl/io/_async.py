@@ -217,9 +217,11 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
         (Awaitable[NvDecFrames]): Awaitable which returns a Frame object.
             The type of the returned object corresponds to the input Packets type.
 
-            - `VideoPackets` -> `VideoNvDecFrames`
+            - `VideoPackets` -> `NvDecVideoFrames`
 
-            - `ImagePackets` -> `ImageNvDecFrames`
+            - `ImagePackets` -> `NvDecImageFrames`
+
+            - `List[ImagePackets]` -> `NvDecVideoFrames`
     """
     func = _common._get_nvdec_decoding_func(packets)
     return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
@@ -306,12 +308,6 @@ def async_convert_frames(frames, **kwargs):
             - `FFmpegImageFrames` -> `CPUBuffer` or `CUDABuffer`
 
             - `List[FFmpegImageFrames]` -> `CPUBuffer` or `CUDABuffer`
-
-            - `NvDecVideoFrames` -> `CUDABuffer`
-
-            - `NvDecImageFrames` -> `CUDABuffer`
-
-            - `List[NvDecImageFrames]` -> `CUDABuffer`
     """
     func = _common._get_conversion_func(frames)
     return _async_task(func, frames, **kwargs)

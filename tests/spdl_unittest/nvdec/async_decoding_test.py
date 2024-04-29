@@ -74,8 +74,7 @@ def test_batch_decode_image(get_samples):
 
     async def _test():
         demuxing = [spdl.io.async_demux_media("image", path) for path in flist]
-        decoding = []
-        frames = []
+        packets = []
         for i, result in enumerate(
             await asyncio.gather(*demuxing, return_exceptions=True)
         ):
@@ -83,16 +82,12 @@ def test_batch_decode_image(get_samples):
                 print(result)
                 assert isinstance(result, Exception)
                 continue
-            coro = spdl.io.async_decode_packets_nvdec(
-                result, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba"
-            )
-            decoding.append(asyncio.create_task(coro))
+            packets.append(result)
 
-        done, _ = await asyncio.wait(decoding, return_when=asyncio.ALL_COMPLETED)
-        for result in done:
-            frames.append(result.result())
-
-        buffer = await spdl.io.async_convert_frames(frames)
-        assert buffer.shape == [250, 4, 240, 320]
+        assert len(packets) == 250
+        frames = await spdl.io.async_decode_packets_nvdec(
+            packets, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba"
+        )
+        assert frames.shape == [250, 4, 240, 320]
 
     asyncio.run(_test())

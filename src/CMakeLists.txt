@@ -16,7 +16,6 @@ set(deps folly)
 set(srcs
   libspdl/core/conversion/audio.cpp
   libspdl/core/conversion/cuda.cpp
-  libspdl/core/conversion/nvdec.cpp
   libspdl/core/conversion/vision.cpp
   libspdl/core/detail/executor.cpp
   libspdl/core/detail/ffmpeg/conversion.cpp
