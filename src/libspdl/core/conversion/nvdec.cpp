@@ -71,7 +71,7 @@ CUDABuffer2DPitchPtr convert_nvdec_batch_image_frames(
   detail::set_cuda_primary_context(buf0->device_index);
   auto ret = std::make_shared<CUDABuffer2DPitch>(
       buf0->device_index, batch_frames.size());
-  ret->allocate(buf0->c, buf0->h, buf0->w, buf0->bpp, buf0->channel_last);
+  ret->allocate(buf0->c, buf0->h, buf0->w);
 
   cudaStream_t stream = 0;
   for (auto& frame : batch_frames) {
