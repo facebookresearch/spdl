@@ -29,6 +29,20 @@ CUstream get_stream() {
   XLOG(DBG5) << "CUDA stream: " << (void*)stream;
   return stream;
 }
+
+struct _Decoder {
+  NvDecDecoder decoder{};
+  bool decoding_ongoing = false;
+};
+
+_Decoder& get_decoder() {
+  // Decoder objects are thread local so that they survive each decoding job,
+  // which gives us opportunity to reuse the decoder and avoid destruction and
+  // recreation ops, which are very expensive (~300ms).
+  static thread_local _Decoder decoder{};
+  return decoder;
+}
+
 } // namespace
 
 template <MediaType media_type>
@@ -46,11 +60,8 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   }
 
   TRACE_EVENT("nvdec", "decode_packets");
-  // Decoder objects are thread local so that they survive each decoding job,
-  // which gives us opportunity to reuse the decoder and avoid destruction and
-  // recreation ops, which are very expensive (~300ms).
-  static thread_local NvDecDecoder decoder{};
-  static thread_local bool decoding_ongoing = false;
+
+  _Decoder& _dec = get_decoder();
 
   AVCodecParameters* codecpar = packets->codecpar;
   auto frames = std::make_unique<NvDecFrames<media_type>>(
@@ -59,14 +70,14 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   frames->buffer = std::make_shared<CUDABuffer2DPitch>(
       cuda_device_index, num_packets, media_type == MediaType::Image);
 
-  if (decoding_ongoing) {
+  if (_dec.decoding_ongoing) {
     // When the previous decoding ended with an error, if the new input data is
     // the same format, then handle_video_sequence might not be called because
     // NVDEC decoder thinks that incoming frames are from the same sequence.
     // This can cause strange decoder behavior. So we need to reset the decoder.
-    decoder.reset();
+    _dec.decoder.reset();
   }
-  decoder.init(
+  _dec.decoder.init(
       cuda_device_index,
       covert_codec_id(codecpar->codec_id),
       frames->buffer.get(),
@@ -77,12 +88,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
       target_height,
       pix_fmt);
 
-  decoding_ongoing = true;
-#define _PKT(i) packets->get_packets()[i]
-#define _PTS(pkt)                                           \
-  (static_cast<double>(pkt->pts) * packets->time_base.num / \
-   packets->time_base.den)
-
+  _dec.decoding_ongoing = true;
   size_t it = 0;
   unsigned long flags = CUVID_PKT_TIMESTAMP;
   switch (codecpar->codec_id) {
@@ -101,6 +107,11 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     default:;
   }
 
+#define _PKT(i) packets->get_packets()[i]
+#define _PTS(pkt)                                           \
+  (static_cast<double>(pkt->pts) * packets->time_base.num / \
+   packets->time_base.den)
+
   flags |= CUVID_PKT_ENDOFPICTURE;
   for (; it < num_packets - 1; ++it) {
     co_await folly::coro::co_safe_point;
@@ -108,13 +119,16 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
     XLOG(DBG9) << fmt::format(
         " -- packet  PTS={:.3f} ({})", _PTS(pkt), pkt->pts);
 
-    decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
+    _dec.decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
   }
   auto pkt = _PKT(it);
   flags |= CUVID_PKT_ENDOFSTREAM;
-  decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
+  _dec.decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
 
-  decoding_ongoing = false;
+  _dec.decoding_ongoing = false;
+
+#undef _PKT
+#undef _PTS
 
   XLOG(DBG5) << fmt::format(
       "Decoded {} frames from {} packets.",
@@ -141,6 +155,3 @@ template folly::coro::Task<NvDecImageFramesPtr> decode_nvdec(
     const std::optional<std::string> pix_fmt);
 
 } // namespace spdl::core::detail
-
-#undef _PKT
-#undef _TS
