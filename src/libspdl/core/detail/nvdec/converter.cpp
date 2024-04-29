@@ -88,26 +88,14 @@ std::unique_ptr<Converter> get_converter(
     //
 
     if (!pix_fmt) {
-      bool channel_last = false;
-      size_t c = 1, bpp = 1;
-      auto w = param->ulTargetWidth, h = param->ulTargetHeight;
-      buffer->allocate(c, h + h / 2, w, bpp, channel_last);
       return std::unique_ptr<Converter>(new NV12Passthrough{stream, buffer});
     }
     auto pix_fmt_val = pix_fmt.value();
     if (pix_fmt_val == "rgba") {
-      bool channel_last = false;
-      size_t c = 4, bpp = 1;
-      auto w = param->ulTargetWidth, h = param->ulTargetHeight;
-      buffer->allocate(c, h, w, bpp, channel_last);
       return std::unique_ptr<Converter>(
           new NV12ToRGB<nv12_to_planar_rgba>{stream, buffer, matrix_coeff});
     }
     if (pix_fmt_val == "bgra") {
-      bool channel_last = false;
-      size_t c = 4, bpp = 1;
-      auto w = param->ulTargetWidth, h = param->ulTargetHeight;
-      buffer->allocate(c, h, w, bpp, channel_last);
       return std::unique_ptr<Converter>(
           new NV12ToRGB<nv12_to_planar_bgra>{stream, buffer, matrix_coeff});
     }

@@ -128,7 +128,12 @@ struct CUDABuffer2DPitch {
 
   /// Allocate the memory big enough to hold data for ``(max_frames, c, h, w)``
   /// The actual data size depends on ``bpp`` and ``pitch``.
-  void allocate(size_t c, size_t h, size_t w, size_t bpp, bool channel_last);
+  void allocate(
+      size_t c,
+      size_t h,
+      size_t w,
+      size_t bpp = 1,
+      bool channel_last = false);
   ///
   /// Get the shape of the data.
   std::vector<size_t> get_shape() const;

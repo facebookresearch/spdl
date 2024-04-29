@@ -43,6 +43,40 @@ _Decoder& get_decoder() {
   return decoder;
 }
 
+std::shared_ptr<CUDABuffer2DPitch> get_buffer(
+    int cuda_device_index,
+    size_t num_packets,
+    AVCodecParameters* codecpar,
+    const CropArea& crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string>& pix_fmt,
+    bool is_image) {
+  auto buffer = std::make_shared<CUDABuffer2DPitch>(
+      cuda_device_index, num_packets, is_image);
+
+  int w = target_width > 0 ? target_width
+                           : (codecpar->width - crop.left - crop.right);
+  int h = target_height > 0 ? target_height
+                            : (codecpar->height - crop.top - crop.bottom);
+
+  auto cu_ctx = get_cucontext(cuda_device_index);
+  CHECK_CU(cuCtxSetCurrent(cu_ctx), "Failed to set current context.");
+
+  if (!pix_fmt) { // Assume NV12
+    buffer->allocate(1, h + h / 2, w);
+    return buffer;
+  }
+  auto pix_fmt_val = pix_fmt.value();
+  if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
+    buffer->allocate(4, h, w);
+    return buffer;
+  }
+  SPDL_FAIL(fmt::format(
+      "Unsupported pixel format: {}. Supported formats are 'rgba', 'bgra'.",
+      pix_fmt_val));
+}
+
 } // namespace
 
 template <MediaType media_type>
@@ -67,8 +101,16 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   auto frames = std::make_unique<NvDecFrames<media_type>>(
       packets->id,
       pix_fmt ? av_get_pix_fmt(pix_fmt->c_str()) : codecpar->format);
-  frames->buffer = std::make_shared<CUDABuffer2DPitch>(
-      cuda_device_index, num_packets, media_type == MediaType::Image);
+
+  frames->buffer = get_buffer(
+      cuda_device_index,
+      num_packets,
+      codecpar,
+      crop,
+      target_width,
+      target_height,
+      pix_fmt,
+      media_type == MediaType::Image);
 
   if (_dec.decoding_ongoing) {
     // When the previous decoding ended with an error, if the new input data is

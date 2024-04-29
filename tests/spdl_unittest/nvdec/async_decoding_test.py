@@ -79,8 +79,8 @@ def test_batch_decode_image(get_samples):
         for i, result in enumerate(
             await asyncio.gather(*demuxing, return_exceptions=True)
         ):
-            print(result)
             if i == 0:
+                print(result)
                 assert isinstance(result, Exception)
                 continue
             coro = spdl.io.async_decode_packets_nvdec(
@@ -90,7 +90,6 @@ def test_batch_decode_image(get_samples):
 
         done, _ = await asyncio.wait(decoding, return_when=asyncio.ALL_COMPLETED)
         for result in done:
-            print(result)
             frames.append(result.result())
 
         buffer = await spdl.io.async_convert_frames(frames)
