@@ -26,10 +26,9 @@ def _decode_videos(src, timestamps, **kwargs):
     @spdl.utils.chain_futures
     def _f(packets_future):
         packets = yield packets_future
-        frames = yield spdl.io.decode_packets_nvdec(
+        yield spdl.io.decode_packets_nvdec(
             packets, cuda_device_index=DEFAULT_CUDA, **kwargs
         )
-        yield spdl.io.convert_frames(frames)
 
     futures = []
     for fut in spdl.io.streaming_demux("video", src, timestamps=timestamps):

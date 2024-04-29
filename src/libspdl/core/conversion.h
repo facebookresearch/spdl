@@ -38,13 +38,6 @@ FuturePtr async_batch_convert_frames(
 ////////////////////////////////////////////////////////////////////////////////
 // NVDEC
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-FuturePtr async_convert_nvdec_frames(
-    std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    NvDecFramesPtr<media_type> frames,
-    ThreadPoolExecutorPtr demux_executor = nullptr);
-
 FuturePtr async_batch_convert_nvdec_frames(
     std::function<void(CUDABuffer2DPitchPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
