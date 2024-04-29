@@ -202,9 +202,8 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt) {
-  // TODO: merge the implementation with the regular nvdec_decoder (especially
-  // the treatment of thread local decoder object)
+    const std::optional<std::string> pix_fmt,
+    bool strict) {
   co_await folly::coro::co_safe_point;
   size_t num_packets = packets.size();
   if (num_packets == 0) {
@@ -219,6 +218,21 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
             "All images must have the same pixel format. The first one has {}, while another has {}.",
             av_get_pix_fmt_name((AVPixelFormat)p0->codecpar->format),
             av_get_pix_fmt_name((AVPixelFormat)packet->codecpar->format)));
+      }
+    }
+  }
+  for (int i = num_packets - 1; i >= 0; --i) {
+    // An example of YUVJ411P format is "ILSVRC2012_val_00016550.JPEG" from
+    // ImageNet validation set.
+    // When such a data is fed to NVDEC, it just does not call the callback.
+    if ((AVPixelFormat)packets[i]->codecpar->format == AV_PIX_FMT_YUVJ411P) {
+      auto msg =
+          fmt::format("Found unsupported format YUVJ411P at index {}.", i);
+      if (strict) {
+        SPDL_FAIL(msg);
+      } else {
+        XLOG(ERR) << msg;
+        packets.erase(packets.begin() + i);
       }
     }
   }
@@ -243,8 +257,7 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
       pix_fmt,
       false);
 
-  for (auto& packet : packets) {
-    co_await folly::coro::co_safe_point;
+  auto decode_fn = [&](ImagePacketsPtr& packet) {
     if (_dec.decoding_ongoing) {
       // When the previous decoding ended with an error, if the new input data
       // is the same format, then handle_video_sequence might not be called
@@ -271,6 +284,35 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     auto pkt = packet->get_packets()[0];
     _dec.decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
     _dec.decoding_ongoing = false;
+  };
+
+  for (auto& packet : packets) {
+    co_await folly::coro::co_safe_point;
+    int n = frames->buffer->n;
+    try {
+      decode_fn(packet);
+    } catch (std::exception& e) {
+      XLOG(ERR) << fmt::format("Failed to decode image: {}", e.what());
+      if (strict) {
+        throw;
+      }
+    }
+    // When a media is not supported, NVDEC does not necessarily
+    // fail. Instead it just does not call the callback.
+    // So we need to check if the number of decoded frames has changed.
+    if (n == frames->buffer->n) {
+      if (strict) {
+        SPDL_FAIL(
+            "Failed to decode image. "
+            "(This could be due to unsupported media type. "
+            "NVDEC does not always fail even when the input format is not supported.)");
+      } else {
+        XLOG(ERR)
+            << "Failed to decode image. "
+               "(This could be due to unsupported media type. "
+               "NVDEC does not always fail even when the input format is not supported.)";
+      }
+    }
   }
   co_return frames;
 }

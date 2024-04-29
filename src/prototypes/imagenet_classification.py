@@ -43,6 +43,7 @@ def _parse_args(args):
     parser.add_argument("--num-workers", type=int, default=1)
     parser.add_argument("--no-compile", action="store_false", dest="compile")
     parser.add_argument("--no-bf16", action="store_false", dest="use_bf16")
+    parser.add_argument("--use-nvdec", action="store_true")
     args = parser.parse_args(args)
     if args.trace:
         args.max_samples = args.batch_size * 40
@@ -181,6 +182,21 @@ def _get_batch_generator(args, device):
             batch = batch.permute((0, 3, 1, 2))
             return batch, classes
 
+    async def _async_decode_nvdec(paths):
+        with torch.profiler.record_function("async_decode"):
+            classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+            classes = torch.tensor(classes, dtype=torch.int64).to(device)
+            buffer = await spdl.io.async_batch_load_image_nvdec(
+                paths,
+                cuda_device_index=0,
+                width=224,
+                height=224,
+                pix_fmt="rgba",
+                strict=True,
+            )
+            batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
+            return batch, classes
+
     @spdl.utils.chain_futures
     def _decode_func(paths):
         with torch.profiler.record_function("decode"):
@@ -207,10 +223,32 @@ def _get_batch_generator(args, device):
             f.set_result((batch, classes))
             yield f
 
+    @spdl.utils.chain_futures
+    def _decode_func_nvdec(paths):
+        with torch.profiler.record_function("decode"):
+            classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+            classes = torch.tensor(classes, dtype=torch.int64).to(device)
+            buffer = yield spdl.io.batch_load_image_nvdec(
+                paths,
+                cuda_device_index=0,
+                width=224,
+                height=224,
+                pix_fmt="rgba",
+                strict=True,
+            )
+            batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
+            f = concurrent.futures.Future()
+            f.set_result((batch, classes))
+            yield f
+
     match args.mode:
         case "concurrent":
+            if args.use_nvdec:
+                return apply_concurrent(_decode_func_nvdec, srcs_gen)
             return apply_concurrent(_decode_func, srcs_gen)
         case "async":
+            if args.use_nvdec:
+                return apply_async(_async_decode_nvdec, srcs_gen)
             return apply_async(_async_decode_func, srcs_gen)
 
 

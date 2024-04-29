@@ -135,6 +135,7 @@ FuturePtr async_batch_decode_image_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
+    bool strict,
     ThreadPoolExecutorPtr executor) {
 #ifndef SPDL_USE_NVCODEC
   auto task =
@@ -148,7 +149,13 @@ FuturePtr async_batch_decode_image_nvdec(
         validate_nvdec_params(cuda_device_index, crop, width, height);
         init_cuda();
         co_return co_await detail::decode_nvdec(
-            std::move(pkts), cuda_device_index, crop, width, height, pix_fmt);
+            std::move(pkts),
+            cuda_device_index,
+            crop,
+            width,
+            height,
+            pix_fmt,
+            strict);
       },
       std::move(packets));
 #endif

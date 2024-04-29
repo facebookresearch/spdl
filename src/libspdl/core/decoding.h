@@ -50,8 +50,8 @@ FuturePtr async_batch_decode_image_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
+    bool strict,
     ThreadPoolExecutorPtr decode_executor);
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demux + decode in one step

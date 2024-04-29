@@ -53,15 +53,11 @@ def to_torch(buffer):
                 "Failed to convert to PyTorch Tensor. "
                 f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
             )
-        # If NvDEC, assert that no copy was made.
-        # FFmpeg CUDA buffer could be on a different cuda context, so copy could have
-        # been made.
-        if isinstance(buffer, (_libspdl.NvDecVideoFrames, _libspdl.NvDecImageFrames)):
-            if tensor.data_ptr() != data_ptr:
-                raise RuntimeError(
-                    "[INTERNAL ERROR] Failed to perform zero-copy conversion to PyTorch Tensor. "
-                    f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
-                )
+        if tensor.data_ptr() != data_ptr:
+            raise RuntimeError(
+                "[INTERNAL ERROR] Failed to perform zero-copy conversion to PyTorch Tensor. "
+                f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
+            )
         return tensor
 
     # Not sure how to make as_tensor work with __array_interface__.
