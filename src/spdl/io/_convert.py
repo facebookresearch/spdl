@@ -56,7 +56,7 @@ def to_torch(buffer):
         # If NvDEC, assert that no copy was made.
         # FFmpeg CUDA buffer could be on a different cuda context, so copy could have
         # been made.
-        if isinstance(buffer, _libspdl.CUDABuffer2DPitch):
+        if isinstance(buffer, (_libspdl.NvDecVideoFrames, _libspdl.NvDecImageFrames)):
             if tensor.data_ptr() != data_ptr:
                 raise RuntimeError(
                     "[INTERNAL ERROR] Failed to perform zero-copy conversion to PyTorch Tensor. "

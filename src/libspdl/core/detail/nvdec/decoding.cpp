@@ -196,4 +196,83 @@ template folly::coro::Task<NvDecImageFramesPtr> decode_nvdec(
     int target_height,
     const std::optional<std::string> pix_fmt);
 
+folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
+    std::vector<ImagePacketsPtr>&& packets,
+    int cuda_device_index,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string> pix_fmt) {
+  // TODO: merge the implementation with the regular nvdec_decoder (especially
+  // the treatment of thread local decoder object)
+  co_await folly::coro::co_safe_point;
+  size_t num_packets = packets.size();
+  if (num_packets == 0) {
+    SPDL_FAIL("No packets to decode.");
+  }
+
+  auto& p0 = packets[0];
+  if (!pix_fmt) {
+    for (auto& packet : packets) {
+      if (packet->codecpar->format != p0->codecpar->format) {
+        SPDL_FAIL(fmt::format(
+            "All images must have the same pixel format. The first one has {}, while another has {}.",
+            av_get_pix_fmt_name((AVPixelFormat)p0->codecpar->format),
+            av_get_pix_fmt_name((AVPixelFormat)packet->codecpar->format)));
+      }
+    }
+  }
+
+  TRACE_EVENT("nvdec", "decode_packets");
+
+  _Decoder& _dec = get_decoder();
+
+  auto frames = std::make_unique<NvDecVideoFrames>(
+      packets[0]->id,
+      pix_fmt ? av_get_pix_fmt(pix_fmt->c_str()) : p0->codecpar->format);
+  frames->buffer = std::make_shared<CUDABuffer2DPitch>(
+      cuda_device_index, num_packets, false);
+
+  frames->buffer = get_buffer(
+      cuda_device_index,
+      num_packets,
+      p0->codecpar,
+      crop,
+      target_width,
+      target_height,
+      pix_fmt,
+      false);
+
+  for (auto& packet : packets) {
+    co_await folly::coro::co_safe_point;
+    if (_dec.decoding_ongoing) {
+      // When the previous decoding ended with an error, if the new input data
+      // is the same format, then handle_video_sequence might not be called
+      // because NVDEC decoder thinks that incoming frames are from the same
+      // sequence. This can cause strange decoder behavior. So we need to reset
+      // the decoder.
+      _dec.decoder.reset();
+    }
+    _dec.decoder.init(
+        cuda_device_index,
+        covert_codec_id(packet->codecpar->codec_id),
+        frames->buffer.get(),
+        packet->time_base,
+        packet->timestamp,
+        crop,
+        target_width,
+        target_height,
+        pix_fmt);
+
+    _dec.decoding_ongoing = true;
+    unsigned long flags =
+        CUVID_PKT_TIMESTAMP | CUVID_PKT_ENDOFPICTURE | CUVID_PKT_ENDOFSTREAM;
+
+    auto pkt = packet->get_packets()[0];
+    _dec.decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
+    _dec.decoding_ongoing = false;
+  }
+  co_return frames;
+}
+
 } // namespace spdl::core::detail

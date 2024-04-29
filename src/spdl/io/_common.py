@@ -39,7 +39,14 @@ def _get_nvdec_decoding_func(packets):
         case _libspdl.ImagePackets:
             name = "async_decode_image_nvdec"
         case _:
-            raise TypeError(f"Unexpected type: {t}.")
+            if not isinstance(packets, list):
+                raise TypeError(f"Unexpected type: {t}.")
+            if all(isinstance(f, _libspdl.ImagePackets) for f in packets):
+                name = "async_batch_decode_image_nvdec"
+            else:
+                raise TypeError(
+                    f"Unexpected type: {t}. When the container type is list, all frames must be ImagePackets."
+                )
     return getattr(_libspdl, name)
 
 
@@ -56,11 +63,9 @@ def _get_conversion_func(frames):
                 raise TypeError(f"Unexpected type: {t}.")
             if all(isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
                 name = "async_convert_batch_image"
-            elif all(isinstance(f, _libspdl.NvDecImageFrames) for f in frames):
-                name = "async_convert_batch_image_nvdec"
             else:
                 raise TypeError(
-                    f"Unexpected type: {t}. When the container type is list, all frames must be either FFmpegImageFrames or NvDecImageFrames."
+                    f"Unexpected type: {t}. When the container type is list, all frames must be either FFmpegImageFrames."
                 )
     return getattr(_libspdl, name)
 

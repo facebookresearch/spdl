@@ -41,6 +41,18 @@ FuturePtr async_decode_nvdec(
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr decode_executor);
 
+FuturePtr async_batch_decode_image_nvdec(
+    std::function<void(NvDecVideoFramesPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<PacketsPtr<MediaType::Image>>&& packets,
+    int cuda_device_index,
+    const CropArea& crop,
+    int width,
+    int height,
+    const std::optional<std::string>& pix_fmt,
+    ThreadPoolExecutorPtr decode_executor);
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Demux + decode in one step
 ////////////////////////////////////////////////////////////////////////////////

@@ -98,9 +98,6 @@ nb::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
 void register_frames_and_buffers(nb::module_& m) {
   auto _Buffer = nb::class_<Buffer>(m, "Buffer");
 
-  auto _CUDABuffer2DPitch =
-      nb::class_<CUDABuffer2DPitch>(m, "CUDABuffer2DPitch");
-
   auto _FFmpegAudioFrames =
       nb::class_<FFmpegAudioFrames>(m, "FFmpegAudioFrames");
 
@@ -150,40 +147,6 @@ void register_frames_and_buffers(nb::module_& m) {
                   "__cuda_array_interface__ is only available for CUDA buffers.");
             }
             return (static_cast<const CUDABuffer*>(&self))->device_index;
-          }));
-
-#ifdef SPDL_USE_NVCODEC
-#define IF_CUDABUFFER2_ENABLED(x) x
-#else
-#define IF_CUDABUFFER2_ENABLED(x)                                         \
-  [](const CUDABuffer2DPitch&) {                                          \
-    throw std::runtime_error("SPDL is not compiled with NVDEC support."); \
-  }
-#endif
-
-  _CUDABuffer2DPitch
-      .def_prop_ro(
-          "channel_last",
-          IF_CUDABUFFER2_ENABLED(
-              [](const CUDABuffer2DPitch& self) { return self.channel_last; }))
-      .def_prop_ro(
-          "ndim", IF_CUDABUFFER2_ENABLED([](const CUDABuffer2DPitch& self) {
-            return self.get_shape().size();
-          }))
-      .def_prop_ro(
-          "shape", IF_CUDABUFFER2_ENABLED(&CUDABuffer2DPitch::get_shape))
-      .def_prop_ro(
-          "is_cuda", IF_CUDABUFFER2_ENABLED([](const CUDABuffer2DPitch& self) {
-            return true;
-          }))
-      .def_prop_ro(
-          "device_index",
-          IF_CUDABUFFER2_ENABLED(
-              [](const CUDABuffer2DPitch& self) { return self.device_index; }))
-      .def_prop_ro(
-          "__cuda_array_interface__",
-          IF_CUDABUFFER2_ENABLED([](CUDABuffer2DPitch& self) {
-            return get_cuda_array_interface(self);
           }));
 
   _FFmpegAudioFrames
