@@ -5,6 +5,7 @@ __all__ = [
     "is_nvcodec_available",
 ]
 
+
 def is_cuda_available() -> bool:
     """Check if SPDL is compiled with CUDA support.
 

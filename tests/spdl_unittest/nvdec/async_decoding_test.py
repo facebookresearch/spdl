@@ -20,7 +20,6 @@ def test_decode_video_nvdec(get_sample):
 
     async def _test():
         decode_tasks = []
-        conversion_tasks = []
         async for packets in spdl.io.async_streaming_demux(
             "video", sample.path, timestamps=timestamps
         ):
@@ -31,10 +30,6 @@ def test_decode_video_nvdec(get_sample):
                 )
             )
         results = await asyncio.gather(*decode_tasks)
-        for frames in results:
-            print(frames)
-            conversion_tasks.append(spdl.io.async_convert_frames(frames))
-        results = await asyncio.gather(*conversion_tasks)
         for buffer in results:
             tensor = spdl.io.to_torch(buffer)
             print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
@@ -61,8 +56,7 @@ def test_decode_image_nvdec(get_sample):
         import torch
 
         frames = await _decode_image(sample.path)
-        buffer = await spdl.io.async_convert_frames(frames)
-        tensor = spdl.io.to_torch(buffer)
+        tensor = spdl.io.to_torch(frames)
         print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
         assert tensor.shape == torch.Size([4, 240, 320])
         assert tensor.dtype == torch.uint8

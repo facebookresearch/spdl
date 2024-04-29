@@ -16,51 +16,6 @@ extern "C" {
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
-// Video/Image - Async wrapper
-////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-FuturePtr async_convert_nvdec_frames(
-    std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    NvDecFramesPtr<media_type> frames,
-    ThreadPoolExecutorPtr executor) {
-  auto task = folly::coro::co_invoke(
-      [frames =
-           std::move(frames)]() -> folly::coro::Task<CUDABuffer2DPitchPtr> {
-
-#ifndef SPDL_USE_NVCODEC
-        SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-#else
-        TRACE_EVENT(
-            "decoding",
-            "core::convert_nvdec_frames",
-            perfetto::Flow::ProcessScoped(frames->get_id()));
-        if (!frames->buffer) {
-          SPDL_FAIL("Attempted to convert an empty NvDecVideoFrames.");
-        }
-        co_return frames->buffer;
-#endif
-      });
-  return detail::execute_task_with_callback(
-      std::move(task),
-      set_result,
-      notify_exception,
-      detail::get_demux_executor_high_prio(executor));
-}
-
-template FuturePtr async_convert_nvdec_frames(
-    std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    NvDecFramesPtr<MediaType::Video> frames,
-    ThreadPoolExecutorPtr executor);
-
-template FuturePtr async_convert_nvdec_frames(
-    std::function<void(CUDABuffer2DPitchPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    NvDecFramesPtr<MediaType::Image> frames,
-    ThreadPoolExecutorPtr executor);
-
-////////////////////////////////////////////////////////////////////////////////
 // Batch Image
 ////////////////////////////////////////////////////////////////////////////////
 namespace {

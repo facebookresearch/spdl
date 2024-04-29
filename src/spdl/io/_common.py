@@ -51,10 +51,6 @@ def _get_conversion_func(frames):
             name = "async_convert_video"
         case _libspdl.FFmpegImageFrames:
             name = "async_convert_image"
-        case _libspdl.NvDecVideoFrames:
-            name = "async_convert_video_nvdec"
-        case _libspdl.NvDecImageFrames:
-            name = "async_convert_image_nvdec"
         case _:
             if not isinstance(frames, list):
                 raise TypeError(f"Unexpected type: {t}.")

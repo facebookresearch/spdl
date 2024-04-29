@@ -425,14 +425,15 @@ async def async_load_media(
     """
     demux_options = demux_options or {}
     decode_options = decode_options or {}
+    if use_nvdec and convert_options is not None:
+        raise ValueError("NVDEC cannot be used with `convert_options`.")
     convert_options = convert_options or {}
     packets = await async_demux_media(media_type, src, **demux_options)
     if use_nvdec:
-        frames = await async_decode_packets_nvdec(packets, **decode_options)
-    else:
-        frames = await async_decode_packets(packets, **decode_options)
-    buffer = await async_convert_frames(frames, **convert_options)
-    return buffer
+        return await async_decode_packets_nvdec(packets, **decode_options)
+
+    frames = await async_decode_packets(packets, **decode_options)
+    return await async_convert_frames(frames, **convert_options)
 
 
 async def _decode(media_type, src, demux_options, decode_options):

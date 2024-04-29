@@ -340,6 +340,7 @@ void register_frames_and_buffers(nb::module_& m) {
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
             return self.get_media_format_name();
           }))
+      .def_prop_ro("is_cuda", [](const NvDecVideoFrames& self) { return true; })
       .def_prop_ro(
           "__cuda_array_interface__",
           IF_NVDECVIDEOFRAMES_ENABLED([](NvDecVideoFrames& self) {
@@ -353,7 +354,12 @@ void register_frames_and_buffers(nb::module_& m) {
       .def(
           "clone",
           IF_NVDECVIDEOFRAMES_ENABLED(
-              ([](const NvDecVideoFrames& self) { return clone(self); })));
+              ([](const NvDecVideoFrames& self) { return clone(self); })))
+      .def_prop_ro(
+          "device_index",
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
+            return self.buffer->device_index;
+          }));
 
   // TODO: Add __repr__
   _NvDecImageFrames
@@ -376,6 +382,7 @@ void register_frames_and_buffers(nb::module_& m) {
           IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
             return self.get_media_format_name();
           }))
+      .def_prop_ro("is_cuda", [](const NvDecImageFrames& self) { return true; })
       .def_prop_ro(
           "__cuda_array_interface__",
           IF_NVDECVIDEOFRAMES_ENABLED([](NvDecImageFrames& self) {
@@ -389,6 +396,11 @@ void register_frames_and_buffers(nb::module_& m) {
       .def(
           "clone",
           IF_NVDECVIDEOFRAMES_ENABLED(
-              ([](const NvDecImageFrames& self) { return clone(self); })));
+              ([](const NvDecImageFrames& self) { return clone(self); })))
+      .def_prop_ro(
+          "device_index",
+          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
+            return self.buffer->device_index;
+          }));
 }
 } // namespace spdl::core

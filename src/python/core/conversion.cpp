@@ -63,22 +63,6 @@ void register_conversion(nb::module_& m) {
       nb::arg("executor") = nullptr);
 
   m.def(
-      "async_convert_video_nvdec",
-      &async_convert_nvdec_frames<MediaType::Video>,
-      nb::arg("set_result"),
-      nb::arg("notify_exception"),
-      nb::arg("frames"),
-      // nb::kw_only(),
-      nb::arg("executor") = nullptr);
-  m.def(
-      "async_convert_image_nvdec",
-      &async_convert_nvdec_frames<MediaType::Image>,
-      nb::arg("set_result"),
-      nb::arg("notify_exception"),
-      nb::arg("frames"),
-      // nb::kw_only(),
-      nb::arg("executor") = nullptr);
-  m.def(
       "async_convert_batch_image_nvdec",
       &async_batch_convert_nvdec_frames,
       nb::arg("set_result"),
