@@ -15,9 +15,11 @@ class FilterGraph {
   FilterGraph(const AVFilterGraphPtr&) = delete;
   FilterGraph& operator=(const AVFilterGraphPtr&) = delete;
 
-  AVFilterContext* get_src_ctx();
-  AVFilterContext* get_sink_ctx();
-  Rational get_time_base() const;
+  void add_frame(AVFrame* in_frame);
+  int get_frame(AVFrame* out_frame);
+
+  Rational get_src_time_base() const;
+  Rational get_sink_time_base() const;
 };
 
 FilterGraph get_audio_filter(
