@@ -157,15 +157,37 @@ FilterGraph get_filter(
 
 } // namespace
 
-AVFilterContext* FilterGraph::get_src_ctx() {
-  return graph->filters[0];
+void FilterGraph::add_frame(AVFrame* frame) {
+  auto src_ctx = graph->filters[0];
+
+  {
+    TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
+    CHECK_AVERROR(
+        av_buffersrc_add_frame_flags(
+            src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF),
+        "Failed to pass a frame to filter.");
+  }
 }
 
-AVFilterContext* FilterGraph::get_sink_ctx() {
-  return graph->filters[1];
+int FilterGraph::get_frame(AVFrame* frame) {
+  auto sink_ctx = graph->filters[1];
+  int ret;
+  {
+    TRACE_EVENT("decoding", "av_buffersink_get_frame");
+    ret = av_buffersink_get_frame(sink_ctx, frame);
+  }
+  if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
+    CHECK_AVERROR_NUM(ret, "Failed to filter a frame.");
+  }
+  return ret;
 }
 
-Rational FilterGraph::get_time_base() const {
+Rational FilterGraph::get_src_time_base() const {
+  auto ctx = graph->filters[0]->outputs[0];
+  return Rational{ctx->time_base.num, ctx->time_base.den};
+}
+
+Rational FilterGraph::get_sink_time_base() const {
   auto ctx = graph->filters[1]->inputs[0];
   return Rational{ctx->time_base.num, ctx->time_base.den};
 }

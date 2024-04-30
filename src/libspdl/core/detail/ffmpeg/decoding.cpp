@@ -23,26 +23,23 @@ namespace {
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
 folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
-    AVFrame* frame,
-    AVFilterContext* src_ctx,
-    AVFilterContext* sink_ctx) {
+    FilterGraph& filter_graph,
+    AVFramePtr&& frame) {
+  XLOG(DBG9)
+      << (frame ? fmt::format(
+                      "{:21s} {:.3f} ({})",
+                      " --- raw frame:",
+                      TS(frame, filter_graph.get_src_time_base()),
+                      frame->pts)
+                : fmt::format(" --- flush filter graph"));
+
+  filter_graph.add_frame(frame.get());
+
   int errnum;
-  {
-    TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
-    errnum = av_buffersrc_add_frame_flags(
-        src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
-  }
-
-  CHECK_AVERROR_NUM(errnum, "Failed to pass a frame to filter.");
-
-  AVFrameAutoUnref frame_ref{frame};
-  while (errnum >= 0) {
-    co_await folly::coro::co_safe_point;
+  AVFrameAutoUnref frame_ref{frame.get()};
+  do {
     AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
-    {
-      TRACE_EVENT("decoding", "av_buffersrc_get_frame");
-      errnum = av_buffersink_get_frame(sink_ctx, frame2.get());
-    }
+    errnum = filter_graph.get_frame(frame2.get());
     switch (errnum) {
       case AVERROR(EAGAIN):
         co_return;
@@ -53,7 +50,7 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
         co_yield std::move(frame2);
       }
     }
-  }
+  } while (errnum >= 0);
 }
 
 folly::coro::AsyncGenerator<AVFramePtr&&> decode_packet(
@@ -121,28 +118,18 @@ template <MediaType media_type>
 folly::coro::Task<void> decode_pkts_with_filter(
     PacketsPtr<media_type> packets,
     AVCodecContextPtr codec_ctx,
-    AVFilterContext* src_ctx,
-    AVFilterContext* sink_ctx,
+    FilterGraph& filter,
     FFmpegFrames<media_type>* frames) {
   for (auto& packet : packets->get_packets()) {
     auto decoding = decode_packet(codec_ctx.get(), packet);
     while (auto raw_frame = co_await decoding.next()) {
       co_await folly::coro::co_safe_point;
-      AVFramePtr rf = *raw_frame;
-
-      XLOG(DBG9)
-          << (rf ? fmt::format(
-                       "{:21s} {:.3f} ({})",
-                       " --- raw frame:",
-                       TS(rf, src_ctx->outputs[0]->time_base),
-                       rf->pts)
-                 : fmt::format(" --- flush filter graph"));
-
-      auto filtering = filter_frame(rf.get(), src_ctx, sink_ctx);
+      auto filtering = filter_frame(filter, *raw_frame);
       while (auto frame = co_await filtering.next()) {
+        co_await folly::coro::co_safe_point;
         AVFramePtr f = *frame;
         if (f) {
-          double ts = TS(f, sink_ctx->inputs[0]->time_base);
+          double ts = TS(f, filter.get_sink_time_base());
           XLOG(DBG9) << fmt::format(
               "{:21s} {:.3f} ({})", " ---- filtered frame:", ts, f->pts);
           frames->push_back(f.release());
@@ -197,12 +184,8 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     auto filter = get_filter<media_type>(
         codec_ctx.get(), filter_desc, packets->frame_rate);
     co_await decode_pkts_with_filter(
-        std::move(packets),
-        std::move(codec_ctx),
-        filter.get_src_ctx(),
-        filter.get_sink_ctx(),
-        frames.get());
-    frames->time_base = filter.get_time_base();
+        std::move(packets), std::move(codec_ctx), filter, frames.get());
+    frames->time_base = filter.get_sink_time_base();
   }
   co_return std::move(frames);
 }
