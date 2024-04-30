@@ -159,23 +159,17 @@ FilterGraph get_filter(
 
 void FilterGraph::add_frame(AVFrame* frame) {
   auto src_ctx = graph->filters[0];
-
-  {
-    TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
-    CHECK_AVERROR(
-        av_buffersrc_add_frame_flags(
-            src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF),
-        "Failed to pass a frame to filter.");
-  }
+  TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
+  CHECK_AVERROR(
+      av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF),
+      "Failed to pass a frame to filter.");
 }
 
 int FilterGraph::get_frame(AVFrame* frame) {
   auto sink_ctx = graph->filters[1];
-  int ret;
-  {
-    TRACE_EVENT("decoding", "av_buffersink_get_frame");
-    ret = av_buffersink_get_frame(sink_ctx, frame);
-  }
+
+  TRACE_EVENT("decoding", "av_buffersink_get_frame");
+  int ret = av_buffersink_get_frame(sink_ctx, frame);
   if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
     CHECK_AVERROR_NUM(ret, "Failed to filter a frame.");
   }
@@ -245,4 +239,43 @@ FilterGraph get_image_filter(
       arg.c_str(),
       avfilter_get_by_name("buffersink"));
 }
+
+#define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
+
+folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
+    FilterGraph& filter_graph,
+    AVFramePtr&& frame) {
+  XLOG(DBG9)
+      << (frame ? fmt::format(
+                      "{:21s} {:.3f} ({})",
+                      " --- raw frame:",
+                      TS(frame, filter_graph.get_src_time_base()),
+                      frame->pts)
+                : fmt::format(" --- flush filter graph"));
+
+  filter_graph.add_frame(frame.get());
+
+  int errnum;
+  AVFrameAutoUnref frame_ref{frame.get()};
+  do {
+    AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
+    errnum = filter_graph.get_frame(frame2.get());
+    switch (errnum) {
+      case AVERROR(EAGAIN):
+        co_return;
+      case AVERROR_EOF:
+        co_return;
+      default: {
+        XLOG(DBG9) << fmt::format(
+            "{:21s} {:.3f} ({})",
+            " ---- filtered frame:",
+            TS(frame2, filter_graph.get_sink_time_base()),
+            frame2->pts);
+
+        co_yield std::move(frame2);
+      }
+    }
+  } while (errnum >= 0);
+}
+
 } // namespace spdl::core::detail
