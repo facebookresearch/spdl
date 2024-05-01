@@ -65,8 +65,8 @@ struct CPUBuffer : public Buffer {
   }
 };
 
+///
 /// Contiguous array data on a CUDA device.
-/// This class is used to hold data decoded with FFmpeg hardware acceleration.
 struct CUDABuffer : Buffer {
 #ifdef SPDL_USE_CUDA
   int device_index;
