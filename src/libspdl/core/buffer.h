@@ -92,46 +92,22 @@ struct CUDABuffer : Buffer {
 /// This class is used to hold data decoded with NVDEC.
 struct CUDABuffer2DPitch {
 #ifdef SPDL_USE_NVCODEC
-  int device_index;
 
-  ///
-  /// information to track the stateo f memory
-  size_t max_frames;
-  /// ``n`` keeps track of how many frames are written.
-  /// ``n`` < max_frames;
-  /// ``n`` is updated by writer.
-  size_t n{0}, c{0}, h{0}, w{0}, bpp{1};
-  size_t width_in_bytes{0};
+  std::shared_ptr<CUDABuffer> buffer;
 
-  ///
-  /// If this is image or video.
-  bool is_image = false;
+  /// ``i`` keeps track of how many frames are written.
+  /// ``i`` < ``n``;
+  /// ``i`` is updated by writer.
+  size_t n, c, h, w;
+  size_t i{0};
 
-  ///
-  /// Data pointer set by CUDA API
-  CUdeviceptr p{0};
-  ///
-  /// Pitch size, set by CUDA API
-  size_t pitch{0};
-
-  CUDABuffer2DPitch(
-      int device_index,
-      size_t max_frames,
-      size_t c,
-      size_t h,
-      size_t w,
-      bool is_image = false);
-  ~CUDABuffer2DPitch();
-
- private:
-  /// Allocate the memory big enough to hold data for ``(max_frames, c, h, w)``
-  /// The actual data size depends on ``bpp`` and ``pitch``.
-  void allocate();
+  CUDABuffer2DPitch(int device_index, size_t n, size_t c, size_t h, size_t w);
+  CUDABuffer2DPitch(int device_index, size_t c, size_t h, size_t w);
 
  public:
   ///
   /// Get the shape of the data.
-  std::vector<size_t> get_shape() const;
+  // std::vector<size_t> get_shape() const;
   ///
   /// Get the pointer to the head of the next frame.
   uint8_t* get_next_frame();

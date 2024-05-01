@@ -374,7 +374,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
 
   // Copy the surface to user-owning buffer
   converter->convert((uint8_t*)mapping.frame, mapping.pitch);
-  buffer->n += 1;
+  buffer->i += 1;
 
   TRACE_EVENT("nvdec", "cuStreamSynchronize");
   CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
