@@ -80,14 +80,8 @@ nb::dict get_cuda_array_interface(CUDABuffer2DPitch& b) {
   ret["typestr"] = typestr;
   ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.p, false};
   auto hp = b.h * b.pitch;
-  ret["strides"] = b.is_image
-      ? nb::tuple(nb::cast(
-            b.channel_last ? std::vector<size_t>{b.pitch, b.c * b.bpp, b.bpp}
-                           : std::vector<size_t>{hp, b.pitch, b.bpp}))
-      : nb::tuple(nb::cast(
-            b.channel_last
-                ? std::vector<size_t>{hp, b.pitch, b.c * b.bpp, b.bpp}
-                : std::vector<size_t>{b.c * hp, hp, b.pitch, b.bpp}));
+  ret["strides"] = b.is_image ? nb::make_tuple(hp, b.pitch, b.bpp)
+                              : nb::make_tuple(b.c * hp, hp, b.pitch, b.bpp);
   ret["stream"] = nb::none();
   return ret;
 }
@@ -285,11 +279,6 @@ void register_frames_and_buffers(nb::module_& m) {
   // TODO: Add __repr__
   _NvDecVideoFrames
       .def_prop_ro(
-          "channel_last",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->channel_last;
-          }))
-      .def_prop_ro(
           "ndim", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
             return self.buffer->get_shape().size();
           }))
@@ -326,11 +315,6 @@ void register_frames_and_buffers(nb::module_& m) {
 
   // TODO: Add __repr__
   _NvDecImageFrames
-      .def_prop_ro(
-          "channel_last",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->channel_last;
-          }))
       .def_prop_ro(
           "ndim", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
             return self.buffer->get_shape().size();

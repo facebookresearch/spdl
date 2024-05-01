@@ -37,20 +37,14 @@ CUDABuffer2DPitch::~CUDABuffer2DPitch() {
   }
 }
 
-void CUDABuffer2DPitch::allocate(
-    size_t c_,
-    size_t h_,
-    size_t w_,
-    size_t bpp_,
-    bool channel_last_) {
+void CUDABuffer2DPitch::allocate(size_t c_, size_t h_, size_t w_, size_t bpp_) {
   if (p) {
     SPDL_FAIL_INTERNAL("Arena is already allocated.");
   }
-  channel_last = channel_last_;
   c = c_, h = h_, w = w_, bpp = bpp_;
 
-  width_in_bytes = channel_last ? w * c * bpp : w * bpp;
-  size_t height = channel_last ? max_frames * h : max_frames * c * h;
+  width_in_bytes = w * bpp;
+  size_t height = max_frames * c * h;
 
   TRACE_EVENT("nvdec", "cuMemAllocPitch");
   CHECK_CU(
@@ -60,11 +54,9 @@ void CUDABuffer2DPitch::allocate(
 
 std::vector<size_t> CUDABuffer2DPitch::get_shape() const {
   if (is_image) {
-    return channel_last ? std::vector<size_t>{h, w, c}
-                        : std::vector<size_t>{c, h, w};
+    return std::vector<size_t>{c, h, w};
   }
-  return channel_last ? std::vector<size_t>{n, h, w, c}
-                      : std::vector<size_t>{n, c, h, w};
+  return std::vector<size_t>{n, c, h, w};
 }
 
 uint8_t* CUDABuffer2DPitch::get_next_frame() {
@@ -80,8 +72,7 @@ uint8_t* CUDABuffer2DPitch::get_next_frame() {
   if (is_image && n == 1) {
     SPDL_FAIL_INTERNAL("Attempted to write multiple frames for image buffer.");
   }
-  return channel_last ? (uint8_t*)p + n * h * pitch
-                      : (uint8_t*)p + n * c * h * pitch;
+  return (uint8_t*)p + n * c * h * pitch;
 }
 
 } // namespace spdl::core

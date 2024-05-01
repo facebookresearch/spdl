@@ -34,9 +34,6 @@ struct Buffer {
   ///
   /// Size of unit element
   size_t depth = sizeof(uint8_t);
-  ///
-  /// Whether channel last (NHWC for image/video, NC for audio)
-  bool channel_last = false;
 
   ///
   /// The actual data.
@@ -44,7 +41,6 @@ struct Buffer {
 
   Buffer(
       std::vector<size_t> shape,
-      bool channel_last,
       ElemClass elem_class,
       size_t depth,
       Storage* storage);
@@ -62,7 +58,6 @@ struct Buffer {
 struct CPUBuffer : public Buffer {
   CPUBuffer(
       const std::vector<size_t> shape,
-      bool channel_last,
       ElemClass elem_class,
       size_t depth,
       CPUStorage* storage);
@@ -80,7 +75,6 @@ struct CUDABuffer : Buffer {
 
   CUDABuffer(
       std::vector<size_t> shape,
-      bool channel_last,
       ElemClass elem_class,
       size_t depth,
       CUDAStorage* storage,
@@ -107,9 +101,6 @@ struct CUDABuffer2DPitch {
   /// If this is image or video.
   bool is_image = false;
 
-  ///
-  /// Shape of the data.
-  bool channel_last = false;
   /// ``n`` keeps track of how many frames are written.
   /// ``n`` < max_frames;
   /// ``n`` is updated by writer.
@@ -128,12 +119,7 @@ struct CUDABuffer2DPitch {
 
   /// Allocate the memory big enough to hold data for ``(max_frames, c, h, w)``
   /// The actual data size depends on ``bpp`` and ``pitch``.
-  void allocate(
-      size_t c,
-      size_t h,
-      size_t w,
-      size_t bpp = 1,
-      bool channel_last = false);
+  void allocate(size_t c, size_t h, size_t w, size_t bpp = 1);
   ///
   /// Get the shape of the data.
   std::vector<size_t> get_shape() const;
@@ -150,7 +136,6 @@ struct CUDABuffer2DPitch {
 /// Create ``CPUBuffer``.
 std::unique_ptr<CPUBuffer> cpu_buffer(
     const std::vector<size_t> shape,
-    bool channel_last = false,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t));
 
@@ -161,7 +146,6 @@ std::unique_ptr<CUDABuffer> cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
     int device_index,
-    bool channel_last = false,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t));
 
@@ -169,11 +153,10 @@ std::unique_ptr<CUDABuffer> cuda_buffer(
     const std::vector<size_t> shape,
     uintptr_t stream,
     int device_index,
-    bool channel_last,
     ElemClass elem_class,
     size_t depth,
     const cuda_allocator_fn& allocator,
-    cuda_deleter_fn deleter);
+    const cuda_deleter_fn& deleter);
 
 #endif
 
