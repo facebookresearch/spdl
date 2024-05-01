@@ -50,7 +50,6 @@ BufferPtr convert_to_cuda(
         buffer->shape,
         cuda_stream,
         cuda_device_index,
-        buffer->channel_last,
         buffer->elem_class,
         buffer->depth,
         cuda_allocator.value(),
@@ -60,7 +59,6 @@ BufferPtr convert_to_cuda(
         buffer->shape,
         static_cast<CUstream>(reinterpret_cast<void*>(cuda_stream)),
         cuda_device_index,
-        buffer->channel_last,
         buffer->elem_class,
         buffer->depth);
   }

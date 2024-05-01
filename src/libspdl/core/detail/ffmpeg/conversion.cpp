@@ -29,7 +29,7 @@ CPUBufferPtr convert_frames(const FFmpegAudioFrames* frames) {
       ;
 
   if constexpr (is_planar) {
-    auto buf = cpu_buffer({num_channels, num_frames}, !is_planar, type, depth);
+    auto buf = cpu_buffer({num_channels, num_frames}, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (int i = 0; i < num_channels; ++i) {
       for (auto frame : fs) {
@@ -40,7 +40,7 @@ CPUBufferPtr convert_frames(const FFmpegAudioFrames* frames) {
     }
     return buf;
   } else {
-    auto buf = cpu_buffer({num_frames, num_channels}, is_planar, type, depth);
+    auto buf = cpu_buffer({num_frames, num_channels}, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frame : fs) {
       int plane_size = depth * frame->nb_samples * num_channels;
@@ -112,7 +112,7 @@ CPUBufferPtr convert_interleaved(
     unsigned int num_channels = 3) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
-  auto buf = cpu_buffer({frames.size(), h, w, num_channels}, true);
+  auto buf = cpu_buffer({frames.size(), h, w, num_channels});
   size_t wc = num_channels * w;
   uint8_t* dst = static_cast<uint8_t*>(buf->data());
   for (const auto& f : frames) {
@@ -183,19 +183,6 @@ CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
     // Y
     copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
     // UV
-    copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
-  }
-  return buf;
-}
-
-CPUBufferPtr convert_nv12_uv(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2, w2 = w / 2;
-
-  auto buf = cpu_buffer({frames.size(), h2, w2, 2}, true);
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
     copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
   }
   return buf;
