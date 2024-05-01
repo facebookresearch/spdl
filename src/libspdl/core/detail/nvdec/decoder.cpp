@@ -155,7 +155,7 @@ inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
 void NvDecDecoder::init(
     CUdevice device_index_,
     cudaVideoCodec codec_,
-    CUDABuffer2DPitch* buffer_,
+    CUDABufferTracker* tracker_,
     Rational timebase_,
     std::tuple<double, double> timestamp_,
     CropArea crop_,
@@ -205,7 +205,7 @@ void NvDecDecoder::init(
     decoder_param.ulMaxHeight = FLAGS_spdl_initial_nvdec_surface_height;
     decoder_param.ulMaxWidth = FLAGS_spdl_initial_nvdec_surface_width;
   }
-  buffer = buffer_;
+  tracker = tracker_;
   timebase = timebase_;
   std::tie(start_time, end_time) = timestamp_;
 
@@ -294,7 +294,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
 
   converter = get_converter(
       stream,
-      buffer,
+      tracker,
       &decoder_param,
       video_fmt->video_signal_description.matrix_coefficients,
       pix_fmt);
@@ -374,7 +374,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
 
   // Copy the surface to user-owning buffer
   converter->convert((uint8_t*)mapping.frame, mapping.pitch);
-  buffer->i += 1;
+  tracker->i += 1;
 
   TRACE_EVENT("nvdec", "cuStreamSynchronize");
   CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");

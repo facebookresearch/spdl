@@ -1,9 +1,8 @@
-#include <libspdl/core/detail/nvdec/decoding.h>
-
-#include <libspdl/core/storage.h>
+#include "libspdl/core/detail/nvdec/decoding.h"
 
 #include "libspdl/core/detail/cuda.h"
 #include "libspdl/core/detail/logging.h"
+#include "libspdl/core/detail/nvdec/buffer.h"
 #include "libspdl/core/detail/nvdec/decoder.h"
 #include "libspdl/core/detail/nvdec/utils.h"
 #include "libspdl/core/detail/nvdec/wrapper.h"
@@ -43,7 +42,7 @@ _Decoder& get_decoder() {
   return decoder;
 }
 
-std::shared_ptr<CUDABuffer2DPitch> get_buffer(
+CUDABufferTracker get_buffer_tracker(
     int cuda_device_index,
     size_t num_packets,
     AVCodecParameters* codecpar,
@@ -52,29 +51,26 @@ std::shared_ptr<CUDABuffer2DPitch> get_buffer(
     int target_height,
     const std::optional<std::string>& pix_fmt,
     bool is_image) {
-  int w = target_width > 0 ? target_width
-                           : (codecpar->width - crop.left - crop.right);
-  int h = target_height > 0 ? target_height
-                            : (codecpar->height - crop.top - crop.bottom);
+  size_t w = target_width > 0 ? target_width
+                              : (codecpar->width - crop.left - crop.right);
+  size_t h = target_height > 0 ? target_height
+                               : (codecpar->height - crop.top - crop.bottom);
 
   auto cu_ctx = get_cucontext(cuda_device_index);
   CHECK_CU(cuCtxSetCurrent(cu_ctx), "Failed to set current context.");
 
   if (!pix_fmt) { // Assume NV12
     if (is_image) {
-      return std::make_shared<CUDABuffer2DPitch>(
-          cuda_device_index, 1, h + h / 2, w);
+      return CUDABufferTracker{cuda_device_index, 1, h + h / 2, w};
     }
-    return std::make_shared<CUDABuffer2DPitch>(
-        cuda_device_index, num_packets, 1, h + h / 2, w);
+    return CUDABufferTracker{cuda_device_index, num_packets, 1, h + h / 2, w};
   }
   auto pix_fmt_val = pix_fmt.value();
   if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
     if (is_image) {
-      return std::make_shared<CUDABuffer2DPitch>(cuda_device_index, 4, h, w);
+      return CUDABufferTracker{cuda_device_index, 4, h, w};
     }
-    return std::make_shared<CUDABuffer2DPitch>(
-        cuda_device_index, num_packets, 4, h, w);
+    return CUDABufferTracker{cuda_device_index, num_packets, 4, h, w};
   }
   SPDL_FAIL(fmt::format(
       "Unsupported pixel format: {}. Supported formats are 'rgba', 'bgra'.",
@@ -102,7 +98,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
   _Decoder& _dec = get_decoder();
 
   AVCodecParameters* codecpar = packets->codecpar;
-  auto buffer = get_buffer(
+  auto tracker = get_buffer_tracker(
       cuda_device_index,
       num_packets,
       codecpar,
@@ -122,7 +118,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
   _dec.decoder.init(
       cuda_device_index,
       covert_codec_id(codecpar->codec_id),
-      buffer.get(),
+      &tracker,
       packets->time_base,
       packets->timestamp,
       crop,
@@ -173,15 +169,15 @@ folly::coro::Task<BufferPtr> decode_nvdec(
 #undef _PTS
 
   XLOG(DBG5) << fmt::format(
-      "Decoded {} frames from {} packets.", buffer->n, packets->num_packets());
+      "Decoded {} frames from {} packets.", tracker.i, packets->num_packets());
 
   if constexpr (media_type == MediaType::Video) {
     // We preallocated the buffer with the number of packets, but these packets
     // could contains the frames outside of specified timestamps.
     // So we update the shape with the actual number of frames.
-    buffer->buffer->shape[0] = buffer->i;
+    tracker.buffer->shape[0] = tracker.i;
   }
-  co_return std::move(buffer->buffer);
+  co_return std::move(tracker.buffer);
 }
 
 template folly::coro::Task<BufferPtr> decode_nvdec(
@@ -245,7 +241,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
 
   _Decoder& _dec = get_decoder();
 
-  auto buffer = get_buffer(
+  auto tracker = get_buffer_tracker(
       cuda_device_index,
       num_packets,
       p0->codecpar,
@@ -267,7 +263,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     _dec.decoder.init(
         cuda_device_index,
         covert_codec_id(packet->codecpar->codec_id),
-        buffer.get(),
+        &tracker,
         packet->time_base,
         packet->timestamp,
         crop,
@@ -286,7 +282,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
 
   for (auto& packet : packets) {
     co_await folly::coro::co_safe_point;
-    int i_ = buffer->i;
+    int i_ = tracker.i;
     try {
       decode_fn(packet);
     } catch (std::exception& e) {
@@ -298,7 +294,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     // When a media is not supported, NVDEC does not necessarily
     // fail. Instead it just does not call the callback.
     // So we need to check if the number of decoded frames has changed.
-    if (i_ == buffer->i) {
+    if (i_ == tracker.i) {
       auto msg =
           "Failed to decode image. (This could be due to unsupported media type. "
           "NVDEC does not always fail even when the input format is not supported.)";
@@ -310,7 +306,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     }
   }
 
-  co_return std::move(buffer->buffer);
+  co_return std::move(tracker.buffer);
 }
 
 } // namespace spdl::core::detail
