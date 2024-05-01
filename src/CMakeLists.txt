@@ -54,7 +54,7 @@ endif()
 if (SPDL_USE_NVCODEC)
   list(APPEND defs SPDL_USE_NVCODEC)
   list(APPEND srcs
-    libspdl/core/buffer/nvdec.cpp
+    libspdl/core/detail/nvdec/buffer.cpp
     libspdl/core/detail/nvdec/converter.cpp
     libspdl/core/detail/nvdec/color_conversion.cu
     libspdl/core/detail/nvdec/decoder.cpp

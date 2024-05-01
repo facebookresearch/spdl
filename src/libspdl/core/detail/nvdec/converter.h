@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/buffer.h>
+#include "libspdl/core/detail/nvdec/buffer.h"
 
 #include <cuviddec.h>
 
@@ -8,9 +8,9 @@ namespace spdl::core::detail {
 
 struct Converter {
   CUstream stream;
-  CUDABuffer2DPitch* buffer;
+  CUDABufferTracker* tracker;
 
-  Converter(CUstream stream, CUDABuffer2DPitch* buffer);
+  Converter(CUstream stream, CUDABufferTracker* tracker);
 
   virtual ~Converter() = default;
 
@@ -21,7 +21,7 @@ struct Converter {
 
 std::unique_ptr<Converter> get_converter(
     CUstream stream,
-    CUDABuffer2DPitch* buffer,
+    CUDABufferTracker* tracker,
     const CUVIDDECODECREATEINFO* decoder_param,
     unsigned char matrix_coeff,
     const std::optional<std::string>& pix_fmt);

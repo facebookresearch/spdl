@@ -2,6 +2,7 @@
 
 #include <libspdl/core/buffer.h>
 
+#include "libspdl/core/detail/nvdec/buffer.h"
 #include "libspdl/core/detail/nvdec/converter.h"
 #include "libspdl/core/detail/nvdec/utils.h"
 #include "libspdl/core/detail/nvdec/wrapper.h"
@@ -52,7 +53,7 @@ class NvDecDecoder {
   CUvideodecoderPtr decoder{nullptr};
 
   // Where the output frames will be stored.
-  CUDABuffer2DPitch* buffer = nullptr;
+  CUDABufferTracker* tracker = nullptr;
   std::unique_ptr<Converter> converter{nullptr};
 
   // Timebase of the incomding packets/decoded frames
@@ -82,7 +83,7 @@ class NvDecDecoder {
   void init(
       CUdevice device_index,
       cudaVideoCodec codec,
-      CUDABuffer2DPitch* buffer,
+      CUDABufferTracker* tracker,
       Rational timebase,
       std::tuple<double, double> timestamp,
       CropArea crop,

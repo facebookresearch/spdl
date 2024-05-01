@@ -25,12 +25,12 @@ class NV12Passthrough : public Converter {
         .dstY = 0,
         .dstMemoryType = CU_MEMORYTYPE_DEVICE,
         .dstHost = nullptr,
-        .dstDevice = (CUdeviceptr)buffer->get_next_frame(),
+        .dstDevice = (CUdeviceptr)tracker->get_next_frame(),
         .dstArray = nullptr,
-        .dstPitch = buffer->w,
+        .dstPitch = tracker->w,
 
-        .WidthInBytes = buffer->w,
-        .Height = buffer->h,
+        .WidthInBytes = tracker->w,
+        .Height = tracker->h,
     };
     TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
     CHECK_CU(
@@ -49,27 +49,28 @@ class NV12ToRGB : public Converter {
  public:
   NV12ToRGB(
       CUstream stream,
-      CUDABuffer2DPitch* buffer,
+      CUDABufferTracker* tracker,
       unsigned char matrix_coeff_)
-      : Converter(stream, buffer), matrix_coeff(matrix_coeff_){};
+      : Converter(stream, tracker), matrix_coeff(matrix_coeff_){};
   void convert(uint8_t* src_ptr, unsigned int src_pitch) override {
     Fn(stream,
        src_ptr,
        src_pitch,
-       buffer->get_next_frame(),
-       buffer->w,
-       buffer->w,
-       buffer->h,
+       tracker->get_next_frame(),
+       tracker->w,
+       tracker->w,
+       tracker->h,
        matrix_coeff);
   };
 };
 } // namespace
 
-Converter::Converter(CUstream s, CUDABuffer2DPitch* b) : stream(s), buffer(b) {}
+Converter::Converter(CUstream s, CUDABufferTracker* t)
+    : stream(s), tracker(t) {}
 
 std::unique_ptr<Converter> get_converter(
     CUstream stream,
-    CUDABuffer2DPitch* buffer,
+    CUDABufferTracker* tracker,
     const CUVIDDECODECREATEINFO* param,
     unsigned char matrix_coeff,
     const std::optional<std::string>& pix_fmt) {
@@ -88,16 +89,16 @@ std::unique_ptr<Converter> get_converter(
     //
 
     if (!pix_fmt) {
-      return std::unique_ptr<Converter>(new NV12Passthrough{stream, buffer});
+      return std::unique_ptr<Converter>(new NV12Passthrough{stream, tracker});
     }
     auto pix_fmt_val = pix_fmt.value();
     if (pix_fmt_val == "rgba") {
       return std::unique_ptr<Converter>(
-          new NV12ToRGB<nv12_to_planar_rgba>{stream, buffer, matrix_coeff});
+          new NV12ToRGB<nv12_to_planar_rgba>{stream, tracker, matrix_coeff});
     }
     if (pix_fmt_val == "bgra") {
       return std::unique_ptr<Converter>(
-          new NV12ToRGB<nv12_to_planar_bgra>{stream, buffer, matrix_coeff});
+          new NV12ToRGB<nv12_to_planar_bgra>{stream, tracker, matrix_coeff});
     }
     SPDL_FAIL(fmt::format(
         "Unsupported pixel format: {}. Supported formats are 'rgba', 'bgra'.",

@@ -15,12 +15,10 @@ namespace spdl::core {
 struct Buffer;
 struct CPUBuffer;
 struct CUDABuffer;
-struct CUDABuffer2DPitch;
 
 using BufferPtr = std::unique_ptr<Buffer>;
 using CPUBufferPtr = std::unique_ptr<CPUBuffer>;
 using CUDABufferPtr = std::unique_ptr<CUDABuffer>;
-using CUDABuffer2DPitchPtr = std::shared_ptr<CUDABuffer2DPitch>;
 
 /// Abstract base buffer class (to be exposed to Python)
 /// Represents contiguous array memory.
@@ -86,32 +84,6 @@ struct CUDABuffer : Buffer {
   bool is_cuda() const override {
     return true;
   }
-};
-
-/// Contiguous array data on a CUDA device.
-/// This class is used to hold data decoded with NVDEC.
-struct CUDABuffer2DPitch {
-#ifdef SPDL_USE_NVCODEC
-
-  CUDABufferPtr buffer;
-
-  /// ``i`` keeps track of how many frames are written.
-  /// ``i`` < ``n``;
-  /// ``i`` is updated by writer.
-  size_t n, c, h, w;
-  size_t i{0};
-
-  CUDABuffer2DPitch(int device_index, size_t n, size_t c, size_t h, size_t w);
-  CUDABuffer2DPitch(int device_index, size_t c, size_t h, size_t w);
-
- public:
-  ///
-  /// Get the shape of the data.
-  // std::vector<size_t> get_shape() const;
-  ///
-  /// Get the pointer to the head of the next frame.
-  uint8_t* get_next_frame();
-#endif
 };
 
 ////////////////////////////////////////////////////////////////////////////////
