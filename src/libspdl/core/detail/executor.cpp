@@ -59,7 +59,7 @@ Singleton<std::shared_ptr<CPUThreadPoolExecutor>, DecoderTag> DECODE_EXECUTOR(
 Executor::KeepAlive<> get_default_demux_executor() {
   auto executorPtrPtr = DEMUX_EXECUTOR.try_get();
   if (!executorPtrPtr) {
-    SPDL_FAIL("Requested Demuxer executor during shutdown.");
+    SPDL_FAIL("Requested executor during shutdown.");
   }
   return getKeepAliveToken(executorPtrPtr->get());
 }
@@ -77,7 +77,7 @@ Executor::KeepAlive<> get_default_demux_executor_low_prio() {
 Executor::KeepAlive<> get_default_decode_executor() {
   auto executorPtrPtr = DECODE_EXECUTOR.try_get();
   if (!executorPtrPtr) {
-    SPDL_FAIL("Requested Demuxer executor during shutdown.");
+    SPDL_FAIL("Requested executor during shutdown.");
   }
   return getKeepAliveToken(executorPtrPtr->get());
 }
@@ -115,7 +115,7 @@ size_t ThreadPoolExecutor::Impl::get_task_queue_size() const {
 void trace_default_demux_executor_queue_size() {
   auto executorPtrPtr = detail::DEMUX_EXECUTOR.try_get();
   if (!executorPtrPtr) {
-    SPDL_FAIL("Requested Demuxer executor during shutdown.");
+    SPDL_FAIL("Requested executor during shutdown.");
   }
   TRACE_COUNTER(
       "demuxing",
@@ -126,7 +126,7 @@ void trace_default_demux_executor_queue_size() {
 void trace_default_decode_executor_queue_size() {
   auto executorPtrPtr = detail::DECODE_EXECUTOR.try_get();
   if (!executorPtrPtr) {
-    SPDL_FAIL("Requested Decode executor during shutdown.");
+    SPDL_FAIL("Requested executor during shutdown.");
   }
   TRACE_COUNTER(
       "decoding",
