@@ -5,6 +5,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
+#include <folly/logging/xlog.h>
 
 namespace spdl::core {
 
@@ -26,7 +27,13 @@ CUDABuffer2DPitch::~CUDABuffer2DPitch() {
       perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
   if (p) {
     TRACE_EVENT("nvdec", "cuMemFree");
-    CHECK_CU(cuMemFree(p), "Failed to free memory.");
+    auto status = cuMemFree(p);
+    if (status != CUDA_SUCCESS) {
+      XLOG(CRITICAL) << fmt::format(
+          "Failed to free CUDA memory ({}: {})",
+          spdl::core::detail::get_error_name(status),
+          spdl::core::detail::get_error_desc(status));
+    }
   }
 }
 
