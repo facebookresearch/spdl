@@ -61,13 +61,20 @@ std::shared_ptr<CUDABuffer2DPitch> get_buffer(
   CHECK_CU(cuCtxSetCurrent(cu_ctx), "Failed to set current context.");
 
   if (!pix_fmt) { // Assume NV12
+    if (is_image) {
+      return std::make_shared<CUDABuffer2DPitch>(
+          cuda_device_index, 1, h + h / 2, w);
+    }
     return std::make_shared<CUDABuffer2DPitch>(
-        cuda_device_index, num_packets, 1, h + h / 2, w, is_image);
+        cuda_device_index, num_packets, 1, h + h / 2, w);
   }
   auto pix_fmt_val = pix_fmt.value();
   if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
+    if (is_image) {
+      return std::make_shared<CUDABuffer2DPitch>(cuda_device_index, 4, h, w);
+    }
     return std::make_shared<CUDABuffer2DPitch>(
-        cuda_device_index, num_packets, 4, h, w, is_image);
+        cuda_device_index, num_packets, 4, h, w);
   }
   SPDL_FAIL(fmt::format(
       "Unsupported pixel format: {}. Supported formats are 'rgba', 'bgra'.",
@@ -283,7 +290,7 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
 
   for (auto& packet : packets) {
     co_await folly::coro::co_safe_point;
-    int n = frames->buffer->n;
+    int i_ = frames->buffer->i;
     try {
       decode_fn(packet);
     } catch (std::exception& e) {
@@ -295,7 +302,7 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     // When a media is not supported, NVDEC does not necessarily
     // fail. Instead it just does not call the callback.
     // So we need to check if the number of decoded frames has changed.
-    if (n == frames->buffer->n) {
+    if (i_ == frames->buffer->i) {
       if (strict) {
         SPDL_FAIL(
             "Failed to decode image. "

@@ -27,9 +27,9 @@ class NV12Passthrough : public Converter {
         .dstHost = nullptr,
         .dstDevice = (CUdeviceptr)buffer->get_next_frame(),
         .dstArray = nullptr,
-        .dstPitch = buffer->pitch,
+        .dstPitch = buffer->w,
 
-        .WidthInBytes = buffer->width_in_bytes,
+        .WidthInBytes = buffer->w,
         .Height = buffer->h,
     };
     TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
@@ -57,7 +57,7 @@ class NV12ToRGB : public Converter {
        src_ptr,
        src_pitch,
        buffer->get_next_frame(),
-       buffer->pitch,
+       buffer->w,
        buffer->w,
        buffer->h,
        matrix_coeff);
