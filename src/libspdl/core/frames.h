@@ -28,18 +28,6 @@ using FFmpegAudioFramesPtr = FFmpegFramesPtr<MediaType::Audio>;
 using FFmpegVideoFramesPtr = FFmpegFramesPtr<MediaType::Video>;
 using FFmpegImageFramesPtr = FFmpegFramesPtr<MediaType::Image>;
 
-template <MediaType media_type>
-struct NvDecFrames;
-
-using NvDecVideoFrames = NvDecFrames<MediaType::Video>;
-using NvDecImageFrames = NvDecFrames<MediaType::Image>;
-
-template <MediaType media_type>
-using NvDecFramesPtr = std::unique_ptr<NvDecFrames<media_type>>;
-
-using NvDecVideoFramesPtr = NvDecFramesPtr<MediaType::Video>;
-using NvDecImageFramesPtr = NvDecFramesPtr<MediaType::Image>;
-
 #define _IS_AUDIO (media_type == MediaType::Audio)
 #define _IS_VIDEO (media_type == MediaType::Video)
 #define _IS_IMAGE (media_type == MediaType::Image)
@@ -183,47 +171,5 @@ FFmpegFramesPtr<media_type> clone(const FFmpegFrames<media_type>& src);
 #undef _IS_AUDIO
 #undef _IS_VIDEO
 #undef _IS_IMAGE
-
-////////////////////////////////////////////////////////////////////////////////
-// NVDEC - Video
-////////////////////////////////////////////////////////////////////////////////
-
-/// Class that holds media frames decoded with NVDEC decoder.
-/// The decoded media can be video or image.
-template <MediaType media_type>
-struct NvDecFrames {
-#ifdef SPDL_USE_NVCODEC
- private:
-  ///
-  /// Used for tracking the lifetime in tracing.
-  uint64_t id{0};
-
- public:
-  /// ``enum AVPixelFormat`` but using ``int`` so as to avoid including FFmpeg
-  /// header.
-  int media_format;
-
-  /// The data buffer. Because when using NVDEC decoder, we need to directly
-  /// copy the decoded frame from decoder's output buffer, we use a continuous
-  /// memory buffer to store the data.
-  CUDABuffer2DPitchPtr buffer;
-
-  NvDecFrames(uint64_t id, int media_format);
-  NvDecFrames(const NvDecFrames&) = delete;
-  NvDecFrames& operator=(const NvDecFrames&) = delete;
-  NvDecFrames(NvDecFrames&&) noexcept;
-  NvDecFrames& operator=(NvDecFrames&&) noexcept;
-  ~NvDecFrames() = default;
-
-  const char* get_media_format_name() const;
-
-  uint64_t get_id() const {
-    return id;
-  }
-#endif
-};
-
-template <MediaType media_type>
-NvDecFramesPtr<media_type> clone(const NvDecFrames<media_type>& src);
 
 } // namespace spdl::core

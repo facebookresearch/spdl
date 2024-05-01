@@ -66,7 +66,7 @@ void validate_nvdec_params(
 
 template <MediaType media_type>
 FuturePtr async_decode_nvdec(
-    std::function<void(NvDecFramesPtr<media_type>)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     PacketsPtr<media_type> packets,
     int cuda_device_index,
@@ -76,16 +76,14 @@ FuturePtr async_decode_nvdec(
     const std::optional<std::string>& pix_fmt,
     ThreadPoolExecutorPtr executor) {
 #ifndef SPDL_USE_NVCODEC
-  auto task = folly::coro::co_invoke(
-      []() -> folly::coro::Task<NvDecFramesPtr<media_type>> {
-        SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-      });
+  auto task = folly::coro::co_invoke([]() -> folly::coro::Task<BufferPtr> {
+    SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+  });
 #else
   ThreadPoolExecutorPtr e;
   auto exe = detail::get_demux_executor_high_prio(e);
   auto task = folly::coro::co_invoke(
-      [=](PacketsPtr<media_type> pkts)
-          -> folly::coro::Task<NvDecFramesPtr<media_type>> {
+      [=](PacketsPtr<media_type> pkts) -> folly::coro::Task<BufferPtr> {
         validate_nvdec_params(cuda_device_index, crop, width, height);
         init_cuda();
         if constexpr (media_type == MediaType::Video) {
@@ -105,7 +103,7 @@ FuturePtr async_decode_nvdec(
 }
 
 template FuturePtr async_decode_nvdec(
-    std::function<void(NvDecFramesPtr<MediaType::Video>)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     PacketsPtr<MediaType::Video> packets,
     int cuda_device_index,
@@ -116,7 +114,7 @@ template FuturePtr async_decode_nvdec(
     ThreadPoolExecutorPtr demux_executor);
 
 template FuturePtr async_decode_nvdec(
-    std::function<void(NvDecFramesPtr<MediaType::Image>)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     PacketsPtr<MediaType::Image> packets,
     int cuda_device_index,
@@ -127,7 +125,7 @@ template FuturePtr async_decode_nvdec(
     ThreadPoolExecutorPtr demux_executor);
 
 FuturePtr async_batch_decode_image_nvdec(
-    std::function<void(NvDecVideoFramesPtr)> set_result,
+    std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<ImagePacketsPtr>&& packets,
     int cuda_device_index,
@@ -138,14 +136,12 @@ FuturePtr async_batch_decode_image_nvdec(
     bool strict,
     ThreadPoolExecutorPtr executor) {
 #ifndef SPDL_USE_NVCODEC
-  auto task =
-      folly::coro::co_invoke([]() -> folly::coro::Task<NvDecVideoFramesPtr> {
-        SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-      });
+  auto task = folly::coro::co_invoke([]() -> folly::coro::Task<BufferPtr> {
+    SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+  });
 #else
   auto task = folly::coro::co_invoke(
-      [=](std::vector<ImagePacketsPtr>&& pkts)
-          -> folly::coro::Task<NvDecVideoFramesPtr> {
+      [=](std::vector<ImagePacketsPtr>&& pkts) -> folly::coro::Task<BufferPtr> {
         validate_nvdec_params(cuda_device_index, crop, width, height);
         init_cuda();
         co_return co_await detail::decode_nvdec(

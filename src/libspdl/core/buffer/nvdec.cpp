@@ -24,10 +24,6 @@ CUDABuffer2DPitch::CUDABuffer2DPitch(
 CUDABuffer2DPitch::CUDABuffer2DPitch(int index, size_t c_, size_t h_, size_t w_)
     : buffer(cuda_buffer({c_, h_, w_}, 0, index)), n(1), c(c_), h(h_), w(w_) {}
 
-// std::vector<size_t> CUDABuffer2DPitch::get_shape() const {
-//   return buffer->shape;
-// }
-
 uint8_t* CUDABuffer2DPitch::get_next_frame() {
   if (i >= n) {
     SPDL_FAIL_INTERNAL(fmt::format(

@@ -84,7 +84,7 @@ std::shared_ptr<CUDABuffer2DPitch> get_buffer(
 } // namespace
 
 template <MediaType media_type>
-folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
+folly::coro::Task<BufferPtr> decode_nvdec(
     PacketsPtr<media_type> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -102,11 +102,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   _Decoder& _dec = get_decoder();
 
   AVCodecParameters* codecpar = packets->codecpar;
-  auto frames = std::make_unique<NvDecFrames<media_type>>(
-      packets->id,
-      pix_fmt ? av_get_pix_fmt(pix_fmt->c_str()) : codecpar->format);
-
-  frames->buffer = get_buffer(
+  auto buffer = get_buffer(
       cuda_device_index,
       num_packets,
       codecpar,
@@ -126,7 +122,7 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
   _dec.decoder.init(
       cuda_device_index,
       covert_codec_id(codecpar->codec_id),
-      frames->buffer.get(),
+      buffer.get(),
       packets->time_base,
       packets->timestamp,
       crop,
@@ -177,14 +173,18 @@ folly::coro::Task<NvDecFramesPtr<media_type>> decode_nvdec(
 #undef _PTS
 
   XLOG(DBG5) << fmt::format(
-      "Decoded {} frames from {} packets.",
-      frames->buffer->n,
-      packets->num_packets());
+      "Decoded {} frames from {} packets.", buffer->n, packets->num_packets());
 
-  co_return frames;
+  if constexpr (media_type == MediaType::Video) {
+    // We preallocated the buffer with the number of packets, but these packets
+    // could contains the frames outside of specified timestamps.
+    // So we update the shape with the actual number of frames.
+    buffer->buffer->shape[0] = buffer->i;
+  }
+  co_return std::move(buffer->buffer);
 }
 
-template folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
+template folly::coro::Task<BufferPtr> decode_nvdec(
     VideoPacketsPtr packets,
     int cuda_device_index,
     const CropArea crop,
@@ -192,7 +192,7 @@ template folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     int target_height,
     const std::optional<std::string> pix_fmt);
 
-template folly::coro::Task<NvDecImageFramesPtr> decode_nvdec(
+template folly::coro::Task<BufferPtr> decode_nvdec(
     ImagePacketsPtr packets,
     int cuda_device_index,
     const CropArea crop,
@@ -200,7 +200,7 @@ template folly::coro::Task<NvDecImageFramesPtr> decode_nvdec(
     int target_height,
     const std::optional<std::string> pix_fmt);
 
-folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
+folly::coro::Task<BufferPtr> decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
     int cuda_device_index,
     const CropArea crop,
@@ -245,11 +245,7 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
 
   _Decoder& _dec = get_decoder();
 
-  auto frames = std::make_unique<NvDecVideoFrames>(
-      packets[0]->id,
-      pix_fmt ? av_get_pix_fmt(pix_fmt->c_str()) : p0->codecpar->format);
-
-  frames->buffer = get_buffer(
+  auto buffer = get_buffer(
       cuda_device_index,
       num_packets,
       p0->codecpar,
@@ -271,7 +267,7 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     _dec.decoder.init(
         cuda_device_index,
         covert_codec_id(packet->codecpar->codec_id),
-        frames->buffer.get(),
+        buffer.get(),
         packet->time_base,
         packet->timestamp,
         crop,
@@ -290,7 +286,7 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
 
   for (auto& packet : packets) {
     co_await folly::coro::co_safe_point;
-    int i_ = frames->buffer->i;
+    int i_ = buffer->i;
     try {
       decode_fn(packet);
     } catch (std::exception& e) {
@@ -302,21 +298,19 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
     // When a media is not supported, NVDEC does not necessarily
     // fail. Instead it just does not call the callback.
     // So we need to check if the number of decoded frames has changed.
-    if (i_ == frames->buffer->i) {
+    if (i_ == buffer->i) {
+      auto msg =
+          "Failed to decode image. (This could be due to unsupported media type. "
+          "NVDEC does not always fail even when the input format is not supported.)";
       if (strict) {
-        SPDL_FAIL(
-            "Failed to decode image. "
-            "(This could be due to unsupported media type. "
-            "NVDEC does not always fail even when the input format is not supported.)");
+        SPDL_FAIL(msg);
       } else {
-        XLOG(ERR)
-            << "Failed to decode image. "
-               "(This could be due to unsupported media type. "
-               "NVDEC does not always fail even when the input format is not supported.)";
+        XLOG(ERR) << msg;
       }
     }
   }
-  co_return frames;
+
+  co_return std::move(buffer->buffer);
 }
 
 } // namespace spdl::core::detail

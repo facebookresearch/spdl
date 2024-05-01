@@ -151,7 +151,7 @@ void register_decoding(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
       "async_decode_video_nvdec",
-      [](std::function<void(NvDecVideoFramesPtr)> set_result,
+      [](std::function<void(BufferPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          VideoPacketsPtr packets,
          const int cuda_device_index,
@@ -193,7 +193,7 @@ void register_decoding(nb::module_& m) {
 
   m.def(
       "async_decode_image_nvdec",
-      [](std::function<void(NvDecImageFramesPtr)> set_result,
+      [](std::function<void(BufferPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          ImagePacketsPtr packets,
          const int cuda_device_index,
@@ -235,7 +235,7 @@ void register_decoding(nb::module_& m) {
 
   m.def(
       "async_batch_decode_image_nvdec",
-      [](std::function<void(NvDecVideoFramesPtr)> set_result,
+      [](std::function<void(BufferPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          std::vector<ImagePacketsPtr>&& packets,
          const int cuda_device_index,
