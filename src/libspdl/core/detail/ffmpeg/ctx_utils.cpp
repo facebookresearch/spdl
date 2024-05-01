@@ -44,9 +44,9 @@ AVDictionaryDPtr get_option_dict(const std::optional<OptionDict>& options) {
 }
 
 void check_empty(const AVDictionary* p) {
-  AVDictionaryEntry* t = nullptr;
-  if (p && av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX)) [[unlikely]] {
-    std::vector<std::string> keys{t->key};
+  if (av_dict_count(p)) {
+    AVDictionaryEntry* t = nullptr;
+    std::vector<std::string> keys;
     while ((t = av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX))) {
       keys.emplace_back(t->key);
     }
