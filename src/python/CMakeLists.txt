@@ -9,7 +9,8 @@ set(src
   core/decoding.cpp
   core/demuxing.cpp
   core/executor.cpp
-  core/frames_and_buffers.cpp
+  core/frames.cpp
+  core/buffer.cpp
   core/future.cpp
   core/packets.cpp
   core/tracing.cpp
