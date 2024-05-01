@@ -12,12 +12,21 @@ namespace spdl::core {
 CUDABuffer2DPitch::CUDABuffer2DPitch(
     int index,
     size_t max_frames_,
+    size_t c_,
+    size_t h_,
+    size_t w_,
     bool is_image_)
-    : device_index(index), max_frames(max_frames_), is_image(is_image_) {
+    : device_index(index),
+      max_frames(max_frames_),
+      c(c_),
+      h(h_),
+      w(w_),
+      is_image(is_image_) {
   TRACE_EVENT(
       "decoding",
       "CUDABuffer2DPitch::CUDABuffer2DPitch",
       perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
+  allocate();
 }
 
 CUDABuffer2DPitch::~CUDABuffer2DPitch() {
@@ -37,12 +46,10 @@ CUDABuffer2DPitch::~CUDABuffer2DPitch() {
   }
 }
 
-void CUDABuffer2DPitch::allocate(size_t c_, size_t h_, size_t w_, size_t bpp_) {
+void CUDABuffer2DPitch::allocate() {
   if (p) {
     SPDL_FAIL_INTERNAL("Arena is already allocated.");
   }
-  c = c_, h = h_, w = w_, bpp = bpp_;
-
   width_in_bytes = w * bpp;
   size_t height = max_frames * c * h;
 

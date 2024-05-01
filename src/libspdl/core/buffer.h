@@ -97,15 +97,15 @@ struct CUDABuffer2DPitch {
   ///
   /// information to track the stateo f memory
   size_t max_frames;
-  ///
-  /// If this is image or video.
-  bool is_image = false;
-
   /// ``n`` keeps track of how many frames are written.
   /// ``n`` < max_frames;
   /// ``n`` is updated by writer.
-  size_t n{0}, c{0}, h{0}, w{0}, bpp{0};
+  size_t n{0}, c{0}, h{0}, w{0}, bpp{1};
   size_t width_in_bytes{0};
+
+  ///
+  /// If this is image or video.
+  bool is_image = false;
 
   ///
   /// Data pointer set by CUDA API
@@ -114,12 +114,21 @@ struct CUDABuffer2DPitch {
   /// Pitch size, set by CUDA API
   size_t pitch{0};
 
-  CUDABuffer2DPitch(int device_index, size_t max_frames, bool is_image = false);
+  CUDABuffer2DPitch(
+      int device_index,
+      size_t max_frames,
+      size_t c,
+      size_t h,
+      size_t w,
+      bool is_image = false);
   ~CUDABuffer2DPitch();
 
+ private:
   /// Allocate the memory big enough to hold data for ``(max_frames, c, h, w)``
   /// The actual data size depends on ``bpp`` and ``pitch``.
-  void allocate(size_t c, size_t h, size_t w, size_t bpp = 1);
+  void allocate();
+
+ public:
   ///
   /// Get the shape of the data.
   std::vector<size_t> get_shape() const;

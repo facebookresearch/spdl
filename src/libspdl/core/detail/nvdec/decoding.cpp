@@ -52,9 +52,6 @@ std::shared_ptr<CUDABuffer2DPitch> get_buffer(
     int target_height,
     const std::optional<std::string>& pix_fmt,
     bool is_image) {
-  auto buffer = std::make_shared<CUDABuffer2DPitch>(
-      cuda_device_index, num_packets, is_image);
-
   int w = target_width > 0 ? target_width
                            : (codecpar->width - crop.left - crop.right);
   int h = target_height > 0 ? target_height
@@ -64,13 +61,13 @@ std::shared_ptr<CUDABuffer2DPitch> get_buffer(
   CHECK_CU(cuCtxSetCurrent(cu_ctx), "Failed to set current context.");
 
   if (!pix_fmt) { // Assume NV12
-    buffer->allocate(1, h + h / 2, w);
-    return buffer;
+    return std::make_shared<CUDABuffer2DPitch>(
+        cuda_device_index, num_packets, 1, h + h / 2, w, is_image);
   }
   auto pix_fmt_val = pix_fmt.value();
   if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
-    buffer->allocate(4, h, w);
-    return buffer;
+    return std::make_shared<CUDABuffer2DPitch>(
+        cuda_device_index, num_packets, 4, h, w, is_image);
   }
   SPDL_FAIL(fmt::format(
       "Unsupported pixel format: {}. Supported formats are 'rgba', 'bgra'.",
@@ -244,8 +241,6 @@ folly::coro::Task<NvDecVideoFramesPtr> decode_nvdec(
   auto frames = std::make_unique<NvDecVideoFrames>(
       packets[0]->id,
       pix_fmt ? av_get_pix_fmt(pix_fmt->c_str()) : p0->codecpar->format);
-  frames->buffer = std::make_shared<CUDABuffer2DPitch>(
-      cuda_device_index, num_packets, false);
 
   frames->buffer = get_buffer(
       cuda_device_index,
