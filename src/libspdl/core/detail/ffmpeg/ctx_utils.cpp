@@ -9,7 +9,6 @@
 
 extern "C" {
 #include <libavutil/channel_layout.h>
-#include <libavutil/hwcontext.h>
 }
 
 // https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
