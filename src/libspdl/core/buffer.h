@@ -93,7 +93,7 @@ struct CUDABuffer : Buffer {
 struct CUDABuffer2DPitch {
 #ifdef SPDL_USE_NVCODEC
 
-  std::shared_ptr<CUDABuffer> buffer;
+  CUDABufferPtr buffer;
 
   /// ``i`` keeps track of how many frames are written.
   /// ``i`` < ``n``;
@@ -119,7 +119,7 @@ struct CUDABuffer2DPitch {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Create ``CPUBuffer``.
-std::unique_ptr<CPUBuffer> cpu_buffer(
+CPUBufferPtr cpu_buffer(
     const std::vector<size_t> shape,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t));
@@ -127,14 +127,14 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
 #ifdef SPDL_USE_CUDA
 ///
 /// Create ``CUDABuffer``.
-std::unique_ptr<CUDABuffer> cuda_buffer(
+CUDABufferPtr cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
     int device_index,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t));
 
-std::unique_ptr<CUDABuffer> cuda_buffer(
+CUDABufferPtr cuda_buffer(
     const std::vector<size_t> shape,
     uintptr_t stream,
     int device_index,

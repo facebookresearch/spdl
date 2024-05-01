@@ -82,10 +82,6 @@ void register_frames_and_buffers(nb::module_& m) {
   auto _FFmpegImageFrames =
       nb::class_<FFmpegImageFrames>(m, "FFmpegImageFrames");
 
-  auto _NvDecVideoFrames = nb::class_<NvDecVideoFrames>(m, "NvDecVideoFrames");
-
-  auto _NvDecImageFrames = nb::class_<NvDecImageFrames>(m, "NvDecImageFrames");
-
 #ifdef SPDL_USE_CUDA
 #define IF_CUDABUFFER_ENABLED(x) x
 #else
@@ -247,88 +243,5 @@ void register_frames_and_buffers(nb::module_& m) {
         auto& frame = self.get_frames().at(0);
         return double(frame->pts) * base.num / base.den;
       });
-
-#ifdef SPDL_USE_NVCODEC
-#define IF_NVDECVIDEOFRAMES_ENABLED(x) x
-#else
-#define IF_NVDECVIDEOFRAMES_ENABLED(x)                                    \
-  [](const NvDecVideoFrames&) {                                           \
-    throw std::runtime_error("SPDL is not compiled with NVDEC support."); \
-  }
-#endif
-
-  // TODO: Add __repr__
-  _NvDecVideoFrames
-      .def_prop_ro(
-          "ndim", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->buffer->shape.size();
-          }))
-      .def_prop_ro(
-          "shape",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->buffer->shape;
-          }))
-      .def_prop_ro(
-          "format",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.get_media_format_name();
-          }))
-      .def_prop_ro("is_cuda", [](const NvDecVideoFrames& self) { return true; })
-      .def_prop_ro(
-          "__cuda_array_interface__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](NvDecVideoFrames& self) {
-            return get_cuda_array_interface(self.buffer->buffer.get());
-          }))
-      .def(
-          "__len__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->buffer->shape[0];
-          }))
-      .def(
-          "clone",
-          IF_NVDECVIDEOFRAMES_ENABLED(
-              ([](const NvDecVideoFrames& self) { return clone(self); })))
-      .def_prop_ro(
-          "device_index",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecVideoFrames& self) {
-            return self.buffer->buffer->device_index;
-          }));
-
-  // TODO: Add __repr__
-  _NvDecImageFrames
-      .def_prop_ro(
-          "ndim", IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->buffer->shape.size();
-          }))
-      .def_prop_ro(
-          "shape",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->buffer->shape;
-          }))
-      .def_prop_ro(
-          "format",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.get_media_format_name();
-          }))
-      .def_prop_ro("is_cuda", [](const NvDecImageFrames& self) { return true; })
-      .def_prop_ro(
-          "__cuda_array_interface__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](NvDecImageFrames& self) {
-            return get_cuda_array_interface(self.buffer->buffer.get());
-          }))
-      .def(
-          "__len__",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->buffer->shape[0];
-          }))
-      .def(
-          "clone",
-          IF_NVDECVIDEOFRAMES_ENABLED(
-              ([](const NvDecImageFrames& self) { return clone(self); })))
-      .def_prop_ro(
-          "device_index",
-          IF_NVDECVIDEOFRAMES_ENABLED([](const NvDecImageFrames& self) {
-            return self.buffer->buffer->device_index;
-          }));
 }
 } // namespace spdl::core

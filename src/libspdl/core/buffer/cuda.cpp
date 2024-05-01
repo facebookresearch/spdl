@@ -31,7 +31,7 @@ inline size_t prod(const std::vector<size_t>& shape) {
 }
 } // namespace
 
-std::unique_ptr<CUDABuffer> cuda_buffer(
+CUDABufferPtr cuda_buffer(
     const std::vector<size_t> shape,
     CUstream stream,
     int device_index,
