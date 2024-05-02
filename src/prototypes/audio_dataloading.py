@@ -92,8 +92,10 @@ def _get_batch_generator(args):
             },
             convert_options={
                 "cuda_device_index": args.worker_id,
-                "cuda_allocator": torch.cuda.caching_allocator_alloc,
-                "cuda_deleter": torch.cuda.caching_allocator_delete,
+                "cuda_allocator": (
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
+                ),
             },
         )
         array = spdl.io.to_torch(buffer)
@@ -114,8 +116,10 @@ def _get_batch_generator(args):
             },
             convert_options={
                 "cuda_device_index": args.worker_id,
-                "cuda_allocator": torch.cuda.caching_allocator_alloc,
-                "cuda_deleter": torch.cuda.caching_allocator_delete,
+                "cuda_allocator": (
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
+                ),
             },
         )
         return spdl.io.to_torch(buffer)

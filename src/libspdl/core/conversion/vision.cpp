@@ -88,19 +88,14 @@ FuturePtr async_convert_frames(
     FFmpegFramesPtr<media_type> frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator_fn>& cuda_allocator,
-    const std::optional<cuda_deleter_fn>& cuda_deleter,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=](FFmpegFramesPtr<media_type>&& frm) -> folly::coro::Task<BufferPtr> {
         auto ret = convert_vision_frames<media_type>(std::move(frm));
         if (cuda_device_index) {
           ret = convert_to_cuda(
-              std::move(ret),
-              *cuda_device_index,
-              cuda_stream,
-              cuda_allocator,
-              cuda_deleter);
+              std::move(ret), *cuda_device_index, cuda_stream, cuda_allocator);
         }
         co_return std::move(ret);
       },
@@ -118,8 +113,7 @@ template FuturePtr async_convert_frames<MediaType::Video>(
     FFmpegFramesPtr<MediaType::Video> frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator_fn>& cuda_allocator,
-    const std::optional<cuda_deleter_fn>& cuda_deleter,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor);
 
 template FuturePtr async_convert_frames<MediaType::Image>(
@@ -128,8 +122,7 @@ template FuturePtr async_convert_frames<MediaType::Image>(
     FFmpegFramesPtr<MediaType::Image> frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator_fn>& cuda_allocator,
-    const std::optional<cuda_deleter_fn>& cuda_deleter,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -163,8 +156,7 @@ FuturePtr async_batch_convert_frames(
     std::vector<FFmpegImageFramesPtr>&& frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator_fn>& cuda_allocator,
-    const std::optional<cuda_deleter_fn>& cuda_deleter,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=](std::vector<FFmpegImageFramesPtr>&& frms)
@@ -172,11 +164,7 @@ FuturePtr async_batch_convert_frames(
         auto ret = convert_batch_image_frames(frms);
         if (cuda_device_index) {
           ret = convert_to_cuda(
-              std::move(ret),
-              *cuda_device_index,
-              cuda_stream,
-              cuda_allocator,
-              cuda_deleter);
+              std::move(ret), *cuda_device_index, cuda_stream, cuda_allocator);
         }
         co_return std::move(ret);
       },

@@ -10,7 +10,6 @@ BufferPtr convert_to_cuda(
     BufferPtr buffer,
     int cuda_device_index,
     uintptr_t cuda_stream,
-    const std::optional<cuda_allocator_fn>& cuda_allocator,
-    const std::optional<cuda_deleter_fn>& cuda_deleter,
+    const std::optional<cuda_allocator>& allocator,
     bool async = false);
 } // namespace spdl::core
