@@ -279,9 +279,11 @@ def async_convert_frames(frames, **kwargs):
                 cuda_stream = stream.cuda_stream
                 ```
 
-        cuda_allocator (Callable):
-            *Optional:* Custom CUDA memory allcoator, which takes the following arguments
-            and return the address of the allocated memory.
+        cuda_allocator (Tuple[Callable[[int, int, int], int], Callable[[int], None]]):
+            *Optional:* A pair of custom CUDA memory allcoator and deleter functions.
+
+            The allocator function, takes the following arguments, and
+            return the address of the allocated memory.
 
             - Size: `int`
             - CUDA device index: `int`
@@ -290,9 +292,8 @@ def async_convert_frames(frames, **kwargs):
             An example of such function is
             [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_alloc].
 
-        cuda_deleter (Callable):
-            *Optional:* Custom CUDA memory deleter, which takes the address of memory allocated
-            by the `cuda_allocator`.
+            The deleter takes the address of memory allocated
+            by the allocator and free the memory.
 
             An example of such function is
             [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].

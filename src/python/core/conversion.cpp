@@ -3,6 +3,7 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
@@ -23,7 +24,6 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_device_index") = nb::none(),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
-      nb::arg("cuda_deleter") = nb::none(),
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_video",
@@ -35,7 +35,6 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_device_index") = nb::none(),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
-      nb::arg("cuda_deleter") = nb::none(),
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_image",
@@ -47,7 +46,6 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_device_index") = nb::none(),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
-      nb::arg("cuda_deleter") = nb::none(),
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image",
@@ -59,7 +57,6 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_device_index") = nb::none(),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
-      nb::arg("cuda_deleter") = nb::none(),
       nb::arg("executor") = nullptr);
 }
 } //  namespace spdl::core

@@ -21,8 +21,7 @@ FuturePtr async_convert_frames(
     FFmpegFramesPtr<media_type> frames,
     const std::optional<int>& cuda_device_index = std::nullopt,
     const uintptr_t cuda_stream = 0,
-    const std::optional<cuda_allocator_fn>& cuda_allocator = std::nullopt,
-    const std::optional<cuda_deleter_fn>& cuda_deleter = std::nullopt,
+    const std::optional<cuda_allocator>& cuda_allocator = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 FuturePtr async_batch_convert_frames(
@@ -31,8 +30,7 @@ FuturePtr async_batch_convert_frames(
     std::vector<FFmpegImageFramesPtr>&& frames,
     const std::optional<int>& cuda_device_index = std::nullopt,
     const uintptr_t cuda_stream = 0,
-    const std::optional<cuda_allocator_fn>& cuda_allocator = std::nullopt,
-    const std::optional<cuda_deleter_fn>& cuda_deleter = std::nullopt,
+    const std::optional<cuda_allocator>& cuda_allocator = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
 } // namespace spdl::core

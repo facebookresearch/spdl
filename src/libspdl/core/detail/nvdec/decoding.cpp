@@ -56,9 +56,6 @@ CUDABufferTracker get_buffer_tracker(
   size_t h = target_height > 0 ? target_height
                                : (codecpar->height - crop.top - crop.bottom);
 
-  auto cu_ctx = get_cucontext(cuda_device_index);
-  CHECK_CU(cuCtxSetCurrent(cu_ctx), "Failed to set current context.");
-
   if (!pix_fmt) { // Assume NV12
     if (is_image) {
       return CUDABufferTracker{cuda_device_index, 1, h + h / 2, w};

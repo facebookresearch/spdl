@@ -82,8 +82,7 @@ def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sa
         cuda_buffer = await spdl.io.async_convert_frames(
             frames,
             cuda_device_index=DEFAULT_CUDA,
-            cuda_allocator=allocator,
-            cuda_deleter=deleter,
+            cuda_allocator=(allocator, deleter),
         )
         assert allocator_called
         cuda_tensor = spdl.io.to_torch(cuda_buffer)

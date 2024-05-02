@@ -61,8 +61,10 @@ def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
                     ),
                 ),
                 cuda_device_index=cuda_device_index,
-                cuda_allocator=torch.cuda.caching_allocator_alloc,
-                cuda_deleter=torch.cuda.caching_allocator_delete,
+                cuda_allocator=(
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
+                ),
             )
             tasks.append(asyncio.create_task(coro))
 

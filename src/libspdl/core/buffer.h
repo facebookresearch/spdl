@@ -101,20 +101,11 @@ CPUBufferPtr cpu_buffer(
 /// Create ``CUDABuffer``.
 CUDABufferPtr cuda_buffer(
     const std::vector<size_t> shape,
-    CUstream stream,
-    int device_index,
-    ElemClass elem_class = ElemClass::UInt,
-    size_t depth = sizeof(uint8_t));
-
-CUDABufferPtr cuda_buffer(
-    const std::vector<size_t> shape,
     uintptr_t stream,
     int device_index,
-    ElemClass elem_class,
-    size_t depth,
-    const cuda_allocator_fn& allocator,
-    const cuda_deleter_fn& deleter);
-
+    ElemClass elem_class = ElemClass::UInt,
+    size_t depth = sizeof(uint8_t),
+    const std::optional<cuda_allocator>& allocator = std::nullopt);
 #endif
 
 } // namespace spdl::core
