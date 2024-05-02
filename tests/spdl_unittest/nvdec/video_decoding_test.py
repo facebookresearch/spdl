@@ -1,10 +1,13 @@
+import gc
+
 import pytest
 
 import spdl.io
-import torch
 
 if not spdl.utils.is_nvcodec_available():
     pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
+
+import torch
 
 
 DEFAULT_CUDA = 0
@@ -105,6 +108,42 @@ def test_nvdec_decode_h264_420p_basic(h264):
 
 
 # TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
+
+
+def test_nvdec_decode_video_torch_allocator(h264):
+    """NVDEC can decode YUV420P video."""
+    allocator_called, deleter_called = False, False
+
+    def allocator(size, device, stream):
+        print("Calling allocator", flush=True)
+        ptr = torch.cuda.caching_allocator_alloc(size, device, stream)
+        nonlocal allocator_called
+        allocator_called = True
+        return ptr
+
+    def deleter(ptr):
+        print("Calling deleter", flush=True)
+        torch.cuda.caching_allocator_delete(ptr)
+        nonlocal deleter_called
+        deleter_called = True
+
+    def _test():
+        assert not allocator_called
+        assert not deleter_called
+        array = _decode_video(
+            h264.path,
+            timestamp=(0, 1.0),
+            cuda_allocator=(allocator, deleter),
+        )
+        assert allocator_called
+        assert not deleter_called
+        assert array.dtype == torch.uint8
+        assert array.shape == (25, 4, h264.height, h264.width)
+
+    _test()
+
+    gc.collect()
+    assert deleter_called
 
 
 @pytest.mark.xfail(

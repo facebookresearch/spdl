@@ -7,6 +7,7 @@
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
@@ -162,6 +163,8 @@ void register_decoding(nb::module_& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt,
+         const uintptr_t cuda_stream,
+         const std::optional<cuda_allocator>& cuda_allocator,
          ThreadPoolExecutorPtr decode_executor) {
         return async_decode_nvdec<MediaType::Video>(
             set_result,
@@ -175,6 +178,8 @@ void register_decoding(nb::module_& m) {
             width,
             height,
             pix_fmt,
+            cuda_stream,
+            cuda_allocator,
             decode_executor);
       },
       nb::arg("set_result"),
@@ -189,6 +194,8 @@ void register_decoding(nb::module_& m) {
       nb::arg("width") = -1,
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
+      nb::arg("cuda_stream") = 0,
+      nb::arg("cuda_allocator") = nb::none(),
       nb::arg("executor") = nullptr);
 
   m.def(
@@ -204,6 +211,8 @@ void register_decoding(nb::module_& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt,
+         const uintptr_t cuda_stream,
+         const std::optional<cuda_allocator>& cuda_allocator,
          ThreadPoolExecutorPtr decode_executor) {
         return async_decode_nvdec<MediaType::Image>(
             set_result,
@@ -217,6 +226,8 @@ void register_decoding(nb::module_& m) {
             width,
             height,
             pix_fmt,
+            cuda_stream,
+            cuda_allocator,
             decode_executor);
       },
       nb::arg("set_result"),
@@ -231,6 +242,8 @@ void register_decoding(nb::module_& m) {
       nb::arg("width") = -1,
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
+      nb::arg("cuda_stream") = 0,
+      nb::arg("cuda_allocator") = nb::none(),
       nb::arg("executor") = nullptr);
 
   m.def(
@@ -247,6 +260,8 @@ void register_decoding(nb::module_& m) {
          int height,
          const std::optional<std::string>& pix_fmt,
          bool strict,
+         const uintptr_t cuda_stream,
+         const std::optional<cuda_allocator>& cuda_allocator,
          ThreadPoolExecutorPtr decode_executor) {
         return async_batch_decode_image_nvdec(
             set_result,
@@ -261,6 +276,8 @@ void register_decoding(nb::module_& m) {
             height,
             pix_fmt,
             strict,
+            cuda_stream,
+            cuda_allocator,
             decode_executor);
       },
       nb::arg("set_result"),
@@ -276,6 +293,8 @@ void register_decoding(nb::module_& m) {
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
       nb::arg("strict") = true,
+      nb::arg("cuda_stream") = 0,
+      nb::arg("cuda_allocator") = nb::none(),
       nb::arg("executor") = nullptr);
 }
 } // namespace spdl::core

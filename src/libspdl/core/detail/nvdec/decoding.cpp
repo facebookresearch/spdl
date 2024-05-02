@@ -50,28 +50,30 @@ CUDABufferTracker get_buffer_tracker(
     int target_width,
     int target_height,
     const std::optional<std::string>& pix_fmt,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
     bool is_image) {
   size_t w = target_width > 0 ? target_width
                               : (codecpar->width - crop.left - crop.right);
   size_t h = target_height > 0 ? target_height
                                : (codecpar->height - crop.top - crop.bottom);
 
-  if (!pix_fmt) { // Assume NV12
-    if (is_image) {
-      return CUDABufferTracker{cuda_device_index, 1, h + h / 2, w};
-    }
-    return CUDABufferTracker{cuda_device_index, num_packets, 1, h + h / 2, w};
+  size_t c;
+  auto pix_fmt_val = pix_fmt.value_or("nv12");
+  if (pix_fmt_val == "nv12") {
+    c = 1;
+    h = h + h / 2;
+  } else if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
+    c = 4;
+  } else {
+    SPDL_FAIL(fmt::format("Unsupported pixel format: {}", pix_fmt_val));
   }
-  auto pix_fmt_val = pix_fmt.value();
-  if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
-    if (is_image) {
-      return CUDABufferTracker{cuda_device_index, 4, h, w};
-    }
-    return CUDABufferTracker{cuda_device_index, num_packets, 4, h, w};
-  }
-  SPDL_FAIL(fmt::format(
-      "Unsupported pixel format: {}. Supported formats are 'rgba', 'bgra'.",
-      pix_fmt_val));
+
+  auto shape = is_image ? std::vector<size_t>{c, h, w}
+                        : std::vector<size_t>{num_packets, c, h, w};
+
+  return CUDABufferTracker{
+      cuda_device_index, shape, cuda_stream, cuda_allocator};
 }
 
 } // namespace
@@ -83,7 +85,9 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt) {
+    const std::optional<std::string> pix_fmt,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator) {
   co_await folly::coro::co_safe_point;
   size_t num_packets = packets->num_packets();
   if (num_packets == 0) {
@@ -103,6 +107,8 @@ folly::coro::Task<BufferPtr> decode_nvdec(
       target_width,
       target_height,
       pix_fmt,
+      cuda_stream,
+      cuda_allocator,
       media_type == MediaType::Image);
 
   if (_dec.decoding_ongoing) {
@@ -183,7 +189,9 @@ template folly::coro::Task<BufferPtr> decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt);
+    const std::optional<std::string> pix_fmt,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator);
 
 template folly::coro::Task<BufferPtr> decode_nvdec(
     ImagePacketsPtr packets,
@@ -191,7 +199,9 @@ template folly::coro::Task<BufferPtr> decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt);
+    const std::optional<std::string> pix_fmt,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator);
 
 folly::coro::Task<BufferPtr> decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
@@ -200,7 +210,9 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     int target_width,
     int target_height,
     const std::optional<std::string> pix_fmt,
-    bool strict) {
+    bool strict,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator) {
   co_await folly::coro::co_safe_point;
   size_t num_packets = packets.size();
   if (num_packets == 0) {
@@ -246,6 +258,8 @@ folly::coro::Task<BufferPtr> decode_nvdec(
       target_width,
       target_height,
       pix_fmt,
+      cuda_stream,
+      cuda_allocator,
       false);
 
   auto decode_fn = [&](ImagePacketsPtr& packet) {

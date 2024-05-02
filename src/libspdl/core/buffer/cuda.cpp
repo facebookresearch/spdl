@@ -33,11 +33,11 @@ inline size_t prod(const std::vector<size_t>& shape) {
 
 CUDABufferPtr cuda_buffer(
     const std::vector<size_t> shape,
-    uintptr_t stream,
     int device_index,
+    uintptr_t stream,
+    const std::optional<cuda_allocator>& allocator,
     ElemClass elem_class,
-    size_t depth,
-    const std::optional<cuda_allocator>& allocator) {
+    size_t depth) {
   return std::make_unique<CUDABuffer>(
       std::move(shape),
       elem_class,

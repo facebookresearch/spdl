@@ -40,11 +40,11 @@ BufferPtr convert_to_cuda(
 
   auto ret = cuda_buffer(
       buffer->shape,
-      cuda_stream,
       cuda_device_index,
+      cuda_stream,
+      allocator,
       buffer->elem_class,
-      buffer->depth,
-      allocator);
+      buffer->depth);
 
   size_t size = buffer->depth * prod(buffer->shape);
   CHECK_CUDA(

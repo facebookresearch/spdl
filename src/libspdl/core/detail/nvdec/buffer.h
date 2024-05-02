@@ -1,6 +1,8 @@
 #pragma once
 #include <libspdl/core/buffer.h>
 
+#include <array>
+
 namespace spdl::core {
 
 /// Contiguous array data on a CUDA device.
@@ -16,9 +18,11 @@ struct CUDABufferTracker {
   size_t i{0};
 
   // For batch image / video
-  CUDABufferTracker(int device_index, size_t n, size_t c, size_t h, size_t w);
-  // For single image
-  CUDABufferTracker(int device_index, size_t c, size_t h, size_t w);
+  CUDABufferTracker(
+      int device_index,
+      const std::vector<size_t>& shape,
+      const uintptr_t cuda_stream,
+      const std::optional<cuda_allocator>& cuda_allocator);
 
   // Get the pointer to the head of the next frame.
   uint8_t* get_next_frame();

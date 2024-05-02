@@ -1,4 +1,5 @@
 import asyncio
+import gc
 
 import pytest
 
@@ -9,6 +10,8 @@ DEFAULT_CUDA = 0
 
 if not spdl.utils.is_nvcodec_available():
     pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
+
+import torch
 
 
 def test_decode_video_nvdec(get_sample):
@@ -53,8 +56,6 @@ def test_decode_image_nvdec(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test():
-        import torch
-
         frames = await _decode_image(sample.path)
         tensor = spdl.io.to_torch(frames)
         print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
@@ -66,28 +67,77 @@ def test_decode_image_nvdec(get_sample):
 
 
 def test_batch_decode_image(get_samples):
-    """Can decode an image."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
+    """batch loading can handle non-existing file."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample_%03d.jpg"
     samples = get_samples(cmd)
 
     flist = ["NON_EXISTING_FILE.JPG"] + samples
 
     async def _test():
-        demuxing = [spdl.io.async_demux_media("image", path) for path in flist]
-        packets = []
-        for i, result in enumerate(
-            await asyncio.gather(*demuxing, return_exceptions=True)
-        ):
-            if i == 0:
-                print(result)
-                assert isinstance(result, Exception)
-                continue
-            packets.append(result)
-
-        assert len(packets) == 250
-        frames = await spdl.io.async_decode_packets_nvdec(
-            packets, cuda_device_index=DEFAULT_CUDA, pix_fmt="rgba"
+        buffer = await spdl.io.async_batch_load_image_nvdec(
+            flist,
+            cuda_device_index=DEFAULT_CUDA,
+            pix_fmt="rgba",
+            width=320,
+            height=240,
+            strict=False,
         )
-        assert frames.shape == [250, 4, 240, 320]
+
+        assert buffer.shape == [10, 4, 240, 320]
+
+        with pytest.raises(RuntimeError):
+            await spdl.io.async_batch_load_image_nvdec(
+                flist,
+                cuda_device_index=DEFAULT_CUDA,
+                width=320,
+                height=240,
+                strict=True,
+            )
 
     asyncio.run(_test())
+
+
+def test_batch_decode_torch_allocator(get_samples):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample_%03d.jpg"
+    flist = get_samples(cmd)
+
+    allocator_called, deleter_called = False, False
+
+    def allocator(size, device, stream):
+        print("Calling allocator", flush=True)
+        ptr = torch.cuda.caching_allocator_alloc(size, device, stream)
+        nonlocal allocator_called
+        allocator_called = True
+        return ptr
+
+    def deleter(ptr):
+        print("Calling deleter", flush=True)
+        torch.cuda.caching_allocator_delete(ptr)
+        nonlocal deleter_called
+        deleter_called = True
+
+    async def _test():
+        assert not allocator_called
+        assert not deleter_called
+        buffer = await spdl.io.async_batch_load_image_nvdec(
+            flist,
+            cuda_device_index=DEFAULT_CUDA,
+            pix_fmt="rgba",
+            width=320,
+            height=240,
+            decode_options={
+                "cuda_allocator": (
+                    allocator,
+                    deleter,
+                ),
+            },
+        )
+        assert buffer.shape == [10, 4, 240, 320]
+
+        assert allocator_called
+        assert not deleter_called
+
+    asyncio.run(_test())
+
+    gc.collect()
+    assert deleter_called
