@@ -74,6 +74,8 @@ FuturePtr async_decode_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
 #ifndef SPDL_USE_NVCODEC
   auto task = folly::coro::co_invoke([]() -> folly::coro::Task<BufferPtr> {
@@ -90,7 +92,14 @@ FuturePtr async_decode_nvdec(
           pkts = co_await detail::apply_bsf(std::move(pkts)).scheduleOn(exe);
         }
         co_return co_await detail::decode_nvdec<media_type>(
-            std::move(pkts), cuda_device_index, crop, width, height, pix_fmt);
+            std::move(pkts),
+            cuda_device_index,
+            crop,
+            width,
+            height,
+            pix_fmt,
+            cuda_stream,
+            cuda_allocator);
       },
       std::move(packets));
 #endif
@@ -111,6 +120,8 @@ template FuturePtr async_decode_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr demux_executor);
 
 template FuturePtr async_decode_nvdec(
@@ -122,6 +133,8 @@ template FuturePtr async_decode_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr demux_executor);
 
 FuturePtr async_batch_decode_image_nvdec(
@@ -134,6 +147,8 @@ FuturePtr async_batch_decode_image_nvdec(
     int height,
     const std::optional<std::string>& pix_fmt,
     bool strict,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
 #ifndef SPDL_USE_NVCODEC
   auto task = folly::coro::co_invoke([]() -> folly::coro::Task<BufferPtr> {
@@ -151,7 +166,9 @@ FuturePtr async_batch_decode_image_nvdec(
             width,
             height,
             pix_fmt,
-            strict);
+            strict,
+            cuda_stream,
+            cuda_allocator);
       },
       std::move(packets));
 #endif

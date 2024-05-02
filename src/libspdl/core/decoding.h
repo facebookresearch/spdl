@@ -39,7 +39,9 @@ FuturePtr async_decode_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
-    ThreadPoolExecutorPtr decode_executor);
+    const uintptr_t cuda_stream = 0,
+    const std::optional<cuda_allocator>& cuda_allocator = std::nullopt,
+    ThreadPoolExecutorPtr decode_executor = nullptr);
 
 FuturePtr async_batch_decode_image_nvdec(
     std::function<void(BufferPtr)> set_result,
@@ -51,7 +53,9 @@ FuturePtr async_batch_decode_image_nvdec(
     int height,
     const std::optional<std::string>& pix_fmt,
     bool strict,
-    ThreadPoolExecutorPtr decode_executor);
+    const uintptr_t cuda_stream = 0,
+    const std::optional<cuda_allocator>& cuda_allocator = std::nullopt,
+    ThreadPoolExecutorPtr decode_executor = nullptr);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demux + decode in one step

@@ -194,6 +194,12 @@ def _get_batch_generator(args, device):
                 width=224,
                 height=224,
                 pix_fmt="rgba",
+                decode_options={
+                    "cuda_allocator": (
+                        torch.cuda.caching_allocator_alloc,
+                        torch.cuda.caching_allocator_delete,
+                    )
+                },
                 strict=True,
             )
             batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
@@ -238,6 +244,12 @@ def _get_batch_generator(args, device):
                 width=224,
                 height=224,
                 pix_fmt="rgba",
+                decode_options={
+                    "cuda_allocator": (
+                        torch.cuda.caching_allocator_alloc,
+                        torch.cuda.caching_allocator_delete,
+                    )
+                },
                 strict=True,
             )
             batch = spdl.io.to_torch(buffer)[:, :-1, :, :]

@@ -24,7 +24,9 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     const CropArea crop,
     int target_width = -1,
     int target_height = -1,
-    const std::optional<std::string> pix_fmt = std::nullopt);
+    const std::optional<std::string> pix_fmt = std::nullopt,
+    const uintptr_t cuda_stream = 0,
+    const std::optional<cuda_allocator>& cuda_allocator = std::nullopt);
 
 folly::coro::Task<BufferPtr> decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
@@ -33,6 +35,8 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     int target_width = -1,
     int target_height = -1,
     const std::optional<std::string> pix_fmt = std::nullopt,
-    bool strict = true);
+    bool strict = true,
+    const uintptr_t cuda_stream = 0,
+    const std::optional<cuda_allocator>& cuda_allocator = std::nullopt);
 
 } // namespace spdl::core::detail

@@ -8,18 +8,21 @@ namespace spdl::core {
 
 CUDABufferTracker::CUDABufferTracker(
     int index,
-    size_t n_,
-    size_t c_,
-    size_t h_,
-    size_t w_)
-    : buffer(cuda_buffer({n_, c_, h_, w_}, 0, index)),
-      n(n_),
-      c(c_),
-      h(h_),
-      w(w_) {}
-
-CUDABufferTracker::CUDABufferTracker(int index, size_t c_, size_t h_, size_t w_)
-    : buffer(cuda_buffer({c_, h_, w_}, 0, index)), n(1), c(c_), h(h_), w(w_) {}
+    const std::vector<size_t>& shape,
+    const uintptr_t stream,
+    const std::optional<cuda_allocator>& allocator)
+    : buffer(cuda_buffer(shape, index, stream, allocator)) {
+  switch (shape.size()) {
+    case 3:
+      n = 1, c = shape[0], h = shape[1], w = shape[2];
+      break;
+    case 4:
+      n = shape[0], c = shape[1], h = shape[2], w = shape[3];
+      break;
+    default:
+      SPDL_FAIL_INTERNAL("Only 3D and 4D are supported.");
+  }
+}
 
 uint8_t* CUDABufferTracker::get_next_frame() {
   if (i >= n) {
