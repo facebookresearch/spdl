@@ -110,7 +110,7 @@ vflip,rotate=angle=0.18,scale=256:256,crop=224:224:x=0.54*(iw-ow):y=0.34*(ih-oh)
 
 and here are the resulting images.
 
-![Images modified with the augmentation pipeline](../assets/preprocessing_random_aug.png)
+![Images modified with the augmentation pipeline](../../assets/preprocessing_random_aug.png)
 
 ## Video frame sampling
 
@@ -183,5 +183,5 @@ array = spdl.io.to_numpy(buffer)
 
 The following figure illustrates the sampled frames.
 
-![Resulting frames](../assets/preprocessing_video_frame_sampling.png)
+![Resulting frames](../../assets/preprocessing_video_frame_sampling.png)
 > From top to bottom: 1. slicing at fixed interval, 2. uniform random samplg and 3&4 two executions of sequential sampling at random index.

@@ -42,21 +42,21 @@ nav:
   - "SPDL (Python)":
       - Installation: installation.md
       - "spdl.io":
-          - "Overview": spdl/io_overview.md
-          - "Low-level APIs": spdl/io_core.md
-          - "High-level APIs": spdl/io.md
-          - "Preprocessing": spdl/io_preprocessing.md
-          - "Support Structures": spdl/io_support.md
+          - "Overview": spdl/io/overview.md
+          - "Low-level APIs": spdl/io/core.md
+          - "High-level APIs": spdl/io/api.md
+          - "Preprocessing": spdl/io/preprocessing.md
+          - "Support Structures": spdl/io/helpers.md
       - "spdl.dataset":
           - "ImageNet": spdl/dataset/imagenet.md
           - "Kinetics": spdl/dataset/kinetics.md
           - "LibriSpeech": spdl/dataset/librispeech.md
       - "spdl.utils":
-          - "Tracing": spdl/utils_tracing.md
-          - "Folly": spdl/utils_folly.md
-          - "FFmpeg": spdl/utils_ffmpeg.md
-          - "Futures": spdl/utils_futures.md
-          - "Misc": spdl/utils_misc.md
+          - "Tracing": spdl/utils/tracing.md
+          - "Folly": spdl/utils/folly.md
+          - "FFmpeg": spdl/utils/ffmpeg.md
+          - "Futures": spdl/utils/futures.md
+          - "Misc": spdl/utils/misc.md
   - "LibSPDL (C++)":
       - Links: libspdl/links.md
       - Classes:

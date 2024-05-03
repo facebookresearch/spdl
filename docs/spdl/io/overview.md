@@ -22,8 +22,8 @@ graph LR
 The individual functionalities are implemented in C++ with multi-threading, so they can
 run free from Python's GIL contention.
 
-The [low-level APIs](./io_core.md) implements these individual functionalities.
-The [high-level APIs](./io.md) combine them to implement common use cases, such as
+The [low-level APIs](./core.md) implements these individual functionalities.
+The [high-level APIs](./api.md) combine them to implement common use cases, such as
 creating a buffer object from source.
 
 ## Async and concurrent API
