@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+from typing import List
 
 from ._dataset import DataSet
 
@@ -130,7 +131,7 @@ class _DataSet:
         # If an attribute of dataclass is marked as `init=False`, then it is assumed
         # that its values will be initialized some other way, (such as it's constant
         # across the dataset, or dynamically derived from some other value retirieved from
-        # the databse), so it will be excluded.
+        # the database), so it will be excluded.
         cols = [f.name for f in dataclasses.fields(record_class) if f.init]
         self._base_query = f"SELECT {','.join(cols)} FROM {table}"
 
@@ -240,7 +241,68 @@ class _DataSet:
         """Sort the dataset by the given attribute."""
         self._sort(order_by=f"ORDER BY {attribute} {'DESC' if desc else 'ASC'}")
 
+    def split(self, n: int, path_pattern: str) -> List[DataSet]:
+        return _split(self, n, path_pattern)
+
 
 def make_dataset(*args, **kwargs) -> DataSet:
     """Make dataset from the given sqlite database connection."""
     return DataSet(_DataSet(*args, **kwargs))
+
+
+def _split_table(con, src_table, tgt_table, n, i, idx_col):
+    con.execute(f"DROP TABLE IF EXISTS {tgt_table}")
+    con.execute(
+        f"CREATE TABLE {tgt_table} AS"
+        f" SELECT * FROM {src_table}"
+        f" WHERE mod(rowid - 1, {n}) = {i};"
+    )
+    con.execute(f"UPDATE {tgt_table} SET {idx_col} = rowid - 1;")
+
+
+def _split(src: _DataSet, n: int, path_pattern: str) -> List[DataSet]:
+    """Split the dataset and create new datasets.
+
+    Args:
+        n: The number of splits.
+
+        path_pattern: The path pattern to which the split datsets are stored.
+            The index will be filled with [str.format][] function, (i.e.
+            `path_pattern.format(i)`).
+
+    !!! note
+
+            If the target database and table exists, the existing table is
+            dropped.
+
+    Returns:
+        (List[DataSet]): Split DataSet object.
+    """
+    import sqlite3
+
+    paths = [path_pattern.format(i) for i in range(n)]
+    if len(set(paths)) != len(paths):
+        raise ValueError(
+            f"The output path of the destination database objects are not unique: {paths}"
+        )
+
+    ret = []
+    tmp_schema = "split"
+    tgt_table = f"{tmp_schema}.{src.table}"
+    for i, path in enumerate(paths):
+        src.con.execute(f'ATTACH DATABASE "{path}" as {tmp_schema};')
+        try:
+            _split_table(
+                src.con, f"main.{src.table}", f"{tgt_table}", n, i, src._idx_col
+            )
+            src.con.commit()
+        except Exception:
+            src.con.rollback()
+        finally:
+            src.con.execute(f"DETACH {tmp_schema};")
+
+        con = sqlite3.connect(path)
+        ret.append(
+            make_dataset(con, src.record_class, src.table, _idx_col=src._idx_col)
+        )
+    return ret
