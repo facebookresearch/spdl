@@ -39,6 +39,7 @@ def _download(src, dst, binary):
 
 
 def fetch(tag: str, filename: str, binary: bool = False):
+    """Download the dataset catalog asset."""
     dst = _get_dir(tag) / filename
 
     if not dst.exists():

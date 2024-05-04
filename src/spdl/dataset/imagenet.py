@@ -1,4 +1,4 @@
-"""Utility tools for traversing ImageNet dataset"""
+"""Utility tools for traversing ImageNet dataset."""
 
 import logging
 import re
@@ -110,28 +110,28 @@ def parse_wnid(s: str):
     raise ValueError(f"The given string does not contain WNID: {s}")
 
 
-def _create_table(con, cur, split: str, table: str):
+def _create_table(con, cur, split: str, table: str, idx_col):
     flist = get_flist(split)
+
+    cols = ",".join([idx_col, "src"])
 
     tmp_table = f"{table}_tmp"
     cur.execute(f"DROP TABLE IF EXISTS {tmp_table}")
-    cur.execute(f"CREATE TABLE {tmp_table}(_index INTEGER, path TEXT) STRICT")
+    cur.execute(f"CREATE TABLE {tmp_table}({cols})")
 
     n = -1
     for paths in _utils._iter_flist(flist, batch_size=1024):
         data = [(n := n + 1, p) for p in paths]
-        cur.executemany(f"INSERT INTO {tmp_table}(_index, path) VALUES(?, ?)", data)
+        cur.executemany(f"INSERT INTO {tmp_table}({cols}) VALUES(?, ?)", data)
         con.commit()
     _LG.info(f"{n} entries populated.")
-
-    cur.execute(f"CREATE INDEX index_idx ON {tmp_table} (_index);")
 
     _LG.debug("Renaming the table.")
     cur.execute(f"ALTER TABLE {tmp_table} RENAME TO {table}")
     con.commit()
 
 
-def _load_dataset(path: str, split: str, table: str):
+def _load_dataset(path: str, split: str, table: str, idx_col: str):
     import sqlite3
 
     _LG.info(f"Connecting to {path=}")
@@ -141,28 +141,29 @@ def _load_dataset(path: str, split: str, table: str):
     res = cur.execute(f"SELECT name FROM sqlite_master WHERE name='{table}'")
     if res.fetchone() is None:
         _LG.info(f"{table=} does not exist at {path=}, creating...")
-        _create_table(con, cur, split, table)
+        _create_table(con, cur, split, table, idx_col)
         _LG.debug("Done")
     return con
 
 
-def ImageNet(*, split: str, path: str = ":memory:") -> DataSet[ImageData]:
-    """Create ImageNet dataset.
+def ImageNet(path: str, *, split: str) -> DataSet[ImageData]:
+    """Load or create ImageNet dataset.
 
     Args:
+        path: Path where the dataset object is searched or newly created.
+            Passing `':memory:'` creates database object in-memory.
+
         split: Passed to [spdl.dataset.librispeech.get_flist][].
             !!! note
                 Using `"train"` split will create database with 1.2 million
                 records which amounts up to ~80MB of RAM or disk space.
 
-        path: Path where the dataset object is stored.
-            Passing `':memory:'` creates database object in-memory.
-
     Returns:
         (DataSet[ImageData]): Dataset object that handles image data.
     """
     table = f"imagenet_{split}".replace("-", "_")
-    con = _load_dataset(path, split, table=table)
+    idx_col = "_index"
+    con = _load_dataset(path, split, table=table, idx_col=idx_col)
 
     class_mapping, _ = get_mappings()
 
@@ -173,6 +174,6 @@ def ImageNet(*, split: str, path: str = ":memory:") -> DataSet[ImageData]:
         cls: int = field(init=False)
 
         def __post_init__(self):
-            self.cls = class_mapping[parse_wnid(self.path)]
+            self.cls = class_mapping[parse_wnid(self.src)]
 
-    return _sql.make_dataset(con, _ImageData, table=table)
+    return _sql.make_dataset(con, _ImageData, table=table, _idx_col=idx_col)
