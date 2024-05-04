@@ -1,17 +1,17 @@
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import List, TypeVar, Generic
+from typing import Generic, List, TypeVar
 
 __all__ = ["DataSet", "ImageData", "AudioData"]
 
-Sample = TypeVar('Sample')
+Sample = TypeVar("Sample")
 
 
 @dataclass
 class ImageData:
     """Image data sample."""
 
-    path: str
+    src: str
     """Route to the file, relative to the dataset root location."""
 
     cls: int
@@ -22,7 +22,7 @@ class ImageData:
 class AudioData:
     """Audio data sample."""
 
-    path: str
+    src: str
     """Route to the file, relative to the dataset root location."""
 
     sample_rate: int
@@ -49,12 +49,14 @@ class DataSet(Generic[Sample]):
         - [spdl.dataset.imagenet.ImageNet][]
         - [spdl.dataset.librispeech.LibriSpeech][]
     """
+
     def __init__(self, _impl):
         self._impl = _impl
 
     @property
     def attributes(self):
         """The attributes each dataset sample has.
+
         This corresponds to the attributes of sample class that each DataSet instance
         handles.
 
@@ -63,14 +65,14 @@ class DataSet(Generic[Sample]):
             ```python
             >>> dataset = spdl.dataset.librispeech.LibriSpeech("test-other")
             >>> dataset.attributes
-            ['path', 'num_frames']
+            ['src', 'num_frames']
             ```
 
         """
         return self._impl.attributes
 
     def __len__(self) -> int:
-        """Returns the number of samples in the dataset.
+        """Return the number of samples in the dataset.
 
         ??? note "Example"
 
@@ -83,7 +85,7 @@ class DataSet(Generic[Sample]):
         return len(self._impl)
 
     def __iter__(self) -> Iterator[Sample]:
-        """Returns iterator object that iterates dataset samples.
+        """Return iterator object that iterates dataset samples.
 
         ??? note "Example"
 
@@ -91,24 +93,24 @@ class DataSet(Generic[Sample]):
             >>> dataset = spdl.dataset.librispeech.LibriSpeech("test-other")
             >>> for record in dataset:
             ...     print(record)
-            Record(path='LibriSpeech/test-other/2414/128291/2414-128291-0020.flac', sample_rate=16000, num_frames=20000)
-            Record(path='LibriSpeech/test-other/7902/96592/7902-96592-0020.flac', sample_rate=16000, num_frames=21040)
+            Record(src='LibriSpeech/test-other/2414/128291/2414-128291-0020.flac', sample_rate=16000, num_frames=20000)
+            Record(src='LibriSpeech/test-other/7902/96592/7902-96592-0020.flac', sample_rate=16000, num_frames=21040)
             ...
             ```
         """
         return iter(self._impl)
 
     def __getitem__(self, key: int | slice) -> Sample | List[Sample]:
-        """Returns the sample at the given key.
+        """Return the sample at the given key.
 
         ??? note "Example"
 
             ```python
             >>> dataset = spdl.dataset.librispeech.LibriSpeech("test-other")
             >>> print(dataset[0])
-            Record(path='LibriSpeech/test-other/2414/128291/2414-128291-0020.flac', sample_rate=16000, num_frames=20000)
+            Record(src='LibriSpeech/test-other/2414/128291/2414-128291-0020.flac', sample_rate=16000, num_frames=20000)
             >>> print(dataset[:3])
-            [Record(path='LibriSpeech/test-other/2414/128291/2414-128291-0020.flac', sample_rate=16000, num_frames=20000), Record(path='LibriSpeech/test-other/7902/96592/7902-96592-0020.flac', sample_rate=16000, num_frames=21040), Record(path='LibriSpeech/test-other/8188/269290/8188-269290-0057.flac', sample_rate=16000, num_frames=23520)]
+            [Record(src='LibriSpeech/test-other/2414/128291/2414-128291-0020.flac', sample_rate=16000, num_frames=20000), Record(src='LibriSpeech/test-other/7902/96592/7902-96592-0020.flac', sample_rate=16000, num_frames=21040), Record(src='LibriSpeech/test-other/8188/269290/8188-269290-0057.flac', sample_rate=16000, num_frames=23520)]
             ```
         """
         return self._impl[key]
@@ -129,7 +131,7 @@ class DataSet(Generic[Sample]):
             │Dataset: librispeech_test_other                                                      │
             │The number of records: 2939                                                          │
             ╞══════════════════════════════════════════════════════════╤═════════════╤════════════╡
-            │ path                                                     │ sample_rate │ num_frames │
+            │ src                                                      │ sample_rate │ num_frames │
             ├──────────────────────────────────────────────────────────┼─────────────┼────────────┤
             │ LibriSpeech/test-other/4852/28312/4852-28312-0019.flac   │       16000 │      54160 │
             │ LibriSpeech/test-other/6432/63722/6432-63722-0048.flac   │       16000 │     113360 │
@@ -143,7 +145,7 @@ class DataSet(Generic[Sample]):
         """
         self._impl.shuffle()
 
-    def sort(self, attribute: str, desc: bool =False) -> None:
+    def sort(self, attribute: str, desc: bool = False) -> None:
         """Sort dataset by attribute.
 
         Args:
@@ -160,7 +162,7 @@ class DataSet(Generic[Sample]):
             │Dataset: librispeech_test_other                                                      │
             │The number of records: 2939                                                          │
             ╞══════════════════════════════════════════════════════════╤═════════════╤════════════╡
-            │ path                                                     │ sample_rate │ num_frames │
+            │ src                                                      │ sample_rate │ num_frames │
             ├──────────────────────────────────────────────────────────┼─────────────┼────────────┤
             │ LibriSpeech/test-other/2414/128291/2414-128291-0020.flac │       16000 │      20000 │
             │ LibriSpeech/test-other/7902/96592/7902-96592-0020.flac   │       16000 │      21040 │
@@ -175,7 +177,7 @@ class DataSet(Generic[Sample]):
             │Dataset: librispeech_test_other                                                      │
             │The number of records: 2939                                                          │
             ╞══════════════════════════════════════════════════════════╤═════════════╤════════════╡
-            │ path                                                     │ sample_rate │ num_frames │
+            │ src                                                      │ sample_rate │ num_frames │
             ├──────────────────────────────────────────────────────────┼─────────────┼────────────┤
             │ LibriSpeech/test-other/4294/14317/4294-14317-0014.flac   │       16000 │     552160 │
             │ LibriSpeech/test-other/7018/75789/7018-75789-0029.flac   │       16000 │     539600 │
