@@ -1,11 +1,16 @@
 """Utility tools for traversing ImageNet dataset"""
 
+import logging
 import re
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import _utils
+from . import _sql, _utils
+from ._dataset import DataSet, ImageData
 
-__all__ = ["get_flist", "get_mappings", "parse_wnid"]
+__all__ = ["ImageNet", "get_flist", "get_mappings", "parse_wnid"]
+
+_LG = logging.getLogger(__name__)
 
 
 def get_flist(split: str) -> Path:
@@ -103,3 +108,71 @@ def parse_wnid(s: str):
     if match := re.search(r"n\d{8}", s):
         return match.group(0)
     raise ValueError(f"The given string does not contain WNID: {s}")
+
+
+def _create_table(con, cur, split: str, table: str):
+    flist = get_flist(split)
+
+    tmp_table = f"{table}_tmp"
+    cur.execute(f"DROP TABLE IF EXISTS {tmp_table}")
+    cur.execute(f"CREATE TABLE {tmp_table}(_index INTEGER, path TEXT) STRICT")
+
+    n = -1
+    for paths in _utils._iter_flist(flist, batch_size=1024):
+        data = [(n := n + 1, p) for p in paths]
+        cur.executemany(f"INSERT INTO {tmp_table}(_index, path) VALUES(?, ?)", data)
+        con.commit()
+    _LG.info(f"{n} entries populated.")
+
+    cur.execute(f"CREATE INDEX index_idx ON {tmp_table} (_index);")
+
+    _LG.debug("Renaming the table.")
+    cur.execute(f"ALTER TABLE {tmp_table} RENAME TO {table}")
+    con.commit()
+
+
+def _load_dataset(path: str, split: str, table: str):
+    import sqlite3
+
+    _LG.info(f"Connecting to {path=}")
+    con = sqlite3.connect(path)
+    cur = con.cursor()
+
+    res = cur.execute(f"SELECT name FROM sqlite_master WHERE name='{table}'")
+    if res.fetchone() is None:
+        _LG.info(f"{table=} does not exist at {path=}, creating...")
+        _create_table(con, cur, split, table)
+        _LG.debug("Done")
+    return con
+
+
+def ImageNet(*, split: str, path: str = ":memory:") -> DataSet[ImageData]:
+    """Create ImageNet dataset.
+
+    Args:
+        split: Passed to [spdl.dataset.librispeech.get_flist][].
+            !!! note
+                Using `"train"` split will create database with 1.2 million
+                records which amounts up to ~80MB of RAM or disk space.
+
+        path: Path where the dataset object is stored.
+            Passing `':memory:'` creates database object in-memory.
+
+    Returns:
+        (DataSet[ImageData]): Dataset object that handles image data.
+    """
+    table = f"imagenet_{split}".replace("-", "_")
+    con = _load_dataset(path, split, table=table)
+
+    class_mapping, _ = get_mappings()
+
+    @dataclass
+    class _ImageData(ImageData):
+        _index: int = field(repr=False)
+
+        cls: int = field(init=False)
+
+        def __post_init__(self):
+            self.cls = class_mapping[parse_wnid(self.path)]
+
+    return _sql.make_dataset(con, _ImageData, table=table)
