@@ -19,6 +19,11 @@ plugins:
             show_root_heading: true
             show_bases: false
             show_source: false
+            preload_modules:
+              - spdl.io
+              - spdl.dataset
+              - spdl.utils
+            members_order: source
             extensions:
             - docs/resolver.py:SPDLDynamicResolver:
           import:
@@ -48,6 +53,7 @@ nav:
           - "Preprocessing": spdl/io/preprocessing.md
           - "Support Structures": spdl/io/helpers.md
       - "spdl.dataset":
+          - "DataSet": spdl/dataset/dataset.md
           - "ImageNet": spdl/dataset/imagenet.md
           - "Kinetics": spdl/dataset/kinetics.md
           - "LibriSpeech": spdl/dataset/librispeech.md
