@@ -190,3 +190,19 @@ class DataSet(Generic[Sample]):
             ```
         """
         self._impl.sort(attribute, desc)
+
+
+def split(dataset: DataSet, n: int, path_pattern: str):
+    """Split the dataset and create new datasets.
+
+    Args:
+        n: The number of splits.
+
+        path_pattern: The path pattern to which the split datsets are stored.
+            The index will be filled with [str.format][] function, (i.e.
+            `path_pattern.format(i)`).
+
+    Returns:
+        (List[DataSet]): Split DataSet objects.
+    """
+    return dataset._impl.split(n, path_pattern)

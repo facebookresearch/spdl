@@ -1,6 +1,7 @@
 import logging
 import time
 
+from spdl.dataset import _dataset
 from spdl.dataset.imagenet import ImageNet
 from spdl.dataset.librispeech import LibriSpeech
 
@@ -60,10 +61,11 @@ for col in dataset.attributes:
 print(dataset.attributes)
 
 print(len(dataset))
-_test(dataset)
-dataset = ImageNet("imagenet.db", split="train")
-t0 = time.monotonic()
-dataset.shuffle()
-elapsed = time.monotonic() - t0
-print(f"{elapsed} [sec]")
-print(dataset)
+# _test(dataset)
+datasets = _dataset.split(dataset, 3, "librispeech_split_{}.db")
+for ds in datasets:
+    print(ds.attributes)
+    print(ds)
+# dataset = ImageNet(split="train", path="imagenet.db")
+# dataset.shuffle()
+# print(dataset)
