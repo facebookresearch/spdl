@@ -4,7 +4,7 @@ import pytest
 
 import spdl.io
 import spdl.utils
-from spdl.io.preprocessing import get_video_filter_desc
+from spdl.io import get_video_filter_desc
 
 
 def _to_numpy(frames):
