@@ -4,6 +4,10 @@ project(folly-deps)
 
 include(../cmake/spdl_common_config.cmake)
 
+# Make all the symbols from third party libraries private
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+
 ###############################################################################
 # Build folly dependencies.
 ###############################################################################
