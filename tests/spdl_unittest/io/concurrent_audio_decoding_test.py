@@ -3,7 +3,7 @@ import pytest
 
 import spdl.io
 import spdl.utils
-from spdl.io.preprocessing import get_audio_filter_desc
+from spdl.io import get_audio_filter_desc
 
 
 def _decode_audio(src, sample_fmt=None):

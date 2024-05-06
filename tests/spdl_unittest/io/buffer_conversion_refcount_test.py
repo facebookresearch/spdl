@@ -5,7 +5,7 @@ import numpy as np
 
 import spdl.io
 import spdl.utils
-from spdl.io.preprocessing import get_video_filter_desc
+from spdl.io import get_video_filter_desc
 
 
 def _decode_video(src, pix_fmt=None):
