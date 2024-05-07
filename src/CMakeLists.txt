@@ -27,6 +27,7 @@ set(srcs
   libspdl/core/adaptor/bytes.cpp
   libspdl/core/adaptor/mmap.cpp
   libspdl/core/storage/cpu.cpp
+  libspdl/core/cuda.cpp
   libspdl/core/packets.cpp
   libspdl/core/utils.cpp
 
@@ -38,7 +39,6 @@ set(srcs
   libspdl/coro/decoding/nvdec.cpp
   libspdl/coro/decoding/sleep.cpp
   libspdl/coro/conversion/audio.cpp
-  libspdl/coro/conversion/cuda.cpp
   libspdl/coro/conversion/vision.cpp
   )
 

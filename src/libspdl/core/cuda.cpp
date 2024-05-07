@@ -1,7 +1,4 @@
-#include <libspdl/coro/conversion.h>
-
-#include "libspdl/coro/detail/executor.h"
-#include "libspdl/coro/detail/future.h"
+#include <libspdl/core/cuda.h>
 
 #ifdef SPDL_USE_CUDA
 #include "libspdl/core/detail/cuda.h"
