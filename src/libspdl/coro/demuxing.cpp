@@ -1,10 +1,13 @@
+#include <libspdl/coro/demuxing.h>
+
+#include "libspdl/coro/detail/executor.h"
+#include "libspdl/coro/detail/future.h"
+
 #include <libspdl/core/demuxing.h>
 
-#include "libspdl/core/detail/executor.h"
-#include "libspdl/core/detail/ffmpeg/demuxing.h"
-#include "libspdl/core/detail/future.h"
+#include <folly/experimental/coro/AsyncGenerator.h>
 
-namespace spdl::core {
+namespace spdl::coro {
 
 /// Demux audio or video
 template <MediaType media_type>
@@ -16,12 +19,17 @@ FuturePtr async_demux(
     SourceAdaptorPtr adaptor,
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor) {
+  auto generator = folly::coro::co_invoke(
+      [=]() -> folly::coro::AsyncGenerator<PacketsPtr<media_type>> {
+        spdl::core::StreamingDemuxer<media_type> demuxer{uri, adaptor, io_cfg};
+        for (auto& window : timestamps) {
+          co_await folly::coro::co_safe_point;
+          co_yield demuxer.demux_window(window);
+        }
+      });
+
   return detail::execute_generator_with_callback(
-      detail::stream_demux<media_type>(
-          std::move(uri),
-          std::move(adaptor),
-          std::move(io_cfg),
-          std::move(timestamps)),
+      std::move(generator),
       std::move(set_result),
       std::move(notify_exception),
       detail::get_demux_executor(executor));
@@ -54,12 +62,20 @@ FuturePtr async_demux_bytes(
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
+  auto generator = folly::coro::co_invoke(
+      [=]() -> folly::coro::AsyncGenerator<PacketsPtr<media_type>> {
+        spdl::core::StreamingDemuxer<media_type> demuxer{data, io_cfg};
+        for (auto& window : timestamps) {
+          co_await folly::coro::co_safe_point;
+          co_yield demuxer.demux_window(window);
+        }
+        if (_zero_clear) {
+          std::memset((void*)data.data(), 0, data.size());
+        }
+      });
+
   return detail::execute_generator_with_callback(
-      detail::stream_demux<media_type>(
-          std::move(data),
-          std::move(io_cfg),
-          std::move(timestamps),
-          _zero_clear),
+      std::move(generator),
       std::move(set_result),
       std::move(notify_exception),
       detail::get_demux_executor(executor));
@@ -84,31 +100,39 @@ template FuturePtr async_demux_bytes(
     bool _zero_clear);
 
 FuturePtr async_demux_image(
-    std::function<void(ImagePacketsPtr)> set_result,
+    std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string uri,
     SourceAdaptorPtr adaptor,
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=]() -> folly::coro::Task<PacketsPtr<MediaType::Image>> {
+        co_return demux_image(
+            std::move(uri), std::move(adaptor), std::move(io_cfg));
+      });
   return detail::execute_task_with_callback(
-      detail::demux_image(
-          std::move(uri), std::move(adaptor), std::move(io_cfg)),
+      std::move(task),
       std::move(set_result),
       std::move(notify_exception),
       detail::get_demux_executor(executor));
 }
 
 FuturePtr async_demux_image_bytes(
-    std::function<void(ImagePacketsPtr)> set_result,
+    std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::optional<IOConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
+  auto task = folly::coro::co_invoke(
+      [=]() -> folly::coro::Task<PacketsPtr<MediaType::Image>> {
+        co_return demux_image(std::move(data), std::move(io_cfg), _zero_clear);
+      });
   return detail::execute_task_with_callback(
-      detail::demux_image(std::move(data), std::move(io_cfg), _zero_clear),
+      std::move(task),
       std::move(set_result),
       std::move(notify_exception),
       detail::get_demux_executor(executor));
 }
-} // namespace spdl::core
+} // namespace spdl::coro

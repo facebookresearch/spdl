@@ -70,9 +70,6 @@ class TracingSession {
 
 std::unique_ptr<TracingSession> init_tracing();
 
-void trace_default_demux_executor_queue_size();
-void trace_default_decode_executor_queue_size();
-
 // These utilities are for adding custom tracing on Python side
 template <typename Number>
 void trace_counter(int i, Number counter);

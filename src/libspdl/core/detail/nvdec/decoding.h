@@ -6,9 +6,6 @@
 #include <libspdl/core/frames.h>
 #include <libspdl/core/types.h>
 
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/Task.h>
-
 #include <memory>
 #include <optional>
 #include <string>
@@ -18,7 +15,7 @@
 namespace spdl::core::detail {
 
 template <MediaType media_type>
-folly::coro::Task<BufferPtr> decode_nvdec(
+BufferPtr decode_nvdec(
     PacketsPtr<media_type> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -28,7 +25,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     const uintptr_t cuda_stream = 0,
     const std::optional<cuda_allocator>& cuda_allocator = std::nullopt);
 
-folly::coro::Task<BufferPtr> decode_nvdec(
+BufferPtr decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
     int cuda_device_index,
     const CropArea crop,

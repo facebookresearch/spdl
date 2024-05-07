@@ -1,10 +1,11 @@
-#include <libspdl/core/conversion.h>
+#include <libspdl/coro/conversion.h>
+
+#include "libspdl/coro/detail/executor.h"
+#include "libspdl/coro/detail/future.h"
 
 #ifdef SPDL_USE_CUDA
 #include "libspdl/core/detail/cuda.h"
 #endif
-#include "libspdl/core/detail/executor.h"
-#include "libspdl/core/detail/future.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 

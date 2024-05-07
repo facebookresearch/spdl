@@ -1,8 +1,8 @@
-#include <libspdl/core/executor.h>
+#include <libspdl/coro/executor.h>
 
-#include "libspdl/core/detail/executor.h"
+#include "libspdl/coro/detail/executor.h"
 
-namespace spdl::core {
+namespace spdl::coro {
 
 ThreadPoolExecutor::ThreadPoolExecutor(
     size_t num_threads,
@@ -17,4 +17,4 @@ size_t ThreadPoolExecutor::get_task_queue_size() const {
   return impl->get_task_queue_size();
 }
 
-} // namespace spdl::core
+} // namespace spdl::coro

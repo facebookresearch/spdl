@@ -5,16 +5,19 @@ message(STATUS "########################################")
 set(src
   bind.cpp
   core/adaptors.cpp
-  core/conversion.cpp
-  core/decoding.cpp
-  core/demuxing.cpp
-  core/executor.cpp
   core/frames.cpp
   core/buffer.cpp
-  core/future.cpp
   core/packets.cpp
+  core/types.cpp
   core/tracing.cpp
-  core/utils.cpp)
+  core/utils.cpp
+
+  coro/future.cpp
+  coro/executor.cpp
+  coro/decoding.cpp
+  coro/demuxing.cpp
+  coro/conversion.cpp
+)
 
 # This adds the library directory to search path
 if (APPLE)

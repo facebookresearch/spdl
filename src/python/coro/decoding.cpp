@@ -1,7 +1,4 @@
-#include <libspdl/core/decoding.h>
-#include <libspdl/core/executor.h>
-#include <libspdl/core/types.h>
-#include <libspdl/core/utils.h>
+#include <libspdl/coro/decoding.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
@@ -14,25 +11,15 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-#include <fmt/format.h>
-
-extern "C" {
-#include <libavfilter/version.h>
-}
-
 namespace nb = nanobind;
 
-namespace spdl::core {
+namespace spdl::coro {
+
+using spdl::core::AudioPacketsPtr;
+using spdl::core::ImagePacketsPtr;
+using spdl::core::VideoPacketsPtr;
 
 void register_decoding(nb::module_& m) {
-  nb::class_<DecodeConfig>(m, "DecodeConfig")
-      .def(
-          nb::init<
-              const std::optional<std::string>&,
-              const std::optional<OptionDict>&>(),
-          nb::arg("decoder") = nb::none(),
-          nb::arg("decoder_options") = nb::none());
-
   ////////////////////////////////////////////////////////////////////////////////
   // Async decoding - FFMPEG
   ////////////////////////////////////////////////////////////////////////////////
@@ -118,7 +105,7 @@ void register_decoding(nb::module_& m) {
 
   m.def(
       "async_decode_image_from_buffer",
-      [](std::function<void(FFmpegImageFramesPtr)> set_result,
+      [](std::function<void(FFmpegFramesPtr<MediaType::Image>)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          // TODO: check if one can use string_view directly.
          nb::bytes data,
@@ -297,4 +284,4 @@ void register_decoding(nb::module_& m) {
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("executor") = nullptr);
 }
-} // namespace spdl::core
+} // namespace spdl::coro

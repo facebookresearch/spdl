@@ -25,14 +25,12 @@ DemuxedPackets<media_type>::DemuxedPackets(
     std::string src_,
     std::tuple<double, double> timestamp_,
     AVCodecParameters* codecpar_,
-    Rational time_base_,
-    Rational frame_rate_)
+    Rational time_base_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
       timestamp(timestamp_),
       codecpar(copy(codecpar_)),
-      time_base(time_base_),
-      frame_rate(frame_rate_) {
+      time_base(time_base_) {
   TRACE_EVENT(
       "decoding",
       "DemuxedPackets::DemuxedPackets",
@@ -87,11 +85,10 @@ template struct DemuxedPackets<MediaType::Image>;
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
   auto other = std::make_unique<DemuxedPackets<media_type>>(
-      src.src,
-      src.timestamp,
-      copy(src.codecpar),
-      src.time_base,
-      src.frame_rate);
+      src.src, src.timestamp, copy(src.codecpar), src.time_base);
+  if constexpr (media_type == MediaType::Video) {
+    other->frame_rate = src.frame_rate;
+  }
   for (const AVPacket* src : src.get_packets()) {
     other->push(CHECK_AVALLOCATE(av_packet_clone(src)));
   }

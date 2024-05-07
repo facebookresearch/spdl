@@ -1,4 +1,4 @@
-#include "libspdl/core/detail/ffmpeg/decoding.h"
+#include <libspdl/core/decoding.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
@@ -14,15 +14,16 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 }
 
-namespace spdl::core::detail {
+namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Decoder
 ////////////////////////////////////////////////////////////////////////////////
+namespace detail {
 namespace {
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-folly::coro::AsyncGenerator<AVFramePtr&&>
+std::vector<AVFramePtr>
 decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
   assert(codec_ctx);
   XLOG(DBG9)
@@ -38,8 +39,8 @@ decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
     TRACE_EVENT("decoding", "avcodec_send_packet");
     errnum = avcodec_send_packet(codec_ctx, packet);
   }
+  std::vector<AVFramePtr> ret;
   while (errnum >= 0) {
-    co_await folly::coro::co_safe_point;
     AVFramePtr frame{CHECK_AVALLOCATE(av_frame_alloc())};
     {
       TRACE_EVENT("decoding", "avcodec_receive_frame");
@@ -47,12 +48,12 @@ decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
     }
     switch (errnum) {
       case AVERROR(EAGAIN):
-        co_return;
+        break;
       case AVERROR_EOF:
         if (flush_null) {
-          co_yield nullptr;
+          ret.emplace_back(AVFramePtr{nullptr});
         }
-        co_return;
+        break;
       default: {
         if (frame->key_frame) {
           TRACE_EVENT_INSTANT("decoding", "key_frame");
@@ -63,10 +64,11 @@ decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
         XLOG(DBG9) << fmt::format(
             "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
 
-        co_yield std::move(frame);
+        ret.emplace_back(frame.release());
       }
     }
   }
+  return ret;
 }
 
 template <MediaType media_type>
@@ -92,7 +94,7 @@ FFmpegFramesPtr<media_type> get_frame(PacketsPtr<media_type>& packets) {
 }
 
 template <MediaType media_type>
-folly::coro::Task<FFmpegFramesPtr<media_type>> decode_pkts_with_filter(
+FFmpegFramesPtr<media_type> decode_packets_with_filter(
     PacketsPtr<media_type> packets,
     AVCodecContextPtr codec_ctx,
     std::string filter_desc) {
@@ -100,41 +102,34 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_pkts_with_filter(
   auto filter =
       get_filter<media_type>(codec_ctx.get(), filter_desc, packets->frame_rate);
   for (auto& packet : packets->get_packets()) {
-    co_await folly::coro::co_safe_point;
-    auto decoding = decode_packet(codec_ctx.get(), packet, true);
-    while (auto raw_frame = co_await decoding.next()) {
-      co_await folly::coro::co_safe_point;
-      auto filtering = filter_frame(filter, *raw_frame);
-      while (auto filtered_frame = co_await filtering.next()) {
-        co_await folly::coro::co_safe_point;
-        frames->push_back(filtered_frame->release());
+    for (auto& raw_frame : decode_packet(codec_ctx.get(), packet, true)) {
+      for (auto& filtered_frame : filter_frame(filter, raw_frame.get())) {
+        frames->push_back(filtered_frame.release());
       }
     }
   }
   frames->time_base = filter.get_sink_time_base();
-  co_return std::move(frames);
+  return frames;
 }
 
 template <MediaType media_type>
-folly::coro::Task<FFmpegFramesPtr<media_type>> decode_pkts(
+FFmpegFramesPtr<media_type> decode_packets(
     PacketsPtr<media_type> packets,
     AVCodecContextPtr codec_ctx) {
   auto frames = get_frame(packets);
   for (auto& packet : packets->get_packets()) {
-    co_await folly::coro::co_safe_point;
-    auto decoding = decode_packet(codec_ctx.get(), packet, false);
-    while (auto frame = co_await decoding.next()) {
-      co_await folly::coro::co_safe_point;
-      frames->push_back(frame->release());
+    for (auto& frame : decode_packet(codec_ctx.get(), packet, false)) {
+      frames->push_back(frame.release());
     }
   }
-  co_return std::move(frames);
+  return frames;
 }
 
 } // namespace
+} // namespace detail
 
 template <MediaType media_type>
-folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
+FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig> cfg,
     std::string filter_desc) {
@@ -142,7 +137,7 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
       "decoding",
       "decode_packets_ffmpeg",
       perfetto::Flow::ProcessScoped(packets->id));
-  auto codec_ctx = get_codec_ctx_ptr(
+  auto codec_ctx = detail::get_codec_ctx_ptr(
       packets->codecpar,
       AVRational{packets->time_base.num, packets->time_base.den},
       cfg ? cfg->decoder : std::nullopt,
@@ -151,25 +146,25 @@ folly::coro::Task<FFmpegFramesPtr<media_type>> decode_packets_ffmpeg(
     packets->push(nullptr); // For flushing
   }
   if (filter_desc.empty()) {
-    co_return co_await decode_pkts(std::move(packets), std::move(codec_ctx));
+    return detail::decode_packets(std::move(packets), std::move(codec_ctx));
   }
-  co_return co_await decode_pkts_with_filter(
+  return detail::decode_packets_with_filter(
       std::move(packets), std::move(codec_ctx), std::move(filter_desc));
 }
 
-template folly::coro::Task<FFmpegAudioFramesPtr> decode_packets_ffmpeg(
+template FFmpegAudioFramesPtr decode_packets_ffmpeg(
     AudioPacketsPtr packets,
     const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
 
-template folly::coro::Task<FFmpegVideoFramesPtr> decode_packets_ffmpeg(
+template FFmpegVideoFramesPtr decode_packets_ffmpeg(
     VideoPacketsPtr packets,
     const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
 
-template folly::coro::Task<FFmpegImageFramesPtr> decode_packets_ffmpeg(
+template FFmpegImageFramesPtr decode_packets_ffmpeg(
     ImagePacketsPtr packets,
     const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
 
-} // namespace spdl::core::detail
+} // namespace spdl::core

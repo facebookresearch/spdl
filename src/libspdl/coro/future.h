@@ -3,7 +3,7 @@
 #include <memory>
 #include <utility>
 
-namespace spdl::core {
+namespace spdl::coro {
 
 struct Future;
 
@@ -31,4 +31,4 @@ struct Future {
   void cancel();
 };
 
-} // namespace spdl::core
+} // namespace spdl::coro

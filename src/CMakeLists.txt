@@ -14,10 +14,6 @@ endif()
 set(defs)
 set(deps folly)
 set(srcs
-  libspdl/core/conversion/audio.cpp
-  libspdl/core/conversion/cuda.cpp
-  libspdl/core/conversion/vision.cpp
-  libspdl/core/detail/executor.cpp
   libspdl/core/detail/ffmpeg/conversion.cpp
   libspdl/core/detail/ffmpeg/ctx_utils.cpp
   libspdl/core/detail/ffmpeg/decoding.cpp
@@ -26,12 +22,6 @@ set(srcs
   libspdl/core/detail/ffmpeg/wrappers.cpp
   libspdl/core/detail/logging.cpp
   libspdl/core/buffer/cpu.cpp
-  libspdl/core/decoding/nvdec_async.cpp
-  libspdl/core/decoding/ffmpeg_async.cpp
-  libspdl/core/decoding/sleep.cpp
-  libspdl/core/executor.cpp
-  libspdl/core/demuxing.cpp
-  libspdl/core/future.cpp
   libspdl/core/frames/ffmpeg.cpp
   libspdl/core/adaptor/adaptor.cpp
   libspdl/core/adaptor/bytes.cpp
@@ -39,6 +29,17 @@ set(srcs
   libspdl/core/storage/cpu.cpp
   libspdl/core/packets.cpp
   libspdl/core/utils.cpp
+
+  libspdl/coro/future.cpp
+  libspdl/coro/executor.cpp
+  libspdl/coro/demuxing.cpp
+  libspdl/coro/detail/executor.cpp
+  libspdl/coro/decoding/ffmpeg.cpp
+  libspdl/coro/decoding/nvdec.cpp
+  libspdl/coro/decoding/sleep.cpp
+  libspdl/coro/conversion/audio.cpp
+  libspdl/coro/conversion/cuda.cpp
+  libspdl/coro/conversion/vision.cpp
   )
 
 if (SPDL_USE_CUDA)

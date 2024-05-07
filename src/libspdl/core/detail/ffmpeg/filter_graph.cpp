@@ -242,9 +242,9 @@ FilterGraph get_image_filter(
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
+std::vector<AVFramePtr> filter_frame(
     FilterGraph& filter_graph,
-    AVFramePtr&& frame) {
+    AVFrame* frame) {
   XLOG(DBG9)
       << (frame ? fmt::format(
                       "{:21s} {:.3f} ({})",
@@ -253,18 +253,19 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
                       frame->pts)
                 : fmt::format(" --- flush filter graph"));
 
-  filter_graph.add_frame(frame.get());
+  filter_graph.add_frame(frame);
 
   int errnum;
-  AVFrameAutoUnref frame_ref{frame.get()};
+  AVFrameAutoUnref frame_ref{frame};
+  std::vector<AVFramePtr> ret;
   do {
     AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
     errnum = filter_graph.get_frame(frame2.get());
     switch (errnum) {
       case AVERROR(EAGAIN):
-        co_return;
+        break;
       case AVERROR_EOF:
-        co_return;
+        break;
       default: {
         XLOG(DBG9) << fmt::format(
             "{:21s} {:.3f} ({})",
@@ -272,10 +273,11 @@ folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
             TS(frame2, filter_graph.get_sink_time_base()),
             frame2->pts);
 
-        co_yield std::move(frame2);
+        ret.emplace_back(std::move(frame2));
       }
     }
   } while (errnum >= 0);
+  return ret;
 }
 
 } // namespace spdl::core::detail

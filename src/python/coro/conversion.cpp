@@ -1,4 +1,4 @@
-#include <libspdl/core/conversion.h>
+#include <libspdl/coro/conversion.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
@@ -12,7 +12,7 @@
 
 namespace nb = nanobind;
 
-namespace spdl::core {
+namespace spdl::coro {
 void register_conversion(nb::module_& m) {
   m.def(
       "async_convert_audio",
@@ -59,4 +59,4 @@ void register_conversion(nb::module_& m) {
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("executor") = nullptr);
 }
-} //  namespace spdl::core
+} //  namespace spdl::coro
