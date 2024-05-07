@@ -53,11 +53,7 @@ std::string get_codec_info(AVCodecParameters* codecpar) {
 } // namespace
 
 void register_packets(nb::module_& m) {
-  auto _AudioPackets = nb::class_<AudioPackets>(m, "AudioPackets");
-  auto _VideoPackets = nb::class_<VideoPackets>(m, "VideoPackets");
-  auto _ImagePackets = nb::class_<ImagePackets>(m, "ImagePackets");
-
-  _AudioPackets
+  nb::class_<AudioPackets>(m, "AudioPackets")
       .def(
           "__repr__",
           [](const AudioPackets& self) {
@@ -73,7 +69,7 @@ void register_packets(nb::module_& m) {
           "timestamp", [](const AudioPackets& self) { return self.timestamp; })
       .def("clone", &clone<MediaType::Audio>);
 
-  _VideoPackets
+  nb::class_<VideoPackets>(m, "VideoPackets")
       .def(
           "_get_pts",
           [](const VideoPackets& self) -> std::vector<double> {
@@ -105,7 +101,7 @@ void register_packets(nb::module_& m) {
           })
       .def("clone", [](const VideoPackets& self) { return clone(self); });
 
-  _ImagePackets
+  nb::class_<ImagePackets>(m, "ImagePackets")
       .def(
           "_get_pts",
           [](const ImagePackets& self) {

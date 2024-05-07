@@ -1,8 +1,8 @@
-#include <libspdl/core/future.h>
+#include <libspdl/coro/future.h>
 
-#include "libspdl/core/detail/future.h"
+#include "libspdl/coro/detail/future.h"
 
-namespace spdl::core {
+namespace spdl::coro {
 
 Future::Impl::Impl(
     folly::SemiFuture<folly::Unit>&& fut,
@@ -33,4 +33,4 @@ void Future::cancel() {
   pimpl->cs.requestCancellation();
 }
 
-} // namespace spdl::core
+} // namespace spdl::coro

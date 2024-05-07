@@ -1,4 +1,4 @@
-#include "libspdl/core/detail/ffmpeg/conversion.h"
+#include <libspdl/core/conversion.h>
 
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
@@ -12,7 +12,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 
-namespace spdl::core::detail {
+namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
@@ -236,4 +236,4 @@ CPUBufferPtr convert_video_frames_cpu(const std::vector<AVFrame*>& frames) {
     }
   }
 }
-} // namespace spdl::core::detail
+} // namespace spdl::core

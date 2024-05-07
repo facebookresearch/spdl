@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/future.h>
+#include <libspdl/coro/future.h>
 
 #include <folly/Executor.h>
 #include <folly/experimental/coro/AsyncGenerator.h>
@@ -10,7 +10,7 @@
 
 #include <memory>
 
-namespace spdl::core {
+namespace spdl::coro {
 
 struct Future::Impl {
   folly::SemiFuture<folly::Unit> future;
@@ -106,4 +106,4 @@ FuturePtr execute_generator_with_callback(
 }
 
 } // namespace detail
-} // namespace spdl::core
+} // namespace spdl::coro

@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-namespace spdl::core {
+namespace spdl::coro {
 
 struct ThreadPoolExecutor;
 
@@ -21,4 +21,7 @@ struct ThreadPoolExecutor {
   size_t get_task_queue_size() const;
 };
 
-} // namespace spdl::core
+void trace_default_demux_executor_queue_size();
+void trace_default_decode_executor_queue_size();
+
+} // namespace spdl::coro

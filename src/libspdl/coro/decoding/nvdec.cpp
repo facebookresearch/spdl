@@ -1,8 +1,10 @@
-#include <libspdl/core/decoding.h>
+#include <libspdl/coro/decoding.h>
 
-#include "libspdl/core/detail/executor.h"
-#include "libspdl/core/detail/ffmpeg/demuxing.h"
-#include "libspdl/core/detail/future.h"
+#include "libspdl/coro/detail/executor.h"
+#include "libspdl/coro/detail/future.h"
+
+#include <libspdl/core/demuxing.h>
+
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -12,7 +14,7 @@
 #include "libspdl/core/detail/nvdec/utils.h"
 #endif
 
-namespace spdl::core {
+namespace spdl::coro {
 namespace {
 #ifdef SPDL_USE_NVCODEC
 void init_cuda() {
@@ -88,10 +90,17 @@ FuturePtr async_decode_nvdec(
       [=](PacketsPtr<media_type> pkts) -> folly::coro::Task<BufferPtr> {
         validate_nvdec_params(cuda_device_index, crop, width, height);
         init_cuda();
+
         if constexpr (media_type == MediaType::Video) {
-          pkts = co_await detail::apply_bsf(std::move(pkts)).scheduleOn(exe);
+          pkts = co_await folly::coro::co_invoke(
+                     [=](PacketsPtr<media_type> pkts)
+                         -> folly::coro::Task<PacketsPtr<media_type>> {
+                       co_return apply_bsf(std::move(pkts));
+                     },
+                     std::move(pkts))
+                     .scheduleOn(exe);
         }
-        co_return co_await detail::decode_nvdec<media_type>(
+        co_return spdl::core::detail::decode_nvdec<media_type>(
             std::move(pkts),
             cuda_device_index,
             crop,
@@ -140,7 +149,7 @@ template FuturePtr async_decode_nvdec(
 FuturePtr async_batch_decode_image_nvdec(
     std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<ImagePacketsPtr>&& packets,
+    std::vector<PacketsPtr<MediaType::Image>>&& packets,
     int cuda_device_index,
     const CropArea& crop,
     int width,
@@ -156,10 +165,11 @@ FuturePtr async_batch_decode_image_nvdec(
   });
 #else
   auto task = folly::coro::co_invoke(
-      [=](std::vector<ImagePacketsPtr>&& pkts) -> folly::coro::Task<BufferPtr> {
+      [=](std::vector<PacketsPtr<MediaType::Image>>&& pkts)
+          -> folly::coro::Task<BufferPtr> {
         validate_nvdec_params(cuda_device_index, crop, width, height);
         init_cuda();
-        co_return co_await detail::decode_nvdec(
+        co_return spdl::core::detail::decode_nvdec(
             std::move(pkts),
             cuda_device_index,
             crop,
@@ -179,4 +189,4 @@ FuturePtr async_batch_decode_image_nvdec(
       std::move(notify_exception),
       detail::get_decode_executor(executor));
 }
-} // namespace spdl::core
+} // namespace spdl::coro

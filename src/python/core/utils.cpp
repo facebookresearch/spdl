@@ -49,9 +49,6 @@ std::vector<std::string> init_folly_init(
 } // namespace
 
 void register_utils(nb::module_& m) {
-  nb::exception<spdl::core::InternalError>(
-      m, "InternalError", PyExc_AssertionError);
-
   m.def("init_folly", &init_folly_init);
   m.def("get_ffmpeg_log_level", &get_ffmpeg_log_level);
   m.def("set_ffmpeg_log_level", &set_ffmpeg_log_level);

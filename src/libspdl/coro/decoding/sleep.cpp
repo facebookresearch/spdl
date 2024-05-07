@@ -1,14 +1,14 @@
-#include <libspdl/core/future.h>
+#include <libspdl/coro/future.h>
 
-#include "libspdl/core/detail/executor.h"
-#include "libspdl/core/detail/future.h"
+#include "libspdl/coro/detail/executor.h"
+#include "libspdl/coro/detail/future.h"
 
 #include <folly/experimental/coro/Sleep.h>
 #include <folly/logging/xlog.h>
 
 #include <chrono>
 
-namespace spdl::core {
+namespace spdl::coro {
 
 FuturePtr async_sleep(
     std::function<void(int)> set_result,
@@ -60,4 +60,4 @@ FuturePtr async_sleep_multi(
       detail::get_decode_executor(executor));
 }
 
-} // namespace spdl::core
+} // namespace spdl::coro

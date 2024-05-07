@@ -1,66 +1,51 @@
 #pragma once
 
 #include <libspdl/core/adaptor.h>
-#include <libspdl/core/executor.h>
-#include <libspdl/core/future.h>
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
-#include <functional>
-#include <memory>
 #include <optional>
-#include <vector>
+#include <string_view>
+#include <tuple>
+
+struct AVFormatContext;
+struct AVStream;
 
 namespace spdl::core {
 
-////////////////////////////////////////////////////////////////////////////////
-// Demuxing
-////////////////////////////////////////////////////////////////////////////////
-
-/// Demux audio or video from source URI
 template <MediaType media_type>
-FuturePtr async_demux(
-    std::function<void(PacketsPtr<media_type>)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::vector<std::tuple<double, double>> timestamps,
-    SourceAdaptorPtr adaptor = nullptr,
-    std::optional<IOConfig> io_cfg = std::nullopt,
-    ThreadPoolExecutorPtr executor = nullptr);
+class StreamingDemuxer {
+  std::unique_ptr<DataInterface> di;
+  AVFormatContext* fmt_ctx;
+  AVStream* stream;
 
-/// Demux audio or video from byte string stored somewhere.
-///
-/// Note: It is caller's responsibility to keep the data alive until the
-/// returned Future is destroyed.
-template <MediaType media_type>
-FuturePtr async_demux_bytes(
-    std::function<void(PacketsPtr<media_type>)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    std::string_view data,
-    std::vector<std::tuple<double, double>> timestamps,
-    std::optional<IOConfig> io_cfg = std::nullopt,
-    ThreadPoolExecutorPtr executor = nullptr,
+ public:
+  StreamingDemuxer(
+      const std::string uri,
+      const SourceAdaptorPtr& adaptor,
+      const std::optional<IOConfig>& io_cfg);
+
+  StreamingDemuxer(
+      const std::string_view data,
+      const std::optional<IOConfig>& io_cfg);
+
+  PacketsPtr<media_type> demux_window(const std::tuple<double, double>& window);
+};
+
+// Demux a single image from the resource indicator
+ImagePacketsPtr demux_image(
+    const std::string uri,
+    const SourceAdaptorPtr adaptor,
+    const std::optional<IOConfig>& io_cfg);
+
+// Demux a single image from the memory
+// _zero_clear sets all the data to zero. This is only for testing.
+ImagePacketsPtr demux_image(
+    const std::string_view src,
+    const std::optional<IOConfig>& io_cfg,
     bool _zero_clear = false);
 
-/// Demux single image from source URI
-FuturePtr async_demux_image(
-    std::function<void(ImagePacketsPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    SourceAdaptorPtr adaptor = nullptr,
-    std::optional<IOConfig> io_cfg = std::nullopt,
-    ThreadPoolExecutorPtr executor = nullptr);
-
-/// Demux image from byte string stored somewhere.
-///
-/// Note: It is caller's responsibility to keep the data alive until the
-/// returned Future is destroyed.
-FuturePtr async_demux_image_bytes(
-    std::function<void(ImagePacketsPtr)> set_result,
-    std::function<void(std::string, bool)> notify_exception,
-    std::string_view data,
-    std::optional<IOConfig> io_cfg = std::nullopt,
-    ThreadPoolExecutorPtr executor = nullptr,
-    bool _zero_clear = false);
+// Apply bitstream filter for NVDEC video decoding
+VideoPacketsPtr apply_bsf(VideoPacketsPtr packets);
 
 } // namespace spdl::core

@@ -1,9 +1,11 @@
+#include <libspdl/coro/conversion.h>
+
+#include "libspdl/coro/conversion/cuda.h"
+#include "libspdl/coro/detail/executor.h"
+#include "libspdl/coro/detail/future.h"
+
 #include <libspdl/core/conversion.h>
 
-#include "libspdl/core/conversion/cuda.h"
-#include "libspdl/core/detail/executor.h"
-#include "libspdl/core/detail/ffmpeg/conversion.h"
-#include "libspdl/core/detail/future.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -13,7 +15,9 @@ extern "C" {
 #include <libavutil/frame.h>
 }
 
-namespace spdl::core {
+namespace spdl::coro {
+
+using spdl::core::InternalError;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Video/Image
@@ -62,7 +66,7 @@ BufferPtr convert_video(const std::vector<AVFrame*>& frames)
   if (static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA) {
     SPDL_FAIL_INTERNAL("FFmpeg-native CUDA frames are not supported.");
   }
-  auto buf = detail::convert_video_frames_cpu(frames);
+  auto buf = spdl::core::convert_video_frames_cpu(frames);
   if constexpr (media_type == MediaType::Image) {
     buf->shape.erase(buf->shape.begin()); // Trim the first dim
   }
@@ -130,7 +134,7 @@ template FuturePtr async_convert_frames<MediaType::Image>(
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 std::vector<AVFrame*> merge_frames(
-    const std::vector<FFmpegImageFramesPtr>& batch) {
+    const std::vector<FFmpegFramesPtr<MediaType::Image>>& batch) {
   std::vector<AVFrame*> ret;
   ret.reserve(batch.size());
   for (auto& frame : batch) {
@@ -144,7 +148,7 @@ std::vector<AVFrame*> merge_frames(
 }
 
 BufferPtr convert_batch_image_frames(
-    const std::vector<FFmpegImageFramesPtr>& batch) {
+    const std::vector<FFmpegFramesPtr<MediaType::Image>>& batch) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
   return convert_video<MediaType::Video>(merge_frames(batch));
 }
@@ -153,13 +157,13 @@ BufferPtr convert_batch_image_frames(
 FuturePtr async_batch_convert_frames(
     std::function<void(BufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegImageFramesPtr>&& frames,
+    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
     const std::optional<int>& cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [=](std::vector<FFmpegImageFramesPtr>&& frms)
+      [=](std::vector<FFmpegFramesPtr<MediaType::Image>>&& frms)
           -> folly::coro::Task<BufferPtr> {
         auto ret = convert_batch_image_frames(frms);
         if (cuda_device_index) {
@@ -178,4 +182,4 @@ FuturePtr async_batch_convert_frames(
       detail::get_demux_executor_high_prio(executor));
 }
 
-} // namespace spdl::core
+} // namespace spdl::coro

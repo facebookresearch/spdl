@@ -1,4 +1,4 @@
-#include "libspdl/core/detail/ffmpeg/demuxing.h"
+#include <libspdl/core/demuxing.h>
 
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
@@ -9,7 +9,8 @@
 
 #include <cmath>
 
-namespace spdl::core::detail {
+namespace spdl::core {
+namespace detail {
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,12 +55,13 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
   return fmt_ctx->streams[idx];
 }
 
-folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
+template <MediaType media_type>
+PacketsPtr<media_type> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::tuple<double, double>& timestamp) {
+    const std::tuple<double, double>& window) {
   TRACE_EVENT("demuxing", "detail::demux_window");
-  auto [start, end] = timestamp;
+  auto [start, end] = window;
 
   if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
     // Note:
@@ -79,9 +81,14 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
     }
   }
 
+  auto ret = std::make_unique<DemuxedPackets<media_type>>(
+      fmt_ctx->url,
+      window,
+      stream->codecpar,
+      Rational{stream->time_base.num, stream->time_base.den});
+
   double packet_ts = -1;
   do {
-    co_await folly::coro::co_safe_point;
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
     int errnum;
     {
@@ -97,34 +104,10 @@ folly::coro::AsyncGenerator<AVPacketPtr> demux_window(
     }
     packet_ts = packet->pts * av_q2d(stream->time_base);
     if (packet_ts <= end) {
-      co_yield std::move(packet);
+      ret->push(packet.release());
     }
   } while (packet_ts < end);
-}
-
-template <MediaType media_type>
-folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
-    AVFormatContext* fmt_ctx,
-    const std::vector<std::tuple<double, double>> timestamps) {
-  TRACE_EVENT("demuxing", "detail::stream_demux");
-  AVStream* stream = init_fmt_ctx(fmt_ctx, media_type);
-  auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-
-  for (auto& timestamp : timestamps) {
-    co_await folly::coro::co_safe_point;
-    auto package = std::make_unique<DemuxedPackets<media_type>>(
-        fmt_ctx->url,
-        timestamp,
-        stream->codecpar,
-        Rational{stream->time_base.num, stream->time_base.den},
-        Rational{frame_rate.num, frame_rate.den});
-    auto task = demux_window(fmt_ctx, stream, timestamp);
-    while (auto packet = co_await task.next()) {
-      package->push(packet->release());
-    }
-    XLOG(DBG9) << fmt::format(" - Sliced {} packets", package->num_packets());
-    co_yield std::move(package);
-  }
+  return ret;
 }
 
 std::unique_ptr<DataInterface> get_interface(
@@ -137,69 +120,55 @@ std::unique_ptr<DataInterface> get_interface(
   }
   return adaptor->get(src, io_cfg.value_or(IOConfig{}));
 }
-} // namespace
 
-template <MediaType media_type>
-folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
-    const std::string uri,
-    const SourceAdaptorPtr adaptor,
-    const std::optional<IOConfig> io_cfg,
-    const std::vector<std::tuple<double, double>> timestamps) {
-  auto interface = get_interface(uri, adaptor, io_cfg);
-  AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
-  auto gen = stream_demux<media_type>(fmt_ctx, timestamps);
-  while (auto package = co_await gen.next()) {
-    co_yield std::move(*package);
-  }
-}
-
-template folly::coro::AsyncGenerator<AudioPacketsPtr>
-stream_demux<MediaType::Audio>(
-    const std::string uri,
-    const SourceAdaptorPtr adaptor,
-    const std::optional<IOConfig> io_cfg,
-    const std::vector<std::tuple<double, double>> timestamps);
-
-template folly::coro::AsyncGenerator<VideoPacketsPtr>
-stream_demux<MediaType::Video>(
-    const std::string uri,
-    const SourceAdaptorPtr adaptor,
-    const std::optional<IOConfig> io_cfg,
-    const std::vector<std::tuple<double, double>> timestamps);
-
-template <MediaType media_type>
-folly::coro::AsyncGenerator<PacketsPtr<media_type>> stream_demux(
+std::unique_ptr<DataInterface> get_in_memory_interface(
     const std::string_view data,
-    const std::optional<IOConfig> io_cfg,
-    const std::vector<std::tuple<double, double>> timestamps,
-    bool _zero_clear) {
+    const std::optional<IOConfig>& io_cfg) {
   thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
-
-  auto interface = get_interface(data, adaptor, io_cfg);
-  AVFormatContext* fmt_ctx = interface->get_fmt_ctx();
-  auto gen = stream_demux<media_type>(fmt_ctx, timestamps);
-  while (auto package = co_await gen.next()) {
-    co_yield std::move(*package);
-  }
-  if (_zero_clear) {
-    std::memset((void*)data.data(), 0, data.size());
-  }
+  return get_interface(data, adaptor, io_cfg);
 }
 
-template folly::coro::AsyncGenerator<AudioPacketsPtr> stream_demux(
-    const std::string_view data,
-    const std::optional<IOConfig> io_cfg,
-    const std::vector<std::tuple<double, double>> timestamps,
-    bool _zero_clear);
+} // namespace
+} // namespace detail
 
-template folly::coro::AsyncGenerator<VideoPacketsPtr> stream_demux(
-    const std::string_view data,
-    const std::optional<IOConfig> io_cfg,
-    const std::vector<std::tuple<double, double>> timestamps,
-    bool _zero_clear);
+template <MediaType media_type>
+StreamingDemuxer<media_type>::StreamingDemuxer(
+    const std::string uri,
+    const SourceAdaptorPtr& adaptor,
+    const std::optional<IOConfig>& io_cfg)
+    : di(detail::get_interface(uri, adaptor, io_cfg)),
+      fmt_ctx(di->get_fmt_ctx()),
+      stream(detail::init_fmt_ctx(fmt_ctx, media_type)){};
 
+template <MediaType media_type>
+StreamingDemuxer<media_type>::StreamingDemuxer(
+    const std::string_view data,
+    const std::optional<IOConfig>& io_cfg)
+    : di(detail::get_in_memory_interface(data, io_cfg)),
+      fmt_ctx(di->get_fmt_ctx()),
+      stream(detail::init_fmt_ctx(fmt_ctx, media_type)) {}
+
+template <MediaType media_type>
+PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
+    const std::tuple<double, double>& window) {
+  auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window);
+  if constexpr (media_type == MediaType::Video) {
+    auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
+    packets->frame_rate = Rational{frame_rate.num, frame_rate.den};
+  }
+  return packets;
+}
+
+template class StreamingDemuxer<MediaType::Audio>;
+template class StreamingDemuxer<MediaType::Video>;
+template class StreamingDemuxer<MediaType::Image>;
+
+////////////////////////////////////////////////////////////////////////////////
+// Demuxing for Image
+////////////////////////////////////////////////////////////////////////////////
+namespace detail {
 namespace {
-folly::coro::Task<ImagePacketsPtr> demux_image(AVFormatContext* fmt_ctx) {
+ImagePacketsPtr demux_image(AVFormatContext* fmt_ctx) {
   TRACE_EVENT("demuxing", "detail::demux");
   AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
 
@@ -207,12 +176,10 @@ folly::coro::Task<ImagePacketsPtr> demux_image(AVFormatContext* fmt_ctx) {
       fmt_ctx->url,
       std::tuple<double, double>{0., 1000.},
       stream->codecpar,
-      Rational{1, 1},
       Rational{1, 1});
 
   int ite = 0;
   do {
-    co_await folly::coro::co_safe_point;
     ++ite;
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
     int errnum;
@@ -235,35 +202,37 @@ folly::coro::Task<ImagePacketsPtr> demux_image(AVFormatContext* fmt_ctx) {
     SPDL_FAIL(
         fmt::format("Failed to demux a sigle frame from {}", fmt_ctx->url));
   }
-  co_return std::move(package);
+  return package;
 }
 
 } // namespace
+} // namespace detail
 
-folly::coro::Task<ImagePacketsPtr> demux_image(
+ImagePacketsPtr demux_image(
     const std::string uri,
     const SourceAdaptorPtr adaptor,
-    const std::optional<IOConfig> io_cfg) {
-  auto interface = get_interface(uri, adaptor, io_cfg);
-  co_return co_await demux_image(interface->get_fmt_ctx());
+    const std::optional<IOConfig>& io_cfg) {
+  auto interface = detail::get_interface(uri, adaptor, io_cfg);
+  return detail::demux_image(interface->get_fmt_ctx());
 }
 
-folly::coro::Task<ImagePacketsPtr> demux_image(
+ImagePacketsPtr demux_image(
     const std::string_view data,
-    const std::optional<IOConfig> io_cfg,
+    const std::optional<IOConfig>& io_cfg,
     bool _zero_clear) {
   thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
-  auto interface = get_interface(data, adaptor, io_cfg);
-  auto result = co_await demux_image(interface->get_fmt_ctx());
+  auto interface = detail::get_interface(data, adaptor, io_cfg);
+  auto result = detail::demux_image(interface->get_fmt_ctx());
   if (_zero_clear) {
     std::memset((void*)data.data(), 0, data.size());
   }
-  co_return std::move(result);
+  return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Bit Stream Filtering for NVDEC
 ////////////////////////////////////////////////////////////////////////////////
+namespace detail {
 namespace {
 AVBSFContextPtr init_bsf(AVCodecParameters* codecpar) {
   // Note
@@ -318,26 +287,23 @@ AVPacketPtr apply_bsf(AVBSFContext* bsf_ctx, AVPacket* packet) {
   return filtered;
 }
 } // namespace
+} // namespace detail
 
-folly::coro::Task<VideoPacketsPtr> apply_bsf(VideoPacketsPtr packets) {
+VideoPacketsPtr apply_bsf(VideoPacketsPtr packets) {
   TRACE_EVENT("demuxing", "apply_bsf");
-  AVBSFContextPtr bsf_ctx = init_bsf(packets->codecpar);
+  auto bsf_ctx = detail::init_bsf(packets->codecpar);
   if (!bsf_ctx) {
-    co_return packets;
+    return packets;
   }
 
   auto package = std::make_unique<DemuxedPackets<MediaType::Video>>(
-      packets->src,
-      packets->timestamp,
-      bsf_ctx->par_out,
-      packets->time_base,
-      packets->frame_rate);
+      packets->src, packets->timestamp, bsf_ctx->par_out, packets->time_base);
+  package->frame_rate = packets->frame_rate;
   for (auto& packet : packets->get_packets()) {
-    co_await folly::coro::co_safe_point;
-    AVPacketPtr filtered = apply_bsf(bsf_ctx.get(), packet);
+    auto filtered = detail::apply_bsf(bsf_ctx.get(), packet);
     package->push(filtered.release());
   }
-  co_return package;
+  return package;
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::core

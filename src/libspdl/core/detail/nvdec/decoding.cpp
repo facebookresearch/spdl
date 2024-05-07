@@ -79,7 +79,7 @@ CUDABufferTracker get_buffer_tracker(
 } // namespace
 
 template <MediaType media_type>
-folly::coro::Task<BufferPtr> decode_nvdec(
+BufferPtr decode_nvdec(
     PacketsPtr<media_type> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -88,7 +88,6 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     const std::optional<std::string> pix_fmt,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator) {
-  co_await folly::coro::co_safe_point;
   size_t num_packets = packets->num_packets();
   if (num_packets == 0) {
     SPDL_FAIL("No packets to decode.");
@@ -155,7 +154,6 @@ folly::coro::Task<BufferPtr> decode_nvdec(
 
   flags |= CUVID_PKT_ENDOFPICTURE;
   for (; it < num_packets - 1; ++it) {
-    co_await folly::coro::co_safe_point;
     auto pkt = _PKT(it);
     XLOG(DBG9) << fmt::format(
         " -- packet  PTS={:.3f} ({})", _PTS(pkt), pkt->pts);
@@ -180,10 +178,10 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     // So we update the shape with the actual number of frames.
     tracker.buffer->shape[0] = tracker.i;
   }
-  co_return std::move(tracker.buffer);
+  return std::move(tracker.buffer);
 }
 
-template folly::coro::Task<BufferPtr> decode_nvdec(
+template BufferPtr decode_nvdec(
     VideoPacketsPtr packets,
     int cuda_device_index,
     const CropArea crop,
@@ -193,7 +191,7 @@ template folly::coro::Task<BufferPtr> decode_nvdec(
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator);
 
-template folly::coro::Task<BufferPtr> decode_nvdec(
+template BufferPtr decode_nvdec(
     ImagePacketsPtr packets,
     int cuda_device_index,
     const CropArea crop,
@@ -203,7 +201,7 @@ template folly::coro::Task<BufferPtr> decode_nvdec(
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator);
 
-folly::coro::Task<BufferPtr> decode_nvdec(
+BufferPtr decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
     int cuda_device_index,
     const CropArea crop,
@@ -213,7 +211,6 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     bool strict,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator) {
-  co_await folly::coro::co_safe_point;
   size_t num_packets = packets.size();
   if (num_packets == 0) {
     SPDL_FAIL("No packets to decode.");
@@ -292,7 +289,6 @@ folly::coro::Task<BufferPtr> decode_nvdec(
   };
 
   for (auto& packet : packets) {
-    co_await folly::coro::co_safe_point;
     int i_ = tracker.i;
     try {
       decode_fn(packet);
@@ -317,7 +313,7 @@ folly::coro::Task<BufferPtr> decode_nvdec(
     }
   }
 
-  co_return std::move(tracker.buffer);
+  return std::move(tracker.buffer);
 }
 
 } // namespace spdl::core::detail

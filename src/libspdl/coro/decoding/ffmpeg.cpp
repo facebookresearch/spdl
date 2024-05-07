@@ -1,11 +1,12 @@
+#include <libspdl/coro/decoding.h>
+
+#include "libspdl/coro/detail/executor.h"
+#include "libspdl/coro/detail/future.h"
+
 #include <libspdl/core/decoding.h>
+#include <libspdl/core/demuxing.h>
 
-#include "libspdl/core/detail/executor.h"
-#include "libspdl/core/detail/ffmpeg/decoding.h"
-#include "libspdl/core/detail/ffmpeg/demuxing.h"
-#include "libspdl/core/detail/future.h"
-
-namespace spdl::core {
+namespace spdl::coro {
 
 template <MediaType media_type>
 FuturePtr async_decode(
@@ -15,34 +16,40 @@ FuturePtr async_decode(
     const std::optional<DecodeConfig> decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor) {
+  auto task = folly::coro::co_invoke(
+      [=](PacketsPtr<media_type>&& pkts)
+          -> folly::coro::Task<FFmpegFramesPtr<media_type>> {
+        co_return decode_packets_ffmpeg(
+            std::move(pkts), std::move(decode_cfg), std::move(filter_desc));
+      },
+      std::move(packets));
   return detail::execute_task_with_callback(
-      detail::decode_packets_ffmpeg(
-          std::move(packets), std::move(decode_cfg), std::move(filter_desc)),
+      std::move(task),
       std::move(set_result),
       std::move(notify_exception),
       detail::get_decode_executor(decode_executor));
 }
 
 template FuturePtr async_decode(
-    std::function<void(FFmpegAudioFramesPtr)> set_result,
+    std::function<void(FFmpegFramesPtr<MediaType::Audio>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    AudioPacketsPtr packets,
+    PacketsPtr<MediaType::Audio> packets,
     const std::optional<DecodeConfig> decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
 template FuturePtr async_decode(
-    std::function<void(FFmpegVideoFramesPtr)> set_result,
+    std::function<void(FFmpegFramesPtr<MediaType::Video>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    VideoPacketsPtr packets,
+    PacketsPtr<MediaType::Video> packets,
     const std::optional<DecodeConfig> decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
 template FuturePtr async_decode(
-    std::function<void(FFmpegImageFramesPtr)> set_result,
+    std::function<void(FFmpegFramesPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    ImagePacketsPtr packets,
+    PacketsPtr<MediaType::Image> packets,
     const std::optional<DecodeConfig> decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
@@ -61,10 +68,10 @@ FuturePtr async_decode_from_source(
     const std::optional<DecodeConfig>& decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor) {
-  auto task =
-      folly::coro::co_invoke([=]() -> folly::coro::Task<FFmpegImageFramesPtr> {
-        co_return co_await detail::decode_packets_ffmpeg(
-            co_await detail::demux_image(uri, adaptor, io_cfg),
+  auto task = folly::coro::co_invoke(
+      [=]() -> folly::coro::Task<FFmpegFramesPtr<MediaType::Image>> {
+        co_return decode_packets_ffmpeg(
+            demux_image(uri, adaptor, io_cfg),
             std::move(decode_cfg),
             std::move(filter_desc));
       });
@@ -78,7 +85,7 @@ FuturePtr async_decode_from_source(
 
 template <>
 FuturePtr async_decode_from_bytes(
-    std::function<void(FFmpegImageFramesPtr)> set_result,
+    std::function<void(FFmpegFramesPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string_view data,
     const std::optional<IOConfig>& io_cfg,
@@ -86,11 +93,10 @@ FuturePtr async_decode_from_bytes(
     std::string filter_desc,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
-  auto task =
-      folly::coro::co_invoke([=]() -> folly::coro::Task<FFmpegImageFramesPtr> {
-        co_return co_await detail::decode_packets_ffmpeg(
-            co_await detail::demux_image(
-                std::move(data), std::move(io_cfg), _zero_clear),
+  auto task = folly::coro::co_invoke(
+      [=]() -> folly::coro::Task<FFmpegFramesPtr<MediaType::Image>> {
+        co_return decode_packets_ffmpeg(
+            demux_image(std::move(data), std::move(io_cfg), _zero_clear),
             std::move(decode_cfg),
             std::move(filter_desc));
       });
@@ -102,4 +108,4 @@ FuturePtr async_decode_from_bytes(
       detail::get_decode_executor(executor));
 }
 
-} // namespace spdl::core
+} // namespace spdl::coro

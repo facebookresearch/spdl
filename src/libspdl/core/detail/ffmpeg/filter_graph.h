@@ -3,10 +3,6 @@
 
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 
-#include <folly/experimental/coro/AsyncGenerator.h>
-
-#include <optional>
-
 namespace spdl::core::detail {
 
 class FilterGraph {
@@ -37,8 +33,6 @@ FilterGraph get_image_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx);
 
-folly::coro::AsyncGenerator<AVFramePtr&&> filter_frame(
-    FilterGraph& filter_graph,
-    AVFramePtr&& frame);
+std::vector<AVFramePtr> filter_frame(FilterGraph& filter_graph, AVFrame* frame);
 
 } // namespace spdl::core::detail

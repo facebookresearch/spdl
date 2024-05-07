@@ -53,8 +53,7 @@ class DemuxedPackets {
       std::string src,
       std::tuple<double, double> timestamp,
       AVCodecParameters* codecpar,
-      Rational time_base,
-      Rational frame_rate);
+      Rational time_base);
 
   // Destructor releases AVPacket* resources
   ~DemuxedPackets();

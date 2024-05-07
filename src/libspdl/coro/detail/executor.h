@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libspdl/core/executor.h>
+#include <libspdl/coro/executor.h>
 
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <memory>
 
-namespace spdl::core {
+namespace spdl::coro {
 namespace detail {
 
 folly::Executor::KeepAlive<> get_demux_executor(ThreadPoolExecutorPtr& exe);
@@ -29,4 +29,4 @@ struct ThreadPoolExecutor::Impl {
   size_t get_task_queue_size() const;
 };
 
-} // namespace spdl::core
+} // namespace spdl::coro

@@ -1,7 +1,4 @@
-#include <libspdl/core/adaptor.h>
-#include <libspdl/core/demuxing.h>
-#include <libspdl/core/types.h>
-#include <libspdl/core/utils.h>
+#include <libspdl/coro/demuxing.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
@@ -13,23 +10,17 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
+#include "libspdl/core/packets.h"
 
 namespace nb = nanobind;
 
-namespace spdl::core {
-using IOConfigPtr = std::shared_ptr<spdl::core::IOConfig>;
+namespace spdl::coro {
+
+using spdl::core::AudioPacketsPtr;
+using spdl::core::ImagePacketsPtr;
+using spdl::core::VideoPacketsPtr;
 
 void register_demuxing(nb::module_& m) {
-  nb::class_<IOConfig>(m, "IOConfig")
-      .def(
-          nb::init<
-              const std::optional<std::string>,
-              const std::optional<OptionDict>,
-              int>(),
-          nb::arg("format") = nb::none(),
-          nb::arg("format_options") = nb::none(),
-          nb::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE);
-
   m.def(
       "async_demux_audio",
       &async_demux<MediaType::Audio>,
@@ -250,4 +241,4 @@ void register_demuxing(nb::module_& m) {
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 }
-} // namespace spdl::core
+} // namespace spdl::coro

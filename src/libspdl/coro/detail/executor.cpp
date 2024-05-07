@@ -1,4 +1,4 @@
-#include "libspdl/core/detail/executor.h"
+#include "libspdl/coro/detail/executor.h"
 
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
@@ -22,7 +22,7 @@ FOLLY_GFLAGS_DEFINE_uint32(
     8,
     "The number of threads the default decode executor creates.");
 
-namespace spdl::core {
+namespace spdl::coro {
 namespace detail {
 namespace {
 
@@ -134,4 +134,4 @@ void trace_default_decode_executor_queue_size() {
       executorPtrPtr->get()->getTaskQueueSize());
 }
 
-} // namespace spdl::core
+} // namespace spdl::coro
