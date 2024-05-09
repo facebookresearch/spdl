@@ -14,7 +14,7 @@ import torch
 from spdl.dataloader._task_runner import (
     apply_async,
     apply_concurrent,
-    BackgroundTaskProcessor,
+    BackgroundGenerator,
 )
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.imagenet import get_mappings, parse_wnid
@@ -278,12 +278,12 @@ def _main(args=None):
     batch_gen = _get_batch_generator(args, device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
+    dataloader = BackgroundGenerator(batch_gen, args.queue_size)
 
     with (
         torch.no_grad(),
         profile() if args.trace else contextlib.nullcontext() as prof,
         spdl.utils.tracing(f"{trace_path}.pftrace", enable=args.trace is not None),
-        BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
     ):
         _run_inference(dataloader, model)
 
