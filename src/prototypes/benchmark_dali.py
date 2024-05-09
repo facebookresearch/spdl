@@ -35,19 +35,22 @@ def _parse_args(args=None):
         default=32,
         type=int,
     )
+    parser.add_argument(
+        "--cpu-only", action="store_true", help="Disable nvJPEG or nvJPEG2000."
+    )
     return parser.parse_args(args)
 
 
-def _benchmark(data_dir, batch_size, num_threads, num_workers):
+def _benchmark(data_dir, batch_size, num_threads, num_workers, cpu_only):
     @pipeline_def
-    def _pipeline(shard_id, num_shards):
+    def _pipeline(shard_id, num_shards, decode_device):
         files, labels = fn.readers.file(
             file_root=data_dir,
             shard_id=Pipeline.current().device_id,
             num_shards=num_shards,
             name="Reader",
         )
-        images = fn.decoders.image(files, device="cpu", output_type=types.RGB)
+        images = fn.decoders.image(files, device=decode_device, output_type=types.RGB)
         images = fn.resize(images, resize_x=256, resize_y=256)
         return images.gpu(), labels.gpu()
 
@@ -58,6 +61,7 @@ def _benchmark(data_dir, batch_size, num_threads, num_workers):
             device_id=device_id,
             shard_id=device_id,
             num_shards=num_workers,
+            decode_device="cpu" if cpu_only else "mixed",
         )
         for device_id in range(num_workers)
     ]
@@ -90,6 +94,7 @@ def _main():
         batch_size=args.batch_size,
         num_threads=args.num_threads,
         num_workers=args.num_workers,
+        cpu_only=args.cpu_only,
     )
 
 
