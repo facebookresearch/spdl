@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import logging
 import warnings
 from concurrent.futures import Future
@@ -43,13 +44,8 @@ def _run_agen(aiterable, sentinel, queue, stopped):
 
 def _run_gen(generator, sentinel, queue, stopped):
     try:
-        for future in generator:
-            try:
-                item = future.result()
-            except Exception as e:
-                _LG.error("%s", e)
-            else:
-                queue.put(item)
+        for item in generator:
+            queue.put(item)
 
             if stopped.is_set():
                 _LG.debug("Stop requested.")
@@ -196,12 +192,19 @@ def apply_concurrent(
     func: Callable[[T], Future[Any]],
     generator: Iterable[T],
     max_concurrency: int = 10,
+    timeout: float = 300,
 ):
     def gen():
         for item in generator:
             yield func(item)
 
-    yield from _apply_concurrent(gen(), max_concurrency)
+    for fut in _apply_concurrent(gen(), max_concurrency):
+        try:
+            yield fut.result(timeout)
+        except concurrent.futures.CancelledError:
+            _LG.warning("Future [%s] was cancelled.", fut)
+        except Exception as err:
+            _LG.error("Future [%s] failed: %s", fut, err)
 
 
 ################################################################################

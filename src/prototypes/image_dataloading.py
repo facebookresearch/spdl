@@ -100,8 +100,9 @@ def _get_batch_generator(args):
         max=args.max_samples,
     )
 
+    @spdl.utils.chain_futures
     def _decode_func(srcs):
-        buffer = spdl.io.batch_load_image(
+        buffer = yield spdl.io.batch_load_image(
             srcs,
             width=224,
             height=224,
