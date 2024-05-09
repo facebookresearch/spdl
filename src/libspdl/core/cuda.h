@@ -1,7 +1,5 @@
 #pragma once
 
-#include <libspdl/coro/conversion.h>
-
 #include <libspdl/core/buffer.h>
 
 #include <functional>
