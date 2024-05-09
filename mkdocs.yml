@@ -22,6 +22,7 @@ plugins:
             preload_modules:
               - spdl.io
               - spdl.dataset
+              - spdl.dataloader
               - spdl.utils
             members_order: source
             extensions:
@@ -52,11 +53,13 @@ nav:
           - "High-level APIs": spdl/io/api.md
           - "Preprocessing": spdl/io/preprocessing.md
           - "Support Structures": spdl/io/helpers.md
-      - "spdl.dataset":
+      - "spdl.dataset (Experimental)":
           - "DataSet": spdl/dataset/dataset.md
           - "ImageNet": spdl/dataset/imagenet.md
           - "Kinetics": spdl/dataset/kinetics.md
           - "LibriSpeech": spdl/dataset/librispeech.md
+      - "spdl.dataloader (Experimental)":
+          - "Task Execution": spdl/dataloader/dataloader.md
       - "spdl.utils":
           - "Tracing": spdl/utils/tracing.md
           - "Folly": spdl/utils/folly.md

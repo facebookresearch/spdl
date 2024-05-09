@@ -5,20 +5,29 @@ import warnings
 from concurrent.futures import Future
 from queue import Queue
 from threading import BoundedSemaphore, Event, Thread
-from typing import Any, AsyncIterable, Awaitable, Callable, Iterable, TypeVar
+from typing import (
+    AsyncIterable,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Generic,
+    Iterable,
+    Iterator,
+    TypeVar,
+)
 
 import spdl.utils
 
 _LG = logging.getLogger(__name__)
 
 __all__ = [
-    "BackgroundTaskProcessor",
     "BackgroundGenerator",
     "apply_async",
     "apply_concurrent",
 ]
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 
 ################################################################################
@@ -92,7 +101,7 @@ class _thread_manager:
             pass
 
 
-class BackgroundGenerator:
+class BackgroundGenerator(Generic[T]):
     """Run generator in background and iterate the items.
 
     Args:
@@ -103,7 +112,7 @@ class BackgroundGenerator:
             generated items from the background thread to the main thread.
             If the queue is full, the background thread will be blocked.
 
-    ??? example
+    ??? note "Example"
 
         ```python
         async def generator():
@@ -118,13 +127,13 @@ class BackgroundGenerator:
 
     def __init__(
         self,
-        iterable: AsyncIterable[Any] | Iterable[Any],
+        iterable: AsyncIterable[T] | Iterable[T],
         queue_size: int = 10,
     ):
         self.iterable = iterable
         self.queue_size = queue_size
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T]:
         queue = Queue(maxsize=self.queue_size)
         # Used to indicate the end of the queue.
         sentinel = object()
@@ -189,11 +198,30 @@ def _apply_concurrent(generator, max_concurrency=10):
 
 
 def apply_concurrent(
-    func: Callable[[T], Future[Any]],
+    func: Callable[[T], Future[U]],
     generator: Iterable[T],
     max_concurrency: int = 10,
     timeout: float = 300,
-):
+) -> Iterator[U]:
+    """Apply concurrent function to generator sequence.
+
+    Args:
+        func: A (non-async) function that takes some input and returns a
+            `Future`.
+
+        generator: An object generates series of inputs to the given function.
+
+        max_concurrency: Controls how many futures should be in running state
+            concurrently. The function will first initialize this number of
+            Futures, then initialize more as the previous Futures complete.
+
+        timeout: The maximum time to wait for each Future object to complete.
+            (Unit: second)
+
+    Yields:
+        The output of the `func`.
+    """
+
     def gen():
         for item in generator:
             yield func(item)
@@ -245,11 +273,11 @@ async def _apply_async(async_func, generator, queue, sentinel, max_concurrency):
 
 
 async def apply_async(
-    async_func: Callable[[T], Awaitable[Any]],
+    func: Callable[[T], Awaitable[U]],
     generator: Iterable[T],
     max_concurrency: int = 10,
     timeout: float = 300,
-):
+) -> AsyncIterator[U]:
     """Apply async function to the non-async generator.
 
     This function iterates the items in the generator, and apply async function,
@@ -262,13 +290,13 @@ async def apply_async(
         The order of the output may not be the same as generator.
 
     Args:
-        async_func: The async function to apply.
+        func: The async function to apply.
         generator: The generator to apply the async function to.
         max_concurrency: The maximum number of concurrent async tasks.
         timeout: The maximum time to wait for the async function. (Unit: second)
 
     Yields:
-        The output of the async function.
+        The output of the `func`.
     """
     # Implementation Note:
     #
@@ -276,7 +304,7 @@ async def apply_async(
     #
     # ```
     # for item in generator:
-    #     yield await async_func(item)
+    #     yield await func(item)
     # ```
     #
     # But this applies the function sequentially, so it is not efficient.
@@ -291,7 +319,7 @@ async def apply_async(
     # ```
     # tasks = set()
     # for item in generator:
-    #     task = asyncio.create_task(async_func(item))
+    #     task = asyncio.create_task(func(item))
     #     tasks.add(task)
     #
     #     if <SOME_OCCASION>:  # When is optimal?
@@ -313,14 +341,11 @@ async def apply_async(
     # We use sentinel to detect the end of the background job
     sentinel = object()
 
-    coro = _apply_async(async_func, generator, queue, sentinel, max_concurrency)
+    coro = _apply_async(func, generator, queue, sentinel, max_concurrency)
     task = asyncio.create_task(coro, name="_apply_async")
     task.add_done_callback(_check_exception)
 
-    while True:
-        item = await asyncio.wait_for(queue.get(), timeout)
-        if item is sentinel:
-            break
+    while (item := await asyncio.wait_for(queue.get(), timeout)) is not sentinel:
         yield item
 
     await task
