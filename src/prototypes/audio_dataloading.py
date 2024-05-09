@@ -12,7 +12,7 @@ import torch
 from spdl.dataloader._task_runner import (
     apply_async,
     apply_concurrent,
-    BackgroundTaskProcessor,
+    BackgroundGenerator,
 )
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.librispeech import get_flist
@@ -147,9 +147,9 @@ def _main(args=None):
     torch.zeros([1, 1], device=device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
-    with (
-        BackgroundTaskProcessor(batch_gen, args.queue_size) as dataloader,
-        spdl.utils.tracing(trace_path, buffer_size=8192, enable=args.trace is not None),
+    dataloader = BackgroundGenerator(batch_gen, args.queue_size)
+    with spdl.utils.tracing(
+        trace_path, buffer_size=8192, enable=args.trace is not None
     ):
         return _iter_dataloader(dataloader)
 
