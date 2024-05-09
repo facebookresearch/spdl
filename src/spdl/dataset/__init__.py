@@ -1,5 +1,9 @@
 """spdl.dataset module implements catalogs for common datasets.
 
+!!! note
+
+    This module is still in early development, and it does not yet have practical functionality.
+
 It provides iterator/map-style interface to datasets.
 
 Unlike conventional dataset implementations, the dataset implemented

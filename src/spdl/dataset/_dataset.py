@@ -41,8 +41,8 @@ class AudioData:
 class DataSet(Generic[Sample]):
     """Dataset interface.
 
-    DataSet class is a facade for the actual dataset implementation.
-    The actual DataSet instances must be created by dedicated factory functions.
+    ``DataSet`` class is a facade for the actual dataset implementation.
+    The actual ``DataSet`` instances must be created by dedicated factory functions.
 
     !!! note "See Also"
 
