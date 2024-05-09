@@ -3,8 +3,8 @@
 #include "libspdl/coro/detail/executor.h"
 #include "libspdl/coro/detail/future.h"
 
-#include <libspdl/core/cuda.h>
 #include <libspdl/core/conversion.h>
+#include <libspdl/core/cuda.h>
 
 #include "libspdl/core/detail/tracing.h"
 
