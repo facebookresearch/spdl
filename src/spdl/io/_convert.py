@@ -3,6 +3,8 @@ import numpy as np
 from spdl._internal import import_utils
 from spdl.lib import _libspdl
 
+from ._type_stub import Buffer
+
 try:
     from numpy.typing import NDArray
 except ImportError:
@@ -18,11 +20,11 @@ __all__ = [
 ]
 
 
-def to_numpy(buffer) -> NDArray:
+def to_numpy(buffer: Buffer) -> NDArray:
     """Convert to NumPy NDArray.
 
     Args:
-        buffer (Buffer): Object implements the array interface protocol.
+        buffer: Object implements the array interface protocol.
 
     Returns:
         (NDArray): A NumPy array.
@@ -35,11 +37,11 @@ def to_numpy(buffer) -> NDArray:
     return np.array(buffer, copy=False)
 
 
-def to_torch(buffer):
+def to_torch(buffer: Buffer):
     """Convert to PyTorch Tensor.
 
     Args:
-        buffer (Buffer): Object implements the (CUDA) array interface protocol.
+        buffer: Object implements the (CUDA) array interface protocol.
 
     Returns:
         (torch.Tensor): A PyTorch Tensor.
@@ -65,11 +67,11 @@ def to_torch(buffer):
     return torch.as_tensor(np.array(buffer, copy=False))
 
 
-def to_numba(buffer):
+def to_numba(buffer: Buffer):
     """Convert to Numba DeviceNDArray or NumPy NDArray.
 
     Args:
-        buffer (Buffer): Object implements the (CUDA) array interface protocol.
+        buffer: Object implements the (CUDA) array interface protocol.
 
     Returns:
         (DeviceNDArray or NDArray): A Numba DeviceNDArray or NumPy NDArray.

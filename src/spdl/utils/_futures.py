@@ -12,7 +12,7 @@ __all__ = [
 _LG = logging.getLogger(__name__)
 
 
-def _chain_futures(generator: Generator[Future, Any, None]) -> Future:
+def _chain_futures(generator: Generator[Future[Any], Any, None]) -> Future[Any]:
     # The Future object that client code handles
     f = Future()
     f.set_running_or_notify_cancel()
@@ -42,7 +42,9 @@ def _chain_futures(generator: Generator[Future, Any, None]) -> Future:
     return f
 
 
-def chain_futures(func: Callable[..., Generator[Future, Any, None]]):
+def chain_futures(
+    func: Callable[..., Generator[Future[Any], Any, None]]
+) -> Callable[..., Future[Any]]:
     """Chain call multiple ``concurrent.futures.Future``s object sequentially.
 
     Args:
@@ -74,7 +76,7 @@ def chain_futures(func: Callable[..., Generator[Future, Any, None]]):
     """
 
     @functools.wraps(func)
-    def _func(*args, **kwargs):
+    def _func(*args, **kwargs) -> Future[Any]:
         return _chain_futures(func(*args, **kwargs))
 
     return _func
