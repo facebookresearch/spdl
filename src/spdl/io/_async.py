@@ -1,9 +1,22 @@
 import asyncio
 import builtins
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from collections.abc import Coroutine
+from concurrent.futures import Future
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Dict,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import spdl.io
+from spdl.io import Buffer, Frames, ImageFrames, ImagePackets, Packets
 from spdl.lib import _libspdl
 
 from . import _common, _preprocessing
@@ -23,6 +36,8 @@ __all__ = [
 ]
 
 _LG = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 def _async_sleep(time: int):
@@ -59,12 +74,12 @@ def _async_sleep_multi(time: int, count: int):
 _EXCEPTION_BACKOFF = 1.00
 
 
-async def _handle_future(future):
+async def _handle_future(future: Future[T]) -> T:
     try:
         return await asyncio.futures.wrap_future(future)
     # Handle the case where unexpected/external thing happens
     except asyncio.CancelledError as e:
-        future.__spdl_future.cancel()
+        future.__spdl_future.cancel()  # pyre-ignore[16]
         try:
             # Wait till the cancel request is fullfilled or job finishes
             await asyncio.futures.wrap_future(future)
@@ -113,7 +128,7 @@ def async_streaming_demux(
     src: Union[str, bytes],
     timestamps: List[Tuple[float, float]],
     **kwargs,
-):
+) -> AsyncIterator[Type[Packets]]:
     """Demux the media of given time windows.
 
     Args:
@@ -127,7 +142,7 @@ def async_streaming_demux(
         io_config (IOConfig): Custom I/O config.
 
     Returns:
-        (AsyncGenerator[Packets]): Audio or video Packets generator.
+        [AudioPackets][spdl.io.AudioPackets] or [VideoPackets][spdl.io.VideoPackets] generator.
     """
     func = _common._get_demux_func(media_type, src)
     return _async_gen(func, len(timestamps), src, timestamps, **kwargs)
@@ -141,9 +156,9 @@ async def _fetch_one(gen):
 def async_demux_media(
     media_type: str,
     src: Union[str, bytes],
-    timestamp: Optional[Tuple[float, float]] = None,
+    timestamp: Tuple[float, float] | None = None,
     **kwargs,
-):
+) -> Coroutine[None, None, Type[Packets]]:
     """Demux image or one chunk of audio/video region from the source.
 
     Args:
@@ -158,7 +173,7 @@ def async_demux_media(
         io_config (IOConfig): Custom I/O config.
 
     Returns:
-        (Awaitable[Packets]): Awaitable which returns an audio/video/image Packets object.
+        Awaitable which returns an AudioPackets/VideoPackets/ImagePackets object.
     """
     if media_type == "image":
         func = _common._get_demux_func(media_type, src)
@@ -168,7 +183,7 @@ def async_demux_media(
     return _fetch_one(async_streaming_demux(media_type, src, timestamps, **kwargs))
 
 
-def async_decode_packets(packets, **kwargs):
+def async_decode_packets(packets: Type[Packets], **kwargs) -> Awaitable[Type[Frames]]:
     """Decode packets.
 
     Args:
@@ -182,14 +197,12 @@ def async_decode_packets(packets, **kwargs):
             *Optional:* Custom filter applied after decoding.
 
     Returns:
-        (Awaitable[FFmpegFrames]): Awaitable which returns a Frames object.
+        An awaitable which returns a Frames object.
             The type of the returned object corresponds to the input Packets type.
 
-            - `AudioPackets` -> `AudioFFmpegFrames`
-
-            - `VideoPackets` -> `VideoFFmpegFrames`
-
-            - `ImagePackets` -> `ImageFFmpegFrames`
+            - `AudioPackets` -> `AudioFrames`
+            - `VideoPackets` -> `VideoFrames`
+            - `ImagePackets` -> `ImageFrames`
     """
     func = _common._get_decoding_func(packets)
     if "filter_desc" not in kwargs:
@@ -197,11 +210,17 @@ def async_decode_packets(packets, **kwargs):
     return _async_task(func, packets, **kwargs)
 
 
-def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
+def async_decode_packets_nvdec(
+    packets: Type[Packets] | List[ImagePackets],
+    cuda_device_index: int,
+    **kwargs,
+) -> Awaitable[Buffer]:
     """Decode packets with NVDEC.
 
     Args:
-        packets (Packet): Packets object.
+        packets: Packets object.
+            Either `VideoPackets`, `ImagePackets` or a list of `ImagePackets`.
+
         cuda_device_index (int): The CUDA device to use for decoding.
 
     Other args:
@@ -215,14 +234,7 @@ def async_decode_packets_nvdec(packets, cuda_device_index, **kwargs):
             Supported value is `"rgba"`. Default: `"rgba"`.
 
     Returns:
-        (Awaitable[NvDecFrames]): Awaitable which returns a Frame object.
-            The type of the returned object corresponds to the input Packets type.
-
-            - `VideoPackets` -> `NvDecVideoFrames`
-
-            - `ImagePackets` -> `NvDecImageFrames`
-
-            - `List[ImagePackets]` -> `NvDecVideoFrames`
+        Awaitable which returns a Buffer object.
     """
     func = _common._get_nvdec_decoding_func(packets)
     return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
@@ -232,7 +244,7 @@ def async_decode_media(
     media_type: str,
     src: Union[str, bytes],
     **kwargs,
-):
+) -> Coroutine[None, None, Type[Frames]]:
     """Perform demuxing and decoding as one background job.
 
     Args:
@@ -240,12 +252,17 @@ def async_decode_media(
         src: Source identifier. If `str` type, it is interpreted as a source location,
             such as local file path or URL. If `bytes` type, then
             they are interpreted as in-memory data.
+
+    Returns:
+        Awaitable which returns Frames object.
     """
     func = _common._get_decode_from_source_func(media_type, src)
     return _async_task(func, src, **kwargs)
 
 
-def async_convert_frames(frames, **kwargs):
+def async_convert_frames(
+    frames: Type[Frames] | List[ImageFrames], **kwargs
+) -> Awaitable[Buffer]:
     """Convert the decoded frames to buffer.
 
     Args:
@@ -299,17 +316,7 @@ def async_convert_frames(frames, **kwargs):
             [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
 
     Returns:
-        (Awaitable[Buffer]): Awaitable which returns a Buffer object.
-
-            The buffer will be created on the device where the frame data are.
-
-            - `FFmpegAudioFrames` -> `CPUBuffer` or `CUDABuffer`
-
-            - `FFmpegVideoFrames` -> `CPUBuffer` or `CUDABuffer`
-
-            - `FFmpegImageFrames` -> `CPUBuffer` or `CUDABuffer`
-
-            - `List[FFmpegImageFrames]` -> `CPUBuffer` or `CUDABuffer`
+        Awaitable which returns a Buffer object.
     """
     func = _common._get_conversion_func(frames)
     return _async_task(func, frames, **kwargs)
@@ -324,11 +331,11 @@ async def async_load_media(
     media_type: str,
     src: Union[str, bytes],
     *,
-    demux_options: Optional[Dict[str, Any]] = None,
-    decode_options: Optional[Dict[str, Any]] = None,
-    convert_options: Optional[Dict[str, Any]] = None,
+    demux_options: Dict[str, Any] | None = None,
+    decode_options: Dict[str, Any] | None = None,
+    convert_options: Dict[str, Any] | None = None,
     use_nvdec: bool = False,
-):
+) -> Buffer:
     """Load the given media into buffer.
 
     This function combines `async_demux_media`, `async_decode_packets` (or
@@ -356,7 +363,7 @@ async def async_load_media(
             *Optional:* If True, use NVDEC to decode the media.
 
     Returns:
-        (Buffer): An object implements buffer protocol.
+        Resulting buffer object.
 
     ??? note "Example: Load an image frame, resize and convert to RGB HWC format."
         ```python
@@ -454,11 +461,11 @@ async def async_batch_load_image(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
-    demux_options: Optional[Dict[str, Any]] = None,
-    decode_options: Optional[Dict[str, Any]] = None,
-    convert_options: Optional[Dict[str, Any]] = None,
+    demux_options: Dict[str, Any] | None = None,
+    decode_options: Dict[str, Any] | None = None,
+    convert_options: Dict[str, Any] | None = None,
     strict: bool = True,
-):
+) -> Buffer:
     """Batch load images.
 
     Args:
@@ -484,9 +491,7 @@ async def async_batch_load_image(
             *Optional:* If True, raise an error if any of the images failed to load.
 
     Returns:
-        (Buffer): An object implements buffer protocol.
-            To be passed to casting functions like [spdl.io.to_numpy][],
-            [spdl.io.to_torch][] or [spdl.io.to_numba][].
+        A buffer object.
 
     ??? note "Example"
         ```python
@@ -534,7 +539,7 @@ async def async_batch_load_image(
 
     await asyncio.wait(decoding)
 
-    frames = []
+    frames: List[ImageFrames] = []
     for src, task in zip(srcs, decoding):
         if err := task.exception():
             _LG.error(_get_err_msg(src, err))
@@ -557,10 +562,10 @@ async def async_batch_load_image_nvdec(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgba",
-    demux_options: Optional[Dict[str, Any]] = None,
-    decode_options: Optional[Dict[str, Any]] = None,
+    demux_options: Dict[str, Any] | None = None,
+    decode_options: Dict[str, Any] | None = None,
     strict: bool = True,
-):
+) -> Buffer:
     """Batch load images.
 
     Args:
@@ -585,9 +590,7 @@ async def async_batch_load_image_nvdec(
             *Optional:* If True, raise an error if any of the images failed to load.
 
     Returns:
-        (Buffer): An object implements buffer protocol.
-            To be passed to casting functions like [spdl.io.to_numpy][],
-            [spdl.io.to_torch][] or [spdl.io.to_numba][].
+        A buffer object.
 
     ??? note "Example"
         ```python
