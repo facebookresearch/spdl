@@ -33,4 +33,15 @@ void Future::cancel() {
   pimpl->cs.requestCancellation();
 }
 
+namespace detail {
+
+FuturePtr run_in_executor(
+    folly::coro::Task<void>&& task,
+    folly::Executor::KeepAlive<> executor,
+    folly::CancellationSource&& cs) {
+  return std::make_unique<Future>(new Future::Impl(
+      std::move(task).scheduleOn(executor).start(), std::move(cs)));
+}
+}
+
 } // namespace spdl::coro
