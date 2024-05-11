@@ -16,7 +16,7 @@ def test_async_sleep_throw():
         # This is the basis of all the other tests.
         coro, sf = spdl.io._async_sleep(500)
         task = asyncio.create_task(coro)
-        with pytest.raises(spdl.io.AsyncIOFailure):
+        with pytest.raises(spdl.io.SPDLBackgroundTaskFailure):
             await task
         assert not sf.cancelled()
 
@@ -65,7 +65,7 @@ def test_async_sleep_multi_throws():
             async for i in coro:
                 print(i, flush=True)
 
-        with pytest.raises(spdl.io.AsyncIOFailure):
+        with pytest.raises(spdl.io.SPDLBackgroundTaskFailure):
             await _sleep()
         assert not sf.cancelled()
 

@@ -1,7 +1,7 @@
 from spdl.lib import _libspdl
 
 __all__ = [
-    "AsyncIOFailure",
+    "SPDLBackgroundTaskFailure",
     "DemuxConfig",
     "DecodeConfig",
     "Executor",
@@ -10,7 +10,7 @@ __all__ = [
 
 # Exception class used to signal the failure of C++ op to Python.
 # Not exposed to user code.
-class AsyncIOFailure(RuntimeError):
+class SPDLBackgroundTaskFailure(RuntimeError):
     """Exception type used to pass the error message from libspdl."""
 
     pass

@@ -4,6 +4,6 @@
 ::: spdl.io.Executor
 
 ## Exceptions
-::: spdl.io.AsyncIOFailure
+::: spdl.io.SPDLBackgroundTaskFailure
     options:
       show_bases: true
