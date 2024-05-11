@@ -44,7 +44,7 @@ struct SourceAdaptor {
   // exposing this via PyBind11, we use void*
   virtual std::unique_ptr<DataInterface> get(
       std::string_view url,
-      const DemuxConfig& io_cfg) const;
+      const DemuxConfig& dmx_cfg) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ struct SourceAdaptor {
 struct MMapAdaptor : public SourceAdaptor {
   std::unique_ptr<DataInterface> get(
       std::string_view url,
-      const DemuxConfig& io_cfg) const override;
+      const DemuxConfig& dmx_cfg) const override;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ struct MMapAdaptor : public SourceAdaptor {
 struct BytesAdaptor : public SourceAdaptor {
   std::unique_ptr<DataInterface> get(
       std::string_view data,
-      const DemuxConfig& io_cfg) const override;
+      const DemuxConfig& dmx_cfg) const override;
 };
 
 } // namespace spdl::core

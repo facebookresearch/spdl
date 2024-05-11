@@ -85,17 +85,17 @@ class MMapInterface : public DataInterface {
   AVFormatInputContextPtr fmt_ctx;
 
  public:
-  MMapInterface(std::string path, const DemuxConfig& io_cfg)
+  MMapInterface(std::string path, const DemuxConfig& dmx_cfg)
       : obj(path),
         io_ctx(get_io_ctx(
             &obj,
-            io_cfg.buffer_size,
+            dmx_cfg.buffer_size,
             MemoryMappedFile::read_packet,
             MemoryMappedFile::seek)),
         fmt_ctx(get_input_format_ctx(
             io_ctx.get(),
-            io_cfg.format,
-            io_cfg.format_options)) {
+            dmx_cfg.format,
+            dmx_cfg.format_options)) {
     fmt_ctx->url = av_strdup(path.data());
   }
 
@@ -108,9 +108,9 @@ class MMapInterface : public DataInterface {
 
 std::unique_ptr<DataInterface> MMapAdaptor::get(
     std::string_view url,
-    const DemuxConfig& io_cfg) const {
+    const DemuxConfig& dmx_cfg) const {
   return std::unique_ptr<DataInterface>(
-      new detail::MMapInterface(std::string{url}, io_cfg));
+      new detail::MMapInterface(std::string{url}, dmx_cfg));
 };
 
 } // namespace spdl::core

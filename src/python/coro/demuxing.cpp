@@ -30,7 +30,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("timestamps"),
       // nb::kw_only(),
       nb::arg("_adaptor") = nullptr,
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr);
 
   m.def(
@@ -39,7 +39,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Audio>(
@@ -47,7 +47,7 @@ void register_demuxing(nb::module_& m) {
             std::move(notify_exception),
             std::string_view{data.c_str(), data.size()},
             timestamps,
-            io_config,
+            demux_config,
             demux_executor,
             _zero_clear);
       },
@@ -56,7 +56,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("data"),
       nb::arg("timestamps"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
@@ -66,7 +66,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          std::string_view data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         // auto buffer_info = data.request(/*writable=*/_zero_clear);
@@ -75,7 +75,7 @@ void register_demuxing(nb::module_& m) {
             std::move(notify_exception),
             data,
             timestamps,
-            io_config,
+            demux_config,
             demux_executor,
             _zero_clear);
       },
@@ -84,7 +84,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("data"),
       nb::arg("timestamps"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
@@ -94,7 +94,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          const SourceAdaptorPtr& _adaptor,
          ThreadPoolExecutorPtr _executor) {
         return async_demux<MediaType::Video>(
@@ -103,7 +103,7 @@ void register_demuxing(nb::module_& m) {
             src,
             timestamps,
             _adaptor,
-            io_config,
+            demux_config,
             _executor);
       },
       nb::arg("set_result"),
@@ -111,7 +111,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("src"),
       nb::arg("timestamps"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("_adaptor") = nullptr,
       nb::arg("executor") = nullptr);
 
@@ -121,7 +121,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Video>(
@@ -129,7 +129,7 @@ void register_demuxing(nb::module_& m) {
             std::move(notify_exception),
             std::string_view{data.c_str(), data.size()},
             timestamps,
-            io_config,
+            demux_config,
             demux_executor,
             _zero_clear);
       },
@@ -138,7 +138,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("data"),
       nb::arg("timestamps"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
@@ -148,7 +148,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          std::string_view data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Video>(
@@ -156,7 +156,7 @@ void register_demuxing(nb::module_& m) {
             std::move(notify_exception),
             data,
             timestamps,
-            io_config,
+            demux_config,
             demux_executor,
             _zero_clear);
       },
@@ -165,7 +165,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("data"),
       nb::arg("timestamps"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
@@ -174,7 +174,7 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(ImagePacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          const std::string& src,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          const SourceAdaptorPtr& _adaptor,
          ThreadPoolExecutorPtr _executor) {
         return async_demux_image(
@@ -182,14 +182,14 @@ void register_demuxing(nb::module_& m) {
             std::move(notify_exception),
             src,
             _adaptor,
-            io_config,
+            demux_config,
             _executor);
       },
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("_adaptor") = nullptr,
       nb::arg("executor") = nullptr);
 
@@ -198,14 +198,14 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(ImagePacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_image_bytes(
             std::move(set_result),
             std::move(notify_exception),
             std::string_view{data.c_str(), data.size()},
-            io_config,
+            demux_config,
             demux_executor,
             _zero_clear);
       },
@@ -213,7 +213,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("notify_exception"),
       nb::arg("data"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
@@ -222,14 +222,14 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(ImagePacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          std::string_view data,
-         const std::optional<DemuxConfig>& io_config,
+         const std::optional<DemuxConfig>& demux_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_image_bytes(
             std::move(set_result),
             std::move(notify_exception),
             data,
-            io_config,
+            demux_config,
             demux_executor,
             _zero_clear);
       },
@@ -237,7 +237,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("notify_exception"),
       nb::arg("data"),
       // nb::kw_only(),
-      nb::arg("io_config") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 }

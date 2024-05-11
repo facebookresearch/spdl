@@ -113,19 +113,19 @@ PacketsPtr<media_type> demux_window(
 std::unique_ptr<DataInterface> get_interface(
     const std::string_view src,
     const SourceAdaptorPtr& adaptor,
-    const std::optional<DemuxConfig>& io_cfg) {
+    const std::optional<DemuxConfig>& dmx_cfg) {
   if (!adaptor) {
     thread_local auto p = std::make_shared<SourceAdaptor>();
-    return p->get(src, io_cfg.value_or(DemuxConfig{}));
+    return p->get(src, dmx_cfg.value_or(DemuxConfig{}));
   }
-  return adaptor->get(src, io_cfg.value_or(DemuxConfig{}));
+  return adaptor->get(src, dmx_cfg.value_or(DemuxConfig{}));
 }
 
 std::unique_ptr<DataInterface> get_in_memory_interface(
     const std::string_view data,
-    const std::optional<DemuxConfig>& io_cfg) {
+    const std::optional<DemuxConfig>& dmx_cfg) {
   thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
-  return get_interface(data, adaptor, io_cfg);
+  return get_interface(data, adaptor, dmx_cfg);
 }
 
 } // namespace
@@ -135,16 +135,16 @@ template <MediaType media_type>
 StreamingDemuxer<media_type>::StreamingDemuxer(
     const std::string uri,
     const SourceAdaptorPtr& adaptor,
-    const std::optional<DemuxConfig>& io_cfg)
-    : di(detail::get_interface(uri, adaptor, io_cfg)),
+    const std::optional<DemuxConfig>& dmx_cfg)
+    : di(detail::get_interface(uri, adaptor, dmx_cfg)),
       fmt_ctx(di->get_fmt_ctx()),
       stream(detail::init_fmt_ctx(fmt_ctx, media_type)){};
 
 template <MediaType media_type>
 StreamingDemuxer<media_type>::StreamingDemuxer(
     const std::string_view data,
-    const std::optional<DemuxConfig>& io_cfg)
-    : di(detail::get_in_memory_interface(data, io_cfg)),
+    const std::optional<DemuxConfig>& dmx_cfg)
+    : di(detail::get_in_memory_interface(data, dmx_cfg)),
       fmt_ctx(di->get_fmt_ctx()),
       stream(detail::init_fmt_ctx(fmt_ctx, media_type)) {}
 
@@ -211,17 +211,17 @@ ImagePacketsPtr demux_image(AVFormatContext* fmt_ctx) {
 ImagePacketsPtr demux_image(
     const std::string uri,
     const SourceAdaptorPtr adaptor,
-    const std::optional<DemuxConfig>& io_cfg) {
-  auto interface = detail::get_interface(uri, adaptor, io_cfg);
+    const std::optional<DemuxConfig>& dmx_cfg) {
+  auto interface = detail::get_interface(uri, adaptor, dmx_cfg);
   return detail::demux_image(interface->get_fmt_ctx());
 }
 
 ImagePacketsPtr demux_image(
     const std::string_view data,
-    const std::optional<DemuxConfig>& io_cfg,
+    const std::optional<DemuxConfig>& dmx_cfg,
     bool _zero_clear) {
   thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
-  auto interface = detail::get_interface(data, adaptor, io_cfg);
+  auto interface = detail::get_interface(data, adaptor, dmx_cfg);
   auto result = detail::demux_image(interface->get_fmt_ctx());
   if (_zero_clear) {
     std::memset((void*)data.data(), 0, data.size());

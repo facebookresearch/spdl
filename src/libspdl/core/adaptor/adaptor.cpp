@@ -14,11 +14,11 @@ class BasicInterface : public DataInterface {
   detail::AVFormatInputContextPtr fmt_ctx;
 
  public:
-  BasicInterface(std::string_view url, const DemuxConfig& io_cfg)
+  BasicInterface(std::string_view url, const DemuxConfig& dmx_cfg)
       : fmt_ctx(get_input_format_ctx(
             std::string{url},
-            io_cfg.format,
-            io_cfg.format_options)) {}
+            dmx_cfg.format,
+            dmx_cfg.format_options)) {}
   ~BasicInterface() = default;
   AVFormatContext* get_fmt_ctx() override {
     return fmt_ctx.get();
@@ -27,7 +27,7 @@ class BasicInterface : public DataInterface {
 
 std::unique_ptr<DataInterface> SourceAdaptor::get(
     std::string_view url,
-    const DemuxConfig& io_cfg) const {
-  return std::unique_ptr<DataInterface>(new BasicInterface(url, io_cfg));
+    const DemuxConfig& dmx_cfg) const {
+  return std::unique_ptr<DataInterface>(new BasicInterface(url, dmx_cfg));
 }
 } // namespace spdl::core
