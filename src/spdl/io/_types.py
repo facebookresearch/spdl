@@ -17,7 +17,7 @@ class AsyncIOFailure(RuntimeError):
 
 
 def DemuxConfig(**kwargs):
-    """Custom IO config.
+    """Customize demuxing behavior.
 
     Other Args:
         format (str):
@@ -53,7 +53,7 @@ def DemuxConfig(**kwargs):
 
 
 def DecodeConfig(**kwargs):
-    """Custom decode config.
+    """Customize decoding behavior.
 
     Other Args:
         decoder (str):
@@ -95,7 +95,7 @@ def Executor(num_threads: int, thread_name_prefix: str):
 
     ??? note "Example: Specifying custom thread pool"
         ```python
-        # Use 10 threads to decode video
+        # Use a thread pool different from default one
         exec = Executor(num_threads=10, thread_name_prefix="custom_exec")
 
         packets = await spdl.io.async_demux_media("video", src, executor=exec)
