@@ -10,3 +10,6 @@
     options:
       heading_level: 2
 
+::: spdl.io.decode_config
+    options:
+      heading_level: 2
