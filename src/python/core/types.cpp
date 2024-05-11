@@ -8,7 +8,7 @@ namespace nb = nanobind;
 
 namespace spdl::core {
 void register_types(nb::module_& m) {
-  nb::class_<IOConfig>(m, "IOConfig")
+  nb::class_<DemuxConfig>(m, "DemuxConfig")
       .def(
           nb::init<
               const std::optional<std::string>,

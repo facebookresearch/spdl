@@ -14,7 +14,7 @@
 
 namespace spdl::coro {
 
-using spdl::core::IOConfig;
+using spdl::core::DemuxConfig;
 using spdl::core::MediaType;
 using spdl::core::PacketsPtr;
 using spdl::core::SourceAdaptorPtr;
@@ -31,7 +31,7 @@ FuturePtr async_demux(
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor = nullptr,
-    std::optional<IOConfig> io_cfg = std::nullopt,
+    std::optional<DemuxConfig> io_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr);
 
 /// Demux audio or video from byte string stored somewhere.
@@ -44,7 +44,7 @@ FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
-    std::optional<IOConfig> io_cfg = std::nullopt,
+    std::optional<DemuxConfig> io_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);
 
@@ -54,7 +54,7 @@ FuturePtr async_demux_image(
     std::function<void(std::string, bool)> notify_exception,
     std::string uri,
     SourceAdaptorPtr adaptor = nullptr,
-    std::optional<IOConfig> io_cfg = std::nullopt,
+    std::optional<DemuxConfig> io_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr);
 
 /// Demux image from byte string stored somewhere.
@@ -65,7 +65,7 @@ FuturePtr async_demux_image_bytes(
     std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<IOConfig> io_cfg = std::nullopt,
+    std::optional<DemuxConfig> io_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);
 

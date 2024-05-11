@@ -64,7 +64,7 @@ FuturePtr async_decode_from_source(
     std::function<void(std::string, bool)> notify_exception,
     const std::string& uri,
     const SourceAdaptorPtr& adaptor,
-    const std::optional<IOConfig>& io_cfg,
+    const std::optional<DemuxConfig>& io_cfg,
     const std::optional<DecodeConfig>& decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor) {
@@ -88,7 +88,7 @@ FuturePtr async_decode_from_bytes(
     std::function<void(FFmpegFramesPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     const std::string_view data,
-    const std::optional<IOConfig>& io_cfg,
+    const std::optional<DemuxConfig>& io_cfg,
     const std::optional<DecodeConfig>& decode_cfg,
     std::string filter_desc,
     ThreadPoolExecutorPtr executor,

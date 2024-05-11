@@ -14,7 +14,7 @@ class BasicInterface : public DataInterface {
   detail::AVFormatInputContextPtr fmt_ctx;
 
  public:
-  BasicInterface(std::string_view url, const IOConfig& io_cfg)
+  BasicInterface(std::string_view url, const DemuxConfig& io_cfg)
       : fmt_ctx(get_input_format_ctx(
             std::string{url},
             io_cfg.format,
@@ -27,7 +27,7 @@ class BasicInterface : public DataInterface {
 
 std::unique_ptr<DataInterface> SourceAdaptor::get(
     std::string_view url,
-    const IOConfig& io_cfg) const {
+    const DemuxConfig& io_cfg) const {
   return std::unique_ptr<DataInterface>(new BasicInterface(url, io_cfg));
 }
 } // namespace spdl::core

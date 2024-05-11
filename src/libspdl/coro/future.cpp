@@ -42,6 +42,6 @@ FuturePtr run_in_executor(
   return std::make_unique<Future>(new Future::Impl(
       std::move(task).scheduleOn(executor).start(), std::move(cs)));
 }
-}
+} // namespace detail
 
 } // namespace spdl::coro

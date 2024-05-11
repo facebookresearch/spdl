@@ -17,7 +17,7 @@ FuturePtr async_demux(
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr executor) {
   auto generator = folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<PacketsPtr<media_type>> {
@@ -41,7 +41,7 @@ template FuturePtr async_demux(
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
 template FuturePtr async_demux(
@@ -50,7 +50,7 @@ template FuturePtr async_demux(
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
 template <MediaType media_type>
@@ -59,7 +59,7 @@ FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
   auto generator = folly::coro::co_invoke(
@@ -86,7 +86,7 @@ template FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
@@ -95,7 +95,7 @@ template FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
@@ -104,7 +104,7 @@ FuturePtr async_demux_image(
     std::function<void(std::string, bool)> notify_exception,
     std::string uri,
     SourceAdaptorPtr adaptor,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::Task<PacketsPtr<MediaType::Image>> {
@@ -122,7 +122,7 @@ FuturePtr async_demux_image_bytes(
     std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<IOConfig> io_cfg,
+    std::optional<DemuxConfig> io_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
   auto task = folly::coro::co_invoke(

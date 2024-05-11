@@ -23,7 +23,7 @@ struct Rational {
 // include ffmpeg headers
 enum class MediaType { Audio, Video, Image };
 
-struct IOConfig {
+struct DemuxConfig {
   std::optional<std::string> format = std::nullopt;
   std::optional<OptionDict> format_options = std::nullopt;
   int buffer_size = SPDL_DEFAULT_BUFFER_SIZE;
