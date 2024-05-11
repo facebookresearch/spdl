@@ -83,7 +83,7 @@ def test_batch_decode_image(get_samples):
             strict=False,
         )
 
-        assert buffer.shape == [10, 4, 240, 320]
+        assert buffer.__cuda_array_interface__["shape"] == (10, 4, 240, 320)
 
         with pytest.raises(RuntimeError):
             await spdl.io.async_batch_load_image_nvdec(
@@ -132,7 +132,7 @@ def test_batch_decode_torch_allocator(get_samples):
                 ),
             },
         )
-        assert buffer.shape == [10, 4, 240, 320]
+        assert buffer.__cuda_array_interface__["shape"] == (10, 4, 240, 320)
 
         assert allocator_called
         assert not deleter_called

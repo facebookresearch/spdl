@@ -59,7 +59,7 @@ void check_consistency(const std::vector<AVFrame*>& frames)
 }
 
 template <MediaType media_type>
-BufferPtr convert_video(const std::vector<AVFrame*>& frames)
+CPUBufferPtr convert_video(const std::vector<AVFrame*>& frames)
   requires(media_type != MediaType::Audio)
 {
   check_consistency<media_type>(frames);
@@ -74,7 +74,7 @@ BufferPtr convert_video(const std::vector<AVFrame*>& frames)
 }
 
 template <MediaType media_type>
-BufferPtr convert_vision_frames(const FFmpegFramesPtr<media_type> frames)
+CPUBufferPtr convert_vision_frames(const FFmpegFramesPtr<media_type> frames)
   requires(media_type != MediaType::Audio)
 {
   TRACE_EVENT(
@@ -87,21 +87,14 @@ BufferPtr convert_vision_frames(const FFmpegFramesPtr<media_type> frames)
 
 template <MediaType media_type>
 FuturePtr async_convert_frames(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesPtr<media_type> frames,
-    const std::optional<int>& cuda_device_index,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [=](FFmpegFramesPtr<media_type>&& frm) -> folly::coro::Task<BufferPtr> {
-        auto ret = convert_vision_frames<media_type>(std::move(frm));
-        if (cuda_device_index) {
-          ret = convert_to_cuda(
-              std::move(ret), *cuda_device_index, cuda_stream, cuda_allocator);
-        }
-        co_return std::move(ret);
+      [=](FFmpegFramesPtr<media_type>&& frm)
+          -> folly::coro::Task<CPUBufferPtr> {
+        co_return convert_vision_frames<media_type>(std::move(frm));
       },
       std::move(frames));
   return detail::execute_task_with_callback(
@@ -112,19 +105,57 @@ FuturePtr async_convert_frames(
 }
 
 template FuturePtr async_convert_frames<MediaType::Video>(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesPtr<MediaType::Video> frames,
-    const std::optional<int>& cuda_device_index,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_convert_frames<MediaType::Image>(
+    std::function<void(CPUBufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesPtr<MediaType::Image> frames,
+    ThreadPoolExecutorPtr executor);
+
+template <MediaType media_type>
+FuturePtr async_convert_frames_cuda(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesPtr<media_type> frames,
+    int cuda_device_index,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=](FFmpegFramesPtr<media_type>&& frm)
+          -> folly::coro::Task<CUDABufferPtr> {
+        co_return convert_to_cuda(
+            convert_vision_frames<media_type>(std::move(frm)),
+            cuda_device_index,
+            cuda_stream,
+            cuda_allocator);
+      },
+      std::move(frames));
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor_high_prio(executor));
+}
+
+template FuturePtr async_convert_frames_cuda<MediaType::Video>(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesPtr<MediaType::Video> frames,
+    int cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor);
 
-template FuturePtr async_convert_frames<MediaType::Image>(
-    std::function<void(BufferPtr)> set_result,
+template FuturePtr async_convert_frames_cuda<MediaType::Image>(
+    std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesPtr<MediaType::Image> frames,
-    const std::optional<int>& cuda_device_index,
+    int cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor);
@@ -147,7 +178,7 @@ std::vector<AVFrame*> merge_frames(
   return ret;
 }
 
-BufferPtr convert_batch_image_frames(
+CPUBufferPtr convert_batch_image_frames(
     const std::vector<FFmpegFramesPtr<MediaType::Image>>& batch) {
   TRACE_EVENT("decoding", "core::convert_batch_image_frames");
   return convert_video<MediaType::Video>(merge_frames(batch));
@@ -155,22 +186,42 @@ BufferPtr convert_batch_image_frames(
 } // namespace
 
 FuturePtr async_batch_convert_frames(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
-    const std::optional<int>& cuda_device_index,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=](std::vector<FFmpegFramesPtr<MediaType::Image>>&& frms)
+          -> folly::coro::Task<CPUBufferPtr> {
+        co_return convert_batch_image_frames(frms);
+      },
+      // Pass the ownership of FramePtrs to executor thread, so that they are
+      // deallocated there, instead of the main thread.
+      std::move(frames));
+  return detail::execute_task_with_callback(
+      std::move(task),
+      set_result,
+      notify_exception,
+      detail::get_demux_executor_high_prio(executor));
+}
+
+FuturePtr async_batch_convert_frames_cuda(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
+    int cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=](std::vector<FFmpegFramesPtr<MediaType::Image>>&& frms)
-          -> folly::coro::Task<BufferPtr> {
-        auto ret = convert_batch_image_frames(frms);
-        if (cuda_device_index) {
-          ret = convert_to_cuda(
-              std::move(ret), *cuda_device_index, cuda_stream, cuda_allocator);
-        }
-        co_return std::move(ret);
+          -> folly::coro::Task<CUDABufferPtr> {
+        co_return convert_to_cuda(
+            convert_batch_image_frames(frms),
+            cuda_device_index,
+            cuda_stream,
+            cuda_allocator);
+        ;
       },
       // Pass the ownership of FramePtrs to executor thread, so that they are
       // deallocated there, instead of the main thread.

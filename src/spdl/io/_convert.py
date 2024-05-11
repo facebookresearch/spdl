@@ -31,8 +31,10 @@ def to_numpy(buffer: Buffer) -> NDArray:
     See also:
         https://numpy.org/doc/stable/reference/arrays.interface.html
     """
-    if buffer.is_cuda:
-        raise RuntimeError("to_numpy() does not support CUDA buffers.")
+    if not hasattr(buffer, "__array_interface__"):
+        raise RuntimeError(
+            "The given object does not have `__array_interface__` attribute."
+        )
     return np.array(buffer, copy=False)
 
 
@@ -45,7 +47,7 @@ def to_torch(buffer: Buffer):
     Returns:
         (torch.Tensor): A PyTorch Tensor.
     """
-    if buffer.is_cuda:
+    if hasattr(buffer, "__cuda_array_interface__"):
         data_ptr = buffer.__cuda_array_interface__["data"][0]
         tensor = torch.as_tensor(buffer, device=f"cuda:{buffer.device_index}")
         if tensor.data_ptr() == 0:
@@ -77,7 +79,7 @@ def to_numba(buffer: Buffer):
     See Also:
         https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html
     """
-    if buffer.is_cuda:
+    if hasattr(buffer, "__cuda_array_interface__"):
         return cuda.as_cuda_array(buffer)
 
     return np.array(buffer, copy=False)

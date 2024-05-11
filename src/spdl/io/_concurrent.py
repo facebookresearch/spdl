@@ -121,7 +121,9 @@ def decode_media(
     return _common._futurize_task(func, src, **kwargs)
 
 
-def convert_frames(frames: Type[Frames], **kwargs) -> Future[Buffer]:
+def convert_frames(
+    frames: Type[Frames], cuda_device_index: int | None = None, **kwargs
+) -> Future[Buffer]:
     """Convert the decoded frames to buffer.
 
     The signature of this function is same as [spdl.io.async_convert_frames][]
@@ -132,7 +134,9 @@ def convert_frames(frames: Type[Frames], **kwargs) -> Future[Buffer]:
     Returns:
         Future object that returns Buffer when fullfilled.
     """
-    func = _common._get_conversion_func(frames)
+    func = _common._get_conversion_func(frames, cuda_device_index)
+    if cuda_device_index is not None:
+        kwargs["cuda_device_index"] = cuda_device_index
     return _common._futurize_task(func, frames, **kwargs)
 
 
