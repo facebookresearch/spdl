@@ -2,7 +2,7 @@ import numpy as np
 
 from spdl._internal import import_utils
 
-from ._type_stub import Buffer
+from spdl.io import CPUBuffer, CUDABuffer
 
 try:
     from numpy.typing import NDArray
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-def to_numpy(buffer: Buffer) -> NDArray:
+def to_numpy(buffer: CPUBuffer) -> NDArray:
     """Convert to NumPy NDArray.
 
     Args:
@@ -38,7 +38,7 @@ def to_numpy(buffer: Buffer) -> NDArray:
     return np.array(buffer, copy=False)
 
 
-def to_torch(buffer: Buffer):
+def to_torch(buffer: CPUBuffer | CUDABuffer):
     """Convert to PyTorch Tensor.
 
     Args:
@@ -67,7 +67,7 @@ def to_torch(buffer: Buffer):
     return torch.as_tensor(np.array(buffer, copy=False))
 
 
-def to_numba(buffer: Buffer):
+def to_numba(buffer: CPUBuffer | CUDABuffer):
     """Convert to Numba DeviceNDArray or NumPy NDArray.
 
     Args:

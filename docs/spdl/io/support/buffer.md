@@ -8,7 +8,8 @@
       show_root_heading: false
       show_root_toc_entry: false
       members:
-      - Buffer
+      - CPUBuffer
+      - CUDABuffer
 
 ## Cast buffer to array/tensor
 

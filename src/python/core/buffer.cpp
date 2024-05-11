@@ -70,8 +70,6 @@ void register_buffers(nb::module_& m) {
   }
 #endif
 
-  nb::class_<Buffer>(m, "Buffer");
-
   nb::class_<CPUBuffer>(m, "CPUBuffer")
       .def_prop_ro("__array_interface__", [](CPUBuffer& self) {
         return get_array_interface(self);
