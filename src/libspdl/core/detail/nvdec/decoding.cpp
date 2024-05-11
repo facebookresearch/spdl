@@ -79,7 +79,7 @@ CUDABufferTracker get_buffer_tracker(
 } // namespace
 
 template <MediaType media_type>
-BufferPtr decode_nvdec(
+CUDABufferPtr decode_nvdec(
     PacketsPtr<media_type> packets,
     int cuda_device_index,
     const CropArea crop,
@@ -181,7 +181,7 @@ BufferPtr decode_nvdec(
   return std::move(tracker.buffer);
 }
 
-template BufferPtr decode_nvdec(
+template CUDABufferPtr decode_nvdec(
     VideoPacketsPtr packets,
     int cuda_device_index,
     const CropArea crop,
@@ -191,7 +191,7 @@ template BufferPtr decode_nvdec(
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator);
 
-template BufferPtr decode_nvdec(
+template CUDABufferPtr decode_nvdec(
     ImagePacketsPtr packets,
     int cuda_device_index,
     const CropArea crop,
@@ -201,7 +201,7 @@ template BufferPtr decode_nvdec(
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator);
 
-BufferPtr decode_nvdec(
+CUDABufferPtr decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
     int cuda_device_index,
     const CropArea crop,

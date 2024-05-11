@@ -15,9 +15,10 @@
 
 namespace spdl::coro {
 
-using spdl::core::BufferPtr;
+using spdl::core::CPUBufferPtr;
 using spdl::core::CropArea;
 using spdl::core::cuda_allocator;
+using spdl::core::CUDABufferPtr;
 using spdl::core::DecodeConfig;
 using spdl::core::DemuxConfig;
 using spdl::core::FFmpegFramesPtr;
@@ -42,7 +43,7 @@ FuturePtr async_decode(
 /// Decode video or image
 template <MediaType media_type>
 FuturePtr async_decode_nvdec(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     PacketsPtr<media_type> packets,
     int cuda_device_index,
@@ -55,7 +56,7 @@ FuturePtr async_decode_nvdec(
     ThreadPoolExecutorPtr decode_executor = nullptr);
 
 FuturePtr async_batch_decode_image_nvdec(
-    std::function<void(BufferPtr)> set_result,
+    std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::vector<PacketsPtr<MediaType::Image>>&& packets,
     int cuda_device_index,

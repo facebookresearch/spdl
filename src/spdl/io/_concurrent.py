@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Tuple, Type, Union
 
 import spdl.utils
 
-from . import _common, _preprocessing
+from spdl.io import CPUBuffer, CUDABuffer, Frames, Packets
 
-from ._type_stub import Buffer, Frames, Packets
+from . import _common, _preprocessing
 
 __all__ = [
     "convert_frames",
@@ -85,7 +85,7 @@ def decode_packets(packets: Type[Packets], **kwargs) -> Future[Type[Frames]]:
 
 def decode_packets_nvdec(
     packets: Type[Packets], cuda_device_index: int, **kwargs
-) -> Future[Buffer]:
+) -> Future[CUDABuffer]:
     """Decode packets with NVDEC.
 
     The signature of this function is same as [spdl.io.async_decode_packets_nvdec][]
@@ -123,7 +123,7 @@ def decode_media(
 
 def convert_frames(
     frames: Type[Frames], cuda_device_index: int | None = None, **kwargs
-) -> Future[Buffer]:
+) -> Future[CPUBuffer | CUDABuffer]:
     """Convert the decoded frames to buffer.
 
     The signature of this function is same as [spdl.io.async_convert_frames][]
@@ -153,7 +153,7 @@ def load_media(
     decode_options: Dict[str, Any] | None = None,
     convert_options: Dict[str, Any] | None = None,
     use_nvdec: bool = False,
-) -> Future[Buffer]:
+) -> Future[CPUBuffer | CUDABuffer]:
     """Load media from source.
 
     The signature of this function is same as [spdl.io.async_load_media][]
@@ -192,7 +192,7 @@ def batch_load_image(
     decode_options: Dict[str, Any] | None = None,
     convert_options: Dict[str, Any] | None = None,
     strict: bool = True,
-) -> Future[Buffer]:
+) -> Future[CPUBuffer | CUDABuffer]:
     """Load media from source.
 
     The signature of this function is same as [spdl.io.async_batch_load_image][]
@@ -264,7 +264,7 @@ def batch_load_image_nvdec(
     demux_options: Dict[str, Any] | None = None,
     decode_options: Dict[str, Any] | None = None,
     strict: bool = True,
-) -> Future[Buffer]:
+) -> Future[CUDABuffer]:
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
 

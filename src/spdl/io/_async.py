@@ -16,7 +16,7 @@ from typing import (
 )
 
 import spdl.io
-from spdl.io import Buffer, Frames, ImageFrames, ImagePackets, Packets
+from spdl.io import CPUBuffer, CUDABuffer, Frames, ImageFrames, ImagePackets, Packets
 from spdl.lib import _libspdl
 
 from . import _common, _preprocessing
@@ -214,7 +214,7 @@ def async_decode_packets_nvdec(
     packets: Type[Packets] | List[ImagePackets],
     cuda_device_index: int,
     **kwargs,
-) -> Awaitable[Buffer]:
+) -> Awaitable[CUDABuffer]:
     """Decode packets with NVDEC.
 
     Args:
@@ -264,7 +264,7 @@ def async_convert_frames(
     frames: Type[Frames] | List[ImageFrames],
     cuda_device_index: int | None = None,
     **kwargs,
-) -> Awaitable[Buffer]:
+) -> Awaitable[CPUBuffer | CUDABuffer]:
     """Convert the decoded frames to buffer.
 
     Args:
@@ -339,7 +339,7 @@ async def async_load_media(
     decode_options: Dict[str, Any] | None = None,
     convert_options: Dict[str, Any] | None = None,
     use_nvdec: bool = False,
-) -> Buffer:
+) -> CPUBuffer | CUDABuffer:
     """Load the given media into buffer.
 
     This function combines `async_demux_media`, `async_decode_packets` (or
@@ -469,7 +469,7 @@ async def async_batch_load_image(
     decode_options: Dict[str, Any] | None = None,
     convert_options: Dict[str, Any] | None = None,
     strict: bool = True,
-) -> Buffer:
+) -> CPUBuffer | CUDABuffer:
     """Batch load images.
 
     Args:
@@ -569,7 +569,7 @@ async def async_batch_load_image_nvdec(
     demux_options: Dict[str, Any] | None = None,
     decode_options: Dict[str, Any] | None = None,
     strict: bool = True,
-) -> Buffer:
+) -> CUDABuffer:
     """Batch load images.
 
     Args:

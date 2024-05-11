@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Tuple
 
 __all__ = [
-    "Buffer",
+    "CPUBuffer",
+    "CUDABuffer",
     "Packets",
     "AudioPackets",
     "VideoPackets",
@@ -344,31 +345,29 @@ class ImageFrames(Frames):
         ...
 
 
-class Buffer:
-    """Buffer implements array interface and CUDA array interface when applicable.
+class CPUBuffer:
+    """Buffer implements array interface.
 
     To be passed to casting functions like [spdl.io.to_numpy][],
     [spdl.io.to_torch][] or [spdl.io.to_numba][].
     """
 
     @property
-    def is_cuda(self) -> bool:
-        """Indicates if the memory held by this buffer is CUDA memory."""
+    def __array_interface__(self) -> Dict[str, Any]:
+        """See https://numpy.org/doc/stable/reference/arrays.interface.html."""
         ...
 
-    @property
-    def shape(self) -> List[int]:
-        """The shape of the buffer."""
-        ...
+
+class CUDABuffer:
+    """CUDABuffer implements CUDA array interface.
+
+    To be passed to casting functions like [spdl.io.to_numpy][],
+    [spdl.io.to_torch][] or [spdl.io.to_numba][].
+    """
 
     @property
     def device_index(self) -> int:
-        """The device index. Valid only for CUDA buffer."""
-        ...
-
-    @property
-    def __array_interface__(self) -> Dict[str, Any]:
-        """See https://numpy.org/doc/stable/reference/arrays.interface.html."""
+        """The device index."""
         ...
 
     @property
