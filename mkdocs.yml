@@ -49,7 +49,11 @@ nav:
       - Installation: installation.md
       - "spdl.io":
           - "Overview": spdl/io/overview.md
-          - "Low-level APIs": spdl/io/core.md
+          - "Low-level APIs":
+              - "Overview": spdl/io/core/about.md
+              - "Demuxing": spdl/io/core/demux.md
+              - "Decoding": spdl/io/core/decode.md
+              - "Conversion": spdl/io/core/conversion.md
           - "High-level APIs": spdl/io/api.md
           - "Preprocessing": spdl/io/preprocessing.md
           - "Support Structures":

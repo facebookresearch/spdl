@@ -89,26 +89,3 @@ The following functions implement each stage
     >>> tensor = asyncio.run(_batch_load_image(["sample1.jpg", "sample2.png"]))
     >>>
     ```
-
-## Streaming demuxing
-
-::: spdl.io.async_streaming_demux
-::: spdl.io.streaming_demux
-
-## Demuxing
-
-::: spdl.io.async_demux_media
-::: spdl.io.demux_media
-
-## Decoding
-
-::: spdl.io.async_decode_packets
-::: spdl.io.decode_packets
-
-::: spdl.io.async_decode_packets_nvdec
-::: spdl.io.decode_packets_nvdec
-
-## Buffer conversion
-
-::: spdl.io.async_convert_frames
-::: spdl.io.convert_frames
