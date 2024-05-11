@@ -83,7 +83,7 @@ async def _handle_future(future: Future[T]) -> T:
         try:
             # Wait till the cancel request is fullfilled or job finishes
             await asyncio.futures.wrap_future(future)
-        except (asyncio.CancelledError, spdl.io.AsyncIOFailure):
+        except (asyncio.CancelledError, spdl.io.SPDLBackgroundTaskFailure):
             pass
         except Exception:
             _LG.exception(
@@ -107,7 +107,7 @@ async def _handle_futures(futures):
         try:
             # Wait till the cancel request is fullfilled or job finishes
             await asyncio.futures.wrap_future(futures[-1])
-        except (asyncio.CancelledError, spdl.io.AsyncIOFailure):
+        except (asyncio.CancelledError, spdl.io.SPDLBackgroundTaskFailure):
             pass
         except Exception:
             _LG.exception(

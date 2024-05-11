@@ -87,7 +87,7 @@ def _futurize_task(func, *args, **kwargs):
     future = Future()
 
     def nofify_exception(msg: str, cancelled: bool):
-        err = CancelledError() if cancelled else spdl.io.AsyncIOFailure(msg)
+        err = CancelledError() if cancelled else spdl.io.SPDLBackgroundTaskFailure(msg)
         future.set_exception(err)
 
     future.set_running_or_notify_cancel()
@@ -110,7 +110,7 @@ def _futurize_generator(func, num_items, *args, **kwargs):
             futures[index].set_running_or_notify_cancel()
 
     def nofify_exception(msg: str, cancelled: bool):
-        err = CancelledError() if cancelled else spdl.io.AsyncIOFailure(msg)
+        err = CancelledError() if cancelled else spdl.io.SPDLBackgroundTaskFailure(msg)
 
         nonlocal index
         futures[index].set_exception(err)
