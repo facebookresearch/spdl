@@ -2,7 +2,7 @@ from spdl.lib import _libspdl
 
 __all__ = [
     "AsyncIOFailure",
-    "IOConfig",
+    "DemuxConfig",
     "DecodeConfig",
     "Executor",
 ]
@@ -16,7 +16,7 @@ class AsyncIOFailure(RuntimeError):
     pass
 
 
-def IOConfig(**kwargs):
+def DemuxConfig(**kwargs):
     """Custom IO config.
 
     Other Args:
@@ -44,12 +44,12 @@ def IOConfig(**kwargs):
         >>> # packets = asyncio.run(spdl.io.async_demux_media("audio", src))
         >>>
         >>> # This works.
-        >>> cfg = IOConfig(format="s16le")
+        >>> cfg = DemuxConfig(format="s16le")
         >>> packets = asyncio.run(spdl.io.async_demux_media("audio", src, io_config=cfg))
         >>>
         ```
     """
-    return _libspdl.IOConfig(**kwargs)
+    return _libspdl.DemuxConfig(**kwargs)
 
 
 def DecodeConfig(**kwargs):

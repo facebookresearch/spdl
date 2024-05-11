@@ -85,7 +85,7 @@ class MMapInterface : public DataInterface {
   AVFormatInputContextPtr fmt_ctx;
 
  public:
-  MMapInterface(std::string path, const IOConfig& io_cfg)
+  MMapInterface(std::string path, const DemuxConfig& io_cfg)
       : obj(path),
         io_ctx(get_io_ctx(
             &obj,
@@ -108,7 +108,7 @@ class MMapInterface : public DataInterface {
 
 std::unique_ptr<DataInterface> MMapAdaptor::get(
     std::string_view url,
-    const IOConfig& io_cfg) const {
+    const DemuxConfig& io_cfg) const {
   return std::unique_ptr<DataInterface>(
       new detail::MMapInterface(std::string{url}, io_cfg));
 };

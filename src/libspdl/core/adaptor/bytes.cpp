@@ -74,7 +74,7 @@ class BytesInterface : public DataInterface {
   AVFormatInputContextPtr fmt_ctx;
 
  public:
-  BytesInterface(std::string_view data, const IOConfig& io_cfg)
+  BytesInterface(std::string_view data, const DemuxConfig& io_cfg)
       : obj(data),
         io_ctx(get_io_ctx(
             &obj,
@@ -98,7 +98,7 @@ class BytesInterface : public DataInterface {
 
 std::unique_ptr<DataInterface> BytesAdaptor::get(
     std::string_view data,
-    const IOConfig& io_cfg) const {
+    const DemuxConfig& io_cfg) const {
   return std::unique_ptr<DataInterface>(
       new detail::BytesInterface{data, io_cfg});
 }

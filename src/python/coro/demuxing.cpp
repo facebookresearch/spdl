@@ -39,7 +39,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Audio>(
@@ -66,7 +66,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          std::string_view data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         // auto buffer_info = data.request(/*writable=*/_zero_clear);
@@ -94,7 +94,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          const std::string& src,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          const SourceAdaptorPtr& _adaptor,
          ThreadPoolExecutorPtr _executor) {
         return async_demux<MediaType::Video>(
@@ -121,7 +121,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Video>(
@@ -148,7 +148,7 @@ void register_demuxing(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          std::string_view data,
          const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Video>(
@@ -174,7 +174,7 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(ImagePacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          const std::string& src,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          const SourceAdaptorPtr& _adaptor,
          ThreadPoolExecutorPtr _executor) {
         return async_demux_image(
@@ -198,7 +198,7 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(ImagePacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_image_bytes(
@@ -222,7 +222,7 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(ImagePacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          std::string_view data,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
         return async_demux_image_bytes(

@@ -109,7 +109,7 @@ void register_decoding(nb::module_& m) {
          std::function<void(std::string, bool)> notify_exception,
          // TODO: check if one can use string_view directly.
          nb::bytes data,
-         const std::optional<IOConfig>& io_config,
+         const std::optional<DemuxConfig>& io_config,
          const std::optional<DecodeConfig>& decode_config,
          std::string filter_desc,
          std::shared_ptr<ThreadPoolExecutor> _executor,

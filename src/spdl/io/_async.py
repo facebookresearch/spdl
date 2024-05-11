@@ -139,7 +139,7 @@ def async_streaming_demux(
         timestamps: List of timestamps.
 
     Other args:
-        io_config (IOConfig): Custom I/O config.
+        io_config (DemuxConfig): Custom I/O config.
 
     Returns:
         [AudioPackets][spdl.io.AudioPackets] or [VideoPackets][spdl.io.VideoPackets] generator.
@@ -170,7 +170,7 @@ def async_demux_media(
             If omitted, the entire data are demuxed.
 
     Other args:
-        io_config (IOConfig): Custom I/O config.
+        io_config (DemuxConfig): Custom I/O config.
 
     Returns:
         Awaitable which returns an AudioPackets/VideoPackets/ImagePackets object.

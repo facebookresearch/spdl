@@ -1,7 +1,7 @@
 # Helper structures
 
 ## Configs
-::: spdl.io.IOConfig
+::: spdl.io.DemuxConfig
 ::: spdl.io.DecodeConfig
 
 ## Executor

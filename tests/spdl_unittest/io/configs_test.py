@@ -10,16 +10,16 @@ def test_io_config_smoketest(get_sample):
     sample = get_sample(cmd)
 
     async def _test(src):
-        io_config = spdl.io.IOConfig()
+        io_config = spdl.io.DemuxConfig()
         _ = await spdl.io.async_demux_media("audio", src, io_config=io_config)
 
-        io_config = spdl.io.IOConfig(format="wav")
+        io_config = spdl.io.DemuxConfig(format="wav")
         _ = await spdl.io.async_demux_media("audio", src, io_config=io_config)
 
-        io_config = spdl.io.IOConfig(format_options={"max_size": "1024"})
+        io_config = spdl.io.DemuxConfig(format_options={"max_size": "1024"})
         _ = await spdl.io.async_demux_media("audio", src, io_config=io_config)
 
-        io_config = spdl.io.IOConfig(buffer_size=1024)
+        io_config = spdl.io.DemuxConfig(buffer_size=1024)
         _ = await spdl.io.async_demux_media("audio", src, io_config=io_config)
 
     asyncio.run(_test(sample.path))
@@ -34,7 +34,7 @@ def test_io_config_headless(get_sample):
         with pytest.raises(RuntimeError):
             await spdl.io.async_demux_media("audio", src)
 
-        io_config = spdl.io.IOConfig(format="s16le")
+        io_config = spdl.io.DemuxConfig(format="s16le")
         _ = await spdl.io.async_demux_media("audio", src, io_config=io_config)
 
     asyncio.run(_test(sample.path))
