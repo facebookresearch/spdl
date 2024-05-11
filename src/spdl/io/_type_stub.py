@@ -12,6 +12,7 @@ __all__ = [
     "AudioFrames",
     "VideoFrames",
     "ImageFrames",
+    "DemuxConfig",
 ]
 
 
@@ -373,3 +374,9 @@ class Buffer:
     def __cuda_array_interface__(self) -> Dict[str, Any]:
         """See https://numba.pydata.org/numba-doc/latest/cuda/cuda_array_interface.html."""
         ...
+
+
+class DemuxConfig:
+    """Demux configuration.
+
+    See the factory function [spdl.io.demux_config][]."""

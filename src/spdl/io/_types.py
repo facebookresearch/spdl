@@ -1,8 +1,9 @@
+from spdl.io import DemuxConfig
 from spdl.lib import _libspdl
 
 __all__ = [
     "SPDLBackgroundTaskFailure",
-    "DemuxConfig",
+    "demux_config",
     "DecodeConfig",
     "Executor",
 ]
@@ -16,7 +17,7 @@ class SPDLBackgroundTaskFailure(RuntimeError):
     pass
 
 
-def DemuxConfig(**kwargs):
+def demux_config(**kwargs) -> DemuxConfig:
     """Customize demuxing behavior.
 
     Other Args:
@@ -29,6 +30,9 @@ def DemuxConfig(**kwargs):
 
         buffer_size (int):
             *Opitonal* Override the size of internal buffer used for demuxing.
+
+    Returns:
+        Config object.
 
     ??? note "Example: Loading headeless audio file (raw PCM)"
         ```python
@@ -44,7 +48,7 @@ def DemuxConfig(**kwargs):
         >>> # packets = asyncio.run(spdl.io.async_demux_media("audio", src))
         >>>
         >>> # This works.
-        >>> cfg = DemuxConfig(format="s16le")
+        >>> cfg = demux_config(format="s16le")
         >>> packets = asyncio.run(spdl.io.async_demux_media("audio", src, demux_config=cfg))
         >>>
         ```
