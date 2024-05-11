@@ -50,7 +50,7 @@ def _get_nvdec_decoding_func(packets):
     return getattr(_libspdl, name)
 
 
-def _get_conversion_func(frames):
+def _get_conversion_func(frames, cuda_device_index=None):
     match t := type(frames):
         case _libspdl.FFmpegAudioFrames:
             name = "async_convert_audio"
@@ -67,6 +67,8 @@ def _get_conversion_func(frames):
                 raise TypeError(
                     f"Unexpected type: {t}. When the container type is list, all frames must be either FFmpegImageFrames."
                 )
+    if cuda_device_index is not None:
+        name = f"{name}_cuda"
     return getattr(_libspdl, name)
 
 

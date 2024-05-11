@@ -259,7 +259,7 @@ def test_batch_decode_image(get_samples):
         buffer = await spdl.io.async_batch_load_image(
             flist, width=None, height=None, pix_fmt=None, strict=False
         )
-        assert buffer.shape == [250, 3, 240, 320]
+        assert buffer.__array_interface__["shape"] == (250, 3, 240, 320)
 
     asyncio.run(_test())
 

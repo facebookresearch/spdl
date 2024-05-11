@@ -47,8 +47,6 @@ struct Buffer {
   ///
   /// Returns the pointer to the head of the data buffer.
   void* data();
-
-  virtual bool is_cuda() const = 0;
 };
 
 ///
@@ -59,10 +57,6 @@ struct CPUBuffer : public Buffer {
       ElemClass elem_class,
       size_t depth,
       CPUStorage* storage);
-
-  bool is_cuda() const override {
-    return false;
-  }
 };
 
 ///
@@ -81,9 +75,6 @@ struct CUDABuffer : Buffer {
   uintptr_t get_cuda_stream() const;
 
 #endif
-  bool is_cuda() const override {
-    return true;
-  }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

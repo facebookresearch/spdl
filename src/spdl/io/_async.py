@@ -261,7 +261,9 @@ def async_decode_media(
 
 
 def async_convert_frames(
-    frames: Type[Frames] | List[ImageFrames], **kwargs
+    frames: Type[Frames] | List[ImageFrames],
+    cuda_device_index: int | None = None,
+    **kwargs,
 ) -> Awaitable[Buffer]:
     """Convert the decoded frames to buffer.
 
@@ -318,7 +320,9 @@ def async_convert_frames(
     Returns:
         Awaitable which returns a Buffer object.
     """
-    func = _common._get_conversion_func(frames)
+    func = _common._get_conversion_func(frames, cuda_device_index)
+    if cuda_device_index is not None:
+        kwargs["cuda_device_index"] = cuda_device_index
     return _async_task(func, frames, **kwargs)
 
 
