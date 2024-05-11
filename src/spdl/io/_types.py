@@ -1,10 +1,10 @@
-from spdl.io import DemuxConfig
+from spdl.io import DecodeConfig, DemuxConfig
 from spdl.lib import _libspdl
 
 __all__ = [
     "SPDLBackgroundTaskFailure",
     "demux_config",
-    "DecodeConfig",
+    "decode_config",
     "Executor",
 ]
 
@@ -56,7 +56,7 @@ def demux_config(**kwargs) -> DemuxConfig:
     return _libspdl.DemuxConfig(**kwargs)
 
 
-def DecodeConfig(**kwargs):
+def decode_config(**kwargs) -> DecodeConfig:
     """Customize decoding behavior.
 
     Other Args:
@@ -65,6 +65,9 @@ def DecodeConfig(**kwargs):
 
         decoder_options (Dict[str, str]):
             *Optional* Provide decoder options
+
+    Returns:
+        Config object.
 
     ??? note "Example: Specifying the decoder for H264"
         ```python

@@ -48,13 +48,13 @@ def test_decode_config_smoketest(get_sample):
     async def _test(src):
         packets = await spdl.io.async_demux_media("video", src)
 
-        cfg = spdl.io.DecodeConfig()
+        cfg = spdl.io.decode_config()
         _ = await spdl.io.async_decode_packets(packets.clone(), decode_config=cfg)
 
-        cfg = spdl.io.DecodeConfig(decoder="h264")
+        cfg = spdl.io.decode_config(decoder="h264")
         _ = await spdl.io.async_decode_packets(packets.clone(), decode_config=cfg)
 
-        cfg = spdl.io.DecodeConfig(
+        cfg = spdl.io.decode_config(
             decoder="h264", decoder_options={"nal_length_size": "4"}
         )
         _ = await spdl.io.async_decode_packets(packets.clone(), decode_config=cfg)

@@ -13,6 +13,7 @@ __all__ = [
     "VideoFrames",
     "ImageFrames",
     "DemuxConfig",
+    "DecodeConfig",
 ]
 
 
@@ -380,3 +381,9 @@ class DemuxConfig:
     """Demux configuration.
 
     See the factory function [spdl.io.demux_config][]."""
+
+
+class DecodeConfig:
+    """Decode configuration.
+
+    See the factory function [spdl.io.decode_config][]."""
