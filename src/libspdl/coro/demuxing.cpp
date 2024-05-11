@@ -17,11 +17,11 @@ FuturePtr async_demux(
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr executor) {
   auto generator = folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<PacketsPtr<media_type>> {
-        spdl::core::StreamingDemuxer<media_type> demuxer{uri, adaptor, io_cfg};
+        spdl::core::StreamingDemuxer<media_type> demuxer{uri, adaptor, dmx_cfg};
         for (auto& window : timestamps) {
           co_await folly::coro::co_safe_point;
           co_yield demuxer.demux_window(window);
@@ -41,7 +41,7 @@ template FuturePtr async_demux(
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
 template FuturePtr async_demux(
@@ -50,7 +50,7 @@ template FuturePtr async_demux(
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
     SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr demux_executor);
 
 template <MediaType media_type>
@@ -59,12 +59,12 @@ FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
   auto generator = folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<PacketsPtr<media_type>> {
-        spdl::core::StreamingDemuxer<media_type> demuxer{data, io_cfg};
+        spdl::core::StreamingDemuxer<media_type> demuxer{data, dmx_cfg};
         for (auto& window : timestamps) {
           co_await folly::coro::co_safe_point;
           co_yield demuxer.demux_window(window);
@@ -86,7 +86,7 @@ template FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
@@ -95,7 +95,7 @@ template FuturePtr async_demux_bytes(
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
@@ -104,12 +104,12 @@ FuturePtr async_demux_image(
     std::function<void(std::string, bool)> notify_exception,
     std::string uri,
     SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::Task<PacketsPtr<MediaType::Image>> {
         co_return demux_image(
-            std::move(uri), std::move(adaptor), std::move(io_cfg));
+            std::move(uri), std::move(adaptor), std::move(dmx_cfg));
       });
   return detail::execute_task_with_callback(
       std::move(task),
@@ -122,12 +122,12 @@ FuturePtr async_demux_image_bytes(
     std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<DemuxConfig> io_cfg,
+    std::optional<DemuxConfig> dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::Task<PacketsPtr<MediaType::Image>> {
-        co_return demux_image(std::move(data), std::move(io_cfg), _zero_clear);
+        co_return demux_image(std::move(data), std::move(dmx_cfg), _zero_clear);
       });
   return detail::execute_task_with_callback(
       std::move(task),

@@ -45,7 +45,7 @@ def DemuxConfig(**kwargs):
         >>>
         >>> # This works.
         >>> cfg = DemuxConfig(format="s16le")
-        >>> packets = asyncio.run(spdl.io.async_demux_media("audio", src, io_config=cfg))
+        >>> packets = asyncio.run(spdl.io.async_demux_media("audio", src, demux_config=cfg))
         >>>
         ```
     """

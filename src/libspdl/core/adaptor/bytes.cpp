@@ -74,17 +74,17 @@ class BytesInterface : public DataInterface {
   AVFormatInputContextPtr fmt_ctx;
 
  public:
-  BytesInterface(std::string_view data, const DemuxConfig& io_cfg)
+  BytesInterface(std::string_view data, const DemuxConfig& dmx_cfg)
       : obj(data),
         io_ctx(get_io_ctx(
             &obj,
-            io_cfg.buffer_size,
+            dmx_cfg.buffer_size,
             Bytes::read_packet,
             Bytes::seek)),
         fmt_ctx(get_input_format_ctx(
             io_ctx.get(),
-            io_cfg.format,
-            io_cfg.format_options)) {
+            dmx_cfg.format,
+            dmx_cfg.format_options)) {
     std::string url = fmt::format("<Bytes: {}>", (void*)data.data());
     fmt_ctx->url = av_strdup(url.data());
   }
@@ -98,9 +98,9 @@ class BytesInterface : public DataInterface {
 
 std::unique_ptr<DataInterface> BytesAdaptor::get(
     std::string_view data,
-    const DemuxConfig& io_cfg) const {
+    const DemuxConfig& dmx_cfg) const {
   return std::unique_ptr<DataInterface>(
-      new detail::BytesInterface{data, io_cfg});
+      new detail::BytesInterface{data, dmx_cfg});
 }
 
 } // namespace spdl::core
