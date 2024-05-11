@@ -1,7 +1,6 @@
 import numpy as np
 
 from spdl._internal import import_utils
-from spdl.lib import _libspdl
 
 from ._type_stub import Buffer
 
@@ -48,17 +47,16 @@ def to_torch(buffer: Buffer):
     """
     if buffer.is_cuda:
         data_ptr = buffer.__cuda_array_interface__["data"][0]
-        index = buffer.device_index
-        tensor = torch.as_tensor(buffer, device=f"cuda:{index}")
+        tensor = torch.as_tensor(buffer, device=f"cuda:{buffer.device_index}")
         if tensor.data_ptr() == 0:
             raise RuntimeError(
                 "Failed to convert to PyTorch Tensor. "
-                f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
+                f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {buffer.device_index}"
             )
         if tensor.data_ptr() != data_ptr:
             raise RuntimeError(
                 "[INTERNAL ERROR] Failed to perform zero-copy conversion to PyTorch Tensor. "
-                f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {index}"
+                f"src: {data_ptr}, dst: {tensor.data_ptr()}, device: {buffer.device_index}"
             )
         return tensor
 

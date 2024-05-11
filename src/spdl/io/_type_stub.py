@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Dict, List, Tuple
+
 __all__ = [
     "Buffer",
     "Packets",
@@ -118,13 +120,15 @@ class Packets:
 
 
 class AudioPackets(Packets):
-    """Packets object containing audio samples.
+    """Packets object containing audio samples."""
 
-    Attributes:
-        timestamp (Tuple[float, float]):
-            The window this packets covers, denoted by start and end time in second.
-            This is the value specified by user when demuxing the stream.
-    """
+    @property
+    def timestamp(self) -> Tuple[float, float]:
+        """The window this packets covers, denoted by start and end time in second.
+
+        This is the value specified by user when demuxing the stream.
+        """
+        ...
 
     def clone(self) -> AudioPackets:
         """Clone the packets, so that data can be decoded multiple times.
@@ -136,13 +140,18 @@ class AudioPackets(Packets):
 
 
 class VideoPackets(Packets):
-    """Packets object containing video frames.
+    """Packets object containing video frames."""
 
-    Attributes:
-        timestamp (Tuple[float, float]):
-            The window this packets covers, denoted by start and end time in second.
-            This is the value specified by user when demuxing the stream.
-    """
+    @property
+    def timestamp(self) -> Tuple[float, float]:
+        """The window this packets covers, denoted by start and end time in second.
+
+        This is the value specified by user when demuxing the stream.
+
+        Returns:
+            (Tuple[float, float]): timestamp
+        """
+        ...
 
     def clone(self) -> VideoPackets:
         """Clone the packets, so that data can be decoded multiple times.
@@ -175,34 +184,45 @@ class Frames:
 
 
 class AudioFrames(Frames):
-    """Audio frames.
+    """Audio frames."""
 
-    Attributes:
-        num_frames (int): The number of audio frames. Same as `__len__` method.
+    @property
+    def num_frames(self) -> int:
+        """The number of audio frames. Same as `__len__` method.
 
-            !!! note
+        !!! note
 
-                In SPDL,
-                `The number of samples == the number of frames x the number of channels`
+            In SPDL,
+            `The number of samples == the number of frames x the number of channels`
+        """
+        ...
 
-        sample_rate (int): The sample rate.
+    @property
+    def sample_rate(self) -> int:
+        """The sample rate."""
+        ...
 
-        num_channels (int): The number of channels.
+    @property
+    def num_channels(self) -> int:
+        """The number of channels."""
+        ...
 
-        format (str): The name of sample format.
+    @property
+    def format(self) -> str:
+        """The name of sample format.
 
-            Sample format name. Possible values are
+        Possible values are
 
-            - `"u8"` for unsigned 8-bit integer.
-            - `"s16"`, `"s32"`, `"s64"` for signed 16-bit, 32-bit and 64-bit integer.
-            - `"flt"`, `"dbl"` for 32-bit and 64-bit float.
+          - `"u8"` for unsigned 8-bit integer.
+          - `"s16"`, `"s32"`, `"s64"` for signed 16-bit, 32-bit and 64-bit integer.
+          - `"flt"`, `"dbl"` for 32-bit and 64-bit float.
 
-            If the frame is planar format (separate planes for different channels), the
-            name will be suffixed with `"p"`. When converted to buffer, the buffer's shape
-            will be channel-first format `(channel, num_samples)` instead of interweaved
-            `(num_samples, channel)`.
-
-    """
+        If the frame is planar format (separate planes for different channels), the
+        name will be suffixed with `"p"`. When converted to buffer, the buffer's shape
+        will be channel-first format `(channel, num_samples)` instead of interweaved
+        `(num_samples, channel)`.
+        """
+        ...
 
     def __len__(self) -> int:
         """Returns the number of frames. Same as `num_frames`."""
@@ -218,33 +238,48 @@ class AudioFrames(Frames):
 
 
 class VideoFrames(Frames):
-    """Video frames.
+    """Video frames."""
 
-    Attributes:
-        num_frames (int): The number of video frames. Same as `__len__` method.
+    @property
+    def num_frames(self) -> int:
+        """The number of video frames. Same as `__len__` method."""
+        ...
 
-        num_planes (int): The number of planes in the each frame.
+    @property
+    def num_planes(self) -> int:
+        """The number of planes in the each frame.
 
-            !!! note
+        !!! note
 
-                This corresponds to the number of color components, however
-                it does not always match with the number of color channels when
-                the frame is converted to buffer/array object.
+            This corresponds to the number of color components, however
+            it does not always match with the number of color channels when
+            the frame is converted to buffer/array object.
 
-                For example, if a video file is YUV format (which is one of the most
-                common formats, and comprised of different plane sizes), and
-                color space conversion is disabled during the decoding, then
-                the resulting frames are converted to buffer as single channel frame
-                where all the Y, U, V components are packed.
+            For example, if a video file is YUV format (which is one of the most
+            common formats, and comprised of different plane sizes), and
+            color space conversion is disabled during the decoding, then
+            the resulting frames are converted to buffer as single channel frame
+            where all the Y, U, V components are packed.
 
-                SPDL by default converts the color space to RGB, so this is
-                usually not an issue.
+            SPDL by default converts the color space to RGB, so this is
+            usually not an issue.
+        """
+        ...
 
-        width (int): The width of video.
-        height (int): The height of video.
+    @property
+    def width(self) -> int:
+        """The width of video."""
+        ...
 
-        format (str): The name of the pixel format.
-    """
+    @property
+    def height(self) -> int:
+        """The height of video."""
+        ...
+
+    @property
+    def format(self) -> str:
+        """The name of the pixel format."""
+        ...
 
     def __len__(self) -> int:
         """Returns the number of frames. Same as `num_frames`."""
@@ -273,17 +308,30 @@ class VideoFrames(Frames):
 
 
 class ImageFrames(Frames):
-    """Image frames.
+    """Image frames."""
 
-    Attributes:
-        num_planes (int): The number of planes in the each frame.
-            See [VideoFrames][spdl.io.VideoFrames] for a caveat.
+    @property
+    def num_planes(self) -> int:
+        """The number of planes in the each frame.
 
-        width (int): The width of image.
-        height (int): The height of image.
+        See [VideoFrames][spdl.io.VideoFrames] for a caveat.
+        """
+        ...
 
-        format (str): The name of the pixel format.
-    """
+    @property
+    def width(self) -> int:
+        """The width of image."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """The height of image."""
+        ...
+
+    @property
+    def format(self) -> str:
+        """The name of the pixel format."""
+        ...
 
     def clone(self) -> VideoFrames:
         """Clone the frames, so that data can be converted to buffer multiple times.
@@ -299,14 +347,29 @@ class Buffer:
 
     To be passed to casting functions like [spdl.io.to_numpy][],
     [spdl.io.to_torch][] or [spdl.io.to_numba][].
-
-    Attributes:
-        is_cuda (bool): Indicates if the memory held by this buffer is CUDA memory.
-        shape (List[int]): The shape of the buffer.
-
-        __array_interface__ (Dict[stc, Any]):
-            See https://numpy.org/doc/stable/reference/arrays.interface.html.
-
-        __cuda_array_interface__ (Dict[str, Any]):
-            See https://numba.pydata.org/numba-doc/latest/cuda/cuda_array_interface.html.
     """
+
+    @property
+    def is_cuda(self) -> bool:
+        """Indicates if the memory held by this buffer is CUDA memory."""
+        ...
+
+    @property
+    def shape(self) -> List[int]:
+        """The shape of the buffer."""
+        ...
+
+    @property
+    def device_index(self) -> int:
+        """The device index. Valid only for CUDA buffer."""
+        ...
+
+    @property
+    def __array_interface__(self) -> Dict[str, Any]:
+        """See https://numpy.org/doc/stable/reference/arrays.interface.html."""
+        ...
+
+    @property
+    def __cuda_array_interface__(self) -> Dict[str, Any]:
+        """See https://numba.pydata.org/numba-doc/latest/cuda/cuda_array_interface.html."""
+        ...
