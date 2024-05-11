@@ -52,7 +52,11 @@ nav:
           - "Low-level APIs": spdl/io/core.md
           - "High-level APIs": spdl/io/api.md
           - "Preprocessing": spdl/io/preprocessing.md
-          - "Support Structures": spdl/io/helpers.md
+          - "Support Structures":
+            - "Packets": spdl/io/support/packets.md
+            - "Frames": spdl/io/support/frames.md
+            - "Buffer": spdl/io/support/buffer.md
+            - "Other": spdl/io/helpers.md
       - "spdl.dataset (Experimental)":
           - "DataSet": spdl/dataset/dataset.md
           - "ImageNet": spdl/dataset/imagenet.md
