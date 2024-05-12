@@ -1,10 +1,10 @@
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Generic, List, TypeVar
 
 __all__ = ["DataSet", "ImageData", "AudioData"]
 
-Sample = TypeVar("Sample")
+DataType = TypeVar("DataType")
 
 
 @dataclass
@@ -38,7 +38,7 @@ class AudioData:
     """
 
 
-class DataSet(Generic[Sample]):
+class DataSet(Generic[DataType]):
     """Dataset interface.
 
     ``DataSet`` class is a facade for the actual dataset implementation.
@@ -84,24 +84,49 @@ class DataSet(Generic[Sample]):
         """
         return len(self._impl)
 
-    def __iter__(self) -> Iterator[Sample]:
-        """Return iterator object that iterates dataset samples.
+    def iterate(
+        self,
+        batch_size: int | None,
+        prefix: str = "",
+        drop_last: bool = False,
+        max_batch: int | None = None,
+    ) -> Iterator[DataType | List[DataType]]:
+        """Iterate over the dataset.
 
-        ??? note "Example"
+        Args:
+            batch_size: The number of samples returned at a time.
+                If `None`, then a single item is returned at a time.
+            prefix: If given, the `src` attribute of the returned samples are prefixed
+                with the given value.
+            drop_last: When the total number of items is not a multiple of
+                the `batch_size`, and `drop_last` is True, the last batch is omitted.
+            max_batch: The maximum number of batches to iterate.
 
-            ```python
-            >>> dataset = spdl.dataset.librispeech.LibriSpeech("test-other")
-            >>> for record in dataset:
-            ...     print(record)
-            Record(src='LibriSpeech/test-other/2414/128291/2414-128291-0020.flac', sample_rate=16000, num_frames=20000)
-            Record(src='LibriSpeech/test-other/7902/96592/7902-96592-0020.flac', sample_rate=16000, num_frames=21040)
-            ...
-            ```
+        Yields:
+            A sample if `batch_size` is `None`, otherwise a list of samples.
         """
-        return iter(self._impl)
+        gen = self._impl.iterate(
+            batch_size=1 if batch_size is None else batch_size,
+            drop_last=drop_last,
+            max_batch=max_batch,
+        )
 
-    def __getitem__(self, key: int | slice) -> Sample | List[Sample]:
+        for batch in gen:
+            if prefix:
+                batch = [replace(s, src=f"{prefix}{s.src}") for s in batch]
+            if batch_size is None:
+                batch = batch[0]
+            yield batch
+
+    def __getitem__(self, key: int | slice) -> DataType | List[DataType]:
         """Return the sample at the given key.
+
+        Args:
+            key: Index or slice object.
+
+        Returns:
+            Single sample if the `key` is integer. List of samples if the `key` is
+            slice.
 
         ??? note "Example"
 
@@ -205,4 +230,4 @@ def split(dataset: DataSet, n: int, path_pattern: str):
     Returns:
         (List[DataSet]): Split DataSet objects.
     """
-    return dataset._impl.split(n, path_pattern)
+    return dataset._impl._split(n, path_pattern)

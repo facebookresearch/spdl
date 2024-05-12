@@ -70,6 +70,13 @@ class SPDLDynamicResolver(Extension):
         finally:
             super().on_package_loaded(pkg=pkg)
 
+    def on_module_instance(self, *, node, mod) -> None:
+
+        super().on_module_instance(node=node, mod=mod)
+        if mod.name in ["io", "dataset"]:
+            if mod.parent.name == "spdl":
+                mod.docstring = None
+
 
 def _test():
     import logging
