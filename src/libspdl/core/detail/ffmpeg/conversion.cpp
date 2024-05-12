@@ -107,18 +107,39 @@ void copy_2d(
   }
 }
 
+void convert_interleaved(
+    const std::vector<AVFrame*>& frames,
+    uint8_t* dst,
+    unsigned int num_channels,
+    size_t w,
+    size_t h) {
+  size_t wc = num_channels * w;
+  for (const auto& f : frames) {
+    copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc);
+  }
+}
+
 CPUBufferPtr convert_interleaved(
     const std::vector<AVFrame*>& frames,
     unsigned int num_channels = 3) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
   auto buf = cpu_buffer({frames.size(), h, w, num_channels});
-  size_t wc = num_channels * w;
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc);
-  }
+  convert_interleaved(frames, (uint8_t*)buf->data(), num_channels, w, h);
   return buf;
+}
+
+void convert_planer(
+    const std::vector<AVFrame*>& frames,
+    uint8_t* dst,
+    int num_planes,
+    size_t w,
+    size_t h) {
+  for (const auto& f : frames) {
+    for (int c = 0; c < num_planes; ++c) {
+      copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
+    }
+  }
 }
 
 CPUBufferPtr convert_planer(
@@ -127,22 +148,16 @@ CPUBufferPtr convert_planer(
   size_t h = frames[0]->height, w = frames[0]->width;
 
   auto buf = cpu_buffer({frames.size(), (size_t)num_planes, h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    for (int c = 0; c < num_planes; ++c) {
-      copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
-    }
-  }
+  convert_planer(frames, (uint8_t*)buf->data(), num_planes, w, h);
   return buf;
 }
 
-CPUBufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
+void convert_yuv420p(
+    const std::vector<AVFrame*>& frames,
+    uint8_t* dst,
+    size_t w,
+    size_t h) {
   size_t h2 = h / 2, w2 = w / 2;
-
-  auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
   for (const auto& f : frames) {
     // Y
     copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
@@ -151,16 +166,26 @@ CPUBufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
     copy_2d(f->data[1], h2, w2, f->linesize[1], &dst, w);
     copy_2d(f->data[2], h2, w2, f->linesize[2], &dst2, w);
   }
+}
+
+CPUBufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
+  size_t h = frames[0]->height, w = frames[0]->width;
+  assert(h % 2 == 0 && w % 2 == 0);
+  size_t h2 = h / 2;
+
+  auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
+  convert_yuv420p(frames, (uint8_t*)buf->data(), w, h);
   return buf;
 }
 
-CPUBufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
+void convert_yuv422p(
+    const std::vector<AVFrame*>& frames,
+    uint8_t* dst,
+    size_t w,
+    size_t h) {
   assert(w % 2 == 0);
   size_t w2 = w / 2;
 
-  auto buf = cpu_buffer({frames.size(), 1, h + h, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
   for (const auto& f : frames) {
     // Y
     copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
@@ -169,7 +194,29 @@ CPUBufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
     copy_2d(f->data[1], h, w2, f->linesize[1], &dst, w);
     copy_2d(f->data[2], h, w2, f->linesize[2], &dst2, w);
   }
+}
+
+CPUBufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
+  size_t h = frames[0]->height, w = frames[0]->width;
+  assert(w % 2 == 0);
+
+  auto buf = cpu_buffer({frames.size(), 1, h + h, w});
+  convert_yuv422p(frames, (uint8_t*)buf->data(), w, h);
   return buf;
+}
+
+void convert_nv12(
+    const std::vector<AVFrame*>& frames,
+    uint8_t* dst,
+    size_t w,
+    size_t h) {
+  size_t h2 = h / 2;
+  for (const auto& f : frames) {
+    // Y
+    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
+    // UV
+    copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
+  }
 }
 
 CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
@@ -178,13 +225,7 @@ CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
   size_t h2 = h / 2;
 
   auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  uint8_t* dst = static_cast<uint8_t*>(buf->data());
-  for (const auto& f : frames) {
-    // Y
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // UV
-    copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
-  }
+  convert_nv12(frames, (uint8_t*)buf->data(), w, h);
   return buf;
 }
 } // namespace
@@ -207,7 +248,7 @@ CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
 // It might be more appropriate to convert the limited range to the full range
 // for YUV, but for now, it copies data as-is for both YUV and YUVJ.
 CPUBufferPtr convert_video_frames(const std::vector<AVFrame*>& frames) {
-  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+  auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
   if (pix_fmt == AV_PIX_FMT_CUDA) {
     SPDL_FAIL("The input frames are not CPU frames.");
   }
@@ -230,10 +271,10 @@ CPUBufferPtr convert_video_frames(const std::vector<AVFrame*>& frames) {
       return convert_yuv422p(frames);
     case AV_PIX_FMT_NV12: {
       return convert_nv12(frames);
-      default:
-        SPDL_FAIL(fmt::format(
-            "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
     }
+    default:
+      SPDL_FAIL(fmt::format(
+          "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
 } // namespace spdl::core
