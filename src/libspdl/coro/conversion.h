@@ -35,16 +35,18 @@ FuturePtr async_convert_frames_cuda(
     const std::optional<cuda_allocator>& cuda_allocator = std::nullopt,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
+template <MediaType media_type>
 FuturePtr async_batch_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
+    std::vector<FFmpegFramesPtr<media_type>>&& frames,
     ThreadPoolExecutorPtr demux_executor = nullptr);
 
+template <MediaType media_type>
 FuturePtr async_batch_convert_frames_cuda(
     std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
+    std::vector<FFmpegFramesPtr<media_type>>&& frames,
     int cuda_device_index,
     const uintptr_t cuda_stream = 0,
     const std::optional<cuda_allocator>& cuda_allocator = std::nullopt,
