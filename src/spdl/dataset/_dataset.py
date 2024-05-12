@@ -230,4 +230,10 @@ def split(dataset: DataSet, n: int, path_pattern: str):
     Returns:
         (List[DataSet]): Split DataSet objects.
     """
-    return dataset._impl._split(n, path_pattern)
+    paths = [path_pattern.format(i) for i in range(n)]
+    if len(set(paths)) != len(paths):
+        raise ValueError(
+            f"The output path of the destination database objects are not unique: {paths}"
+        )
+
+    return dataset._impl._split(paths)
