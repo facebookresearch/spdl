@@ -1,4 +1,4 @@
-"""spdl.dataset module implements catalogs and traversal methods for common datasets."""
+"""Catalogs and traversal methods for common datasets."""
 
 from ._dataset import AudioData, DataSet, ImageData
 
