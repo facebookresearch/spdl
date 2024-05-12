@@ -229,8 +229,8 @@ def batch_load_image(
     convert_options = convert_options or {}
 
     filter_desc = _preprocessing.get_video_filter_desc(
-        width=width,
-        height=height,
+        scale_width=width,
+        scale_height=height,
         pix_fmt=pix_fmt,
     )
 
