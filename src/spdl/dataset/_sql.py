@@ -2,6 +2,8 @@ import dataclasses
 import logging
 from typing import List
 
+from . import _utils
+
 from ._dataset import DataSet
 
 _LG = logging.getLogger(__name__)
@@ -136,7 +138,7 @@ class _DataSet:
         self._base_query = f"SELECT {','.join(cols)} FROM {table}"
 
         def _row_factory(cursor, row):
-            return record_class(**{k: v for k, v in zip(cols, row)})
+            return record_class(**{k: v for k, v in zip(cols, row, strict=True)})
 
         self._row_factory = _row_factory
 
@@ -172,8 +174,18 @@ class _DataSet:
             cur.row_factory = self._row_factory
         return cur
 
-    def __iter__(self):
-        return self._get_cursor(set_factory=True).execute(self._get_query())
+    def iterate(self, batch_size: int, drop_last: bool, max_batch: int | None):
+        limit = _get_limit(start=0, stop=None, step=1, _idx_col=self._idx_col)
+        if max_batch is not None:
+            if max_batch <= 0:
+                raise ValueError(
+                    f"`max_batch` must be a positive integer. Found: {max_batch}"
+                )
+            limit = f"{limit} LIMIT {max_batch * batch_size}"
+
+        query = self._get_query(limit=limit)
+        cur = self._get_cursor(set_factory=True)
+        return _utils._iter_batch(cur.execute(query), batch_size, drop_last)
 
     ###########################################################################
     # Map interface: (requires `_idx_col` attribute)
@@ -241,7 +253,7 @@ class _DataSet:
         """Sort the dataset by the given attribute."""
         self._sort(order_by=f"ORDER BY {attribute} {'DESC' if desc else 'ASC'}")
 
-    def split(self, n: int, path_pattern: str) -> List[DataSet]:
+    def _split(self, n: int, path_pattern: str) -> List[DataSet]:
         return _split(self, n, path_pattern)
 
 

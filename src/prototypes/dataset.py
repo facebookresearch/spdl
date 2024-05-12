@@ -69,3 +69,8 @@ for ds in datasets:
 # dataset = ImageNet(split="train", path="imagenet.db")
 # dataset.shuffle()
 # print(dataset)
+
+for i, batch in enumerate(dataset.iterate(batch_size=2, max_batch=5)):
+    print(i, f"{len(batch)}")
+    print("\n".join(f"{item}, {item._index}" for item in batch))
+    print()

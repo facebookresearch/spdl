@@ -109,7 +109,7 @@ def LibriSpeech(path: str, *, split: str) -> DataSet[AudioData]:
         split: Passed to [spdl.dataset.librispeech.get_flist][].
 
     Returns:
-        (DataSet[AudioData]): Dataset object.
+        Dataset object.
     """
     table = f"librispeech_{split}".replace("-", "_")
     idx_col = "_index"
