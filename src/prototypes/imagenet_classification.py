@@ -159,6 +159,12 @@ def _get_batch_generator(args, device):
 
     class_mapping, _ = get_mappings()
 
+    w, h = 224, 224
+
+    filter_desc = spdl.io.get_video_filter_desc(
+        scale_width=256, scale_height=256, crop_width=w, crop_height=h, pix_fmt="rgb24"
+    )
+
     async def _async_decode_func(paths):
         with torch.profiler.record_function("async_decode"):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
@@ -169,9 +175,7 @@ def _get_batch_generator(args, device):
                 height=None,
                 pix_fmt=None,
                 strict=True,
-                decode_options={
-                    "filter_desc": "scale=width=256:height=256,crop=224:224,format=rgb24",
-                },
+                decode_options={"filter_desc": filter_desc},
                 convert_options={
                     "cuda_device_index": 0,
                     "cuda_allocator": (
@@ -191,8 +195,8 @@ def _get_batch_generator(args, device):
             buffer = await spdl.io.async_batch_load_image_nvdec(
                 paths,
                 cuda_device_index=0,
-                width=224,
-                height=224,
+                width=w,
+                height=h,
                 pix_fmt="rgba",
                 decode_options={
                     "cuda_allocator": (
@@ -216,9 +220,7 @@ def _get_batch_generator(args, device):
                 height=None,
                 pix_fmt=None,
                 strict=True,
-                decode_options={
-                    "filter_desc": "scale=width=256:height=256,crop=224:224,format=rgb24",
-                },
+                decode_options={"filter_desc": filter_desc},
                 convert_options={
                     "cuda_device_index": 0,
                     "cuda_allocator": (
@@ -241,8 +243,8 @@ def _get_batch_generator(args, device):
             buffer = yield spdl.io.batch_load_image_nvdec(
                 paths,
                 cuda_device_index=0,
-                width=224,
-                height=224,
+                width=w,
+                height=h,
                 pix_fmt="rgba",
                 decode_options={
                     "cuda_allocator": (

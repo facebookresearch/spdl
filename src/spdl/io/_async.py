@@ -377,8 +377,8 @@ async def async_load_media(
         ...         "sample.jpg",
         ...         decode_options={
         ...             "filter_desc": spdl.io.get_video_filter_desc(
-        ...                 width=124,
-        ...                 height=96,
+        ...                 scale_width=124,
+        ...                 scale_height=96,
         ...                 pix_fmt="rgb24",
         ...             ),
         ...         }
@@ -505,8 +505,8 @@ async def async_batch_load_image(
         ... ]
         >>> coro = async_batch_load_image(
         ...     srcs,
-        ...     width=124,
-        ...     height=96,
+        ...     scale_width=124,
+        ...     scale_height=96,
         ...     pix_fmt="rgb24",
         ... )
         >>> buffer = asyncio.run(coro)
@@ -524,8 +524,8 @@ async def async_batch_load_image(
     convert_options = convert_options or {}
 
     filter_desc = _preprocessing.get_video_filter_desc(
-        width=width,
-        height=height,
+        scale_width=width,
+        scale_height=height,
         pix_fmt=pix_fmt,
     )
 
