@@ -206,7 +206,7 @@ CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
 //
 // It might be more appropriate to convert the limited range to the full range
 // for YUV, but for now, it copies data as-is for both YUV and YUVJ.
-CPUBufferPtr convert_video_frames_cpu(const std::vector<AVFrame*>& frames) {
+CPUBufferPtr convert_video_frames(const std::vector<AVFrame*>& frames) {
   auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
   if (pix_fmt == AV_PIX_FMT_CUDA) {
     SPDL_FAIL("The input frames are not CPU frames.");
