@@ -73,7 +73,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image",
-      &async_batch_convert_frames,
+      &async_batch_convert_frames<MediaType::Image>,
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
@@ -81,7 +81,7 @@ void register_conversion(nb::module_& m) {
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image_cuda",
-      &async_batch_convert_frames_cuda,
+      &async_batch_convert_frames_cuda<MediaType::Image>,
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),

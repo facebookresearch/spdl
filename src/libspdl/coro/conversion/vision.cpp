@@ -185,6 +185,7 @@ CPUBufferPtr convert_batch_image_frames(
 }
 } // namespace
 
+template <>
 FuturePtr async_batch_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
@@ -205,6 +206,7 @@ FuturePtr async_batch_convert_frames(
       detail::get_demux_executor_high_prio(executor));
 }
 
+template <>
 FuturePtr async_batch_convert_frames_cuda(
     std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
