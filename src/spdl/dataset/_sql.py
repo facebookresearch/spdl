@@ -253,8 +253,8 @@ class _DataSet:
         """Sort the dataset by the given attribute."""
         self._sort(order_by=f"ORDER BY {attribute} {'DESC' if desc else 'ASC'}")
 
-    def _split(self, n: int, path_pattern: str) -> List[DataSet]:
-        return _split(self, n, path_pattern)
+    def _split(self, paths: str) -> List[DataSet]:
+        return _split(self, paths)
 
 
 def make_dataset(*args, **kwargs) -> DataSet:
@@ -272,15 +272,11 @@ def _split_table(con, src_table, tgt_table, n, i, idx_col):
     con.execute(f"UPDATE {tgt_table} SET {idx_col} = rowid - 1;")
 
 
-def _split(src: _DataSet, n: int, path_pattern: str) -> List[DataSet]:
+def _split(src: _DataSet, paths: List[DataSet]) -> List[DataSet]:
     """Split the dataset and create new datasets.
 
     Args:
-        n: The number of splits.
-
-        path_pattern: The path pattern to which the split datsets are stored.
-            The index will be filled with [str.format][] function, (i.e.
-            `path_pattern.format(i)`).
+        paths: The paths to which new datasets are written.
 
     !!! note
 
@@ -292,12 +288,7 @@ def _split(src: _DataSet, n: int, path_pattern: str) -> List[DataSet]:
     """
     import sqlite3
 
-    paths = [path_pattern.format(i) for i in range(n)]
-    if len(set(paths)) != len(paths):
-        raise ValueError(
-            f"The output path of the destination database objects are not unique: {paths}"
-        )
-
+    n = len(paths)
     ret = []
     tmp_schema = "split"
     tgt_table = f"{tmp_schema}.{src.table}"
