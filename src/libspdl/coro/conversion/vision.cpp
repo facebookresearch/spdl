@@ -66,7 +66,7 @@ CPUBufferPtr convert_video(const std::vector<AVFrame*>& frames)
   if (static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA) {
     SPDL_FAIL_INTERNAL("FFmpeg-native CUDA frames are not supported.");
   }
-  auto buf = spdl::core::convert_video_frames_cpu(frames);
+  auto buf = spdl::core::convert_video_frames(frames);
   if constexpr (media_type == MediaType::Image) {
     buf->shape.erase(buf->shape.begin()); // Trim the first dim
   }
