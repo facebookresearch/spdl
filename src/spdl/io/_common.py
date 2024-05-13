@@ -100,6 +100,9 @@ def _futurize_task(func, *args, **kwargs):
 
 
 def _futurize_generator(func, num_items, *args, **kwargs):
+    if num_items <= 0:
+        raise ValueError("[INTERNAL] The number of futures must be greater than 0.")
+
     futures = [Future() for _ in range(num_items)]
 
     index = 0

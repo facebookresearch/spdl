@@ -1,19 +1,8 @@
 import asyncio
 import builtins
 import logging
-from collections.abc import Coroutine
 from concurrent.futures import Future
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Dict,
-    List,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-)
+from typing import Any, AsyncIterator, Dict, List, Sequence, Tuple, Type, TypeVar
 
 import spdl.io
 from spdl.io import CPUBuffer, CUDABuffer, Frames, ImageFrames, ImagePackets, Packets
@@ -93,17 +82,17 @@ async def _handle_future(future: Future[T]) -> T:
         raise e
 
 
-async def _async_task(func, *args, **kwargs):
+def _async_task(func, *args, **kwargs):
     future = _common._futurize_task(func, *args, **kwargs)
-    return await _handle_future(future)
+    return _handle_future(future)
 
 
-async def _handle_futures(futures):
+async def _handle_futures(futures: Sequence[Future[T]]) -> AsyncIterator[T]:
     try:
         for future in futures:
             yield await asyncio.futures.wrap_future(future)
     except asyncio.CancelledError as ce:
-        future.__spdl_future.cancel()
+        future.__spdl_future.cancel()  # pyre-ignore: [16]
         try:
             # Wait till the cancel request is fullfilled or job finishes
             await asyncio.futures.wrap_future(futures[-1])
@@ -117,13 +106,12 @@ async def _handle_futures(futures):
         raise ce
 
 
-async def _async_gen(func, num_items, *args, **kwargs):
+def _async_gen(func, num_items, *args, **kwargs):
     futures = _common._futurize_generator(func, num_items, *args, **kwargs)
-    async for item in _handle_futures(futures):
-        yield item
+    return _handle_futures(futures)
 
 
-def async_streaming_demux(
+async def async_streaming_demux(
     media_type: str,
     src: str | bytes,
     timestamps: List[Tuple[float, float]],
@@ -144,21 +132,19 @@ def async_streaming_demux(
     Returns:
         [AudioPackets][spdl.io.AudioPackets] or [VideoPackets][spdl.io.VideoPackets] generator.
     """
+    if not timestamps:
+        raise ValueError("`timestamps` cannot be an empty list.")
     func = _common._get_demux_func(media_type, src)
-    return _async_gen(func, len(timestamps), src, timestamps, **kwargs)
+    async for packets in _async_gen(func, len(timestamps), src, timestamps, **kwargs):
+        yield packets
 
 
-async def _fetch_one(gen):
-    async for packets in gen:
-        return packets
-
-
-def async_demux_media(
+async def async_demux_media(
     media_type: str,
     src: str | bytes,
     timestamp: Tuple[float, float] | None = None,
     **kwargs,
-) -> Coroutine[None, None, Type[Packets]]:
+) -> Type[Packets]:
     """Demux image or one chunk of audio/video region from the source.
 
     Args:
@@ -173,17 +159,17 @@ def async_demux_media(
         demux_config (DemuxConfig): Custom I/O config.
 
     Returns:
-        Awaitable which returns an AudioPackets/VideoPackets/ImagePackets object.
+        AudioPackets/VideoPackets/ImagePackets object.
     """
     if media_type == "image":
         func = _common._get_demux_func(media_type, src)
-        return _async_task(func, src, **kwargs)
+        return await _async_task(func, src, **kwargs)
 
     timestamps = [(-float("inf"), float("inf")) if timestamp is None else timestamp]
-    return _fetch_one(async_streaming_demux(media_type, src, timestamps, **kwargs))
+    return await anext(async_streaming_demux(media_type, src, timestamps, **kwargs))
 
 
-def async_decode_packets(packets: Type[Packets], **kwargs) -> Awaitable[Type[Frames]]:
+async def async_decode_packets(packets: Type[Packets], **kwargs) -> Type[Frames]:
     """Decode packets.
 
     Args:
@@ -197,7 +183,7 @@ def async_decode_packets(packets: Type[Packets], **kwargs) -> Awaitable[Type[Fra
             *Optional:* Custom filter applied after decoding.
 
     Returns:
-        An awaitable which returns a Frames object.
+        A Frames object.
             The type of the returned object corresponds to the input Packets type.
 
             - `AudioPackets` -> `AudioFrames`
@@ -207,14 +193,14 @@ def async_decode_packets(packets: Type[Packets], **kwargs) -> Awaitable[Type[Fra
     func = _common._get_decoding_func(packets)
     if "filter_desc" not in kwargs:
         kwargs["filter_desc"] = _preprocessing.get_filter_desc(packets)
-    return _async_task(func, packets, **kwargs)
+    return await _async_task(func, packets, **kwargs)
 
 
-def async_decode_packets_nvdec(
+async def async_decode_packets_nvdec(
     packets: Type[Packets] | List[ImagePackets],
     cuda_device_index: int,
     **kwargs,
-) -> Awaitable[CUDABuffer]:
+) -> CUDABuffer:
     """Decode packets with NVDEC.
 
     Args:
@@ -234,17 +220,18 @@ def async_decode_packets_nvdec(
             Supported value is `"rgba"`. Default: `"rgba"`.
 
     Returns:
-        Awaitable which returns a Buffer object.
+        A CUDABuffer object.
     """
     func = _common._get_nvdec_decoding_func(packets)
-    return _async_task(func, packets, cuda_device_index=cuda_device_index, **kwargs)
+    kwargs["cuda_device_index"] = cuda_device_index
+    return await _async_task(func, packets, **kwargs)
 
 
-def async_decode_media(
+async def async_decode_media(
     media_type: str,
     src: str | bytes,
     **kwargs,
-) -> Coroutine[None, None, Type[Frames]]:
+) -> Type[Frames]:
     """Perform demuxing and decoding as one background job.
 
     Args:
@@ -257,14 +244,14 @@ def async_decode_media(
         Awaitable which returns Frames object.
     """
     func = _common._get_decode_from_source_func(media_type, src)
-    return _async_task(func, src, **kwargs)
+    return await _async_task(func, src, **kwargs)
 
 
-def async_convert_frames(
+async def async_convert_frames(
     frames: Type[Frames] | Sequence[Frames],
     cuda_device_index: int | None = None,
     **kwargs,
-) -> Awaitable[CPUBuffer | CUDABuffer]:
+) -> CPUBuffer | CUDABuffer:
     """Convert the decoded frames to buffer.
 
     Args:
@@ -318,12 +305,12 @@ def async_convert_frames(
             [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
 
     Returns:
-        Awaitable which returns a Buffer object.
+        A Buffer object.
     """
     func = _common._get_conversion_func(frames, cuda_device_index)
     if cuda_device_index is not None:
         kwargs["cuda_device_index"] = cuda_device_index
-    return _async_task(func, frames, **kwargs)
+    return await _async_task(func, frames, **kwargs)
 
 
 ################################################################################
@@ -531,7 +518,8 @@ async def async_batch_load_image(
 
     if filter_desc and "filter_desc" in decode_options:
         raise ValueError(
-            "`width`, `height` or `pix_fmt` and `filter_desc` in `decode_options` cannot be present at the same time."
+            "`width`, `height` or `pix_fmt` and `filter_desc` in `decode_options` "
+            "cannot be present at the same time."
         )
     elif filter_desc:
         decode_options["filter_desc"] = filter_desc
