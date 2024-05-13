@@ -22,69 +22,6 @@ using spdl::core::InternalError;
 ////////////////////////////////////////////////////////////////////////////////
 // Video/Image
 ////////////////////////////////////////////////////////////////////////////////
-namespace {
-
-template <MediaType media_type>
-void check_consistency(const std::vector<AVFrame*>& frames)
-  requires(media_type != MediaType::Audio)
-{
-  auto numel = frames.size();
-  if (numel == 0) {
-    SPDL_FAIL("No frame to convert to buffer.");
-  }
-  if constexpr (media_type == MediaType::Image) {
-    if (numel != 1) {
-      SPDL_FAIL_INTERNAL(fmt::format(
-          "There must be exactly one frame to convert to buffer. Found: {}",
-          numel));
-    }
-  }
-  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
-  int height = frames[0]->height, width = frames[0]->width;
-  for (auto* f : frames) {
-    if (f->height != height || f->width != width) {
-      SPDL_FAIL(fmt::format(
-          "Cannot convert the frames as the frames do not have the same size. "
-          "Reference WxH = {}x{}, found {}x{}.",
-          height,
-          width,
-          f->height,
-          f->width));
-    }
-    if (static_cast<AVPixelFormat>(f->format) != pix_fmt) {
-      SPDL_FAIL(fmt::format(
-          "Cannot convert the frames as the frames do not have the same pixel format."));
-    }
-  }
-}
-
-template <MediaType media_type>
-CPUBufferPtr convert_video(const std::vector<AVFrame*>& frames)
-  requires(media_type != MediaType::Audio)
-{
-  check_consistency<media_type>(frames);
-  if (static_cast<AVPixelFormat>(frames[0]->format) == AV_PIX_FMT_CUDA) {
-    SPDL_FAIL_INTERNAL("FFmpeg-native CUDA frames are not supported.");
-  }
-  auto buf = spdl::core::convert_video_frames(frames);
-  if constexpr (media_type == MediaType::Image) {
-    buf->shape.erase(buf->shape.begin()); // Trim the first dim
-  }
-  return buf;
-}
-
-template <MediaType media_type>
-CPUBufferPtr convert_vision_frames(const FFmpegFramesPtr<media_type> frames)
-  requires(media_type != MediaType::Audio)
-{
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_vision_frames",
-      perfetto::Flow::ProcessScoped(frames->get_id()));
-  return convert_video<media_type>(frames->get_frames());
-}
-} // namespace
-
 template <MediaType media_type>
 FuturePtr async_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
@@ -94,7 +31,7 @@ FuturePtr async_convert_frames(
   auto task = folly::coro::co_invoke(
       [=](FFmpegFramesPtr<media_type>&& frm)
           -> folly::coro::Task<CPUBufferPtr> {
-        co_return convert_vision_frames<media_type>(std::move(frm));
+        co_return spdl::core::convert_frames<media_type>(std::move(frm));
       },
       std::move(frames));
   return detail::execute_task_with_callback(
@@ -129,7 +66,7 @@ FuturePtr async_convert_frames_cuda(
       [=](FFmpegFramesPtr<media_type>&& frm)
           -> folly::coro::Task<CUDABufferPtr> {
         co_return convert_to_cuda(
-            convert_vision_frames<media_type>(std::move(frm)),
+            spdl::core::convert_frames<media_type>(std::move(frm)),
             cuda_device_index,
             cuda_stream,
             cuda_allocator);

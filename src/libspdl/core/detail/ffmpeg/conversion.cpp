@@ -316,6 +316,47 @@ CPUBufferPtr convert_nv12(
 }
 } // namespace
 
+namespace {
+template <MediaType media_type>
+void check_frame_consistency(const FFmpegFramesPtr<media_type>& frames_ptr)
+  requires(media_type != MediaType::Audio)
+{
+  auto numel = frames_ptr->get_num_frames();
+  if (numel == 0) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  if constexpr (media_type == MediaType::Image) {
+    if (numel != 1) {
+      SPDL_FAIL_INTERNAL(fmt::format(
+          "There must be exactly one frame to convert to buffer. Found: {}",
+          numel));
+    }
+  }
+  auto frames = frames_ptr->get_frames();
+  auto pix_fmt = static_cast<AVPixelFormat>(frames[0]->format);
+  if (pix_fmt == AV_PIX_FMT_CUDA) {
+    SPDL_FAIL_INTERNAL("FFmpeg-native CUDA frames are not supported.");
+  }
+
+  int height = frames[0]->height, width = frames[0]->width;
+  for (auto* f : frames) {
+    if (f->height != height || f->width != width) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frames as the frames do not have the same size. "
+          "Reference WxH = {}x{}, found {}x{}.",
+          height,
+          width,
+          f->height,
+          f->width));
+    }
+    if (static_cast<AVPixelFormat>(f->format) != pix_fmt) {
+      SPDL_FAIL(fmt::format(
+          "Cannot convert the frames as the frames do not have the same pixel format."));
+    }
+  }
+}
+} // namespace
+
 // Note:
 //
 // YUV is a limited range (16 - 235), while YUVJ is a full range. (0-255).
@@ -333,36 +374,91 @@ CPUBufferPtr convert_nv12(
 //
 // It might be more appropriate to convert the limited range to the full range
 // for YUV, but for now, it copies data as-is for both YUV and YUVJ.
-CPUBufferPtr convert_video_frames(const std::vector<AVFrame*>& frames) {
-  auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
-  if (pix_fmt == AV_PIX_FMT_CUDA) {
-    SPDL_FAIL("The input frames are not CPU frames.");
-  }
-  switch (pix_fmt) {
-    case AV_PIX_FMT_GRAY8:
-      // Technically, not a planer format, but it's the same.
-      return convert_planer(frames, 1);
-    case AV_PIX_FMT_RGBA:
-      return convert_interleaved(frames, 4);
-    case AV_PIX_FMT_RGB24:
-      return convert_interleaved(frames);
-    case AV_PIX_FMT_YUVJ444P:
-    case AV_PIX_FMT_YUV444P:
-      return convert_planer(frames, 3);
-    case AV_PIX_FMT_YUVJ420P:
-    case AV_PIX_FMT_YUV420P:
-      return convert_yuv420p(frames);
-    case AV_PIX_FMT_YUVJ422P:
-    case AV_PIX_FMT_YUV422P:
-      return convert_yuv422p(frames);
-    case AV_PIX_FMT_NV12: {
-      return convert_nv12(frames);
+template <MediaType media_type>
+CPUBufferPtr convert_frames(const FFmpegFramesPtr<media_type>& frames_ptr) {
+  TRACE_EVENT(
+      "decoding",
+      "core::convert_frames",
+      perfetto::Flow::ProcessScoped(frames_ptr->get_id()));
+  check_frame_consistency<media_type>(frames_ptr);
+
+  auto frames = frames_ptr->get_frames();
+  auto ret = [&]() {
+    auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
+
+    switch (pix_fmt) {
+      case AV_PIX_FMT_GRAY8:
+        // Technically, not a planer format, but it's the same.
+        return convert_planer(frames, 1);
+      case AV_PIX_FMT_RGBA:
+        return convert_interleaved(frames, 4);
+      case AV_PIX_FMT_RGB24:
+        return convert_interleaved(frames);
+      case AV_PIX_FMT_YUVJ444P:
+      case AV_PIX_FMT_YUV444P:
+        return convert_planer(frames, 3);
+      case AV_PIX_FMT_YUVJ420P:
+      case AV_PIX_FMT_YUV420P:
+        return convert_yuv420p(frames);
+      case AV_PIX_FMT_YUVJ422P:
+      case AV_PIX_FMT_YUV422P:
+        return convert_yuv422p(frames);
+      case AV_PIX_FMT_NV12:
+        return convert_nv12(frames);
+      default:
+        SPDL_FAIL(fmt::format(
+            "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
     }
-    default:
+  }();
+
+  if constexpr (media_type == MediaType::Image) {
+    ret->shape.erase(ret->shape.begin()); // Trim the first dim
+  }
+  return ret;
+}
+
+template CPUBufferPtr convert_frames(const FFmpegVideoFramesPtr& frames);
+
+template CPUBufferPtr convert_frames(const FFmpegImageFramesPtr& frames);
+
+namespace {
+template <MediaType media_type>
+void check_batch_frame_consistency(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch) {
+  auto& frames0 = batch.at(0)->get_frames();
+  auto w = frames0.at(0)->width, h = frames0.at(0)->height;
+  auto num_frames = frames0.size();
+
+  auto pix_fmt0 = static_cast<AVPixelFormat>(frames0.at(0)->format);
+  for (auto& frames_ptr : batch) {
+    check_frame_consistency(frames_ptr);
+    auto frames = frames_ptr->get_frames();
+    auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
+    if (pix_fmt != pix_fmt0) {
       SPDL_FAIL(fmt::format(
-          "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
+          "The input video frames must have the same pixel format. Expected {}, but found {}",
+          av_get_pix_fmt_name(pix_fmt0),
+          av_get_pix_fmt_name(pix_fmt)));
+    }
+    if (frames.size() != num_frames) {
+      SPDL_FAIL(fmt::format(
+          "The number of frames must be the same. Expected {}, but found {}",
+          num_frames,
+          frames.size()));
+    }
+    for (auto& frame : frames) {
+      if (frame->width != w || frame->height != h) {
+        SPDL_FAIL(fmt::format(
+            "The input video frames must be the same size. Expected {}x{}, but found {}x{}",
+            w,
+            h,
+            frame->width,
+            frame->height));
+      }
+    }
   }
 }
+} // namespace
 
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
