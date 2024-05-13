@@ -58,15 +58,20 @@ def _get_conversion_func(frames, cuda_device_index=None):
             name = "async_convert_video"
         case _libspdl.FFmpegImageFrames:
             name = "async_convert_image"
-        case _:
-            if not isinstance(frames, list):
-                raise TypeError(f"Unexpected type: {t}.")
-            if all(isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
+        case builtins.list:
+            if all(isinstance(f, _libspdl.FFmpegAudioFrames) for f in frames):
+                name = "async_convert_batch_audio"
+            elif all(isinstance(f, _libspdl.FFmpegVideoFrames) for f in frames):
+                name = "async_convert_batch_video"
+            elif all(isinstance(f, _libspdl.FFmpegImageFrames) for f in frames):
                 name = "async_convert_batch_image"
             else:
                 raise TypeError(
-                    f"Unexpected type: {t}. When the container type is list, all frames must be either FFmpegImageFrames."
+                    "When the container type is list, all the frames must be "
+                    f"same type. Found: {({type(f) for f in frames})}"
                 )
+        case _:
+            raise TypeError(f"Unexpected type: {t}.")
     if cuda_device_index is not None:
         name = f"{name}_cuda"
     return getattr(_libspdl, name)

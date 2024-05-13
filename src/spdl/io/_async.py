@@ -9,10 +9,10 @@ from typing import (
     Awaitable,
     Dict,
     List,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
-    Union,
 )
 
 import spdl.io
@@ -125,7 +125,7 @@ async def _async_gen(func, num_items, *args, **kwargs):
 
 def async_streaming_demux(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ) -> AsyncIterator[Type[Packets]]:
@@ -155,7 +155,7 @@ async def _fetch_one(gen):
 
 def async_demux_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     timestamp: Tuple[float, float] | None = None,
     **kwargs,
 ) -> Coroutine[None, None, Type[Packets]]:
@@ -242,7 +242,7 @@ def async_decode_packets_nvdec(
 
 def async_decode_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     **kwargs,
 ) -> Coroutine[None, None, Type[Frames]]:
     """Perform demuxing and decoding as one background job.
@@ -261,14 +261,14 @@ def async_decode_media(
 
 
 def async_convert_frames(
-    frames: Type[Frames] | List[ImageFrames],
+    frames: Type[Frames] | Sequence[Frames],
     cuda_device_index: int | None = None,
     **kwargs,
 ) -> Awaitable[CPUBuffer | CUDABuffer]:
     """Convert the decoded frames to buffer.
 
     Args:
-        frames (Frames): Frames object.
+        frames: Frames objects.
 
     Other args:
         cuda_device_index (int):
@@ -333,7 +333,7 @@ def async_convert_frames(
 
 async def async_load_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     *,
     demux_options: Dict[str, Any] | None = None,
     decode_options: Dict[str, Any] | None = None,
@@ -460,7 +460,7 @@ def _get_err_msg(src, err):
 
 
 async def async_batch_load_image(
-    srcs: List[Union[str, bytes]],
+    srcs: List[str | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -560,7 +560,7 @@ async def async_batch_load_image(
 
 
 async def async_batch_load_image_nvdec(
-    srcs: List[Union[str, bytes]],
+    srcs: List[str | bytes],
     *,
     cuda_device_index: int,
     width: int | None,
