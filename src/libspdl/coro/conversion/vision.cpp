@@ -163,48 +163,32 @@ template FuturePtr async_convert_frames_cuda<MediaType::Image>(
 ////////////////////////////////////////////////////////////////////////////////
 // Batch Image
 ////////////////////////////////////////////////////////////////////////////////
-namespace {
-std::vector<AVFrame*> merge_frames(
-    const std::vector<FFmpegFramesPtr<MediaType::Image>>& batch) {
-  std::vector<AVFrame*> ret;
-  ret.reserve(batch.size());
-  for (auto& frame : batch) {
-    if (frame->get_num_frames() != 1) {
-      SPDL_FAIL_INTERNAL(
-          "Unexpected number of frames are found in one of the image frames.");
-    }
-    ret.push_back(frame->get_frames()[0]);
-  }
-  return ret;
-}
-
-CPUBufferPtr convert_batch_image_frames(
-    const std::vector<FFmpegFramesPtr<MediaType::Image>>& batch) {
-  TRACE_EVENT("decoding", "core::convert_batch_image_frames");
-  return convert_video<MediaType::Video>(merge_frames(batch));
-}
-} // namespace
-
-template <>
+template <MediaType media_type>
 FuturePtr async_batch_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
+    std::vector<FFmpegFramesPtr<media_type>>&& frames,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [=](std::vector<FFmpegFramesPtr<MediaType::Image>>&& frms)
+      [=](std::vector<FFmpegFramesPtr<media_type>>&& frms)
           -> folly::coro::Task<CPUBufferPtr> {
-        co_return convert_batch_image_frames(frms);
+        co_return convert_frames(frms);
       },
       // Pass the ownership of FramePtrs to executor thread, so that they are
       // deallocated there, instead of the main thread.
       std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
-      set_result,
-      notify_exception,
+      std::move(set_result),
+      std::move(notify_exception),
       detail::get_demux_executor_high_prio(executor));
 }
+
+template FuturePtr async_batch_convert_frames(
+    std::function<void(CPUBufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
+    ThreadPoolExecutorPtr executor);
 
 template <>
 FuturePtr async_batch_convert_frames_cuda(
@@ -219,7 +203,7 @@ FuturePtr async_batch_convert_frames_cuda(
       [=](std::vector<FFmpegFramesPtr<MediaType::Image>>&& frms)
           -> folly::coro::Task<CUDABufferPtr> {
         co_return convert_to_cuda(
-            convert_batch_image_frames(frms),
+            convert_frames(frms),
             cuda_device_index,
             cuda_stream,
             cuda_allocator);
@@ -230,8 +214,8 @@ FuturePtr async_batch_convert_frames_cuda(
       std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
-      set_result,
-      notify_exception,
+      std::move(set_result),
+      std::move(notify_exception),
       detail::get_demux_executor_high_prio(executor));
 }
 
