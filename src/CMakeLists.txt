@@ -38,8 +38,7 @@ set(srcs
   libspdl/coro/decoding/ffmpeg.cpp
   libspdl/coro/decoding/nvdec.cpp
   libspdl/coro/decoding/sleep.cpp
-  libspdl/coro/conversion/audio.cpp
-  libspdl/coro/conversion/vision.cpp
+  libspdl/coro/conversion.cpp
   )
 
 if (SPDL_USE_CUDA)
