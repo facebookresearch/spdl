@@ -103,37 +103,6 @@ void register_decoding(nb::module_& m) {
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
-  m.def(
-      "async_decode_image_from_buffer",
-      [](std::function<void(FFmpegFramesPtr<MediaType::Image>)> set_result,
-         std::function<void(std::string, bool)> notify_exception,
-         // TODO: check if one can use string_view directly.
-         nb::bytes data,
-         const std::optional<DemuxConfig>& demux_config,
-         const std::optional<DecodeConfig>& decode_config,
-         std::string filter_desc,
-         std::shared_ptr<ThreadPoolExecutor> _executor,
-         bool _zero_clear) {
-        return async_decode_from_bytes<MediaType::Image>(
-            std::move(set_result),
-            std::move(notify_exception),
-            std::string_view{data.c_str(), data.size()},
-            demux_config,
-            decode_config,
-            std::move(filter_desc),
-            _executor,
-            _zero_clear);
-      },
-      nb::arg("set_result"),
-      nb::arg("notify_exception"),
-      nb::arg("data"),
-      // nb::kw_only(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("decoder_config") = nb::none(),
-      nb::arg("filter_desc") = "",
-      nb::arg("executor") = nullptr,
-      nb::arg("_zero_clear") = false);
-
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC
   ////////////////////////////////////////////////////////////////////////////////
