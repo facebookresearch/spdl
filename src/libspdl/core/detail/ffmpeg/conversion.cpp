@@ -119,19 +119,9 @@ void copy_interleaved(
   }
 }
 
-CPUBufferPtr convert_interleaved(
-    const std::vector<AVFrame*>& frames,
-    unsigned int num_channels = 3) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-
-  auto buf = cpu_buffer({frames.size(), h, w, num_channels});
-  copy_interleaved(frames, (uint8_t*)buf->data(), num_channels, w, h);
-  return buf;
-}
-
 template <MediaType media_type>
 CPUBufferPtr convert_interleaved(
-    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    const std::vector<const FFmpegFrames<media_type>*>& batch,
     size_t num_channels,
     size_t num_frames,
     size_t w,
@@ -158,19 +148,9 @@ void copy_planer(
   }
 }
 
-CPUBufferPtr convert_planer(
-    const std::vector<AVFrame*>& frames,
-    size_t num_planes) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-
-  auto buf = cpu_buffer({frames.size(), num_planes, h, w});
-  copy_planer(frames, (uint8_t*)buf->data(), num_planes, w, h);
-  return buf;
-}
-
 template <MediaType media_type>
 CPUBufferPtr convert_planer(
-    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    const std::vector<const FFmpegFrames<media_type>*>& batch,
     size_t num_planes,
     size_t num_frames,
     size_t w,
@@ -200,19 +180,9 @@ void copy_yuv420p(
   }
 }
 
-CPUBufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2;
-
-  auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  copy_yuv420p(frames, (uint8_t*)buf->data(), w, h);
-  return buf;
-}
-
 template <MediaType media_type>
 CPUBufferPtr convert_yuv420p(
-    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    const std::vector<const FFmpegFrames<media_type>*>& batch,
     size_t num_frames,
     size_t w,
     size_t h) {
@@ -246,18 +216,9 @@ void copy_yuv422p(
   }
 }
 
-CPUBufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(w % 2 == 0);
-
-  auto buf = cpu_buffer({frames.size(), 1, h + h, w});
-  copy_yuv422p(frames, (uint8_t*)buf->data(), w, h);
-  return buf;
-}
-
 template <MediaType media_type>
 CPUBufferPtr convert_yuv422p(
-    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    const std::vector<const FFmpegFrames<media_type>*>& batch,
     size_t num_frames,
     size_t w,
     size_t h) {
@@ -287,19 +248,9 @@ void copy_nv12(
   }
 }
 
-CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
-  size_t h = frames[0]->height, w = frames[0]->width;
-  assert(h % 2 == 0 && w % 2 == 0);
-  size_t h2 = h / 2;
-
-  auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  copy_nv12(frames, (uint8_t*)buf->data(), w, h);
-  return buf;
-}
-
 template <MediaType media_type>
 CPUBufferPtr convert_nv12(
-    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    const std::vector<const FFmpegFrames<media_type>*>& batch,
     size_t num_frames,
     size_t w,
     size_t h) {
@@ -318,7 +269,7 @@ CPUBufferPtr convert_nv12(
 
 namespace {
 template <MediaType media_type>
-void check_frame_consistency(const FFmpegFramesPtr<media_type>& frames_ptr)
+void check_frame_consistency(const FFmpegFrames<media_type>* frames_ptr)
   requires(media_type != MediaType::Audio)
 {
   auto numel = frames_ptr->get_num_frames();
@@ -355,76 +306,13 @@ void check_frame_consistency(const FFmpegFramesPtr<media_type>& frames_ptr)
     }
   }
 }
-} // namespace
 
-// Note:
-//
-// YUV is a limited range (16 - 235), while YUVJ is a full range. (0-255).
-//
-// YUVJ == YUV + AVCOL_RANGE_JPEG
-//
-// AVCOL_RANGE_JPEG has slight different value range for Chroma.
-// (1 - 255 instead of 0 - 255)
-// https://ffmpeg.org/doxygen/5.1/pixfmt_8h.html#a3da0bf691418bc22c4bcbe6583ad589a
-//
-// FFmpeg emits a warning like
-// `deprecated pixel format used, make sure you did set range correctly`
-//
-// See also: https://superuser.com/a/1273941
-//
-// It might be more appropriate to convert the limited range to the full range
-// for YUV, but for now, it copies data as-is for both YUV and YUVJ.
-template <MediaType media_type>
-CPUBufferPtr convert_frames(const FFmpegFramesPtr<media_type>& frames_ptr) {
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_frames",
-      perfetto::Flow::ProcessScoped(frames_ptr->get_id()));
-  check_frame_consistency<media_type>(frames_ptr);
-
-  auto frames = frames_ptr->get_frames();
-  auto ret = [&]() {
-    auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
-
-    switch (pix_fmt) {
-      case AV_PIX_FMT_GRAY8:
-        // Technically, not a planer format, but it's the same.
-        return convert_planer(frames, 1);
-      case AV_PIX_FMT_RGBA:
-        return convert_interleaved(frames, 4);
-      case AV_PIX_FMT_RGB24:
-        return convert_interleaved(frames);
-      case AV_PIX_FMT_YUVJ444P:
-      case AV_PIX_FMT_YUV444P:
-        return convert_planer(frames, 3);
-      case AV_PIX_FMT_YUVJ420P:
-      case AV_PIX_FMT_YUV420P:
-        return convert_yuv420p(frames);
-      case AV_PIX_FMT_YUVJ422P:
-      case AV_PIX_FMT_YUV422P:
-        return convert_yuv422p(frames);
-      case AV_PIX_FMT_NV12:
-        return convert_nv12(frames);
-      default:
-        SPDL_FAIL(fmt::format(
-            "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
-    }
-  }();
-
-  if constexpr (media_type == MediaType::Image) {
-    ret->shape.erase(ret->shape.begin()); // Trim the first dim
-  }
-  return ret;
-}
-
-template CPUBufferPtr convert_frames(const FFmpegVideoFramesPtr& frames);
-
-template CPUBufferPtr convert_frames(const FFmpegImageFramesPtr& frames);
-
-namespace {
 template <MediaType media_type>
 void check_batch_frame_consistency(
-    const std::vector<FFmpegFramesPtr<media_type>>& batch) {
+    const std::vector<const FFmpegFrames<media_type>*>& batch) {
+  if (batch.empty()) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
   auto& frames0 = batch.at(0)->get_frames();
   auto w = frames0.at(0)->width, h = frames0.at(0)->height;
   auto num_frames = frames0.size();
@@ -460,48 +348,34 @@ void check_batch_frame_consistency(
 }
 } // namespace
 
+// Note:
+//
+// YUV is a limited range (16 - 235), while YUVJ is a full range. (0-255).
+//
+// YUVJ == YUV + AVCOL_RANGE_JPEG
+//
+// AVCOL_RANGE_JPEG has slight different value range for Chroma.
+// (1 - 255 instead of 0 - 255)
+// https://ffmpeg.org/doxygen/5.1/pixfmt_8h.html#a3da0bf691418bc22c4bcbe6583ad589a
+//
+// FFmpeg emits a warning like
+// `deprecated pixel format used, make sure you did set range correctly`
+//
+// See also: https://superuser.com/a/1273941
+//
+// It might be more appropriate to convert the limited range to the full range
+// for YUV, but for now, it copies data as-is for both YUV and YUVJ.
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
-    const std::vector<FFmpegFramesPtr<media_type>>& batch) {
-  auto& ref_frames = batch.at(0)->get_frames();
-  auto w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
-  auto num_frames = ref_frames.size();
-
-  auto pix_fmt = static_cast<AVPixelFormat>(ref_frames.at(0)->format);
-  for (auto& frames_ptr : batch) {
-    auto frames = frames_ptr->get_frames();
-    auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
-    if (pix_fmt == AV_PIX_FMT_CUDA) {
-      SPDL_FAIL("The input frames must be CPU, but found CUDA frames.");
-    }
-
-    if constexpr (media_type == MediaType::Image) {
-      if (frames.size() != 1) {
-        SPDL_FAIL_INTERNAL(fmt::format(
-            "Expected the ImageFrames class to hold only one frame, but found: {}.",
-            frames.size()));
-      }
-    }
-
-    if (frames.size() != num_frames) {
-      SPDL_FAIL(fmt::format(
-          "The number of frames must be the same. Expected {}, but found {}",
-          num_frames,
-          frames.size()));
-    }
-    for (auto& frame : frames) {
-      if (frame->width != w || frame->height != h) {
-        SPDL_FAIL(fmt::format(
-            "The input video frames must be the same size. Expected {}x{}, but found {}x{}",
-            w,
-            h,
-            frame->width,
-            frame->height));
-      }
-    }
-  }
+    const std::vector<const FFmpegFrames<media_type>*>& batch) {
+  TRACE_EVENT("decoding", "core::convert_frames");
+  check_batch_frame_consistency(batch);
 
   auto ret = [&]() {
+    auto& ref_frames = batch.at(0)->get_frames();
+    auto w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+    auto num_frames = ref_frames.size();
+    auto pix_fmt = static_cast<AVPixelFormat>(ref_frames.at(0)->format);
     switch (pix_fmt) {
       case AV_PIX_FMT_GRAY8:
         // Technically, not a planer format, but it's the same.
@@ -531,13 +405,16 @@ CPUBufferPtr convert_frames(
   if constexpr (media_type == MediaType::Image) {
     // Remove the 2nd num_frame dimension (which is 1).
     // BNCHW -> BCHW.
-    ret->shape.erase(std::next(ret->shape.begin())); // Trim the first dim
+    ret->shape.erase(std::next(ret->shape.begin()));
   }
 
   return ret;
 }
 
 template CPUBufferPtr convert_frames(
-    const std::vector<FFmpegImageFramesPtr>& batch);
+    const std::vector<const FFmpegImageFrames*>& batch);
+
+template CPUBufferPtr convert_frames(
+    const std::vector<const FFmpegVideoFrames*>& batch);
 
 } // namespace spdl::core

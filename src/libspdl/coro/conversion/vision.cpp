@@ -16,8 +16,17 @@ extern "C" {
 }
 
 namespace spdl::coro {
-
-using spdl::core::InternalError;
+namespace {
+template <MediaType media_type>
+std::vector<const spdl::core::FFmpegFrames<media_type>*> _ref(
+    std::vector<FFmpegFramesPtr<media_type>>& frames) {
+  std::vector<const spdl::core::FFmpegFrames<media_type>*> ret;
+  for (auto& frame : frames) {
+    ret.push_back(frame.get());
+  }
+  return ret;
+}
+} // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Video/Image
@@ -31,13 +40,13 @@ FuturePtr async_convert_frames(
   auto task = folly::coro::co_invoke(
       [=](FFmpegFramesPtr<media_type>&& frm)
           -> folly::coro::Task<CPUBufferPtr> {
-        co_return spdl::core::convert_frames<media_type>(std::move(frm));
+        co_return spdl::core::convert_frames<media_type>(frm.get());
       },
       std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
-      set_result,
-      notify_exception,
+      std::move(set_result),
+      std::move(notify_exception),
       detail::get_demux_executor_high_prio(executor));
 }
 
@@ -66,7 +75,7 @@ FuturePtr async_convert_frames_cuda(
       [=](FFmpegFramesPtr<media_type>&& frm)
           -> folly::coro::Task<CUDABufferPtr> {
         co_return convert_to_cuda(
-            spdl::core::convert_frames<media_type>(std::move(frm)),
+            spdl::core::convert_frames<media_type>(frm.get()),
             cuda_device_index,
             cuda_stream,
             cuda_allocator);
@@ -109,7 +118,7 @@ FuturePtr async_batch_convert_frames(
   auto task = folly::coro::co_invoke(
       [=](std::vector<FFmpegFramesPtr<media_type>>&& frms)
           -> folly::coro::Task<CPUBufferPtr> {
-        co_return convert_frames(frms);
+        co_return convert_frames(_ref(frms));
       },
       // Pass the ownership of FramePtrs to executor thread, so that they are
       // deallocated there, instead of the main thread.
@@ -140,7 +149,7 @@ FuturePtr async_batch_convert_frames_cuda(
       [=](std::vector<FFmpegFramesPtr<MediaType::Image>>&& frms)
           -> folly::coro::Task<CUDABufferPtr> {
         co_return convert_to_cuda(
-            convert_frames(frms),
+            convert_frames(_ref(frms)),
             cuda_device_index,
             cuda_stream,
             cuda_allocator);
