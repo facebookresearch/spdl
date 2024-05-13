@@ -12,8 +12,6 @@ def _get_demux_func(media_type, src):
     match type(src):
         case builtins.bytes:
             name = f"async_demux_{media_type}_bytes"
-        case builtins.memoryview:
-            name = f"async_demux_{media_type}_buffer"
         case _:
             name = f"async_demux_{media_type}"
     return getattr(_libspdl, name)
@@ -81,8 +79,6 @@ def _get_decode_from_source_func(media_type, src):
     match type(src):
         case builtins.bytes:
             t = "bytes"
-        case builtins.memoryview:
-            t = "buffer"
         case _:
             t = "source"
 
