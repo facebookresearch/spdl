@@ -87,23 +87,9 @@ def _async_task(func, *args, **kwargs):
     return _handle_future(future)
 
 
-async def _handle_futures(futures: Sequence[Future[T]]) -> AsyncIterator[T]:
-    try:
-        for future in futures:
-            yield await asyncio.futures.wrap_future(future)
-    except asyncio.CancelledError as ce:
-        future.__spdl_future.cancel()  # pyre-ignore: [16]
-        try:
-            # Wait till the cancel request is fullfilled or job finishes
-            await asyncio.futures.wrap_future(futures[-1])
-        except (asyncio.CancelledError, spdl.io.SPDLBackgroundTaskFailure):
-            pass
-        except Exception:
-            _LG.exception(
-                "An exception was raised while waiting for the task to be cancelled."
-            )
-        # Propagate the error.
-        raise ce
+async def _handle_futures(futures):
+    for fut in futures:
+        yield await _handle_future(fut)
 
 
 def _async_gen(func, num_items, *args, **kwargs):
