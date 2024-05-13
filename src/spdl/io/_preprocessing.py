@@ -188,16 +188,16 @@ def get_video_filter_desc(
     return ",".join(parts)
 
 
-def get_filter_desc(packets, filter_args: Dict[str, Any] | None = None):
+def get_filter_desc(packets, **filter_args):
     """Get the filter to process the given packets.
 
     Args:
         packets (Packets): Packet to process.
 
+    Other args:
         filter_args: Passed to [spdl.io.get_audio_filter_desc][] or
             [spdl.io.get_video_filter_desc][].
     """
-    filter_args = filter_args or {}
     match type(packets):
         case _libspdl.AudioPackets:
             return get_audio_filter_desc(timestamp=packets.timestamp, **filter_args)

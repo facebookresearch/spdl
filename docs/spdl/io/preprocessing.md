@@ -42,28 +42,28 @@ For the detail of each filter, please refer to
 >>>
 >>> def random_augmentation():
 ...     filters = []
-... 
+...
 ...     # random_hflip
 ...     if bool(random.getrandbits(1)):
 ...         filters.append("hflip")
-... 
+...
 ...     # random_vflip
 ...     if bool(random.getrandbits(1)):
 ...         filters.append("vflip")
-... 
+...
 ...     # random_rotate +/- 30 deg
 ...     angle = (60 * random.random() - 30) * 3.14 / 180
 ...     filters.append(f"rotate=angle={angle:.2f}")
-... 
+...
 ...     # resize
 ...     filters.append("scale=256:256")
-... 
+...
 ...     # random_crop
 ...     x_pos, y_pos = random.random(), random.random()
 ...     filters.append(f"crop=224:224:x={x_pos:.2f}*(iw-ow):y={y_pos:.2f}*(ih-oh)")
-... 
+...
 ...     filter_desc = ",".join(filters)
-... 
+...
 ...     return filter_desc
 ```
 
@@ -138,9 +138,7 @@ First we decode frames,
 ...     packets,
 ...     filter_desc=spdl.io.get_filter_desc(
 ...         packets,
-...         filter_args={
-...             "pix_fmt": "rgb24",
-...         },
+...         pix_fmt = "rgb24",
 ...     ),
 ... )
 >>> # Say this video is 29.97 FPS

@@ -53,11 +53,9 @@ def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
                     packets,
                     filter_desc=spdl.io.get_filter_desc(
                         packets,
-                        filter_args={
-                            "width": width,
-                            "height": height,
-                            "pix_fmt": pix_fmt,
-                        },
+                        width=width,
+                        height=height,
+                        pix_fmt=pix_fmt,
                     ),
                 ),
                 cuda_device_index=cuda_device_index,
