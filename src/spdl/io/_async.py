@@ -44,25 +44,6 @@ def _async_sleep_multi(time: int, count: int):
     return _handle_futures(futures), futures[0].__spdl_future
 
 
-# The time it waits before rethrowing the async exception.
-#
-# When the background async op fails, the front end Python code tries to
-# fetch and propagate the exception by letting the backend code throw it.
-#
-# However, Python might reach to the rethrowing part before the background
-# C++ execution sets the exception, and in this case, instead of the
-# original exception, the background code throws Folly's FutureNotReady
-# exception. This practically hides the actual exception that caused the
-# background async code to fail.
-#
-# So we wait a bit before rethrowing the exception. It is not guaranteed
-# that this will ensure the C++ exception to be ready.
-# This will delay the completion of async code only if it fails.
-# This does not affect the performance of success cases.
-# It should not affect the overall throughput too.
-_EXCEPTION_BACKOFF = 1.00
-
-
 async def _handle_future(future: Future[T]) -> T:
     try:
         return await asyncio.futures.wrap_future(future)
