@@ -6,8 +6,6 @@
 
 namespace spdl::core {
 
-CPUBufferPtr convert_audio_frames(const FFmpegAudioFrames* frames);
-
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
     const std::vector<const FFmpegFrames<media_type>*>& batch);

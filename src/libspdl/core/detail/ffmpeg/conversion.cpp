@@ -16,80 +16,126 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
-template <size_t depth, ElemClass type, bool is_planar>
-CPUBufferPtr convert_frames(const FFmpegAudioFrames* frames) {
-  size_t num_frames = frames->get_num_frames();
-  const auto& fs = frames->get_frames();
-  size_t num_channels =
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
-      fs[0]->ch_layout.nb_channels
+#define GET_CHANNEL(x) x->ch_layout.nb_channels
 #else
-      fs[0]->channels
+#define GET_CHANNEL(x) x->channels
 #endif
-      ;
+
+namespace {
+template <size_t depth, ElemClass type, bool is_planar>
+CPUBufferPtr convert_frames(
+    const std::vector<const FFmpegAudioFrames*>& batch) {
+  size_t num_frames = batch.at(0)->get_num_frames();
+  size_t num_channels = GET_CHANNEL(batch.at(0)->get_frames().at(0));
 
   if constexpr (is_planar) {
-    auto buf = cpu_buffer({num_channels, num_frames}, type, depth);
+    auto buf =
+        cpu_buffer({batch.size(), num_channels, num_frames}, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
-    for (int i = 0; i < num_channels; ++i) {
-      for (auto frame : fs) {
-        int plane_size = depth * frame->nb_samples;
-        memcpy(dst, frame->extended_data[i], plane_size);
-        dst += plane_size;
+    for (auto frames_ptr : batch) {
+      auto fs = frames_ptr->get_frames();
+      for (int i = 0; i < num_channels; ++i) {
+        for (auto frame : fs) {
+          int plane_size = depth * frame->nb_samples;
+          memcpy(dst, frame->extended_data[i], plane_size);
+          dst += plane_size;
+        }
       }
     }
     return buf;
   } else {
-    auto buf = cpu_buffer({num_frames, num_channels}, type, depth);
+    auto buf =
+        cpu_buffer({batch.size(), num_frames, num_channels}, type, depth);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
-    for (auto frame : fs) {
-      int plane_size = depth * frame->nb_samples * num_channels;
-      memcpy(dst, frame->extended_data[0], plane_size);
-      dst += plane_size;
+    for (auto frames_ptr : batch) {
+      auto fs = frames_ptr->get_frames();
+      for (auto frame : fs) {
+        int plane_size = depth * frame->nb_samples * num_channels;
+        memcpy(dst, frame->extended_data[0], plane_size);
+        dst += plane_size;
+      }
     }
     return buf;
   }
 }
+} // namespace
 
-CPUBufferPtr convert_audio_frames(const FFmpegAudioFrames* frames) {
-  const auto& fs = frames->get_frames();
-  if (!fs.size()) {
-    SPDL_FAIL("No audio frame to convert to buffer.");
+template <>
+CPUBufferPtr convert_frames(
+    const std::vector<const FFmpegAudioFrames*>& batch) {
+  if (batch.empty()) {
+    SPDL_FAIL("No frame to convert to buffer.");
   }
-  auto sample_fmt = static_cast<AVSampleFormat>(fs[0]->format);
-  switch (sample_fmt) {
+  auto frames_ptr0 = batch.at(0);
+  auto num_frames0 = frames_ptr0->get_num_frames();
+  if (num_frames0 == 0) {
+    SPDL_FAIL("No frame to convert to buffer.");
+  }
+  auto frames0 = frames_ptr0->get_frames();
+  auto num_channels0 = GET_CHANNEL(frames0.at(0));
+  auto sample_fmt0 = static_cast<AVSampleFormat>(frames0.at(0)->format);
+  for (auto& frames_ptr : batch) {
+    auto num_frames = frames_ptr->get_num_frames();
+    if (num_frames == 0) {
+      SPDL_FAIL("No frame to convert to buffer.");
+    }
+    auto frames = frames_ptr->get_frames();
+    auto sample_fmt = static_cast<AVSampleFormat>(frames.at(0)->format);
+    auto num_channels = GET_CHANNEL(frames.at(0));
+    if (num_frames == 0) {
+      SPDL_FAIL("No frame to convert to buffer.");
+    }
+    if (num_frames != num_frames0) {
+      SPDL_FAIL(fmt::format(
+          "Inconsistent number of frames: {} vs {}", num_frames0, num_frames));
+    }
+    if (sample_fmt0 != sample_fmt) {
+      SPDL_FAIL(fmt::format(
+          "Inconsistent sample format: {} vs {}",
+          av_get_sample_fmt_name(sample_fmt0),
+          av_get_sample_fmt_name(sample_fmt)));
+    }
+    if (num_channels0 != num_channels) {
+      SPDL_FAIL(fmt::format(
+          "Inconsistent number of channels: {} vs {}",
+          num_channels0,
+          num_channels));
+    }
+  }
+  switch (sample_fmt0) {
     case AV_SAMPLE_FMT_U8:
-      return convert_frames<1, ElemClass::UInt, false>(frames);
+      return convert_frames<1, ElemClass::UInt, false>(batch);
     case AV_SAMPLE_FMT_U8P:
-      return convert_frames<1, ElemClass::UInt, true>(frames);
+      return convert_frames<1, ElemClass::UInt, true>(batch);
     case AV_SAMPLE_FMT_S16:
-      return convert_frames<2, ElemClass::Int, false>(frames);
+      return convert_frames<2, ElemClass::Int, false>(batch);
     case AV_SAMPLE_FMT_S16P:
-      return convert_frames<2, ElemClass::Int, true>(frames);
+      return convert_frames<2, ElemClass::Int, true>(batch);
     case AV_SAMPLE_FMT_S32:
-      return convert_frames<4, ElemClass::Int, false>(frames);
+      return convert_frames<4, ElemClass::Int, false>(batch);
     case AV_SAMPLE_FMT_S32P:
-      return convert_frames<4, ElemClass::Int, true>(frames);
+      return convert_frames<4, ElemClass::Int, true>(batch);
     case AV_SAMPLE_FMT_FLT:
-      return convert_frames<4, ElemClass::Float, false>(frames);
+      return convert_frames<4, ElemClass::Float, false>(batch);
     case AV_SAMPLE_FMT_FLTP:
-      return convert_frames<4, ElemClass::Float, true>(frames);
+      return convert_frames<4, ElemClass::Float, true>(batch);
     case AV_SAMPLE_FMT_S64:
-      return convert_frames<8, ElemClass::Int, false>(frames);
+      return convert_frames<8, ElemClass::Int, false>(batch);
     case AV_SAMPLE_FMT_S64P:
-      return convert_frames<8, ElemClass::Int, true>(frames);
+      return convert_frames<8, ElemClass::Int, true>(batch);
     case AV_SAMPLE_FMT_DBL:
-      return convert_frames<8, ElemClass::Float, false>(frames);
+      return convert_frames<8, ElemClass::Float, false>(batch);
     case AV_SAMPLE_FMT_DBLP:
-      return convert_frames<8, ElemClass::Float, true>(frames);
+      return convert_frames<8, ElemClass::Float, true>(batch);
     default:
       SPDL_FAIL_INTERNAL(fmt::format(
-          "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt)));
+          "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt0)));
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Video
+// Image / Video
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 void copy_2d(
