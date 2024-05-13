@@ -9,15 +9,6 @@
 #include "libspdl/core/detail/tracing.h"
 
 namespace spdl::coro {
-CPUBufferPtr convert_audio_frames(
-    const FFmpegFramesPtr<MediaType::Audio> frames) {
-  TRACE_EVENT(
-      "decoding",
-      "core::convert_audio_frames",
-      perfetto::Flow::ProcessScoped(frames->get_id()));
-  return spdl::core::convert_audio_frames(frames.get());
-}
-
 template <>
 FuturePtr async_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
@@ -27,7 +18,7 @@ FuturePtr async_convert_frames(
   auto task = folly::coro::co_invoke(
       [=](FFmpegFramesPtr<MediaType::Audio>&& frm)
           -> folly::coro::Task<CPUBufferPtr> {
-        co_return convert_audio_frames(std::move(frm));
+        co_return convert_frames(frm.get());
       },
       std::move(frames));
   return detail::execute_task_with_callback(
@@ -50,7 +41,7 @@ FuturePtr async_convert_frames_cuda(
       [=](FFmpegFramesPtr<MediaType::Audio>&& frm)
           -> folly::coro::Task<CUDABufferPtr> {
         co_return convert_to_cuda(
-            convert_audio_frames(std::move(frm)),
+            convert_frames(frm.get()),
             cuda_device_index,
             cuda_stream,
             cuda_allocator);
