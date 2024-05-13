@@ -40,7 +40,7 @@ def streaming_demux(
     """
     if not timestamps:
         raise ValueError("`timestamps` cannot be an empty list.")
-    func = _common._get_demux_func(media_type, src)
+    func = _common._get_stream_demux_func(media_type, src)
     return _common._futurize_generator(func, len(timestamps), src, timestamps, **kwargs)
 
 
@@ -60,12 +60,10 @@ def demux_media(
     Returns:
         Future object that returns Packets when fullfilled.
     """
-    if media_type == "image":
-        func = _common._get_demux_func(media_type, src)
-        return _common._futurize_task(func, src, **kwargs)
-
-    timestamps = [(-float("inf"), float("inf")) if timestamp is None else timestamp]
-    return streaming_demux(media_type, src, timestamps, **kwargs)[0]
+    func = _common._get_demux_func(media_type, src)
+    if media_type != "image" and timestamp is not None:
+        kwargs["timestamp"] = timestamp
+    return _common._futurize_task(func, src, **kwargs)
 
 
 def decode_packets(packets: Type[Packets], **kwargs) -> Future[Type[Frames]]:

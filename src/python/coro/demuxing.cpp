@@ -22,13 +22,52 @@ using spdl::core::VideoPacketsPtr;
 
 void register_demuxing(nb::module_& m) {
   m.def(
+      "async_stream_demux_audio",
+      &async_stream_demux<MediaType::Audio>,
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("src"),
+      // nb::kw_only(),
+      nb::arg("timestamps") = nb::none(),
+      nb::arg("_adaptor") = nullptr,
+      nb::arg("demux_config") = nb::none(),
+      nb::arg("executor") = nullptr);
+
+  m.def(
+      "async_stream_demux_audio_bytes",
+      [](std::function<void(AudioPacketsPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         nb::bytes data,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<DemuxConfig>& demux_config,
+         ThreadPoolExecutorPtr executor,
+         bool _zero_clear) {
+        return async_stream_demux_bytes<MediaType::Audio>(
+            std::move(set_result),
+            std::move(notify_exception),
+            std::string_view{data.c_str(), data.size()},
+            timestamps,
+            demux_config,
+            executor,
+            _zero_clear);
+      },
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("data"),
+      // nb::kw_only(),
+      nb::arg("timestamps") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
+      nb::arg("executor") = nullptr,
+      nb::arg("_zero_clear") = false);
+
+  m.def(
       "async_demux_audio",
       &async_demux<MediaType::Audio>,
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      nb::arg("timestamps"),
       // nb::kw_only(),
+      nb::arg("timestamp") = nb::none(),
       nb::arg("_adaptor") = nullptr,
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr);
@@ -38,7 +77,7 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(AudioPacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
-         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<std::tuple<double, double>>& timestamp,
          const std::optional<DemuxConfig>& demux_config,
          ThreadPoolExecutorPtr demux_executor,
          bool _zero_clear) {
@@ -46,7 +85,7 @@ void register_demuxing(nb::module_& m) {
             std::move(set_result),
             std::move(notify_exception),
             std::string_view{data.c_str(), data.size()},
-            timestamps,
+            timestamp,
             demux_config,
             demux_executor,
             _zero_clear);
@@ -54,37 +93,61 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      nb::arg("timestamps"),
       // nb::kw_only(),
+      nb::arg("timestamp") = nb::none(),
+      nb::arg("demux_config") = nb::none(),
+      nb::arg("executor") = nullptr,
+      nb::arg("_zero_clear") = false);
+
+  m.def(
+      "async_stream_demux_video",
+      &async_stream_demux<MediaType::Video>,
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("src"),
+      // nb::kw_only(),
+      nb::arg("timestamps") = nb::none(),
+      nb::arg("_adaptor") = nullptr,
+      nb::arg("demux_config") = nb::none(),
+      nb::arg("executor") = nullptr);
+
+  m.def(
+      "async_stream_demux_video_bytes",
+      [](std::function<void(VideoPacketsPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         nb::bytes data,
+         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<DemuxConfig>& demux_config,
+         ThreadPoolExecutorPtr executor,
+         bool _zero_clear) {
+        return async_stream_demux_bytes<MediaType::Video>(
+            std::move(set_result),
+            std::move(notify_exception),
+            std::string_view{data.c_str(), data.size()},
+            timestamps,
+            demux_config,
+            executor,
+            _zero_clear);
+      },
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("data"),
+      // nb::kw_only(),
+      nb::arg("timestamps") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
   m.def(
       "async_demux_video",
-      [](std::function<void(VideoPacketsPtr)> set_result,
-         std::function<void(std::string, bool)> notify_exception,
-         const std::string& src,
-         const std::vector<std::tuple<double, double>>& timestamps,
-         const std::optional<DemuxConfig>& demux_config,
-         const SourceAdaptorPtr& _adaptor,
-         ThreadPoolExecutorPtr _executor) {
-        return async_demux<MediaType::Video>(
-            std::move(set_result),
-            std::move(notify_exception),
-            src,
-            timestamps,
-            _adaptor,
-            demux_config,
-            _executor);
-      },
+      &async_demux<MediaType::Video>,
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      nb::arg("timestamps"),
       // nb::kw_only(),
-      nb::arg("demux_config") = nb::none(),
+      nb::arg("timestamp") = nb::none(),
       nb::arg("_adaptor") = nullptr,
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr);
 
   m.def(
@@ -92,50 +155,37 @@ void register_demuxing(nb::module_& m) {
       [](std::function<void(VideoPacketsPtr)> set_result,
          std::function<void(std::string, bool)> notify_exception,
          nb::bytes data,
-         const std::vector<std::tuple<double, double>>& timestamps,
+         const std::optional<std::tuple<double, double>>& timestamp,
          const std::optional<DemuxConfig>& demux_config,
-         ThreadPoolExecutorPtr demux_executor,
+         ThreadPoolExecutorPtr executor,
          bool _zero_clear) {
         return async_demux_bytes<MediaType::Video>(
             std::move(set_result),
             std::move(notify_exception),
             std::string_view{data.c_str(), data.size()},
-            timestamps,
+            timestamp,
             demux_config,
-            demux_executor,
+            executor,
             _zero_clear);
       },
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      nb::arg("timestamps"),
       // nb::kw_only(),
+      nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
 
   m.def(
       "async_demux_image",
-      [](std::function<void(ImagePacketsPtr)> set_result,
-         std::function<void(std::string, bool)> notify_exception,
-         const std::string& src,
-         const std::optional<DemuxConfig>& demux_config,
-         const SourceAdaptorPtr& _adaptor,
-         ThreadPoolExecutorPtr _executor) {
-        return async_demux_image(
-            std::move(set_result),
-            std::move(notify_exception),
-            src,
-            _adaptor,
-            demux_config,
-            _executor);
-      },
+      &async_demux_image,
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
       // nb::kw_only(),
-      nb::arg("demux_config") = nb::none(),
       nb::arg("_adaptor") = nullptr,
+      nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr);
 
   m.def(

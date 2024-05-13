@@ -17,6 +17,18 @@ def _get_demux_func(media_type, src):
     return getattr(_libspdl, name)
 
 
+def _get_stream_demux_func(media_type, src):
+    if media_type not in ["audio", "video"]:
+        raise ValueError(f"Unexpected media type: {media_type}.")
+
+    match type(src):
+        case builtins.bytes:
+            name = f"async_stream_demux_{media_type}_bytes"
+        case _:
+            name = f"async_stream_demux_{media_type}"
+    return getattr(_libspdl, name)
+
+
 def _get_decoding_func(packets):
     match t := type(packets):
         case _libspdl.AudioPackets:

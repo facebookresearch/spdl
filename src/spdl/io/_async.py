@@ -101,7 +101,7 @@ async def async_streaming_demux(
     """
     if not timestamps:
         raise ValueError("`timestamps` cannot be an empty list.")
-    func = _common._get_demux_func(media_type, src)
+    func = _common._get_stream_demux_func(media_type, src)
     async for packets in _async_gen(func, len(timestamps), src, timestamps, **kwargs):
         yield packets
 
@@ -128,12 +128,10 @@ async def async_demux_media(
     Returns:
         AudioPackets/VideoPackets/ImagePackets object.
     """
-    if media_type == "image":
-        func = _common._get_demux_func(media_type, src)
-        return await _async_task(func, src, **kwargs)
-
-    timestamps = [(-float("inf"), float("inf")) if timestamp is None else timestamp]
-    return await anext(async_streaming_demux(media_type, src, timestamps, **kwargs))
+    func = _common._get_demux_func(media_type, src)
+    if media_type != "image" and timestamp is not None:
+        kwargs["timestamp"] = timestamp
+    return await _async_task(func, src, **kwargs)
 
 
 async def async_decode_packets(packets: Type[Packets], **kwargs) -> Type[Frames]:

@@ -29,8 +29,8 @@ class StreamingDemuxer {
       const std::string_view data,
       const std::optional<DemuxConfig>& dmx_cfg);
 
-  PacketsPtr<media_type> demux_window(const std::tuple<double, double>& window);
-  PacketsPtr<media_type> demux();
+  PacketsPtr<media_type> demux_window(
+      const std::optional<std::tuple<double, double>>& window);
 };
 
 // Demux a single image from the resource indicator
