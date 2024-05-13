@@ -38,6 +38,8 @@ def streaming_demux(
     Returns:
         List of Future object that returns Packets when fullfilled.
     """
+    if not timestamps:
+        raise ValueError("`timestamps` cannot be an empty list.")
     func = _common._get_demux_func(media_type, src)
     return _common._futurize_generator(func, len(timestamps), src, timestamps, **kwargs)
 
