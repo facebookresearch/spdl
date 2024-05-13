@@ -42,6 +42,8 @@ FuturePtr async_convert_frames(
           -> folly::coro::Task<CPUBufferPtr> {
         co_return spdl::core::convert_frames<media_type>(frm.get());
       },
+      // Pass the ownership of FramePtrs to executor thread, so that they are
+      // deallocated there, instead of the main thread.
       std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
@@ -50,13 +52,19 @@ FuturePtr async_convert_frames(
       detail::get_demux_executor_high_prio(executor));
 }
 
-template FuturePtr async_convert_frames<MediaType::Video>(
+template FuturePtr async_convert_frames(
+    std::function<void(CPUBufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesPtr<MediaType::Audio> frames,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesPtr<MediaType::Video> frames,
     ThreadPoolExecutorPtr executor);
 
-template FuturePtr async_convert_frames<MediaType::Image>(
+template FuturePtr async_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesPtr<MediaType::Image> frames,
@@ -80,6 +88,8 @@ FuturePtr async_convert_frames_cuda(
             cuda_stream,
             cuda_allocator);
       },
+      // Pass the ownership of FramePtrs to executor thread, so that they are
+      // deallocated there, instead of the main thread.
       std::move(frames));
   return detail::execute_task_with_callback(
       std::move(task),
@@ -88,7 +98,16 @@ FuturePtr async_convert_frames_cuda(
       detail::get_demux_executor_high_prio(executor));
 }
 
-template FuturePtr async_convert_frames_cuda<MediaType::Video>(
+template FuturePtr async_convert_frames_cuda(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    FFmpegFramesPtr<MediaType::Audio> frames,
+    int cuda_device_index,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_convert_frames_cuda(
     std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesPtr<MediaType::Video> frames,
@@ -97,7 +116,7 @@ template FuturePtr async_convert_frames_cuda<MediaType::Video>(
     const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor);
 
-template FuturePtr async_convert_frames_cuda<MediaType::Image>(
+template FuturePtr async_convert_frames_cuda(
     std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     FFmpegFramesPtr<MediaType::Image> frames,
@@ -107,7 +126,7 @@ template FuturePtr async_convert_frames_cuda<MediaType::Image>(
     ThreadPoolExecutorPtr executor);
 
 ////////////////////////////////////////////////////////////////////////////////
-// Batch Image
+// Batch
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 FuturePtr async_batch_convert_frames(
@@ -133,20 +152,32 @@ FuturePtr async_batch_convert_frames(
 template FuturePtr async_batch_convert_frames(
     std::function<void(CPUBufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegFramesPtr<MediaType::Audio>>&& frames,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_batch_convert_frames(
+    std::function<void(CPUBufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegFramesPtr<MediaType::Video>>&& frames,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_batch_convert_frames(
+    std::function<void(CPUBufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
     std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
     ThreadPoolExecutorPtr executor);
 
-template <>
+template <MediaType media_type>
 FuturePtr async_batch_convert_frames_cuda(
     std::function<void(CUDABufferPtr)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
+    std::vector<FFmpegFramesPtr<media_type>>&& frames,
     int cuda_device_index,
     const uintptr_t cuda_stream,
     const std::optional<cuda_allocator>& cuda_allocator,
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke(
-      [=](std::vector<FFmpegFramesPtr<MediaType::Image>>&& frms)
+      [=](std::vector<FFmpegFramesPtr<media_type>>&& frms)
           -> folly::coro::Task<CUDABufferPtr> {
         co_return convert_to_cuda(
             convert_frames(_ref(frms)),
@@ -164,5 +195,32 @@ FuturePtr async_batch_convert_frames_cuda(
       std::move(notify_exception),
       detail::get_demux_executor_high_prio(executor));
 }
+
+template FuturePtr async_batch_convert_frames_cuda(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegFramesPtr<MediaType::Audio>>&& frames,
+    int cuda_device_index,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_batch_convert_frames_cuda(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegFramesPtr<MediaType::Video>>&& frames,
+    int cuda_device_index,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
+    ThreadPoolExecutorPtr executor);
+
+template FuturePtr async_batch_convert_frames_cuda(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::vector<FFmpegFramesPtr<MediaType::Image>>&& frames,
+    int cuda_device_index,
+    const uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& cuda_allocator,
+    ThreadPoolExecutorPtr executor);
 
 } // namespace spdl::coro
