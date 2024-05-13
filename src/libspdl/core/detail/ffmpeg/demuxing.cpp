@@ -128,6 +128,10 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
   return get_interface(data, adaptor, dmx_cfg);
 }
 
+std::tuple<double, double> NO_WINDOW{
+    -std::numeric_limits<double>::infinity(),
+    std::numeric_limits<double>::infinity()};
+
 } // namespace
 } // namespace detail
 
@@ -159,6 +163,11 @@ PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
   return packets;
 }
 
+template <MediaType media_type>
+PacketsPtr<media_type> StreamingDemuxer<media_type>::demux() {
+  return demux_window(detail::NO_WINDOW);
+}
+
 template class StreamingDemuxer<MediaType::Audio>;
 template class StreamingDemuxer<MediaType::Video>;
 template class StreamingDemuxer<MediaType::Image>;
@@ -173,10 +182,7 @@ ImagePacketsPtr demux_image(AVFormatContext* fmt_ctx) {
   AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
 
   auto package = std::make_unique<DemuxedPackets<MediaType::Image>>(
-      fmt_ctx->url,
-      std::tuple<double, double>{0., 1000.},
-      stream->codecpar,
-      Rational{1, 1});
+      fmt_ctx->url, NO_WINDOW, stream->codecpar, Rational{1, 1});
 
   int ite = 0;
   do {
