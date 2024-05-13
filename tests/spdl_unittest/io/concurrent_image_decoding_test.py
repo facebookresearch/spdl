@@ -165,3 +165,30 @@ def test_batch_decode_image_rgb24(get_samples):
         assert np.all(array[:, 2 * w :, 0] == 0)
         assert np.all(array[:, 2 * w :, 1] == 0)
         assert np.all(array[:, 2 * w :, 2] >= 253)
+
+
+def test_batch_video_conversion(get_sample):
+    """Can decode video clips."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+    sample = get_sample(cmd, width=320, height=240)
+
+    timestamps = [(0, 1), (1, 1.5), (2, 2.7), (3, 3.6)]
+
+    @spdl.utils.chain_futures
+    def _decode(demuxing):
+        packets = yield demuxing
+        filter_desc = get_video_filter_desc(timestamp=packets.timestamp, num_frames=15)
+        yield spdl.io.decode_packets(packets, filter_desc=filter_desc)
+
+    decoding = [
+        _decode(demuxing)
+        for demuxing in spdl.io.streaming_demux(
+            "video", src=sample.path, timestamps=timestamps
+        )
+    ]
+
+    frames = spdl.utils.wait_futures(decoding).result()
+    buffer = spdl.io.convert_frames(frames).result()
+    array = spdl.io.to_numpy(buffer)
+
+    assert array.shape == (4, 15, 3, 240, 320)

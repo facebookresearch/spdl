@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import Future
-from typing import Any, Dict, List, Tuple, Type, Union
+from typing import Any, Dict, List, Sequence, Tuple, Type
 
 import spdl.utils
 
@@ -24,7 +24,7 @@ _LG = logging.getLogger(__name__)
 
 def streaming_demux(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     timestamps: List[Tuple[float, float]],
     **kwargs,
 ) -> List[Future[Type[Packets]]]:
@@ -44,7 +44,7 @@ def streaming_demux(
 
 def demux_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     timestamp: Tuple[float, float] | None = None,
     **kwargs,
 ) -> Future[Type[Packets]]:
@@ -104,7 +104,7 @@ def decode_packets_nvdec(
 
 def decode_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     **kwargs,
 ) -> Future[Type[Frames]]:
     """Demux and decode media from source.
@@ -122,7 +122,9 @@ def decode_media(
 
 
 def convert_frames(
-    frames: Type[Frames], cuda_device_index: int | None = None, **kwargs
+    frames: Type[Frames] | Sequence[Frames],
+    cuda_device_index: int | None = None,
+    **kwargs,
 ) -> Future[CPUBuffer | CUDABuffer]:
     """Convert the decoded frames to buffer.
 
@@ -147,7 +149,7 @@ def convert_frames(
 
 def load_media(
     media_type: str,
-    src: Union[str, bytes],
+    src: str | bytes,
     *,
     demux_options: Dict[str, Any] | None = None,
     decode_options: Dict[str, Any] | None = None,
@@ -183,7 +185,7 @@ def load_media(
 
 
 def batch_load_image(
-    srcs: List[Union[str, bytes]],
+    srcs: List[str | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -255,7 +257,7 @@ def batch_load_image(
 
 
 def batch_load_image_nvdec(
-    srcs: List[Union[str, bytes]],
+    srcs: List[str | bytes],
     *,
     cuda_device_index: int,
     width: int | None,
