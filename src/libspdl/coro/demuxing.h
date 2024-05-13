@@ -25,11 +25,21 @@ using spdl::core::SourceAdaptorPtr;
 
 /// Demux audio or video from source URI
 template <MediaType media_type>
-FuturePtr async_demux(
+FuturePtr async_stream_demux(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string uri,
     std::vector<std::tuple<double, double>> timestamps,
+    SourceAdaptorPtr adaptor = nullptr,
+    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr);
+
+template <MediaType media_type>
+FuturePtr async_demux(
+    std::function<void(PacketsPtr<media_type>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::string uri,
+    std::optional<std::tuple<double, double>> timestamp = std::nullopt,
     SourceAdaptorPtr adaptor = nullptr,
     std::optional<DemuxConfig> dmx_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr);
@@ -39,11 +49,21 @@ FuturePtr async_demux(
 /// Note: It is caller's responsibility to keep the data alive until the
 /// returned Future is destroyed.
 template <MediaType media_type>
-FuturePtr async_demux_bytes(
+FuturePtr async_stream_demux_bytes(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
     std::vector<std::tuple<double, double>> timestamps,
+    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr,
+    bool _zero_clear = false);
+
+template <MediaType media_type>
+FuturePtr async_demux_bytes(
+    std::function<void(PacketsPtr<media_type>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    std::string_view data,
+    std::optional<std::tuple<double, double>> timestamp = std::nullopt,
     std::optional<DemuxConfig> dmx_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);

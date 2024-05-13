@@ -154,18 +154,14 @@ StreamingDemuxer<media_type>::StreamingDemuxer(
 
 template <MediaType media_type>
 PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
-    const std::tuple<double, double>& window) {
-  auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window);
+    const std::optional<std::tuple<double, double>>& window) {
+  auto packets = detail::demux_window<media_type>(
+      fmt_ctx, stream, window.value_or(detail::NO_WINDOW));
   if constexpr (media_type == MediaType::Video) {
     auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
     packets->frame_rate = Rational{frame_rate.num, frame_rate.den};
   }
   return packets;
-}
-
-template <MediaType media_type>
-PacketsPtr<media_type> StreamingDemuxer<media_type>::demux() {
-  return demux_window(detail::NO_WINDOW);
 }
 
 template class StreamingDemuxer<MediaType::Audio>;
