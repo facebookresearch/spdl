@@ -107,7 +107,7 @@ void copy_2d(
   }
 }
 
-void convert_interleaved(
+void copy_interleaved(
     const std::vector<AVFrame*>& frames,
     uint8_t* dst,
     unsigned int num_channels,
@@ -125,18 +125,34 @@ CPUBufferPtr convert_interleaved(
   size_t h = frames[0]->height, w = frames[0]->width;
 
   auto buf = cpu_buffer({frames.size(), h, w, num_channels});
-  convert_interleaved(frames, (uint8_t*)buf->data(), num_channels, w, h);
+  copy_interleaved(frames, (uint8_t*)buf->data(), num_channels, w, h);
   return buf;
 }
 
-void convert_planer(
+template <MediaType media_type>
+CPUBufferPtr convert_interleaved(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    size_t num_channels,
+    size_t num_frames,
+    size_t w,
+    size_t h) {
+  auto buf = cpu_buffer({batch.size(), num_frames, h, w, num_channels});
+  auto dst = (uint8_t*)buf->data();
+  for (auto& frames : batch) {
+    copy_interleaved(frames->get_frames(), dst, num_channels, w, h);
+    dst += num_frames * h * w * num_channels;
+  }
+  return buf;
+}
+
+void copy_planer(
     const std::vector<AVFrame*>& frames,
     uint8_t* dst,
-    int num_planes,
+    size_t num_planes,
     size_t w,
     size_t h) {
   for (const auto& f : frames) {
-    for (int c = 0; c < num_planes; ++c) {
+    for (size_t c = 0; c < num_planes; ++c) {
       copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
     }
   }
@@ -144,15 +160,31 @@ void convert_planer(
 
 CPUBufferPtr convert_planer(
     const std::vector<AVFrame*>& frames,
-    int num_planes) {
+    size_t num_planes) {
   size_t h = frames[0]->height, w = frames[0]->width;
 
-  auto buf = cpu_buffer({frames.size(), (size_t)num_planes, h, w});
-  convert_planer(frames, (uint8_t*)buf->data(), num_planes, w, h);
+  auto buf = cpu_buffer({frames.size(), num_planes, h, w});
+  copy_planer(frames, (uint8_t*)buf->data(), num_planes, w, h);
   return buf;
 }
 
-void convert_yuv420p(
+template <MediaType media_type>
+CPUBufferPtr convert_planer(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    size_t num_planes,
+    size_t num_frames,
+    size_t w,
+    size_t h) {
+  auto buf = cpu_buffer({batch.size(), num_frames, num_planes, h, w});
+  auto dst = (uint8_t*)buf->data();
+  for (auto& frames : batch) {
+    copy_planer(frames->get_frames(), dst, num_planes, w, h);
+    dst += num_frames * num_planes * h * w;
+  }
+  return buf;
+}
+
+void copy_yuv420p(
     const std::vector<AVFrame*>& frames,
     uint8_t* dst,
     size_t w,
@@ -174,11 +206,29 @@ CPUBufferPtr convert_yuv420p(const std::vector<AVFrame*>& frames) {
   size_t h2 = h / 2;
 
   auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  convert_yuv420p(frames, (uint8_t*)buf->data(), w, h);
+  copy_yuv420p(frames, (uint8_t*)buf->data(), w, h);
   return buf;
 }
 
-void convert_yuv422p(
+template <MediaType media_type>
+CPUBufferPtr convert_yuv420p(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    size_t num_frames,
+    size_t w,
+    size_t h) {
+  assert(h % 2 == 0 && w % 2 == 0);
+  size_t h2 = h / 2;
+
+  auto buf = cpu_buffer({batch.size(), num_frames, 1, h + h2, w});
+  auto dst = (uint8_t*)buf->data();
+  for (auto& frames : batch) {
+    copy_yuv420p(frames->get_frames(), dst, w, h);
+    dst += num_frames * (h + h2) * w;
+  }
+  return buf;
+}
+
+void copy_yuv422p(
     const std::vector<AVFrame*>& frames,
     uint8_t* dst,
     size_t w,
@@ -201,11 +251,29 @@ CPUBufferPtr convert_yuv422p(const std::vector<AVFrame*>& frames) {
   assert(w % 2 == 0);
 
   auto buf = cpu_buffer({frames.size(), 1, h + h, w});
-  convert_yuv422p(frames, (uint8_t*)buf->data(), w, h);
+  copy_yuv422p(frames, (uint8_t*)buf->data(), w, h);
   return buf;
 }
 
-void convert_nv12(
+template <MediaType media_type>
+CPUBufferPtr convert_yuv422p(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    size_t num_frames,
+    size_t w,
+    size_t h) {
+  assert(w % 2 == 0);
+
+  auto buf = cpu_buffer({batch.size(), num_frames, 1, h + h, w});
+
+  auto dst = (uint8_t*)buf->data();
+  for (auto& frames : batch) {
+    copy_yuv422p(frames->get_frames(), dst, w, h);
+    dst += num_frames * (h + h) * w;
+  }
+  return buf;
+}
+
+void copy_nv12(
     const std::vector<AVFrame*>& frames,
     uint8_t* dst,
     size_t w,
@@ -225,7 +293,25 @@ CPUBufferPtr convert_nv12(const std::vector<AVFrame*>& frames) {
   size_t h2 = h / 2;
 
   auto buf = cpu_buffer({frames.size(), 1, h + h2, w});
-  convert_nv12(frames, (uint8_t*)buf->data(), w, h);
+  copy_nv12(frames, (uint8_t*)buf->data(), w, h);
+  return buf;
+}
+
+template <MediaType media_type>
+CPUBufferPtr convert_nv12(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch,
+    size_t num_frames,
+    size_t w,
+    size_t h) {
+  assert(h % 2 == 0 && w % 2 == 0);
+  size_t h2 = h / 2;
+
+  auto buf = cpu_buffer({batch.size(), num_frames, 1, h + h2, w});
+  auto dst = (uint8_t*)buf->data();
+  for (auto& frames : batch) {
+    copy_nv12(frames->get_frames(), dst, w, h);
+    dst += num_frames * (h + h2) * w;
+  }
   return buf;
 }
 } // namespace
@@ -277,4 +363,85 @@ CPUBufferPtr convert_video_frames(const std::vector<AVFrame*>& frames) {
           "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
   }
 }
+
+template <MediaType media_type>
+CPUBufferPtr convert_frames(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch) {
+  auto& ref_frames = batch.at(0)->get_frames();
+  auto w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+  auto num_frames = ref_frames.size();
+
+  auto pix_fmt = static_cast<AVPixelFormat>(ref_frames.at(0)->format);
+  for (auto& frames_ptr : batch) {
+    auto frames = frames_ptr->get_frames();
+    auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
+    if (pix_fmt == AV_PIX_FMT_CUDA) {
+      SPDL_FAIL("The input frames must be CPU, but found CUDA frames.");
+    }
+
+    if constexpr (media_type == MediaType::Image) {
+      if (frames.size() != 1) {
+        SPDL_FAIL_INTERNAL(fmt::format(
+            "Expected the ImageFrames class to hold only one frame, but found: {}.",
+            frames.size()));
+      }
+    }
+
+    if (frames.size() != num_frames) {
+      SPDL_FAIL(fmt::format(
+          "The number of frames must be the same. Expected {}, but found {}",
+          num_frames,
+          frames.size()));
+    }
+    for (auto& frame : frames) {
+      if (frame->width != w || frame->height != h) {
+        SPDL_FAIL(fmt::format(
+            "The input video frames must be the same size. Expected {}x{}, but found {}x{}",
+            w,
+            h,
+            frame->width,
+            frame->height));
+      }
+    }
+  }
+
+  auto ret = [&]() {
+    switch (pix_fmt) {
+      case AV_PIX_FMT_GRAY8:
+        // Technically, not a planer format, but it's the same.
+        return convert_planer(batch, 1, num_frames, w, h);
+      case AV_PIX_FMT_RGBA:
+        return convert_interleaved(batch, 4, num_frames, w, h);
+      case AV_PIX_FMT_RGB24:
+        return convert_interleaved(batch, 3, num_frames, w, h);
+      case AV_PIX_FMT_YUVJ444P:
+      case AV_PIX_FMT_YUV444P:
+        return convert_planer(batch, 3, num_frames, w, h);
+      case AV_PIX_FMT_YUVJ420P:
+      case AV_PIX_FMT_YUV420P:
+        return convert_yuv420p(batch, num_frames, w, h);
+      case AV_PIX_FMT_YUVJ422P:
+      case AV_PIX_FMT_YUV422P:
+        return convert_yuv422p(batch, num_frames, w, h);
+      case AV_PIX_FMT_NV12: {
+        return convert_nv12(batch, num_frames, w, h);
+      }
+      default:
+        SPDL_FAIL(fmt::format(
+            "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
+    }
+  }();
+
+  if constexpr (media_type == MediaType::Image) {
+    // Remove the 2nd num_frame dimension (which is 1).
+    // BNCHW -> BCHW.
+    ret->shape.erase(std::next(ret->shape.begin())); // Trim the first dim
+  }
+
+  return ret;
+}
+
+template CPUBufferPtr convert_frames(
+    const std::vector<FFmpegImageFramesPtr>& batch);
+
 } // namespace spdl::core

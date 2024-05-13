@@ -10,4 +10,8 @@ CPUBufferPtr convert_audio_frames(const FFmpegAudioFrames* frames);
 
 CPUBufferPtr convert_video_frames(const std::vector<AVFrame*>& frames);
 
+template <MediaType media_type>
+CPUBufferPtr convert_frames(
+    const std::vector<FFmpegFramesPtr<media_type>>& batch);
+
 } // namespace spdl::core
