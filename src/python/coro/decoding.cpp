@@ -46,7 +46,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("packets"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "",
       nb::arg("executor") = nullptr);
@@ -57,7 +59,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("packets"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "",
       nb::arg("executor") = nullptr);
@@ -68,7 +72,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("packets"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "",
       nb::arg("executor") = nullptr);
@@ -83,7 +89,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("_adaptor") = nullptr,
       nb::arg("demux_config") = nb::none(),
       nb::arg("decoder_config") = nb::none(),
@@ -96,7 +104,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("demux_config") = nb::none(),
       nb::arg("decoder_config") = nb::none(),
       nb::arg("filter_desc") = "",
@@ -141,7 +151,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("packets"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
@@ -189,7 +201,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("packets"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
@@ -239,7 +253,9 @@ void register_decoding(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("packets"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,

@@ -14,11 +14,11 @@ template <MediaType media_type>
 FuturePtr async_stream_demux(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::vector<std::tuple<double, double>> timestamps,
-    SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> dmx_cfg,
-    ThreadPoolExecutorPtr executor) {
+    const std::string& uri,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    ThreadPoolExecutorPtr executor,
+    SourceAdaptorPtr adaptor) {
   auto generator = folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<PacketsPtr<media_type>> {
         spdl::core::StreamingDemuxer<media_type> demuxer{uri, adaptor, dmx_cfg};
@@ -38,30 +38,30 @@ FuturePtr async_stream_demux(
 template FuturePtr async_stream_demux(
     std::function<void(PacketsPtr<MediaType::Audio>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::vector<std::tuple<double, double>> timestamps,
-    SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> dmx_cfg,
-    ThreadPoolExecutorPtr demux_executor);
+    const std::string& uri,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    ThreadPoolExecutorPtr demux_executor,
+    SourceAdaptorPtr adaptor);
 
 template FuturePtr async_stream_demux(
     std::function<void(PacketsPtr<MediaType::Video>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::vector<std::tuple<double, double>> timestamps,
-    SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> dmx_cfg,
-    ThreadPoolExecutorPtr demux_executor);
+    const std::string& uri,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    ThreadPoolExecutorPtr demux_executor,
+    SourceAdaptorPtr adaptor);
 
 template <MediaType media_type>
 FuturePtr async_demux(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::optional<std::tuple<double, double>> timestamp,
-    SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> dmx_cfg,
-    ThreadPoolExecutorPtr executor) {
+    const std::string& uri,
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    ThreadPoolExecutorPtr executor,
+    SourceAdaptorPtr adaptor) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::Task<PacketsPtr<media_type>> {
         spdl::core::StreamingDemuxer<media_type> demuxer{uri, adaptor, dmx_cfg};
@@ -77,28 +77,28 @@ FuturePtr async_demux(
 template FuturePtr async_demux(
     std::function<void(PacketsPtr<MediaType::Audio>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::optional<std::tuple<double, double>> timestamp,
-    SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> dmx_cfg,
-    ThreadPoolExecutorPtr demux_executor);
+    const std::string& uri,
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    ThreadPoolExecutorPtr demux_executor,
+    SourceAdaptorPtr adaptor);
 
 template FuturePtr async_demux(
     std::function<void(PacketsPtr<MediaType::Video>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::optional<std::tuple<double, double>> timestamp,
-    SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> dmx_cfg,
-    ThreadPoolExecutorPtr demux_executor);
+    const std::string& uri,
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    ThreadPoolExecutorPtr demux_executor,
+    SourceAdaptorPtr adaptor);
 
 template <MediaType media_type>
 FuturePtr async_stream_demux_bytes(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::vector<std::tuple<double, double>> timestamps,
-    std::optional<DemuxConfig> dmx_cfg,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
   auto generator = folly::coro::co_invoke(
@@ -124,8 +124,8 @@ template FuturePtr async_stream_demux_bytes(
     std::function<void(PacketsPtr<MediaType::Video>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::vector<std::tuple<double, double>> timestamps,
-    std::optional<DemuxConfig> dmx_cfg,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
@@ -133,8 +133,8 @@ template FuturePtr async_stream_demux_bytes(
     std::function<void(PacketsPtr<MediaType::Audio>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::vector<std::tuple<double, double>> timestamps,
-    std::optional<DemuxConfig> dmx_cfg,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
@@ -143,8 +143,8 @@ FuturePtr async_demux_bytes(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<std::tuple<double, double>> timestamp,
-    std::optional<DemuxConfig> dmx_cfg,
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<DemuxConfig>& dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
   auto task = folly::coro::co_invoke(
@@ -168,8 +168,8 @@ template FuturePtr async_demux_bytes(
     std::function<void(PacketsPtr<MediaType::Video>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<std::tuple<double, double>> timestamp,
-    std::optional<DemuxConfig> dmx_cfg,
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<DemuxConfig>& dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
@@ -177,18 +177,18 @@ template FuturePtr async_demux_bytes(
     std::function<void(PacketsPtr<MediaType::Audio>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<std::tuple<double, double>> timestamp,
-    std::optional<DemuxConfig> dmx_cfg,
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const std::optional<DemuxConfig>& dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear);
 
 FuturePtr async_demux_image(
     std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    SourceAdaptorPtr adaptor,
-    std::optional<DemuxConfig> dmx_cfg,
-    ThreadPoolExecutorPtr executor) {
+    const std::string& uri,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    ThreadPoolExecutorPtr executor,
+    SourceAdaptorPtr adaptor) {
   auto task = folly::coro::co_invoke(
       [=]() -> folly::coro::Task<PacketsPtr<MediaType::Image>> {
         co_return demux_image(
@@ -205,7 +205,7 @@ FuturePtr async_demux_image_bytes(
     std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<DemuxConfig> dmx_cfg,
+    const std::optional<DemuxConfig>& dmx_cfg,
     ThreadPoolExecutorPtr executor,
     bool _zero_clear) {
   auto task = folly::coro::co_invoke(

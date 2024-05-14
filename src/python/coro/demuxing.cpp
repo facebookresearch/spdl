@@ -27,11 +27,13 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamps") = nb::none(),
-      nb::arg("_adaptor") = nullptr,
       nb::arg("demux_config") = nb::none(),
-      nb::arg("executor") = nullptr);
+      nb::arg("executor") = nullptr,
+      nb::arg("_adaptor") = nullptr);
 
   m.def(
       "async_stream_demux_audio_bytes",
@@ -54,7 +56,9 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamps") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
@@ -66,11 +70,13 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamp") = nb::none(),
-      nb::arg("_adaptor") = nullptr,
       nb::arg("demux_config") = nb::none(),
-      nb::arg("executor") = nullptr);
+      nb::arg("executor") = nullptr,
+      nb::arg("_adaptor") = nullptr);
 
   m.def(
       "async_demux_audio_bytes",
@@ -93,7 +99,9 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
@@ -105,11 +113,13 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamps") = nb::none(),
-      nb::arg("_adaptor") = nullptr,
       nb::arg("demux_config") = nb::none(),
-      nb::arg("executor") = nullptr);
+      nb::arg("executor") = nullptr,
+      nb::arg("_adaptor") = nullptr);
 
   m.def(
       "async_stream_demux_video_bytes",
@@ -132,7 +142,9 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamps") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
@@ -144,11 +156,13 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamp") = nb::none(),
-      nb::arg("_adaptor") = nullptr,
       nb::arg("demux_config") = nb::none(),
-      nb::arg("executor") = nullptr);
+      nb::arg("executor") = nullptr,
+      nb::arg("_adaptor") = nullptr);
 
   m.def(
       "async_demux_video_bytes",
@@ -171,7 +185,9 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
@@ -183,10 +199,12 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("src"),
-      // nb::kw_only(),
-      nb::arg("_adaptor") = nullptr,
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("demux_config") = nb::none(),
-      nb::arg("executor") = nullptr);
+      nb::arg("executor") = nullptr,
+      nb::arg("_adaptor") = nullptr);
 
   m.def(
       "async_demux_image_bytes",
@@ -207,7 +225,9 @@ void register_demuxing(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("demux_config") = nb::none(),
       nb::arg("executor") = nullptr,
       nb::arg("_zero_clear") = false);
