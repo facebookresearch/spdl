@@ -3,9 +3,11 @@
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
+import numba.cuda as cuda
 
-import spdl.libspdl
+import numpy as np
+import spdl.io
+import spdl.utils
 
 
 def _parse_args():
@@ -18,8 +20,6 @@ def _parse_args():
     parser.add_argument("-o", "--output-dir", type=Path, required=True)
     parser.add_argument("--width", type=int)
     parser.add_argument("--height", type=int)
-    parser.add_argument("--pix-fmt")
-    parser.add_argument("--decoder")
     parser.add_argument("--gpu", type=int)
     parser.add_argument("--nvdec", action="store_true")
     parser.add_argument("--num-demuxing-threads", type=int, default=1)
@@ -30,7 +30,7 @@ def _parse_args():
 
 def _main():
     args = _parse_args()
-    spdl.libspdl.init_folly(
+    spdl.utils.init_folly(
         [
             f"--spdl_demuxer_executor_threads={args.num_demuxing_threads}",
             f"--spdl_decoder_executor_threads={args.num_decoding_threads}",
@@ -43,43 +43,34 @@ def _main():
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    timestamps = [(0, 0.1)]  # , (2, 2.1), (10, 10.1)]
-    if args.nvdec:
-        cuda.select_device(args.gpu)
-        # Needed because SPDL initializes CUDA context only in decoding threads, but
-        # the main thread also need a context when copying data to host.
-        # Other ways of initializing CUDA context also work, but this one is simple.
-        buffers = test_nvdec(args, timestamps)
-    else:
-        buffers = test_ffmpeg(args, timestamps)
-
-    arrays = [cuda.as_cuda_array(buf).copy_to_host() for buf in buffers]
-    _plot(arrays, args.output_dir, args.pix_fmt)
+    timestamps = [(0, 0.1), (2, 2.1), (10, 10.1)]
+    # cuda.select_device(args.gpu)
+    # Needed because SPDL initializes CUDA context only in decoding threads, but
+    # the main thread also need a context when copying data to host.
+    # Other ways of initializing CUDA context also work, but this one is simple.
+    cuda.select_device(args.gpu)
+    array = test_nvdec(args, timestamps)
+    _plot(array, args.output_dir, "rgba")
 
 
 def test_nvdec(args, timestamps):
-    future = spdl.libspdl.decode_video_nvdec(
-        args.input_video,
-        timestamps=timestamps,
-        cuda_device_index=-1 if args.gpu is None else args.gpu,
-        width=args.width or -1,
-        height=args.height or -1,
-        pix_fmt=args.pix_fmt,
-    )
-    return [spdl.libspdl._BufferWrapper(fut) for fut in future.get()]
+    @spdl.utils.chain_futures
+    def _load_video_nvdec():
+        gen = spdl.io.streaming_demux("video", args.input_video, timestamps=timestamps)
+        arrays = []
+        for future in gen:
+            packets = yield future
+            buffer = yield spdl.io.decode_packets_nvdec(
+                packets,
+                cuda_device_index=-1 if args.gpu is None else args.gpu,
+                width=args.width or -1,
+                height=args.height or -1,
+                pix_fmt="rgba",
+            )
+            arrays.append(cuda.as_cuda_array(buffer).copy_to_host())
+        yield spdl.utils.create_future(arrays)
 
-
-def test_ffmpeg(args, timestamps):
-    future = spdl.libspdl.decode_video(
-        args.input_video,
-        timestamps=timestamps,
-        decoder=args.decoder,
-        decoder_options=None if args.gpu is None else {"gpu": f"{args.gpu}"},
-        cuda_device_index=-1 if args.gpu is None else args.gpu,
-        width=args.width,
-        height=args.height,
-    )
-    return [spdl.libspdl._to_buffer(fut) for fut in future.get()]
+    return _load_video_nvdec().result()
 
 
 def _plot(arrays, output_dir, pix_fmt: Optional[str]):
