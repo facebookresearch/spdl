@@ -28,21 +28,21 @@ template <MediaType media_type>
 FuturePtr async_stream_demux(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::vector<std::tuple<double, double>> timestamps,
-    SourceAdaptorPtr adaptor = nullptr,
-    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
-    ThreadPoolExecutorPtr executor = nullptr);
+    const std::string& uri,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr,
+    SourceAdaptorPtr adaptor = nullptr);
 
 template <MediaType media_type>
 FuturePtr async_demux(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    std::optional<std::tuple<double, double>> timestamp = std::nullopt,
-    SourceAdaptorPtr adaptor = nullptr,
-    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
-    ThreadPoolExecutorPtr executor = nullptr);
+    const std::string& uri,
+    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr,
+    SourceAdaptorPtr adaptor = nullptr);
 
 /// Demux audio or video from byte string stored somewhere.
 ///
@@ -53,8 +53,8 @@ FuturePtr async_stream_demux_bytes(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::vector<std::tuple<double, double>> timestamps,
-    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
+    const std::vector<std::tuple<double, double>>& timestamps,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);
 
@@ -63,8 +63,8 @@ FuturePtr async_demux_bytes(
     std::function<void(PacketsPtr<media_type>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<std::tuple<double, double>> timestamp = std::nullopt,
-    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
+    const std::optional<std::tuple<double, double>>& timestamp = std::nullopt,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);
 
@@ -72,10 +72,10 @@ FuturePtr async_demux_bytes(
 FuturePtr async_demux_image(
     std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
-    std::string uri,
-    SourceAdaptorPtr adaptor = nullptr,
-    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
-    ThreadPoolExecutorPtr executor = nullptr);
+    const std::string& uri,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+    ThreadPoolExecutorPtr executor = nullptr,
+    SourceAdaptorPtr adaptor = nullptr);
 
 /// Demux image from byte string stored somewhere.
 ///
@@ -85,7 +85,7 @@ FuturePtr async_demux_image_bytes(
     std::function<void(PacketsPtr<MediaType::Image>)> set_result,
     std::function<void(std::string, bool)> notify_exception,
     std::string_view data,
-    std::optional<DemuxConfig> dmx_cfg = std::nullopt,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
     ThreadPoolExecutorPtr executor = nullptr,
     bool _zero_clear = false);
 

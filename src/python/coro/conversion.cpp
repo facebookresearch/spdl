@@ -20,7 +20,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_audio_cuda",
@@ -28,7 +30,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
@@ -39,7 +43,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_video_cuda",
@@ -47,7 +53,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
@@ -58,7 +66,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_image_cuda",
@@ -66,7 +76,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
@@ -77,7 +89,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_audio_cuda",
@@ -85,7 +99,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
@@ -96,7 +112,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_video_cuda",
@@ -104,7 +122,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
@@ -115,7 +135,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("executor") = nullptr);
   m.def(
       "async_convert_batch_image_cuda",
@@ -123,7 +145,9 @@ void register_conversion(nb::module_& m) {
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("frames"),
-      // nb::kw_only(),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
       nb::arg("cuda_device_index"),
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
