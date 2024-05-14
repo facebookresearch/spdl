@@ -84,6 +84,7 @@ class BackgroundTaskExecutor:
         # Otherwise the loop is unexpectedly dead.
         if not self.stopped.is_set():
             # Wait for all the works to be completed.
+            _LG.info("Waiting for the background thread to exit.")
             self.queue.join()
             self.stopped.set()
 

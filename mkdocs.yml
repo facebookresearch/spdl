@@ -56,6 +56,7 @@ nav:
               - "Conversion": spdl/io/core/conversion.md
           - "High-level APIs":
               - "Loading Media": spdl/io/api/load.md
+              - "Saving Media": spdl/io/api/encoding.md
           - "Preprocessing": spdl/io/preprocessing.md
           - "Support Structures":
             - "Packets": spdl/io/support/packets.md

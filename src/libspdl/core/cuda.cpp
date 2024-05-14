@@ -50,4 +50,20 @@ CUDABufferPtr convert_to_cuda(
 #endif
 }
 
+CPUStorage cp_to_cpu(const void* src, const std::vector<size_t> shape) {
+#ifndef SPDL_USE_CUDA
+  SPDL_FAIL("SPDL is not compiled with CUDA support.");
+#else
+
+  size_t size = prod(shape);
+  CPUStorage storage{size};
+
+  CHECK_CUDA(
+      cudaMemcpy(storage.data(), src, size, cudaMemcpyDeviceToHost),
+      "Failed to copy data from device to host.");
+
+  return storage;
+#endif
+}
+
 } // namespace spdl::core

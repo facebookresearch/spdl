@@ -16,6 +16,7 @@ folly::Executor::KeepAlive<> get_demux_executor_high_prio(
     ThreadPoolExecutorPtr& exe);
 
 folly::Executor::KeepAlive<> get_decode_executor(ThreadPoolExecutorPtr& exe);
+folly::Executor::KeepAlive<> get_encode_executor(ThreadPoolExecutorPtr& exe);
 
 } // namespace detail
 

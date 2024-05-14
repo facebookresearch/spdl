@@ -1,5 +1,7 @@
 #include <libspdl/core/conversion.h>
 
+#include "libspdl/core/detail/ffmpeg/conversion.h"
+#include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -463,4 +465,58 @@ template CPUBufferPtr convert_frames(
 template CPUBufferPtr convert_frames(
     const std::vector<const FFmpegVideoFrames*>& batch);
 
+namespace detail {
+////////////////////////////////////////////////////////////////////////////////
+// Buffer to frame
+////////////////////////////////////////////////////////////////////////////////
+namespace {
+AVFrameViewPtr get_video_frame(AVPixelFormat fmt, size_t width, size_t height) {
+  AVFrameViewPtr ret{CHECK_AVALLOCATE(av_frame_alloc())};
+  ret->format = fmt;
+  ret->width = width;
+  ret->height = height;
+  ret->pts = 0;
+  return ret;
+}
+
+void ref_interweaved(AVFrame* frame, void* data, int num_channels) {
+  frame->data[0] = reinterpret_cast<uint8_t*>(data);
+  frame->linesize[0] = frame->width * num_channels;
+}
+
+void ref_planar(AVFrame* frame, void* data, int num_channels) {
+  auto src = reinterpret_cast<uint8_t*>(data);
+  for (int c = 0; c < num_channels; ++c) {
+    frame->data[c] = src;
+    frame->linesize[c] = frame->width;
+    src += frame->height * frame->width;
+  }
+}
+} // namespace
+
+AVFrameViewPtr reference_image_buffer(
+    AVPixelFormat fmt,
+    void* data,
+    size_t width,
+    size_t height) {
+  auto frame = get_video_frame(fmt, width, height);
+  switch (fmt) {
+    case AV_PIX_FMT_RGB24:
+    case AV_PIX_FMT_BGR24:
+      ref_interweaved(frame.get(), data, 3);
+      break;
+    case AV_PIX_FMT_GRAY8:
+      ref_interweaved(frame.get(), data, 1);
+      break;
+    case AV_PIX_FMT_YUV444P:
+      ref_planar(frame.get(), data, 3);
+      break;
+    default:
+      SPDL_FAIL(fmt::format(
+          "Unsupported source pixel format: {}", av_get_pix_fmt_name(fmt)));
+  }
+  return frame;
+}
+
+} // namespace detail
 } // namespace spdl::core

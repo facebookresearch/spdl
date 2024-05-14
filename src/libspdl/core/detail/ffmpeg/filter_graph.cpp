@@ -242,9 +242,8 @@ FilterGraph get_image_filter(
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-std::vector<AVFramePtr> filter_frame(
-    FilterGraph& filter_graph,
-    AVFrame* frame) {
+std::vector<AVFramePtr>
+filter_frame(FilterGraph& filter_graph, AVFrame* frame, bool flush_null) {
   XLOG(DBG9)
       << (frame ? fmt::format(
                       "{:21s} {:.3f} ({})",
@@ -265,6 +264,9 @@ std::vector<AVFramePtr> filter_frame(
       case AVERROR(EAGAIN):
         break;
       case AVERROR_EOF:
+        if (flush_null) {
+          ret.emplace_back(AVFramePtr{nullptr});
+        }
         break;
       default: {
         XLOG(DBG9) << fmt::format(
@@ -278,6 +280,45 @@ std::vector<AVFramePtr> filter_frame(
     }
   } while (errnum >= 0);
   return ret;
+}
+
+FilterGraph get_image_enc_filter(
+    int src_width,
+    int src_height,
+    AVPixelFormat src_fmt,
+    int enc_width,
+    int enc_height,
+    const std::optional<std::string>& scale_algo,
+    AVPixelFormat enc_fmt,
+    const std::optional<std::string>& filter_desc) {
+  auto desc = [&]() -> std::string {
+    std::vector<std::string> parts;
+    if (filter_desc) {
+      parts.emplace_back(filter_desc.value());
+    }
+    if (filter_desc || src_width != enc_width || src_height != enc_height) {
+      std::string arg = fmt::format("scale={}:{}", enc_width, enc_height);
+      if (scale_algo) {
+        arg += fmt::format(":flags={}", scale_algo.value());
+      }
+      parts.emplace_back(arg);
+    }
+    if (filter_desc || src_fmt != enc_fmt) {
+      parts.emplace_back(
+          fmt::format("format={}", av_get_pix_fmt_name(enc_fmt)));
+    }
+    if (parts.size()) {
+      return fmt::to_string(fmt::join(parts, ","));
+    }
+    return "null";
+  }();
+  auto arg = get_buffer_arg(
+      src_width, src_height, av_get_pix_fmt_name(src_fmt), {1, 1}, {1, 1});
+  return get_filter(
+      desc.c_str(),
+      avfilter_get_by_name("buffer"),
+      arg.c_str(),
+      avfilter_get_by_name("buffersink"));
 }
 
 } // namespace spdl::core::detail

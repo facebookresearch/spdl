@@ -44,6 +44,43 @@ struct CropArea {
   short bottom = 0;
 };
 
+struct EncodeConfig {
+  // Muxer format or device name
+  std::optional<std::string> muxer = std::nullopt;
+  // Options for muxer
+  std::optional<OptionDict> muxer_options = std::nullopt;
+
+  // Encoder
+  std::optional<std::string> encoder = std::nullopt;
+  // Encoder options
+  std::optional<OptionDict> encoder_options = std::nullopt;
+
+  // Pixel/sample format used for encoding
+  std::optional<std::string> format = std::nullopt;
+
+  // Rescale options
+  int width = -1;
+  int height = -1;
+  std::optional<std::string> scale_algo = std::nullopt;
+
+  // Optional filter desc
+  std::optional<std::string> filter_desc = std::nullopt;
+
+  int bit_rate = -1;
+  int compression_level = -1;
+
+  // qscale corresponds to ffmpeg CLI's qscale.
+  // Example: MP3
+  // https://trac.ffmpeg.org/wiki/Encode/MP3
+  // This should be set like
+  // https://github.com/FFmpeg/FFmpeg/blob/n4.3.2/fftools/ffmpeg_opt.c#L1550
+  int qscale = -1;
+
+  // video
+  int gop_size = -1;
+  int max_b_frames = -1;
+};
+
 // Thrown when unexpected internal error occurs.
 class InternalError : public std::logic_error {
   using std::logic_error::logic_error;

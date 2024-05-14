@@ -19,6 +19,10 @@ void AVFormatInputContextDeleter::operator()(AVFormatContext* p) {
   avformat_close_input(&p);
 };
 
+void AVFormatOutputContextDeleter::operator()(AVFormatContext* p) {
+  avformat_free_context(p);
+};
+
 void AVCodecContextDeleter::operator()(AVCodecContext* p) {
   // Tracing because it takes as long as 300ms in case of cuvid decoder.
   TRACE_EVENT("decoding", "avcodec_free_context");
@@ -39,6 +43,16 @@ void AVPacketDeleter::operator()(AVPacket* p) {
 void AVFrameDeleter::operator()(AVFrame* p) {
   if (p) {
     av_frame_unref(p);
+    av_frame_free(&p);
+  }
+}
+
+void AVFrameViewDeleter::operator()(AVFrame* p) {
+  if (p) {
+    for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
+      p->data[i] = NULL;
+      p->linesize[i] = 0;
+    }
     av_frame_free(&p);
   }
 }

@@ -22,6 +22,7 @@ void register_executor(nb::module_&);
 void register_demuxing(nb::module_&);
 void register_decoding(nb::module_&);
 void register_conversion(nb::module_& m);
+void register_encoding(nb::module_&);
 } // namespace spdl::coro
 
 namespace {
@@ -39,5 +40,6 @@ NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::coro::register_conversion(m);
   spdl::coro::register_demuxing(m);
   spdl::coro::register_decoding(m);
+  spdl::coro::register_encoding(m);
 }
 } // namespace
