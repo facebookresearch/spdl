@@ -1,6 +1,5 @@
 """Test decoding with image classification"""
 
-import concurrent.futures
 import contextlib
 import logging
 import time
@@ -231,9 +230,7 @@ def _get_batch_generator(args, device):
             )
             batch = spdl.io.to_torch(buffer)
             batch = batch.permute((0, 3, 1, 2))
-            f = concurrent.futures.Future()
-            f.set_result((batch, classes))
-            yield f
+            yield spdl.utils.create_future((batch, classes))
 
     @spdl.utils.chain_futures
     def _decode_func_nvdec(paths):
@@ -255,9 +252,7 @@ def _get_batch_generator(args, device):
                 strict=True,
             )
             batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
-            f = concurrent.futures.Future()
-            f.set_result((batch, classes))
-            yield f
+            yield spdl.utils.create_future((batch, classes))
 
     match args.mode:
         case "concurrent":

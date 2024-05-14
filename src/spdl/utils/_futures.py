@@ -2,14 +2,17 @@ import functools
 import logging
 
 from concurrent.futures import Future
-from typing import Any, Callable, Generator, List
+from typing import Any, Callable, Generator, List, TypeVar
 
 __all__ = [
     "chain_futures",
     "wait_futures",
+    "create_future",
 ]
 
 _LG = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 def _chain_futures(generator: Generator[Future[Any], Any, None]) -> Future[Any]:
@@ -135,4 +138,19 @@ def wait_futures(futures: List[Future], strict: bool = True) -> Future:
     # pyre-ignore: [16]
     f.__spdl_futures = futures
 
+    return f
+
+
+def create_future(val: T) -> Future[T]:
+    """Create a Future object with given value.
+
+    Args:
+        val: The initial value of the future.
+
+    Returns:
+        A Future object with given value.
+    """
+    f = Future()
+    f.set_running_or_notify_cancel()
+    f.set_result(val)
     return f

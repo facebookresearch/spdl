@@ -116,7 +116,7 @@ def _get_batch_generator(args):
                 ),
             },
         )
-        return spdl.io.to_torch(buffer)
+        yield spdl.utils.create_future(spdl.io.to_torch(buffer))
 
     async def _async_decode_func(srcs):
         buffer = await spdl.io.async_batch_load_image(
