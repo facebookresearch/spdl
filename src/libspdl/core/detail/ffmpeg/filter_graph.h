@@ -33,6 +33,19 @@ FilterGraph get_image_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx);
 
-std::vector<AVFramePtr> filter_frame(FilterGraph& filter_graph, AVFrame* frame);
+std::vector<AVFramePtr> filter_frame(
+    FilterGraph& filter_graph,
+    AVFrame* frame,
+    bool flush_null = false);
+
+FilterGraph get_image_enc_filter(
+    int src_width,
+    int src_height,
+    AVPixelFormat src_fmt,
+    int enc_width,
+    int enc_height,
+    const std::optional<std::string>& scale_algo,
+    AVPixelFormat enc_fmt,
+    const std::optional<std::string>& filter_desc);
 
 } // namespace spdl::core::detail

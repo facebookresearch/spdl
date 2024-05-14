@@ -16,9 +16,10 @@ struct Storage {
   virtual ~Storage() = default;
 };
 
-struct CPUStorage : Storage {
+class CPUStorage : Storage {
   void* data_ = nullptr;
 
+ public:
   void* data() const override;
 
   CPUStorage() = default;
@@ -37,9 +38,11 @@ using cuda_allocator_fn = std::function<uintptr_t(int, int, uintptr_t)>;
 using cuda_deleter_fn = std::function<void(uintptr_t)>;
 using cuda_allocator = std::pair<cuda_allocator_fn, cuda_deleter_fn>;
 
-struct CUDAStorage : Storage {
+class CUDAStorage : Storage {
 #ifdef SPDL_USE_CUDA
   void* data_ = nullptr;
+
+ public:
   CUstream stream = 0;
 
   cuda_deleter_fn deleter;

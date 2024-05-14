@@ -22,12 +22,18 @@ FOLLY_GFLAGS_DEFINE_uint32(
     8,
     "The number of threads the default decode executor creates.");
 
+FOLLY_GFLAGS_DEFINE_uint32(
+    spdl_encoder_executor_threads,
+    8,
+    "The number of threads the default decode executor creates.");
+
 namespace spdl::coro {
 namespace detail {
 namespace {
 
 class DemuxerTag {};
 class DecoderTag {};
+class EncoderTag {};
 
 CPUThreadPoolExecutor* get_executor(
     size_t num_threads,
@@ -56,6 +62,13 @@ Singleton<std::shared_ptr<CPUThreadPoolExecutor>, DecoderTag> DECODE_EXECUTOR(
           "DefaultDecodeThreadPoolExecutor"));
     });
 
+Singleton<std::shared_ptr<CPUThreadPoolExecutor>, EncoderTag> ENCODE_EXECUTOR(
+    [] {
+      return new std::shared_ptr<CPUThreadPoolExecutor>(get_executor(
+          FLAGS_spdl_encoder_executor_threads,
+          "DefaultEncodeThreadPoolExecutor"));
+    });
+
 Executor::KeepAlive<> get_default_demux_executor() {
   auto executorPtrPtr = DEMUX_EXECUTOR.try_get();
   if (!executorPtrPtr) {
@@ -82,6 +95,14 @@ Executor::KeepAlive<> get_default_decode_executor() {
   return getKeepAliveToken(executorPtrPtr->get());
 }
 
+Executor::KeepAlive<> get_default_encode_executor() {
+  auto executorPtrPtr = ENCODE_EXECUTOR.try_get();
+  if (!executorPtrPtr) {
+    SPDL_FAIL("Requested executor during shutdown.");
+  }
+  return getKeepAliveToken(executorPtrPtr->get());
+}
+
 } // namespace
 
 folly::Executor::KeepAlive<> get_demux_executor(ThreadPoolExecutorPtr& exe) {
@@ -95,6 +116,10 @@ folly::Executor::KeepAlive<> get_demux_executor_high_prio(
 
 folly::Executor::KeepAlive<> get_decode_executor(ThreadPoolExecutorPtr& exe) {
   return exe ? exe->impl->get() : get_default_decode_executor();
+}
+
+folly::Executor::KeepAlive<> get_encode_executor(ThreadPoolExecutorPtr& exe) {
+  return exe ? exe->impl->get() : get_default_encode_executor();
 }
 
 } // namespace detail

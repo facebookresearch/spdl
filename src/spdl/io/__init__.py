@@ -11,13 +11,23 @@
 # This import is just for annotation, so pleaes overlook this one.
 from ._type_stub import *  # noqa
 
-from . import _async, _concurrent, _config, _convert, _misc, _preprocessing, _type_stub
+from . import (
+    _async,
+    _concurrent,
+    _config,
+    _convert,
+    _encoding,
+    _misc,
+    _preprocessing,
+    _type_stub,
+)
 
 _mods = [
     _async,
     _concurrent,
     _config,
     _convert,
+    _encoding,
     _preprocessing,
     _type_stub,
     _misc,

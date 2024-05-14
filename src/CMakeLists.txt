@@ -18,6 +18,7 @@ set(srcs
   libspdl/core/detail/ffmpeg/ctx_utils.cpp
   libspdl/core/detail/ffmpeg/decoding.cpp
   libspdl/core/detail/ffmpeg/demuxing.cpp
+  libspdl/core/detail/ffmpeg/encoding.cpp
   libspdl/core/detail/ffmpeg/filter_graph.cpp
   libspdl/core/detail/ffmpeg/wrappers.cpp
   libspdl/core/detail/logging.cpp
@@ -28,6 +29,7 @@ set(srcs
   libspdl/core/adaptor/mmap.cpp
   libspdl/core/storage/cpu.cpp
   libspdl/core/cuda.cpp
+  libspdl/core/encoding.cpp
   libspdl/core/packets.cpp
   libspdl/core/utils.cpp
 
@@ -39,6 +41,7 @@ set(srcs
   libspdl/coro/decoding/nvdec.cpp
   libspdl/coro/decoding/sleep.cpp
   libspdl/coro/conversion.cpp
+  libspdl/coro/encoding.cpp
   )
 
 if (SPDL_USE_CUDA)

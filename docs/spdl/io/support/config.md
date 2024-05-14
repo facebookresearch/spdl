@@ -13,3 +13,11 @@
 ::: spdl.io.decode_config
     options:
       heading_level: 2
+
+::: spdl.io.EncodeConfig
+    options:
+      heading_level: 2
+
+::: spdl.io.encode_config
+    options:
+      heading_level: 2

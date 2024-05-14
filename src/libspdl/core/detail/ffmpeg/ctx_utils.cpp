@@ -5,7 +5,9 @@
 
 #include <folly/logging/xlog.h>
 
+#include <filesystem>
 #include <mutex>
+#include <set>
 
 extern "C" {
 #include <libavutil/channel_layout.h>
@@ -78,7 +80,7 @@ AVIOContextPtr get_io_ctx(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// AVFormatContext
+// AVFormatContext (decode)
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 AVFormatInputContextPtr get_input_format_ctx(
@@ -206,6 +208,280 @@ AVCodecContextPtr get_codec_ctx_ptr(
   codec_ctx->pkt_timebase = pkt_timebase;
   open_codec(codec_ctx.get(), decoder_options);
   return codec_ctx;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// AVFormatContext (encode)
+////////////////////////////////////////////////////////////////////////////////
+AVFormatOutputContextPtr get_output_format_ctx(
+    const std::string url,
+    const std::optional<std::string>& format) {
+  AVFormatContext* p = nullptr;
+  CHECK_AVERROR(
+      avformat_alloc_output_context2(
+          &p, nullptr, format ? format->c_str() : nullptr, url.c_str()),
+      fmt::format("Failed to allocate output format context for {}.", url));
+  return AVFormatOutputContextPtr{p};
+}
+
+AVFormatOutputContextPtr get_output_format_ctx(
+    AVIOContext* io_ctx,
+    std::string format,
+    const std::optional<std::string>& name) {
+  AVFormatContext* p = nullptr;
+  std::string nm = name ? *name : "Custom Output Context";
+  CHECK_AVERROR(
+      avformat_alloc_output_context2(&p, nullptr, format.c_str(), nm.c_str()),
+      fmt::format("Failed to allocate output format context for {}.", nm));
+  return AVFormatOutputContextPtr{p};
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Encoding
+////////////////////////////////////////////////////////////////////////////////
+const AVCodec* get_image_codec(
+    const std::optional<std::string>& encoder,
+    const AVOutputFormat* oformat,
+    const std::string& url) {
+  if (encoder) {
+    const AVCodec* c = avcodec_find_encoder_by_name(encoder->c_str());
+    if (!c) {
+      SPDL_FAIL(fmt::format("Unexpected encoder name: {}", encoder.value()));
+    }
+    return c;
+  }
+
+  // FFmpeg defaults to 'image2' muxer, of which default encoder is MJPEG.
+  // This also applies to formats like PNG and TIFF
+  if (std::strcmp(oformat->name, "image2") == 0) {
+    // The following list was obtained by running
+    // ffmpeg -h muxer=image2 | grep 'Common extensions'
+    // then for each extension, checking the encoder by
+    // fmpeg -hide_banner -h encoder=$ext | grep 'Encoder '
+    static const std::set<std::string> exts{
+        "bmp", "dpx",    "exr", "pam",   "pbm", "pcx", "pfm",
+        "pgm", "pgmyuv", "phm", "png",   "ppm", "sgi", "tiff",
+        "xwd", "vbn",    "xbm", "xface", "qoi", "hdr", "wbmp"};
+
+    auto ext = std::filesystem::path(url).extension().string();
+    if (!ext.empty()) {
+      ext = ext.substr(1);
+      if (exts.contains(ext)) {
+        const AVCodec* c = avcodec_find_encoder_by_name(ext.c_str());
+        if (c) {
+          return c;
+        }
+      }
+    }
+  }
+
+  auto default_codec = oformat->video_codec;
+
+  const AVCodec* c = avcodec_find_encoder(default_codec);
+  if (!c) {
+    SPDL_FAIL(fmt::format(
+        "Encoder not found for codec: {}", avcodec_get_name(default_codec)));
+  }
+  return c;
+}
+
+namespace {
+bool is_pix_fmt_supported(
+    const AVPixelFormat fmt,
+    const AVPixelFormat* pix_fmts) {
+  if (!pix_fmts) {
+    return true;
+  }
+  while (*pix_fmts != AV_PIX_FMT_NONE) {
+    if (fmt == *pix_fmts) {
+      return true;
+    }
+    ++pix_fmts;
+  }
+  return false;
+}
+
+std::string to_str(const AVPixelFormat* pix_fmts) {
+  std::vector<std::string> ret;
+  while (*pix_fmts != AV_PIX_FMT_NONE) {
+    ret.emplace_back(av_get_pix_fmt_name(*pix_fmts));
+    ++pix_fmts;
+  }
+  return fmt::to_string(fmt::join(ret, ", "));
+}
+} // namespace
+
+AVPixelFormat get_enc_fmt(
+    AVPixelFormat src_fmt,
+    const std::optional<std::string>& encoder_format,
+    const AVCodec* codec) {
+  if (encoder_format) {
+    const auto& val = encoder_format.value();
+    auto fmt = av_get_pix_fmt(val.c_str());
+    if (!is_pix_fmt_supported(fmt, codec->pix_fmts)) {
+      SPDL_FAIL(fmt::format(
+          "Codec {} does not support {} format. Supported values are; {}",
+          codec->name,
+          val,
+          to_str(codec->pix_fmts)));
+    }
+    return fmt;
+  }
+  if (codec->pix_fmts) {
+    return codec->pix_fmts[0];
+  }
+  return src_fmt;
+}
+
+AVCodecContextPtr get_codec_ctx(const AVCodec* codec, int flags) {
+  auto ctx = AVCodecContextPtr{CHECK_AVALLOCATE(avcodec_alloc_context3(codec))};
+
+  if (flags & AVFMT_GLOBALHEADER) {
+    ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+  }
+  return ctx;
+}
+
+void configure_video_codec_ctx(
+    AVCodecContextPtr& ctx,
+    AVPixelFormat format,
+    AVRational frame_rate,
+    int width,
+    int height,
+    const EncodeConfig& cfg) {
+  // TODO: Review other options and make them configurable?
+  // https://ffmpeg.org/doxygen/4.1/muxing_8c_source.html#l00147
+  //  - bit_rate_tolerance
+  //  - mb_decisions
+
+  ctx->pix_fmt = format;
+  ctx->width = width;
+  ctx->height = height;
+  ctx->time_base = av_inv_q(frame_rate);
+
+  // Set optional stuff
+  if (cfg.bit_rate > 0) {
+    ctx->bit_rate = cfg.bit_rate;
+  }
+  if (cfg.compression_level != -1) {
+    ctx->compression_level = cfg.compression_level;
+  }
+  if (cfg.gop_size != -1) {
+    ctx->gop_size = cfg.gop_size;
+  }
+  if (cfg.max_b_frames != -1) {
+    ctx->max_b_frames = cfg.max_b_frames;
+  }
+  if (cfg.qscale >= 0) {
+    ctx->flags |= AV_CODEC_FLAG_QSCALE;
+    ctx->global_quality = FF_QP2LAMBDA * cfg.qscale;
+  }
+}
+
+void configure_image_codec_ctx(
+    AVCodecContextPtr& ctx,
+    AVPixelFormat format,
+    int width,
+    int height,
+    const EncodeConfig& cfg) {
+  configure_video_codec_ctx(ctx, format, {1, 1}, width, height, cfg);
+}
+
+template <MediaType media_type>
+void open_codec(
+    AVCodecContext* codec_ctx,
+    const std::optional<OptionDict>& encode_options) {
+  AVDictionaryDPtr option = get_option_dict(encode_options);
+
+  if constexpr (media_type == MediaType::Audio) {
+    // Enable experimental feature if required
+    // Note:
+    // "vorbis" refers to FFmpeg's native encoder,
+    // https://ffmpeg.org/doxygen/4.1/vorbisenc_8c.html#a8c2e524b0f125f045fef39c747561450
+    // while "libvorbis" refers to the one depends on libvorbis,
+    // which is not experimental
+    // https://ffmpeg.org/doxygen/4.1/libvorbisenc_8c.html#a5dd5fc671e2df9c5b1f97b2ee53d4025
+    // similarly, "opus" refers to FFmpeg's native encoder
+    // https://ffmpeg.org/doxygen/4.1/opusenc_8c.html#a05b203d4a9a231cc1fd5a7ddeb68cebc
+    // while "libopus" refers to the one depends on libopusenc
+    // https://ffmpeg.org/doxygen/4.1/libopusenc_8c.html#aa1d649e48cd2ec00cfe181cf9d0f3251
+    if (std::strcmp(codec_ctx->codec->name, "vorbis") == 0) {
+      if (!av_dict_get(option, "strict", nullptr, 0)) {
+        XLOG_FIRST_N(WARN, 1)
+            << "\"vorbis\" encoder is selected. Enabling '-strict experimental'. ",
+            "If this is not desired, please provide \"strict\" encoder option ",
+            "with desired value.";
+        av_dict_set(option, "strict", "experimental", 0);
+      }
+    }
+    if (std::strcmp(codec_ctx->codec->name, "opus") == 0) {
+      if (!av_dict_get(option, "strict", nullptr, 0)) {
+        XLOG_FIRST_N(WARN, 1)
+            << "\"opus\" encoder is selected. Enabling '-strict experimental'. ",
+            "If this is not desired, please provide \"strict\" encoder option ",
+            "with desired value.";
+        av_dict_set(option, "strict", "experimental", 0);
+      }
+    }
+  }
+
+  // Default to single thread execution.
+  if (!av_dict_get(option, "threads", nullptr, 0)) {
+    av_dict_set(option, "threads", "1", 0);
+  }
+
+  CHECK_AVERROR(
+      avcodec_open2(codec_ctx, codec_ctx->codec, option),
+      "Failed to open codec context.");
+  check_empty(option);
+}
+
+template void open_codec<MediaType::Image>(
+    AVCodecContext* codec_ctx,
+    const std::optional<OptionDict>& encode_options);
+
+AVStream* create_stream(
+    AVFormatContext* format_ctx,
+    AVCodecContext* codec_ctx) {
+  AVStream* stream = CHECK_AVALLOCATE(avformat_new_stream(format_ctx, nullptr));
+  // Note: time base may be adjusted when `calling avformat_write_header()`
+  // https://ffmpeg.org/doxygen/5.1/structAVStream.html#a9db755451f14e2bf590d4b85d82b32e6
+  stream->time_base = codec_ctx->time_base;
+  CHECK_AVERROR(
+      avcodec_parameters_from_context(stream->codecpar, codec_ctx),
+      "Failed to create a new stream.");
+  return stream;
+}
+
+void open_format(
+    AVFormatContext* format_ctx,
+    const std::optional<OptionDict>& options) {
+  AVFORMAT_CONST AVOutputFormat* fmt = format_ctx->oformat;
+  AVDictionaryDPtr option = get_option_dict(options);
+
+  if (strcmp(fmt->name, "image2") == 0) {
+    // By default, image2 muxer warns about the path not containing sequence
+    // number everytime the codec is initialized. For the case of single image
+    // encoding, this is unnecessary and super annoying. So we set the update
+    // flag to 1.
+    // https://github.com/FFmpeg/FFmpeg/blob/e757726e89ff636e0dc6743f635888639a196e36/libavformat/img2enc.c#L171-L174
+    if (!av_dict_get(option, "update", nullptr, 0)) {
+      av_dict_set(option, "update", "1", 0);
+    }
+  }
+
+  if (!(fmt->flags & AVFMT_NOFILE) &&
+      !(format_ctx->flags & AVFMT_FLAG_CUSTOM_IO)) {
+    CHECK_AVERROR(
+        avio_open2(
+            &format_ctx->pb, format_ctx->url, AVIO_FLAG_WRITE, nullptr, option),
+        fmt::format("Failed to open custom output: {}", format_ctx->url));
+  }
+
+  CHECK_AVERROR(
+      avformat_write_header(format_ctx, option),
+      fmt::format("Failed to write header: {}", format_ctx->url));
+  check_empty(option);
 }
 
 } // namespace spdl::core::detail

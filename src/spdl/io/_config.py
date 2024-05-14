@@ -1,9 +1,10 @@
-from spdl.io import DecodeConfig, DemuxConfig
+from spdl.io import DecodeConfig, DemuxConfig, EncodeConfig
 from spdl.lib import _libspdl
 
 __all__ = [
     "demux_config",
     "decode_config",
+    "encode_config",
 ]
 
 
@@ -81,3 +82,41 @@ def decode_config(**kwargs) -> DecodeConfig:
         ```
     """
     return _libspdl.DecodeConfig(**kwargs)
+
+
+def encode_config(**kwargs) -> EncodeConfig:
+    """Customize encoding behavior.
+
+    Other Args:
+        muxer (str): *Optional* Multiplexer (container) format or output device.
+
+        muxer_options (str): *Optional* Multiplexer (container) format or output device.
+
+        encoder (str): *Optional* Override encoder.
+
+        encoder_options (Dict[str, str]): *Optional* Provide encoder options.
+
+        format (str): *Optional* Override encoder format. Such as "yuv420p".
+
+        width (int): *Optional* Resize image to the given width.
+
+        height (int): *Optional* Resize image to the given height.
+
+        scale_algo (str): *Optional* The algorithm used to scale the image.
+
+            See `sws_flags` entry at https://ffmpeg.org/ffmpeg-scaler.html#sws_005fflags
+            for the available values and the detail.
+
+        filter_desc (str): *Optional* Additional filtering applied before width/height/format conversion.
+
+        bit_rate (int): *Optional* Override bit rate.
+
+        compression_level (int): *Optional* Override compression level.
+
+        sqcale (int): *Optional* Override scale.
+
+        gop_size (int): *Optional* Override GOP size.
+
+        max_bframes (int): *Optional* Override maximum number of B-Frames.
+    """
+    return _libspdl.EncodeConfig(**kwargs)
