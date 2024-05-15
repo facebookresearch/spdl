@@ -162,7 +162,6 @@ def main():
         name="spdl",
         version="0.0.1",
         author="Moto Hira",
-        author_email="moto",
         description="SPDL: Scalable and Performant Data Loading.",
         long_description="Fast multimedia data loading and processing.",
         packages=find_packages(where="src"),
