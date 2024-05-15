@@ -42,7 +42,7 @@ jobs:
       - name: Build SPDL
         run: |
           mkdir ~/package
-          conda build ./conda_build --python=${{ matrix.python-version }} --output-folder ~/package
+          conda build ./packaging/conda --python=${{ matrix.python-version }} --output-folder ~/package
 
       - uses: actions/upload-artifact@v4
         with:

@@ -41,7 +41,7 @@ jobs:
       - name: Build SPDL
         run: |
           mkdir ~/package
-          conda build -c nvidia/label/cuda-${{ matrix.cu_version }} ./conda_build --python=${{ matrix.python-version }} --output-folder ~/package
+          conda build -c nvidia/label/cuda-${{ matrix.cu_version }} ./packaging/conda --python=${{ matrix.python-version }} --output-folder ~/package
         env:
           CU_VERSION: ${{ matrix.cu_version }}
           CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-${{ matrix.cu_version }}::cuda-toolkit"
