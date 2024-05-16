@@ -79,7 +79,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DCMAKE_INSTALL_PREFIX={build_dir}",
             f"-DCMAKE_PREFIX_PATH={build_dir}",
             "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=false",
-            f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DPython_EXECUTABLE={sys.executable}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
             ###################################################################
