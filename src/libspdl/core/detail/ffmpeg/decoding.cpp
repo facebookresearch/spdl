@@ -88,21 +88,19 @@ FilterGraph get_filter(
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> get_frame(PacketsPtr<media_type>& packets) {
+FFmpegFramesPtr<media_type> get_frame(DemuxedPackets<media_type>* packets) {
   return std::make_unique<FFmpegFrames<media_type>>(
       packets->id, packets->time_base);
 }
 
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets_with_filter(
-    PacketsPtr<media_type> packets,
-    AVCodecContextPtr codec_ctx,
-    std::string filter_desc) {
+    DemuxedPackets<media_type>* packets,
+    AVCodecContext* codec_ctx,
+    FilterGraph& filter) {
   auto frames = get_frame(packets);
-  auto filter =
-      get_filter<media_type>(codec_ctx.get(), filter_desc, packets->frame_rate);
   for (auto& packet : packets->get_packets()) {
-    for (auto& raw_frame : decode_packet(codec_ctx.get(), packet, true)) {
+    for (auto& raw_frame : decode_packet(codec_ctx, packet, true)) {
       for (auto& filtered_frame : filter_frame(filter, raw_frame.get())) {
         frames->push_back(filtered_frame.release());
       }
@@ -114,15 +112,26 @@ FFmpegFramesPtr<media_type> decode_packets_with_filter(
 
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets(
-    PacketsPtr<media_type> packets,
-    AVCodecContextPtr codec_ctx) {
+    DemuxedPackets<media_type>* packets,
+    AVCodecContext* codec_ctx) {
   auto frames = get_frame(packets);
   for (auto& packet : packets->get_packets()) {
-    for (auto& frame : decode_packet(codec_ctx.get(), packet, false)) {
+    for (auto& frame : decode_packet(codec_ctx, packet, false)) {
       frames->push_back(frame.release());
     }
   }
   return frames;
+}
+
+template <MediaType media_type>
+AVCodecContextPtr get_decode_ctx(
+    PacketsPtr<media_type>& packets,
+    const std::optional<DecodeConfig>& cfg) {
+  return detail::get_codec_ctx_ptr(
+      packets->codecpar,
+      AVRational{packets->time_base.num, packets->time_base.den},
+      cfg ? cfg->decoder : std::nullopt,
+      cfg ? cfg->decoder_options : std::nullopt);
 }
 
 } // namespace
@@ -137,19 +146,18 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
       "decoding",
       "decode_packets_ffmpeg",
       perfetto::Flow::ProcessScoped(packets->id));
-  auto codec_ctx = detail::get_codec_ctx_ptr(
-      packets->codecpar,
-      AVRational{packets->time_base.num, packets->time_base.den},
-      cfg ? cfg->decoder : std::nullopt,
-      cfg ? cfg->decoder_options : std::nullopt);
+  auto codec_ctx = detail::get_decode_ctx(packets, cfg);
   if constexpr (media_type != MediaType::Image) {
     packets->push(nullptr); // For flushing
   }
   if (filter_desc.empty()) {
-    return detail::decode_packets(std::move(packets), std::move(codec_ctx));
+    return detail::decode_packets(packets.get(), codec_ctx.get());
+  } else {
+    auto filter = detail::get_filter<media_type>(
+        codec_ctx.get(), filter_desc, packets->frame_rate);
+    return detail::decode_packets_with_filter(
+        packets.get(), codec_ctx.get(), filter);
   }
-  return detail::decode_packets_with_filter(
-      std::move(packets), std::move(codec_ctx), std::move(filter_desc));
 }
 
 template FFmpegAudioFramesPtr decode_packets_ffmpeg(
