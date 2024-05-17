@@ -17,6 +17,71 @@ extern "C" {
 }
 
 namespace spdl::core::detail {
+
+////////////////////////////////////////////////////////////////////////////////
+// Iterator
+////////////////////////////////////////////////////////////////////////////////
+
+IterativeFiltering::Ite::Ite(
+    FilterGraph* filter_graph_,
+    AVFrame* frame,
+    bool flush_null_)
+    : filter_graph(filter_graph_), null_flushed(!flush_null_) {
+  filter_graph->add_frame(frame);
+  fill_next();
+}
+
+IterativeFiltering::Ite& IterativeFiltering::Ite::operator++() {
+  fill_next();
+  return *this;
+}
+
+bool IterativeFiltering::Ite::operator!=(const Sentinel&) {
+  return !(completed && null_flushed);
+}
+
+AVFramePtr IterativeFiltering::Ite::operator*() {
+  if (completed) {
+    if (null_flushed) {
+      // This should not be reachable, because `operator!=` guards
+      SPDL_FAIL_INTERNAL("Frame was requested but filtering is exhausted.");
+    }
+    null_flushed = true;
+    return {};
+  }
+  return std::move(next_ret);
+}
+
+void IterativeFiltering::Ite::fill_next() {
+  next_ret = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
+  int errnum = filter_graph->get_frame(next_ret.get());
+  switch (errnum) {
+    case AVERROR(EAGAIN):
+    case AVERROR_EOF: {
+      completed = true;
+      // Note: `next_ret` is now invalid state.
+    }
+  }
+}
+
+IterativeFiltering::IterativeFiltering(
+    FilterGraph* filter_graph_,
+    AVFrame* frame_,
+    bool flush_null_)
+    : filter_graph(filter_graph_), frame(frame_), flush_null(flush_null_){};
+
+IterativeFiltering::Ite IterativeFiltering::begin() {
+  return {filter_graph, frame, flush_null};
+};
+
+const IterativeFiltering::Sentinel& IterativeFiltering::end() {
+  return sentinel;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// FilterGraph
+////////////////////////////////////////////////////////////////////////////////
+
 namespace {
 // for debug
 std::string describe_graph(AVFilterGraph* graph) {
@@ -157,7 +222,17 @@ FilterGraph get_filter(
 
 } // namespace
 
+#define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
+
 void FilterGraph::add_frame(AVFrame* frame) {
+  XLOG(DBG9)
+      << (frame ? fmt::format(
+                      "{:21s} {:.3f} ({})",
+                      " --- raw frame:",
+                      TS(frame, get_src_time_base()),
+                      frame->pts)
+                : fmt::format(" --- flush filter graph"));
+
   auto src_ctx = graph->filters[0];
   TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
   CHECK_AVERROR(
@@ -173,7 +248,20 @@ int FilterGraph::get_frame(AVFrame* frame) {
   if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
     CHECK_AVERROR_NUM(ret, "Failed to filter a frame.");
   }
+
+  if (ret >= 0) {
+    XLOG(DBG9) << fmt::format(
+        "{:21s} {:.3f} ({})",
+        " ---- filtered frame:",
+        TS(frame, get_sink_time_base()),
+        frame->pts);
+  }
+
   return ret;
+}
+
+IterativeFiltering FilterGraph::filter(AVFrame* frame, bool flush_null) {
+  return {this, frame, flush_null};
 }
 
 Rational FilterGraph::get_src_time_base() const {
@@ -185,6 +273,10 @@ Rational FilterGraph::get_sink_time_base() const {
   auto ctx = graph->filters[1]->inputs[0];
   return Rational{ctx->time_base.num, ctx->time_base.den};
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Factory functions - decoding
+////////////////////////////////////////////////////////////////////////////////
 
 FilterGraph get_audio_filter(
     const std::string& filter_description,
@@ -240,47 +332,9 @@ FilterGraph get_image_filter(
       avfilter_get_by_name("buffersink"));
 }
 
-#define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
-
-std::vector<AVFramePtr>
-filter_frame(FilterGraph& filter_graph, AVFrame* frame, bool flush_null) {
-  XLOG(DBG9)
-      << (frame ? fmt::format(
-                      "{:21s} {:.3f} ({})",
-                      " --- raw frame:",
-                      TS(frame, filter_graph.get_src_time_base()),
-                      frame->pts)
-                : fmt::format(" --- flush filter graph"));
-
-  filter_graph.add_frame(frame);
-
-  int errnum;
-  AVFrameAutoUnref frame_ref{frame};
-  std::vector<AVFramePtr> ret;
-  do {
-    AVFramePtr frame2{CHECK_AVALLOCATE(av_frame_alloc())};
-    errnum = filter_graph.get_frame(frame2.get());
-    switch (errnum) {
-      case AVERROR(EAGAIN):
-        break;
-      case AVERROR_EOF:
-        if (flush_null) {
-          ret.emplace_back(AVFramePtr{nullptr});
-        }
-        break;
-      default: {
-        XLOG(DBG9) << fmt::format(
-            "{:21s} {:.3f} ({})",
-            " ---- filtered frame:",
-            TS(frame2, filter_graph.get_sink_time_base()),
-            frame2->pts);
-
-        ret.emplace_back(std::move(frame2));
-      }
-    }
-  } while (errnum >= 0);
-  return ret;
-}
+////////////////////////////////////////////////////////////////////////////////
+// Factory functions - encoding
+////////////////////////////////////////////////////////////////////////////////
 
 FilterGraph get_image_enc_filter(
     int src_width,

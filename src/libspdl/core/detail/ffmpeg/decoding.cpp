@@ -102,7 +102,7 @@ FFmpegFramesPtr<media_type> decode_packets_with_filter(
   auto frames = get_frame(packets);
   for (auto& packet : packets->get_packets()) {
     for (auto& raw_frame : decode_packet(codec_ctx, packet, true)) {
-      for (auto& filtered_frame : filter_frame(filter, raw_frame.get())) {
+      for (auto filtered_frame : filter.filter(raw_frame.get())) {
         frames->push_back(filtered_frame.release());
       }
     }
@@ -227,7 +227,7 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
     while (packet_index < num_packets) {
       auto& packet = packets_ref[packet_index++];
       for (auto& raw_frame : detail::decode_packet(cdc_ctx, packet, true)) {
-        for (auto& filtered_frame : filter_frame(filter, raw_frame.get())) {
+        for (auto filtered_frame : filter.filter(raw_frame.get())) {
           if (ret->get_num_frames() < num_frames) {
             ret->push_back(filtered_frame.release());
           } else {
