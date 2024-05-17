@@ -5,6 +5,44 @@
 
 namespace spdl::core::detail {
 
+class FilterGraph;
+
+// Helper structure that converts filtering operation (while loop) into
+// iterator.
+struct IterativeFiltering {
+  struct Sentinel {};
+
+  static constexpr Sentinel sentinel{};
+
+  FilterGraph* filter_graph;
+  AVFrame* frame;
+  bool flush_null;
+
+  struct Ite {
+    FilterGraph* filter_graph;
+    bool completed = false;
+    bool null_flushed;
+    AVFramePtr next_ret{};
+
+    bool operator!=(const Sentinel&);
+
+    Ite(FilterGraph*, AVFrame* frame, bool flush_null);
+
+    Ite& operator++();
+
+    AVFramePtr operator*();
+
+   private:
+    void fill_next();
+  };
+
+  IterativeFiltering(FilterGraph*, AVFrame*, bool flush_null = false);
+
+  Ite begin();
+  const Sentinel& end();
+};
+
+// Wrap AVFilterGraphPtr to provide convenient methods
 class FilterGraph {
   AVFilterGraphPtr graph;
 
@@ -13,11 +51,16 @@ class FilterGraph {
   FilterGraph(const AVFilterGraphPtr&) = delete;
   FilterGraph& operator=(const AVFilterGraphPtr&) = delete;
 
-  void add_frame(AVFrame* in_frame);
-  int get_frame(AVFrame* out_frame);
+  IterativeFiltering filter(AVFrame*, bool flush_null = false);
 
   Rational get_src_time_base() const;
   Rational get_sink_time_base() const;
+
+ private:
+  void add_frame(AVFrame* in_frame);
+  int get_frame(AVFrame* out_frame);
+
+  friend class IterativeFiltering;
 };
 
 FilterGraph get_audio_filter(
@@ -32,11 +75,6 @@ FilterGraph get_video_filter(
 FilterGraph get_image_filter(
     const std::string& filter_description,
     AVCodecContext* codec_ctx);
-
-std::vector<AVFramePtr> filter_frame(
-    FilterGraph& filter_graph,
-    AVFrame* frame,
-    bool flush_null = false);
 
 FilterGraph get_image_enc_filter(
     int src_width,
