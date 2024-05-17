@@ -125,7 +125,24 @@ void register_decoding(nb::module_& m) {
 
   m.def(
       "async_decode_image_from_bytes",
-      &async_decode_from_bytes<MediaType::Image>,
+      [](std::function<void(FFmpegFramesPtr<MediaType::Image>)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         nb::bytes data,
+         const std::optional<DemuxConfig>& dmx_cfg,
+         const std::optional<DecodeConfig>& decode_config,
+         std::string filter_desc,
+         ThreadPoolExecutorPtr decode_executor,
+         bool _zero_clear = false) {
+        return async_decode_from_bytes(
+            set_result,
+            notify_exception,
+            std::string_view{data.c_str(), data.size()},
+            dmx_cfg,
+            decode_config,
+            filter_desc,
+            decode_executor,
+            _zero_clear);
+      },
       nb::arg("set_result"),
       nb::arg("notify_exception"),
       nb::arg("data"),
