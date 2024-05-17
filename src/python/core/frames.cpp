@@ -34,14 +34,21 @@ void register_frames(nb::module_& m) {
       .def(
           "__repr__",
           [](const FFmpegAudioFrames& self) {
+            auto num_frames = self.get_num_frames();
+            auto pts = [&]() {
+              if (num_frames == 0) {
+                return std::numeric_limits<double>::quiet_NaN();
+              }
+              return double(self.get_frames().front()->pts) *
+                  self.time_base.num / self.time_base.den;
+            }();
             return fmt::format(
                 "FFmpegAudioFrames<num_frames={}, sample_format=\"{}\", sample_rate={}, num_channels={}, pts={}>",
-                self.get_num_frames(),
+                num_frames,
                 self.get_media_format_name(),
                 self.get_sample_rate(),
                 self.get_num_channels(),
-                double(self.get_frames().front()->pts) * self.time_base.num /
-                    self.time_base.den);
+                pts);
           })
       .def("clone", [](const FFmpegAudioFrames& self) { return clone(self); });
 
@@ -95,15 +102,22 @@ void register_frames(nb::module_& m) {
       .def(
           "__repr__",
           [](const FFmpegVideoFrames& self) {
+            auto num_frames = self.get_num_frames();
+            auto pts = [&]() {
+              if (num_frames == 0) {
+                return std::numeric_limits<double>::quiet_NaN();
+              }
+              return double(self.get_frames().front()->pts) *
+                  self.time_base.num / self.time_base.den;
+            }();
             return fmt::format(
                 "FFmpegVideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, pts={}>",
-                self.get_num_frames(),
+                num_frames,
                 self.get_media_format_name(),
                 self.get_num_planes(),
                 self.get_width(),
                 self.get_height(),
-                double(self.get_frames().front()->pts) * self.time_base.num /
-                    self.time_base.den);
+                pts);
           })
       .def("clone", [](const FFmpegVideoFrames& self) { return clone(self); });
 
