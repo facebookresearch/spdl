@@ -16,10 +16,71 @@ extern "C" {
 }
 
 namespace spdl::core {
+namespace detail {
+
+////////////////////////////////////////////////////////////////////////////////
+// Iterator
+////////////////////////////////////////////////////////////////////////////////
+
+IterativeDecoding::Ite::Ite(
+    Decoder* decoder_,
+    AVPacket* packet,
+    bool flush_null)
+    : decoder(decoder_), null_flushed(!flush_null) {
+  decoder->add_packet(packet);
+  fill_next();
+}
+
+IterativeDecoding::Ite& IterativeDecoding::Ite::operator++() {
+  fill_next();
+  return *this;
+}
+
+bool IterativeDecoding::Ite::operator!=(const Sentinel&) {
+  return !(completed && null_flushed);
+}
+
+AVFramePtr IterativeDecoding::Ite::operator*() {
+  if (completed) {
+    if (null_flushed) {
+      // This should not be reachable, because `operator!=` guards
+      SPDL_FAIL_INTERNAL("Frame was requested but decoding is exhausted.");
+    }
+    null_flushed = true;
+    return {};
+  }
+  return std::move(next_ret);
+}
+
+void IterativeDecoding::Ite::fill_next() {
+  next_ret = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
+  int errnum = decoder->get_frame(next_ret.get());
+  switch (errnum) {
+    case AVERROR(EAGAIN):
+    case AVERROR_EOF: {
+      completed = true;
+      // Note: `next_ret` is now invalid state.
+    }
+  }
+}
+
+IterativeDecoding::IterativeDecoding(
+    Decoder* decoder_,
+    AVPacket* packet_,
+    bool flush_null_)
+    : decoder(decoder_), packet(packet_), flush_null(flush_null_){};
+
+IterativeDecoding::Ite IterativeDecoding::begin() {
+  return {decoder, packet, flush_null};
+};
+
+const IterativeDecoding::Sentinel& IterativeDecoding::end() {
+  return sentinel;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Decoder
 ////////////////////////////////////////////////////////////////////////////////
-namespace detail {
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
 Decoder::Decoder(
@@ -49,38 +110,26 @@ void Decoder::add_packet(AVPacket* packet) {
   }
 }
 
-std::vector<AVFramePtr> Decoder::get_frames(bool flush_null) {
-  int errnum = 0;
-  std::vector<AVFramePtr> ret;
-  while (errnum >= 0) {
-    AVFramePtr frame{CHECK_AVALLOCATE(av_frame_alloc())};
-    {
-      TRACE_EVENT("decoding", "avcodec_receive_frame");
-      errnum = avcodec_receive_frame(codec_ctx.get(), frame.get());
-    }
-    switch (errnum) {
-      case AVERROR(EAGAIN):
-        break;
-      case AVERROR_EOF:
-        if (flush_null) {
-          ret.emplace_back(AVFramePtr{nullptr});
-        }
-        break;
-      default: {
-        if (frame->key_frame) {
-          TRACE_EVENT_INSTANT("decoding", "key_frame");
-        }
-        CHECK_AVERROR_NUM(errnum, "Failed to decode a frame.");
-
-        double ts = TS(frame, codec_ctx->pkt_timebase);
-        XLOG(DBG9) << fmt::format(
-            "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
-
-        ret.emplace_back(frame.release());
-      }
-    }
+int Decoder::get_frame(AVFrame* frame) {
+  int ret;
+  {
+    TRACE_EVENT("decoding", "avcodec_receive_frame");
+    ret = avcodec_receive_frame(codec_ctx.get(), frame);
   }
+  if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
+    CHECK_AVERROR_NUM(ret, "Failed to decode a packet.");
+  }
+  if (ret >= 0) {
+    double ts = TS(frame, codec_ctx->pkt_timebase);
+    XLOG(DBG9) << fmt::format(
+        "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
+  }
+
   return ret;
+}
+
+IterativeDecoding Decoder::decode(AVPacket* packet, bool flush_null) {
+  return {this, packet, flush_null};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,8 +166,7 @@ FFmpegFramesPtr<media_type> decode_packets_with_filter(
     FilterGraph& filter) {
   auto frames = get_frame(packets);
   for (auto& packet : packets->get_packets()) {
-    decoder.add_packet(packet);
-    for (auto& raw_frame : decoder.get_frames(true)) {
+    for (auto raw_frame : decoder.decode(packet, !packet)) {
       for (auto filtered_frame : filter.filter(raw_frame.get())) {
         frames->push_back(filtered_frame.release());
       }
@@ -134,8 +182,7 @@ FFmpegFramesPtr<media_type> decode_packets(
     Decoder& decoder) {
   auto frames = get_frame(packets);
   for (auto& packet : packets->get_packets()) {
-    decoder.add_packet(packet);
-    for (auto& frame : decoder.get_frames(false)) {
+    for (auto frame : decoder.decode(packet)) {
       frames->push_back(frame.release());
     }
   }
@@ -198,8 +245,9 @@ StreamingDecoder<media_type>::Impl::Impl(
         if (filter_desc_.empty()) {
           return std::nullopt;
         }
-        return detail::get_filter<media_type>(
+        auto filter = detail::get_filter<media_type>(
             decoder.codec_ctx.get(), filter_desc_, packets->frame_rate);
+        return std::make_optional<FilterGraph>(std::move(filter));
       }()) {
   packets->push(nullptr);
 }
@@ -235,8 +283,7 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
     auto& filter = filter_graph.value();
     while (packet_index < num_packets) {
       auto& packet = packets_ref[packet_index++];
-      decoder.add_packet(packet);
-      for (auto& raw_frame : decoder.get_frames(true)) {
+      for (auto raw_frame : decoder.decode(packet, !packet)) {
         for (auto filtered_frame : filter.filter(raw_frame.get())) {
           if (ret->get_num_frames() < num_frames) {
             ret->push_back(filtered_frame.release());
@@ -256,8 +303,7 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
   } else {
     while (packet_index < num_packets) {
       auto& packet = packets_ref[packet_index++];
-      decoder.add_packet(packet);
-      for (auto& frame : decoder.get_frames(false)) {
+      for (auto frame : decoder.decode(packet)) {
         if (ret->get_num_frames() < num_frames) {
           ret->push_back(frame.release());
         } else {

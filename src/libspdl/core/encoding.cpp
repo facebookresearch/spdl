@@ -76,9 +76,10 @@ void encode_image(
 
   auto frame =
       detail::reference_image_buffer(src_fmt, data, src_width, src_height);
-  for (auto filtered : filter_graph.filter(frame.get(), true)) {
+  for (auto filtered : filter_graph.filter(frame.get())) {
     encoder.encode(filtered);
   }
+  encoder.encode(nullptr);
 }
 
 } // namespace spdl::core
