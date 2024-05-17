@@ -27,9 +27,9 @@ AVFormatInputContextPtr get_input_format_ctx(
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options);
 
-AVCodecContextPtr get_codec_ctx_ptr(
+AVCodecContextPtr get_decode_codec_ctx_ptr(
     const AVCodecParameters* params,
-    AVRational pkt_timebase,
+    Rational pkt_timebase,
     const std::optional<std::string>& decoder = std::nullopt,
     const std::optional<OptionDict>& decoder_options = std::nullopt);
 
