@@ -54,6 +54,62 @@ template FuturePtr async_decode(
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
 
+template <MediaType media_type>
+FuturePtr async_streaming_decoder(
+    std::function<void(StreamingDecoderPtr<media_type>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    PacketsPtr<media_type> packets,
+    const std::optional<DecodeConfig>& decode_cfg,
+    const std::string& filter_desc,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=](PacketsPtr<media_type>&& pkts)
+          -> folly::coro::Task<StreamingDecoderPtr<media_type>> {
+        co_return std::make_shared<spdl::core::StreamingDecoder<media_type>>(
+            std::move(pkts), std::move(decode_cfg), std::move(filter_desc));
+      },
+      std::move(packets));
+  return detail::execute_task_with_callback(
+      std::move(task),
+      std::move(set_result),
+      std::move(notify_exception),
+      detail::get_decode_executor(executor));
+}
+
+template FuturePtr async_streaming_decoder(
+    std::function<void(StreamingDecoderPtr<MediaType::Video>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    PacketsPtr<MediaType::Video> packets,
+    const std::optional<DecodeConfig>& decode_cfg,
+    const std::string& filter_desc,
+    ThreadPoolExecutorPtr executor);
+
+template <MediaType media_type>
+FuturePtr async_decode_frames(
+    std::function<void(std::optional<FFmpegFramesPtr<media_type>>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    StreamingDecoderPtr<media_type> decoder,
+    int num_frames,
+    ThreadPoolExecutorPtr executor) {
+  auto task = folly::coro::co_invoke(
+      [=]() -> folly::coro::Task<std::optional<FFmpegFramesPtr<media_type>>> {
+        co_return std::move(decoder->decode(num_frames));
+      });
+  return detail::execute_task_with_callback(
+      std::move(task),
+      std::move(set_result),
+      std::move(notify_exception),
+      detail::get_decode_executor(executor));
+}
+
+template FuturePtr async_decode_frames(
+    std::function<void(std::optional<FFmpegFramesPtr<MediaType::Video>>)>
+        set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    StreamingDecoderPtr<MediaType::Video> decoder,
+    int num_frames,
+    ThreadPoolExecutorPtr executor);
+
 //////////////////////////////////////////////////////////////////////////////
 // Demuxing + decoding in one go
 //////////////////////////////////////////////////////////////////////////////

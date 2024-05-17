@@ -14,6 +14,7 @@ void register_frames(nb::module_&);
 void register_buffers(nb::module_&);
 void register_tracing(nb::module_&);
 void register_utils(nb::module_&);
+void register_demuxer(nb::module_&);
 } // namespace spdl::core
 
 namespace spdl::coro {
@@ -34,6 +35,7 @@ NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_buffers(m);
   spdl::core::register_tracing(m);
   spdl::core::register_utils(m);
+  spdl::core::register_demuxer(m);
   // coro
   spdl::coro::register_future(m);
   spdl::coro::register_executor(m);

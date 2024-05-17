@@ -11,6 +11,7 @@ set(src
   core/types.cpp
   core/tracing.cpp
   core/utils.cpp
+  core/streaming_decoder.cpp
 
   coro/future.cpp
   coro/executor.cpp

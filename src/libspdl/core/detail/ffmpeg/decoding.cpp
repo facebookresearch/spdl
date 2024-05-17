@@ -1,6 +1,7 @@
 #include <libspdl/core/decoding.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
+#include "libspdl/core/detail/ffmpeg/decoding.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
@@ -174,5 +175,99 @@ template FFmpegImageFramesPtr decode_packets_ffmpeg(
     ImagePacketsPtr packets,
     const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
+
+template <MediaType media_type>
+  requires(media_type != MediaType::Image)
+StreamingDecoder<media_type>::Impl::Impl(
+    PacketsPtr<media_type> packets_,
+    const std::optional<DecodeConfig> cfg_,
+    const std::string filter_desc_)
+    : packets(std::move(packets_)),
+      codec_ctx(detail::get_decode_ctx(packets, cfg_)),
+      filter_graph([&]() -> std::optional<FilterGraph> {
+        if (filter_desc_.empty()) {
+          return std::nullopt;
+        }
+        return detail::get_filter<media_type>(
+            codec_ctx.get(), filter_desc_, packets->frame_rate);
+      }()) {
+  packets->push(nullptr);
+}
+
+template <MediaType media_type>
+  requires(media_type != MediaType::Image)
+std::optional<FFmpegFramesPtr<media_type>>
+StreamingDecoder<media_type>::Impl::decode(int num_frames) {
+  if (num_frames <= 0) {
+    SPDL_FAIL("the `num_frames` must be positive.");
+  }
+  if (carry_overs.size() >= 2) {
+    auto ret = std::move(carry_overs.front());
+    carry_overs.pop_front();
+    return ret;
+  }
+
+  FFmpegFramesPtr<media_type> ret = [&]() {
+    if (carry_overs.empty()) {
+      return detail::get_frame(packets.get());
+    }
+    auto item = std::move(carry_overs.front());
+    carry_overs.pop_front();
+    return item;
+  }();
+  if (carry_overs.empty()) {
+    carry_overs.push_back(detail::get_frame(packets.get()));
+  }
+
+  auto& packets_ref = packets->get_packets();
+  auto num_packets = packets->num_packets();
+  auto cdc_ctx = codec_ctx.get();
+  if (filter_graph) {
+    auto& filter = filter_graph.value();
+    while (packet_index < num_packets) {
+      auto& packet = packets_ref[packet_index++];
+      for (auto& raw_frame : detail::decode_packet(cdc_ctx, packet, true)) {
+        for (auto& filtered_frame : filter_frame(filter, raw_frame.get())) {
+          if (ret->get_num_frames() < num_frames) {
+            ret->push_back(filtered_frame.release());
+          } else {
+            auto& carry_over = carry_overs.back();
+            carry_over->push_back(filtered_frame.release());
+            if (carry_over->get_num_frames() >= num_frames) {
+              carry_overs.push_back(detail::get_frame(packets.get()));
+            }
+          }
+        }
+      }
+      if (ret->get_num_frames() >= num_frames) {
+        break;
+      }
+    }
+  } else {
+    while (packet_index < num_packets) {
+      auto& packet = packets_ref[packet_index++];
+      for (auto& frame : detail::decode_packet(cdc_ctx, packet, false)) {
+        if (ret->get_num_frames() < num_frames) {
+          ret->push_back(frame.release());
+        } else {
+          auto& carry_over = carry_overs.back();
+          carry_over->push_back(frame.release());
+          if (carry_over->get_num_frames() >= num_frames) {
+            carry_overs.push_back(detail::get_frame(packets.get()));
+          }
+        }
+      }
+      if (ret->get_num_frames() >= num_frames) {
+        break;
+      }
+    }
+  }
+  if (!ret->get_num_frames()) {
+    return std::nullopt;
+  }
+  return ret;
+}
+
+template struct StreamingDecoder<MediaType::Video>::Impl;
 
 } // namespace spdl::core
