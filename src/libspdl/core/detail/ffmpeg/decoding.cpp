@@ -20,13 +20,19 @@ namespace spdl::core {
 // Decoder
 ////////////////////////////////////////////////////////////////////////////////
 namespace detail {
-namespace {
-
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-std::vector<AVFramePtr>
-decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
-  assert(codec_ctx);
+Decoder::Decoder(
+    AVCodecParameters* codecpar,
+    Rational time_base,
+    const std::optional<DecodeConfig>& cfg)
+    : codec_ctx(detail::get_decode_codec_ctx_ptr(
+          codecpar,
+          time_base,
+          cfg ? cfg->decoder : std::nullopt,
+          cfg ? cfg->decoder_options : std::nullopt)) {}
+
+void Decoder::add_packet(AVPacket* packet) {
   XLOG(DBG9)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(
@@ -35,17 +41,22 @@ decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
                           TS(packet, codec_ctx->pkt_timebase),
                           packet->pts));
 
-  int errnum;
   {
     TRACE_EVENT("decoding", "avcodec_send_packet");
-    errnum = avcodec_send_packet(codec_ctx, packet);
+    CHECK_AVERROR(
+        avcodec_send_packet(codec_ctx.get(), packet),
+        "Failed to pass a frame to decoder.");
   }
+}
+
+std::vector<AVFramePtr> Decoder::get_frames(bool flush_null) {
+  int errnum = 0;
   std::vector<AVFramePtr> ret;
   while (errnum >= 0) {
     AVFramePtr frame{CHECK_AVALLOCATE(av_frame_alloc())};
     {
       TRACE_EVENT("decoding", "avcodec_receive_frame");
-      errnum = avcodec_receive_frame(codec_ctx, frame.get());
+      errnum = avcodec_receive_frame(codec_ctx.get(), frame.get());
     }
     switch (errnum) {
       case AVERROR(EAGAIN):
@@ -72,6 +83,11 @@ decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
   return ret;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// decoding functions
+////////////////////////////////////////////////////////////////////////////////
+
+namespace {
 template <MediaType media_type>
 FilterGraph get_filter(
     AVCodecContext* codec_ctx,
@@ -97,11 +113,12 @@ FFmpegFramesPtr<media_type> get_frame(DemuxedPackets<media_type>* packets) {
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets_with_filter(
     DemuxedPackets<media_type>* packets,
-    AVCodecContext* codec_ctx,
+    Decoder& decoder,
     FilterGraph& filter) {
   auto frames = get_frame(packets);
   for (auto& packet : packets->get_packets()) {
-    for (auto& raw_frame : decode_packet(codec_ctx, packet, true)) {
+    decoder.add_packet(packet);
+    for (auto& raw_frame : decoder.get_frames(true)) {
       for (auto filtered_frame : filter.filter(raw_frame.get())) {
         frames->push_back(filtered_frame.release());
       }
@@ -114,25 +131,15 @@ FFmpegFramesPtr<media_type> decode_packets_with_filter(
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets(
     DemuxedPackets<media_type>* packets,
-    AVCodecContext* codec_ctx) {
+    Decoder& decoder) {
   auto frames = get_frame(packets);
   for (auto& packet : packets->get_packets()) {
-    for (auto& frame : decode_packet(codec_ctx, packet, false)) {
+    decoder.add_packet(packet);
+    for (auto& frame : decoder.get_frames(false)) {
       frames->push_back(frame.release());
     }
   }
   return frames;
-}
-
-template <MediaType media_type>
-AVCodecContextPtr get_decode_ctx(
-    PacketsPtr<media_type>& packets,
-    const std::optional<DecodeConfig>& cfg) {
-  return detail::get_codec_ctx_ptr(
-      packets->codecpar,
-      AVRational{packets->time_base.num, packets->time_base.den},
-      cfg ? cfg->decoder : std::nullopt,
-      cfg ? cfg->decoder_options : std::nullopt);
 }
 
 } // namespace
@@ -147,17 +154,16 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
       "decoding",
       "decode_packets_ffmpeg",
       perfetto::Flow::ProcessScoped(packets->id));
-  auto codec_ctx = detail::get_decode_ctx(packets, cfg);
+  detail::Decoder decoder{packets->codecpar, packets->time_base, cfg};
   if constexpr (media_type != MediaType::Image) {
     packets->push(nullptr); // For flushing
   }
   if (filter_desc.empty()) {
-    return detail::decode_packets(packets.get(), codec_ctx.get());
+    return detail::decode_packets(packets.get(), decoder);
   } else {
     auto filter = detail::get_filter<media_type>(
-        codec_ctx.get(), filter_desc, packets->frame_rate);
-    return detail::decode_packets_with_filter(
-        packets.get(), codec_ctx.get(), filter);
+        decoder.codec_ctx.get(), filter_desc, packets->frame_rate);
+    return detail::decode_packets_with_filter(packets.get(), decoder, filter);
   }
 }
 
@@ -176,6 +182,10 @@ template FFmpegImageFramesPtr decode_packets_ffmpeg(
     const std::optional<DecodeConfig> cfg,
     std::string filter_desc);
 
+////////////////////////////////////////////////////////////////////////////////
+// StreamingDecoder
+////////////////////////////////////////////////////////////////////////////////
+
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
 StreamingDecoder<media_type>::Impl::Impl(
@@ -183,13 +193,13 @@ StreamingDecoder<media_type>::Impl::Impl(
     const std::optional<DecodeConfig> cfg_,
     const std::string filter_desc_)
     : packets(std::move(packets_)),
-      codec_ctx(detail::get_decode_ctx(packets, cfg_)),
+      decoder(packets->codecpar, packets->time_base, cfg_),
       filter_graph([&]() -> std::optional<FilterGraph> {
         if (filter_desc_.empty()) {
           return std::nullopt;
         }
         return detail::get_filter<media_type>(
-            codec_ctx.get(), filter_desc_, packets->frame_rate);
+            decoder.codec_ctx.get(), filter_desc_, packets->frame_rate);
       }()) {
   packets->push(nullptr);
 }
@@ -221,12 +231,12 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
 
   auto& packets_ref = packets->get_packets();
   auto num_packets = packets->num_packets();
-  auto cdc_ctx = codec_ctx.get();
   if (filter_graph) {
     auto& filter = filter_graph.value();
     while (packet_index < num_packets) {
       auto& packet = packets_ref[packet_index++];
-      for (auto& raw_frame : detail::decode_packet(cdc_ctx, packet, true)) {
+      decoder.add_packet(packet);
+      for (auto& raw_frame : decoder.get_frames(true)) {
         for (auto filtered_frame : filter.filter(raw_frame.get())) {
           if (ret->get_num_frames() < num_frames) {
             ret->push_back(filtered_frame.release());
@@ -246,7 +256,8 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
   } else {
     while (packet_index < num_packets) {
       auto& packet = packets_ref[packet_index++];
-      for (auto& frame : detail::decode_packet(cdc_ctx, packet, false)) {
+      decoder.add_packet(packet);
+      for (auto& frame : decoder.get_frames(false)) {
         if (ret->get_num_frames() < num_frames) {
           ret->push_back(frame.release());
         } else {

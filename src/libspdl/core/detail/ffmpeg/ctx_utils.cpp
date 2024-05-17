@@ -192,9 +192,9 @@ void open_codec(
 
 } // namespace
 
-AVCodecContextPtr get_codec_ctx_ptr(
+AVCodecContextPtr get_decode_codec_ctx_ptr(
     const AVCodecParameters* params,
-    AVRational pkt_timebase,
+    Rational pkt_timebase,
     const std::optional<std::string>& decoder,
     const std::optional<OptionDict>& decoder_options) {
   AVCodecContextPtr codec_ctx = alloc_codec_context(params->codec_id, decoder);
@@ -205,7 +205,7 @@ AVCodecContextPtr get_codec_ctx_ptr(
       "Failed to set CodecContext parameter.");
   XLOG(DBG9) << "Codec: " << codec_ctx->codec->name;
 
-  codec_ctx->pkt_timebase = pkt_timebase;
+  codec_ctx->pkt_timebase = AVRational{pkt_timebase.num, pkt_timebase.den};
   open_codec(codec_ctx.get(), decoder_options);
   return codec_ctx;
 }
