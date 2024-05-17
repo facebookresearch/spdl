@@ -10,6 +10,43 @@
 namespace spdl::core {
 namespace detail {
 
+struct Decoder;
+
+// Helper structure that converts decoding operation (while loop) into
+// iterator.
+struct IterativeDecoding {
+  struct Sentinel {};
+
+  static constexpr Sentinel sentinel{};
+
+  Decoder* decoder;
+  AVPacket* packet;
+  bool flush_null;
+
+  struct Ite {
+    Decoder* decoder;
+    bool completed = false;
+    bool null_flushed;
+    AVFramePtr next_ret{};
+
+    bool operator!=(const Sentinel&);
+
+    Ite(Decoder*, AVPacket*, bool flush_null);
+
+    Ite& operator++();
+
+    AVFramePtr operator*();
+
+   private:
+    void fill_next();
+  };
+
+  IterativeDecoding(Decoder*, AVPacket*, bool flush_null);
+
+  Ite begin();
+  const Sentinel& end();
+};
+
 // Wraps AVCodecContextPtr and provide convenient methods
 struct Decoder {
   AVCodecContextPtr codec_ctx;
@@ -19,13 +56,17 @@ struct Decoder {
       Rational time_base,
       const std::optional<DecodeConfig>& cfg = std::nullopt);
 
+  IterativeDecoding decode(AVPacket*, bool flush_null = false);
+
+ private:
   void add_packet(AVPacket*);
-  std::vector<AVFramePtr> get_frames(bool flush_null);
+  int get_frame(AVFrame* output);
+
+  friend class IterativeDecoding;
 };
 
 } // namespace detail
 
-using spdl::core::detail::AVCodecContextPtr;
 using spdl::core::detail::FilterGraph;
 
 template <MediaType media_type>

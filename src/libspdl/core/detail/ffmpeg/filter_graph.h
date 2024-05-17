@@ -16,17 +16,15 @@ struct IterativeFiltering {
 
   FilterGraph* filter_graph;
   AVFrame* frame;
-  bool flush_null;
 
   struct Ite {
     FilterGraph* filter_graph;
     bool completed = false;
-    bool null_flushed;
     AVFramePtr next_ret{};
 
     bool operator!=(const Sentinel&);
 
-    Ite(FilterGraph*, AVFrame* frame, bool flush_null);
+    Ite(FilterGraph*, AVFrame* frame);
 
     Ite& operator++();
 
@@ -36,7 +34,7 @@ struct IterativeFiltering {
     void fill_next();
   };
 
-  IterativeFiltering(FilterGraph*, AVFrame*, bool flush_null = false);
+  IterativeFiltering(FilterGraph*, AVFrame*);
 
   Ite begin();
   const Sentinel& end();
@@ -48,10 +46,9 @@ class FilterGraph {
 
  public:
   FilterGraph(AVFilterGraphPtr&& g) : graph(std::move(g)) {}
-  FilterGraph(const AVFilterGraphPtr&) = delete;
-  FilterGraph& operator=(const AVFilterGraphPtr&) = delete;
+  FilterGraph(FilterGraph&&) = default;
 
-  IterativeFiltering filter(AVFrame*, bool flush_null = false);
+  IterativeFiltering filter(AVFrame*);
 
   Rational get_src_time_base() const;
   Rational get_sink_time_base() const;

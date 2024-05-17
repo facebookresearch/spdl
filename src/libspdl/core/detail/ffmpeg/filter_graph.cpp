@@ -22,11 +22,8 @@ namespace spdl::core::detail {
 // Iterator
 ////////////////////////////////////////////////////////////////////////////////
 
-IterativeFiltering::Ite::Ite(
-    FilterGraph* filter_graph_,
-    AVFrame* frame,
-    bool flush_null_)
-    : filter_graph(filter_graph_), null_flushed(!flush_null_) {
+IterativeFiltering::Ite::Ite(FilterGraph* filter_graph_, AVFrame* frame)
+    : filter_graph(filter_graph_) {
   filter_graph->add_frame(frame);
   fill_next();
 }
@@ -37,17 +34,13 @@ IterativeFiltering::Ite& IterativeFiltering::Ite::operator++() {
 }
 
 bool IterativeFiltering::Ite::operator!=(const Sentinel&) {
-  return !(completed && null_flushed);
+  return !completed;
 }
 
 AVFramePtr IterativeFiltering::Ite::operator*() {
   if (completed) {
-    if (null_flushed) {
-      // This should not be reachable, because `operator!=` guards
-      SPDL_FAIL_INTERNAL("Frame was requested but filtering is exhausted.");
-    }
-    null_flushed = true;
-    return {};
+    // This should not be reachable, because `operator!=` guards
+    SPDL_FAIL_INTERNAL("Frame was requested but filtering is exhausted.");
   }
   return std::move(next_ret);
 }
@@ -66,12 +59,11 @@ void IterativeFiltering::Ite::fill_next() {
 
 IterativeFiltering::IterativeFiltering(
     FilterGraph* filter_graph_,
-    AVFrame* frame_,
-    bool flush_null_)
-    : filter_graph(filter_graph_), frame(frame_), flush_null(flush_null_){};
+    AVFrame* frame_)
+    : filter_graph(filter_graph_), frame(frame_){};
 
 IterativeFiltering::Ite IterativeFiltering::begin() {
-  return {filter_graph, frame, flush_null};
+  return {filter_graph, frame};
 };
 
 const IterativeFiltering::Sentinel& IterativeFiltering::end() {
@@ -243,12 +235,14 @@ void FilterGraph::add_frame(AVFrame* frame) {
 int FilterGraph::get_frame(AVFrame* frame) {
   auto sink_ctx = graph->filters[1];
 
-  TRACE_EVENT("decoding", "av_buffersink_get_frame");
-  int ret = av_buffersink_get_frame(sink_ctx, frame);
+  int ret;
+  {
+    TRACE_EVENT("decoding", "av_buffersink_get_frame");
+    ret = av_buffersink_get_frame(sink_ctx, frame);
+  }
   if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
     CHECK_AVERROR_NUM(ret, "Failed to filter a frame.");
   }
-
   if (ret >= 0) {
     XLOG(DBG9) << fmt::format(
         "{:21s} {:.3f} ({})",
@@ -260,8 +254,8 @@ int FilterGraph::get_frame(AVFrame* frame) {
   return ret;
 }
 
-IterativeFiltering FilterGraph::filter(AVFrame* frame, bool flush_null) {
-  return {this, frame, flush_null};
+IterativeFiltering FilterGraph::filter(AVFrame* frame) {
+  return {this, frame};
 }
 
 Rational FilterGraph::get_src_time_base() const {
