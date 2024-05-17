@@ -19,6 +19,7 @@ __all__ = [
     "async_decode_packets_nvdec",
     "async_demux_media",
     "async_streaming_demux",
+    "async_streaming_decode",
     "async_load_media",
     "async_batch_load_image",
     "async_batch_load_image_nvdec",
@@ -159,6 +160,28 @@ async def async_decode_packets(packets: Type[Packets], **kwargs) -> Type[Frames]
     if "filter_desc" not in kwargs:
         kwargs["filter_desc"] = _preprocessing.get_filter_desc(packets)
     return await _async_task(func, packets, **kwargs)
+
+
+async def async_streaming_decode(
+    packets: Type[Packets],
+    num_frames: int,
+    **kwargs,
+) -> AsyncIterator[Type[Frames]]:
+    match t := type(packets):
+        case _libspdl.VideoPackets:
+            constructor = _libspdl.async_streaming_video_decoder
+            decode_fn = _libspdl.async_decode_video_frames
+        case _:
+            raise RuntimeError(f"{t} is not supported.")
+
+    executor = kwargs.get("executor")
+
+    decoder = await _async_task(constructor, packets, **kwargs)
+    while True:
+        frames = await _async_task(decode_fn, decoder, num_frames, executor)
+        if frames is None:
+            break
+        yield frames
 
 
 async def async_decode_packets_nvdec(

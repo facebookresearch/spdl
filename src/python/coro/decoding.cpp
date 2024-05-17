@@ -79,6 +79,31 @@ void register_decoding(nb::module_& m) {
       nb::arg("filter_desc") = "",
       nb::arg("executor") = nullptr);
 
+  m.def(
+      "async_streaming_video_decoder",
+      &async_streaming_decoder<MediaType::Video>,
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("packets"),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
+      nb::arg("decode_config") = nb::none(),
+      nb::arg("filter_desc") = "",
+      nb::arg("executor") = nullptr);
+
+  m.def(
+      "async_decode_video_frames",
+      &async_decode_frames<MediaType::Video>,
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("decoder"),
+      nb::arg("num_frames"),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
+      nb::arg("executor") = nullptr);
+
   ////////////////////////////////////////////////////////////////////////////////
   // Async demuxing + decoding - FFMPEG
   ////////////////////////////////////////////////////////////////////////////////

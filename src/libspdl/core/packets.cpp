@@ -99,4 +99,29 @@ template PacketsPtr<MediaType::Audio> clone(const AudioPackets& src);
 template PacketsPtr<MediaType::Video> clone(const VideoPackets& src);
 template PacketsPtr<MediaType::Image> clone(const ImagePackets& src);
 
+template <MediaType media_type>
+PacketsPtr<media_type>
+slice(const DemuxedPackets<media_type>& src, int start, int end) {
+  if (start < 0) {
+    SPDL_FAIL_INTERNAL("`start` must be non-negative.");
+  }
+  if (end > src.num_packets()) {
+    SPDL_FAIL_INTERNAL("`end` cannot be larger than the number of packets.");
+  }
+
+  auto other = std::make_unique<DemuxedPackets<media_type>>(
+      src.src, src.timestamp, copy(src.codecpar), src.time_base);
+  if constexpr (media_type == MediaType::Video) {
+    other->frame_rate = src.frame_rate;
+  }
+  auto& packets = src.get_packets();
+  for (int i = start; i < end; ++i) {
+    AVPacket* pkt = CHECK_AVALLOCATE(av_packet_clone(packets[i]));
+  }
+  return other;
+}
+
+template PacketsPtr<MediaType::Video>
+slice(const DemuxedPackets<MediaType::Video>& src, int start, int end);
+
 } // namespace spdl::core

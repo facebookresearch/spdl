@@ -4,6 +4,7 @@
 #include <libspdl/coro/future.h>
 
 #include <libspdl/core/adaptor.h>
+#include <libspdl/core/decoding.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
@@ -26,6 +27,10 @@ using spdl::core::MediaType;
 using spdl::core::PacketsPtr;
 using spdl::core::SourceAdaptorPtr;
 
+template <MediaType media_type>
+using StreamingDecoderPtr =
+    std::shared_ptr<spdl::core::StreamingDecoder<media_type>>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Decode only
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,6 +44,23 @@ FuturePtr async_decode(
     const std::optional<DecodeConfig> decode_config,
     std::string filter_desc,
     ThreadPoolExecutorPtr decode_executor);
+
+template <MediaType media_type>
+FuturePtr async_streaming_decoder(
+    std::function<void(StreamingDecoderPtr<media_type>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    PacketsPtr<media_type> packets,
+    const std::optional<DecodeConfig>& dmx_cfg,
+    const std::string& filter_desc,
+    ThreadPoolExecutorPtr executor);
+
+template <MediaType media_type>
+FuturePtr async_decode_frames(
+    std::function<void(std::optional<FFmpegFramesPtr<media_type>>)> set_result,
+    std::function<void(std::string, bool)> notify_exception,
+    StreamingDecoderPtr<media_type> decoder,
+    int num_frames,
+    ThreadPoolExecutorPtr executor);
 
 /// Decode video or image
 template <MediaType media_type>
