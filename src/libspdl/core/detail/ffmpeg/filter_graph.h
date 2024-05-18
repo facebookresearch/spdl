@@ -53,11 +53,8 @@ class FilterGraph {
   Rational get_src_time_base() const;
   Rational get_sink_time_base() const;
 
- private:
   void add_frame(AVFrame* in_frame);
   int get_frame(AVFrame* out_frame);
-
-  friend class IterativeFiltering;
 };
 
 FilterGraph get_audio_filter(
