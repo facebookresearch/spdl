@@ -176,19 +176,6 @@ FFmpegFramesPtr<media_type> decode_packets_with_filter(
   return frames;
 }
 
-template <MediaType media_type>
-FFmpegFramesPtr<media_type> decode_packets(
-    DemuxedPackets<media_type>* packets,
-    Decoder& decoder) {
-  auto frames = get_frame(packets);
-  for (auto& packet : packets->get_packets()) {
-    for (auto frame : decoder.decode(packet)) {
-      frames->push_back(frame.release());
-    }
-  }
-  return frames;
-}
-
 } // namespace
 } // namespace detail
 
@@ -205,13 +192,9 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
   if constexpr (media_type != MediaType::Image) {
     packets->push(nullptr); // For flushing
   }
-  if (filter_desc.empty()) {
-    return detail::decode_packets(packets.get(), decoder);
-  } else {
-    auto filter = detail::get_filter<media_type>(
-        decoder.codec_ctx.get(), filter_desc, packets->frame_rate);
-    return detail::decode_packets_with_filter(packets.get(), decoder, filter);
-  }
+  auto filter = detail::get_filter<media_type>(
+      decoder.codec_ctx.get(), filter_desc, packets->frame_rate);
+  return detail::decode_packets_with_filter(packets.get(), decoder, filter);
 }
 
 template FFmpegAudioFramesPtr decode_packets_ffmpeg(
@@ -241,14 +224,10 @@ StreamingDecoder<media_type>::Impl::Impl(
     const std::string filter_desc_)
     : packets(std::move(packets_)),
       decoder(packets->codecpar, packets->time_base, cfg_),
-      filter_graph([&]() -> std::optional<FilterGraph> {
-        if (filter_desc_.empty()) {
-          return std::nullopt;
-        }
-        auto filter = detail::get_filter<media_type>(
-            decoder.codec_ctx.get(), filter_desc_, packets->frame_rate);
-        return std::make_optional<FilterGraph>(std::move(filter));
-      }()) {
+      filter_graph(detail::get_filter<media_type>(
+          decoder.codec_ctx.get(),
+          filter_desc_,
+          packets->frame_rate)) {
   packets->push(nullptr);
 }
 
@@ -279,44 +258,23 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
 
   auto& packets_ref = packets->get_packets();
   auto num_packets = packets->num_packets();
-  if (filter_graph) {
-    auto& filter = filter_graph.value();
-    while (packet_index < num_packets) {
-      auto& packet = packets_ref[packet_index++];
-      for (auto raw_frame : decoder.decode(packet, !packet)) {
-        for (auto filtered_frame : filter.filter(raw_frame.get())) {
-          if (ret->get_num_frames() < num_frames) {
-            ret->push_back(filtered_frame.release());
-          } else {
-            auto& carry_over = carry_overs.back();
-            carry_over->push_back(filtered_frame.release());
-            if (carry_over->get_num_frames() >= num_frames) {
-              carry_overs.push_back(detail::get_frame(packets.get()));
-            }
-          }
-        }
-      }
-      if (ret->get_num_frames() >= num_frames) {
-        break;
-      }
-    }
-  } else {
-    while (packet_index < num_packets) {
-      auto& packet = packets_ref[packet_index++];
-      for (auto frame : decoder.decode(packet)) {
+  while (packet_index < num_packets) {
+    auto& packet = packets_ref[packet_index++];
+    for (auto raw_frame : decoder.decode(packet, !packet)) {
+      for (auto filtered_frame : filter_graph.filter(raw_frame.get())) {
         if (ret->get_num_frames() < num_frames) {
-          ret->push_back(frame.release());
+          ret->push_back(filtered_frame.release());
         } else {
           auto& carry_over = carry_overs.back();
-          carry_over->push_back(frame.release());
+          carry_over->push_back(filtered_frame.release());
           if (carry_over->get_num_frames() >= num_frames) {
             carry_overs.push_back(detail::get_frame(packets.get()));
           }
         }
       }
-      if (ret->get_num_frames() >= num_frames) {
-        break;
-      }
+    }
+    if (ret->get_num_frames() >= num_frames) {
+      break;
     }
   }
   if (!ret->get_num_frames()) {
