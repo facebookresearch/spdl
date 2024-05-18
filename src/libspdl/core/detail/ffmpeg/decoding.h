@@ -74,7 +74,7 @@ template <MediaType media_type>
 struct StreamingDecoder<media_type>::Impl {
   PacketsPtr<media_type> packets;
   detail::Decoder decoder;
-  std::optional<FilterGraph> filter_graph;
+  FilterGraph filter_graph;
 
   std::deque<FFmpegFramesPtr<media_type>> carry_overs;
   int packet_index = 0;
