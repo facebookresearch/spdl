@@ -238,49 +238,68 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
   if (num_frames <= 0) {
     SPDL_FAIL("the `num_frames` must be positive.");
   }
-  if (carry_overs.size() >= 2) {
-    auto ret = std::move(carry_overs.front());
-    carry_overs.pop_front();
-    return ret;
+  if (completed) {
+    return {};
   }
 
-  FFmpegFramesPtr<media_type> ret = [&]() {
-    if (carry_overs.empty()) {
-      return detail::get_frame(packets.get());
-    }
-    auto item = std::move(carry_overs.front());
-    carry_overs.pop_front();
-    return item;
-  }();
-  if (carry_overs.empty()) {
-    carry_overs.push_back(detail::get_frame(packets.get()));
-  }
-
+  auto ret = detail::get_frame(packets.get());
   auto& packets_ref = packets->get_packets();
   auto num_packets = packets->num_packets();
-  while (packet_index < num_packets) {
-    auto& packet = packets_ref[packet_index++];
-    for (auto raw_frame : decoder.decode(packet, !packet)) {
-      for (auto filtered_frame : filter_graph.filter(raw_frame.get())) {
-        if (ret->get_num_frames() < num_frames) {
-          ret->push_back(filtered_frame.release());
-        } else {
-          auto& carry_over = carry_overs.back();
-          carry_over->push_back(filtered_frame.release());
-          if (carry_over->get_num_frames() >= num_frames) {
-            carry_overs.push_back(detail::get_frame(packets.get()));
-          }
-        }
+  while (!completed) {
+    // Flush filtered frames
+    while (filter_has_frame && (ret->get_num_frames() < num_frames)) {
+      auto frame = detail::AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
+      switch (filter_graph.get_frame(frame.get())) {
+        case AVERROR_EOF:
+          completed = true;
+          [[fallthrough]];
+        case AVERROR(EAGAIN):
+          filter_has_frame = false;
+          break;
+        default:
+          ret->push_back(frame.release());
       }
     }
-    if (ret->get_num_frames() >= num_frames) {
+
+    if (completed || ret->get_num_frames() >= num_frames) {
       break;
     }
+
+    assert(!filter_has_frame);
+
+    if (decoder_has_frame) {
+      auto frame = detail::AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
+      switch (decoder.get_frame(frame.get())) {
+        case AVERROR_EOF:
+          filter_graph.add_frame(nullptr);
+          filter_has_frame = true;
+          [[fallthrough]];
+        case AVERROR(EAGAIN):
+          decoder_has_frame = false;
+          break;
+        default:
+          filter_graph.add_frame(frame.get());
+          filter_has_frame = true;
+      }
+    }
+
+    if (filter_has_frame) {
+      continue;
+    }
+
+    assert(!decoder_has_frame);
+
+    if (packet_index >= num_packets) {
+      break;
+    }
+    auto& packet = packets_ref[packet_index++];
+    decoder.add_packet(packet);
+    decoder_has_frame = true;
   }
-  if (!ret->get_num_frames()) {
-    return std::nullopt;
+  if (ret->get_num_frames()) {
+    return ret;
   }
-  return ret;
+  return {};
 }
 
 template struct StreamingDecoder<MediaType::Video>::Impl;

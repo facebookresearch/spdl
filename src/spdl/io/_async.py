@@ -180,7 +180,7 @@ async def async_streaming_decode(
     while True:
         frames = await _async_task(decode_fn, decoder, num_frames, executor)
         if frames is None:
-            break
+            return
         yield frames
 
 

@@ -58,26 +58,35 @@ struct Decoder {
 
   IterativeDecoding decode(AVPacket*, bool flush_null = false);
 
- private:
   void add_packet(AVPacket*);
   int get_frame(AVFrame* output);
-
-  friend class IterativeDecoding;
 };
 
 } // namespace detail
-
-using spdl::core::detail::FilterGraph;
 
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
 struct StreamingDecoder<media_type>::Impl {
   PacketsPtr<media_type> packets;
   detail::Decoder decoder;
-  FilterGraph filter_graph;
+  detail::FilterGraph filter_graph;
 
-  std::deque<FFmpegFramesPtr<media_type>> carry_overs;
   int packet_index = 0;
+
+  // Decoding && filtering is usually implemented as nested while loop
+  // ```
+  // decoder.add_packet(packet);
+  // while (decoder_has_frame) {
+  //   filter.add_frame(decoder.get_frame());
+  //   while (filter_has_frame) {
+  //     frame = filter.get_frame();
+  //   }
+  // }
+  // ```
+  // To make it interruptable/resumable, we keep two states.
+  bool decoder_has_frame = false;
+  bool filter_has_frame = false;
+  bool completed = false;
   Impl(
       PacketsPtr<media_type> packets,
       const std::optional<DecodeConfig> cfg,
