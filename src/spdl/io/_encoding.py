@@ -10,7 +10,8 @@ __all__ = [
 
 Array = TypeVar("Array")
 
-async def async_encode_image(dst: str, data: Array, pix_fmt: str="rgb24", **kwargs):
+
+async def async_encode_image(dst: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
     """Save the given image array/tensor to file.
 
     Args:
@@ -52,7 +53,7 @@ async def async_encode_image(dst: str, data: Array, pix_fmt: str="rgb24", **kwar
         >>> asyncio.run(coro)
         >>>
         ```
-    
+
     ??? note "Example - Directly save CUDA tensor as image"
 
         ```python
@@ -67,7 +68,7 @@ async def async_encode_image(dst: str, data: Array, pix_fmt: str="rgb24", **kwar
         >>> asyncio.run(coro)
         >>>
         ```
-    
+
     """
     func = _libspdl.async_encode_image
     await _async_task(func, dst, data, pix_fmt=pix_fmt, **kwargs)
