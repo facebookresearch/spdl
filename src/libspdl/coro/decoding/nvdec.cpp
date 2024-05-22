@@ -17,18 +17,6 @@
 namespace spdl::coro {
 namespace {
 #ifdef SPDL_USE_NVCODEC
-void init_cuda() {
-  static std::once_flag flag;
-  std::call_once(flag, []() {
-    TRACE_EVENT("nvdec", "cudaGetDeviceCount");
-    int count;
-    CHECK_CUDA(cudaGetDeviceCount(&count), "Failed to fetch the device count.");
-    if (count == 0) {
-      SPDL_FAIL("No CUDA device was found.");
-    }
-  });
-}
-
 void validate_nvdec_params(
     int cuda_device_index,
     const CropArea& crop,
@@ -89,7 +77,6 @@ FuturePtr async_decode_nvdec(
   auto task = folly::coro::co_invoke(
       [=](PacketsPtr<media_type> pkts) -> folly::coro::Task<CUDABufferPtr> {
         validate_nvdec_params(cuda_device_index, crop, width, height);
-        init_cuda();
 
         if constexpr (media_type == MediaType::Video) {
           pkts = co_await folly::coro::co_invoke(
@@ -168,7 +155,6 @@ FuturePtr async_batch_decode_image_nvdec(
       [=](std::vector<PacketsPtr<MediaType::Image>>&& pkts)
           -> folly::coro::Task<CUDABufferPtr> {
         validate_nvdec_params(cuda_device_index, crop, width, height);
-        init_cuda();
         co_return spdl::core::detail::decode_nvdec(
             std::move(pkts),
             cuda_device_index,

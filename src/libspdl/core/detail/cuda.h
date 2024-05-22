@@ -38,6 +38,8 @@ const char* get_error_desc(CUresult error);
 
 namespace spdl::core::detail {
 
+void ensure_cuda_initialized();
+
 // Get or create a CUcontext associated with the device.
 // If the current context is associated with the device, then return it.
 // Otherwise, create or fetch a floating primary context and return it.

@@ -93,6 +93,8 @@ CUDABufferPtr decode_nvdec(
     SPDL_FAIL("No packets to decode.");
   }
 
+  ensure_cuda_initialized();
+
   TRACE_EVENT("nvdec", "decode_packets");
 
   _Decoder& _dec = get_decoder();
@@ -215,6 +217,8 @@ CUDABufferPtr decode_nvdec(
   if (num_packets == 0) {
     SPDL_FAIL("No packets to decode.");
   }
+
+  ensure_cuda_initialized();
 
   auto& p0 = packets[0];
   if (!pix_fmt) {
