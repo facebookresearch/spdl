@@ -73,4 +73,16 @@ void set_cuda_primary_context(int device_index) {
   CHECK_CU(cuCtxPushCurrent(ctx), "Failed to push the CUDA context.");
 }
 
+void ensure_cuda_initialized() {
+  static std::once_flag flag;
+  std::call_once(flag, []() {
+    TRACE_EVENT("nvdec", "cudaGetDeviceCount");
+    int count;
+    CHECK_CUDA(cudaGetDeviceCount(&count), "Failed to fetch the device count.");
+    if (count == 0) {
+      SPDL_FAIL("No CUDA device was found.");
+    }
+  });
+}
+
 } // namespace spdl::core::detail
