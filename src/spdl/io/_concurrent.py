@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Sequence, Tuple, Type
 import spdl.utils
 
 from spdl.io import CPUBuffer, CUDABuffer, Frames, Packets
+from spdl.lib import _libspdl
 
 from . import _common, _preprocessing
 
@@ -12,6 +13,7 @@ __all__ = [
     "convert_frames",
     "decode_packets",
     "decode_packets_nvdec",
+    "decode_image_nvjpeg",
     "demux_media",
     "streaming_demux",
     "load_media",
@@ -119,6 +121,23 @@ def decode_media(
     """
     func = _common._get_decode_from_source_func(media_type, src)
     return _common._futurize_task(func, src, **kwargs)
+
+
+def decode_image_nvjpeg(
+    data: bytes, cuda_device_index: int, **kwargs
+) -> Future[CUDABuffer]:
+    """Decode image with NVJPEG.
+
+    The signature of this function is same as [spdl.io.async_decode_image_nvjpeg][]
+    except the return type.
+    This function returns `concurrent.futures.Future` which in turn returns a
+    CUDABuffer object when fullfilled.
+
+    Returns:
+        Future object that returns CUDABuffer when fullfilled.
+    """
+    func = _libspdl.async_decode_image_nvjpeg
+    return _common._futurize_task(func, data, cuda_device_index, **kwargs)
 
 
 def convert_frames(

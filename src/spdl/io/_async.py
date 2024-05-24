@@ -6,6 +6,7 @@ from typing import Any, AsyncIterator, Dict, List, Sequence, Tuple, Type, TypeVa
 
 import spdl.io
 from spdl.io import CPUBuffer, CUDABuffer, Frames, ImageFrames, ImagePackets, Packets
+from spdl.io._type_stub import CUDABuffer
 from spdl.lib import _libspdl
 
 from . import _common, _preprocessing
@@ -17,6 +18,7 @@ __all__ = [
     "async_convert_frames",
     "async_decode_packets",
     "async_decode_packets_nvdec",
+    "async_decode_image_nvjpeg",
     "async_demux_media",
     "async_streaming_demux",
     "async_streaming_decode",
@@ -191,6 +193,15 @@ async def async_decode_packets_nvdec(
 ) -> CUDABuffer:
     """Decode packets with NVDEC.
 
+    Unlike FFmpeg-based decoding, NVDEC returns GPU buffer directly.
+
+    ``` mermaid
+    graph LR
+      Source -->|Demux| Packets;
+      Packets -->|Decode| Buffer;
+      Buffer -->|Cast| Array[Array / Tensor];
+    ```
+
     Args:
         packets: Packets object.
             Either `VideoPackets`, `ImagePackets` or a list of `ImagePackets`.
@@ -299,6 +310,37 @@ async def async_convert_frames(
     if cuda_device_index is not None:
         kwargs["cuda_device_index"] = cuda_device_index
     return await _async_task(func, frames, **kwargs)
+
+
+async def async_decode_image_nvjpeg(
+    data: bytes, cuda_device_index: int, **kwargs
+) -> CUDABuffer:
+    """Decode (JPEG) image with nvJPEG.
+
+    Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
+
+    ``` mermaid
+    graph LR
+      Source -->|Decode| Buffer;
+      Buffer -->|Cast| Array[Array / Tensor];
+    ```
+
+    Args:
+        data: JPEG image data in bytes.
+        cuda_device_index: CUDA device index.
+
+    Other args:
+        pix_fmt (str): *Optional* Output pixel format.
+            Supported values are `"RGB"` or `"BGR"`.
+
+        cuda_allocator:
+            See [async_convert_frames](spdl.io.async_convert_frames).
+
+    Returns:
+        A CUDABuffer object. Shape is [C==3, H, W].
+    """
+    func = _libspdl.async_decode_image_nvjpeg
+    return await _async_task(func, data, cuda_device_index, **kwargs)
 
 
 ################################################################################
