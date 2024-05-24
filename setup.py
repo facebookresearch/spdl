@@ -161,7 +161,7 @@ class CMakeBuild(build_ext):
 def main():
     setup(
         name="spdl",
-        version="0.0.4",
+        version="0.0.5",
         author="Moto Hira",
         description="SPDL: Scalable and Performant Data Loading.",
         long_description="Fast multimedia data loading and processing.",
