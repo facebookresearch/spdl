@@ -76,7 +76,12 @@ if (SPDL_USE_NVJPEG)
     libspdl/core/detail/nvjpeg/utils.cpp
     libspdl/core/detail/nvjpeg/decoding.cpp
   )
-  list(APPEND deps nvjpeg-stub)
+
+  if (SPDL_LINK_STATIC_NVJPEG)
+    list(APPEND deps CUDA::nvjpeg_static)
+  else()
+    list(APPEND deps CUDA::nvjpeg)
+  endif()
 endif()
 
 if(SPDL_USE_TRACING)
