@@ -54,12 +54,16 @@ The libspdl uses the following third party libraries.
 
 * [Perfetto](https://perfetto.dev/docs/instrumentation/tracing-sdk) ([Apache 2.0](https://github.com/google/perfetto/blob/v41.0/LICENSE))
 
-* [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)    
-When building with CUDA integration or [NVIDIA Video Codec](https://developer.nvidia.com/video-codec-sdk), CUDA header files must be installed.
+* [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)†† ([EULA](https://docs.nvidia.com/cuda/eula/index.html))    
+When building with CUDA integration, CUDA header files must be installed.
 
-* [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk) header files    
-The header files of video codec SDK (`nvcuvid.h` and `cuviddec.h`), which are distribtued under MIT license, is used when hardware video decoder is enabled.
+* [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk)†† header files    
+The header files of video codec SDK (`nvcuvid.h` and `cuviddec.h`), which are distribtued under MIT license, is used when compiling SPDL with hardware video decoder enabled.
+
+* [nvJPEG](https://docs.nvidia.com/cuda/nvjpeg/index.html)†† (Covered by [CUDA Toolkit EULA](https://docs.nvidia.com/cuda/eula/index.html))
 
 † FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.
 
 Users are free to dynamically link GPL or non-distributable version of FFmpeg libraries. However, note that linking a non-LGPL binary might change of the condition for redistribution of your application.
+
+†† This software contains source code provided by NVIDIA Corporation.
