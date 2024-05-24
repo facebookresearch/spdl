@@ -4,29 +4,27 @@ project(spdl)
 
 option(SPDL_USE_CUDA "Enable CUDA support" OFF)
 option(SPDL_USE_NVCODEC "Enable NVCODEC support" OFF)
+option(SPDL_USE_NVJPEG "Enable nvJPEG support" OFF)
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
 
-if (SPDL_USE_NVCODEC)
+if (SPDL_USE_NVCODEC OR SPDL_USE_NVJPEG)
   if (NOT SPDL_USE_CUDA)
     unset(SPDL_USE_CUDA CACHE)
     set(SPDL_USE_CUDA ON)
   endif()
 endif()
 
+###############################################################################
+# Configurations
+###############################################################################
+include(./cmake/spdl_common_config.cmake)
+include(./cmake/check_cxx_coroutine.cmake)
 if (SPDL_USE_CUDA)
   if(NOT DEFINED ${CMAKE_CUDA_ARCHITECTURES})
     set(CMAKE_CUDA_ARCHITECTURES 75)
   endif()
-
-  enable_language(CUDA)
-  find_package(CUDAToolkit REQUIRED COMPONENT cuda_driver cudart)
+  include(./cmake/spdl_cuda_config.cmake)
 endif()
-
-###############################################################################
-# Condigurations
-###############################################################################
-include(./cmake/spdl_common_config.cmake)
-include(./cmake/check_cxx_coroutine.cmake)
 
 ###############################################################################
 # Build folly, libspdl and binding
@@ -53,6 +51,9 @@ if (SPDL_USE_TRACING)
 endif()
 if (SPDL_USE_NVCODEC)
   add_subdirectory(third_party/nvcodec)
+endif()
+if (SPDL_USE_NVJPEG)
+  add_subdirectory(third_party/nvjpeg)
 endif()
 
 if (NOT DEFINED SPDL_PYTHON_BINDING_INSTALL_PREFIX)

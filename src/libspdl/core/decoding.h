@@ -29,4 +29,10 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     const std::optional<DecodeConfig> cfg = std::nullopt,
     const std::string filter_desc = {});
 
+CUDABufferPtr decode_image_nvjpeg(
+    const std::string_view& data,
+    int cuda_device_index,
+    const std::string& pix_fmt,
+    const std::optional<cuda_allocator>& cuda_allocator);
+
 } // namespace spdl::core

@@ -40,6 +40,7 @@ set(srcs
   libspdl/coro/detail/executor.cpp
   libspdl/coro/decoding/ffmpeg.cpp
   libspdl/coro/decoding/nvdec.cpp
+  libspdl/coro/decoding/nvjpeg.cpp
   libspdl/coro/decoding/sleep.cpp
   libspdl/coro/conversion.cpp
   libspdl/coro/encoding.cpp
@@ -67,6 +68,15 @@ if (SPDL_USE_NVCODEC)
     libspdl/core/detail/nvdec/wrapper.cpp
     )
   list(APPEND deps nvcuvid-stub)
+endif()
+
+if (SPDL_USE_NVJPEG)
+  list(APPEND defs SPDL_USE_NVJPEG)
+  list(APPEND srcs
+    libspdl/core/detail/nvjpeg/utils.cpp
+    libspdl/core/detail/nvjpeg/decoding.cpp
+  )
+  list(APPEND deps nvjpeg-stub)
 endif()
 
 if(SPDL_USE_TRACING)

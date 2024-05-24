@@ -118,6 +118,15 @@ FuturePtr async_decode_from_bytes(
     ThreadPoolExecutorPtr decode_executor,
     bool _zero_clear = false);
 
+FuturePtr async_decode_image_nvjpeg(
+    std::function<void(CUDABufferPtr)> set_result,
+    std::function<void(std::string, bool)> notify_execption,
+    const std::string_view& data_ptrs,
+    int cuda_device_index,
+    const std::string& pix_fmt,
+    const std::optional<cuda_allocator>& cuda_allocator,
+    ThreadPoolExecutorPtr decode_executor);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Function for test

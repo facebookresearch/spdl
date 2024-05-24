@@ -310,5 +310,37 @@ void register_decoding(nb::module_& m) {
       nb::arg("cuda_stream") = 0,
       nb::arg("cuda_allocator") = nb::none(),
       nb::arg("executor") = nullptr);
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Asynchronous decoding - NVJPEG
+  ////////////////////////////////////////////////////////////////////////////////
+  m.def(
+      "async_decode_image_nvjpeg",
+      [](std::function<void(CUDABufferPtr)> set_result,
+         std::function<void(std::string, bool)> notify_exception,
+         nb::bytes data,
+         int cuda_device_index,
+         const std::string& pix_fmt,
+         const std::optional<cuda_allocator>& cuda_allocator,
+         ThreadPoolExecutorPtr decode_executor) {
+        return async_decode_image_nvjpeg(
+            set_result,
+            notify_exception,
+            std::string_view{data.c_str(), data.size()},
+            cuda_device_index,
+            pix_fmt,
+            cuda_allocator,
+            decode_executor);
+      },
+      nb::arg("set_result"),
+      nb::arg("notify_exception"),
+      nb::arg("data"),
+      nb::arg("cuda_device_index"),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
+      nb::arg("pix_fmt") = "rgb",
+      nb::arg("cuda_allocator") = nb::none(),
+      nb::arg("executor") = nullptr);
 }
 } // namespace spdl::coro
