@@ -6,7 +6,6 @@ from typing import Any, AsyncIterator, Dict, List, Sequence, Tuple, Type, TypeVa
 
 import spdl.io
 from spdl.io import CPUBuffer, CUDABuffer, Frames, ImageFrames, ImagePackets, Packets
-from spdl.io._type_stub import CUDABuffer
 from spdl.lib import _libspdl
 
 from . import _common, _preprocessing
