@@ -185,7 +185,7 @@ std::string to_string(nvjpegBackend_t b) {
       return "NVJPEG_BACKEND_GPU_HYBRID_DEVICE";
     case NVJPEG_BACKEND_HARDWARE_DEVICE:
       return "NVJPEG_BACKEND_HARDWARE_DEVICE";
-#if NVJPEG_VER_MAJOR >= 12
+#if NVJPEG_VER_MAJOR >= 13 || (NVJPEG_VER_MAJOR >= 12 && NVJPEG_VER_MINOR >= 2)
     case NVJPEG_BACKEND_LOSSLESS_JPEG:
       return "NVJPEG_BACKEND_LOSSLESS_JPEG";
 #endif
@@ -210,7 +210,7 @@ std::string to_string(nvjpegOutputFormat_t f) {
       return "NVJPEG_OUTPUT_RGBI";
     case NVJPEG_OUTPUT_BGRI:
       return "NVJPEG_OUTPUT_BGRI";
-#if NVJPEG_VER_MAJOR >= 12
+#if NVJPEG_VER_MAJOR >= 13 || (NVJPEG_VER_MAJOR >= 12 && NVJPEG_VER_MINOR >= 2)
     case NVJPEG_OUTPUT_UNCHANGEDI_U16:
       return "NVJPEG_OUTPUT_UNCHANGEDI_U16";
 #endif
