@@ -165,6 +165,15 @@ class VideoPackets(Packets):
         """
         ...
 
+    def __len__(self) -> int:
+        """Returns the number of packets.
+
+        !!! note
+
+            Each packet typically contains one compressed frame, but it is not guaranteed.
+        """
+        ...
+
     def split_at_keyframes(self) -> List[VideoPackets]:
         """Split the packets into multiple packets at keyframes.
 
