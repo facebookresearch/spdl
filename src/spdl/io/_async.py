@@ -333,7 +333,7 @@ async def async_decode_image_nvjpeg(
             Supported values are `"RGB"` or `"BGR"`.
 
         cuda_allocator:
-            See [async_convert_frames](spdl.io.async_convert_frames).
+            See [async_convert_frames][spdl.io.async_convert_frames].
 
     Returns:
         A CUDABuffer object. Shape is [C==3, H, W].
