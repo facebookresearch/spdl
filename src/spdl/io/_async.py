@@ -2,10 +2,19 @@ import asyncio
 import builtins
 import logging
 from concurrent.futures import Future
-from typing import Any, AsyncIterator, Dict, List, Sequence, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Dict, List, Sequence, Tuple, TypeVar
 
 import spdl.io
-from spdl.io import CPUBuffer, CUDABuffer, Frames, ImageFrames, ImagePackets, Packets
+from spdl.io import (
+    CPUBuffer,
+    CUDABuffer,
+    Frames,
+    ImageFrames,
+    ImagePackets,
+    Packets,
+    VideoFrames,
+    VideoPackets,
+)
 from spdl.lib import _libspdl
 
 from . import _common, _preprocessing
@@ -85,7 +94,7 @@ async def async_streaming_demux(
     src: str | bytes,
     timestamps: List[Tuple[float, float]],
     **kwargs,
-) -> AsyncIterator[Type[Packets]]:
+) -> AsyncIterator[Packets]:
     """Demux the media of given time windows.
 
     Args:
@@ -113,7 +122,7 @@ async def async_demux_media(
     src: str | bytes,
     timestamp: Tuple[float, float] | None = None,
     **kwargs,
-) -> Type[Packets]:
+) -> Packets:
     """Demux image or one chunk of audio/video region from the source.
 
     Args:
@@ -136,7 +145,7 @@ async def async_demux_media(
     return await _async_task(func, src, **kwargs)
 
 
-async def async_decode_packets(packets: Type[Packets], **kwargs) -> Type[Frames]:
+async def async_decode_packets(packets: Packets, **kwargs) -> Frames:
     """Decode packets.
 
     Args:
@@ -164,10 +173,10 @@ async def async_decode_packets(packets: Type[Packets], **kwargs) -> Type[Frames]
 
 
 async def async_streaming_decode(
-    packets: Type[Packets],
+    packets: Packets,
     num_frames: int,
     **kwargs,
-) -> AsyncIterator[Type[Frames]]:
+) -> AsyncIterator[Frames]:
     match t := type(packets):
         case _libspdl.VideoPackets:
             constructor = _libspdl.async_streaming_video_decoder
@@ -186,7 +195,7 @@ async def async_streaming_decode(
 
 
 async def async_decode_packets_nvdec(
-    packets: Type[Packets] | List[ImagePackets],
+    packets: Packets | List[ImagePackets],
     cuda_device_index: int,
     **kwargs,
 ) -> CUDABuffer:
@@ -229,7 +238,7 @@ async def async_decode_media(
     media_type: str,
     src: str | bytes,
     **kwargs,
-) -> Type[Frames]:
+) -> Frames:
     """Perform demuxing and decoding as one background job.
 
     Args:
@@ -246,7 +255,7 @@ async def async_decode_media(
 
 
 async def async_convert_frames(
-    frames: Type[Frames] | Sequence[Frames],
+    frames: Frames | Sequence[Frames],
     cuda_device_index: int | None = None,
     **kwargs,
 ) -> CPUBuffer | CUDABuffer:

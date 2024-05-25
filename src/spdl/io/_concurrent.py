@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import Future
-from typing import Any, Dict, List, Sequence, Tuple, Type
+from typing import Any, Dict, List, Sequence, Tuple
 
 import spdl.utils
 
@@ -29,7 +29,7 @@ def streaming_demux(
     src: str | bytes,
     timestamps: List[Tuple[float, float]],
     **kwargs,
-) -> List[Future[Type[Packets]]]:
+) -> List[Future[Packets]]:
     """Demux the media of given time windows.
 
     The signature of this function is same as [spdl.io.async_streaming_demux][]
@@ -51,7 +51,7 @@ def demux_media(
     src: str | bytes,
     timestamp: Tuple[float, float] | None = None,
     **kwargs,
-) -> Future[Type[Packets]]:
+) -> Future[Packets]:
     """Demux image or one chunk of audio/video region from the source.
 
     The signature of this function is same as [spdl.io.async_demux_media][]
@@ -68,7 +68,7 @@ def demux_media(
     return _common._futurize_task(func, src, **kwargs)
 
 
-def decode_packets(packets: Type[Packets], **kwargs) -> Future[Type[Frames]]:
+def decode_packets(packets: Packets, **kwargs) -> Future[Frames]:
     """Decode packets.
 
     The signature of this function is same as [spdl.io.async_decode_packets][]
@@ -86,7 +86,7 @@ def decode_packets(packets: Type[Packets], **kwargs) -> Future[Type[Frames]]:
 
 
 def decode_packets_nvdec(
-    packets: Type[Packets], cuda_device_index: int, **kwargs
+    packets: Packets, cuda_device_index: int, **kwargs
 ) -> Future[CUDABuffer]:
     """Decode packets with NVDEC.
 
@@ -108,7 +108,7 @@ def decode_media(
     media_type: str,
     src: str | bytes,
     **kwargs,
-) -> Future[Type[Frames]]:
+) -> Future[Frames]:
     """Demux and decode media from source.
 
     The signature of this function is same as [spdl.io.async_decode_media][]
@@ -141,7 +141,7 @@ def decode_image_nvjpeg(
 
 
 def convert_frames(
-    frames: Type[Frames] | Sequence[Frames],
+    frames: Frames | Sequence[Frames],
     cuda_device_index: int | None = None,
     **kwargs,
 ) -> Future[CPUBuffer | CUDABuffer]:
