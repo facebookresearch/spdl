@@ -101,7 +101,7 @@ void register_packets(nb::module_& m) {
                 get_codec_info<MediaType::Video>(self.codecpar));
           })
       .def("clone", [](const VideoPackets& self) { return clone(self); })
-      .def("split_at_keyframes", [](const VideoPackets& self) {
+      .def("_split_at_keyframes", [](const VideoPackets& self) {
         return spdl::core::split_at_keyframes(self);
       });
 

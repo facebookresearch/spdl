@@ -174,7 +174,7 @@ class VideoPackets(Packets):
         """
         ...
 
-    def split_at_keyframes(self) -> List[VideoPackets]:
+    def _split_at_keyframes(self) -> List[VideoPackets]:
         """Split the packets into multiple packets at keyframes.
 
         Returns:
