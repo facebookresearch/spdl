@@ -30,7 +30,6 @@ CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
     int cuda_device_index,
     const std::string& pix_fmt,
-    const std::optional<std::string>& backend,
     const std::optional<cuda_allocator>& cuda_allocator) {
   SPDL_FAIL("SPDL is not compiled with NVJPEG support.");
 }
