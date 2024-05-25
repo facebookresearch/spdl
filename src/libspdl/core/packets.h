@@ -72,7 +72,4 @@ class DemuxedPackets {
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src);
 
-template <MediaType media_type>
-PacketsPtr<media_type>
-slice(const DemuxedPackets<media_type>& src, int start, int end);
 } // namespace spdl::core
