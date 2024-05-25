@@ -165,6 +165,14 @@ class VideoPackets(Packets):
         """
         ...
 
+    def split_at_keyframes(self) -> List[VideoPackets]:
+        """Split the packets into multiple packets at keyframes.
+
+        Returns:
+            A list of VideoPackets objects, each containing frames starting with a key frame.
+        """
+        ...
+
 
 class ImagePackets(Packets):
     """Packets object contain an image frame."""

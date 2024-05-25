@@ -99,4 +99,36 @@ template PacketsPtr<MediaType::Audio> clone(const AudioPackets& src);
 template PacketsPtr<MediaType::Video> clone(const VideoPackets& src);
 template PacketsPtr<MediaType::Image> clone(const ImagePackets& src);
 
+std::vector<VideoPacketsPtr> split_at_keyframes(const VideoPackets& src) {
+  auto& src_packets = src.get_packets();
+  // Search key frame indices
+  std::vector<size_t> keyframe_indices;
+  keyframe_indices.push_back(0); // always include the first frame
+  for (size_t i = 1; i < src_packets.size(); ++i) {
+    if (src_packets[i]->flags & AV_PKT_FLAG_KEY) {
+      keyframe_indices.push_back(i);
+    }
+  }
+  size_t num_keyframes = keyframe_indices.size();
+
+  // Add the end to make the following operation simple
+  keyframe_indices.push_back(src_packets.size());
+
+  std::vector<VideoPacketsPtr> ret;
+  ret.reserve(num_keyframes);
+  for (size_t i = 0; i < num_keyframes; ++i) {
+    auto start = keyframe_indices[i];
+    auto end = keyframe_indices[i + 1];
+
+    auto chunk = std::make_unique<VideoPackets>(
+        src.src, src.timestamp, copy(src.codecpar), src.time_base);
+    chunk->frame_rate = src.frame_rate;
+    for (size_t t = start; t < end; ++t) {
+      chunk->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
+    }
+
+    ret.push_back(std::move(chunk));
+  }
+  return ret;
+}
 } // namespace spdl::core

@@ -5,6 +5,7 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
+#include <nanobind/stl/vector.h>
 
 #include <fmt/format.h>
 
@@ -99,7 +100,10 @@ void register_packets(nb::module_& m) {
                 self.get_media_format_name(),
                 get_codec_info<MediaType::Video>(self.codecpar));
           })
-      .def("clone", [](const VideoPackets& self) { return clone(self); });
+      .def("clone", [](const VideoPackets& self) { return clone(self); })
+      .def("split_at_keyframes", [](const VideoPackets& self) {
+        return spdl::core::split_at_keyframes(self);
+      });
 
   nb::class_<ImagePackets>(m, "ImagePackets")
       .def(
