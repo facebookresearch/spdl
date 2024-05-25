@@ -253,7 +253,7 @@ class _DataSet:
         """Sort the dataset by the given attribute."""
         self._sort(order_by=f"ORDER BY {attribute} {'DESC' if desc else 'ASC'}")
 
-    def _split(self, paths: str) -> List[DataSet]:
+    def _split(self, paths: List[str]) -> List[DataSet]:
         return _split(self, paths)
 
 
@@ -272,7 +272,7 @@ def _split_table(con, src_table, tgt_table, n, i, idx_col):
     con.execute(f"UPDATE {tgt_table} SET {idx_col} = rowid - 1;")
 
 
-def _split(src: _DataSet, paths: List[DataSet]) -> List[DataSet]:
+def _split(src: _DataSet, paths: List[str]) -> List[DataSet]:
     """Split the dataset and create new datasets.
 
     Args:

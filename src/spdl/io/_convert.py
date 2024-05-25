@@ -5,7 +5,7 @@ from spdl._internal import import_utils
 from spdl.io import CPUBuffer, CUDABuffer
 
 try:
-    from numpy.typing import NDArray
+    from numpy.typing import NDArray  # type: ignore[name-defined]
 except ImportError:
     from numpy import ndarray as NDArray
 
@@ -48,6 +48,10 @@ def to_torch(buffer: CPUBuffer | CUDABuffer):
         (torch.Tensor): A PyTorch Tensor.
     """
     if hasattr(buffer, "__cuda_array_interface__"):
+        # Note: this is to silence pyre errors.
+        # Usually, it should be asserting that `buffer` is a CUDABuffer,
+        # but CUDABuffer class is a stub, so it would fail.
+        assert not isinstance(buffer, CPUBuffer)
         data_ptr = buffer.__cuda_array_interface__["data"][0]
         tensor = torch.as_tensor(buffer, device=f"cuda:{buffer.device_index}")
         if tensor.data_ptr() == 0:
