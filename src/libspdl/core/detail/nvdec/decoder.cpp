@@ -150,6 +150,10 @@ inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
     }
   }
 }
+
+std::tuple<double, double> NO_WINDOW{
+    -std::numeric_limits<double>::infinity(),
+    std::numeric_limits<double>::infinity()};
 } // namespace
 
 void NvDecDecoder::init(
@@ -157,7 +161,7 @@ void NvDecDecoder::init(
     cudaVideoCodec codec_,
     CUDABufferTracker* tracker_,
     Rational timebase_,
-    std::tuple<double, double> timestamp_,
+    const std::optional<std::tuple<double, double>>& timestamp_,
     CropArea crop_,
     int tgt_w,
     int tgt_h,
@@ -207,7 +211,7 @@ void NvDecDecoder::init(
   }
   tracker = tracker_;
   timebase = timebase_;
-  std::tie(start_time, end_time) = timestamp_;
+  std::tie(start_time, end_time) = timestamp_ ? *timestamp_ : NO_WINDOW;
 
   crop = crop_;
   target_width = tgt_w;

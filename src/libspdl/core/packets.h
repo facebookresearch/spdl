@@ -35,7 +35,7 @@ class DemuxedPackets {
   uint64_t id;
   // Source information
   std::string src;
-  std::tuple<double, double> timestamp;
+  std::optional<std::tuple<double, double>> timestamp;
 
   //
   AVCodecParameters* codecpar = nullptr;
@@ -52,6 +52,11 @@ class DemuxedPackets {
   DemuxedPackets(
       std::string src,
       std::tuple<double, double> timestamp,
+      AVCodecParameters* codecpar,
+      Rational time_base);
+
+  DemuxedPackets(
+      std::string src,
       AVCodecParameters* codecpar,
       Rational time_base);
 
@@ -72,6 +77,5 @@ class DemuxedPackets {
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src);
 
-std::vector<VideoPacketsPtr>
-split_at_keyframes(const VideoPackets& src);
+std::vector<VideoPacketsPtr> split_at_keyframes(const VideoPackets& src);
 } // namespace spdl::core
