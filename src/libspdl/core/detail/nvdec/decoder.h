@@ -85,7 +85,7 @@ class NvDecDecoder {
       cudaVideoCodec codec,
       CUDABufferTracker* tracker,
       Rational timebase,
-      std::tuple<double, double> timestamp,
+      const std::optional<std::tuple<double, double>>& timestamp,
       CropArea crop,
       int target_width = -1,
       int target_height = -1,

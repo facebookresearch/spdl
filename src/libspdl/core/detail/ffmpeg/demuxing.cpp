@@ -55,13 +55,17 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
   return fmt_ctx->streams[idx];
 }
 
+std::tuple<double, double> NO_WINDOW{
+    -std::numeric_limits<double>::infinity(),
+    std::numeric_limits<double>::infinity()};
+
 template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::tuple<double, double>& window) {
+    const std::optional<std::tuple<double, double>>& window) {
   TRACE_EVENT("demuxing", "detail::demux_window");
-  auto [start, end] = window;
+  auto [start, end] = window ? *window : NO_WINDOW;
 
   if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
     // Note:
@@ -83,9 +87,9 @@ PacketsPtr<media_type> demux_window(
 
   auto ret = std::make_unique<DemuxedPackets<media_type>>(
       fmt_ctx->url,
-      window,
       stream->codecpar,
       Rational{stream->time_base.num, stream->time_base.den});
+  ret->timestamp = window;
 
   double packet_ts = -1;
   do {
@@ -128,10 +132,6 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
   return get_interface(data, adaptor, dmx_cfg);
 }
 
-std::tuple<double, double> NO_WINDOW{
-    -std::numeric_limits<double>::infinity(),
-    std::numeric_limits<double>::infinity()};
-
 } // namespace
 } // namespace detail
 
@@ -155,8 +155,7 @@ StreamingDemuxer<media_type>::StreamingDemuxer(
 template <MediaType media_type>
 PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
     const std::optional<std::tuple<double, double>>& window) {
-  auto packets = detail::demux_window<media_type>(
-      fmt_ctx, stream, window.value_or(detail::NO_WINDOW));
+  auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window);
   if constexpr (media_type == MediaType::Video) {
     auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
     packets->frame_rate = Rational{frame_rate.num, frame_rate.den};
@@ -178,7 +177,7 @@ ImagePacketsPtr demux_image(AVFormatContext* fmt_ctx) {
   AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
 
   auto package = std::make_unique<DemuxedPackets<MediaType::Image>>(
-      fmt_ctx->url, NO_WINDOW, stream->codecpar, Rational{1, 1});
+      fmt_ctx->url, stream->codecpar, Rational{1, 1});
 
   int ite = 0;
   do {
@@ -298,14 +297,15 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets) {
     return packets;
   }
 
-  auto package = std::make_unique<DemuxedPackets<MediaType::Video>>(
-      packets->src, packets->timestamp, bsf_ctx->par_out, packets->time_base);
-  package->frame_rate = packets->frame_rate;
+  auto ret = std::make_unique<DemuxedPackets<MediaType::Video>>(
+      packets->src, bsf_ctx->par_out, packets->time_base);
+  ret->timestamp = packets->timestamp;
+  ret->frame_rate = packets->frame_rate;
   for (auto& packet : packets->get_packets()) {
     auto filtered = detail::apply_bsf(bsf_ctx.get(), packet);
-    package->push(filtered.release());
+    ret->push(filtered.release());
   }
-  return package;
+  return ret;
 }
 
 } // namespace spdl::core

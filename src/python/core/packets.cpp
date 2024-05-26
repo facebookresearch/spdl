@@ -1,6 +1,7 @@
 #include <libspdl/core/packets.h>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
@@ -51,6 +52,11 @@ std::string get_codec_info(AVCodecParameters* codecpar) {
   return fmt::format("{}", fmt::join(parts, ", "));
 }
 
+std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
+  return ts ? fmt::format("({}, {})", std::get<0>(*ts), std::get<1>(*ts))
+            : "n/a";
+}
+
 } // namespace
 
 void register_packets(nb::module_& m) {
@@ -59,10 +65,9 @@ void register_packets(nb::module_& m) {
           "__repr__",
           [](const AudioPackets& self) {
             return fmt::format(
-                "AudioPackets<src=\"{}\", timestamp=({}, {}), sample_format=\"{}\", {}>",
+                "AudioPackets<src=\"{}\", timestamp={}, sample_format=\"{}\", {}>",
                 self.src,
-                std::get<0>(self.timestamp),
-                std::get<1>(self.timestamp),
+                get_ts(self.timestamp),
                 self.get_media_format_name(),
                 get_codec_info<MediaType::Audio>(self.codecpar));
           })
@@ -90,10 +95,9 @@ void register_packets(nb::module_& m) {
           "__repr__",
           [](const VideoPackets& self) {
             return fmt::format(
-                "VideoPackets<src=\"{}\", timestamp=({}, {}), frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
+                "VideoPackets<src=\"{}\", timestamp={}, frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
                 self.src,
-                std::get<0>(self.timestamp),
-                std::get<1>(self.timestamp),
+                get_ts(self.timestamp),
                 self.frame_rate.num,
                 self.frame_rate.den,
                 self.num_packets(),

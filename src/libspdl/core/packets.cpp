@@ -38,6 +38,21 @@ DemuxedPackets<media_type>::DemuxedPackets(
 };
 
 template <MediaType media_type>
+DemuxedPackets<media_type>::DemuxedPackets(
+    std::string src_,
+    AVCodecParameters* codecpar_,
+    Rational time_base_)
+    : id(reinterpret_cast<uintptr_t>(this)),
+      src(src_),
+      codecpar(copy(codecpar_)),
+      time_base(time_base_) {
+  TRACE_EVENT(
+      "decoding",
+      "DemuxedPackets::DemuxedPackets",
+      perfetto::Flow::ProcessScoped(id));
+};
+
+template <MediaType media_type>
 DemuxedPackets<media_type>::~DemuxedPackets() {
   TRACE_EVENT(
       "decoding",
@@ -85,7 +100,8 @@ template struct DemuxedPackets<MediaType::Image>;
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
   auto other = std::make_unique<DemuxedPackets<media_type>>(
-      src.src, src.timestamp, copy(src.codecpar), src.time_base);
+      src.src, copy(src.codecpar), src.time_base);
+  other->timestamp = src.timestamp;
   if constexpr (media_type == MediaType::Video) {
     other->frame_rate = src.frame_rate;
   }
@@ -121,7 +137,8 @@ std::vector<VideoPacketsPtr> split_at_keyframes(const VideoPackets& src) {
     auto end = keyframe_indices[i + 1];
 
     auto chunk = std::make_unique<VideoPackets>(
-        src.src, src.timestamp, copy(src.codecpar), src.time_base);
+        src.src, copy(src.codecpar), src.time_base);
+    chunk->timestamp = src.timestamp;
     chunk->frame_rate = src.frame_rate;
     for (size_t t = start; t < end; ++t) {
       chunk->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
