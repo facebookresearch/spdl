@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import numpy as np
 
@@ -157,5 +158,40 @@ def test_split_video_packets_at_keyframes_recursive(get_sample, frame_interval=5
         )
         assert np.all(array0 == array_ref0)
         assert np.all(array1 == array_ref1)
+
+    asyncio.run(_test(sample.path))
+
+
+def test_sample_decoding_time(get_sample):
+    """Sample decoding works"""
+    cmd = (
+        "ffmpeg -hide_banner -y -f lavfi -i testsrc "
+        f"-force_key_frames 'expr:eq(mod(n, 3), 0)' "
+        "-frames:v 1000 sample.mp4"
+    )
+    sample = get_sample(cmd)
+
+    async def _test(path):
+        indices = list(range(0, 1000, 25))
+
+        packets = await spdl.io.async_demux_media("video", path)
+        t0 = time.monotonic()
+        frames = await spdl.io.async_decode_packets(packets.clone())
+        frames = frames[indices]
+        elapsed_ref = time.monotonic() - t0
+        buffer = await spdl.io.async_convert_frames(frames)
+        array_ref = spdl.io.to_numpy(buffer)
+
+        t0 = time.monotonic()
+        frames = await spdl.io.async_sample_decode_video(packets, indices)
+        elapsed = time.monotonic() - t0
+        buffer = await spdl.io.async_convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
+
+        print(f"{elapsed_ref=}, {elapsed=}")
+        assert np.all(array == array_ref)
+
+        # should be much faster than 2x
+        assert elapsed_ref / 2 > elapsed
 
     asyncio.run(_test(sample.path))

@@ -30,6 +30,7 @@ __all__ = [
     "async_demux_media",
     "async_streaming_demux",
     "async_streaming_decode",
+    "async_sample_decode_video",
     "async_load_media",
     "async_batch_load_image",
     "async_batch_load_image_nvdec",
@@ -349,6 +350,58 @@ async def async_decode_image_nvjpeg(
     """
     func = _libspdl.async_decode_image_nvjpeg
     return await _async_task(func, data, cuda_device_index, **kwargs)
+
+
+async def async_sample_decode_video(
+    packets: VideoPackets, indices: List[int]
+) -> List[VideoFrames]:
+    """Selectively decode frames from the given video packets.
+
+    This function retuns the result similar to decoding all the packets then
+    selecting the frames. i.e.
+
+    ```python
+    frames = await spdl.io.async_decode_packets(packets)
+    frames = frames[indices]
+    ```
+
+    But this function decodes the minimum number of packets, so it is faster
+    when sampling a few frame sparsely from long video.
+
+    Args:
+        packets (VideoPackets): VideoPackets object to sample from.
+
+        indices (List[int]): List of indices for sampling.
+            The list must be sorted in ascending order and without duplicates.
+
+    Returns:
+        Decoded frames.
+    """
+    if not indices:
+        raise ValueError("Frame indices must be non-empty.")
+
+    num_packets = len(packets)
+    if any(not (0 <= i < num_packets) for i in indices):
+        raise IndexError(f"Frame index must be [0, {num_packets}).")
+    if sorted(indices) != indices:
+        raise ValueError("Frame indices must be sorted in ascending order.")
+    if len(set(indices)) != len(indices):
+        raise ValueError("Frame indices must be unique.")
+
+    start = 0
+    i = 0
+    ret = []
+    for packets_ in packets._split_at_keyframes():
+        end = start + len(packets_)
+        idx = []
+        while i < len(indices) and start <= indices[i] < end:
+            idx.append(indices[i] - start)
+            i += 1
+        if idx:
+            frames = await async_decode_packets(packets_)
+            ret.extend(frames[idx])  # type: ignore[arg-type]
+        start = end
+    return ret
 
 
 ################################################################################
