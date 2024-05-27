@@ -11,7 +11,10 @@ set(src
   core/types.cpp
   core/tracing.cpp
   core/utils.cpp
-  core/streaming_decoder.cpp
+  core/demuxing.cpp
+  core/decoding.cpp
+  core/conversion.cpp
+  core/encoding.cpp
 
   coro/future.cpp
   coro/executor.cpp
