@@ -21,7 +21,7 @@ class StreamingDemuxer {
 
  public:
   StreamingDemuxer(
-      const std::string uri,
+      const std::string src,
       const SourceAdaptorPtr& adaptor,
       const std::optional<DemuxConfig>& dmx_cfg);
 
@@ -35,14 +35,14 @@ class StreamingDemuxer {
 
 // Demux a single image from the resource indicator
 ImagePacketsPtr demux_image(
-    const std::string uri,
+    const std::string src,
     const SourceAdaptorPtr adaptor,
     const std::optional<DemuxConfig>& dmx_cfg);
 
 // Demux a single image from the memory
 // _zero_clear sets all the data to zero. This is only for testing.
 ImagePacketsPtr demux_image(
-    const std::string_view src,
+    const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg,
     bool _zero_clear = false);
 
