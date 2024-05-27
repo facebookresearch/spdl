@@ -8,7 +8,7 @@
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
 
-namespace spdl::core {
+namespace spdl::core::detail {
 namespace {
 
 std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
@@ -33,8 +33,8 @@ std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
         return {{1, height, width}, false};
       default:
         // It should be already handled by `get_nvjpeg_output_format`
-        SPDL_FAIL_INTERNAL(fmt::format(
-            "Unexpected output format: {}", detail::to_string(out_fmt)));
+        SPDL_FAIL_INTERNAL(
+            fmt::format("Unexpected output format: {}", to_string(out_fmt)));
     }
   }();
 
@@ -54,7 +54,6 @@ std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
 
   return {std::move(buffer), output};
 }
-
 } // namespace
 
 CUDABufferPtr decode_image_nvjpeg(
@@ -64,18 +63,18 @@ CUDABufferPtr decode_image_nvjpeg(
     const std::optional<cuda_allocator>& cuda_allocator) {
   cudaStream_t cuda_stream = 0;
 
-  auto out_fmt = detail::get_nvjpeg_output_format(pix_fmt);
+  auto out_fmt = get_nvjpeg_output_format(pix_fmt);
 
-  detail::ensure_cuda_initialized();
-  detail::set_cuda_primary_context(cuda_device_index);
+  ensure_cuda_initialized();
+  set_cuda_primary_context(cuda_device_index);
 
-  auto nvjpeg = detail::get_nvjpeg();
+  auto nvjpeg = get_nvjpeg();
 
   // Note: Creation/destruction of nvjpegJpegState_t is thread-safe, however,
   // looking at the trace, it appears that they have internal locking mechanism
   // which make these operations as slow as several hudreds milliseconds in
   // multithread situation. So we use thread local.
-  thread_local auto jpeg_state = detail::get_nvjpeg_jpeg_state(nvjpeg);
+  thread_local auto jpeg_state = get_nvjpeg_jpeg_state(nvjpeg);
 
   int num_components;
   nvjpegChromaSubsampling_t subsampling;
@@ -128,4 +127,4 @@ CUDABufferPtr decode_image_nvjpeg(
   return std::move(buffer);
 }
 
-} // namespace spdl::core
+} // namespace spdl::core::detail
