@@ -65,14 +65,14 @@ void encode_image(
     void* data,
     std::vector<size_t> shape,
     const std::string& src_pix_fmt,
-    const EncodeConfig enc_cfg) {
+    const std::optional<EncodeConfig>& enc_cfg) {
   const AVPixelFormat src_fmt = av_get_pix_fmt(src_pix_fmt.c_str());
   if (src_fmt == AV_PIX_FMT_NONE) {
     SPDL_FAIL(fmt::format("Invalid source pixel format: {}", src_pix_fmt));
   }
   auto [src_width, src_height] = get_image_size(src_fmt, shape);
-  auto [encoder, filter_graph] =
-      detail::get_encode_process(uri, src_fmt, src_width, src_height, enc_cfg);
+  auto [encoder, filter_graph] = detail::get_encode_process(
+      uri, src_fmt, src_width, src_height, enc_cfg.value_or(EncodeConfig{}));
 
   auto frame =
       detail::reference_image_buffer(src_fmt, data, src_width, src_height);

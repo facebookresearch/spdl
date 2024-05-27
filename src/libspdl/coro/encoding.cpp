@@ -40,12 +40,7 @@ FuturePtr async_encode_image_cuda(
     ThreadPoolExecutorPtr executor) {
   auto task = folly::coro::co_invoke([=]() -> folly::coro::Task<int> {
     auto storage = spdl::core::cp_to_cpu(data, shape);
-    spdl::core::encode_image(
-        uri,
-        storage.data(),
-        shape,
-        pix_fmt,
-        encode_cfg.value_or(EncodeConfig{}));
+    spdl::core::encode_image(uri, storage.data(), shape, pix_fmt, encode_cfg);
     co_return 0; // dummy
   });
   return detail::execute_task_with_callback(
