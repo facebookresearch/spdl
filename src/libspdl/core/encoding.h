@@ -10,6 +10,6 @@ void encode_image(
     void* data,
     std::vector<size_t> shape,
     const std::string& src_pix_fmt,
-    const EncodeConfig enc_cfg);
+    const std::optional<EncodeConfig>& enc_cfg);
 
 } // namespace spdl::core
