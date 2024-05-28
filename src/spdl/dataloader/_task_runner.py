@@ -28,7 +28,7 @@ U = TypeVar("U")
 ################################################################################
 # Impl for AsyncTaskRunner
 ################################################################################
-def _run_agen(aiterable, sentinel, queue, stopped):
+def _run_agen(loop, aiterable, sentinel, queue, stopped):
     async def _generator_loop():
         try:
             async for item in aiterable:
@@ -42,8 +42,7 @@ def _run_agen(aiterable, sentinel, queue, stopped):
             stopped.set()
         _LG.debug("exiting _generator_loop.")
 
-    asyncio.set_event_loop(asyncio.new_event_loop())
-    asyncio.run(_generator_loop())
+    loop.run_until_complete(_generator_loop())
 
 
 class _thread_manager:
@@ -120,9 +119,11 @@ class BackgroundGenerator(Generic[T]):
         # Used to flag cancellation from outside and to
         # flag the completion from the inside.
         stopped = Event()
+
+        loop = asyncio.new_event_loop()
         thread = Thread(
             target=_run_agen,
-            args=(self.iterable, sentinel, queue, stopped),
+            args=(loop, self.iterable, sentinel, queue, stopped),
         )
 
         with _thread_manager(thread, stopped, queue, sentinel):
