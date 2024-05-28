@@ -15,7 +15,6 @@ from spdl.io import (
     Frames,
     ImageFrames,
     ImagePackets,
-    Packets,
     VideoFrames,
     VideoPackets,
 )
@@ -243,7 +242,7 @@ async def async_streaming_decode(
 
     decoder = await _async_task(constructor, packets, **kwargs)
     while True:
-        frames = await _async_task(decode_fn, decoder, num_frames, executor)
+        frames = await _async_task(decode_fn, decoder, num_frames, executor=executor)
         if frames is None:
             return
         yield frames
@@ -406,8 +405,17 @@ async def async_decode_image_nvjpeg(
     return await _async_task(func, data, cuda_device_index, **kwargs)
 
 
+async def _decode_partial(
+    packets: VideoPackets, indices: List[int], **kwargs
+) -> VideoFrames:
+    """Decode packets but return early when requested frames are decoded."""
+    num_frames = max(indices) + 1
+    async for frames in async_streaming_decode(packets, num_frames, **kwargs):
+        return frames[indices]
+
+
 async def async_sample_decode_video(
-    packets: VideoPackets, indices: List[int]
+    packets: VideoPackets, indices: List[int], **kwargs
 ) -> List[VideoFrames]:
     """Selectively decode frames from the given video packets.
 
@@ -442,19 +450,26 @@ async def async_sample_decode_video(
     if len(set(indices)) != len(indices):
         raise ValueError("Frame indices must be unique.")
 
-    start = 0
-    i = 0
-    ret = []
-    for packets_ in packets._split_at_keyframes():
-        end = start + len(packets_)
+    i = start = 0
+    coros = []
+    for split in packets._split_at_keyframes():
+        end = start + len(split)
         idx = []
         while i < len(indices) and start <= indices[i] < end:
             idx.append(indices[i] - start)
             i += 1
         if idx:
-            frames = await async_decode_packets(packets_)
-            ret.extend(frames[idx])  # type: ignore[arg-type]
+            coros.append(_decode_partial(split, idx, **kwargs))
         start = end
+
+    tasks = [asyncio.create_task(coro) for coro in coros]
+    await asyncio.wait(tasks)
+    ret = []
+    for task in tasks:
+        try:
+            ret.extend(task.result())
+        except Exception as e:
+            _LG.error(f"Failed to decode {task.get_name()}. Reason: {e}")
     return ret
 
 
