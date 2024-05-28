@@ -1,13 +1,16 @@
+import asyncio
 import gc
 
 import pytest
 
 import spdl.io
+import spdl.utils
+
+import torch
+
 
 if not spdl.utils.is_nvcodec_available():
     pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
-
-import torch
 
 
 DEFAULT_CUDA = 0
@@ -15,29 +18,34 @@ DEFAULT_CUDA = 0
 
 def _decode_video(src, timestamp=None, **decode_options):
     decode_options["cuda_device_index"] = DEFAULT_CUDA
-    future = spdl.io.load_media(
-        "video",
-        src,
-        demux_options={"timestamp": timestamp},
-        decode_options=decode_options,
-        use_nvdec=True,
+    buffer = asyncio.run(
+        spdl.io.async_load_video(
+            src,
+            demux_options={"timestamp": timestamp},
+            decode_options=decode_options,
+            use_nvdec=True,
+        )
     )
-    return spdl.io.to_torch(future.result())
+    return spdl.io.to_torch(buffer)
 
 
 def _decode_videos(src, timestamps, **kwargs):
-    @spdl.utils.chain_futures
-    def _f(packets_future):
-        packets = yield packets_future
-        yield spdl.io.decode_packets_nvdec(
-            packets, cuda_device_index=DEFAULT_CUDA, **kwargs
-        )
 
-    futures = []
-    for fut in spdl.io.streaming_demux("video", src, timestamps=timestamps):
-        futures.append((_f(fut)))
+    async def _decode():
+        decoding = []
+        async for packets in spdl.io.async_streaming_demux_video(
+            src, timestamps=timestamps
+        ):
+            coro = spdl.io.async_decode_packets_nvdec(
+                packets, cuda_device_index=DEFAULT_CUDA, **kwargs
+            )
+            decoding.append(asyncio.create_task(coro))
 
-    return [spdl.io.to_torch(f.result()) for f in futures]
+        frames = await asyncio.gather(*decoding)
+
+        return [spdl.io.to_torch(f) for f in frames]
+
+    return asyncio.run(_decode())
 
 
 @pytest.fixture

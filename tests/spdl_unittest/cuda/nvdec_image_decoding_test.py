@@ -14,18 +14,18 @@ if not spdl.utils.is_nvcodec_available():
 DEFAULT_CUDA = 0
 
 
-def _decode_image(path, pix_fmt="rgba", executor=None):
-    future = spdl.io.load_media(
-        "image",
-        path,
-        decode_options={
-            "cuda_device_index": DEFAULT_CUDA,
-            "pix_fmt": pix_fmt,
-            "executor": executor,
-        },
-        use_nvdec=True,
+def _decode_image(path, pix_fmt="rgba"):
+    buffer = asyncio.run(
+        spdl.io.async_load_image(
+            path,
+            decode_options={
+                "cuda_device_index": DEFAULT_CUDA,
+                "pix_fmt": pix_fmt,
+            },
+            use_nvdec=True,
+        )
     )
-    return spdl.io.to_torch(future.result())
+    return spdl.io.to_torch(buffer)
 
 
 def test_decode_image_yuv422(get_sample):
@@ -119,13 +119,9 @@ def test_decode_multiple_invalid_input(get_sample):
     )
     sample = get_sample(cmd, width=16, height=16)
 
-    executor = spdl.io.Executor(1, "SingleDecoderExecutor")
     for _ in range(2):
         with pytest.raises(RuntimeError):
-            _decode_image(
-                sample.path,
-                executor=executor,
-            ).get()
+            _decode_image(sample.path)
 
 
 def test_batch_decode_images_async(get_samples):
@@ -153,12 +149,14 @@ def test_batch_decode_images(get_samples):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=rgba -frames:v 250 sample_%d.jpeg"
     flist = get_samples(cmd)
 
-    buffer = spdl.io.batch_load_image_nvdec(
-        flist,
-        cuda_device_index=DEFAULT_CUDA,
-        width=None,
-        height=None,
-    ).result()
+    buffer = asyncio.run(
+        spdl.io.async_load_image_batch_nvdec(
+            flist,
+            cuda_device_index=DEFAULT_CUDA,
+            width=None,
+            height=None,
+        )
+    )
     batch = spdl.io.to_torch(buffer)
     assert batch.shape == torch.Size([250, 4, 240, 320])
     assert batch.dtype == torch.uint8

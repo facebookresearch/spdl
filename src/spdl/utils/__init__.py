@@ -2,13 +2,12 @@
 
 from typing import Any, List
 
-from . import _build, _ffmpeg, _folly, _futures, _tracing
+from . import _build, _ffmpeg, _folly, _tracing
 
 _mods = [
     _build,
     _ffmpeg,
     _folly,
-    _futures,
     _tracing,
 ]
 

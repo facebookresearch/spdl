@@ -3,6 +3,7 @@ import gc
 
 import pytest
 import spdl.io
+import spdl.utils
 import torch
 
 

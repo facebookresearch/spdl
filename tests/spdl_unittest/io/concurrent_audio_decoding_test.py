@@ -1,19 +1,23 @@
+import asyncio
+
 import numpy as np
 import pytest
 
 import spdl.io
 import spdl.utils
-from spdl.dataset._utils import fetch
 from spdl.io import get_audio_filter_desc, get_filter_desc
 
 
 def _decode_audio(src, sample_fmt=None):
-    future = spdl.io.load_media(
-        "audio",
-        src,
-        decode_options={"filter_desc": get_audio_filter_desc(sample_fmt=sample_fmt)},
+    buffer = asyncio.run(
+        spdl.io.async_load_audio(
+            src,
+            decode_options={
+                "filter_desc": get_audio_filter_desc(sample_fmt=sample_fmt)
+            },
+        )
     )
-    return spdl.io.to_numpy(future.result())
+    return spdl.io.to_numpy(buffer)
 
 
 @pytest.mark.parametrize(
@@ -53,23 +57,21 @@ def test_batch_audio_conversion(get_sample):
 
     timestamps = [(0, 1), (1, 1.5), (2, 2.7)]
 
-    @spdl.utils.chain_futures
-    def _decode(demuxing):
-        packets = yield demuxing
-        filter_desc = get_audio_filter_desc(
-            timestamp=packets.timestamp, num_frames=8000
-        )
-        yield spdl.io.decode_packets(packets, filter_desc=filter_desc)
+    async def _test():
+        decoding = []
+        async for packets in spdl.io.async_streaming_demux_audio(
+            src=sample.path, timestamps=timestamps
+        ):
+            filter_desc = get_filter_desc(packets, num_frames=8_000)
+            coro = spdl.io.async_decode_packets(packets, filter_desc=filter_desc)
+            decoding.append(asyncio.create_task(coro))
 
-    decoding = [
-        _decode(demuxing)
-        for demuxing in spdl.io.streaming_demux(
-            "audio", src=sample.path, timestamps=timestamps
-        )
-    ]
+        frames = await asyncio.gather(*decoding)
 
-    frames = spdl.utils.wait_futures(decoding).result()
-    buffer = spdl.io.convert_frames(frames).result()
-    array = spdl.io.to_numpy(buffer)
+        buffer = await spdl.io.async_convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
+        return array
+
+    array = asyncio.run(_test())
 
     assert array.shape == (3, 8000, 2)
