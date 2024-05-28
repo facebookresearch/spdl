@@ -78,7 +78,6 @@ void register_conversion(nb::module_& m) {
   m.def("convert_frames", &batch_convert<MediaType::Video>, nb::arg("frames"));
   m.def("convert_frames", &batch_convert<MediaType::Image>, nb::arg("frames"));
 
-
   ////////////////////////////////////////////////////////////////////////////////
   // CUDA conversion
   ////////////////////////////////////////////////////////////////////////////////
