@@ -40,7 +40,7 @@ def get_audio_filter_desc(
             dropping the exceeding frames or padding with silence.
 
     Returns:
-        Filter description.
+        (str): Filter description.
     """
     parts = []
     if num_channels is not None:
@@ -136,7 +136,7 @@ def get_video_filter_desc(
             __Video__, *Optional:* Change the padding frames to the given color.
 
     Returns:
-        Filter description.
+        (str): Filter description.
     """
     parts = []
     if frame_rate is not None:
@@ -188,7 +188,7 @@ def get_video_filter_desc(
     return ",".join(parts)
 
 
-def get_filter_desc(packets, **filter_args):
+def get_filter_desc(packets, **filter_args) -> str:
     """Get the filter to process the given packets.
 
     Args:
@@ -197,6 +197,9 @@ def get_filter_desc(packets, **filter_args):
     Other args:
         filter_args: Passed to [spdl.io.get_audio_filter_desc][] or
             [spdl.io.get_video_filter_desc][].
+
+    Returns:
+        (str): The resulting filter expression.
     """
     match type(packets):
         case _libspdl.AudioPackets:

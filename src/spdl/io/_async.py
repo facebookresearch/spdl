@@ -2,10 +2,14 @@ import asyncio
 import builtins
 import logging
 from concurrent.futures import Future
-from typing import Any, AsyncIterator, Dict, List, Sequence, Tuple, TypeVar
+
+# pyre-strict
+from typing import Any, AsyncIterator, Dict, List, overload, Sequence, Tuple, TypeVar
 
 import spdl.io
 from spdl.io import (
+    AudioFrames,
+    AudioPackets,
     CPUBuffer,
     CUDABuffer,
     Frames,
@@ -103,7 +107,7 @@ async def async_streaming_demux(
     src: str | bytes,
     timestamps: List[Tuple[float, float]],
     **kwargs,
-) -> AsyncIterator[Packets]:
+):
     """Demux the media of given time windows.
 
     Args:
@@ -130,7 +134,7 @@ async def async_streaming_demux_audio(
     src: str | bytes,
     timestamps: List[Tuple[float, float]],
     **kwargs,
-) -> AsyncIterator[Packets]:
+) -> AsyncIterator[AudioPackets]:
     async for packets in async_streaming_demux("audio", src, timestamps, **kwargs):
         yield packets
 
@@ -139,7 +143,7 @@ async def async_streaming_demux_video(
     src: str | bytes,
     timestamps: List[Tuple[float, float]],
     **kwargs,
-) -> AsyncIterator[Packets]:
+) -> AsyncIterator[VideoPackets]:
     async for packets in async_streaming_demux("video", src, timestamps, **kwargs):
         yield packets
 
@@ -149,7 +153,7 @@ async def async_demux_media(
     src: str | bytes,
     timestamp: Tuple[float, float] | None = None,
     **kwargs,
-) -> Packets:
+):
     """Demux image or one chunk of audio/video region from the source.
 
     Args:
@@ -174,25 +178,37 @@ async def async_demux_media(
 
 async def async_demux_audio(
     src: str | bytes, timestamp: Tuple[float, float] | None = None, **kwargs
-):
+) -> AudioPackets:
     return await async_demux_media("audio", src, timestamp=timestamp, **kwargs)
 
 
 async def async_demux_video(
     src: str | bytes, timestamp: Tuple[float, float] | None = None, **kwargs
-):
+) -> VideoPackets:
     return await async_demux_media("video", src, timestamp=timestamp, **kwargs)
 
 
-async def async_demux_image(src: str | bytes, **kwargs):
+async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
     return await async_demux_media("image", src, **kwargs)
 
 
-async def async_decode_packets(packets: Packets, **kwargs) -> Frames:
+@overload
+async def async_decode_packets(packets: AudioPackets, **kwargs) -> AudioFrames: ...
+
+
+@overload
+async def async_decode_packets(packets: VideoPackets, **kwargs) -> VideoFrames: ...
+
+
+@overload
+async def async_decode_packets(packets: ImagePackets, **kwargs) -> ImageFrames: ...
+
+
+async def async_decode_packets(packets, **kwargs):
     """Decode packets.
 
     Args:
-        packets (Packets): Packets object.
+        packets (AudioPackets | VideoPackets | ImagePackets): Packets object.
 
     Other args:
         decoder_config (DecodeConfig):
@@ -202,12 +218,8 @@ async def async_decode_packets(packets: Packets, **kwargs) -> Frames:
             *Optional:* Custom filter applied after decoding.
 
     Returns:
-        A Frames object.
-            The type of the returned object corresponds to the input Packets type.
-
-            - `AudioPackets` -> `AudioFrames`
-            - `VideoPackets` -> `VideoFrames`
-            - `ImagePackets` -> `ImageFrames`
+        (AudioFrames | VideoFrames | ImageFrames): A Frames object.
+            The media type of the returned object corresponds to the input Packets type.
     """
     func = _common._get_decoding_func(packets)
     if "filter_desc" not in kwargs:
@@ -216,10 +228,10 @@ async def async_decode_packets(packets: Packets, **kwargs) -> Frames:
 
 
 async def async_streaming_decode(
-    packets: Packets,
+    packets: VideoPackets,
     num_frames: int,
     **kwargs,
-) -> AsyncIterator[Frames]:
+) -> AsyncIterator[VideoFrames]:
     match t := type(packets):
         case _libspdl.VideoPackets:
             constructor = _libspdl.async_streaming_video_decoder
@@ -238,7 +250,7 @@ async def async_streaming_decode(
 
 
 async def async_decode_packets_nvdec(
-    packets: Packets | List[ImagePackets],
+    packets: ImagePackets | VideoPackets | List[ImagePackets],
     cuda_device_index: int,
     **kwargs,
 ) -> CUDABuffer:
@@ -384,7 +396,7 @@ async def async_decode_image_nvjpeg(
         pix_fmt (str): *Optional* Output pixel format.
             Supported values are `"RGB"` or `"BGR"`.
 
-        cuda_allocator:
+        cuda_allocator (Callable):
             See [async_convert_frames][spdl.io.async_convert_frames].
 
     Returns:
@@ -615,7 +627,7 @@ async def async_load_image_batch(
             *Optional:* Change the format of the pixel.
 
         demux_options (Dict[str, Any]):
-            *Optional:* Demux options passed to [spdl.io.async_demux_media][].
+            *Optional:* Demux options passed to [spdl.io.async_demux_image][].
 
         decode_options (Dict[str, Any]):
             *Optional:* Decode options passed to [spdl.io.async_decode_packets][].

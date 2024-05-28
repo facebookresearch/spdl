@@ -15,17 +15,17 @@ The following functions implement each stage
 
 *Demuxing*
 
-- Single sequence [async_demux_media][spdl.io.async_demux_media] ([demux_media][spdl.io.demux_media])
-- Multiple sequences [async_streaming_demux][spdl.io.async_streaming_demux] ([streaming_demux][spdl.io.streaming_demux])
+- Single sequence [async_demux_audio][spdl.io.async_demux_audio], [async_demux_video][spdl.io.async_demux_video], [async_demux_image][spdl.io.async_demux_image].
+- Multiple sequences [async_streaming_demux_audio][spdl.io.async_streaming_demux_audio], [async_streaming_demux_video][spdl.io.async_streaming_demux_video].
 
 *Decoding*
 
-- CPU decoding [async_decode_packets][spdl.io.async_decode_packets] ([decode_packets][spdl.io.decode_packets])
-- NVDEC decoding [async_decode_packets_nvdec][spdl.io.async_decode_packets_nvdec] ([decode_packets_nvdec][spdl.io.decode_packets_nvdec])
+- CPU decoding [async_decode_packets][spdl.io.async_decode_packets]
+- NVDEC decoding [async_decode_packets_nvdec][spdl.io.async_decode_packets_nvdec]
 
 *Frame conversion*
 
-- [async_convert_frames][spdl.io.async_convert_frames] ([convert_frames][spdl.io.convert_frames])
+- [async_convert_frames][spdl.io.async_convert_frames]
 
 !!! note
 
