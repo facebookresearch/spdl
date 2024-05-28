@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from threading import Event, Thread
 from typing import (
@@ -107,9 +108,11 @@ class BackgroundGenerator(Generic[T]):
     def __init__(
         self,
         iterable: AsyncIterable[T],
+        num_workers: int | None = None,
         queue_size: int = 10,
     ):
         self.iterable = iterable
+        self.num_workers = num_workers
         self.queue_size = queue_size
 
     def __iter__(self) -> Iterator[T]:
@@ -121,6 +124,12 @@ class BackgroundGenerator(Generic[T]):
         stopped = Event()
 
         loop = asyncio.new_event_loop()
+        loop.set_default_executor(
+            ThreadPoolExecutor(
+                max_workers=self.num_workers,
+                thread_name_prefix="SPDL_BackgroundGenerator",
+            )
+        )
         thread = Thread(
             target=_run_agen,
             args=(loop, self.iterable, sentinel, queue, stopped),
