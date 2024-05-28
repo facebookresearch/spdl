@@ -14,7 +14,6 @@ import spdl.utils
 import torch
 from spdl.dataloader._task_runner import (
     apply_async,
-    apply_concurrent,
     BackgroundGenerator,
 )
 from spdl.dataloader._utils import _iter_flist
@@ -30,7 +29,6 @@ def _parse_args(args):
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
-    parser.add_argument("--mode", choices=["async", "concurrent"], default="async")
     parser.add_argument("--max-samples", type=int)
     parser.add_argument("--prefix")
     parser.add_argument("--batch-size", type=int, default=32)
@@ -100,24 +98,6 @@ def _get_batch_generator(args):
         max=args.max_samples,
     )
 
-    @spdl.utils.chain_futures
-    def _decode_func(srcs):
-        buffer = yield spdl.io.batch_load_image(
-            srcs,
-            width=224,
-            height=224,
-            pix_fmt="rgb24",
-            strict=False,
-            convert_options={
-                "cuda_device_index": args.worker_id,
-                "cuda_allocator": (
-                    torch.cuda.caching_allocator_alloc,
-                    torch.cuda.caching_allocator_delete,
-                ),
-            },
-        )
-        yield spdl.utils.create_future(spdl.io.to_torch(buffer))
-
     async def _async_decode_func(srcs):
         buffer = await spdl.io.async_load_image_batch(
             srcs,
@@ -135,13 +115,7 @@ def _get_batch_generator(args):
         )
         return spdl.io.to_torch(buffer)
 
-    match args.mode:
-        case "concurrent":
-            return apply_concurrent(_decode_func, srcs_gen)
-        case "async":
-            return apply_async(_async_decode_func, srcs_gen)
-        case _:
-            raise ValueError(f"Unexpected mode: {args.mode}")
+    return apply_async(_async_decode_func, srcs_gen)
 
 
 def _benchmark(args):

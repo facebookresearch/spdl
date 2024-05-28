@@ -10,11 +10,7 @@ import spdl.utils
 
 import timm
 import torch
-from spdl.dataloader._task_runner import (
-    apply_async,
-    apply_concurrent,
-    BackgroundGenerator,
-)
+from spdl.dataloader._task_runner import apply_async, BackgroundGenerator
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.imagenet import get_mappings, parse_wnid
 from torch.profiler import profile
@@ -30,7 +26,6 @@ def _parse_args(args):
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
-    parser.add_argument("--mode", choices=["async", "concurrent"], default="async")
     parser.add_argument("--max-samples", type=int)
     parser.add_argument("--prefix", default="")
     parser.add_argument("--batch-size", type=int, default=32)
@@ -208,61 +203,9 @@ def _get_batch_generator(args, device):
             batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
             return batch, classes
 
-    @spdl.utils.chain_futures
-    def _decode_func(paths):
-        with torch.profiler.record_function("decode"):
-            classes = [[class_mapping[parse_wnid(p)]] for p in paths]
-            classes = torch.tensor(classes, dtype=torch.int64).to(device)
-            buffer = yield spdl.io.batch_load_image(
-                paths,
-                width=None,
-                height=None,
-                pix_fmt=None,
-                strict=True,
-                decode_options={"filter_desc": filter_desc},
-                convert_options={
-                    "cuda_device_index": 0,
-                    "cuda_allocator": (
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
-                    ),
-                },
-            )
-            batch = spdl.io.to_torch(buffer)
-            batch = batch.permute((0, 3, 1, 2))
-            yield spdl.utils.create_future((batch, classes))
-
-    @spdl.utils.chain_futures
-    def _decode_func_nvdec(paths):
-        with torch.profiler.record_function("decode"):
-            classes = [[class_mapping[parse_wnid(p)]] for p in paths]
-            classes = torch.tensor(classes, dtype=torch.int64).to(device)
-            buffer = yield spdl.io.batch_load_image_nvdec(
-                paths,
-                cuda_device_index=0,
-                width=w,
-                height=h,
-                pix_fmt="rgba",
-                decode_options={
-                    "cuda_allocator": (
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
-                    )
-                },
-                strict=True,
-            )
-            batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
-            yield spdl.utils.create_future((batch, classes))
-
-    match args.mode:
-        case "concurrent":
-            if args.use_nvdec:
-                return apply_concurrent(_decode_func_nvdec, srcs_gen)
-            return apply_concurrent(_decode_func, srcs_gen)
-        case "async":
-            if args.use_nvdec:
-                return apply_async(_async_decode_nvdec, srcs_gen)
-            return apply_async(_async_decode_func, srcs_gen)
+    if args.use_nvdec:
+        return apply_async(_async_decode_nvdec, srcs_gen)
+    return apply_async(_async_decode_func, srcs_gen)
 
 
 def _main(args=None):
