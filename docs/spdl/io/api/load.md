@@ -17,8 +17,9 @@ graph TD
   Source -->|Seek and demux Window3| Packets3 -->|Decode| Frames3 -->|Convert| Buffer3;
 ```
 
-::: spdl.io.async_load_media
-::: spdl.io.load_media
+::: spdl.io.async_load_audio
+::: spdl.io.async_load_video
+::: spdl.io.async_load_image
 
 ## Load a batch of images
 
@@ -34,5 +35,4 @@ graph TD
   Source3 -->|Demux, decode and resize| Frames3 -->|Convert| Buffer;
 ```
 
-::: spdl.io.async_batch_load_image
-::: spdl.io.batch_load_image
+::: spdl.io.async_load_image_batch

@@ -76,7 +76,6 @@ nav:
           - "Tracing": spdl/utils/tracing.md
           - "Folly": spdl/utils/folly.md
           - "FFmpeg": spdl/utils/ffmpeg.md
-          - "Futures": spdl/utils/futures.md
           - "Misc": spdl/utils/misc.md
   - "LibSPDL (C++)":
       - Links: libspdl/links.md
