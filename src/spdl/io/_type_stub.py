@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, overload
 
 __all__ = [
     "CPUBuffer",
@@ -306,7 +306,14 @@ class VideoFrames(Frames):
         """Returns the number of frames. Same as `num_frames`."""
         ...
 
-    def __getitem__(self, key: int | slice) -> ImageFrames | VideoFrames:
+    @overload
+    def __getitem__(self, key: int) -> ImageFrames: ...
+    @overload
+    def __getitem__(self, key: slice) -> VideoFrames: ...
+    @overload
+    def __getitem__(self, key: List[int]) -> VideoFrames: ...
+
+    def __getitem__(self, key: int | slice | List[int]) -> VideoFrames | ImageFrames:
         """Slice frame by key.
 
         Args:
