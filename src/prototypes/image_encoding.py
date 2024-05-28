@@ -1,12 +1,10 @@
 import asyncio
 import logging
 from pathlib import Path
-from time import sleep
 
 import numpy as np
 
 import spdl.io
-import torch
 from spdl.dataloader import BackgroundTaskExecutor
 
 _LG = logging.getLogger(__name__)

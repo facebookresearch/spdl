@@ -168,7 +168,7 @@ def _get_batch_generator(args, device):
         with torch.profiler.record_function("async_decode"):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
             classes = torch.tensor(classes, dtype=torch.int64).to(device)
-            buffer = await spdl.io.async_batch_load_image(
+            buffer = await spdl.io.async_load_image_batch(
                 paths,
                 width=None,
                 height=None,
@@ -191,7 +191,7 @@ def _get_batch_generator(args, device):
         with torch.profiler.record_function("async_decode"):
             classes = [[class_mapping[parse_wnid(p)]] for p in paths]
             classes = torch.tensor(classes, dtype=torch.int64).to(device)
-            buffer = await spdl.io.async_batch_load_image_nvdec(
+            buffer = await spdl.io.async_load_image_batch_nvdec(
                 paths,
                 cuda_device_index=0,
                 width=w,

@@ -28,9 +28,13 @@ def test_async_transfer_buffer_to_cuda(media_type, get_sample):
     async def _test(src):
         _ = torch.zeros([0], device=torch.device(f"cuda:{DEFAULT_CUDA}"))
 
-        frames = await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_media(media_type, src)
-        )
+        demux_func = {
+            "audio": spdl.io.async_demux_audio,
+            "video": spdl.io.async_demux_video,
+            "image": spdl.io.async_demux_image,
+        }[media_type]
+
+        frames = await spdl.io.async_decode_packets(await demux_func(src))
         cpu_tensor = spdl.io.to_torch(
             await spdl.io.async_convert_frames(frames.clone())
         )
@@ -70,10 +74,14 @@ def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sa
         nonlocal deleter_called
         deleter_called = True
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src):
-        frames = await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_media(media_type, src)
-        )
+        frames = await spdl.io.async_decode_packets(await demux_func(src))
         cpu_tensor = spdl.io.to_torch(
             await spdl.io.async_convert_frames(frames.clone())
         )

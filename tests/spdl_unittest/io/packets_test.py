@@ -25,8 +25,14 @@ def test_clone_packets(media_type, get_sample):
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src):
-        packets1 = await spdl.io.async_demux_media(media_type, src)
+        packets1 = await demux_func(src)
         packets2 = packets1.clone()
 
         array1 = await _load_from_packets(packets1)
@@ -43,8 +49,14 @@ def test_clone_invalid_packets(media_type, get_sample):
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src):
-        packets = await spdl.io.async_demux_media(media_type, src)
+        packets = await demux_func(src)
         _ = await spdl.io.async_decode_packets(packets)
         with pytest.raises(TypeError):
             packets.clone()
@@ -58,8 +70,14 @@ def test_clone_packets_multi(media_type, get_sample):
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src, N=100):
-        packets = await spdl.io.async_demux_media(media_type, src)
+        packets = await demux_func(src)
         clones = [packets.clone() for _ in range(N)]
 
         array = await _load_from_packets(packets)
@@ -89,7 +107,7 @@ def test_split_video_packets_at_keyframes(get_sample, frame_interval):
     num_splits = 120 // frame_interval
 
     async def _test(src, N=100):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
 
         splits = packets._split_at_keyframes()
         print([len(s) for s in splits])
@@ -124,7 +142,7 @@ def test_split_video_packets_at_keyframes_recursive(get_sample, frame_interval=5
     sample = get_sample(cmd)
 
     async def _test(src, N=100):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
 
         splits = packets._split_at_keyframes()
         assert 5 == len(splits[0])
@@ -174,7 +192,7 @@ def test_sample_decoding_time(get_sample):
     async def _test(path):
         indices = list(range(0, 1000, 25))
 
-        packets = await spdl.io.async_demux_media("video", path)
+        packets = await spdl.io.async_demux_video(path)
         t0 = time.monotonic()
         frames = await spdl.io.async_decode_packets(packets.clone())
         frames = frames[indices]

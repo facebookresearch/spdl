@@ -134,7 +134,7 @@ def test_batch_decode_images_async(get_samples):
     flist = get_samples(cmd)
 
     async def _test(srcs):
-        buffer = await spdl.io.async_batch_load_image_nvdec(
+        buffer = await spdl.io.async_load_image_batch_nvdec(
             srcs,
             cuda_device_index=DEFAULT_CUDA,
             width=None,
