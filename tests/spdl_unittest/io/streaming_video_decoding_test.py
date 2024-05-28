@@ -12,7 +12,7 @@ def test_streaming_decode(get_sample):
     sample = get_sample(cmd)
 
     async def test(src):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
         frames = await spdl.io.async_decode_packets(packets.clone())
         buffer = await spdl.io.async_convert_frames(frames)
         ref_array = spdl.io.to_numpy(buffer)
@@ -35,7 +35,7 @@ def test_streaming_decode_indivisible(get_sample):
     sample = get_sample(cmd)
 
     async def test(src):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
         agen = spdl.io.async_streaming_decode(packets, 5)
 
         frame = await anext(agen)
@@ -57,7 +57,7 @@ def test_streaming_decode_stop_iteration(get_sample):
     sample = get_sample(cmd)
 
     async def test(src):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
         agen = spdl.io.async_streaming_decode(packets, 5)
 
         frame = await anext(agen)
@@ -82,7 +82,7 @@ def test_streaming_decode_carryover(get_sample):
     filter_desc = "fps=1000"
 
     async def test(src):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
         frames = await spdl.io.async_decode_packets(
             packets.clone(), filter_desc=filter_desc
         )

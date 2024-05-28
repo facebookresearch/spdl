@@ -15,23 +15,21 @@ def test_failure():
     ts = [(0, 1)]
 
     async def _test_audio():
-        async for packets in spdl.io.async_streaming_demux(
-            "audio",
+        async for packets in spdl.io.async_streaming_demux_audio(
             "FOO.mp3",
             timestamps=ts,
         ):
             pass
 
     async def _test_video():
-        async for packets in spdl.io.async_streaming_demux(
-            "video",
+        async for packets in spdl.io.async_streaming_demux_video(
             "FOOBAR.mp4",
             timestamps=ts,
         ):
             pass
 
     async def _test_image():
-        await spdl.io.async_demux_media("image", "FOO.jpg")
+        await spdl.io.async_demux_image("FOO.jpg")
 
     with pytest.raises(RuntimeError, match="Failed to open the input"):
         asyncio.run(_test_audio())
@@ -79,7 +77,7 @@ def test_decode_audio_clips(get_sample):
 
     async def _test():
         timestamps = [(i, i + 1) for i in range(N)]
-        gen = spdl.io.async_streaming_demux("audio", sample.path, timestamps=timestamps)
+        gen = spdl.io.async_streaming_demux_audio(sample.path, timestamps=timestamps)
         arrays = await _test_async_decode(gen, N)
         assert len(arrays) == N
         for i, arr in enumerate(arrays):
@@ -96,8 +94,8 @@ def test_decode_audio_clips_num_frames(get_sample):
     sample = get_sample(cmd)
 
     async def _decode(src, num_frames=None):
-        async for packets in spdl.io.async_streaming_demux(
-            "audio", src, timestamps=[(0, 1)]
+        async for packets in spdl.io.async_streaming_demux_audio(
+            src, timestamps=[(0, 1)]
         ):
             filter_desc = get_audio_filter_desc(timestamp=(0, 1), num_frames=num_frames)
             frames = await spdl.io.async_decode_packets(
@@ -135,7 +133,7 @@ def test_decode_video_clips(get_sample):
 
     async def _test():
         timestamps = [(i, i + 1) for i in range(N)]
-        gen = spdl.io.async_streaming_demux("video", sample.path, timestamps=timestamps)
+        gen = spdl.io.async_streaming_demux_video(sample.path, timestamps=timestamps)
         arrays = await _test_async_decode(gen, N)
         assert len(arrays) == N
         for i, arr in enumerate(arrays):
@@ -152,8 +150,8 @@ def test_decode_video_clips_num_frames(get_sample):
     sample = get_sample(cmd)
 
     async def _decode(src, pix_fmt="rgb24", **kwargs):
-        async for packets in spdl.io.async_streaming_demux(
-            "video", src, timestamps=[(0, 2)]
+        async for packets in spdl.io.async_streaming_demux_video(
+            src, timestamps=[(0, 2)]
         ):
             filter_desc = get_video_filter_desc(
                 timestamp=(0, 2), pix_fmt=pix_fmt, **kwargs
@@ -205,7 +203,7 @@ def test_decode_video_frame_rate_pts(get_sample):
     sample = get_sample(cmd)
 
     async def _test(src):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
         frames_ref = await spdl.io.async_decode_packets(packets.clone())
         frames = await spdl.io.async_decode_packets(
             packets, filter_desc=get_video_filter_desc(frame_rate=(5, 1))
@@ -221,7 +219,7 @@ def test_decode_video_frame_rate_pts(get_sample):
 
 
 async def _decode_image(path):
-    packets = await spdl.io.async_demux_media("image", path)
+    packets = await spdl.io.async_demux_image(path)
     print(packets)
     frames = await spdl.io.async_decode_packets(packets)
     print(frames)
@@ -256,7 +254,7 @@ def test_batch_decode_image(get_samples):
     flist = ["NON_EXISTING_FILE.JPG"] + samples
 
     async def _test():
-        buffer = await spdl.io.async_batch_load_image(
+        buffer = await spdl.io.async_load_image_batch(
             flist, width=None, height=None, pix_fmt=None, strict=False
         )
         assert buffer.__array_interface__["shape"] == (250, 3, 240, 320)
@@ -271,7 +269,7 @@ def test_async_convert_audio(get_sample):
 
     async def _test(src):
         ts = [(1, 2)]
-        gen = spdl.io.async_streaming_demux("audio", src, timestamps=ts)
+        gen = spdl.io.async_streaming_demux_audio(src, timestamps=ts)
         arrays = await _test_async_decode(gen, 1)
         array = arrays[0]
         print(array.dtype, array.shape)
@@ -286,7 +284,7 @@ def test_async_convert_video(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test(src):
-        packets = await spdl.io.async_demux_media("video", src)
+        packets = await spdl.io.async_demux_video(src)
         frames = await spdl.io.async_decode_packets(packets)
         buffer = await spdl.io.async_convert_frames(frames)
         array = spdl.io.to_numpy(buffer)

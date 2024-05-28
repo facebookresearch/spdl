@@ -28,12 +28,20 @@ __all__ = [
     "async_decode_packets_nvdec",
     "async_decode_image_nvjpeg",
     "async_demux_media",
+    "async_demux_audio",
+    "async_demux_video",
+    "async_demux_image",
     "async_streaming_demux",
+    "async_streaming_demux_audio",
+    "async_streaming_demux_video",
     "async_streaming_decode",
     "async_sample_decode_video",
     "async_load_media",
-    "async_batch_load_image",
-    "async_batch_load_image_nvdec",
+    "async_load_audio",
+    "async_load_video",
+    "async_load_image",
+    "async_load_image_batch",
+    "async_load_image_batch_nvdec",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -118,6 +126,24 @@ async def async_streaming_demux(
         yield packets
 
 
+async def async_streaming_demux_audio(
+    src: str | bytes,
+    timestamps: List[Tuple[float, float]],
+    **kwargs,
+) -> AsyncIterator[Packets]:
+    async for packets in async_streaming_demux("audio", src, timestamps, **kwargs):
+        yield packets
+
+
+async def async_streaming_demux_video(
+    src: str | bytes,
+    timestamps: List[Tuple[float, float]],
+    **kwargs,
+) -> AsyncIterator[Packets]:
+    async for packets in async_streaming_demux("video", src, timestamps, **kwargs):
+        yield packets
+
+
 async def async_demux_media(
     media_type: str,
     src: str | bytes,
@@ -144,6 +170,22 @@ async def async_demux_media(
     if media_type != "image" and timestamp is not None:
         kwargs["timestamp"] = timestamp
     return await _async_task(func, src, **kwargs)
+
+
+async def async_demux_audio(
+    src: str | bytes, timestamp: Tuple[float, float] | None = None, **kwargs
+):
+    return await async_demux_media("audio", src, timestamp=timestamp, **kwargs)
+
+
+async def async_demux_video(
+    src: str | bytes, timestamp: Tuple[float, float] | None = None, **kwargs
+):
+    return await async_demux_media("video", src, timestamp=timestamp, **kwargs)
+
+
+async def async_demux_image(src: str | bytes, **kwargs):
+    return await async_demux_media("image", src, **kwargs)
 
 
 async def async_decode_packets(packets: Packets, **kwargs) -> Frames:
@@ -523,6 +565,18 @@ async def async_load_media(
     return await async_convert_frames(frames, **convert_options)
 
 
+async def async_load_audio(*args, **kwargs):
+    return await async_load_media("audio", *args, **kwargs)
+
+
+async def async_load_video(*args, **kwargs):
+    return await async_load_media("video", *args, **kwargs)
+
+
+async def async_load_image(*args, **kwargs):
+    return await async_load_media("image", *args, **kwargs)
+
+
 async def _decode(media_type, src, demux_options, decode_options):
     packets = await async_demux_media(media_type, src, **demux_options)
     return await async_decode_packets(packets, **decode_options)
@@ -537,7 +591,7 @@ def _get_err_msg(src, err):
     return f"Failed to decode an image from {src_}: {err}."
 
 
-async def async_batch_load_image(
+async def async_load_image_batch(
     srcs: List[str | bytes],
     *,
     width: int | None,
@@ -581,7 +635,7 @@ async def async_batch_load_image(
         ...     "sample1.jpg",
         ...     "sample2.png",
         ... ]
-        >>> coro = async_batch_load_image(
+        >>> coro = async_load_image_batch(
         ...     srcs,
         ...     scale_width=124,
         ...     scale_height=96,
@@ -638,7 +692,7 @@ async def async_batch_load_image(
     return await async_convert_frames(frames, **convert_options)
 
 
-async def async_batch_load_image_nvdec(
+async def async_load_image_batch_nvdec(
     srcs: List[str | bytes],
     *,
     cuda_device_index: int,
@@ -681,7 +735,7 @@ async def async_batch_load_image_nvdec(
         ...     "sample1.jpg",
         ...     "sample2.png",
         ... ]
-        >>> coro = async_batch_load_image_nvdec(
+        >>> coro = async_load_image_batch_nvdec(
         ...     srcs,
         ...     cuda_device_index=0,
         ...     width=124,

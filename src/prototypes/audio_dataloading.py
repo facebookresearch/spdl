@@ -105,8 +105,7 @@ def _get_batch_generator(args):
 
     async def _async_decode_func(src):
         src = src[0].split("\t")[0]
-        buffer = await spdl.io.async_load_media(
-            "audio",
+        buffer = await spdl.io.async_load_audio(
             src,
             decode_options={
                 "filter_desc": spdl.io.get_audio_filter_desc(

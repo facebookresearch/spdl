@@ -23,8 +23,8 @@ def test_decode_video_nvdec(get_sample):
 
     async def _test():
         decode_tasks = []
-        async for packets in spdl.io.async_streaming_demux(
-            "video", sample.path, timestamps=timestamps
+        async for packets in spdl.io.async_streaming_demux_video(
+            sample.path, timestamps=timestamps
         ):
             print(packets)
             decode_tasks.append(
@@ -41,7 +41,7 @@ def test_decode_video_nvdec(get_sample):
 
 
 async def _decode_image(path):
-    packets = await spdl.io.async_demux_media("image", path)
+    packets = await spdl.io.async_demux_image(path)
     print(packets)
     frames = await spdl.io.async_decode_packets_nvdec(
         packets, cuda_device_index=DEFAULT_CUDA
@@ -74,7 +74,7 @@ def test_batch_decode_image(get_samples):
     flist = ["NON_EXISTING_FILE.JPG"] + samples
 
     async def _test():
-        buffer = await spdl.io.async_batch_load_image_nvdec(
+        buffer = await spdl.io.async_load_image_batch_nvdec(
             flist,
             cuda_device_index=DEFAULT_CUDA,
             pix_fmt="rgba",
@@ -86,7 +86,7 @@ def test_batch_decode_image(get_samples):
         assert buffer.__cuda_array_interface__["shape"] == (10, 4, 240, 320)
 
         with pytest.raises(RuntimeError):
-            await spdl.io.async_batch_load_image_nvdec(
+            await spdl.io.async_load_image_batch_nvdec(
                 flist,
                 cuda_device_index=DEFAULT_CUDA,
                 width=320,
@@ -119,7 +119,7 @@ def test_batch_decode_torch_allocator(get_samples):
     async def _test():
         assert not allocator_called
         assert not deleter_called
-        buffer = await spdl.io.async_batch_load_image_nvdec(
+        buffer = await spdl.io.async_load_image_batch_nvdec(
             flist,
             cuda_device_index=DEFAULT_CUDA,
             pix_fmt="rgba",

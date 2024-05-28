@@ -24,9 +24,15 @@ def test_demux_bytes_without_copy(media_type, get_sample):
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src):
         assert not _is_all_zero(src)
-        _ = await spdl.io.async_demux_media(media_type, src, _zero_clear=True)
+        _ = await demux_func(src, _zero_clear=True)
         assert _is_all_zero(src)
 
     with open(sample.path, "rb") as f:
@@ -36,7 +42,13 @@ def test_demux_bytes_without_copy(media_type, get_sample):
 
 
 async def _decode(media_type, src):
-    packets = await spdl.io.async_demux_media(media_type, src)
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
+    packets = await demux_func(src)
     frames = await spdl.io.async_decode_packets(packets)
     buffer = await spdl.io.async_convert_frames(frames)
     return spdl.io.to_numpy(buffer)

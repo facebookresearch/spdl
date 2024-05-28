@@ -44,7 +44,42 @@ def __dir__():
     return __all__
 
 
+_deprecated = {
+    "async_demux_media": (
+        "async_demux_media",
+        "`async_demux_audio`, `async_demux_video` or `async_demux_image`",
+    ),
+    "async_streaming_demux": (
+        "async_streaming_demux",
+        "`async_streaming_demux_audio` or `async_streaming_demux_video`",
+    ),
+    "async_load_media": (
+        "async_load_media",
+        "`async_load_audio`, `async_load_video` or `async_load_image`",
+    ),
+    "async_batch_load_image": (
+        "async_load_image_batch",
+        "`async_load_image_batch`",
+    ),
+    "async_batch_load_image_nvdec": (
+        "async_load_image_batch_nvdec",
+        "`async_load_image_batch_nvdec`",
+    ),
+}
+
+
 def __getattr__(name: str):
+    if name in _deprecated:
+        import warnings
+
+        new_name, replacements = _deprecated[name]
+        warnings.warn(
+            f"`{name}` has been deprecated. Please use {replacements}.",
+            category=FutureWarning,
+            stacklevel=2,
+        )
+        name = new_name
+
     for mod in _mods:
         if name in mod.__all__:
             return getattr(mod, name)

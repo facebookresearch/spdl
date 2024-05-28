@@ -23,10 +23,14 @@ def test_clone_frames(media_type, get_sample):
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src):
-        frames1 = await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_media(media_type, src)
-        )
+        frames1 = await spdl.io.async_decode_packets(await demux_func(src))
         frames2 = frames1.clone()
 
         array1 = await _load_from_frames(frames1)
@@ -43,10 +47,14 @@ def test_clone_invalid_frames(media_type, get_sample):
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src):
-        frames = await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_media(media_type, src)
-        )
+        frames = await spdl.io.async_decode_packets(await demux_func(src))
         _ = await spdl.io.async_convert_frames(frames)
         with pytest.raises(TypeError):
             frames.clone()
@@ -60,10 +68,14 @@ def test_clone_frames_multi(media_type, get_sample):
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
+    demux_func = {
+        "audio": spdl.io.async_demux_audio,
+        "video": spdl.io.async_demux_video,
+        "image": spdl.io.async_demux_image,
+    }[media_type]
+
     async def _test(src, N=100):
-        frames = await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_media(media_type, src)
-        )
+        frames = await spdl.io.async_decode_packets(await demux_func(src))
         clones = [frames.clone() for _ in range(N)]
 
         array = await _load_from_frames(frames)
