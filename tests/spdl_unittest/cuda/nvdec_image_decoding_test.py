@@ -22,7 +22,7 @@ def _decode_image(path, pix_fmt="rgba"):
                 "cuda_device_index": DEFAULT_CUDA,
                 "pix_fmt": pix_fmt,
             },
-            use_nvdec=True,
+            _use_nvdec=True,
         )
     )
     return spdl.io.to_torch(buffer)
