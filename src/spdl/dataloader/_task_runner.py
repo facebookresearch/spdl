@@ -1,10 +1,8 @@
 import asyncio
-import concurrent.futures
 import logging
 import warnings
-from concurrent.futures import Future
 from queue import Queue
-from threading import BoundedSemaphore, Event, Thread
+from threading import Event, Thread
 from typing import (
     AsyncIterable,
     AsyncIterator,
@@ -16,14 +14,11 @@ from typing import (
     TypeVar,
 )
 
-import spdl.utils
-
 _LG = logging.getLogger(__name__)
 
 __all__ = [
     "BackgroundGenerator",
     "apply_async",
-    "apply_concurrent",
 ]
 
 T = TypeVar("T")
@@ -49,21 +44,6 @@ def _run_agen(aiterable, sentinel, queue, stopped):
 
     asyncio.set_event_loop(asyncio.new_event_loop())
     asyncio.run(_generator_loop())
-
-
-def _run_gen(generator, sentinel, queue, stopped):
-    try:
-        for item in generator:
-            queue.put(item)
-
-            if stopped.is_set():
-                _LG.debug("Stop requested.")
-                generator.close()
-                break
-            _LG.debug("exiting _generator_loop.")
-    finally:
-        queue.put(sentinel)
-        stopped.set()
 
 
 class _thread_manager:
@@ -127,7 +107,7 @@ class BackgroundGenerator(Generic[T]):
 
     def __init__(
         self,
-        iterable: AsyncIterable[T] | Iterable[T],
+        iterable: AsyncIterable[T],
         queue_size: int = 10,
     ):
         self.iterable = iterable
@@ -141,7 +121,7 @@ class BackgroundGenerator(Generic[T]):
         # flag the completion from the inside.
         stopped = Event()
         thread = Thread(
-            target=(_run_agen if hasattr(self.iterable, "__aiter__") else _run_gen),
+            target=_run_agen,
             args=(self.iterable, sentinel, queue, stopped),
         )
 
@@ -169,70 +149,6 @@ class BackgroundTaskProcessor(BackgroundGenerator):
 
     def __exit__(self, exc_type, exc_value, traceback):
         pass
-
-
-################################################################################
-# Impl for apply_concurrent
-################################################################################
-def _apply_concurrent(generator, max_concurrency=10):
-    semaphore = BoundedSemaphore(max_concurrency)
-
-    def _cb(_):
-        semaphore.release()
-
-    futs = []
-    try:
-        for future in generator:
-            semaphore.acquire()
-            future.add_done_callback(_cb)
-            futs.append(future)
-
-            while len(futs) > 0 and futs[0].done():
-                yield futs.pop(0)
-
-        yield from futs
-    except GeneratorExit:
-        _LG.info("Generator exited - waiting for the ongoing futures to complete.")
-        spdl.utils.wait_futures(futs).result()
-        raise
-
-
-def apply_concurrent(
-    func: Callable[[T], Future[U]],
-    generator: Iterable[T],
-    max_concurrency: int = 10,
-    timeout: float = 300,
-) -> Iterator[U]:
-    """Apply concurrent function to generator sequence.
-
-    Args:
-        func: A (non-async) function that takes some input and returns a
-            `Future`.
-
-        generator: An object generates series of inputs to the given function.
-
-        max_concurrency: Controls how many futures should be in running state
-            concurrently. The function will first initialize this number of
-            Futures, then initialize more as the previous Futures complete.
-
-        timeout: The maximum time to wait for each Future object to complete.
-            (Unit: second)
-
-    Yields:
-        The output of the `func`.
-    """
-
-    def gen():
-        for item in generator:
-            yield func(item)
-
-    for fut in _apply_concurrent(gen(), max_concurrency):
-        try:
-            yield fut.result(timeout)
-        except concurrent.futures.CancelledError:
-            _LG.warning("Future [%s] was cancelled.", fut)
-        except Exception as err:
-            _LG.error("Future [%s] failed: %s", fut, err)
 
 
 ################################################################################
