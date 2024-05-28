@@ -12,10 +12,7 @@ import spdl.io
 import spdl.utils
 
 import torch
-from spdl.dataloader._task_runner import (
-    apply_async,
-    BackgroundGenerator,
-)
+from spdl.dataloader._task_runner import apply_async, BackgroundGenerator
 from spdl.dataloader._utils import _iter_flist
 
 _LG = logging.getLogger(__name__)
