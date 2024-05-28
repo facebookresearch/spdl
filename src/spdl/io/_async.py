@@ -600,7 +600,9 @@ async def async_load_video(*args, **kwargs):
     return await async_load_media("video", *args, **kwargs)
 
 
-async def async_load_image(*args, **kwargs):
+async def async_load_image(*args, _use_nvdec = None, **kwargs):
+    if _use_nvdec is not None:
+        kwargs["use_nvdec"] = _use_nvdec
     return await async_load_media("image", *args, **kwargs)
 
 
