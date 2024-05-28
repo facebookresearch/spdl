@@ -1,5 +1,6 @@
 import asyncio
 from random import randbytes
+import concurrent.futures
 
 import pytest
 

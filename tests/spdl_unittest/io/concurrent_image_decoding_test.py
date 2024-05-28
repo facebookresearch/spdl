@@ -1,22 +1,27 @@
+import asyncio
+
 import numpy as np
 
 import spdl.io
 import spdl.utils
-from spdl.io import get_video_filter_desc
+from spdl.io import get_filter_desc, get_video_filter_desc
 
 
 def _decode_image(src, pix_fmt=None):
-    future = spdl.io.load_media(
-        "image",
-        src,
-        decode_options={"filter_desc": get_video_filter_desc(pix_fmt=pix_fmt)},
+    buffer = asyncio.run(
+        spdl.io.async_load_image(
+            src,
+            decode_options={"filter_desc": get_video_filter_desc(pix_fmt=pix_fmt)},
+        )
     )
-    return spdl.io.to_numpy(future.result())
+    return spdl.io.to_numpy(buffer)
 
 
 def _batch_load_image(srcs, pix_fmt="rgb24"):
-    future = spdl.io.batch_load_image(srcs, width=None, height=None, pix_fmt=pix_fmt)
-    return spdl.io.to_numpy(future.result())
+    buffer = asyncio.run(
+        spdl.io.async_load_image_batch(srcs, width=None, height=None, pix_fmt=pix_fmt)
+    )
+    return spdl.io.to_numpy(buffer)
 
 
 def test_decode_image_gray_black(get_sample):
@@ -174,21 +179,20 @@ def test_batch_video_conversion(get_sample):
 
     timestamps = [(0, 1), (1, 1.5), (2, 2.7), (3, 3.6)]
 
-    @spdl.utils.chain_futures
-    def _decode(demuxing):
-        packets = yield demuxing
-        filter_desc = get_video_filter_desc(timestamp=packets.timestamp, num_frames=15)
-        yield spdl.io.decode_packets(packets, filter_desc=filter_desc)
+    async def _test():
+        decoding = []
+        async for packets in spdl.io.async_streaming_demux_video(
+            src=sample.path, timestamps=timestamps
+        ):
+            filter_desc = get_filter_desc(packets, num_frames=15)
+            coro = spdl.io.async_decode_packets(packets, filter_desc=filter_desc)
+            decoding.append(asyncio.create_task(coro))
 
-    decoding = [
-        _decode(demuxing)
-        for demuxing in spdl.io.streaming_demux(
-            "video", src=sample.path, timestamps=timestamps
-        )
-    ]
+        frames = await asyncio.gather(*decoding)
 
-    frames = spdl.utils.wait_futures(decoding).result()
-    buffer = spdl.io.convert_frames(frames).result()
-    array = spdl.io.to_numpy(buffer)
+        buffer = await spdl.io.async_convert_frames(frames)
+        return spdl.io.to_numpy(buffer)
+
+    array = asyncio.run(_test())
 
     assert array.shape == (4, 15, 3, 240, 320)

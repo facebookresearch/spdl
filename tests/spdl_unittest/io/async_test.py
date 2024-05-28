@@ -63,10 +63,7 @@ async def _test_async_decode(generator, N):
         tasks.append(asyncio.create_task(_decode_packet(packets)))
     assert len(tasks) == N
 
-    done, pending = await asyncio.wait(tasks)
-    assert len(pending) == 0
-    assert len(done) == len(tasks) == N
-    return [t.result() for t in tasks]
+    return await asyncio.gather(*tasks)
 
 
 def test_decode_audio_clips(get_sample):
@@ -237,7 +234,7 @@ def test_decode_image(get_sample):
     sample = get_sample(cmd, width=320, height=240)
 
     async def _test(src):
-        buffer = await spdl.io.async_load_media("image", src)
+        buffer = await spdl.io.async_load_image(src)
         array = spdl.io.to_numpy(buffer)
         print(array.shape, array.dtype)
         assert array.dtype == np.uint8
