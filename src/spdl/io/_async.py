@@ -407,7 +407,7 @@ async def async_decode_image_nvjpeg(
 
 async def _decode_partial(
     packets: VideoPackets, indices: List[int], **kwargs
-) -> VideoFrames:
+) -> List[ImageFrames]:
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
     async for frames in async_streaming_decode(packets, num_frames, **kwargs):

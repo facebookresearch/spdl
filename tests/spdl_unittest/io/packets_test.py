@@ -184,13 +184,13 @@ def test_sample_decoding_time(get_sample):
     """Sample decoding works"""
     cmd = (
         "ffmpeg -hide_banner -y -f lavfi -i testsrc "
-        f"-force_key_frames 'expr:eq(mod(n, 3), 0)' "
-        "-frames:v 1000 sample.mp4"
+        "-force_key_frames 'expr:eq(mod(n, 25), 0)' "
+        "-frames:v 5000 sample.mp4"
     )
     sample = get_sample(cmd)
 
     async def _test(path):
-        indices = list(range(0, 1000, 25))
+        indices = list(range(0, 5000, 100))
 
         packets = await spdl.io.async_demux_video(path)
         t0 = time.monotonic()

@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, List, Tuple
 
 from . import _core, _preprocessing
+from spdl.lib import _libspdl
 
 __all__ = [
     "load_audio",
@@ -14,6 +15,7 @@ __all__ = [
     "async_load_image",
     "async_load_image_batch",
     "async_load_image_batch_nvdec",
+    "async_sample_decode_video",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -330,3 +332,46 @@ async def async_load_image_batch_nvdec(
         strict=strict,
         **decode_options,
     )
+
+
+async def _decode_partial(packets, indices, **kwargs):
+    """Decode packets but return early when requested frames are decoded."""
+    num_frames = max(indices) + 1
+    decoder = await _core._run_async(_libspdl.streaming_decoder, packets, **kwargs)
+    frames = await _core._run_async(decoder.decode, num_frames)
+    return frames[indices]
+
+
+async def async_sample_decode_video(packets, indices, **kwargs):
+    if not indices:
+        raise ValueError("Frame indices must be non-empty.")
+
+    num_packets = len(packets)
+    if any(not (0 <= i < num_packets) for i in indices):
+        raise IndexError(f"Frame index must be [0, {num_packets}).")
+    if sorted(indices) != indices:
+        raise ValueError("Frame indices must be sorted in ascending order.")
+    if len(set(indices)) != len(indices):
+        raise ValueError("Frame indices must be unique.")
+
+    i = start = 0
+    coros = []
+    for split in packets._split_at_keyframes():
+        end = start + len(split)
+        idx = []
+        while i < len(indices) and start <= indices[i] < end:
+            idx.append(indices[i] - start)
+            i += 1
+        if idx:
+            coros.append(_decode_partial(split, idx, **kwargs))
+        start = end
+
+    tasks = [asyncio.create_task(coro) for coro in coros]
+    await asyncio.wait(tasks)
+    ret = []
+    for task in tasks:
+        try:
+            ret.extend(task.result())
+        except Exception as e:
+            _LG.error(f"Failed to decode {task.get_name()}. Reason: {e}")
+    return ret
