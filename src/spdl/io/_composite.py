@@ -338,7 +338,7 @@ async def _decode_partial(packets, indices, **kwargs):
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
     decoder = await _core._run_async(_libspdl.streaming_decoder, packets, **kwargs)
-    frames = await _core._run_async(decoder.decode, num_frames)
+    frames = await _core._run_async(_libspdl.decode, decoder, num_frames)
     return frames[indices]
 
 

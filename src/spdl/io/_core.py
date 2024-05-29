@@ -78,7 +78,7 @@ async def async_streaming_demux_audio(
 ):
     demuxer = await _run_async(_libspdl.streaming_audio_demuxer, src, **kwargs)
     for window in timestamps:
-        yield await _run_async(demuxer.demux_window, window)
+        yield await _run_async(_libspdl.demux, demuxer, window)
 
 
 async def async_streaming_demux_video(
@@ -86,7 +86,7 @@ async def async_streaming_demux_video(
 ):
     demuxer = await _run_async(_libspdl.streaming_video_demuxer, src, **kwargs)
     for window in timestamps:
-        yield await _run_async(demuxer.demux_window, window)
+        yield await _run_async(_libspdl.demux, demuxer, window)
 
 
 ################################################################################
@@ -129,7 +129,7 @@ async def async_decode_image_nvjpeg(*args, **kwargs):
 
 async def async_streaming_decode(packets: Packets, num_frames: int, **kwargs):
     decoder = await _run_async(_libspdl.streaming_decoder, packets, **kwargs)
-    while (item := await _run_async(decoder.decode, num_frames)) is not None:
+    while (item := await _run_async(_libspdl.decode, decoder, num_frames)) is not None:
         yield item
 
 

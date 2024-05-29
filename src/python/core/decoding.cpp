@@ -54,7 +54,7 @@ CUDABufferPtr decode_nvdec(
 }
 
 template <MediaType media_type>
-std::shared_ptr<StreamingDecoder<media_type>> decoder(
+std::shared_ptr<StreamingDecoder<media_type>> make_decoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::string& filter_desc) {
@@ -63,21 +63,30 @@ std::shared_ptr<StreamingDecoder<media_type>> decoder(
       std::move(packets), std::move(decode_cfg), std::move(filter_desc));
 }
 
+template <MediaType media_type>
+std::optional<FFmpegFramesPtr<media_type>> decoder_decode(
+    StreamingDecoder<media_type>& self,
+    int num_frames) {
+  nb::gil_scoped_release g;
+  return self.decode(num_frames);
+}
+
 } // namespace
 
 void register_decoding(nb::module_& m) {
-  nb::class_<StreamingDecoder<MediaType::Video>>(m, "StreamingVideoDecoder")
-      .def("decode", &StreamingDecoder<MediaType::Video>::decode);
+  nb::class_<StreamingDecoder<MediaType::Video>>(m, "StreamingVideoDecoder");
 
   m.def(
       "streaming_decoder",
-      &decoder<MediaType::Video>,
+      &make_decoder<MediaType::Video>,
       nb::arg("packets"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "");
+
+  m.def("decode", &decoder_decode<MediaType::Video>);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Async decoding - FFMPEG
