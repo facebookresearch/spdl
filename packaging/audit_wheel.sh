@@ -31,5 +31,5 @@ for whl in dist/spdl*.whl; do
         --exclude libnvcuvid.so      \
         --exclude libcudart.so.11.0  \
         --exclude libcudart.so.12    \
-        --exclude libnvjpeg.so
+        --exclude libnvjpeg.so.12
 done
