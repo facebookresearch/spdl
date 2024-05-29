@@ -72,13 +72,21 @@ void register_packets(nb::module_& m) {
                 get_codec_info<MediaType::Audio>(self.codecpar));
           })
       .def_prop_ro(
-          "timestamp", [](const AudioPackets& self) { return self.timestamp; })
-      .def("clone", &clone<MediaType::Audio>);
+          "timestamp",
+          [](const AudioPackets& self) {
+            nb::gil_scoped_release g;
+            return self.timestamp;
+          })
+      .def("clone", [](const AudioPackets& self) {
+        nb::gil_scoped_release g;
+        return clone(self);
+      });
 
   nb::class_<VideoPackets>(m, "VideoPackets")
       .def(
           "_get_pts",
           [](const VideoPackets& self) -> std::vector<double> {
+            nb::gil_scoped_release g;
             std::vector<double> ret;
             auto base = self.time_base;
             for (auto& packet : self.get_packets()) {
@@ -87,7 +95,11 @@ void register_packets(nb::module_& m) {
             return ret;
           })
       .def_prop_ro(
-          "timestamp", [](const VideoPackets& self) { return self.timestamp; })
+          "timestamp",
+          [](const VideoPackets& self) {
+            nb::gil_scoped_release g;
+            return self.timestamp;
+          })
       .def(
           "__len__",
           [](const VideoPackets& self) { return self.num_packets(); })
@@ -104,8 +116,14 @@ void register_packets(nb::module_& m) {
                 self.get_media_format_name(),
                 get_codec_info<MediaType::Video>(self.codecpar));
           })
-      .def("clone", [](const VideoPackets& self) { return clone(self); })
+      .def(
+          "clone",
+          [](const VideoPackets& self) {
+            nb::gil_scoped_release g;
+            return clone(self);
+          })
       .def("_split_at_keyframes", [](const VideoPackets& self) {
+        nb::gil_scoped_release g;
         return spdl::core::split_at_keyframes(self);
       });
 
@@ -113,6 +131,7 @@ void register_packets(nb::module_& m) {
       .def(
           "_get_pts",
           [](const ImagePackets& self) {
+            nb::gil_scoped_release g;
             auto base = self.time_base;
             auto pts = self.get_packets().at(0)->pts;
             return pts * base.num / base.den;
@@ -126,6 +145,9 @@ void register_packets(nb::module_& m) {
                 self.get_media_format_name(),
                 get_codec_info<MediaType::Image>(self.codecpar));
           })
-      .def("clone", [](const ImagePackets& self) { return clone(self); });
+      .def("clone", [](const ImagePackets& self) {
+        nb::gil_scoped_release g;
+        return clone(self);
+      });
 }
 } // namespace spdl::core

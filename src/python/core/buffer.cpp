@@ -81,6 +81,7 @@ void register_buffers(nb::module_& m) {
           IF_CUDABUFFER_ENABLED(
               [](CUDABuffer& self) { return get_cuda_array_interface(self); }))
       .def_prop_ro("device_index", IF_CUDABUFFER_ENABLED([](CUDABuffer& self) {
+                     nb::gil_scoped_release g;
                      return self.device_index;
                    }));
 }
