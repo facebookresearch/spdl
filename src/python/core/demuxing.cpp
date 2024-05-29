@@ -19,13 +19,21 @@ namespace spdl::core {
 namespace {
 
 template <MediaType media_type>
-std::shared_ptr<StreamingDemuxer<media_type>> demuxer(
+std::shared_ptr<StreamingDemuxer<media_type>> make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
     const SourceAdaptorPtr _adaptor) {
   nb::gil_scoped_release g;
   return std::make_shared<StreamingDemuxer<media_type>>(
       src, std::move(_adaptor), std::move(dmx_cfg));
+}
+
+template <MediaType media_type>
+PacketsPtr<media_type> demuxer_demux(
+    StreamingDemuxer<media_type>& self,
+    const std::optional<std::tuple<double, double>>& window) {
+  nb::gil_scoped_release g;
+  return self.demux_window(window);
 }
 
 template <MediaType media_type>
@@ -39,7 +47,7 @@ std::shared_ptr<StreamingDemuxer<media_type>> demuxer_bytes(
 }
 
 template <MediaType media_type>
-PacketsPtr<media_type> demux(
+PacketsPtr<media_type> demux_src(
     const std::string& src,
     const std::optional<std::tuple<double, double>>& timestamps,
     const std::optional<DemuxConfig>& dmx_cfg,
@@ -92,15 +100,12 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   // StreamingDemuxer
   ///////////////////////////////////////////////////////////////////////////////
-  nb::class_<StreamingDemuxer<MediaType::Audio>>(m, "StreamingAudioDemuxer")
-      .def("demux_window", &StreamingDemuxer<MediaType::Audio>::demux_window);
-
-  nb::class_<StreamingDemuxer<MediaType::Video>>(m, "StreamingVideoDemuxer")
-      .def("demux_window", &StreamingDemuxer<MediaType::Video>::demux_window);
+  nb::class_<StreamingDemuxer<MediaType::Audio>>(m, "StreamingAudioDemuxer");
+  nb::class_<StreamingDemuxer<MediaType::Video>>(m, "StreamingVideoDemuxer");
 
   m.def(
       "streaming_audio_demuxer",
-      &demuxer<MediaType::Audio>,
+      &make_demuxer<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -119,7 +124,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "streaming_video_demuxer",
-      &demuxer<MediaType::Video>,
+      &make_demuxer<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -136,12 +141,16 @@ void register_demuxing(nb::module_& m) {
 #endif
       nb::arg("demux_config") = nb::none());
 
+  m.def("demux", &demuxer_demux<MediaType::Audio>);
+
+  m.def("demux", &demuxer_demux<MediaType::Video>);
+
   ///////////////////////////////////////////////////////////////////////////////
   // Demux from src (path, URL etc...)
   ///////////////////////////////////////////////////////////////////////////////
   m.def(
       "demux_audio",
-      &demux<MediaType::Audio>,
+      &demux_src<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -152,7 +161,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "demux_video",
-      &demux<MediaType::Video>,
+      &demux_src<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
