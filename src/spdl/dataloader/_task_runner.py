@@ -108,6 +108,7 @@ class BackgroundGenerator(Generic[T]):
     def __init__(
         self,
         iterable: AsyncIterable[T],
+        *,
         num_workers: int | None = None,
         queue_size: int = 10,
     ):
@@ -174,25 +175,23 @@ def _check_exception(task, stacklevel=1):
 
 
 async def _apply_async(async_func, generator, queue, sentinel, max_concurrency):
-    semaphore = asyncio.BoundedSemaphore(max_concurrency)
-
     async def _f(item):
-        async with semaphore:
-            result = await async_func(item)
-            await queue.put(result)
+        result = await async_func(item)
+        await queue.put(result)
 
+    sem = asyncio.BoundedSemaphore(max_concurrency)
     tasks = set()
     for i, item in enumerate(generator):
+        await sem.acquire()
+
         task = asyncio.create_task(_f(item), name=f"item_{i}")
-        task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
         tasks.add(task)
+        task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+        task.add_done_callback(lambda _: sem.release())
+        task.add_done_callback(tasks.discard)
 
-        # Occasionally remove the done tasks.
-        if len(tasks) >= 3 * max_concurrency:
-            _, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-
-    if tasks:
-        await asyncio.wait(tasks)
+    while tasks:
+        await asyncio.sleep(0.1)
 
     _LG.debug("_apply_async - done")
     await queue.put(sentinel)
@@ -201,6 +200,8 @@ async def _apply_async(async_func, generator, queue, sentinel, max_concurrency):
 async def apply_async(
     func: Callable[[T], Awaitable[U]],
     generator: Iterable[T],
+    *,
+    buffer_size: int = 10,
     max_concurrency: int = 10,
     timeout: float = 300,
 ) -> AsyncIterator[U]:
@@ -218,6 +219,8 @@ async def apply_async(
     Args:
         func: The async function to apply.
         generator: The generator to apply the async function to.
+        buffer_size: The size of the internal queue.
+            If it's full, the generator will be blocked.
         max_concurrency: The maximum number of concurrent async tasks.
         timeout: The maximum time to wait for the async function. (Unit: second)
 
@@ -262,7 +265,7 @@ async def apply_async(
     # To eliminate such parameter, we use asyncio.Queue object and pass the results
     # into this queue, as soon as it's ready. We only await the `Queue.get()`. Then,
     # yield the results fetched from the queue.
-    queue = asyncio.Queue()
+    queue = asyncio.Queue(buffer_size)
 
     # We use sentinel to detect the end of the background job
     sentinel = object()
