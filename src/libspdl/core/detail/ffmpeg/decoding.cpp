@@ -242,6 +242,7 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
     return {};
   }
 
+  TRACE_EVENT("decoding", "StreamingDecoder::decode");
   auto ret = detail::get_frame(packets.get());
   auto& packets_ref = packets->get_packets();
   auto num_packets = packets->num_packets();
