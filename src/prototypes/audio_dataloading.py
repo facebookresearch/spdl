@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-"""Benchmark loading image dataset"""
+"""Benchmark loading audio dataset"""
 
-import concurrent.futures
 import logging
+import os
 import time
 from pathlib import Path
+
+os.environ["SPDL_USE_PYTHON_THREADPOOL"] = "1"
 
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader._task_runner import (
-    apply_async,
-    apply_concurrent,
-    BackgroundGenerator,
-)
+from spdl.dataloader._task_runner import apply_async, BackgroundGenerator
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.librispeech import get_flist
 
@@ -30,7 +28,6 @@ def _parse_args(args):
     parser.add_argument(
         "--split", default="test-other", choices=["test-clean", "test-other"]
     )
-    parser.add_argument("--mode", choices=["async", "concurrent"], default="async")
     parser.add_argument("--max-samples", type=int)
     parser.add_argument("--prefix")
     parser.add_argument("--batch-size", type=int, default=32)
@@ -80,29 +77,6 @@ def _get_batch_generator(args):
         max=args.max_samples,
     )
 
-    @spdl.utils.chain_futures
-    def _decode_func(src):
-        src = src[0].split("\t")[0]
-        buffer = yield spdl.io.load_media(
-            "audio",
-            src,
-            decode_options={
-                "sample_rate": 16000,
-                "num_channels": 1,
-            },
-            convert_options={
-                "cuda_device_index": args.worker_id,
-                "cuda_allocator": (
-                    torch.cuda.caching_allocator_alloc,
-                    torch.cuda.caching_allocator_delete,
-                ),
-            },
-        )
-        array = spdl.io.to_torch(buffer)
-        f = concurrent.futures.Future()
-        f.set_result(array)
-        yield f
-
     async def _async_decode_func(src):
         src = src[0].split("\t")[0]
         buffer = await spdl.io.async_load_audio(
@@ -123,13 +97,7 @@ def _get_batch_generator(args):
         )
         return spdl.io.to_torch(buffer)
 
-    match args.mode:
-        case "concurrent":
-            return apply_concurrent(_decode_func, srcs_gen)
-        case "async":
-            return apply_async(_async_decode_func, srcs_gen)
-        case _:
-            raise ValueError(f"Unexpected mode: {args.mode}")
+    return apply_async(_async_decode_func, srcs_gen)
 
 
 def _main(args=None):
@@ -146,7 +114,9 @@ def _main(args=None):
     torch.zeros([1, 1], device=device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
-    dataloader = BackgroundGenerator(batch_gen, args.queue_size)
+    dataloader = BackgroundGenerator(
+        batch_gen, num_workers=args.num_decode_threads, queue_size=args.queue_size
+    )
     with spdl.utils.tracing(
         trace_path, buffer_size=8192, enable=args.trace is not None
     ):
