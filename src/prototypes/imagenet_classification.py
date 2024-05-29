@@ -2,8 +2,11 @@
 
 import contextlib
 import logging
+import os
 import time
 from pathlib import Path
+
+os.environ["SPDL_USE_PYTHON_THREADPOOL"] = "1"
 
 import spdl.io
 import spdl.utils
@@ -218,7 +221,9 @@ def _main(args=None):
     batch_gen = _get_batch_generator(args, device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
-    dataloader = BackgroundGenerator(batch_gen, args.queue_size)
+    dataloader = BackgroundGenerator(
+        batch_gen, num_workers=args.num_decode_threads, queue_size=args.queue_size
+    )
 
     with (
         torch.no_grad(),

@@ -2,11 +2,14 @@
 
 import asyncio
 import logging
+import os
 import signal
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
+
+os.environ["SPDL_USE_PYTHON_THREADPOOL"] = "1"
 
 import spdl.io
 import spdl.utils
@@ -183,7 +186,7 @@ def _benchmark(args):
     torch.zeros([1, 1], device=device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
-    dataloader = BackgroundGenerator(batch_gen, args.queue_size)
+    dataloader = BackgroundGenerator(batch_gen, num_workers=args.num_decode_threads, queue_size=args.queue_size)
     with spdl.utils.tracing(trace_path, enable=args.trace is not None):
         return _iter_dataloader(dataloader, ev)
 
