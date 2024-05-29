@@ -1,3 +1,7 @@
+import concurrent.futures
+import os
+import warnings
+
 from spdl.lib import _libspdl
 
 __all__ = [
@@ -12,6 +16,9 @@ class SPDLBackgroundTaskFailure(RuntimeError):
     """Exception type used to pass the error message from libspdl."""
 
     pass
+
+
+_SPDL_USE_PYTHON_THREADPOOL = os.environ.get("SPDL_USE_PYTHON_THREADPOOL", "0") == "1"
 
 
 def Executor(num_threads: int, thread_name_prefix: str):
@@ -31,4 +38,14 @@ def Executor(num_threads: int, thread_name_prefix: str):
         buffer = await spdl.io.async_convert_frames(frames, executor=exec)
         ```
     """
-    return _libspdl.ThreadPoolExecutor(num_threads, thread_name_prefix)
+    if _SPDL_USE_PYTHON_THREADPOOL:
+        warnings.warn(
+            "`spdl.io.Executor` is now an alias of `concurrent.futures.ThreadPoolExecutor`. "
+            "Please use `concurrent.futures.ThreadPoolExecutor` directly.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        f = concurrent.futures.ThreadPoolExecutor
+    else:
+        f = _libspdl.ThreadPoolExecutor
+    return f(num_threads, thread_name_prefix)

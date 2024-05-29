@@ -11,17 +11,30 @@
 # This import is just for annotation, so pleaes overlook this one.
 from ._type_stub import *  # noqa
 
-from . import _async, _config, _convert, _encoding, _misc, _preprocessing, _type_stub
+import os
 
-_mods = [
-    _async,
+_SPDL_USE_PYTHON_THREADPOOL = os.environ.get("SPDL_USE_PYTHON_THREADPOOL", "0") == "1"
+
+if _SPDL_USE_PYTHON_THREADPOOL:
+    from . import _composite, _core
+
+    _io_impls = [_composite, _core]
+else:
+    from . import _async, _encoding
+
+    _io_impls = [_async, _encoding]
+
+from . import _config, _convert, _misc, _preprocessing, _type_stub  # noqa: E402
+
+
+_mods = _io_impls + [
     _config,
     _convert,
-    _encoding,
+    _misc,
     _preprocessing,
     _type_stub,
-    _misc,
 ]
+
 
 __all__ = sorted(item for mod in _mods for item in mod.__all__)
 
