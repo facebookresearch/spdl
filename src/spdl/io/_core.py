@@ -105,7 +105,9 @@ async def async_decode_packets(*args, **kwargs):
 
 
 def decode_packets_nvdec(packets: VideoPackets, *, cuda_device_index: int, **kwargs):
-    return _libspdl.decode_packets_nvdec(packets, cuda_device_index, **kwargs)
+    return _libspdl.decode_packets_nvdec(
+        packets, cuda_device_index=cuda_device_index, **kwargs
+    )
 
 
 async def async_decode_packets_nvdec(*args, **kwargs):
@@ -161,7 +163,7 @@ Array = TypeVar("Array")
 
 
 def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
-    return _libspdl.encode_image(path, data, pix_fmt, **kwargs)
+    return _libspdl.encode_image(path, data, pix_fmt=pix_fmt, **kwargs)
 
 
 async def async_encode_image(*args, **kwargs):
