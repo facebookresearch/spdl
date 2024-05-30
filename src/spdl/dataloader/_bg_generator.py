@@ -80,6 +80,17 @@ class _thread_manager:
             pass
 
 
+def _get_loop(num_workers: int | None):
+    loop = asyncio.new_event_loop()
+    loop.set_default_executor(
+        ThreadPoolExecutor(
+            max_workers=num_workers,
+            thread_name_prefix="SPDL_BackgroundGenerator",
+        )
+    )
+    return loop
+
+
 class BackgroundGenerator(Generic[T]):
     """Run generator in background and iterate the items.
 
@@ -87,9 +98,17 @@ class BackgroundGenerator(Generic[T]):
         iterable: Generator to run in the background. It can be an
             asynchronous generator or a regular generator.
 
+        num_workers: The number of worker threads in the default thread executor.
+            If `loop` is provided, this argument is ignored.
+
         queue_size: The size of the queue that is used to pass the
             generated items from the background thread to the main thread.
             If the queue is full, the background thread will be blocked.
+
+        loop: If provided, use this event loop to execute the generator.
+            Otherwise, a new event loop will be created. When providing a loop,
+            `num_workers` is ignored, so the executor must be configured by
+            client code.
 
     ??? note "Example"
 
@@ -110,10 +129,11 @@ class BackgroundGenerator(Generic[T]):
         *,
         num_workers: int | None = None,
         queue_size: int = 10,
+        loop: asyncio.AbstractEventLoop | None = None,
     ):
         self.iterable = iterable
-        self.num_workers = num_workers
         self.queue_size = queue_size
+        self.loop = _get_loop(num_workers) if loop is None else loop
 
     def __iter__(self) -> Iterator[T]:
         queue = Queue(maxsize=self.queue_size)
@@ -123,16 +143,9 @@ class BackgroundGenerator(Generic[T]):
         # flag the completion from the inside.
         stopped = Event()
 
-        loop = asyncio.new_event_loop()
-        loop.set_default_executor(
-            ThreadPoolExecutor(
-                max_workers=self.num_workers,
-                thread_name_prefix="SPDL_BackgroundGenerator",
-            )
-        )
         thread = Thread(
             target=_run_agen,
-            args=(loop, self.iterable, sentinel, queue, stopped),
+            args=(self.loop, self.iterable, sentinel, queue, stopped),
         )
 
         with _thread_manager(thread, stopped, queue, sentinel):
