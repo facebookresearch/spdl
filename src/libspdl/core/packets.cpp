@@ -115,8 +115,8 @@ template PacketsPtr<MediaType::Audio> clone(const AudioPackets& src);
 template PacketsPtr<MediaType::Video> clone(const VideoPackets& src);
 template PacketsPtr<MediaType::Image> clone(const ImagePackets& src);
 
-std::vector<VideoPacketsPtr> split_at_keyframes(const VideoPackets& src) {
-  auto& src_packets = src.get_packets();
+std::vector<VideoPacketsPtr> split_at_keyframes(VideoPacketsPtr src) {
+  auto& src_packets = src->get_packets();
   // Search key frame indices
   std::vector<size_t> keyframe_indices;
   keyframe_indices.push_back(0); // always include the first frame
@@ -137,9 +137,9 @@ std::vector<VideoPacketsPtr> split_at_keyframes(const VideoPackets& src) {
     auto end = keyframe_indices[i + 1];
 
     auto chunk = std::make_unique<VideoPackets>(
-        src.src, copy(src.codecpar), src.time_base);
-    chunk->timestamp = src.timestamp;
-    chunk->frame_rate = src.frame_rate;
+        src->src, copy(src->codecpar), src->time_base);
+    chunk->timestamp = src->timestamp;
+    chunk->frame_rate = src->frame_rate;
     for (size_t t = start; t < end; ++t) {
       chunk->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
     }

@@ -116,16 +116,15 @@ void register_packets(nb::module_& m) {
                 self.get_media_format_name(),
                 get_codec_info<MediaType::Video>(self.codecpar));
           })
-      .def(
-          "clone",
-          [](const VideoPackets& self) {
-            nb::gil_scoped_release g;
-            return clone(self);
-          })
-      .def("_split_at_keyframes", [](const VideoPackets& self) {
+      .def("clone", [](const VideoPackets& self) {
         nb::gil_scoped_release g;
-        return spdl::core::split_at_keyframes(self);
+        return clone(self);
       });
+
+  m.def("_split_at_keyframes", [](VideoPacketsPtr self) {
+    nb::gil_scoped_release g;
+    return spdl::core::split_at_keyframes(std::move(self));
+  });
 
   nb::class_<ImagePackets>(m, "ImagePackets")
       .def(
