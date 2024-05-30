@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 
 import spdl.io
-from spdl.dataloader._task_runner import apply_async, BackgroundGenerator
+from spdl.dataloader import apply_async, BackgroundGenerator
 from spdl.dataloader._utils import _iter_flist
 
 _LG = logging.getLogger(__name__)

@@ -2,16 +2,13 @@
 """Benchmark loading audio dataset"""
 
 import logging
-import os
 import time
 from pathlib import Path
-
-os.environ["SPDL_USE_PYTHON_THREADPOOL"] = "1"
 
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader._task_runner import apply_async, BackgroundGenerator
+from spdl.dataloader import apply_async, BackgroundGenerator
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.librispeech import get_flist
 

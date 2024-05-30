@@ -2,18 +2,14 @@
 
 import contextlib
 import logging
-import os
 import time
 from pathlib import Path
 
-os.environ["SPDL_USE_PYTHON_THREADPOOL"] = "1"
-
 import spdl.io
 import spdl.utils
-
 import timm
 import torch
-from spdl.dataloader._task_runner import apply_async, BackgroundGenerator
+from spdl.dataloader import apply_async, BackgroundGenerator
 from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.imagenet import get_mappings, parse_wnid
 from torch.profiler import profile
