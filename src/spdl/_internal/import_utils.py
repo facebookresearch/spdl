@@ -35,6 +35,9 @@ class _LazilyImportedModule(ModuleType):
             # This allows to avoid calling __getattr__ for every attribute access.
             self.__dict__.update(self.module.__dict__)
 
+            if self.__name__ == "torch":
+                self.module._C._log_api_usage_once("spdl.io.to_torch")
+
 
 def lazy_import(name):
     """Import module lazily.
