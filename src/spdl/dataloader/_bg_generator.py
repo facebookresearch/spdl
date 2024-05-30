@@ -1,19 +1,18 @@
 import asyncio
 import logging
 import warnings
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
-from threading import Event, Thread
-from typing import (
+from collections.abc import (
     AsyncIterable,
     AsyncIterator,
     Awaitable,
     Callable,
-    Generic,
     Iterable,
     Iterator,
-    TypeVar,
 )
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
+from threading import Event, Thread
+from typing import Generic, TypeVar
 
 _LG = logging.getLogger(__name__)
 

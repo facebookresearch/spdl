@@ -1,7 +1,5 @@
 """Custom resolver to make dynamic attributes available."""
 
-from typing import List
-
 from griffe import Extension, get_logger, Module
 from griffe.dataclasses import Alias
 

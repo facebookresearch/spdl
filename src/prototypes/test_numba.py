@@ -1,7 +1,6 @@
 """Test numba __cuda_array_interface__ integration"""
 
 from pathlib import Path
-from typing import Optional
 
 import numba.cuda as cuda
 
@@ -73,7 +72,7 @@ def test_nvdec(args, timestamps):
     return _load_video_nvdec().result()
 
 
-def _plot(arrays, output_dir, pix_fmt: Optional[str]):
+def _plot(arrays, output_dir, pix_fmt: str | None):
     from PIL import Image
 
     mode = None
