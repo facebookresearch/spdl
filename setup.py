@@ -22,6 +22,11 @@ def _get_ext_modules():
                     Extension(f"spdl.lib._spdl_ffmpeg{v}", sources=[]),
                 ]
             )
+    if ext_modules:
+        ext_modules.append(
+            Extension(f"spdl.lib.__STUB__", sources=[]),
+        )
+
     return ext_modules
 
 
@@ -150,12 +155,17 @@ class CMakeBuild(build_ext):
         # Fix the library name for libspdl
         # linux: spdl/lib/libspdl_ffmpeg4.cpython-310-x86_64-linux-gnu.so -> spdl/lib/libspdl_ffmpeg4.so
         # macOS: spdl/lib/libspdl_ffmpeg4.cpython-310-x86_64-linux-gnu.so -> spdl/lib/libspdl_ffmpeg4.dylib
-        if "_spdl_ffmpeg" not in ext_filename:
+        if "libspdl_ffmpeg" in ext_filename:
             parts = ext_filename.split(".")
             del parts[-2]
             if sys.platform == "darwin":
                 parts[-1] = "dylib"
             ext_filename = ".".join(parts)
+        elif "__STUB__" in ext_filename:
+            parts = ext_filename.split(".")
+            parts = [parts[0].replace("__STUB__", "_libspdl.pyi")]
+            ext_filename = ".".join(parts)
+            print(ext_filename)
         return ext_filename
 
 
