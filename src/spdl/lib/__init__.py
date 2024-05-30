@@ -9,7 +9,7 @@ import atexit
 import importlib
 import importlib.resources
 import logging
-from typing import Any, List
+from typing import Any
 
 _LG = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-def __dir__() -> List[str]:
+def __dir__() -> list[str]:
     return sorted(__all__)
 
 

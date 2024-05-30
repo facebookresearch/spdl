@@ -401,7 +401,7 @@ async def async_convert_frames(
                 cuda_stream = stream.cuda_stream
                 ```
 
-        cuda_allocator (Tuple[Callable[[int, int, int], int], Callable[[int], None]]):
+        cuda_allocator (tuple[Callable[[int, int, int], int], Callable[[int], None]]):
             *Optional:* A pair of custom CUDA memory allcoator and deleter functions.
 
             The allocator function, takes the following arguments, and

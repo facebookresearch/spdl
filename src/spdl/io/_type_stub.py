@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple, overload
+from typing import Any, Dict, overload
 
 __all__ = [
     "CPUBuffer",
@@ -127,7 +127,7 @@ class AudioPackets(Packets):
     """Packets object containing audio samples."""
 
     @property
-    def timestamp(self) -> Tuple[float, float]:
+    def timestamp(self) -> tuple[float, float]:
         """The window this packets covers, denoted by start and end time in second.
 
         This is the value specified by user when demuxing the stream.
@@ -147,13 +147,13 @@ class VideoPackets(Packets):
     """Packets object containing video frames."""
 
     @property
-    def timestamp(self) -> Tuple[float, float]:
+    def timestamp(self) -> tuple[float, float]:
         """The window this packets covers, denoted by start and end time in second.
 
         This is the value specified by user when demuxing the stream.
 
         Returns:
-            (Tuple[float, float]): timestamp
+            (tuple[float, float]): timestamp
         """
         ...
 
@@ -174,7 +174,7 @@ class VideoPackets(Packets):
         """
         ...
 
-    def _split_at_keyframes(self) -> List[VideoPackets]:
+    def _split_at_keyframes(self) -> list[VideoPackets]:
         """Split the packets into multiple packets at keyframes.
 
         Returns:
@@ -311,9 +311,9 @@ class VideoFrames(Frames):
     @overload
     def __getitem__(self, key: slice) -> VideoFrames: ...
     @overload
-    def __getitem__(self, key: List[int]) -> VideoFrames: ...
+    def __getitem__(self, key: list[int]) -> VideoFrames: ...
 
-    def __getitem__(self, key: int | slice | List[int]) -> VideoFrames | ImageFrames:
+    def __getitem__(self, key: int | slice | list[int]) -> VideoFrames | ImageFrames:
         """Slice frame by key.
 
         Args:

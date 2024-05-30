@@ -308,7 +308,7 @@ def test_async_convert_image(get_sample):
 
 
 def test_async_convert_batch_image(get_samples):
-    """async_convert_frames can convert List[FFmpegImageFrames] to Buffer"""
+    """async_convert_frames can convert list[FFmpegImageFrames] to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
     flist = get_samples(cmd)
 

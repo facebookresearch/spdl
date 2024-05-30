@@ -1,10 +1,11 @@
 import asyncio
 import builtins
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
+
+from spdl.lib import _libspdl
 
 from . import _core, _preprocessing
-from spdl.lib import _libspdl
 
 __all__ = [
     "load_audio",
@@ -20,7 +21,7 @@ __all__ = [
 
 _LG = logging.getLogger(__name__)
 
-Window = Tuple[float, float]
+Window = tuple[float, float]
 
 
 async def async_load_audio(*args, **kwargs):
@@ -29,7 +30,7 @@ async def async_load_audio(*args, **kwargs):
 
 def load_audio(
     src: str | bytes,
-    timestamp: Window | List[Window] | None = None,
+    timestamp: Window | list[Window] | None = None,
     *,
     demux_options: Dict[str, Any] | None = None,
     decode_options: Dict[str, Any] | None = None,
@@ -57,7 +58,7 @@ async def async_load_video(*args, **kwargs):
 
 def load_video(
     src: str | bytes,
-    timestamp: Window | List[Window] | None = None,
+    timestamp: Window | list[Window] | None = None,
     *,
     demux_options: Dict[str, Any] | None = None,
     decode_options: Dict[str, Any] | None = None,
@@ -137,7 +138,7 @@ def _get_err_msg(src, err):
 
 
 async def async_load_image_batch(
-    srcs: List[str | bytes],
+    srcs: list[str | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -240,7 +241,7 @@ async def async_load_image_batch(
 
 
 async def async_load_image_batch_nvdec(
-    srcs: List[str | bytes],
+    srcs: list[str | bytes],
     *,
     cuda_device_index: int,
     width: int | None,

@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 from spdl.lib import _libspdl
 
@@ -11,7 +11,7 @@ def get_audio_filter_desc(
     sample_rate: int | None = None,
     num_channels: int | None = None,
     sample_fmt: str | None = None,
-    timestamp: Tuple[float, float] | None = None,
+    timestamp: tuple[float, float] | None = None,
     num_frames: int | None = None,
     filter_desc: str | None = None,
 ) -> str:
@@ -30,7 +30,7 @@ def get_audio_filter_desc(
             `"s32"`, `"s32p"`, `"flt"`, `"fltp"`, `"s64"`,
             `"s64p"`, `"dbl"`, `"dblp"`).
 
-        timestamp (Tuple[float, float]):
+        timestamp (tuple[float, float]):
             *Optional:* Trim the audio by start and end time.
             This has to match the value passed to demux functions.
             It can be retrieved from `timestamp` attribute of `Packets` object.
@@ -71,8 +71,8 @@ def get_audio_filter_desc(
 
 def get_video_filter_desc(
     *,
-    frame_rate: Tuple[int, int] | None = None,
-    timestamp: Tuple[float, float] | None = None,
+    frame_rate: tuple[int, int] | None = None,
+    timestamp: tuple[float, float] | None = None,
     scale_width: int | None = None,
     scale_height: int | None = None,
     scale_algo: str = "bicubic",
@@ -90,7 +90,7 @@ def get_video_filter_desc(
         frame_rate (int):
             __Video__: *Optional:* Change the frame rate.
 
-        timestamp (Tuple[float, float]):
+        timestamp (tuple[float, float]):
             *Optional:* Trim the video by start and end time.
             This has to match the value passed to demux functions.
             It can be retrieved from `timestamp` attribute of `Packets` object.
