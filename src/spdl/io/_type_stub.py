@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, overload
+from typing import Any, overload
 
 __all__ = [
     "CPUBuffer",
@@ -378,7 +378,7 @@ class CPUBuffer:
     """
 
     @property
-    def __array_interface__(self) -> Dict[str, Any]:
+    def __array_interface__(self) -> dict[str, Any]:
         """See https://numpy.org/doc/stable/reference/arrays.interface.html."""
         ...
 
@@ -396,7 +396,7 @@ class CUDABuffer:
         ...
 
     @property
-    def __cuda_array_interface__(self) -> Dict[str, Any]:
+    def __cuda_array_interface__(self) -> dict[str, Any]:
         """See https://numba.pydata.org/numba-doc/latest/cuda/cuda_array_interface.html."""
         ...
 

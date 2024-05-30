@@ -1,7 +1,7 @@
 import asyncio
 import builtins
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from spdl.lib import _libspdl
 
@@ -32,9 +32,9 @@ def load_audio(
     src: str | bytes,
     timestamp: Window | list[Window] | None = None,
     *,
-    demux_options: Dict[str, Any] | None = None,
-    decode_options: Dict[str, Any] | None = None,
-    convert_options: Dict[str, Any] | None = None,
+    demux_options: dict[str, Any] | None = None,
+    decode_options: dict[str, Any] | None = None,
+    convert_options: dict[str, Any] | None = None,
 ):
     demux_options = demux_options or {}
     decode_options = decode_options or {}
@@ -60,9 +60,9 @@ def load_video(
     src: str | bytes,
     timestamp: Window | list[Window] | None = None,
     *,
-    demux_options: Dict[str, Any] | None = None,
-    decode_options: Dict[str, Any] | None = None,
-    convert_options: Dict[str, Any] | None = None,
+    demux_options: dict[str, Any] | None = None,
+    decode_options: dict[str, Any] | None = None,
+    convert_options: dict[str, Any] | None = None,
     use_nvdec: bool = False,
 ):
     demux_options = demux_options or {}
@@ -99,9 +99,9 @@ async def async_load_image(*args, **kwargs):
 def load_image(
     src: str | bytes,
     *,
-    demux_options: Dict[str, Any] | None = None,
-    decode_options: Dict[str, Any] | None = None,
-    convert_options: Dict[str, Any] | None = None,
+    demux_options: dict[str, Any] | None = None,
+    decode_options: dict[str, Any] | None = None,
+    convert_options: dict[str, Any] | None = None,
     use_nvjpeg: bool = False,
     cuda_device_index: int | None = None,
     _use_nvdec: bool = False,
@@ -143,9 +143,9 @@ async def async_load_image_batch(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
-    demux_options: Dict[str, Any] | None = None,
-    decode_options: Dict[str, Any] | None = None,
-    convert_options: Dict[str, Any] | None = None,
+    demux_options: dict[str, Any] | None = None,
+    decode_options: dict[str, Any] | None = None,
+    convert_options: dict[str, Any] | None = None,
     strict: bool = True,
 ):
     """Batch load images.
@@ -160,13 +160,13 @@ async def async_load_image_batch(
         pix_fmt:
             *Optional:* Change the format of the pixel.
 
-        demux_options (Dict[str, Any]):
+        demux_options (dict[str, Any]):
             *Optional:* Demux options passed to [spdl.io.async_demux_media][].
 
-        decode_options (Dict[str, Any]):
+        decode_options (dict[str, Any]):
             *Optional:* Decode options passed to [spdl.io.async_decode_packets][].
 
-        convert_options (Dict[str, Any]):
+        convert_options (dict[str, Any]):
             *Optional:* Convert options passed to [spdl.io.async_convert_frames][].
 
         strict:
@@ -247,8 +247,8 @@ async def async_load_image_batch_nvdec(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgba",
-    demux_options: Dict[str, Any] | None = None,
-    decode_options: Dict[str, Any] | None = None,
+    demux_options: dict[str, Any] | None = None,
+    decode_options: dict[str, Any] | None = None,
     strict: bool = True,
 ):
     """Batch load images.
@@ -265,10 +265,10 @@ async def async_load_image_batch_nvdec(
         pix_fmt:
             *Optional:* Change the format of the pixel.
 
-        demux_options (Dict[str, Any]):
+        demux_options (dict[str, Any]):
             *Optional:* Demux options passed to [spdl.io.async_demux_media][].
 
-        decode_options (Dict[str, Any]):
+        decode_options (dict[str, Any]):
             *Optional:* Other decode options passed to [spdl.io.async_decode_packets_nvdec][].
 
         strict:
