@@ -38,7 +38,7 @@ def _parse_args(args):
     parser.add_argument("--use-nvdec", action="store_true")
     args = parser.parse_args(args)
     if args.trace:
-        args.max_samples = args.batch_size * 40
+        args.max_samples = args.batch_size * 60
     return args
 
 
@@ -114,12 +114,14 @@ def _run_inference(dataloader, model):
     num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
     try:
         for i, (batch, classes) in enumerate(dataloader):
-            # Ignore the first batch.
-            if i == 2:
+            if i == 20:
                 t0 = time.monotonic()
                 num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
 
-            with torch.profiler.record_function(f"iter_{i}"):
+            with (
+                torch.profiler.record_function(f"iter_{i}"),
+                spdl.utils.trace_event(f"iter_{i}"),
+            ):
 
                 top1, top5 = model(batch, classes)
 
@@ -225,6 +227,10 @@ def _main(args=None):
         profile() if args.trace else contextlib.nullcontext() as prof,
         spdl.utils.tracing(f"{trace_path}.pftrace", enable=args.trace is not None),
     ):
+        with spdl.utils.trace_event("warm-up"):
+            dataloader = iter(dataloader)
+            batch = next(dataloader)
+            model(*batch)
         _run_inference(dataloader, model)
 
     if args.trace:
