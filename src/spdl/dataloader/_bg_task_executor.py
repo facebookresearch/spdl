@@ -66,7 +66,7 @@ class BackgroundTaskExecutor:
 
     def __init__(
         self,
-        num_workers: int = 1,
+        num_workers: int | None = 1,
         loop: asyncio.AbstractEventLoop | None = None,
     ):
         self.loop = _get_loop(num_workers) if loop is None else loop
