@@ -9,8 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
 
-os.environ["SPDL_USE_PYTHON_THREADPOOL"] = "1"
-
 import spdl.io
 import spdl.utils
 import torch
@@ -33,8 +31,7 @@ def _parse_args(args):
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--queue-size", type=int, default=16)
-    parser.add_argument("--num-demux-threads", type=int, required=True)
-    parser.add_argument("--num-decode-threads", type=int, required=True)
+    parser.add_argument("--num-threads", type=int, required=True)
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--num-workers", type=int, required=True)
     parser.add_argument("--nvdec", action="store_true")
@@ -167,7 +164,7 @@ def _iter_dataloader(dataloader, ev):
 
 def _benchmark(args):
     args = _parse_args(args)
-    _init(args.debug, args.num_demux_threads, args.num_decode_threads, args.worker_id)
+    _init(args.debug, args.worker_id)
 
     _LG.info(args)
 
@@ -187,7 +184,7 @@ def _benchmark(args):
 
     trace_path = f"{args.trace}.{args.worker_id}"
     dataloader = BackgroundGenerator(
-        batch_gen, num_workers=args.num_decode_threads, queue_size=args.queue_size
+        batch_gen, num_workers=args.num_threads, queue_size=args.queue_size
     )
     with spdl.utils.tracing(trace_path, enable=args.trace is not None):
         return _iter_dataloader(dataloader, ev)
@@ -201,14 +198,12 @@ def _init_logging(debug=False, worker_id=None):
     logging.basicConfig(format=fmt, level=level)
 
 
-def _init(debug, num_demux_threads, num_decode_threads, worker_id):
+def _init(debug, worker_id):
     _init_logging(debug, worker_id)
 
     spdl.utils.set_ffmpeg_log_level(16)
     spdl.utils.init_folly(
         [
-            f"--spdl_demuxer_executor_threads={num_demux_threads}",
-            f"--spdl_decoder_executor_threads={num_decode_threads}",
             f"--logging={'DBG' if debug else 'INFO'}",
         ]
     )

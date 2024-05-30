@@ -30,8 +30,7 @@ def _parse_args(args):
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--queue-size", type=int, default=16)
-    parser.add_argument("--num-demux-threads", type=int, default=2)
-    parser.add_argument("--num-decode-threads", type=int, default=8)
+    parser.add_argument("--num-threads", type=int, default=8)
     parser.add_argument("--worker-id", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=1)
     args = parser.parse_args(args)
@@ -99,7 +98,7 @@ def _get_batch_generator(args):
 
 def _main(args=None):
     args = _parse_args(args)
-    _init(args.debug, args.num_demux_threads, args.num_decode_threads, args.worker_id)
+    _init(args.debug, args.worker_id)
 
     _LG.info(args)
 
@@ -112,7 +111,7 @@ def _main(args=None):
 
     trace_path = f"{args.trace}.{args.worker_id}"
     dataloader = BackgroundGenerator(
-        batch_gen, num_workers=args.num_decode_threads, queue_size=args.queue_size
+        batch_gen, num_workers=args.num_threads, queue_size=args.queue_size
     )
     with spdl.utils.tracing(
         trace_path, buffer_size=8192, enable=args.trace is not None
@@ -128,14 +127,12 @@ def _init_logging(debug=False, worker_id=None):
     logging.basicConfig(format=fmt, level=level)
 
 
-def _init(debug, num_demux_threads, num_decode_threads, worker_id):
+def _init(debug, worker_id):
     _init_logging(debug, worker_id)
 
     spdl.utils.set_ffmpeg_log_level(16)
     spdl.utils.init_folly(
         [
-            f"--spdl_demuxer_executor_threads={num_demux_threads}",
-            f"--spdl_decoder_executor_threads={num_decode_threads}",
             f"--logging={'DBG' if debug else 'INFO'}",
         ]
     )
