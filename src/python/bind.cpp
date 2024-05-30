@@ -20,15 +20,6 @@ void register_conversion(nb::module_&);
 void register_encoding(nb::module_&);
 } // namespace spdl::core
 
-namespace spdl::coro {
-void register_future(nb::module_&);
-void register_executor(nb::module_&);
-void register_demuxing(nb::module_&);
-void register_decoding(nb::module_&);
-void register_conversion(nb::module_& m);
-void register_encoding(nb::module_&);
-} // namespace spdl::coro
-
 namespace {
 NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_types(m);
@@ -42,12 +33,5 @@ NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_decoding(m);
   spdl::core::register_conversion(m);
   spdl::core::register_encoding(m);
-  // coro
-  spdl::coro::register_future(m);
-  spdl::coro::register_executor(m);
-  spdl::coro::register_conversion(m);
-  spdl::coro::register_demuxing(m);
-  spdl::coro::register_decoding(m);
-  spdl::coro::register_encoding(m);
 }
 } // namespace
