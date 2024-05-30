@@ -61,15 +61,15 @@ def _run_async(func: Callable[..., T], *args, executor=None, **kwargs) -> Awaita
 
 
 def demux_audio(
-    src: str | bytes, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> AudioPackets:
-    return _libspdl.demux_audio(src, timestamp, **kwargs)
+    return _libspdl.demux_audio(src, timestamp=timestamp, **kwargs)
 
 
 def demux_video(
-    src: str | bytes, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> VideoPackets:
-    return _libspdl.demux_video(src, timestamp, **kwargs)
+    return _libspdl.demux_video(src, timestamp=timestamp, **kwargs)
 
 
 def demux_image(src: str | bytes, **kwargs) -> ImagePackets:
@@ -77,7 +77,7 @@ def demux_image(src: str | bytes, **kwargs) -> ImagePackets:
 
 
 async def async_demux_audio(
-    src: str | bytes, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> AudioPackets:
     """Demux audio from the source.
 
@@ -95,11 +95,11 @@ async def async_demux_audio(
     Returns:
         (AudioPackets): object.
     """
-    return await _run_async(demux_audio, src, timestamp, **kwargs)
+    return await _run_async(demux_audio, src, timestamp=timestamp, **kwargs)
 
 
 async def async_demux_video(
-    src: str | bytes, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> VideoPackets:
     """Demux video from the source.
 
@@ -117,7 +117,7 @@ async def async_demux_video(
     Returns:
         (VideoPackets): object.
     """
-    return await _run_async(demux_video, src, timestamp, **kwargs)
+    return await _run_async(demux_video, src, timestamp=timestamp, **kwargs)
 
 
 async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
