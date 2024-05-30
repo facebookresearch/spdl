@@ -33,17 +33,6 @@ set(srcs
   libspdl/core/encoding.cpp
   libspdl/core/packets.cpp
   libspdl/core/utils.cpp
-
-  libspdl/coro/future.cpp
-  libspdl/coro/executor.cpp
-  libspdl/coro/demuxing.cpp
-  libspdl/coro/detail/executor.cpp
-  libspdl/coro/decoding/ffmpeg.cpp
-  libspdl/coro/decoding/nvdec.cpp
-  libspdl/coro/decoding/nvjpeg.cpp
-  libspdl/coro/decoding/sleep.cpp
-  libspdl/coro/conversion.cpp
-  libspdl/coro/encoding.cpp
   )
 
 if (SPDL_USE_CUDA)

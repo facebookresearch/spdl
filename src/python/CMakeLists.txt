@@ -15,13 +15,6 @@ set(src
   core/decoding.cpp
   core/conversion.cpp
   core/encoding.cpp
-
-  coro/future.cpp
-  coro/executor.cpp
-  coro/decoding.cpp
-  coro/demuxing.cpp
-  coro/conversion.cpp
-  coro/encoding.cpp
 )
 
 # This adds the library directory to search path

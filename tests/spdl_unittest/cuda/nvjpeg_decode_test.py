@@ -46,7 +46,7 @@ def test_decode_rubbish(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd, width=320, height=240)
 
-    executor = spdl.io.Executor(1, "SingleDecoderExecutor")
+    executor = concurrent.futures.ThreadPoolExecutor(1, "SingleDecoderExecutor")
 
     async def _test(data):
         for _ in range(10):

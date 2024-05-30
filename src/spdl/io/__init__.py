@@ -11,25 +11,22 @@
 # This import is just for annotation, so pleaes overlook this one.
 from ._type_stub import *  # noqa
 
-import os
-
-_SPDL_USE_PYTHON_THREADPOOL = os.environ.get("SPDL_USE_PYTHON_THREADPOOL", "0") == "1"
-
-if _SPDL_USE_PYTHON_THREADPOOL:
-    from . import _composite, _core
-
-    _io_impls = [_composite, _core]
-else:
-    from . import _async, _encoding
-
-    _io_impls = [_async, _encoding]
-
-from . import _config, _convert, _misc, _preprocessing, _type_stub  # noqa: E402
-
-
-_mods = _io_impls + [
+from . import (  # noqa: E402
+    _composite,
     _config,
     _convert,
+    _core,
+    _misc,
+    _preprocessing,
+    _type_stub,
+)
+
+
+_mods = [
+    _composite,
+    _config,
+    _convert,
+    _core,
     _misc,
     _preprocessing,
     _type_stub,
@@ -48,18 +45,6 @@ def __dir__():
 
 
 _deprecated = {
-    "async_demux_media": (
-        "async_demux_media",
-        "`async_demux_audio`, `async_demux_video` or `async_demux_image`",
-    ),
-    "async_streaming_demux": (
-        "async_streaming_demux",
-        "`async_streaming_demux_audio` or `async_streaming_demux_video`",
-    ),
-    "async_load_media": (
-        "async_load_media",
-        "`async_load_audio`, `async_load_video` or `async_load_image`",
-    ),
     "async_batch_load_image": (
         "async_load_image_batch",
         "`async_load_image_batch`",

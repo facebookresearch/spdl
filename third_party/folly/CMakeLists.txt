@@ -45,11 +45,6 @@ configure_file(
 )
 
 set(
-  defs
-  FOLLY_HAS_COROUTINES
-  )
-
-set(
   src
   "${base_dir}/folly/CancellationToken.cpp"
   "${base_dir}/folly/Conv.cpp"
@@ -85,20 +80,7 @@ set(
   "${base_dir}/folly/detail/UniqueInstance.cpp"
   "${base_dir}/folly/detail/ThreadLocalDetail.cpp"
 
-  "${base_dir}/folly/fibers/Baton.cpp"
-  "${base_dir}/folly/fibers/Fiber.cpp"
-  "${base_dir}/folly/fibers/FiberManager.cpp"
-  "${base_dir}/folly/fibers/GuardPageAllocator.cpp"
-  "${base_dir}/folly/fibers/Semaphore.cpp"
-
-  "${base_dir}/folly/futures/detail/Core.cpp"
-  "${base_dir}/folly/futures/Future.cpp"
-  "${base_dir}/folly/futures/HeapTimekeeper.cpp"
-  "${base_dir}/folly/futures/ThreadWheelTimekeeper.cpp"
-
-  "${base_dir}/folly/executors/ExecutorWithPriority.cpp"
   "${base_dir}/folly/executors/GlobalThreadPoolList.cpp"
-  "${base_dir}/folly/executors/InlineExecutor.cpp"
   "${base_dir}/folly/executors/ThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/CPUThreadPoolExecutor.cpp"
   "${base_dir}/folly/executors/QueueObserver.cpp"
@@ -178,8 +160,6 @@ set(
 
   "${base_dir}/folly/tracing/AsyncStack.cpp"
 
-  "${base_dir}/folly/experimental/coro/Baton.cpp"
-  "${base_dir}/folly/experimental/coro/detail/Malloc.cpp"
   "${base_dir}/folly/experimental/symbolizer/SignalHandler.cpp"
   )
 
@@ -201,7 +181,6 @@ target_sources(
   FILES "${headers}"
   )
 
-target_compile_definitions(folly PRIVATE "${defs}")
 target_compile_options(folly PUBLIC "-Wno-nullability-completeness")
 target_link_libraries(
   folly
