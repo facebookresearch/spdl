@@ -127,7 +127,7 @@ class BackgroundGenerator(Generic[T]):
         self,
         iterable: AsyncIterable[T],
         *,
-        num_workers: int | None = None,
+        num_workers: int | None = 3,
         queue_size: int = 10,
         loop: asyncio.AbstractEventLoop | None = None,
     ):
@@ -214,7 +214,7 @@ async def apply_async(
     generator: Iterable[T],
     *,
     buffer_size: int = 10,
-    max_concurrency: int = 10,
+    max_concurrency: int = 3,
     timeout: float = 300,
 ) -> AsyncIterator[U]:
     """Apply async function to the non-async generator.
@@ -233,7 +233,7 @@ async def apply_async(
         generator: The generator to apply the async function to.
         buffer_size: The size of the internal queue.
             If it's full, the generator will be blocked.
-        max_concurrency: The maximum number of concurrent async tasks.
+        max_concurrency: The maximum number of async tasks scheduled concurrently.
         timeout: The maximum time to wait for the async function. (Unit: second)
 
     Yields:
