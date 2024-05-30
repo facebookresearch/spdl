@@ -47,6 +47,22 @@ function(add_spdl_extension ffmpeg_version)
     LIBRARY DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
     RUNTIME DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
   )
+
+  if (NOT TARGET "_libspdl_stub")
+    nanobind_add_stub(
+      _libspdl_stub
+      MODULE ${name}
+      OUTPUT _libspdl.pyi
+      PYTHON_PATH $<TARGET_FILE_DIR:${name}>
+      DEPENDS ${name}
+      )
+
+    install(
+      FILES "${CMAKE_CURRENT_BINARY_DIR}/_libspdl.pyi"
+      DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
+      )
+  endif()
+
 endfunction()
 
 set(ffmpeg_versions 4 5 6 7)
