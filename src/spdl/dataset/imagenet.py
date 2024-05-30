@@ -68,7 +68,7 @@ def get_mappings():
 
     Returns:
         (dict[str, int]): Mapping from WordNet ID to class index.
-        (dict[str, Tuple[str]]): Mapping from WordNet ID to list of labels.
+        (dict[str, tuple[str]]): Mapping from WordNet ID to list of labels.
 
     ??? note "Example"
         ```python

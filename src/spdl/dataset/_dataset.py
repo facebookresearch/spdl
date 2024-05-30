@@ -90,7 +90,7 @@ class DataSet(Generic[DataType]):
         prefix: str = "",
         drop_last: bool = False,
         max_batch: int | None = None,
-    ) -> Iterator[DataType | List[DataType]]:
+    ) -> Iterator[DataType | list[DataType]]:
         """Iterate over the dataset.
 
         Args:
@@ -118,7 +118,7 @@ class DataSet(Generic[DataType]):
                 batch = batch[0]
             yield batch
 
-    def __getitem__(self, key: int | slice) -> DataType | List[DataType]:
+    def __getitem__(self, key: int | slice) -> DataType | list[DataType]:
         """Return the sample at the given key.
 
         Args:
@@ -228,7 +228,7 @@ def split(dataset: DataSet, n: int, path_pattern: str):
             `path_pattern.format(i)`).
 
     Returns:
-        (List[DataSet]): Split DataSet objects.
+        (list[DataSet]): Split DataSet objects.
     """
     paths = [path_pattern.format(i) for i in range(n)]
     if len(set(paths)) != len(paths):

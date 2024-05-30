@@ -16,7 +16,7 @@ __all__ = sorted(item for mod in _mods for item in mod.__all__)
 _doc_submodules = [mod.__name__.split(".")[-1] for mod in _mods]
 
 
-def __dir__() -> List[str]:
+def __dir__() -> list[str]:
     return __all__
 
 

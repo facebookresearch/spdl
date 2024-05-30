@@ -14,13 +14,13 @@ def _print_members(pkg):
         logger.info(f"    {k}: {v}")
 
 
-def _get_module(pkg: Module, path: List[str]):
+def _get_module(pkg: Module, path: list[str]):
     for submod in path:
         pkg = pkg[submod]
     return pkg
 
 
-def _get_spdl_module(path: List[str]):
+def _get_spdl_module(path: list[str]):
     import spdl
 
     mod = spdl
@@ -29,7 +29,7 @@ def _get_spdl_module(path: List[str]):
     return mod
 
 
-def _assign(pkg: Module, src: List[str], tgt: List[str]):
+def _assign(pkg: Module, src: list[str], tgt: list[str]):
     src_pkg = _get_module(pkg, src)
     tgt_pkg = _get_module(pkg, tgt)
 
