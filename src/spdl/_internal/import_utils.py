@@ -19,7 +19,7 @@ class _LazilyImportedModule(ModuleType):
 
     def __repr__(self):
         if self.module is None:
-            return f"<module '{self.__module__}.{self.__class__.__name__}(\"{self.name}\")'>"
+            return f"<module '{self.__module__}.{self.__class__.__name__}(\"{self.__name__}\")'>"
         return repr(self.module)
 
     def __dir__(self):
