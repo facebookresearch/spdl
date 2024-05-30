@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-from typing import List
 
 from . import _utils
 

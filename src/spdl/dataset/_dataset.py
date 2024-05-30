@@ -1,6 +1,6 @@
 from collections.abc import Iterator
-from dataclasses import dataclass, field, replace
-from typing import Generic, List, TypeVar
+from dataclasses import dataclass, replace
+from typing import Generic, TypeVar
 
 __all__ = ["DataSet", "ImageData", "AudioData"]
 

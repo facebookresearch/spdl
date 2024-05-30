@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Optional, Union
 
 _LG = logging.getLogger(__name__)
 
@@ -39,13 +38,13 @@ def _iter_batch(gen, batch_size, drop_last=False):
 
 
 def _iter_flist(
-    path: Union[str, Path],
+    path: str | Path,
     *,
-    prefix: Optional[str] = None,
+    prefix: str | None = None,
     batch_size: int = 1,
     n: int = 0,
     N: int = 1,
-    max: Optional[int] = None,
+    max: int | None = None,
     drop_last: bool = False,
 ):
     gen = _iter_batch(
