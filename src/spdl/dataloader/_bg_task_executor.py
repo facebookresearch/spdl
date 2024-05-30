@@ -3,12 +3,14 @@ import logging
 from queue import Empty, Queue
 from threading import Event, Thread
 
-_LG = logging.getLogger(__name__)
+from ._bg_generator import _get_loop
 
 __all__ = ["BackgroundTaskExecutor"]
 
+_LG = logging.getLogger(__name__)
 
-def _async_executor(queue: Queue, stopped: Event):
+
+def _async_executor(loop: asyncio.AbstractEventLoop, queue: Queue, stopped: Event):
     tasks = set()
 
     def _cb(task):
@@ -29,7 +31,7 @@ def _async_executor(queue: Queue, stopped: Event):
             tasks.add(task)
             task.add_done_callback(_cb)
 
-    async def _loop(sleep_interval: float = 0.1):
+    async def _main_loop(sleep_interval: float = 0.1):
         while not (stopped.is_set()):
             try:
                 _process_queue()
@@ -41,8 +43,7 @@ def _async_executor(queue: Queue, stopped: Event):
         _LG.info("Exiting.")
 
     try:
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        asyncio.run(_loop())
+        loop.run_until_complete(_main_loop())
     finally:
         stopped.set()
 
@@ -63,15 +64,23 @@ class _QueueWrapper(Queue):
 class BackgroundTaskExecutor:
     """Run tasks in background thread."""
 
-    def __init__(self):
-        self.thread: Thread = None
-        self.queue: Queue = None
-        self.stopped: Event = None
+    def __init__(
+        self,
+        num_workers: int = 1,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ):
+        self.loop = _get_loop(num_workers) if loop is None else loop
+
+        self.thread: Thread = None  # pyre-ignore: [6]
+        self.queue: Queue = None  # pyre-ignore: [6]
+        self.stopped: Event = None  # pyre-ignore: [6]
 
     def __enter__(self) -> Queue:
         self.queue = _QueueWrapper()
         self.stopped = Event()
-        self.thread = Thread(target=_async_executor, args=(self.queue, self.stopped))
+        self.thread = Thread(
+            target=_async_executor, args=(self.loop, self.queue, self.stopped)
+        )
         self.thread.start()
         return self.queue
 
