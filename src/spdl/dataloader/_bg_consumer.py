@@ -3,9 +3,9 @@ import logging
 from queue import Empty, Queue
 from threading import Event, Thread
 
-from ._bg_generator import _get_loop
+from ._utils import _get_loop
 
-__all__ = ["BackgroundTaskExecutor"]
+__all__ = ["BackgroundConsumer"]
 
 _LG = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class _QueueWrapper(Queue):
         super().put(item)
 
 
-class BackgroundTaskExecutor:
+class BackgroundConsumer:
     """Run tasks in background thread."""
 
     def __init__(

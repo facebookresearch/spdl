@@ -1,10 +1,11 @@
 """Utilities to run I/O operations efficiently."""
 
-from ._bg_generator import apply_async, BackgroundGenerator
-from ._bg_task_executor import BackgroundTaskExecutor
+from ._bg_consumer import BackgroundConsumer
+from ._bg_generator import BackgroundGenerator
+from ._utils import apply_async
 
 __all__ = [
+    "BackgroundConsumer",
     "BackgroundGenerator",
-    "BackgroundTaskExecutor",
     "apply_async",
 ]
