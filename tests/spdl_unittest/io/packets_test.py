@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 import spdl.io
 
+from spdl.lib import _libspdl
+
 CMDS = {
     "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
     "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 25 sample.mp4",
@@ -109,7 +111,7 @@ def test_split_video_packets_at_keyframes(get_sample, frame_interval):
     async def _test(src, N=100):
         packets = await spdl.io.async_demux_video(src)
 
-        splits = packets._split_at_keyframes()
+        splits = _libspdl._split_at_keyframes(packets.clone())
         print([len(s) for s in splits])
         assert len(splits) == num_splits
         for i in range(num_splits):
@@ -144,12 +146,12 @@ def test_split_video_packets_at_keyframes_recursive(get_sample, frame_interval=5
     async def _test(src, N=100):
         packets = await spdl.io.async_demux_video(src)
 
-        splits = packets._split_at_keyframes()
+        splits = _libspdl._split_at_keyframes(packets)
         assert 5 == len(splits[0])
         assert 3 == len(splits[1])
 
-        s0 = splits[0]._split_at_keyframes()
-        s1 = splits[1]._split_at_keyframes()
+        s0 = _libspdl._split_at_keyframes(splits[0].clone())
+        s1 = _libspdl._split_at_keyframes(splits[1].clone())
 
         assert 1 == len(s0)
         assert 1 == len(s1)

@@ -357,7 +357,7 @@ async def async_sample_decode_video(packets, indices, **kwargs):
 
     i = start = 0
     coros = []
-    for split in packets._split_at_keyframes():
+    for split in _libspdl._split_at_keyframes(packets):
         end = start + len(split)
         idx = []
         while i < len(indices) and start <= indices[i] < end:
