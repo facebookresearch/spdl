@@ -16,7 +16,7 @@ def demux_config(**kwargs) -> DemuxConfig:
             *Optional* Overwrite format. Can be used if the source file does not have
             a header.
 
-        format_options (Dict[str, str]):
+        format_options (dict[str, str]):
             *Optional* Provide demuxer options
 
         buffer_size (int):
@@ -54,7 +54,7 @@ def decode_config(**kwargs) -> DecodeConfig:
         decoder (str):
             *Optional* Override decoder.
 
-        decoder_options (Dict[str, str]):
+        decoder_options (dict[str, str]):
             *Optional* Provide decoder options
 
     Returns:
@@ -94,7 +94,7 @@ def encode_config(**kwargs) -> EncodeConfig:
 
         encoder (str): *Optional* Override encoder.
 
-        encoder_options (Dict[str, str]): *Optional* Provide encoder options.
+        encoder_options (dict[str, str]): *Optional* Provide encoder options.
 
         format (str): *Optional* Override encoder format. Such as "yuv420p".
 
