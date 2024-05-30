@@ -63,7 +63,6 @@ nav:
             - "Frames": spdl/io/support/frames.md
             - "Buffer": spdl/io/support/buffer.md
             - "Config": spdl/io/support/config.md
-            - "Thread Pool": spdl/io/support/thread_pool.md
             - "Others": spdl/io/support/others.md
       - "spdl.dataset (Experimental)":
           - "DataSet": spdl/dataset/dataset.md
