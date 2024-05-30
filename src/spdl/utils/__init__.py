@@ -1,7 +1,5 @@
 """Utility functions."""
 
-from typing import Any, List
-
 from . import _build, _ffmpeg, _folly, _tracing
 
 _mods = [
@@ -20,7 +18,7 @@ def __dir__() -> list[str]:
     return __all__
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str):
     for mod in _mods:
         if name in mod.__all__:
             return getattr(mod, name)
