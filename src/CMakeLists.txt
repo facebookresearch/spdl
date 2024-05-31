@@ -28,7 +28,7 @@ set(srcs
   libspdl/core/adaptor/bytes.cpp
   libspdl/core/adaptor/mmap.cpp
   libspdl/core/storage/cpu.cpp
-  libspdl/core/cuda.cpp
+  libspdl/core/conversion.cpp
   libspdl/core/decoding.cpp
   libspdl/core/encoding.cpp
   libspdl/core/packets.cpp
