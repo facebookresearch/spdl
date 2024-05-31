@@ -22,6 +22,12 @@ StreamingDecoder<media_type>::StreamingDecoder(
 
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
+StreamingDecoder<media_type>::~StreamingDecoder() {
+  delete pImpl;
+}
+
+template <MediaType media_type>
+  requires(media_type != MediaType::Image)
 std::optional<FFmpegFramesPtr<media_type>> StreamingDecoder<media_type>::decode(
     int num_frames) {
   return pImpl->decode(num_frames);

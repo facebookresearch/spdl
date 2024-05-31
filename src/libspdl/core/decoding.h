@@ -20,6 +20,8 @@ struct StreamingDecoder {
       const std::optional<DecodeConfig> cfg = std::nullopt,
       const std::string filter_desc = {});
 
+  ~StreamingDecoder();
+
   std::optional<FFmpegFramesPtr<media_type>> decode(int num_frames);
 };
 
