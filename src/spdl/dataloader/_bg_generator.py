@@ -51,7 +51,6 @@ def _run_agen(
                 sentinel.err_msg = traceback.print_exception(err)
                 return
             else:
-                _LG.info(f"Putting {item}")
                 queue.put(item)
 
             if stopped.is_set():
