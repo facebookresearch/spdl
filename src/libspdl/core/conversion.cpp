@@ -1,4 +1,4 @@
-#include <libspdl/core/cuda.h>
+#include <libspdl/core/conversion.h>
 
 #ifdef SPDL_USE_CUDA
 #include "libspdl/core/detail/cuda.h"

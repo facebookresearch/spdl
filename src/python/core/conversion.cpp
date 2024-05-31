@@ -1,5 +1,4 @@
 #include <libspdl/core/conversion.h>
-#include <libspdl/core/cuda.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
