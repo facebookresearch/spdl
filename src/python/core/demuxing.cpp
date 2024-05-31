@@ -30,10 +30,10 @@ std::shared_ptr<StreamingDemuxer<media_type>> make_demuxer(
 
 template <MediaType media_type>
 PacketsPtr<media_type> demuxer_demux(
-    StreamingDemuxer<media_type>& self,
+    std::shared_ptr<StreamingDemuxer<media_type>>& self,
     const std::optional<std::tuple<double, double>>& window) {
   nb::gil_scoped_release g;
-  return self.demux_window(window);
+  return self->demux_window(window);
 }
 
 template <MediaType media_type>
