@@ -65,10 +65,10 @@ std::shared_ptr<StreamingDecoder<media_type>> make_decoder(
 
 template <MediaType media_type>
 std::optional<FFmpegFramesPtr<media_type>> decoder_decode(
-    StreamingDecoder<media_type>& self,
+    std::shared_ptr<StreamingDecoder<media_type>> self,
     int num_frames) {
   nb::gil_scoped_release g;
-  return self.decode(num_frames);
+  return self->decode(num_frames);
 }
 
 } // namespace
