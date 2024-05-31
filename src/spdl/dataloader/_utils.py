@@ -13,6 +13,7 @@ _LG = logging.getLogger(__name__)
 
 T = TypeVar("T")
 U = TypeVar("U")
+S = TypeVar("S")
 
 
 def _iter_file(path, prefix):
@@ -202,3 +203,55 @@ async def apply_async(
         yield item
 
     await task
+
+
+async def _pipe(
+    func: Callable[[T], Awaitable[U]],
+    input_queue: asyncio.Queue[T | S],
+    output_queue: asyncio.Queue[U | S],
+    sentinel: S,
+    concurrency: int,
+    name: str,
+) -> None:
+    sem = asyncio.BoundedSemaphore(concurrency)
+
+    async def _f(item: T):
+        async with sem:
+            result = await func(item)
+            await output_queue.put(result)
+
+    tasks = set()
+
+    i = 0
+    while (item := await input_queue.get()) is not sentinel:
+        async with sem:
+            task = asyncio.create_task(_f(item), name=f"{name}_{i}")  # pyre-ignore: [6]
+            tasks.add(task)
+            task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+            task.add_done_callback(lambda t: tasks.discard)
+        i += 1
+
+    while tasks:
+        await asyncio.sleep(0.1)
+
+
+async def pipe(
+    func: Callable[[T], Awaitable[U]],
+    input_queue: asyncio.Queue[T | S],
+    output_queue: asyncio.Queue[U | S],
+    sentinel: S,
+    *,
+    concurrency: int = 1,
+    name: str | None = None,
+) -> None:
+    name = name or func.__name__
+    task = asyncio.create_task(
+        _pipe(func, input_queue, output_queue, sentinel, concurrency, name),
+        name=f"pipe_{name}",
+    )
+    task.add_done_callback(_check_exception)
+
+    try:
+        await task
+    finally:
+        await output_queue.put(sentinel)
