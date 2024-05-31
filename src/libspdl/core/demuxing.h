@@ -22,15 +22,15 @@ class StreamingDemuxer {
  public:
   StreamingDemuxer(
       const std::string src,
-      const SourceAdaptorPtr& adaptor,
-      const std::optional<DemuxConfig>& dmx_cfg);
+      const SourceAdaptorPtr& adaptor = nullptr,
+      const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
   StreamingDemuxer(
       const std::string_view data,
-      const std::optional<DemuxConfig>& dmx_cfg);
+      const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
   PacketsPtr<media_type> demux_window(
-      const std::optional<std::tuple<double, double>>& window);
+      const std::optional<std::tuple<double, double>>& window = std::nullopt);
 };
 
 // Demux a single image from the resource indicator
