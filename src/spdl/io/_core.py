@@ -156,9 +156,9 @@ async def async_streaming_demux_audio(
     Yields:
         (AudioPackets): AudioPackets object, corresponds to the given window.
     """
-    demuxer = await _run_async(_libspdl.streaming_audio_demuxer, src, **kwargs)
+    demuxer = await _run_async(_libspdl._streaming_audio_demuxer, src, **kwargs)
     for window in timestamps:
-        yield await _run_async(_libspdl.demux, demuxer, window)
+        yield await _run_async(_libspdl._demux, demuxer, window)
 
 
 async def async_streaming_demux_video(
@@ -179,9 +179,9 @@ async def async_streaming_demux_video(
     Returns:
         (VideoPackets): VideoPackets object, corresponds to the given window.
     """
-    demuxer = await _run_async(_libspdl.streaming_video_demuxer, src, **kwargs)
+    demuxer = await _run_async(_libspdl._streaming_video_demuxer, src, **kwargs)
     for window in timestamps:
-        yield await _run_async(_libspdl.demux, demuxer, window)
+        yield await _run_async(_libspdl._demux, demuxer, window)
 
 
 ################################################################################
@@ -338,8 +338,8 @@ async def async_streaming_decode(
     Yields:
         VideoFrames object containing at most `num_frames` frames.
     """
-    decoder = await _run_async(_libspdl.streaming_decoder, packets, **kwargs)
-    while (item := await _run_async(_libspdl.decode, decoder, num_frames)) is not None:
+    decoder = await _run_async(_libspdl._streaming_decoder, packets, **kwargs)
+    while (item := await _run_async(_libspdl._decode, decoder, num_frames)) is not None:
         yield item
 
 

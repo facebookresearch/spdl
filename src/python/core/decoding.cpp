@@ -77,7 +77,7 @@ void register_decoding(nb::module_& m) {
   nb::class_<StreamingDecoder<MediaType::Video>>(m, "StreamingVideoDecoder");
 
   m.def(
-      "streaming_decoder",
+      "_streaming_decoder",
       &make_decoder<MediaType::Video>,
       nb::arg("packets"),
 #if NB_VERSION_MAJOR >= 2
@@ -86,7 +86,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "");
 
-  m.def("decode", &decoder_decode<MediaType::Video>);
+  m.def("_decode", &decoder_decode<MediaType::Video>);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Async decoding - FFMPEG

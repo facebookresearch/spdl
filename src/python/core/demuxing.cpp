@@ -104,7 +104,7 @@ void register_demuxing(nb::module_& m) {
   nb::class_<StreamingDemuxer<MediaType::Video>>(m, "StreamingVideoDemuxer");
 
   m.def(
-      "streaming_audio_demuxer",
+      "_streaming_audio_demuxer",
       &make_demuxer<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
@@ -114,7 +114,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("_adaptor") = nullptr);
 
   m.def(
-      "streaming_audio_demuxer",
+      "_streaming_audio_demuxer",
       &demuxer_bytes<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
@@ -123,7 +123,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("demux_config") = nb::none());
 
   m.def(
-      "streaming_video_demuxer",
+      "_streaming_video_demuxer",
       &make_demuxer<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
@@ -133,7 +133,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("_adaptor") = nullptr);
 
   m.def(
-      "streaming_video_demuxer",
+      "_streaming_video_demuxer",
       &demuxer_bytes<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
@@ -141,9 +141,9 @@ void register_demuxing(nb::module_& m) {
 #endif
       nb::arg("demux_config") = nb::none());
 
-  m.def("demux", &demuxer_demux<MediaType::Audio>);
+  m.def("_demux", &demuxer_demux<MediaType::Audio>);
 
-  m.def("demux", &demuxer_demux<MediaType::Video>);
+  m.def("_demux", &demuxer_demux<MediaType::Video>);
 
   ///////////////////////////////////////////////////////////////////////////////
   // Demux from src (path, URL etc...)
