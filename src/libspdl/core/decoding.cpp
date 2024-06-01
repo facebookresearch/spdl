@@ -29,6 +29,21 @@ StreamingDecoder<media_type>::~StreamingDecoder() {
 }
 
 template <MediaType media_type>
+DecoderPtr<media_type> make_decoder(
+    PacketsPtr<media_type> packets,
+    const std::optional<DecodeConfig>& decode_cfg,
+    const std::string& filter_desc) {
+  TRACE_EVENT("decoding", "make_decoder");
+  return std::make_unique<spdl::core::StreamingDecoder<media_type>>(
+      std::move(packets), std::move(decode_cfg), std::move(filter_desc));
+}
+
+template DecoderPtr<MediaType::Video> make_decoder(
+    PacketsPtr<MediaType::Video> packets,
+    const std::optional<DecodeConfig>& decode_cfg,
+    const std::string& filter_desc);
+
+template <MediaType media_type>
   requires(media_type != MediaType::Image)
 std::optional<FFmpegFramesPtr<media_type>> StreamingDecoder<media_type>::decode(
     int num_frames) {

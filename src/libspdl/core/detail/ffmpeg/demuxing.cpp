@@ -137,20 +137,10 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
 
 template <MediaType media_type>
 StreamingDemuxer<media_type>::StreamingDemuxer(
-    const std::string uri,
-    const SourceAdaptorPtr& adaptor,
-    const std::optional<DemuxConfig>& dmx_cfg)
-    : di(detail::get_interface(uri, adaptor, dmx_cfg)),
+    std::unique_ptr<DataInterface> di_)
+    : di(std::move(di_)),
       fmt_ctx(di->get_fmt_ctx()),
       stream(detail::init_fmt_ctx(fmt_ctx, media_type)){};
-
-template <MediaType media_type>
-StreamingDemuxer<media_type>::StreamingDemuxer(
-    const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg)
-    : di(detail::get_in_memory_interface(data, dmx_cfg)),
-      fmt_ctx(di->get_fmt_ctx()),
-      stream(detail::init_fmt_ctx(fmt_ctx, media_type)) {}
 
 template <MediaType media_type>
 StreamingDemuxer<media_type>::~StreamingDemuxer() {
@@ -174,7 +164,41 @@ PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
 
 template class StreamingDemuxer<MediaType::Audio>;
 template class StreamingDemuxer<MediaType::Video>;
-template class StreamingDemuxer<MediaType::Image>;
+
+template <MediaType media_type>
+DemuxerPtr<media_type> make_demuxer(
+    const std::string src,
+    const SourceAdaptorPtr& adaptor,
+    const std::optional<DemuxConfig>& dmx_cfg) {
+  TRACE_EVENT("demuxing", "make_demuxer");
+  return std::make_unique<StreamingDemuxer<media_type>>(
+      detail::get_interface(src, adaptor, dmx_cfg));
+}
+
+template DemuxerPtr<MediaType::Audio> make_demuxer(
+    const std::string,
+    const SourceAdaptorPtr&,
+    const std::optional<DemuxConfig>&);
+template DemuxerPtr<MediaType::Video> make_demuxer(
+    const std::string,
+    const SourceAdaptorPtr&,
+    const std::optional<DemuxConfig>&);
+
+template <MediaType media_type>
+DemuxerPtr<media_type> make_demuxer(
+    const std::string_view data,
+    const std::optional<DemuxConfig>& dmx_cfg) {
+  TRACE_EVENT("demuxing", "make_demuxer");
+  return std::make_unique<StreamingDemuxer<media_type>>(
+      detail::get_in_memory_interface(data, dmx_cfg));
+}
+
+template DemuxerPtr<MediaType::Audio> make_demuxer(
+    const std::string_view,
+    const std::optional<DemuxConfig>&);
+template DemuxerPtr<MediaType::Video> make_demuxer(
+    const std::string_view,
+    const std::optional<DemuxConfig>&);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxing for Image
