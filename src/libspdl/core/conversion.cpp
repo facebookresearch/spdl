@@ -22,15 +22,10 @@ CUDABufferPtr convert_to_cuda(
     CPUBufferPtr buffer,
     int cuda_device_index,
     uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& allocator,
-    bool async) {
+    const std::optional<cuda_allocator>& allocator) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
-  if (async) {
-    SPDL_FAIL("Async conversion is not supported.");
-  }
-
   TRACE_EVENT("decoding", "core::convert_to_cuda");
 
   auto ret = cuda_buffer(

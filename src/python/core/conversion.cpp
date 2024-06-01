@@ -66,6 +66,16 @@ CUDABufferPtr batch_convert_cuda(
       cuda_allocator);
 }
 
+CUDABufferPtr _convert_to_cuda(
+    CPUBufferPtr buffer,
+    int cuda_device_index,
+    uintptr_t cuda_stream,
+    const std::optional<cuda_allocator>& allocator) {
+  nb::gil_scoped_release g;
+  return convert_to_cuda(
+      std::move(buffer), cuda_device_index, cuda_stream, allocator);
+}
+
 template <typename IntType = int32_t>
 CPUBufferPtr _convert_tokens_1d(
     const nb::list tokens,
@@ -141,6 +151,18 @@ void register_conversion(nb::module_& m) {
   m.def("convert_frames", &batch_convert<MediaType::Audio>, nb::arg("frames"));
   m.def("convert_frames", &batch_convert<MediaType::Video>, nb::arg("frames"));
   m.def("convert_frames", &batch_convert<MediaType::Image>, nb::arg("frames"));
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Device trancfer
+  ////////////////////////////////////////////////////////////////////////////////
+  m.def(
+      "transfer_to_cuda",
+      &_convert_to_cuda,
+      nb::arg("buffer"),
+      nb::kw_only(),
+      nb::arg("cuda_device_index"),
+      nb::arg("cuda_stream") = 0,
+      nb::arg("cuda_allocator") = nb::none());
 
   ////////////////////////////////////////////////////////////////////////////////
   // CUDA conversion
