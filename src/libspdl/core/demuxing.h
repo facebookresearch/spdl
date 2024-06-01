@@ -29,6 +29,8 @@ class StreamingDemuxer {
       const std::string_view data,
       const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
+  ~StreamingDemuxer();
+
   PacketsPtr<media_type> demux_window(
       const std::optional<std::tuple<double, double>>& window = std::nullopt);
 };
