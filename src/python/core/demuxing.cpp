@@ -19,30 +19,40 @@ namespace spdl::core {
 namespace {
 
 template <MediaType media_type>
-std::shared_ptr<StreamingDemuxer<media_type>> make_demuxer(
+using DemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
+
+template <MediaType media_type>
+DemuxerPtr<media_type> make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
     const SourceAdaptorPtr _adaptor) {
   nb::gil_scoped_release g;
-  return std::make_shared<StreamingDemuxer<media_type>>(
+  return std::make_unique<StreamingDemuxer<media_type>>(
       src, std::move(_adaptor), std::move(dmx_cfg));
 }
 
 template <MediaType media_type>
-PacketsPtr<media_type> demuxer_demux(
-    std::shared_ptr<StreamingDemuxer<media_type>>& self,
+std::tuple<DemuxerPtr<media_type>, PacketsPtr<media_type>> demuxer_demux(
+    DemuxerPtr<media_type> demuxer,
     const std::optional<std::tuple<double, double>>& window) {
   nb::gil_scoped_release g;
-  return self->demux_window(window);
+  auto packets = demuxer->demux_window(window);
+  return {std::move(demuxer), std::move(packets)};
 }
 
 template <MediaType media_type>
-std::shared_ptr<StreamingDemuxer<media_type>> demuxer_bytes(
+void drop_demuxer(DemuxerPtr<media_type> t) {
+  nb::gil_scoped_release g;
+  t.reset(); // Technically not necessary, but it's explicit this way.
+}
+
+template <MediaType media_type>
+DemuxerPtr<media_type> demuxer_bytes(
     nb::bytes data,
     const std::optional<DemuxConfig>& dmx_cfg) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
-  return std::make_shared<StreamingDemuxer<media_type>>(
+  return std::make_unique<StreamingDemuxer<media_type>>(
       data_, std::move(dmx_cfg));
 }
 
@@ -144,6 +154,10 @@ void register_demuxing(nb::module_& m) {
   m.def("_demux", &demuxer_demux<MediaType::Audio>);
 
   m.def("_demux", &demuxer_demux<MediaType::Video>);
+
+  m.def("_drop", &drop_demuxer<MediaType::Audio>);
+
+  m.def("_drop", &drop_demuxer<MediaType::Video>);
 
   ///////////////////////////////////////////////////////////////////////////////
   // Demux from src (path, URL etc...)

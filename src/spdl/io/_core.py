@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import functools
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -138,6 +139,31 @@ async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
     return await _run_async(demux_image, src, **kwargs)
 
 
+class _streaming_demuxer_wrpper:
+    def __init__(self, demuxer):
+        self.demuxer = demuxer
+
+    async def demux(self, window):
+        self.demuxer, packets = await _run_async(_libspdl._demux, self.demuxer, window)
+        return packets
+
+
+@contextlib.asynccontextmanager
+async def _streaming_demuxer(constructor, src, **kwargs):
+    demuxer = await _run_async(constructor, src, **kwargs)
+    wrapper = _streaming_demuxer_wrpper(demuxer)
+    try:
+        yield wrapper
+    finally:
+        await _run_async(_libspdl._drop, wrapper.demuxer)
+
+
+async def _stream_demux(demuxer, src, timestamps, **kwargs):
+    async with _streaming_demuxer(demuxer, src, **kwargs) as _demuxer:
+        for window in timestamps:
+            yield await _demuxer.demux(window)
+
+
 async def async_streaming_demux_audio(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[AudioPackets]:
@@ -156,9 +182,9 @@ async def async_streaming_demux_audio(
     Yields:
         (AudioPackets): AudioPackets object, corresponds to the given window.
     """
-    demuxer = await _run_async(_libspdl._streaming_audio_demuxer, src, **kwargs)
-    for window in timestamps:
-        yield await _run_async(_libspdl._demux, demuxer, window)
+    demuxer = _libspdl._streaming_audio_demuxer
+    async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
+        yield packets
 
 
 async def async_streaming_demux_video(
@@ -179,9 +205,9 @@ async def async_streaming_demux_video(
     Returns:
         (VideoPackets): VideoPackets object, corresponds to the given window.
     """
-    demuxer = await _run_async(_libspdl._streaming_video_demuxer, src, **kwargs)
-    for window in timestamps:
-        yield await _run_async(_libspdl._demux, demuxer, window)
+    demuxer = _libspdl._streaming_video_demuxer
+    async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
+        yield packets
 
 
 ################################################################################
@@ -326,6 +352,27 @@ async def async_decode_image_nvjpeg(
     )
 
 
+class _streaming_decoder_wrpper:
+    def __init__(self, decoder):
+        self.decoder = decoder
+
+    async def decode(self, num_frames):
+        self.decoder, frames = await _run_async(
+            _libspdl._decode, self.decoder, num_frames
+        )
+        return frames
+
+
+@contextlib.asynccontextmanager
+async def _streaming_decoder(constructor, packets, **kwargs):
+    decoder = await _run_async(constructor, packets, **kwargs)
+    wrapper = _streaming_decoder_wrpper(decoder)
+    try:
+        yield wrapper
+    finally:
+        await _run_async(_libspdl._drop, wrapper.decoder)
+
+
 async def async_streaming_decode(
     packets: VideoPackets, num_frames: int, **kwargs
 ) -> AsyncIterator[VideoFrames]:
@@ -338,9 +385,10 @@ async def async_streaming_decode(
     Yields:
         VideoFrames object containing at most `num_frames` frames.
     """
-    decoder = await _run_async(_libspdl._streaming_decoder, packets, **kwargs)
-    while (item := await _run_async(_libspdl._decode, decoder, num_frames)) is not None:
-        yield item
+    decoder = _libspdl._streaming_decoder
+    async with _streaming_decoder(decoder, packets, **kwargs) as _decoder:
+        while (item := await _decoder.decode(num_frames)) is not None:
+            yield item
 
 
 ################################################################################

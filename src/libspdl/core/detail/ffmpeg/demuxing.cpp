@@ -153,6 +153,15 @@ StreamingDemuxer<media_type>::StreamingDemuxer(
       stream(detail::init_fmt_ctx(fmt_ctx, media_type)) {}
 
 template <MediaType media_type>
+StreamingDemuxer<media_type>::~StreamingDemuxer() {
+  TRACE_EVENT("demuxing", "StreamingDemuxer::~StreamingDemuxer");
+  di.reset();
+  // Techinically, this is not necessary, but doing it here puts
+  // the destruction of AVFormatContext under ~StreamingDemuxe, which
+  // makes the trace easier to interpret.
+}
+
+template <MediaType media_type>
 PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
     const std::optional<std::tuple<double, double>>& window) {
   auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window);

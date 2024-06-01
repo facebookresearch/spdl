@@ -4,6 +4,7 @@
 #include "libspdl/core/detail/ffmpeg/decoding.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/nvdec/decoding.h"
+#include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
 
@@ -23,6 +24,7 @@ StreamingDecoder<media_type>::StreamingDecoder(
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
 StreamingDecoder<media_type>::~StreamingDecoder() {
+  TRACE_EVENT("decoding", "StreamingDecoder::~StreamingDecoder");
   delete pImpl;
 }
 

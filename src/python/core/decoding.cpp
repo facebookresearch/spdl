@@ -10,6 +10,7 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
+#include "libspdl/core/types.h"
 
 namespace nb = nanobind;
 
@@ -54,21 +55,30 @@ CUDABufferPtr decode_nvdec(
 }
 
 template <MediaType media_type>
-std::shared_ptr<StreamingDecoder<media_type>> make_decoder(
+using DecoderPtr = std::unique_ptr<StreamingDecoder<media_type>>;
+
+template <MediaType media_type>
+DecoderPtr<media_type> make_decoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::string& filter_desc) {
   nb::gil_scoped_release g;
-  return std::make_shared<spdl::core::StreamingDecoder<media_type>>(
+  return std::make_unique<spdl::core::StreamingDecoder<media_type>>(
       std::move(packets), std::move(decode_cfg), std::move(filter_desc));
 }
 
 template <MediaType media_type>
-std::optional<FFmpegFramesPtr<media_type>> decoder_decode(
-    std::shared_ptr<StreamingDecoder<media_type>> self,
-    int num_frames) {
+void _drop(DecoderPtr<media_type> decoder) {
   nb::gil_scoped_release g;
-  return self->decode(num_frames);
+  decoder.reset();
+}
+
+template <MediaType media_type>
+std::tuple<DecoderPtr<media_type>, std::optional<FFmpegFramesPtr<media_type>>>
+_decode(DecoderPtr<media_type> decoder, int num_frames) {
+  nb::gil_scoped_release g;
+  auto frames = decoder->decode(num_frames);
+  return {std::move(decoder), std::move(frames)};
 }
 
 } // namespace
@@ -86,7 +96,8 @@ void register_decoding(nb::module_& m) {
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = "");
 
-  m.def("_decode", &decoder_decode<MediaType::Video>);
+  m.def("_decode", &_decode<MediaType::Video>);
+  m.def("_drop", &_drop<MediaType::Video>);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Async decoding - FFMPEG
