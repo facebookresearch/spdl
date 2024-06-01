@@ -77,5 +77,9 @@ class DemuxedPackets {
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src);
 
-std::vector<VideoPacketsPtr> split_at_keyframes(VideoPacketsPtr src);
+std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
+extract_packets_at_indices(
+    const VideoPacketsPtr& src,
+    const std::vector<size_t>& indices);
+
 } // namespace spdl::core
