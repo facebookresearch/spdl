@@ -14,26 +14,36 @@ struct AVStream;
 namespace spdl::core {
 
 template <MediaType media_type>
+class StreamingDemuxer;
+
+template <MediaType media_type>
+using DemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
+
+template <MediaType media_type>
 class StreamingDemuxer {
   std::unique_ptr<DataInterface> di;
   AVFormatContext* fmt_ctx;
   AVStream* stream;
 
  public:
-  StreamingDemuxer(
-      const std::string src,
-      const SourceAdaptorPtr& adaptor = nullptr,
-      const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
-
-  StreamingDemuxer(
-      const std::string_view data,
-      const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
+  StreamingDemuxer(std::unique_ptr<DataInterface> di);
 
   ~StreamingDemuxer();
 
   PacketsPtr<media_type> demux_window(
       const std::optional<std::tuple<double, double>>& window = std::nullopt);
 };
+
+template <MediaType media_type>
+DemuxerPtr<media_type> make_demuxer(
+    const std::string src,
+    const SourceAdaptorPtr& adaptor = nullptr,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
+
+template <MediaType media_type>
+DemuxerPtr<media_type> make_demuxer(
+    const std::string_view data,
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
 // Demux a single image from the resource indicator
 ImagePacketsPtr demux_image(

@@ -19,16 +19,21 @@ namespace spdl::core {
 namespace {
 
 template <MediaType media_type>
-using DemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
-
-template <MediaType media_type>
-DemuxerPtr<media_type> make_demuxer(
+DemuxerPtr<media_type> _make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
     const SourceAdaptorPtr _adaptor) {
   nb::gil_scoped_release g;
-  return std::make_unique<StreamingDemuxer<media_type>>(
-      src, std::move(_adaptor), std::move(dmx_cfg));
+  return make_demuxer<media_type>(src, std::move(_adaptor), std::move(dmx_cfg));
+}
+
+template <MediaType media_type>
+DemuxerPtr<media_type> _make_demuxer_bytes(
+    nb::bytes data,
+    const std::optional<DemuxConfig>& dmx_cfg) {
+  auto data_ = std::string_view{data.c_str(), data.size()};
+  nb::gil_scoped_release g;
+  return make_demuxer<media_type>(data_, std::move(dmx_cfg));
 }
 
 template <MediaType media_type>
@@ -47,24 +52,14 @@ void drop_demuxer(DemuxerPtr<media_type> t) {
 }
 
 template <MediaType media_type>
-DemuxerPtr<media_type> demuxer_bytes(
-    nb::bytes data,
-    const std::optional<DemuxConfig>& dmx_cfg) {
-  auto data_ = std::string_view{data.c_str(), data.size()};
-  nb::gil_scoped_release g;
-  return std::make_unique<StreamingDemuxer<media_type>>(
-      data_, std::move(dmx_cfg));
-}
-
-template <MediaType media_type>
 PacketsPtr<media_type> demux_src(
     const std::string& src,
     const std::optional<std::tuple<double, double>>& timestamps,
     const std::optional<DemuxConfig>& dmx_cfg,
     const SourceAdaptorPtr adaptor) {
   nb::gil_scoped_release g;
-  StreamingDemuxer<media_type> demuxer{src, adaptor, dmx_cfg};
-  return demuxer.demux_window(timestamps);
+  auto demuxer = make_demuxer<media_type>(src, adaptor, dmx_cfg);
+  return demuxer->demux_window(timestamps);
 }
 
 void zero_clear(nb::bytes data) {
@@ -79,8 +74,8 @@ PacketsPtr<media_type> demux_bytes(
     bool _zero_clear) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
-  StreamingDemuxer<media_type> demuxer{data_, dmx_cfg};
-  auto ret = demuxer.demux_window(timestamp);
+  auto demuxer = make_demuxer<media_type>(data_, dmx_cfg);
+  auto ret = demuxer->demux_window(timestamp);
   if (_zero_clear) {
     zero_clear(data);
   }
@@ -115,7 +110,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "_streaming_audio_demuxer",
-      &make_demuxer<MediaType::Audio>,
+      &_make_demuxer<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -125,7 +120,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "_streaming_audio_demuxer",
-      &demuxer_bytes<MediaType::Audio>,
+      &_make_demuxer_bytes<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -134,7 +129,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "_streaming_video_demuxer",
-      &make_demuxer<MediaType::Video>,
+      &_make_demuxer<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -144,7 +139,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "_streaming_video_demuxer",
-      &demuxer_bytes<MediaType::Video>,
+      &_make_demuxer_bytes<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),

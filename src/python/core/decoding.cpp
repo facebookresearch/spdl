@@ -55,15 +55,12 @@ CUDABufferPtr decode_nvdec(
 }
 
 template <MediaType media_type>
-using DecoderPtr = std::unique_ptr<StreamingDecoder<media_type>>;
-
-template <MediaType media_type>
-DecoderPtr<media_type> make_decoder(
+DecoderPtr<media_type> _make_decoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::string& filter_desc) {
   nb::gil_scoped_release g;
-  return std::make_unique<spdl::core::StreamingDecoder<media_type>>(
+  return make_decoder(
       std::move(packets), std::move(decode_cfg), std::move(filter_desc));
 }
 
@@ -88,7 +85,7 @@ void register_decoding(nb::module_& m) {
 
   m.def(
       "_streaming_decoder",
-      &make_decoder<MediaType::Video>,
+      &_make_decoder<MediaType::Video>,
       nb::arg("packets"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
