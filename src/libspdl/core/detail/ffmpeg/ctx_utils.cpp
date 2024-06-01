@@ -153,12 +153,14 @@ AVCodecContextPtr alloc_codec_context(
     const std::optional<std::string>& decoder_name) {
   auto codec = [&]() -> const AVCodec* {
     if (decoder_name) {
+      TRACE_EVENT("decoding", "avcodec_find_decoder_by_name");
       auto c = avcodec_find_decoder_by_name(decoder_name->c_str());
       if (!c) {
         SPDL_FAIL(fmt::format("Unsupported codec: {}", decoder_name.value()));
       }
       return c;
     } else {
+      TRACE_EVENT("decoding", "avcodec_parameters_to_context");
       auto c = avcodec_find_decoder(codec_id);
       if (!c) {
         SPDL_FAIL(
@@ -168,6 +170,7 @@ AVCodecContextPtr alloc_codec_context(
     }
   }();
 
+  TRACE_EVENT("decoding", "avcodec_alloc_context3");
   auto* codec_ctx = CHECK_AVALLOCATE(avcodec_alloc_context3(codec));
   return AVCodecContextPtr{codec_ctx};
 }
@@ -200,9 +203,12 @@ AVCodecContextPtr get_decode_codec_ctx_ptr(
   AVCodecContextPtr codec_ctx = alloc_codec_context(params->codec_id, decoder);
 
   XLOG(DBG9) << "Configuring codec context.";
-  CHECK_AVERROR(
-      avcodec_parameters_to_context(codec_ctx.get(), params),
-      "Failed to set CodecContext parameter.");
+  {
+    TRACE_EVENT("decoding", "avcodec_parameters_to_context");
+    CHECK_AVERROR(
+        avcodec_parameters_to_context(codec_ctx.get(), params),
+        "Failed to set CodecContext parameter.");
+  }
   XLOG(DBG9) << "Codec: " << codec_ctx->codec->name;
 
   codec_ctx->pkt_timebase = AVRational{pkt_timebase.num, pkt_timebase.den};
