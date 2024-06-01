@@ -9,26 +9,6 @@ from setuptools.command.build_ext import build_ext
 ROOT_DIR = os.path.dirname(__file__)
 TP_DIR = os.path.join(ROOT_DIR, "third_party")
 
-_SPDL_USE_FFMPEG_VERSION = os.environ.get("SPDL_USE_FFMPEG_VERSION", "all")
-
-
-def _get_ext_modules():
-    ext_modules = []
-    for v in ["4", "5", "6", "7"]:
-        if _SPDL_USE_FFMPEG_VERSION == "all" or _SPDL_USE_FFMPEG_VERSION == v:
-            ext_modules.extend(
-                [
-                    Extension(f"spdl.lib.libspdl_ffmpeg{v}", sources=[]),
-                    Extension(f"spdl.lib._spdl_ffmpeg{v}", sources=[]),
-                ]
-            )
-    if ext_modules:
-        ext_modules.append(
-            Extension(f"spdl.lib.__STUB__", sources=[]),
-        )
-
-    return ext_modules
-
 
 def _env(var, default=False):
     if var not in os.environ:
@@ -45,6 +25,31 @@ def _env(var, default=False):
             f"Expected one of {trues + falses}"
         )
     return False
+
+
+_SPDL_USE_FFMPEG_VERSION = os.environ.get("SPDL_USE_FFMPEG_VERSION", "all")
+_SPDL_USE_NVCODEC = _env("SPDL_USE_NVCODEC")
+_SPDL_USE_NVJPEG = _env("SPDL_USE_NVJPEG")
+_SPDL_USE_CUDA = _env("SPDL_USE_CUDA", _SPDL_USE_NVCODEC or _SPDL_USE_NVJPEG)
+_SPDL_BUILD_STUB = _env("SPDL_BUILD_STUB", not _SPDL_USE_CUDA)
+
+
+def _get_ext_modules():
+    ext_modules = []
+    for v in ["4", "5", "6", "7"]:
+        if _SPDL_USE_FFMPEG_VERSION == "all" or _SPDL_USE_FFMPEG_VERSION == v:
+            ext_modules.extend(
+                [
+                    Extension(f"spdl.lib.libspdl_ffmpeg{v}", sources=[]),
+                    Extension(f"spdl.lib._spdl_ffmpeg{v}", sources=[]),
+                ]
+            )
+    if ext_modules and _SPDL_BUILD_STUB:
+        ext_modules.append(
+            Extension(f"spdl.lib.__STUB__", sources=[]),
+        )
+
+    return ext_modules
 
 
 def _get_cmake_commands(build_dir, install_dir, debug):
@@ -91,14 +96,14 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             # Options based on env vars
             ###################################################################
             f"-DSPDL_USE_TRACING={_b(_env('SPDL_USE_TRACING'))}",
-            f"-DSPDL_USE_CUDA={_b(_env('SPDL_USE_CUDA'))}",
-            f"-DSPDL_USE_NVCODEC={_b(_env('SPDL_USE_NVCODEC'))}",
-            f"-DSPDL_USE_NVJPEG={_b(_env('SPDL_USE_NVJPEG'))}",
+            f"-DSPDL_USE_CUDA={_b(_SPDL_USE_CUDA)}",
+            f"-DSPDL_USE_NVCODEC={_b(_SPDL_USE_NVCODEC)}",
+            f"-DSPDL_USE_NVJPEG={_b(_SPDL_USE_NVJPEG)}",
             f"-DSPDL_LINK_STATIC_NVJPEG={_b(_env('SPDL_LINK_STATIC_NVJPEG'))}",
             f"-DSPDL_USE_FFMPEG_VERSION={_SPDL_USE_FFMPEG_VERSION}",
             f"-DSPDL_DEBUG_REFCOUNT={_b(_env('SPDL_DEBUG_REFCOUNT'))}",
             f"-DSPDL_BUILD_SAMPLES={_b(_env('SPDL_BUILD_SAMPLES'))}",
-            f"-DSPDL_BUILD_STUB={_b(_env('SPDL_BUILD_STUB'))}"
+            f"-DSPDL_BUILD_STUB={_b(_SPDL_BUILD_STUB)}",
             ###################################################################
             f"-DPython_INCLUDE_DIR={sysconfig.get_paths()['include']}",
             "-GNinja",

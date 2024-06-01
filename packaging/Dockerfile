@@ -13,6 +13,7 @@ ENV SPDL_USE_CUDA="${USE_CUDA}"
 ENV SPDL_USE_NVCODEC="${USE_CUDA}"
 ENV SPDL_USE_NVJPEG="${USE_CUDA}"
 ENV SPDL_USE_TRACING="${USE_TRACING}"
+ENV SPDL_BUILD_STUB=0
 
 # The default cmake is too old
 RUN python3 -m pip uninstall -y cmake
