@@ -115,36 +115,59 @@ template PacketsPtr<MediaType::Audio> clone(const AudioPackets& src);
 template PacketsPtr<MediaType::Video> clone(const VideoPackets& src);
 template PacketsPtr<MediaType::Image> clone(const ImagePackets& src);
 
-std::vector<VideoPacketsPtr> split_at_keyframes(VideoPacketsPtr src) {
-  auto& src_packets = src->get_packets();
-  // Search key frame indices
-  std::vector<size_t> keyframe_indices;
-  keyframe_indices.push_back(0); // always include the first frame
+namespace {
+std::vector<std::tuple<size_t, size_t>> get_keyframe_indices(
+    const std::vector<AVPacket*>& src_packets) {
+  std::vector<std::tuple<size_t, size_t>> ret;
+  size_t start = 0;
   for (size_t i = 1; i < src_packets.size(); ++i) {
     if (src_packets[i]->flags & AV_PKT_FLAG_KEY) {
-      keyframe_indices.push_back(i);
+      ret.push_back({start, i});
+      start = i;
     }
   }
-  size_t num_keyframes = keyframe_indices.size();
+  ret.push_back({start, src_packets.size()});
+  return ret;
+}
 
-  // Add the end to make the following operation simple
-  keyframe_indices.push_back(src_packets.size());
+VideoPacketsPtr
+extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
+  auto& src_packets = src->get_packets();
+  auto ret = std::make_unique<VideoPackets>(
+      src->src, copy(src->codecpar), src->time_base);
+  ret->timestamp = src->timestamp;
+  ret->frame_rate = src->frame_rate;
+  for (size_t t = start; t < end; ++t) {
+    ret->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
+  }
+  return ret;
+}
 
-  std::vector<VideoPacketsPtr> ret;
-  ret.reserve(num_keyframes);
-  for (size_t i = 0; i < num_keyframes; ++i) {
-    auto start = keyframe_indices[i];
-    auto end = keyframe_indices[i + 1];
+} // namespace
 
-    auto chunk = std::make_unique<VideoPackets>(
-        src->src, copy(src->codecpar), src->time_base);
-    chunk->timestamp = src->timestamp;
-    chunk->frame_rate = src->frame_rate;
-    for (size_t t = start; t < end; ++t) {
-      chunk->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
+std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
+extract_packets_at_indices(
+    const VideoPacketsPtr& src,
+    const std::vector<size_t>& indices) {
+  auto& src_packets = src->get_packets();
+  auto split_indices = get_keyframe_indices(src_packets);
+
+  std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>> ret;
+  size_t i = 0;
+  for (auto& window : split_indices) {
+    auto& [start, end] = window;
+
+    std::vector<size_t> indices_in_window;
+    while (i < indices.size() && (start <= indices[i] && indices[i] < end)) {
+      indices_in_window.push_back(indices[i] - start);
+      ++i;
     }
-
-    ret.push_back(std::move(chunk));
+    if (indices_in_window.size() > 0) {
+      ret.push_back({extract_packets(src, start, end), indices_in_window});
+    }
+    if (i >= indices.size()) {
+      break;
+    }
   }
   return ret;
 }

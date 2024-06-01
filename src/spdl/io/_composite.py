@@ -355,20 +355,12 @@ async def async_sample_decode_video(packets, indices, **kwargs):
     if len(set(indices)) != len(indices):
         raise ValueError("Frame indices must be unique.")
 
-    i = start = 0
-    coros = []
-    for split in _libspdl._split_at_keyframes(packets):
-        end = start + len(split)
-        idx = []
-        while i < len(indices) and start <= indices[i] < end:
-            idx.append(indices[i] - start)
-            i += 1
-        if idx:
-            coros.append(_decode_partial(split, idx, **kwargs))
-        start = end
+    tasks = []
+    for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
+        tasks.append(asyncio.create_task(_decode_partial(split, idxes, **kwargs)))
 
-    tasks = [asyncio.create_task(coro) for coro in coros]
     await asyncio.wait(tasks)
+
     ret = []
     for task in tasks:
         try:

@@ -121,10 +121,12 @@ void register_packets(nb::module_& m) {
         return clone(self);
       });
 
-  m.def("_split_at_keyframes", [](VideoPacketsPtr self) {
-    nb::gil_scoped_release g;
-    return spdl::core::split_at_keyframes(std::move(self));
-  });
+  m.def(
+      "_extract_packets_at_indices",
+      [](VideoPacketsPtr packets, const std::vector<size_t>& indices) {
+        nb::gil_scoped_release g;
+        return extract_packets_at_indices(packets, indices);
+      });
 
   nb::class_<ImagePackets>(m, "ImagePackets")
       .def(
