@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import functools
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from typing import overload, TypeVar
 
 from spdl.io import (
@@ -27,6 +27,8 @@ __all__ = [
     "async_demux_audio",
     "async_demux_video",
     "async_demux_image",
+    "streaming_demux_audio",
+    "streaming_demux_video",
     "async_streaming_demux_audio",
     "async_streaming_demux_video",
     # DECODING
@@ -141,6 +143,24 @@ async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
     return await _run_async(demux_image, src, **kwargs)
 
 
+def streaming_demux_audio(
+    src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
+) -> Iterator[AudioPackets]:
+    demuxer = _libspdl._streaming_audio_demuxer(src, **kwargs)
+    for window in timestamps:
+        demuxer, packets = _libspdl._demux(demuxer, window)
+        yield packets
+
+
+def streaming_demux_video(
+    src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
+) -> Iterator[VideoPackets]:
+    demuxer = _libspdl._streaming_video_demuxer(src, **kwargs)
+    for window in timestamps:
+        demuxer, packets = _libspdl._demux(demuxer, window)
+        yield packets
+
+
 class _streaming_demuxer_wrpper:
     def __init__(self, demuxer):
         self.demuxer = demuxer
@@ -157,6 +177,8 @@ async def _streaming_demuxer(constructor, src, **kwargs):
     try:
         yield wrapper
     finally:
+        # Move the deallocation to the background thread.
+        # (Do not deallocate memory in the main thread)
         await _run_async(_libspdl._drop, wrapper.demuxer)
 
 
