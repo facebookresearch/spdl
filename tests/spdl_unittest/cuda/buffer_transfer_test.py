@@ -36,12 +36,11 @@ def test_async_transfer_buffer_to_cuda(media_type, get_sample):
         }[media_type]
 
         frames = await spdl.io.async_decode_packets(await demux_func(src))
-        cpu_tensor = spdl.io.to_torch(
-            await spdl.io.async_convert_frames(frames.clone())
-        )
+        buffer = await spdl.io.async_convert_frames(frames)
+        cpu_tensor = spdl.io.to_torch(buffer).clone()
         cuda_tensor = spdl.io.to_torch(
-            await spdl.io.async_convert_frames(
-                frames,
+            await spdl.io.async_transfer_buffer(
+                buffer,
                 cuda_device_index=DEFAULT_CUDA,
             )
         )
@@ -83,13 +82,12 @@ def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sa
 
     async def _test(src):
         frames = await spdl.io.async_decode_packets(await demux_func(src))
-        cpu_tensor = spdl.io.to_torch(
-            await spdl.io.async_convert_frames(frames.clone())
-        )
+        buffer = await spdl.io.async_convert_frames(frames)
+        cpu_tensor = spdl.io.to_torch(buffer).clone()
 
         assert not allocator_called
-        cuda_buffer = await spdl.io.async_convert_frames(
-            frames,
+        cuda_buffer = await spdl.io.async_transfer_buffer(
+            buffer,
             cuda_device_index=DEFAULT_CUDA,
             cuda_allocator=(allocator, deleter),
         )

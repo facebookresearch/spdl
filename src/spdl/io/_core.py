@@ -15,7 +15,6 @@ from spdl.io import (
     VideoFrames,
     VideoPackets,
 )
-from spdl.io._type_stub import CUDABuffer
 from spdl.lib import _libspdl
 
 from . import _preprocessing
@@ -41,6 +40,9 @@ __all__ = [
     # FRAME CONVERSION
     "convert_frames",
     "async_convert_frames",
+    # DATA TRANSFER
+    "transfer_buffer",
+    "async_transfer_buffer",
     # ENCODING
     "encode_image",
     "async_encode_image",
@@ -397,29 +399,39 @@ async def async_streaming_decode(
 
 
 def convert_frames(
-    frames,
-    *,
-    cuda_device_index: int | None = None,
+    frames: AudioFrames | VideoFrames | ImageFrames,
     **kwargs,
-):
-    if cuda_device_index is not None:
-        func = _libspdl.convert_frames_cuda
-        kwargs["cuda_device_index"] = cuda_device_index
-    else:
-        func = _libspdl.convert_frames
-    return func(frames, **kwargs)
+) -> CPUBuffer:
+    return _libspdl.convert_frames(frames, **kwargs)
 
 
 async def async_convert_frames(
     frames: AudioFrames | VideoFrames | ImageFrames,
-    *,
-    cuda_device_index: int | None = None,
     **kwargs,
-) -> CPUBuffer | CUDABuffer:
+) -> CPUBuffer:
     """Convert the decoded frames to buffer.
 
     Args:
         frames: Frames objects.
+
+    Returns:
+        (CPUBuffer): A Buffer object.
+    """
+    return await _run_async(convert_frames, frames, **kwargs)
+
+
+################################################################################
+# Device data transfer
+################################################################################
+def transfer_buffer(buffer: CPUBuffer, **kwargs) -> CUDABuffer:
+    return _libspdl.transfer_to_cuda(buffer, **kwargs)
+
+
+async def async_transfer_buffer(buffer: CPUBuffer, **kwargs) -> CUDABuffer:
+    """Transfer the given buffer to CUDA device.
+
+    Args:
+        data (CPUBuffer): Buffer object on host memory.
 
     Other args:
         cuda_device_index (int):
@@ -469,11 +481,9 @@ async def async_convert_frames(
             [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
 
     Returns:
-        A Buffer object.
+        (CUDABuffer): A Buffer object.
     """
-    return await _run_async(
-        convert_frames, frames, cuda_device_index=cuda_device_index, **kwargs
-    )
+    return await _run_async(transfer_buffer, buffer, **kwargs)
 
 
 ################################################################################
