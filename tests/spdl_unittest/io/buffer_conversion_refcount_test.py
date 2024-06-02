@@ -13,7 +13,7 @@ def _decode_video(src, pix_fmt=None):
     return asyncio.run(
         spdl.io.async_load_video(
             src,
-            decode_options={"filter_desc": get_video_filter_desc(pix_fmt=pix_fmt)},
+            filter_desc=get_video_filter_desc(pix_fmt=pix_fmt),
         )
     )
 
