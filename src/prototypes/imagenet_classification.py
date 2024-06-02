@@ -170,7 +170,7 @@ def _get_batch_generator(args, device):
                 pix_fmt=None,
                 strict=True,
                 decode_options={"filter_desc": filter_desc},
-                convert_options={
+                transfer_options={
                     "cuda_device_index": 0,
                     "cuda_allocator": (
                         torch.cuda.caching_allocator_alloc,

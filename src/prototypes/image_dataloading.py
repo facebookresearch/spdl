@@ -100,7 +100,7 @@ def _get_batch_generator(args):
             width=256,
             height=256,
             pix_fmt="rgb24",
-            convert_options={
+            transfer_options={
                 "cuda_device_index": args.worker_id,
                 "cuda_allocator": (
                     torch.cuda.caching_allocator_alloc,

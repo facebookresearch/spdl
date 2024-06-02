@@ -35,6 +35,7 @@ def load_audio(
     demux_options: dict[str, Any] | None = None,
     decode_options: dict[str, Any] | None = None,
     convert_options: dict[str, Any] | None = None,
+    transfer_options: dict[str, Any] | None = None,
 ):
     demux_options = demux_options or {}
     decode_options = decode_options or {}
@@ -43,7 +44,10 @@ def load_audio(
     if timestamp is None or isinstance(timestamp, tuple):
         packets = _core.demux_audio(src, **demux_options)
         frames = _core.decode_packets(packets, **decode_options)
-        return _core.convert_frames(frames, **convert_options)
+        buffer = _core.convert_frames(frames, **convert_options)
+        if transfer_options is not None:
+            buffer = _core.transfer_buffer(buffer, **transfer_options)
+        return buffer
 
     ret = []
     for packets in _core.streaming_demux_audio(src, timestamp):
@@ -146,6 +150,7 @@ async def async_load_image_batch(
     demux_options: dict[str, Any] | None = None,
     decode_options: dict[str, Any] | None = None,
     convert_options: dict[str, Any] | None = None,
+    transfer_options: dict[str, Any] | None = None,
     strict: bool = True,
 ):
     """Batch load images.
@@ -237,7 +242,12 @@ async def async_load_image_batch(
     if not frames:
         raise RuntimeError("Failed to load all the images.")
 
-    return await _core.async_convert_frames(frames, **convert_options)
+    buffer = await _core.async_convert_frames(frames, **convert_options)
+
+    if transfer_options is not None:
+        buffer = await _core.async_transfer_buffer(buffer, **transfer_options)
+
+    return buffer
 
 
 async def async_load_image_batch_nvdec(

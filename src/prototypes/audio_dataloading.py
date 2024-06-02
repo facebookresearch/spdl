@@ -83,7 +83,7 @@ def _get_batch_generator(args):
                     num_channels=1,
                 )
             },
-            convert_options={
+            transfer_options={
                 "cuda_device_index": args.worker_id,
                 "cuda_allocator": (
                     torch.cuda.caching_allocator_alloc,
