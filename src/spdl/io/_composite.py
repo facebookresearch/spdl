@@ -4,7 +4,15 @@ import logging
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
-from spdl.io import CPUBuffer, CUDABuffer, DecodeConfig, DemuxConfig, TransferConfig
+from spdl.io import (
+    CPUBuffer,
+    CUDABuffer,
+    DecodeConfig,
+    DemuxConfig,
+    ImagePackets,
+    TransferConfig,
+    VideoPackets,
+)
 
 from spdl.lib import _libspdl
 
@@ -36,7 +44,6 @@ Window = tuple[float, float]
 ################################################################################
 def _load_packets(
     packets,
-    demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str = "",
     transfer_config: TransferConfig | None = None,
@@ -458,6 +465,11 @@ async def async_load_image_batch_nvdec(
     )
 
 
+################################################################################
+# Sample decode
+################################################################################
+
+
 async def _decode_partial(packets, indices, **kwargs):
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
@@ -465,7 +477,9 @@ async def _decode_partial(packets, indices, **kwargs):
         return frames[indices]
 
 
-async def async_sample_decode_video(packets, indices, **kwargs):
+async def async_sample_decode_video(
+    packets: VideoPackets, indices: list[int], **kwargs
+) -> list[ImagePackets]:
     if not indices:
         raise ValueError("Frame indices must be non-empty.")
 
