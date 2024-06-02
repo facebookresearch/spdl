@@ -77,19 +77,17 @@ def _get_batch_generator(args):
         src = src[0].split("\t")[0]
         buffer = await spdl.io.async_load_audio(
             src,
-            decode_options={
-                "filter_desc": spdl.io.get_audio_filter_desc(
-                    sample_rate=16000,
-                    num_channels=1,
-                )
-            },
-            transfer_options={
-                "cuda_device_index": args.worker_id,
-                "cuda_allocator": (
+            filter_desc=spdl.io.get_audio_filter_desc(
+                sample_rate=16000,
+                num_channels=1,
+            ),
+            transfer_config=spdl.io.transfer_config(
+                device_index=args.worker_id,
+                allocator=(
                     torch.cuda.caching_allocator_alloc,
                     torch.cuda.caching_allocator_delete,
                 ),
-            },
+            ),
         )
         return spdl.io.to_torch(buffer)
 

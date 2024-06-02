@@ -16,6 +16,7 @@ __all__ = [
     "DemuxConfig",
     "DecodeConfig",
     "EncodeConfig",
+    "TransferConfig",
 ]
 
 
@@ -409,3 +410,7 @@ class EncodeConfig:
     """Encode configuration.
 
     See the factory function [spdl.io.encode_config][]."""
+
+
+class TransferConfig:
+    pass

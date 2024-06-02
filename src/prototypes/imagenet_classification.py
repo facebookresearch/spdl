@@ -171,10 +171,12 @@ def _get_batch_generator(args, device):
                 strict=True,
                 decode_options={"filter_desc": filter_desc},
                 transfer_options={
-                    "cuda_device_index": 0,
-                    "cuda_allocator": (
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
+                    "transfer_config": spdl.io.transfer_config(
+                        device_index=0,
+                        allocator=(
+                            torch.cuda.caching_allocator_alloc,
+                            torch.cuda.caching_allocator_delete,
+                        ),
                     ),
                 },
             )

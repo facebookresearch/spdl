@@ -44,21 +44,23 @@ def _parse_args(args):
 def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
     async def _decode_window(packets):
         frames = await spdl.io.async_decode_packets(
-                    packets,
-                    filter_desc=spdl.io.get_filter_desc(
-                        packets,
-                        scale_width=width,
-                        scale_height=height,
-                        pix_fmt=pix_fmt,
-                    ),
-                )
+            packets,
+            filter_desc=spdl.io.get_filter_desc(
+                packets,
+                scale_width=width,
+                scale_height=height,
+                pix_fmt=pix_fmt,
+            ),
+        )
         buffer = await spdl.io.async_convert_frames(frames)
         buffer = await spdl.io.async_transfer_buffer(
             buffer,
-            cuda_device_index=cuda_device_index,
-            cuda_allocator=(
-                torch.cuda.caching_allocator_alloc,
-                torch.cuda.caching_allocator_delete,
+            transfer_config=spdl.io.transfer_config(
+                device_index=cuda_device_index,
+                allocator=(
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
+                ),
             ),
         )
         return buffer

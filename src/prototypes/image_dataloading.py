@@ -101,10 +101,12 @@ def _get_batch_generator(args):
             height=256,
             pix_fmt="rgb24",
             transfer_options={
-                "cuda_device_index": args.worker_id,
-                "cuda_allocator": (
-                    torch.cuda.caching_allocator_alloc,
-                    torch.cuda.caching_allocator_delete,
+                "transfer_config": spdl.io.transfer_config(
+                    device_index=args.worker_id,
+                    allocator=(
+                        torch.cuda.caching_allocator_alloc,
+                        torch.cuda.caching_allocator_delete,
+                    ),
                 ),
             },
             strict=False,

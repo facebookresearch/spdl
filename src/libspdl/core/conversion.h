@@ -1,6 +1,7 @@
 #pragma once
 #include <libspdl/core/buffer.h>
 #include <libspdl/core/frames.h>
+#include <libspdl/core/types.h>
 
 #include <vector>
 
@@ -19,11 +20,7 @@ CPUBufferPtr convert_frames(const FFmpegFrames<media_type>* frames) {
   return ret;
 }
 
-CUDABufferPtr convert_to_cuda(
-    CPUBufferPtr buffer,
-    int cuda_device_index,
-    uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& allocator);
+CUDABufferPtr convert_to_cuda(CPUBufferPtr buffer, const TransferConfig& cfg);
 
 CPUStorage cp_to_cpu(const void* src, const std::vector<size_t> shape);
 

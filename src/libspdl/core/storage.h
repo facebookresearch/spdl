@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libspdl/core/types.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -33,10 +35,6 @@ class CPUStorage : Storage {
 
   ~CPUStorage();
 };
-
-using cuda_allocator_fn = std::function<uintptr_t(int, int, uintptr_t)>;
-using cuda_deleter_fn = std::function<void(uintptr_t)>;
-using cuda_allocator = std::pair<cuda_allocator_fn, cuda_deleter_fn>;
 
 class CUDAStorage : Storage {
 #ifdef SPDL_USE_CUDA

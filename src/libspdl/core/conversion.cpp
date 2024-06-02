@@ -18,11 +18,7 @@ size_t prod(const std::vector<size_t>& shape) {
 
 } // namespace
 
-CUDABufferPtr convert_to_cuda(
-    CPUBufferPtr buffer,
-    int cuda_device_index,
-    uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& allocator) {
+CUDABufferPtr convert_to_cuda(CPUBufferPtr buffer, const TransferConfig& cfg) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
@@ -30,9 +26,9 @@ CUDABufferPtr convert_to_cuda(
 
   auto ret = cuda_buffer(
       buffer->shape,
-      cuda_device_index,
-      cuda_stream,
-      allocator,
+      cfg.device_index,
+      cfg.stream,
+      cfg.allocator,
       buffer->elem_class,
       buffer->depth);
 
