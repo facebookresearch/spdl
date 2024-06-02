@@ -4,7 +4,7 @@ import logging
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
-from spdl.io import CPUBuffer, CUDABuffer, DecodeConfig, DemuxConfig
+from spdl.io import CPUBuffer, CUDABuffer, DecodeConfig, DemuxConfig, TransferConfig
 
 from spdl.lib import _libspdl
 
@@ -39,17 +39,14 @@ def _load_packets(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str = "",
-    cuda_device_index: int | None = None,
-    **transfer_kwargs,
+    transfer_config: TransferConfig | None = None,
 ):
     frames = _core.decode_packets(
         packets, decode_config=decode_config, filter_desc=filter_desc
     )
     buffer = _core.convert_frames(frames)
-    if cuda_device_index is not None:
-        buffer = _core.transfer_buffer(
-            buffer, cuda_device_index=cuda_device_index, **transfer_kwargs
-        )
+    if transfer_config is not None:
+        buffer = _core.transfer_buffer(buffer, transfer_config=transfer_config)
     return buffer
 
 

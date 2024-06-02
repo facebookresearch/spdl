@@ -40,12 +40,9 @@ CPUBufferPtr batch_convert(std::vector<FFmpegFramesPtr<media_type>>&& frames) {
 
 CUDABufferPtr _transfer_to_cuda(
     CPUBufferPtr buffer,
-    int cuda_device_index,
-    uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& allocator) {
+    const TransferConfig& cfg) {
   nb::gil_scoped_release g;
-  return convert_to_cuda(
-      std::move(buffer), cuda_device_index, cuda_stream, allocator);
+  return convert_to_cuda(std::move(buffer), cfg);
 }
 
 template <typename IntType = int32_t>
@@ -132,9 +129,7 @@ void register_conversion(nb::module_& m) {
       &_transfer_to_cuda,
       nb::arg("buffer"),
       nb::kw_only(),
-      nb::arg("cuda_device_index"),
-      nb::arg("cuda_stream") = 0,
-      nb::arg("cuda_allocator") = nb::none());
+      nb::arg("transfer_config"));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Convert list of integers (tokens)

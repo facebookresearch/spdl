@@ -1,10 +1,11 @@
-from spdl.io import DecodeConfig, DemuxConfig, EncodeConfig
+from spdl.io import DecodeConfig, DemuxConfig, EncodeConfig, TransferConfig
 from spdl.lib import _libspdl
 
 __all__ = [
     "demux_config",
     "decode_config",
     "encode_config",
+    "transfer_config",
 ]
 
 
@@ -82,6 +83,10 @@ def decode_config(**kwargs) -> DecodeConfig:
         ```
     """
     return _libspdl.DecodeConfig(**kwargs)
+
+
+def transfer_config(**kwargs) -> TransferConfig:
+    return _libspdl.TransferConfig(**kwargs)
 
 
 def encode_config(**kwargs) -> EncodeConfig:
