@@ -47,29 +47,24 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
 template <MediaType media_type>
 CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<media_type> packets,
-    const int cuda_device_index,
+    const TransferConfig transfer_config,
     const CropArea& crop,
     int width,
     int height,
-    const std::optional<std::string>& pix_fmt,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator);
+    const std::optional<std::string>& pix_fmt);
 
 CUDABufferPtr decode_packets_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
-    const int cuda_device_index,
+    const TransferConfig transfer_config,
     const CropArea& crop,
     int width,
     int height,
     const std::optional<std::string>& pix_fmt,
-    bool strict,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator);
+    bool strict);
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    int cuda_device_index,
-    const std::string& pix_fmt,
-    const std::optional<cuda_allocator>& cuda_allocator);
+    const TransferConfig transfer_config,
+    const std::string& pix_fmt);
 
 } // namespace spdl::core

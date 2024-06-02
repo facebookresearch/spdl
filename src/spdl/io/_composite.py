@@ -372,7 +372,7 @@ async def async_load_image_batch(
 async def async_load_image_batch_nvdec(
     srcs: list[str | bytes],
     *,
-    cuda_device_index: int,
+    transfer_config: TransferConfig,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgba",
@@ -454,7 +454,7 @@ async def async_load_image_batch_nvdec(
 
     return await _core.async_decode_packets_nvdec(
         packets,
-        cuda_device_index=cuda_device_index,
+        transfer_config=transfer_config,
         width=width,
         height=height,
         pix_fmt=pix_fmt,

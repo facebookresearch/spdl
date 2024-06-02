@@ -12,6 +12,7 @@ from spdl.io import (
     CUDABuffer,
     ImageFrames,
     ImagePackets,
+    TransferConfig,
     VideoFrames,
     VideoPackets,
 )
@@ -286,18 +287,18 @@ async def async_decode_packets(packets, **kwargs):
 def decode_packets_nvdec(
     packets: VideoPackets | ImagePackets | list[ImagePackets],
     *,
-    cuda_device_index: int,
+    transfer_config: TransferConfig,
     **kwargs,
 ) -> CUDABuffer:
     return _libspdl.decode_packets_nvdec(
-        packets, cuda_device_index=cuda_device_index, **kwargs
+        packets, transfer_config=transfer_config, **kwargs
     )
 
 
 async def async_decode_packets_nvdec(
     packets: VideoPackets | ImagePackets | list[ImagePackets],
     *,
-    cuda_device_index: int,
+    transfer_config: TransferConfig,
     **kwargs,
 ) -> CUDABuffer:
     """Decode packets with NVDEC.
@@ -330,7 +331,7 @@ async def async_decode_packets_nvdec(
         A CUDABuffer object.
     """
     return await _run_async(
-        decode_packets_nvdec, packets, cuda_device_index=cuda_device_index, **kwargs
+        decode_packets_nvdec, packets, transfer_config=transfer_config, **kwargs
     )
 
 

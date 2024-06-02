@@ -188,16 +188,16 @@ def _get_batch_generator(args, device):
             classes = torch.tensor(classes, dtype=torch.int64).to(device)
             buffer = await spdl.io.async_load_image_batch_nvdec(
                 paths,
-                cuda_device_index=0,
+                transfer_config=spdl.io.transfer_config(
+                    device_index=0,
+                    allocator=(
+                        torch.cuda.caching_allocator_alloc,
+                        torch.cuda.caching_allocator_delete,
+                    ),
+                ),
                 width=w,
                 height=h,
                 pix_fmt="rgba",
-                decode_options={
-                    "cuda_allocator": (
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
-                    )
-                },
                 strict=True,
             )
             batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
