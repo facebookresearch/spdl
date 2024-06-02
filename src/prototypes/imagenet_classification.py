@@ -169,16 +169,14 @@ def _get_batch_generator(args, device):
                 height=None,
                 pix_fmt=None,
                 strict=True,
-                decode_options={"filter_desc": filter_desc},
-                transfer_options={
-                    "transfer_config": spdl.io.transfer_config(
-                        device_index=0,
-                        allocator=(
-                            torch.cuda.caching_allocator_alloc,
-                            torch.cuda.caching_allocator_delete,
-                        ),
+                filter_desc=filter_desc,
+                transfer_config=spdl.io.transfer_config(
+                    device_index=0,
+                    allocator=(
+                        torch.cuda.caching_allocator_alloc,
+                        torch.cuda.caching_allocator_delete,
                     ),
-                },
+                ),
             )
             batch = spdl.io.to_torch(buffer)
             batch = batch.permute((0, 3, 1, 2))

@@ -9,6 +9,7 @@ from spdl.io import (
     CUDABuffer,
     DecodeConfig,
     DemuxConfig,
+    ImageFrames,
     ImagePackets,
     TransferConfig,
     VideoPackets,
@@ -261,16 +262,23 @@ def _get_err_msg(src, err):
     return f"Failed to decode an image from {src_}: {err}."
 
 
+def _decode(src, demux_config, decode_config, filter_desc):
+    pkts = _core.demux_image(src, demux_config=demux_config)
+    return _core.decode_packets(
+        pkts, decode_config=decode_config, filter_desc=filter_desc
+    )
+
+
 async def async_load_image_batch(
     srcs: list[str | bytes],
     *,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
-    demux_options: dict[str, Any] | None = None,
-    decode_options: dict[str, Any] | None = None,
-    convert_options: dict[str, Any] | None = None,
-    transfer_options: dict[str, Any] | None = None,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    transfer_config: TransferConfig | None = None,
     strict: bool = True,
 ):
     """Batch load images.
@@ -322,35 +330,24 @@ async def async_load_image_batch(
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
 
-    demux_options = demux_options or {}
-    decode_options = decode_options or {}
-    convert_options = convert_options or {}
-
     filter_desc = _preprocessing.get_video_filter_desc(
         scale_width=width,
         scale_height=height,
         pix_fmt=pix_fmt,
+        filter_desc=filter_desc,
     )
 
-    if filter_desc and "filter_desc" in decode_options:
-        raise ValueError(
-            "`width`, `height` or `pix_fmt` and `filter_desc` in `decode_options` "
-            "cannot be present at the same time."
-        )
-    elif filter_desc:
-        decode_options["filter_desc"] = filter_desc
+    futures = [
+        _core._run_async(_decode, src, demux_config, decode_config, filter_desc)
+        for src in srcs
+    ]
 
-    async def _decode(src):
-        pkts = await _core.async_demux_image(src, **demux_options)
-        return await _core.async_decode_packets(pkts, **decode_options)
+    await asyncio.wait(futures)
 
-    tasks = [asyncio.create_task(_decode(src)) for src in srcs]
-
-    await asyncio.wait(tasks)
-    frames = []
-    for src, task in zip(srcs, tasks):
+    frames: list[ImageFrames] = []
+    for src, future in zip(srcs, futures):
         try:
-            frms = task.result()
+            frms = future.result()
         except Exception as err:
             _LG.error(_get_err_msg(src, err))
         else:
@@ -362,10 +359,12 @@ async def async_load_image_batch(
     if not frames:
         raise RuntimeError("Failed to load all the images.")
 
-    buffer = await _core.async_convert_frames(frames, **convert_options)
+    buffer = await _core.async_convert_frames(frames)
 
-    if transfer_options is not None:
-        buffer = await _core.async_transfer_buffer(buffer, **transfer_options)
+    if transfer_config is not None:
+        buffer = await _core.async_transfer_buffer(
+            buffer, transfer_config=transfer_config
+        )
 
     return buffer
 
@@ -377,7 +376,7 @@ async def async_load_image_batch_nvdec(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgba",
-    demux_options: dict[str, Any] | None = None,
+    demux_config: DemuxConfig | None = None,
     decode_options: dict[str, Any] | None = None,
     strict: bool = True,
 ):
@@ -429,13 +428,12 @@ async def async_load_image_batch_nvdec(
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
 
-    demux_options = demux_options or {}
     decode_options = decode_options or {}
     width = -1 if width is None else width
     height = -1 if height is None else height
 
     tasks = [
-        asyncio.create_task(_core.async_demux_image(src, **demux_options))
+        asyncio.create_task(_core.async_demux_image(src, demux_config=demux_config))
         for src in srcs
     ]
 

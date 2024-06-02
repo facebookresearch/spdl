@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import functools
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from typing import overload, TypeVar
 
 from spdl.io import (
@@ -54,7 +54,9 @@ _LG = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-def _run_async(func: Callable[..., T], *args, executor=None, **kwargs) -> Awaitable[T]:
+def _run_async(
+    func: Callable[..., T], *args, executor=None, **kwargs
+) -> asyncio.Future[T]:
     loop = asyncio.get_running_loop()
     _func = functools.partial(func, *args, **kwargs)
     return loop.run_in_executor(executor, _func)  # pyre-ignore: [6]
@@ -421,14 +423,14 @@ async def async_streaming_decode(
 
 
 def convert_frames(
-    frames: AudioFrames | VideoFrames | ImageFrames,
+    frames: AudioFrames | VideoFrames | ImageFrames | list[ImageFrames],
     **kwargs,
 ) -> CPUBuffer:
     return _libspdl.convert_frames(frames, **kwargs)
 
 
 async def async_convert_frames(
-    frames: AudioFrames | VideoFrames | ImageFrames,
+    frames: AudioFrames | VideoFrames | ImageFrames | list[ImageFrames],
     **kwargs,
 ) -> CPUBuffer:
     """Convert the decoded frames to buffer.
