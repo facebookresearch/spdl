@@ -11,10 +11,7 @@ from spdl.io import get_audio_filter_desc, get_filter_desc
 def _decode_audio(src, sample_fmt=None):
     buffer = asyncio.run(
         spdl.io.async_load_audio(
-            src,
-            decode_options={
-                "filter_desc": get_audio_filter_desc(sample_fmt=sample_fmt)
-            },
+            src, filter_desc=get_audio_filter_desc(sample_fmt=sample_fmt)
         )
     )
     return spdl.io.to_numpy(buffer)

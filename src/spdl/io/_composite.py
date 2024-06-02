@@ -1,7 +1,10 @@
 import asyncio
 import builtins
 import logging
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
+
+from spdl.io import CPUBuffer, CUDABuffer, DecodeConfig, DemuxConfig
 
 from spdl.lib import _libspdl
 
@@ -14,6 +17,10 @@ __all__ = [
     "async_load_audio",
     "async_load_video",
     "async_load_image",
+    "streaming_load_audio",
+    "streaming_load_video",
+    "async_streaming_load_audio",
+    "async_streaming_load_video",
     "async_load_image_batch",
     "async_load_image_batch_nvdec",
     "async_sample_decode_video",
@@ -24,112 +31,221 @@ _LG = logging.getLogger(__name__)
 Window = tuple[float, float]
 
 
-async def async_load_audio(*args, **kwargs):
-    return await _core._run_async(load_audio, *args, **kwargs)
+################################################################################
+# Load
+################################################################################
+def _load_packets(
+    packets,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str = "",
+    cuda_device_index: int | None = None,
+    **transfer_kwargs,
+):
+    frames = _core.decode_packets(
+        packets, decode_config=decode_config, filter_desc=filter_desc
+    )
+    buffer = _core.convert_frames(frames)
+    if cuda_device_index is not None:
+        buffer = _core.transfer_buffer(
+            buffer, cuda_device_index=cuda_device_index, **transfer_kwargs
+        )
+    return buffer
 
 
 def load_audio(
     src: str | bytes,
-    timestamp: Window | list[Window] | None = None,
+    timestamp: tuple[float, float] | None = None,
     *,
-    demux_options: dict[str, Any] | None = None,
-    decode_options: dict[str, Any] | None = None,
-    convert_options: dict[str, Any] | None = None,
-    transfer_options: dict[str, Any] | None = None,
-):
-    demux_options = demux_options or {}
-    decode_options = decode_options or {}
-    convert_options = convert_options or {}
-
-    if timestamp is None or isinstance(timestamp, tuple):
-        packets = _core.demux_audio(src, **demux_options)
-        frames = _core.decode_packets(packets, **decode_options)
-        buffer = _core.convert_frames(frames, **convert_options)
-        if transfer_options is not None:
-            buffer = _core.transfer_buffer(buffer, **transfer_options)
-        return buffer
-
-    ret = []
-    for packets in _core.streaming_demux_audio(src, timestamp):
-        frames = _core.decode_packets(packets)
-        ret.append(_core.convert_frames(frames, **convert_options))
-    return ret
+    demux_config: DemuxConfig | None = None,
+    **kwargs,
+) -> CPUBuffer | CUDABuffer:
+    packets = _core.demux_audio(src, timestamp=timestamp, demux_config=demux_config)
+    return _load_packets(packets, **kwargs)
 
 
-async def async_load_video(*args, **kwargs):
-    return await _core._run_async(load_video, *args, **kwargs)
+async def async_load_audio(
+    *args,
+    **kwargs,
+) -> CPUBuffer | CUDABuffer:
+    return await _core._run_async(load_audio, *args, **kwargs)
 
 
 def load_video(
     src: str | bytes,
-    timestamp: Window | list[Window] | None = None,
+    timestamp: tuple[float, float] | None = None,
     *,
-    demux_options: dict[str, Any] | None = None,
-    decode_options: dict[str, Any] | None = None,
-    convert_options: dict[str, Any] | None = None,
-    use_nvdec: bool = False,
-):
-    demux_options = demux_options or {}
-    decode_options = decode_options or {}
-    if use_nvdec and convert_options is not None:
-        _LG.warn("`convert_options` is ignored when decoding video with NVDEC.")
-    convert_options = convert_options or {}
-
-    if use_nvdec:
-
-        def _decode(packets):
-            return _core.decode_packets_nvdec(packets, **decode_options)
-
-    else:
-
-        def _decode(packets):
-            frames = _core.decode_packets(packets, **decode_options)
-            return _core.convert_frames(frames, **convert_options)
-
-    if timestamp is None or isinstance(timestamp, tuple):
-        packets = _core.demux_video(src, **demux_options)
-        return _decode(packets)
-
-    ret = []
-    for packets in _core.streaming_demux_video(src, timestamp):
-        ret.append(_decode(packets))
-    return ret
+    demux_config: DemuxConfig | None = None,
+    **kwargs,
+) -> CPUBuffer | CUDABuffer:
+    packets = _core.demux_video(src, timestamp=timestamp, demux_config=demux_config)
+    return _load_packets(packets, **kwargs)
 
 
-async def async_load_image(*args, **kwargs):
-    return await _core._run_async(load_image, *args, **kwargs)
+async def async_load_video(
+    *args,
+    **kwargs,
+) -> CPUBuffer | CUDABuffer:
+    return await _core._run_async(load_video, *args, **kwargs)
 
 
 def load_image(
     src: str | bytes,
     *,
-    demux_options: dict[str, Any] | None = None,
-    decode_options: dict[str, Any] | None = None,
-    convert_options: dict[str, Any] | None = None,
-    use_nvjpeg: bool = False,
-    cuda_device_index: int | None = None,
-    _use_nvdec: bool = False,
-):
-    if use_nvjpeg:
-        if cuda_device_index is None:
-            raise ValueError("`use_nvjpeg=True` requires `cuda_device_index`.")
-        if demux_options is not None:
-            _LG.warn("`demux_options` is ignored when decoding image with NVJPEG.")
-        if decode_options is not None:
-            _LG.warn("`decode_options` is ignored when decoding image with NVJPEG.")
-        if convert_options is not None:
-            _LG.warn("`convert_options` is ignored when decoding image with NVJPEG.")
-        return _core.decode_image_nvjpeg(src, cuda_device_index=cuda_device_index)
+    demux_config: DemuxConfig | None = None,
+    **kwargs,
+) -> CPUBuffer | CUDABuffer:
+    packets = _core.demux_image(src, demux_config=demux_config)
+    return _load_packets(packets, **kwargs)
 
-    demux_options = demux_options or {}
-    decode_options = decode_options or {}
-    convert_options = convert_options or {}
 
-    packets = _core.demux_image(src, **demux_options)
-    if _use_nvdec:
-        return _core.decode_packets_nvdec(packets, **decode_options)
-    frames = _core.decode_packets(packets, **decode_options)
-    return _core.convert_frames(frames, **convert_options)
+async def async_load_image(
+    *args,
+    **kwargs,
+) -> CPUBuffer | CUDABuffer:
+    return await _core._run_async(load_image, *args, **kwargs)
+
+
+################################################################################
+# Streaming load
+################################################################################
+
+
+def _get_src_str(src):
+    if isinstance(src, bytes):
+        return f"bytes object at {id(src)}"
+    return f"'{src}'"
+
+
+def streaming_load_audio(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    strict: bool = True,
+    **kwargs,
+) -> Iterator[CPUBuffer | CUDABuffer]:
+    demuxer = _core.streaming_demux_audio(src, timestamps, demux_config=demux_config)
+    for packets in demuxer:
+        try:
+            yield _load_packets(packets, **kwargs)
+        except Exception:
+            if strict:
+                raise
+            _LG.error(
+                "Failed to load audio clip at %s from %s.",
+                _get_src_str(src),
+                packets.timestamp,
+            )
+
+
+# TODO: Add strict option
+def streaming_load_video(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    strict: bool = True,
+    **kwargs,
+) -> Iterator[CPUBuffer | CUDABuffer]:
+    demuxer = _core.streaming_demux_video(src, timestamps, demux_config=demux_config)
+    for packets in demuxer:
+        try:
+            yield _load_packets(packets, **kwargs)
+        except Exception:
+            if strict:
+                raise
+            _LG.error(
+                "Failed to load video clip at %s from %s.",
+                _get_src_str(src),
+                packets.timestamp,
+                exc_info=True,
+            )
+
+
+################################################################################
+# Async streaming load
+################################################################################
+async def _async_load_packets(*args, **kwargs):
+    return await _core._run_async(_load_packets, *args)
+
+
+# TODO: Add concurrency and strict option
+async def _async_streaming_load(
+    demuxer, **kwargs
+) -> AsyncIterator[asyncio.Task[CPUBuffer | CUDABuffer]]:
+
+    tasks = []
+    async for packets in demuxer:
+        tasks.append(asyncio.create_task(_async_load_packets(packets, **kwargs)))
+
+        while tasks and tasks[0].done():
+            yield tasks.pop(0)
+
+    while tasks:
+        await tasks[0]
+        yield tasks.pop(0)
+
+
+async def async_streaming_load_audio(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    strict: bool = True,
+    **kwargs,
+) -> AsyncIterator[CPUBuffer | CUDABuffer]:
+    demuxer = _core.async_streaming_demux_audio(
+        src, timestamps, demux_config=demux_config
+    )
+    i = 0
+    async for task in _async_streaming_load(demuxer, **kwargs):
+        try:
+            yield task.result()
+        except Exception:
+            if strict:
+                raise
+            _LG.error(
+                "Failed to load audio clip  at %s from %s",
+                timestamps[i],
+                _get_src_str(src),
+                exc_info=True,
+            )
+        finally:
+            i += 1
+
+
+async def async_streaming_load_video(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    strict: bool = True,
+    **kwargs,
+) -> AsyncIterator[CPUBuffer | CUDABuffer]:
+    demuxer = _core.async_streaming_demux_video(
+        src, timestamps, demux_config=demux_config
+    )
+    i = 0
+    async for task in _async_streaming_load(demuxer, **kwargs):
+        try:
+            yield task.result()
+        except Exception:
+            if strict:
+                raise
+            _LG.error(
+                "Failed to load video clip at %s from %s",
+                timestamps[i],
+                _get_src_str(src),
+                exc_info=True,
+            )
+        finally:
+            i += 1
+
+
+################################################################################
+#
+################################################################################
 
 
 def _get_err_msg(src, err):

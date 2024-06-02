@@ -18,14 +18,8 @@ DEFAULT_CUDA = 0
 
 def _decode_video(src, timestamp=None, **decode_options):
     decode_options["cuda_device_index"] = DEFAULT_CUDA
-    buffer = asyncio.run(
-        spdl.io.async_load_video(
-            src,
-            demux_options={"timestamp": timestamp},
-            decode_options=decode_options,
-            use_nvdec=True,
-        )
-    )
+    packets = spdl.io.demux_video(src, timestamp=timestamp)
+    buffer = spdl.io.decode_packets_nvdec(packets, **decode_options)
     return spdl.io.to_torch(buffer)
 
 

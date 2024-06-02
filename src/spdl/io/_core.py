@@ -268,7 +268,7 @@ async def async_decode_packets(packets, **kwargs):
         packets (AudioPackets, VideoPackets or ImagePackets): Packets object.
 
     Other args:
-        decoder_config (DecodeConfig):
+        decode_config (DecodeConfig):
             *Optional:* Custom decode config.
 
         filter_desc (str):
