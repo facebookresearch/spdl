@@ -11,7 +11,7 @@ def _decode_image(src, pix_fmt=None):
     buffer = asyncio.run(
         spdl.io.async_load_image(
             src,
-            decode_options={"filter_desc": get_video_filter_desc(pix_fmt=pix_fmt)},
+            filter_desc=get_video_filter_desc(pix_fmt=pix_fmt),
         )
     )
     return spdl.io.to_numpy(buffer)

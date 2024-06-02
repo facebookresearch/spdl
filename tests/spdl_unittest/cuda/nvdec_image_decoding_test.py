@@ -15,15 +15,9 @@ DEFAULT_CUDA = 0
 
 
 def _decode_image(path, pix_fmt="rgba"):
-    buffer = asyncio.run(
-        spdl.io.async_load_image(
-            path,
-            decode_options={
-                "cuda_device_index": DEFAULT_CUDA,
-                "pix_fmt": pix_fmt,
-            },
-            _use_nvdec=True,
-        )
+    packets = spdl.io.demux_image(path)
+    buffer = spdl.io.decode_packets_nvdec(
+        packets, cuda_device_index=DEFAULT_CUDA, pix_fmt=pix_fmt
     )
     return spdl.io.to_torch(buffer)
 

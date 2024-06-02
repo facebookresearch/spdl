@@ -12,23 +12,15 @@ timestamps = [
     (3, 4),
 ]
 
+
 async def test():
     with spdl.utils.trace_event("sync_streaming"):
-        for packets in spdl.io.streaming_demux_video(src, timestamps):
-            frames = spdl.io.decode_packets(packets)
-            buffer = spdl.io.convert_frames(frames)
-    
-    async def decode(packets):
-        frames = await spdl.io.async_decode_packets(packets)
-        buffer = await spdl.io.async_convert_frames(frames)
-        return buffer
+        for _ in spdl.io.streaming_load_video(src, timestamps):
+            pass
 
     with spdl.utils.trace_event("async_streaming"):
-        tasks = []
-        async for packets in spdl.io.async_streaming_demux_video(src, timestamps):
-            tasks.append(asyncio.create_task(decode(packets)))
-
-        await asyncio.wait(tasks)
+        async for _ in spdl.io.async_streaming_load_video(src, timestamps):
+            pass
 
 
 with spdl.utils.tracing("trace_streaming.pftrace"):
