@@ -17,7 +17,9 @@ def test_decode_pix_fmt(get_sample):
 
     async def _test(data, pix_fmt):
         buffer = await spdl.io.async_decode_image_nvjpeg(
-            data, cuda_device_index=DEFAULT_CUDA, pix_fmt=pix_fmt
+            data,
+            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            pix_fmt=pix_fmt,
         )
         tensor = spdl.io.to_torch(buffer)
         assert tensor.dtype == torch.uint8
@@ -53,12 +55,16 @@ def test_decode_rubbish(get_sample):
             rubbish = randbytes(2096)
             with pytest.raises(RuntimeError):
                 await spdl.io.async_decode_image_nvjpeg(
-                    rubbish, cuda_device_index=DEFAULT_CUDA, executor=executor
+                    rubbish,
+                    cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+                    executor=executor,
                 )
 
         for _ in range(10):
             buffer = await spdl.io.async_decode_image_nvjpeg(
-                data, cuda_device_index=DEFAULT_CUDA, executor=executor
+                data,
+                cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+                executor=executor,
             )
 
             tensor = spdl.io.to_torch(buffer)

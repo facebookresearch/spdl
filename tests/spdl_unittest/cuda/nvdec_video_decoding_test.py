@@ -16,14 +16,19 @@ if not spdl.utils.is_nvcodec_available():
 DEFAULT_CUDA = 0
 
 
-def _decode_video(src, timestamp=None, **decode_options):
-    decode_options["cuda_device_index"] = DEFAULT_CUDA
+def _decode_video(src, timestamp=None, allocator=None, **decode_options):
+    cuda_config = spdl.io.cuda_config(
+        device_index=DEFAULT_CUDA,
+        allocator=allocator,
+    )
     packets = spdl.io.demux_video(src, timestamp=timestamp)
-    buffer = spdl.io.decode_packets_nvdec(packets, **decode_options)
+    buffer = spdl.io.decode_packets_nvdec(
+        packets, cuda_config=cuda_config, **decode_options
+    )
     return spdl.io.to_torch(buffer)
 
 
-def _decode_videos(src, timestamps, **kwargs):
+def _decode_videos(src, timestamps):
 
     async def _decode():
         decoding = []
@@ -31,7 +36,8 @@ def _decode_videos(src, timestamps, **kwargs):
             src, timestamps=timestamps
         ):
             coro = spdl.io.async_decode_packets_nvdec(
-                packets, cuda_device_index=DEFAULT_CUDA, **kwargs
+                packets,
+                cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             )
             decoding.append(asyncio.create_task(coro))
 
@@ -135,7 +141,7 @@ def test_nvdec_decode_video_torch_allocator(h264):
         array = _decode_video(
             h264.path,
             timestamp=(0, 1.0),
-            cuda_allocator=(allocator, deleter),
+            allocator=(allocator, deleter),
         )
         assert allocator_called
         assert not deleter_called

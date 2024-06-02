@@ -38,9 +38,7 @@ CPUBufferPtr batch_convert(std::vector<FFmpegFramesPtr<media_type>>&& frames) {
   return convert_frames(_ref(frames));
 }
 
-CUDABufferPtr _transfer_to_cuda(
-    CPUBufferPtr buffer,
-    const TransferConfig& cfg) {
+CUDABufferPtr _transfer_to_cuda(CPUBufferPtr buffer, const CUDAConfig& cfg) {
   nb::gil_scoped_release g;
   return convert_to_cuda(std::move(buffer), cfg);
 }
@@ -129,7 +127,7 @@ void register_conversion(nb::module_& m) {
       &_transfer_to_cuda,
       nb::arg("buffer"),
       nb::kw_only(),
-      nb::arg("transfer_config"));
+      nb::arg("cuda_config"));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Convert list of integers (tokens)

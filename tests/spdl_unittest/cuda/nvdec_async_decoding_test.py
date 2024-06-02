@@ -6,12 +6,12 @@ import pytest
 import spdl.io
 import spdl.utils
 
+import torch
+
 DEFAULT_CUDA = 0
 
 if not spdl.utils.is_nvcodec_available():
     pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
-
-import torch
 
 
 def test_decode_video_nvdec(get_sample):
@@ -29,7 +29,7 @@ def test_decode_video_nvdec(get_sample):
             print(packets)
             decode_tasks.append(
                 spdl.io.async_decode_packets_nvdec(
-                    packets, cuda_device_index=DEFAULT_CUDA
+                    packets, cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
                 )
             )
         results = await asyncio.gather(*decode_tasks)
@@ -44,7 +44,7 @@ async def _decode_image(path):
     packets = await spdl.io.async_demux_image(path)
     print(packets)
     frames = await spdl.io.async_decode_packets_nvdec(
-        packets, cuda_device_index=DEFAULT_CUDA
+        packets, cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
     )
     print(frames)
     return frames
@@ -76,7 +76,7 @@ def test_batch_decode_image(get_samples):
     async def _test():
         buffer = await spdl.io.async_load_image_batch_nvdec(
             flist,
-            cuda_device_index=DEFAULT_CUDA,
+            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             pix_fmt="rgba",
             width=320,
             height=240,
@@ -88,7 +88,7 @@ def test_batch_decode_image(get_samples):
         with pytest.raises(RuntimeError):
             await spdl.io.async_load_image_batch_nvdec(
                 flist,
-                cuda_device_index=DEFAULT_CUDA,
+                cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
                 width=320,
                 height=240,
                 strict=True,
@@ -121,16 +121,16 @@ def test_batch_decode_torch_allocator(get_samples):
         assert not deleter_called
         buffer = await spdl.io.async_load_image_batch_nvdec(
             flist,
-            cuda_device_index=DEFAULT_CUDA,
-            pix_fmt="rgba",
-            width=320,
-            height=240,
-            decode_options={
-                "cuda_allocator": (
+            cuda_config=spdl.io.cuda_config(
+                device_index=DEFAULT_CUDA,
+                allocator=(
                     allocator,
                     deleter,
                 ),
-            },
+            ),
+            pix_fmt="rgba",
+            width=320,
+            height=240,
         )
         assert buffer.__cuda_array_interface__["shape"] == (10, 4, 240, 320)
 

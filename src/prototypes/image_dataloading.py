@@ -100,15 +100,13 @@ def _get_batch_generator(args):
             width=256,
             height=256,
             pix_fmt="rgb24",
-            transfer_options={
-                "transfer_config": spdl.io.transfer_config(
-                    device_index=args.worker_id,
-                    allocator=(
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
-                    ),
+            cuda_config=spdl.io.cuda_config(
+                device_index=args.worker_id,
+                allocator=(
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
                 ),
-            },
+            ),
             strict=False,
         )
         return spdl.io.to_torch(buffer)

@@ -10,9 +10,9 @@ from spdl.io import (
     AudioPackets,
     CPUBuffer,
     CUDABuffer,
+    CUDAConfig,
     ImageFrames,
     ImagePackets,
-    TransferConfig,
     VideoFrames,
     VideoPackets,
 )
@@ -287,18 +287,16 @@ async def async_decode_packets(packets, **kwargs):
 def decode_packets_nvdec(
     packets: VideoPackets | ImagePackets | list[ImagePackets],
     *,
-    transfer_config: TransferConfig,
+    cuda_config: CUDAConfig,
     **kwargs,
 ) -> CUDABuffer:
-    return _libspdl.decode_packets_nvdec(
-        packets, transfer_config=transfer_config, **kwargs
-    )
+    return _libspdl.decode_packets_nvdec(packets, cuda_config=cuda_config, **kwargs)
 
 
 async def async_decode_packets_nvdec(
     packets: VideoPackets | ImagePackets | list[ImagePackets],
     *,
-    transfer_config: TransferConfig,
+    cuda_config: CUDAConfig,
     **kwargs,
 ) -> CUDABuffer:
     """Decode packets with NVDEC.
@@ -331,25 +329,21 @@ async def async_decode_packets_nvdec(
         A CUDABuffer object.
     """
     return await _run_async(
-        decode_packets_nvdec, packets, transfer_config=transfer_config, **kwargs
+        decode_packets_nvdec, packets, cuda_config=cuda_config, **kwargs
     )
 
 
-def decode_image_nvjpeg(
-    src: str | bytes, *, cuda_device_index: int, **kwargs
-) -> CUDABuffer:
+def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDABuffer:
     if isinstance(src, bytes):
         data = src
     else:
         with open(src, "rb") as f:
             data = f.read()
-    return _libspdl.decode_image_nvjpeg(
-        data, cuda_device_index=cuda_device_index, **kwargs
-    )
+    return _libspdl.decode_image_nvjpeg(data, cuda_config=cuda_config, **kwargs)
 
 
 async def async_decode_image_nvjpeg(
-    src: str | bytes, *, cuda_device_index: int, **kwargs
+    src: str | bytes, *, cuda_config: CUDAConfig, **kwargs
 ) -> CUDABuffer:
     """Decode image with NVJPEG.
 
@@ -374,9 +368,7 @@ async def async_decode_image_nvjpeg(
     Returns:
         A CUDABuffer object. Shape is [C==3, H, W].
     """
-    return await _run_async(
-        decode_image_nvjpeg, src, cuda_device_index=cuda_device_index, **kwargs
-    )
+    return await _run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
 
 
 class _streaming_decoder_wrpper:

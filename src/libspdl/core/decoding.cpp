@@ -94,7 +94,7 @@ void validate_nvdec_params(
 template <MediaType media_type>
 CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<media_type> packets,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -102,25 +102,25 @@ CUDABufferPtr decode_packets_nvdec(
 #ifndef SPDL_USE_NVCODEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
-  validate_nvdec_params(transfer_config.device_index, crop, width, height);
+  validate_nvdec_params(cuda_config.device_index, crop, width, height);
   if constexpr (media_type == MediaType::Video) {
     packets = apply_bsf(std::move(packets));
   }
   return detail::decode_nvdec<media_type>(
       std::move(packets),
-      transfer_config.device_index,
+      cuda_config.device_index,
       crop,
       width,
       height,
       pix_fmt,
-      transfer_config.stream,
-      transfer_config.allocator);
+      cuda_config.stream,
+      cuda_config.allocator);
 #endif
 }
 
 template CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<MediaType::Video> packets,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -128,7 +128,7 @@ template CUDABufferPtr decode_packets_nvdec(
 
 template CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<MediaType::Image> packets,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -136,7 +136,7 @@ template CUDABufferPtr decode_packets_nvdec(
 
 CUDABufferPtr decode_packets_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -145,17 +145,17 @@ CUDABufferPtr decode_packets_nvdec(
 #ifndef SPDL_USE_NVCODEC
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
-  validate_nvdec_params(transfer_config.device_index, crop, width, height);
+  validate_nvdec_params(cuda_config.device_index, crop, width, height);
   return detail::decode_nvdec(
       std::move(packets),
-      transfer_config.device_index,
+      cuda_config.device_index,
       crop,
       width,
       height,
       pix_fmt,
       strict,
-      transfer_config.stream,
-      transfer_config.allocator);
+      cuda_config.stream,
+      cuda_config.allocator);
 #endif
 }
 
@@ -163,19 +163,19 @@ CUDABufferPtr decode_packets_nvdec(
 namespace detail {
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const std::string& pix_fmt);
 } // namespace detail
 #endif
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const std::string& pix_fmt) {
 #ifndef SPDL_USE_NVJPEG
   SPDL_FAIL("SPDL is not compiled with NVJPEG support.");
 #else
-  return detail::decode_image_nvjpeg(data, transfer_config, pix_fmt);
+  return detail::decode_image_nvjpeg(data, cuda_config, pix_fmt);
 #endif
 }
 

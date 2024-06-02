@@ -28,7 +28,7 @@ void register_types(nb::module_& m) {
           nb::arg("decoder") = nb::none(),
           nb::arg("decoder_options") = nb::none());
 
-  nb::class_<TransferConfig>(m, "TransferConfig")
+  nb::class_<CUDAConfig>(m, "CUDAConfig")
       .def(
           nb::init<int, uintptr_t, std::optional<cuda_allocator>>(),
           nb::arg("device_index"),
