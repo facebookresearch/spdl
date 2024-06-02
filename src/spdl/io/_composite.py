@@ -7,11 +7,11 @@ from typing import Any
 from spdl.io import (
     CPUBuffer,
     CUDABuffer,
+    CUDAConfig,
     DecodeConfig,
     DemuxConfig,
     ImageFrames,
     ImagePackets,
-    TransferConfig,
     VideoPackets,
 )
 
@@ -47,14 +47,14 @@ def _load_packets(
     packets,
     decode_config: DecodeConfig | None = None,
     filter_desc: str = "",
-    transfer_config: TransferConfig | None = None,
+    cuda_config: CUDAConfig | None = None,
 ):
     frames = _core.decode_packets(
         packets, decode_config=decode_config, filter_desc=filter_desc
     )
     buffer = _core.convert_frames(frames)
-    if transfer_config is not None:
-        buffer = _core.transfer_buffer(buffer, transfer_config=transfer_config)
+    if cuda_config is not None:
+        buffer = _core.transfer_buffer(buffer, cuda_config=cuda_config)
     return buffer
 
 
@@ -278,7 +278,7 @@ async def async_load_image_batch(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    transfer_config: TransferConfig | None = None,
+    cuda_config: CUDAConfig | None = None,
     strict: bool = True,
 ):
     """Batch load images.
@@ -361,10 +361,8 @@ async def async_load_image_batch(
 
     buffer = await _core.async_convert_frames(frames)
 
-    if transfer_config is not None:
-        buffer = await _core.async_transfer_buffer(
-            buffer, transfer_config=transfer_config
-        )
+    if cuda_config is not None:
+        buffer = await _core.async_transfer_buffer(buffer, cuda_config=cuda_config)
 
     return buffer
 
@@ -372,7 +370,7 @@ async def async_load_image_batch(
 async def async_load_image_batch_nvdec(
     srcs: list[str | bytes],
     *,
-    transfer_config: TransferConfig,
+    cuda_config: CUDAConfig,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgba",
@@ -454,7 +452,7 @@ async def async_load_image_batch_nvdec(
 
     return await _core.async_decode_packets_nvdec(
         packets,
-        transfer_config=transfer_config,
+        cuda_config=cuda_config,
         width=width,
         height=height,
         pix_fmt=pix_fmt,

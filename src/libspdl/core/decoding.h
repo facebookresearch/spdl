@@ -47,7 +47,7 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
 template <MediaType media_type>
 CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<media_type> packets,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -55,7 +55,7 @@ CUDABufferPtr decode_packets_nvdec(
 
 CUDABufferPtr decode_packets_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -64,7 +64,7 @@ CUDABufferPtr decode_packets_nvdec(
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     const std::string& pix_fmt);
 
 } // namespace spdl::core

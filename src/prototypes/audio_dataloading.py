@@ -81,7 +81,7 @@ def _get_batch_generator(args):
                 sample_rate=16000,
                 num_channels=1,
             ),
-            transfer_config=spdl.io.transfer_config(
+            cuda_config=spdl.io.cuda_config(
                 device_index=args.worker_id,
                 allocator=(
                     torch.cuda.caching_allocator_alloc,

@@ -18,7 +18,7 @@ size_t prod(const std::vector<size_t>& shape) {
 
 } // namespace
 
-CUDABufferPtr convert_to_cuda(CPUBufferPtr buffer, const TransferConfig& cfg) {
+CUDABufferPtr convert_to_cuda(CPUBufferPtr buffer, const CUDAConfig& cfg) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else

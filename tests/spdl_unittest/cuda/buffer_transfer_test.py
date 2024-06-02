@@ -41,7 +41,7 @@ def test_async_transfer_buffer_to_cuda(media_type, get_sample):
         cuda_tensor = spdl.io.to_torch(
             await spdl.io.async_transfer_buffer(
                 buffer,
-                transfer_config=spdl.io.transfer_config(
+                cuda_config=spdl.io.cuda_config(
                     device_index=DEFAULT_CUDA,
                 ),
             )
@@ -90,7 +90,7 @@ def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sa
         assert not allocator_called
         cuda_buffer = await spdl.io.async_transfer_buffer(
             buffer,
-            transfer_config=spdl.io.transfer_config(
+            cuda_config=spdl.io.cuda_config(
                 device_index=DEFAULT_CUDA,
                 allocator=(allocator, deleter),
             ),

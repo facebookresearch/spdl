@@ -54,7 +54,7 @@ def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
         buffer = await spdl.io.async_convert_frames(frames)
         buffer = await spdl.io.async_transfer_buffer(
             buffer,
-            transfer_config=spdl.io.transfer_config(
+            cuda_config=spdl.io.cuda_config(
                 device_index=cuda_device_index,
                 allocator=(
                     torch.cuda.caching_allocator_alloc,
@@ -95,7 +95,7 @@ def _get_decode_nvdec_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba
         async for packets in demuxer:
             coro = spdl.io.async_decode_packets_nvdec(
                 packets,
-                transfer_config=spdl.io.transfer_config(
+                cuda_config=spdl.io.cuda_config(
                     device_index=cuda_device_index,
                     allocator=(
                         torch.cuda.caching_allocator_alloc,

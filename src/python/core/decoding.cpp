@@ -28,7 +28,7 @@ FFmpegFramesPtr<media_type> decode(
 template <MediaType media_type>
 CUDABufferPtr decode_nvdec(
     PacketsPtr<media_type> packets,
-    const TransferConfig transfer_config,
+    const CUDAConfig cuda_config,
     int crop_left,
     int crop_top,
     int crop_right,
@@ -39,7 +39,7 @@ CUDABufferPtr decode_nvdec(
   nb::gil_scoped_release g;
   return decode_packets_nvdec(
       std::move(packets),
-      transfer_config,
+      cuda_config,
       CropArea{
           static_cast<short>(crop_left),
           static_cast<short>(crop_top),
@@ -135,7 +135,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("transfer_config"),
+      nb::arg("cuda_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
@@ -151,7 +151,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("transfer_config"),
+      nb::arg("cuda_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
@@ -163,7 +163,7 @@ void register_decoding(nb::module_& m) {
   m.def(
       "decode_packets_nvdec",
       [](std::vector<ImagePacketsPtr>&& packets,
-         const TransferConfig& transfer_config,
+         const CUDAConfig& cuda_config,
          int crop_left,
          int crop_top,
          int crop_right,
@@ -175,7 +175,7 @@ void register_decoding(nb::module_& m) {
         nb::gil_scoped_release g;
         return decode_packets_nvdec(
             std::move(packets),
-            transfer_config,
+            cuda_config,
             CropArea{
                 static_cast<short>(crop_left),
                 static_cast<short>(crop_top),
@@ -190,7 +190,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("transfer_config"),
+      nb::arg("cuda_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
@@ -206,19 +206,17 @@ void register_decoding(nb::module_& m) {
   m.def(
       "decode_image_nvjpeg",
       [](nb::bytes data,
-         const TransferConfig transfer_config,
+         const CUDAConfig cuda_config,
          const std::string& pix_fmt) {
         nb::gil_scoped_release g;
         return decode_image_nvjpeg(
-            std::string_view{data.c_str(), data.size()},
-            transfer_config,
-            pix_fmt);
+            std::string_view{data.c_str(), data.size()}, cuda_config, pix_fmt);
       },
       nb::arg("data"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("transfer_config"),
+      nb::arg("cuda_config"),
       nb::arg("pix_fmt") = "rgb");
 }
 
