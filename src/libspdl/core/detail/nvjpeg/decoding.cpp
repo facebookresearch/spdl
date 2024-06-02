@@ -58,15 +58,14 @@ std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    int cuda_device_index,
-    const std::string& pix_fmt,
-    const std::optional<cuda_allocator>& cuda_allocator) {
+    const TransferConfig transfer_config,
+    const std::string& pix_fmt) {
   cudaStream_t cuda_stream = 0;
 
   auto out_fmt = get_nvjpeg_output_format(pix_fmt);
 
   ensure_cuda_initialized();
-  set_cuda_primary_context(cuda_device_index);
+  set_cuda_primary_context(transfer_config.device_index);
 
   auto nvjpeg = get_nvjpeg();
 
@@ -99,9 +98,9 @@ CUDABufferPtr decode_image_nvjpeg(
       out_fmt,
       heights[0],
       widths[0],
-      cuda_device_index,
+      transfer_config.device_index,
       cuda_stream,
-      cuda_allocator);
+      transfer_config.allocator);
 
   // Note: backend is not used by NVJPEG API when using nvjpegDecode().
   //

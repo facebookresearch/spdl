@@ -28,20 +28,18 @@ FFmpegFramesPtr<media_type> decode(
 template <MediaType media_type>
 CUDABufferPtr decode_nvdec(
     PacketsPtr<media_type> packets,
-    const int cuda_device_index,
+    const TransferConfig transfer_config,
     int crop_left,
     int crop_top,
     int crop_right,
     int crop_bottom,
     int width,
     int height,
-    const std::optional<std::string>& pix_fmt,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator) {
+    const std::optional<std::string>& pix_fmt) {
   nb::gil_scoped_release g;
   return decode_packets_nvdec(
       std::move(packets),
-      cuda_device_index,
+      transfer_config,
       CropArea{
           static_cast<short>(crop_left),
           static_cast<short>(crop_top),
@@ -49,9 +47,7 @@ CUDABufferPtr decode_nvdec(
           static_cast<short>(crop_bottom)},
       width,
       height,
-      pix_fmt,
-      cuda_stream,
-      cuda_allocator);
+      pix_fmt);
 }
 
 template <MediaType media_type>
@@ -139,16 +135,14 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_device_index"),
+      nb::arg("transfer_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
       nb::arg("crop_bottom") = 0,
       nb::arg("width") = -1,
       nb::arg("height") = -1,
-      nb::arg("pix_fmt").none() = "rgba",
-      nb::arg("cuda_stream") = 0,
-      nb::arg("cuda_allocator") = nb::none());
+      nb::arg("pix_fmt").none() = "rgba");
 
   m.def(
       "decode_packets_nvdec",
@@ -157,21 +151,19 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_device_index"),
+      nb::arg("transfer_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
       nb::arg("crop_bottom") = 0,
       nb::arg("width") = -1,
       nb::arg("height") = -1,
-      nb::arg("pix_fmt").none() = "rgba",
-      nb::arg("cuda_stream") = 0,
-      nb::arg("cuda_allocator") = nb::none());
+      nb::arg("pix_fmt").none() = "rgba");
 
   m.def(
       "decode_packets_nvdec",
       [](std::vector<ImagePacketsPtr>&& packets,
-         const int cuda_device_index,
+         const TransferConfig& transfer_config,
          int crop_left,
          int crop_top,
          int crop_right,
@@ -179,13 +171,11 @@ void register_decoding(nb::module_& m) {
          int width,
          int height,
          const std::optional<std::string>& pix_fmt,
-         bool strict,
-         const uintptr_t cuda_stream,
-         const std::optional<cuda_allocator>& cuda_allocator) {
+         bool strict) {
         nb::gil_scoped_release g;
         return decode_packets_nvdec(
             std::move(packets),
-            cuda_device_index,
+            transfer_config,
             CropArea{
                 static_cast<short>(crop_left),
                 static_cast<short>(crop_top),
@@ -194,15 +184,13 @@ void register_decoding(nb::module_& m) {
             width,
             height,
             pix_fmt,
-            strict,
-            cuda_stream,
-            cuda_allocator);
+            strict);
       },
       nb::arg("packets"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_device_index"),
+      nb::arg("transfer_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
@@ -210,9 +198,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("width") = -1,
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba",
-      nb::arg("strict") = true,
-      nb::arg("cuda_stream") = 0,
-      nb::arg("cuda_allocator") = nb::none());
+      nb::arg("strict") = true);
 
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVJPEG
@@ -220,23 +206,20 @@ void register_decoding(nb::module_& m) {
   m.def(
       "decode_image_nvjpeg",
       [](nb::bytes data,
-         int cuda_device_index,
-         const std::string& pix_fmt,
-         const std::optional<cuda_allocator>& cuda_allocator) {
+         const TransferConfig transfer_config,
+         const std::string& pix_fmt) {
         nb::gil_scoped_release g;
         return decode_image_nvjpeg(
             std::string_view{data.c_str(), data.size()},
-            cuda_device_index,
-            pix_fmt,
-            cuda_allocator);
+            transfer_config,
+            pix_fmt);
       },
       nb::arg("data"),
-      nb::arg("cuda_device_index"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("pix_fmt") = "rgb",
-      nb::arg("cuda_allocator") = nb::none());
+      nb::arg("transfer_config"),
+      nb::arg("pix_fmt") = "rgb");
 }
 
 } // namespace spdl::core

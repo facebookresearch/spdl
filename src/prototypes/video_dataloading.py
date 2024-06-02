@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import os
 import signal
 import time
 from dataclasses import dataclass
@@ -96,7 +95,13 @@ def _get_decode_nvdec_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba
         async for packets in demuxer:
             coro = spdl.io.async_decode_packets_nvdec(
                 packets,
-                cuda_device_index=cuda_device_index,
+                transfer_config=spdl.io.transfer_config(
+                    device_index=cuda_device_index,
+                    allocator=(
+                        torch.cuda.caching_allocator_alloc,
+                        torch.cuda.caching_allocator_delete,
+                    ),
+                ),
                 width=width,
                 height=height,
                 pix_fmt=pix_fmt,
