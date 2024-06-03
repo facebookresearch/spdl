@@ -52,9 +52,9 @@ The libspdl uses the following third party libraries.
 
 * [Perfetto](https://perfetto.dev/docs/instrumentation/tracing-sdk) ([Apache 2.0](https://github.com/google/perfetto/blob/v41.0/LICENSE))
 
-* [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)†† ([CUDA Toolkit EULA](https://docs.nvidia.com/cuda/eula/index.html))    
-When building with CUDA integration, CUDA header files must be installed.
-    * [nvJPEG](https://docs.nvidia.com/cuda/nvjpeg/index.html)†† (Also covered by CUDA Toolkit EULA)
+* [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)†† ([CUDA Toolkit EULA](https://docs.nvidia.com/cuda/eula/index.html)) and the following family of libraries covered by the same EULA    
+    * [nvJPEG](https://docs.nvidia.com/cuda/nvjpeg/index.html)
+    * [NPP](https://developer.nvidia.com/npp)
 
 * [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk)†† header files    
 The header files of video codec SDK (`nvcuvid.h` and `cuviddec.h`), which are distribtued under MIT license, is used when compiling SPDL with hardware video decoder enabled.
