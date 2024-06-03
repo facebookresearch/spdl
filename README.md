@@ -43,7 +43,7 @@ The libspdl uses the following third party libraries.
    * [glog](https://github.com/google/glog) ([BSD-3](https://github.com/google/glog/blob/v0.5.0/COPYING))
    * [Libevent](https://github.com/libevent/libevent) ([BSD-3](https://github.com/mthrok/libevent/blob/release-2.1.12-stable-patch/LICENSE))
 
-* [nanobind](https://github.com/wjakob/nanobind) ([BSD-3](https://github.com/wjakob/nanobind/blob/v1.9.0/LICENSE))
+* [nanobind](https://github.com/wjakob/nanobind) ([BSD-3](https://github.com/wjakob/nanobind/blob/v1.9.0/LICENSE)) and its dependency
    * [robin-map](https://github.com/Tessil/robin-map/) ([MIT](https://github.com/Tessil/robin-map/blob/v1.3.0/LICENSE))
 
 * [FFmpeg](https://github.com/FFmpeg/FFmpeg) ([LGPL](https://github.com/FFmpeg/FFmpeg/blob/master/COPYING.LGPLv2.1)†)
@@ -52,15 +52,15 @@ The libspdl uses the following third party libraries.
 
 * [Perfetto](https://perfetto.dev/docs/instrumentation/tracing-sdk) ([Apache 2.0](https://github.com/google/perfetto/blob/v41.0/LICENSE))
 
-* [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)†† ([EULA](https://docs.nvidia.com/cuda/eula/index.html))    
+* [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)†† ([CUDA Toolkit EULA](https://docs.nvidia.com/cuda/eula/index.html))    
 When building with CUDA integration, CUDA header files must be installed.
+    * [nvJPEG](https://docs.nvidia.com/cuda/nvjpeg/index.html)†† (Also covered by CUDA Toolkit EULA)
 
 * [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk)†† header files    
 The header files of video codec SDK (`nvcuvid.h` and `cuviddec.h`), which are distribtued under MIT license, is used when compiling SPDL with hardware video decoder enabled.
 
-* [nvJPEG](https://docs.nvidia.com/cuda/nvjpeg/index.html)†† (Covered by [CUDA Toolkit EULA](https://docs.nvidia.com/cuda/eula/index.html))
 
-† FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.
+† FFmpeg is dual-licensed software. One can choose LGPL or GPL. When building `libspdl`, pre-built LGPL version of FFmpeg library files are downloaded and linked against `libspdl`. These FFmpeg library files are compiled in a way that no GPL component is used and runtime search path is not hard-coded. Therefore, the resulting `libspdl` is not obliged to be GPL, and users can (need to) provide own FFmpeg library files.
 
 Users are free to dynamically link GPL or non-distributable version of FFmpeg libraries. However, note that linking a non-LGPL binary might change of the condition for redistribution of your application.
 
