@@ -2,43 +2,9 @@
 #include <libspdl/core/types.h>
 
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
+#include "libspdl/core/detail/generator.h"
 
 namespace spdl::core::detail {
-
-class FilterGraph;
-
-// Helper structure that converts filtering operation (while loop) into
-// iterator.
-struct IterativeFiltering {
-  struct Sentinel {};
-
-  static constexpr Sentinel sentinel{};
-
-  FilterGraph* filter_graph;
-  AVFrame* frame;
-
-  struct Ite {
-    FilterGraph* filter_graph;
-    bool completed = false;
-    AVFramePtr next_ret{};
-
-    bool operator!=(const Sentinel&);
-
-    Ite(FilterGraph*, AVFrame* frame);
-
-    Ite& operator++();
-
-    AVFramePtr operator*();
-
-   private:
-    void fill_next();
-  };
-
-  IterativeFiltering(FilterGraph*, AVFrame*);
-
-  Ite begin();
-  const Sentinel& end();
-};
 
 // Wrap AVFilterGraphPtr to provide convenient methods
 class FilterGraph {
@@ -48,13 +14,10 @@ class FilterGraph {
   FilterGraph(AVFilterGraphPtr&& g) : graph(std::move(g)) {}
   FilterGraph(FilterGraph&&) = default;
 
-  IterativeFiltering filter(AVFrame*);
+  Generator<AVFramePtr> filter(AVFrame*);
 
   Rational get_src_time_base() const;
   Rational get_sink_time_base() const;
-
-  void add_frame(AVFrame* in_frame);
-  int get_frame(AVFrame* out_frame);
 };
 
 FilterGraph get_audio_filter(

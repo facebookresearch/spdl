@@ -76,8 +76,9 @@ void encode_image(
 
   auto frame =
       detail::reference_image_buffer(src_fmt, data, src_width, src_height);
-  for (auto filtered : filter_graph.filter(frame.get())) {
-    encoder.encode(filtered);
+  auto filtering = filter_graph.filter(frame.get());
+  while (filtering) {
+    encoder.encode(filtering());
   }
   encoder.encode(nullptr);
 }
