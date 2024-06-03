@@ -5,6 +5,10 @@
 #include "libspdl/core/detail/nvjpeg/utils.h"
 #include "libspdl/core/detail/tracing.h"
 
+#ifdef SPDL_USE_NPPI
+#include "libspdl/core/detail/npp/resize.h"
+#endif
+
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
 
@@ -59,6 +63,8 @@ std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
     const CUDAConfig cuda_config,
+    int scale_width,
+    int scale_height,
     const std::string& pix_fmt) {
   cudaStream_t cuda_stream = 0;
 
@@ -123,6 +129,33 @@ CUDABufferPtr decode_image_nvjpeg(
             cuda_stream),
         "Failed to decode an image.");
   }
+
+  if (scale_width > 0 && scale_height > 0) {
+#ifndef SPDL_USE_NPPI
+    SPDL_FAIL(
+        "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
+#else
+    auto [buffer2, output2] = get_output(
+        out_fmt,
+        scale_height,
+        scale_width,
+        cuda_config.device_index,
+        cuda_stream,
+        cuda_config.allocator);
+
+    resize_npp(
+        out_fmt,
+        output,
+        widths[0],
+        heights[0],
+        output2,
+        scale_width,
+        scale_height);
+
+    return std::move(buffer2);
+#endif
+  }
+
   return std::move(buffer);
 }
 

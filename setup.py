@@ -99,6 +99,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DSPDL_USE_CUDA={_b(_SPDL_USE_CUDA)}",
             f"-DSPDL_USE_NVCODEC={_b(_SPDL_USE_NVCODEC)}",
             f"-DSPDL_USE_NVJPEG={_b(_SPDL_USE_NVJPEG)}",
+            f"-DSPDL_USE_NPPI={_b(_env('SPDL_USE_NPPI'))}",
             f"-DSPDL_LINK_STATIC_NVJPEG={_b(_env('SPDL_LINK_STATIC_NVJPEG'))}",
             f"-DSPDL_USE_FFMPEG_VERSION={_SPDL_USE_FFMPEG_VERSION}",
             f"-DSPDL_DEBUG_REFCOUNT={_b(_env('SPDL_DEBUG_REFCOUNT'))}",

@@ -65,11 +65,24 @@ if (SPDL_USE_NVJPEG)
     libspdl/core/detail/nvjpeg/utils.cpp
     libspdl/core/detail/nvjpeg/decoding.cpp
   )
+  if (SPDL_USE_NPPI)
+    list(APPEND defs SPDL_USE_NPPI)
+    list(APPEND srcs
+      libspdl/core/detail/npp/resize.cpp
+      libspdl/core/detail/npp/utils.cpp
+    )
+  endif()
 
   if (SPDL_LINK_STATIC_NVJPEG)
     list(APPEND deps CUDA::nvjpeg_static)
+    if (SPDL_USE_NPPI)
+      list(APPEND deps CUDA::nppig_static)
+    endif()
   else()
     list(APPEND deps CUDA::nvjpeg)
+    if (SPDL_USE_NPPI)
+      list(APPEND deps CUDA::nppig)
+    endif()
   endif()
 endif()
 

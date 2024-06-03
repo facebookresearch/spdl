@@ -46,3 +46,7 @@ std::string get_internal_err_str(
 #define SPDL_FAIL_INTERNAL(msg)                                 \
   throw InternalError(spdl::core::detail::get_internal_err_str( \
       msg, spdl::core::detail::source_location::current()))
+
+#define SPDL_WARN(msg)                            \
+  XLOG(WARN) << (spdl::core::detail::get_err_str( \
+      msg, spdl::core::detail::source_location::current()))

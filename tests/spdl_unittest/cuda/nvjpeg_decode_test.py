@@ -80,3 +80,29 @@ def test_decode_rubbish(get_sample):
         data = f.read()
 
     asyncio.run(_test(data))
+
+
+def test_decode_resize(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    sample = get_sample(cmd, width=320, height=240)
+
+    async def _test(data):
+        buffer = await spdl.io.async_decode_image_nvjpeg(
+            data,
+            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            scale_width=160,
+            scale_height=120,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        assert tensor.dtype == torch.uint8
+        assert tensor.shape == torch.Size([3, 120, 160])
+        assert tensor.device == torch.device("cuda", DEFAULT_CUDA)
+        assert not torch.equal(tensor[0], tensor[1])
+        assert not torch.equal(tensor[1], tensor[2])
+        assert not torch.equal(tensor[2], tensor[0])
+        return tensor
+
+    with open(sample.path, "rb") as f:
+        data = f.read()
+
+    asyncio.run(_test(data))

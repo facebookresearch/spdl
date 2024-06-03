@@ -65,6 +65,8 @@ CUDABufferPtr decode_packets_nvdec(
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
     const CUDAConfig cuda_config,
+    int scale_width,
+    int scale_height,
     const std::string& pix_fmt);
 
 } // namespace spdl::core
