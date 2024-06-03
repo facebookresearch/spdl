@@ -17,70 +17,32 @@ extern "C" {
 
 namespace spdl::core {
 namespace detail {
-
-////////////////////////////////////////////////////////////////////////////////
-// Iterator
-////////////////////////////////////////////////////////////////////////////////
-
-IterativeDecoding::Ite::Ite(
-    Decoder* decoder_,
-    AVPacket* packet,
-    bool flush_null)
-    : decoder(decoder_), null_flushed(!flush_null) {
-  decoder->add_packet(packet);
-  fill_next();
-}
-
-IterativeDecoding::Ite& IterativeDecoding::Ite::operator++() {
-  fill_next();
-  return *this;
-}
-
-bool IterativeDecoding::Ite::operator!=(const Sentinel&) {
-  return !(completed && null_flushed);
-}
-
-AVFramePtr IterativeDecoding::Ite::operator*() {
-  if (completed) {
-    if (null_flushed) {
-      // This should not be reachable, because `operator!=` guards
-      SPDL_FAIL_INTERNAL("Frame was requested but decoding is exhausted.");
-    }
-    null_flushed = true;
-    return {};
-  }
-  return std::move(next_ret);
-}
-
-void IterativeDecoding::Ite::fill_next() {
-  next_ret = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
-  int errnum = decoder->get_frame(next_ret.get());
-  switch (errnum) {
-    case AVERROR(EAGAIN):
-    case AVERROR_EOF: {
-      completed = true;
-      // Note: `next_ret` is now invalid state.
-    }
-  }
-}
-
-IterativeDecoding::IterativeDecoding(
-    Decoder* decoder_,
-    AVPacket* packet_,
-    bool flush_null_)
-    : decoder(decoder_), packet(packet_), flush_null(flush_null_){};
-
-IterativeDecoding::Ite IterativeDecoding::begin() {
-  return {decoder, packet, flush_null};
-};
-
-const IterativeDecoding::Sentinel& IterativeDecoding::end() {
-  return sentinel;
-};
-
 ////////////////////////////////////////////////////////////////////////////////
 // Decoder
 ////////////////////////////////////////////////////////////////////////////////
+namespace {
+void send_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
+  {
+    TRACE_EVENT("decoding", "avcodec_send_packet");
+    CHECK_AVERROR(
+        avcodec_send_packet(codec_ctx, packet),
+        "Failed to pass a frame to decoder.");
+  }
+}
+
+int receive_frame(AVCodecContext* codec_ctx, AVFrame* frame) {
+  int ret;
+  {
+    TRACE_EVENT("decoding", "avcodec_receive_frame");
+    ret = avcodec_receive_frame(codec_ctx, frame);
+  }
+  if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
+    CHECK_AVERROR_NUM(ret, "Failed to decode a packet.");
+  }
+  return ret;
+}
+} // namespace
+
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
 Decoder::Decoder(
@@ -93,7 +55,7 @@ Decoder::Decoder(
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)) {}
 
-void Decoder::add_packet(AVPacket* packet) {
+Generator<AVFrame*> Decoder::decode(AVPacket* packet, bool flush_null) {
   XLOG(DBG9)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(
@@ -102,34 +64,29 @@ void Decoder::add_packet(AVPacket* packet) {
                           TS(packet, codec_ctx->pkt_timebase),
                           packet->pts));
 
-  {
-    TRACE_EVENT("decoding", "avcodec_send_packet");
-    CHECK_AVERROR(
-        avcodec_send_packet(codec_ctx.get(), packet),
-        "Failed to pass a frame to decoder.");
-  }
-}
-
-int Decoder::get_frame(AVFrame* frame) {
-  int ret;
-  {
-    TRACE_EVENT("decoding", "avcodec_receive_frame");
-    ret = avcodec_receive_frame(codec_ctx.get(), frame);
-  }
-  if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
-    CHECK_AVERROR_NUM(ret, "Failed to decode a packet.");
-  }
-  if (ret >= 0) {
-    double ts = TS(frame, codec_ctx->pkt_timebase);
-    XLOG(DBG9) << fmt::format(
-        "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
-  }
-
-  return ret;
-}
-
-IterativeDecoding Decoder::decode(AVPacket* packet, bool flush_null) {
-  return {this, packet, flush_null};
+  auto frame = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
+  send_packet(codec_ctx.get(), packet);
+  int errnum;
+  do {
+    switch ((errnum = receive_frame(codec_ctx.get(), frame.get()))) {
+      case AVERROR(EAGAIN):
+        co_return;
+      case AVERROR_EOF: {
+        if (flush_null) {
+          co_yield nullptr;
+        }
+        co_return;
+      }
+      default: {
+        {
+          double ts = TS(frame, codec_ctx->pkt_timebase);
+          XLOG(DBG9) << fmt::format(
+              "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
+        }
+        co_yield frame.get();
+      }
+    }
+  } while (errnum >= 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -142,8 +99,9 @@ Generator<AVFramePtr> decode_packets(
     Decoder& decoder,
     FilterGraph& filter) {
   for (auto& packet : packets) {
-    for (auto raw_frame : decoder.decode(packet, !packet)) {
-      auto filtering = filter.filter(raw_frame.get());
+    auto decoding = decoder.decode(packet, !packet);
+    while (decoding) {
+      auto filtering = filter.filter(decoding());
       while (filtering) {
         co_yield filtering();
       }
