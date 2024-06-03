@@ -38,15 +38,12 @@ cuda_allocator default_alloc = {default_allocator, default_deleter};
 
 } // namespace
 
-CUDAStorage::CUDAStorage(
-    size_t size,
-    int device,
-    uintptr_t stream_,
-    const std::optional<cuda_allocator>& allocator)
-    : stream(static_cast<CUstream>((void*)stream_)) {
+CUDAStorage::CUDAStorage(size_t size, const CUDAConfig& cfg)
+    : stream(static_cast<CUstream>((void*)cfg.stream)) {
   TRACE_EVENT("decoding", "custom_cuda_allocator_fn");
-  auto [allocator_fn, deleter_fn] = allocator.value_or(default_alloc);
-  data_ = reinterpret_cast<void*>(allocator_fn(size, device, stream_));
+  auto [allocator_fn, deleter_fn] = cfg.allocator.value_or(default_alloc);
+  data_ =
+      reinterpret_cast<void*>(allocator_fn(size, cfg.device_index, cfg.stream));
   deleter = std::move(deleter_fn);
 }
 

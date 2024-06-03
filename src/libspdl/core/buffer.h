@@ -91,9 +91,7 @@ CPUBufferPtr cpu_buffer(
 /// Create ``CUDABuffer``.
 CUDABufferPtr cuda_buffer(
     const std::vector<size_t> shape,
-    int device_index,
-    uintptr_t stream,
-    const std::optional<cuda_allocator>& allocator,
+    const CUDAConfig& cfg,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t));
 #endif
