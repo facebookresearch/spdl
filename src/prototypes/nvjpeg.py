@@ -32,7 +32,7 @@ def _get_test_func(args, use_nvjpeg, width=224, height=224):
     srcs_gen = _iter_flist(
         args.input_flist,
         prefix=args.prefix,
-        batch_size=1,
+        batch_size=32,
         max=args.max_samples,
         drop_last=True,
     )
@@ -46,25 +46,22 @@ def _get_test_func(args, use_nvjpeg, width=224, height=224):
 
     if use_nvjpeg:
 
-        async def _decode(src):
-            src = src[0]
-            with open(src, "rb") as f:
-                data = f.read()
-            return await spdl.io.async_decode_image_nvjpeg(
-                data, cuda_config=cuda_config, scale_width=width, scale_height=height
+        async def _decode(srcs):
+            buffer = await spdl.io.async_load_image_batch_nvjpeg(
+                srcs, cuda_config=cuda_config, width=width, height=height
             )
+            return spdl.io.to_torch(buffer)
 
     else:
 
-        async def _decode(src):
-            src = src[0]
-            return await spdl.io.async_load_image(
-                src,
+        async def _decode(srcs):
+            buffer = await spdl.io.async_load_image_batch(
+                srcs,
                 cuda_config=cuda_config,
-                filter_desc=spdl.io.get_video_filter_desc(
-                    scale_width=width, scale_height=height
-                ),
+                width=width,
+                height=height,
             )
+            return spdl.io.to_torch(buffer)
 
     return apply_async(_decode, srcs_gen)
 
@@ -73,8 +70,8 @@ def _run(dataloader):
     num_frames = 0
     t0 = time.monotonic()
     try:
-        for _ in dataloader:
-            num_frames += 1
+        for batch in dataloader:
+            num_frames += batch.shape[0]
     finally:
         elapsed = time.monotonic() - t0
         fps = num_frames / elapsed

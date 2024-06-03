@@ -32,6 +32,7 @@ __all__ = [
     "async_streaming_load_video",
     "async_load_image_batch",
     "async_load_image_batch_nvdec",
+    "async_load_image_batch_nvjpeg",
     "async_sample_decode_video",
 ]
 
@@ -458,6 +459,41 @@ async def async_load_image_batch_nvdec(
         pix_fmt=pix_fmt,
         strict=strict,
         **decode_options,
+    )
+
+
+def _get_bytes(srcs: list[str | bytes]) -> list[bytes]:
+    ret: list[bytes] = []
+    for src in srcs:
+        if isinstance(src, bytes):
+            ret.append(src)
+        elif isinstance(src, str):
+            with open(src, "rb") as f:
+                ret.append(f.read())
+        else:
+            raise TypeError(
+                f"Source must be either `str` (path) or `byets` (data). Found: {type(src)}"
+            )
+    return ret
+
+
+async def async_load_image_batch_nvjpeg(
+    srcs: list[str | bytes],
+    *,
+    cuda_config: CUDAConfig,
+    width: int | None,
+    height: int | None,
+    pix_fmt: str | None = "rgb",
+    strict: bool = True,
+):
+    srcs_ = _get_bytes(srcs)
+    return await _core._run_async(
+        _libspdl.decode_image_nvjpeg,
+        srcs_,
+        scale_width=width,
+        scale_height=height,
+        cuda_config=cuda_config,
+        pix_fmt=pix_fmt,
     )
 
 
