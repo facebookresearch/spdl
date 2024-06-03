@@ -20,7 +20,7 @@ CPUBufferPtr convert_frames(const FFmpegFrames<media_type>* frames) {
   return ret;
 }
 
-CUDABufferPtr convert_to_cuda(CPUBufferPtr buffer, const CUDAConfig& cfg);
+CUDABufferPtr transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg);
 
 CPUStorage cp_to_cpu(const void* src, const std::vector<size_t> shape);
 
