@@ -466,11 +466,11 @@ async def async_load_image_batch_nvdec(
 ################################################################################
 
 
-async def _decode_partial(packets, indices, **kwargs):
+def _decode_partial(packets, indices, **kwargs):
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
-    async for frames in _core.async_streaming_decode(packets, num_frames, **kwargs):
-        return frames[indices]
+    decoder = _core.streaming_decode(packets, num_frames, **kwargs)
+    return next(decoder)[indices]
 
 
 async def async_sample_decode_video(
@@ -489,7 +489,7 @@ async def async_sample_decode_video(
 
     tasks = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
-        tasks.append(asyncio.create_task(_decode_partial(split, idxes, **kwargs)))
+        tasks.append(_core._run_async(_decode_partial, split, idxes, **kwargs))
 
     await asyncio.wait(tasks)
 

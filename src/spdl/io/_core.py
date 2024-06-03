@@ -34,12 +34,13 @@ __all__ = [
     "async_streaming_demux_video",
     # DECODING
     "decode_packets",
-    "decode_packets_nvdec",
-    "decode_image_nvjpeg",
     "async_decode_packets",
+    "decode_packets_nvdec",
     "async_decode_packets_nvdec",
-    "async_decode_image_nvjpeg",
+    "streaming_decode",
     "async_streaming_decode",
+    "decode_image_nvjpeg",
+    "async_decode_image_nvjpeg",
     # FRAME CONVERSION
     "convert_frames",
     "async_convert_frames",
@@ -369,6 +370,26 @@ async def async_decode_image_nvjpeg(
         A CUDABuffer object. Shape is [C==3, H, W].
     """
     return await _run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
+
+
+def streaming_decode(
+    packets: VideoPackets, num_frames: int, **kwargs
+) -> Iterator[VideoFrames]:
+    """Decode the video packets chunk by chunk.
+
+    Args:
+        packets: VideoPackets object.
+        num_frames: Number of frames to decode at a time.
+
+    Yields:
+        VideoFrames object containing at most `num_frames` frames.
+    """
+    decoder = _libspdl._streaming_decoder(packets, **kwargs)
+    while True:
+        decoder, frames = _libspdl._decode(decoder, num_frames)
+        if frames is None:
+            return
+        yield frames
 
 
 class _streaming_decoder_wrpper:
