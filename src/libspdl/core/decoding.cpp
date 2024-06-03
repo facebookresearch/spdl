@@ -164,6 +164,8 @@ namespace detail {
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
     const CUDAConfig cuda_config,
+    int scale_width,
+    int scale_height,
     const std::string& pix_fmt);
 } // namespace detail
 #endif
@@ -171,11 +173,14 @@ CUDABufferPtr decode_image_nvjpeg(
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
     const CUDAConfig cuda_config,
+    int scale_width,
+    int scale_height,
     const std::string& pix_fmt) {
 #ifndef SPDL_USE_NVJPEG
   SPDL_FAIL("SPDL is not compiled with NVJPEG support.");
 #else
-  return detail::decode_image_nvjpeg(data, cuda_config, pix_fmt);
+  return detail::decode_image_nvjpeg(
+      data, cuda_config, scale_width, scale_height, pix_fmt);
 #endif
 }
 
