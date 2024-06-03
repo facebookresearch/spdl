@@ -52,11 +52,9 @@ ImagePacketsPtr demux_image(
     const std::optional<DemuxConfig>& dmx_cfg);
 
 // Demux a single image from the memory
-// _zero_clear sets all the data to zero. This is only for testing.
 ImagePacketsPtr demux_image(
     const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    bool _zero_clear = false);
+    const std::optional<DemuxConfig>& dmx_cfg);
 
 // Apply bitstream filter for NVDEC video decoding
 VideoPacketsPtr apply_bsf(VideoPacketsPtr packets);
