@@ -3,6 +3,8 @@ import time
 from pathlib import Path
 
 import spdl.io
+import spdl.utils
+import torch
 from spdl.dataloader import apply_async, BackgroundGenerator
 from spdl.dataloader._utils import _iter_flist
 
@@ -22,8 +24,7 @@ def _parse_args(args=None):
     parser.add_argument("--prefix", default="")
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--device", type=int, default=0)
-    parser.add_argument("--num-demux-threads", type=int, default=2)
-    parser.add_argument("--num-decode-threads", type=int, default=4)
+    parser.add_argument("--num-threads", type=int, default=4)
     return parser.parse_args(args)
 
 
@@ -35,6 +36,13 @@ def _get_test_func(args, use_nvjpeg):
         max=args.max_samples,
         drop_last=True,
     )
+    cuda_config = spdl.io.cuda_config(
+        device_index=args.device,
+        allocator=(
+            torch.cuda.caching_allocator_alloc,
+            torch.cuda.caching_allocator_delete,
+        ),
+    )
 
     if use_nvjpeg:
 
@@ -43,15 +51,16 @@ def _get_test_func(args, use_nvjpeg):
             with open(src, "rb") as f:
                 data = f.read()
             return await spdl.io.async_decode_image_nvjpeg(
-                data, cuda_device_index=args.device
+                data, cuda_config=cuda_config
             )
 
     else:
 
         async def _decode(src):
             src = src[0]
-            return await spdl.io.async_load_media(
-                "image", src, convert_options={"cuda_device_index": args.device}
+            return await spdl.io.async_load_image(
+                src,
+                cuda_config=cuda_config,
             )
 
     return apply_async(_decode, srcs_gen)
@@ -71,26 +80,24 @@ def _run(dataloader):
 
 def _main():
     args = _parse_args()
-    _init(args.debug, args.num_demux_threads, args.num_decode_threads)
+    _init(args.debug)
 
     for use_nvjpeg in [True, True, False]:  # Run nvjpeg twice to warmup
         _LG.info("Testing %s.", "nvjpeg" if use_nvjpeg else "ffmpeg")
         batch_gen = _get_test_func(args, use_nvjpeg)
 
-        dataloader = BackgroundGenerator(batch_gen)
+        dataloader = BackgroundGenerator(batch_gen, num_workers=args.num_threads)
         trace_path = f"{args.trace}_{'nvjpeg' if use_nvjpeg else 'ffmpeg'}.pftrace"
         with (spdl.utils.tracing(trace_path, enable=args.trace is not None),):
             _run(dataloader)
 
 
-def _init(debug, num_demux_threads, num_decode_threads, worker_id=None):
+def _init(debug, worker_id=None):
     _init_logging(debug, worker_id)
 
     spdl.utils.set_ffmpeg_log_level(16)
     spdl.utils.init_folly(
         [
-            f"--spdl_demuxer_executor_threads={num_demux_threads}",
-            f"--spdl_decoder_executor_threads={num_decode_threads}",
             f"--logging={'DBG' if debug else 'INFO'}",
         ]
     )
