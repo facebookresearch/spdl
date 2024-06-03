@@ -1,3 +1,5 @@
+#pragma once
+
 #include <coroutine>
 #include <cstdint>
 #include <exception>

@@ -19,58 +19,6 @@ extern "C" {
 namespace spdl::core::detail {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Iterator
-////////////////////////////////////////////////////////////////////////////////
-
-IterativeFiltering::Ite::Ite(FilterGraph* filter_graph_, AVFrame* frame)
-    : filter_graph(filter_graph_) {
-  filter_graph->add_frame(frame);
-  fill_next();
-}
-
-IterativeFiltering::Ite& IterativeFiltering::Ite::operator++() {
-  fill_next();
-  return *this;
-}
-
-bool IterativeFiltering::Ite::operator!=(const Sentinel&) {
-  return !completed;
-}
-
-AVFramePtr IterativeFiltering::Ite::operator*() {
-  if (completed) {
-    // This should not be reachable, because `operator!=` guards
-    SPDL_FAIL_INTERNAL("Frame was requested but filtering is exhausted.");
-  }
-  return std::move(next_ret);
-}
-
-void IterativeFiltering::Ite::fill_next() {
-  next_ret = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
-  int errnum = filter_graph->get_frame(next_ret.get());
-  switch (errnum) {
-    case AVERROR(EAGAIN):
-    case AVERROR_EOF: {
-      completed = true;
-      // Note: `next_ret` is now invalid state.
-    }
-  }
-}
-
-IterativeFiltering::IterativeFiltering(
-    FilterGraph* filter_graph_,
-    AVFrame* frame_)
-    : filter_graph(filter_graph_), frame(frame_){};
-
-IterativeFiltering::Ite IterativeFiltering::begin() {
-  return {filter_graph, frame};
-};
-
-const IterativeFiltering::Sentinel& IterativeFiltering::end() {
-  return sentinel;
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // FilterGraph
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -212,29 +160,16 @@ FilterGraph get_filter(
   return FilterGraph{std::move(filter_graph)};
 }
 
-} // namespace
-
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-void FilterGraph::add_frame(AVFrame* frame) {
-  XLOG(DBG9)
-      << (frame ? fmt::format(
-                      "{:21s} {:.3f} ({})",
-                      " --- raw frame:",
-                      TS(frame, get_src_time_base()),
-                      frame->pts)
-                : fmt::format(" --- flush filter graph"));
-
-  auto src_ctx = graph->filters[0];
+void add_frame(AVFilterContext* src_ctx, AVFrame* frame) {
   TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
   CHECK_AVERROR(
       av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF),
       "Failed to pass a frame to filter.");
 }
 
-int FilterGraph::get_frame(AVFrame* frame) {
-  auto sink_ctx = graph->filters[1];
-
+int get_frame(AVFilterContext* sink_ctx, AVFrame* frame) {
   int ret;
   {
     TRACE_EVENT("decoding", "av_buffersink_get_frame");
@@ -243,19 +178,40 @@ int FilterGraph::get_frame(AVFrame* frame) {
   if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
     CHECK_AVERROR_NUM(ret, "Failed to filter a frame.");
   }
-  if (ret >= 0) {
-    XLOG(DBG9) << fmt::format(
-        "{:21s} {:.3f} ({})",
-        " ---- filtered frame:",
-        TS(frame, get_sink_time_base()),
-        frame->pts);
-  }
-
   return ret;
 }
 
-IterativeFiltering FilterGraph::filter(AVFrame* frame) {
-  return {this, frame};
+} // namespace
+
+Generator<AVFramePtr> FilterGraph::filter(AVFrame* frame) {
+  XLOG(DBG9)
+      << (frame ? fmt::format(
+                      "{:21s} {:.3f} ({})",
+                      " --- raw frame:",
+                      TS(frame, get_src_time_base()),
+                      frame->pts)
+                : fmt::format(" --- flush filter graph"));
+
+  add_frame(graph->filters[0], frame);
+  int errnum;
+  do {
+    AVFramePtr ret = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
+    switch ((errnum = get_frame(graph->filters[1], ret.get()))) {
+      case AVERROR(EAGAIN):
+        co_return;
+      case AVERROR_EOF:
+        co_return;
+      default: {
+        XLOG(DBG9) << fmt::format(
+            "{:21s} {:.3f} ({})",
+            " ---- filtered frame:",
+            TS(ret, get_sink_time_base()),
+            ret->pts);
+
+        co_yield std::move(ret);
+      }
+    }
+  } while (errnum >= 0);
 }
 
 Rational FilterGraph::get_src_time_base() const {

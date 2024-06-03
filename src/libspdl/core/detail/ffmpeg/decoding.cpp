@@ -143,8 +143,9 @@ Generator<AVFramePtr> decode_packets(
     FilterGraph& filter) {
   for (auto& packet : packets) {
     for (auto raw_frame : decoder.decode(packet, !packet)) {
-      for (auto filtered_frame : filter.filter(raw_frame.get())) {
-        co_yield std::move(filtered_frame);
+      auto filtering = filter.filter(raw_frame.get());
+      while (filtering) {
+        co_yield filtering();
       }
     }
   }
