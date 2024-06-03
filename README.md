@@ -48,8 +48,6 @@ The libspdl uses the following third party libraries.
 
 * [FFmpeg](https://github.com/FFmpeg/FFmpeg) ([LGPL](https://github.com/FFmpeg/FFmpeg/blob/master/COPYING.LGPLv2.1)†)
 
-* Header files of [Video Codec SDK](https://gitlab.com/nvidia/video/video-codec-sdk) ([MIT]())
-
 ### Optional Dependencies
 
 * [Perfetto](https://perfetto.dev/docs/instrumentation/tracing-sdk) ([Apache 2.0](https://github.com/google/perfetto/blob/v41.0/LICENSE))
