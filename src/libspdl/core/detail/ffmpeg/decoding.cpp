@@ -137,6 +137,19 @@ IterativeDecoding Decoder::decode(AVPacket* packet, bool flush_null) {
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace {
+Generator<AVFramePtr> decode_packets(
+    const std::vector<AVPacket*>& packets,
+    Decoder& decoder,
+    FilterGraph& filter) {
+  for (auto& packet : packets) {
+    for (auto raw_frame : decoder.decode(packet, !packet)) {
+      for (auto filtered_frame : filter.filter(raw_frame.get())) {
+        co_yield std::move(filtered_frame);
+      }
+    }
+  }
+}
+
 template <MediaType media_type>
 FilterGraph get_filter(
     AVCodecContext* codec_ctx,
@@ -159,23 +172,6 @@ FFmpegFramesPtr<media_type> get_frame(DemuxedPackets<media_type>* packets) {
       packets->id, packets->time_base);
 }
 
-template <MediaType media_type>
-FFmpegFramesPtr<media_type> decode_packets_with_filter(
-    DemuxedPackets<media_type>* packets,
-    Decoder& decoder,
-    FilterGraph& filter) {
-  auto frames = get_frame(packets);
-  for (auto& packet : packets->get_packets()) {
-    for (auto raw_frame : decoder.decode(packet, !packet)) {
-      for (auto filtered_frame : filter.filter(raw_frame.get())) {
-        frames->push_back(filtered_frame.release());
-      }
-    }
-  }
-  frames->time_base = filter.get_sink_time_base();
-  return frames;
-}
-
 } // namespace
 } // namespace detail
 
@@ -194,7 +190,14 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
   }
   auto filter = detail::get_filter<media_type>(
       decoder.codec_ctx.get(), filter_desc, packets->frame_rate);
-  return detail::decode_packets_with_filter(packets.get(), decoder, filter);
+  auto ret = detail::get_frame(packets.get());
+
+  auto gen = detail::decode_packets(packets->get_packets(), decoder, filter);
+  while (gen) {
+    ret->push_back(gen().release());
+  }
+  ret->time_base = filter.get_sink_time_base();
+  return ret;
 }
 
 template FFmpegAudioFramesPtr decode_packets_ffmpeg(
@@ -227,7 +230,11 @@ StreamingDecoder<media_type>::Impl::Impl(
       filter_graph(detail::get_filter<media_type>(
           decoder.codec_ctx.get(),
           filter_desc_,
-          packets->frame_rate)) {
+          packets->frame_rate)),
+      gen(detail::decode_packets(
+          packets->get_packets(),
+          decoder,
+          filter_graph)) {
   packets->push(nullptr);
 }
 
@@ -238,69 +245,17 @@ StreamingDecoder<media_type>::Impl::decode(int num_frames) {
   if (num_frames <= 0) {
     SPDL_FAIL("the `num_frames` must be positive.");
   }
-  if (completed) {
+
+  if (!gen) {
     return {};
   }
 
   TRACE_EVENT("decoding", "StreamingDecoder::decode");
   auto ret = detail::get_frame(packets.get());
-  auto& packets_ref = packets->get_packets();
-  auto num_packets = packets->num_packets();
-  while (!completed) {
-    // Flush filtered frames
-    while (filter_has_frame && (ret->get_num_frames() < num_frames)) {
-      auto frame = detail::AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
-      switch (filter_graph.get_frame(frame.get())) {
-        case AVERROR_EOF:
-          completed = true;
-          [[fallthrough]];
-        case AVERROR(EAGAIN):
-          filter_has_frame = false;
-          break;
-        default:
-          ret->push_back(frame.release());
-      }
-    }
-
-    if (completed || ret->get_num_frames() >= num_frames) {
-      break;
-    }
-
-    assert(!filter_has_frame);
-
-    if (decoder_has_frame) {
-      auto frame = detail::AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
-      switch (decoder.get_frame(frame.get())) {
-        case AVERROR_EOF:
-          filter_graph.add_frame(nullptr);
-          filter_has_frame = true;
-          [[fallthrough]];
-        case AVERROR(EAGAIN):
-          decoder_has_frame = false;
-          break;
-        default:
-          filter_graph.add_frame(frame.get());
-          filter_has_frame = true;
-      }
-    }
-
-    if (filter_has_frame) {
-      continue;
-    }
-
-    assert(!decoder_has_frame);
-
-    if (packet_index >= num_packets) {
-      break;
-    }
-    auto& packet = packets_ref[packet_index++];
-    decoder.add_packet(packet);
-    decoder_has_frame = true;
+  for (int i = 0; gen && (i < num_frames); ++i) {
+    ret->push_back(gen().release());
   }
-  if (ret->get_num_frames()) {
-    return ret;
-  }
-  return {};
+  return ret;
 }
 
 template struct StreamingDecoder<MediaType::Video>::Impl;

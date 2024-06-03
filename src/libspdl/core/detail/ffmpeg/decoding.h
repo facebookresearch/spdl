@@ -4,6 +4,7 @@
 
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
+#include "libspdl/core/detail/generator.h"
 
 #include <deque>
 
@@ -71,22 +72,7 @@ struct StreamingDecoder<media_type>::Impl {
   detail::Decoder decoder;
   detail::FilterGraph filter_graph;
 
-  int packet_index = 0;
-
-  // Decoding && filtering is usually implemented as nested while loop
-  // ```
-  // decoder.add_packet(packet);
-  // while (decoder_has_frame) {
-  //   filter.add_frame(decoder.get_frame());
-  //   while (filter_has_frame) {
-  //     frame = filter.get_frame();
-  //   }
-  // }
-  // ```
-  // To make it interruptable/resumable, we keep two states.
-  bool decoder_has_frame = false;
-  bool filter_has_frame = false;
-  bool completed = false;
+  detail::Generator<detail::AVFramePtr> gen;
   Impl(
       PacketsPtr<media_type> packets,
       const std::optional<DecodeConfig> cfg,
