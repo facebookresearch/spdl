@@ -19,10 +19,8 @@ struct CUDABufferTracker {
 
   // For batch image / video
   CUDABufferTracker(
-      int device_index,
-      const std::vector<size_t>& shape,
-      const uintptr_t cuda_stream,
-      const std::optional<cuda_allocator>& cuda_allocator);
+      const CUDAConfig& cuda_config,
+      const std::vector<size_t>& shape);
 
   // Get the pointer to the head of the next frame.
   uint8_t* get_next_frame();

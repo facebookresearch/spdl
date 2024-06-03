@@ -33,17 +33,15 @@ inline size_t prod(const std::vector<size_t>& shape) {
 
 CUDABufferPtr cuda_buffer(
     const std::vector<size_t> shape,
-    int device_index,
-    uintptr_t stream,
-    const std::optional<cuda_allocator>& allocator,
+    const CUDAConfig& cfg,
     ElemClass elem_class,
     size_t depth) {
   return std::make_unique<CUDABuffer>(
       std::move(shape),
       elem_class,
       depth,
-      new CUDAStorage{depth * prod(shape), device_index, stream, allocator},
-      device_index);
+      new CUDAStorage{depth * prod(shape), cfg},
+      cfg.device_index);
 }
 
 } // namespace spdl::core

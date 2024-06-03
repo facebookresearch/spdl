@@ -107,14 +107,7 @@ CUDABufferPtr decode_packets_nvdec(
     packets = apply_bsf(std::move(packets));
   }
   return detail::decode_nvdec<media_type>(
-      std::move(packets),
-      cuda_config.device_index,
-      crop,
-      width,
-      height,
-      pix_fmt,
-      cuda_config.stream,
-      cuda_config.allocator);
+      std::move(packets), cuda_config, crop, width, height, pix_fmt);
 #endif
 }
 
@@ -147,15 +140,7 @@ CUDABufferPtr decode_packets_nvdec(
 #else
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
   return detail::decode_nvdec(
-      std::move(packets),
-      cuda_config.device_index,
-      crop,
-      width,
-      height,
-      pix_fmt,
-      strict,
-      cuda_config.stream,
-      cuda_config.allocator);
+      std::move(packets), cuda_config, crop, width, height, pix_fmt, strict);
 #endif
 }
 

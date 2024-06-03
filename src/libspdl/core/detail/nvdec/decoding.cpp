@@ -43,15 +43,13 @@ _Decoder& get_decoder() {
 }
 
 CUDABufferTracker get_buffer_tracker(
-    int cuda_device_index,
+    const CUDAConfig& cuda_config,
     size_t num_packets,
     AVCodecParameters* codecpar,
     const CropArea& crop,
     int target_width,
     int target_height,
     const std::optional<std::string>& pix_fmt,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator,
     bool is_image) {
   size_t w = target_width > 0 ? target_width
                               : (codecpar->width - crop.left - crop.right);
@@ -72,8 +70,7 @@ CUDABufferTracker get_buffer_tracker(
   auto shape = is_image ? std::vector<size_t>{c, h, w}
                         : std::vector<size_t>{num_packets, c, h, w};
 
-  return CUDABufferTracker{
-      cuda_device_index, shape, cuda_stream, cuda_allocator};
+  return CUDABufferTracker{cuda_config, shape};
 }
 
 } // namespace
@@ -81,13 +78,11 @@ CUDABufferTracker get_buffer_tracker(
 template <MediaType media_type>
 CUDABufferPtr decode_nvdec(
     PacketsPtr<media_type> packets,
-    int cuda_device_index,
+    const CUDAConfig& cuda_config,
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator) {
+    const std::optional<std::string> pix_fmt) {
   size_t num_packets = packets->num_packets();
   if (num_packets == 0) {
     SPDL_FAIL("No packets to decode.");
@@ -101,15 +96,13 @@ CUDABufferPtr decode_nvdec(
 
   AVCodecParameters* codecpar = packets->codecpar;
   auto tracker = get_buffer_tracker(
-      cuda_device_index,
+      cuda_config,
       num_packets,
       codecpar,
       crop,
       target_width,
       target_height,
       pix_fmt,
-      cuda_stream,
-      cuda_allocator,
       media_type == MediaType::Image);
 
   if (_dec.decoding_ongoing) {
@@ -120,7 +113,7 @@ CUDABufferPtr decode_nvdec(
     _dec.decoder.reset();
   }
   _dec.decoder.init(
-      cuda_device_index,
+      cuda_config.device_index,
       covert_codec_id(codecpar->codec_id),
       &tracker,
       packets->time_base,
@@ -185,34 +178,28 @@ CUDABufferPtr decode_nvdec(
 
 template CUDABufferPtr decode_nvdec(
     VideoPacketsPtr packets,
-    int cuda_device_index,
+    const CUDAConfig& cuda_config,
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator);
+    const std::optional<std::string> pix_fmt);
 
 template CUDABufferPtr decode_nvdec(
     ImagePacketsPtr packets,
-    int cuda_device_index,
+    const CUDAConfig& cuda_config,
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator);
+    const std::optional<std::string> pix_fmt);
 
 CUDABufferPtr decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
-    int cuda_device_index,
+    const CUDAConfig& cuda_config,
     const CropArea crop,
     int target_width,
     int target_height,
     const std::optional<std::string> pix_fmt,
-    bool strict,
-    const uintptr_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator) {
+    bool strict) {
   size_t num_packets = packets.size();
   if (num_packets == 0) {
     SPDL_FAIL("No packets to decode.");
@@ -252,15 +239,13 @@ CUDABufferPtr decode_nvdec(
   _Decoder& _dec = get_decoder();
 
   auto tracker = get_buffer_tracker(
-      cuda_device_index,
+      cuda_config,
       num_packets,
       p0->codecpar,
       crop,
       target_width,
       target_height,
       pix_fmt,
-      cuda_stream,
-      cuda_allocator,
       false);
 
   auto decode_fn = [&](ImagePacketsPtr& packet) {
@@ -273,7 +258,7 @@ CUDABufferPtr decode_nvdec(
       _dec.decoder.reset();
     }
     _dec.decoder.init(
-        cuda_device_index,
+        cuda_config.device_index,
         covert_codec_id(packet->codecpar->codec_id),
         &tracker,
         packet->time_base,

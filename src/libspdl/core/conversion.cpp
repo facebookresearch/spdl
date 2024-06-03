@@ -24,13 +24,7 @@ CUDABufferPtr transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg) {
 #else
   TRACE_EVENT("decoding", "core::transfer_buffer");
 
-  auto ret = cuda_buffer(
-      buffer->shape,
-      cfg.device_index,
-      cfg.stream,
-      cfg.allocator,
-      buffer->elem_class,
-      buffer->depth);
+  auto ret = cuda_buffer(buffer->shape, cfg, buffer->elem_class, buffer->depth);
 
   size_t size = buffer->depth * prod(buffer->shape);
   CHECK_CUDA(

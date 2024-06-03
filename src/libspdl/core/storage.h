@@ -49,11 +49,7 @@ class CUDAStorage : Storage {
 
   CUDAStorage() = default;
   CUDAStorage(size_t size, int device, CUstream stream);
-  CUDAStorage(
-      size_t size,
-      int device,
-      uintptr_t stream,
-      const std::optional<cuda_allocator>& allocator = std::nullopt);
+  CUDAStorage(size_t size, const CUDAConfig& cfg);
 
   CUDAStorage(const CUDAStorage&) = delete;
   CUDAStorage& operator=(const CUDAStorage&) = delete;

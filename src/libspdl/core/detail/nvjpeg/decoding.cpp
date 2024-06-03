@@ -43,11 +43,7 @@ std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
     const CUDAConfig& cuda_config) {
   auto [shape, interleaved] = get_shape(out_fmt, height, width);
 
-  auto buffer = cuda_buffer(
-      shape,
-      cuda_config.device_index,
-      cuda_config.stream,
-      cuda_config.allocator);
+  auto buffer = cuda_buffer(shape, cuda_config);
 
   auto ptr = static_cast<uint8_t*>(buffer->data());
 

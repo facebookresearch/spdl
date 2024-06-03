@@ -7,11 +7,9 @@
 namespace spdl::core {
 
 CUDABufferTracker::CUDABufferTracker(
-    int index,
-    const std::vector<size_t>& shape,
-    const uintptr_t stream,
-    const std::optional<cuda_allocator>& allocator)
-    : buffer(cuda_buffer(shape, index, stream, allocator)) {
+    const CUDAConfig& cuda_config,
+    const std::vector<size_t>& shape)
+    : buffer(cuda_buffer(shape, cuda_config)) {
   switch (shape.size()) {
     case 3:
       n = 1, c = shape[0], h = shape[1], w = shape[2];
