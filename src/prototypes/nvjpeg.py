@@ -28,7 +28,7 @@ def _parse_args(args=None):
     return parser.parse_args(args)
 
 
-def _get_test_func(args, use_nvjpeg):
+def _get_test_func(args, use_nvjpeg, width=224, height=224):
     srcs_gen = _iter_flist(
         args.input_flist,
         prefix=args.prefix,
@@ -51,7 +51,7 @@ def _get_test_func(args, use_nvjpeg):
             with open(src, "rb") as f:
                 data = f.read()
             return await spdl.io.async_decode_image_nvjpeg(
-                data, cuda_config=cuda_config
+                data, cuda_config=cuda_config, scale_width=width, scale_height=height
             )
 
     else:
@@ -61,6 +61,9 @@ def _get_test_func(args, use_nvjpeg):
             return await spdl.io.async_load_image(
                 src,
                 cuda_config=cuda_config,
+                filter_desc=spdl.io.get_video_filter_desc(
+                    scale_width=width, scale_height=height
+                ),
             )
 
     return apply_async(_decode, srcs_gen)

@@ -58,6 +58,10 @@ void resize_npp(
     nvjpegImage_t dst,
     int dst_width,
     int dst_height) {
+#ifndef SPDL_USE_NPPI
+  SPDL_FAIL(
+      "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
+#else
   NppStreamContext stream;
   stream.hStream = nullptr; // default stream
 
@@ -94,6 +98,7 @@ void resize_npp(
       SPDL_FAIL_INTERNAL(
           fmt::format("Unexpected output format: {}", to_string(fmt)));
   }
+#endif
 }
 
 } // namespace spdl::core::detail

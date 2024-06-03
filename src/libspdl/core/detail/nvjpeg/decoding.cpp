@@ -15,35 +15,39 @@
 namespace spdl::core::detail {
 namespace {
 
+std::tuple<std::vector<size_t>, bool>
+get_shape(nvjpegOutputFormat_t out_fmt, size_t height, size_t width) {
+  switch (out_fmt) {
+    // TODO: Support NVJPEG_OUTPUT_YUV?
+    case NVJPEG_OUTPUT_RGB:
+      [[fallthrough]];
+    case NVJPEG_OUTPUT_BGR:
+      return {{3, height, width}, false};
+    case NVJPEG_OUTPUT_RGBI:
+      [[fallthrough]];
+    case NVJPEG_OUTPUT_BGRI:
+      return {{height, width, 3}, true};
+    case NVJPEG_OUTPUT_Y:
+      return {{1, height, width}, false};
+    default:
+      // It should be already handled by `get_nvjpeg_output_format`
+      SPDL_FAIL_INTERNAL(
+          fmt::format("Unexpected output format: {}", to_string(out_fmt)));
+  }
+}
+
 std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
     nvjpegOutputFormat_t out_fmt,
     size_t height,
     size_t width,
-    int cuda_device_index,
-    cudaStream_t cuda_stream,
-    const std::optional<cuda_allocator>& cuda_allocator) {
-  auto [shape, interleaved] = [&]() -> std::tuple<std::vector<size_t>, bool> {
-    switch (out_fmt) {
-      // TODO: Support NVJPEG_OUTPUT_YUV?
-      case NVJPEG_OUTPUT_RGB:
-        [[fallthrough]];
-      case NVJPEG_OUTPUT_BGR:
-        return {{3, height, width}, false};
-      case NVJPEG_OUTPUT_RGBI:
-        [[fallthrough]];
-      case NVJPEG_OUTPUT_BGRI:
-        return {{height, width, 3}, true};
-      case NVJPEG_OUTPUT_Y:
-        return {{1, height, width}, false};
-      default:
-        // It should be already handled by `get_nvjpeg_output_format`
-        SPDL_FAIL_INTERNAL(
-            fmt::format("Unexpected output format: {}", to_string(out_fmt)));
-    }
-  }();
+    const CUDAConfig& cuda_config) {
+  auto [shape, interleaved] = get_shape(out_fmt, height, width);
 
   auto buffer = cuda_buffer(
-      shape, cuda_device_index, (uintptr_t)cuda_stream, cuda_allocator);
+      shape,
+      cuda_config.device_index,
+      cuda_config.stream,
+      cuda_config.allocator);
 
   auto ptr = static_cast<uint8_t*>(buffer->data());
 
@@ -58,21 +62,11 @@ std::tuple<CUDABufferPtr, nvjpegImage_t> get_output(
 
   return {std::move(buffer), output};
 }
-} // namespace
 
-CUDABufferPtr decode_image_nvjpeg(
-    const std::string_view& data,
-    const CUDAConfig cuda_config,
-    int scale_width,
-    int scale_height,
-    const std::string& pix_fmt) {
-  cudaStream_t cuda_stream = 0;
-
-  auto out_fmt = get_nvjpeg_output_format(pix_fmt);
-
-  ensure_cuda_initialized();
-  set_cuda_primary_context(cuda_config.device_index);
-
+std::tuple<CUDABufferPtr, nvjpegImage_t, int, int> decode(
+    std::string_view data,
+    nvjpegOutputFormat_t fmt,
+    const CUDAConfig& cuda_config) {
   auto nvjpeg = get_nvjpeg();
 
   // Note: Creation/destruction of nvjpegJpegState_t is thread-safe, however,
@@ -85,7 +79,6 @@ CUDABufferPtr decode_image_nvjpeg(
   nvjpegChromaSubsampling_t subsampling;
   thread_local int widths[NVJPEG_MAX_COMPONENT];
   thread_local int heights[NVJPEG_MAX_COMPONENT];
-
   {
     TRACE_EVENT("decoding", "nvjpegGetImageInfo");
     CHECK_NVJPEG(
@@ -100,13 +93,7 @@ CUDABufferPtr decode_image_nvjpeg(
         "Failed to fetch image information.");
   }
 
-  auto [buffer, output] = get_output(
-      out_fmt,
-      heights[0],
-      widths[0],
-      cuda_config.device_index,
-      cuda_stream,
-      cuda_config.allocator);
+  auto [buffer, image] = get_output(fmt, heights[0], widths[0], cuda_config);
 
   // Note: backend is not used by NVJPEG API when using nvjpegDecode().
   //
@@ -124,36 +111,46 @@ CUDABufferPtr decode_image_nvjpeg(
             jpeg_state.get(),
             (const unsigned char*)data.data(),
             data.size(),
-            out_fmt,
-            &output,
-            cuda_stream),
+            fmt,
+            &image,
+            (CUstream_st*)cuda_config.stream),
         "Failed to decode an image.");
   }
+  return {std::move(buffer), image, widths[0], heights[0]};
+}
+
+} // namespace
+
+CUDABufferPtr decode_image_nvjpeg(
+    const std::string_view& data,
+    const CUDAConfig cuda_config,
+    int scale_width,
+    int scale_height,
+    const std::string& pix_fmt) {
+  cudaStream_t cuda_stream = 0;
+
+  auto out_fmt = get_nvjpeg_output_format(pix_fmt);
+
+  ensure_cuda_initialized();
+  set_cuda_primary_context(cuda_config.device_index);
+
+  auto [buffer, decoded, src_width, src_height] =
+      decode(data, out_fmt, cuda_config);
 
   if (scale_width > 0 && scale_height > 0) {
-#ifndef SPDL_USE_NPPI
-    SPDL_FAIL(
-        "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
-#else
-    auto [buffer2, output2] = get_output(
-        out_fmt,
-        scale_height,
-        scale_width,
-        cuda_config.device_index,
-        cuda_stream,
-        cuda_config.allocator);
+    auto [buffer2, resized] =
+        get_output(out_fmt, scale_height, scale_width, cuda_config);
 
     resize_npp(
         out_fmt,
-        output,
-        widths[0],
-        heights[0],
-        output2,
+        decoded,
+        src_width,
+        src_height,
+        resized,
         scale_width,
         scale_height);
 
     return std::move(buffer2);
-#endif
   }
 
   return std::move(buffer);
