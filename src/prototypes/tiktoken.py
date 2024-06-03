@@ -9,6 +9,7 @@ import spdl.utils
 import tiktoken
 import torch
 from spdl.dataset._utils import _iter_flist
+from spdl.io import CUDAConfig
 from spdl.io._core import _run_async
 from spdl.lib import _libspdl
 
@@ -26,50 +27,62 @@ def _parse_args(args):
     return parser.parse_args(args)
 
 
-def _tokenize(sentence, encoding, cuda_device: int = 0):
+def _tokenize(sentence, encoding, cuda_config: CUDAConfig | None = None):
     with spdl.utils.trace_event("encode"):
         tokens = encoding.encode(sentence)
     with spdl.utils.trace_event("convert_tokens_1d"):
         buffer = _libspdl.convert_tokens_1d(tokens)
-    buffer = _libspdl.transfer_to_cuda(
-        buffer,
-        cuda_config=spdl.io.cuda_config(
-            device_index=cuda_device,
-            allocator=(
-                torch.cuda.caching_allocator_alloc,
-                torch.cuda.caching_allocator_delete,
-            ),
-        ),
-    )
+    if cuda_config is not None:
+        buffer = _libspdl.transfer_buffer(
+            buffer,
+            cuda_config=cuda_config,
+        )
     return buffer
 
 
-async def _bulk_tokenize(file_gen, encoding, queue, sentinel, concurrency=32):
+async def _bulk_tokenize(
+    file_gen, encoding, queue, cuda_device: int = 0, concurrency=32
+):
+    cuda_config = spdl.io.cuda_config(
+        device_index=cuda_device,
+        allocator=(
+            torch.cuda.caching_allocator_alloc,
+            torch.cuda.caching_allocator_delete,
+        ),
+    )
+
     semaphore = asyncio.BoundedSemaphore(concurrency)
 
     async def _func(data):
         async with semaphore:
-            buffer = await _run_async(_tokenize, data, encoding)
+            data = _read(path)
+            buffer = await _run_async(
+                _tokenize, data, encoding, cuda_config=cuda_config
+            )
             await queue.put(buffer)
 
     tasks = set()
     for path in file_gen:
         async with semaphore:
-            data = _read(path)
-            task = asyncio.create_task(_func(data))
+            task = asyncio.create_task(_func(path))
             tasks.add(task)
             task.add_done_callback(tasks.discard)
 
     while tasks:
         await asyncio.sleep(0.1)
-    await queue.put(sentinel)
 
 
 async def _run(file_gen, encoding, concurrency=32):
     sentinel = object()
     queue = asyncio.Queue()
-    task = asyncio.create_task(_bulk_tokenize(file_gen, encoding, queue, sentinel))
 
+    async def _task():
+        try:
+            await _bulk_tokenize(file_gen, encoding, queue)
+        finally:
+            await queue.put(sentinel)
+
+    task = asyncio.create_task(_task())
     while (item := await queue.get()) is not sentinel:
         print(item)
 

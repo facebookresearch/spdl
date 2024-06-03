@@ -38,9 +38,9 @@ CPUBufferPtr batch_convert(std::vector<FFmpegFramesPtr<media_type>>&& frames) {
   return convert_frames(_ref(frames));
 }
 
-CUDABufferPtr _transfer_to_cuda(CPUBufferPtr buffer, const CUDAConfig& cfg) {
+CUDABufferPtr _transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg) {
   nb::gil_scoped_release g;
-  return convert_to_cuda(std::move(buffer), cfg);
+  return transfer_buffer(std::move(buffer), cfg);
 }
 
 template <typename IntType = int32_t>
@@ -123,8 +123,8 @@ void register_conversion(nb::module_& m) {
   // Device trancfer
   ////////////////////////////////////////////////////////////////////////////////
   m.def(
-      "transfer_to_cuda",
-      &_transfer_to_cuda,
+      "transfer_buffer",
+      &_transfer_buffer,
       nb::arg("buffer"),
       nb::kw_only(),
       nb::arg("cuda_config"));
