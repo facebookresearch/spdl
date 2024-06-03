@@ -77,6 +77,7 @@ PacketsPtr<media_type> demux_bytes(
   auto demuxer = make_demuxer<media_type>(data_, dmx_cfg);
   auto ret = demuxer->demux_window(timestamp);
   if (_zero_clear) {
+    nb::gil_scoped_acquire gg;
     zero_clear(data);
   }
   return ret;
@@ -96,7 +97,12 @@ ImagePacketsPtr demux_img_bytes(
     bool _zero_clear) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
-  return demux_image(data_, dmx_cfg, _zero_clear);
+  auto ret = demux_image(data_, dmx_cfg);
+  if (_zero_clear) {
+    nb::gil_scoped_acquire gg;
+    zero_clear(data);
+  }
+  return ret;
 }
 
 } // namespace

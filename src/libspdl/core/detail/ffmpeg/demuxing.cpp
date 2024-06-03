@@ -252,14 +252,10 @@ ImagePacketsPtr demux_image(
 
 ImagePacketsPtr demux_image(
     const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    bool _zero_clear) {
+    const std::optional<DemuxConfig>& dmx_cfg) {
   thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
   auto interface = detail::get_interface(data, adaptor, dmx_cfg);
   auto result = detail::demux_image(interface->get_fmt_ctx());
-  if (_zero_clear) {
-    std::memset((void*)data.data(), 0, data.size());
-  }
   return result;
 }
 
