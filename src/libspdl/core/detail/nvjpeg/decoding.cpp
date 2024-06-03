@@ -46,12 +46,18 @@ std::tuple<CUDABufferPtr, SizeMeta> get_output(
     nvjpegOutputFormat_t out_fmt,
     size_t height,
     size_t width,
-    const CUDAConfig& cuda_config) {
+    const CUDAConfig& cuda_config,
+    std::optional<size_t> batch_size = std::nullopt) {
   auto [num_channels, interleaved] = get_shape(out_fmt);
 
-  auto buffer = interleaved
-      ? cuda_buffer({height, width, num_channels}, cuda_config)
-      : cuda_buffer({num_channels, height, width}, cuda_config);
+  auto buffer = [&](const size_t ch, bool interleaved) {
+    return batch_size
+        ? (interleaved
+               ? cuda_buffer({*batch_size, height, width, ch}, cuda_config)
+               : cuda_buffer({*batch_size, ch, height, width}, cuda_config))
+        : (interleaved ? cuda_buffer({height, width, ch}, cuda_config)
+                       : cuda_buffer({ch, height, width}, cuda_config));
+  }(num_channels, interleaved);
 
   return {
       std::move(buffer),
@@ -62,8 +68,13 @@ std::tuple<CUDABufferPtr, SizeMeta> get_output(
           .interleaved = interleaved}};
 }
 
-void wrap_buffer(CUDABufferPtr& buffer, SizeMeta meta, nvjpegImage_t& image) {
+void wrap_buffer(
+    CUDABufferPtr& buffer,
+    SizeMeta meta,
+    nvjpegImage_t& image,
+    size_t batch = 0) {
   auto ptr = static_cast<uint8_t*>(buffer->data());
+  ptr += batch * meta.height * meta.width * meta.num_channels;
   auto pitch = meta.interleaved ? meta.width * meta.num_channels : meta.width;
   for (int c = 0; c < meta.num_channels; c++) {
     image.channel[c] = ptr;
@@ -164,6 +175,45 @@ CUDABufferPtr decode_image_nvjpeg(
   }
 
   return std::move(buffer);
+}
+
+CUDABufferPtr decode_image_nvjpeg(
+    const std::vector<std::string_view>& dataset,
+    const CUDAConfig cuda_config,
+    int scale_width,
+    int scale_height,
+    const std::string& pix_fmt) {
+  auto batch_size = dataset.size();
+  if (batch_size == 0) {
+    SPDL_FAIL("No input is provided.");
+  }
+  if (scale_width <= 0 && scale_height <= 0) {
+    SPDL_FAIL("Both `scale_width` and `scale_height` must be specified.");
+  }
+
+  auto fmt = get_nvjpeg_output_format(pix_fmt);
+
+  ensure_cuda_initialized();
+  set_cuda_primary_context(cuda_config.device_index);
+
+  auto [out_buffer, out_meta] =
+      get_output(fmt, scale_height, scale_width, cuda_config, batch_size);
+  nvjpegImage_t out_wrapper;
+
+  for (size_t i = 0; i < batch_size; ++i) {
+    auto [src_buffer, src_meta, decoded] = decode(dataset[i], fmt, cuda_config);
+
+    wrap_buffer(out_buffer, out_meta, out_wrapper, i);
+    resize_npp(
+        fmt,
+        decoded,
+        src_meta.width,
+        src_meta.height,
+        out_wrapper,
+        scale_width,
+        scale_height);
+  }
+  return std::move(out_buffer);
 }
 
 } // namespace spdl::core::detail

@@ -69,4 +69,11 @@ CUDABufferPtr decode_image_nvjpeg(
     int scale_height,
     const std::string& pix_fmt);
 
+CUDABufferPtr decode_image_nvjpeg(
+    const std::vector<std::string_view>& data,
+    const CUDAConfig cuda_config,
+    int scale_width,
+    int scale_height,
+    const std::string& pix_fmt);
+
 } // namespace spdl::core

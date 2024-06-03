@@ -226,6 +226,31 @@ void register_decoding(nb::module_& m) {
       nb::arg("scale_width") = -1,
       nb::arg("scale_height") = -1,
       nb::arg("pix_fmt") = "rgb");
+
+  m.def(
+      "decode_image_nvjpeg",
+      [](const std::vector<nb::bytes>& data,
+         const CUDAConfig cuda_config,
+         int scale_width,
+         int scale_height,
+         const std::string& pix_fmt) {
+        std::vector<std::string_view> dataset;
+        for (const auto& d : data) {
+          dataset.push_back(std::string_view{d.c_str(), d.size()});
+        }
+
+        nb::gil_scoped_release g;
+        return decode_image_nvjpeg(
+            dataset, cuda_config, scale_width, scale_height, pix_fmt);
+      },
+      nb::arg("data"),
+#if NB_VERSION_MAJOR >= 2
+      nb::kw_only(),
+#endif
+      nb::arg("cuda_config"),
+      nb::arg("scale_width"),
+      nb::arg("scale_height"),
+      nb::arg("pix_fmt") = "rgb");
 }
 
 } // namespace spdl::core
