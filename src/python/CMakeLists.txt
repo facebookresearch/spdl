@@ -14,6 +14,7 @@ set(src
   core/demuxing.cpp
   core/decoding.cpp
   core/conversion.cpp
+  core/transfer.cpp
   core/encoding.cpp
 )
 
