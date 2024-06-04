@@ -2,16 +2,18 @@
 
 import asyncio
 import concurrent.futures
+import time
 from pathlib import Path
+
+import numpy as np
 
 import spdl.io
 import spdl.utils
 import tiktoken
 import torch
 from spdl.io import CUDAConfig
-from spdl.io._core import _run_async
 from spdl.lib import _libspdl
-from spdl.utils import iter_flist
+from spdl.utils import iter_flist, run_async
 
 
 def _parse_args(args):
@@ -24,20 +26,29 @@ def _parse_args(args):
     parser.add_argument("--prefix", help="Root directory of the dataset")
     parser.add_argument("--encoding", default="cl100k_base")
     parser.add_argument("--num-threads", type=int, default=4)
+    parser.add_argument("--trace", type=Path)
     return parser.parse_args(args)
 
 
-def _tokenize(sentence, encoding, cuda_config: CUDAConfig | None = None):
+def _read(path):
+    with open(path, "r") as fp:
+        return fp.read()
+
+
+def _tokenize(path, encoding, cuda_config: CUDAConfig | None = None):
+    with spdl.utils.trace_event("read"):
+        data = _read(path)
     with spdl.utils.trace_event("encode"):
-        tokens = encoding.encode(sentence)
+        tokens = encoding.encode(data)
     with spdl.utils.trace_event("convert_tokens_1d"):
-        buffer = _libspdl.convert_tokens_1d(tokens)
+        arr = np.array(tokens)
     if cuda_config is not None:
         buffer = _libspdl.transfer_buffer(
-            buffer,
+            arr,
             cuda_config=cuda_config,
         )
-    return buffer
+        arr = spdl.io.to_torch(buffer)
+    return arr
 
 
 async def _bulk_tokenize(
@@ -53,12 +64,9 @@ async def _bulk_tokenize(
 
     semaphore = asyncio.BoundedSemaphore(concurrency)
 
-    async def _func(data):
+    async def _func(path):
         async with semaphore:
-            data = _read(path)
-            buffer = await _run_async(
-                _tokenize, data, encoding, cuda_config=cuda_config
-            )
+            buffer = await run_async(_tokenize, path, encoding, cuda_config=cuda_config)
             await queue.put(buffer)
 
     tasks = set()
@@ -83,15 +91,15 @@ async def _run(file_gen, encoding, concurrency=32):
             await queue.put(sentinel)
 
     task = asyncio.create_task(_task())
+    num_tokens = 0
+    t0 = time.monotonic()
     while (item := await queue.get()) is not sentinel:
-        print(item)
+        num_tokens += item.numel()
+    elapsed = time.monotonic() - t0
+    tps = num_tokens / elapsed
+    print(f"{tps} [token/sec] ({num_tokens=}, {elapsed=:.3f})")
 
     await task
-
-
-def _read(path):
-    with open(path, "r") as fp:
-        return fp.read()
 
 
 def _test(input_flist, prefix, encoding, num_threads):
@@ -102,14 +110,15 @@ def _test(input_flist, prefix, encoding, num_threads):
     loop.set_default_executor(
         concurrent.futures.ThreadPoolExecutor(max_workers=num_threads)
     )
-    with spdl.utils.tracing("trace_tiktoken"):
-        loop.run_until_complete(_run(file_gen, encoding))
+    loop.run_until_complete(_run(file_gen, encoding))
 
 
 def _main(args=None):
     args = _parse_args(args)
 
-    _test(args.input_flist, args.prefix, args.encoding, args.num_threads)
+    path = f"{args.trace}.pftrace"
+    with spdl.utils.tracing(path, enable=args.trace):
+        _test(args.input_flist, args.prefix, args.encoding, args.num_threads)
 
 
 if __name__ == "__main__":
