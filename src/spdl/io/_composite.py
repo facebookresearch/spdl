@@ -485,6 +485,7 @@ async def async_load_image_batch_nvjpeg(
     height: int | None,
     pix_fmt: str | None = "rgb",
     strict: bool = True,
+    **kwargs,
 ):
     srcs_ = _get_bytes(srcs)
     return await _core._run_async(
@@ -494,6 +495,7 @@ async def async_load_image_batch_nvjpeg(
         scale_height=height,
         cuda_config=cuda_config,
         pix_fmt=pix_fmt,
+        **kwargs,
     )
 
 
