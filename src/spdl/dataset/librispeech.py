@@ -4,6 +4,8 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import spdl.utils
+
 from . import _sql, _utils
 from ._dataset import AudioData, DataSet
 
@@ -60,7 +62,7 @@ def _create_table(con, cur, split: str, table: str, idx_col: str):
     cur.execute(f"CREATE TABLE {tmp_table}({cols})")
 
     n = -1
-    for rows in _utils._iter_flist(flist, batch_size=1024):
+    for rows in spdl.utils.iter_flist(flist, batch_size=1024):
         data = []
         for row in rows:
             path, num_frames = row.split("\t")

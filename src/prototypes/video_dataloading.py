@@ -12,7 +12,7 @@ import spdl.io
 import spdl.utils
 import torch
 from spdl.dataloader import apply_async, BackgroundGenerator
-from spdl.dataloader._utils import _iter_flist
+from spdl.utils import iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ def _get_decode_nvdec_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba
 
 
 def _get_batch_generator(args):
-    srcs_gen = _iter_flist(
+    srcs_gen = iter_flist(
         args.input_flist,
         prefix=args.prefix,
         n=args.worker_id,

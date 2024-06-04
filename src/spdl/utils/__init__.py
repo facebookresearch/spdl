@@ -1,9 +1,10 @@
 """Utility functions."""
 
-from . import _build, _ffmpeg, _folly, _tracing
+from . import _build, _ffmpeg, _flist, _folly, _tracing
 
 _mods = [
     _build,
+    _flist,
     _ffmpeg,
     _folly,
     _tracing,

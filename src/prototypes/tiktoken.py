@@ -8,10 +8,10 @@ import spdl.io
 import spdl.utils
 import tiktoken
 import torch
-from spdl.dataset._utils import _iter_flist
 from spdl.io import CUDAConfig
 from spdl.io._core import _run_async
 from spdl.lib import _libspdl
+from spdl.utils import iter_flist
 
 
 def _parse_args(args):
@@ -96,7 +96,7 @@ def _read(path):
 
 def _test(input_flist, prefix, encoding, num_threads):
     encoding = tiktoken.get_encoding(encoding)
-    file_gen = _iter_flist(input_flist, prefix=prefix, max=2000)
+    file_gen = iter_flist(input_flist, prefix=prefix, max=2000)
 
     loop = asyncio.new_event_loop()
     loop.set_default_executor(

@@ -9,8 +9,8 @@ import spdl.io
 import spdl.utils
 import torch
 from spdl.dataloader import apply_async, BackgroundGenerator
-from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.librispeech import get_flist
+from spdl.utils import iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def _iter_dataloader(dataloader):
 
 
 def _get_batch_generator(args):
-    srcs_gen = _iter_flist(
+    srcs_gen = iter_flist(
         get_flist(args.split),
         prefix=args.prefix,
         batch_size=1,  # args.batch_size,
