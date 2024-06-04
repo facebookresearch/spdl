@@ -1,8 +1,6 @@
-import asyncio
 import contextlib
-import functools
 import logging
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import overload, TypeVar
 
 from spdl.io import (
@@ -17,6 +15,7 @@ from spdl.io import (
     VideoPackets,
 )
 from spdl.lib import _libspdl
+from spdl.utils import run_async
 
 from . import _preprocessing
 
@@ -54,14 +53,6 @@ __all__ = [
 
 _LG = logging.getLogger(__name__)
 T = TypeVar("T")
-
-
-def _run_async(
-    func: Callable[..., T], *args, executor=None, **kwargs
-) -> asyncio.Future[T]:
-    loop = asyncio.get_running_loop()
-    _func = functools.partial(func, *args, **kwargs)
-    return loop.run_in_executor(executor, _func)  # pyre-ignore: [6]
 
 
 ################################################################################
@@ -104,7 +95,7 @@ async def async_demux_audio(
     Returns:
         (AudioPackets): object.
     """
-    return await _run_async(demux_audio, src, timestamp=timestamp, **kwargs)
+    return await run_async(demux_audio, src, timestamp=timestamp, **kwargs)
 
 
 async def async_demux_video(
@@ -126,7 +117,7 @@ async def async_demux_video(
     Returns:
         (VideoPackets): object.
     """
-    return await _run_async(demux_video, src, timestamp=timestamp, **kwargs)
+    return await run_async(demux_video, src, timestamp=timestamp, **kwargs)
 
 
 async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
@@ -144,7 +135,7 @@ async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
     Returns:
         (ImagePackets): object.
     """
-    return await _run_async(demux_image, src, **kwargs)
+    return await run_async(demux_image, src, **kwargs)
 
 
 def streaming_demux_audio(
@@ -170,20 +161,20 @@ class _streaming_demuxer_wrpper:
         self.demuxer = demuxer
 
     async def demux(self, window):
-        self.demuxer, packets = await _run_async(_libspdl._demux, self.demuxer, window)
+        self.demuxer, packets = await run_async(_libspdl._demux, self.demuxer, window)
         return packets
 
 
 @contextlib.asynccontextmanager
 async def _streaming_demuxer(constructor, src, **kwargs):
-    demuxer = await _run_async(constructor, src, **kwargs)
+    demuxer = await run_async(constructor, src, **kwargs)
     wrapper = _streaming_demuxer_wrpper(demuxer)
     try:
         yield wrapper
     finally:
         # Move the deallocation to the background thread.
         # (Do not deallocate memory in the main thread)
-        await _run_async(_libspdl._drop, wrapper.demuxer)
+        await run_async(_libspdl._drop, wrapper.demuxer)
 
 
 async def _stream_demux(demuxer, src, timestamps, **kwargs):
@@ -282,7 +273,7 @@ async def async_decode_packets(packets, **kwargs):
         (AudioFrames, VideoFrames or ImageFrames): A Frames object.
             The media type of the returned object corresponds to the input Packets type.
     """
-    return await _run_async(decode_packets, packets, **kwargs)
+    return await run_async(decode_packets, packets, **kwargs)
 
 
 def decode_packets_nvdec(
@@ -329,7 +320,7 @@ async def async_decode_packets_nvdec(
     Returns:
         A CUDABuffer object.
     """
-    return await _run_async(
+    return await run_async(
         decode_packets_nvdec, packets, cuda_config=cuda_config, **kwargs
     )
 
@@ -369,7 +360,7 @@ async def async_decode_image_nvjpeg(
     Returns:
         A CUDABuffer object. Shape is [C==3, H, W].
     """
-    return await _run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
+    return await run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
 
 
 def streaming_decode(
@@ -397,7 +388,7 @@ class _streaming_decoder_wrpper:
         self.decoder = decoder
 
     async def decode(self, num_frames):
-        self.decoder, frames = await _run_async(
+        self.decoder, frames = await run_async(
             _libspdl._decode, self.decoder, num_frames
         )
         return frames
@@ -405,12 +396,12 @@ class _streaming_decoder_wrpper:
 
 @contextlib.asynccontextmanager
 async def _streaming_decoder(constructor, packets, **kwargs):
-    decoder = await _run_async(constructor, packets, **kwargs)
+    decoder = await run_async(constructor, packets, **kwargs)
     wrapper = _streaming_decoder_wrpper(decoder)
     try:
         yield wrapper
     finally:
-        await _run_async(_libspdl._drop, wrapper.decoder)
+        await run_async(_libspdl._drop, wrapper.decoder)
 
 
 async def async_streaming_decode(
@@ -455,7 +446,7 @@ async def async_convert_frames(
     Returns:
         (CPUBuffer): A Buffer object.
     """
-    return await _run_async(convert_frames, frames, **kwargs)
+    return await run_async(convert_frames, frames, **kwargs)
 
 
 ################################################################################
@@ -521,7 +512,7 @@ async def async_transfer_buffer(buffer: CPUBuffer, **kwargs) -> CUDABuffer:
     Returns:
         (CUDABuffer): A Buffer object.
     """
-    return await _run_async(transfer_buffer, buffer, **kwargs)
+    return await run_async(transfer_buffer, buffer, **kwargs)
 
 
 ################################################################################
@@ -594,4 +585,4 @@ async def async_encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **k
         ```
 
     """
-    return await _run_async(encode_image, path, data, pix_fmt, **kwargs)
+    return await run_async(encode_image, path, data, pix_fmt, **kwargs)
