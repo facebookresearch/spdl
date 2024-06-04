@@ -37,69 +37,6 @@ CPUBufferPtr batch_convert(std::vector<FFmpegFramesPtr<media_type>>&& frames) {
   nb::gil_scoped_release g;
   return convert_frames(_ref(frames));
 }
-
-template <typename IntType = int32_t>
-CPUBufferPtr _convert_tokens_1d(
-    const nb::list tokens,
-    std::optional<size_t> token_length) {
-  auto num_tokens = tokens.size();
-  if (num_tokens == 0) {
-    throw std::runtime_error("Token is empty");
-  }
-  if (token_length && *token_length == 0) {
-    throw std::runtime_error("`token_length` cannot be zero.");
-  }
-  auto len = token_length ? *token_length : num_tokens;
-  auto buffer = cpu_buffer({len}, ElemClass::Int, sizeof(IntType));
-  auto data = static_cast<IntType*>(buffer->data());
-  for (size_t i = 0; i < std::min(len, num_tokens); ++i) {
-    *data = nb::cast<IntType>(tokens[i]);
-    ++data;
-  }
-  if (len > num_tokens) {
-    std::memset(data, 0, sizeof(IntType) * (len - num_tokens));
-  }
-  return buffer;
-}
-
-template <typename IntType = int32_t>
-CPUBufferPtr _convert_tokens_2d(
-    const nb::list batch_tokens,
-    std::optional<size_t> token_length) {
-  auto num_batch = batch_tokens.size();
-  if (num_batch == 0) {
-    throw std::runtime_error("Batch is empty");
-  }
-
-  auto max_token_length = [&]() -> size_t {
-    size_t ret = 0;
-    for (nb::handle h : batch_tokens) {
-      ret = std::max(ret, nb::cast<nb::list>(h).size());
-    }
-    return ret;
-  }();
-  if (max_token_length == 0) {
-    throw std::runtime_error("Tokens are empty");
-  }
-
-  auto len = token_length ? *token_length : max_token_length;
-  auto buffer = cpu_buffer({num_batch, len}, ElemClass::Int, sizeof(IntType));
-  auto data = static_cast<IntType*>(buffer->data());
-  for (nb::handle h : batch_tokens) {
-    auto tokens = nb::cast<nb::list>(h);
-    auto num_tokens = tokens.size();
-    for (size_t i = 0; i < std::min(len, num_tokens); ++i) {
-      *data = nb::cast<IntType>(tokens[i]);
-      ++data;
-    }
-    if (len > num_tokens) {
-      std::memset(data, 0, sizeof(IntType) * (len - num_tokens));
-      data += len - num_tokens;
-    }
-  }
-  return buffer;
-}
-
 } // namespace
 
 void register_conversion(nb::module_& m) {
@@ -113,20 +50,5 @@ void register_conversion(nb::module_& m) {
   m.def("convert_frames", &batch_convert<MediaType::Audio>, nb::arg("frames"));
   m.def("convert_frames", &batch_convert<MediaType::Video>, nb::arg("frames"));
   m.def("convert_frames", &batch_convert<MediaType::Image>, nb::arg("frames"));
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // Convert list of integers (tokens)
-  ////////////////////////////////////////////////////////////////////////////////
-  m.def(
-      "convert_tokens_1d",
-      &_convert_tokens_1d<>,
-      nb::arg("tokens"),
-      nb::arg("token_length") = nb::none());
-
-  m.def(
-      "convert_tokens_2d",
-      &_convert_tokens_2d<>,
-      nb::arg("tokens"),
-      nb::arg("token_length") = nb::none());
 }
 } // namespace spdl::core
