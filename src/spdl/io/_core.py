@@ -46,6 +46,8 @@ __all__ = [
     # DATA TRANSFER
     "transfer_buffer",
     "async_transfer_buffer",
+    "transfer_buffer_cpu",
+    "async_transfer_buffer_cpu",
     # ENCODING
     "encode_image",
     "async_encode_image",
@@ -466,9 +468,7 @@ async def async_convert_frames(
 ################################################################################
 # Device data transfer
 ################################################################################
-def transfer_buffer(
-    buffer: CPUBuffer, *, cuda_config: CUDAConfig, **kwargs
-) -> CUDABuffer:
+def transfer_buffer(buffer: CPUBuffer, *, cuda_config: CUDAConfig) -> CUDABuffer:
     """Move the given CPU buffer to GPU.
 
     Args:
@@ -479,11 +479,11 @@ def transfer_buffer(
     Returns:
         Buffer data on the target GPU.
     """
-    return _libspdl.transfer_buffer(buffer, cuda_config=cuda_config, **kwargs)
+    return _libspdl.transfer_buffer(buffer, cuda_config=cuda_config)
 
 
 async def async_transfer_buffer(
-    buffer: CPUBuffer, *, cuda_config: CUDAConfig, **kwargs
+    buffer: CPUBuffer, *, cuda_config: CUDAConfig
 ) -> CUDABuffer:
     """Transfer the given buffer to CUDA device.
 
@@ -494,7 +494,31 @@ async def async_transfer_buffer(
     Returns:
         (CUDABuffer): A Buffer object.
     """
-    return await run_async(transfer_buffer, buffer, cuda_config=cuda_config, **kwargs)
+    return await run_async(transfer_buffer, buffer, cuda_config=cuda_config)
+
+
+def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
+    """Copy the given CUDA buffer to CPU.
+
+    Args:
+        buffer: Source data
+
+    Returns:
+        Buffer data on CPU.
+    """
+    return _libspdl.transfer_buffer_cpu(buffer)
+
+
+def async_transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
+    """Copy the given CUDA buffer to CPU.
+
+    Args:
+        buffer: Source data
+
+    Returns:
+        Buffer data on CPU.
+    """
+    return run_async(transfer_buffer_cpu, buffer)
 
 
 ################################################################################
