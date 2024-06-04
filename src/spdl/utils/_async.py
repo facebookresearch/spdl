@@ -1,7 +1,7 @@
 import asyncio
 import functools
 import logging
-from asyncio import BoundedSemaphore, Future as AsyncFuture, Queue as AsyncQueue
+from asyncio import BoundedSemaphore, Queue as AsyncQueue
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
@@ -22,12 +22,12 @@ U = TypeVar("U")
 _Sentinel = object()
 
 
-def run_async(
+async def run_async(
     func: Callable[..., T],
     *args,
     _executor: ThreadPoolExecutor | None = None,
     **kwargs,
-) -> AsyncFuture[T]:
+) -> Awaitable[T]:
     """Run the given synchronous function asynchronously (in a thread).
 
     !!! note
@@ -44,7 +44,7 @@ def run_async(
     """
     loop = asyncio.get_running_loop()
     _func = functools.partial(func, *args, **kwargs)
-    return loop.run_in_executor(_executor, _func)  # pyre-ignore: [6]
+    return await loop.run_in_executor(_executor, _func)  # pyre-ignore: [6]
 
 
 ################################################################################
