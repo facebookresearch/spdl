@@ -63,31 +63,16 @@ T = TypeVar("T")
 def demux_audio(
     src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> AudioPackets:
-    return _libspdl.demux_audio(src, timestamp=timestamp, **kwargs)
-
-
-def demux_video(
-    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
-) -> VideoPackets:
-    return _libspdl.demux_video(src, timestamp=timestamp, **kwargs)
-
-
-def demux_image(src: str | bytes, **kwargs) -> ImagePackets:
-    return _libspdl.demux_image(src, **kwargs)
-
-
-async def async_demux_audio(
-    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
-) -> AudioPackets:
     """Demux audio from the source.
 
     Args:
-        src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` type, then
-            they are interpreted as in-memory data.
+        src: Source identifier.
+            If `str` type, it is interpreted as a source location,
+            such as local file path or URL. If `bytes` type,
+            then they are interpreted as in-memory data.
 
         timestamp:
-            A time window. If omitted, the entire data are demuxed.
+            A time window. If omitted, the entire audio are demuxed.
 
     Other args:
         demux_config (DemuxConfig): Custom I/O config.
@@ -95,10 +80,17 @@ async def async_demux_audio(
     Returns:
         (AudioPackets): object.
     """
+    return _libspdl.demux_audio(src, timestamp=timestamp, **kwargs)
+
+
+async def async_demux_audio(
+    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
+) -> AudioPackets:
+    """Async version of [demux_audio][spdl.io.demux_audio]"""
     return await run_async(demux_audio, src, timestamp=timestamp, **kwargs)
 
 
-async def async_demux_video(
+def demux_video(
     src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> VideoPackets:
     """Demux video from the source.
@@ -117,10 +109,17 @@ async def async_demux_video(
     Returns:
         (VideoPackets): object.
     """
+    return _libspdl.demux_video(src, timestamp=timestamp, **kwargs)
+
+
+async def async_demux_video(
+    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
+) -> VideoPackets:
+    """Async version of [demux_video][spdl.io.demux_video]"""
     return await run_async(demux_video, src, timestamp=timestamp, **kwargs)
 
 
-async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
+def demux_image(src: str | bytes, **kwargs) -> ImagePackets:
     """Demux image from the source.
 
     Args:
@@ -135,12 +134,37 @@ async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
     Returns:
         (ImagePackets): object.
     """
+    return _libspdl.demux_image(src, **kwargs)
+
+
+async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
+    """Async version of [demux_image][spdl.io.demux_image]"""
     return await run_async(demux_image, src, **kwargs)
+
+
+################################################################################
+# Demuxing
+################################################################################
 
 
 def streaming_demux_audio(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> Iterator[AudioPackets]:
+    """Demux audio of the given time windows.
+
+    Args:
+        src: Source identifier. If `str` type, it is interpreted as a source location,
+            such as local file path or URL. If `bytes` type, then
+            they are interpreted as in-memory data.
+        timestamps: List of timestamps, indicating the start and end time of the window
+            in seconds.
+
+    Other args:
+        demux_config (DemuxConfig): Custom I/O config.
+
+    Yields:
+        AudioPackets object, corresponds to the given window.
+    """
     demuxer = _libspdl._streaming_audio_demuxer(src, **kwargs)
     for window in timestamps:
         demuxer, packets = _libspdl._demux(demuxer, window)
@@ -150,6 +174,21 @@ def streaming_demux_audio(
 def streaming_demux_video(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> Iterator[VideoPackets]:
+    """Demux video of the given time windows.
+
+    Args:
+        src: Source identifier. If `str` type, it is interpreted as a source location,
+            such as local file path or URL. If `bytes` type, then
+            they are interpreted as in-memory data.
+        timestamps: List of timestamps, indicating the start and end time of the window
+            in seconds.
+
+    Other args:
+        demux_config (DemuxConfig): Custom I/O config.
+
+    Returns:
+        VideoPackets object, corresponds to the given window.
+    """
     demuxer = _libspdl._streaming_video_demuxer(src, **kwargs)
     for window in timestamps:
         demuxer, packets = _libspdl._demux(demuxer, window)
@@ -186,21 +225,7 @@ async def _stream_demux(demuxer, src, timestamps, **kwargs):
 async def async_streaming_demux_audio(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[AudioPackets]:
-    """Demux audio of the given time windows.
-
-    Args:
-        src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` type, then
-            they are interpreted as in-memory data.
-        timestamps: List of timestamps, indicating the start and end time of the window
-            in seconds.
-
-    Other args:
-        demux_config (DemuxConfig): Custom I/O config.
-
-    Yields:
-        (AudioPackets): AudioPackets object, corresponds to the given window.
-    """
+    """Async version of [streaming_demux_audio][spdl.io.streaming_demux_audio]."""
     demuxer = _libspdl._streaming_audio_demuxer
     async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
         yield packets
@@ -209,21 +234,7 @@ async def async_streaming_demux_audio(
 async def async_streaming_demux_video(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[VideoPackets]:
-    """Demux video of the given time windows.
-
-    Args:
-        src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` type, then
-            they are interpreted as in-memory data.
-        timestamps: List of timestamps, indicating the start and end time of the window
-            in seconds.
-
-    Other args:
-        demux_config (DemuxConfig): Custom I/O config.
-
-    Returns:
-        (VideoPackets): VideoPackets object, corresponds to the given window.
-    """
+    """Async version of [streaming_demux_video][spdl.io.streaming_demux_video]."""
     demuxer = _libspdl._streaming_video_demuxer
     async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
         yield packets
@@ -242,21 +253,7 @@ def decode_packets(packets: VideoPackets, **kwargs) -> VideoFrames: ...
 def decode_packets(packets: ImagePackets, **kwargs) -> ImageFrames: ...
 
 
-def decode_packets(packets, **kwargs):
-    if "filter_desc" not in kwargs:
-        kwargs["filter_desc"] = _preprocessing.get_filter_desc(packets)
-    return _libspdl.decode_packets(packets, **kwargs)
-
-
-@overload
-async def async_decode_packets(packets: AudioPackets, **kwargs) -> AudioFrames: ...
-@overload
-async def async_decode_packets(packets: VideoPackets, **kwargs) -> VideoFrames: ...
-@overload
-async def async_decode_packets(packets: ImagePackets, **kwargs) -> ImageFrames: ...
-
-
-async def async_decode_packets(packets, **kwargs):
+def decode_packets(packets, filter_desc: str | None = None, **kwargs):
     """Decode packets.
 
     Args:
@@ -273,6 +270,21 @@ async def async_decode_packets(packets, **kwargs):
         (AudioFrames, VideoFrames or ImageFrames): A Frames object.
             The media type of the returned object corresponds to the input Packets type.
     """
+    if filter_desc is None:
+        filter_desc = _preprocessing.get_filter_desc(packets)
+    return _libspdl.decode_packets(packets, filter_desc=filter_desc, **kwargs)
+
+
+@overload
+async def async_decode_packets(packets: AudioPackets, **kwargs) -> AudioFrames: ...
+@overload
+async def async_decode_packets(packets: VideoPackets, **kwargs) -> VideoFrames: ...
+@overload
+async def async_decode_packets(packets: ImagePackets, **kwargs) -> ImageFrames: ...
+
+
+async def async_decode_packets(packets, **kwargs):
+    """Async version of [decode_packets][spdl.io.decode_packets]."""
     return await run_async(decode_packets, packets, **kwargs)
 
 
@@ -282,30 +294,14 @@ def decode_packets_nvdec(
     cuda_config: CUDAConfig,
     **kwargs,
 ) -> CUDABuffer:
-    return _libspdl.decode_packets_nvdec(packets, cuda_config=cuda_config, **kwargs)
-
-
-async def async_decode_packets_nvdec(
-    packets: VideoPackets | ImagePackets | list[ImagePackets],
-    *,
-    cuda_config: CUDAConfig,
-    **kwargs,
-) -> CUDABuffer:
     """Decode packets with NVDEC.
 
     Unlike FFmpeg-based decoding, NVDEC returns GPU buffer directly.
 
-    ``` mermaid
-    graph LR
-      Source -->|Demux| Packets;
-      Packets -->|Decode| Buffer;
-      Buffer -->|Cast| Array[Array / Tensor];
-    ```
-
     Args:
         packets: Packets object.
 
-        cuda_device_index: The CUDA device to use for decoding.
+        cuda_config: The CUDA device to use for decoding.
 
     Other args:
         crop_left,crop_top,crop_right,crop_bottom (int):
@@ -320,12 +316,37 @@ async def async_decode_packets_nvdec(
     Returns:
         A CUDABuffer object.
     """
+    return _libspdl.decode_packets_nvdec(packets, cuda_config=cuda_config, **kwargs)
+
+
+async def async_decode_packets_nvdec(
+    packets: VideoPackets | ImagePackets | list[ImagePackets],
+    *,
+    cuda_config: CUDAConfig,
+    **kwargs,
+) -> CUDABuffer:
+    """Async version of [decode_packets_nvdec][spdl.io.decode_packets_nvdec]."""
     return await run_async(
         decode_packets_nvdec, packets, cuda_config=cuda_config, **kwargs
     )
 
 
 def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDABuffer:
+    """Decode image with nvJPEG.
+
+    Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
+
+    Args:
+        src: File path to a JPEG image or data in bytes.
+        cuda_config: The CUDA device to use for decoding.
+
+    Other args:
+        pix_fmt (str): *Optional* Output pixel format.
+            Supported values are `"RGB"` or `"BGR"`.
+
+    Returns:
+        A CUDABuffer object. Shape is [C==3, H, W].
+    """
     if isinstance(src, bytes):
         data = src
     else:
@@ -337,29 +358,7 @@ def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDA
 async def async_decode_image_nvjpeg(
     src: str | bytes, *, cuda_config: CUDAConfig, **kwargs
 ) -> CUDABuffer:
-    """Decode image with NVJPEG.
-
-    Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
-
-    ``` mermaid
-    graph LR
-      Source -->|Decode| Buffer;
-      Buffer -->|Cast| Array[Array / Tensor];
-    ```
-
-    Args:
-        data: File path to a JPEG image or data in bytes.
-        cuda_device_index: The CUDA device to use for decoding.
-
-    Other args:
-        pix_fmt (str): *Optional* Output pixel format.
-            Supported values are `"RGB"` or `"BGR"`.
-
-        cuda_allocator: See [async_convert_frames][spdl.io.async_convert_frames].
-
-    Returns:
-        A CUDABuffer object. Shape is [C==3, H, W].
-    """
+    """Async version of [decode_image_nvjpeg][spdl.io.decode_image_nvjpeg]."""
     return await run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
 
 
@@ -407,15 +406,7 @@ async def _streaming_decoder(constructor, packets, **kwargs):
 async def async_streaming_decode_packets(
     packets: VideoPackets, num_frames: int, **kwargs
 ) -> AsyncIterator[VideoFrames]:
-    """Decode the video packets chunk by chunk.
-
-    Args:
-        packets: VideoPackets object.
-        num_frames: Number of frames to decode at a time.
-
-    Yields:
-        VideoFrames object containing at most `num_frames` frames.
-    """
+    """Async version of [streaming_decode_packets][spdl.io.streaming_decode_packets]."""
     decoder = _libspdl._streaming_decoder
     async with _streaming_decoder(decoder, packets, **kwargs) as _decoder:
         while (item := await _decoder.decode(num_frames)) is not None:
@@ -428,14 +419,14 @@ async def async_streaming_decode_packets(
 
 
 def convert_frames(
-    frames: AudioFrames | VideoFrames | ImageFrames | list[ImageFrames],
-    **kwargs,
-) -> CPUBuffer:
-    return _libspdl.convert_frames(frames, **kwargs)
-
-
-async def async_convert_frames(
-    frames: AudioFrames | VideoFrames | ImageFrames | list[ImageFrames],
+    frames: (
+        AudioFrames
+        | VideoFrames
+        | ImageFrames
+        | list[AudioFrames]
+        | list[VideoFrames]
+        | list[ImageFrames]
+    ),
     **kwargs,
 ) -> CPUBuffer:
     """Convert the decoded frames to buffer.
@@ -445,7 +436,30 @@ async def async_convert_frames(
 
     Returns:
         (CPUBuffer): A Buffer object.
+            The shape of the buffer obejct is
+
+            - AudioFrames -> `[C, H]` or `[N, C]`.
+            - VideoFrames -> `[N, C, H, W]` or `[N, H, W, C]`.
+            - ImageFrames -> `[C, H, W]`.
+
+            where
+
+            - `C`: channel (color channel or audio channel)
+            - `N`: frames
+            - `W`: width
+            - `H`: height
+
+            If a list of Frames objects are passed, then they are treated as one batch,
+            so that the resulting buffer object has batch dimention at the beginning.
     """
+    return _libspdl.convert_frames(frames, **kwargs)
+
+
+async def async_convert_frames(
+    frames: AudioFrames | VideoFrames | ImageFrames | list[ImageFrames],
+    **kwargs,
+) -> CPUBuffer:
+    """Async version of [convert_frames][spdl.io.convert_frames]."""
     return await run_async(convert_frames, frames, **kwargs)
 
 
@@ -455,6 +469,16 @@ async def async_convert_frames(
 def transfer_buffer(
     buffer: CPUBuffer, *, cuda_config: CUDAConfig, **kwargs
 ) -> CUDABuffer:
+    """Move the given CPU buffer to GPU.
+
+    Args:
+        buffer: Source data
+
+        cuda_config: Target GPU.
+
+    Returns:
+        Buffer data on the target GPU.
+    """
     return _libspdl.transfer_buffer(buffer, cuda_config=cuda_config, **kwargs)
 
 
@@ -464,54 +488,8 @@ async def async_transfer_buffer(
     """Transfer the given buffer to CUDA device.
 
     Args:
-        data (CPUBuffer): Buffer object on host memory.
-
-    Other args:
-        cuda_device_index (int):
-            *Optional:* When provided, the buffer is moved to CUDA device.
-
-        cuda_stream (int (uintptr_t) ):
-            *Optional:* Pointer to a custom CUDA stream. By default, it uses the
-            per-thread default stream.
-
-            !!! note
-
-                Host to device buffer transfer is performed in a thread different than
-                Python main thread.
-
-                Since the frame data are available only for the duration of the
-                background job, the transfer is performed with synchronization.
-
-                It is possible to provide the same stream as the one used in Python's
-                main thread, but it might introduce undesired synchronization.
-
-            ??? note "How to retrieve CUDA stream pointer on PyTorch"
-
-                An example to fetch the default stream from PyTorch.
-
-                ```python
-                stream = torch.cuda.Stream()
-                cuda_stream = stream.cuda_stream
-                ```
-
-        cuda_allocator (tuple[Callable[[int, int, int], int], Callable[[int], None]]):
-            *Optional:* A pair of custom CUDA memory allcoator and deleter functions.
-
-            The allocator function, takes the following arguments, and
-            return the address of the allocated memory.
-
-            - Size: `int`
-            - CUDA device index: `int`
-            - CUDA stream address: `int` (`uintptr_t`)
-
-            An example of such function is
-            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_alloc].
-
-            The deleter takes the address of memory allocated
-            by the allocator and free the memory.
-
-            An example of such function is
-            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
+        buffer: Buffer object on host memory.
+        cuda_config: CUDA configuration.
 
     Returns:
         (CUDABuffer): A Buffer object.
@@ -527,14 +505,10 @@ Array = TypeVar("Array")
 
 
 def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
-    return _libspdl.encode_image(path, data, pix_fmt=pix_fmt, **kwargs)
-
-
-async def async_encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
     """Save the given image array/tensor to file.
 
     Args:
-        dst: The path to which the data are written.
+        path: The path to which the data are written.
 
         data (NumPy NDArray, PyTorch Tensor):
             Image data in array format. The data  must be `uint8` type,
@@ -551,9 +525,6 @@ async def async_encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **k
 
     Other args:
         encode_config (EncodeConfig): Customize the encoding.
-
-        executor (Executor): Thread pool executor to run the operation.
-            By default, it uses the default encode thread pool.
 
     ??? note "Example - Save image as PNG with resizing"
 
@@ -589,4 +560,9 @@ async def async_encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **k
         ```
 
     """
+    return _libspdl.encode_image(path, data, pix_fmt=pix_fmt, **kwargs)
+
+
+async def async_encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
+    """Async version of [encode_image][spdl.io.encode_image]."""
     return await run_async(encode_image, path, data, pix_fmt, **kwargs)

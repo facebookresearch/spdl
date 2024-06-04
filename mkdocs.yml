@@ -49,14 +49,10 @@ nav:
       - Installation: installation.md
       - "spdl.io":
           - "Overview": spdl/io/overview.md
-          - "Low-level APIs":
-              - "Overview": spdl/io/core/about.md
-              - "Demuxing": spdl/io/core/demuxing.md
-              - "Decoding": spdl/io/core/decoding.md
-              - "Conversion": spdl/io/core/conversion.md
-          - "High-level APIs":
-              - "Loading Media": spdl/io/api/load.md
-              - "Saving Media": spdl/io/api/encoding.md
+          - "Core API":
+              - "Loading": spdl/io/core_load.md
+              - "Saving": spdl/io/core_save.md
+          - "Composite APIs": spdl/io/composite_load.md
           - "Preprocessing": spdl/io/preprocessing.md
           - "Support Structures":
             - "Packets": spdl/io/support/packets.md

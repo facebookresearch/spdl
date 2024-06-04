@@ -413,4 +413,6 @@ class EncodeConfig:
 
 
 class CUDAConfig:
-    pass
+    """Specify the CUDA devie and memory management.
+
+    See the factory function [spdl.io.cuda_config][]."""
