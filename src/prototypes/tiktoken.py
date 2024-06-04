@@ -12,7 +12,6 @@ import spdl.utils
 import tiktoken
 import torch
 from spdl.io import CUDAConfig
-from spdl.lib import _libspdl
 from spdl.utils import iter_flist, run_async
 
 
@@ -40,10 +39,10 @@ def _tokenize(path, encoding, cuda_config: CUDAConfig | None = None):
         data = _read(path)
     with spdl.utils.trace_event("encode"):
         tokens = encoding.encode(data)
-    with spdl.utils.trace_event("convert_tokens_1d"):
+    with spdl.utils.trace_event("np.array"):
         arr = np.array(tokens)
     if cuda_config is not None:
-        buffer = _libspdl.transfer_buffer(
+        buffer = spdl.io.transfer_buffer(
             arr,
             cuda_config=cuda_config,
         )
