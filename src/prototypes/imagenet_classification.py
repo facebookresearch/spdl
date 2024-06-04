@@ -36,6 +36,7 @@ def _parse_args(args):
     parser.add_argument("--no-compile", action="store_false", dest="compile")
     parser.add_argument("--no-bf16", action="store_false", dest="use_bf16")
     parser.add_argument("--use-nvdec", action="store_true")
+    parser.add_argument("--use-nvjpeg", action="store_true")
     args = parser.parse_args(args)
     if args.trace:
         args.max_samples = args.batch_size * 60
@@ -160,51 +161,71 @@ def _get_batch_generator(args, device):
     )
 
     async def _async_decode_func(paths):
-        with torch.profiler.record_function("async_decode"):
-            classes = [[class_mapping[parse_wnid(p)]] for p in paths]
-            classes = torch.tensor(classes, dtype=torch.int64).to(device)
-            buffer = await spdl.io.async_load_image_batch(
-                paths,
-                width=None,
-                height=None,
-                pix_fmt=None,
-                strict=True,
-                filter_desc=filter_desc,
-                cuda_config=spdl.io.cuda_config(
-                    device_index=0,
-                    allocator=(
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
-                    ),
+        classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+        classes = torch.tensor(classes, dtype=torch.int64).to(device)
+        buffer = await spdl.io.async_load_image_batch(
+            paths,
+            width=None,
+            height=None,
+            pix_fmt=None,
+            strict=True,
+            filter_desc=filter_desc,
+            cuda_config=spdl.io.cuda_config(
+                device_index=0,
+                allocator=(
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
                 ),
-            )
-            batch = spdl.io.to_torch(buffer)
-            batch = batch.permute((0, 3, 1, 2))
-            return batch, classes
+            ),
+        )
+        batch = spdl.io.to_torch(buffer)
+        batch = batch.permute((0, 3, 1, 2))
+        return batch, classes
 
     async def _async_decode_nvdec(paths):
-        with torch.profiler.record_function("async_decode"):
-            classes = [[class_mapping[parse_wnid(p)]] for p in paths]
-            classes = torch.tensor(classes, dtype=torch.int64).to(device)
-            buffer = await spdl.io.async_load_image_batch_nvdec(
-                paths,
-                cuda_config=spdl.io.cuda_config(
-                    device_index=0,
-                    allocator=(
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
-                    ),
+        classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+        classes = torch.tensor(classes, dtype=torch.int64).to(device)
+        buffer = await spdl.io.async_load_image_batch_nvdec(
+            paths,
+            cuda_config=spdl.io.cuda_config(
+                device_index=0,
+                allocator=(
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
                 ),
-                width=w,
-                height=h,
-                pix_fmt="rgba",
-                strict=True,
-            )
-            batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
-            return batch, classes
+            ),
+            width=w,
+            height=h,
+            pix_fmt="rgba",
+            strict=True,
+        )
+        batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
+        return batch, classes
+
+    async def _async_decode_nvjpeg(paths):
+        classes = [[class_mapping[parse_wnid(p)]] for p in paths]
+        classes = torch.tensor(classes, dtype=torch.int64).to(device)
+        buffer = await spdl.io.async_load_image_batch_nvjpeg(
+            paths,
+            cuda_config=spdl.io.cuda_config(
+                device_index=0,
+                allocator=(
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
+                ),
+            ),
+            width=w,
+            height=h,
+            pix_fmt="rgb",
+            # strict=True,
+        )
+        batch = spdl.io.to_torch(buffer)
+        return batch, classes
 
     if args.use_nvdec:
         return apply_async(_async_decode_nvdec, srcs_gen)
+    if args.use_nvjpeg:
+        return apply_async(_async_decode_nvjpeg, srcs_gen)
     return apply_async(_async_decode_func, srcs_gen)
 
 
@@ -218,6 +239,10 @@ def _main(args=None):
     batch_gen = _get_batch_generator(args, device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
+    if args.use_nvjpeg:
+        trace_path = f"{trace_path}.nvjpeg"
+    if args.use_nvdec:
+        trace_path = f"{trace_path}.nvdec"
     dataloader = BackgroundGenerator(
         batch_gen, num_workers=args.num_threads, queue_size=args.queue_size
     )
@@ -227,10 +252,6 @@ def _main(args=None):
         profile() if args.trace else contextlib.nullcontext() as prof,
         spdl.utils.tracing(f"{trace_path}.pftrace", enable=args.trace is not None),
     ):
-        with spdl.utils.trace_event("warm-up"):
-            dataloader = iter(dataloader)
-            batch = next(dataloader)
-            model(*batch)
         _run_inference(dataloader, model)
 
     if args.trace:
