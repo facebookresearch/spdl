@@ -452,11 +452,15 @@ async def async_convert_frames(
 ################################################################################
 # Device data transfer
 ################################################################################
-def transfer_buffer(buffer: CPUBuffer, **kwargs) -> CUDABuffer:
-    return _libspdl.transfer_buffer(buffer, **kwargs)
+def transfer_buffer(
+    buffer: CPUBuffer, *, cuda_config: CUDAConfig, **kwargs
+) -> CUDABuffer:
+    return _libspdl.transfer_buffer(buffer, cuda_config=cuda_config, **kwargs)
 
 
-async def async_transfer_buffer(buffer: CPUBuffer, **kwargs) -> CUDABuffer:
+async def async_transfer_buffer(
+    buffer: CPUBuffer, *, cuda_config: CUDAConfig, **kwargs
+) -> CUDABuffer:
     """Transfer the given buffer to CUDA device.
 
     Args:
@@ -512,7 +516,7 @@ async def async_transfer_buffer(buffer: CPUBuffer, **kwargs) -> CUDABuffer:
     Returns:
         (CUDABuffer): A Buffer object.
     """
-    return await run_async(transfer_buffer, buffer, **kwargs)
+    return await run_async(transfer_buffer, buffer, cuda_config=cuda_config, **kwargs)
 
 
 ################################################################################
