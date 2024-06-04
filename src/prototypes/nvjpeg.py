@@ -6,7 +6,7 @@ import spdl.io
 import spdl.utils
 import torch
 from spdl.dataloader import apply_async, BackgroundGenerator
-from spdl.dataloader._utils import _iter_flist
+from spdl.utils import iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def _parse_args(args=None):
 
 
 def _get_test_func(args, use_nvjpeg, width=224, height=224):
-    srcs_gen = _iter_flist(
+    srcs_gen = iter_flist(
         args.input_flist,
         prefix=args.prefix,
         batch_size=32,

@@ -10,8 +10,8 @@ import spdl.utils
 import timm
 import torch
 from spdl.dataloader import apply_async, BackgroundGenerator
-from spdl.dataloader._utils import _iter_flist
 from spdl.dataset.imagenet import get_mappings, parse_wnid
+from spdl.utils import iter_flist
 from torch.profiler import profile
 
 _LG = logging.getLogger(__name__)
@@ -142,7 +142,7 @@ def _run_inference(dataloader, model):
 
 
 def _get_batch_generator(args, device):
-    srcs_gen = _iter_flist(
+    srcs_gen = iter_flist(
         args.input_flist,
         prefix=args.prefix,
         batch_size=args.batch_size,
