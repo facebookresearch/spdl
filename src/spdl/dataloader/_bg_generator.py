@@ -106,8 +106,7 @@ class BackgroundGenerator(Generic[T]):
     """Run generator in background and iterate the items.
 
     Args:
-        iterable: Generator to run in the background. It can be an
-            asynchronous generator or a regular generator.
+        iterable: Async generator to run in the background.
 
         num_workers: The number of worker threads in the default thread executor.
             If `loop` is provided, this argument is ignored.
