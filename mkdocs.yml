@@ -72,6 +72,7 @@ nav:
       - "spdl.dataloader (Experimental)":
           - "Task Execution": spdl/dataloader/dataloader.md
       - "spdl.utils":
+          - "Async": spdl/utils/async.md
           - "Tracing": spdl/utils/tracing.md
           - "Folly": spdl/utils/folly.md
           - "FFmpeg": spdl/utils/ffmpeg.md

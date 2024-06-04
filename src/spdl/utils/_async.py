@@ -1,29 +1,50 @@
 import asyncio
 import functools
 import logging
+from asyncio import BoundedSemaphore, Future as AsyncFuture, Queue as AsyncQueue
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
+from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
 
 __all__ = [
     "apply_async",
-    "pipe",
+    "async_generate",
+    "async_iterate",
+    "async_pipe",
     "run_async",
 ]
 
 _LG = logging.getLogger(__name__)
 
-S = TypeVar("S")
 T = TypeVar("T")
 U = TypeVar("U")
 
+_Sentinel = object()
+
 
 def run_async(
-    func: Callable[..., T], *args, executor=None, **kwargs
-) -> asyncio.Future[T]:
-    """Run the given function in the thread pool executor of the current event loop."""
+    func: Callable[..., T],
+    *args,
+    _executor: ThreadPoolExecutor | None = None,
+    **kwargs,
+) -> AsyncFuture[T]:
+    """Run the given synchronous function asynchronously (in a thread).
+
+    !!! note
+
+        To achieve the true concurrency, the function must be thread-safe and must
+        release the GIL.
+
+    Args:
+        func: The function to run.
+        args: Positional arguments to the `func`.
+        _executor: Custom executor.
+            If `None` the default executor of the current event loop is used.
+        kwargs: Keyword arguments to the `func`.
+    """
     loop = asyncio.get_running_loop()
     _func = functools.partial(func, *args, **kwargs)
-    return loop.run_in_executor(executor, _func)  # pyre-ignore: [6]
+    return loop.run_in_executor(_executor, _func)  # pyre-ignore: [6]
 
 
 ################################################################################
@@ -38,19 +59,24 @@ def _check_exception(task, stacklevel=1):
         _LG.error("Task [%s] failed: %s", task.get_name(), err, stacklevel=stacklevel)
 
 
-async def _apply_async(func, generator, queue, concurrency) -> None:
-    sem = asyncio.BoundedSemaphore(concurrency)
+async def _generate(
+    func: Callable[[T], Awaitable[U]],
+    generator: Iterable[T],
+    queue: AsyncQueue[U],
+    concurrency: int,
+    name: str,
+) -> None:
+    sem = BoundedSemaphore(concurrency)
 
     async def _f(item):
         async with sem:
-            result = await func(item)
-            await queue.put(result)
+            await queue.put(await func(item))
 
     tasks = set()
 
     for i, item in enumerate(generator):
         async with sem:
-            task = asyncio.create_task(_f(item), name=f"item_{i}")
+            task = asyncio.create_task(_f(item), name=f"{name}_{i}")
             tasks.add(task)
             task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
             task.add_done_callback(tasks.discard)
@@ -58,93 +84,113 @@ async def _apply_async(func, generator, queue, concurrency) -> None:
     while tasks:
         await asyncio.sleep(0.1)
 
-    _LG.debug("_apply_async - done")
+    _LG.debug("Done: %s", name)
+
+
+async def async_generate(
+    func: Callable[[T], Awaitable[U]],
+    generator: Iterable[T],
+    queue: AsyncQueue[U],
+    *,
+    concurrency: int = 3,
+    name: str | None = None,
+    _sentinel=_Sentinel,
+) -> None:
+    """Apply async function to the non-async generator.
+
+    This function iterates on a (synchronous) generator, applies an async function, and
+    put the results into an async queue.
+
+    ```
+    ┌───────────┐
+    │ Generator │
+    └─────┬─────┘
+          │
+         ┌▼┐
+         │ │
+         │ │ AsyncQueue
+         │ │
+         └─┘
+    ```
+
+    `concurrency` controls the number of coroutines that are scheduled
+    concurrently. At most `concurrency` number of coroutines are scheduled
+    at any time. Each coroutine will put the result into the queue independently.
+    As a result, the order of the output may not be the same as generator.
+
+    Args:
+        func: The async function to apply.
+        generator: The generator to apply the async function to.
+        queue: Output queue.
+        concurrency: The maximum number of async tasks scheduled concurrently.
+        name: The name to give to the task.
+    """
+    name_: str = name or f"apply_async_{func.__name__}"
+
+    task = asyncio.create_task(
+        _generate(func, generator, queue, concurrency, name_),
+        name=name_,
+    )
+    task.add_done_callback(_check_exception)
+
+    try:
+        await task
+    finally:
+        await queue.put(_sentinel)  # pyre-ignore: [6]
+
+
+################################################################################
+# apply_sync
+################################################################################
 
 
 async def apply_async(
     func: Callable[[T], Awaitable[U]],
     generator: Iterable[T],
-    *,
     buffer_size: int = 10,
     concurrency: int = 3,
-) -> AsyncIterator[U]:
-    """Apply async function to the non-async generator.
-
-    This function iterates the items in the generator, and apply async function,
-    buffer the coroutines so that at any time, there are `concurrency`
-    coroutines running. Each coroutines put the resulting items to the internal
-    queue as soon as it's ready.
-
-    !!! note
-
-        The order of the output may not be the same as generator.
-
-    Args:
-        func: The async function to apply.
-        generator: The generator to apply the async function to.
-        buffer_size: The size of the internal queue.
-            If it's full, the generator will be blocked.
-        concurrency: The maximum number of async tasks scheduled concurrently.
-
-    Yields:
-        The output of the `func`.
-    """
-    # Implementation Note:
-    #
-    # The simplest form to apply the async function to the generator is
-    #
-    # ```
-    # for item in generator:
-    #     yield await func(item)
-    # ```
-    #
-    # But this applies the function sequentially, so it is not efficient.
-    #
-    # We need to run multiple coroutines in parallel, and fetch the results.
-    # But since the size of the generator is not know, and it can be as large
-    # as millions, we need to set the max buffer size.
-    #
-    # A common approach is to put tasks in `set` and use `asyncio.wait`.
-    # But this approach leaves some ambiguity as "when to wait"?
-    #
-    # ```
-    # tasks = set()
-    # for item in generator:
-    #     task = asyncio.create_task(func(item))
-    #     tasks.add(task)
-    #
-    #     if <SOME_OCCASION>:  # When is optimal?
-    #         done, tasks = await asyncio.wait(
-    #             tasks, return_when=asyncio.FIRST_COMPLETED)
-    #         for task in done:
-    #             yield task.result()
-    # ```
-    #
-    # This kind of parameter has non-negligible impact on the performance, and
-    # usually the best performance is achieved when there is no such parameter,
-    # so that the async loop does the job for us.
-    #
-    # To eliminate such parameter, we use asyncio.Queue object and pass the results
-    # into this queue, as soon as it's ready. We only await the `Queue.get()`. Then,
-    # yield the results fetched from the queue.
-    queue = asyncio.Queue(buffer_size)
-
-    # We use sentinel to detect the end of the background job
-    sentinel = object()
-
-    async def _apply():
-        try:
-            await _apply_async(func, generator, queue, concurrency)
-        finally:
-            await queue.put(sentinel)  # Signal the end of the generator
-
-    task = asyncio.create_task(_apply(), name="_apply_async")
+):
+    queue = AsyncQueue(buffer_size)
+    task = asyncio.create_task(
+        async_generate(func, generator, queue, concurrency=concurrency)
+    )
     task.add_done_callback(_check_exception)
 
-    while (item := await queue.get()) is not sentinel:
+    async for item in async_iterate(queue):
         yield item
-
     await task
+
+
+################################################################################
+# async_iterate
+################################################################################
+async def async_iterate(
+    queue: AsyncQueue[T],
+    *,
+    _sentinel=_Sentinel,
+) -> AsyncIterator[T]:
+    """Iterate over the given queue.
+
+    ```
+           ┌─┐
+           │ │
+           │ │ AsyncQueue
+           │ │
+           └┬┘
+            │
+    ┌───────▼────────┐
+    │ Async Iterator │
+    └────────────────┘
+    ```
+
+    Args:
+        queue: Asynchronous queue where the result of tasks are placed.
+
+    Returns:
+        Async iterator over the result objects.
+    """
+    while (item := await queue.get()) is not _sentinel:
+        yield item
 
 
 ################################################################################
@@ -152,51 +198,80 @@ async def apply_async(
 ################################################################################
 async def _pipe(
     func: Callable[[T], Awaitable[U]],
-    input_queue: asyncio.Queue[T | S],
-    output_queue: asyncio.Queue[U | S],
-    sentinel: S,
+    input_queue: AsyncQueue[T],
+    output_queue: AsyncQueue[U],
+    _sentinel,
     concurrency: int,
     name: str,
 ) -> None:
-    sem = asyncio.BoundedSemaphore(concurrency)
+    sem = BoundedSemaphore(concurrency)
 
     async def _f(item: T):
         async with sem:
-            result = await func(item)
-            await output_queue.put(result)
+            await output_queue.put(await func(item))
 
     tasks = set()
 
-    i = 0
-    while (item := await input_queue.get()) is not sentinel:
+    i = -1
+    while (item := await input_queue.get()) is not _sentinel:
+        i += 1
         async with sem:
             task = asyncio.create_task(_f(item), name=f"{name}_{i}")  # pyre-ignore: [6]
             tasks.add(task)
             task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
             task.add_done_callback(lambda t: tasks.discard)
-        i += 1
 
     while tasks:
         await asyncio.sleep(0.1)
 
+    _LG.debug("Done: %s", name)
 
-async def pipe(
+
+async def async_pipe(
     func: Callable[[T], Awaitable[U]],
-    input_queue: asyncio.Queue[T | S],
-    output_queue: asyncio.Queue[U | S],
-    sentinel: S,
+    input_queue: AsyncQueue[T],
+    output_queue: AsyncQueue[U],
     *,
     concurrency: int = 1,
     name: str | None = None,
+    _sentinel=_Sentinel,
 ) -> None:
-    name = name or func.__name__
+    """Apply an async function to the outputs of the input queue and put the results to the output queue.
+
+    ```
+           ┌─┐
+           │ │
+           │ │ AsyncQueue
+           │ │
+           └┬┘
+            │
+    ┌───────▼────────┐
+    │ Async Function │
+    └───────┬────────┘
+            │
+           ┌▼┐
+           │ │
+           │ │ AsyncQueue
+           │ │
+           └─┘
+    ```
+
+    Args:
+        func: Async function that to be applied to the items in the input queue.
+        input_queue: Input queue.
+        output_queue: Output queue.
+        concurrency: The maximum number of async tasks scheduled concurrently.
+        name: The name to give to the task
+    """
+    name_: str = name or f"pipe_{func.__name__}"
+
     task = asyncio.create_task(
-        _pipe(func, input_queue, output_queue, sentinel, concurrency, name),
-        name=f"pipe_{name}",
+        _pipe(func, input_queue, output_queue, _sentinel, concurrency, name_),
+        name=name_,
     )
     task.add_done_callback(_check_exception)
 
     try:
         await task
     finally:
-        await output_queue.put(sentinel)
+        await output_queue.put(_sentinel)
