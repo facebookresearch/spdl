@@ -508,7 +508,7 @@ async def async_load_image_batch_nvjpeg(
 def _decode_partial(packets, indices, **kwargs):
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
-    decoder = _core.streaming_decode(packets, num_frames, **kwargs)
+    decoder = _core.streaming_decode_packets(packets, num_frames, **kwargs)
     return next(decoder)[indices]
 
 

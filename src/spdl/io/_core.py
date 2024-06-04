@@ -36,8 +36,8 @@ __all__ = [
     "async_decode_packets",
     "decode_packets_nvdec",
     "async_decode_packets_nvdec",
-    "streaming_decode",
-    "async_streaming_decode",
+    "streaming_decode_packets",
+    "async_streaming_decode_packets",
     "decode_image_nvjpeg",
     "async_decode_image_nvjpeg",
     # FRAME CONVERSION
@@ -363,7 +363,7 @@ async def async_decode_image_nvjpeg(
     return await run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
 
 
-def streaming_decode(
+def streaming_decode_packets(
     packets: VideoPackets, num_frames: int, **kwargs
 ) -> Iterator[VideoFrames]:
     """Decode the video packets chunk by chunk.
@@ -404,7 +404,7 @@ async def _streaming_decoder(constructor, packets, **kwargs):
         await run_async(_libspdl._drop, wrapper.decoder)
 
 
-async def async_streaming_decode(
+async def async_streaming_decode_packets(
     packets: VideoPackets, num_frames: int, **kwargs
 ) -> AsyncIterator[VideoFrames]:
     """Decode the video packets chunk by chunk.
