@@ -16,6 +16,7 @@ from spdl.io import (
 )
 
 from spdl.lib import _libspdl
+from spdl.utils import run_async
 
 from . import _core, _preprocessing
 
@@ -74,7 +75,7 @@ async def async_load_audio(
     *args,
     **kwargs,
 ) -> CPUBuffer | CUDABuffer:
-    return await _core._run_async(load_audio, *args, **kwargs)
+    return await run_async(load_audio, *args, **kwargs)
 
 
 def load_video(
@@ -92,7 +93,7 @@ async def async_load_video(
     *args,
     **kwargs,
 ) -> CPUBuffer | CUDABuffer:
-    return await _core._run_async(load_video, *args, **kwargs)
+    return await run_async(load_video, *args, **kwargs)
 
 
 def load_image(
@@ -109,7 +110,7 @@ async def async_load_image(
     *args,
     **kwargs,
 ) -> CPUBuffer | CUDABuffer:
-    return await _core._run_async(load_image, *args, **kwargs)
+    return await run_async(load_image, *args, **kwargs)
 
 
 ################################################################################
@@ -173,7 +174,7 @@ def streaming_load_video(
 # Async streaming load
 ################################################################################
 async def _async_load_packets(*args, **kwargs):
-    return await _core._run_async(_load_packets, *args)
+    return await run_async(_load_packets, *args)
 
 
 # TODO: Add concurrency and strict option
@@ -339,7 +340,7 @@ async def async_load_image_batch(
     )
 
     futures = [
-        _core._run_async(_decode, src, demux_config, decode_config, filter_desc)
+        run_async(_decode, src, demux_config, decode_config, filter_desc)
         for src in srcs
     ]
 
@@ -488,7 +489,7 @@ async def async_load_image_batch_nvjpeg(
     **kwargs,
 ):
     srcs_ = _get_bytes(srcs)
-    return await _core._run_async(
+    return await run_async(
         _libspdl.decode_image_nvjpeg,
         srcs_,
         scale_width=width,
@@ -527,7 +528,7 @@ async def async_sample_decode_video(
 
     tasks = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
-        tasks.append(_core._run_async(_decode_partial, split, idxes, **kwargs))
+        tasks.append(run_async(_decode_partial, split, idxes, **kwargs))
 
     await asyncio.wait(tasks)
 
