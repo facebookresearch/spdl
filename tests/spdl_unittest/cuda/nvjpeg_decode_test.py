@@ -30,11 +30,8 @@ def test_decode_pix_fmt(get_sample):
         assert not torch.equal(tensor[2], tensor[0])
         return tensor
 
-    with open(sample.path, "rb") as f:
-        data = f.read()
-
-    rgb_tensor = asyncio.run(_test(data, "rgb"))
-    bgr_tensor = asyncio.run(_test(data, "bgr"))
+    rgb_tensor = asyncio.run(_test(sample.path, "rgb"))
+    bgr_tensor = asyncio.run(_test(sample.path, "bgr"))
 
     assert torch.equal(rgb_tensor[0], bgr_tensor[2])
     assert torch.equal(rgb_tensor[1], bgr_tensor[1])
@@ -76,10 +73,7 @@ def test_decode_rubbish(get_sample):
             assert not torch.equal(tensor[2], tensor[0])
         return tensor
 
-    with open(sample.path, "rb") as f:
-        data = f.read()
-
-    asyncio.run(_test(data))
+    asyncio.run(_test(sample.path))
 
 
 def test_decode_resize(get_sample):
@@ -102,7 +96,60 @@ def test_decode_resize(get_sample):
         assert not torch.equal(tensor[2], tensor[0])
         return tensor
 
+    asyncio.run(_test(sample.path))
+
+
+def _is_all_zero(arr):
+    return all(int(v) == 0 for v in arr)
+
+
+def test_decode_zero_clear(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    sample = get_sample(cmd, width=320, height=240)
+
+    async def _test(data):
+        buffer = await spdl.io.async_decode_image_nvjpeg(
+            data,
+            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            scale_width=160,
+            scale_height=120,
+            _zero_clear=True,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        assert tensor.dtype == torch.uint8
+        assert tensor.shape == torch.Size([3, 120, 160])
+        assert tensor.device == torch.device("cuda", DEFAULT_CUDA)
+
     with open(sample.path, "rb") as f:
         data = f.read()
 
+    assert not _is_all_zero(data)
     asyncio.run(_test(data))
+    assert _is_all_zero(data)
+
+
+def test_batch_decode_zero_clear(get_samples):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample_%03d.jpg"
+    flist = get_samples(cmd)
+
+    async def _test(dataset):
+        buffer = await spdl.io.async_load_image_batch_nvjpeg(
+            dataset,
+            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            width=160,
+            height=120,
+            _zero_clear=True,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        assert tensor.dtype == torch.uint8
+        assert tensor.shape == torch.Size([100, 3, 120, 160])
+        assert tensor.device == torch.device("cuda", DEFAULT_CUDA)
+
+    dataset = []
+    for path in flist:
+        with open(path, "rb") as f:
+            dataset.append(f.read())
+
+    assert all(not _is_all_zero(data) for data in dataset)
+    asyncio.run(_test(dataset))
+    assert all(_is_all_zero(data) for data in dataset)

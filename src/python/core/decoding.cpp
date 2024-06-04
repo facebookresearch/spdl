@@ -10,7 +10,8 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
-#include "libspdl/core/types.h"
+
+#include <cstring>
 
 namespace nb = nanobind;
 
@@ -72,6 +73,10 @@ _decode(DecoderPtr<media_type> decoder, int num_frames) {
   nb::gil_scoped_release g;
   auto frames = decoder->decode(num_frames);
   return {std::move(decoder), std::move(frames)};
+}
+
+void zero_clear(nb::bytes data) {
+  std::memset((void*)data.c_str(), 0, data.size());
 }
 
 } // namespace
@@ -209,14 +214,20 @@ void register_decoding(nb::module_& m) {
          const CUDAConfig cuda_config,
          int scale_width,
          int scale_height,
-         const std::string& pix_fmt) {
+         const std::string& pix_fmt,
+         bool _zero_clear) {
         nb::gil_scoped_release g;
-        return decode_image_nvjpeg(
+        auto ret = decode_image_nvjpeg(
             std::string_view{data.c_str(), data.size()},
             cuda_config,
             scale_width,
             scale_height,
             pix_fmt);
+        if (_zero_clear) {
+          nb::gil_scoped_acquire gg;
+          zero_clear(data);
+        }
+        return ret;
       },
       nb::arg("data"),
 #if NB_VERSION_MAJOR >= 2
@@ -225,7 +236,8 @@ void register_decoding(nb::module_& m) {
       nb::arg("cuda_config"),
       nb::arg("scale_width") = -1,
       nb::arg("scale_height") = -1,
-      nb::arg("pix_fmt") = "rgb");
+      nb::arg("pix_fmt") = "rgb",
+      nb::arg("_zero_clear") = false);
 
   m.def(
       "decode_image_nvjpeg",
@@ -233,15 +245,22 @@ void register_decoding(nb::module_& m) {
          const CUDAConfig cuda_config,
          int scale_width,
          int scale_height,
-         const std::string& pix_fmt) {
+         const std::string& pix_fmt,
+         bool _zero_clear) {
         std::vector<std::string_view> dataset;
         for (const auto& d : data) {
           dataset.push_back(std::string_view{d.c_str(), d.size()});
         }
-
         nb::gil_scoped_release g;
-        return decode_image_nvjpeg(
+        auto ret = decode_image_nvjpeg(
             dataset, cuda_config, scale_width, scale_height, pix_fmt);
+        if (_zero_clear) {
+          nb::gil_scoped_acquire gg;
+          for (auto& d : data) {
+            zero_clear(d);
+          }
+        }
+        return ret;
       },
       nb::arg("data"),
 #if NB_VERSION_MAJOR >= 2
@@ -250,7 +269,8 @@ void register_decoding(nb::module_& m) {
       nb::arg("cuda_config"),
       nb::arg("scale_width"),
       nb::arg("scale_height"),
-      nb::arg("pix_fmt") = "rgb");
+      nb::arg("pix_fmt") = "rgb",
+      nb::arg("_zero_clear") = false);
 }
 
 } // namespace spdl::core
