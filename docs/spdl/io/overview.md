@@ -2,28 +2,35 @@
 
 ## Overview
 
-The `spdl.io` module implements the core functionalities to load media data into arrays.
+The `spdl.io` module provides functionalities to load media data into arrays.
 
-Loading media data are consisted of 4 phases.
+Loading media into arrays consists of multiple phases.
+
+1. **Demuxing**: Given the source data (file), slice the binary data into unit objects called packet. `Packets` contain encoded data, such as audio samples and visual frames.
+2. **Decoding**: Decode the packets. The resulting objects are refered to as `Frames`. Frames contain raw audio samples and visual frames.
+3. **Conversion**: Convert the decoded frames into contiguous memory, so that they can be usedin scientific computing. In SPDL, the result of conversion (contiguous memory) is called `Buffer`.
+4. **Transfer**: Optionally, the buffer is moved to GPU devices.
+5. **Cast**: Cast the buffer into array/tensor types defined by libraries like NumPy and PyTorch. SPDL implements zero-copy casting.
 
 ``` mermaid
 graph LR
   Source -->|Demux| Packets;
   Packets -->|Decode| Frames;
-  Frames -->|Convert| Buffer;
-  Buffer -->|Cast| Array[Array / Tensor];
+  Frames -->|Convert| CPUBuffer;
+  CPUBuffer -->|Transfer| CUDABuffer;
+  CPUBuffer -->|Cast| Array[Array / Tensor];
+  CUDABuffer -->|Cast| Array[Array / Tensor];
 ```
 
-1. Demux the source media into packets
-2. Decode the packets and obtain raw frames
-3. Convert the frames to contiguous buffer
-4. Cast the buffer to array
+!!! note
 
-The individual functionalities are implemented in C++ with multi-threading, so they can
-run free from Python's GIL contention.
+    There are functions skip certain steps. For example NVDEC takes packets and produces CUDA Buffer directly, and NVJPEG consumes source and generates CUDA Buffer directly.
 
-The [low-level APIs](./core/about.md) implements these individual functionalities.
-The [high-level APIs](./api/load.md) combine them to implement common use cases, such as
+The individual functionalities are implemented in C++, and releases GIL when being executed,
+so they can be executed concurrently. 
+
+[The core APIs](./core_load.md) implements individual functionalities.
+[The composite APIs](./composite_load.md) combine them to implement common use cases, such as
 creating a buffer object from source.
 
 ## Async
@@ -67,7 +74,7 @@ batch image loading. For the actual usage, please refer to
     ```python
     >>> # Define a coroutine that decodes a single image into frames (but not to buffer)
     >>> async def decode_image(src: str, width: int, height: int, pix_fmt="rgb24"):
-    ...     packets = await spdl.io.async_demux_media("image", src)
+    ...     packets = await spdl.io.async_demux_image(src)
     ...     # Decode, format and resize
     ...     frames = await spdl.io.async_decode_packets(
     ...         packets,

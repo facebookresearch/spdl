@@ -21,3 +21,11 @@
 ::: spdl.io.encode_config
     options:
       heading_level: 2
+
+::: spdl.io.CUDAConfig
+    options:
+      heading_level: 2
+
+::: spdl.io.cuda_config
+    options:
+      heading_level: 2

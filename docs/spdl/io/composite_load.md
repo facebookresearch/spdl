@@ -1,4 +1,4 @@
-# High-level I/O APIs
+# Composite APIs
 
 ## Load audio/video/image
 
@@ -17,8 +17,13 @@ graph TD
   Source -->|Seek and demux Window3| Packets3 -->|Decode| Frames3 -->|Convert| Buffer3;
 ```
 
+::: spdl.io.load_audio
 ::: spdl.io.async_load_audio
+
+::: spdl.io.load_video
 ::: spdl.io.async_load_video
+
+::: spdl.io.load_image
 ::: spdl.io.async_load_image
 
 ## Load a batch of images

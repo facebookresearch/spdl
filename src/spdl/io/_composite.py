@@ -48,7 +48,7 @@ Window = tuple[float, float]
 def _load_packets(
     packets,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str = "",
+    filter_desc: str | None = None,
     cuda_config: CUDAConfig | None = None,
 ):
     frames = _core.decode_packets(
@@ -65,17 +65,56 @@ def load_audio(
     timestamp: tuple[float, float] | None = None,
     *,
     demux_config: DemuxConfig | None = None,
-    **kwargs,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig | None = None,
 ) -> CPUBuffer | CUDABuffer:
+    """Load audio from source.
+
+    This function combines [demux_audio][spdl.io.demux_audio],
+    [decode_packets][spdl.io.decode_packets], [convert_frames][spdl.io.convert_frames],
+    and optionally, [transfer_buffer][spdl.io.transfer_buffer], and produces
+    buffer object in one step.
+
+    Args:
+        src: See [demux_audio][spdl.io.demux_audio].
+        timestamp: See [demux_audio][spdl.io.demux_audio].
+        demux_config: See [demux_audio][spdl.io.demux_audio].
+        decode_config: See [decode_packets][spdl.io.decode_packets].
+        filter_desc: See [decode_packets][spdl.io.decode_packets].
+        cuda_config: See [transfer_buffer][spdl.io.transfer_buffer].
+
+    Returns:
+        Buffer object.
+    """
     packets = _core.demux_audio(src, timestamp=timestamp, demux_config=demux_config)
-    return _load_packets(packets, **kwargs)
+    return _load_packets(
+        packets,
+        decode_config=decode_config,
+        filter_desc=filter_desc,
+        cuda_config=cuda_config,
+    )
 
 
 async def async_load_audio(
-    *args,
-    **kwargs,
+    src: str | bytes,
+    timestamp: tuple[float, float] | None = None,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig | None = None,
 ) -> CPUBuffer | CUDABuffer:
-    return await run_async(load_audio, *args, **kwargs)
+    """Async version of [load_audio][spdl.io.load_audio]."""
+    return await run_async(
+        load_audio,
+        src,
+        timestamp,
+        demux_config=demux_config,
+        decode_config=decode_config,
+        filter_desc=filter_desc,
+        cuda_config=cuda_config,
+    )
 
 
 def load_video(
@@ -83,34 +122,109 @@ def load_video(
     timestamp: tuple[float, float] | None = None,
     *,
     demux_config: DemuxConfig | None = None,
-    **kwargs,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig | None = None,
 ) -> CPUBuffer | CUDABuffer:
+    """Load video from source.
+
+    This function combines [demux_video][spdl.io.demux_video],
+    [decode_packets][spdl.io.decode_packets], [convert_frames][spdl.io.convert_frames],
+    and optionally, [transfer_buffer][spdl.io.transfer_buffer], and produces
+    buffer object in one step.
+
+    Args:
+        src: See [demux_video][spdl.io.demux_video].
+        timestamp: See [demux_video][spdl.io.demux_video].
+        demux_config: See [demux_video][spdl.io.demux_video].
+        decode_config: See [decode_packets][spdl.io.decode_packets].
+        filter_desc: See [decode_packets][spdl.io.decode_packets].
+        cuda_config: See [transfer_buffer][spdl.io.transfer_buffer].
+
+    Returns:
+        Buffer object.
+    """
     packets = _core.demux_video(src, timestamp=timestamp, demux_config=demux_config)
-    return _load_packets(packets, **kwargs)
+    return _load_packets(
+        packets,
+        decode_config=decode_config,
+        filter_desc=filter_desc,
+        cuda_config=cuda_config,
+    )
 
 
 async def async_load_video(
-    *args,
-    **kwargs,
+    src: str | bytes,
+    timestamp: tuple[float, float] | None = None,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig | None = None,
 ) -> CPUBuffer | CUDABuffer:
-    return await run_async(load_video, *args, **kwargs)
+    """Async version of [load_video][spdl.io.load_video]."""
+    return await run_async(
+        load_video,
+        src,
+        timestamp,
+        demux_config=demux_config,
+        decode_config=decode_config,
+        filter_desc=filter_desc,
+        cuda_config=cuda_config,
+    )
 
 
 def load_image(
     src: str | bytes,
     *,
     demux_config: DemuxConfig | None = None,
-    **kwargs,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig | None = None,
 ) -> CPUBuffer | CUDABuffer:
+    """Load image from source.
+
+    This function combines [demux_image][spdl.io.demux_image],
+    [decode_packets][spdl.io.decode_packets], [convert_frames][spdl.io.convert_frames],
+    and optionally, [transfer_buffer][spdl.io.transfer_buffer], and produces
+    buffer object in one step.
+
+    Args:
+        src: See [demux_image][spdl.io.demux_image].
+        demux_config: See [demux_image][spdl.io.demux_image].
+        decode_config: See [decode_packets][spdl.io.decode_packets].
+        filter_desc: See [decode_packets][spdl.io.decode_packets].
+        cuda_config: See [transfer_buffer][spdl.io.transfer_buffer].
+
+    Returns:
+        Buffer object.
+    """
     packets = _core.demux_image(src, demux_config=demux_config)
-    return _load_packets(packets, **kwargs)
+    return _load_packets(
+        packets,
+        decode_config=decode_config,
+        filter_desc=filter_desc,
+        cuda_config=cuda_config,
+    )
 
 
 async def async_load_image(
-    *args,
-    **kwargs,
+    src: str | bytes,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig | None = None,
 ) -> CPUBuffer | CUDABuffer:
-    return await run_async(load_image, *args, **kwargs)
+    """Async version of [load_image][spdl.io.load_image]."""
+    return await run_async(
+        load_image,
+        src,
+        demux_config=demux_config,
+        decode_config=decode_config,
+        filter_desc=filter_desc,
+        cuda_config=cuda_config,
+    )
 
 
 ################################################################################
@@ -131,7 +245,7 @@ def streaming_load_audio(
     demux_config: DemuxConfig | None = None,
     strict: bool = True,
     **kwargs,
-) -> Iterator[CPUBuffer | CUDABuffer]:
+) -> Iterator[CPUBuffer] | Iterator[CUDABuffer]:
     demuxer = _core.streaming_demux_audio(src, timestamps, demux_config=demux_config)
     for packets in demuxer:
         try:
@@ -154,7 +268,7 @@ def streaming_load_video(
     demux_config: DemuxConfig | None = None,
     strict: bool = True,
     **kwargs,
-) -> Iterator[CPUBuffer | CUDABuffer]:
+) -> Iterator[CPUBuffer] | Iterator[CUDABuffer]:
     demuxer = _core.streaming_demux_video(src, timestamps, demux_config=demux_config)
     for packets in demuxer:
         try:
@@ -512,6 +626,10 @@ def _decode_partial(packets, indices, **kwargs):
     return next(decoder)[indices]
 
 
+async def _async_decode_partial(*args, **kwargs):
+    return await run_async(_decode_partial, *args, **kwargs)
+
+
 async def async_sample_decode_video(
     packets: VideoPackets, indices: list[int], **kwargs
 ) -> list[ImagePackets]:
@@ -528,7 +646,8 @@ async def async_sample_decode_video(
 
     tasks = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
-        tasks.append(run_async(_decode_partial, split, idxes, **kwargs))
+        coro = _async_decode_partial(split, idxes, **kwargs)
+        tasks.append(asyncio.create_task(coro))
 
     await asyncio.wait(tasks)
 

@@ -85,8 +85,59 @@ def decode_config(**kwargs) -> DecodeConfig:
     return _libspdl.DecodeConfig(**kwargs)
 
 
-def cuda_config(**kwargs) -> CUDAConfig:
-    return _libspdl.CUDAConfig(**kwargs)
+def cuda_config(device_index: int, **kwargs) -> CUDAConfig:
+    """Sprcify the CUDA device and memory management.
+
+    Args:
+        device_index (int): The device to move the data to.
+
+    Other Args:
+        stream (int):
+            *Optional:* Pointer to a custom CUDA stream. By default, it uses the
+            per-thread default stream.
+
+            The value corresponds to `uintptr_t` of CUDA API.
+
+            !!! note
+
+                Host to device buffer transfer is performed in a thread different than
+                Python main thread.
+
+                Since the frame data are available only for the duration of the
+                background job, the transfer is performed with synchronization.
+
+                It is possible to provide the same stream as the one used in Python's
+                main thread, but it might introduce undesired synchronization.
+
+            ??? note "How to retrieve CUDA stream pointer on PyTorch"
+
+                An example to fetch the default stream from PyTorch.
+
+                ```python
+                stream = torch.cuda.Stream()
+                cuda_stream = stream.cuda_stream
+                ```
+
+        allocator (tuple[Callable[[int, int, int], int], Callable[[int], None]]):
+            *Optional:* A pair of custom CUDA memory allcoator and deleter functions.
+
+            The allocator function, takes the following arguments, and
+            return the address of the allocated memory.
+
+            - Size: `int`
+            - CUDA device index: `int`
+            - CUDA stream address: `int` (`uintptr_t`)
+
+            An example of such function is
+            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_alloc].
+
+            The deleter takes the address of memory allocated
+            by the allocator and free the memory.
+
+            An example of such function is
+            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
+    """
+    return _libspdl.CUDAConfig(device_index=device_index, **kwargs)
 
 
 def encode_config(**kwargs) -> EncodeConfig:
