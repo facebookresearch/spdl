@@ -11,8 +11,8 @@ from threading import Event
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import apply_async, BackgroundGenerator
-from spdl.utils import iter_flist
+from spdl.dataloader import BackgroundGenerator
+from spdl.utils import apply_async, iter_flist
 
 _LG = logging.getLogger(__name__)
 
