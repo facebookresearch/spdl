@@ -41,8 +41,12 @@ def _parse_python_args():
 
 
 async def decode_packets(packets, gpu, pix_fmt):
+    print(packets)
     if gpu is None:
-        frames = await spdl.io.async_decode_packets(packets, pix_fmt=pix_fmt)
+        frames = await spdl.io.async_decode_packets(
+            packets, filter_desc=spdl.io.get_filter_desc(packets, pix_fmt=pix_fmt)
+        )
+        print(frames)
         buffer = await spdl.io.async_convert_frames(frames)
         return spdl.io.to_numpy(buffer)
     frames = await spdl.io.async_decode_packets_nvdec(
@@ -54,15 +58,22 @@ async def decode_packets(packets, gpu, pix_fmt):
 
 async def decode_video(src, gpu, pix_fmt):
     ts = [(1, 1.05), (10, 10.05), (20, 20.05)]
-    gen = spdl.io.async_streaming_demux("video", src, timestamps=ts)
+    gen = spdl.io.async_streaming_demux_video(src, timestamps=ts)
     aws = [decode_packets(packets, gpu, pix_fmt) async for packets in gen]
     return await asyncio.gather(*aws)
 
 
 async def decode_image(src, gpu, pix_fmt):
-    packets = await spdl.io.async_demux_media("image", src)
-    array = await decode_packets(packets, gpu, pix_fmt)
-    return [array[None]]
+    if gpu:
+        buffer = await spdl.io.async_decode_image_nvjpeg(
+            src, cuda_config=spdl.io.cuda_config(device_index=gpu), pix_fmt=pix_fmt
+        )
+        tensor = spdl.io.to_torch(buffer).cpu().numpy()
+        return [tensor[None]]
+    else:
+        packets = await spdl.io.async_demux_image(src)
+        array = await decode_packets(packets, gpu, pix_fmt)
+        return [array[None]]
 
 
 def decode(src_path, type, gpu, pix_fmt):
@@ -117,15 +128,13 @@ def _main():
     _plot(frames, args.gpu, args.pix_fmt, output_dir)
 
 
-def _init(debug, demuxer_threads=1, decoder_threads=1):
+def _init(debug):
     logging.basicConfig(level=logging.INFO)
     if debug:
         logging.getLogger("spdl").setLevel(logging.DEBUG)
         spdl.utils.set_ffmpeg_log_level(40)
 
     folly_args = [
-        f"--spdl_demuxer_executor_threads={demuxer_threads}",
-        f"--spdl_decoder_executor_threads={decoder_threads}",
         f"--logging={'DBG' if debug else 'INFO'}",
     ]
     spdl.utils.init_folly(folly_args)
