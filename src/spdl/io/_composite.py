@@ -453,15 +453,17 @@ async def async_load_image_batch(
         filter_desc=filter_desc,
     )
 
-    futures = [
-        run_async(_decode, src, demux_config, decode_config, filter_desc)
+    tasks = [
+        asyncio.create_task(
+            run_async(_decode, src, demux_config, decode_config, filter_desc)
+        )
         for src in srcs
     ]
 
-    await asyncio.wait(futures)
+    await asyncio.wait(tasks)
 
     frames: list[ImageFrames] = []
-    for src, future in zip(srcs, futures):
+    for src, future in zip(srcs, tasks):
         try:
             frms = future.result()
         except Exception as err:
@@ -626,10 +628,6 @@ def _decode_partial(packets, indices, **kwargs):
     return next(decoder)[indices]
 
 
-async def _async_decode_partial(*args, **kwargs):
-    return await run_async(_decode_partial, *args, **kwargs)
-
-
 async def async_sample_decode_video(
     packets: VideoPackets, indices: list[int], **kwargs
 ) -> list[ImagePackets]:
@@ -646,8 +644,9 @@ async def async_sample_decode_video(
 
     tasks = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
-        coro = _async_decode_partial(split, idxes, **kwargs)
-        tasks.append(asyncio.create_task(coro))
+        tasks.append(
+            asyncio.create_task(run_async(_decode_partial, split, idxes, **kwargs))
+        )
 
     await asyncio.wait(tasks)
 
