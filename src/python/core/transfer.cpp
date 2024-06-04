@@ -12,6 +12,7 @@
 namespace nb = nanobind;
 
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
+using cuda_array = nb::ndarray<nb::device::cuda, nb::c_contig>;
 
 namespace spdl::core {
 namespace {
@@ -34,7 +35,7 @@ ElemClass _get_elemclass(uint8_t code) {
   }
 }
 
-CUDABufferPtr _transfer_array(cpu_array array, const CUDAConfig& cfg) {
+CUDABufferPtr _transfer_cpu_array(cpu_array array, const CUDAConfig& cfg) {
   nb::gil_scoped_release g;
   std::vector<size_t> shape;
   auto src_ptr = array.shape_ptr();
@@ -49,9 +50,24 @@ CUDABufferPtr _transfer_array(cpu_array array, const CUDAConfig& cfg) {
       cfg);
 }
 
+CPUBufferPtr _transfer_cuda_array(cuda_array array) {
+  nb::gil_scoped_release g;
+  std::vector<size_t> shape;
+  auto src_ptr = array.shape_ptr();
+  for (size_t i = 0; i < array.ndim(); ++i) {
+    shape.push_back(src_ptr[i]);
+  }
+  return transfer_buffer(
+      shape,
+      _get_elemclass(array.dtype().code),
+      array.itemsize(),
+      array.data());
+}
+
 } // namespace
 
 void register_transfer(nb::module_& m) {
+  // CPU -> CUDA
   m.def(
       "transfer_buffer",
       &_transfer_buffer,
@@ -61,9 +77,12 @@ void register_transfer(nb::module_& m) {
 
   m.def(
       "transfer_buffer",
-      &_transfer_array,
+      &_transfer_cpu_array,
       nb::arg("buffer"),
       nb::kw_only(),
       nb::arg("cuda_config"));
+
+  // CUDA -> CPU
+  m.def("transfer_buffer_cpu", &_transfer_cuda_array, nb::arg("buffer"));
 }
 } // namespace spdl::core

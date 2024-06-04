@@ -150,9 +150,9 @@ def test_array_transfer_torch():
         cuda_tensor = spdl.io.to_torch(buffer)
 
         device = torch.device(f"cuda:{DEFAULT_CUDA}")
-        assert cpu_tensor.dtype == cpu_tensor.dtype
-        assert cpu_tensor.shape == cpu_tensor.shape
-        assert cpu_tensor.device == cpu_tensor.device
+        assert cuda_tensor.dtype == cpu_tensor.dtype
+        assert cuda_tensor.shape == cpu_tensor.shape
+        assert cuda_tensor.device == device
         assert torch.allclose(cuda_tensor, cpu_tensor.to(device))
 
     for dtype in [np.uint8, np.int32, np.int64]:
@@ -175,9 +175,9 @@ def test_array_transfer_non_contiguous_torch():
         cuda_tensor = spdl.io.to_torch(buffer)
 
         device = torch.device(f"cuda:{DEFAULT_CUDA}")
-        assert cpu_tensor.dtype == cpu_tensor.dtype
-        assert cpu_tensor.shape == cpu_tensor.shape
-        assert cpu_tensor.device == cpu_tensor.device
+        assert cuda_tensor.dtype == cpu_tensor.dtype
+        assert cuda_tensor.shape == cpu_tensor.shape
+        assert cuda_tensor.device == device
         assert torch.allclose(cuda_tensor, cpu_tensor.to(device))
 
     asyncio.run(test())
@@ -218,3 +218,23 @@ def test_array_transfer_concurrent():
 
     array = np.random.randint(0, 256, size=(1, 64_000), dtype=np.uint8)
     asyncio.run(test(array))
+
+
+def test_transfer_cpu():
+    """smoke test for transfer_buffer function"""
+
+    async def test(cuda_tensor):
+        buffer = await spdl.io.async_transfer_buffer_cpu(cuda_tensor)
+        return spdl.io.to_torch(buffer)
+
+    for dtype in [np.uint8, np.int32, np.int64]:
+        max_val = np.iinfo(dtype).max
+        array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
+        ref = torch.from_numpy(array)
+        cuda_tensor = ref.cuda(device=DEFAULT_CUDA)
+        cpu_tensor = asyncio.run(test(cuda_tensor))
+
+        assert ref.dtype == cpu_tensor.dtype
+        assert ref.shape == cpu_tensor.shape
+        assert ref.device == cpu_tensor.device
+        assert torch.allclose(ref, cpu_tensor)

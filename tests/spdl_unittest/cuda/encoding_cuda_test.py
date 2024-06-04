@@ -29,9 +29,11 @@ def test_encode_smoketest(fmt, enc_cfg):
 
     async def _test(arr):
         with NamedTemporaryFile(suffix=".png") as f:
+            buffer = await spdl.io.async_transfer_buffer_cpu(arr)
+            cpu_arr = spdl.io.to_numpy(buffer)
             await spdl.io.async_encode_image(
                 f.name,
-                arr,
+                cpu_arr,
                 pix_fmt=pix_fmt,
                 encode_config=enc_cfg,
             )

@@ -45,6 +45,26 @@ CUDABufferPtr transfer_buffer(
 #endif
 }
 
+CPUBufferPtr transfer_buffer(
+    const std::vector<size_t>& shape,
+    ElemClass elem_class,
+    size_t depth,
+    const void* ptr) {
+#ifndef SPDL_USE_CUDA
+  SPDL_FAIL("SPDL is not compiled with CUDA support.");
+#else
+  TRACE_EVENT("decoding", "core::transfer_buffer");
+
+  auto ret = cpu_buffer(shape, elem_class, depth);
+  size_t size = depth * prod(shape);
+  CHECK_CUDA(
+      cudaMemcpy(ret->data(), ptr, size, cudaMemcpyDeviceToHost),
+      "Failed to copy data from device to host.");
+
+  return ret;
+#endif
+}
+
 CPUStorage cp_to_cpu(const void* src, const std::vector<size_t> shape) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
