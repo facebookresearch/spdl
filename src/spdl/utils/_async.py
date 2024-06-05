@@ -1,7 +1,7 @@
 import asyncio
 import functools
 import logging
-from asyncio import BoundedSemaphore, Queue as AsyncQueue, Task
+from asyncio import BoundedSemaphore, Queue as AsyncQueue, Task, wait_for
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
@@ -100,13 +100,18 @@ async def _queue_tasks(
     queue: AsyncQueue[Task[U]],
     name: str,
     timeout: float | None,
+    sentinel,
 ) -> None:
     sem = None if queue.maxsize == 0 else BoundedSemaphore(queue.maxsize)
 
-    # Assumption: `iterator` does not get stuck.
-    for i, item in enumerate(iterator):
-        task = _create_task(afunc(item), f"{name}_{i}", sem)
-        await asyncio.wait_for(queue.put(task), timeout)
+    try:
+        # Assumption: `iterator` does not get stuck.
+        for i, item in enumerate(iterator):
+            task = _create_task(afunc(item), f"{name}_{i}", sem)
+            task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+            await wait_for(queue.put(task), timeout)
+    finally:
+        await wait_for(queue.put(sentinel), timeout)
 
     _LG.debug("Done: %s", name)
 
@@ -182,36 +187,33 @@ async def async_generate(
     q_intern = AsyncQueue(concurrency)
 
     queue_task = asyncio.create_task(
-        _queue_tasks(iterator, afunc, q_intern, name_, timeout),
+        _queue_tasks(iterator, afunc, q_intern, name_, timeout, sentinel),
         name=name_,
     )
     queue_task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
 
     num_failures = 0
 
-    async def _handle_task(task):
-        task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
-        await asyncio.wait([task])
-        # Exception is checked and logged by the above callback, so we don't
-        # do anything about it.
-        if task.exception() is None:
-            await asyncio.wait_for(queue.put(task.result()), timeout)
-        else:
-            nonlocal num_failures
-            num_failures += 1
-
     try:
-        while not (queue_task.done() and q_intern.empty()):
-            # note: if timeout occurs here, then queue_task is not producing
-            # a task. That suggests that user-provided iterator is stuck.
-            task = await asyncio.wait_for(q_intern.get(), timeout)
-            await _handle_task(task)
+        # note: if timeout occurs here, then queue_task is not producing
+        # a task. That suggests that upstream is stuck.
+        while (task := await wait_for(q_intern.get(), timeout)) is not sentinel:
+            try:
+                await wait_for(task, timeout=timeout)
+            except (TimeoutError, asyncio.exceptions.TimeoutError):
+                raise
+            except Exception:
+                num_failures += 1
+                # No need to log. It's logged in callback.
+            else:
+                await wait_for(queue.put(task.result()), timeout)
+
     finally:
         if num_failures > 0:
             _LG.warning("[%s] %s task(s) did not succeed.", name_, num_failures)
         # note: if timeout occurs here, then downstream is not consuming the
         # queue fast enough.
-        await asyncio.wait_for(queue.put(sentinel), timeout)  # pyre-ignore: [6]
+        await wait_for(queue.put(sentinel), timeout)  # pyre-ignore: [6]
 
     # Let the error in `_queue_task`, (such as iterator failure) bubble up.
     # Otherwise, the error will be swallowed.
@@ -271,7 +273,7 @@ async def async_iterate(
     Yields:
         The result objects in the queue.
     """
-    while (item := await asyncio.wait_for(queue.get(), timeout)) is not sentinel:
+    while (item := await wait_for(queue.get(), timeout)) is not sentinel:
         yield item
 
 
@@ -281,18 +283,22 @@ async def async_iterate(
 async def _pipe_queue_tasks(
     input_queue: AsyncQueue[T],
     afunc: Callable[[T], Awaitable[U]],
-    q_intern: AsyncQueue[U],
+    q_intern: AsyncQueue[Task[U]],
     name: str,
     timeout: float | None,
     sentinel,
 ) -> None:
     sem = None if q_intern.maxsize == 0 else BoundedSemaphore(q_intern.maxsize)
 
-    i = -1
-    while (item := await asyncio.wait_for(input_queue.get(), timeout)) is not sentinel:
-        i += 1
-        task = _create_task(afunc(item), f"{name}_{i}", sem)
-        await asyncio.wait_for(q_intern.put(task), timeout)
+    try:
+        i = -1
+        while (item := await wait_for(input_queue.get(), timeout)) is not sentinel:
+            i += 1
+            task = _create_task(afunc(item), f"{name}_{i}", sem)
+            task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+            await wait_for(q_intern.put(task), timeout)
+    finally:
+        await wait_for(q_intern.put(sentinel), timeout)
 
     _LG.debug("Done: %s", name)
 
@@ -352,27 +358,24 @@ async def async_pipe(
 
     num_failures = 0
 
-    async def _handle_task(task):
-        task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
-        await asyncio.wait([task])
-        # Exception is checked and logged by the above callback, so we don't
-        # do anything about it.
-        if task.exception() is None:
-            await asyncio.wait_for(output_queue.put(task.result()), timeout)
-        else:
-            nonlocal num_failures
-            num_failures += 1
-
     try:
-        while not (queue_task.done() and q_intern.empty()):
-            # note: if timeout occurs here, then queue_task is not producing
-            # a task. That suggests that user-provided iterator is stuck.
-            task = await asyncio.wait_for(q_intern.get(), timeout)
-            await _handle_task(task)
+        # note: if timeout occurs here, then queue_task is not producing
+        # a task. That suggests that upstream is stuck.
+        while (task := await wait_for(q_intern.get(), timeout)) is not sentinel:
+            try:
+                await wait_for(task, timeout=timeout)
+            except (TimeoutError, asyncio.exceptions.TimeoutError):
+                raise
+            except Exception:
+                num_failures += 1
+                # No need to log. It's logged in callback.
+            else:
+                await wait_for(output_queue.put(task.result()), timeout)
+
     finally:
         if num_failures > 0:
             _LG.warning("[%s] %s task(s) did not succeed.", name_, num_failures)
-        await asyncio.wait_for(output_queue.put(sentinel), timeout)
+        await wait_for(output_queue.put(sentinel), timeout)
 
     # Let the error in `_queue_task`, (such as iterator failure) bubble up.
     # Otherwise, the error will be swallowed.
