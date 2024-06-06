@@ -102,14 +102,15 @@ async def _queue_tasks(
     timeout: float | None,
     sentinel,
 ) -> None:
-    sem = None if queue.maxsize == 0 else BoundedSemaphore(queue.maxsize)
+    sem = BoundedSemaphore(queue.maxsize)
 
     try:
         # Assumption: `iterator` does not get stuck.
         for i, item in enumerate(iterator):
-            task = _create_task(afunc(item), f"{name}_{i}", sem)
-            task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
-            await wait_for(queue.put(task), timeout)
+            async with sem:
+                task = _create_task(afunc(item), f"{name}_{i}", sem)
+                task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+                await wait_for(queue.put(task), timeout)
     finally:
         await wait_for(queue.put(sentinel), timeout)
 
@@ -179,8 +180,8 @@ async def async_generate(
                 tasks will not receive sentinel.
                 So make sure that the downstream tasks also have timeout.
     """
-    if concurrency < 0:
-        raise ValueError("`concurrency` value must be >= 0")
+    if concurrency < 1:
+        raise ValueError("`concurrency` value must be >= 1")
 
     name_: str = name or f"apply_async_{afunc.__name__}"
 
@@ -199,14 +200,14 @@ async def async_generate(
         # a task. That suggests that upstream is stuck.
         while (task := await wait_for(q_intern.get(), timeout)) is not sentinel:
             try:
-                await wait_for(task, timeout=timeout)
+                result = await wait_for(task, timeout=timeout)
             except (TimeoutError, asyncio.exceptions.TimeoutError):
                 raise
             except Exception:
                 num_failures += 1
                 # No need to log. It's logged in callback.
             else:
-                await wait_for(queue.put(task.result()), timeout)
+                await wait_for(queue.put(result), timeout)
 
     finally:
         if num_failures > 0:
@@ -288,15 +289,16 @@ async def _pipe_queue_tasks(
     timeout: float | None,
     sentinel,
 ) -> None:
-    sem = None if q_intern.maxsize == 0 else BoundedSemaphore(q_intern.maxsize)
+    sem = BoundedSemaphore(q_intern.maxsize)
 
     try:
         i = -1
         while (item := await wait_for(input_queue.get(), timeout)) is not sentinel:
             i += 1
-            task = _create_task(afunc(item), f"{name}_{i}", sem)
-            task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
-            await wait_for(q_intern.put(task), timeout)
+            async with sem:
+                task = _create_task(afunc(item), f"{name}_{i}", sem)
+                task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+                await wait_for(q_intern.put(task), timeout)
     finally:
         await wait_for(q_intern.put(sentinel), timeout)
 
@@ -343,8 +345,8 @@ async def async_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    if concurrency < 0:
-        raise ValueError("`concurrency` value must be >= 0")
+    if concurrency < 1:
+        raise ValueError("`concurrency` value must be >= 1")
 
     name_: str = name or f"pipe_{func.__name__}"
 
