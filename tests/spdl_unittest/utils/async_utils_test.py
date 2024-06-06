@@ -61,6 +61,29 @@ def test_async_generate_simple():
     assert vals == src
 
 
+def test_async_generate_wrong_task_signature():
+    """async_generate should fail immediately if user provided incompatible afunc/iterator."""
+    src_gen_exhausted = False
+
+    def src():
+        yield 0
+        # The system should fail immediately after the first invokation of the
+        # `_2args` bellow, thus it should not reach the following places
+        nonlocal src_gen_exhausted
+        src_gen_exhausted = True
+
+    async def _2args(val, _):
+        return val
+
+    queue = asyncio.Queue()
+
+    coro = spdl.utils.async_generate(src(), _2args, queue)
+
+    with pytest.raises(TypeError):
+        asyncio.run(coro)
+    assert not src_gen_exhausted
+
+
 def test_async_generate_task_failure():
     """async_generate should be robust against the error originated from the coroutinue."""
     src = list(range(6))
@@ -111,7 +134,7 @@ def test_async_generate_concurrency():
 
 
 def test_async_generate_timeout_afunc():
-    """`async_generate` raises when `afunc` does not return without the given timeout."""
+    """`async_generate` raises when `afunc` does not return within the given timeout."""
 
     src = list(range(3))
 
@@ -121,9 +144,9 @@ def test_async_generate_timeout_afunc():
 
     queue = asyncio.Queue()
 
-    coro = spdl.utils.async_generate(src, _long_sleep, queue, timeout=2)
+    coro = spdl.utils.async_generate(src, _long_sleep, queue, timeout=2, concurrency=1)
 
-    with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+    with pytest.raises(asyncio.exceptions.TimeoutError):
         asyncio.run(coro)
 
 
@@ -134,7 +157,7 @@ def test_async_generate_timeout_queue():
 
     coro = spdl.utils.async_generate(range(3), no_op, queue, timeout=2)
 
-    with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+    with pytest.raises(asyncio.exceptions.TimeoutError):
         asyncio.run(coro)
 
 
@@ -186,7 +209,7 @@ def test_async_iterate_timeout():
         async for val in spdl.utils.async_iterate(queue, timeout=1):
             pass
 
-    with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+    with pytest.raises(asyncio.exceptions.TimeoutError):
         asyncio.run(test())
 
 
@@ -210,6 +233,32 @@ def test_async_pipe():
         result = _flush_queue(output_queue)
 
         assert result == [v * 2 for v in ref]
+
+    asyncio.run(test())
+
+
+def test_async_pipe_wrong_task_signature():
+    """async_pipe fails immediately if user provided incompatible iterator/afunc."""
+    input_queue = asyncio.Queue()
+    output_queue = asyncio.Queue()
+
+    async def _2args(val: int, _):
+        return val
+
+    async def test():
+        ref = list(range(6))
+        _put_queue(input_queue, ref)
+
+        with pytest.raises(TypeError):
+            await spdl.utils.async_pipe(
+                input_queue, _2args, output_queue, concurrency=3
+            )
+
+        remaining = _flush_queue(input_queue)
+        assert remaining == ref[1:]
+
+        result = _flush_queue(output_queue)
+        assert result == []
 
     asyncio.run(test())
 
@@ -258,7 +307,7 @@ def test_async_pipe_timeout_input_queue():
     async def test():
         await spdl.utils.async_pipe(input_queue, no_op, output_queue, timeout=1)
 
-    with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+    with pytest.raises(asyncio.exceptions.TimeoutError):
         asyncio.run(test())
 
 
@@ -274,8 +323,31 @@ def test_async_pipe_timeout_output_queue():
 
         await spdl.utils.async_pipe(input_queue, no_op, output_queue, timeout=1)
 
-    with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+    with pytest.raises(asyncio.exceptions.TimeoutError):
         asyncio.run(test())
+
+
+def test_async_generate_wrong_task_signature():
+    """async_generate should fail immediately if user provided incompatible afunc/iterator."""
+    src_gen_exhausted = False
+
+    def src():
+        yield 0
+        # The system should fail immediately after the first invokation of the
+        # `_2args` bellow, thus it should not reach the following places
+        nonlocal src_gen_exhausted
+        src_gen_exhausted = True
+
+    async def _2args(val, _):
+        return val
+
+    queue = asyncio.Queue()
+
+    coro = spdl.utils.async_generate(src(), _2args, queue)
+
+    with pytest.raises(TypeError):
+        asyncio.run(coro)
+    assert not src_gen_exhausted
 
 
 ################################################################################
@@ -377,7 +449,7 @@ def test_3combo_src_timeout():
 
         assert results == []
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await gen_task
 
         await pipe_task
@@ -406,14 +478,14 @@ def test_3combo_clogged_input_queue():
         gen_task = asyncio.create_task(generate)
         pipe_task = asyncio.create_task(pipe)
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             async for _ in spdl.utils.async_iterate(output_queue, timeout=2):
                 pass
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await gen_task
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await pipe_task
 
     asyncio.run(test())
@@ -440,14 +512,14 @@ def test_3combo_clogged_output_queue():
         gen_task = asyncio.create_task(generate)
         pipe_task = asyncio.create_task(pipe)
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             async for _ in spdl.utils.async_iterate(output_queue, timeout=2):
                 pass
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await gen_task
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await pipe_task
 
     asyncio.run(test())
@@ -508,14 +580,14 @@ def test_3combo_pipe_timeout():
         gen_task = asyncio.create_task(generate)
         pipe_task = asyncio.create_task(pipe)
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             async for _ in spdl.utils.async_iterate(output_queue, timeout=2):
                 pass
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await gen_task
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await pipe_task
 
     asyncio.run(test())
@@ -541,14 +613,14 @@ def test_3combo_iter_timeout():
         gen_task = asyncio.create_task(generate)
         pipe_task = asyncio.create_task(pipe)
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             async for _ in spdl.utils.async_iterate(output_queue, timeout=1):
                 pass
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await gen_task
 
-        with pytest.raises((TimeoutError, asyncio.exceptions.TimeoutError)):
+        with pytest.raises(asyncio.exceptions.TimeoutError):
             await pipe_task
 
     asyncio.run(test())
