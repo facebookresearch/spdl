@@ -1,6 +1,5 @@
 import sys
 from contextlib import contextmanager
-from typing import Optional, Union
 
 from spdl.lib import _libspdl
 
@@ -18,7 +17,7 @@ __all__ = [
 def tracing(
     output: int | str,
     buffer_size: int = 4096,
-    process_name: Optional[str] = None,
+    process_name: str | None = None,
     enable: bool = True,
 ):
     """Enable tracing.
@@ -70,7 +69,7 @@ def trace_event(name: str):
     _libspdl.trace_event_end()
 
 
-def trace_counter(i: int, val: Union[int, float]):
+def trace_counter(i: int, val: int | float):
     """Trace a counter value.
 
     Note:
