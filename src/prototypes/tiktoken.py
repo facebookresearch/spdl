@@ -26,6 +26,7 @@ def _parse_args(args):
     parser.add_argument("--encoding", default="cl100k_base")
     parser.add_argument("--num-threads", type=int, default=4)
     parser.add_argument("--trace", type=Path)
+    parser.add_argument("--max", type=int)
     return parser.parse_args(args)
 
 
@@ -101,9 +102,9 @@ async def _run(file_gen, encoding, concurrency=32):
     await task
 
 
-def _test(input_flist, prefix, encoding, num_threads):
+def _test(input_flist, prefix, encoding, num_threads, max):
     encoding = tiktoken.get_encoding(encoding)
-    file_gen = iter_flist(input_flist, prefix=prefix, max=2000)
+    file_gen = iter_flist(input_flist, prefix=prefix, max=max)
 
     loop = asyncio.new_event_loop()
     loop.set_default_executor(
@@ -117,7 +118,7 @@ def _main(args=None):
 
     path = f"{args.trace}.pftrace"
     with spdl.utils.tracing(path, enable=args.trace):
-        _test(args.input_flist, args.prefix, args.encoding, args.num_threads)
+        _test(args.input_flist, args.prefix, args.encoding, args.num_threads, args.max)
 
 
 if __name__ == "__main__":
