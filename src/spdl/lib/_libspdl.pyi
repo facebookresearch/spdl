@@ -4,6 +4,9 @@ from typing import Annotated, overload
 from numpy.typing import ArrayLike
 
 
+class AudioDemuxer:
+    pass
+
 class AudioPackets:
     def __repr__(self) -> str: ...
 
@@ -122,13 +125,7 @@ class MMapAdaptor:
 class SourceAdaptor:
     def __init__(self) -> None: ...
 
-class StreamingAudioDemuxer:
-    pass
-
 class StreamingVideoDecoder:
-    pass
-
-class StreamingVideoDemuxer:
     pass
 
 class TracingSession:
@@ -139,6 +136,9 @@ class TracingSession:
     def start(self, arg0: int, arg1: int, /) -> None: ...
 
     def stop(self) -> None: ...
+
+class VideoDemuxer:
+    pass
 
 class VideoPackets:
     @property

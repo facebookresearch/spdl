@@ -136,15 +136,14 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
 } // namespace detail
 
 template <MediaType media_type>
-StreamingDemuxer<media_type>::StreamingDemuxer(
-    std::unique_ptr<DataInterface> di_)
+Demuxer<media_type>::Demuxer(std::unique_ptr<DataInterface> di_)
     : di(std::move(di_)),
       fmt_ctx(di->get_fmt_ctx()),
       stream(detail::init_fmt_ctx(fmt_ctx, media_type)){};
 
 template <MediaType media_type>
-StreamingDemuxer<media_type>::~StreamingDemuxer() {
-  TRACE_EVENT("demuxing", "StreamingDemuxer::~StreamingDemuxer");
+Demuxer<media_type>::~Demuxer() {
+  TRACE_EVENT("demuxing", "Demuxer::~Demuxer");
   di.reset();
   // Techinically, this is not necessary, but doing it here puts
   // the destruction of AVFormatContext under ~StreamingDemuxe, which
@@ -152,7 +151,7 @@ StreamingDemuxer<media_type>::~StreamingDemuxer() {
 }
 
 template <MediaType media_type>
-PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
+PacketsPtr<media_type> Demuxer<media_type>::demux_window(
     const std::optional<std::tuple<double, double>>& window) {
   auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window);
   if constexpr (media_type == MediaType::Video) {
@@ -162,8 +161,8 @@ PacketsPtr<media_type> StreamingDemuxer<media_type>::demux_window(
   return packets;
 }
 
-template class StreamingDemuxer<MediaType::Audio>;
-template class StreamingDemuxer<MediaType::Video>;
+template class Demuxer<MediaType::Audio>;
+template class Demuxer<MediaType::Video>;
 
 template <MediaType media_type>
 DemuxerPtr<media_type> make_demuxer(
@@ -171,7 +170,7 @@ DemuxerPtr<media_type> make_demuxer(
     const SourceAdaptorPtr& adaptor,
     const std::optional<DemuxConfig>& dmx_cfg) {
   TRACE_EVENT("demuxing", "make_demuxer");
-  return std::make_unique<StreamingDemuxer<media_type>>(
+  return std::make_unique<Demuxer<media_type>>(
       detail::get_interface(src, adaptor, dmx_cfg));
 }
 
@@ -189,7 +188,7 @@ DemuxerPtr<media_type> make_demuxer(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg) {
   TRACE_EVENT("demuxing", "make_demuxer");
-  return std::make_unique<StreamingDemuxer<media_type>>(
+  return std::make_unique<Demuxer<media_type>>(
       detail::get_in_memory_interface(data, dmx_cfg));
 }
 

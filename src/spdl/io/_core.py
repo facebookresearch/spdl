@@ -167,7 +167,7 @@ def streaming_demux_audio(
     Yields:
         AudioPackets object, corresponds to the given window.
     """
-    demuxer = _libspdl._streaming_audio_demuxer(src, **kwargs)
+    demuxer = _libspdl._audio_demuxer(src, **kwargs)
     for window in timestamps:
         demuxer, packets = _libspdl._demux(demuxer, window)
         yield packets
@@ -191,7 +191,7 @@ def streaming_demux_video(
     Returns:
         VideoPackets object, corresponds to the given window.
     """
-    demuxer = _libspdl._streaming_video_demuxer(src, **kwargs)
+    demuxer = _libspdl._video_demuxer(src, **kwargs)
     for window in timestamps:
         demuxer, packets = _libspdl._demux(demuxer, window)
         yield packets
@@ -228,7 +228,7 @@ async def async_streaming_demux_audio(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[AudioPackets]:
     """Async version of [streaming_demux_audio][spdl.io.streaming_demux_audio]."""
-    demuxer = _libspdl._streaming_audio_demuxer
+    demuxer = _libspdl._audio_demuxer
     async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
         yield packets
 
@@ -237,7 +237,7 @@ async def async_streaming_demux_video(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[VideoPackets]:
     """Async version of [streaming_demux_video][spdl.io.streaming_demux_video]."""
-    demuxer = _libspdl._streaming_video_demuxer
+    demuxer = _libspdl._video_demuxer
     async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
         yield packets
 
