@@ -35,3 +35,70 @@ def test_encode_smoketest(fmt, enc_cfg):
 
     asyncio.run(_test(data))
     asyncio.run(_test(torch.from_numpy(data)))
+
+
+def test_encode_png_gray16be():
+    data = np.random.randint(256, size=(32, 64), dtype=np.uint16)
+    enc_cfg = spdl.io.encode_config(format="gray16be")
+
+    async def _test(arr):
+        with NamedTemporaryFile(suffix=".png") as f:
+            await spdl.io.async_encode_image(
+                f.name,
+                arr,
+                pix_fmt="gray16be",
+                encode_config=enc_cfg,
+            )
+
+    asyncio.run(_test(data))
+
+
+def _test_rejects(pix_fmt, dtype):
+    async def _test(arr):
+        with NamedTemporaryFile(suffix=".png") as f:
+            with pytest.raises(RuntimeError):
+                await spdl.io.async_encode_image(
+                    f.name,
+                    arr,
+                    pix_fmt=pix_fmt,
+                )
+
+    data = np.ones((32, 64), dtype=dtype)
+    asyncio.run(_test(data))
+
+
+@pytest.mark.parametrize(
+    "pix_fmt,dtype",
+    product(
+        ["rgb24", "gray", "yuv444p"],
+        [
+            np.uint16,
+            np.uint32,
+            np.uint64,
+            np.int16,
+            np.int32,
+            np.int64,
+            float,
+            np.double,
+        ],
+    ),
+)
+def test_encode_rejects_dtypes(pix_fmt, dtype):
+    _test_rejects(pix_fmt, dtype)
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.uint8,
+        np.uint32,
+        np.uint64,
+        np.int16,
+        np.int32,
+        np.int64,
+        float,
+        np.double,
+    ],
+)
+def test_encode_rejects_dtypes_gray16be(dtype):
+    _test_rejects("gray16be", dtype)
