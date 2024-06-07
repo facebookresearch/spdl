@@ -86,7 +86,7 @@ AVFrame* make_reference(AVFrame* src) {
 #ifdef SPDL_DEBUG_REFCOUNT
 
 #include <fmt/core.h>
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 extern "C" {
 #include <stdatomic.h>
@@ -108,7 +108,7 @@ void debug_log_avframe_refcount(AVFrame* p) {
       break;
     }
     auto buf = p->buf[i]->buffer;
-    XLOG(DBG) << fmt::format(
+    VLOG(0) << fmt::format(
         "Refcount {}: {} ({} -> {})",
         i,
         buf->refcount,
@@ -119,7 +119,7 @@ void debug_log_avframe_refcount(AVFrame* p) {
 
 void debug_log_avpacket_refcount(AVPacket* p) {
   auto buf = p->buf->buffer;
-  XLOG(INFO) << fmt::format(
+  LOG(INFO) << fmt::format(
       "Refcount: {} ({})", buf->refcount, (void*)(buf->data));
 }
 } // namespace spdl::core::detail

@@ -8,7 +8,7 @@
 #include "libspdl/core/detail/nvdec/wrapper.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 #include <cuda.h>
 #include <cuviddec.h>
@@ -25,7 +25,7 @@ CUstream get_stream() {
   CHECK_CU(
       cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING), // CU_STREAM_DEFAULT
       "Failed to create stream.");
-  XLOG(DBG5) << "CUDA stream: " << (void*)stream;
+  VLOG(5) << "CUDA stream: " << (void*)stream;
   return stream;
 }
 
@@ -150,8 +150,7 @@ CUDABufferPtr decode_nvdec(
   flags |= CUVID_PKT_ENDOFPICTURE;
   for (; it < num_packets - 1; ++it) {
     auto pkt = _PKT(it);
-    XLOG(DBG9) << fmt::format(
-        " -- packet  PTS={:.3f} ({})", _PTS(pkt), pkt->pts);
+    VLOG(9) << fmt::format(" -- packet  PTS={:.3f} ({})", _PTS(pkt), pkt->pts);
 
     _dec.decoder.decode(pkt->data, pkt->size, pkt->pts, flags);
   }
@@ -164,7 +163,7 @@ CUDABufferPtr decode_nvdec(
 #undef _PKT
 #undef _PTS
 
-  XLOG(DBG5) << fmt::format(
+  VLOG(5) << fmt::format(
       "Decoded {} frames from {} packets.", tracker.i, packets->num_packets());
 
   if constexpr (media_type == MediaType::Video) {
@@ -228,7 +227,7 @@ CUDABufferPtr decode_nvdec(
       if (strict) {
         SPDL_FAIL(msg);
       } else {
-        XLOG(ERR) << msg;
+        LOG(ERROR) << msg;
         packets.erase(packets.begin() + i);
       }
     }
@@ -282,7 +281,7 @@ CUDABufferPtr decode_nvdec(
     try {
       decode_fn(packet);
     } catch (std::exception& e) {
-      XLOG(ERR) << fmt::format("Failed to decode image: {}", e.what());
+      LOG(ERROR) << fmt::format("Failed to decode image: {}", e.what());
       if (strict) {
         throw;
       }
@@ -297,7 +296,7 @@ CUDABufferPtr decode_nvdec(
       if (strict) {
         SPDL_FAIL(msg);
       } else {
-        XLOG(ERR) << msg;
+        LOG(ERROR) << msg;
       }
     }
   }

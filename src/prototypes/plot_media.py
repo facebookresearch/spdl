@@ -134,11 +134,6 @@ def _init(debug):
         logging.getLogger("spdl").setLevel(logging.DEBUG)
         spdl.utils.set_ffmpeg_log_level(40)
 
-    folly_args = [
-        f"--logging={'DBG' if debug else 'INFO'}",
-    ]
-    spdl.utils.init_folly(folly_args)
-
 
 if __name__ == "__main__":
     _main()

@@ -2,8 +2,8 @@
 
 #include "libspdl/core/detail/logging.h"
 
-#include <fmt/core.h>
-#include <folly/logging/xlog.h>
+#include <fmt/format.h>
+#include <glog/logging.h>
 
 namespace spdl::core {
 
@@ -49,7 +49,7 @@ inline size_t prod(const std::vector<size_t>& shape) {
 
 std::unique_ptr<CPUBuffer>
 cpu_buffer(std::vector<size_t> shape, ElemClass elem_class, size_t depth) {
-  XLOG(DBG) << fmt::format(
+  VLOG(0) << fmt::format(
       "Allocating {} bytes. (shape: {}, elem: {})",
       prod(shape) * depth,
       fmt::join(shape, ", "),

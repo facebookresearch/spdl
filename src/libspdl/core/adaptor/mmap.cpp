@@ -3,7 +3,7 @@
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 extern "C" {
 #include <libavformat/avio.h>
@@ -63,7 +63,7 @@ class MemoryMappedFile {
         pos_ = buffer_size_ + offset;
         break;
       default:
-        XLOG(ERR) << "Unexpected whence value was found: " << whence;
+        LOG(ERROR) << "Unexpected whence value was found: " << whence;
         return -1;
     }
     return pos_;

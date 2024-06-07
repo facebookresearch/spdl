@@ -8,7 +8,7 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 extern "C" {
 #include <libavfilter/buffersink.h>
@@ -56,7 +56,7 @@ Decoder::Decoder(
           cfg ? cfg->decoder_options : std::nullopt)) {}
 
 Generator<AVFrame*> Decoder::decode(AVPacket* packet, bool flush_null) {
-  XLOG(DBG9)
+  VLOG(9)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(
                           "{:21s} {:.3f} ({})",
@@ -80,7 +80,7 @@ Generator<AVFrame*> Decoder::decode(AVPacket* packet, bool flush_null) {
       default: {
         {
           double ts = TS(frame, codec_ctx->pkt_timebase);
-          XLOG(DBG9) << fmt::format(
+          VLOG(9) << fmt::format(
               "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
         }
         co_yield frame.get();

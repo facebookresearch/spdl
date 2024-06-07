@@ -6,7 +6,7 @@
 #include "libspdl/core/detail/nvdec/utils.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 #include <sys/types.h>
 
@@ -82,7 +82,7 @@ inline RECON update_type(
       i1.enableHistogram != i2.enableHistogram ||
       // Exceeded the previous maximum width/height
       i1.ulMaxWidth < i2.ulWidth || i1.ulMaxHeight < i2.ulHeight) {
-    // XLOG(DBG9) << "Recreating the decoder object.\n    "
+    // VLOG(9) << "Recreating the decoder object.\n    "
     //            << detail::get_diff(i1, i2);
     return RECREATE;
   }
@@ -100,7 +100,7 @@ inline RECON update_type(
       i1.target_rect.bottom == i2.target_rect.bottom) {
     return RECON::RETAIN;
   }
-  // XLOG(DBG9) << "Reconfiguring the decoder object.";
+  // VLOG(9) << "Reconfiguring the decoder object.";
   return RECON::RECONFIGURE;
 }
 
@@ -130,7 +130,7 @@ inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
   }
   if (CUDA_SUCCESS == result) {
     if (status.decodeStatus > cuvidDecodeStatus_Success) {
-      XLOG(DBG9) << fmt::format(
+      VLOG(9) << fmt::format(
           "{} (error code: {})",
           get_desc(status.decodeStatus),
           int(status.decodeStatus));
@@ -189,7 +189,7 @@ void NvDecDecoder::init(
         "Invalid time base was found: {}/{}", timebase_.num, timebase_.den));
   }
   if (!parser || codec != codec_) {
-    XLOG(DBG9) << "initializing parser";
+    VLOG(9) << "initializing parser";
     codec = codec_;
     parser = get_parser(this, codec);
     decoder = nullptr;
@@ -238,7 +238,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   }
   TRACE_EVENT("nvdec", "handle_video_sequence");
 
-  XLOG(DBG9) << print(video_fmt);
+  VLOG(9) << print(video_fmt);
 
   // Check if the input video is supported.
   CUVIDDECODECAPS caps = check_capacity(video_fmt, cap_cache);
@@ -258,7 +258,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
       target_width,
       target_height);
 
-  XLOG(DBG5) << print(&new_decoder_param);
+  VLOG(5) << print(&new_decoder_param);
 
   // Update decoder
   uint ret = [&]() -> uint {
@@ -305,8 +305,8 @@ int NvDecDecoder::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   }
   TRACE_EVENT("nvdec", "handle_decode_picture");
 
-  // XLOG(INFO) << "Received decoded pictures.";
-  // XLOG(INFO) << print(pic_params);
+  // LOG(INFO) << "Received decoded pictures.";
+  // LOG(INFO) << print(pic_params);
   if (!decoder) {
     SPDL_FAIL_INTERNAL("Decoder not initialized.");
   }
@@ -338,18 +338,18 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   }
   TRACE_EVENT("nvdec", "handle_display_picture");
 
-  // XLOG(INFO) << "Received display pictures.";
-  // XLOG(INFO) << print(disp_info);
+  // LOG(INFO) << "Received display pictures.";
+  // LOG(INFO) << print(disp_info);
   double ts = double(disp_info->timestamp) * timebase.num / timebase.den;
 
-  XLOG(DBG9) << fmt::format(
+  VLOG(9) << fmt::format(
       " --- Frame  PTS={:.3f} ({})", ts, disp_info->timestamp);
 
   if (ts < start_time || end_time <= ts) {
     return 1;
   }
 
-  XLOG(DBG9) << fmt::format(
+  VLOG(9) << fmt::format(
       "{} x {}", decoder_param.ulTargetWidth, decoder_param.ulTargetHeight);
 
   warn_if_error(decoder.get(), disp_info->picture_index);
@@ -385,7 +385,7 @@ int NvDecDecoder::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
   }
   TRACE_EVENT("nvdec", "handle_operating_point");
 
-  // XLOG(INFO) << "Received operating points.";
+  // LOG(INFO) << "Received operating points.";
 
   // Not implemented yet.
   return 0;
@@ -400,8 +400,8 @@ int NvDecDecoder::handle_sei_msg(CUVIDSEIMESSAGEINFO* msg_info) {
     return 1;
   }
 
-  // XLOG(INFO) << "Received SEI messages.";
-  // XLOG(INFO) << print(msg_info);
+  // LOG(INFO) << "Received SEI messages.";
+  // LOG(INFO) << print(msg_info);
   return 0;
 }
 

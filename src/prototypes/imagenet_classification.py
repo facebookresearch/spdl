@@ -262,11 +262,6 @@ def _init(debug, worker_id):
     _init_logging(debug, worker_id)
 
     spdl.utils.set_ffmpeg_log_level(16)
-    spdl.utils.init_folly(
-        [
-            f"--logging={'DBG' if debug else 'INFO'}",
-        ]
-    )
 
 
 def _init_logging(debug=False, worker_id=None):

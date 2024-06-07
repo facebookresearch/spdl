@@ -1,9 +1,9 @@
 #include "libspdl/core/detail/nvjpeg/utils.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/Singleton.h>
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
+#include <mutex>
 #include <set>
 
 namespace spdl::core::detail {
@@ -32,8 +32,8 @@ void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) {
   if (!p) {
     auto status = nvjpegJpegStateDestroy(p);
     if (status != NVJPEG_STATUS_SUCCESS) {
-      XLOG(WARN) << "Failed to destroy nvjpeg state: "
-                 << detail::to_string(status);
+      LOG(WARNING) << "Failed to destroy nvjpeg state: "
+                   << detail::to_string(status);
     }
   }
 };

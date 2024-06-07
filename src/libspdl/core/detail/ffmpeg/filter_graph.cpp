@@ -4,7 +4,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/format.h>
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 #include <cmath>
 #include <stdexcept>
@@ -152,10 +152,10 @@ FilterGraph get_filter(
   }
 
   // for (unsigned i = 0; i < p->nb_filters; ++i) {
-  //   XLOG(INFO) << "Filter " << i << ": " << p->filters[i]->name;
+  //   LOG(INFO) << "Filter " << i << ": " << p->filters[i]->name;
   // }
 
-  XLOG(DBG5) << describe_graph(filter_graph.get());
+  VLOG(5) << describe_graph(filter_graph.get());
 
   return FilterGraph{std::move(filter_graph)};
 }
@@ -184,7 +184,7 @@ int get_frame(AVFilterContext* sink_ctx, AVFrame* frame) {
 } // namespace
 
 Generator<AVFramePtr> FilterGraph::filter(AVFrame* frame) {
-  XLOG(DBG9)
+  VLOG(9)
       << (frame ? fmt::format(
                       "{:21s} {:.3f} ({})",
                       " --- raw frame:",
@@ -202,7 +202,7 @@ Generator<AVFramePtr> FilterGraph::filter(AVFrame* frame) {
       case AVERROR_EOF:
         co_return;
       default: {
-        XLOG(DBG9) << fmt::format(
+        VLOG(9) << fmt::format(
             "{:21s} {:.3f} ({})",
             " ---- filtered frame:",
             TS(ret, get_sink_time_base()),

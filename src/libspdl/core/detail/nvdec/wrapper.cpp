@@ -4,7 +4,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 #include <cuda.h>
 
@@ -12,7 +12,7 @@
   do {                                                   \
     auto __status = expr;                                \
     if (__status != CUDA_SUCCESS) {                      \
-      XLOG(WARN) << fmt::format(                         \
+      LOG(WARNING) << fmt::format(                       \
           "{} ({}: {})",                                 \
           msg,                                           \
           spdl::core::detail::get_error_name(__status),  \
@@ -55,7 +55,7 @@ MapGuard::~MapGuard() {
   auto status = cuvidUnmapVideoFrame(decoder, frame);
 
   if (status != CUDA_SUCCESS) {
-    XLOG(CRITICAL) << fmt::format(
+    LOG(ERROR) << fmt::format(
         "Failed to unmap video frame ({}: {})",
         get_error_name(status),
         get_error_desc(status));

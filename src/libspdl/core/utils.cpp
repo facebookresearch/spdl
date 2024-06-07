@@ -7,8 +7,8 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/init/Init.h>
-#include <folly/logging/xlog.h>
+#include <fmt/core.h>
+#include <glog/logging.h>
 
 #include <cstdint>
 #include <mutex>
@@ -30,19 +30,6 @@ void set_ffmpeg_log_level(int level) {
 
 void register_avdevices() {
   avdevice_register_all();
-}
-
-namespace {
-folly::Init* FOLLY_INIT = nullptr;
-
-void delete_folly_init() {
-  delete FOLLY_INIT;
-}
-} // namespace
-
-void init_folly(int* argc, char*** argv) {
-  FOLLY_INIT = new folly::Init{argc, argv};
-  std::atexit(delete_folly_init);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +56,7 @@ void TracingSession::init() {
 #ifdef SPDL_USE_TRACING
     detail::init_perfetto();
 #else
-    XLOG(WARN) << "Tracing is not enabled.";
+    LOG(WARNING) << "Tracing is not enabled.";
 #endif
   });
 }

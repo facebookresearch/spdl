@@ -3,7 +3,8 @@
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/logging/xlog.h>
+#include <fmt/format.h>
+#include <glog/logging.h>
 
 #include <filesystem>
 #include <mutex>
@@ -202,14 +203,14 @@ AVCodecContextPtr get_decode_codec_ctx_ptr(
     const std::optional<OptionDict>& decoder_options) {
   AVCodecContextPtr codec_ctx = alloc_codec_context(params->codec_id, decoder);
 
-  XLOG(DBG9) << "Configuring codec context.";
+  VLOG(9) << "Configuring codec context.";
   {
     TRACE_EVENT("decoding", "avcodec_parameters_to_context");
     CHECK_AVERROR(
         avcodec_parameters_to_context(codec_ctx.get(), params),
         "Failed to set CodecContext parameter.");
   }
-  XLOG(DBG9) << "Codec: " << codec_ctx->codec->name;
+  VLOG(9) << "Codec: " << codec_ctx->codec->name;
 
   codec_ctx->pkt_timebase = AVRational{pkt_timebase.num, pkt_timebase.den};
   open_codec(codec_ctx.get(), decoder_options);
@@ -413,19 +414,19 @@ void open_codec(
     // https://ffmpeg.org/doxygen/4.1/libopusenc_8c.html#aa1d649e48cd2ec00cfe181cf9d0f3251
     if (std::strcmp(codec_ctx->codec->name, "vorbis") == 0) {
       if (!av_dict_get(option, "strict", nullptr, 0)) {
-        XLOG_FIRST_N(WARN, 1)
-            << "\"vorbis\" encoder is selected. Enabling '-strict experimental'. ",
-            "If this is not desired, please provide \"strict\" encoder option ",
-            "with desired value.";
+        LOG_FIRST_N(WARNING, 1)
+            << "\"vorbis\" encoder is selected. Enabling '-strict experimental'. "
+               "If this is not desired, please provide \"strict\" encoder option "
+               "with desired value.";
         av_dict_set(option, "strict", "experimental", 0);
       }
     }
     if (std::strcmp(codec_ctx->codec->name, "opus") == 0) {
       if (!av_dict_get(option, "strict", nullptr, 0)) {
-        XLOG_FIRST_N(WARN, 1)
-            << "\"opus\" encoder is selected. Enabling '-strict experimental'. ",
-            "If this is not desired, please provide \"strict\" encoder option ",
-            "with desired value.";
+        LOG_FIRST_N(WARNING, 1)
+            << "\"opus\" encoder is selected. Enabling '-strict experimental'. "
+               "If this is not desired, please provide \"strict\" encoder option "
+               "with desired value.";
         av_dict_set(option, "strict", "experimental", 0);
       }
     }

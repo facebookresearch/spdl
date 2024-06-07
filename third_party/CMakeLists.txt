@@ -20,9 +20,6 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 # the following disables the export.
 set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY true)
 
-add_subdirectory(double-conversion)
 add_subdirectory(fmt)
 add_subdirectory(gflags)
 add_subdirectory(glog)
-add_subdirectory(libevent)
-add_subdirectory(boost)

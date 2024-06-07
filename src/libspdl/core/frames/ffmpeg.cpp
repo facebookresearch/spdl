@@ -9,7 +9,7 @@
 #include <cassert>
 #include <exception>
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 extern "C" {
 #include <libavutil/frame.h>

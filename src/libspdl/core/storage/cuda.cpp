@@ -4,7 +4,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@ uintptr_t default_allocator(int size, int device, uintptr_t stream) {
 void default_deleter(uintptr_t data) {
   auto status = cudaFree((void*)data);
   if (status != cudaSuccess) {
-    XLOG(CRITICAL) << fmt::format(
+    LOG(ERROR) << fmt::format(
         "Failed to free CUDA memory ({}: {})",
         cudaGetErrorName(status),
         cudaGetErrorString(status));
@@ -61,7 +61,7 @@ CUDAStorage& CUDAStorage::operator=(CUDAStorage&& other) noexcept {
 CUDAStorage::~CUDAStorage() {
   if (data_) {
     TRACE_EVENT("decoding", "CUDAStorage::~CUDAStorage");
-    XLOG(DBG9) << "Freeing CUDA memory " << data_;
+    VLOG(9) << "Freeing CUDA memory " << data_;
     deleter(reinterpret_cast<uintptr_t>(data_));
   }
 }
