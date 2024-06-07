@@ -39,7 +39,7 @@ plugins:
             FILE_PATTERNS: "*.cpp *.h"
             RECURSIVE: YES
             SEPARATE_MEMBER_PAGES: YES
-            EXCLUDE_SYMBOLS: std,spdl::core::detail,folly
+            EXCLUDE_SYMBOLS: std,spdl::core::detail
             PREDEFINED: SPDL_USE_CUDA SPDL_USE_NVCODEC
             SOURCE_BROWSER: YES
             VERBATIM_HEADERS: NO
@@ -70,7 +70,6 @@ nav:
       - "spdl.utils":
           - "Async": spdl/utils/async.md
           - "Tracing": spdl/utils/tracing.md
-          - "Folly": spdl/utils/folly.md
           - "FFmpeg": spdl/utils/ffmpeg.md
           - "Misc": spdl/utils/misc.md
   - "LibSPDL (C++)":

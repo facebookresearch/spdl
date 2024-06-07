@@ -20,9 +20,3 @@ Having dedicated thread pools for I/O and compute allows users to configure the 
 The following figure illustrates this.
 
 [The illustration of demuxing and decoding threads](../assets/thread_pools.png)
-
-???+ note
-
-    Internally, the data acquisition, demuxing and decoding are implemented using [C++ 20 coroutines](https://en.cppreference.com/w/cpp/language/coroutines). We use the excellent [`folly::coro`](https://github.com/facebook/folly/blob/main/folly/experimental/coro/README.md) library, which does all the heavy lifting, including but not limited to coroutine and thread pool management.
-    
-    The use of `folly::coro::Task`, `folly::coro::AsyncGenerator`, and `folly::CPUThreadPoolExecutor` makes it easy to express the decoding logic in asynchronous composable manner.

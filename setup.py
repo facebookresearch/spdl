@@ -57,7 +57,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         return "ON" if var else "OFF"
 
     cfg = "Debug" if debug else "Release"
-    deps_build_dir = os.path.join(build_dir, "folly-deps")
+    deps_build_dir = os.path.join(build_dir, "deps_first_stage")
     main_build_dir = os.path.join(build_dir, "main")
     deps_cmd = [
         # fmt: off
@@ -116,7 +116,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         ],
         # fmt: on
     ]
-    if _env("SKIP_FOLLY_DEPS"):
+    if _env("SKIP_1ST_DEPS"):
         return main_build_cmd
     return deps_cmd + main_build_cmd
 
