@@ -1,6 +1,5 @@
 #pragma once
 
-#include <nppi.h>
 #include <nvjpeg.h>
 
 namespace spdl::core::detail {
