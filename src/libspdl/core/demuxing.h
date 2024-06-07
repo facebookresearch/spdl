@@ -14,21 +14,21 @@ struct AVStream;
 namespace spdl::core {
 
 template <MediaType media_type>
-class StreamingDemuxer;
+class Demuxer;
 
 template <MediaType media_type>
-using DemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
+using DemuxerPtr = std::unique_ptr<Demuxer<media_type>>;
 
 template <MediaType media_type>
-class StreamingDemuxer {
+class Demuxer {
   std::unique_ptr<DataInterface> di;
   AVFormatContext* fmt_ctx;
   AVStream* stream;
 
  public:
-  StreamingDemuxer(std::unique_ptr<DataInterface> di);
+  Demuxer(std::unique_ptr<DataInterface> di);
 
-  ~StreamingDemuxer();
+  ~Demuxer();
 
   PacketsPtr<media_type> demux_window(
       const std::optional<std::tuple<double, double>>& window = std::nullopt);

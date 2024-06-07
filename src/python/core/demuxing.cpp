@@ -109,13 +109,13 @@ ImagePacketsPtr demux_img_bytes(
 
 void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
-  // StreamingDemuxer
+  // Demuxer
   ///////////////////////////////////////////////////////////////////////////////
-  nb::class_<StreamingDemuxer<MediaType::Audio>>(m, "StreamingAudioDemuxer");
-  nb::class_<StreamingDemuxer<MediaType::Video>>(m, "StreamingVideoDemuxer");
+  nb::class_<Demuxer<MediaType::Audio>>(m, "AudioDemuxer");
+  nb::class_<Demuxer<MediaType::Video>>(m, "VideoDemuxer");
 
   m.def(
-      "_streaming_audio_demuxer",
+      "_audio_demuxer",
       &_make_demuxer<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
@@ -125,7 +125,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("_adaptor") = nullptr);
 
   m.def(
-      "_streaming_audio_demuxer",
+      "_audio_demuxer",
       &_make_demuxer_bytes<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
@@ -134,7 +134,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("demux_config") = nb::none());
 
   m.def(
-      "_streaming_video_demuxer",
+      "_video_demuxer",
       &_make_demuxer<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
@@ -144,7 +144,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("_adaptor") = nullptr);
 
   m.def(
-      "_streaming_video_demuxer",
+      "_video_demuxer",
       &_make_demuxer_bytes<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
