@@ -146,10 +146,11 @@ void copy_2d(
     int width,
     int src_linesize,
     uint8_t** dst,
-    int dst_linesize) {
+    int dst_linesize,
+    int depth = 1) {
   TRACE_EVENT("decoding", "conversion::copy_2d");
   for (int h = 0; h < height; ++h) {
-    memcpy(*dst, src, width);
+    memcpy(*dst, src, width * depth);
     src += src_linesize;
     *dst += dst_linesize;
   }
@@ -160,10 +161,11 @@ void copy_interleaved(
     uint8_t* dst,
     unsigned int num_channels,
     size_t w,
-    size_t h) {
-  size_t wc = num_channels * w;
+    size_t h,
+    int depth = 1) {
+  size_t wc = num_channels * w * depth;
   for (const auto& f : frames) {
-    copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc);
+    copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc, depth);
   }
 }
 
@@ -188,10 +190,11 @@ void copy_planer(
     uint8_t* dst,
     size_t num_planes,
     size_t w,
-    size_t h) {
+    size_t h,
+    int depth) {
   for (const auto& f : frames) {
     for (size_t c = 0; c < num_planes; ++c) {
-      copy_2d(f->data[c], h, w, f->linesize[c], &dst, w);
+      copy_2d(f->data[c], h, w, f->linesize[c], &dst, w * depth, depth);
     }
   }
 }
@@ -202,12 +205,14 @@ CPUBufferPtr convert_planer(
     size_t num_planes,
     size_t num_frames,
     size_t w,
-    size_t h) {
-  auto buf = cpu_buffer({batch.size(), num_frames, num_planes, h, w});
+    size_t h,
+    int depth = sizeof(uint8_t)) {
+  auto buf = cpu_buffer(
+      {batch.size(), num_frames, num_planes, h, w}, ElemClass::UInt, depth);
   auto dst = (uint8_t*)buf->data();
   for (auto& frames : batch) {
-    copy_planer(frames->get_frames(), dst, num_planes, w, h);
-    dst += num_frames * num_planes * h * w;
+    copy_planer(frames->get_frames(), dst, num_planes, w, h, depth);
+    dst += num_frames * num_planes * h * w * depth;
   }
   return buf;
 }
@@ -428,6 +433,8 @@ CPUBufferPtr convert_frames(
       case AV_PIX_FMT_GRAY8:
         // Technically, not a planer format, but it's the same.
         return convert_planer(batch, 1, num_frames, w, h);
+      case AV_PIX_FMT_GRAY16BE:
+        return convert_planer(batch, 1, num_frames, w, h, sizeof(uint16_t));
       case AV_PIX_FMT_RGBA:
         return convert_interleaved(batch, 4, num_frames, w, h);
       case AV_PIX_FMT_RGB24:
