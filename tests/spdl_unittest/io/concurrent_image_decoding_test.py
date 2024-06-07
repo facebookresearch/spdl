@@ -118,6 +118,35 @@ def test_decode_image_rgb24(get_sample):
     assert np.all(blue[..., 2] >= 254)
 
 
+def test_decode_image_16be(get_sample):
+    """PNG image (16be) can be decoded and converted to RGB"""
+    # fmt: off
+    cmd = """
+    ffmpeg -hide_banner -y                                 \
+        -f lavfi -i color=white:size=32x32,format=gray16be \
+        -f lavfi -i color=black:size=32x32,format=gray16be \
+        -filter_complex hstack=inputs=2                    \
+        -frames:v 1 -pix_fmt gray16be sample_%03d.png
+    """
+    height, width = 32, 64
+    sample = get_sample(cmd, width=width, height=height)
+
+    async def _load(src):
+        packets = await spdl.io.async_demux_image(src)
+        frames = await spdl.io.async_decode_packets(packets)
+        buffer = await spdl.io.async_convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
+        return array
+
+    array = asyncio.run(_load(sample.path))
+
+    assert array.dtype == np.uint16
+    assert array.shape == (1, height, width)
+
+    assert np.all(array[..., :32] == 65022)
+    assert np.all(array[..., 32:] == 256)
+
+
 def test_batch_decode_image_slice(get_samples):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.png"
     n, h, w = 32, 240, 320
