@@ -10,65 +10,18 @@ namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // NVJPEG library handle Singletons
 ////////////////////////////////////////////////////////////////////////////////
-namespace {
-struct nvjpegLibraryHandle {
-  nvjpegHandle_t h;
-  nvjpegLibraryHandle(nvjpegBackend_t be = NVJPEG_BACKEND_DEFAULT) {
+
+nvjpegHandle_t get_nvjpeg() {
+  static nvjpegHandle_t h;
+  static std::once_flag flag;
+  std::call_once(flag, []() {
     TRACE_EVENT("decoding", "nvjpegCreateEx");
     CHECK_NVJPEG(
-        nvjpegCreateEx(be, nullptr, nullptr, NVJPEG_FLAGS_DEFAULT, &h),
+        nvjpegCreateEx(
+            NVJPEG_BACKEND_DEFAULT, nullptr, nullptr, NVJPEG_FLAGS_DEFAULT, &h),
         "Failed to create the NVJPEG library handle.");
-  }
-  ~nvjpegLibraryHandle() {
-    TRACE_EVENT("decoding", "nvjpegDestroy");
-    auto state = nvjpegDestroy(h);
-    if (state != NVJPEG_STATUS_SUCCESS) {
-      XLOG(CRITICAL) << "Failed to destroy the nvjpeg library handle: "
-                     << detail::to_string(state);
-    }
-  }
-  static std::shared_ptr<nvjpegLibraryHandle> get_nvjpeg(nvjpegBackend_t);
-};
-
-struct TagDefault {};
-static folly::Singleton<nvjpegLibraryHandle, TagDefault> libnvjpeg_default;
-
-struct TagHybrid {};
-static folly::Singleton<nvjpegLibraryHandle, TagHybrid> libnvjpeg_hybrid([]() {
-  return new nvjpegLibraryHandle(NVJPEG_BACKEND_HYBRID);
-});
-
-struct TagGpuHybrid {};
-static folly::Singleton<nvjpegLibraryHandle, TagGpuHybrid> libnvjpeg_gpu_hybrid(
-    []() { return new nvjpegLibraryHandle(NVJPEG_BACKEND_GPU_HYBRID); });
-
-struct TagHardware {};
-static folly::Singleton<nvjpegLibraryHandle, TagHardware> libnvjpeg_hardware(
-    []() { return new nvjpegLibraryHandle(NVJPEG_BACKEND_HARDWARE); });
-
-std::shared_ptr<nvjpegLibraryHandle> nvjpegLibraryHandle::get_nvjpeg(
-    nvjpegBackend_t backend) {
-  switch (backend) {
-    case NVJPEG_BACKEND_DEFAULT:
-      return libnvjpeg_default.try_get();
-    case NVJPEG_BACKEND_HYBRID:
-      return libnvjpeg_hybrid.try_get();
-    case NVJPEG_BACKEND_GPU_HYBRID:
-      return libnvjpeg_gpu_hybrid.try_get();
-    case NVJPEG_BACKEND_HARDWARE:
-      return libnvjpeg_hardware.try_get();
-    default:
-      SPDL_FAIL(fmt::format("Unexpected backend. {}", to_string(backend)));
-  }
-}
-} // namespace
-
-nvjpegHandle_t get_nvjpeg(nvjpegBackend_t backend) {
-  auto lib = nvjpegLibraryHandle::get_nvjpeg(backend);
-  if (!lib) {
-    SPDL_FAIL("Failed to get the NVJPEG library handle.");
-  }
-  return lib->h;
+  });
+  return h;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
