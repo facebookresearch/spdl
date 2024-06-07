@@ -9,7 +9,7 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 ###############################################################################
-# Build folly dependencies.
+# Build third party dependencies.
 ###############################################################################
 # glog has some private header file, which name conflicts with clang's tooling,
 # so we need to install glog somewhere once.

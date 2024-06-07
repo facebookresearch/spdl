@@ -6,6 +6,8 @@ option(SPDL_USE_CUDA "Enable CUDA support" OFF)
 option(SPDL_USE_NVCODEC "Enable NVCODEC support" OFF)
 option(SPDL_USE_NVJPEG "Enable nvJPEG support" OFF)
 option(SPDL_USE_NPPI "Enable NVIDIA 2D Image And Signal Performance Primitives support" OFF)
+option(SPDL_LINK_STATIC_NVJPEG "Link nvJPEG and NPPI statically." OFF)
+
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
 option(SPDL_BUILD_STUB "Build Python binding stub file" OFF)
 option(SPDL_BUILD_PYTHON_BINDING "Build Python binding" ON)
