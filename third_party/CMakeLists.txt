@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
-project(folly-deps)
+project(first-stage-deps)
 
 include(../cmake/spdl_common_config.cmake)
 
@@ -15,7 +15,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 # so we need to install glog somewhere once.
 
 # glog exports package to user registery (~/.glog) with build path and this
-# causes issue when compiling folly.
+# causes issue when compiling SPDL.
 # https://github.com/google/glog/issues/705
 # the following disables the export.
 set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY true)
