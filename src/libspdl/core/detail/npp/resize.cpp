@@ -6,6 +6,8 @@
 
 #include <fmt/core.h>
 
+#include <nppi.h>
+
 #define RESIZE_FUNC         \
   NppStatus (*resize_func)( \
       const Npp8u*,         \

@@ -157,6 +157,10 @@ CUDABufferPtr decode_image_nvjpeg(
   auto [buffer, src_meta, decoded] = decode(data, fmt, cuda_config);
 
   if (scale_width > 0 && scale_height > 0) {
+#ifndef SPDL_USE_NPPI
+    SPDL_FAIL(
+        "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
+#else
     auto [buffer2, meta2] =
         get_output(fmt, scale_height, scale_width, cuda_config);
     nvjpegImage_t resized;
@@ -172,6 +176,7 @@ CUDABufferPtr decode_image_nvjpeg(
         scale_height);
 
     return std::move(buffer2);
+#endif
   }
 
   return std::move(buffer);
@@ -183,6 +188,10 @@ CUDABufferPtr decode_image_nvjpeg(
     int scale_width,
     int scale_height,
     const std::string& pix_fmt) {
+#ifndef SPDL_USE_NPPI
+  SPDL_FAIL(
+      "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
+#else
   auto batch_size = dataset.size();
   if (batch_size == 0) {
     SPDL_FAIL("No input is provided.");
@@ -214,6 +223,7 @@ CUDABufferPtr decode_image_nvjpeg(
         scale_height);
   }
   return std::move(out_buffer);
+#endif
 }
 
 } // namespace spdl::core::detail
