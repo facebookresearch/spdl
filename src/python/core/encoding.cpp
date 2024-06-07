@@ -14,7 +14,7 @@
 
 namespace nb = nanobind;
 
-using u8_cpu_array = nb::ndarray<uint8_t, nb::device::cpu, nb::c_contig>;
+using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
 using u8_cuda_array = nb::ndarray<uint8_t, nb::device::cuda, nb::c_contig>;
 
 namespace spdl::core {
@@ -31,13 +31,17 @@ std::vector<size_t> get_shape(nb::ndarray<Ts...>& arr) {
 
 void encode(
     std::string path,
-    u8_cpu_array data,
+    cpu_array data,
     const std::string& pix_fmt,
     const std::optional<EncodeConfig>& encode_cfg) {
   auto src = reinterpret_cast<void*>(data.data());
   auto shape = get_shape(data);
+  if (data.dtype().code != (uint8_t)nb::dlpack::dtype_code::UInt) {
+    throw std::runtime_error("Only unsigned interger type is supported");
+  }
+  auto bit_depth = data.dtype().bits;
   nb::gil_scoped_release g;
-  encode_image(path, src, shape, pix_fmt, encode_cfg);
+  encode_image(path, src, shape, bit_depth, pix_fmt, encode_cfg);
 }
 
 void encode_cuda(
@@ -47,9 +51,13 @@ void encode_cuda(
     const std::optional<EncodeConfig>& encode_cfg) {
   auto src = reinterpret_cast<void*>(data.data());
   auto shape = get_shape(data);
+  if (data.dtype().code != (uint8_t)nb::dlpack::dtype_code::UInt) {
+    throw std::runtime_error("Only unsigned interger type is supported");
+  }
+  auto bit_depth = data.dtype().bits;
   nb::gil_scoped_release g;
   auto storage = cp_to_cpu(src, shape);
-  encode_image(uri, storage.data(), shape, pix_fmt, encode_cfg);
+  encode_image(uri, storage.data(), shape, bit_depth, pix_fmt, encode_cfg);
 }
 } // namespace
 

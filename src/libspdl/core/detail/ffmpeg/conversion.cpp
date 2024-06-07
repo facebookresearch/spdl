@@ -488,9 +488,13 @@ AVFrameViewPtr get_video_frame(AVPixelFormat fmt, size_t width, size_t height) {
   return ret;
 }
 
-void ref_interweaved(AVFrame* frame, void* data, int num_channels) {
+void ref_interweaved(
+    AVFrame* frame,
+    void* data,
+    int num_channels,
+    int bit_depth = 1) {
   frame->data[0] = reinterpret_cast<uint8_t*>(data);
-  frame->linesize[0] = frame->width * num_channels;
+  frame->linesize[0] = frame->width * num_channels * bit_depth;
 }
 
 void ref_planar(AVFrame* frame, void* data, int num_channels) {
@@ -516,6 +520,9 @@ AVFrameViewPtr reference_image_buffer(
       break;
     case AV_PIX_FMT_GRAY8:
       ref_interweaved(frame.get(), data, 1);
+      break;
+    case AV_PIX_FMT_GRAY16BE:
+      ref_interweaved(frame.get(), data, 1, 2);
       break;
     case AV_PIX_FMT_YUV444P:
       ref_planar(frame.get(), data, 3);
