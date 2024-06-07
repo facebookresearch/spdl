@@ -1,8 +1,9 @@
 #include "libspdl/core/detail/cuda.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
+#include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
 
@@ -44,19 +45,19 @@ CUcontext get_cucontext(CUdevice device) {
     TRACE_EVENT("nvdec", "cuCtxGetCurrent");
     CHECK_CU(cuCtxGetCurrent(&ctx), "Failed to get the current CUDA context.");
     if (ctx) {
-      XLOG(DBG) << "Context found.";
+      VLOG(0) << "Context found.";
       CUdevice dev;
       TRACE_EVENT("nvdec", "cuCtxGetDevice");
       CHECK_CU(
           cuCtxGetDevice(&dev),
           "Failed to get the device of the current CUDA context.");
       if (device == dev) {
-        XLOG(DBG) << "The current context is the same device.";
+        VLOG(0) << "The current context is the same device.";
         CUCONTEXT_CACHE.emplace(device, ctx);
         return ctx;
       }
     }
-    XLOG(DBG) << "Context not found.";
+    VLOG(0) << "Context not found.";
     // Context is not set or different device, create floating one.
     TRACE_EVENT("nvdec", "cuDevicePrimaryCtxRetain");
     CHECK_CU(

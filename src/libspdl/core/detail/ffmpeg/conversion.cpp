@@ -6,7 +6,9 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
+
+#include <cassert>
 
 extern "C" {
 #include <libavutil/frame.h>

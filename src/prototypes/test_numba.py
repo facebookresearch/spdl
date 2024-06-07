@@ -29,13 +29,6 @@ def _parse_args():
 
 def _main():
     args = _parse_args()
-    spdl.utils.init_folly(
-        [
-            f"--spdl_demuxer_executor_threads={args.num_demuxing_threads}",
-            f"--spdl_decoder_executor_threads={args.num_decoding_threads}",
-            f"--logging={'DBG' if args.debug else 'INFO'}",
-        ]
-    )
 
     from numba import cuda
 

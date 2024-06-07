@@ -4,7 +4,7 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>

@@ -2,7 +2,7 @@
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 #include <memory>
 

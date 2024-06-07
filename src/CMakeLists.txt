@@ -12,7 +12,7 @@ if (SPDL_BUILD_PYTHON_BINDING)
 endif()
 
 set(defs)
-set(deps folly)
+set(deps fmt::fmt glog::glog)
 set(srcs
   libspdl/core/detail/ffmpeg/conversion.cpp
   libspdl/core/detail/ffmpeg/ctx_utils.cpp

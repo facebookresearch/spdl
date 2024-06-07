@@ -5,7 +5,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/format.h>
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 #include <span>
 
@@ -118,7 +118,7 @@ CUvideodecoder get_decoder(CUVIDDECODECREATEINFO* param) {
   CUvideodecoder decoder;
   TRACE_EVENT("nvdec", "cuvidCreateDecoder");
   CHECK_CU(cuvidCreateDecoder(&decoder, param), "Failed to create decoder.");
-  XLOG(DBG9) << "Created CUvideodecoder: " << decoder;
+  VLOG(9) << "Created CUvideodecoder: " << decoder;
   return decoder;
 }
 
@@ -131,7 +131,7 @@ CUVIDDECODECREATEINFO get_create_info(
     const CropArea& crop,
     int target_width,
     int target_height) {
-  // XLOG(INFO) << fmt::format(
+  // LOG(INFO) << fmt::format(
   //    "Output sufrace format: {}", get_surface_format_name(output_fmt));
 
   int width = video_fmt->display_area.right - video_fmt->display_area.left -
@@ -167,12 +167,12 @@ CUVIDDECODECREATEINFO get_create_info(
       output_fmt == cudaVideoSurfaceFormat_P016) {
     if (tgt_w % 2) {
       tgt_w -= 1;
-      XLOG_FIRST_N(WARN, 1)
+      LOG_FIRST_N(WARN, 1)
           << fmt::format("Width must be even. Cropping to {}.", tgt_w);
     }
     if (tgt_h % 2) {
       tgt_h -= 1;
-      XLOG_FIRST_N(WARN, 1)
+      LOG_FIRST_N(WARN, 1)
           << fmt::format("Height must be even. Cropping to {}.", tgt_h);
     }
   }

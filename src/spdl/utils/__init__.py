@@ -1,13 +1,12 @@
 """Utility functions."""
 
-from . import _async, _build, _ffmpeg, _flist, _folly, _tracing
+from . import _async, _build, _ffmpeg, _flist, _tracing
 
 _mods = [
     _async,
     _build,
     _flist,
     _ffmpeg,
-    _folly,
     _tracing,
 ]
 

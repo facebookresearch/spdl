@@ -2,14 +2,14 @@
 
 #ifdef SPDL_USE_TRACING
 
-#include <folly/logging/xlog.h>
+#include <glog/logging.h>
 
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace spdl::core::detail {
 
 void init_perfetto() {
-  XLOG(INFO) << "Initializing Tracing";
+  LOG(INFO) << "Initializing Tracing";
   perfetto::TracingInitArgs args;
   args.backends = perfetto::kInProcessBackend;
   perfetto::Tracing::Initialize(args);
@@ -26,7 +26,7 @@ void configure_perfetto(const std::string& name) {
 std::unique_ptr<perfetto::TracingSession> start_tracing_session(
     int fd,
     int buffer_size) {
-  XLOG(INFO) << "Starting tracing";
+  LOG(INFO) << "Starting tracing";
   // The trace config defines which types of data sources are enabled for
   // recording. In this example we just need the "track_event" data source,
   // which corresponds to the TRACE_EVENT trace points.
@@ -42,7 +42,7 @@ std::unique_ptr<perfetto::TracingSession> start_tracing_session(
 }
 
 void stop_tracing_session(std::unique_ptr<perfetto::TracingSession> session) {
-  XLOG(INFO) << "Stopping tracing";
+  LOG(INFO) << "Stopping tracing";
   perfetto::TrackEvent::Flush();
   session->StopBlocking();
 }
