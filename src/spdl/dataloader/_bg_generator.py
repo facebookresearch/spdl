@@ -30,7 +30,7 @@ class _Sentinel:
 
 def _run_agen(
     loop,
-    aiterable: AsyncIterator,
+    aiterator: AsyncIterator,
     sentinel: _Sentinel,
     queue: Queue,
     stopped: Event,
@@ -39,7 +39,7 @@ def _run_agen(
     async def _generator_loop():
         while True:
             try:
-                item = await asyncio.wait_for(anext(aiterable), timeout)
+                item = await asyncio.wait_for(anext(aiterator), timeout)
             except StopAsyncIteration:
                 return
             except asyncio.TimeoutError:
@@ -142,14 +142,14 @@ class BackgroundGenerator(Generic[T]):
 
     def __init__(
         self,
-        iterable: AsyncIterator[T],
+        iterator: AsyncIterator[T],
         *,
         num_workers: int | None = 3,
         queue_size: int = 10,
         timeout: int | float | None = 300,
         loop: asyncio.AbstractEventLoop | None = None,
     ):
-        self.iterable = iterable
+        self.iterator = iterator
         self.queue_size = queue_size
         self.loop = _get_loop(num_workers) if loop is None else loop
         self.timeout = timeout
@@ -164,7 +164,7 @@ class BackgroundGenerator(Generic[T]):
 
         thread = Thread(
             target=_run_agen,
-            args=(self.loop, self.iterable, sentinel, queue, stopped, self.timeout),
+            args=(self.loop, self.iterator, sentinel, queue, stopped, self.timeout),
         )
 
         with _thread_manager(thread, stopped, queue, sentinel):
