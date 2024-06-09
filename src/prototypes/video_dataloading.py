@@ -64,8 +64,7 @@ def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
         )
         return buffer
 
-    async def _decode(srcs):
-        src = srcs[0]
+    async def _decode(src):
         timestamps = [(0, float("inf"))]
         demuxer = spdl.io.async_streaming_demux_video(src, timestamps=timestamps)
         tasks = []
@@ -87,8 +86,7 @@ def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
 
 
 def _get_decode_nvdec_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
-    async def _decode_nvdec(srcs):
-        src = srcs[0]
+    async def _decode_nvdec(src):
         timestamps = [(0, float("inf"))]
         demuxer = spdl.io.async_streaming_demux_video(src, timestamps=timestamps)
         tasks = []

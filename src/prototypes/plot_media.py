@@ -49,10 +49,9 @@ async def decode_packets(packets, gpu, pix_fmt):
         print(frames)
         buffer = await spdl.io.async_convert_frames(frames)
         return spdl.io.to_numpy(buffer)
-    frames = await spdl.io.async_decode_packets_nvdec(
-        packets, cuda_device_index=gpu, pix_fmt=pix_fmt
+    buffer = await spdl.io.async_decode_packets_nvdec(
+        packets, cuda_config=spdl.io.cuda_config(device_index=gpu), pix_fmt=pix_fmt
     )
-    buffer = await spdl.io.async_convert_frames(frames)
     return spdl.io.to_torch(buffer).cpu().numpy()
 
 
