@@ -1,5 +1,6 @@
 #include <libspdl/core/demuxing.h>
 
+#include "libspdl/core/detail/ffmpeg/bsf.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/logging.h"
@@ -261,9 +262,7 @@ ImagePacketsPtr demux_image(
 ////////////////////////////////////////////////////////////////////////////////
 // Bit Stream Filtering for NVDEC
 ////////////////////////////////////////////////////////////////////////////////
-namespace detail {
-namespace {
-AVBSFContextPtr init_bsf(AVCodecParameters* codecpar) {
+VideoPacketsPtr apply_bsf(VideoPacketsPtr packets) {
   // Note
   // FFmpeg's implementation applies BSF to all H264/HEVC formats,
   //
@@ -274,7 +273,7 @@ AVBSFContextPtr init_bsf(AVCodecParameters* codecpar) {
   //
   //  "QuickTime / MOV", "FLV (Flash Video)", "Matroska / WebM"
   const char* name;
-  switch (codecpar->codec_id) {
+  switch (packets->codecpar->codec_id) {
     case AV_CODEC_ID_H264:
       name = "h264_mp4toannexb";
       break;
@@ -282,56 +281,21 @@ AVBSFContextPtr init_bsf(AVCodecParameters* codecpar) {
       name = "hevc_mp4toannexb";
       break;
     default:
-      return {nullptr};
+      return packets;
   }
 
-  TRACE_EVENT("demuxing", "init_bsf");
-  const AVBitStreamFilter* bsf = av_bsf_get_by_name(name);
-  if (!bsf) {
-    SPDL_FAIL(fmt::format("Bit stream filter ({}) is not available", name));
-  }
-  AVBSFContext* p = nullptr;
-  CHECK_AVERROR(av_bsf_alloc(bsf, &p), "Failed to allocate AVBSFContext.");
-  AVBSFContextPtr bsf_ctx{p};
-  CHECK_AVERROR(
-      avcodec_parameters_copy(p->par_in, codecpar),
-      "Failed to copy codec parameter.");
-  CHECK_AVERROR(av_bsf_init(p), "Failed to initialize AVBSFContext..");
-  return bsf_ctx;
-}
-AVPacketPtr apply_bsf(AVBSFContext* bsf_ctx, AVPacket* packet) {
-  AVPacketPtr filtered{CHECK_AVALLOCATE(av_packet_alloc())};
-  {
-    TRACE_EVENT("decoding", "av_bsf_send_packet");
-    CHECK_AVERROR(
-        av_bsf_send_packet(bsf_ctx, packet),
-        "Failed to send packet to bit stream filter.");
-  }
-  {
-    TRACE_EVENT("decoding", "av_bsf_receive_packet");
-    CHECK_AVERROR(
-        av_bsf_receive_packet(bsf_ctx, filtered.get()),
-        "Failed to fetch packet from bit stream filter.");
-  }
-  return filtered;
-}
-} // namespace
-} // namespace detail
-
-VideoPacketsPtr apply_bsf(VideoPacketsPtr packets) {
   TRACE_EVENT("demuxing", "apply_bsf");
-  auto bsf_ctx = detail::init_bsf(packets->codecpar);
-  if (!bsf_ctx) {
-    return packets;
-  }
+  auto bsf = detail::BitStreamFilter{name, packets->codecpar};
 
   auto ret = std::make_unique<DemuxedPackets<MediaType::Video>>(
-      packets->src, bsf_ctx->par_out, packets->time_base);
+      packets->src, bsf.get_output_codec_par(), packets->time_base);
   ret->timestamp = packets->timestamp;
   ret->frame_rate = packets->frame_rate;
   for (auto& packet : packets->get_packets()) {
-    auto filtered = detail::apply_bsf(bsf_ctx.get(), packet);
-    ret->push(filtered.release());
+    auto filtering = bsf.filter(packet);
+    while (filtering) {
+      ret->push(filtering().release());
+    }
   }
   return ret;
 }
