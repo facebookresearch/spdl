@@ -18,6 +18,7 @@ set(srcs
   libspdl/core/detail/ffmpeg/ctx_utils.cpp
   libspdl/core/detail/ffmpeg/bsf.cpp
   libspdl/core/detail/ffmpeg/decoding.cpp
+  libspdl/core/detail/ffmpeg/demuxer.cpp
   libspdl/core/detail/ffmpeg/demuxing.cpp
   libspdl/core/detail/ffmpeg/encoding.cpp
   libspdl/core/detail/ffmpeg/filter_graph.cpp

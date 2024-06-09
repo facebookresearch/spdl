@@ -1,6 +1,7 @@
 #include <libspdl/core/demuxing.h>
 
 #include "libspdl/core/detail/ffmpeg/bsf.h"
+#include "libspdl/core/detail/ffmpeg/demuxer.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/logging.h"
@@ -56,19 +57,6 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
   return fmt_ctx->streams[idx];
 }
 
-int read_packet(AVFormatContext* fmt_ctx, AVPacket* packet) {
-  int ret;
-  {
-    TRACE_EVENT("demuxing", "av_read_frame");
-    ret = av_read_frame(fmt_ctx, packet);
-  }
-  if (ret < 0 && ret != AVERROR_EOF) {
-    CHECK_AVERROR_NUM(
-        ret, fmt::format("Failed to read a packet. ({})", fmt_ctx->url));
-  }
-  return ret;
-}
-
 std::tuple<double, double> NO_WINDOW{
     -std::numeric_limits<double>::infinity(),
     std::numeric_limits<double>::infinity()};
@@ -105,11 +93,10 @@ PacketsPtr<media_type> demux_window(
       Rational{stream->time_base.num, stream->time_base.den});
   ret->timestamp = window;
 
-  do {
-    AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
-    if (read_packet(fmt_ctx, packet.get()) == AVERROR_EOF) {
-      break;
-    }
+  auto demuxer = detail::Demuxer{fmt_ctx};
+  auto demuxing = demuxer.demux();
+  while (demuxing) {
+    auto packet = demuxing();
     if (packet->stream_index != stream->index) {
       continue;
     }
@@ -117,7 +104,7 @@ PacketsPtr<media_type> demux_window(
       break;
     }
     ret->push(packet.release());
-  } while (true);
+  }
   return ret;
 }
 
@@ -218,23 +205,16 @@ ImagePacketsPtr demux_image(AVFormatContext* fmt_ctx) {
   auto ret = std::make_unique<DemuxedPackets<MediaType::Image>>(
       fmt_ctx->url, stream->codecpar, Rational{1, 1});
 
-  do {
-    AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
-    if (read_packet(fmt_ctx, packet.get()) == AVERROR_EOF) {
-      break;
-    }
+  auto demuxer = detail::Demuxer{fmt_ctx};
+  auto demuxing = demuxer.demux();
+  while (demuxing) {
+    auto packet = demuxing();
     if (packet->stream_index != stream->index) {
       continue;
     }
     ret->push(packet.release());
-  } while (true);
-  if (ret->num_packets() != 1) {
-    SPDL_FAIL(fmt::format(
-        "Error demuxing an image from {}. "
-        "Expected exactly one packet but found {}",
-        fmt_ctx->url,
-        ret->num_packets()));
-  }
+    break;
+  };
   return ret;
 }
 
