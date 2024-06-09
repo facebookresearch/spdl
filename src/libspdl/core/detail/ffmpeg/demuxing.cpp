@@ -10,6 +10,7 @@
 #include <glog/logging.h>
 
 #include <cmath>
+#include <optional>
 
 namespace spdl::core {
 namespace detail {
@@ -65,7 +66,7 @@ template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::optional<std::tuple<double, double>>& window) {
+    const std::optional<std::tuple<double, double>>& window = std::nullopt) {
   TRACE_EVENT("demuxing", "detail::demux_window");
   auto [start, end] = window ? *window : NO_WINDOW;
 
@@ -196,37 +197,14 @@ template DemuxerPtr<MediaType::Video> make_demuxer(
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxing for Image
 ////////////////////////////////////////////////////////////////////////////////
-namespace detail {
-namespace {
-ImagePacketsPtr demux_image(AVFormatContext* fmt_ctx) {
-  TRACE_EVENT("demuxing", "detail::demux");
-  AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
-
-  auto ret = std::make_unique<DemuxedPackets<MediaType::Image>>(
-      fmt_ctx->url, stream->codecpar, Rational{1, 1});
-
-  auto demuxer = detail::Demuxer{fmt_ctx};
-  auto demuxing = demuxer.demux();
-  while (demuxing) {
-    auto packet = demuxing();
-    if (packet->stream_index != stream->index) {
-      continue;
-    }
-    ret->push(packet.release());
-    break;
-  };
-  return ret;
-}
-
-} // namespace
-} // namespace detail
-
 ImagePacketsPtr demux_image(
     const std::string uri,
     const SourceAdaptorPtr adaptor,
     const std::optional<DemuxConfig>& dmx_cfg) {
   auto interface = detail::get_interface(uri, adaptor, dmx_cfg);
-  return detail::demux_image(interface->get_fmt_ctx());
+  auto fmt_ctx = interface->get_fmt_ctx();
+  return detail::demux_window<MediaType::Image>(
+      fmt_ctx, detail::init_fmt_ctx(fmt_ctx, MediaType::Video));
 }
 
 ImagePacketsPtr demux_image(
@@ -234,7 +212,9 @@ ImagePacketsPtr demux_image(
     const std::optional<DemuxConfig>& dmx_cfg) {
   thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
   auto interface = detail::get_interface(data, adaptor, dmx_cfg);
-  auto result = detail::demux_image(interface->get_fmt_ctx());
+  auto fmt_ctx = interface->get_fmt_ctx();
+  auto result = detail::demux_window<MediaType::Image>(
+      fmt_ctx, detail::init_fmt_ctx(fmt_ctx, MediaType::Video));
   return result;
 }
 
