@@ -56,6 +56,19 @@ inline AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
   return fmt_ctx->streams[idx];
 }
 
+int read_packet(AVFormatContext* fmt_ctx, AVPacket* packet) {
+  int ret;
+  {
+    TRACE_EVENT("demuxing", "av_read_frame");
+    ret = av_read_frame(fmt_ctx, packet);
+  }
+  if (ret < 0 && ret != AVERROR_EOF) {
+    CHECK_AVERROR_NUM(
+        ret, fmt::format("Failed to read a packet. ({})", fmt_ctx->url));
+  }
+  return ret;
+}
+
 std::tuple<double, double> NO_WINDOW{
     -std::numeric_limits<double>::infinity(),
     std::numeric_limits<double>::infinity()};
@@ -92,26 +105,19 @@ PacketsPtr<media_type> demux_window(
       Rational{stream->time_base.num, stream->time_base.den});
   ret->timestamp = window;
 
-  double packet_ts = -1;
   do {
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
-    int errnum;
-    {
-      TRACE_EVENT("demuxing", "av_read_frame");
-      errnum = av_read_frame(fmt_ctx, packet.get());
-    }
-    if (errnum == AVERROR_EOF) {
+    if (read_packet(fmt_ctx, packet.get()) == AVERROR_EOF) {
       break;
     }
-    CHECK_AVERROR_NUM(errnum, "Failed to process packet.");
     if (packet->stream_index != stream->index) {
       continue;
     }
-    packet_ts = packet->pts * av_q2d(stream->time_base);
-    if (packet_ts <= end) {
-      ret->push(packet.release());
+    if (packet->pts * av_q2d(stream->time_base) > end) {
+      break;
     }
-  } while (packet_ts < end);
+    ret->push(packet.release());
+  } while (true);
   return ret;
 }
 
@@ -209,34 +215,27 @@ ImagePacketsPtr demux_image(AVFormatContext* fmt_ctx) {
   TRACE_EVENT("demuxing", "detail::demux");
   AVStream* stream = init_fmt_ctx(fmt_ctx, MediaType::Video);
 
-  auto package = std::make_unique<DemuxedPackets<MediaType::Image>>(
+  auto ret = std::make_unique<DemuxedPackets<MediaType::Image>>(
       fmt_ctx->url, stream->codecpar, Rational{1, 1});
 
-  int ite = 0;
   do {
-    ++ite;
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
-    int errnum;
-    {
-      TRACE_EVENT("demuxing", "av_read_frame");
-      errnum = av_read_frame(fmt_ctx, packet.get());
-    }
-    if (errnum == AVERROR_EOF) {
+    if (read_packet(fmt_ctx, packet.get()) == AVERROR_EOF) {
       break;
     }
-    CHECK_AVERROR_NUM(
-        errnum, fmt::format("Failed to process packet. {}", fmt_ctx->url));
     if (packet->stream_index != stream->index) {
       continue;
     }
-    package->push(packet.release());
-    break;
-  } while (ite < 1000);
-  if (!package->num_packets()) {
-    SPDL_FAIL(
-        fmt::format("Failed to demux a sigle frame from {}", fmt_ctx->url));
+    ret->push(packet.release());
+  } while (true);
+  if (ret->num_packets() != 1) {
+    SPDL_FAIL(fmt::format(
+        "Error demuxing an image from {}. "
+        "Expected exactly one packet but found {}",
+        fmt_ctx->url,
+        ret->num_packets()));
   }
-  return package;
+  return ret;
 }
 
 } // namespace
