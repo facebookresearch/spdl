@@ -1,15 +1,16 @@
 import asyncio
 import warnings
-from collections.abc import Callable, Iterable, Mapping
-from typing import TypeVar
+from collections.abc import Callable, Iterator, Mapping
+from typing import Generic, TypeVar
 
-from spdl._internal import import_utils
 from spdl.dataloader import BackgroundGenerator
 from spdl.utils import iter_batch
+
 from torch.utils.data import RandomSampler, SequentialSampler
 
 
-torch = import_utils.lazy_import("torch")
+__all__ = ["DataLoader"]
+
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -35,14 +36,14 @@ async def _sample(dataset, batch_sampler, buffer_size, collate_fn):
         yield await task_buffer.get_nowait()
 
 
-class PyTorchStyleDataLoader:
+class DataLoader(Generic[U]):
     def __init__(
         self,
         dataset: Mapping[int, T],
         batch_size: int | None = 1,
         shuffle: bool = False,
-        sampler: Iterable[int] | None = None,
-        batch_sampler: Iterable[list[int]] | None = None,
+        sampler: Iterator[int] | None = None,
+        batch_sampler: Iterator[list[int]] | None = None,
         num_workers: int = 4,
         collate_fn: Callable[[list[T]], U] | None = None,
         pin_memory: bool = False,
@@ -93,7 +94,7 @@ class PyTorchStyleDataLoader:
         self.generator = generator
         self.prefetch_factor = prefetch_factor
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[U]:
         batch_sampler = self.batch_sampler or iter_batch(
             self.sampler or _get_sampler(self.dataset, self.shuffle, self.generator),
             self.batch_size,

@@ -5,10 +5,10 @@ import spdl.io
 import spdl.utils
 
 import torch
-from spdl.dataloader import PyTorchStyleDataLoader
 from spdl.io import ImageFrames
 from spdl.utils import run_async
 from torch import Tensor
+from pytorch_spdl.dataloader import DataLoader
 from torchvision.datasets.imagenet import ImageNet
 
 root = "/home/moto/local/imagenet"
@@ -29,7 +29,7 @@ def _async_decode(path: str) -> Task[ImageFrames]:
     return asyncio.create_task(coro)
 
 
-async def _collate_fn(samples: list[tuple[str, int]]) -> Tensor:
+async def _collate_fn(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
     tasks = [_async_decode(s[0]) for s in samples]
     classes_ = [s[1] for s in samples]
 
@@ -51,7 +51,7 @@ async def _collate_fn(samples: list[tuple[str, int]]) -> Tensor:
 def _main():
     dataset = ImageNet(root=root, loader=lambda x: x)
 
-    dataloader = PyTorchStyleDataLoader(
+    dataloader = DataLoader(
         dataset,
         batch_size=32,
         num_workers=3,
