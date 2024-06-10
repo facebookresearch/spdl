@@ -52,7 +52,7 @@ void drop_demuxer(DemuxerPtr<media_type> t) {
 }
 
 template <MediaType media_type>
-PacketsPtr<media_type> demux_src(
+PacketsPtr<media_type> _demux_src(
     const std::string& src,
     const std::optional<std::tuple<double, double>>& timestamps,
     const std::optional<DemuxConfig>& dmx_cfg,
@@ -67,7 +67,7 @@ void zero_clear(nb::bytes data) {
 }
 
 template <MediaType media_type>
-PacketsPtr<media_type> demux_bytes(
+PacketsPtr<media_type> _demux_bytes(
     nb::bytes data,
     const std::optional<std::tuple<double, double>>& timestamp,
     const std::optional<DemuxConfig>& dmx_cfg,
@@ -83,26 +83,19 @@ PacketsPtr<media_type> demux_bytes(
   return ret;
 }
 
-ImagePacketsPtr demux_img(
+ImagePacketsPtr _demux_image(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
     const SourceAdaptorPtr _adaptor) {
-  nb::gil_scoped_release g;
-  return demux_image(src, _adaptor, dmx_cfg);
+  return _demux_src<MediaType::Image>(src, std::nullopt, dmx_cfg, _adaptor);
 }
 
-ImagePacketsPtr demux_img_bytes(
+ImagePacketsPtr _demux_image_bytes(
     nb::bytes data,
     const std::optional<DemuxConfig>& dmx_cfg,
     bool _zero_clear) {
-  auto data_ = std::string_view{data.c_str(), data.size()};
-  nb::gil_scoped_release g;
-  auto ret = demux_image(data_, dmx_cfg);
-  if (_zero_clear) {
-    nb::gil_scoped_acquire gg;
-    zero_clear(data);
-  }
-  return ret;
+  return _demux_bytes<MediaType::Image>(
+      data, std::nullopt, dmx_cfg, _zero_clear);
 }
 
 } // namespace
@@ -165,7 +158,7 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   m.def(
       "demux_audio",
-      &demux_src<MediaType::Audio>,
+      &_demux_src<MediaType::Audio>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -176,7 +169,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "demux_video",
-      &demux_src<MediaType::Video>,
+      &_demux_src<MediaType::Video>,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -187,7 +180,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "demux_image",
-      &demux_img,
+      &_demux_image,
       nb::arg("src"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -200,7 +193,7 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   m.def(
       "demux_audio",
-      &demux_bytes<MediaType::Audio>,
+      &_demux_bytes<MediaType::Audio>,
       nb::arg("data"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -211,7 +204,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "demux_video",
-      &demux_bytes<MediaType::Video>,
+      &_demux_bytes<MediaType::Video>,
       nb::arg("data"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -222,7 +215,7 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "demux_image",
-      &demux_img_bytes,
+      &_demux_image_bytes,
       nb::arg("data"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),

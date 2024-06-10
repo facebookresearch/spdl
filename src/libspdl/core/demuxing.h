@@ -45,17 +45,6 @@ DemuxerPtr<media_type> make_demuxer(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
-// Demux a single image from the resource indicator
-ImagePacketsPtr demux_image(
-    const std::string src,
-    const SourceAdaptorPtr adaptor,
-    const std::optional<DemuxConfig>& dmx_cfg);
-
-// Demux a single image from the memory
-ImagePacketsPtr demux_image(
-    const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg);
-
 // Apply bitstream filter for NVDEC video decoding
 VideoPacketsPtr apply_bsf(VideoPacketsPtr packets);
 

@@ -39,7 +39,7 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
 } // namespace detail
 
 ////////////////////////////////////////////////////////////////////////////////
-// Demuxer (audio/video)
+// Demuxer
 ////////////////////////////////////////////////////////////////////////////////
 
 template <MediaType media_type>
@@ -70,6 +70,7 @@ PacketsPtr<media_type> Demuxer<media_type>::demux_window(
 
 template class Demuxer<MediaType::Audio>;
 template class Demuxer<MediaType::Video>;
+template class Demuxer<MediaType::Image>;
 
 template <MediaType media_type>
 DemuxerPtr<media_type> make_demuxer(
@@ -89,6 +90,10 @@ template DemuxerPtr<MediaType::Video> make_demuxer(
     const std::string,
     const SourceAdaptorPtr&,
     const std::optional<DemuxConfig>&);
+template DemuxerPtr<MediaType::Image> make_demuxer(
+    const std::string,
+    const SourceAdaptorPtr&,
+    const std::optional<DemuxConfig>&);
 
 template <MediaType media_type>
 DemuxerPtr<media_type> make_demuxer(
@@ -105,30 +110,9 @@ template DemuxerPtr<MediaType::Audio> make_demuxer(
 template DemuxerPtr<MediaType::Video> make_demuxer(
     const std::string_view,
     const std::optional<DemuxConfig>&);
-
-////////////////////////////////////////////////////////////////////////////////
-// Demuxing for Image
-////////////////////////////////////////////////////////////////////////////////
-ImagePacketsPtr demux_image(
-    const std::string uri,
-    const SourceAdaptorPtr adaptor,
-    const std::optional<DemuxConfig>& dmx_cfg) {
-  auto interface = detail::get_interface(uri, adaptor, dmx_cfg);
-  auto fmt_ctx = interface->get_fmt_ctx();
-  return detail::demux_window<MediaType::Image>(
-      fmt_ctx, detail::init_fmt_ctx(fmt_ctx, MediaType::Video));
-}
-
-ImagePacketsPtr demux_image(
-    const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg) {
-  thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
-  auto interface = detail::get_interface(data, adaptor, dmx_cfg);
-  auto fmt_ctx = interface->get_fmt_ctx();
-  auto result = detail::demux_window<MediaType::Image>(
-      fmt_ctx, detail::init_fmt_ctx(fmt_ctx, MediaType::Video));
-  return result;
-}
+template DemuxerPtr<MediaType::Image> make_demuxer(
+    const std::string_view,
+    const std::optional<DemuxConfig>&);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Bit Stream Filtering for NVDEC
