@@ -24,29 +24,6 @@ Generator<AVFramePtr> decode_packets(
   }
 }
 
-namespace {
-void send_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
-  {
-    TRACE_EVENT("decoding", "avcodec_send_packet");
-    CHECK_AVERROR(
-        avcodec_send_packet(codec_ctx, packet),
-        "Failed to pass a frame to decoder.");
-  }
-}
-
-int receive_frame(AVCodecContext* codec_ctx, AVFrame* frame) {
-  int ret;
-  {
-    TRACE_EVENT("decoding", "avcodec_receive_frame");
-    ret = avcodec_receive_frame(codec_ctx, frame);
-  }
-  if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
-    CHECK_AVERROR_NUM(ret, "Failed to decode a packet.");
-  }
-  return ret;
-}
-} // namespace
-
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
 Decoder::Decoder(
@@ -68,11 +45,26 @@ Generator<AVFramePtr> Decoder::decode(AVPacket* packet, bool flush_null) {
                           TS(packet, codec_ctx->pkt_timebase),
                           packet->pts));
 
-  send_packet(codec_ctx.get(), packet);
   int errnum;
-  do {
+
+  {
+    TRACE_EVENT("decoding", "avcodec_send_packet");
+    errnum = avcodec_send_packet(codec_ctx.get(), packet);
+  }
+  if (errnum < 0) {
+    LOG(WARNING) << av_error(errnum, "Failed to pass a frame to decoder.");
+    co_return;
+  }
+
+  while (errnum >= 0) {
     auto frame = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
-    switch ((errnum = receive_frame(codec_ctx.get(), frame.get()))) {
+
+    {
+      TRACE_EVENT("decoding", "avcodec_receive_frame");
+      errnum = avcodec_receive_frame(codec_ctx.get(), frame.get());
+    }
+
+    switch (errnum) {
       case AVERROR(EAGAIN):
         co_return;
       case AVERROR_EOF: {
@@ -82,15 +74,21 @@ Generator<AVFramePtr> Decoder::decode(AVPacket* packet, bool flush_null) {
         co_return;
       }
       default: {
-        {
-          double ts = TS(frame, codec_ctx->pkt_timebase);
-          VLOG(9) << fmt::format(
-              "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
+        if (errnum < 0) {
+          LOG(WARNING) << av_error(errnum, "Failed to decode a packet.");
+          co_return;
         }
+
+        VLOG(9) << fmt::format(
+            "{:21s} {:.3f} ({})",
+            " --- raw frame:",
+            TS(frame, codec_ctx->pkt_timebase),
+            frame->pts);
+
         co_yield std::move(frame);
       }
     }
-  } while (errnum >= 0);
+  }
 }
 
 } // namespace spdl::core::detail
