@@ -10,25 +10,6 @@
 #include <fmt/core.h>
 
 namespace spdl::core {
-namespace detail {
-
-Generator<AVFramePtr> decode_packets(
-    const std::vector<AVPacket*>& packets,
-    Decoder& decoder,
-    FilterGraph& filter) {
-  for (auto& packet : packets) {
-    auto decoding = decoder.decode(packet, !packet);
-    while (decoding) {
-      auto filtering = filter.filter(decoding());
-      while (filtering) {
-        co_yield filtering();
-      }
-    }
-  }
-}
-
-} // namespace detail
-
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,

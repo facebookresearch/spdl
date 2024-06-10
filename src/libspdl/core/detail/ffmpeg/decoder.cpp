@@ -7,6 +7,23 @@
 #include <glog/logging.h>
 
 namespace spdl::core::detail {
+
+Generator<AVFramePtr> decode_packets(
+    const std::vector<AVPacket*>& packets,
+    Decoder& decoder,
+    FilterGraph& filter) {
+  for (auto& packet : packets) {
+    auto decoding = decoder.decode(packet, !packet);
+    while (decoding) {
+      auto frame = decoding();
+      auto filtering = filter.filter(frame.get());
+      while (filtering) {
+        co_yield filtering();
+      }
+    }
+  }
+}
+
 namespace {
 void send_packet(AVCodecContext* codec_ctx, AVPacket* packet) {
   {
@@ -42,7 +59,7 @@ Decoder::Decoder(
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)) {}
 
-Generator<AVFrame*> Decoder::decode(AVPacket* packet, bool flush_null) {
+Generator<AVFramePtr> Decoder::decode(AVPacket* packet, bool flush_null) {
   VLOG(9)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(
@@ -51,10 +68,10 @@ Generator<AVFrame*> Decoder::decode(AVPacket* packet, bool flush_null) {
                           TS(packet, codec_ctx->pkt_timebase),
                           packet->pts));
 
-  auto frame = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
   send_packet(codec_ctx.get(), packet);
   int errnum;
   do {
+    auto frame = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
     switch ((errnum = receive_frame(codec_ctx.get(), frame.get()))) {
       case AVERROR(EAGAIN):
         co_return;
@@ -70,7 +87,7 @@ Generator<AVFrame*> Decoder::decode(AVPacket* packet, bool flush_null) {
           VLOG(9) << fmt::format(
               "{:21s} {:.3f} ({})", " --- raw frame:", ts, frame->pts);
         }
-        co_yield frame.get();
+        co_yield std::move(frame);
       }
     }
   } while (errnum >= 0);

@@ -6,26 +6,6 @@
 #include "libspdl/core/detail/tracing.h"
 
 namespace spdl::core {
-namespace detail {
-namespace {
-
-Generator<AVFramePtr> decode_packets(
-    const std::vector<AVPacket*>& packets,
-    Decoder& decoder,
-    FilterGraph& filter) {
-  for (auto& packet : packets) {
-    auto decoding = decoder.decode(packet, !packet);
-    while (decoding) {
-      auto filtering = filter.filter(decoding());
-      while (filtering) {
-        co_yield filtering();
-      }
-    }
-  }
-}
-
-} // namespace
-} // namespace detail
 /////////////////////////////////////////////////////////////////////////////////
 // StreamingDecoder::Impl
 /////////////////////////////////////////////////////////////////////////////////
