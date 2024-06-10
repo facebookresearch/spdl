@@ -2,27 +2,11 @@
 
 #include <libspdl/core/decoding.h>
 
+#include "libspdl/core/detail/ffmpeg/decoder.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
-#include "libspdl/core/detail/generator.h"
-
-#include <deque>
 
 namespace spdl::core {
-namespace detail {
-// Wraps AVCodecContextPtr and provide convenient methods
-struct Decoder {
-  AVCodecContextPtr codec_ctx;
-
-  Decoder(
-      AVCodecParameters*,
-      Rational time_base,
-      const std::optional<DecodeConfig>& cfg = std::nullopt);
-
-  Generator<AVFrame*> decode(AVPacket*, bool flush_null = false);
-};
-
-} // namespace detail
 
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
