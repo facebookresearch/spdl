@@ -75,7 +75,7 @@ class DataLoader(Generic[U]):
         if num_workers <= 0:
             raise ValueError("`num_workers` must be greater than 0.")
         if pin_memory:
-            warnings.warn("`pin_memory` is not supported.")
+            warnings.warn("`pin_memory` is not supported.", stacklevel=2)
         if prefetch_factor <= 0:
             raise ValueError("`prefetch_factor` must be greater than 0.")
 
