@@ -395,6 +395,7 @@ async def async_load_image_batch(
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
     cuda_config: CUDAConfig | None = None,
+    pin_memory: bool = False,
     strict: bool = True,
 ):
     """Batch load images.
@@ -477,7 +478,7 @@ async def async_load_image_batch(
     if not frames:
         raise RuntimeError("Failed to load all the images.")
 
-    buffer = await _core.async_convert_frames(frames)
+    buffer = await _core.async_convert_frames(frames, pin_memory=pin_memory)
 
     if cuda_config is not None:
         buffer = await _core.async_transfer_buffer(buffer, cuda_config=cuda_config)

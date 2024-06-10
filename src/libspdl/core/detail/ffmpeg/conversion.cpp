@@ -29,13 +29,14 @@ namespace spdl::core {
 namespace {
 template <size_t depth, ElemClass type, bool is_planar>
 CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegAudioFrames*>& batch) {
+    const std::vector<const FFmpegAudioFrames*>& batch,
+    bool pin_memory) {
   size_t num_frames = batch.at(0)->get_num_frames();
   size_t num_channels = GET_CHANNEL(batch.at(0)->get_frames().at(0));
 
   if constexpr (is_planar) {
-    auto buf =
-        cpu_buffer({batch.size(), num_channels, num_frames}, type, depth);
+    auto buf = cpu_buffer(
+        {batch.size(), num_channels, num_frames}, type, depth, pin_memory);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frames_ptr : batch) {
       auto fs = frames_ptr->get_frames();
@@ -49,8 +50,8 @@ CPUBufferPtr convert_frames(
     }
     return buf;
   } else {
-    auto buf =
-        cpu_buffer({batch.size(), num_frames, num_channels}, type, depth);
+    auto buf = cpu_buffer(
+        {batch.size(), num_frames, num_channels}, type, depth, pin_memory);
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frames_ptr : batch) {
       auto fs = frames_ptr->get_frames();
@@ -67,7 +68,8 @@ CPUBufferPtr convert_frames(
 
 template <>
 CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegAudioFrames*>& batch) {
+    const std::vector<const FFmpegAudioFrames*>& batch,
+    bool pin_memory) {
   if (batch.empty()) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
@@ -109,29 +111,29 @@ CPUBufferPtr convert_frames(
   }
   switch (sample_fmt0) {
     case AV_SAMPLE_FMT_U8:
-      return convert_frames<1, ElemClass::UInt, false>(batch);
+      return convert_frames<1, ElemClass::UInt, false>(batch, pin_memory);
     case AV_SAMPLE_FMT_U8P:
-      return convert_frames<1, ElemClass::UInt, true>(batch);
+      return convert_frames<1, ElemClass::UInt, true>(batch, pin_memory);
     case AV_SAMPLE_FMT_S16:
-      return convert_frames<2, ElemClass::Int, false>(batch);
+      return convert_frames<2, ElemClass::Int, false>(batch, pin_memory);
     case AV_SAMPLE_FMT_S16P:
-      return convert_frames<2, ElemClass::Int, true>(batch);
+      return convert_frames<2, ElemClass::Int, true>(batch, pin_memory);
     case AV_SAMPLE_FMT_S32:
-      return convert_frames<4, ElemClass::Int, false>(batch);
+      return convert_frames<4, ElemClass::Int, false>(batch, pin_memory);
     case AV_SAMPLE_FMT_S32P:
-      return convert_frames<4, ElemClass::Int, true>(batch);
+      return convert_frames<4, ElemClass::Int, true>(batch, pin_memory);
     case AV_SAMPLE_FMT_FLT:
-      return convert_frames<4, ElemClass::Float, false>(batch);
+      return convert_frames<4, ElemClass::Float, false>(batch, pin_memory);
     case AV_SAMPLE_FMT_FLTP:
-      return convert_frames<4, ElemClass::Float, true>(batch);
+      return convert_frames<4, ElemClass::Float, true>(batch, pin_memory);
     case AV_SAMPLE_FMT_S64:
-      return convert_frames<8, ElemClass::Int, false>(batch);
+      return convert_frames<8, ElemClass::Int, false>(batch, pin_memory);
     case AV_SAMPLE_FMT_S64P:
-      return convert_frames<8, ElemClass::Int, true>(batch);
+      return convert_frames<8, ElemClass::Int, true>(batch, pin_memory);
     case AV_SAMPLE_FMT_DBL:
-      return convert_frames<8, ElemClass::Float, false>(batch);
+      return convert_frames<8, ElemClass::Float, false>(batch, pin_memory);
     case AV_SAMPLE_FMT_DBLP:
-      return convert_frames<8, ElemClass::Float, true>(batch);
+      return convert_frames<8, ElemClass::Float, true>(batch, pin_memory);
     default:
       SPDL_FAIL_INTERNAL(fmt::format(
           "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt0)));
@@ -422,7 +424,8 @@ void check_batch_frame_consistency(
 // for YUV, but for now, it copies data as-is for both YUV and YUVJ.
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegFrames<media_type>*>& batch) {
+    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    bool pin_memory) {
   TRACE_EVENT("decoding", "core::convert_frames");
   check_batch_frame_consistency(batch);
 
@@ -469,10 +472,12 @@ CPUBufferPtr convert_frames(
 }
 
 template CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegImageFrames*>& batch);
+    const std::vector<const FFmpegImageFrames*>& batch,
+    bool pin_memory);
 
 template CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegVideoFrames*>& batch);
+    const std::vector<const FFmpegVideoFrames*>& batch,
+    bool pin_memory);
 
 namespace detail {
 ////////////////////////////////////////////////////////////////////////////////
