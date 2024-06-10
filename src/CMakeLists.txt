@@ -33,6 +33,7 @@ set(srcs
   libspdl/core/transfer.cpp
   libspdl/core/decoder.cpp
   libspdl/core/decoding.cpp
+  libspdl/core/demuxing.cpp
   libspdl/core/encoding.cpp
   libspdl/core/packets.cpp
   libspdl/core/utils.cpp
