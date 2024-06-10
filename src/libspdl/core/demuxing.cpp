@@ -22,11 +22,20 @@ PacketsPtr<media_type> demux_window(
 std::unique_ptr<DataInterface> get_interface(
     const std::string_view src,
     const SourceAdaptorPtr& adaptor,
-    const std::optional<DemuxConfig>& dmx_cfg);
+    const std::optional<DemuxConfig>& dmx_cfg) {
+  if (!adaptor) {
+    thread_local auto p = std::make_shared<SourceAdaptor>();
+    return p->get(src, dmx_cfg.value_or(DemuxConfig{}));
+  }
+  return adaptor->get(src, dmx_cfg.value_or(DemuxConfig{}));
+}
 
 std::unique_ptr<DataInterface> get_in_memory_interface(
     const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg);
+    const std::optional<DemuxConfig>& dmx_cfg) {
+  thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
+  return get_interface(data, adaptor, dmx_cfg);
+}
 } // namespace detail
 
 ////////////////////////////////////////////////////////////////////////////////
