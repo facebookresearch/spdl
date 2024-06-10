@@ -20,12 +20,13 @@ struct Storage {
 
 class CPUStorage : Storage {
   void* data_ = nullptr;
+  bool memory_pinned = false;
 
  public:
   void* data() const override;
 
   CPUStorage() = default;
-  CPUStorage(size_t size);
+  CPUStorage(size_t size, bool pin_memory = false);
 
   CPUStorage(const CPUStorage&) = delete;
   CPUStorage& operator=(const CPUStorage&) = delete;

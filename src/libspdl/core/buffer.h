@@ -84,7 +84,8 @@ struct CUDABuffer : Buffer {
 CPUBufferPtr cpu_buffer(
     const std::vector<size_t> shape,
     ElemClass elem_class = ElemClass::UInt,
-    size_t depth = sizeof(uint8_t));
+    size_t depth = sizeof(uint8_t),
+    bool pin_memory = false);
 
 #ifdef SPDL_USE_CUDA
 ///

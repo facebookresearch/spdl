@@ -47,15 +47,21 @@ inline size_t prod(const std::vector<size_t>& shape) {
 }
 } // namespace
 
-std::unique_ptr<CPUBuffer>
-cpu_buffer(std::vector<size_t> shape, ElemClass elem_class, size_t depth) {
+std::unique_ptr<CPUBuffer> cpu_buffer(
+    std::vector<size_t> shape,
+    ElemClass elem_class,
+    size_t depth,
+    bool pin_memory) {
   VLOG(0) << fmt::format(
       "Allocating {} bytes. (shape: {}, elem: {})",
       prod(shape) * depth,
       fmt::join(shape, ", "),
       depth);
   return std::make_unique<CPUBuffer>(
-      std::move(shape), elem_class, depth, new CPUStorage{prod(shape) * depth});
+      std::move(shape),
+      elem_class,
+      depth,
+      new CPUStorage{prod(shape) * depth, pin_memory});
 }
 
 } // namespace spdl::core
