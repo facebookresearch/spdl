@@ -1,7 +1,8 @@
 #include <libspdl/core/decoding.h>
 #include <libspdl/core/demuxing.h>
 
-#include "libspdl/core/detail/ffmpeg/decoding.h"
+#include "libspdl/core/detail/ffmpeg/decoder.h"
+#include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/nvdec/decoding.h"
 #include "libspdl/core/detail/tracing.h"
@@ -9,48 +10,65 @@
 #include <fmt/core.h>
 
 namespace spdl::core {
+namespace detail {
+
+Generator<AVFramePtr> decode_packets(
+    const std::vector<AVPacket*>& packets,
+    Decoder& decoder,
+    FilterGraph& filter) {
+  for (auto& packet : packets) {
+    auto decoding = decoder.decode(packet, !packet);
+    while (decoding) {
+      auto filtering = filter.filter(decoding());
+      while (filtering) {
+        co_yield filtering();
+      }
+    }
+  }
+}
+
+} // namespace detail
 
 template <MediaType media_type>
-  requires(media_type != MediaType::Image)
-StreamingDecoder<media_type>::StreamingDecoder(
+FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig> cfg,
-    const std::string filter_desc)
-    : pImpl(new StreamingDecoder<media_type>::Impl(
-          std::move(packets),
-          std::move(cfg),
-          std::move(filter_desc))) {}
+    std::string filter_desc) {
+  TRACE_EVENT(
+      "decoding",
+      "decode_packets_ffmpeg",
+      perfetto::Flow::ProcessScoped(packets->id));
+  detail::Decoder decoder{packets->codecpar, packets->time_base, cfg};
+  if constexpr (media_type != MediaType::Image) {
+    packets->push(nullptr); // For flushing
+  }
+  auto filter = detail::get_filter<media_type>(
+      decoder.codec_ctx.get(), filter_desc, packets->frame_rate);
+  auto ret = std::make_unique<FFmpegFrames<media_type>>(
+      packets->id, packets->time_base);
 
-template <MediaType media_type>
-  requires(media_type != MediaType::Image)
-StreamingDecoder<media_type>::~StreamingDecoder() {
-  TRACE_EVENT("decoding", "StreamingDecoder::~StreamingDecoder");
-  delete pImpl;
+  auto gen = detail::decode_packets(packets->get_packets(), decoder, filter);
+  while (gen) {
+    ret->push_back(gen().release());
+  }
+  ret->time_base = filter.get_sink_time_base();
+  return ret;
 }
 
-template <MediaType media_type>
-DecoderPtr<media_type> make_decoder(
-    PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig>& decode_cfg,
-    const std::string& filter_desc) {
-  TRACE_EVENT("decoding", "make_decoder");
-  return std::make_unique<spdl::core::StreamingDecoder<media_type>>(
-      std::move(packets), std::move(decode_cfg), std::move(filter_desc));
-}
+template FFmpegAudioFramesPtr decode_packets_ffmpeg(
+    AudioPacketsPtr packets,
+    const std::optional<DecodeConfig> cfg,
+    std::string filter_desc);
 
-template DecoderPtr<MediaType::Video> make_decoder(
-    PacketsPtr<MediaType::Video> packets,
-    const std::optional<DecodeConfig>& decode_cfg,
-    const std::string& filter_desc);
+template FFmpegVideoFramesPtr decode_packets_ffmpeg(
+    VideoPacketsPtr packets,
+    const std::optional<DecodeConfig> cfg,
+    std::string filter_desc);
 
-template <MediaType media_type>
-  requires(media_type != MediaType::Image)
-std::optional<FFmpegFramesPtr<media_type>> StreamingDecoder<media_type>::decode(
-    int num_frames) {
-  return pImpl->decode(num_frames);
-}
-
-template class StreamingDecoder<MediaType::Video>;
+template FFmpegImageFramesPtr decode_packets_ffmpeg(
+    ImagePacketsPtr packets,
+    const std::optional<DecodeConfig> cfg,
+    std::string filter_desc);
 
 #ifdef SPDL_USE_NVCODEC
 namespace {

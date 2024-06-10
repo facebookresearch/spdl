@@ -18,7 +18,6 @@ set(srcs
   libspdl/core/detail/ffmpeg/ctx_utils.cpp
   libspdl/core/detail/ffmpeg/bsf.cpp
   libspdl/core/detail/ffmpeg/decoder.cpp
-  libspdl/core/detail/ffmpeg/decoding.cpp
   libspdl/core/detail/ffmpeg/demuxer.cpp
   libspdl/core/detail/ffmpeg/demuxing.cpp
   libspdl/core/detail/ffmpeg/encoding.cpp
@@ -32,6 +31,7 @@ set(srcs
   libspdl/core/adaptor/mmap.cpp
   libspdl/core/storage/cpu.cpp
   libspdl/core/transfer.cpp
+  libspdl/core/decoder.cpp
   libspdl/core/decoding.cpp
   libspdl/core/encoding.cpp
   libspdl/core/packets.cpp
