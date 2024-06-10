@@ -18,35 +18,32 @@ namespace nb = nanobind;
 namespace spdl::core {
 namespace {
 
-template <MediaType media_type>
-DemuxerPtr<media_type> _make_demuxer(
+DemuxerPtr _make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
     const SourceAdaptorPtr _adaptor) {
   nb::gil_scoped_release g;
-  return make_demuxer<media_type>(src, std::move(_adaptor), std::move(dmx_cfg));
+  return make_demuxer(src, std::move(_adaptor), std::move(dmx_cfg));
 }
 
-template <MediaType media_type>
-DemuxerPtr<media_type> _make_demuxer_bytes(
+DemuxerPtr _make_demuxer_bytes(
     nb::bytes data,
     const std::optional<DemuxConfig>& dmx_cfg) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
-  return make_demuxer<media_type>(data_, std::move(dmx_cfg));
+  return make_demuxer(data_, std::move(dmx_cfg));
 }
 
 template <MediaType media_type>
-std::tuple<DemuxerPtr<media_type>, PacketsPtr<media_type>> demuxer_demux(
-    DemuxerPtr<media_type> demuxer,
+std::tuple<DemuxerPtr, PacketsPtr<media_type>> _demuxer_demux(
+    DemuxerPtr demuxer,
     const std::optional<std::tuple<double, double>>& window) {
   nb::gil_scoped_release g;
-  auto packets = demuxer->demux_window(window);
+  auto packets = demuxer->demux_window<media_type>(window);
   return {std::move(demuxer), std::move(packets)};
 }
 
-template <MediaType media_type>
-void drop_demuxer(DemuxerPtr<media_type> t) {
+void drop_demuxer(DemuxerPtr t) {
   nb::gil_scoped_release g;
   t.reset(); // Technically not necessary, but it's explicit this way.
 }
@@ -58,8 +55,8 @@ PacketsPtr<media_type> _demux_src(
     const std::optional<DemuxConfig>& dmx_cfg,
     const SourceAdaptorPtr adaptor) {
   nb::gil_scoped_release g;
-  auto demuxer = make_demuxer<media_type>(src, adaptor, dmx_cfg);
-  return demuxer->demux_window(timestamps);
+  auto demuxer = make_demuxer(src, adaptor, dmx_cfg);
+  return demuxer->demux_window<media_type>(timestamps);
 }
 
 void zero_clear(nb::bytes data) {
@@ -74,8 +71,8 @@ PacketsPtr<media_type> _demux_bytes(
     bool _zero_clear) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
-  auto demuxer = make_demuxer<media_type>(data_, dmx_cfg);
-  auto ret = demuxer->demux_window(timestamp);
+  auto demuxer = make_demuxer(data_, dmx_cfg);
+  auto ret = demuxer->demux_window<media_type>(timestamp);
   if (_zero_clear) {
     nb::gil_scoped_acquire gg;
     zero_clear(data);
@@ -104,54 +101,34 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   // Demuxer
   ///////////////////////////////////////////////////////////////////////////////
-  nb::class_<Demuxer<MediaType::Audio>>(m, "AudioDemuxer");
-  nb::class_<Demuxer<MediaType::Video>>(m, "VideoDemuxer");
+  nb::class_<Demuxer>(m, "Demuxer");
 
   m.def(
-      "_audio_demuxer",
-      &_make_demuxer<MediaType::Audio>,
+      "_demuxer",
+      &_make_demuxer,
       nb::arg("src"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("demux_config") = nb::none(),
       nb::arg("_adaptor") = nullptr);
 
   m.def(
-      "_audio_demuxer",
-      &_make_demuxer_bytes<MediaType::Audio>,
+      "_demuxer",
+      &_make_demuxer_bytes,
       nb::arg("src"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("demux_config") = nb::none());
 
   m.def(
-      "_video_demuxer",
-      &_make_demuxer<MediaType::Video>,
-      nb::arg("src"),
-#if NB_VERSION_MAJOR >= 2
-      nb::kw_only(),
-#endif
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("_adaptor") = nullptr);
-
+      "_demux_audio",
+      &_demuxer_demux<MediaType::Audio>,
+      nb::arg("demuxer"),
+      nb::arg("window") = nb::none());
   m.def(
-      "_video_demuxer",
-      &_make_demuxer_bytes<MediaType::Video>,
-      nb::arg("src"),
-#if NB_VERSION_MAJOR >= 2
-      nb::kw_only(),
-#endif
-      nb::arg("demux_config") = nb::none());
-
-  m.def("_demux", &demuxer_demux<MediaType::Audio>);
-
-  m.def("_demux", &demuxer_demux<MediaType::Video>);
-
-  m.def("_drop", &drop_demuxer<MediaType::Audio>);
-
-  m.def("_drop", &drop_demuxer<MediaType::Video>);
+      "_demux_video",
+      &_demuxer_demux<MediaType::Video>,
+      nb::arg("demuxer"),
+      nb::arg("window") = nb::none());
+  m.def("_drop", &drop_demuxer);
 
   ///////////////////////////////////////////////////////////////////////////////
   // Demux from src (path, URL etc...)
@@ -160,9 +137,7 @@ void register_demuxing(nb::module_& m) {
       "demux_audio",
       &_demux_src<MediaType::Audio>,
       nb::arg("src"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("_adaptor") = nullptr);
@@ -171,9 +146,7 @@ void register_demuxing(nb::module_& m) {
       "demux_video",
       &_demux_src<MediaType::Video>,
       nb::arg("src"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("_adaptor") = nullptr);
@@ -182,9 +155,7 @@ void register_demuxing(nb::module_& m) {
       "demux_image",
       &_demux_image,
       nb::arg("src"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("demux_config") = nb::none(),
       nb::arg("_adaptor") = nullptr);
 
@@ -195,9 +166,7 @@ void register_demuxing(nb::module_& m) {
       "demux_audio",
       &_demux_bytes<MediaType::Audio>,
       nb::arg("data"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("_zero_clear") = false);
@@ -206,9 +175,7 @@ void register_demuxing(nb::module_& m) {
       "demux_video",
       &_demux_bytes<MediaType::Video>,
       nb::arg("data"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("_zero_clear") = false);
@@ -217,9 +184,7 @@ void register_demuxing(nb::module_& m) {
       "demux_image",
       &_demux_image_bytes,
       nb::arg("data"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("demux_config") = nb::none(),
       nb::arg("_zero_clear") = false);
 }

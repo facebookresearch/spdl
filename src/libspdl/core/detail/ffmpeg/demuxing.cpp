@@ -14,14 +14,14 @@
 
 namespace spdl::core::detail {
 
-AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_) {
-  {
-    TRACE_EVENT("demuxing", "avformat_find_stream_info");
-    CHECK_AVERROR(
-        avformat_find_stream_info(fmt_ctx, nullptr),
-        fmt::format("Failed to find stream information: {}.", fmt_ctx->url));
-  }
+void init_fmt_ctx(AVFormatContext* fmt_ctx) {
+  TRACE_EVENT("demuxing", "avformat_find_stream_info");
+  CHECK_AVERROR(
+      avformat_find_stream_info(fmt_ctx, nullptr),
+      fmt::format("Failed to find stream information: {}.", fmt_ctx->url));
+}
 
+AVStream* get_stream(AVFormatContext* fmt_ctx, enum MediaType type_) {
   AVMediaType type = [&]() {
     switch (type_) {
       case MediaType::Audio:
