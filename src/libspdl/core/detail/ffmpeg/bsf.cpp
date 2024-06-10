@@ -10,12 +10,10 @@ AVBSFContextPtr init_bsf(
     const std::string& name,
     AVCodecParameters* codec_par) {
   TRACE_EVENT("demuxing", "init_bsf");
-  const AVBitStreamFilter* bsf = av_bsf_get_by_name(name.c_str());
-  if (!bsf) {
-    SPDL_FAIL(fmt::format("Bit stream filter ({}) is not available", name));
-  }
   AVBSFContext* p = nullptr;
-  CHECK_AVERROR(av_bsf_alloc(bsf, &p), "Failed to allocate AVBSFContext.");
+  CHECK_AVERROR(
+      av_bsf_list_parse_str(name.c_str(), &p),
+      "Failed to create AVBSFContext.");
   AVBSFContextPtr bsf_ctx{p};
   CHECK_AVERROR(
       avcodec_parameters_copy(p->par_in, codec_par),

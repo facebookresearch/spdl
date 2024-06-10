@@ -20,7 +20,8 @@ template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::optional<std::tuple<double, double>>& window = std::nullopt);
+    const std::optional<std::tuple<double, double>>& window = std::nullopt,
+    const std::optional<std::string>& bsf = std::nullopt);
 
 std::unique_ptr<DataInterface> get_interface(
     const std::string_view src,
@@ -60,9 +61,10 @@ Demuxer::~Demuxer() {
 
 template <MediaType media_type>
 PacketsPtr<media_type> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window) {
+    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf) {
   auto stream = detail::get_stream(fmt_ctx, media_type);
-  auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window);
+  auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window, bsf);
   if constexpr (media_type == MediaType::Video) {
     auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
     packets->frame_rate = Rational{frame_rate.num, frame_rate.den};
@@ -71,13 +73,16 @@ PacketsPtr<media_type> Demuxer::demux_window(
 }
 
 template PacketsPtr<MediaType::Audio> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window);
+    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Video> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window);
+    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Image> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window);
+    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf);
 
 DemuxerPtr make_demuxer(
     const std::string src,
