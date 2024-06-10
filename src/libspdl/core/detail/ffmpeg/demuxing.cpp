@@ -54,6 +54,36 @@ AVStream* get_stream(AVFormatContext* fmt_ctx, enum MediaType type_) {
   return fmt_ctx->streams[idx];
 }
 
+Generator<AVPacketPtr> demux_and_filter(
+    AVFormatContext* fmt_ctx,
+    AVStream* stream,
+    std::optional<BitStreamFilter>& filter,
+    double end) {
+  auto demuxer = Demuxer{fmt_ctx};
+  auto demuxing = demuxer.demux();
+  while (demuxing) {
+    auto packet = demuxing();
+    if (packet->stream_index != stream->index) {
+      continue;
+    }
+    if (!filter) {
+      if (packet->pts * av_q2d(stream->time_base) > end) {
+        co_return;
+      }
+      co_yield std::move(packet);
+    } else {
+      auto filtering = filter->filter(packet.get());
+      while (filtering) {
+        auto filtered = filtering();
+        if (filtered->pts * av_q2d(stream->time_base) > end) {
+          co_return;
+        }
+        co_yield std::move(filtered);
+      }
+    }
+  }
+}
+
 std::tuple<double, double> NO_WINDOW{
     -std::numeric_limits<double>::infinity(),
     std::numeric_limits<double>::infinity()};
@@ -62,7 +92,8 @@ template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::optional<std::tuple<double, double>>& window = std::nullopt) {
+    const std::optional<std::tuple<double, double>>& window = std::nullopt,
+    const std::optional<std::string>& bsf = std::nullopt) {
   TRACE_EVENT("demuxing", "detail::demux_window");
   auto [start, end] = window ? *window : NO_WINDOW;
 
@@ -84,23 +115,22 @@ PacketsPtr<media_type> demux_window(
     }
   }
 
+  auto filter = [&]() -> std::optional<BitStreamFilter> {
+    if (!bsf) {
+      return std::nullopt;
+    }
+    return BitStreamFilter{*bsf, stream->codecpar};
+  }();
+
   auto ret = std::make_unique<DemuxedPackets<media_type>>(
       fmt_ctx->url,
-      stream->codecpar,
+      bsf ? filter->get_output_codec_par() : stream->codecpar,
       Rational{stream->time_base.num, stream->time_base.den});
   ret->timestamp = window;
 
-  auto demuxer = detail::Demuxer{fmt_ctx};
-  auto demuxing = demuxer.demux();
+  auto demuxing = demux_and_filter(fmt_ctx, stream, filter, end);
   while (demuxing) {
-    auto packet = demuxing();
-    if (packet->stream_index != stream->index) {
-      continue;
-    }
-    if (packet->pts * av_q2d(stream->time_base) > end) {
-      break;
-    }
-    ret->push(packet.release());
+    ret->push(demuxing().release());
   }
   return ret;
 }
@@ -108,16 +138,19 @@ PacketsPtr<media_type> demux_window(
 template PacketsPtr<MediaType::Audio> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::optional<std::tuple<double, double>>& window);
+    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Video> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::optional<std::tuple<double, double>>& window);
+    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Image> demux_window(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
-    const std::optional<std::tuple<double, double>>& window);
+    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf);
 
 } // namespace spdl::core::detail

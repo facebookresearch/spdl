@@ -208,8 +208,8 @@ class _streaming_demuxer_wrpper:
             case _:
                 raise ValueError(f"Unsupported media type: {media_type}")
 
-    async def demux(self, window):
-        self.demuxer, packets = await run_async(self.demux_func, self.demuxer, window)
+    async def demux(self, window, **kwargs):
+        self.demuxer, packets = await run_async(self.demux_func, self.demuxer, window, **kwargs)
         return packets
 
 
@@ -225,10 +225,10 @@ async def _streaming_demuxer(media_type, src, **kwargs):
         await run_async(_libspdl._drop, wrapper.demuxer)
 
 
-async def _stream_demux(media_type, src, timestamps, **kwargs):
+async def _stream_demux(media_type, src, timestamps, bsf=None, **kwargs):
     async with _streaming_demuxer(media_type, src, **kwargs) as _demuxer:
         for window in timestamps:
-            yield await _demuxer.demux(window)
+            yield await _demuxer.demux(window, bsf=bsf)
 
 
 async def async_streaming_demux_audio(

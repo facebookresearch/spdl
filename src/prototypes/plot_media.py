@@ -35,6 +35,10 @@ def _parse_python_args():
     parser.add_argument(
         "-o", "--output-dir", help="Output directory.", type=Path, required=True
     )
+    parser.add_argument(
+        "--noise",
+        action="store_true",
+    )
     parser.add_argument("--gpu", type=int)
     parser.add_argument("others", nargs="*")
     return parser.parse_args()
@@ -55,14 +59,15 @@ async def decode_packets(packets, gpu, pix_fmt):
     return spdl.io.to_torch(buffer).cpu().numpy()
 
 
-async def decode_video(src, gpu, pix_fmt):
+async def decode_video(src, gpu, pix_fmt, noise):
     ts = [(1, 1.05), (10, 10.05), (20, 20.05)]
-    gen = spdl.io.async_streaming_demux_video(src, timestamps=ts)
+    bsf = "noise=100000" if noise else None
+    gen = spdl.io.async_streaming_demux_video(src, timestamps=ts, bsf=bsf)
     aws = [decode_packets(packets, gpu, pix_fmt) async for packets in gen]
     return await asyncio.gather(*aws)
 
 
-async def decode_image(src, gpu, pix_fmt):
+async def decode_image(src, gpu, pix_fmt, noise):
     if gpu:
         buffer = await spdl.io.async_decode_image_nvjpeg(
             src, cuda_config=spdl.io.cuda_config(device_index=gpu), pix_fmt=pix_fmt
@@ -70,19 +75,20 @@ async def decode_image(src, gpu, pix_fmt):
         tensor = spdl.io.to_torch(buffer).cpu().numpy()
         return [tensor[None]]
     else:
-        packets = await spdl.io.async_demux_image(src)
+        bsf = "noise=1" if noise else None
+        packets = await spdl.io.async_demux_image(src, bsf=bsf)
         array = await decode_packets(packets, gpu, pix_fmt)
         return [array[None]]
 
 
-def decode(src_path, type, gpu, pix_fmt):
+def decode(src_path, type, gpu, pix_fmt, noise):
     """Test the python wrapper of SPDL"""
 
     src = str(src_path.resolve())
     if type == "video":
-        coro = decode_video(src, gpu, pix_fmt)
+        coro = decode_video(src, gpu, pix_fmt, noise)
     if type == "image":
-        coro = decode_image(src, gpu, pix_fmt)
+        coro = decode_image(src, gpu, pix_fmt, noise)
     return asyncio.run(coro)
 
 
@@ -122,6 +128,7 @@ def _main():
         args.type,
         args.gpu,
         args.pix_fmt,
+        args.noise,
     )
 
     _plot(frames, args.gpu, args.pix_fmt, output_dir)

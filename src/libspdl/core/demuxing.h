@@ -28,7 +28,8 @@ class Demuxer {
 
   template <MediaType media_type>
   PacketsPtr<media_type> demux_window(
-      const std::optional<std::tuple<double, double>>& window = std::nullopt);
+      const std::optional<std::tuple<double, double>>& window = std::nullopt,
+      const std::optional<std::string>& bsf = std::nullopt);
 };
 
 DemuxerPtr make_demuxer(
