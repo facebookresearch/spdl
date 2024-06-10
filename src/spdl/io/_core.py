@@ -167,9 +167,9 @@ def streaming_demux_audio(
     Yields:
         AudioPackets object, corresponds to the given window.
     """
-    demuxer = _libspdl._audio_demuxer(src, **kwargs)
+    demuxer = _libspdl._demuxer(src, **kwargs)
     for window in timestamps:
-        demuxer, packets = _libspdl._demux(demuxer, window)
+        demuxer, packets = _libspdl._demux_audio(demuxer, window)
         yield packets
 
 
@@ -191,25 +191,32 @@ def streaming_demux_video(
     Returns:
         VideoPackets object, corresponds to the given window.
     """
-    demuxer = _libspdl._video_demuxer(src, **kwargs)
+    demuxer = _libspdl._demuxer(src, **kwargs)
     for window in timestamps:
-        demuxer, packets = _libspdl._demux(demuxer, window)
+        demuxer, packets = _libspdl._demux_video(demuxer, window)
         yield packets
 
 
 class _streaming_demuxer_wrpper:
-    def __init__(self, demuxer):
+    def __init__(self, demuxer, media_type):
         self.demuxer = demuxer
+        match media_type:
+            case "audio":
+                self.demux_func = _libspdl._demux_audio
+            case "video":
+                self.demux_func = _libspdl._demux_video
+            case _:
+                raise ValueError(f"Unsupported media type: {media_type}")
 
     async def demux(self, window):
-        self.demuxer, packets = await run_async(_libspdl._demux, self.demuxer, window)
+        self.demuxer, packets = await run_async(self.demux_func, self.demuxer, window)
         return packets
 
 
 @contextlib.asynccontextmanager
-async def _streaming_demuxer(constructor, src, **kwargs):
-    demuxer = await run_async(constructor, src, **kwargs)
-    wrapper = _streaming_demuxer_wrpper(demuxer)
+async def _streaming_demuxer(media_type, src, **kwargs):
+    demuxer = await run_async(_libspdl._demuxer, src, **kwargs)
+    wrapper = _streaming_demuxer_wrpper(demuxer, media_type)
     try:
         yield wrapper
     finally:
@@ -218,8 +225,8 @@ async def _streaming_demuxer(constructor, src, **kwargs):
         await run_async(_libspdl._drop, wrapper.demuxer)
 
 
-async def _stream_demux(demuxer, src, timestamps, **kwargs):
-    async with _streaming_demuxer(demuxer, src, **kwargs) as _demuxer:
+async def _stream_demux(media_type, src, timestamps, **kwargs):
+    async with _streaming_demuxer(media_type, src, **kwargs) as _demuxer:
         for window in timestamps:
             yield await _demuxer.demux(window)
 
@@ -228,8 +235,7 @@ async def async_streaming_demux_audio(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[AudioPackets]:
     """Async version of [streaming_demux_audio][spdl.io.streaming_demux_audio]."""
-    demuxer = _libspdl._audio_demuxer
-    async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
+    async for packets in _stream_demux("audio", src, timestamps, **kwargs):
         yield packets
 
 
@@ -237,8 +243,7 @@ async def async_streaming_demux_video(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[VideoPackets]:
     """Async version of [streaming_demux_video][spdl.io.streaming_demux_video]."""
-    demuxer = _libspdl._video_demuxer
-    async for packets in _stream_demux(demuxer, src, timestamps, **kwargs):
+    async for packets in _stream_demux("video", src, timestamps, **kwargs):
         yield packets
 
 

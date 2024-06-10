@@ -3,6 +3,8 @@
 #include "libspdl/core/detail/ffmpeg/bsf.h"
 #include "libspdl/core/detail/tracing.h"
 
+#include <fmt/core.h>
+
 extern "C" {
 #include <libavformat/avformat.h>
 }
@@ -11,7 +13,8 @@ namespace spdl::core {
 
 // Implemented in core/detail/ffmpeg/demuxing.cpp
 namespace detail {
-AVStream* init_fmt_ctx(AVFormatContext* fmt_ctx, enum MediaType type_);
+void init_fmt_ctx(AVFormatContext* fmt_ctx);
+AVStream* get_stream(AVFormatContext* fmt_ctx, enum MediaType type_);
 
 template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
@@ -42,14 +45,12 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
 // Demuxer
 ////////////////////////////////////////////////////////////////////////////////
 
-template <MediaType media_type>
-Demuxer<media_type>::Demuxer(std::unique_ptr<DataInterface> di_)
-    : di(std::move(di_)),
-      fmt_ctx(di->get_fmt_ctx()),
-      stream(detail::init_fmt_ctx(fmt_ctx, media_type)){};
+Demuxer::Demuxer(std::unique_ptr<DataInterface> di_)
+    : di(std::move(di_)), fmt_ctx(di->get_fmt_ctx()) {
+  detail::init_fmt_ctx(fmt_ctx);
+};
 
-template <MediaType media_type>
-Demuxer<media_type>::~Demuxer() {
+Demuxer::~Demuxer() {
   TRACE_EVENT("demuxing", "Demuxer::~Demuxer");
   di.reset();
   // Techinically, this is not necessary, but doing it here puts
@@ -58,8 +59,9 @@ Demuxer<media_type>::~Demuxer() {
 }
 
 template <MediaType media_type>
-PacketsPtr<media_type> Demuxer<media_type>::demux_window(
+PacketsPtr<media_type> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window) {
+  auto stream = detail::get_stream(fmt_ctx, media_type);
   auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window);
   if constexpr (media_type == MediaType::Video) {
     auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
@@ -68,51 +70,31 @@ PacketsPtr<media_type> Demuxer<media_type>::demux_window(
   return packets;
 }
 
-template class Demuxer<MediaType::Audio>;
-template class Demuxer<MediaType::Video>;
-template class Demuxer<MediaType::Image>;
+template PacketsPtr<MediaType::Audio> Demuxer::demux_window(
+    const std::optional<std::tuple<double, double>>& window);
 
-template <MediaType media_type>
-DemuxerPtr<media_type> make_demuxer(
+template PacketsPtr<MediaType::Video> Demuxer::demux_window(
+    const std::optional<std::tuple<double, double>>& window);
+
+template PacketsPtr<MediaType::Image> Demuxer::demux_window(
+    const std::optional<std::tuple<double, double>>& window);
+
+DemuxerPtr make_demuxer(
     const std::string src,
     const SourceAdaptorPtr& adaptor,
     const std::optional<DemuxConfig>& dmx_cfg) {
   TRACE_EVENT("demuxing", "make_demuxer");
-  return std::make_unique<Demuxer<media_type>>(
+  return std::make_unique<Demuxer>(
       detail::get_interface(src, adaptor, dmx_cfg));
 }
 
-template DemuxerPtr<MediaType::Audio> make_demuxer(
-    const std::string,
-    const SourceAdaptorPtr&,
-    const std::optional<DemuxConfig>&);
-template DemuxerPtr<MediaType::Video> make_demuxer(
-    const std::string,
-    const SourceAdaptorPtr&,
-    const std::optional<DemuxConfig>&);
-template DemuxerPtr<MediaType::Image> make_demuxer(
-    const std::string,
-    const SourceAdaptorPtr&,
-    const std::optional<DemuxConfig>&);
-
-template <MediaType media_type>
-DemuxerPtr<media_type> make_demuxer(
+DemuxerPtr make_demuxer(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg) {
   TRACE_EVENT("demuxing", "make_demuxer");
-  return std::make_unique<Demuxer<media_type>>(
+  return std::make_unique<Demuxer>(
       detail::get_in_memory_interface(data, dmx_cfg));
 }
-
-template DemuxerPtr<MediaType::Audio> make_demuxer(
-    const std::string_view,
-    const std::optional<DemuxConfig>&);
-template DemuxerPtr<MediaType::Video> make_demuxer(
-    const std::string_view,
-    const std::optional<DemuxConfig>&);
-template DemuxerPtr<MediaType::Image> make_demuxer(
-    const std::string_view,
-    const std::optional<DemuxConfig>&);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Bit Stream Filtering for NVDEC
