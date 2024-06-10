@@ -2,6 +2,7 @@
 
 #include <libspdl/core/types.h>
 
+#include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/generator.h"
 
@@ -16,7 +17,12 @@ struct Decoder {
       Rational time_base,
       const std::optional<DecodeConfig>& cfg = std::nullopt);
 
-  Generator<AVFrame*> decode(AVPacket*, bool flush_null = false);
+  Generator<AVFramePtr> decode(AVPacket*, bool flush_null = false);
 };
+
+Generator<AVFramePtr> decode_packets(
+    const std::vector<AVPacket*>& packets,
+    Decoder& decoder,
+    FilterGraph& filter);
 
 } // namespace spdl::core::detail
