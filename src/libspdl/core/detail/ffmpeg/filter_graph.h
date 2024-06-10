@@ -43,4 +43,20 @@ FilterGraph get_image_enc_filter(
     AVPixelFormat enc_fmt,
     const std::optional<std::string>& filter_desc);
 
+template <MediaType media_type>
+FilterGraph get_filter(
+    AVCodecContext* codec_ctx,
+    const std::string& filter_desc,
+    std::optional<Rational> frame_rate) {
+  if constexpr (media_type == MediaType::Audio) {
+    return get_audio_filter(filter_desc, codec_ctx);
+  }
+  if constexpr (media_type == MediaType::Video) {
+    return get_video_filter(filter_desc, codec_ctx, *frame_rate);
+  }
+  if constexpr (media_type == MediaType::Image) {
+    return get_image_filter(filter_desc, codec_ctx);
+  }
+}
+
 } // namespace spdl::core::detail
