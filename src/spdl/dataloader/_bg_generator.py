@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import traceback
-import warnings
 from collections.abc import AsyncIterator, Iterator
 from queue import Empty, Queue
 from threading import Event, Thread
@@ -188,24 +187,3 @@ class BackgroundGenerator(Generic[T]):
                         )
                     else:
                         return
-
-
-class BackgroundTaskProcessor(BackgroundGenerator):
-    """Deprecated. Use BackgroundGenerator instead."""
-
-    def __init__(self, *args, **kwargs):
-        message = "BackgroundTaskProcessor has been renamed to BackgroundGenerator."
-        warnings.warn(message, DeprecationWarning, stacklevel=2)
-        super().__init__(*args, **kwargs)
-
-    def __enter__(self):
-        message = (
-            "Background thread management has been moved to __iter__. "
-            f"You can now directly iterate on {type(self).__name__}, and "
-            "get rid of the context manager. "
-        )
-        warnings.warn(message, DeprecationWarning, stacklevel=2)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
