@@ -63,7 +63,7 @@ add_subdirectory(src)
 
 if (SPDL_BUILD_PYTHON_BINDING)
   add_subdirectory(third_party/nanobind)
-  add_subdirectory(src/python)
+  add_subdirectory(src/binding)
 endif()
 
 message(STATUS "########################################")

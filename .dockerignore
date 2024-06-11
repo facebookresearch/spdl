@@ -3,7 +3,7 @@
 !cmake
 !**/CMakeLists.txt
 !src/libspdl
-!src/python
+!src/binding
 !src/spdl
 !third_party
 !packaging/*.sh
