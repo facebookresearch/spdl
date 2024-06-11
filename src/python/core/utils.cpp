@@ -27,6 +27,11 @@ void register_utils(nb::module_& m) {
     nb::gil_scoped_release g;
     return is_nvcodec_available();
   });
+
+  m.def("init_glog", [](char const* name){
+    nb::gil_scoped_release g;
+    init_glog(name);
+  });
 }
 
 } // namespace spdl::core

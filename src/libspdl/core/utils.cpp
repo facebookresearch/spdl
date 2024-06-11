@@ -18,8 +18,17 @@ extern "C" {
 #include <libavutil/log.h>
 }
 
+namespace google {
+namespace glog_internal_namespace_ {
+bool IsGoogleLoggingInitialized();
+} // namespace glog_internal_namespace_
+} // namespace google
+
 namespace spdl::core {
 
+//////////////////////////////////////////////////////////////////////////////////
+// Utilities for FFmpeg
+//////////////////////////////////////////////////////////////////////////////////
 int get_ffmpeg_log_level() {
   return av_log_get_level();
 }
@@ -30,6 +39,16 @@ void set_ffmpeg_log_level(int level) {
 
 void register_avdevices() {
   avdevice_register_all();
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+// Utilities for Glog
+//////////////////////////////////////////////////////////////////////////////////
+void init_glog(const char* name) {
+  if (!::google::glog_internal_namespace_::IsGoogleLoggingInitialized()) {
+    ::google::InitGoogleLogging(name);
+    ::google::InstallFailureSignalHandler();
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
