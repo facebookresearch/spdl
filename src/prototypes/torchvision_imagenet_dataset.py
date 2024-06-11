@@ -1,14 +1,18 @@
 import asyncio
+import time
 from asyncio import Task
 
 import spdl.io
 import spdl.utils
 
 import torch
-from pytorch_spdl.dataloader import DataLoader
+from spdl.dataloader import BackgroundGenerator
 from spdl.io import ImageFrames
 from spdl.utils import run_async
 from torch import Tensor
+from torch.profiler import profile
+
+from torch.utils.data import DataLoader, IterableDataset
 from torchvision.datasets.imagenet import ImageNet
 
 root = "/home/moto/local/imagenet"
@@ -48,23 +52,93 @@ async def _collate_fn(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
     return spdl.io.to_torch(buffer), torch.tensor(classes_)
 
 
-def _main():
-    dataset = ImageNet(root=root, loader=lambda x: x)
+def _to_aiter(iterable, batch_size, collate_fn, drop_last):
 
-    dataloader = DataLoader(
+    async def _aiter():
+        batch = []
+        for item in iterable:
+            batch.append(item)
+            if len(batch) == batch_size:
+                yield await collate_fn(batch)
+                batch = []
+        if not drop_last and batch:
+            yield await collate_fn(batch)
+
+    return aiter(_aiter())
+
+
+class _DataSet(IterableDataset):
+    def __init__(
+        self,
         dataset,
-        batch_size=32,
-        num_workers=3,
-        collate_fn=_collate_fn,
-        prefetch_factor=2,
+        collate_fn,
+        batch_size: int,
+        num_workers: int,
+        drop_last: bool = False,
+        prefetch_factor: int = 2,
+        timeout: int | float = 30,
+    ) -> None:
+        self._dataset = dataset
+        self.collate_fn = collate_fn
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.drop_last = drop_last
+        self.prefetch_factor = prefetch_factor
+        self.timeout = timeout
+
+    def __iter__(self):
+        gen = _to_aiter(self._dataset, self.batch_size, self.collate_fn, self.drop_last)
+        bgg = BackgroundGenerator(
+            gen,
+            num_workers=self.num_workers,
+            queue_size=self.prefetch_factor,
+            timeout=self.timeout,
+        )
+        return iter(bgg)
+
+
+def _dataloader(dataset, collate_fn, batch_size, num_workers, prefetch_factor=8):
+    _dataset = _DataSet(
+        dataset,
+        batch_size=batch_size,
+        collate_fn=collate_fn,
+        num_workers=num_workers,
+        prefetch_factor=prefetch_factor,
     )
 
-    with spdl.utils.tracing("/home/moto/tmp/trace/dataloader.pftrace"):
-        for i, (batch, classes) in enumerate(dataloader):
-            print(batch.shape, batch.dtype, classes.shape, classes.dtype)
+    return DataLoader(
+        _dataset,
+        batch_size=None,
+        num_workers=0,
+    )
 
-            if i == 10:
-                break
+
+def _main():
+    dataloader = _dataloader(
+        ImageNet(root=root, loader=lambda x: x),
+        collate_fn=_collate_fn,
+        batch_size=32,
+        num_workers=8,
+    )
+
+    trace_path = "/home/moto/tmp/trace/dataloader"
+    with (
+        profile() as prof,
+        spdl.utils.tracing(f"{trace_path}.pftrace"),
+    ):
+        t0 = time.monotonic()
+        num_frames = 0
+        try:
+            for i, (batch, classes) in enumerate(dataloader):
+                print(batch.shape, batch.dtype, classes.shape, classes.dtype)
+                num_frames += batch.shape[0]
+
+                if i == 300:
+                    break
+        finally:
+            elapsed = time.monotonic() - t0
+            print(f"{elapsed:.2f} [sec], {num_frames=}")
+    prof.export_chrome_trace(f"{trace_path}.json")
 
 
 if __name__ == "__main__":
