@@ -1,13 +1,12 @@
 import asyncio
 import warnings
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Awaitable, Callable, Iterator, Mapping
 from typing import Generic, TypeVar
 
 from spdl.dataloader import BackgroundGenerator
 from spdl.utils import iter_batch
 
-from torch.utils.data import RandomSampler, SequentialSampler
-
+from torch.utils.data import IterableDataset, RandomSampler, SequentialSampler
 
 __all__ = ["DataLoader"]
 
@@ -36,16 +35,31 @@ async def _sample(dataset, batch_sampler, buffer_size, collate_fn):
         yield await task_buffer.get_nowait()
 
 
+def _to_aiter(iterable, batch_size, collate_fn, drop_last):
+
+    async def _aiter():
+        batch = []
+        for item in iterable:
+            batch.append(item)
+            if len(batch) == batch_size:
+                yield await collate_fn(batch)
+                batch = []
+        if not drop_last and batch:
+            yield await collate_fn(batch)
+
+    return aiter(_aiter())
+
+
 class DataLoader(Generic[U]):
     def __init__(
         self,
-        dataset: Mapping[int, T],
+        dataset: Mapping[int, T] | IterableDataset,
         batch_size: int | None = 1,
         shuffle: bool = False,
         sampler: Iterator[int] | None = None,
         batch_sampler: Iterator[list[int]] | None = None,
         num_workers: int = 4,
-        collate_fn: Callable[[list[T]], U] | None = None,
+        collate_fn: Callable[[list[T]], Awaitable[U]] | None = None,
         pin_memory: bool = False,
         drop_last: bool = False,
         timeout: float = 30,
@@ -84,8 +98,8 @@ class DataLoader(Generic[U]):
             raise ValueError("`prefetch_factor` must be greater than 0.")
 
         self.dataset = dataset
-
         self.batch_size = batch_size
+
         self.shuffle = shuffle
         self.sampler = sampler
         self.batch_sampler = batch_sampler
@@ -98,10 +112,22 @@ class DataLoader(Generic[U]):
         self.prefetch_factor = prefetch_factor
 
     def __iter__(self) -> Iterator[U]:
+        if isinstance(self.dataset, IterableDataset):
+            gen = _to_aiter(
+                self.dataset, self.batch_size, self.collate_fn, self.drop_last
+            )
+            bgg = BackgroundGenerator(
+                gen,
+                num_workers=self.num_workers,
+                queue_size=self.prefetch_factor,
+                timeout=self.timeout,
+            )
+            return iter(bgg)
+
         batch_sampler = self.batch_sampler or iter_batch(
             self.sampler or _get_sampler(self.dataset, self.shuffle, self.generator),
-            self.batch_size,
-            self.drop_last,
+            batch_size=self.batch_size,
+            drop_last=self.drop_last,
         )
 
         gen = _sample(self.dataset, batch_sampler, self.num_workers, self.collate_fn)
