@@ -5,10 +5,10 @@ import spdl.io
 import spdl.utils
 
 import torch
+from pytorch_spdl.dataloader import DataLoader
 from spdl.io import ImageFrames
 from spdl.utils import run_async
 from torch import Tensor
-from pytorch_spdl.dataloader import DataLoader
 from torchvision.datasets.imagenet import ImageNet
 
 root = "/home/moto/local/imagenet"
