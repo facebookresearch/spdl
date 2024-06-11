@@ -9,6 +9,7 @@ import atexit
 import importlib
 import importlib.resources
 import logging
+import sys
 from typing import Any
 
 _LG = logging.getLogger(__name__)
@@ -45,6 +46,11 @@ def _import_libspdl():
         except Exception:
             _LG.debug("Failed to import %s.", lib, exc_info=True)
             continue
+
+        try:
+            ext.init_glog(sys.argv[0])
+        except Exception:
+            _LG.debug("Faile to initialize Google logging.", exc_info=True)
 
         if hasattr(ext, "clear_ffmpeg_cuda_context_cache"):
             atexit.register(ext.clear_ffmpeg_cuda_context_cache)
