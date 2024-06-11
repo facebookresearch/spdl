@@ -52,9 +52,6 @@ def _import_libspdl():
         except Exception:
             _LG.debug("Faile to initialize Google logging.", exc_info=True)
 
-        if hasattr(ext, "clear_ffmpeg_cuda_context_cache"):
-            atexit.register(ext.clear_ffmpeg_cuda_context_cache)
-
         try:
             ext.register_avdevices()
         except Exception:
