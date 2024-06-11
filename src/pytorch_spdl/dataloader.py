@@ -75,7 +75,11 @@ class DataLoader(Generic[U]):
         if num_workers <= 0:
             raise ValueError("`num_workers` must be greater than 0.")
         if pin_memory:
-            warnings.warn("`pin_memory` is not supported.", stacklevel=2)
+            warnings.warn(
+                "In SPDL, `pin_memory` is supported via convert function ."
+                "See `spdl.io.convert_frames` for the detail.",
+                stacklevel=2,
+            )
         if prefetch_factor <= 0:
             raise ValueError("`prefetch_factor` must be greater than 0.")
 
@@ -88,7 +92,6 @@ class DataLoader(Generic[U]):
 
         self.num_workers = num_workers
         self.collate_fn = collate_fn
-        self.pin_memory = pin_memory
         self.drop_last = drop_last
         self.timeout = timeout
         self.generator = generator
