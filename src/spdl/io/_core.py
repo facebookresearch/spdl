@@ -209,7 +209,9 @@ class _streaming_demuxer_wrpper:
                 raise ValueError(f"Unsupported media type: {media_type}")
 
     async def demux(self, window, **kwargs):
-        self.demuxer, packets = await run_async(self.demux_func, self.demuxer, window, **kwargs)
+        self.demuxer, packets = await run_async(
+            self.demux_func, self.demuxer, window, **kwargs
+        )
         return packets
 
 

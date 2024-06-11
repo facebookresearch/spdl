@@ -28,7 +28,7 @@ void register_utils(nb::module_& m) {
     return is_nvcodec_available();
   });
 
-  m.def("init_glog", [](char const* name){
+  m.def("init_glog", [](char const* name) {
     nb::gil_scoped_release g;
     init_glog(name);
   });

@@ -88,7 +88,8 @@ ImagePacketsPtr _demux_image(
     const std::optional<DemuxConfig>& dmx_cfg,
     const std::optional<std::string>& bsf,
     const SourceAdaptorPtr _adaptor) {
-  return _demux_src<MediaType::Image>(src, std::nullopt, dmx_cfg, bsf, _adaptor);
+  return _demux_src<MediaType::Image>(
+      src, std::nullopt, dmx_cfg, bsf, _adaptor);
 }
 
 ImagePacketsPtr _demux_image_bytes(
