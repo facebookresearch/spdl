@@ -1,14 +1,13 @@
-import asyncio
+"""This module implements interfaces compatible to PyTorch."""
+
 import warnings
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
 
 import torch
-from spdl.dataloader import BackgroundGenerator
-from spdl.utils import iter_batch
-from torch import Tensor
-
 from torch.utils.data import (
+    BatchSampler,
     Dataset,
     default_collate,
     IterableDataset,
@@ -22,92 +21,152 @@ __all__ = ["DataLoader"]
 
 T = TypeVar("T")
 U = TypeVar("U")
+T_co = TypeVar("T_co", covariant=True)
 
 
-def _get_sampler(dataset, shuffle, generator):
+def _get_sampler(num_samples, shuffle=False, generator=None):
+    class _Sized:
+        def __init__(self, n):
+            self.n = n
+
+        def __len__(self) -> int:
+            return self.n
+
+    dummy = _Sized(num_samples)
     if shuffle:
-        return RandomSampler(dataset, generator=generator)
-    return SequentialSampler(dataset)
+        return RandomSampler(dummy, generator=generator)
+    return SequentialSampler(dummy)
 
 
-async def _aiter(gen, func, buffer_size):
-    task_buffer = asyncio.Queue(buffer_size)
-    while True:
-        if task_buffer.full():
-            # TOOD: add error handling
-            yield await task_buffer.get_nowait()
-
-        try:
-            item = next(gen)
-        except StopIteration:
-            break
-        else:
-            task_buffer.put_nowait(asyncio.create_task(func(item)))
-    while not task_buffer.empty():
-        yield await task_buffer.get_nowait()
+def _get_batch_sampler(
+    num_samples: int,
+    batch_size: int,
+    drop_last: bool,
+    shuffle: bool,
+    generator,
+    sampler: Iterable[int] | None,
+):
+    return BatchSampler(
+        sampler or _get_sampler(num_samples, shuffle, generator), batch_size, drop_last
+    )
 
 
-class _BackgroundIterator(IterableDataset):
-    def __init__(
-        self,
-        iterable,
-        collate_fn,
-        num_workers: int,
-        buffer_size: int = 2,
-        timeout: int | float | None = 30,
-    ) -> None:
-        self.iterable = iterable
-        self.collate_fn = collate_fn
+def _indexer(dataset, sampler):
+    for i in sampler:
+        yield dataset[i]
+
+
+def _batch_indexer(dataset, batch_sampler):
+    for idx in batch_sampler:
+        yield [dataset[i] for i in idx]
+
+
+class _Loader:
+    def __init__(self, sample_generator, load_fn, num_buffer, num_workers):
+        self.sample_generator = sample_generator
+        self.load_fn = load_fn
+        self.num_buffer = num_buffer
         self.num_workers = num_workers
-        self.buffer_size = buffer_size
-        self.timeout = timeout
 
     def __iter__(self):
-        gen = _aiter(
-            self.iterable,
-            self.collate_fn,
-            self.buffer_size,
-        )
-        bgg = BackgroundGenerator(
-            gen,
-            num_workers=self.num_workers,
-            queue_size=1,
-            timeout=self.timeout,
-        )
-        return iter(bgg)
+        futures = []
+        with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+            while True:
+                if len(futures) >= self.num_buffer:
+                    result = futures.pop(0).result()
+                    yield result
+
+                try:
+                    samples = next(self.sample_generator)
+                except StopIteration:
+                    break
+                else:
+                    futures.append(executor.submit(self.load_fn, samples))
+
+            while futures:
+                result = futures.pop(0).result()
+                yield result
 
 
-async def _default_collate(val) -> Tensor:
-    return default_collate(val)
-
-
-def _get_num_items(dataset, batch_size, drop_last):
-    num_items = len(dataset) if hasattr(dataset, "__len__") else None
-    if num_items is not None and batch_size is not None:
-        if drop_last:
-            num_items = num_items // batch_size
-        else:
-            num_items = num_items // batch_size + (1 if num_items % batch_size else 0)
-    return num_items
-
-
-class _DataLoader(torch.utils.data.DataLoader):
-    """Wrap DataLoader to override __len__"""
-    def __init__(self, ds, num_items):
+class _SizedBatchSampler(_Loader):
+    def __init__(self, dataset, batch_sampler, load_fn, num_buffer, num_workers):
         super().__init__(
-            ds,
-            batch_size=None,
-            num_workers=0,
+            _batch_indexer(dataset, batch_sampler), load_fn, num_buffer, num_workers
         )
-        self.num_items = num_items
+        self.batch_sampler = batch_sampler
 
     def __len__(self):
-        if self.num_items is not None:
-            return self.num_items
-        return super().__len__()
+        return len(self.batch_sampler)
 
 
-T_co = TypeVar("T_co", covariant=True)
+class _SizedSampler(_Loader):
+    def __init__(self, dataset, sampler, load_fn, num_buffer, num_workers):
+        super().__init__(_indexer(dataset, sampler), load_fn, num_buffer, num_workers)
+        self.sampler = sampler
+
+    def __len__(self):
+        return len(self.sampler)
+
+
+def _batched(iterable, batch_size, drop_last):
+    batch = []
+    for item in iterable:
+        batch.append(item)
+
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+
+    if batch and not drop_last:
+        yield batch
+
+
+def _get_num_items(num_items, batch_size, drop_last):
+    num_batches = num_items // batch_size
+    if not drop_last and (num_items % batch_size > 0):
+        num_batches += 1
+    return num_batches
+
+
+def _wrap(dataset):
+    for item in dataset:
+        yield [item]
+
+
+class _Iterator(_Loader):
+    def __init__(self, dataset, load_fn, num_buffer, num_workers):
+        super().__init__(_wrap(dataset), load_fn, num_buffer, num_workers)
+        self.dataset = dataset
+
+    def __iter__(self):
+        for item in super().__iter__():
+            yield item[0]
+
+    def __len__(self):
+        return len(self.dataset)
+
+
+class _BatchIterator(_Loader):
+    def __init__(
+        self, dataset, batch_size, drop_last, load_fn, num_buffer, num_workers
+    ):
+        super().__init__(
+            _batched(dataset, batch_size, drop_last), load_fn, num_buffer, num_workers
+        )
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+
+    def __len__(self):
+        return _get_num_items(len(self.dataset), self.batch_size, self.drop_last)
+
+
+class _DummyDataSet:
+    def __getitem__(self, key):
+        return key
+
+    def __getitems__(self, key):
+        return key
 
 
 def DataLoader(
@@ -127,8 +186,67 @@ def DataLoader(
     *,
     prefetch_factor: int = 2,
     persistent_workers: bool = False,
-    pin_memory_device: str = ""
+    pin_memory_device: str = "",
 ) -> torch.utils.data.DataLoader[T_co]:
+    """A factory function to create PyTorch DataLoader but with multi-threading.
+
+    The resulting dataloader can be used as a drop-in replacement of PyTorch
+    DataLoader.
+
+    The DataLoader creates a batch sampler that wraps the given arguments.
+    Inside of the batch sampler, it spawns a thread pool and runs collate function
+    in the pool.
+
+    To achieve high performance, `dataset` and `collate_fn` should work with such
+    settings. Therefore, making the following changes are recommended.
+
+    - `dataset` should return the idicator of the sample, and it should not perform
+      CPU-intensive computations like decoding images and videos.
+    - `collate_fn` should perform batch loading and preprocessing in thread-safe,
+      GIL-free manner.
+
+    SPDL provides load/preprocessing functions for audio/video/image that are
+    thread-safe and releases GIL.
+
+    For NLP, OpenAI's `tiktoken` is known to work. However, do not use methods
+    suffixed with `_batch` as these methods individually spawn thread pool.
+    Instead, use the single decode/encode method, so that it uses the thread pool
+    controlled by the DataLoader instance.
+
+    Arguments for this function are mostly same as [torch.utils.data.DataLoader][],
+    except that the following.
+
+    - `collate_fn` is used regarless of loading batch of samples or single samples.
+      When loading single samples (both `batch_sample` and `batch_size` are `None`),
+      `collate_fn` should accept single item.
+    - `timeout`, `worker_init_fn`, `multiprocessing_context`, `persistent_worker`
+      and `pin_memory_device` are not used.
+
+    (`pin_memory_device` is supported by [spdl.io.transfer_buffer][] function.)
+    """
+    # Note:
+    #
+    # DataLoader has the following 6 mode of operations, determined by the arguments
+    #
+    # For IterableDataset
+    # (`shuffle`, `sampler` and `batch_sampler` are not compatible)
+    #
+    # supports len?, batch_size, drop_last,  --> Mode of Operation
+    #      N            None         -           (Sequential) Single iteration
+    #      Y            None         -           (Sequential) Single iteration with len support
+    #      N            Given       Y/N          (Sequential) Batch iteration
+    #      Y            Given       Y/N          (Sequential) Batch iteration with len support
+    #
+    # For Map-style dataset (`len` must be provided.)
+    #
+    # batch_size, drop_last, shuffle, sampler, batch_sampler --> Mode of Operation
+    #     None        -        Y/N       -          -            Single sampling
+    #     None        -         -      Given        -            Single sampling
+    #     Given      Y/N       Y/N       -          -            Batch sampling
+    #     Given      Y/N        -      Given        -            Batch sampling
+    #       -         -         -        -        Given          Batch sampling
+    #
+
     if isinstance(dataset, IterableDataset):
         if any(arg is not None for arg in [shuffle, sampler, batch_sampler]):
             warnings.warn(
@@ -158,13 +276,6 @@ def DataLoader(
                     stacklevel=2,
                 )
 
-    if timeout == 0:
-        warnings.warn(
-            "`timeout=0` is treated as immediate timeout. "
-            "To disable timeout, provide `None`.",
-            stacklevel=2,
-        )
-
     if num_workers <= 0:
         raise ValueError("`num_workers` must be greater than 0.")
 
@@ -178,51 +289,74 @@ def DataLoader(
             stacklevel=2,
         )
 
+    if timeout is not None:
+        warnings.warn(
+            "`timeout` is not supported. It is ignored.",
+            stacklevel=2,
+        )
+
     if worker_init_fn is not None:
         warnings.warn(
-            "`worker_init_fn` is not supported. It will be ignored.",
+            "`worker_init_fn` is not supported. It is ignored.",
             stacklevel=2,
         )
     if multiprocessing_context is not None:
         warnings.warn(
-            "`multiprocessing_context` is ignored.",
+            "`multiprocessing_context` is not supported. It is ignored.",
             stacklevel=2,
         )
     if persistent_workers:
         warnings.warn(
-            "`persistent_workers` is not supported.",
+            "`persistent_workers` is not supported. It is ignored.",
             stacklevel=2,
         )
 
-    collate_fn = collate_fn or _default_collate
-    num_items = _get_num_items(dataset, batch_size, drop_last)
+    collate_fn = collate_fn or default_collate
+    num_buffer = prefetch_factor * num_workers
+    ds = _DummyDataSet()
 
     if isinstance(dataset, IterableDataset):
-        iter_dataset = (
-            dataset
-            if batch_size is None
-            else iter_batch(dataset, batch_size, drop_last)
-        )
-
+        if batch_size is not None:
+            # Batch iterate mode
+            _batch_loader = _BatchIterator(
+                dataset, batch_size, drop_last, collate_fn, num_buffer, num_workers
+            )
+            return torch.utils.data.DataLoader(
+                ds, batch_sampler=_batch_loader, collate_fn=lambda x: x, num_workers=0
+            )
+        else:
+            # Single iterate mode
+            _loader = _Iterator(dataset, collate_fn, num_buffer, num_workers)
+            return torch.utils.data.DataLoader(
+                ds, sampler=_loader, batch_size=None, num_workers=0
+            )
     else:
-        _batch_sampler = batch_sampler or iter_batch(
-            sampler or _get_sampler(dataset, shuffle, generator),
-            batch_size=batch_size,
-            drop_last=drop_last,
-        )
+        num_samples = len(dataset)
+        if batch_size is not None or batch_sampler is not None:
+            # Batch sampling mode
+            _batch_sampler = batch_sampler or BatchSampler(
+                sampler or _get_sampler(num_samples, shuffle, generator),
+                batch_size,
+                drop_last,
+            )
 
-        def _gen():
-            for batch_idx in _batch_sampler:
-                yield [dataset[j] for j in batch_idx]
+            _loader = _SizedBatchSampler(
+                dataset,
+                _batch_sampler,
+                collate_fn,
+                num_buffer,
+                num_workers,
+            )
 
-        iter_dataset = _gen()
-
-    bg_iterator = _BackgroundIterator(
-        iter_dataset,
-        collate_fn,
-        num_workers,
-        buffer_size=prefetch_factor,
-        timeout=timeout,
-    )
-
-    return _DataLoader(bg_iterator, num_items)
+            return torch.utils.data.DataLoader(
+                ds, batch_sampler=_loader, collate_fn=lambda x: x, num_workers=0
+            )
+        else:
+            # Single sampling mode
+            _sampler = _get_sampler(num_samples, shuffle, generator)
+            _loader = _SizedSampler(
+                dataset, _sampler, collate_fn, num_buffer, num_workers
+            )
+            return torch.utils.data.DataLoader(
+                ds, sampler=_loader, batch_size=None, num_workers=0
+            )

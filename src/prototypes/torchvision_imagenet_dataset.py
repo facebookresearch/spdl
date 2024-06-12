@@ -1,7 +1,5 @@
-import asyncio
 import gc
 import time
-from asyncio import Task
 
 import spdl.io
 import spdl.utils
@@ -10,8 +8,6 @@ import torch
 from pytorch_spdl.dataloader import DataLoader
 from spdl.io import ImageFrames
 from spdl.lib import _libspdl
-from spdl.utils import run_async
-from spdl.utils._async import _check_exception
 from torch import Tensor
 from torch.profiler import profile
 
@@ -30,29 +26,22 @@ def _decode(path: str, width=224, height=224, pix_fmt="rgb24") -> ImageFrames:
     )
 
 
-def _async_decode(path: str) -> Task[ImageFrames]:
-    task = asyncio.create_task(run_async(_decode, path))
-    task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
-    return task
+def _batch_decode(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
+    classes_ = torch.tensor([cls_ for _, cls_ in samples])
 
-
-async def _batch_decode(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
-    tasks = [_async_decode(s[0]) for s in samples]
-    classes_ = [s[1] for s in samples]
-
-    await asyncio.wait(tasks)
-
-    frames = []
-    for task in tasks:
-        try:
-            frame = task.result()
-        except Exception as e:
-            print("Failed to decode image:", e)
-        else:
-            frames.append(frame)
-
-    buffer = await spdl.io.async_convert_frames(frames)
-    return spdl.io.to_torch(buffer), torch.tensor(classes_)
+    frames = [_decode(path) for path, _ in samples]
+    buffer = spdl.io.convert_frames(frames)
+    buffer = spdl.io.transfer_buffer(
+        buffer,
+        cuda_config=spdl.io.cuda_config(
+            device_index=0,
+            allocator=(
+                torch.cuda.caching_allocator_alloc,
+                torch.cuda.caching_allocator_delete,
+            ),
+        ),
+    )
+    return spdl.io.to_torch(buffer), classes_
 
 
 class _record_gc:
@@ -68,7 +57,7 @@ class _record_gc:
             _libspdl.trace_event_end()
 
 
-# gc.callbacks.append(_record_gc())
+gc.callbacks.append(_record_gc())
 spdl.utils.set_ffmpeg_log_level(0)
 
 
@@ -77,13 +66,18 @@ def _main():
         ImageNet(root=root, loader=lambda x: x),
         collate_fn=_batch_decode,
         batch_size=32,
-        num_workers=32,
+        num_workers=124,
+        prefetch_factor=2,
     )
+
+    dataloader = iter(dataloader)
+    for _ in range(50):
+        next(dataloader)
 
     trace_path = "/home/moto/tmp/trace/dataloader"
     with (
         profile() as prof,
-        spdl.utils.tracing(f"{trace_path}.pftrace"),
+        spdl.utils.tracing(f"{trace_path}.pftrace", buffer_size=4096 * 16),
     ):
         t0 = time.monotonic()
         num_frames = 0
@@ -92,7 +86,7 @@ def _main():
                 # print(batch.shape, batch.dtype, classes.shape, classes.dtype)
                 num_frames += batch.shape[0]
 
-                if i == 100:
+                if i == 499:
                     break
 
         finally:
