@@ -33,6 +33,7 @@ __all__ = [
     "async_streaming_load_video",
     "async_load_image_batch",
     "async_load_image_batch_nvdec",
+    "load_image_batch_nvjpeg",
     "async_load_image_batch_nvjpeg",
     "async_sample_decode_video",
 ]
@@ -608,6 +609,27 @@ async def async_load_image_batch_nvjpeg(
     srcs_ = _get_bytes(srcs)
     return await run_async(
         _libspdl.decode_image_nvjpeg,
+        srcs_,
+        scale_width=width,
+        scale_height=height,
+        cuda_config=cuda_config,
+        pix_fmt=pix_fmt,
+        **kwargs,
+    )
+
+
+def load_image_batch_nvjpeg(
+    srcs: list[str | bytes],
+    *,
+    cuda_config: CUDAConfig,
+    width: int | None,
+    height: int | None,
+    pix_fmt: str | None = "rgb",
+    strict: bool = True,
+    **kwargs,
+):
+    srcs_ = _get_bytes(srcs)
+    return _libspdl.decode_image_nvjpeg(
         srcs_,
         scale_width=width,
         scale_height=height,
