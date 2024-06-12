@@ -53,17 +53,20 @@ class _Loader:
         self.num_workers = num_workers
 
     def __iter__(self):
+        sentinel = object()
+
         def _wrap(item):
             try:
                 return self.func(item)
             except Exception as e:
-                _LG.info("Failed to process: %s", e)
+                _LG.error("Failed to process: %s", e)
+                return sentinel
 
         futures = []
         with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
             while True:
                 if len(futures) >= self.num_buffer:
-                    if (result := futures.pop(0).result()) is not None:
+                    if (result := futures.pop(0).result()) is not sentinel:
                         yield result
 
                 try:
@@ -71,10 +74,10 @@ class _Loader:
                 except StopIteration:
                     break
                 else:
-                    futures.append(executor.submit(self.func, samples))
+                    futures.append(executor.submit(_wrap, samples))
 
             while futures:
-                if (result := futures.pop(0).result()) is not None:
+                if (result := futures.pop(0).result()) is not sentinel:
                     yield result
 
 
