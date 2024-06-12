@@ -1,5 +1,6 @@
 """This module implements interfaces compatible to PyTorch."""
 
+import logging
 import warnings
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -22,6 +23,158 @@ __all__ = ["DataLoader"]
 T = TypeVar("T")
 U = TypeVar("U")
 T_co = TypeVar("T_co", covariant=True)
+
+_LG = logging.getLogger(__name__)
+
+
+class _Loader:
+    """Base structure to be used in place of sampler/batch_sampler.
+
+    It applies the given function to the result of generator. Generator
+    can yield either single item or batch of items. It does not matter for
+    this class as long as the process function is able to handle it.
+
+    It can be written as simple generator expression, but PyTorch expect
+    sampler/batch_sampler to have `__len__` method, so it is in the shape of
+    class.
+
+    `num_workers` determines the number of threads to be used for processing.
+    `num_buffer` determines how many  pforcess functions should be executed
+    concurrently.
+
+    To use the thread resource properly, `num_buffer` must be larger or equal
+    to `num_workers`. Otherwise, the thread pool will be starved.
+    """
+
+    def __init__(self, sample_generator, func, num_buffer, num_workers):
+        self.sample_generator = sample_generator
+        self.func = func
+        self.num_buffer = num_buffer
+        self.num_workers = num_workers
+
+    def __iter__(self):
+        def _wrap(item):
+            try:
+                return self.func(item)
+            except Exception as e:
+                _LG.info("Failed to process: %s", e)
+
+        futures = []
+        with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+            while True:
+                if len(futures) >= self.num_buffer:
+                    if (result := futures.pop(0).result()) is not None:
+                        yield result
+
+                try:
+                    samples = next(self.sample_generator)
+                except StopIteration:
+                    break
+                else:
+                    futures.append(executor.submit(self.func, samples))
+
+            while futures:
+                if (result := futures.pop(0).result()) is not None:
+                    yield result
+
+
+def _batch_indexer(dataset, batch_sampler):
+    for idx in batch_sampler:
+        if hasattr(dataset, "__getitems__"):
+            yield dataset.__getitems__(idx)
+        else:
+            yield [dataset[i] for i in idx]
+
+
+class _SizedBatchSampler(_Loader):
+    """Base structure to be used in place of batch_sampler.
+
+    It can be written as simple generator expression, but PyTorch expect
+    sampler/batch_sampler to have `__len__` method, so it is in the shape of
+    class.
+    """
+
+    def __init__(self, dataset, batch_sampler, load_fn, num_buffer, num_workers):
+        super().__init__(
+            _batch_indexer(dataset, batch_sampler), load_fn, num_buffer, num_workers
+        )
+        self.batch_sampler = batch_sampler
+
+    def __len__(self):
+        return len(self.batch_sampler)
+
+
+def _indexer(dataset, sampler):
+    for i in sampler:
+        yield dataset[i]
+
+
+class _SizedSampler(_Loader):
+    """Index-based sampling without batch."""
+
+    def __init__(self, dataset, sampler, load_fn, num_buffer, num_workers):
+        super().__init__(_indexer(dataset, sampler), load_fn, num_buffer, num_workers)
+        self.sampler = sampler
+
+    def __len__(self):
+        return len(self.sampler)
+
+
+def _wrap(dataset):
+    for item in dataset:
+        yield [item]
+
+
+class _Iterator(_Loader):
+    """Like a regular iterator, but has __len__."""
+
+    def __init__(self, dataset, load_fn, num_buffer, num_workers):
+        super().__init__(_wrap(dataset), load_fn, num_buffer, num_workers)
+        self.dataset = dataset
+
+    def __iter__(self):
+        for item in super().__iter__():
+            yield item[0]
+
+    def __len__(self):
+        return len(self.dataset)
+
+
+def _batched(iterable, batch_size, drop_last):
+    batch = []
+    for item in iterable:
+        batch.append(item)
+
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+
+    if batch and not drop_last:
+        yield batch
+
+
+def _get_num_items(num_items, batch_size, drop_last):
+    num_batches = num_items // batch_size
+    if not drop_last and (num_items % batch_size > 0):
+        num_batches += 1
+    return num_batches
+
+
+class _BatchIterator(_Loader):
+    """Iterate dataset sequentially and batch."""
+
+    def __init__(
+        self, dataset, batch_size, drop_last, load_fn, num_buffer, num_workers
+    ):
+        super().__init__(
+            _batched(dataset, batch_size, drop_last), load_fn, num_buffer, num_workers
+        )
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+
+    def __len__(self):
+        return _get_num_items(len(self.dataset), self.batch_size, self.drop_last)
 
 
 def _get_sampler(num_samples, shuffle=False, generator=None):
@@ -51,117 +204,13 @@ def _get_batch_sampler(
     )
 
 
-def _indexer(dataset, sampler):
-    for i in sampler:
-        yield dataset[i]
-
-
-def _batch_indexer(dataset, batch_sampler):
-    for idx in batch_sampler:
-        yield [dataset[i] for i in idx]
-
-
-class _Loader:
-    def __init__(self, sample_generator, load_fn, num_buffer, num_workers):
-        self.sample_generator = sample_generator
-        self.load_fn = load_fn
-        self.num_buffer = num_buffer
-        self.num_workers = num_workers
-
-    def __iter__(self):
-        futures = []
-        with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
-            while True:
-                if len(futures) >= self.num_buffer:
-                    result = futures.pop(0).result()
-                    yield result
-
-                try:
-                    samples = next(self.sample_generator)
-                except StopIteration:
-                    break
-                else:
-                    futures.append(executor.submit(self.load_fn, samples))
-
-            while futures:
-                result = futures.pop(0).result()
-                yield result
-
-
-class _SizedBatchSampler(_Loader):
-    def __init__(self, dataset, batch_sampler, load_fn, num_buffer, num_workers):
-        super().__init__(
-            _batch_indexer(dataset, batch_sampler), load_fn, num_buffer, num_workers
-        )
-        self.batch_sampler = batch_sampler
-
-    def __len__(self):
-        return len(self.batch_sampler)
-
-
-class _SizedSampler(_Loader):
-    def __init__(self, dataset, sampler, load_fn, num_buffer, num_workers):
-        super().__init__(_indexer(dataset, sampler), load_fn, num_buffer, num_workers)
-        self.sampler = sampler
-
-    def __len__(self):
-        return len(self.sampler)
-
-
-def _batched(iterable, batch_size, drop_last):
-    batch = []
-    for item in iterable:
-        batch.append(item)
-
-        if len(batch) >= batch_size:
-            yield batch
-            batch = []
-
-    if batch and not drop_last:
-        yield batch
-
-
-def _get_num_items(num_items, batch_size, drop_last):
-    num_batches = num_items // batch_size
-    if not drop_last and (num_items % batch_size > 0):
-        num_batches += 1
-    return num_batches
-
-
-def _wrap(dataset):
-    for item in dataset:
-        yield [item]
-
-
-class _Iterator(_Loader):
-    def __init__(self, dataset, load_fn, num_buffer, num_workers):
-        super().__init__(_wrap(dataset), load_fn, num_buffer, num_workers)
-        self.dataset = dataset
-
-    def __iter__(self):
-        for item in super().__iter__():
-            yield item[0]
-
-    def __len__(self):
-        return len(self.dataset)
-
-
-class _BatchIterator(_Loader):
-    def __init__(
-        self, dataset, batch_size, drop_last, load_fn, num_buffer, num_workers
-    ):
-        super().__init__(
-            _batched(dataset, batch_size, drop_last), load_fn, num_buffer, num_workers
-        )
-        self.dataset = dataset
-        self.batch_size = batch_size
-        self.drop_last = drop_last
-
-    def __len__(self):
-        return _get_num_items(len(self.dataset), self.batch_size, self.drop_last)
-
-
 class _DummyDataSet:
+    """We perform load and preprocessing in [batch] sampler, but PyTorch DataLoader
+
+    expects that dataset to be queried from the output of the sampler, so this dataset
+    just returns the query key as-is.
+    """
+
     def __getitem__(self, key):
         return key
 
