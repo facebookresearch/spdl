@@ -53,6 +53,11 @@ def _import_libspdl():
             _LG.debug("Faile to initialize Google logging.", exc_info=True)
 
         try:
+            ext.set_ffmpeg_log_level(8)
+        except Exception:
+            _LG.debug("Failed to set FFmpeg log level.", exc_info=True)
+
+        try:
             ext.register_avdevices()
         except Exception:
             _LG.debug("Failed to register avdevices.", exc_info=True)
