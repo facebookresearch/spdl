@@ -1,6 +1,7 @@
 """Test the performance of SPDL and PyTorch DataLoader integration"""
 
 import contextlib
+import logging
 import time
 from pathlib import Path
 
@@ -21,6 +22,10 @@ def _parse_args(args):
 
     parser = argparse.ArgumentParser(
         description=__doc__,
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
     )
     parser.add_argument(
         "--num-threads",
@@ -56,6 +61,10 @@ def _parse_args(args):
         "--max-batches",
         type=int,
     )
+    parser.add_argument(
+        "--use-nvjpeg",
+        action="store_true",
+    )
     args = parser.parse_args(args)
     if args.trace and args.max_batches is None:
         args.max_batches = 300
@@ -73,7 +82,7 @@ def _decode(path: str, width=224, height=224, pix_fmt="rgb24") -> ImageFrames:
 
 
 def _batch_decode(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
-    classes_ = torch.tensor([cls_ for _, cls_ in samples])
+    classes = torch.tensor([cls_ for _, cls_ in samples])
 
     frames = [_decode(path) for path, _ in samples]
     buffer = spdl.io.convert_frames(frames)
@@ -87,15 +96,37 @@ def _batch_decode(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
             ),
         ),
     )
-    return spdl.io.to_torch(buffer), classes_
+    return spdl.io.to_torch(buffer), classes
+
+
+def _batch_decode_nvjpeg(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
+    classes = torch.tensor([cls_ for _, cls_ in samples])
+
+    buffer = spdl.io.load_image_batch_nvjpeg(
+        [path for path, _ in samples],
+        cuda_config=spdl.io.cuda_config(
+            device_index=0,
+            allocator=(
+                torch.cuda.caching_allocator_alloc,
+                torch.cuda.caching_allocator_delete,
+            ),
+        ),
+        width=224,
+        height=224,
+        pix_fmt="rgb",
+        # strict=True,
+    )
+    batch = spdl.io.to_torch(buffer)
+    return batch, classes
 
 
 def _main(args=None):
     args = _parse_args(args)
+    _init_logging(args.debug)
 
     dataloader = DataLoader(
         ImageNet(root=args.root, loader=lambda x: x),
-        collate_fn=_batch_decode,
+        collate_fn=_batch_decode_nvjpeg if args.use_nvjpeg else _batch_decode,
         batch_size=args.batch_size,
         num_workers=args.num_threads,
         prefetch_factor=args.prefetch_factor,
@@ -128,6 +159,12 @@ def _main(args=None):
 
     if args.trace:
         prof.export_chrome_trace(f"{args.trace}.json")
+
+
+def _init_logging(debug):
+    fmt = "%(asctime)s [%(filename)s:%(lineno)d] [%(levelname)s] %(message)s"
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(format=fmt, level=level)
 
 
 if __name__ == "__main__":
