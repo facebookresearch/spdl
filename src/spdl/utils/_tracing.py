@@ -116,3 +116,16 @@ def trace_default_demux_executor_queue_size():
         ```
     """
     _libspdl.trace_default_demux_executor_queue_size()
+
+
+def trace_gc():
+    """Attach tracer to garbage collection."""
+    import gc
+
+    def _func(phase, info):
+        if phase == "start":
+            _libspdl.trace_event_begin("gc")
+        else:
+            _libspdl.trace_event_end()
+
+    gc.callbacks.append(_func)
