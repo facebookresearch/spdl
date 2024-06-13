@@ -8,9 +8,9 @@ from pathlib import Path
 import torch
 from torch import Tensor
 from torch.profiler import profile
-
-from torchvision.transforms import Compose, Resize, PILToTensor
 from torchvision.datasets.imagenet import ImageNet
+
+from torchvision.transforms import Compose, PILToTensor, Resize
 
 
 def _parse_args(args):
@@ -76,9 +76,7 @@ def _main(args=None):
     for _ in range(50):
         next(dataloader)
 
-    with (
-        profile() if args.trace is not None else contextlib.nullcontext() as prof,
-    ):
+    with (profile() if args.trace is not None else contextlib.nullcontext() as prof,):
         t0 = time.monotonic()
         num_frames = 0
         try:

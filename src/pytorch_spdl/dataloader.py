@@ -309,7 +309,7 @@ def DataLoader(
     else:
         if sampler is not None and batch_sampler is not None:
             raise ValueError(
-                "`samplers` and `batch_sampler` cannot be specified at the same time."
+                "`sampler` and `batch_sampler` cannot be specified at the same time."
             )
         if sampler is not None:
             if shuffle:
