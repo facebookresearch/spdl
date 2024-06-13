@@ -4,7 +4,6 @@
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
-#include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
@@ -19,17 +18,17 @@ namespace spdl::core {
 namespace {
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode(
-    PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig> cfg,
-    const std::string filter_desc) {
+    PacketsPtr<media_type>&& packets,
+    const std::optional<DecodeConfig>& cfg,
+    const std::string& filter_desc) {
   nb::gil_scoped_release g;
   return decode_packets_ffmpeg(std::move(packets), cfg, filter_desc);
 }
 
 template <MediaType media_type>
 CUDABufferPtr decode_nvdec(
-    PacketsPtr<media_type> packets,
-    const CUDAConfig cuda_config,
+    PacketsPtr<media_type>&& packets,
+    const CUDAConfig& cuda_config,
     int crop_left,
     int crop_top,
     int crop_right,
@@ -53,12 +52,11 @@ CUDABufferPtr decode_nvdec(
 
 template <MediaType media_type>
 DecoderPtr<media_type> _make_decoder(
-    PacketsPtr<media_type> packets,
+    PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::string& filter_desc) {
   nb::gil_scoped_release g;
-  return make_decoder(
-      std::move(packets), std::move(decode_cfg), std::move(filter_desc));
+  return make_decoder(std::move(packets), decode_cfg, filter_desc);
 }
 
 template <MediaType media_type>
@@ -211,7 +209,7 @@ void register_decoding(nb::module_& m) {
   m.def(
       "decode_image_nvjpeg",
       [](nb::bytes data,
-         const CUDAConfig cuda_config,
+         const CUDAConfig& cuda_config,
          int scale_width,
          int scale_height,
          const std::string& pix_fmt,
@@ -242,7 +240,7 @@ void register_decoding(nb::module_& m) {
   m.def(
       "decode_image_nvjpeg",
       [](const std::vector<nb::bytes>& data,
-         const CUDAConfig cuda_config,
+         const CUDAConfig& cuda_config,
          int scale_width,
          int scale_height,
          const std::string& pix_fmt,

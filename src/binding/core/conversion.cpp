@@ -1,9 +1,6 @@
 #include <libspdl/core/conversion.h>
 
 #include <nanobind/nanobind.h>
-#include <nanobind/stl/function.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
@@ -18,7 +15,7 @@ namespace spdl::core {
 namespace {
 template <MediaType media_type>
 CPUBufferPtr convert(
-    const FFmpegFramesPtr<media_type> frames,
+    const FFmpegFramesPtr<media_type>&& frames,
     bool pin_memory) {
   nb::gil_scoped_release g;
   return convert_frames(frames.get(), pin_memory);
