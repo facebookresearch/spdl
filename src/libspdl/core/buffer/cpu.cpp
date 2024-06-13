@@ -52,16 +52,14 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
     ElemClass elem_class,
     size_t depth,
     bool pin_memory) {
+  size_t size = depth * prod(shape);
   VLOG(0) << fmt::format(
       "Allocating {} bytes. (shape: {}, elem: {})",
-      prod(shape) * depth,
+      size,
       fmt::join(shape, ", "),
       depth);
   return std::make_unique<CPUBuffer>(
-      std::move(shape),
-      elem_class,
-      depth,
-      new CPUStorage{prod(shape) * depth, pin_memory});
+      std::move(shape), elem_class, depth, new CPUStorage{size, pin_memory});
 }
 
 } // namespace spdl::core

@@ -36,11 +36,12 @@ CUDABufferPtr cuda_buffer(
     const CUDAConfig& cfg,
     ElemClass elem_class,
     size_t depth) {
+  size_t size = depth * prod(shape);
   return std::make_unique<CUDABuffer>(
       std::move(shape),
       elem_class,
       depth,
-      new CUDAStorage{depth * prod(shape), cfg},
+      new CUDAStorage{size, cfg},
       cfg.device_index);
 }
 
