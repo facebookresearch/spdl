@@ -8,7 +8,6 @@
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
-#include <nanobind/stl/string_view.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
@@ -21,7 +20,7 @@ namespace {
 DemuxerPtr _make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
-    const SourceAdaptorPtr _adaptor) {
+    SourceAdaptorPtr _adaptor) {
   nb::gil_scoped_release g;
   return make_demuxer(src, std::move(_adaptor), std::move(dmx_cfg));
 }
@@ -31,7 +30,7 @@ DemuxerPtr _make_demuxer_bytes(
     const std::optional<DemuxConfig>& dmx_cfg) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
-  return make_demuxer(data_, std::move(dmx_cfg));
+  return make_demuxer(data_, dmx_cfg);
 }
 
 template <MediaType media_type>
