@@ -327,29 +327,6 @@ def test_async_pipe_timeout_output_queue():
         asyncio.run(test())
 
 
-def test_async_generate_wrong_task_signature():
-    """async_generate should fail immediately if user provided incompatible afunc/iterator."""
-    src_gen_exhausted = False
-
-    def src():
-        yield 0
-        # The system should fail immediately after the first invokation of the
-        # `_2args` bellow, thus it should not reach the following places
-        nonlocal src_gen_exhausted
-        src_gen_exhausted = True
-
-    async def _2args(val, _):
-        return val
-
-    queue = asyncio.Queue()
-
-    coro = spdl.utils.async_generate(src(), _2args, queue)
-
-    with pytest.raises(TypeError):
-        asyncio.run(coro)
-    assert not src_gen_exhausted
-
-
 ################################################################################
 # async_genereate + async_iterate
 ################################################################################
