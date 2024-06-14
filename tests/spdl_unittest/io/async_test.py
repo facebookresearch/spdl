@@ -143,6 +143,9 @@ def test_decode_video_clips(get_sample):
 
 def test_decode_video_clips_num_frames(get_sample):
     """Can decode video clips with padding/dropping."""
+    if "tpad" not in spdl.utils.get_ffmpeg_filters():
+        raise pytest.skip("tpad filter is not available. Install FFmepg >= 4.2.")
+
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"
     sample = get_sample(cmd)
 
