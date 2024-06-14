@@ -1,6 +1,7 @@
 #include <libspdl/core/utils.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
+#include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -37,6 +38,11 @@ void set_ffmpeg_log_level(int level) {
 void register_avdevices() {
   avdevice_register_all();
 }
+
+std::vector<std::string> get_ffmpeg_filters() {
+  return detail::get_filters();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////
 // Utilities for Glog

@@ -5,7 +5,13 @@ from spdl.lib import _libspdl
 __all__ = [
     "get_ffmpeg_log_level",
     "set_ffmpeg_log_level",
+    "get_ffmpeg_filters",
 ]
+
+
+def get_ffmpeg_filters() -> list[str]:
+    """Get the list of available filter names."""
+    return _libspdl.get_ffmpeg_filters()
 
 
 def get_ffmpeg_log_level() -> int:
