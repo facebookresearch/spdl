@@ -11,7 +11,7 @@ namespace spdl::core {
 // CUDAStorage
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-uintptr_t default_allocator(int size, int device, uintptr_t stream) {
+uintptr_t default_allocator(int size, int device, uintptr_t _) {
   {
     TRACE_EVENT("decoding", "cudaSetDevice");
     CHECK_CUDA(cudaSetDevice(device), "Failed to set current context.");

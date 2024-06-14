@@ -32,7 +32,7 @@ CPUBuffer::CPUBuffer(
     ElemClass elem_class_,
     size_t depth_,
     CPUStorage* storage_)
-    : Buffer(std::move(shape_), elem_class_, depth_, (Storage*)storage_) {}
+    : Buffer(shape_, elem_class_, depth_, (Storage*)storage_) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Factory functions

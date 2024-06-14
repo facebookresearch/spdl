@@ -65,7 +65,7 @@ struct CUDABuffer : Buffer {
   int device_index;
 
   CUDABuffer(
-      const std::vector<size_t>& shape,
+      std::vector<size_t> shape,
       ElemClass elem_class,
       size_t depth,
       CUDAStorage* storage,

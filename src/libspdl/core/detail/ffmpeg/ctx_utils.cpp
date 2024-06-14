@@ -229,18 +229,6 @@ AVFormatOutputContextPtr get_output_format_ctx(
   return AVFormatOutputContextPtr{p};
 }
 
-AVFormatOutputContextPtr get_output_format_ctx(
-    AVIOContext* io_ctx,
-    std::string format,
-    const std::optional<std::string>& name) {
-  AVFormatContext* p = nullptr;
-  std::string nm = name ? *name : "Custom Output Context";
-  CHECK_AVERROR(
-      avformat_alloc_output_context2(&p, nullptr, format.c_str(), nm.c_str()),
-      fmt::format("Failed to allocate output format context for {}.", nm));
-  return AVFormatOutputContextPtr{p};
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Encoding
 ////////////////////////////////////////////////////////////////////////////////
