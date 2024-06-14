@@ -16,7 +16,7 @@ def test_demux_config_smoketest(get_sample):
         demux_config = spdl.io.demux_config(format="wav")
         _ = await spdl.io.async_demux_audio(src, demux_config=demux_config)
 
-        demux_config = spdl.io.demux_config(format_options={"max_size": "1024"})
+        demux_config = spdl.io.demux_config(format_options={"ignore_length": "true"})
         _ = await spdl.io.async_demux_audio(src, demux_config=demux_config)
 
         demux_config = spdl.io.demux_config(buffer_size=1024)
