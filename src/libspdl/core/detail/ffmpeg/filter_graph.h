@@ -10,7 +10,6 @@ namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 std::vector<std::string> get_filters();
 
-
 // Wrap AVFilterGraphPtr to provide convenient methods
 class FilterGraph {
   AVFilterGraphPtr graph;
