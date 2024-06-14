@@ -176,10 +176,11 @@ template <MediaType media_type>
 CPUBufferPtr convert_interleaved(
     const std::vector<const FFmpegFrames<media_type>*>& batch,
     size_t num_channels,
-    size_t num_frames,
-    size_t w,
-    size_t h,
     bool pin_memory) {
+  auto& ref_frames = batch.at(0)->get_frames();
+  size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+  auto num_frames = ref_frames.size();
+
   auto buf = cpu_buffer(
       {batch.size(), num_frames, h, w, num_channels},
       ElemClass::UInt,
@@ -211,11 +212,12 @@ template <MediaType media_type>
 CPUBufferPtr convert_planer(
     const std::vector<const FFmpegFrames<media_type>*>& batch,
     size_t num_planes,
-    size_t num_frames,
-    size_t w,
-    size_t h,
     int depth,
     bool pin_memory) {
+  auto& ref_frames = batch.at(0)->get_frames();
+  size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+  auto num_frames = ref_frames.size();
+
   auto buf = cpu_buffer(
       {batch.size(), num_frames, num_planes, h, w},
       ElemClass::UInt,
@@ -248,10 +250,11 @@ void copy_yuv420p(
 template <MediaType media_type>
 CPUBufferPtr convert_yuv420p(
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    size_t num_frames,
-    size_t w,
-    size_t h,
     bool pin_memory) {
+  auto& ref_frames = batch.at(0)->get_frames();
+  size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+  auto num_frames = ref_frames.size();
+
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
 
@@ -289,10 +292,11 @@ void copy_yuv422p(
 template <MediaType media_type>
 CPUBufferPtr convert_yuv422p(
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    size_t num_frames,
-    size_t w,
-    size_t h,
     bool pin_memory) {
+  auto& ref_frames = batch.at(0)->get_frames();
+  size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+  auto num_frames = ref_frames.size();
+
   assert(w % 2 == 0);
 
   auto buf = cpu_buffer(
@@ -326,10 +330,11 @@ void copy_nv12(
 template <MediaType media_type>
 CPUBufferPtr convert_nv12(
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    size_t num_frames,
-    size_t w,
-    size_t h,
     bool pin_memory) {
+  auto& ref_frames = batch.at(0)->get_frames();
+  size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+  auto num_frames = ref_frames.size();
+
   assert(h % 2 == 0 && w % 2 == 0);
   size_t h2 = h / 2;
 
@@ -454,33 +459,28 @@ CPUBufferPtr convert_frames(
 
   auto ret = [&]() {
     auto& ref_frames = batch.at(0)->get_frames();
-    auto w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
-    auto num_frames = ref_frames.size();
     auto pix_fmt = static_cast<AVPixelFormat>(ref_frames.at(0)->format);
     switch (pix_fmt) {
       case AV_PIX_FMT_GRAY8:
         // Technically, not a planer format, but it's the same.
-        return convert_planer(
-            batch, 1, num_frames, w, h, sizeof(uint8_t), pin_memory);
+        return convert_planer(batch, 1, sizeof(uint8_t), pin_memory);
       case AV_PIX_FMT_GRAY16BE:
-        return convert_planer(
-            batch, 1, num_frames, w, h, sizeof(uint16_t), pin_memory);
+        return convert_planer(batch, 1, sizeof(uint16_t), pin_memory);
       case AV_PIX_FMT_RGBA:
-        return convert_interleaved(batch, 4, num_frames, w, h, pin_memory);
+        return convert_interleaved(batch, 4, pin_memory);
       case AV_PIX_FMT_RGB24:
-        return convert_interleaved(batch, 3, num_frames, w, h, pin_memory);
+        return convert_interleaved(batch, 3, pin_memory);
       case AV_PIX_FMT_YUVJ444P:
       case AV_PIX_FMT_YUV444P:
-        return convert_planer(
-            batch, 3, num_frames, w, h, sizeof(uint8_t), pin_memory);
+        return convert_planer(batch, 3, sizeof(uint8_t), pin_memory);
       case AV_PIX_FMT_YUVJ420P:
       case AV_PIX_FMT_YUV420P:
-        return convert_yuv420p(batch, num_frames, w, h, pin_memory);
+        return convert_yuv420p(batch, pin_memory);
       case AV_PIX_FMT_YUVJ422P:
       case AV_PIX_FMT_YUV422P:
-        return convert_yuv422p(batch, num_frames, w, h, pin_memory);
+        return convert_yuv422p(batch, pin_memory);
       case AV_PIX_FMT_NV12: {
-        return convert_nv12(batch, num_frames, w, h, pin_memory);
+        return convert_nv12(batch, pin_memory);
       }
       default:
         SPDL_FAIL(fmt::format(
