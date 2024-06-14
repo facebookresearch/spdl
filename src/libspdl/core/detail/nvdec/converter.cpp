@@ -51,7 +51,7 @@ class NV12ToRGB : public Converter {
       CUstream stream,
       CUDABufferTracker* tracker,
       unsigned char matrix_coeff_)
-      : Converter(stream, tracker), matrix_coeff(matrix_coeff_){};
+      : Converter(stream, tracker), matrix_coeff(matrix_coeff_) {}
   void convert(uint8_t* src_ptr, unsigned int src_pitch) override {
     Fn(stream,
        src_ptr,
@@ -61,7 +61,7 @@ class NV12ToRGB : public Converter {
        tracker->w,
        tracker->h,
        matrix_coeff);
-  };
+  }
 };
 } // namespace
 

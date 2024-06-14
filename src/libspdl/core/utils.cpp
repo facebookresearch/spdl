@@ -1,9 +1,6 @@
 #include <libspdl/core/utils.h>
 
-#include <libspdl/core/types.h>
-
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
-#include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 

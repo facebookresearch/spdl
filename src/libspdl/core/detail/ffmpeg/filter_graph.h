@@ -11,8 +11,7 @@ class FilterGraph {
   AVFilterGraphPtr graph;
 
  public:
-  FilterGraph(AVFilterGraphPtr&& g) : graph(std::move(g)) {}
-  FilterGraph(FilterGraph&&) = default;
+  explicit FilterGraph(AVFilterGraphPtr&& g) : graph(std::move(g)) {}
 
   Generator<AVFramePtr> filter(AVFrame*);
 

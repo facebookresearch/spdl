@@ -50,7 +50,7 @@ void AVFrameDeleter::operator()(AVFrame* p) {
 void AVFrameViewDeleter::operator()(AVFrame* p) {
   if (p) {
     for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
-      p->data[i] = NULL;
+      p->data[i] = nullptr;
       p->linesize[i] = 0;
     }
     av_frame_free(&p);

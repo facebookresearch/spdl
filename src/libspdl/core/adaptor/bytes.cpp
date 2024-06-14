@@ -19,7 +19,7 @@ class Bytes {
   int64_t pos = 0;
 
  public:
-  Bytes(std::string_view data) : buffer(std::move(data)) {}
+  explicit Bytes(std::string_view data) : buffer(std::move(data)) {}
 
   Bytes(const Bytes&) = delete;
   Bytes& operator=(const Bytes&) = delete;

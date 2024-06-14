@@ -37,7 +37,7 @@ std::unique_ptr<DataInterface> get_interface(
 std::unique_ptr<DataInterface> get_in_memory_interface(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg) {
-  thread_local SourceAdaptorPtr adaptor{new BytesAdaptor()};
+  thread_local SourceAdaptorPtr adaptor = std::make_shared<BytesAdaptor>();
   return get_interface(data, adaptor, dmx_cfg);
 }
 } // namespace detail

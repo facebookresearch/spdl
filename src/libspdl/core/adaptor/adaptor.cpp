@@ -2,14 +2,12 @@
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
-#include <glog/logging.h>
-
 #include <memory>
 
 using namespace spdl::core::detail;
 
 namespace spdl::core {
-
+namespace {
 class BasicInterface : public DataInterface {
   detail::AVFormatInputContextPtr fmt_ctx;
 
@@ -24,7 +22,7 @@ class BasicInterface : public DataInterface {
     return fmt_ctx.get();
   }
 };
-
+} // namespace
 std::unique_ptr<DataInterface> SourceAdaptor::get(
     std::string_view url,
     const DemuxConfig& dmx_cfg) const {

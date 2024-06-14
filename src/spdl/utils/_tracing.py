@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import sys
 from contextlib import contextmanager
 

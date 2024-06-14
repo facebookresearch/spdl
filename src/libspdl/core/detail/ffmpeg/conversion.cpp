@@ -12,7 +12,6 @@
 
 extern "C" {
 #include <libavutil/frame.h>
-#include <libavutil/hwcontext.h>
 #include <libavutil/pixdesc.h>
 }
 
@@ -154,7 +153,7 @@ void copy_2d(
     int depth = 1) {
   TRACE_EVENT("decoding", "conversion::copy_2d");
   for (int h = 0; h < height; ++h) {
-    memcpy(*dst, src, width * depth);
+    memcpy(*dst, src, (size_t)width * depth);
     src += src_linesize;
     *dst += dst_linesize;
   }

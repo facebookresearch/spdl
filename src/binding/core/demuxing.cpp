@@ -22,7 +22,7 @@ DemuxerPtr _make_demuxer(
     const std::optional<DemuxConfig>& dmx_cfg,
     SourceAdaptorPtr _adaptor) {
   nb::gil_scoped_release g;
-  return make_demuxer(src, std::move(_adaptor), std::move(dmx_cfg));
+  return make_demuxer(src, std::move(_adaptor), dmx_cfg);
 }
 
 DemuxerPtr _make_demuxer_bytes(

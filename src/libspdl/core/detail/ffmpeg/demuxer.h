@@ -9,7 +9,7 @@ class Demuxer {
   AVFormatContext* fmt_ctx;
 
  public:
-  Demuxer(AVFormatContext* fmt_ctx);
+  explicit Demuxer(AVFormatContext* fmt_ctx);
 
   Generator<AVPacketPtr> demux();
 };

@@ -7,7 +7,6 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <cassert>
-#include <exception>
 
 #include <glog/logging.h>
 
@@ -221,7 +220,7 @@ FFmpegFrames<media_type>::slice(int start, int stop, int step) const
 
   for (int i = start; i < stop; i += step) {
     assert(0 <= i && i < numel);
-    out->frames.push_back(detail::make_reference(frames[i]));
+    out->frames.push_back(detail::make_reference(frames.at(i)));
   }
   return out;
 }
@@ -246,7 +245,7 @@ FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
     if (i < 0) {
       i += numel;
     }
-    out->frames.push_back(detail::make_reference(frames[i]));
+    out->frames.push_back(detail::make_reference(frames.at(i)));
   }
   return out;
 }
@@ -265,7 +264,7 @@ FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int64_t i) const
   }
   assert(0 <= i && i < numel);
   auto out = std::make_unique<FFmpegFrames<MediaType::Image>>(id, time_base);
-  out->push_back(detail::make_reference(frames[i]));
+  out->push_back(detail::make_reference(frames.at(i)));
   return out;
 }
 
