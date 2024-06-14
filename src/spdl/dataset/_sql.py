@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 
-from . import _utils
+from spdl.utils import iter_batch
 
 from ._dataset import DataSet
 
@@ -184,7 +184,7 @@ class _DataSet:
 
         query = self._get_query(limit=limit)
         cur = self._get_cursor(set_factory=True)
-        return _utils._iter_batch(cur.execute(query), batch_size, drop_last)
+        return iter_batch(cur.execute(query), batch_size, drop_last)
 
     ###########################################################################
     # Map interface: (requires `_idx_col` attribute)

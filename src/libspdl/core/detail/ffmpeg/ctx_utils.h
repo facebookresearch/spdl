@@ -41,11 +41,6 @@ AVFormatOutputContextPtr get_output_format_ctx(
     const std::string& url,
     const std::optional<std::string>& format = std::nullopt);
 
-AVFormatOutputContextPtr get_output_format_ctx(
-    AVIOContext* io_ctx,
-    std::string format,
-    const std::optional<std::string>& name = std::nullopt);
-
 const AVCodec* get_image_codec(
     const std::optional<std::string>& encoder,
     const AVOutputFormat* oformat,

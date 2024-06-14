@@ -257,14 +257,20 @@ async def async_streaming_demux_video(
 
 
 @overload
-def decode_packets(packets: AudioPackets, **kwargs) -> AudioFrames: ...
+def decode_packets(
+    packets: AudioPackets, filter_desc: str | None = None, **kwargs
+) -> AudioFrames: ...
 @overload
-def decode_packets(packets: VideoPackets, **kwargs) -> VideoFrames: ...
+def decode_packets(
+    packets: VideoPackets, filter_desc: str | None = None, **kwargs
+) -> VideoFrames: ...
 @overload
-def decode_packets(packets: ImagePackets, **kwargs) -> ImageFrames: ...
+def decode_packets(
+    packets: ImagePackets, filter_desc: str | None = None, **kwargs
+) -> ImageFrames: ...
 
 
-def decode_packets(packets, filter_desc: str | None = None, **kwargs):
+def decode_packets(packets, filter_desc=None, **kwargs):
     """Decode packets.
 
     Args:

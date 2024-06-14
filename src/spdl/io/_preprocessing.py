@@ -204,8 +204,10 @@ def get_filter_desc(packets, **filter_args) -> str:
     """
     match type(packets):
         case _libspdl.AudioPackets:
+            # pyre-ignore: [16]
             return get_audio_filter_desc(timestamp=packets.timestamp, **filter_args)
         case _libspdl.VideoPackets:
+            # pyre-ignore: [16]
             return get_video_filter_desc(timestamp=packets.timestamp, **filter_args)
         case _libspdl.ImagePackets:
             return get_video_filter_desc(timestamp=None, **filter_args)
