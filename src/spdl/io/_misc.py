@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 __all__ = ["SPDLBackgroundTaskFailure"]
 
 

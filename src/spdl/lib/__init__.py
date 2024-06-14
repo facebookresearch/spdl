@@ -5,11 +5,13 @@ lazy access to the module so that the module won't be loaded until
 it's used by user code.
 """
 
-import atexit
+# pyre-unsafe
+
 import importlib
 import importlib.resources
 import logging
 import sys
+from types import ModuleType
 from typing import Any
 
 _LG = logging.getLogger(__name__)
@@ -31,7 +33,7 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def _import_libspdl():
+def _import_libspdl() -> ModuleType:
     libs = [
         f"{__package__}.{t.name.split('.')[0]}"
         for t in importlib.resources.files(__package__).iterdir()

@@ -28,7 +28,7 @@ void* Buffer::data() {
 // CPUBuffer
 ////////////////////////////////////////////////////////////////////////////////
 CPUBuffer::CPUBuffer(
-    std::vector<size_t> shape_,
+    const std::vector<size_t>& shape_,
     ElemClass elem_class_,
     size_t depth_,
     CPUStorage* storage_)
@@ -48,7 +48,7 @@ inline size_t prod(const std::vector<size_t>& shape) {
 } // namespace
 
 std::unique_ptr<CPUBuffer> cpu_buffer(
-    std::vector<size_t> shape,
+    const std::vector<size_t>& shape,
     ElemClass elem_class,
     size_t depth,
     bool pin_memory) {
@@ -59,7 +59,7 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
       fmt::join(shape, ", "),
       depth);
   return std::make_unique<CPUBuffer>(
-      std::move(shape), elem_class, depth, new CPUStorage{size, pin_memory});
+      shape, elem_class, depth, new CPUStorage{size, pin_memory});
 }
 
 } // namespace spdl::core

@@ -13,8 +13,8 @@ namespace spdl::core {
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig> cfg,
-    std::string filter_desc) {
+    const std::optional<DecodeConfig>& cfg,
+    const std::string& filter_desc) {
   TRACE_EVENT(
       "decoding",
       "decode_packets_ffmpeg",
@@ -38,18 +38,18 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
 
 template FFmpegAudioFramesPtr decode_packets_ffmpeg(
     AudioPacketsPtr packets,
-    const std::optional<DecodeConfig> cfg,
-    std::string filter_desc);
+    const std::optional<DecodeConfig>& cfg,
+    const std::string& filter_desc);
 
 template FFmpegVideoFramesPtr decode_packets_ffmpeg(
     VideoPacketsPtr packets,
-    const std::optional<DecodeConfig> cfg,
-    std::string filter_desc);
+    const std::optional<DecodeConfig>& cfg,
+    const std::string& filter_desc);
 
 template FFmpegImageFramesPtr decode_packets_ffmpeg(
     ImagePacketsPtr packets,
-    const std::optional<DecodeConfig> cfg,
-    std::string filter_desc);
+    const std::optional<DecodeConfig>& cfg,
+    const std::string& filter_desc);
 
 #ifdef SPDL_USE_NVCODEC
 namespace {
@@ -93,7 +93,7 @@ void validate_nvdec_params(
 template <MediaType media_type>
 CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<media_type> packets,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -112,7 +112,7 @@ CUDABufferPtr decode_packets_nvdec(
 
 template CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<MediaType::Video> packets,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -120,7 +120,7 @@ template CUDABufferPtr decode_packets_nvdec(
 
 template CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<MediaType::Image> packets,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -128,7 +128,7 @@ template CUDABufferPtr decode_packets_nvdec(
 
 CUDABufferPtr decode_packets_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -147,13 +147,13 @@ CUDABufferPtr decode_packets_nvdec(
 namespace detail {
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
     const std::string& pix_fmt);
 CUDABufferPtr decode_image_nvjpeg(
     const std::vector<std::string_view>& data,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
     const std::string& pix_fmt);
@@ -162,7 +162,7 @@ CUDABufferPtr decode_image_nvjpeg(
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
     const std::string& pix_fmt) {
@@ -176,7 +176,7 @@ CUDABufferPtr decode_image_nvjpeg(
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::vector<std::string_view>& data,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
     const std::string& pix_fmt) {

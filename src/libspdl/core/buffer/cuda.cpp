@@ -32,16 +32,15 @@ inline size_t prod(const std::vector<size_t>& shape) {
 } // namespace
 
 CUDABufferPtr cuda_buffer(
-    const std::vector<size_t> shape,
+    const std::vector<size_t>& shape,
     const CUDAConfig& cfg,
     ElemClass elem_class,
     size_t depth) {
-  size_t size = depth * prod(shape);
   return std::make_unique<CUDABuffer>(
-      std::move(shape),
+      shape,
       elem_class,
       depth,
-      new CUDAStorage{size, cfg},
+      new CUDAStorage{depth * prod(shape), cfg},
       cfg.device_index);
 }
 

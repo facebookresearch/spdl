@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import asyncio
 import builtins
 import logging

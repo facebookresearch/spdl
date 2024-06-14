@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import math
 
 from spdl.lib import _libspdl

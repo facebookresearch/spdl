@@ -65,7 +65,7 @@ CPUBufferPtr transfer_buffer(
 #endif
 }
 
-CPUStorage cp_to_cpu(const void* src, const std::vector<size_t> shape) {
+CPUStorage cp_to_cpu(const void* src, const std::vector<size_t>& shape) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else

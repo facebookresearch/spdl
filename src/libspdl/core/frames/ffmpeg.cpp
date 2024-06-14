@@ -227,7 +227,7 @@ FFmpegFrames<media_type>::slice(int start, int stop, int step) const
 
 template <MediaType media_type>
 FFmpegVideoFramesPtr FFmpegFrames<media_type>::slice(
-    const std::vector<int64_t> index) const
+    const std::vector<int64_t>& index) const
   requires _IS_VIDEO
 {
   const int numel = frames.size();
@@ -268,9 +268,9 @@ FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int64_t i) const
   return out;
 }
 
-template struct FFmpegFrames<MediaType::Audio>;
-template struct FFmpegFrames<MediaType::Video>;
-template struct FFmpegFrames<MediaType::Image>;
+template class FFmpegFrames<MediaType::Audio>;
+template class FFmpegFrames<MediaType::Video>;
+template class FFmpegFrames<MediaType::Image>;
 
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> clone(const FFmpegFrames<media_type>& src) {

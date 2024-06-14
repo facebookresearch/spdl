@@ -18,7 +18,7 @@ AVIOContextPtr get_io_ctx(
     int64_t (*seek)(void* opaque, int64_t offset, int whence));
 
 AVFormatInputContextPtr get_input_format_ctx(
-    const std::string url,
+    const std::string& url,
     const std::optional<std::string>& format = std::nullopt,
     const std::optional<OptionDict>& format_options = std::nullopt);
 
@@ -38,7 +38,7 @@ AVCodecContextPtr get_decode_codec_ctx_ptr(
 ///////////////////////////////////////////////////////////////////////////////
 
 AVFormatOutputContextPtr get_output_format_ctx(
-    const std::string url,
+    const std::string& url,
     const std::optional<std::string>& format = std::nullopt);
 
 AVFormatOutputContextPtr get_output_format_ctx(

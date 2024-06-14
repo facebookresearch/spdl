@@ -17,7 +17,7 @@ class BasicInterface : public DataInterface {
             std::string{url},
             dmx_cfg.format,
             dmx_cfg.format_options)) {}
-  ~BasicInterface() = default;
+  ~BasicInterface() override = default;
   AVFormatContext* get_fmt_ctx() override {
     return fmt_ctx.get();
   }

@@ -21,7 +21,7 @@ CUDABufferPtr decode_nvdec(
     const CropArea crop,
     int target_width = -1,
     int target_height = -1,
-    const std::optional<std::string> pix_fmt = std::nullopt);
+    const std::optional<std::string>& pix_fmt = std::nullopt);
 
 CUDABufferPtr decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
@@ -29,7 +29,7 @@ CUDABufferPtr decode_nvdec(
     const CropArea crop,
     int target_width = -1,
     int target_height = -1,
-    const std::optional<std::string> pix_fmt = std::nullopt,
+    const std::optional<std::string>& pix_fmt = std::nullopt,
     bool strict = true);
 
 } // namespace spdl::core::detail

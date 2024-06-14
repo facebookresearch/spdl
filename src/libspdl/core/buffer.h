@@ -52,7 +52,7 @@ struct Buffer {
 /// Contiguous array data on CPU memory.
 struct CPUBuffer : public Buffer {
   CPUBuffer(
-      const std::vector<size_t> shape,
+      const std::vector<size_t>& shape,
       ElemClass elem_class,
       size_t depth,
       CPUStorage* storage);
@@ -65,7 +65,7 @@ struct CUDABuffer : Buffer {
   int device_index;
 
   CUDABuffer(
-      std::vector<size_t> shape,
+      const std::vector<size_t>& shape,
       ElemClass elem_class,
       size_t depth,
       CUDAStorage* storage,
@@ -82,7 +82,7 @@ struct CUDABuffer : Buffer {
 
 /// Create ``CPUBuffer``.
 CPUBufferPtr cpu_buffer(
-    const std::vector<size_t> shape,
+    const std::vector<size_t>& shape,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t),
     bool pin_memory = false);
@@ -91,7 +91,7 @@ CPUBufferPtr cpu_buffer(
 ///
 /// Create ``CUDABuffer``.
 CUDABufferPtr cuda_buffer(
-    const std::vector<size_t> shape,
+    const std::vector<size_t>& shape,
     const CUDAConfig& cfg,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t));

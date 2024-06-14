@@ -19,15 +19,6 @@ extern "C" {
 
 namespace spdl::core::detail {
 namespace {
-CUstream get_stream() {
-  TRACE_EVENT("nvdec", "cuStreamCreate");
-  CUstream stream;
-  CHECK_CU(
-      cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING), // CU_STREAM_DEFAULT
-      "Failed to create stream.");
-  VLOG(5) << "CUDA stream: " << (void*)stream;
-  return stream;
-}
 
 struct _Decoder {
   NvDecDecoder decoder{};
@@ -82,7 +73,7 @@ CUDABufferPtr decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt) {
+    const std::optional<std::string>& pix_fmt) {
   size_t num_packets = packets->num_packets();
   if (num_packets == 0) {
     SPDL_FAIL("No packets to decode.");
@@ -181,7 +172,7 @@ template CUDABufferPtr decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt);
+    const std::optional<std::string>& pix_fmt);
 
 template CUDABufferPtr decode_nvdec(
     ImagePacketsPtr packets,
@@ -189,7 +180,7 @@ template CUDABufferPtr decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt);
+    const std::optional<std::string>& pix_fmt);
 
 CUDABufferPtr decode_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
@@ -197,7 +188,7 @@ CUDABufferPtr decode_nvdec(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string> pix_fmt,
+    const std::optional<std::string>& pix_fmt,
     bool strict) {
   size_t num_packets = packets.size();
   if (num_packets == 0) {
