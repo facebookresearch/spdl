@@ -1,7 +1,7 @@
 import asyncio
 
 import numpy as np
-
+import pytest
 import spdl.io
 import spdl.utils
 from spdl.io import get_filter_desc, get_video_filter_desc
@@ -203,6 +203,9 @@ def test_batch_decode_image_rgb24(get_samples):
 
 def test_batch_video_conversion(get_sample):
     """Can decode video clips."""
+    if "tpad" not in spdl.utils.get_ffmpeg_filters():
+        raise pytest.skip("tpad filter is not available. Install FFmepg >= 4.2.")
+
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd, width=320, height=240)
 
