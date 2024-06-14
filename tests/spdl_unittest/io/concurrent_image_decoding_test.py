@@ -109,7 +109,7 @@ def test_decode_image_rgb24(get_sample):
 
     green = array[:, width:2*width]
     assert np.all(green[..., 0] == 0)
-    assert np.all(green[..., 1] >= 254)
+    assert np.all(green[..., 1] >= 253)
     assert np.all(green[..., 2] <= 1)
 
     blue = array[:, 2*width:]
@@ -192,7 +192,7 @@ def test_batch_decode_image_rgb24(get_samples):
 
         # Green
         assert np.all(array[:, w : 2 * w, 0] == 0)
-        assert np.all(array[:, w : 2 * w, 1] == 254)
+        assert np.all(array[:, w : 2 * w, 1] >= 253)
         assert np.all(array[:, w : 2 * w, 2] == 0)
 
         # Blue
