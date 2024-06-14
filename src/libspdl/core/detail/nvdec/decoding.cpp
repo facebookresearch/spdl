@@ -10,7 +10,6 @@
 
 #include <glog/logging.h>
 
-#include <cuda.h>
 #include <cuviddec.h>
 
 extern "C" {

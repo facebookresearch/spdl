@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 
-from spdl.utils import iter_batch
+from spdl.utils import iter_batch  # pyre-ignore: [21]
 
 from ._dataset import DataSet
 
