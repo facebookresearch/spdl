@@ -22,5 +22,5 @@ CPUBufferPtr transfer_buffer(
     size_t depth,
     const void* ptr);
 
-CPUStorage cp_to_cpu(const void* src, const std::vector<size_t> shape);
+CPUStorage cp_to_cpu(const void* src, const std::vector<size_t>& shape);
 } // namespace spdl::core

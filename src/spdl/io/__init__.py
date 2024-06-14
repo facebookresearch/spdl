@@ -1,5 +1,7 @@
 """Implements the core I/O functionalities."""
 
+# pyre-unsafe
+
 # This has to happen before other sub modules are imporeted.
 # Otherwise circular import would occur.
 #
@@ -8,7 +10,7 @@
 # available at the runtime, while simultaneously pleasing all the linters
 # (black, flake8 and pyre) and documentation tools, this seems like
 # the simplest solution.
-# This import is just for annotation, so pleaes overlook this one.
+# This import is just for annotation, so please overlook this one.
 from ._type_stub import *  # noqa
 
 from . import (  # noqa: E402

@@ -92,9 +92,9 @@ const char* DemuxedPackets<media_type>::get_media_format_name() const {
   return detail::get_media_format_name<media_type>(codecpar->format);
 }
 
-template struct DemuxedPackets<MediaType::Audio>;
-template struct DemuxedPackets<MediaType::Video>;
-template struct DemuxedPackets<MediaType::Image>;
+template class DemuxedPackets<MediaType::Audio>;
+template class DemuxedPackets<MediaType::Video>;
+template class DemuxedPackets<MediaType::Image>;
 
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
@@ -104,8 +104,8 @@ PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
   if constexpr (media_type == MediaType::Video) {
     other->frame_rate = src.frame_rate;
   }
-  for (const AVPacket* src : src.get_packets()) {
-    other->push(CHECK_AVALLOCATE(av_packet_clone(src)));
+  for (const AVPacket* pkt : src.get_packets()) {
+    other->push(CHECK_AVALLOCATE(av_packet_clone(pkt)));
   }
   return other;
 }

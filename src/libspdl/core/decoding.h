@@ -24,8 +24,8 @@ struct StreamingDecoder {
 
   explicit StreamingDecoder(
       PacketsPtr<media_type> packets,
-      const std::optional<DecodeConfig> cfg = std::nullopt,
-      const std::string filter_desc = {});
+      const std::optional<DecodeConfig>& cfg = std::nullopt,
+      const std::string& filter_desc = {});
 
   ~StreamingDecoder();
 
@@ -41,13 +41,13 @@ DecoderPtr<media_type> make_decoder(
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig> cfg = std::nullopt,
-    const std::string filter_desc = {});
+    const std::optional<DecodeConfig>& cfg = std::nullopt,
+    const std::string& filter_desc = {});
 
 template <MediaType media_type>
 CUDABufferPtr decode_packets_nvdec(
     PacketsPtr<media_type> packets,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -55,7 +55,7 @@ CUDABufferPtr decode_packets_nvdec(
 
 CUDABufferPtr decode_packets_nvdec(
     std::vector<ImagePacketsPtr>&& packets,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     const CropArea& crop,
     int width,
     int height,
@@ -64,14 +64,14 @@ CUDABufferPtr decode_packets_nvdec(
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
     const std::string& pix_fmt);
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::vector<std::string_view>& data,
-    const CUDAConfig cuda_config,
+    const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
     const std::string& pix_fmt);

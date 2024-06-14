@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 from spdl.io import CUDAConfig, DecodeConfig, DemuxConfig, EncodeConfig
 from spdl.lib import _libspdl
 

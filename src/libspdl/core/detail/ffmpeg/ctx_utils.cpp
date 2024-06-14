@@ -130,7 +130,7 @@ AVFormatInputContextPtr get_input_format_ctx(
 } // namespace
 
 AVFormatInputContextPtr get_input_format_ctx(
-    const std::string url,
+    const std::string& url,
     const std::optional<std::string>& format,
     const std::optional<OptionDict>& format_options) {
   return get_input_format_ctx(url.data(), format, format_options, nullptr);
@@ -219,7 +219,7 @@ AVCodecContextPtr get_decode_codec_ctx_ptr(
 // AVFormatContext (encode)
 ////////////////////////////////////////////////////////////////////////////////
 AVFormatOutputContextPtr get_output_format_ctx(
-    const std::string url,
+    const std::string& url,
     const std::optional<std::string>& format) {
   AVFormatContext* p = nullptr;
   CHECK_AVERROR(

@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import asyncio
 import logging
 from queue import Empty, Queue

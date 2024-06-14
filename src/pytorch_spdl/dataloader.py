@@ -1,5 +1,7 @@
 """This module implements interfaces compatible to PyTorch."""
 
+# pyre-unsafe
+
 import logging
 import warnings
 from collections.abc import Iterable

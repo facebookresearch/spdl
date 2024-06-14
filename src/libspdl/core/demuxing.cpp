@@ -85,7 +85,7 @@ template PacketsPtr<MediaType::Image> Demuxer::demux_window(
     const std::optional<std::string>& bsf);
 
 DemuxerPtr make_demuxer(
-    const std::string src,
+    const std::string& src,
     const SourceAdaptorPtr& adaptor,
     const std::optional<DemuxConfig>& dmx_cfg) {
   TRACE_EVENT("demuxing", "make_demuxer");

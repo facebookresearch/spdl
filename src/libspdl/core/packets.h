@@ -13,7 +13,7 @@ struct AVPacket;
 namespace spdl::core {
 
 template <MediaType media_type>
-struct DemuxedPackets;
+class DemuxedPackets;
 
 using AudioPackets = DemuxedPackets<MediaType::Audio>;
 using VideoPackets = DemuxedPackets<MediaType::Video>;

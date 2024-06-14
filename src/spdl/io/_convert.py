@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import numpy as np
 
 from spdl._internal import import_utils

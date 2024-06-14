@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import contextlib
 import logging
 from collections.abc import AsyncIterator, Iterator

@@ -19,8 +19,8 @@ struct StreamingDecoder<media_type>::Impl {
   detail::Generator<detail::AVFramePtr> gen;
   Impl(
       PacketsPtr<media_type> packets_,
-      const std::optional<DecodeConfig> cfg_,
-      const std::string filter_desc_)
+      const std::optional<DecodeConfig>& cfg_,
+      const std::string& filter_desc_)
       : packets(std::move(packets_)),
         decoder(packets->codecpar, packets->time_base, cfg_),
         filter_graph(detail::get_filter<media_type>(
@@ -61,12 +61,12 @@ template <MediaType media_type>
   requires(media_type != MediaType::Image)
 StreamingDecoder<media_type>::StreamingDecoder(
     PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig> cfg,
-    const std::string filter_desc)
+    const std::optional<DecodeConfig>& cfg,
+    const std::string& filter_desc)
     : pImpl(new StreamingDecoder<media_type>::Impl(
           std::move(packets),
-          std::move(cfg),
-          std::move(filter_desc))) {}
+          cfg,
+          filter_desc)) {}
 
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
@@ -82,7 +82,7 @@ DecoderPtr<media_type> make_decoder(
     const std::string& filter_desc) {
   TRACE_EVENT("decoding", "make_decoder");
   return std::make_unique<spdl::core::StreamingDecoder<media_type>>(
-      std::move(packets), std::move(decode_cfg), std::move(filter_desc));
+      std::move(packets), decode_cfg, filter_desc);
 }
 
 template DecoderPtr<MediaType::Video> make_decoder(
@@ -97,6 +97,6 @@ std::optional<FFmpegFramesPtr<media_type>> StreamingDecoder<media_type>::decode(
   return pImpl->decode(num_frames);
 }
 
-template class StreamingDecoder<MediaType::Video>;
+template struct StreamingDecoder<MediaType::Video>;
 
 } // namespace spdl::core

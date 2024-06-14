@@ -33,7 +33,7 @@ class Demuxer {
 };
 
 DemuxerPtr make_demuxer(
-    const std::string src,
+    const std::string& src,
     const SourceAdaptorPtr& adaptor = nullptr,
     const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
