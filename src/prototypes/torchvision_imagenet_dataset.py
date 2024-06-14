@@ -85,7 +85,7 @@ def _batch_decode(samples: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
     classes = torch.tensor([cls_ for _, cls_ in samples])
 
     frames = [_decode(path) for path, _ in samples]
-    buffer = spdl.io.convert_frames(frames, pin_memory=True)
+    buffer = spdl.io.convert_frames(frames, pin_memory=False)
     buffer = spdl.io.transfer_buffer(
         buffer,
         cuda_config=spdl.io.cuda_config(
