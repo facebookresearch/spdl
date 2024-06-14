@@ -22,12 +22,12 @@ class MemoryMappedFile {
   int64_t pos_ = 0;
 
  public:
-  MemoryMappedFile(const std::string& path) {
+  explicit MemoryMappedFile(const std::string& path) {
     CHECK_AVERROR(
-        av_file_map(path.data(), &buffer_, &buffer_size_, 0, NULL),
+        av_file_map(path.data(), &buffer_, &buffer_size_, 0, nullptr),
         "Failed to map file ({}).",
         path);
-  };
+  }
 
   MemoryMappedFile(const MemoryMappedFile&) = delete;
   MemoryMappedFile& operator=(const MemoryMappedFile&) = delete;
@@ -36,7 +36,7 @@ class MemoryMappedFile {
 
   ~MemoryMappedFile() {
     av_file_unmap(buffer_, buffer_size_);
-  };
+  }
 
  private:
   int read_packet(uint8_t* buf, int buf_size) {
@@ -47,7 +47,7 @@ class MemoryMappedFile {
     memcpy(buf, buffer_ + pos_, buf_size);
     pos_ += buf_size;
     return buf_size;
-  };
+  }
 
   int64_t seek(int64_t offset, int whence) {
     switch (whence) {
@@ -67,16 +67,16 @@ class MemoryMappedFile {
         return -1;
     }
     return pos_;
-  };
+  }
 
  public:
   static int read_packet(void* opaque, uint8_t* buf, int buf_size) {
     return static_cast<MemoryMappedFile*>(opaque)->read_packet(buf, buf_size);
-  };
+  }
 
   static int64_t seek(void* opaque, int64_t offset, int whence) {
     return static_cast<MemoryMappedFile*>(opaque)->seek(offset, whence);
-  };
+  }
 };
 
 class MMapInterface : public DataInterface {

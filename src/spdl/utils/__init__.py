@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 """Utility functions."""
 
 from . import _async, _build, _ffmpeg, _flist, _tracing

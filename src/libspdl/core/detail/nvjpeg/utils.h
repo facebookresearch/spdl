@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "libspdl/core/detail/logging.h"

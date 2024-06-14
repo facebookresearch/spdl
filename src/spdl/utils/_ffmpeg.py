@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 from spdl.lib import _libspdl
 
 __all__ = [

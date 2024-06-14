@@ -25,7 +25,7 @@ namespace spdl::core::detail {
 namespace {
 // for debug
 std::string describe_graph(AVFilterGraph* graph) {
-  char* desc_ = avfilter_graph_dump(graph, NULL);
+  char* desc_ = avfilter_graph_dump(graph, nullptr);
   std::string desc{desc_};
   av_free(static_cast<void*>(desc_));
   return desc;

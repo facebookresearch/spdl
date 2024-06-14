@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import importlib
 from types import ModuleType
 

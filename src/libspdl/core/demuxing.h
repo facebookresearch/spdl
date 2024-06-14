@@ -22,7 +22,7 @@ class Demuxer {
   AVFormatContext* fmt_ctx;
 
  public:
-  Demuxer(std::unique_ptr<DataInterface> di);
+  explicit Demuxer(std::unique_ptr<DataInterface> di);
 
   ~Demuxer();
 

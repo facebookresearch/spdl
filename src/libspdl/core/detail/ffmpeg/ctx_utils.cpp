@@ -6,13 +6,10 @@
 #include <fmt/format.h>
 #include <glog/logging.h>
 
+#include <cassert>
 #include <filesystem>
 #include <mutex>
 #include <set>
-
-extern "C" {
-#include <libavutil/channel_layout.h>
-}
 
 // https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
 // Starting from libavformat 59 (ffmpeg 5),
@@ -50,6 +47,7 @@ void check_empty(const AVDictionary* p) {
     AVDictionaryEntry* t = nullptr;
     std::vector<std::string> keys;
     while ((t = av_dict_get(p, "", t, AV_DICT_IGNORE_SUFFIX))) {
+      assert(t);
       keys.emplace_back(t->key);
     }
     SPDL_FAIL(fmt::format("Unexpected options: {}", fmt::join(keys, ", ")));

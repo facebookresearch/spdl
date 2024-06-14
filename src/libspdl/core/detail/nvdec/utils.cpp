@@ -386,7 +386,7 @@ const char* get_chroma_name(cudaVideoChromaFormat chroma) {
 const char* get_video_signal_format_name(unsigned char video_format) {
   std::vector<const char*> names{
       "Component", "PAL", "NTSC", "SECAM", "MAC", "Unspecified"};
-  if (video_format >= sizeof(names)) {
+  if (video_format >= names.size()) {
     return "Unknown";
   }
   return names[video_format];

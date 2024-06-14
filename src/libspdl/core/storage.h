@@ -26,7 +26,7 @@ class CPUStorage : Storage {
   void* data() const override;
 
   CPUStorage() = default;
-  CPUStorage(size_t size, bool pin_memory = false);
+  explicit CPUStorage(size_t size, bool pin_memory = false);
 
   CPUStorage(const CPUStorage&) = delete;
   CPUStorage& operator=(const CPUStorage&) = delete;
@@ -34,7 +34,7 @@ class CPUStorage : Storage {
   CPUStorage(CPUStorage&&) noexcept;
   CPUStorage& operator=(CPUStorage&&) noexcept;
 
-  ~CPUStorage();
+  ~CPUStorage() override;
 };
 
 class CUDAStorage : Storage {
@@ -42,7 +42,7 @@ class CUDAStorage : Storage {
   void* data_ = nullptr;
 
  public:
-  CUstream stream = 0;
+  CUstream stream = nullptr;
 
   cuda_deleter_fn deleter;
 
@@ -58,7 +58,7 @@ class CUDAStorage : Storage {
   CUDAStorage(CUDAStorage&&) noexcept;
   CUDAStorage& operator=(CUDAStorage&&) noexcept;
 
-  ~CUDAStorage();
+  ~CUDAStorage() override;
 #endif
 };
 

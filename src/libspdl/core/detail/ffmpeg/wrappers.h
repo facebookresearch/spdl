@@ -101,7 +101,7 @@ using AVFilterGraphPtr = std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter>;
 // AVFrameAutoUnref
 struct AVFrameAutoUnref {
   AVFrame* p;
-  AVFrameAutoUnref(AVFrame* p);
+  explicit AVFrameAutoUnref(AVFrame* p);
   ~AVFrameAutoUnref();
 };
 

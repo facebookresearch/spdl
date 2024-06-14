@@ -36,7 +36,7 @@ struct Generator {
 
   handle_type h_;
 
-  Generator(handle_type h) : h_(h) {}
+  explicit Generator(handle_type h) : h_(h) {}
   ~Generator() {
     h_.destroy();
   }

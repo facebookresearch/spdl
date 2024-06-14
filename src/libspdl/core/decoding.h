@@ -22,7 +22,7 @@ struct StreamingDecoder {
   struct Impl;
   Impl* pImpl;
 
-  StreamingDecoder(
+  explicit StreamingDecoder(
       PacketsPtr<media_type> packets,
       const std::optional<DecodeConfig> cfg = std::nullopt,
       const std::string filter_desc = {});

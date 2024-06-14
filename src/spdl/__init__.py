@@ -2,3 +2,5 @@
 
 Do not add anything here, thanks.
 """
+
+# pyre-strict
