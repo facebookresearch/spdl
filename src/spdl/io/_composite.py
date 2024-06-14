@@ -18,7 +18,7 @@ from spdl.io import (
 )
 
 from spdl.lib import _libspdl
-from spdl.utils import run_async
+from spdl.utils import run_async  # pyre-ignore: [21]
 
 from . import _core, _preprocessing
 

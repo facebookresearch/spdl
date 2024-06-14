@@ -209,7 +209,7 @@ def _get_batch_sampler(
     )
 
 
-class _DummyDataSet:
+class _DummyDataSet(Dataset):
     """We perform load and preprocessing in [batch] sampler, but PyTorch DataLoader
 
     expects that dataset to be queried from the output of the sampler, so this dataset
@@ -385,9 +385,10 @@ def DataLoader(
                 ds, sampler=_loader, batch_size=None, num_workers=0
             )
     else:
-        num_samples = len(dataset)
+        num_samples = len(dataset)  # pyre-ignore: [6]
         if batch_size is not None or batch_sampler is not None:
             # Batch sampling mode
+            assert isinstance(batch_size, int)
             _batch_sampler = batch_sampler or BatchSampler(
                 sampler or _get_sampler(num_samples, shuffle, generator),
                 batch_size,
