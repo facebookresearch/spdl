@@ -1,5 +1,7 @@
 """Test numba __cuda_array_interface__ integration"""
 
+# pyre-ignore-all-errors
+
 from pathlib import Path
 
 import numba.cuda as cuda

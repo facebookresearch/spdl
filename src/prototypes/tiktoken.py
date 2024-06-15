@@ -1,5 +1,7 @@
 """Bulk tokenize text files with OpenAI's TikToken"""
 
+# pyre-ignore-all-errors
+
 import asyncio
 import concurrent.futures
 import time
