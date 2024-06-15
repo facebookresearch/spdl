@@ -37,9 +37,9 @@ void encode(
   if (data.dtype().code != (uint8_t)nb::dlpack::dtype_code::UInt) {
     throw std::runtime_error("Only unsigned interger type is supported");
   }
-  auto bit_depth = data.dtype().bits / 8;
+  auto depth = data.dtype().bits / 8;
   nb::gil_scoped_release g;
-  encode_image(path, src, shape, bit_depth, pix_fmt, encode_cfg);
+  encode_image(path, src, shape, depth, pix_fmt, encode_cfg);
 }
 
 void encode_cuda(
@@ -52,10 +52,10 @@ void encode_cuda(
   if (data.dtype().code != (uint8_t)nb::dlpack::dtype_code::UInt) {
     throw std::runtime_error("Only unsigned interger type is supported");
   }
-  auto bit_depth = data.dtype().bits / 8;
+  auto depth = data.dtype().bits / 8;
   nb::gil_scoped_release g;
   auto storage = cp_to_cpu(src, shape);
-  encode_image(uri, storage.data(), shape, bit_depth, pix_fmt, encode_cfg);
+  encode_image(uri, storage.data(), shape, depth, pix_fmt, encode_cfg);
 }
 } // namespace
 
