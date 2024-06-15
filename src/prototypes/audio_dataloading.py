@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Benchmark loading audio dataset"""
 
+# pyre-ignore-all-errors
+
 import logging
 import time
 from pathlib import Path

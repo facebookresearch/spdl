@@ -1,5 +1,7 @@
 """Experiment for running asyncio.loop in background thread and decode media"""
 
+# pyre-ignore-all-errors
+
 import asyncio
 import logging
 import signal

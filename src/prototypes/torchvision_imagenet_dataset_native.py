@@ -1,12 +1,13 @@
 """Referench script to benchmark the performance of PyTorch DataLoader"""
 
+# pyre-ignore-all-errors
+
 import contextlib
 import logging
 import time
 from pathlib import Path
 
 import torch
-from torch import Tensor
 from torch.profiler import profile
 from torchvision.datasets.imagenet import ImageNet
 

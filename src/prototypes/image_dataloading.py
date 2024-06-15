@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Benchmark loading image dataset"""
 
+# pyre-ignore-all-errors
+
 import logging
 import signal
 import time

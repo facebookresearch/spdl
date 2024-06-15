@@ -1,3 +1,5 @@
+# pyre-ignore-all-errors
+
 import asyncio
 
 import spdl.io

@@ -1,5 +1,7 @@
 """Test decoding with image classification"""
 
+# pyre-ignore-all-errors
+
 import contextlib
 import logging
 import time

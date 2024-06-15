@@ -1,5 +1,7 @@
 """Test the performance of SPDL and PyTorch DataLoader integration"""
 
+# pyre-ignore-all-errors
+
 import contextlib
 import logging
 import time

@@ -1,5 +1,7 @@
 """Benchmark DALI's batch image decoding performance"""
 
+# pyre-ignore-all-errors
+
 from timeit import default_timer as timer
 
 import nvidia.dali.fn as fn

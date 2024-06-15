@@ -1,3 +1,5 @@
+# pyre-ignore-all-errors
+
 import time
 
 import spdl.io

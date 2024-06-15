@@ -1,3 +1,5 @@
+# pyre-ignore-all-errors
+
 import logging
 import time
 from pathlib import Path

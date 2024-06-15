@@ -1,8 +1,9 @@
+# pyre-ignore-all-errors
+
 import logging
 import time
 
 from spdl.dataset import _dataset
-from spdl.dataset.imagenet import ImageNet
 from spdl.dataset.librispeech import LibriSpeech
 
 
