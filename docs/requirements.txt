@@ -1,0 +1,8 @@
+mkdocs
+mkdocs-autorefs
+mkdocs-material
+mkdocs-plugin-inline-svg
+mkdocstrings
+mkdocstrings-python
+mkdoxy
+pymdown-extensions
