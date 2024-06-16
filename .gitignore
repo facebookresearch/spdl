@@ -1,6 +1,6 @@
 /scripts
 /src/spdl/include
-/third_party/sqlite/csv.c
+/docs/source/_autosummary/
 *.zip
 *.tar.gz
 *.tar.xz
