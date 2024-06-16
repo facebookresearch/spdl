@@ -18,7 +18,6 @@ from . import (  # noqa: E402
     _config,
     _convert,
     _core,
-    _misc,
     _preprocessing,
     _type_stub,
 )
@@ -29,7 +28,6 @@ _mods = [
     _config,
     _convert,
     _core,
-    _misc,
     _preprocessing,
     _type_stub,
 ]
