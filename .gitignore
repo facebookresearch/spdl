@@ -1,7 +1,7 @@
 /scripts
 /src/spdl/include
-/docs/source/_autosummary/
-/docs/doctrees/
+/docs/source/generated/
+/docs/_build/
 *.zip
 *.tar.gz
 *.tar.xz
