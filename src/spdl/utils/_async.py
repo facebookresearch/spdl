@@ -34,17 +34,17 @@ async def run_async(
 ) -> Awaitable[T]:
     """Run the given synchronous function asynchronously (in a thread).
 
-    !!! note
+    .. note::
 
-        To achieve the true concurrency, the function must be thread-safe and must
-        release the GIL.
+       To achieve the true concurrency, the function must be thread-safe and must
+       release the GIL.
 
     Args:
         func: The function to run.
-        args: Positional arguments to the `func`.
+        args: Positional arguments to the ``func``.
         _executor: Custom executor.
-            If `None` the default executor of the current event loop is used.
-        kwargs: Keyword arguments to the `func`.
+            If ``None`` the default executor of the current event loop is used.
+        kwargs: Keyword arguments to the ``func``.
     """
     loop = asyncio.get_running_loop()
     _func = functools.partial(func, *args, **kwargs)
@@ -173,40 +173,40 @@ async def async_generate(
     concurrency: int = 3,
     name: str | None = None,
     timeout: float | None = _TIMEOUT,
-    sentinel=_SENTINEL,
+    sentinel: object = _SENTINEL,
 ) -> None:
     """Apply async function to synchronous iterator.
 
     This function iterates on a synchronous iterator, applies an async function, and
     puts the results into an async queue.
 
-    ```
-    ┌───────────┐
-    │ Iterator  │
-    └─────┬─────┘
-          │
-         ┌▼┐
-         │ │
-         │ │ AsyncQueue
-         │ │
-         └─┘
-    ```
+    .. code-block::
+
+       ┌───────────┐
+       │ Iterator  │
+       └─────┬─────┘
+             │
+            ┌▼┐
+            │ │
+            │ │ AsyncQueue
+            │ │
+            └─┘
 
     Optionally, it applies concurrency when applying the async function.
     `concurrency` argument controls the number of coroutines that are scheduled
     concurrently. At most `concurrency` number of coroutines are scheduled
     at a time.
 
-    !!! warning:
+    .. warning::
 
-        This function assumes that user-provided `iterator` returns
-        within a reasonable time. If the `iterator` gets stuck,
-        this function also gets stuck.
+       This function assumes that user-provided ``iterator`` returns
+       within a reasonable time. If the ``iterator`` blocks,
+       this function also blocks.
 
-    !!! note:
+    .. note::
 
-        `afunc` will be applied to multiple items concurrently, so it should
-        refrain from modifying global states.
+       ``afunc`` will be applied to multiple items concurrently, so it should
+       refrain from modifying global states.
 
     Args:
         iterator: Iterator to apply the async function to.
@@ -219,14 +219,14 @@ async def async_generate(
             a result object or `sentinel` object into the queue.
             If `None`, then it blocks indefinetly.
 
-            !!! note:
+            .. note::
 
-                `timeout` is intended to only escape from unexpected deadlock
-                condition, and it does not garantee a graceful exit.
-                When timeout happens, the sentinel might not be propagated
-                properly, which leads to the situation where the downstream
-                tasks will not receive sentinel.
-                So make sure that the downstream tasks also have timeout.
+               ``timeout`` is intended to only escape from unexpected deadlock
+               condition, and it does not garantee a graceful exit.
+               When timeout happens, the sentinel might not be propagated
+               properly, which leads to the situation where the downstream
+               tasks will not receive sentinel.
+               So make sure that the downstream tasks also have timeout.
     """
     if concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
@@ -278,17 +278,17 @@ async def async_iterate(
 ) -> AsyncIterator[T]:
     """Iterate over the given queue.
 
-    ```
-           ┌─┐
-           │ │
-           │ │ AsyncQueue
-           │ │
-           └┬┘
-            │
-    ┌───────▼────────┐
-    │ Async Iterator │
-    └────────────────┘
-    ```
+    .. code-block::
+
+              ┌─┐
+              │ │
+              │ │ AsyncQueue
+              │ │
+              └┬┘
+               │
+       ┌───────▼────────┐
+       │ Async Iterator │
+       └────────────────┘
 
     Args:
         queue: Asynchronous queue where the results of some task are put.
@@ -317,25 +317,26 @@ async def async_pipe(
     timeout: float | None = _TIMEOUT,
     sentinel=_SENTINEL,
 ) -> None:
-    """Apply an async function to the outputs of the input queue and put the results to the output queue.
+    """Apply an async function to the outputs of the input queue and put the
+    results to the output queue.
 
-    ```
-           ┌─┐
-           │ │
-           │ │ AsyncQueue
-           │ │
-           └┬┘
-            │
-    ┌───────▼────────┐
-    │ Async Function │
-    └───────┬────────┘
-            │
-           ┌▼┐
-           │ │
-           │ │ AsyncQueue
-           │ │
-           └─┘
-    ```
+    .. code-block::
+
+              ┌─┐
+              │ │
+              │ │ AsyncQueue
+              │ │
+              └┬┘
+               │
+       ┌───────▼────────┐
+       │ Async Function │
+       └───────┬────────┘
+               │
+              ┌▼┐
+              │ │
+              │ │ AsyncQueue
+              │ │
+              └─┘
 
     Args:
         func: Async function that to be applied to the items in the input queue.

@@ -12,6 +12,7 @@ __all__ = [
     "trace_default_demux_executor_queue_size",
     "trace_event",
     "tracing",
+    "trace_gc",
 ]
 
 
@@ -30,11 +31,10 @@ def tracing(
         process_name: The name of the tracing process.
         enable: Whether to enable tracing.
 
-    ??? note "Example"
-        ```python
-        with tracing("/tmp/trace.pftrace"):
-            do_operations()
-        ```
+    .. admonition:: Example
+
+       >>> with tracing("/tmp/trace.pftrace"):
+       >>>     do_operations()
     """
     if not enable:
         yield
@@ -58,13 +58,12 @@ def trace_event(name: str):
     Args:
         name: The name of the tracing slice.
 
-    ??? note "Example"
-        ```python
-        with tracing():
-            # Tracce `my_operation()` with the name "my_operation".
-            with trace_event("my_operation"):
-                my_operation()
-        ```
+    .. admonition:: Example
+
+       >>> with tracing():
+       >>>     # Tracce `my_operation()` with the name "my_operation".
+       >>>     with trace_event("my_operation"):
+       >>>         my_operation()
     """
     _libspdl.trace_event_begin(name)
     yield
@@ -82,12 +81,11 @@ def trace_counter(i: int, val: int | float):
         i: The index of the counter. Must be [0, 7].
         val: The value of the counter.
 
-    ??? note "Example"
-        ```python
-        with tracing():
-            trace_counter(0, 2.5);
-            trace_counter(0, 3);
-        ```
+    .. admonition:: Example
+
+       >>> with tracing():
+       >>>     trace_counter(0, 2.5);
+       >>>     trace_counter(0, 3);
     """
     _libspdl.trace_counter(i, val)
 
@@ -95,13 +93,12 @@ def trace_counter(i: int, val: int | float):
 def trace_default_decode_executor_queue_size():
     """Trace the number of queued items in the default decode executor queue.
 
-    ??? note "Example"
-        ```python
-        with tracing():
-            trace_default_decode_executor_queue_size()
-            # ... do other stuff
-            trace_default_decode_executor_queue_size()
-        ```
+    .. admonition:: Example
+
+       >>> with tracing():
+       >>>     trace_default_decode_executor_queue_size()
+       >>>     # ... do other stuff
+       >>>     trace_default_decode_executor_queue_size()
     """
     _libspdl.trace_default_decode_executor_queue_size()
 
@@ -109,13 +106,12 @@ def trace_default_decode_executor_queue_size():
 def trace_default_demux_executor_queue_size():
     """Trace the number of queued items in the default demux executor queue.
 
-    ??? note "Example"
-        ```python
-        with tracing():
-            trace_default_demux_executor_queue_size()
-            # ... do other stuff
-            trace_default_demux_executor_queue_size()
-        ```
+    .. admonition:: Example
+
+       >>> with tracing():
+       >>>     trace_default_demux_executor_queue_size()
+       >>>     # ... do other stuff
+       >>>     trace_default_demux_executor_queue_size()
     """
     _libspdl.trace_default_demux_executor_queue_size()
 

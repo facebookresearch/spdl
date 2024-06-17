@@ -11,6 +11,7 @@ from spdl.io import (
     CPUBuffer,
     CUDABuffer,
     CUDAConfig,
+    DecodeConfig,
     ImageFrames,
     ImagePackets,
     VideoFrames,
@@ -78,11 +79,10 @@ def demux_audio(
         timestamp:
             A time window. If omitted, the entire audio are demuxed.
 
-    Other args:
         demux_config (DemuxConfig): Custom I/O config.
 
     Returns:
-        (AudioPackets): object.
+        Demuxed audio packets.
     """
     return _libspdl.demux_audio(src, timestamp=timestamp, **kwargs)
 
@@ -90,7 +90,7 @@ def demux_audio(
 async def async_demux_audio(
     src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> AudioPackets:
-    """Async version of [demux_audio][spdl.io.demux_audio]"""
+    """Async version of :py:func:`~spdl.io.demux_audio`."""
     return await run_async(demux_audio, src, timestamp=timestamp, **kwargs)
 
 
@@ -107,11 +107,10 @@ def demux_video(
         timestamp:
             A time window. If omitted, the entire data are demuxed.
 
-    Other args:
         demux_config (DemuxConfig): Custom I/O config.
 
     Returns:
-        (VideoPackets): object.
+        Demuxed video packets.
     """
     return _libspdl.demux_video(src, timestamp=timestamp, **kwargs)
 
@@ -119,7 +118,7 @@ def demux_video(
 async def async_demux_video(
     src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
 ) -> VideoPackets:
-    """Async version of [demux_video][spdl.io.demux_video]"""
+    """Async version of :py:func:`~spdl.io.demux_video`."""
     return await run_async(demux_video, src, timestamp=timestamp, **kwargs)
 
 
@@ -131,23 +130,21 @@ def demux_image(src: str | bytes, **kwargs) -> ImagePackets:
             such as local file path or URL. If `bytes` type, then
             they are interpreted as in-memory data.
 
-
-    Other args:
         demux_config (DemuxConfig): Custom I/O config.
 
     Returns:
-        (ImagePackets): object.
+        Demuxed image packets.
     """
     return _libspdl.demux_image(src, **kwargs)
 
 
 async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
-    """Async version of [demux_image][spdl.io.demux_image]"""
+    """Async version of :py:func:`~spdl.io.demux_image`."""
     return await run_async(demux_image, src, **kwargs)
 
 
 ################################################################################
-# Demuxing
+# Streaming Demuxing
 ################################################################################
 
 
@@ -163,11 +160,10 @@ def streaming_demux_audio(
         timestamps: List of timestamps, indicating the start and end time of the window
             in seconds.
 
-    Other args:
         demux_config (DemuxConfig): Custom I/O config.
 
     Yields:
-        AudioPackets object, corresponds to the given window.
+        Packets objects correspond to the given windows.
     """
     demuxer = _libspdl._demuxer(src, **kwargs)
     for window in timestamps:
@@ -187,11 +183,10 @@ def streaming_demux_video(
         timestamps: List of timestamps, indicating the start and end time of the window
             in seconds.
 
-    Other args:
         demux_config (DemuxConfig): Custom I/O config.
 
-    Returns:
-        VideoPackets object, corresponds to the given window.
+    Yields:
+        Packets objects correspond to the given windows.
     """
     demuxer = _libspdl._demuxer(src, **kwargs)
     for window in timestamps:
@@ -238,7 +233,7 @@ async def _stream_demux(media_type, src, timestamps, bsf=None, **kwargs):
 async def async_streaming_demux_audio(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[AudioPackets]:
-    """Async version of [streaming_demux_audio][spdl.io.streaming_demux_audio]."""
+    """Async version of :py:func:`~spdl.io.streaming_demux_audio`."""
     async for packets in _stream_demux("audio", src, timestamps, **kwargs):
         yield packets
 
@@ -246,7 +241,7 @@ async def async_streaming_demux_audio(
 async def async_streaming_demux_video(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[VideoPackets]:
-    """Async version of [streaming_demux_video][spdl.io.streaming_demux_video]."""
+    """Async version of :py:func:`~spdl.io.streaming_demux_video`."""
     async for packets in _stream_demux("video", src, timestamps, **kwargs):
         yield packets
 
@@ -276,16 +271,14 @@ def decode_packets(packets, filter_desc=None, **kwargs):
     Args:
         packets (AudioPackets, VideoPackets or ImagePackets): Packets object.
 
-    Other args:
-        decode_config (DecodeConfig):
-            *Optional:* Custom decode config.
-
         filter_desc (str):
             *Optional:* Custom filter applied after decoding.
 
+        decode_config (DecodeConfig):
+            *Optional:* Custom decode config.
+
     Returns:
-        (AudioFrames, VideoFrames or ImageFrames): A Frames object.
-            The media type of the returned object corresponds to the input Packets type.
+        Frames object.
     """
     if filter_desc is None:
         filter_desc = _preprocessing.get_filter_desc(packets)
@@ -301,7 +294,7 @@ async def async_decode_packets(packets: ImagePackets, **kwargs) -> ImageFrames: 
 
 
 async def async_decode_packets(packets, **kwargs):
-    """Async version of [decode_packets][spdl.io.decode_packets]."""
+    """Async version of :py:func:`~spdl.io.decode_packets`."""
     return await run_async(decode_packets, packets, **kwargs)
 
 
@@ -311,24 +304,34 @@ def decode_packets_nvdec(
     cuda_config: CUDAConfig,
     **kwargs,
 ) -> CUDABuffer:
-    """Decode packets with NVDEC.
+    """**[Experimental]** Decode packets with NVDEC.
 
-    Unlike FFmpeg-based decoding, NVDEC returns GPU buffer directly.
+    .. warning::
+
+       This API is exmperimental. The performance is not probed, and the specification
+       might change.
+
+    .. note::
+
+       Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
+
+    .. note::
+
+       For image, only baseline (non-progressive) JPEG formats are supported.
 
     Args:
         packets: Packets object.
 
         cuda_config: The CUDA device to use for decoding.
 
-    Other args:
-        crop_left,crop_top,crop_right,crop_bottom (int):
+        crop_left, crop_top, crop_right, crop_bottom (int):
             *Optional:* Crop the given number of pixels from each side.
 
-        width,height (int): *Optional:* Resize the frame. Resizing is done after
+        width, height (int): *Optional:* Resize the frame. Resizing is done after
             cropping.
 
         pix_fmt (str or `None`): *Optional:* Change the format of the pixel.
-            Supported value is `"rgba"`. Default: `"rgba"`.
+            Supported value is ``"rgba"``. Default: ``"rgba"``.
 
     Returns:
         A CUDABuffer object.
@@ -342,27 +345,34 @@ async def async_decode_packets_nvdec(
     cuda_config: CUDAConfig,
     **kwargs,
 ) -> CUDABuffer:
-    """Async version of [decode_packets_nvdec][spdl.io.decode_packets_nvdec]."""
+    """**[Experimental]** Async version of :py:func:`~spdl.io.decode_packets_nvdec`."""
     return await run_async(
         decode_packets_nvdec, packets, cuda_config=cuda_config, **kwargs
     )
 
 
 def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDABuffer:
-    """Decode image with nvJPEG.
+    """**[Experimental]** Decode image with nvJPEG.
 
-    Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
+    .. warning::
+
+       This API is exmperimental. The performance is not probed, and the specification
+       might change.
+
+    .. note::
+
+       Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
 
     Args:
         src: File path to a JPEG image or data in bytes.
         cuda_config: The CUDA device to use for decoding.
 
-    Other args:
+        scale_width, scale_height (int): Resize image.
         pix_fmt (str): *Optional* Output pixel format.
-            Supported values are `"RGB"` or `"BGR"`.
+            Supported values are ``"RGB"`` or ``"BGR"``.
 
     Returns:
-        A CUDABuffer object. Shape is [C==3, H, W].
+        A CUDABuffer object. Shape is ``[C==3, H, W]``.
     """
     if isinstance(src, bytes):
         data = src
@@ -375,23 +385,30 @@ def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDA
 async def async_decode_image_nvjpeg(
     src: str | bytes, *, cuda_config: CUDAConfig, **kwargs
 ) -> CUDABuffer:
-    """Async version of [decode_image_nvjpeg][spdl.io.decode_image_nvjpeg]."""
+    """**[Experimental]** Async version of :py:func:`~spdl.io.decode_image_nvjpeg`."""
     return await run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
 
 
 def streaming_decode_packets(
-    packets: VideoPackets, num_frames: int, **kwargs
+    packets: VideoPackets,
+    num_frames: int,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str = "",
 ) -> Iterator[VideoFrames]:
     """Decode the video packets chunk by chunk.
 
     Args:
-        packets: VideoPackets object.
+        packets: Input packets.
         num_frames: Number of frames to decode at a time.
+        decode_config: *Optional:* Custom decoding config.
+        filter_desc: *Optional:* Custom filter description.
 
     Yields:
-        VideoFrames object containing at most `num_frames` frames.
+        VideoFrames object containing at most ``num_frames`` frames.
     """
-    decoder = _libspdl._streaming_decoder(packets, **kwargs)
+    decoder = _libspdl._streaming_decoder(
+        packets, decode_config=decode_config, filter_desc=filter_desc
+    )
     while True:
         decoder, frames = _libspdl._decode(decoder, num_frames)
         if frames is None:
@@ -423,7 +440,7 @@ async def _streaming_decoder(constructor, packets, **kwargs):
 async def async_streaming_decode_packets(
     packets: VideoPackets, num_frames: int, **kwargs
 ) -> AsyncIterator[VideoFrames]:
-    """Async version of [streaming_decode_packets][spdl.io.streaming_decode_packets]."""
+    """Async version of :py:func:`~spdl.io.streaming_decode_packets`."""
     decoder = _libspdl._streaming_decoder
     async with _streaming_decoder(decoder, packets, **kwargs) as _decoder:
         while (item := await _decoder.decode(num_frames)) is not None:
@@ -452,31 +469,39 @@ def convert_frames(
         frames: Frames objects.
 
     Returns:
-        (CPUBuffer): A Buffer object.
+        A Buffer object.
             The shape of the buffer obejct is
 
-            - AudioFrames -> `[C, H]` or `[N, C]`.
-            - VideoFrames -> `[N, C, H, W]` or `[N, H, W, C]`.
-            - ImageFrames -> `[C, H, W]`.
+            - ``AudioFrames`` -> ``[C, H]`` or ``[N, C]``.
+            - ``VideoFrames`` -> ``[N, C, H, W]`` or ``[N, H, W, C]``.
+            - ``ImageFrames`` -> ``[C, H, W]``.
+            - ``list[AudioFrames]`` -> ``[B, C, H]`` or ``[B, N, C]``.
+            - ``list[VideoFrames]`` -> ``[B, N, C, H, W]`` or ``[B, N, H, W, C]``.
+            - ``list[ImageFrames]`` -> ``[B, C, H, W]``.
 
             where
 
-            - `C`: channel (color channel or audio channel)
-            - `N`: frames
-            - `W`: width
-            - `H`: height
-
-            If a list of Frames objects are passed, then they are treated as one batch,
-            so that the resulting buffer object has batch dimention at the beginning.
+            - ``B``: batch
+            - ``C``: channel (color channel or audio channel)
+            - ``N``: frames
+            - ``W``: width
+            - ``H``: height
     """
     return _libspdl.convert_frames(frames, **kwargs)
 
 
 async def async_convert_frames(
-    frames: AudioFrames | VideoFrames | ImageFrames | list[ImageFrames],
+    frames: (
+        AudioFrames
+        | VideoFrames
+        | ImageFrames
+        | list[AudioFrames]
+        | list[VideoFrames]
+        | list[ImageFrames]
+    ),
     **kwargs,
 ) -> CPUBuffer:
-    """Async version of [convert_frames][spdl.io.convert_frames]."""
+    """Async version of :py:func:`~spdl.io.convert_frames`."""
     return await run_async(convert_frames, frames, **kwargs)
 
 
@@ -484,15 +509,14 @@ async def async_convert_frames(
 # Device data transfer
 ################################################################################
 def transfer_buffer(buffer: CPUBuffer, *, cuda_config: CUDAConfig) -> CUDABuffer:
-    """Move the given CPU buffer to GPU.
+    """Move the given CPU buffer to CUDA device.
 
     Args:
-        buffer: Source data
-
-        cuda_config: Target GPU.
+        buffer: Source data.
+        cuda_config: Target CUDA device configuration.
 
     Returns:
-        Buffer data on the target GPU.
+        Buffer data on the target GPU device.
     """
     return _libspdl.transfer_buffer(buffer, cuda_config=cuda_config)
 
@@ -500,20 +524,12 @@ def transfer_buffer(buffer: CPUBuffer, *, cuda_config: CUDAConfig) -> CUDABuffer
 async def async_transfer_buffer(
     buffer: CPUBuffer, *, cuda_config: CUDAConfig
 ) -> CUDABuffer:
-    """Transfer the given buffer to CUDA device.
-
-    Args:
-        buffer: Buffer object on host memory.
-        cuda_config: CUDA configuration.
-
-    Returns:
-        (CUDABuffer): A Buffer object.
-    """
+    """Async version of :py:func:`~spdl.io.transfer_buffer`."""
     return await run_async(transfer_buffer, buffer, cuda_config=cuda_config)
 
 
 def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
-    """Copy the given CUDA buffer to CPU.
+    """Move the given CUDA buffer to CPU.
 
     Args:
         buffer: Source data
@@ -525,14 +541,7 @@ def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
 
 
 def async_transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
-    """Copy the given CUDA buffer to CPU.
-
-    Args:
-        buffer: Source data
-
-    Returns:
-        Buffer data on CPU.
-    """
+    """Async version of :py:func:`~spdl.io.transfer_buffer_cpu`."""
     return run_async(transfer_buffer_cpu, buffer)
 
 
@@ -550,24 +559,22 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
         path: The path to which the data are written.
 
         data (NumPy NDArray, PyTorch Tensor):
-            Image data in array format. The data  must be `uint8` type,
+            Image data in array format. The data  must be ``uint8`` type,
             either on CPU or CUDA device.
 
             The shape must be one of the following and must match the
-            value of `pix_fmt`.
+            value of ``pix_fmt``.
 
-            - `(height, width, channel==3)` when `pix_fmt="rgb24"`
-            - `(height, width)` when `pix_fmt=gray8`
-            - `(channel==3, height, width)` when `pix_fmt="yuv444p"`
+            - ``(height, width, channel==3)`` when ``pix_fmt="rgb24"``
+            - ``(height, width)`` when ``pix_fmt=gray8``
+            - ``(channel==3, height, width)`` when ``pix_fmt="yuv444p"``
 
         pix_fmt: See above.
 
-    Other args:
         encode_config (EncodeConfig): Customize the encoding.
 
-    ??? note "Example - Save image as PNG with resizing"
+    Example - Save image as PNG with resizing
 
-        ```python
         >>> import asyncio
         >>> import numpy as np
         >>> import spdl.io
@@ -577,31 +584,35 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
         ...     "foo.png",
         ...     data,
         ...     pix_fmt="rgb24",
-        ...     encode_config=spdl.io.encode_config(width=198, height=96, scale_algo="neighbor"),
+        ...     encode_config=spdl.io.encode_config(
+        ...         width=198,
+        ...         height=96,
+        ...         scale_algo="neighbor",
+        ...     ),
         ... )
         >>> asyncio.run(coro)
         >>>
-        ```
 
-    ??? note "Example - Directly save CUDA tensor as image"
+    Example - Save CUDA tensor as image
 
-        ```python
         >>> import torch
         >>>
         >>> data = torch.randint(255, size=(32, 16, 3), dtype=torch.uint8, device="cuda")
-        >>> coro = spdl.io.async_encode_image(
-        ...     "foo.png",
-        ...     data,
-        ...     pix_fmt="rgb24",
-        ... )
-        >>> asyncio.run(coro)
         >>>
-        ```
-
+        >>> async def encode(data):
+        >>>     buffer = await spdl.io.async_transfer_buffer_cpu(data)
+        >>>     return await spdl.io.async_encode_image(
+        ...         "foo.png",
+        ...         buffer,
+        ...         pix_fmt="rgb24",
+        ...     )
+        ...
+        >>> asyncio.run(encode(data))
+        >>>
     """
     return _libspdl.encode_image(path, data, pix_fmt=pix_fmt, **kwargs)
 
 
 async def async_encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
-    """Async version of [encode_image][spdl.io.encode_image]."""
+    """Async version of :py:func:`~spdl.io.encode_image`."""
     return await run_async(encode_image, path, data, pix_fmt, **kwargs)

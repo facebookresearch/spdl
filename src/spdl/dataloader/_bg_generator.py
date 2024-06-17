@@ -104,20 +104,20 @@ class _thread_manager:
 
 
 class BackgroundGenerator(Generic[T]):
-    """Run generator in background and iterate the items.
+    """**[Experimental]** Run generator in background and iterate the items.
 
     Args:
         iterable: Async generator to run in the background.
 
         num_workers: The number of worker threads in the default thread executor.
-            If `loop` is provided, this argument is ignored.
+            If ``loop`` is provided, this argument is ignored.
 
         queue_size: The size of the queue that is used to pass the
             generated items from the background thread to the main thread.
             If the queue is full, the background thread will be blocked.
 
         timeout: The maximum time to wait for the generator to yield an item.
-            If the generator does not yield an item within this time, `TimeoutError`
+            If the generator does not yield an item within this time, ``TimeoutError``
             is raised.
 
             This parameter is intended for breaking unforseen situations where
@@ -125,20 +125,18 @@ class BackgroundGenerator(Generic[T]):
 
         loop: If provided, use this event loop to execute the generator.
             Otherwise, a new event loop will be created. When providing a loop,
-            `num_workers` is ignored, so the executor must be configured by
+            ``num_workers`` is ignored, so the executor must be configured by
             client code.
 
-    ??? note "Example"
+    .. admonition:: Example
 
-        ```python
-        async def generator():
-            for i in range(10):
-                yield i
-
-        processor = BackgroundGenerator(generator())
-        for item in processor:
-            # Do something with the item.
-        ```
+       >>> async def generator():
+       >>>     for i in range(10):
+       >>>         yield i
+       >>>
+       >>> processor = BackgroundGenerator(generator())
+       >>> for item in processor:
+       >>>     # Do something with the item.
     """
 
     def __init__(

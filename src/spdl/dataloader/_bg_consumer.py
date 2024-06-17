@@ -64,7 +64,16 @@ class _QueueWrapper(Queue):
 
 
 class BackgroundConsumer:
-    """Run tasks in background thread."""
+    """**[Experimental]** Run coroutines in background thread.
+
+    Args:
+        num_workers: The number of threads to run in background.
+
+        loop: If provided, use this event loop to execute the generator.
+            Otherwise, a new event loop will be created. When providing a loop,
+            ``num_workers`` is ignored, so the executor must be configured by
+            client code.
+    """
 
     def __init__(
         self,
