@@ -14,7 +14,7 @@ __all__ = [
 def demux_config(**kwargs) -> DemuxConfig:
     """Customize demuxing behavior.
 
-    Other Args:
+    Args:
         format (str):
             *Optional* Overwrite format. Can be used if the source file does not have
             a header.
@@ -28,24 +28,23 @@ def demux_config(**kwargs) -> DemuxConfig:
     Returns:
         Config object.
 
-    ??? note "Example: Loading headeless audio file (raw PCM)"
-        ```python
-        >>> import asyncio
-        >>> import spdl.io
-        >>>
-        >>> # Say, this file contains raw PCM samples.
-        >>> # One way to generate such a file is,
-        >>> # ffmpeg -f lavfi -i 'sine=duration=3' -f s16le -c:a pcm_s16le sample.raw
-        >>> src = "sample.raw"
-        >>>
-        >>> # This won't work
-        >>> # packets = asyncio.run(spdl.io.async_demux_media("audio", src))
-        >>>
-        >>> # This works.
-        >>> cfg = demux_config(format="s16le")
-        >>> packets = asyncio.run(spdl.io.async_demux_media("audio", src, demux_config=cfg))
-        >>>
-        ```
+    .. admonition:: Example: Loading headeless audio file (raw PCM)
+
+       >>> import asyncio
+       >>> import spdl.io
+       >>>
+       >>> # Say, this file contains raw PCM samples.
+       >>> # One way to generate such a file is,
+       >>> # ffmpeg -f lavfi -i 'sine=duration=3' -f s16le -c:a pcm_s16le sample.raw
+       >>> src = "sample.raw"
+       >>>
+       >>> # This won't work
+       >>> # packets = asyncio.run(spdl.io.async_demux_media("audio", src))
+       >>>
+       >>> # This works.
+       >>> cfg = demux_config(format="s16le")
+       >>> packets = asyncio.run(spdl.io.async_demux_audio(src, demux_config=cfg))
+       >>>
     """
     return _libspdl.DemuxConfig(**kwargs)
 
@@ -53,7 +52,7 @@ def demux_config(**kwargs) -> DemuxConfig:
 def decode_config(**kwargs) -> DecodeConfig:
     """Customize decoding behavior.
 
-    Other Args:
+    Args:
         decoder (str):
             *Optional* Override decoder.
 
@@ -63,26 +62,24 @@ def decode_config(**kwargs) -> DecodeConfig:
     Returns:
         Config object.
 
-    ??? note "Example: Specifying the decoder for H264"
-        ```python
-        # Use libopenh264 decoder to decode video
-        cfg = DecodeConfig(decoder="libopenh264")
+    .. admonition:: Example: Specifying the decoder for H264
 
-        frames = await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_media("video", src),
-            decode_config=cfg)
-        ```
+       >>> # Use libopenh264 decoder to decode video
+       >>> cfg = DecodeConfig(decoder="libopenh264")
+       >>>
+       >>> frames = await spdl.io.async_decode_packets(
+       ...     await spdl.io.async_demux_media("video", src),
+       ...     decode_config=cfg)
 
-    ??? note "Example: Change the number of threads internal to FFmpeg decoder"
-        ```python
-        # Let FFmpeg chose the optimal number of threads for decoding.
-        # Note: By default, SPDL specifies decoders to be single thread.
-        cfg = DecodeConfig(decoder_options={"threads": "0"})
+    .. admonition:: Example: Change the number of threads internal to FFmpeg decoder
 
-        frames = await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_media("video", src),
-            decode_config=cfg)
-        ```
+       >>> # Let FFmpeg chose the optimal number of threads for decoding.
+       >>> # Note: By default, SPDL specifies decoders to use a single thread.
+       >>> cfg = DecodeConfig(decoder_options={"threads": "0"})
+       >>>
+       >>> frames = await spdl.io.async_decode_packets(
+       ...     await spdl.io.async_demux_video(src),
+       ...     decode_config=cfg)
     """
     return _libspdl.DecodeConfig(**kwargs)
 
@@ -93,51 +90,47 @@ def cuda_config(device_index: int, **kwargs) -> CUDAConfig:
     Args:
         device_index (int): The device to move the data to.
 
-    Other Args:
         stream (int):
-            *Optional:* Pointer to a custom CUDA stream. By default, it uses the
-            per-thread default stream.
+            *Optional:* Pointer to a custom CUDA stream. By default, per-thread
+            default stream is used.
 
-            The value corresponds to `uintptr_t` of CUDA API.
+            The value corresponds to ``uintptr_t`` of CUDA API.
 
-            !!! note
-
-                Host to device buffer transfer is performed in a thread different than
-                Python main thread.
-
-                Since the frame data are available only for the duration of the
-                background job, the transfer is performed with synchronization.
+            .. admonition:: Using PyTorch default CUDA stream
 
                 It is possible to provide the same stream as the one used in Python's
-                main thread, but it might introduce undesired synchronization.
+                main thread. For example, you can fetch the default CUDA stream that
+                PyTorch is using as follow.
 
-            ??? note "How to retrieve CUDA stream pointer on PyTorch"
+                >>> stream = torch.cuda.Stream()
+                >>> cuda_stream = stream.cuda_stream
 
-                An example to fetch the default stream from PyTorch.
+                .. warning::
 
-                ```python
-                stream = torch.cuda.Stream()
-                cuda_stream = stream.cuda_stream
-                ```
+                   Using the same stream as a model is running might introduce
+                   undesired synchronization.
 
         allocator (tuple[Callable[[int, int, int], int], Callable[[int], None]]):
             *Optional:* A pair of custom CUDA memory allcoator and deleter functions.
 
-            The allocator function, takes the following arguments, and
+            .. rubric:: Allocator
+
+            The allocator function takes the following arguments, and
             return the address of the allocated memory.
 
-            - Size: `int`
-            - CUDA device index: `int`
-            - CUDA stream address: `int` (`uintptr_t`)
+            - Size: ``int``
+            - CUDA device index: ``int``
+            - CUDA stream address: ``int`` (``uintptr_t``)
 
-            An example of such function is
-            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_alloc].
+            .. rubric:: Deleter
 
             The deleter takes the address of memory allocated
             by the allocator and free the memory.
 
-            An example of such function is
-            [PyTorch's CUDA caching allocator][torch.cuda.caching_allocator_delete].
+
+            An example of such functions are PyTorch's
+            :py:func:`~torch.cuda.caching_allocator_alloc` and
+            :py:func:`~torch.cuda.caching_allocator_delete`.
     """
     return _libspdl.CUDAConfig(device_index=device_index, **kwargs)
 
@@ -145,7 +138,7 @@ def cuda_config(device_index: int, **kwargs) -> CUDAConfig:
 def encode_config(**kwargs) -> EncodeConfig:
     """Customize encoding behavior.
 
-    Other Args:
+    Args:
         muxer (str): *Optional* Multiplexer (container) format or output device.
 
         muxer_options (str): *Optional* Multiplexer (container) format or output device.
@@ -162,7 +155,7 @@ def encode_config(**kwargs) -> EncodeConfig:
 
         scale_algo (str): *Optional* The algorithm used to scale the image.
 
-            See `sws_flags` entry at https://ffmpeg.org/ffmpeg-scaler.html#sws_005fflags
+            See ``sws_flags`` entry at https://ffmpeg.org/ffmpeg-scaler.html#sws_005fflags
             for the available values and the detail.
 
         filter_desc (str): *Optional* Additional filtering applied before width/height/format conversion.

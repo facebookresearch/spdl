@@ -4,7 +4,7 @@ import asyncio
 import builtins
 import logging
 from collections.abc import AsyncIterator, Iterator
-from typing import Any
+from typing import Any, overload
 
 from spdl.io import (
     CPUBuffer,
@@ -63,6 +63,7 @@ def _load_packets(
     return buffer
 
 
+@overload
 def load_audio(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
@@ -70,22 +71,41 @@ def load_audio(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    cuda_config: CUDAConfig | None = None,
-) -> CPUBuffer | CUDABuffer:
-    """Load audio from source.
+    cuda_config: None = None,
+) -> CPUBuffer: ...
+@overload
+def load_audio(
+    src: str | bytes,
+    timestamp: tuple[float, float] | None = None,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig,
+) -> CUDABuffer: ...
 
-    This function combines [demux_audio][spdl.io.demux_audio],
-    [decode_packets][spdl.io.decode_packets], [convert_frames][spdl.io.convert_frames],
-    and optionally, [transfer_buffer][spdl.io.transfer_buffer], and produces
-    buffer object in one step.
+
+def load_audio(
+    src,
+    timestamp=None,
+    *,
+    demux_config=None,
+    decode_config=None,
+    filter_desc=None,
+    cuda_config=None,
+):
+    """Load audio from source into buffer.
+
+    This function combines :py:func:`~spdl.io.demux_audio`,
+    :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
+    and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
+    buffer object from source in one step.
 
     Args:
-        src: See [demux_audio][spdl.io.demux_audio].
-        timestamp: See [demux_audio][spdl.io.demux_audio].
-        demux_config: See [demux_audio][spdl.io.demux_audio].
-        decode_config: See [decode_packets][spdl.io.decode_packets].
-        filter_desc: See [decode_packets][spdl.io.decode_packets].
-        cuda_config: See [transfer_buffer][spdl.io.transfer_buffer].
+        src, timestamp, demux_config: See :py:func:`~spdl.io.demux_audio`.
+        decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
+        cuda_config: See :py:func:`~spdl.io.transfer_buffer`.
+            Providing this argument will move the buffer to CUDA device.
 
     Returns:
         Buffer object.
@@ -99,6 +119,7 @@ def load_audio(
     )
 
 
+@overload
 async def async_load_audio(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
@@ -106,9 +127,30 @@ async def async_load_audio(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    cuda_config: CUDAConfig | None = None,
-) -> CPUBuffer | CUDABuffer:
-    """Async version of [load_audio][spdl.io.load_audio]."""
+    cuda_config: None = None,
+) -> CPUBuffer: ...
+@overload
+async def async_load_audio(
+    src: str | bytes,
+    timestamp: tuple[float, float] | None = None,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig,
+) -> CUDABuffer: ...
+
+
+async def async_load_audio(
+    src,
+    timestamp=None,
+    *,
+    demux_config=None,
+    decode_config=None,
+    filter_desc=None,
+    cuda_config=None,
+):
+    """Async version of :py:func:`~spdl.io.load_audio`."""
     return await run_async(
         load_audio,
         src,
@@ -120,6 +162,7 @@ async def async_load_audio(
     )
 
 
+@overload
 def load_video(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
@@ -127,22 +170,41 @@ def load_video(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    cuda_config: CUDAConfig | None = None,
-) -> CPUBuffer | CUDABuffer:
-    """Load video from source.
+    cuda_config: None = None,
+) -> CPUBuffer: ...
+@overload
+def load_video(
+    src: str | bytes,
+    timestamp: tuple[float, float] | None = None,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig,
+) -> CUDABuffer: ...
 
-    This function combines [demux_video][spdl.io.demux_video],
-    [decode_packets][spdl.io.decode_packets], [convert_frames][spdl.io.convert_frames],
-    and optionally, [transfer_buffer][spdl.io.transfer_buffer], and produces
-    buffer object in one step.
+
+def load_video(
+    src: str | bytes,
+    timestamp=None,
+    *,
+    demux_config=None,
+    decode_config=None,
+    filter_desc=None,
+    cuda_config=None,
+):
+    """Load video from source into buffer.
+
+    This function combines :py:func:`~spdl.io.demux_video`,
+    :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
+    and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
+    buffer object from source in one step.
 
     Args:
-        src: See [demux_video][spdl.io.demux_video].
-        timestamp: See [demux_video][spdl.io.demux_video].
-        demux_config: See [demux_video][spdl.io.demux_video].
-        decode_config: See [decode_packets][spdl.io.decode_packets].
-        filter_desc: See [decode_packets][spdl.io.decode_packets].
-        cuda_config: See [transfer_buffer][spdl.io.transfer_buffer].
+        src, timestamp, demux_config: See :py:func:`~spdl.io.demux_video`.
+        decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
+        cuda_config: See :py:func:`~spdl.io.transfer_buffer`.
+            Providing this argument will move the buffer to CUDA device.
 
     Returns:
         Buffer object.
@@ -156,6 +218,7 @@ def load_video(
     )
 
 
+@overload
 async def async_load_video(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
@@ -163,9 +226,32 @@ async def async_load_video(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    cuda_config: CUDAConfig | None = None,
-) -> CPUBuffer | CUDABuffer:
-    """Async version of [load_video][spdl.io.load_video]."""
+    cuda_config: None = None,
+) -> CPUBuffer: ...
+
+
+@overload
+async def async_load_video(
+    src: str | bytes,
+    timestamp: tuple[float, float] | None = None,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig,
+) -> CUDABuffer: ...
+
+
+async def async_load_video(
+    src,
+    timestamp=None,
+    *,
+    demux_config=None,
+    decode_config=None,
+    filter_desc=None,
+    cuda_config=None,
+):
+    """Async version of :py:func:`~spdl.io.load_video`."""
     return await run_async(
         load_video,
         src,
@@ -177,27 +263,46 @@ async def async_load_video(
     )
 
 
+@overload
 def load_image(
     src: str | bytes,
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    cuda_config: CUDAConfig | None = None,
-) -> CPUBuffer | CUDABuffer:
-    """Load image from source.
+    cuda_config: None = None,
+) -> CPUBuffer: ...
+@overload
+def load_image(
+    src: str | bytes,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDABuffer,
+) -> CUDABuffer: ...
 
-    This function combines [demux_image][spdl.io.demux_image],
-    [decode_packets][spdl.io.decode_packets], [convert_frames][spdl.io.convert_frames],
-    and optionally, [transfer_buffer][spdl.io.transfer_buffer], and produces
-    buffer object in one step.
+
+def load_image(
+    src,
+    *,
+    demux_config=None,
+    decode_config=None,
+    filter_desc=None,
+    cuda_config=None,
+):
+    """Load image from source into buffer.
+
+    This function combines :py:func:`~spdl.io.demux_image`,
+    :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
+    and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
+    buffer object from source in one step.
 
     Args:
-        src: See [demux_image][spdl.io.demux_image].
-        demux_config: See [demux_image][spdl.io.demux_image].
-        decode_config: See [decode_packets][spdl.io.decode_packets].
-        filter_desc: See [decode_packets][spdl.io.decode_packets].
-        cuda_config: See [transfer_buffer][spdl.io.transfer_buffer].
+        src, demux_config: See :py:func:`~spdl.io.demux_video`.
+        decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
+        cuda_config: See :py:func:`~spdl.io.transfer_buffer`.
+            Providing this argument will move the buffer to CUDA device.
 
     Returns:
         Buffer object.
@@ -211,15 +316,35 @@ def load_image(
     )
 
 
+@overload
 async def async_load_image(
     src: str | bytes,
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    cuda_config: CUDAConfig | None = None,
-) -> CPUBuffer | CUDABuffer:
-    """Async version of [load_image][spdl.io.load_image]."""
+    cuda_config: None = None,
+) -> CPUBuffer: ...
+@overload
+async def async_load_image(
+    src: str | bytes,
+    *,
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDABuffer,
+) -> CUDABuffer: ...
+
+
+async def async_load_image(
+    src,
+    *,
+    demux_config=None,
+    decode_config=None,
+    filter_desc=None,
+    cuda_config=None,
+):
+    """Async version of :py:func:`~spdl.io.load_image`."""
     return await run_async(
         load_image,
         src,
@@ -241,18 +366,67 @@ def _get_src_str(src):
     return f"'{src}'"
 
 
+@overload
 def streaming_load_audio(
     src: str | bytes,
     timestamps: list[tuple[float, float]],
     *,
     demux_config: DemuxConfig | None = None,
+    cuda_config: None = None,
     strict: bool = True,
     **kwargs,
-) -> Iterator[CPUBuffer] | Iterator[CUDABuffer]:
+) -> Iterator[CPUBuffer | None]: ...
+@overload
+def streaming_load_audio(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    cuda_config: CUDAConfig,
+    strict: bool = True,
+    **kwargs,
+) -> Iterator[CUDABuffer | None]: ...
+
+
+def streaming_load_audio(
+    src,
+    timestamps,
+    *,
+    demux_config=None,
+    cuda_config=None,
+    strict=True,
+    **kwargs,
+):
+    """Load audio into buffer window by window.
+
+    This function combines :py:func:`~spdl.io.streaming_demux_audio`,
+    :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
+    and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
+    buffer objects from source window by window.
+
+    Args:
+        src, timestamps: See :py:func:`~spdl.io.streaming_demux_audio`.
+        demux_config: *Optional:* See :py:func:`~spdl.io.streaming_demux_audio`.
+        decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
+        cuda_config: See :py:func:`~spdl.io.transfer_buffer`.
+            Providing this argument will move the buffer to CUDA device.
+        strict: If ``True``, the function fails if any of decoding operation fails.
+            Otherwise, the function yields ``None`` and continue.
+            Default: ``True``.
+
+            .. note::
+
+               ``strict`` is only effective for decoding and conversion operations.
+               If the function fails to demux the source, it raises an exception
+               regardless of the value of ``strict``.
+
+    Returns:
+        Buffer object.
+    """
     demuxer = _core.streaming_demux_audio(src, timestamps, demux_config=demux_config)
     for packets in demuxer:
         try:
-            yield _load_packets(packets, **kwargs)
+            yield _load_packets(packets, cuda_config=cuda_config, **kwargs)
         except Exception:
             if strict:
                 raise
@@ -261,21 +435,62 @@ def streaming_load_audio(
                 _get_src_str(src),
                 packets.timestamp,
             )
+            yield None
 
 
-# TODO: Add strict option
+@overload
 def streaming_load_video(
     src: str | bytes,
     timestamps: list[tuple[float, float]],
     *,
     demux_config: DemuxConfig | None = None,
+    cuda_config: None = None,
     strict: bool = True,
     **kwargs,
-) -> Iterator[CPUBuffer] | Iterator[CUDABuffer]:
+) -> Iterator[CPUBuffer | None]: ...
+@overload
+def streaming_load_video(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    cuda_config: CUDAConfig,
+    strict: bool = True,
+    **kwargs,
+) -> Iterator[CUDABuffer | None]: ...
+
+
+def streaming_load_video(
+    src,
+    timestamps,
+    *,
+    demux_config=None,
+    cuda_config=None,
+    strict=True,
+    **kwargs,
+):
+    """Load video into buffer window by window.
+
+    This function combines :py:func:`~spdl.io.streaming_demux_video`,
+    :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
+    and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
+    buffer objects from source window by window.
+
+    Args:
+        src, timestamps: See :py:func:`~spdl.io.streaming_demux_video`.
+        demux_config: *Optional:* See :py:func:`~spdl.io.streaming_demux_video`.
+        decode_config, filter_desc: *Optional:* See :py:func:`~spdl.io.decode_packets`.
+        cuda_config: *Optional:* See :py:func:`~spdl.io.transfer_buffer`.
+            Providing this argument will move the buffer to CUDA device.
+
+    Returns:
+        Buffer object.
+
+    """
     demuxer = _core.streaming_demux_video(src, timestamps, demux_config=demux_config)
     for packets in demuxer:
         try:
-            yield _load_packets(packets, **kwargs)
+            yield _load_packets(packets, cuda_config=cuda_config, **kwargs)
         except Exception:
             if strict:
                 raise
@@ -311,19 +526,49 @@ async def _async_streaming_load(
         yield tasks.pop(0)
 
 
+@overload
 async def async_streaming_load_audio(
     src: str | bytes,
     timestamps: list[tuple[float, float]],
     *,
     demux_config: DemuxConfig | None = None,
+    cuda_config: None = None,
     strict: bool = True,
     **kwargs,
-) -> AsyncIterator[CPUBuffer | CUDABuffer]:
+) -> AsyncIterator[CPUBuffer | None]: ...
+@overload
+async def async_streaming_load_audio(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    cuda_config: CUDAConfig,
+    strict: bool = True,
+    **kwargs,
+) -> AsyncIterator[CUDABuffer | None]: ...
+
+
+async def async_streaming_load_audio(
+    src,
+    timestamps,
+    *,
+    demux_config=None,
+    cuda_config=None,
+    strict=True,
+    **kwargs,
+):
+    """Async version of :py:func:`~spdl.io.streaming_load_audio`.
+
+    .. note::
+
+       This function performs demuxing and decoding independently and
+       concurrently.
+    """
     demuxer = _core.async_streaming_demux_audio(
         src, timestamps, demux_config=demux_config
     )
     i = 0
-    async for task in _async_streaming_load(demuxer, **kwargs):
+    async for task in _async_streaming_load(demuxer, cuda_config=cuda_config, **kwargs):
         try:
             yield task.result()
         except Exception:
@@ -335,18 +580,49 @@ async def async_streaming_load_audio(
                 _get_src_str(src),
                 exc_info=True,
             )
+            yield None
         finally:
             i += 1
 
 
+@overload
 async def async_streaming_load_video(
     src: str | bytes,
     timestamps: list[tuple[float, float]],
     *,
     demux_config: DemuxConfig | None = None,
+    cuda_config: None = None,
     strict: bool = True,
     **kwargs,
-) -> AsyncIterator[CPUBuffer | CUDABuffer]:
+) -> Iterator[CPUBuffer | None]: ...
+@overload
+async def async_streaming_load_video(
+    src: str | bytes,
+    timestamps: list[tuple[float, float]],
+    *,
+    demux_config: DemuxConfig | None = None,
+    cuda_config: CUDAConfig,
+    strict: bool = True,
+    **kwargs,
+) -> Iterator[CUDABuffer | None]: ...
+
+
+async def async_streaming_load_video(
+    src,
+    timestamps,
+    *,
+    demux_config=None,
+    cuda_config=None,
+    strict=True,
+    **kwargs,
+):
+    """Async version of :py:func:`~spdl.io.streaming_load_video`.
+
+    .. note::
+
+       This function performs demuxing and decoding independently and
+       concurrently.
+    """
     demuxer = _core.async_streaming_demux_video(
         src, timestamps, demux_config=demux_config
     )
@@ -363,6 +639,7 @@ async def async_streaming_load_video(
                 _get_src_str(src),
                 exc_info=True,
             )
+            yield None
         finally:
             i += 1
 
@@ -388,6 +665,7 @@ def _decode(src, demux_config, decode_config, filter_desc):
     )
 
 
+@overload
 async def async_load_image_batch(
     srcs: list[str | bytes],
     *,
@@ -397,11 +675,51 @@ async def async_load_image_batch(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
-    cuda_config: CUDAConfig | None = None,
+    cuda_config: None = None,
     pin_memory: bool = False,
     strict: bool = True,
+) -> CPUBuffer: ...
+
+
+@overload
+async def async_load_image_batch(
+    srcs: list[str | bytes],
+    *,
+    width: int | None,
+    height: int | None,
+    pix_fmt: str | None = "rgb24",
+    demux_config: DemuxConfig | None = None,
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = None,
+    cuda_config: CUDAConfig,
+    pin_memory: bool = False,
+    strict: bool = True,
+) -> CUDABuffer: ...
+
+
+async def async_load_image_batch(
+    srcs: list[str | bytes],
+    *,
+    width,
+    height,
+    pix_fmt="rgb24",
+    demux_config=None,
+    decode_config=None,
+    filter_desc=None,
+    cuda_config=None,
+    pin_memory=False,
+    strict=True,
 ):
     """Batch load images.
+
+    This function combines :py:func:`~spdl.io.demux_image`,
+    :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
+    and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
+    buffer object from source in one step.
+
+    It concurrently demuxes and decodes the input images, using
+    the :py:class:`~concurrent.futures.ThreadPoolExecutor` attached to
+    the running async event loop, fetched by :py:func:`~asyncio.get_running_loop`.
 
     Args:
         srcs: List of source identifiers.
@@ -411,16 +729,25 @@ async def async_load_image_batch(
         height: *Optional:* Resize the frame.
 
         pix_fmt:
-            *Optional:* Change the format of the pixel.
+            *Optional:* The output pixel format.
 
-        demux_options (dict[str, Any]):
-            *Optional:* Demux options passed to [spdl.io.async_demux_media][].
+        demux_config:
+            *Optional:* Demux configuration passed to
+            :py:func:`~spdl.io.async_demux_image`.
 
-        decode_options (dict[str, Any]):
-            *Optional:* Decode options passed to [spdl.io.async_decode_packets][].
+        decode_config:
+            *Optional:* Decode configuration passed to
+            :py:func:`~spdl.io.async_decode_packets`.
 
-        convert_options (dict[str, Any]):
-            *Optional:* Convert options passed to [spdl.io.async_convert_frames][].
+        filter_desc:
+            *Optional:* Filter description passed to
+            :py:func:`~spdl.io.async_decode_packets`.
+
+        cuda_config:
+            *Optional:* The CUDA device passed to
+            :py:func:`~spdl.io.async_transfer_buffer`.
+            Providing this argument will move the resulting buffer to
+            the CUDA device.
 
         strict:
             *Optional:* If True, raise an error if any of the images failed to load.
@@ -428,8 +755,8 @@ async def async_load_image_batch(
     Returns:
         A buffer object.
 
-    ??? note "Example"
-        ```python
+    .. admonition: Example
+
         >>> srcs = [
         ...     "sample1.jpg",
         ...     "sample2.png",
@@ -444,8 +771,6 @@ async def async_load_image_batch(
         >>> array = spdl.io.to_numpy(buffer)
         >>> # An array with shape HWC==[2, 96, 124, 3]
         >>>
-        ```
-
     """
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
@@ -499,8 +824,16 @@ async def async_load_image_batch_nvdec(
     demux_config: DemuxConfig | None = None,
     decode_options: dict[str, Any] | None = None,
     strict: bool = True,
-):
-    """Batch load images.
+) -> CUDABuffer:
+    """**[Experimental]** Batch load images with NVDEC.
+
+    This function combines :py:func:`~spdl.io.demux_image` and
+    :py:func:`~spdl.io.decode_packets_nvdec` to produce
+    buffer object from source in one step.
+
+    It concurrently demuxes the input images, using
+    the :py:class:`~concurrent.futures.ThreadPoolExecutor` attached to
+    the running async event loop, fetched by :py:func:`~asyncio.get_running_loop`.
 
     Args:
         srcs: List of source identifiers.
@@ -514,11 +847,13 @@ async def async_load_image_batch_nvdec(
         pix_fmt:
             *Optional:* Change the format of the pixel.
 
-        demux_options (dict[str, Any]):
-            *Optional:* Demux options passed to [spdl.io.async_demux_media][].
+        demux_config:
+            *Optional:* Demux options passed to
+            :py:func:`~spdl.io.async_demux_media`.
 
-        decode_options (dict[str, Any]):
-            *Optional:* Other decode options passed to [spdl.io.async_decode_packets_nvdec][].
+        decode_options:
+            *Optional:* Other decode options passed to
+            :py:func:`~spdl.io.async_decode_packets_nvdec`.
 
         strict:
             *Optional:* If True, raise an error if any of the images failed to load.
@@ -526,8 +861,8 @@ async def async_load_image_batch_nvdec(
     Returns:
         A buffer object.
 
-    ??? note "Example"
-        ```python
+    .. admonition:: Example
+
         >>> srcs = [
         ...     "sample1.jpg",
         ...     "sample2.png",
@@ -543,7 +878,6 @@ async def async_load_image_batch_nvdec(
         >>> array = spdl.io.to_torch(buffer)
         >>> # An array with shape NCHW==[2, 4, 96, 124] on CUDA device 0
         >>>
-        ```
     """
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
@@ -608,6 +942,11 @@ async def async_load_image_batch_nvjpeg(
     strict: bool = True,
     **kwargs,
 ):
+    """**[Experimental]** Async version of :py:func:`~spdl.io.load_image_batch_nvjpeg`.
+
+    Unlike other async batch functions, this function does not employ intra-operation
+    parallelism. (Decoding is done sequentially.)
+    """
     srcs_ = _get_bytes(srcs)
     return await run_async(
         _libspdl.decode_image_nvjpeg,
@@ -629,7 +968,28 @@ def load_image_batch_nvjpeg(
     pix_fmt: str | None = "rgb",
     strict: bool = True,
     **kwargs,
-):
+) -> CUDABuffer:
+    """**[Experimental]** Batch load images with nvJPEG.
+
+    This function decodes images using nvJPEG and resize them with NPP.
+    The input images are processed in sequential manner.
+
+    Args:
+        srcs: Input images.
+        cuda_config: The CUDA device to use for decoding images.
+        width: *Optional:* Resize the frame.
+
+        height: *Optional:* Resize the frame.
+
+        pix_fmt:
+            *Optional:* Change the format of the pixel.
+
+        strict:
+            *Optional:* If True, raise an error if any of the images failed to load.
+
+    Returns:
+        A buffer object.
+    """
     srcs_ = _get_bytes(srcs)
     return _libspdl.decode_image_nvjpeg(
         srcs_,
@@ -646,16 +1006,41 @@ def load_image_batch_nvjpeg(
 ################################################################################
 
 
-def _decode_partial(packets, indices, **kwargs):
+def _decode_partial(packets, indices, decode_config, filter_desc):
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
-    decoder = _core.streaming_decode_packets(packets, num_frames, **kwargs)
+    decoder = _core.streaming_decode_packets(
+        packets, num_frames, decode_config, filter_desc
+    )
     return next(decoder)[indices]
 
 
 async def async_sample_decode_video(
-    packets: VideoPackets, indices: list[int], **kwargs
+    packets: VideoPackets,
+    indices: list[int],
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str = "",
 ) -> list[ImagePackets]:
+    """Decode specified frames from the packets.
+
+    This function decodes the input video packets and returns the frames
+    specified by ``indices``. Internally, it splits the packets into
+    smaller set of packets and decode the minimum number of frames to
+    retrieve the specified frames.
+
+    Args:
+        packets: The input video packets.
+        indices: The list of frame indices.
+        decode_config:
+            *Optional:* Decode config. Passed to
+            :py:func:`~spdl.io.streaming_decode_packets`.
+
+        filter_desc: *Optional:* Filter description.
+            :py:func:`~spdl.io.streaming_decode_packets`.
+
+    Returns:
+        Decoded frames.
+    """
     if not indices:
         raise ValueError("Frame indices must be non-empty.")
 
@@ -670,7 +1055,9 @@ async def async_sample_decode_video(
     tasks = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
         tasks.append(
-            asyncio.create_task(run_async(_decode_partial, split, idxes, **kwargs))
+            asyncio.create_task(
+                run_async(_decode_partial, split, idxes, decode_config, filter_desc)
+            )
         )
 
     await asyncio.wait(tasks)
