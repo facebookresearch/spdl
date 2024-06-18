@@ -12,6 +12,24 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
+#ifdef SPDL_LOG_API_USAGE
+#include <c10/util/Logging.h>
+
+#define _USAGE_LOGGING(name)                      \
+  if constexpr (media_type == MediaType::Audio) { \
+    C10_LOG_API_USAGE_ONCE(name "_audio");        \
+  }                                               \
+  if constexpr (media_type == MediaType::Video) { \
+    C10_LOG_API_USAGE_ONCE(name "_video");        \
+  }                                               \
+  if constexpr (media_type == MediaType::Image) { \
+    C10_LOG_API_USAGE_ONCE(name "_image");        \
+  }
+
+#else
+#define _USAGE_LOGGING(...)
+#endif
+
 namespace nb = nanobind;
 
 namespace spdl::core {
@@ -38,6 +56,7 @@ std::tuple<DemuxerPtr, PacketsPtr<media_type>> _demuxer_demux(
     DemuxerPtr demuxer,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
+  _USAGE_LOGGING("spdl.core.demux_window");
   nb::gil_scoped_release g;
   auto packets = demuxer->demux_window<media_type>(window, bsf);
   return {std::move(demuxer), std::move(packets)};
@@ -55,6 +74,7 @@ PacketsPtr<media_type> _demux_src(
     const std::optional<DemuxConfig>& dmx_cfg,
     const std::optional<std::string>& bsf,
     const SourceAdaptorPtr adaptor) {
+  _USAGE_LOGGING("spdl.core.demux_src");
   nb::gil_scoped_release g;
   auto demuxer = make_demuxer(src, adaptor, dmx_cfg);
   return demuxer->demux_window<media_type>(timestamps, bsf);
@@ -71,6 +91,7 @@ PacketsPtr<media_type> _demux_bytes(
     const std::optional<DemuxConfig>& dmx_cfg,
     const std::optional<std::string>& bsf,
     bool _zero_clear) {
+  _USAGE_LOGGING("spdl.core.demux_bytes");
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
   auto demuxer = make_demuxer(data_, dmx_cfg);
