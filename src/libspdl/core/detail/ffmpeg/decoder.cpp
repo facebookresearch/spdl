@@ -8,19 +8,28 @@
 
 namespace spdl::core::detail {
 
+Generator<AVPacket*> _stream_packet(const std::vector<AVPacket*>& packets) {
+  for (auto& packet : packets) {
+    co_yield packet;
+  }
+  co_yield nullptr;
+}
+
 Generator<AVFramePtr> decode_packets(
     const std::vector<AVPacket*>& packets,
     Decoder& decoder,
     std::optional<FilterGraph>& filter) {
+  auto packet_stream = _stream_packet(packets);
   if (!filter) {
-    for (auto& packet : packets) {
-      auto decoding = decoder.decode(packet, false);
+    while (packet_stream) {
+      auto decoding = decoder.decode(packet_stream(), false);
       while (decoding) {
         co_yield decoding();
       }
     }
   } else {
-    for (auto& packet : packets) {
+    while (packet_stream) {
+      auto packet = packet_stream();
       auto decoding = decoder.decode(packet, !packet);
       while (decoding) {
         auto frame = decoding();

@@ -30,9 +30,7 @@ struct StreamingDecoder<media_type>::Impl {
         gen(detail::decode_packets(
             packets->get_packets(),
             decoder,
-            filter_graph)) {
-    packets->push(nullptr);
-  }
+            filter_graph)) {}
 
   std::optional<FFmpegFramesPtr<media_type>> decode(int num_frames) {
     if (num_frames <= 0) {

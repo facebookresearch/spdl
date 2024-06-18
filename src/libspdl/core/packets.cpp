@@ -74,6 +74,9 @@ void DemuxedPackets<media_type>::push(AVPacket* p) {
           "Multiple AVPacket is being pushed, but the expected number of AVPacket when decoding an image is one.");
     }
   }
+  if (!p) {
+    SPDL_FAIL_INTERNAL("Packet is NULL.");
+  }
   packets.push_back(p);
 }
 

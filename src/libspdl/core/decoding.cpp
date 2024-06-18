@@ -20,9 +20,6 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
       "decode_packets_ffmpeg",
       perfetto::Flow::ProcessScoped(packets->id));
   detail::Decoder decoder{packets->codecpar, packets->time_base, cfg};
-  if constexpr (media_type != MediaType::Image) {
-    packets->push(nullptr); // For flushing
-  }
   auto filter = detail::get_filter<media_type>(
       decoder.codec_ctx.get(), filter_desc, packets->frame_rate);
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
