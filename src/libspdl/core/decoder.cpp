@@ -14,13 +14,13 @@ template <MediaType media_type>
 struct StreamingDecoder<media_type>::Impl {
   PacketsPtr<media_type> packets;
   detail::Decoder decoder;
-  detail::FilterGraph filter_graph;
+  std::optional<detail::FilterGraph> filter_graph;
 
   detail::Generator<detail::AVFramePtr> gen;
   Impl(
       PacketsPtr<media_type> packets_,
       const std::optional<DecodeConfig>& cfg_,
-      const std::string& filter_desc_)
+      const std::optional<std::string>& filter_desc_)
       : packets(std::move(packets_)),
         decoder(packets->codecpar, packets->time_base, cfg_),
         filter_graph(detail::get_filter<media_type>(
@@ -62,7 +62,7 @@ template <MediaType media_type>
 StreamingDecoder<media_type>::StreamingDecoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& cfg,
-    const std::string& filter_desc)
+    const std::optional<std::string>& filter_desc)
     : pImpl(new StreamingDecoder<media_type>::Impl(
           std::move(packets),
           cfg,
@@ -79,7 +79,7 @@ template <MediaType media_type>
 DecoderPtr<media_type> make_decoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& decode_cfg,
-    const std::string& filter_desc) {
+    const std::optional<std::string>& filter_desc) {
   TRACE_EVENT("decoding", "make_decoder");
   return std::make_unique<spdl::core::StreamingDecoder<media_type>>(
       std::move(packets), decode_cfg, filter_desc);
@@ -88,7 +88,7 @@ DecoderPtr<media_type> make_decoder(
 template DecoderPtr<MediaType::Video> make_decoder(
     PacketsPtr<MediaType::Video> packets,
     const std::optional<DecodeConfig>& decode_cfg,
-    const std::string& filter_desc);
+    const std::optional<std::string>& filter_desc);
 
 template <MediaType media_type>
   requires(media_type != MediaType::Image)

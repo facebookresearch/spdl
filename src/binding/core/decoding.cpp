@@ -20,7 +20,7 @@ template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode(
     PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& cfg,
-    const std::string& filter_desc) {
+    const std::optional<std::string>& filter_desc) {
   nb::gil_scoped_release g;
   return decode_packets_ffmpeg(std::move(packets), cfg, filter_desc);
 }
@@ -54,7 +54,7 @@ template <MediaType media_type>
 DecoderPtr<media_type> _make_decoder(
     PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& decode_cfg,
-    const std::string& filter_desc) {
+    const std::optional<std::string>& filter_desc) {
   nb::gil_scoped_release g;
   return make_decoder(std::move(packets), decode_cfg, filter_desc);
 }
@@ -90,7 +90,7 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
-      nb::arg("filter_desc") = "");
+      nb::arg("filter_desc") = nb::none());
 
   m.def("_decode", &_decode<MediaType::Video>);
   m.def("_drop", &_drop<MediaType::Video>);
@@ -106,7 +106,7 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
-      nb::arg("filter_desc") = "");
+      nb::arg("filter_desc") = nb::none());
 
   m.def(
       "decode_packets",
@@ -116,7 +116,7 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
-      nb::arg("filter_desc") = "");
+      nb::arg("filter_desc") = nb::none());
 
   m.def(
       "decode_packets",
@@ -126,7 +126,7 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
-      nb::arg("filter_desc") = "");
+      nb::arg("filter_desc") = nb::none());
 
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC

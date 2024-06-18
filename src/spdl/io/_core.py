@@ -393,7 +393,7 @@ def streaming_decode_packets(
     packets: VideoPackets,
     num_frames: int,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str = "",
+    filter_desc: str | None = None,
 ) -> Iterator[VideoFrames]:
     """Decode the video packets chunk by chunk.
 

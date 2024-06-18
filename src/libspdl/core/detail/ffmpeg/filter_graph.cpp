@@ -244,6 +244,9 @@ Rational FilterGraph::get_sink_time_base() const {
 FilterGraph get_audio_filter(
     const std::string& filter_desc,
     AVCodecContext* codec_ctx) {
+  if (filter_desc.empty()) {
+    SPDL_FAIL("filter description is empty.");
+  }
   auto arg = get_abuffer_arg(
       codec_ctx->pkt_timebase,
       codec_ctx->sample_rate,
@@ -255,7 +258,7 @@ FilterGraph get_audio_filter(
 #endif
   );
   return get_filter(
-      filter_desc.empty() ? "anull" : filter_desc.c_str(),
+      filter_desc.c_str(),
       avfilter_get_by_name("abuffer"),
       arg.c_str(),
       avfilter_get_by_name("abuffersink"));
@@ -265,6 +268,9 @@ FilterGraph get_video_filter(
     const std::string& filter_desc,
     AVCodecContext* codec_ctx,
     Rational frame_rate) {
+  if (filter_desc.empty()) {
+    SPDL_FAIL("filter description is empty.");
+  }
   auto arg = get_buffer_arg(
       codec_ctx->width,
       codec_ctx->height,
@@ -273,7 +279,7 @@ FilterGraph get_video_filter(
       frame_rate,
       codec_ctx->sample_aspect_ratio);
   return get_filter(
-      filter_desc.empty() ? "null" : filter_desc.c_str(),
+      filter_desc.c_str(),
       avfilter_get_by_name("buffer"),
       arg.c_str(),
       avfilter_get_by_name("buffersink"));
@@ -282,6 +288,9 @@ FilterGraph get_video_filter(
 FilterGraph get_image_filter(
     const std::string& filter_desc,
     AVCodecContext* codec_ctx) {
+  if (filter_desc.empty()) {
+    SPDL_FAIL("filter description is empty.");
+  }
   auto arg = get_buffer_arg(
       codec_ctx->width,
       codec_ctx->height,
@@ -289,7 +298,7 @@ FilterGraph get_image_filter(
       codec_ctx->pkt_timebase,
       codec_ctx->sample_aspect_ratio);
   return get_filter(
-      filter_desc.empty() ? "null" : filter_desc.c_str(),
+      filter_desc.c_str(),
       avfilter_get_by_name("buffer"),
       arg.c_str(),
       avfilter_get_by_name("buffersink"));

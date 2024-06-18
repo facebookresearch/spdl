@@ -62,4 +62,16 @@ FilterGraph get_filter(
   }
 }
 
+template <MediaType media_type>
+std::optional<FilterGraph> get_filter(
+    AVCodecContext* codec_ctx,
+    const std::optional<std::string>& filter_desc,
+    std::optional<Rational> frame_rate) {
+  if (filter_desc) {
+    return get_filter<media_type>(codec_ctx, *filter_desc, frame_rate);
+  } else {
+    return std::nullopt;
+  }
+}
+
 } // namespace spdl::core::detail

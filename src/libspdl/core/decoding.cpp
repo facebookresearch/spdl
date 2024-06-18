@@ -14,7 +14,7 @@ template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& cfg,
-    const std::string& filter_desc) {
+    const std::optional<std::string>& filter_desc) {
   TRACE_EVENT(
       "decoding",
       "decode_packets_ffmpeg",
@@ -32,24 +32,26 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
   while (gen) {
     ret->push_back(gen().release());
   }
-  ret->time_base = filter.get_sink_time_base();
+  if (filter) {
+    ret->time_base = filter->get_sink_time_base();
+  }
   return ret;
 }
 
 template FFmpegAudioFramesPtr decode_packets_ffmpeg(
     AudioPacketsPtr packets,
     const std::optional<DecodeConfig>& cfg,
-    const std::string& filter_desc);
+    const std::optional<std::string>& filter_desc);
 
 template FFmpegVideoFramesPtr decode_packets_ffmpeg(
     VideoPacketsPtr packets,
     const std::optional<DecodeConfig>& cfg,
-    const std::string& filter_desc);
+    const std::optional<std::string>& filter_desc);
 
 template FFmpegImageFramesPtr decode_packets_ffmpeg(
     ImagePacketsPtr packets,
     const std::optional<DecodeConfig>& cfg,
-    const std::string& filter_desc);
+    const std::optional<std::string>& filter_desc);
 
 #ifdef SPDL_USE_NVCODEC
 namespace {

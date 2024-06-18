@@ -1019,7 +1019,7 @@ async def async_sample_decode_video(
     packets: VideoPackets,
     indices: list[int],
     decode_config: DecodeConfig | None = None,
-    filter_desc: str = "",
+    filter_desc: str | None = None,
 ) -> list[ImagePackets]:
     """Decode specified frames from the packets.
 
