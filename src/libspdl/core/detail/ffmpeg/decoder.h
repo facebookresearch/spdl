@@ -23,6 +23,6 @@ struct Decoder {
 Generator<AVFramePtr> decode_packets(
     const std::vector<AVPacket*>& packets,
     Decoder& decoder,
-    FilterGraph& filter);
+    std::optional<FilterGraph>& filter);
 
 } // namespace spdl::core::detail

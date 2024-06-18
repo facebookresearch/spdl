@@ -15,7 +15,7 @@ def get_audio_filter_desc(
     timestamp: tuple[float, float] | None = None,
     num_frames: int | None = None,
     filter_desc: str | None = None,
-) -> str:
+) -> str | None:
     """Construct FFmpeg filter expression for preprocessing audio.
 
     Args:
@@ -41,7 +41,7 @@ def get_audio_filter_desc(
             dropping the exceeding frames or padding with silence.
 
     Returns:
-        (str): Filter description.
+        Filter description.
     """
     parts = []
     if num_channels is not None:
@@ -67,7 +67,9 @@ def get_audio_filter_desc(
     if sample_fmt is not None:
         parts.append(f"aformat=sample_fmts={sample_fmt}")
 
-    return ",".join(parts)
+    if parts:
+        return ",".join(parts)
+    return None
 
 
 def get_video_filter_desc(
@@ -84,7 +86,7 @@ def get_video_filter_desc(
     num_frames: int | None = None,
     pad_mode: str | None = None,
     filter_desc: str | None = None,
-) -> str:
+) -> str | None:
     """Construct FFmpeg filter expression for preprocessing video/image.
 
     Args:
@@ -137,7 +139,7 @@ def get_video_filter_desc(
             __Video__, *Optional:* Change the padding frames to the given color.
 
     Returns:
-        (str): Filter description.
+        Filter description.
     """
     parts = []
     if frame_rate is not None:
@@ -186,10 +188,12 @@ def get_video_filter_desc(
         parts.append(filter_desc)
     if pix_fmt is not None:
         parts.append(f"format=pix_fmts={pix_fmt}")
-    return ",".join(parts)
+    if parts:
+        return ",".join(parts)
+    return None
 
 
-def get_filter_desc(packets, **filter_args) -> str:
+def get_filter_desc(packets, **filter_args) -> str | None:
     """Get the filter to process the given packets.
 
     Args:
@@ -200,7 +204,7 @@ def get_filter_desc(packets, **filter_args) -> str:
             [spdl.io.get_video_filter_desc][].
 
     Returns:
-        (str): The resulting filter expression.
+        The resulting filter expression.
     """
     match type(packets):
         case _libspdl.AudioPackets:

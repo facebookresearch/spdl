@@ -11,14 +11,23 @@ namespace spdl::core::detail {
 Generator<AVFramePtr> decode_packets(
     const std::vector<AVPacket*>& packets,
     Decoder& decoder,
-    FilterGraph& filter) {
-  for (auto& packet : packets) {
-    auto decoding = decoder.decode(packet, !packet);
-    while (decoding) {
-      auto frame = decoding();
-      auto filtering = filter.filter(frame.get());
-      while (filtering) {
-        co_yield filtering();
+    std::optional<FilterGraph>& filter) {
+  if (!filter) {
+    for (auto& packet : packets) {
+      auto decoding = decoder.decode(packet, false);
+      while (decoding) {
+        co_yield decoding();
+      }
+    }
+  } else {
+    for (auto& packet : packets) {
+      auto decoding = decoder.decode(packet, !packet);
+      while (decoding) {
+        auto frame = decoding();
+        auto filtering = filter->filter(frame.get());
+        while (filtering) {
+          co_yield filtering();
+        }
       }
     }
   }

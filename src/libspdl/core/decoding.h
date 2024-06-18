@@ -25,7 +25,7 @@ struct StreamingDecoder {
   explicit StreamingDecoder(
       PacketsPtr<media_type> packets,
       const std::optional<DecodeConfig>& cfg = std::nullopt,
-      const std::string& filter_desc = {});
+      const std::optional<std::string>& filter_desc = std::nullopt);
 
   ~StreamingDecoder();
 
@@ -36,13 +36,13 @@ template <MediaType media_type>
 DecoderPtr<media_type> make_decoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& decode_cfg,
-    const std::string& filter_desc);
+    const std::optional<std::string>& filter_desc);
 
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& cfg = std::nullopt,
-    const std::string& filter_desc = {});
+    const std::optional<std::string>& filter_desc = std::nullopt);
 
 template <MediaType media_type>
 CUDABufferPtr decode_packets_nvdec(
