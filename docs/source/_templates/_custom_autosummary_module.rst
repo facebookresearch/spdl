@@ -134,6 +134,36 @@
 {% endif %}
 {% endblock %}
 
+..
+   ############################################################################
+   Others
+   ############################################################################
+
+
+{%- set others = [] -%}
+{%- for m in members %}
+{%- if (m not in functions) and (m not in classes) and (m not in modules) and (m not in attributes) and (m not in exceptions) %}
+{%- set others = others.append(m) %}
+{% endif %}
+{% endfor %}
+
+{% if others %}
+.. rubric:: Others
+
+{%- for item in others %}
+{{ item | escape | underline(line='-')}}
+
+.. autosummary::
+   :template: _custom_autosummary_others.rst
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~{{ fullname }}.{{ item }}
+
+{% endfor %}
+
+{% endif %}
 
 .. raw:: html
 
