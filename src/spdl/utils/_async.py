@@ -15,6 +15,7 @@ __all__ = [
     "async_iterate",
     "async_pipe",
     "run_async",
+    "EOF_SENTINEL",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -22,9 +23,24 @@ _LG = logging.getLogger(__name__)
 T = TypeVar("T")
 U = TypeVar("U")
 
-_SENTINEL = object()
 _TIMEOUT = 30
 
+
+# Custom class just for the sake of Sphinx doc
+# Functionally, just `object()` is sufficient.
+class Sentinel:
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
+
+EOF_SENTINEL = Sentinel("EOF")
+EOF_SENTINEL.__doc__ = (
+    "The default sentinel object used to "
+    "mark/detect the end of stream in async pipelines."
+)
 
 async def run_async(
     func: Callable[..., T],
@@ -173,7 +189,7 @@ async def async_generate(
     concurrency: int = 3,
     name: str | None = None,
     timeout: float | None = _TIMEOUT,
-    sentinel: object = _SENTINEL,
+    sentinel: object = EOF_SENTINEL,
 ) -> None:
     """Apply async function to synchronous iterator.
 
@@ -274,7 +290,7 @@ async def async_iterate(
     queue: AsyncQueue[T],
     *,
     timeout: float | None = _TIMEOUT,
-    sentinel=_SENTINEL,
+    sentinel: object = EOF_SENTINEL,
 ) -> AsyncIterator[T]:
     """Iterate over the given queue.
 
@@ -291,7 +307,7 @@ async def async_iterate(
        └────────────────┘
 
     Args:
-        queue: Asynchronous queue where the results of some task are put.
+        queue (asyncio.Queue): Asynchronous queue where the results of some task are put.
         timeout: The maximum time to wait for the queue. If `None`, then it
             blocks indefinetly.
 
@@ -315,7 +331,7 @@ async def async_pipe(
     concurrency: int = 1,
     name: str | None = None,
     timeout: float | None = _TIMEOUT,
-    sentinel=_SENTINEL,
+    sentinel: object = EOF_SENTINEL,
 ) -> None:
     """Apply an async function to the outputs of the input queue and put the
     results to the output queue.
@@ -339,11 +355,16 @@ async def async_pipe(
               └─┘
 
     Args:
-        func: Async function that to be applied to the items in the input queue.
-        input_queue: Input queue.
-        output_queue: Output queue.
+        input_queue (asyncio.Queue): Input queue.
+        afunc: Async function that to be applied to the items in the input queue.
+        output_queue (asyncio.Queue): Output queue.
         concurrency: The maximum number of async tasks scheduled concurrently.
-        name: The name to give to the task
+        name: The name (prefix) to give to the task.
+        timeout: Timeout for each task. When a timeout occurs, the whole operation
+            fails.
+        sentinel: An object used to mark the end of data flow. The upstream job is
+            expected to put the identical object as this argument to the input queue
+            when the job is done.
     """
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")

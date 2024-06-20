@@ -6,18 +6,18 @@ import pytest
 import spdl.utils
 
 
-_SENTINEL = spdl.utils._async._SENTINEL
+EOF = spdl.utils.EOF_SENTINEL
 
 
-def _put_queue(queue, vals, sentinel=_SENTINEL):
+def _put_queue(queue, vals):
     for val in vals:
         queue.put_nowait(val)
-    queue.put_nowait(sentinel)
+    queue.put_nowait(EOF)
 
 
-def _flush_queue(queue, sentinel=_SENTINEL):
+def _flush_queue(queue, sentinel=EOF):
     ret = []
-    while (item := queue.get_nowait()) is not sentinel:
+    while (item := queue.get_nowait()) is not EOF:
         ret.append(item)
     return ret
 
