@@ -8,8 +8,6 @@ from spdl.lib import _libspdl
 
 __all__ = [
     "trace_counter",
-    "trace_default_decode_executor_queue_size",
-    "trace_default_demux_executor_queue_size",
     "trace_event",
     "tracing",
     "trace_gc",
@@ -88,32 +86,6 @@ def trace_counter(i: int, val: int | float):
        >>>     trace_counter(0, 3);
     """
     _libspdl.trace_counter(i, val)
-
-
-def trace_default_decode_executor_queue_size():
-    """Trace the number of queued items in the default decode executor queue.
-
-    .. admonition:: Example
-
-       >>> with tracing():
-       >>>     trace_default_decode_executor_queue_size()
-       >>>     # ... do other stuff
-       >>>     trace_default_decode_executor_queue_size()
-    """
-    _libspdl.trace_default_decode_executor_queue_size()
-
-
-def trace_default_demux_executor_queue_size():
-    """Trace the number of queued items in the default demux executor queue.
-
-    .. admonition:: Example
-
-       >>> with tracing():
-       >>>     trace_default_demux_executor_queue_size()
-       >>>     # ... do other stuff
-       >>>     trace_default_demux_executor_queue_size()
-    """
-    _libspdl.trace_default_demux_executor_queue_size()
 
 
 def trace_gc():
