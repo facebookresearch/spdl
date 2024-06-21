@@ -42,15 +42,6 @@ def _parse_args(args):
     return args
 
 
-# TODO: Think of a way to put this back
-# async def _track(queue):
-#     while True:
-#         await asyncio.sleep(3 / 1000)
-#         spdl.utils.trace_default_demux_executor_queue_size()
-#         spdl.utils.trace_default_decode_executor_queue_size()
-#         spdl.utils.trace_counter(0, queue.qsize())
-
-
 @dataclass
 class PerfResult:
     elapsed: float

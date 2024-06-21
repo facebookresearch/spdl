@@ -42,6 +42,7 @@ EOF_SENTINEL.__doc__ = (
     "mark/detect the end of stream in async pipelines."
 )
 
+
 async def run_async(
     func: Callable[..., T],
     *args,
