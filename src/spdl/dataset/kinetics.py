@@ -1,5 +1,7 @@
 """Utility tools for traversing Kinetics dataset"""
 
+# pyre-unsafe
+
 from pathlib import Path
 
 from . import _utils

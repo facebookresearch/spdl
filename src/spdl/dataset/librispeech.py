@@ -1,5 +1,7 @@
 """Utility tools for traversing LibriSpeech dataset."""
 
+# pyre-unsafe
+
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path

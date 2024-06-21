@@ -1,5 +1,7 @@
 """Utility tools for traversing ImageNet dataset."""
 
+# pyre-unsafe
+
 import logging
 import re
 from dataclasses import dataclass, field
