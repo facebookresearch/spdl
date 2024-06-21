@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from typing import Generic, TypeVar

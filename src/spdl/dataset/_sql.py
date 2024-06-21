@@ -1,3 +1,5 @@
+# pyre-unsafe
+
 import dataclasses
 import logging
 
