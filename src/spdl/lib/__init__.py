@@ -50,6 +50,11 @@ def _import_libspdl() -> ModuleType:
             continue
 
         try:
+            ext.log_api_usage("spdl")
+        except Exception:
+            _LG.debug("Failed to log API usage.", exc_info=True)
+
+        try:
             ext.init_glog(sys.argv[0])
         except Exception:
             _LG.debug("Faile to initialize Google logging.", exc_info=True)
