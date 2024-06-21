@@ -142,7 +142,7 @@
 
 {%- set others = [] -%}
 {%- for m in members %}
-{%- if (m not in functions) and (m not in classes) and (m not in modules) and (m not in attributes) and (m not in exceptions) %}
+{%- if (m not in functions) and (m not in classes) and (m not in modules) and (m not in attributes) and (m not in exceptions) and (not m.startswith("_")) %}
 {%- set others = others.append(m) %}
 {% endif %}
 {% endfor %}
