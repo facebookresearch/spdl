@@ -23,6 +23,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
+    "sphinxcontrib.mermaid",
     # "breathe",
     # "exhale",
 ]
@@ -50,6 +51,7 @@ exclude_patterns = []
 
 breathe_projects = {"libspdl": "generated/doxygen/xml/"}
 breathe_default_project = "libspdl"
+mermaid_version = "10.9.1"
 
 
 def _get_source():
