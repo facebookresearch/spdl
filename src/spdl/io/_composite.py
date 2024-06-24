@@ -18,9 +18,9 @@ from spdl.io import (
 )
 
 from spdl.lib import _libspdl
-from spdl.utils import run_async  # pyre-ignore: [21]
 
 from . import _core, _preprocessing
+from ._core import run_async
 
 __all__ = [
     "load_audio",
