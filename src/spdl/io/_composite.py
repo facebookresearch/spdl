@@ -721,6 +721,28 @@ async def async_load_image_batch(
     the :py:class:`~concurrent.futures.ThreadPoolExecutor` attached to
     the running async event loop, fetched by :py:func:`~asyncio.get_running_loop`.
 
+    .. mermaid::
+
+       gantt
+           title Example timeline of asynchronous batch image decoding
+           dateFormat X
+           axisFormat %s
+           section Thread 1
+               Demux image 1 :demux1, 0, 3
+               Demux image 2 :demux2, after demux1, 7
+               Demux image 3 :demux3, after demux2, 10
+               Demux image 4 :demux4, after demux3, 15
+               Batch conversion :batch, after decode4, 40
+               Device Transfer :after batch, 43
+           section Thread 2
+               Decode/resize image 1 :after demux1, 20
+           section Thread 3
+               Decode/resize image 2 :after demux2, 27
+           section Thread 4
+               Decode/resize image 3 :after demux3, 35
+           section Thread 5
+               Decode/resize image 4 :decode4, after demux4, 37
+
     Args:
         srcs: List of source identifiers.
 
@@ -761,7 +783,7 @@ async def async_load_image_batch(
         ...     "sample1.jpg",
         ...     "sample2.png",
         ... ]
-        >>> coro = async_batch_load_image(
+        >>> coro = async_load_image_batch(
         ...     srcs,
         ...     scale_width=124,
         ...     scale_height=96,
@@ -867,7 +889,7 @@ async def async_load_image_batch_nvdec(
         ...     "sample1.jpg",
         ...     "sample2.png",
         ... ]
-        >>> coro = async_batch_load_image_nvdec(
+        >>> coro = async_load_image_batch_nvdec(
         ...     srcs,
         ...     cuda_device_index=0,
         ...     width=124,
@@ -1027,6 +1049,76 @@ async def async_sample_decode_video(
     specified by ``indices``. Internally, it splits the packets into
     smaller set of packets and decode the minimum number of frames to
     retrieve the specified frames.
+
+    The packet splits are decoded concurrently.
+
+    .. mermaid::
+
+       block-beta
+         columns 15
+           A["Input Packets"]:15
+
+           space:15
+
+           block:B1:3
+             columns 3
+             P1["1"] P2["2"] P3["3"]
+           end
+           block:B2:3
+             columns 3
+             P4["4"] P5["5"] P6["6"]
+           end
+           block:B3:3
+             columns 3
+             P7["7"] P8["8"] P9["9"]
+           end
+           block:B4:3
+             columns 3
+             P10["10"] P11["11"] P12["12"]
+           end
+           block:B5:3
+             columns 3
+             P13["13"] P14["14"] P15["15"]
+           end
+
+           space:15
+
+           block:d1:3
+             columns 3
+             F1["Frame 1"] space:2
+           end
+           space:3
+           block:d2:3
+             columns 3
+             F7["Frame 7"] F8["Frame 8"] space
+           end
+           space:3
+           block:d3:3
+             columns 3
+             F13["Frame 13"] F14["Frame 14"] F15["Frame 15"]
+           end
+
+           space:15
+
+           space:6
+           block:out:3
+             columns 3
+             O1["Frame 1"] O8["Frame 8"] O15["Frame 15"]
+           end
+           space:6
+           A -- "Split" --> B1
+           A -- "Split" --> B2
+           A -- "Split" --> B3
+           A -- "Split" --> B4
+           A -- "Split" --> B5
+
+           B1 -- "Decode" --> d1
+           B3 -- "Decode" --> d2
+           B5 -- "Decode" --> d3
+
+           F1 --> O1
+           F8 --> O8
+           F15 --> O15
 
     Args:
         packets: The input video packets.

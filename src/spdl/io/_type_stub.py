@@ -237,9 +237,9 @@ class AudioFrames(Frames):
 
         Possible values are
 
-          - ``"u8"`` for unsigned 8-bit integer.
-          - ``"s16"``, ``"s32"``, ``"s64"`` for signed 16-bit, 32-bit and 64-bit integer.
-          - ``"flt"``, ``"dbl"`` for 32-bit and 64-bit float.
+        - ``"u8"`` for unsigned 8-bit integer.
+        - ``"s16"``, ``"s32"``, ``"s64"`` for signed 16-bit, 32-bit and 64-bit integer.
+        - ``"flt"``, ``"dbl"`` for 32-bit and 64-bit float.
 
         If the frame is planar format (separate planes for different channels), the
         name will be suffixed with ``"p"``. When converted to buffer, the buffer's shape

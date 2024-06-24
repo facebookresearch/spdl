@@ -2,6 +2,8 @@
 
 import math
 
+from spdl.io import AudioPackets, ImagePackets, VideoPackets
+
 from spdl.lib import _libspdl
 
 __all__ = ["get_audio_filter_desc", "get_video_filter_desc", "get_filter_desc"]
@@ -27,14 +29,14 @@ def get_audio_filter_desc(
 
         sample_fmt (str):
             *Optional:* Change the format of sample.
-            Valid values are (`"u8"`, `"u8p"`, `s16`, `s16p`,
-            `"s32"`, `"s32p"`, `"flt"`, `"fltp"`, `"s64"`,
-            `"s64p"`, `"dbl"`, `"dblp"`).
+            Valid values are (``"u8"``, ``"u8p"``, ``"s16"``, ``"s16p"``,
+            ``"s32"``, ``"s32p"``, ``"flt"``, ``"fltp"``, ``"s64"``,
+            ``"s64p"``, ``"dbl"``, ``"dblp"``).
 
         timestamp (tuple[float, float]):
             *Optional:* Trim the audio by start and end time.
-            This has to match the value passed to demux functions.
-            It can be retrieved from `timestamp` attribute of `Packets` object.
+            This has to match the value passed to demux functions, which can be
+            retrieved from :py:attr:`spdl.io.AudioPackets.timestamp`.
 
         num_frames (int):
             *Optional:* Fix the number of output frames by
@@ -90,53 +92,52 @@ def get_video_filter_desc(
     """Construct FFmpeg filter expression for preprocessing video/image.
 
     Args:
-        frame_rate (int):
-            __Video__: *Optional:* Change the frame rate.
+        frame_rate: `Video`: *Optional:* Change the frame rate.
 
-        timestamp (tuple[float, float]):
+        timestamp:
             *Optional:* Trim the video by start and end time.
-            This has to match the value passed to demux functions.
-            It can be retrieved from `timestamp` attribute of `Packets` object.
+            This has to match the value passed to demux functions, which can be
+            retrieved from :py:attr:`spdl.io.VideoPackets.timestamp`.
 
         scale_width:
-            __Video__, __Image__: *Optional:* Change the resolution of the frame.
+            `Video`, `Image`: *Optional:* Change the resolution of the frame.
 
         scale_height:
-            __Video__, __Image__: *Optional:* Change the resolution of the frame.
+            `Video`, `Image`: *Optional:* Change the resolution of the frame.
 
         scale_algo:
-            __Video__, __Image__: *Optional:* Scaling algorithm.
+            `Video`, `Image`: *Optional:* Scaling algorithm.
             See https://ffmpeg.org/ffmpeg-scaler.html for the available values.
 
         scale_mode:
-            __Video__, __Image__: *Optional:* How to handle the different aspect
+            `Video`, `Image`: *Optional:* How to handle the different aspect
             ratio when changing the resolution of the frame.
 
-            - `"pad"`: Scale the image so that the entire content of the original
+            - ``"pad"``: Scale the image so that the entire content of the original
               image is present with padding.
-            - `"crop"`: Scale the image first to cover the entire region of the
+            - ``"crop"``: Scale the image first to cover the entire region of the
               output resolution, then crop the excess.
-            - `None`: The image is scaled as-is.
+            - ``None``: The image is scaled as-is.
 
         crop_width:
-            __Video__, __Image__: *Optional:* Crop the image at center (after scaling).
+            `Video`, `Image`: *Optional:* Crop the image at center (after scaling).
 
         crop_height:
-            __Video__, __Image__: *Optional:* Crop the image at center (after scaling).
+            `Video`, `Image`: *Optional:* Crop the image at center (after scaling).
 
-        pix_fmt (str):
-            __Video__, __Image__: *Optional:* Change the pixel format.
-            Valid values are (`"gray8"`, `"rgba"`, `"rgb24"`, `"yuv444p"`,
-            `yuv420p`, `yuv422p`, `nv12`).
+        pix_fmt:
+            `Video`, `Image`: *Optional:* Change the pixel format.
+            Valid values are (``"gray8"``, ``"rgba"``, ``"rgb24"``, ``"yuv444p"``,
+            ``"yuv420p"``, ``"yuv422p"``, ``"nv12"``).
 
-        num_frames (int):
-            __Video__: *Optional:* Fix the number of output frames by
+        num_frames:
+            `Video`: *Optional:* Fix the number of output frames by
             dropping the exceeding frames or padding.
             The default behavior when padding is to repeat the last frame.
-            This can be changed to fixed color frame with `pad_mode` argument.
+            This can be changed to fixed color frame with ``pad_mode`` argument.
 
-        pad_mode (str):
-            __Video__, *Optional:* Change the padding frames to the given color.
+        pad_mode:
+            `Video`, *Optional:* Change the padding frames to the given color.
 
     Returns:
         Filter description.
@@ -193,15 +194,17 @@ def get_video_filter_desc(
     return None
 
 
-def get_filter_desc(packets, **filter_args) -> str | None:
+def get_filter_desc(
+    packets: AudioPackets | VideoPackets | ImagePackets, **filter_args
+) -> str | None:
     """Get the filter to process the given packets.
 
     Args:
-        packets (Packets): Packet to process.
+        packets: Packet to process.
 
     Other args:
-        filter_args: Passed to [spdl.io.get_audio_filter_desc][] or
-            [spdl.io.get_video_filter_desc][].
+        filter_args: Passed to :py:func:`~spdl.io.get_audio_filter_desc` or
+            :py:func:`~spdl.io.get_video_filter_desc`.
 
     Returns:
         The resulting filter expression.
