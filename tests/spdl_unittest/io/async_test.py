@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import spdl.io
+import spdl.utils
 from spdl.io import get_audio_filter_desc, get_video_filter_desc
 from spdl.lib import _libspdl
 

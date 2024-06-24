@@ -13,8 +13,8 @@ import spdl.io
 import spdl.utils
 import tiktoken
 import torch
-from spdl.io import CUDAConfig
-from spdl.utils import iter_flist, run_async
+from spdl.io import CUDAConfig, run_async
+from spdl.utils import iter_flist
 
 
 def _parse_args(args):
