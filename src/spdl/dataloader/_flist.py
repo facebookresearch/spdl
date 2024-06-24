@@ -129,6 +129,6 @@ def iter_flist(
         if not suppress_error:
             raise
         # Because this utility is intended to be used in background thread,
-        # we supress the error and exit
+        # we suppress the error and exit
         _LG.exception("Error while iterating over flist %s", path)
         return
