@@ -10,9 +10,9 @@ from pathlib import Path
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import BackgroundGenerator
+from spdl.dataloader import AsyncPipeline, BackgroundGenerator
 from spdl.dataset.librispeech import get_flist
-from spdl.utils import apply_async, iter_flist
+from spdl.utils import iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -93,7 +93,13 @@ def _get_batch_generator(args):
         )
         return spdl.io.to_torch(buffer)
 
-    return apply_async(_async_decode_func, srcs_gen)
+    apl = (
+        AsyncPipeline()
+        .add_source(srcs_gen)
+        .pipe(_async_decode_func, concurrency=args.num_threads)
+    )
+
+    return apl
 
 
 def _main(args=None):

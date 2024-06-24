@@ -7,8 +7,8 @@ from pathlib import Path
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import BackgroundGenerator
-from spdl.utils import apply_async, iter_flist
+from spdl.dataloader import AsyncPipeline, BackgroundGenerator
+from spdl.utils import iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -65,7 +65,9 @@ def _get_test_func(args, use_nvjpeg, width=224, height=224):
             )
             return spdl.io.to_torch(buffer)
 
-    return apply_async(_decode, srcs_gen)
+    return (
+        AsyncPipeline().add_source(srcs_gen).pipe(_decode, concurrency=args.num_threads)
+    )
 
 
 def _run(dataloader):

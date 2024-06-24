@@ -1,89 +1,68 @@
 import asyncio
-import time
 
 import pytest
 
 import spdl.dataloader
+from spdl.dataloader import AsyncPipeline  # pyre-ignore: [16]
+
+
+async def adouble(i):
+    return 2 * i
+
+
+async def aplus1(i):
+    return 1 + i
 
 
 def test_simple():
-    """bg generator can process simple async generator"""
+    """bg generator can process simple pipeline"""
 
-    async def _agen():
-        for i in range(10):
-            yield i
+    apl = AsyncPipeline().add_source(range(10)).pipe(adouble).pipe(aplus1)
 
-    bgg = spdl.dataloader.BackgroundGenerator(
-        _agen(),
-        timeout=None,
-    )
+    bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=None)
     dataloader = iter(bgg)
     for i in range(10):
-        assert i == next(dataloader)
+        assert 2 * i + 1 == next(dataloader)
     with pytest.raises(StopIteration):
         next(dataloader)
 
 
-def test_timeout():
-    """`timeout` parameter stops the bg generator cleanly"""
+def _get_apl(n=10):
+    async def pass_with_sleep(i):
+        await asyncio.sleep(0.1 * i)
+        return i
 
-    async def _agen():
-        await asyncio.sleep(1)
-        yield 0
-        await asyncio.sleep(3)
-        yield 1
+    apl = AsyncPipeline().add_source(range(n)).pipe(pass_with_sleep)
+    return apl
 
+
+def test_timeout_none():
     # Iterate all.
     bgg = spdl.dataloader.BackgroundGenerator(
-        _agen(),
-        timeout=5,
-    )
-    dataloader = iter(bgg)
-    assert next(dataloader) == 0
-    assert next(dataloader) == 1
-    with pytest.raises(StopIteration):
-        next(dataloader)
-
-    # Iterate all.
-    bgg = spdl.dataloader.BackgroundGenerator(
-        _agen(),
+        _get_apl(),
         timeout=None,
     )
-    dataloader = iter(bgg)
-    assert next(dataloader) == 0
-    assert next(dataloader) == 1
-    with pytest.raises(StopIteration):
-        next(dataloader)
+    results = list(bgg)
+    assert results == list(range(10))
 
+
+def test_timeout_enough():
+    # Iterate all.
+    bgg = spdl.dataloader.BackgroundGenerator(
+        _get_apl(),
+        timeout=1.3,
+    )
+    results = list(bgg)
+    assert results == list(range(10))
+
+
+def test_timeout_not_enough():
+    """Timeout shut down the background generator cleanly."""
     # Iterate none.
     bgg = spdl.dataloader.BackgroundGenerator(
-        _agen(),
-        timeout=0.1,
+        _get_apl(),
+        timeout=0.01,
     )
-    dataloader = iter(bgg)
     with pytest.raises(TimeoutError):
-        next(iter(bgg))
-
-    # Iterate one. foreground timeout before background
-    # This could race.
-    # bgg = spdl.dataloader.BackgroundGenerator(
-    #     _agen(),
-    #     timeout=2.0,
-    # )
-    # dataloader = iter(bgg)
-
-    # assert next(dataloader) == 0
-    # with pytest.raises(TimeoutError):
-    #     next(dataloader)
-
-    # Iterate one, background timeout before foreground.
-    bgg = spdl.dataloader.BackgroundGenerator(
-        _agen(),
-        timeout=2.0,
-    )
-    dataloader = iter(bgg)
-
-    assert next(dataloader) == 0
-    time.sleep(4)
-    with pytest.raises(RuntimeError):
-        next(dataloader)
+        for _ in bgg:
+            pass
