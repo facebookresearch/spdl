@@ -7,8 +7,6 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import spdl.utils
-
 from . import _sql, _utils
 from ._dataset import DataSet, ImageData
 
@@ -124,7 +122,7 @@ def _create_table(con, cur, split: str, table: str, idx_col):
     cur.execute(f"CREATE TABLE {tmp_table}({cols})")
 
     n = -1
-    for paths in spdl.utils.iter_flist(flist, batch_size=1024):
+    for paths in _utils.batch(flist):
         data = [(n := n + 1, p) for p in paths]
         cur.executemany(f"INSERT INTO {tmp_table}({cols}) VALUES(?, ?)", data)
         con.commit()

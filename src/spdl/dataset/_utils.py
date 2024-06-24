@@ -6,6 +6,23 @@ from pathlib import Path
 
 _LG = logging.getLogger(__name__)
 
+
+__all__ = []
+
+
+################################################################################
+# Helper function for dataset creation
+################################################################################
+def batch(iterator, size=1024):
+    batch = []
+    for item in iterator:
+        batch.append(item)
+        if len(batch) >= size:
+            yield batch
+            batch = []
+    yield batch
+
+
 ################################################################################
 # Dataset catalog acquisition
 ################################################################################
