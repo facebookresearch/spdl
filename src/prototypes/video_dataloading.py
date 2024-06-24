@@ -13,8 +13,8 @@ from threading import Event
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import BackgroundGenerator
-from spdl.utils import apply_async, iter_flist
+from spdl.dataloader import AsyncPipeline, BackgroundGenerator
+from spdl.utils import iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -135,7 +135,11 @@ def _get_batch_generator(args):
         if args.nvdec
         else _get_decode_fn(args.worker_id)
     )
-    return apply_async(_decode_fn, srcs_gen)
+    return (
+        AsyncPipeline()
+        .add_source(srcs_gen)
+        .pipe(_decode_fn, concurrency=args.num_threads)
+    )
 
 
 @dataclass

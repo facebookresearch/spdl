@@ -11,9 +11,9 @@ import spdl.io
 import spdl.utils
 import timm
 import torch
-from spdl.dataloader import BackgroundGenerator
+from spdl.dataloader import AsyncPipeline, BackgroundGenerator
 from spdl.dataset.imagenet import get_mappings, parse_wnid
-from spdl.utils import apply_async, iter_flist
+from spdl.utils import iter_flist
 from torch.profiler import profile
 
 _LG = logging.getLogger(__name__)
@@ -224,11 +224,15 @@ def _get_batch_generator(args, device):
         batch = spdl.io.to_torch(buffer)
         return batch, classes
 
+    apl = AsyncPipeline().add_source(srcs_gen)
+
     if args.use_nvdec:
-        return apply_async(_async_decode_nvdec, srcs_gen)
-    if args.use_nvjpeg:
-        return apply_async(_async_decode_nvjpeg, srcs_gen)
-    return apply_async(_async_decode_func, srcs_gen)
+        apl.pipe(_async_decode_nvdec, concurrency=7)
+    elif args.use_nvjpeg:
+        apl.pipe(_async_decode_nvjpeg, concurrency=args.num_threads)
+    else:
+        apl.pipe(_async_decode_func, concurrency=args.num_threads)
+    return apl
 
 
 def _main(args=None):
@@ -238,7 +242,7 @@ def _main(args=None):
 
     device = torch.device("cuda:0")
     model = _get_model(args.batch_size, device, args.compile, args.use_bf16)
-    batch_gen = _get_batch_generator(args, device)
+    pipeline = _get_batch_generator(args, device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
     if args.use_nvjpeg:
@@ -246,7 +250,7 @@ def _main(args=None):
     if args.use_nvdec:
         trace_path = f"{trace_path}.nvdec"
     dataloader = BackgroundGenerator(
-        batch_gen, num_workers=args.num_threads, queue_size=args.queue_size
+        pipeline, num_workers=args.num_threads, queue_size=args.queue_size
     )
 
     with (
