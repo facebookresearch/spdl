@@ -1,12 +1,11 @@
-# pyre-unsafe
-
 """Utility functions."""
 
-from . import _build, _ffmpeg, _flist, _tracing
+# pyre-unsafe
+
+from . import _build, _ffmpeg, _tracing
 
 _mods = [
     _build,
-    _flist,
     _ffmpeg,
     _tracing,
 ]
