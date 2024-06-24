@@ -273,6 +273,9 @@ def decode_packets(packets, filter_desc=None, **kwargs):
 
         filter_desc (str):
             *Optional:* Custom filter applied after decoding.
+            See :py:func:`~spdl.io.get_filter_desc`,
+            :py:func:`~spdl.io.get_audio_filter_desc`, and
+            :py:func:`~spdl.io.get_video_filter_desc`.
 
         decode_config (DecodeConfig):
             *Optional:* Custom decode config.

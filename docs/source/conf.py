@@ -31,7 +31,7 @@ autosummary_generate = True
 autosummary_imported_members = True
 autoclass_content = "class"
 autodoc_default_options = {
-    "special-members": ",".join(["__len__", "__getitem__"]),
+    "special-members": ",".join(["__len__", "__getitem__", "__iter__"]),
     "undoc-members": True,
     "exclude-members": ",".join(
         [
