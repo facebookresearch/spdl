@@ -5,6 +5,7 @@ import time
 
 from spdl.dataset import _dataset
 from spdl.dataset.librispeech import LibriSpeech
+from spdl.utils import iter_batch
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -71,7 +72,8 @@ for ds in datasets:
 # dataset.shuffle()
 # print(dataset)
 
-for i, batch in enumerate(dataset.iterate(batch_size=2, max_batch=5)):
+
+for i, batch in enumerate(iter_batch(dataset.iterate(max_items=10), batch_size=2)):
     print(i, f"{len(batch)}")
     print("\n".join(f"{item}, {item._index}" for item in batch))
     print()

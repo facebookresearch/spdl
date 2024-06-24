@@ -3,8 +3,6 @@
 import dataclasses
 import logging
 
-from spdl.utils import iter_batch  # pyre-ignore: [21]
-
 from ._dataset import DataSet
 
 _LG = logging.getLogger(__name__)
@@ -175,18 +173,17 @@ class _DataSet:
             cur.row_factory = self._row_factory
         return cur
 
-    def iterate(self, batch_size: int, drop_last: bool, max_batch: int | None):
-        limit = _get_limit(start=0, stop=None, step=1, _idx_col=self._idx_col)
-        if max_batch is not None:
-            if max_batch <= 0:
+    def iterate(self, *, max_items: int | None):
+        if max_items is not None:
+            if max_items <= 0:
                 raise ValueError(
-                    f"`max_batch` must be a positive integer. Found: {max_batch}"
+                    f"`max_batch` must be a positive integer. Found: {max_items}"
                 )
-            limit = f"{limit} LIMIT {max_batch * batch_size}"
+        limit = _get_limit(start=0, stop=max_items, step=1, _idx_col=self._idx_col)
 
         query = self._get_query(limit=limit)
         cur = self._get_cursor(set_factory=True)
-        return iter_batch(cur.execute(query), batch_size, drop_last)
+        return cur.execute(query)
 
     ###########################################################################
     # Map interface: (requires `_idx_col` attribute)

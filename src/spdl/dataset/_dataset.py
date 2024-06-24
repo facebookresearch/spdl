@@ -88,37 +88,18 @@ class DataSet(Generic[DataType]):
 
     def iterate(
         self,
-        batch_size: int | None,
-        prefix: str = "",
-        drop_last: bool = False,
-        max_batch: int | None = None,
+        *,
+        max_items: int | None = None,
     ) -> Iterator[DataType | list[DataType]]:
         """Iterate over the dataset.
 
         Args:
-            batch_size: The number of samples returned at a time.
-                If `None`, then a single item is returned at a time.
-            prefix: If given, the `src` attribute of the returned samples are prefixed
-                with the given value.
-            drop_last: When the total number of items is not a multiple of
-                the `batch_size`, and `drop_last` is True, the last batch is omitted.
-            max_batch: The maximum number of batches to iterate.
+            max_items: The maximum number of batches to iterate.
 
         Yields:
             A sample if `batch_size` is `None`, otherwise a list of samples.
         """
-        gen = self._impl.iterate(
-            batch_size=1 if batch_size is None else batch_size,
-            drop_last=drop_last,
-            max_batch=max_batch,
-        )
-
-        for batch in gen:
-            if prefix:
-                batch = [replace(s, src=f"{prefix}{s.src}") for s in batch]
-            if batch_size is None:
-                batch = batch[0]
-            yield batch
+        yield from self._impl.iterate(max_items=max_items)
 
     def __getitem__(self, key: int | slice) -> DataType | list[DataType]:
         """Return the sample at the given key.
