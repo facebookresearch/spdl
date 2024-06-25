@@ -247,12 +247,18 @@ class AsyncPipeline:
            queue = Queue()
 
            pipeline = (
-               AsyncPipeline(buffer_size=10)
+               AsyncPipeline()
                .add_source(source())
                .pipe(decode, concurrency=10)
                .add_sink(queue)
 
-           asyncio.run(pipeline.run())
+           loop = asyncio.new_event_loop()
+           loop.set_default_executor(
+               ThreadPoolExecutor(
+                   max_workers=10,
+               )
+           )
+           loop.run_until_complete(pipeline.run())
 
 
     Args:
@@ -260,7 +266,7 @@ class AsyncPipeline:
             pushed from the source iterator.
     """
 
-    def __init__(self, buffer_size: int = 10):
+    def __init__(self, *, buffer_size: int = 1):
         self.queues = [AsyncQueue(buffer_size)]
         self.coros: list[tuple[Coroutine, str | None]] = []
 
@@ -295,7 +301,9 @@ class AsyncPipeline:
     def pipe(
         self,
         afunc: Callable[[T], Awaitable[U]],
+        *,
         concurrency: int = 1,
+        buffer_size: int = 10,
         name: str | None = None,
     ) -> "AsyncPipeline":
         """Apply an async function to items in the pipeline.
@@ -323,7 +331,7 @@ class AsyncPipeline:
             concurrency: The maximum number of async tasks executed concurrently.
             name: The name (prefix) to give to the task.
         """
-        self.queues.append(AsyncQueue(1))
+        self.queues.append(AsyncQueue(buffer_size))
         in_queue, out_queue = self.queues[-2:]
         coro = _pipe(in_queue, afunc, out_queue, concurrency, name)
         self.coros.append((coro, afunc.__name__))
