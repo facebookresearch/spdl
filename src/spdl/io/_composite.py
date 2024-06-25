@@ -724,24 +724,24 @@ async def async_load_image_batch(
     .. mermaid::
 
        gantt
-           title Example timeline of asynchronous batch image decoding
+           title Illustration of asynchronous batch image decoding timeline
            dateFormat X
            axisFormat %s
            section Thread 1
                Demux image 1 :demux1, 0, 3
-               Demux image 2 :demux2, after demux1, 7
-               Demux image 3 :demux3, after demux2, 10
-               Demux image 4 :demux4, after demux3, 15
-               Batch conversion :batch, after decode4, 40
-               Device Transfer :after batch, 43
-           section Thread 2
                Decode/resize image 1 :after demux1, 20
+           section Thread 2
+               Demux image 2 :demux2, 1, 5
+               Decode/resize image 2 :after demux2, 23
            section Thread 3
-               Decode/resize image 2 :after demux2, 27
+               Demux image 3 :demux3, 2, 5
+               Decode/resize image 3 :after demux3, 24
            section Thread 4
-               Decode/resize image 3 :after demux3, 35
+               Demux image 4 :demux4, 3, 8
+               Decode/resize image 4 :decode4, after demux4, 25
            section Thread 5
-               Decode/resize image 4 :decode4, after demux4, 37
+               Batch conversion :batch, after decode4, 30
+               Device Transfer :after batch, 33
 
     Args:
         srcs: List of source identifiers.
@@ -1050,8 +1050,6 @@ async def async_sample_decode_video(
     smaller set of packets and decode the minimum number of frames to
     retrieve the specified frames.
 
-    The packet splits are decoded concurrently.
-
     .. mermaid::
 
        block-beta
@@ -1106,19 +1104,38 @@ async def async_sample_decode_video(
              O1["Frame 1"] O8["Frame 8"] O15["Frame 15"]
            end
            space:6
-           A -- "Split" --> B1
-           A -- "Split" --> B2
-           A -- "Split" --> B3
-           A -- "Split" --> B4
-           A -- "Split" --> B5
+           A -- "Split 1" --> B1
+           A -- "Split 2" --> B2
+           A -- "Split 3" --> B3
+           A -- "Split 4" --> B4
+           A -- "Split 5" --> B5
 
-           B1 -- "Decode" --> d1
-           B3 -- "Decode" --> d2
-           B5 -- "Decode" --> d3
+           B1 -- "Decode 1" --> d1
+           B3 -- "Decode 3" --> d2
+           B5 -- "Decode 5" --> d3
 
            F1 --> O1
            F8 --> O8
            F15 --> O15
+
+    The packet splits are decoded concurrently.
+    The following figure illustrates the timeline of the process.
+
+    .. mermaid::
+
+       gantt
+           title Illustration of asynchronous sample decode timeline
+           dateFormat X
+           axisFormat %s
+           section Thread 1
+               Split Input Packets:split, 0, 3
+               Decode Split 1 :decode1, after split, 7
+               Gather and return: gather, after decode2, 14
+           section Thread 2
+               Decode Split 3 :decode2, after split, 10
+           section Thread 3
+               Decode Split 5 :decode2, after split, 13
+
 
     Args:
         packets: The input video packets.
