@@ -13,7 +13,6 @@ from typing import TypeVar
 __all__ = [
     "AsyncPipeline",
     "PipelineFailure",
-    "EOF_SENTINEL",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -22,21 +21,9 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-# Custom class just for the sake of Sphinx doc
-# Functionally, just `object()` is sufficient.
-class Sentinel:
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return self.name
-
-
-EOF_SENTINEL = Sentinel("EOF")
-EOF_SENTINEL.__doc__ = (
-    "The default sentinel object used to "
-    "mark/detect the end of stream in async pipelines."
-)
+# Sentinel objects used to instruct AsyncPipeline to take special actions.
+_EOF = object()  # Indicate the end of stream.
+_SKIP = object()  # Indicate that there is no data to process.
 
 
 # Note:
@@ -69,16 +56,16 @@ def _check_exception(task, stacklevel):
 
 
 @asynccontextmanager
-async def _put_sentinel_when_done(queue, put_on_error=False):
+async def _put_eof_when_done(queue, put_on_error=False):
     try:
         yield
     except Exception:
         if put_on_error:
-            await queue.put(EOF_SENTINEL)
+            await queue.put(_EOF)
         else:
             raise
     else:
-        await queue.put(EOF_SENTINEL)
+        await queue.put(_EOF)
 
 
 ################################################################################
@@ -92,14 +79,13 @@ async def _pipe(
     output_queue: AsyncQueue[U],
     concurrency: int = 1,
     name: str | None = None,
+    _pipe_eof: bool = False,
 ) -> None:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
     if concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
-
-    name_: str = name or f"pipe_{afunc.__name__}"
 
     num_fail = num_ok = 0
     ave_time = 0.0
@@ -117,15 +103,20 @@ async def _pipe(
             raise
 
     # Note: the order of the contextmanager matters.
-    # `_put_sentinel_when_done` must be placed first (its finally block is executed last)
-    async with _put_sentinel_when_done(output_queue):
+    # `_put_eof_when_done` must be placed first (its finally block is executed last)
+    async with _put_eof_when_done(output_queue):
         i, tasks = 0, set()
         t0 = time.monotonic()
-        while (item := await input_queue.get()) is not EOF_SENTINEL:
+        while True:
+            item = await input_queue.get()
+            if item is _SKIP:
+                continue
+            if item is _EOF and not _pipe_eof:
+                break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
             coro = afunc(item)
-            task = asyncio.create_task(_wrap(coro), name=f"{name_}_{(i := i + 1)}")
+            task = asyncio.create_task(_wrap(coro), name=f"{name}_{(i := i + 1)}")
             task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
             tasks.add(task)
 
@@ -134,15 +125,18 @@ async def _pipe(
                     tasks, return_when=asyncio.FIRST_COMPLETED
                 )
 
+            if item is _EOF:
+                break
+
         if tasks:
             await asyncio.wait(tasks)
         elapsed = time.monotonic() - t0
 
     _LG.info(
-        "[%s] Completed %s tasks (%s failed) in %.4f [%s]. "
-        "QPS: %.2f (Concurrency: %d). "
-        "Average task time: %.4f [%s].",
-        name_,
+        "[%s]\tCompleted %5d tasks (%3d failed) in %.4f [%3s]. "
+        "QPS: %.2f (Concurrency: %3d). "
+        "Average task time: %.4f [%3s].",
+        name,
         num_ok + num_fail,
         num_fail,
         elapsed * 1000 if elapsed < 1 else elapsed,
@@ -161,11 +155,12 @@ async def _pipe(
 
 async def _enqueue(
     iterator: Iterator[T],
-    queue: AsyncQueue[T | Sentinel],
+    queue: AsyncQueue[T],
 ) -> None:
-    async with _put_sentinel_when_done(queue, put_on_error=True):
+    async with _put_eof_when_done(queue, put_on_error=True):
         for item in iterator:
-            await queue.put(item)
+            if item is not _SKIP:
+                await queue.put(item)
 
 
 ################################################################################
@@ -174,11 +169,12 @@ async def _enqueue(
 
 
 async def _dequeue(
-    input_queue: AsyncQueue[T | Sentinel],
+    input_queue: AsyncQueue[T],
     output_queue: Queue[T],
 ):
-    while (item := await input_queue.get()) is not EOF_SENTINEL:
-        output_queue.put(item)  # pyre-ignore: [6]
+    while (item := await input_queue.get()) is not _EOF:
+        if item is not _SKIP:
+            output_queue.put(item)  # pyre-ignore: [6]
 
 
 ################################################################################
@@ -188,6 +184,10 @@ async def _dequeue(
 
 # TODO [Python 3.11]: Migrate to ExceptionGroup
 class PipelineFailure(Exception):
+    """PipelineFailure()
+    Thrown by :py:meth:`spdl.dataloader.AsyncPipeline.run`
+    when pipeline encounters an error."""
+
     def __init__(self, errs):
         msg = []
         for k, v in errs.items():
@@ -345,8 +345,41 @@ class AsyncPipeline:
         """
         self.queues.append(AsyncQueue(buffer_size))
         in_queue, out_queue = self.queues[-2:]
+        if name is None:
+            if hasattr(afunc, "__name__"):
+                name = afunc.__name__
+            else:
+                name = afunc.__class__.__name__
         coro = _pipe(in_queue, afunc, out_queue, concurrency, name)
-        self.coros.append((coro, afunc.__name__))
+        self.coros.append((coro, name))
+        return self
+
+    def aggregate(self, n: int, /, *, drop_last: bool = False) -> "AsyncPipeline":
+        """Buffer the items in the pipeline.
+
+
+        Args:
+            n: The number of items to buffer.
+            drop_last: Drop the last aggregation if it has less than ``n`` items.
+        """
+
+        vals = [[]]
+
+        async def aggregate(i):
+            if i is not _EOF:
+                vals[0].append(i)
+
+            if (i is _EOF and vals[0]) or (len(vals[0]) >= n):
+                ret = vals.pop(0)
+                vals.append([])
+                return ret
+            return _SKIP
+
+        self.queues.append(AsyncQueue(1))
+        in_queue, out_queue = self.queues[-2:]
+        name = f"aggregate({n})"
+        coro = _pipe(in_queue, aggregate, out_queue, 1, name, _pipe_eof=not drop_last)
+        self.coros.append((coro, name))
         return self
 
     def add_sink(self, sink: Queue[T]) -> "AsyncPipeline":
