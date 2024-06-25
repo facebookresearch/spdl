@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from asyncio import Queue as AsyncQueue
 from collections.abc import Awaitable, Callable, Coroutine, Iterator
 from contextlib import asynccontextmanager
@@ -100,29 +101,31 @@ async def _pipe(
 
     name_: str = name or f"pipe_{afunc.__name__}"
 
-    num_task_failures = 0
+    num_fail = num_ok = 0
+    ave_time = 0.0
 
     async def _wrap(coro: Awaitable[U]) -> None:
+        nonlocal num_fail, num_ok, ave_time
         try:
+            t0 = time.monotonic()
             result = await coro
+            elapsed = time.monotonic() - t0
+            ave_time += (elapsed - ave_time) / (num_ok := num_ok + 1)
             await output_queue.put(result)
         except Exception:
-            nonlocal num_task_failures
-            num_task_failures += 1
+            num_fail += 1
             raise
-
-    tasks = set()
 
     # Note: the order of the contextmanager matters.
     # `_put_sentinel_when_done` must be placed first (its finally block is executed last)
     async with _put_sentinel_when_done(output_queue):
-        i = 0
+        i, tasks = 0, set()
+        t0 = time.monotonic()
         while (item := await input_queue.get()) is not EOF_SENTINEL:
-            i += 1
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
             coro = afunc(item)
-            task = asyncio.create_task(_wrap(coro), name=f"{name_}_{i}")
+            task = asyncio.create_task(_wrap(coro), name=f"{name_}_{(i := i + 1)}")
             task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
             tasks.add(task)
 
@@ -133,13 +136,22 @@ async def _pipe(
 
         if tasks:
             await asyncio.wait(tasks)
+        elapsed = time.monotonic() - t0
 
-        if num_task_failures > 0:
-            _LG.warning(
-                "[%s] %s task(s) did not succeed.",
-                name_,
-                num_task_failures,
-            )
+    _LG.info(
+        "[%s] Completed %s tasks (%s failed) in %.4f [%s]. "
+        "QPS: %.2f (Concurrency: %d). "
+        "Average task time: %.4f [%s].",
+        name_,
+        num_ok + num_fail,
+        num_fail,
+        elapsed * 1000 if elapsed < 1 else elapsed,
+        "ms" if elapsed < 1 else "sec",
+        num_ok / elapsed if elapsed > 0.001 else float("nan"),
+        concurrency,
+        ave_time * 1000 if ave_time < 1 else ave_time,
+        "ms" if ave_time < 1 else "sec",
+    )
 
 
 ################################################################################
