@@ -432,7 +432,7 @@ def test_async_pipeline_cancel():
             raise
 
     pipeline = (
-        AsyncPipeline(1)
+        AsyncPipeline()
         .add_source(range(10))
         .pipe(astuck, concurrency=1)
         .add_sink(result_queue)
