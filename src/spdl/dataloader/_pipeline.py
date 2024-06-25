@@ -373,6 +373,10 @@ class AsyncPipeline:
            and async ops. For example, data acquisition failure due to network issue
            or decoding failures.
            Errors happen inside of user-provided functions are simply logged and ignored.
+
+        Raises:
+
+            PipelineFailure: Rised when a part of the pipeline has an error.
         """
         tasks = set()
         for i, (coro, name) in enumerate(self.coros):
