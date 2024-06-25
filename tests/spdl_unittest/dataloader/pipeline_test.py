@@ -4,15 +4,15 @@ from queue import Queue
 
 import pytest
 
-from spdl.dataloader import AsyncPipeline, EOF_SENTINEL as EOF, PipelineFailure
-from spdl.dataloader._pipeline import _dequeue, _enqueue, _pipe
+from spdl.dataloader import AsyncPipeline, PipelineFailure
+from spdl.dataloader._pipeline import _dequeue, _enqueue, _EOF, _pipe, _SKIP
 
 
 def _put_aqueue(queue, vals, *, eof):
     for val in vals:
         queue.put_nowait(val)
     if eof:
-        queue.put_nowait(EOF)
+        queue.put_nowait(_EOF)
 
 
 def _flush_queue(queue):
@@ -43,7 +43,7 @@ def test_async_enqueue_empty():
     queue = asyncio.Queue()
     coro = _enqueue([], queue)
     asyncio.run(coro)
-    assert _flush_aqueue(queue) == [EOF]
+    assert _flush_aqueue(queue) == [_EOF]
 
 
 def test_async_enqueue_simple():
@@ -53,7 +53,22 @@ def test_async_enqueue_simple():
     coro = _enqueue(src, queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
-    assert vals == src + [EOF]
+    assert vals == src + [_EOF]
+
+
+def test_async_enqueue_skip():
+    """_async_enqueue should skip if the value is SKIP_SENTINEL"""
+
+    def src():
+        for i in range(6):
+            yield i
+            yield _SKIP
+
+    queue = asyncio.Queue()
+    coro = _enqueue(src(), queue)
+    asyncio.run(coro)
+    vals = _flush_aqueue(queue)
+    assert vals == list(range(6)) + [_EOF]
 
 
 def test_async_enqueue_iterator_failure():
@@ -96,7 +111,7 @@ def test_async_enqueue_cancel():
 
 @pytest.mark.parametrize("empty", [False, True])
 def test_async_dequeue_simple(empty: bool):
-    """_async_dequeue pass the contents from input_queue to output_queue"""
+    """_dequeue pass the contents from input_queue to output_queue"""
     input_queue = asyncio.Queue()
     output_queue = Queue()
 
@@ -109,6 +124,22 @@ def test_async_dequeue_simple(empty: bool):
     results = _flush_queue(output_queue)
 
     assert results == data
+
+
+def test_async_dequeue_skip():
+    """_dequeue does not pass the value if it is SKIP"""
+    input_queue = asyncio.Queue()
+    output_queue = Queue()
+
+    data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
+    _put_aqueue(input_queue, data, eof=True)
+
+    coro = _dequeue(input_queue, output_queue)
+
+    asyncio.run(coro)
+    results = _flush_queue(output_queue)
+
+    assert results == [0, 1, 2]
 
 
 def test_async_dequeue_cancel():
@@ -155,12 +186,29 @@ def test_async_pipe():
 
         result = _flush_aqueue(output_queue)
 
-        assert result == [v * 2 for v in ref] + [EOF]
+        assert result == [v * 2 for v in ref] + [_EOF]
 
     asyncio.run(test())
 
 
-# TOOD: test same for AsyncPipeline
+def test_async_pipe_skip():
+    """async_pipe skips the data if it is SKIP."""
+    input_queue = asyncio.Queue()
+    output_queue = asyncio.Queue()
+
+    async def test():
+        data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
+        _put_aqueue(input_queue, data, eof=True)
+
+        await _pipe(input_queue, adouble, output_queue)
+
+        result = _flush_aqueue(output_queue)
+
+        assert result == [v * 2 for v in [0, 1, 2]] + [_EOF]
+
+    asyncio.run(test())
+
+
 def test_async_pipe_wrong_task_signature():
     """async_pipe fails immediately if user provided incompatible iterator/afunc."""
     input_queue = asyncio.Queue()
@@ -274,7 +322,7 @@ def test_async_pipe_concurrency_throughput():
         input_queue = asyncio.Queue()
         output_queue = asyncio.Queue()
 
-        ref = [4, 5, 6, 7, EOF]
+        ref = [4, 5, 6, 7, _EOF]
         _put_aqueue(input_queue, ref, eof=False)
 
         t0 = time.monotonic()
@@ -338,6 +386,90 @@ def test_async_pipeline_noop():
 
         assert 10 == len(results)
         assert results == src
+
+    asyncio.run(_test())
+
+
+def test_async_pipeline_skip():
+    """AsyncPipeline functions without pipe"""
+    result_queue = Queue()
+
+    def src():
+        for i in range(10):
+            yield i
+            yield _SKIP
+        yield _SKIP
+
+    pipeline = AsyncPipeline().add_source(src()).add_sink(result_queue)
+
+    async def _test():
+        await pipeline.run()
+        results = _flush_queue(result_queue)
+
+        assert 10 == len(results)
+        assert results == list(range(10))
+
+    asyncio.run(_test())
+
+
+def test_async_pipeline_skip_odd():
+    """AsyncPipeline functions without pipe"""
+    result_queue = Queue()
+
+    src = list(range(10))
+
+    async def odd(i):
+        return i if i % 2 else _SKIP
+
+    pipeline = AsyncPipeline().add_source(src).pipe(odd).add_sink(result_queue)
+
+    async def _test():
+        await pipeline.run()
+        results = _flush_queue(result_queue)
+
+        assert 5 == len(results)
+        assert results == [i for i in src if i % 2]
+
+    asyncio.run(_test())
+
+
+def test_async_pipeline_aggregate():
+    """AsyncPipeline aggregates the input"""
+    result_queue = Queue()
+
+    src = list(range(13))
+
+    pipeline = AsyncPipeline().add_source(src).aggregate(4).add_sink(result_queue)
+
+    async def _test():
+        await pipeline.run()
+        results = _flush_queue(result_queue)
+
+        assert 4 == len(results)
+        assert results == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12]]
+
+    asyncio.run(_test())
+
+
+def test_async_pipeline_aggregate_drop_last():
+    """AsyncPipeline aggregates the input and drop the last"""
+    result_queue = Queue()
+
+    src = list(range(13))
+
+    pipeline = (
+        AsyncPipeline()
+        .add_source(src)
+        .aggregate(4, drop_last=True)
+        .add_sink(result_queue)
+    )
+
+    async def _test():
+        await pipeline.run()
+        results = _flush_queue(result_queue)
+
+        assert 3 == len(results)
+        assert results == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
 
     asyncio.run(_test())
 
