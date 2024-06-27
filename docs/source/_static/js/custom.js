@@ -60,7 +60,18 @@ function setupAutodocCpp() {
     })
 }
 
+/* Append `target="_blank"` to source link
+ */
+function updateSourceLink() {
+    const sourceLinks = document.querySelectorAll("a.reference.external")
+    console.log(sourceLinks)
+    sourceLinks.forEach(c => {
+        c.setAttribute('target', '_blank')
+    })
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     setupAutodocPy()
     setupAutodocCpp()
+    updateSourceLink()
 })
