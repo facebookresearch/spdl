@@ -151,6 +151,13 @@ class BackgroundGenerator(Generic[T]):
         self.loop = _get_loop(num_workers) if loop is None else loop
         self.timeout = timeout
 
+        try:
+            from spdl.lib import _libspdl
+
+            _libspdl.log_api_usage("spdl.dataloader.BackgroundGenerator")
+        except Exception:
+            pass  # ignore if not supported.
+
     def __iter__(self) -> Iterator[T]:
         """Run the generator in background thread and iterate the result.
 
