@@ -263,6 +263,7 @@ class AsyncPipeline:
                .add_source(source())
                .pipe(decode, concurrency=10)
                .add_sink(queue)
+           )
 
            loop = asyncio.new_event_loop()
            loop.set_default_executor(
@@ -429,7 +430,7 @@ class AsyncPipeline:
 
         Raises:
 
-            PipelineFailure: Rised when a part of the pipeline has an error.
+            PipelineFailure: Raised when a part of the pipeline has an error.
         """
         tasks = set()
         for i, (coro, name) in enumerate(self.coros):
