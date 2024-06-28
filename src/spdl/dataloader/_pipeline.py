@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from queue import Queue
 from typing import TypeVar
 
-
 __all__ = [
     "AsyncPipeline",
     "PipelineFailure",
@@ -282,6 +281,13 @@ class AsyncPipeline:
     def __init__(self, *, buffer_size: int = 1):
         self.queues = [AsyncQueue(buffer_size)]
         self.coros: list[tuple[Coroutine, str | None]] = []
+
+        try:
+            from spdl.lib import _libspdl
+
+            _libspdl.log_api_usage("spdl.dataloader.AsyncPipeline")
+        except Exception:
+            pass  # ignore if not supported.
 
     def add_source(self, source: Iterator[T]) -> "AsyncPipeline":
         """Attach an iterator to the source buffer.
