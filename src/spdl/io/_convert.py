@@ -1,15 +1,10 @@
 # pyre-unsafe
 
 import numpy as np
+from numpy.typing import NDArray
 
 from spdl._internal import import_utils
-
 from spdl.io import CPUBuffer, CUDABuffer
-
-try:
-    from numpy.typing import NDArray  # type: ignore[name-defined]
-except ImportError:
-    from numpy import ndarray as NDArray
 
 torch = import_utils.lazy_import("torch")
 cuda = import_utils.lazy_import("numba.cuda")
