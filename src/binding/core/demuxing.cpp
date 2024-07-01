@@ -51,6 +51,11 @@ DemuxerPtr _make_demuxer_bytes(
   return make_demuxer(data_, dmx_cfg);
 }
 
+bool _has_audio(DemuxerPtr demuxer) {
+  nb::gil_scoped_release g;
+  return demuxer->has_audio();
+}
+
 template <MediaType media_type>
 PacketsPtr<media_type> _demuxer_demux(
     Demuxer& demuxer,
@@ -136,7 +141,8 @@ void register_demuxing(nb::module_& m) {
           "demux_video",
           &_demuxer_demux<MediaType::Video>,
           nb::arg("window") = nb::none(),
-          nb::arg("bsf") = nb::none());
+          nb::arg("bsf") = nb::none())
+      .def("has_audio", &_has_audio);
 
   m.def(
       "_demuxer",

@@ -54,9 +54,18 @@ Demuxer::Demuxer(std::unique_ptr<DataInterface> di_)
 Demuxer::~Demuxer() {
   TRACE_EVENT("demuxing", "Demuxer::~Demuxer");
   di.reset();
-  // Techinically, this is not necessary, but doing it here puts
+  // Technically, this is not necessary, but doing it here puts
   // the destruction of AVFormatContext under ~StreamingDemuxe, which
   // makes the trace easier to interpret.
+}
+
+bool Demuxer::has_audio() {
+  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
+    if (AVMEDIA_TYPE_AUDIO == fmt_ctx->streams[i]->codecpar->codec_type) {
+      return true;
+    }
+  }
+  return false;
 }
 
 template <MediaType media_type>
