@@ -6,8 +6,6 @@ import numpy as np
 import pytest
 import spdl.io
 
-from spdl.lib import _libspdl
-
 CMDS = {
     "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
     "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 25 sample.mp4",
@@ -19,6 +17,54 @@ async def _load_from_packets(packets):
     frames = await spdl.io.async_decode_packets(packets)
     buffer = await spdl.io.async_convert_frames(frames)
     return spdl.io.to_numpy(buffer)
+
+
+def test_audio_packets_attribtues(get_sample):
+    """AudioPackets have sample_rate and num_channels attributes"""
+    # fmt: off
+    cmd = """
+    ffmpeg -hide_banner -y \
+    -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
+    -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
+    -filter_complex amerge  -c:a pcm_s16le sample.wav
+    """
+    # fmt: on
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        packets = await spdl.io.async_demux_audio(src)
+        assert packets.sample_rate == 8000
+        assert packets.num_channels == 2
+
+    asyncio.run(_test(sample.path))
+
+
+def test_video_packets_attribtues(get_sample):
+    """VideoPackets have width, height, pixe_format attributes"""
+    cmd = CMDS["video"]
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        packets = await spdl.io.async_demux_video(src)
+        assert packets.width == 320
+        assert packets.height == 240
+        assert packets.pix_fmt == "yuv444p"
+
+    asyncio.run(_test(sample.path))
+
+
+def test_image_packets_attribtues(get_sample):
+    """ImagePackets have width, height, pixe_format attributes"""
+    cmd = CMDS["image"]
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        packets = await spdl.io.async_demux_image(src)
+        assert packets.width == 320
+        assert packets.height == 240
+        assert packets.pix_fmt == "gray"
+
+    asyncio.run(_test(sample.path))
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
