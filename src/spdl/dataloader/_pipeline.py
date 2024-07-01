@@ -300,6 +300,7 @@ class AsyncPipeline:
         concurrency: int = 1,
         buffer_size: int = 10,
         name: str | None = None,
+        hooks: Sequence[PipelineHook] | None = None,
     ) -> "AsyncPipeline":
         """Apply an async function to items in the pipeline.
 
@@ -325,6 +326,9 @@ class AsyncPipeline:
             afunc: Async function applied to the items in the queue.
             concurrency: The maximum number of async tasks executed concurrently.
             name: The name (prefix) to give to the task.
+            hooks: Hook objects to be attached to the stage. Hooks are intended for collecting
+                stats of the stage.
+                If ``None``, a default hook, :py:class:`~spdl.dataloader.TaskStatsHook` is used.
         """
         self.queues.append(AsyncQueue(buffer_size))
         in_queue, out_queue = self.queues[-2:]
@@ -333,17 +337,35 @@ class AsyncPipeline:
                 name = afunc.__name__
             else:
                 name = afunc.__class__.__name__
-        coro = _pipe(in_queue, afunc, out_queue, concurrency, name)
+
+        coro = _pipe(
+            in_queue,
+            afunc,
+            out_queue,
+            concurrency,
+            name,
+            hooks=hooks,
+        )
         self.coros.append((coro, name))
         return self
 
-    def aggregate(self, n: int, /, *, drop_last: bool = False) -> "AsyncPipeline":
+    def aggregate(
+        self,
+        n: int,
+        /,
+        *,
+        drop_last: bool = False,
+        hooks: Sequence[PipelineHook] | None = None,
+    ) -> "AsyncPipeline":
         """Buffer the items in the pipeline.
 
 
         Args:
             n: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``n`` items.
+            hooks: Hook objects to be attached to the stage. Hooks are intended for collecting
+                stats of the stage.
+                If ``None``, a default hook, :py:class:`~spdl.dataloader.TaskStatsHook` is used.
         """
 
         vals = [[]]
@@ -361,7 +383,15 @@ class AsyncPipeline:
         self.queues.append(AsyncQueue(1))
         in_queue, out_queue = self.queues[-2:]
         name = f"aggregate({n})"
-        coro = _pipe(in_queue, aggregate, out_queue, 1, name, _pipe_eof=not drop_last)
+        coro = _pipe(
+            in_queue,
+            aggregate,
+            out_queue,
+            1,
+            name,
+            hooks=hooks,
+            _pipe_eof=not drop_last,
+        )
         self.coros.append((coro, name))
         return self
 

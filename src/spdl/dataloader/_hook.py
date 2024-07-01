@@ -109,7 +109,16 @@ class PipelineHook(ABC):
 async def _stage_hooks(hooks: Sequence[PipelineHook]):
     async with AsyncExitStack() as stack:
         for h in hooks:
-            await stack.enter_async_context(h.stage_hook())
+            stage_hook = h.stage_hook()
+            if not hasattr(stage_hook, "__aenter__") or not hasattr(
+                stage_hook, "__aexit__"
+            ):
+                raise ValueError(
+                    "`stage_hook()` must return an object that has `__aenter__` and"
+                    " `__aexit__` method. "
+                    "Make sure that `stage_hook()` is decorated with `asynccontextmanager`."
+                )
+            await stack.enter_async_context(stage_hook)
         yield
 
 
@@ -117,7 +126,16 @@ async def _stage_hooks(hooks: Sequence[PipelineHook]):
 async def _task_hooks(hooks: Sequence[PipelineHook]):
     async with AsyncExitStack() as stack:
         for h in hooks:
-            await stack.enter_async_context(h.task_hook())
+            task_hook = h.task_hook()
+            if not hasattr(task_hook, "__aenter__") or not hasattr(
+                task_hook, "__aexit__"
+            ):
+                raise ValueError(
+                    "`task_hook()` must return an object that has `__aenter__` and"
+                    " `__aexit__` method. "
+                    "Make sure that `task_hook()` is decorated with `asynccontextmanager`."
+                )
+            await stack.enter_async_context(task_hook)
         yield
 
 
