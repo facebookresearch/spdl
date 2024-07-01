@@ -26,6 +26,8 @@ class Demuxer {
 
   ~Demuxer();
 
+  bool has_audio();
+
   template <MediaType media_type>
   PacketsPtr<media_type> demux_window(
       const std::optional<std::tuple<double, double>>& window = std::nullopt,
