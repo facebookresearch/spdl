@@ -66,11 +66,11 @@ void _drop(DecoderPtr<media_type> decoder) {
 }
 
 template <MediaType media_type>
-std::tuple<DecoderPtr<media_type>, std::optional<FFmpegFramesPtr<media_type>>>
-_decode(DecoderPtr<media_type> decoder, int num_frames) {
+std::optional<FFmpegFramesPtr<media_type>> _decode(
+    StreamingDecoder<media_type>& decoder,
+    int num_frames) {
   nb::gil_scoped_release g;
-  auto frames = decoder->decode(num_frames);
-  return {std::move(decoder), std::move(frames)};
+  return decoder.decode(num_frames);
 }
 
 void zero_clear(nb::bytes data) {
@@ -80,7 +80,8 @@ void zero_clear(nb::bytes data) {
 } // namespace
 
 void register_decoding(nb::module_& m) {
-  nb::class_<StreamingDecoder<MediaType::Video>>(m, "StreamingVideoDecoder");
+  nb::class_<StreamingDecoder<MediaType::Video>>(m, "StreamingVideoDecoder")
+      .def("decode", &_decode<MediaType::Video>);
 
   m.def(
       "_streaming_decoder",
@@ -92,7 +93,6 @@ void register_decoding(nb::module_& m) {
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none());
 
-  m.def("_decode", &_decode<MediaType::Video>);
   m.def("_drop", &_drop<MediaType::Video>);
 
   ////////////////////////////////////////////////////////////////////////////////

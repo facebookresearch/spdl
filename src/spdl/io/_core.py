@@ -196,8 +196,7 @@ def streaming_demux_audio(
     """
     demuxer = _libspdl._demuxer(src, **kwargs)
     for window in timestamps:
-        demuxer, packets = _libspdl._demux_audio(demuxer, window)
-        yield packets
+        yield demuxer.demux_audio(window)
 
 
 def streaming_demux_video(
@@ -219,8 +218,7 @@ def streaming_demux_video(
     """
     demuxer = _libspdl._demuxer(src, **kwargs)
     for window in timestamps:
-        demuxer, packets = _libspdl._demux_video(demuxer, window)
-        yield packets
+        yield demuxer.demux_video(window)
 
 
 class _streaming_demuxer_wrpper:
@@ -228,17 +226,14 @@ class _streaming_demuxer_wrpper:
         self.demuxer = demuxer
         match media_type:
             case "audio":
-                self.demux_func = _libspdl._demux_audio
+                self.demux_func = demuxer.demux_audio
             case "video":
-                self.demux_func = _libspdl._demux_video
+                self.demux_func = demuxer.demux_video
             case _:
                 raise ValueError(f"Unsupported media type: {media_type}")
 
     async def demux(self, window, **kwargs):
-        self.demuxer, packets = await run_async(
-            self.demux_func, self.demuxer, window, **kwargs
-        )
-        return packets
+        return await run_async(self.demux_func, window, **kwargs)
 
 
 @contextlib.asynccontextmanager
@@ -441,10 +436,7 @@ def streaming_decode_packets(
     decoder = _libspdl._streaming_decoder(
         packets, decode_config=decode_config, filter_desc=filter_desc
     )
-    while True:
-        decoder, frames = _libspdl._decode(decoder, num_frames)
-        if frames is None:
-            return
+    while (frames := decoder.decode(num_frames)) is not None:
         yield frames
 
 
@@ -453,15 +445,12 @@ class _streaming_decoder_wrpper:
         self.decoder = decoder
 
     async def decode(self, num_frames):
-        self.decoder, frames = await run_async(
-            _libspdl._decode, self.decoder, num_frames
-        )
-        return frames
+        return await run_async(self.decoder.decode, num_frames)
 
 
 @contextlib.asynccontextmanager
-async def _streaming_decoder(constructor, packets, **kwargs):
-    decoder = await run_async(constructor, packets, **kwargs)
+async def _streaming_decoder(packets, **kwargs):
+    decoder = await run_async(_libspdl._streaming_decoder, packets, **kwargs)
     wrapper = _streaming_decoder_wrpper(decoder)
     try:
         yield wrapper
@@ -473,9 +462,8 @@ async def async_streaming_decode_packets(
     packets: VideoPackets, num_frames: int, **kwargs
 ) -> AsyncIterator[VideoFrames]:
     """Async version of :py:func:`~spdl.io.streaming_decode_packets`."""
-    decoder = _libspdl._streaming_decoder
-    async with _streaming_decoder(decoder, packets, **kwargs) as _decoder:
-        while (item := await _decoder.decode(num_frames)) is not None:
+    async with _streaming_decoder(packets, **kwargs) as decoder:
+        while (item := await decoder.decode(num_frames)) is not None:
             yield item
 
 

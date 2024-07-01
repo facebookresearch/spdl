@@ -52,14 +52,13 @@ DemuxerPtr _make_demuxer_bytes(
 }
 
 template <MediaType media_type>
-std::tuple<DemuxerPtr, PacketsPtr<media_type>> _demuxer_demux(
-    DemuxerPtr demuxer,
+PacketsPtr<media_type> _demuxer_demux(
+    Demuxer& demuxer,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
   _USAGE_LOGGING("spdl.core.demux_window");
   nb::gil_scoped_release g;
-  auto packets = demuxer->demux_window<media_type>(window, bsf);
-  return {std::move(demuxer), std::move(packets)};
+  return demuxer.demux_window<media_type>(window, bsf);
 }
 
 void drop_demuxer(DemuxerPtr t) {
@@ -127,7 +126,17 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   // Demuxer
   ///////////////////////////////////////////////////////////////////////////////
-  nb::class_<Demuxer>(m, "Demuxer");
+  nb::class_<Demuxer>(m, "Demuxer")
+      .def(
+          "demux_audio",
+          &_demuxer_demux<MediaType::Audio>,
+          nb::arg("window") = nb::none(),
+          nb::arg("bsf") = nb::none())
+      .def(
+          "demux_video",
+          &_demuxer_demux<MediaType::Video>,
+          nb::arg("window") = nb::none(),
+          nb::arg("bsf") = nb::none());
 
   m.def(
       "_demuxer",
@@ -143,19 +152,6 @@ void register_demuxing(nb::module_& m) {
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none());
-
-  m.def(
-      "_demux_audio",
-      &_demuxer_demux<MediaType::Audio>,
-      nb::arg("demuxer"),
-      nb::arg("window") = nb::none(),
-      nb::arg("bsf") = nb::none());
-  m.def(
-      "_demux_video",
-      &_demuxer_demux<MediaType::Video>,
-      nb::arg("demuxer"),
-      nb::arg("window") = nb::none(),
-      nb::arg("bsf") = nb::none());
 
   m.def("_drop", &drop_demuxer);
 
