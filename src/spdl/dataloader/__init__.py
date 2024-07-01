@@ -2,13 +2,14 @@
 
 # pyre-unsafe
 
-from . import _bg_consumer, _bg_generator, _flist, _pipeline  # noqa: E402
+from . import _bg_consumer, _bg_generator, _flist, _hook, _pipeline  # noqa: E402
 
 _mods = [
     _bg_consumer,
     _bg_generator,
     _flist,
     _pipeline,
+    _hook,
 ]
 
 __all__ = sorted(item for mod in _mods for item in mod.__all__)
