@@ -1,10 +1,11 @@
 import asyncio
 import time
+from contextlib import asynccontextmanager
 from queue import Queue
 
 import pytest
 
-from spdl.dataloader import AsyncPipeline, PipelineFailure
+from spdl.dataloader import AsyncPipeline, PipelineFailure, PipelineHook
 from spdl.dataloader._pipeline import _dequeue, _enqueue, _EOF, _pipe, _SKIP
 
 
@@ -173,8 +174,12 @@ async def aplus1(val: int):
     return val + 1
 
 
+async def passthrough(val):
+    return val
+
+
 def test_async_pipe():
-    """async_pipe processes the data in input queue and pass it to output queue."""
+    """_pipe processes the data in input queue and pass it to output queue."""
     input_queue = asyncio.Queue()
     output_queue = asyncio.Queue()
 
@@ -192,7 +197,7 @@ def test_async_pipe():
 
 
 def test_async_pipe_skip():
-    """async_pipe skips the data if it is SKIP."""
+    """_pipe skips the data if it is SKIP."""
     input_queue = asyncio.Queue()
     output_queue = asyncio.Queue()
 
@@ -210,7 +215,7 @@ def test_async_pipe_skip():
 
 
 def test_async_pipe_wrong_task_signature():
-    """async_pipe fails immediately if user provided incompatible iterator/afunc."""
+    """_pipe fails immediately if user provided incompatible iterator/afunc."""
     input_queue = asyncio.Queue()
     output_queue = asyncio.Queue()
 
@@ -235,7 +240,7 @@ def test_async_pipe_wrong_task_signature():
 
 @pytest.mark.parametrize("full", [False, True])
 def test_async_pipe_cancel(full):
-    """async_pipeis cancellable."""
+    """_pipe is cancellable."""
     input_queue = asyncio.Queue()
     output_queue = asyncio.Queue(1)
 
@@ -582,3 +587,278 @@ def test_async_pipeline_cancel():
     assert not cancelled
     asyncio.run(_test())
     assert cancelled
+
+
+################################################################################
+# _pipe + hook
+################################################################################
+
+
+def test_async_pipe_hook_wrong_def():
+    """Pipeline fails if stage_hook is not properly overrode."""
+
+    class _h3(PipelineHook):
+        # missing asynccontextmanager
+        async def stage_hook(self):
+            yield
+
+        @asynccontextmanager
+        async def task_hook(self):
+            yield
+
+    class _h4(PipelineHook):
+        # missing asynccontextmanager and async keyword
+        def stage_hook(self):
+            yield
+
+        @asynccontextmanager
+        async def task_hook(self):
+            yield
+
+    async def _test(hook):
+        pipeline = AsyncPipeline().add_source(range(10)).pipe(passthrough, hooks=[hook])
+
+        with pytest.raises(PipelineFailure):
+            await pipeline.run()
+
+    asyncio.run(_test(_h3()))
+    asyncio.run(_test(_h4()))
+
+
+@pytest.mark.parametrize("drop_last", [False, True])
+def test_async_pipe_hook(drop_last: bool):
+    """Hook is executed properly"""
+
+    class _hook(PipelineHook):
+        def __init__(self):
+            self._enter_task_called = 0
+            self._enter_stage_called = 0
+            self._exit_task_called = 0
+            self._exit_stage_called = 0
+
+        @asynccontextmanager
+        async def stage_hook(self):
+            self._enter_stage_called += 1
+            yield
+            self._exit_stage_called += 1
+
+        @asynccontextmanager
+        async def task_hook(self):
+            self._enter_task_called += 1
+            try:
+                yield
+            finally:
+                self._exit_task_called += 1
+
+    result_queue = Queue()
+
+    h1, h2, h3 = _hook(), _hook(), _hook()
+
+    async def _fail(_):
+        raise RuntimeError("Failing")
+
+    pipeline = (
+        AsyncPipeline()
+        .add_source(range(10))
+        .pipe(adouble, hooks=[h1])
+        .aggregate(5, hooks=[h2], drop_last=drop_last)
+        .pipe(_fail, hooks=[h3])
+        .add_sink(result_queue)
+    )
+
+    asyncio.run(pipeline.run())
+
+    assert result_queue.empty()
+
+    assert h1._enter_stage_called == 1
+    assert h1._exit_stage_called == 1
+    assert h1._enter_task_called == 10
+    assert h1._exit_task_called == 10
+
+    assert h2._enter_stage_called == 1
+    assert h2._exit_stage_called == 1
+    assert h2._enter_task_called == 10 if drop_last else 11
+    assert h2._exit_task_called == 10 if drop_last else 11
+
+    # Even when the stage task fails,
+    # the exit_stage and exit_task are still called.
+    assert h3._enter_stage_called == 1
+    assert h3._exit_stage_called == 1
+    assert h3._enter_task_called == 2
+    assert h3._exit_task_called == 2
+
+
+def test_async_pipe_hook_multiple():
+    """Multiple hooks are executed properly"""
+
+    class _hook(PipelineHook):
+        def __init__(self):
+            self._enter_task_called = 0
+            self._enter_stage_called = 0
+            self._exit_task_called = 0
+            self._exit_stage_called = 0
+
+        @asynccontextmanager
+        async def stage_hook(self):
+            self._enter_stage_called += 1
+            yield
+            self._exit_stage_called += 1
+
+        @asynccontextmanager
+        async def task_hook(self):
+            self._enter_task_called += 1
+            try:
+                yield
+            finally:
+                self._exit_task_called += 1
+
+    result_queue = Queue()
+
+    hooks = [_hook(), _hook(), _hook()]
+
+    pipeline = (
+        AsyncPipeline()
+        .add_source(range(10))
+        .pipe(passthrough, hooks=hooks)
+        .add_sink(result_queue)
+    )
+
+    asyncio.run(pipeline.run())
+
+    assert list(range(10)) == _flush_queue(result_queue)
+
+    for h in hooks:
+        assert h._enter_stage_called == 1
+        assert h._exit_stage_called == 1
+        assert h._enter_task_called == 10
+        assert h._exit_task_called == 10
+
+
+def test_async_pipe_hook_failure_enter_stage():
+    """If enter_stage fails, the pipeline is aborted."""
+
+    class _enter_stage_fail(PipelineHook):
+        @asynccontextmanager
+        async def stage_hook(self):
+            raise RuntimeError("failing")
+
+        @asynccontextmanager
+        async def task_hook(self):
+            yield
+
+    pipeline = (
+        AsyncPipeline()
+        .add_source(range(10))
+        .pipe(passthrough, hooks=[_enter_stage_fail()])
+    )
+
+    with pytest.raises(PipelineFailure):
+        asyncio.run(pipeline.run())
+
+
+def test_async_pipe_hook_failure_exit_stage():
+    """If exit_stage fails, the pipeline does not fail."""
+
+    class _exit_stage_fail(PipelineHook):
+        @asynccontextmanager
+        async def stage_hook(self):
+            yield
+            raise RuntimeError("failing")
+
+        @asynccontextmanager
+        async def task_hook(self):
+            yield
+
+    result_queue = Queue()
+
+    pipeline = (
+        AsyncPipeline()
+        .add_source(range(10))
+        .pipe(passthrough, hooks=[_exit_stage_fail()])
+        .add_sink(result_queue)
+    )
+
+    with pytest.raises(PipelineFailure):
+        asyncio.run(pipeline.run())
+
+    results = _flush_queue(result_queue)
+    assert 10 == len(results)
+    assert results == list(range(10))
+
+
+def test_async_pipe_hook_failure_enter_task():
+    """If enter_task fails, the pipeline does not fail."""
+
+    class _hook(PipelineHook):
+        @asynccontextmanager
+        async def task_hook(self):
+            raise RuntimeError("failing enter_task")
+
+        @asynccontextmanager
+        async def stage_hook(self, *_):
+            yield
+
+    result_queue = Queue()
+
+    pipeline = (
+        AsyncPipeline()
+        .add_source(range(10))
+        .pipe(passthrough, hooks=[_hook()])
+        .add_sink(result_queue)
+    )
+
+    asyncio.run(pipeline.run())
+
+    assert result_queue.empty()
+
+
+def test_async_pipe_hook_failure_exit_task():
+    """If exit_task fails, the pipeline does not fail.
+
+    IMPORTANT: The result is dropped.
+    """
+
+    class _exit_stage_fail(PipelineHook):
+        @asynccontextmanager
+        async def task_hook(self):
+            yield
+            raise RuntimeError("failing exit_task")
+
+    result_queue = Queue()
+
+    pipeline = (
+        AsyncPipeline()
+        .add_source(range(10))
+        .pipe(passthrough, hooks=[_exit_stage_fail()])
+        .add_sink(result_queue)
+    )
+
+    asyncio.run(pipeline.run())
+
+    assert result_queue.empty()
+
+
+def test_async_pipe_hook_exit_task_capture_error():
+    """If task fails exit_task captures the error."""
+
+    exc_info = None
+
+    class _capture(PipelineHook):
+        @asynccontextmanager
+        async def task_hook(self):
+            try:
+                yield
+            except Exception as e:
+                nonlocal exc_info
+                exc_info = e
+
+    err = RuntimeError("failing")
+
+    async def _fail(_):
+        raise err
+
+    pipeline = AsyncPipeline().add_source([None]).pipe(_fail, hooks=[_capture()])
+
+    asyncio.run(pipeline.run())
+
+    assert exc_info is err
