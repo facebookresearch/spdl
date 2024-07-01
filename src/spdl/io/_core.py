@@ -26,6 +26,7 @@ from . import _preprocessing
 
 __all__ = [
     # DEMUXING
+    "Demuxer",
     "demux_audio",
     "demux_video",
     "demux_image",
@@ -94,10 +95,8 @@ async def run_async(
 ################################################################################
 
 
-def demux_audio(
-    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
-) -> AudioPackets:
-    """Demux audio from the source.
+class Demuxer:
+    """Demuxer can demux audio, video and image fomr the soure.
 
     Args:
         src: Source identifier.
@@ -105,15 +104,83 @@ def demux_audio(
             such as local file path or URL. If `bytes` type,
             then they are interpreted as in-memory data.
 
-        timestamp:
-            A time window. If omitted, the entire audio are demuxed.
-
         demux_config (DemuxConfig): Custom I/O config.
+    """
+
+    def __init__(self, src: str | bytes, **kwargs):
+        self._demuxer = _libspdl._demuxer(src, **kwargs)
+
+    def demux_audio(
+        self, window: tuple[float, float] | None = None, **kwargs
+    ) -> AudioPackets:
+        """Demux audio from the source.
+
+        Args:
+            timestamp:
+                A time window. If omitted, the entire audio are demuxed.
+
+        Returns:
+            Demuxed audio packets.
+        """
+        _libspdl.log_api_usage("spdl.io.demux_audio")
+        return self._demuxer.demux_audio(window=window, **kwargs)
+
+    def demux_video(
+        self, window: tuple[float, float] | None = None, **kwargs
+    ) -> VideoPackets:
+        """Demux video from the source.
+
+        Args:
+            timestamp:
+                A time window. If omitted, the entire audio are demuxed.
+
+        Returns:
+            Demuxed video packets.
+        """
+        _libspdl.log_api_usage("spdl.io.demux_video")
+        return self._demuxer.demux_video(window=window, **kwargs)
+
+    def demux_image(self, **kwargs) -> ImagePackets:
+        """Demux image from the source.
+
+        Returns:
+            Demuxed image packets.
+        """
+        _libspdl.log_api_usage("spdl.io.demux_image")
+        return self._demuxer.demux_image(**kwargs)
+
+    def has_audio(self) -> bool:
+        """Returns true if the source has audio stream."""
+        return self._demuxer.has_audio()
+
+    def __enter__(self) -> "Demuxer":
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
+        self._demuxer._drop()
+
+    async def __aenter__(self) -> "Demuxer":
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, exc_traceback) -> None:
+        await run_async(self._demuxer._drop)
+
+
+def demux_audio(
+    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
+) -> AudioPackets:
+    """Demux audio from the source.
+
+    Args:
+        src: See :py:class:`~spdl.io.Demuxer`.
+        timestamp: See :py:meth:`spdl.io.Demuxer.demux_audio`.
+        demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
 
     Returns:
         Demuxed audio packets.
     """
-    return _libspdl.demux_audio(src, timestamp=timestamp, **kwargs)
+    with Demuxer(src, **kwargs) as demuxer:
+        return demuxer.demux_audio(window=timestamp)
 
 
 async def async_demux_audio(
@@ -129,19 +196,16 @@ def demux_video(
     """Demux video from the source.
 
     Args:
-        src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` type, then
-            they are interpreted as in-memory data.
+        src: See :py:class:`~spdl.io.Demuxer`.
+        timestamp: See :py:meth:`spdl.io.Demuxer.demux_video`.
+        demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
 
-        timestamp:
-            A time window. If omitted, the entire data are demuxed.
-
-        demux_config (DemuxConfig): Custom I/O config.
 
     Returns:
         Demuxed video packets.
     """
-    return _libspdl.demux_video(src, timestamp=timestamp, **kwargs)
+    with Demuxer(src, **kwargs) as demuxer:
+        return demuxer.demux_video(window=timestamp)
 
 
 async def async_demux_video(
@@ -155,16 +219,14 @@ def demux_image(src: str | bytes, **kwargs) -> ImagePackets:
     """Demux image from the source.
 
     Args:
-        src: Source identifier. If `str` type, it is interpreted as a source location,
-            such as local file path or URL. If `bytes` type, then
-            they are interpreted as in-memory data.
-
-        demux_config (DemuxConfig): Custom I/O config.
+        src: See :py:class:`~spdl.io.Demuxer`.
+        demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
 
     Returns:
         Demuxed image packets.
     """
-    return _libspdl.demux_image(src, **kwargs)
+    with Demuxer(src, **kwargs) as demuxer:
+        return demuxer.demux_image()
 
 
 async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
@@ -194,7 +256,7 @@ def streaming_demux_audio(
     Yields:
         Packets objects correspond to the given windows.
     """
-    demuxer = _libspdl._demuxer(src, **kwargs)
+    demuxer = Demuxer(src, **kwargs)
     for window in timestamps:
         yield demuxer.demux_audio(window)
 
@@ -216,58 +278,27 @@ def streaming_demux_video(
     Yields:
         Packets objects correspond to the given windows.
     """
-    demuxer = _libspdl._demuxer(src, **kwargs)
+    demuxer = Demuxer(src, **kwargs)
     for window in timestamps:
         yield demuxer.demux_video(window)
-
-
-class _streaming_demuxer_wrpper:
-    def __init__(self, demuxer, media_type):
-        self.demuxer = demuxer
-        match media_type:
-            case "audio":
-                self.demux_func = demuxer.demux_audio
-            case "video":
-                self.demux_func = demuxer.demux_video
-            case _:
-                raise ValueError(f"Unsupported media type: {media_type}")
-
-    async def demux(self, window, **kwargs):
-        return await run_async(self.demux_func, window, **kwargs)
-
-
-@contextlib.asynccontextmanager
-async def _streaming_demuxer(media_type, src, **kwargs):
-    demuxer = await run_async(_libspdl._demuxer, src, **kwargs)
-    wrapper = _streaming_demuxer_wrpper(demuxer, media_type)
-    try:
-        yield wrapper
-    finally:
-        # Move the deallocation to the background thread.
-        # (Do not deallocate memory in the main thread)
-        await run_async(_libspdl._drop, wrapper.demuxer)
-
-
-async def _stream_demux(media_type, src, timestamps, bsf=None, **kwargs):
-    async with _streaming_demuxer(media_type, src, **kwargs) as _demuxer:
-        for window in timestamps:
-            yield await _demuxer.demux(window, bsf=bsf)
 
 
 async def async_streaming_demux_audio(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[AudioPackets]:
     """Async version of :py:func:`~spdl.io.streaming_demux_audio`."""
-    async for packets in _stream_demux("audio", src, timestamps, **kwargs):
-        yield packets
+    async with Demuxer(src, **kwargs) as demuxer:
+        for window in timestamps:
+            yield await run_async(demuxer.demux_audio, window)
 
 
 async def async_streaming_demux_video(
     src: str | bytes, timestamps: list[tuple[float, float]], **kwargs
 ) -> AsyncIterator[VideoPackets]:
     """Async version of :py:func:`~spdl.io.streaming_demux_video`."""
-    async for packets in _stream_demux("video", src, timestamps, **kwargs):
-        yield packets
+    async with Demuxer(src, **kwargs) as demuxer:
+        for window in timestamps:
+            yield await run_async(demuxer.demux_video, window)
 
 
 ################################################################################

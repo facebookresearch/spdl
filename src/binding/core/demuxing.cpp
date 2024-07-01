@@ -12,117 +12,74 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-#ifdef SPDL_LOG_API_USAGE
-#include <c10/util/Logging.h>
-
-#define _USAGE_LOGGING(name)                      \
-  if constexpr (media_type == MediaType::Audio) { \
-    C10_LOG_API_USAGE_ONCE(name "_audio");        \
-  }                                               \
-  if constexpr (media_type == MediaType::Video) { \
-    C10_LOG_API_USAGE_ONCE(name "_video");        \
-  }                                               \
-  if constexpr (media_type == MediaType::Image) { \
-    C10_LOG_API_USAGE_ONCE(name "_image");        \
-  }
-
-#else
-#define _USAGE_LOGGING(...)
-#endif
-
 namespace nb = nanobind;
 
 namespace spdl::core {
 namespace {
 
-DemuxerPtr _make_demuxer(
+// Wrap Demuxer to
+// 1. Release GIL
+// 2. Allow explicit deallocation with `drop` method, so that it can be
+//    deallocated in a thread other than the main thread.
+// 3. Add `zero_clear`, method for testing purpose.
+struct PyDemuxer {
+  DemuxerPtr demuxer;
+
+  std::string_view data;
+  bool zero_clear = false;
+
+  explicit PyDemuxer(DemuxerPtr&& demuxer_) : demuxer(std::move(demuxer_)) {}
+  PyDemuxer(DemuxerPtr&& demuxer_, std::string_view data_, bool zero_clear_)
+      : demuxer(std::move(demuxer_)), data(data_), zero_clear(zero_clear_) {}
+
+  bool has_audio() {
+    nb::gil_scoped_release g;
+    return demuxer->has_audio();
+  }
+
+  template <MediaType media_type>
+  PacketsPtr<media_type> demux(
+      const std::optional<std::tuple<double, double>>& window,
+      const std::optional<std::string>& bsf) {
+    nb::gil_scoped_release g;
+    return demuxer->demux_window<media_type>(window, bsf);
+  }
+
+  PacketsPtr<MediaType::Image> demux_image(
+      const std::optional<std::string>& bsf) {
+    nb::gil_scoped_release g;
+    return demuxer->demux_window<MediaType::Image>(std::nullopt, bsf);
+  }
+
+  void _drop() {
+    nb::gil_scoped_release g;
+    if (zero_clear) {
+      std::memset((void*)data.data(), 0, data.size());
+    }
+    // Explicitly release
+    demuxer.reset();
+  }
+};
+
+using PyDemuxerPtr = std::unique_ptr<PyDemuxer>;
+
+PyDemuxerPtr _make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
     SourceAdaptorPtr _adaptor) {
   nb::gil_scoped_release g;
-  return make_demuxer(src, std::move(_adaptor), dmx_cfg);
+  return std::make_unique<PyDemuxer>(
+      make_demuxer(src, std::move(_adaptor), dmx_cfg));
 }
 
-DemuxerPtr _make_demuxer_bytes(
+PyDemuxerPtr _make_demuxer_bytes(
     nb::bytes data,
-    const std::optional<DemuxConfig>& dmx_cfg) {
+    const std::optional<DemuxConfig>& dmx_cfg,
+    bool zero_clear = false) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release g;
-  return make_demuxer(data_, dmx_cfg);
-}
-
-bool _has_audio(DemuxerPtr demuxer) {
-  nb::gil_scoped_release g;
-  return demuxer->has_audio();
-}
-
-template <MediaType media_type>
-PacketsPtr<media_type> _demuxer_demux(
-    Demuxer& demuxer,
-    const std::optional<std::tuple<double, double>>& window,
-    const std::optional<std::string>& bsf) {
-  _USAGE_LOGGING("spdl.core.demux_window");
-  nb::gil_scoped_release g;
-  return demuxer.demux_window<media_type>(window, bsf);
-}
-
-void drop_demuxer(DemuxerPtr t) {
-  nb::gil_scoped_release g;
-  t.reset(); // Technically not necessary, but it's explicit this way.
-}
-
-template <MediaType media_type>
-PacketsPtr<media_type> _demux_src(
-    const std::string& src,
-    const std::optional<std::tuple<double, double>>& timestamps,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    const std::optional<std::string>& bsf,
-    const SourceAdaptorPtr adaptor) {
-  _USAGE_LOGGING("spdl.core.demux_src");
-  nb::gil_scoped_release g;
-  auto demuxer = make_demuxer(src, adaptor, dmx_cfg);
-  return demuxer->demux_window<media_type>(timestamps, bsf);
-}
-
-void zero_clear(nb::bytes data) {
-  std::memset((void*)data.c_str(), 0, data.size());
-}
-
-template <MediaType media_type>
-PacketsPtr<media_type> _demux_bytes(
-    nb::bytes data,
-    const std::optional<std::tuple<double, double>>& timestamp,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    const std::optional<std::string>& bsf,
-    bool _zero_clear) {
-  _USAGE_LOGGING("spdl.core.demux_bytes");
-  auto data_ = std::string_view{data.c_str(), data.size()};
-  nb::gil_scoped_release g;
-  auto demuxer = make_demuxer(data_, dmx_cfg);
-  auto ret = demuxer->demux_window<media_type>(timestamp, bsf);
-  if (_zero_clear) {
-    nb::gil_scoped_acquire gg;
-    zero_clear(data);
-  }
-  return ret;
-}
-
-ImagePacketsPtr _demux_image(
-    const std::string& src,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    const std::optional<std::string>& bsf,
-    const SourceAdaptorPtr _adaptor) {
-  return _demux_src<MediaType::Image>(
-      src, std::nullopt, dmx_cfg, bsf, _adaptor);
-}
-
-ImagePacketsPtr _demux_image_bytes(
-    nb::bytes data,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    const std::optional<std::string>& bsf,
-    bool _zero_clear) {
-  return _demux_bytes<MediaType::Image>(
-      data, std::nullopt, dmx_cfg, bsf, _zero_clear);
+  return std::make_unique<PyDemuxer>(
+      make_demuxer(data_, dmx_cfg), data_, zero_clear);
 }
 
 } // namespace
@@ -131,18 +88,20 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   // Demuxer
   ///////////////////////////////////////////////////////////////////////////////
-  nb::class_<Demuxer>(m, "Demuxer")
+  nb::class_<PyDemuxer>(m, "Demuxer")
       .def(
           "demux_audio",
-          &_demuxer_demux<MediaType::Audio>,
+          &PyDemuxer::demux<MediaType::Audio>,
           nb::arg("window") = nb::none(),
           nb::arg("bsf") = nb::none())
       .def(
           "demux_video",
-          &_demuxer_demux<MediaType::Video>,
+          &PyDemuxer::demux<MediaType::Video>,
           nb::arg("window") = nb::none(),
           nb::arg("bsf") = nb::none())
-      .def("has_audio", &_has_audio);
+      .def("demux_image", &PyDemuxer::demux_image, nb::arg("bsf") = nb::none())
+      .def("has_audio", &PyDemuxer::has_audio)
+      .def("_drop", &PyDemuxer::_drop);
 
   m.def(
       "_demuxer",
@@ -157,72 +116,7 @@ void register_demuxing(nb::module_& m) {
       &_make_demuxer_bytes,
       nb::arg("src"),
       nb::kw_only(),
-      nb::arg("demux_config") = nb::none());
-
-  m.def("_drop", &drop_demuxer);
-
-  ///////////////////////////////////////////////////////////////////////////////
-  // Demux from src (path, URL etc...)
-  ///////////////////////////////////////////////////////////////////////////////
-  m.def(
-      "demux_audio",
-      &_demux_src<MediaType::Audio>,
-      nb::arg("src"),
-      nb::kw_only(),
-      nb::arg("timestamp") = nb::none(),
       nb::arg("demux_config") = nb::none(),
-      nb::arg("bsf") = nb::none(),
-      nb::arg("_adaptor") = nullptr);
-
-  m.def(
-      "demux_video",
-      &_demux_src<MediaType::Video>,
-      nb::arg("src"),
-      nb::kw_only(),
-      nb::arg("timestamp") = nb::none(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("bsf") = nb::none(),
-      nb::arg("_adaptor") = nullptr);
-
-  m.def(
-      "demux_image",
-      &_demux_image,
-      nb::arg("src"),
-      nb::kw_only(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("bsf") = nb::none(),
-      nb::arg("_adaptor") = nullptr);
-
-  ///////////////////////////////////////////////////////////////////////////////
-  // Demux from byte string
-  ///////////////////////////////////////////////////////////////////////////////
-  m.def(
-      "demux_audio",
-      &_demux_bytes<MediaType::Audio>,
-      nb::arg("data"),
-      nb::kw_only(),
-      nb::arg("timestamp") = nb::none(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("bsf") = nb::none(),
-      nb::arg("_zero_clear") = false);
-
-  m.def(
-      "demux_video",
-      &_demux_bytes<MediaType::Video>,
-      nb::arg("data"),
-      nb::kw_only(),
-      nb::arg("timestamp") = nb::none(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("bsf") = nb::none(),
-      nb::arg("_zero_clear") = false);
-
-  m.def(
-      "demux_image",
-      &_demux_image_bytes,
-      nb::arg("data"),
-      nb::kw_only(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("bsf") = nb::none(),
       nb::arg("_zero_clear") = false);
 }
 } // namespace spdl::core
