@@ -307,11 +307,11 @@ class AsyncPipeline:
         Args:
             source: A lightweight iterator that generates data.
 
-            .. warning::
+                .. warning::
 
-               The source iterator must be lightweight as it is executed in async
-               event loop. If the iterator performs a an operation that blocks,
-               the entire pipeline will be blocked.
+                   The source iterator must be lightweight as it is executed in async
+                   event loop. If the iterator performs a an operation that blocks,
+                   the entire pipeline will be blocked.
         """
         coro = _enqueue(source, self.queues[0])
         self.coros.append((coro, "source"))
