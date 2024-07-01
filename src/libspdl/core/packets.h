@@ -69,9 +69,15 @@ class DemuxedPackets {
   DemuxedPackets& operator=(DemuxedPackets&& other) noexcept = delete;
 
   void push(AVPacket*);
-  size_t num_packets() const;
   const std::vector<AVPacket*>& get_packets() const;
   const char* get_media_format_name() const;
+
+  // Get the number of valid packets, that is, the number of frames returned
+  // by decoding function when decoded.
+  // This is different from `packets.size()` when timestamp is set.
+  // This is the number of packets visible to users.
+  size_t num_packets() const
+    requires(media_type == MediaType::Video || media_type == MediaType::Image);
 };
 
 template <MediaType media_type>
@@ -80,6 +86,6 @@ PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src);
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
 extract_packets_at_indices(
     const VideoPacketsPtr& src,
-    const std::vector<size_t>& indices);
+    std::vector<size_t> indices);
 
 } // namespace spdl::core

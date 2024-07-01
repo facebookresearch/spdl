@@ -81,8 +81,28 @@ void DemuxedPackets<media_type>::push(AVPacket* p) {
 }
 
 template <MediaType media_type>
-size_t DemuxedPackets<media_type>::num_packets() const {
-  return packets.size();
+size_t DemuxedPackets<media_type>::num_packets() const
+  requires(media_type == MediaType::Video || media_type == MediaType::Image)
+{
+  if constexpr (media_type == MediaType::Image) {
+    assert(packets.size() == 1);
+    return 1;
+  }
+  if constexpr (media_type == MediaType::Video) {
+    if (timestamp) {
+      size_t ret = 0;
+      auto [start, end] = *timestamp;
+      for (const AVPacket* pkt : packets) {
+        auto pts =
+            static_cast<double>(pkt->pts) * time_base.num / time_base.den;
+        if (start <= pts && pts < end) {
+          ++ret;
+        }
+      }
+      return ret;
+    }
+    return packets.size();
+  }
 }
 
 template <MediaType media_type>
@@ -150,8 +170,26 @@ extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
 extract_packets_at_indices(
     const VideoPacketsPtr& src,
-    const std::vector<size_t>& indices) {
+    std::vector<size_t> indices) {
   auto& src_packets = src->get_packets();
+  // If timestamp is set, then there are frames before the window.
+  // `indices` are supposed to be within the window.
+  // So we adjust the `indices` by shifitng the number of frames before the
+  // window.
+  if (src->timestamp) {
+    auto [start, end] = *(src->timestamp);
+    size_t offset = 0;
+    for (auto& packet : src_packets) {
+      auto pts = static_cast<double>(packet->pts) * src->time_base.num /
+          src->time_base.den;
+      if (pts < start) {
+        offset += 1;
+      }
+    }
+    for (size_t& i : indices) {
+      i += offset;
+    }
+  }
   auto split_indices = get_keyframe_indices(src_packets);
 
   std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>> ret;
