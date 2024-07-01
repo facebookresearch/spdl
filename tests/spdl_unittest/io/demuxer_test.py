@@ -1,5 +1,5 @@
 import pytest
-from spdl.lib import _libspdl
+import spdl.io
 
 
 @pytest.mark.parametrize(
@@ -21,5 +21,5 @@ def test_demuxer_has_audio(get_sample, cmd, expected):
     """has_audio returns true for audio stream"""
     sample = get_sample(cmd)
 
-    demuxer = _libspdl._demuxer(sample.path)
-    assert demuxer.has_audio() == expected
+    with spdl.io.Demuxer(sample.path) as demuxer:
+        assert demuxer.has_audio() == expected
