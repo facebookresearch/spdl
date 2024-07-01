@@ -175,3 +175,60 @@ def test_sample_decoding_time(get_sample):
         assert elapsed_ref / 2 > elapsed
 
     asyncio.run(_test(sample.path))
+
+
+def test_packet_len(get_sample):
+    """VideoPackets length should exclude the preceeding packets when timestamp is not None"""
+    # 3 seconds of video with only one keyframe at the beginning.
+    # Use the following command to check
+    # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 75 sample.mp4"
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        ref_array = spdl.io.to_numpy(await spdl.io.async_load_video(src))
+
+        packets = await spdl.io.async_demux_video(src, timestamp=(1.0, 2.0))
+        num_packets = len(packets)
+
+        frames = await spdl.io.async_decode_packets(packets)
+        num_frames = len(frames)
+        print(f"{num_packets=}, {num_frames=}")
+        assert num_packets == num_frames == 25
+
+        array = spdl.io.to_numpy(await spdl.io.async_convert_frames(frames))
+        assert np.all(array == ref_array[25:50])
+
+    asyncio.run(_test(sample.path))
+
+
+def test_sample_decoding_window(get_sample):
+    """async_sample_decode_video returns the correct frame when timestamps is specified."""
+    # 10 seconds of video with only one keyframe at the beginning.
+    # Use the following command to check
+    # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        # 250 frames
+        ref_array = spdl.io.to_numpy(await spdl.io.async_load_video(src))
+
+        # frames from 25 - 50, but internally it holds 0 - 50
+        packets = await spdl.io.async_demux_video(src, timestamp=(1.0, 2.0))
+        assert len(packets) == 25
+
+        # decode all to verify the pre-condition
+        frames = await spdl.io.async_decode_packets(packets.clone())
+        array = spdl.io.to_numpy(await spdl.io.async_convert_frames(frames))
+        assert np.all(array == ref_array[25:50])
+
+        # Sample decode should offset the indices
+        indices = list(range(0, 25, 2))
+        frames = await spdl.io.async_sample_decode_video(packets, indices)
+        assert len(indices) == len(frames) == 13
+        array = spdl.io.to_numpy(await spdl.io.async_convert_frames(frames))
+        print(f"{array.shape=}, {ref_array[25:50:2].shape=}")
+        assert np.all(array == ref_array[25:50:2])
+
+    asyncio.run(_test(sample.path))
