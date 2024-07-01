@@ -138,7 +138,7 @@ class AudioPackets(Packets):
     Packets object containing audio samples."""
 
     @property
-    def timestamp(self) -> tuple[float, float]:
+    def timestamp(self) -> tuple[float, float] | None:
         """The window this packets covers, denoted by start and end time in second.
 
         This is the value specified by user when demuxing the stream.
@@ -158,11 +158,26 @@ class VideoPackets(Packets):
     """Packets object containing video frames."""
 
     @property
-    def timestamp(self) -> tuple[float, float]:
+    def timestamp(self) -> tuple[float, float] | None:
         """The window this packets covers, denoted by start and end time in second.
 
         This is the value specified by user when demuxing the stream.
         """
+        ...
+
+    @property
+    def pix_fmt(self) -> str:
+        """The name of the pixel format, such as ``"yuv420p"``."""
+        ...
+
+    @property
+    def width(self) -> int:
+        """The width of video."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """The height of video."""
         ...
 
     def clone(self) -> VideoPackets:
@@ -186,6 +201,21 @@ class VideoPackets(Packets):
 class ImagePackets(Packets):
     """ImagePackets()
     Packets object contain an image frame."""
+
+    @property
+    def pix_fmt(self) -> str:
+        """The name of the pixel format, such as ``"yuv420p"``."""
+        ...
+
+    @property
+    def width(self) -> int:
+        """The width of image."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """The height of image."""
+        ...
 
     def clone(self) -> ImagePackets:
         """Clone the packets, so that data can be decoded multiple times.

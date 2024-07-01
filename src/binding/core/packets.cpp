@@ -76,6 +76,27 @@ void register_packets(nb::module_& m) {
             nb::gil_scoped_release g;
             return self.timestamp;
           })
+      .def_prop_ro(
+          "sample_rate",
+          [](const AudioPackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return self.codecpar->sample_rate;
+          })
+      .def_prop_ro(
+          "num_channels",
+          [](const AudioPackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return
+
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+                self.codecpar->ch_layout.nb_channels;
+#else
+                self.codecpar->channels;
+#endif
+            ;
+          })
       .def("clone", [](const AudioPackets& self) {
         nb::gil_scoped_release g;
         return clone(self);
@@ -98,6 +119,27 @@ void register_packets(nb::module_& m) {
           [](const VideoPackets& self) {
             nb::gil_scoped_release g;
             return self.timestamp;
+          })
+      .def_prop_ro(
+          "pix_fmt",
+          [](const VideoPackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return self.get_media_format_name();
+          })
+      .def_prop_ro(
+          "width",
+          [](const VideoPackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return self.codecpar->width;
+          })
+      .def_prop_ro(
+          "height",
+          [](const VideoPackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return self.codecpar->height;
           })
       .def(
           "__len__",
@@ -135,6 +177,27 @@ void register_packets(nb::module_& m) {
             auto base = self.time_base;
             auto pts = self.get_packets().at(0)->pts;
             return pts * base.num / base.den;
+          })
+      .def_prop_ro(
+          "pix_fmt",
+          [](const ImagePackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return self.get_media_format_name();
+          })
+      .def_prop_ro(
+          "width",
+          [](const ImagePackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return self.codecpar->width;
+          })
+      .def_prop_ro(
+          "height",
+          [](const ImagePackets& self) {
+            nb::gil_scoped_release g;
+            assert(self.codecpar);
+            return self.codecpar->height;
           })
       .def(
           "__repr__",
