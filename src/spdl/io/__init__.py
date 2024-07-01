@@ -35,10 +35,6 @@ _mods = [
 
 __all__ = sorted(item for mod in _mods for item in mod.__all__)
 
-_doc_submodules = [
-    mod.__name__.split(".")[-1] for mod in _mods if mod not in [_type_stub]
-]
-
 
 def __dir__():
     return __all__
