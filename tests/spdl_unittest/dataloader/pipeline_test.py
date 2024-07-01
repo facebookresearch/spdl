@@ -5,7 +5,8 @@ from queue import Queue
 
 import pytest
 
-from spdl.dataloader import AsyncPipeline, PipelineFailure, PipelineHook
+from spdl.dataloader import AsyncPipeline, PipelineFailure, PipelineHook, TaskStatsHook
+from spdl.dataloader._hook import _periodic_dispatch
 from spdl.dataloader._pipeline import _dequeue, _enqueue, _EOF, _pipe, _SKIP
 
 
@@ -862,3 +863,66 @@ def test_async_pipe_hook_exit_task_capture_error():
     asyncio.run(pipeline.run())
 
     assert exc_info is err
+
+
+################################################################################
+# TaskStatsHook
+################################################################################
+
+
+def test_task_stats():
+    """TaskStatsHook logs the interval of each task."""
+
+    hook = TaskStatsHook("foo", 1)
+
+    async def _test():
+        async with hook.stage_hook():
+            for i in range(3):
+                async with hook.task_hook():
+                    await asyncio.sleep(0.5)
+
+            assert hook.num_tasks == 3
+            assert hook.num_success == 3
+            assert 0.3 < hook.ave_time < 0.7
+
+            for i in range(2):
+                with pytest.raises(RuntimeError):
+                    async with hook.task_hook():
+                        await asyncio.sleep(1.0)
+                        raise RuntimeError("failing")
+
+            assert hook.num_tasks == 5
+            assert hook.num_success == 3
+            assert 0.5 < hook.ave_time < 0.9
+
+    asyncio.run(_test())
+
+
+def test_periodic_dispatch_smoke_test():
+    """_periodic_dispatch runs functions with the given interval."""
+
+    calls = []
+
+    async def afun():
+        nonlocal calls
+        calls.append(time.monotonic())
+
+    async def _test():
+        task = asyncio.create_task(_periodic_dispatch(afun, 1))
+
+        await asyncio.sleep(3.2)
+
+        task.cancel()
+
+    asyncio.run(_test())
+
+    assert len(calls) == 3
+    assert 0.9 < calls[1] - calls[0] < 1.1
+    assert 0.9 < calls[2] - calls[1] < 1.1
+
+
+def test_task_stats_log_interval_stats():
+    """Smoke test for _log_interval_stats."""
+
+    hook = TaskStatsHook("foo", 1)
+    asyncio.run(hook._log_interval_stats())

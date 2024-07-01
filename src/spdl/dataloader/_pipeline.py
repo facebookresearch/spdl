@@ -9,6 +9,7 @@ from queue import Queue
 from typing import TypeVar
 
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
+from ._utils import _log_exception
 
 __all__ = [
     "AsyncPipeline",
@@ -24,35 +25,6 @@ U = TypeVar("U")
 # Sentinel objects used to instruct AsyncPipeline to take special actions.
 _EOF = object()  # Indicate the end of stream.
 _SKIP = object()  # Indicate that there is no data to process.
-
-
-# Note:
-# This function is intentionally made in a way it cannot be directly attached to
-# task callback. Instead it should be wrapped in lambda as follow, even though
-# there are some opposition on assigning lambda:
-#
-# `task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))`
-#
-# This way, the filename and line number of the log points to the location where
-# task was created.
-# Otherwise the log will point to the location somewhere deep in `asyncio` module
-# which is not very helpful.
-def _check_exception(task, stacklevel):
-    try:
-        task.result()
-    except asyncio.exceptions.CancelledError:
-        _LG.warning("Task [%s] was cancelled.", task.get_name(), stacklevel=stacklevel)
-    except (TimeoutError, asyncio.exceptions.TimeoutError):
-        # Timeout does not contain any message
-        _LG.error("Task [%s] timeout.", task.get_name(), stacklevel=stacklevel)
-    except Exception as err:
-        _LG.error(
-            "Task [%s] failed: %s %s",
-            task.get_name(),
-            type(err).__name__,
-            err,
-            stacklevel=stacklevel,
-        )
 
 
 @asynccontextmanager
@@ -80,6 +52,7 @@ async def _pipe(
     concurrency: int = 1,
     name: str = "pipe",
     hooks: Sequence[PipelineHook] | None = None,
+    report_stats_interval: float | None = None,
     _pipe_eof: bool = False,
 ) -> None:
     if input_queue is output_queue:
@@ -88,7 +61,11 @@ async def _pipe(
     if concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
 
-    hooks = [TaskStatsHook(name, concurrency)] if hooks is None else hooks
+    hooks = (
+        [TaskStatsHook(name, concurrency, interval=report_stats_interval)]
+        if hooks is None
+        else hooks
+    )
 
     async def _wrap(coro: Awaitable[U]) -> None:
         async with _task_hooks(hooks):  # pyre-ignore: [16]
@@ -108,7 +85,7 @@ async def _pipe(
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
             coro = afunc(item)
             task = asyncio.create_task(_wrap(coro), name=f"{name}_{(i := i + 1)}")
-            task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+            task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
             tasks.add(task)
 
             if len(tasks) >= concurrency:
@@ -301,6 +278,7 @@ class AsyncPipeline:
         buffer_size: int = 10,
         name: str | None = None,
         hooks: Sequence[PipelineHook] | None = None,
+        report_stats_interval: float | None = None,
     ) -> "AsyncPipeline":
         """Apply an async function to items in the pipeline.
 
@@ -326,9 +304,19 @@ class AsyncPipeline:
             afunc: Async function applied to the items in the queue.
             concurrency: The maximum number of async tasks executed concurrently.
             name: The name (prefix) to give to the task.
-            hooks: Hook objects to be attached to the stage. Hooks are intended for collecting
-                stats of the stage.
-                If ``None``, a default hook, :py:class:`~spdl.dataloader.TaskStatsHook` is used.
+            hooks: Hook objects to be attached to the stage. Hooks are intended for
+                collecting stats of the stage.
+                If ``None``, a default hook,
+                :py:class:`~spdl.dataloader.TaskStatsHook` is used.
+            report_stats_interval:
+                The interval (in seconds) to log the stats of this stage when no
+                ``hooks`` is provided. This argument is passed to
+                :py:class:`~spdl.dataloader.TaskStatsHook`.
+                This argument is effective only when ``hooks`` are not provided.
+                If ``hooks`` is provided and stats report is needed,
+                the ``hooks`` argument should
+                include one of :py:class:`~spdl.dataloader.TaskStatsHook`
+                instance with the desired interval.
         """
         self.queues.append(AsyncQueue(buffer_size))
         in_queue, out_queue = self.queues[-2:]
@@ -345,6 +333,7 @@ class AsyncPipeline:
             concurrency,
             name,
             hooks=hooks,
+            report_stats_interval=report_stats_interval,
         )
         self.coros.append((coro, name))
         return self
@@ -356,6 +345,7 @@ class AsyncPipeline:
         *,
         drop_last: bool = False,
         hooks: Sequence[PipelineHook] | None = None,
+        report_stats_interval: float | None = None,
     ) -> "AsyncPipeline":
         """Buffer the items in the pipeline.
 
@@ -363,9 +353,8 @@ class AsyncPipeline:
         Args:
             n: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``n`` items.
-            hooks: Hook objects to be attached to the stage. Hooks are intended for collecting
-                stats of the stage.
-                If ``None``, a default hook, :py:class:`~spdl.dataloader.TaskStatsHook` is used.
+            hooks: See :py:meth:`pipe`.
+            report_stats_interval: See :py:meth:`pipe`.
         """
 
         vals = [[]]
@@ -390,6 +379,7 @@ class AsyncPipeline:
             1,
             name,
             hooks=hooks,
+            report_stats_interval=report_stats_interval,
             _pipe_eof=not drop_last,
         )
         self.coros.append((coro, name))
@@ -447,7 +437,7 @@ class AsyncPipeline:
         tasks = set()
         for i, (coro, name) in enumerate(self.coros):
             task = asyncio.create_task(coro, name=f"AsyncPipeline::{i}_{name}")
-            task.add_done_callback(lambda t: _check_exception(t, stacklevel=2))
+            task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
             tasks.add(task)
 
         while tasks:
