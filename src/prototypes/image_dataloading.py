@@ -14,8 +14,7 @@ import spdl.io
 import spdl.utils
 
 import torch
-from spdl.dataloader import AsyncPipeline, BackgroundGenerator
-from spdl.utils import iter_flist
+from spdl.dataloader import AsyncPipeline, BackgroundGenerator, iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -50,29 +49,18 @@ class PerfResult:
 
 
 def _iter_dataloader(dataloader, ev):
-    t0 = t_int = time.monotonic()
-    num_frames = num_frames_int = 0
-    num_batches = 0
+    t0 = time.monotonic()
+    num_frames = num_batches = 0
     try:
         for batch in dataloader:
             num_frames += batch.shape[0]
             num_batches += 1
-
-            t1 = time.monotonic()
-            if (elapsed := t1 - t_int) > 10:
-                n = num_frames - num_frames_int
-                _LG.info(f"Interval FPS={n / elapsed:.2f} (Done {num_batches=})")
-
-                t_int = t1
-                num_frames_int = num_frames
 
             if ev.is_set():
                 break
 
     finally:
         elapsed = time.monotonic() - t0
-        fps = num_frames / elapsed
-        _LG.info(f"FPS={fps:.2f} ({num_frames} / {elapsed:.2f}), (Done {num_frames})")
 
     return PerfResult(elapsed, num_batches, num_frames)
 
@@ -87,7 +75,7 @@ def _get_batch_generator(args):
         max=args.max_samples,
     )
 
-    async def _async_decode_func(srcs):
+    async def batch_decode(srcs):
         buffer = await spdl.io.async_load_image_batch(
             srcs,
             width=256,
@@ -107,7 +95,7 @@ def _get_batch_generator(args):
     apl = (
         AsyncPipeline()
         .add_source(srcs_gen)
-        .pipe(_async_decode_func, concurrency=args.num_threads)
+        .pipe(batch_decode, concurrency=args.num_threads, report_stats_interval=5)
     )
 
     return apl

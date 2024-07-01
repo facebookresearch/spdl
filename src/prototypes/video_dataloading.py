@@ -13,8 +13,7 @@ from threading import Event
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import AsyncPipeline, BackgroundGenerator
-from spdl.utils import iter_flist
+from spdl.dataloader import AsyncPipeline, BackgroundGenerator, iter_flist
 
 _LG = logging.getLogger(__name__)
 
@@ -138,7 +137,7 @@ def _get_batch_generator(args):
     return (
         AsyncPipeline()
         .add_source(srcs_gen)
-        .pipe(_decode_fn, concurrency=args.num_threads)
+        .pipe(_decode_fn, concurrency=args.num_threads, report_stats_interval=10)
     )
 
 
@@ -150,22 +149,13 @@ class PerfResult:
 
 
 def _iter_dataloader(dataloader, ev):
-    t0 = t_int = time.monotonic()
-    num_frames = num_frames_int = 0
-    num_batches = 0
+    t0 = time.monotonic()
+    num_frames = num_batches = 0
     try:
         for batches in dataloader:
             for batch in batches:
                 num_frames += batch.shape[0]
                 num_batches += 1
-
-            t1 = time.monotonic()
-            if (elapsed := t1 - t_int) > 10:
-                n = num_frames - num_frames_int
-                _LG.info(f"Interval FPS={n / elapsed:.2f} (Done {num_batches=})")
-
-                t_int = t1
-                num_frames_int = num_frames
 
             if ev.is_set():
                 break

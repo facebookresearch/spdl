@@ -1,11 +1,14 @@
 # pyre-unsafe
 
+import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from contextlib import asynccontextmanager, AsyncExitStack
 from typing import TypeVar
+
+from ._utils import _log_exception
 
 __all__ = [
     "PipelineHook",
@@ -139,6 +142,17 @@ async def _task_hooks(hooks: Sequence[PipelineHook]):
         yield
 
 
+async def _periodic_dispatch(afun, interval):
+    tasks = set()
+    while True:
+        await asyncio.sleep(interval)
+
+        task = asyncio.create_task(afun())
+        tasks.add(task)
+        task.add_done_callback(tasks.discard)
+        task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
+
+
 class TaskStatsHook(PipelineHook):
     """Track the task runtimes and success rate.
 
@@ -147,22 +161,39 @@ class TaskStatsHook(PipelineHook):
         concurrency: Concurrency of the stage. Only used for logging.
     """
 
-    def __init__(self, name: str, concurrency: int):
+    def __init__(self, name: str, concurrency: int, interval: float | None = None):
         self.name = name
         self.concurrency = concurrency
+        self.interval = interval
 
         self.num_tasks = 0
         self.num_success = 0
         self.ave_time = 0.0
 
+        # For interval
+        self._int_task = None
+        self._int_t0 = 0
+        self._int_num_tasks = 0
+        self._int_num_success = 0
+        self._int_ave_time = 0.0
+
     @asynccontextmanager
     async def stage_hook(self):
         """Track the stage runtime and log the task stats."""
+        if self.interval is not None:
+            self._int_t0 = time.monotonic()
+            self._int_task = asyncio.create_task(
+                _periodic_dispatch(self._log_interval_stats, self.interval)
+            )
+            self._int_task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
+
         t0 = time.monotonic()
         try:
             yield
         finally:
             elapsed = time.monotonic() - t0
+            if self.interval is not None:
+                self._int_task.cancel()
             self._log_stats(elapsed, self.num_tasks, self.num_success, self.ave_time)
 
     @asynccontextmanager
@@ -175,6 +206,32 @@ class TaskStatsHook(PipelineHook):
         elapsed = time.monotonic() - t0
         self.num_success += 1
         self.ave_time += (elapsed - self.ave_time) / self.num_success
+
+    async def _log_interval_stats(self):
+        t0 = time.monotonic()
+        num_success = self.num_success
+        num_tasks = self.num_tasks
+        ave_time = self.ave_time
+
+        if (num_success - self._int_num_success) > 0:
+            int_ave = (
+                ave_time * num_success - self._int_ave_time * self._int_num_success
+            )
+            int_ave /= num_success - self._int_num_success
+        else:
+            int_ave = 0.0
+
+        self._log_stats(
+            t0 - self._int_t0,
+            num_tasks - self._int_num_tasks,
+            num_success - self._int_num_success,
+            int_ave,
+        )
+
+        self._int_t0 = t0
+        self._int_num_tasks = num_tasks
+        self._int_num_success = num_success
+        self._int_ave_time = ave_time
 
     def _log_stats(self, elapsed, num_tasks, num_success, ave_time):
         _LG.info(
