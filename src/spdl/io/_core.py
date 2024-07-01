@@ -33,10 +33,6 @@ __all__ = [
     "async_demux_audio",
     "async_demux_video",
     "async_demux_image",
-    "streaming_demux_audio",
-    "streaming_demux_video",
-    "async_streaming_demux_audio",
-    "async_streaming_demux_video",
     # DECODING
     "decode_packets",
     "async_decode_packets",

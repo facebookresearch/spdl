@@ -45,14 +45,10 @@ def __dir__():
 
 
 _deprecated = {
-    "async_batch_load_image": (
-        "async_load_image_batch",
-        "`async_load_image_batch`",
-    ),
-    "async_batch_load_image_nvdec": (
-        "async_load_image_batch_nvdec",
-        "`async_load_image_batch_nvdec`",
-    ),
+    "streaming_demux_audio",
+    "streaming_demux_video",
+    "async_streaming_demux_audio",
+    "async_streaming_demux_video",
 }
 
 
@@ -60,13 +56,12 @@ def __getattr__(name: str):
     if name in _deprecated:
         import warnings
 
-        new_name, replacements = _deprecated[name]
         warnings.warn(
-            f"`{name}` has been deprecated. Please use {replacements}.",
+            f"`{name}` has been deprecated. Please use `spdl.io.Demuxer`.",
             category=FutureWarning,
             stacklevel=2,
         )
-        name = new_name
+        return getattr(_core, name)
 
     for mod in _mods:
         if name in mod.__all__:
