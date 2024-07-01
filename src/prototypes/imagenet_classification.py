@@ -11,9 +11,8 @@ import spdl.io
 import spdl.utils
 import timm
 import torch
-from spdl.dataloader import AsyncPipeline, BackgroundGenerator
+from spdl.dataloader import AsyncPipeline, BackgroundGenerator, iter_flist
 from spdl.dataset.imagenet import get_mappings, parse_wnid
-from spdl.utils import iter_flist
 from torch.profiler import profile
 
 _LG = logging.getLogger(__name__)

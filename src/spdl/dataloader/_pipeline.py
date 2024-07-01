@@ -2,12 +2,13 @@
 
 import asyncio
 import logging
-import time
 from asyncio import Queue as AsyncQueue
-from collections.abc import Awaitable, Callable, Coroutine, Iterator
+from collections.abc import Awaitable, Callable, Coroutine, Iterator, Sequence
 from contextlib import asynccontextmanager
 from queue import Queue
 from typing import TypeVar
+
+from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
 
 __all__ = [
     "AsyncPipeline",
@@ -77,7 +78,8 @@ async def _pipe(
     afunc: Callable[[T], Awaitable[U]],
     output_queue: AsyncQueue[U],
     concurrency: int = 1,
-    name: str | None = None,
+    name: str = "pipe",
+    hooks: Sequence[PipelineHook] | None = None,
     _pipe_eof: bool = False,
 ) -> None:
     if input_queue is output_queue:
@@ -86,26 +88,16 @@ async def _pipe(
     if concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
 
-    num_fail = num_ok = 0
-    ave_time = 0.0
+    hooks = [TaskStatsHook(name, concurrency)] if hooks is None else hooks
 
     async def _wrap(coro: Awaitable[U]) -> None:
-        nonlocal num_fail, num_ok, ave_time
-        try:
-            t0 = time.monotonic()
+        async with _task_hooks(hooks):  # pyre-ignore: [16]
             result = await coro
-            elapsed = time.monotonic() - t0
-            ave_time += (elapsed - ave_time) / (num_ok := num_ok + 1)
-            await output_queue.put(result)
-        except Exception:
-            num_fail += 1
-            raise
 
-    # Note: the order of the contextmanager matters.
-    # `_put_eof_when_done` must be placed first (its finally block is executed last)
-    async with _put_eof_when_done(output_queue):
+        await output_queue.put(result)
+
+    async with _stage_hooks(hooks), _put_eof_when_done(output_queue):
         i, tasks = 0, set()
-        t0 = time.monotonic()
         while True:
             item = await input_queue.get()
             if item is _SKIP:
@@ -129,22 +121,6 @@ async def _pipe(
 
         if tasks:
             await asyncio.wait(tasks)
-        elapsed = time.monotonic() - t0
-
-    _LG.info(
-        "[%s]\tCompleted %5d tasks (%3d failed) in %.4f [%3s]. "
-        "QPS: %.2f (Concurrency: %3d). "
-        "Average task time: %.4f [%3s].",
-        name,
-        num_ok + num_fail,
-        num_fail,
-        elapsed * 1000 if elapsed < 1 else elapsed,
-        "ms" if elapsed < 1 else "sec",
-        num_ok / elapsed if elapsed > 0.001 else float("nan"),
-        concurrency,
-        ave_time * 1000 if ave_time < 1 else ave_time,
-        "ms" if ave_time < 1 else "sec",
-    )
 
 
 ################################################################################
