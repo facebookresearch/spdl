@@ -24,9 +24,12 @@ T = TypeVar("T")
 class PipelineHook(ABC):
     """Base class for hooks to be used in the pipeline.
 
+    ``PipelineHook`` can add custom actions when executing pipeline.
+    It is useful for logging and profiling the pipeline execution.
+
     A hook consists of two async context managers. ``stage_hook`` and ``task_hook``.
 
-    ``stage_hook`` is executed once when the pipeline stage is initialized and finalized.
+    ``stage_hook`` is executed once when the pipeline is initialized and finalized.
     ``task_hook`` is executed for each task.
 
     The following diagram illustrates this.
@@ -54,6 +57,10 @@ class PipelineHook(ABC):
            end
            StageStart["__aenter__() from stage_hook()"] --> TaskGroup
            TaskGroup --> StageComplete["__aexit__() from stage_hook()"]
+
+    To add custom hook, subclass this class and override ``task_hook`` and
+    optionally ``stage_hook`` method, and pass an instance to methods such as
+    :py::meth:`spdl.dataloader.AsyncPipeline.pipe`.
 
     .. tip::
 
@@ -88,6 +95,17 @@ class PipelineHook(ABC):
     async def stage_hook(self):
         """Perform custom action when the pipeline stage is initialized and completed.
 
+        .. important::
+
+           This method has to be async context manager. So when overriding the method,
+           make sure to use ``async`` keyword and ``@asynccontextmanager`` decorator.
+
+           .. code-block:: python
+
+              @asynccontextmanager
+              async def stage_hook(self):
+                  # Add custom logic here
+
         .. caution::
 
            If this hook raises an exception, the pipeline is aborted.
@@ -98,6 +116,17 @@ class PipelineHook(ABC):
     @asynccontextmanager
     async def task_hook(self):
         """Perform custom action before and after task is executed.
+
+        .. important::
+
+           This method has to be async context manager. So when overriding the method,
+           make sure to use ``async`` keyword and ``@asynccontextmanager`` decorator.
+
+           .. code-block:: python
+
+              @asynccontextmanager
+              async def stask_hook(self):
+                  # Add custom logic here
 
         .. note::
 
