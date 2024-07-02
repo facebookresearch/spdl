@@ -56,9 +56,10 @@ def test_batch_audio_conversion(get_sample):
 
     async def _test():
         decoding = []
-        async for packets in spdl.io.async_streaming_demux_audio(
-            src=sample.path, timestamps=timestamps
-        ):
+
+        demuxer = spdl.io.Demuxer(sample.path)
+        for ts in timestamps:
+            packets = demuxer.demux_audio(ts)
             filter_desc = get_filter_desc(packets, num_frames=8_000)
             coro = spdl.io.async_decode_packets(packets, filter_desc=filter_desc)
             decoding.append(asyncio.create_task(coro))
