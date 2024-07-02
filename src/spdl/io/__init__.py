@@ -45,6 +45,10 @@ _deprecated = {
     "streaming_demux_video",
     "async_streaming_demux_audio",
     "async_streaming_demux_video",
+    "streaming_load_audio",
+    "streaming_load_video",
+    "async_streaming_load_audio",
+    "async_streaming_load_video",
 }
 
 
@@ -57,7 +61,9 @@ def __getattr__(name: str):
             category=FutureWarning,
             stacklevel=2,
         )
-        return getattr(_core, name)
+        if "demux" in name:
+            return getattr(_core, name)
+        return getattr(_composite, name)
 
     for mod in _mods:
         if name in mod.__all__:
