@@ -92,7 +92,7 @@ async def run_async(
 
 
 class Demuxer:
-    """Demuxer can demux audio, video and image fomr the soure.
+    """Demuxer can demux audio, video and image from the soure.
 
     Args:
         src: Source identifier.
