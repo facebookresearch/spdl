@@ -41,8 +41,9 @@ def _parse_args(args):
     return args
 
 
-def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
-    async def _decode_window(packets):
+def _get_decode_fn(cuda_device_index, use_nvdec, width=222, height=222, pix_fmt="rgba"):
+    async def _decode_ffmpeg(src):
+        packets = await spdl.io.async_demux_video(src)
         frames = await spdl.io.async_decode_packets(
             packets,
             filter_desc=spdl.io.get_filter_desc(
@@ -63,62 +64,26 @@ def _get_decode_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
                 ),
             ),
         )
-        return buffer
+        return spdl.io.to_torch(buffer)
 
-    async def _decode(src):
-        timestamps = [(0, float("inf"))]
-        demuxer = spdl.io.async_streaming_demux_video(src, timestamps=timestamps)
-        tasks = []
-        async for packets in demuxer:
-            tasks.append(asyncio.create_task(_decode_window(packets)))
-
-        await asyncio.wait(tasks)
-        buffers = []
-        for task in tasks:
-            try:
-                buffers.append(task.result())
-            except asyncio.CancelledError:
-                _LG.error("Task %s was cancelled", task)
-            except Exception as err:
-                _LG.error("Failed to process task %s: %s", task.get_name(), err)
-        return [spdl.io.to_torch(buffer) for buffer in buffers]
-
-    return _decode
-
-
-def _get_decode_nvdec_fn(cuda_device_index, width=222, height=222, pix_fmt="rgba"):
     async def _decode_nvdec(src):
-        timestamps = [(0, float("inf"))]
-        demuxer = spdl.io.async_streaming_demux_video(src, timestamps=timestamps)
-        tasks = []
-        async for packets in demuxer:
-            coro = spdl.io.async_decode_packets_nvdec(
-                packets,
-                cuda_config=spdl.io.cuda_config(
-                    device_index=cuda_device_index,
-                    allocator=(
-                        torch.cuda.caching_allocator_alloc,
-                        torch.cuda.caching_allocator_delete,
-                    ),
+        packets = await spdl.io.async_demux_video(src)
+        buffer = await spdl.io.async_decode_packets_nvdec(
+            packets,
+            cuda_config=spdl.io.cuda_config(
+                device_index=cuda_device_index,
+                allocator=(
+                    torch.cuda.caching_allocator_alloc,
+                    torch.cuda.caching_allocator_delete,
                 ),
-                width=width,
-                height=height,
-                pix_fmt=pix_fmt,
-            )
-            tasks.append(asyncio.create_task(coro))
+            ),
+            width=width,
+            height=height,
+            pix_fmt=pix_fmt,
+        )
+        return spdl.io.to_torch(buffer)
 
-        await asyncio.wait(tasks)
-        buffers = []
-        for task in tasks:
-            try:
-                buffers.append(task.result())
-            except asyncio.CancelledError:
-                _LG.error("Task %s was cancelled", task)
-            except Exception as err:
-                _LG.error("Failed to process task %s: %s", task.get_name(), err)
-        return [spdl.io.to_torch(buffer) for buffer in buffers]
-
-    return _decode_nvdec
+    return _decode_nvdec if use_nvdec else _decode_ffmpeg
 
 
 def _get_batch_generator(args):
@@ -129,11 +94,7 @@ def _get_batch_generator(args):
         N=args.num_workers,
         max=args.max_samples,
     )
-    _decode_fn = (
-        _get_decode_nvdec_fn(args.worker_id)
-        if args.nvdec
-        else _get_decode_fn(args.worker_id)
-    )
+    _decode_fn = _get_decode_fn(args.worker_id, args.nvdec)
     return (
         AsyncPipeline()
         .add_source(srcs_gen)
