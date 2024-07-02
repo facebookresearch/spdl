@@ -3,7 +3,7 @@ package:
   version: "{{ environ.get('SPDL_BUILD_VERSION', '0.0.0') }}"
 
 source:
-  path: ".."
+  path: "../.."
 
 requirements:
   build:
@@ -20,6 +20,7 @@ requirements:
     - setuptools
     - cmake
     - ninja
+    - typing_extensions
     {{ environ.get('CONDA_CUDATOOLKIT_CONSTRAINT', '') }}
 
   run:
@@ -47,7 +48,5 @@ test:
     - numpy
 
 about:
-  home: https://github.com/mthrok/spdl
-  license: Apache 2
-  license_file: LICENSE
+  home: https://github.com/facebookresearch/spdl
   summary: Scalable and performant data loading for scientific computing

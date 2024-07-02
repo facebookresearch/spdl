@@ -56,6 +56,6 @@ jobs:
         if: matrix.python-version == '3.10'
         run: |
           conda install -c file://${HOME}/package/ spdl
-          conda install -c conda-forge ffmpeg
+          conda install -c conda-forge 'ffmpeg==6'
           conda install -c pytorch numpy pytest pytorch numba
           pytest -v tests/spdl_unittest/io/
