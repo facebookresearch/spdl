@@ -124,22 +124,26 @@ void register_packets(nb::module_& m) {
           "pix_fmt",
           [](const VideoPackets& self) {
             nb::gil_scoped_release g;
-            assert(self.codecpar);
             return self.get_media_format_name();
           })
       .def_prop_ro(
           "width",
           [](const VideoPackets& self) {
             nb::gil_scoped_release g;
-            assert(self.codecpar);
-            return self.codecpar->width;
+            return self.get_width();
           })
       .def_prop_ro(
           "height",
           [](const VideoPackets& self) {
             nb::gil_scoped_release g;
-            assert(self.codecpar);
-            return self.codecpar->height;
+            return self.get_height();
+          })
+      .def_prop_ro(
+          "frame_rate",
+          [](const VideoPackets& self) {
+            nb::gil_scoped_release g;
+            auto rate = self.get_frame_rate();
+            return std::tuple<int, int>(rate.num, rate.den);
           })
       .def(
           "__len__",
@@ -182,22 +186,19 @@ void register_packets(nb::module_& m) {
           "pix_fmt",
           [](const ImagePackets& self) {
             nb::gil_scoped_release g;
-            assert(self.codecpar);
             return self.get_media_format_name();
           })
       .def_prop_ro(
           "width",
           [](const ImagePackets& self) {
             nb::gil_scoped_release g;
-            assert(self.codecpar);
-            return self.codecpar->width;
+            return self.get_width();
           })
       .def_prop_ro(
           "height",
           [](const ImagePackets& self) {
             nb::gil_scoped_release g;
-            assert(self.codecpar);
-            return self.codecpar->height;
+            return self.get_height();
           })
       .def(
           "__repr__",

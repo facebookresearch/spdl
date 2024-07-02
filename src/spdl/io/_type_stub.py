@@ -180,6 +180,11 @@ class VideoPackets(Packets):
         """The height of video."""
         ...
 
+    @property
+    def frame_rate(self) -> tuple[int, int]:
+        """The frame rate of the video in the form of ``(numerator, denominator)``."""
+        ...
+
     def clone(self) -> VideoPackets:
         """Clone the packets, so that data can be decoded multiple times.
 

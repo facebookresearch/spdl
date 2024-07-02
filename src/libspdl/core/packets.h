@@ -72,6 +72,10 @@ class DemuxedPackets {
   const std::vector<AVPacket*>& get_packets() const;
   const char* get_media_format_name() const;
 
+  int get_width() const;
+  int get_height() const;
+  Rational get_frame_rate() const;
+
   // Get the number of valid packets, that is, the number of frames returned
   // by decoding function when decoded.
   // This is different from `packets.size()` when timestamp is set.
