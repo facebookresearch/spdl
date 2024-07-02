@@ -6,6 +6,8 @@
 
 #include <glog/logging.h>
 
+#include <cassert>
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 }
