@@ -11,35 +11,10 @@ from spdl.lib import _libspdl
 
 
 def test_failure():
-    """demux async functoins fails normally if the input does not exist"""
-
-    ts = [(0, 1)]
-
-    async def _test_audio():
-        async for packets in spdl.io.async_streaming_demux_audio(
-            "FOO.mp3",
-            timestamps=ts,
-        ):
-            pass
-
-    async def _test_video():
-        async for packets in spdl.io.async_streaming_demux_video(
-            "FOOBAR.mp4",
-            timestamps=ts,
-        ):
-            pass
-
-    async def _test_image():
-        await spdl.io.async_demux_image("FOO.jpg")
+    """Demuxer fails without segfault if the input does not exist"""
 
     with pytest.raises(RuntimeError, match="Failed to open the input"):
-        asyncio.run(_test_audio())
-
-    with pytest.raises(RuntimeError, match="Failed to open the input"):
-        asyncio.run(_test_video())
-
-    with pytest.raises(RuntimeError, match="Failed to open the input"):
-        asyncio.run(_test_image())
+        spdl.io.Demuxer("dvkgviuerehidguburuekkhgjijfjbkj")
 
 
 async def _decode_packet(packets):
