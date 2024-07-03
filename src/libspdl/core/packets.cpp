@@ -117,6 +117,23 @@ const char* DemuxedPackets<media_type>::get_media_format_name() const {
   return detail::get_media_format_name<media_type>(codecpar->format);
 }
 
+template <MediaType media_type>
+int DemuxedPackets<media_type>::get_width() const {
+  assert(codecpar);
+  return codecpar->width;
+}
+
+template <MediaType media_type>
+int DemuxedPackets<media_type>::get_height() const {
+  assert(codecpar);
+  return codecpar->height;
+}
+
+template <MediaType media_type>
+Rational DemuxedPackets<media_type>::get_frame_rate() const {
+  return frame_rate;
+}
+
 template class DemuxedPackets<MediaType::Audio>;
 template class DemuxedPackets<MediaType::Video>;
 template class DemuxedPackets<MediaType::Image>;
