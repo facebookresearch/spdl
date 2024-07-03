@@ -39,9 +39,18 @@ def test_audio_packets_attribtues(get_sample):
     asyncio.run(_test(sample.path))
 
 
-def test_video_packets_attribtues(get_sample):
+@pytest.mark.parametrize(
+    "rate",
+    [
+        (30, 1),
+        (60, 1),
+        (120, 1),
+        (30000, 1001),
+    ],
+)
+def test_video_packets_attribtues(get_sample, rate):
     """VideoPackets have width, height, pixe_format attributes"""
-    cmd = CMDS["video"]
+    cmd = f"ffmpeg -hide_banner -y -f lavfi -r {rate[0]}/{rate[1]} -i testsrc -frames:v 25 sample.mp4"
     sample = get_sample(cmd)
 
     async def _test(src):
@@ -49,6 +58,7 @@ def test_video_packets_attribtues(get_sample):
         assert packets.width == 320
         assert packets.height == 240
         assert packets.pix_fmt == "yuv444p"
+        assert packets.frame_rate == rate
 
     asyncio.run(_test(sample.path))
 
