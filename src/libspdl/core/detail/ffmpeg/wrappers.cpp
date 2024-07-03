@@ -81,6 +81,15 @@ AVFrame* make_reference(AVFrame* src) {
   return dst;
 }
 
+OptionDict parse_dict(const AVDictionary* metadata) {
+  AVDictionaryEntry* tag = nullptr;
+  OptionDict ret;
+  while ((tag = av_dict_get(metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+    ret.emplace(std::string(tag->key), std::string(tag->value));
+  }
+  return ret;
+}
+
 } // namespace spdl::core::detail
 
 #ifdef SPDL_DEBUG_REFCOUNT

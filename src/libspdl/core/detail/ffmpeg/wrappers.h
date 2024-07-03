@@ -123,6 +123,8 @@ const char* get_media_format_name(int media_format) {
   }
 }
 
+OptionDict parse_dict(const AVDictionary* metadata);
+
 } // namespace spdl::core::detail
 
 // RAII wrapper for objects that require clean up, but need to expose double

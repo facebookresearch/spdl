@@ -401,6 +401,11 @@ class ImageFrames(Frames):
         """The name of the pixel format."""
         ...
 
+    @property
+    def metadata(self) -> dict[str, str]:
+        """Metadata attached to the frame."""
+        ...
+
     def clone(self) -> VideoFrames:
         """Clone the frames, so that data can be converted to buffer multiple times.
 
