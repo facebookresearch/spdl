@@ -3,6 +3,7 @@
 #include <fmt/core.h>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/map.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
@@ -181,6 +182,12 @@ void register_frames(nb::module_& m) {
           [](const FFmpegImageFrames& self) {
             nb::gil_scoped_release g;
             return self.get_media_format_name();
+          })
+      .def_prop_ro(
+          "metadata",
+          [](const FFmpegImageFrames& self) {
+            nb::gil_scoped_release g;
+            return self.get_metadata();
           })
       .def(
           "__repr__",

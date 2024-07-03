@@ -94,6 +94,10 @@ class FFmpegFrames {
   const char* get_media_format_name() const;
 
   ///
+  /// Get metadata
+  OptionDict get_metadata() const;
+
+  ///
   /// Get the number of frames.
   int get_num_frames() const;
   // the behavior is different for audio

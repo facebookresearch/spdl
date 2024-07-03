@@ -89,6 +89,14 @@ const char* FFmpegFrames<media_type>::get_media_format_name() const {
 }
 
 template <MediaType media_type>
+OptionDict FFmpegFrames<media_type>::get_metadata() const {
+  if (frames.size() == 0) {
+    return {};
+  }
+  return detail::parse_dict(frames[0]->metadata);
+}
+
+template <MediaType media_type>
 int FFmpegFrames<media_type>::get_num_frames() const {
   if constexpr (_IS_AUDIO) {
     int ret = 0;
