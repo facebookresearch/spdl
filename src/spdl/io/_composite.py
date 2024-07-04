@@ -20,7 +20,7 @@ from spdl.io import (
 from spdl.lib import _libspdl
 
 from . import _core, _preprocessing
-from ._core import run_async
+from ._core import _FILTER_DESC_DEFAULT, run_async
 
 __all__ = [
     "load_audio",
@@ -47,7 +47,7 @@ Window = tuple[float, float]
 def _load_packets(
     packets,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDAConfig | None = None,
 ):
     frames = _core.decode_packets(
@@ -66,7 +66,7 @@ def load_audio(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: None = None,
 ) -> CPUBuffer: ...
 @overload
@@ -76,7 +76,7 @@ def load_audio(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDAConfig,
 ) -> CUDABuffer: ...
 
@@ -87,7 +87,7 @@ def load_audio(
     *,
     demux_config=None,
     decode_config=None,
-    filter_desc=None,
+    filter_desc=_FILTER_DESC_DEFAULT,
     cuda_config=None,
 ):
     """Load audio from source into buffer.
@@ -122,7 +122,7 @@ async def async_load_audio(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: None = None,
 ) -> CPUBuffer: ...
 @overload
@@ -132,7 +132,7 @@ async def async_load_audio(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDAConfig,
 ) -> CUDABuffer: ...
 
@@ -143,7 +143,7 @@ async def async_load_audio(
     *,
     demux_config=None,
     decode_config=None,
-    filter_desc=None,
+    filter_desc=_FILTER_DESC_DEFAULT,
     cuda_config=None,
 ):
     """Async version of :py:func:`~spdl.io.load_audio`."""
@@ -165,7 +165,7 @@ def load_video(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: None = None,
 ) -> CPUBuffer: ...
 @overload
@@ -175,7 +175,7 @@ def load_video(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDAConfig,
 ) -> CUDABuffer: ...
 
@@ -186,7 +186,7 @@ def load_video(
     *,
     demux_config=None,
     decode_config=None,
-    filter_desc=None,
+    filter_desc=_FILTER_DESC_DEFAULT,
     cuda_config=None,
 ):
     """Load video from source into buffer.
@@ -221,7 +221,7 @@ async def async_load_video(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: None = None,
 ) -> CPUBuffer: ...
 
@@ -233,7 +233,7 @@ async def async_load_video(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDAConfig,
 ) -> CUDABuffer: ...
 
@@ -244,7 +244,7 @@ async def async_load_video(
     *,
     demux_config=None,
     decode_config=None,
-    filter_desc=None,
+    filter_desc=_FILTER_DESC_DEFAULT,
     cuda_config=None,
 ):
     """Async version of :py:func:`~spdl.io.load_video`."""
@@ -265,7 +265,7 @@ def load_image(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: None = None,
 ) -> CPUBuffer: ...
 @overload
@@ -274,7 +274,7 @@ def load_image(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDABuffer,
 ) -> CUDABuffer: ...
 
@@ -284,7 +284,7 @@ def load_image(
     *,
     demux_config=None,
     decode_config=None,
-    filter_desc=None,
+    filter_desc=_FILTER_DESC_DEFAULT,
     cuda_config=None,
 ):
     """Load image from source into buffer.
@@ -318,7 +318,7 @@ async def async_load_image(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: None = None,
 ) -> CPUBuffer: ...
 @overload
@@ -327,7 +327,7 @@ async def async_load_image(
     *,
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDABuffer,
 ) -> CUDABuffer: ...
 
@@ -337,7 +337,7 @@ async def async_load_image(
     *,
     demux_config=None,
     decode_config=None,
-    filter_desc=None,
+    filter_desc=_FILTER_DESC_DEFAULT,
     cuda_config=None,
 ):
     """Async version of :py:func:`~spdl.io.load_image`."""
@@ -670,7 +670,7 @@ async def async_load_image_batch(
     pix_fmt: str | None = "rgb24",
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: None = None,
     pin_memory: bool = False,
     strict: bool = True,
@@ -686,7 +686,7 @@ async def async_load_image_batch(
     pix_fmt: str | None = "rgb24",
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     cuda_config: CUDAConfig,
     pin_memory: bool = False,
     strict: bool = True,
@@ -701,7 +701,7 @@ async def async_load_image_batch(
     pix_fmt="rgb24",
     demux_config=None,
     decode_config=None,
-    filter_desc=None,
+    filter_desc=_FILTER_DESC_DEFAULT,
     cuda_config=None,
     pin_memory=False,
     strict=True,
@@ -793,12 +793,12 @@ async def async_load_image_batch(
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
 
-    filter_desc = _preprocessing.get_video_filter_desc(
-        scale_width=width,
-        scale_height=height,
-        pix_fmt=pix_fmt,
-        filter_desc=filter_desc,
-    )
+    if filter_desc == _FILTER_DESC_DEFAULT:
+        filter_desc = _preprocessing.get_video_filter_desc(
+            scale_width=width,
+            scale_height=height,
+            pix_fmt=pix_fmt,
+        )
 
     tasks = [
         asyncio.create_task(
@@ -1037,7 +1037,7 @@ async def async_sample_decode_video(
     packets: VideoPackets,
     indices: list[int],
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
     strict: bool = True,
 ) -> list[ImagePackets]:
     """Decode specified frames from the packets.
@@ -1138,11 +1138,10 @@ async def async_sample_decode_video(
         packets: The input video packets.
         indices: The list of frame indices.
         decode_config:
-            *Optional:* Decode config. Passed to
-            :py:func:`~spdl.io.streaming_decode_packets`.
-
+            *Optional:* Decode config.
+            See :py:func:`~spdl.io.decode_config`.
         filter_desc: *Optional:* Filter description.
-            :py:func:`~spdl.io.streaming_decode_packets`.
+            See :py:func:`~spdl.io.decode_packets` for detail.
 
         strict: *Optional:* If True, raise an error
             if any of the frames failed to decode.
@@ -1160,6 +1159,9 @@ async def async_sample_decode_video(
         raise ValueError("Frame indices must be sorted in ascending order.")
     if len(set(indices)) != len(indices):
         raise ValueError("Frame indices must be unique.")
+
+    if filter_desc == _FILTER_DESC_DEFAULT:
+        filter_desc = _preprocessing.get_video_filter_desc()
 
     tasks = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
