@@ -161,7 +161,9 @@ FilterGraph get_filter(
   {
     TRACE_EVENT("decoding", "avfilter_graph_config");
     CHECK_AVERROR(
-        avfilter_graph_config(p, nullptr), "Failed to configure the graph.");
+        avfilter_graph_config(p, nullptr),
+        "Failed to configure the graph. \"{}\"",
+        desc);
   }
 
   // for (unsigned i = 0; i < p->nb_filters; ++i) {
