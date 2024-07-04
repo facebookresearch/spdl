@@ -80,7 +80,7 @@ def test_async_decode_video_bytes(get_sample):
         with open(path, "rb") as f:
             hyp = await _decode("video", f.read())
 
-        assert hyp.shape == (1000, 3, 240, 320)
+        assert hyp.shape == (1000, 240, 320, 3)
         assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))
@@ -96,7 +96,7 @@ def test_demux_image_bytes(get_sample):
         with open(sample.path, "rb") as f:
             hyp = await _decode("image", f.read())
 
-        assert hyp.shape == (1, 240, 320)
+        assert hyp.shape == (240, 320, 3)
         assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))
