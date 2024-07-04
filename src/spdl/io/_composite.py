@@ -1038,6 +1038,7 @@ async def async_sample_decode_video(
     indices: list[int],
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = None,
+    strict: bool = True,
 ) -> list[ImagePackets]:
     """Decode specified frames from the packets.
 
@@ -1143,6 +1144,9 @@ async def async_sample_decode_video(
         filter_desc: *Optional:* Filter description.
             :py:func:`~spdl.io.streaming_decode_packets`.
 
+        strict: *Optional:* If True, raise an error
+            if any of the frames failed to decode.
+
     Returns:
         Decoded frames.
     """
@@ -1173,4 +1177,6 @@ async def async_sample_decode_video(
             ret.extend(task.result())
         except Exception as e:
             _LG.error(f"Failed to decode {task.get_name()}. Reason: {e}")
+    if strict and len(ret) != len(indices):
+        raise RuntimeError("Failed to decode some frames.")
     return ret
