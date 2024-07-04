@@ -223,6 +223,7 @@ def test_sample_decoding_window(get_sample):
     async def _test(src):
         # 250 frames
         ref_array = spdl.io.to_numpy(await spdl.io.async_load_video(src))
+        assert len(ref_array) == 250
 
         # frames from 25 - 50, but internally it holds 0 - 50
         packets = await spdl.io.async_demux_video(src, timestamp=(1.0, 2.0))
@@ -230,6 +231,7 @@ def test_sample_decoding_window(get_sample):
 
         # decode all to verify the pre-condition
         frames = await spdl.io.async_decode_packets(packets.clone())
+        assert len(frames) == 25
         array = spdl.io.to_numpy(await spdl.io.async_convert_frames(frames))
         assert np.all(array == ref_array[25:50])
 

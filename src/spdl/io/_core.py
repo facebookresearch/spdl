@@ -60,6 +60,8 @@ __all__ = [
 _LG = logging.getLogger(__name__)
 T = TypeVar("T")
 
+_FILTER_DESC_DEFAULT = "__PLACEHOLDER__"
+
 
 async def run_async(
     func: Callable[..., T],
@@ -304,37 +306,48 @@ async def async_streaming_demux_video(
 
 @overload
 def decode_packets(
-    packets: AudioPackets, filter_desc: str | None = None, **kwargs
+    packets: AudioPackets, filter_desc: str | None = _FILTER_DESC_DEFAULT, **kwargs
 ) -> AudioFrames: ...
 @overload
 def decode_packets(
-    packets: VideoPackets, filter_desc: str | None = None, **kwargs
+    packets: VideoPackets, filter_desc: str | None = _FILTER_DESC_DEFAULT, **kwargs
 ) -> VideoFrames: ...
 @overload
 def decode_packets(
-    packets: ImagePackets, filter_desc: str | None = None, **kwargs
+    packets: ImagePackets, filter_desc: str | None = _FILTER_DESC_DEFAULT, **kwargs
 ) -> ImageFrames: ...
 
 
-def decode_packets(packets, filter_desc=None, **kwargs):
+def decode_packets(packets, filter_desc=_FILTER_DESC_DEFAULT, **kwargs):
     """Decode packets.
 
     Args:
         packets (AudioPackets, VideoPackets or ImagePackets): Packets object.
 
-        filter_desc (str):
+        filter_desc:
             *Optional:* Custom filter applied after decoding.
-            See :py:func:`~spdl.io.get_filter_desc`,
-            :py:func:`~spdl.io.get_audio_filter_desc`, and
+            To generate a description for common media processing operations,
+            use :py:func:`~spdl.io.get_filter_desc` (if you have a packets object
+            that has the timestamp set),
+            :py:func:`~spdl.io.get_audio_filter_desc`, or
             :py:func:`~spdl.io.get_video_filter_desc`.
+            If ``None`` is provided, then filtering is disabled.
+
+            .. note::
+
+               When decoding image/video packets, by default color space conversion
+               is applied so that the output pixel format is rgb24.
+               If you want to obtain the frame without color conversion, disable filter by
+               providing ``None``, of specify ``pix_fmt=None` in the filter deec factory function.`
 
         decode_config (DecodeConfig):
             *Optional:* Custom decode config.
+            See :py:func:`~spdl.io.decode_config`,
 
     Returns:
         Frames object.
     """
-    if filter_desc is None:
+    if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_filter_desc(packets)
     return _libspdl.decode_packets(packets, filter_desc=filter_desc, **kwargs)
 
@@ -447,7 +460,7 @@ def streaming_decode_packets(
     packets: VideoPackets,
     num_frames: int,
     decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
 ) -> Iterator[VideoFrames]:
     """Decode the video packets chunk by chunk.
 
@@ -455,11 +468,16 @@ def streaming_decode_packets(
         packets: Input packets.
         num_frames: Number of frames to decode at a time.
         decode_config: *Optional:* Custom decoding config.
+            *Optional:* Custom decode config.
+            See :py:func:`~spdl.io.decode_config`,
         filter_desc: *Optional:* Custom filter description.
+            See :py:func:`~spdl.io.decode_packets` for the detail.
 
     Yields:
         VideoFrames object containing at most ``num_frames`` frames.
     """
+    if filter_desc == _FILTER_DESC_DEFAULT:
+        filter_desc = _preprocessing.get_filter_desc(packets)
     decoder = _libspdl._streaming_decoder(
         packets, decode_config=decode_config, filter_desc=filter_desc
     )
@@ -477,6 +495,8 @@ class _streaming_decoder_wrpper:
 
 @contextlib.asynccontextmanager
 async def _streaming_decoder(packets, **kwargs):
+    if "filter_desc" not in kwargs:
+        kwargs["filter_desc"] = _preprocessing.get_filter_desc(packets)
     decoder = await run_async(_libspdl._streaming_decoder, packets, **kwargs)
     wrapper = _streaming_decoder_wrpper(decoder)
     try:
