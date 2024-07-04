@@ -30,7 +30,7 @@ def test_decode_image_gray_black(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
     sample = get_sample(cmd, width=320, height=240)
 
-    gray = _decode_image(sample.path)
+    gray = _decode_image(sample.path, pix_fmt=None)
 
     assert gray.dtype == np.uint8
     assert gray.shape == (1, sample.height, sample.width)
@@ -43,7 +43,7 @@ def test_decode_image_gray_white(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xFFFFFF,format=gray -frames:v 1 sample.png"
     sample = get_sample(cmd, width=320, height=240)
 
-    gray = _decode_image(sample.path)
+    gray = _decode_image(sample.path, pix_fmt=None)
 
     assert gray.dtype == np.uint8
     assert gray.shape == (1, sample.height, sample.width)
@@ -55,7 +55,7 @@ def test_decode_image_yuv422(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj422p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd, width=320, height=240)
 
-    yuv = _decode_image(sample.path)
+    yuv = _decode_image(sample.path, pix_fmt=None)
 
     h, w = sample.height, sample.width
 
@@ -133,7 +133,7 @@ def test_decode_image_16be(get_sample):
 
     async def _load(src):
         packets = await spdl.io.async_demux_image(src)
-        frames = await spdl.io.async_decode_packets(packets)
+        frames = await spdl.io.async_decode_packets(packets, filter_desc=None)
         buffer = await spdl.io.async_convert_frames(frames)
         array = spdl.io.to_numpy(buffer)
         return array
