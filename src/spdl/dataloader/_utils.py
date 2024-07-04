@@ -2,9 +2,13 @@
 
 import asyncio
 import logging
+import sys
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 
-__all__ = []
+__all__ = [
+    "create_task",
+]
 
 _LG = logging.getLogger(__name__)
 
@@ -40,10 +44,23 @@ def _log_exception(task, stacklevel):
         # Timeout does not contain any message
         _LG.error("Task [%s] timeout.", task.get_name(), stacklevel=stacklevel)
     except Exception as err:
+        _, _, exc_tb = sys.exc_info()
+        f = traceback.extract_tb(exc_tb, limit=-1)[-1]
+
         _LG.error(
-            "Task [%s] failed: %s %s",
+            "Task [%s] failed: %s %s (%s:%d:%s)",
             task.get_name(),
             type(err).__name__,
             err,
+            f.filename,
+            f.lineno,
+            f.name,
             stacklevel=stacklevel,
         )
+
+
+def create_task(coro, name=None) -> asyncio.Task:
+    """Wrapper around :py:func:`asyncio.create_task`. Add logging callback."""
+    task = asyncio.create_task(coro, name=name)
+    task.add_done_callback(lambda t: _log_exception(t, stacklevel=3))
+    return task
