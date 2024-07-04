@@ -84,7 +84,7 @@ def get_video_filter_desc(
     scale_mode: str | None = "pad",
     crop_width: int | None = None,
     crop_height: int | None = None,
-    pix_fmt: str | None = None,
+    pix_fmt: str | None = "rgb24",
     num_frames: int | None = None,
     pad_mode: str | None = None,
     filter_desc: str | None = None,

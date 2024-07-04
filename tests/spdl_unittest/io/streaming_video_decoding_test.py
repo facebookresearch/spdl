@@ -41,12 +41,12 @@ def test_streaming_decode_indivisible(get_sample):
         frame = await anext(agen)
         buffer = await spdl.io.async_convert_frames(frame)
         array = spdl.io.to_numpy(buffer)
-        assert array.shape == (5, 3, 240, 320)
+        assert array.shape == (5, 240, 320, 3)
 
         frame = await anext(agen)
         buffer = await spdl.io.async_convert_frames(frame)
         array = spdl.io.to_numpy(buffer)
-        assert array.shape == (3, 3, 240, 320)
+        assert array.shape == (3, 240, 320, 3)
 
     asyncio.run(test(sample.path))
 
@@ -63,7 +63,7 @@ def test_streaming_decode_stop_iteration(get_sample):
         frame = await anext(agen)
         buffer = await spdl.io.async_convert_frames(frame)
         array = spdl.io.to_numpy(buffer)
-        assert array.shape == (1, 3, 240, 320)
+        assert array.shape == (1, 240, 320, 3)
 
         for _ in range(20):
             with pytest.raises(StopAsyncIteration):

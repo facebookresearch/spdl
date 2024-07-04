@@ -244,3 +244,19 @@ def test_sample_decoding_window(get_sample):
         assert np.all(array == ref_array[25:50:2])
 
     asyncio.run(_test(sample.path))
+
+
+def test_sample_decode_video_default_color_space(get_sample):
+    """sample_decode_video should return rgb24 frames by default."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+    sample = get_sample(cmd)
+
+    async def _test(src):
+        packets = await spdl.io.async_demux_video(src)
+        assert packets.pix_fmt != "rgb24"  # precondition
+        frames = await spdl.io.async_sample_decode_video(packets, list(range(10)))
+
+        for f in frames:
+            assert f.format == "rgb24"
+
+    asyncio.run(_test(sample.path))

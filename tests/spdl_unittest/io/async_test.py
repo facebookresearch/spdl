@@ -111,7 +111,7 @@ def test_decode_video_clips(get_sample):
         assert len(arrays) == N
         for i, arr in enumerate(arrays):
             print(i, arr.shape, arr.dtype)
-            assert arr.shape == (25, 3, 240, 320)
+            assert arr.shape == (25, 240, 320, 3)
             assert arr.dtype == np.uint8
 
     asyncio.run(_test())
@@ -217,7 +217,7 @@ def test_decode_image(get_sample):
         array = spdl.io.to_numpy(buffer)
         print(array.shape, array.dtype)
         assert array.dtype == np.uint8
-        assert array.shape == (3, 240, 320)
+        assert array.shape == (240, 320, 3)
 
     asyncio.run(_test(sample.path))
 
@@ -265,7 +265,7 @@ def test_async_convert_video(get_sample):
         buffer = await spdl.io.async_convert_frames(frames)
         array = spdl.io.to_numpy(buffer)
         print(array.dtype, array.shape)
-        assert array.shape == (1000, 3, 240, 320)
+        assert array.shape == (1000, 240, 320, 3)
 
     asyncio.run(_test(sample.path))
 
@@ -281,7 +281,7 @@ def test_async_convert_image(get_sample):
         print(buffer)
         arr = spdl.io.to_numpy(buffer)
         print(arr.dtype, arr.shape)
-        assert arr.shape == (3, 240, 320)
+        assert arr.shape == (240, 320, 3)
 
     asyncio.run(_test(sample.path))
 
@@ -297,6 +297,6 @@ def test_async_convert_batch_image(get_samples):
         print(buffer)
         arr = spdl.io.to_numpy(buffer)
         print(arr.dtype, arr.shape)
-        assert arr.shape == (4, 3, 240, 320)
+        assert arr.shape == (4, 240, 320, 3)
 
     asyncio.run(_test(flist))
