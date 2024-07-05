@@ -357,7 +357,7 @@ def decode_packets(packets, filter_desc=_FILTER_DESC_DEFAULT, **kwargs):
                When decoding image/video packets, by default color space conversion
                is applied so that the output pixel format is rgb24.
                If you want to obtain the frame without color conversion, disable filter by
-               providing ``None``, of specify ``pix_fmt=None` in the filter deec factory function.`
+               providing ``None``, of specify ``pix_fmt=None`` in the filter deec factory function.
 
         decode_config (DecodeConfig):
             *Optional:* Custom decode config.
