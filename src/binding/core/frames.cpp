@@ -38,15 +38,6 @@ void register_frames(nb::module_& m) {
             return self.get_num_channels();
           })
       .def_prop_ro(
-          "format",
-          [](FFmpegAudioFrames& self) {
-            nb::gil_scoped_release g;
-            LOG_FIRST_N(WARNING, 1)
-                << "FFmpegAudioFrames.format attribute is deprecated. "
-                << "Use FFmpegAudioFrames.sample_fmt instead.";
-            return self.get_media_format_name();
-          })
-      .def_prop_ro(
           "sample_fmt",
           [](FFmpegAudioFrames& self) {
             nb::gil_scoped_release g;
@@ -103,15 +94,6 @@ void register_frames(nb::module_& m) {
           [](FFmpegVideoFrames& self) {
             nb::gil_scoped_release g;
             return self.get_height();
-          })
-      .def_prop_ro(
-          "format",
-          [](FFmpegVideoFrames& self) {
-            nb::gil_scoped_release g;
-            LOG_FIRST_N(WARNING, 1)
-                << "FFmpegVideoFrames.format attribute is deprecated. "
-                << "Use FFmpegVideoFrames.pix_fmt instead.";
-            return self.get_media_format_name();
           })
       .def_prop_ro(
           "pix_fmt",
@@ -196,15 +178,6 @@ void register_frames(nb::module_& m) {
           [](const FFmpegImageFrames& self) {
             nb::gil_scoped_release g;
             return self.get_height();
-          })
-      .def_prop_ro(
-          "format",
-          [](const FFmpegImageFrames& self) {
-            nb::gil_scoped_release g;
-            LOG_FIRST_N(WARNING, 1)
-                << "FFmpegImageFrames.format attribute is deprecated. "
-                << "Use FFmpegImageFrames.pix_fmt instead.";
-            return self.get_media_format_name();
           })
       .def_prop_ro(
           "pix_fmt",
