@@ -257,6 +257,6 @@ def test_sample_decode_video_default_color_space(get_sample):
         frames = await spdl.io.async_sample_decode_video(packets, list(range(10)))
 
         for f in frames:
-            assert f.format == "rgb24"
+            assert f.pix_fmt == "rgb24"
 
     asyncio.run(_test(sample.path))
