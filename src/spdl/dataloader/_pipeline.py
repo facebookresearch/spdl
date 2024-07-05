@@ -9,7 +9,7 @@ from queue import Queue
 from typing import TypeVar
 
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
-from ._utils import _log_exception
+from ._utils import create_task
 
 __all__ = [
     "AsyncPipeline",
@@ -83,9 +83,7 @@ async def _pipe(
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            coro = afunc(item)
-            task = asyncio.create_task(_wrap(coro), name=f"{name}_{(i := i + 1)}")
-            task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
+            task = create_task(_wrap(afunc(item)), name=f"{name}_{(i := i + 1)}")
             tasks.add(task)
 
             if len(tasks) >= concurrency:
@@ -436,9 +434,7 @@ class AsyncPipeline:
         """
         tasks = set()
         for i, (coro, name) in enumerate(self.coros):
-            task = asyncio.create_task(coro, name=f"AsyncPipeline::{i}_{name}")
-            task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
-            tasks.add(task)
+            tasks.add(create_task(coro, name=f"AsyncPipeline::{i}_{name}"))
 
         while tasks:
             # Note:

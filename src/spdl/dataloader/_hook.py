@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from contextlib import asynccontextmanager, AsyncExitStack
 from typing import TypeVar
 
-from ._utils import _log_exception
+from ._utils import create_task
 
 __all__ = [
     "PipelineHook",
@@ -176,10 +176,9 @@ async def _periodic_dispatch(afun, interval):
     while True:
         await asyncio.sleep(interval)
 
-        task = asyncio.create_task(afun())
+        task = create_task(afun())
         tasks.add(task)
         task.add_done_callback(tasks.discard)
-        task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
 
 
 class TaskStatsHook(PipelineHook):
@@ -211,10 +210,9 @@ class TaskStatsHook(PipelineHook):
         """Track the stage runtime and log the task stats."""
         if self.interval is not None:
             self._int_t0 = time.monotonic()
-            self._int_task = asyncio.create_task(
+            self._int_task = create_task(
                 _periodic_dispatch(self._log_interval_stats, self.interval)
             )
-            self._int_task.add_done_callback(lambda t: _log_exception(t, stacklevel=2))
 
         t0 = time.monotonic()
         try:
