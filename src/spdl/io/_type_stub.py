@@ -267,7 +267,7 @@ class AudioFrames(Frames):
         ...
 
     @property
-    def format(self) -> str:
+    def sample_fmt(self) -> str:
         """The name of sample format.
 
         Possible values are
@@ -337,7 +337,7 @@ class VideoFrames(Frames):
         ...
 
     @property
-    def format(self) -> str:
+    def pix_fmt(self) -> str:
         """The name of the pixel format."""
         ...
 
@@ -397,7 +397,7 @@ class ImageFrames(Frames):
         ...
 
     @property
-    def format(self) -> str:
+    def pix_fmt(self) -> str:
         """The name of the pixel format."""
         ...
 
