@@ -8,6 +8,9 @@ from collections.abc import AsyncIterator, Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import overload, TypeVar
 
+import numpy as np
+from numpy.typing import NDArray
+
 from spdl.io import (
     AudioFrames,
     AudioPackets,
@@ -101,11 +104,15 @@ class Demuxer:
             If `str` type, it is interpreted as a source location,
             such as local file path or URL. If `bytes` type,
             then they are interpreted as in-memory data.
+            If array type (objects implement buffer protocol,
+            such as NumPy NDArray and PyTorch Tensor), then they must be
+            1 dimentional uint8 array, which contains the raw bytes of the
+            source.
 
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: str | bytes, **kwargs):
+    def __init__(self, src: str | bytes | NDArray[np.uint8], **kwargs):
         self._demuxer = _libspdl._demuxer(src, **kwargs)
 
     def demux_audio(
@@ -165,7 +172,10 @@ class Demuxer:
 
 
 def demux_audio(
-    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes | NDArray[np.uint8],
+    *,
+    timestamp: tuple[float, float] | None = None,
+    **kwargs,
 ) -> AudioPackets:
     """Demux audio from the source.
 
@@ -182,14 +192,20 @@ def demux_audio(
 
 
 async def async_demux_audio(
-    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes | NDArray[np.uint8],
+    *,
+    timestamp: tuple[float, float] | None = None,
+    **kwargs,
 ) -> AudioPackets:
     """Async version of :py:func:`~spdl.io.demux_audio`."""
     return await run_async(demux_audio, src, timestamp=timestamp, **kwargs)
 
 
 def demux_video(
-    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes | NDArray[np.uint8],
+    *,
+    timestamp: tuple[float, float] | None = None,
+    **kwargs,
 ) -> VideoPackets:
     """Demux video from the source.
 
@@ -207,13 +223,16 @@ def demux_video(
 
 
 async def async_demux_video(
-    src: str | bytes, *, timestamp: tuple[float, float] | None = None, **kwargs
+    src: str | bytes | NDArray[np.uint8],
+    *,
+    timestamp: tuple[float, float] | None = None,
+    **kwargs,
 ) -> VideoPackets:
     """Async version of :py:func:`~spdl.io.demux_video`."""
     return await run_async(demux_video, src, timestamp=timestamp, **kwargs)
 
 
-def demux_image(src: str | bytes, **kwargs) -> ImagePackets:
+def demux_image(src: str | bytes | NDArray[np.uint8], **kwargs) -> ImagePackets:
     """Demux image from the source.
 
     Args:
