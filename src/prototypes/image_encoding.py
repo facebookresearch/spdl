@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 import spdl.io
-from spdl.dataloader import BackgroundTaskExecutor
+from spdl.dataloader import BackgroundTaskExecutor, create_task
 
 _LG = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ async def batch_save(batch, pix_fmt):
         print(i)
         path = str(root / f"foo.torch.batch_{pix_fmt}_{i}.png")
         coro = spdl.io.async_encode_image(path, batch[i], pix_fmt=pix_fmt)
-        tasks.append(asyncio.create_task(coro))
+        tasks.append(create_task(coro))
         break
 
     await asyncio.wait(tasks)
