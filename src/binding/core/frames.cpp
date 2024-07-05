@@ -108,15 +108,15 @@ void register_frames(nb::module_& m) {
           "format",
           [](FFmpegVideoFrames& self) {
             nb::gil_scoped_release g;
+            LOG_FIRST_N(WARNING, 1)
+                << "FFmpegVideoFrames.format attribute is deprecated. "
+                << "Use FFmpegVideoFrames.pix_fmt instead.";
             return self.get_media_format_name();
           })
       .def_prop_ro(
           "pix_fmt",
           [](FFmpegVideoFrames& self) {
             nb::gil_scoped_release g;
-            LOG_FIRST_N(WARNING, 1)
-                << "FFmpegVideoFrames.format attribute is deprecated. "
-                << "Use FFmpegVideoFrames.pix_fmt instead.";
             return self.get_media_format_name();
           })
       .def(
@@ -201,15 +201,15 @@ void register_frames(nb::module_& m) {
           "format",
           [](const FFmpegImageFrames& self) {
             nb::gil_scoped_release g;
+            LOG_FIRST_N(WARNING, 1)
+                << "FFmpegImageFrames.format attribute is deprecated. "
+                << "Use FFmpegImageFrames.pix_fmt instead.";
             return self.get_media_format_name();
           })
       .def_prop_ro(
           "pix_fmt",
           [](FFmpegImageFrames& self) {
             nb::gil_scoped_release g;
-            LOG_FIRST_N(WARNING, 1)
-                << "FFmpegImageFrames.format attribute is deprecated. "
-                << "Use FFmpegImageFrames.pix_fmt instead.";
             return self.get_media_format_name();
           })
       .def_prop_ro(
