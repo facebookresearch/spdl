@@ -53,7 +53,7 @@ def _run_pipeline(
 
             if stopped.is_set():
                 _LG.debug("Stop requested.")
-                task[0].cancel()
+                tasks[0].cancel()
                 return
 
     try:
