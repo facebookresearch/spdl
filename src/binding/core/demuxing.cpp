@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
@@ -13,6 +14,8 @@
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
+
+using cpu_array = nb::ndarray<const uint8_t, nb::ndim<1>, nb::device::cpu>;
 
 namespace spdl::core {
 namespace {
@@ -82,6 +85,18 @@ PyDemuxerPtr _make_demuxer_bytes(
       make_demuxer(data_, dmx_cfg), data_, zero_clear);
 }
 
+PyDemuxerPtr _make_demuxer_array(
+    cpu_array data,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    bool zero_clear = false) {
+  auto ptr = reinterpret_cast<const char*>(data.data());
+  // Note size() returns the number of elements, not the size in bytes.
+  auto data_ = std::string_view{ptr, data.size()};
+  nb::gil_scoped_release g;
+  return std::make_unique<PyDemuxer>(
+      make_demuxer(data_, dmx_cfg), data_, zero_clear);
+}
+
 } // namespace
 
 void register_demuxing(nb::module_& m) {
@@ -114,6 +129,13 @@ void register_demuxing(nb::module_& m) {
   m.def(
       "_demuxer",
       &_make_demuxer_bytes,
+      nb::arg("src"),
+      nb::kw_only(),
+      nb::arg("demux_config") = nb::none(),
+      nb::arg("_zero_clear") = false);
+  m.def(
+      "_demuxer",
+      &_make_demuxer_array,
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
