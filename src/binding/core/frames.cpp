@@ -8,6 +8,8 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
+#include <glog/logging.h>
+
 extern "C" {
 #include <libavutil/frame.h>
 }
@@ -37,6 +39,15 @@ void register_frames(nb::module_& m) {
           })
       .def_prop_ro(
           "format",
+          [](FFmpegAudioFrames& self) {
+            nb::gil_scoped_release g;
+            LOG_FIRST_N(WARNING, 1)
+                << "FFmpegAudioFrames.format attribute is deprecated. "
+                << "Use FFmpegAudioFrames.sample_fmt instead.";
+            return self.get_media_format_name();
+          })
+      .def_prop_ro(
+          "sample_fmt",
           [](FFmpegAudioFrames& self) {
             nb::gil_scoped_release g;
             return self.get_media_format_name();
@@ -97,6 +108,15 @@ void register_frames(nb::module_& m) {
           "format",
           [](FFmpegVideoFrames& self) {
             nb::gil_scoped_release g;
+            return self.get_media_format_name();
+          })
+      .def_prop_ro(
+          "pix_fmt",
+          [](FFmpegVideoFrames& self) {
+            nb::gil_scoped_release g;
+            LOG_FIRST_N(WARNING, 1)
+                << "FFmpegVideoFrames.format attribute is deprecated. "
+                << "Use FFmpegVideoFrames.pix_fmt instead.";
             return self.get_media_format_name();
           })
       .def(
@@ -181,6 +201,15 @@ void register_frames(nb::module_& m) {
           "format",
           [](const FFmpegImageFrames& self) {
             nb::gil_scoped_release g;
+            return self.get_media_format_name();
+          })
+      .def_prop_ro(
+          "pix_fmt",
+          [](FFmpegImageFrames& self) {
+            nb::gil_scoped_release g;
+            LOG_FIRST_N(WARNING, 1)
+                << "FFmpegImageFrames.format attribute is deprecated. "
+                << "Use FFmpegImageFrames.pix_fmt instead.";
             return self.get_media_format_name();
           })
       .def_prop_ro(
