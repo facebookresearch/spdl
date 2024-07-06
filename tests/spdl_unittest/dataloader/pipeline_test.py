@@ -1,4 +1,5 @@
 import asyncio
+import random
 import time
 from contextlib import asynccontextmanager
 from queue import Queue
@@ -950,5 +951,57 @@ def test_async_pipeline_restart():
             await apl.run()
             results = _flush_queue(output_queue)
             assert results == list(range(10))
+
+    asyncio.run(_test())
+
+
+def test_async_pipeline_resume():
+    """AsyncPipeline can execute the source partially, then resumed"""
+
+    # Note
+    # If we pass `range(10)` directly, new iterator is created at every run.
+    src = iter(range(10))
+
+    queue = Queue()
+
+    apl = AsyncPipeline().add_source(src).add_sink(queue)
+
+    async def _test():
+        await apl.run(num_items=2)
+        results = _flush_queue(queue)
+        assert results == [0, 1]
+
+        await apl.run(num_items=3)
+        results = _flush_queue(queue)
+        assert results == [2, 3, 4]
+
+        await apl.run()
+        results = _flush_queue(queue)
+        assert results == [5, 6, 7, 8, 9]
+
+    asyncio.run(_test())
+
+
+def test_async_pipeline_infinite_loop():
+    """AsyncPipeline can execute inifinite iterable"""
+
+    def src(i=-1):
+        while True:
+            yield (i := i + 1)
+
+    output_queue = Queue()
+
+    apl = AsyncPipeline().add_source(src()).add_sink(output_queue)
+
+    async def _test():
+        i = 0
+        for _ in range(10):
+
+            num_items = random.randint(0, 1028)
+            await apl.run(num_items=num_items)
+            results = _flush_queue(output_queue)
+            assert results == list(range(i, i + num_items))
+
+            i += num_items
 
     asyncio.run(_test())
