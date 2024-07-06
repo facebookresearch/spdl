@@ -231,7 +231,10 @@ class AsyncPipeline:
 
     def __init__(self, *, buffer_size: int = 1):
         self.queues = [AsyncQueue(buffer_size)]
-        self.coros: list[tuple[Coroutine, str | None]] = []
+
+        self._source = None
+        self._process_funcs = []
+        self._output_queue = None
 
         try:
             from spdl.lib import _libspdl
@@ -264,8 +267,9 @@ class AsyncPipeline:
                    event loop. If the iterator performs a an operation that blocks,
                    the entire pipeline will be blocked.
         """
-        coro = _enqueue(source, self.queues[0])
-        self.coros.append((coro, "source"))
+        if self._source is not None:
+            raise ValueError("Source already set.")
+        self._source = source
         return self
 
     def pipe(
@@ -324,16 +328,20 @@ class AsyncPipeline:
             else:
                 name = afunc.__class__.__name__
 
-        coro = _pipe(
-            in_queue,
-            afunc,
-            out_queue,
-            concurrency,
-            name,
-            hooks=hooks,
-            report_stats_interval=report_stats_interval,
+        self._process_funcs.append(
+            (
+                name,
+                lambda: _pipe(
+                    in_queue,
+                    afunc,
+                    out_queue,
+                    concurrency,
+                    name,
+                    hooks=hooks,
+                    report_stats_interval=report_stats_interval,
+                ),
+            )
         )
-        self.coros.append((coro, name))
         return self
 
     def aggregate(
@@ -370,17 +378,22 @@ class AsyncPipeline:
         self.queues.append(AsyncQueue(1))
         in_queue, out_queue = self.queues[-2:]
         name = f"aggregate({n})"
-        coro = _pipe(
-            in_queue,
-            aggregate,
-            out_queue,
-            1,
-            name,
-            hooks=hooks,
-            report_stats_interval=report_stats_interval,
-            _pipe_eof=not drop_last,
+
+        self._process_funcs.append(
+            (
+                name,
+                lambda: _pipe(
+                    in_queue,
+                    aggregate,
+                    out_queue,
+                    1,
+                    name,
+                    hooks=hooks,
+                    report_stats_interval=report_stats_interval,
+                    _pipe_eof=not drop_last,
+                ),
+            )
         )
-        self.coros.append((coro, name))
         return self
 
     def add_sink(self, sink: Queue[T]) -> "AsyncPipeline":
@@ -403,12 +416,17 @@ class AsyncPipeline:
         Args:
             Queue: Synchronous queue to pass the items.
         """
-        coro = _dequeue(self.queues[-1], sink)
-        self.coros.append((coro, "sink"))
+        q = self.queues[-1]
+        self._process_funcs.append(
+            (
+                "sink",
+                lambda: _dequeue(q, sink),
+            )
+        )
         return self
 
     # TODO [Python 3.11]: Try TaskGroup
-    async def run(self) -> None:
+    async def run(self, *, num_items: int | None = None) -> None:
         """Run the pipeline until its completion. All stages are executed concurrently.
 
         The pipeline completes when one of the following conditions is met.
@@ -433,8 +451,18 @@ class AsyncPipeline:
             PipelineFailure: Raised when a part of the pipeline has an error.
         """
         tasks = set()
-        for i, (coro, name) in enumerate(self.coros):
-            tasks.add(create_task(coro, name=f"AsyncPipeline::{i}_{name}"))
+        if self._source is None:
+            raise ValueError("Source is not set.")
+
+        # Source
+        tasks.add(
+            create_task(
+                _enqueue(self._source, self.queues[0]), name="AsyncPipeline::0_source"
+            )
+        )
+        # Rest
+        for i, (name, process_fn) in enumerate(self._process_funcs, start=1):
+            tasks.add(create_task(process_fn(), name=f"AsyncPipeline::{i}_{name}"))
 
         while tasks:
             # Note:
