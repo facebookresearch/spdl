@@ -106,11 +106,16 @@ async def _pipe(
 async def _enqueue(
     iterator: Iterator[T],
     queue: AsyncQueue[T],
+    max_items: int | None = None,
 ) -> None:
     async with _put_eof_when_done(queue, put_on_error=True):
+        num_items = 0
         for item in iterator:
             if item is not _SKIP:
                 await queue.put(item)
+                num_items += 1
+                if max_items is not None and num_items >= max_items:
+                    return
 
 
 ################################################################################
@@ -446,6 +451,10 @@ class AsyncPipeline:
            or decoding failures.
            Errors happen inside of user-provided functions are simply logged and ignored.
 
+        Args:
+            num_items: *Optional:* The maximum number of items to process.
+                If ``None``, the pipeline runs until the source is exhausted.
+
         Raises:
 
             PipelineFailure: Raised when a part of the pipeline has an error.
@@ -457,7 +466,8 @@ class AsyncPipeline:
         # Source
         tasks.add(
             create_task(
-                _enqueue(self._source, self.queues[0]), name="AsyncPipeline::0_source"
+                _enqueue(self._source, self.queues[0], max_items=num_items),
+                name="AsyncPipeline::0_source",
             )
         )
         # Rest
