@@ -36,7 +36,6 @@ def _run_pipeline(
     sentinel: _Sentinel,
     queue: Queue,
     stopped: Event,
-    timeout: int | float | None,
 ):
     async def _run():
         task = asyncio.create_task(pipeline.run())
@@ -66,11 +65,19 @@ def _run_pipeline(
 class _thread_manager:
     """Context manager to stop and join the background thread."""
 
-    def __init__(self, thread: Thread, stopped: Event, queue: Queue, sentinel: object):
+    def __init__(
+        self,
+        thread: Thread,
+        stopped: Event,
+        queue: Queue,
+        sentinel: object,
+        timeout: int | float | None,
+    ):
         self.thread = thread
         self.stopped = stopped
         self.queue = queue
         self.sentinel = sentinel
+        self.timeout = timeout
 
     def __enter__(self):
         self.thread.start()
@@ -93,7 +100,13 @@ class _thread_manager:
             self._flush()
 
         _LG.info("Waiting for the background thread to join.")
-        self.thread.join()
+        self.thread.join(self.timeout)
+        if self.thread.is_alive():
+            _LG.warning(
+                "The background thread did not join after %f seconds.", self.timeout
+            )
+        else:
+            _LG.info("The background thread joined.")
 
     def _flush(self):
         _LG.debug("Flushing the queue.")
@@ -120,6 +133,8 @@ class BackgroundGenerator(Generic[T]):
 
             This parameter is intended for breaking unforseen situations where
             the background generator is stuck for some reasons.
+
+            It is also used for timeout when waiting for the background thread to join.
 
         loop: If provided, use this event loop to execute the generator.
             Otherwise, a new event loop will be created. When providing a loop,
@@ -176,10 +191,10 @@ class BackgroundGenerator(Generic[T]):
 
         thread = Thread(
             target=_run_pipeline,
-            args=(self.loop, self.pipeline, sentinel, queue, stopped, self.timeout),
+            args=(self.loop, self.pipeline, sentinel, queue, stopped),
         )
 
-        with _thread_manager(thread, stopped, queue, sentinel):
+        with _thread_manager(thread, stopped, queue, sentinel, self.timeout):
             while True:
                 try:
                     item = queue.get(timeout=self.timeout)
