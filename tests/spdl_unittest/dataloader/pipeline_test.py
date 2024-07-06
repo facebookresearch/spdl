@@ -926,3 +926,29 @@ def test_task_stats_log_interval_stats():
 
     hook = TaskStatsHook("foo", 1)
     asyncio.run(hook._log_interval_stats())
+
+
+################################################################################
+# AsyncPipeline - resume
+################################################################################
+
+
+def test_async_pipeline_restart():
+    """AsyncPipeline can run multiple times if source is reusable."""
+
+    class Generator:
+        def __iter__(self):
+            yield from range(10)
+
+    output_queue = Queue()
+
+    apl = AsyncPipeline().add_source(Generator()).add_sink(output_queue)
+
+    async def _test():
+        # Run multiple times
+        for _ in range(5):
+            await apl.run()
+            results = _flush_queue(output_queue)
+            assert results == list(range(10))
+
+    asyncio.run(_test())
