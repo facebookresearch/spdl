@@ -939,7 +939,8 @@ def test_async_pipeline_restart():
 
     class Generator:
         def __iter__(self):
-            yield from range(10)
+            for _ in range(5):
+                yield from range(10)
 
     output_queue = Queue()
 
@@ -948,9 +949,13 @@ def test_async_pipeline_restart():
     async def _test():
         # Run multiple times
         for _ in range(5):
-            await apl.run()
+            await apl.run(num_items=10)
             results = _flush_queue(output_queue)
             assert results == list(range(10))
+
+        # Now it's empty
+        await apl.run(num_items=10)
+        assert output_queue.empty()
 
     asyncio.run(_test())
 

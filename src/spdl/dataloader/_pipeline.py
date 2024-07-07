@@ -274,7 +274,7 @@ class AsyncPipeline:
         """
         if self._source is not None:
             raise ValueError("Source already set.")
-        self._source = source
+        self._source = iter(source)
         return self
 
     def pipe(
