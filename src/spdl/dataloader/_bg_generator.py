@@ -119,9 +119,9 @@ class BackgroundGenerator(Generic[T]):
     """**[Experimental]** Run generator in background and iterate the items.
 
     Args:
-        iterable: Async generator to run in the background.
+        pipeline: Pipeline to run in the background.
 
-        num_workers: The number of worker threads in the default thread executor.
+        num_workers: The number of worker threads to be attached to the event loop.
             If ``loop`` is provided, this argument is ignored.
 
         queue_size: The size of the queue that is used to pass the
@@ -145,7 +145,7 @@ class BackgroundGenerator(Generic[T]):
     .. admonition:: Example
 
        >>> apl = (
-       >>>     spdl.pipeline.AsyncPipeline()
+       >>>     spdl.dataloader.AsyncPipeline()
        >>>     .add_source(iter(range(10)))
        >>> )
        >>>
@@ -227,6 +227,13 @@ class BackgroundGenerator(Generic[T]):
                         f"within {self.timeout} seconds."
                     ) from None
                 else:
+                    # Note:
+                    # In the original implementation, the sentinel value was compared using
+                    # identity checking (`is` operator). But strangely, this stopped working in
+                    # https://github.com/facebookresearch/spdl/pull/32 .
+                    #
+                    # The sentinel object passed to the background thread and came back through
+                    # a queue is no longer the same object. So now we use `isinstance`.
                     if not isinstance(item, _Sentinel):
                         yield item
                     elif item.err_msg is None:
