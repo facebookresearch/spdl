@@ -81,7 +81,7 @@ def test_run_partial():
 
     apl = AsyncPipeline().add_source(iter(Generator())).pipe(adouble).pipe(aplus1)
 
-    bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=None)
+    bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=5)
 
     dataloader = iter(bgg.run(3))
     for i in range(3):
