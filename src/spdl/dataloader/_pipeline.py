@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from asyncio import Queue as AsyncQueue
-from collections.abc import Awaitable, Callable, Coroutine, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Sequence
 from contextlib import asynccontextmanager
 from queue import Queue
 from typing import TypeVar
@@ -126,10 +126,14 @@ async def _enqueue(
 async def _dequeue(
     input_queue: AsyncQueue[T],
     output_queue: Queue[T],
+    timeout: int | float | None,
 ):
+    loop = asyncio.get_running_loop()
     while (item := await input_queue.get()) is not _EOF:
         if item is not _SKIP:
-            output_queue.put(item)  # pyre-ignore: [6]
+            await loop.run_in_executor(
+                None, lambda: output_queue.put(item, timeout=timeout)
+            )  # pyre-ignore: [6]
 
 
 ################################################################################
@@ -325,7 +329,7 @@ class AsyncPipeline:
                 include one of :py:class:`~spdl.dataloader.TaskStatsHook`
                 instance with the desired interval.
         """
-        self.queues.append(AsyncQueue(buffer_size))
+        self.queues.append(AsyncQueue(maxsize=buffer_size))
         in_queue, out_queue = self.queues[-2:]
         if name is None:
             if hasattr(afunc, "__name__"):
@@ -401,7 +405,9 @@ class AsyncPipeline:
         )
         return self
 
-    def add_sink(self, sink: Queue[T]) -> "AsyncPipeline":
+    def add_sink(
+        self, sink: Queue[T], timeout: int | float | None = None
+    ) -> "AsyncPipeline":
         """Attach a (synchronous) queue to the end of the pipeline.
 
         .. code-block::
@@ -420,12 +426,17 @@ class AsyncPipeline:
 
         Args:
             Queue: Synchronous queue to pass the items.
+            timeout: Timeout for the ``queue.put()`` operation in seconds.
+                In case the output queue (synchronous) is full and the
+                foreground thread is not consuming the queue, the pipeline will
+                wait for this amount of time before giving up.
         """
         q = self.queues[-1]
+        self._output_queue = sink
         self._process_funcs.append(
             (
                 "sink",
-                lambda: _dequeue(q, sink),
+                lambda: _dequeue(q, sink, timeout),
             )
         )
         return self
