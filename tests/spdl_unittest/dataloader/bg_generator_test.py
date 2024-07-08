@@ -16,7 +16,7 @@ async def aplus1(i):
     return 1 + i
 
 
-def test_simple():
+def test_bgg_simple():
     """bg generator can process simple pipeline"""
 
     apl = AsyncPipeline().add_source(range(10)).pipe(adouble).pipe(aplus1)
@@ -38,7 +38,7 @@ def _get_apl(n=10):
     return apl
 
 
-def test_timeout_none():
+def test_bgg_timeout_none():
     # Iterate all.
     bgg = spdl.dataloader.BackgroundGenerator(
         _get_apl(),
@@ -48,7 +48,7 @@ def test_timeout_none():
     assert results == list(range(10))
 
 
-def test_timeout_enough():
+def test_bgg_timeout_enough():
     # Iterate all.
     bgg = spdl.dataloader.BackgroundGenerator(
         _get_apl(),
@@ -58,7 +58,7 @@ def test_timeout_enough():
     assert results == list(range(10))
 
 
-def test_timeout_not_enough():
+def test_bgg_timeout_not_enough():
     """Timeout shut down the background generator cleanly."""
     # Iterate none.
     bgg = spdl.dataloader.BackgroundGenerator(
@@ -70,7 +70,7 @@ def test_timeout_not_enough():
             pass
 
 
-def test_run_partial():
+def test_bgg_run_partial():
     """bg generator can run pipeline partially and repeatedly"""
 
     class Generator:
@@ -79,7 +79,7 @@ def test_run_partial():
                 print(f"Generating: {i}")
                 yield i
 
-    apl = AsyncPipeline().add_source(iter(Generator())).pipe(adouble).pipe(aplus1)
+    apl = AsyncPipeline().add_source(Generator()).pipe(adouble).pipe(aplus1)
 
     bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=5)
 
@@ -103,3 +103,33 @@ def test_run_partial():
 
     with pytest.raises(StopIteration):
         next(dataloader)
+
+
+def test_bgg_resume_from_cancelled():
+    """When bg thread was stopped by foreground, it can be resumed cleanly"""
+
+    def src(i=-1):
+        while True:
+            yield (i := i + 1)
+
+    apl = (
+        AsyncPipeline()
+        .add_source(src())
+        .pipe(adouble, buffer_size=1)
+        .pipe(aplus1, buffer_size=1)
+    )
+
+    bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=None)
+
+    async def _test():
+        for i, item in enumerate(bgg):
+            assert (i * 2 + 1) == item
+            if i == 3:
+                break
+
+        for i, item in enumerate(bgg, start=4):
+            assert (i * 2 + 1) == item
+            if i == 6:
+                break
+
+    asyncio.run(_test())
