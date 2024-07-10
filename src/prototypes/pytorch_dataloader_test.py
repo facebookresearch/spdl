@@ -4,7 +4,7 @@ from typing import TypeVar
 import pytest
 
 import torch
-from pytorch_spdl.dataloader import DataLoader
+from pytorch_dataloader import DataLoader
 from torch.utils.data import DataLoader as PyTorchDataLoader, IterableDataset
 
 
