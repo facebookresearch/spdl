@@ -131,6 +131,9 @@ PacketsPtr<media_type> demux_window(
   auto demuxing = demux_and_filter(fmt_ctx, stream, filter, end);
   while (demuxing) {
     ret->push(demuxing().release());
+    if constexpr (media_type == MediaType::Image) {
+      break;
+    }
   }
   return ret;
 }
