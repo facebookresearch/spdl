@@ -11,7 +11,7 @@ import spdl.io
 import spdl.utils
 
 import torch
-from pytorch_spdl.dataloader import DataLoader
+from pytorch_dataloader import DataLoader
 from spdl.io import ImageFrames
 from torch import Tensor
 from torch.profiler import profile
