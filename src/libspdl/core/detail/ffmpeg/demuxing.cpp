@@ -97,7 +97,7 @@ PacketsPtr<media_type> demux_window(
   TRACE_EVENT("demuxing", "detail::demux_window");
   auto [start, end] = window ? *window : NO_WINDOW;
 
-  if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+  if constexpr (media_type == MediaType::Video) {
     // Note:
     // Since the video frames can be non-chronological order, so we add small
     // margin to end
