@@ -243,7 +243,9 @@ class AsyncPipeline:
 
         self._source = None
         self._process_funcs: list[tuple[str, Callable, dict]] = []
-        self._output_queue = None
+
+        self._sink = None
+        self._sink_timeout = None
 
         try:
             from spdl.lib import _libspdl
@@ -433,19 +435,11 @@ class AsyncPipeline:
                 foreground thread is not consuming the queue, the pipeline will
                 wait for this amount of time before giving up.
         """
-        q = self.queues[-1]
-        self._output_queue = sink
-        self._process_funcs.append(
-            (
-                "sink",
-                _dequeue,
-                {
-                    "input_queue": q,
-                    "output_queue": sink,
-                    "timeout": timeout,
-                },
-            )
-        )
+        if self._sink is not None:
+            raise ValueError("Sink already set.")
+
+        self._sink = sink
+        self._sink_timeout = timeout
         return self
 
     def __str__(self) -> str:
@@ -454,6 +448,9 @@ class AsyncPipeline:
 
         for name, _, _ in self._process_funcs:
             parts.append(f"  - {name}")
+
+        if self._sink is not None:
+            parts.append(f"  - sink(timeout={self._sink_timeout})")
         return "\n".join(parts)
 
     # TODO [Python 3.11]: Try TaskGroup
@@ -500,6 +497,15 @@ class AsyncPipeline:
         for i, (name, fn, args) in enumerate(self._process_funcs, start=1):
             name = f"AsyncPipeline::{i}_{name}"
             tasks.add(create_task(fn(**args), name=name))
+
+        # sink
+        if self._sink is not None:
+            tasks.add(
+                create_task(
+                    _dequeue(self.queues[-1], self._sink, timeout=self._sink_timeout),
+                    name=f"AsyncPipeline::{len(self._process_funcs) + 1}_sink",
+                )
+            )
 
         while tasks:
             # Note:
