@@ -242,7 +242,7 @@ class AsyncPipeline:
         self.queues = [AsyncQueue(buffer_size)]
 
         self._source = None
-        self._process_funcs = []
+        self._process_funcs: list[tuple[str, Callable, dict]] = []
         self._output_queue = None
 
         try:
@@ -340,15 +340,16 @@ class AsyncPipeline:
         self._process_funcs.append(
             (
                 f"AsyncPipeline::{len(self._process_funcs) + 1}_{name}",
-                lambda: _pipe(
-                    in_queue,
-                    afunc,
-                    out_queue,
-                    concurrency,
-                    name,
-                    hooks=hooks,
-                    report_stats_interval=report_stats_interval,
-                ),
+                _pipe,
+                {
+                    "input_queue": in_queue,
+                    "afunc": afunc,
+                    "output_queue": out_queue,
+                    "concurrency": concurrency,
+                    "name": name,
+                    "hooks": hooks,
+                    "report_stats_interval": report_stats_interval,
+                },
             )
         )
         return self
@@ -391,16 +392,17 @@ class AsyncPipeline:
         self._process_funcs.append(
             (
                 name,
-                lambda: _pipe(
-                    in_queue,
-                    aggregate,
-                    out_queue,
-                    1,
-                    name,
-                    hooks=hooks,
-                    report_stats_interval=report_stats_interval,
-                    _pipe_eof=not drop_last,
-                ),
+                _pipe,
+                {
+                    "input_queue": in_queue,
+                    "afunc": aggregate,
+                    "output_queue": out_queue,
+                    "concurrency": 1,
+                    "name": name,
+                    "hooks": hooks,
+                    "report_stats_interval": report_stats_interval,
+                    "_pipe_eof": not drop_last,
+                },
             )
         )
         return self
@@ -436,7 +438,12 @@ class AsyncPipeline:
         self._process_funcs.append(
             (
                 "sink",
-                lambda: _dequeue(q, sink, timeout),
+                _dequeue,
+                {
+                    "input_queue": q,
+                    "output_queue": sink,
+                    "timeout": timeout,
+                },
             )
         )
         return self
@@ -445,7 +452,7 @@ class AsyncPipeline:
         parts = [repr(self)]
         parts.append(f"  - AsyncPipeline::0_src: {self._source}")
 
-        for i, (name, _) in enumerate(self._process_funcs, start=1):
+        for name, _, _ in self._process_funcs:
             parts.append(f"  - {name}")
         return "\n".join(parts)
 
@@ -490,8 +497,8 @@ class AsyncPipeline:
             )
         )
         # Rest
-        for i, (name, process_fn) in enumerate(self._process_funcs, start=1):
-            tasks.add(create_task(process_fn(), name=name))
+        for name, fn, args in self._process_funcs:
+            tasks.add(create_task(fn(**args), name=name))
 
         while tasks:
             # Note:
