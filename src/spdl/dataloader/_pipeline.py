@@ -339,7 +339,7 @@ class AsyncPipeline:
 
         self._process_funcs.append(
             (
-                f"AsyncPipeline::{len(self._process_funcs) + 1}_{name}",
+                f"{name}({concurrency=})",
                 _pipe,
                 {
                     "input_queue": in_queue,
@@ -450,7 +450,7 @@ class AsyncPipeline:
 
     def __str__(self) -> str:
         parts = [repr(self)]
-        parts.append(f"  - AsyncPipeline::0_src: {self._source}")
+        parts.append(f"  - src: {self._source}")
 
         for name, _, _ in self._process_funcs:
             parts.append(f"  - {name}")
@@ -497,7 +497,8 @@ class AsyncPipeline:
             )
         )
         # Rest
-        for name, fn, args in self._process_funcs:
+        for i, (name, fn, args) in enumerate(self._process_funcs, start=1):
+            name = f"AsyncPipeline::{i}_{name}"
             tasks.add(create_task(fn(**args), name=name))
 
         while tasks:
