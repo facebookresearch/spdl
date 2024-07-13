@@ -935,6 +935,36 @@ def test_task_stats_log_interval_stats():
 
 
 ################################################################################
+# __str__
+################################################################################
+
+
+def test_async_pipeline_str_smoke():
+    apl = AsyncPipeline()
+
+    print(apl)
+
+    apl = AsyncPipeline().add_source(range(10))
+
+    print(apl)
+
+    async def foo(i):
+        return i
+
+    apl = AsyncPipeline().add_source(range(10)).pipe(foo)
+
+    print(apl)
+
+    apl = AsyncPipeline().add_source(range(10)).pipe(foo).aggregate(1)
+
+    print(apl)
+
+    apl = AsyncPipeline().add_source(range(10)).pipe(foo).aggregate(1).add_sink(None)
+
+    print(apl)
+
+
+################################################################################
 # AsyncPipeline - resume
 ################################################################################
 
