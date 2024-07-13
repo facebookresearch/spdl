@@ -339,7 +339,7 @@ class AsyncPipeline:
 
         self._process_funcs.append(
             (
-                name,
+                f"AsyncPipeline::{len(self._process_funcs) + 1}_{name}",
                 lambda: _pipe(
                     in_queue,
                     afunc,
@@ -441,6 +441,14 @@ class AsyncPipeline:
         )
         return self
 
+    def __str__(self) -> str:
+        parts = [repr(self)]
+        parts.append(f"  - AsyncPipeline::0_src: {self._source}")
+
+        for i, (name, _) in enumerate(self._process_funcs, start=1):
+            parts.append(f"  - {name}")
+        return "\n".join(parts)
+
     # TODO [Python 3.11]: Try TaskGroup
     async def run(self, *, num_items: int | None = None) -> None:
         """Run the pipeline until its completion. All stages are executed concurrently.
@@ -483,7 +491,7 @@ class AsyncPipeline:
         )
         # Rest
         for i, (name, process_fn) in enumerate(self._process_funcs, start=1):
-            tasks.add(create_task(process_fn(), name=f"AsyncPipeline::{i}_{name}"))
+            tasks.add(create_task(process_fn(), name=name))
 
         while tasks:
             # Note:
