@@ -898,26 +898,34 @@ def test_task_stats_log_interval_stats():
 
 
 def test_async_pipeline_str_smoke():
+    async def passthrough(i):
+        return i
+
     apl = AsyncPipeline()
 
     print(apl)
 
-    apl = AsyncPipeline().add_source(range(10))
+    apl = apl.add_source(range(10))
 
     print(apl)
 
-    async def foo(i):
-        return i
-
-    apl = AsyncPipeline().add_source(range(10)).pipe(foo)
+    apl = apl.pipe(passthrough)
 
     print(apl)
 
-    apl = AsyncPipeline().add_source(range(10)).pipe(foo).aggregate(1)
+    apl = apl.aggregate(1)
 
     print(apl)
 
-    apl = AsyncPipeline().add_source(range(10)).pipe(foo).aggregate(1).add_sink(1000)
+    apl = apl.pipe(passthrough, output_order="input")
+
+    print(apl)
+
+    apl = apl.aggregate(1)
+
+    print(apl)
+
+    apl = apl.add_sink(100)
 
     print(apl)
 
@@ -995,5 +1003,62 @@ def test_async_pipeline_infinite_loop():
             assert results == list(range(i, i + num_items))
 
             i += num_items
+
+    asyncio.run(_test())
+
+
+################################################################################
+# AsyncPipeline - order
+################################################################################
+
+
+def test_async_pipeline_order_complete():
+    """The output is in the order of completion."""
+
+    async def _sleep(i):
+        await asyncio.sleep(i / 10)
+        return i
+
+    output_queue = Queue()
+
+    src = list(reversed(range(10)))
+    apl = (
+        AsyncPipeline()
+        .add_source(src)
+        .pipe(_sleep, concurrency=10, output_order="completion")
+        .add_sink(output_queue)
+    )
+
+    async def _test():
+        await apl.run()
+        results = _flush_queue(output_queue)
+        assert results == list(reversed(src))
+
+    asyncio.run(_test())
+
+
+def test_async_pipeline_order_input():
+    """The output is in the order of the input."""
+
+    async def _sleep(i):
+        print(f"Sleeping: {i}")
+        await asyncio.sleep(i / 10)
+        print(f"Returning: {i}")
+        return i
+
+    output_queue = Queue()
+
+    src = list(reversed(range(10)))
+    apl = (
+        AsyncPipeline()
+        .add_source(src)
+        .pipe(_sleep, concurrency=10, output_order="input")
+        .add_sink(output_queue)
+    )
+
+    async def _test():
+        await apl.run()
+        results = _flush_queue(output_queue)
+        assert results == src
 
     asyncio.run(_test())
