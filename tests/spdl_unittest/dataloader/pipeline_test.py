@@ -525,7 +525,7 @@ def test_async_pipeline_type_error():
 
     err = einfo.value
     print(err._errs.keys())
-    assert isinstance(err._errs["AsyncPipeline::1_wrong_sig(concurrency=1)"], TypeError)
+    assert isinstance(err._errs["AsyncPipeline::1_wrong_sig"], TypeError)
 
 
 def test_async_pipeline_task_failure():
