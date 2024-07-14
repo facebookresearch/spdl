@@ -97,6 +97,92 @@ async def _pipe(
             await asyncio.wait(tasks)
 
 
+async def _ordered_pipe(
+    input_queue: Queue[T],
+    afunc: Callable[[T], Awaitable[U]],
+    output_queue: Queue[U],
+    concurrency: int = 1,
+    name: str = "pipe",
+    hooks: Sequence[PipelineHook] | None = None,
+    report_stats_interval: float | None = None,
+) -> None:
+    """
+
+    Implementation Note:
+
+    The core idea of ordered pipe implementation is to use queue as buffer for active tasks.
+
+                  ┌─┐
+                  │ │
+                  │ │ Queue: Input
+                  │ │
+                  └┬┘
+                   │
+           ┌───────▼────────┐
+           │ Async Function │
+           └───────┬────────┘
+                  ┌▼┐
+                  │ │
+                  │ │ Queue: Intermediate queue:
+                  │ │ contains tasks. queue size == concurrency
+                  └┬┘
+           ┌───────▼────────┐
+           │     enqueue    │
+           └───────┬────────┘
+                  ┌▼┐
+                  │ │
+                  │ │ Queue: Output
+                  │ │
+                  └─┘
+
+    """
+    if input_queue is output_queue:
+        raise ValueError("input queue and output queue must be different")
+
+    if concurrency < 1:
+        raise ValueError("`concurrency` value must be >= 1")
+
+    hooks = (
+        [TaskStatsHook(name, concurrency, interval=report_stats_interval)]
+        if hooks is None
+        else hooks
+    )
+
+    async def _wrap(item: T) -> asyncio.Task[U]:
+        async def _with_hooks():
+            async with _task_hooks(hooks):  # pyre-ignore: [16]
+                return await afunc(item)
+
+        return create_task(_with_hooks())
+
+    inter_queue = Queue(concurrency)
+
+    coro1 = _pipe(
+        input_queue,
+        _wrap,
+        inter_queue,
+        1,
+        name,
+        hooks=[],
+    )
+
+    async def _unwrap(task: asyncio.Task[U]) -> U:
+        return await task
+
+    coro2 = _pipe(
+        inter_queue,
+        _unwrap,
+        output_queue,  # pyre-ignore: [6]
+        1,
+        name,
+        hooks=[],
+    )
+
+    async with _stage_hooks(hooks), _put_eof_when_done(output_queue):
+        tasks = {create_task(coro1), create_task(coro2)}
+        await asyncio.wait(tasks)
+
+
 ################################################################################
 # _enqueue
 ################################################################################
@@ -295,6 +381,7 @@ class AsyncPipeline:
         name: str | None = None,
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
+        output_order: str = "completion",
     ) -> "AsyncPipeline":
         """Apply an async function to items in the pipeline.
 
@@ -333,7 +420,17 @@ class AsyncPipeline:
                 the ``hooks`` argument should
                 include one of :py:class:`~spdl.dataloader.TaskStatsHook`
                 instance with the desired interval.
+            output_order: If ``"completion"`` (default), the items are put to output queue
+                in the order their process is completed.
+                If ``"input"``, then the items are put to output queue in the order given
+                in the input queue.
         """
+        if output_order not in ["completion", "input"]:
+            raise ValueError(
+                '`output_order` must be either "completion" or "input". '
+                f"Found: {output_order}"
+            )
+
         if name is None:
             if hasattr(afunc, "__name__"):
                 name = afunc.__name__
@@ -342,7 +439,7 @@ class AsyncPipeline:
 
         self._process_args.append(
             (
-                "pipe",
+                "pipe" if output_order == "completion" else "ordered_pipe",
                 {
                     "afunc": afunc,
                     "concurrency": concurrency,
@@ -437,6 +534,11 @@ class AsyncPipeline:
             match type_:
                 case "pipe":
                     part = f"{args['name']}(concurrency={args['concurrency']})"
+                case "ordered_pipe":
+                    part = (
+                        f"{args['name']}(concurrency={args['concurrency']}, "
+                        'output_order="input")'
+                    )
                 case "aggregate":
                     part = args["name"]
                 case _:
@@ -478,10 +580,12 @@ class AsyncPipeline:
             in_queue, out_queue = self._queues[i - 1 : i + 1]
 
             match type_:
-                case "pipe":
+                case "pipe" | "aggregate":
                     coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
-                case "aggregate":
-                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
+                case "ordered_pipe":
+                    coro = _ordered_pipe(
+                        **args, input_queue=in_queue, output_queue=out_queue
+                    )
                 case _:  # pragma: no cover
                     raise ValueError(f"Unexpected process type: {type_}")
 
