@@ -312,16 +312,11 @@ class AsyncPipeline:
                )
            )
            loop.run_until_complete(pipeline.run())
-
-
-    Args:
-        buffer_size: The size of the first queue to which data are
-            pushed from the source iterator.
     """
 
-    def __init__(self, *, buffer_size: int = 1):
+    def __init__(self, **kwargs):
         self._source = None
-        self._source_buffer_size = buffer_size
+        self._source_buffer_size = kwargs.get("buffer_size", 1)
 
         self._process_args: list[tuple[str, dict, int]] = []
 
@@ -377,11 +372,11 @@ class AsyncPipeline:
         afunc: Callable[[T], Awaitable[U]],
         *,
         concurrency: int = 1,
-        buffer_size: int = 10,
         name: str | None = None,
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
         output_order: str = "completion",
+        **kwargs,
     ) -> "AsyncPipeline":
         """Apply an async function to items in the pipeline.
 
@@ -447,7 +442,8 @@ class AsyncPipeline:
                     "hooks": hooks,
                     "report_stats_interval": report_stats_interval,
                 },
-                buffer_size,
+                # TODO: change this to 1
+                kwargs.get("buffer_size", 10),
             )
         )
         return self
