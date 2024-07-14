@@ -2,10 +2,9 @@
 
 import asyncio
 import logging
-from asyncio import Queue as AsyncQueue
+from asyncio import Queue
 from collections.abc import Awaitable, Callable, Iterator, Sequence
 from contextlib import asynccontextmanager
-from queue import Queue
 from typing import TypeVar
 
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
@@ -46,9 +45,9 @@ async def _put_eof_when_done(queue, put_on_error=False):
 
 
 async def _pipe(
-    input_queue: AsyncQueue[T],
+    input_queue: Queue[T],
     afunc: Callable[[T], Awaitable[U]],
-    output_queue: AsyncQueue[U],
+    output_queue: Queue[U],
     concurrency: int = 1,
     name: str = "pipe",
     hooks: Sequence[PipelineHook] | None = None,
@@ -105,7 +104,7 @@ async def _pipe(
 
 async def _enqueue(
     iterator: Iterator[T],
-    queue: AsyncQueue[T],
+    queue: Queue[T],
     max_items: int | None = None,
 ) -> None:
     async with _put_eof_when_done(queue, put_on_error=True):
@@ -124,16 +123,12 @@ async def _enqueue(
 
 
 async def _dequeue(
-    input_queue: AsyncQueue[T],
+    input_queue: Queue[T],
     output_queue: Queue[T],
-    timeout: int | float | None,
 ):
-    loop = asyncio.get_running_loop()
     while (item := await input_queue.get()) is not _EOF:
         if item is not _SKIP:
-            await loop.run_in_executor(
-                None, lambda: output_queue.put(item, timeout=timeout)
-            )  # pyre-ignore: [6]
+            await output_queue.put(item)
 
 
 ################################################################################
@@ -244,10 +239,9 @@ class AsyncPipeline:
 
         self._process_args: list[tuple[str, dict, int]] = []
 
-        self._sink = None
-        self._sink_timeout = None
+        self._sink_buffer_size = None
 
-        self._queues: list[AsyncQueue] = []
+        self._queues: list[Queue] = []
 
         try:
             from spdl.lib import _libspdl
@@ -257,7 +251,7 @@ class AsyncPipeline:
             pass  # ignore if not supported.
 
     @property
-    def output_queue(self) -> AsyncQueue:
+    def output_queue(self) -> Queue:
         """The output queue of the pipeline."""
         if not self._queues:
             raise ValueError("No output queue is set.")
@@ -274,7 +268,7 @@ class AsyncPipeline:
                    │
                   ┌▼┐
                   │ │
-                  │ │ AsyncQueue
+                  │ │ Queue
                   │ │
                   └─┘
 
@@ -308,7 +302,7 @@ class AsyncPipeline:
 
                   ┌─┐
                   │ │
-                  │ │ AsyncQueue
+                  │ │ Queue
                   │ │
                   └┬┘
                    │
@@ -318,7 +312,7 @@ class AsyncPipeline:
                    │
                   ┌▼┐
                   │ │
-                  │ │ AsyncQueue
+                  │ │ Queue
                   │ │
                   └─┘
 
@@ -410,37 +404,28 @@ class AsyncPipeline:
         )
         return self
 
-    def add_sink(
-        self, sink: Queue[T], timeout: int | float | None = None
-    ) -> "AsyncPipeline":
-        """Attach a (synchronous) queue to the end of the pipeline.
+    def add_sink(self, buffer_size: int = 1) -> "AsyncPipeline":
+        """Attach a queue to the end of the pipeline.
 
         .. code-block::
 
            ┌─┐
            │ │
-           │ │ AsyncQueue
+           │ │ Queue
            │ │
            └┬┘
             │
            ┌▼┐
            │ │
-           │ │ Synchronous Queue
+           │ │ Queue
            │ │
            └─┘
 
         Args:
-            Queue: Synchronous queue to pass the items.
-            timeout: Timeout for the ``queue.put()`` operation in seconds.
-                In case the output queue (synchronous) is full and the
-                foreground thread is not consuming the queue, the pipeline will
-                wait for this amount of time before giving up.
+            buffer_size: The size of the last queue.
         """
-        if self._sink is not None:
-            raise ValueError("Sink already set.")
-
-        self._sink = sink
-        self._sink_timeout = timeout
+        assert isinstance(buffer_size, int)
+        self._sink_buffer_size = buffer_size
         return self
 
     def __str__(self) -> str:
@@ -458,13 +443,62 @@ class AsyncPipeline:
                     part = type_
             parts.append(f"  - {part}")
 
-            if type_ not in ["aggregate"]:
+            if type_ not in ["aggregate"] and buffer_size > 1:
                 parts.append(f"    Buffer: buffer_size={buffer_size}")
 
-        if self._sink is not None:
-            parts.append(f"  - sink(timeout={self._sink_timeout})")
+        if self._sink_buffer_size is not None:
+            parts.append(f"  - sink: buffer_size={self._sink_buffer_size}")
 
         return "\n".join(parts)
+
+    def _build(self, num_items):
+        if self._source is None:
+            raise ValueError("Source is not set.")
+
+        construct_queue = len(self._queues) == 0
+
+        coros = []
+
+        # source
+        if construct_queue:
+            self._queues.append(Queue(self._source_buffer_size))
+
+        coros.append(
+            (
+                "AsyncPipeline::0_source",
+                _enqueue(self._source, self._queues[0], max_items=num_items),
+            )
+        )
+
+        # pipes
+        for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
+            if construct_queue:
+                self._queues.append(Queue(buffer_size))
+
+            in_queue, out_queue = self._queues[i - 1 : i + 1]
+
+            match type_:
+                case "pipe":
+                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
+                case "aggregate":
+                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
+                case _:  # pragma: no cover
+                    raise ValueError(f"Unexpected process type: {type_}")
+
+            coros.append((f"AsyncPipeline::{i}_{args['name']}", coro))
+
+        if self._sink_buffer_size is not None:
+            if construct_queue:
+                self._queues.append(Queue(self._sink_buffer_size))
+
+            coros.append(
+                (
+                    f"AsyncPipeline::{len(self._process_args) + 1}_sink",
+                    _dequeue(*self._queues[-2:]),
+                )
+            )
+
+        return coros
 
     # TODO [Python 3.11]: Try TaskGroup
     async def run(self, *, num_items: int | None = None) -> None:
@@ -495,48 +529,11 @@ class AsyncPipeline:
 
             PipelineFailure: Raised when a part of the pipeline has an error.
         """
-        if self._source is None:
-            raise ValueError("Source is not set.")
+        coros = self._build(num_items)
+        await self._run(coros)
 
-        construct_queue = len(self._queues) == 0
-
-        # Build
-        tasks = set()
-        # Source
-        if construct_queue:
-            self._queues.append(AsyncQueue(self._source_buffer_size))
-        tasks.add(
-            create_task(
-                _enqueue(self._source, self._queues[0], max_items=num_items),
-                name="AsyncPipeline::0_source",
-            )
-        )
-
-        # Rest
-        for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
-            if construct_queue:
-                self._queues.append(AsyncQueue(buffer_size))
-
-            in_queue, out_queue = self._queues[i - 1 : i + 1]
-
-            match type_:
-                case "pipe":
-                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
-                case "aggregate":
-                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
-                case _:  # pragma: no cover
-                    raise ValueError(f"Unexpected process type: {type_}")
-
-            tasks.add(create_task(coro, name=f"AsyncPipeline::{i}_{args['name']}"))
-
-        # sink
-        if self._sink is not None:
-            tasks.add(
-                create_task(
-                    _dequeue(self._queues[-1], self._sink, timeout=self._sink_timeout),
-                    name=f"AsyncPipeline::{len(self._process_args) + 1}_sink",
-                )
-            )
+    async def _run(self, coros):
+        tasks = {create_task(coro, name=name) for name, coro in coros}
 
         while tasks:
             # Note:

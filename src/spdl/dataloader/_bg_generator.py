@@ -1,11 +1,12 @@
 # pyre-unsafe
 
+import asyncio
+import concurrent.futures
 import logging
 import warnings
 from asyncio import AbstractEventLoop as EventLoop
 from collections.abc import Iterator
 from contextlib import contextmanager
-from queue import Empty, Queue
 from threading import Thread
 from typing import Generic, TypeVar
 
@@ -94,8 +95,7 @@ class BackgroundGenerator(Generic[T]):
         self.loop = _get_loop(num_workers) if loop is None else loop
         self.timeout = timeout
 
-        self.queue = Queue(maxsize=self.queue_size)
-        self.pipeline.add_sink(self.queue)
+        self.pipeline.add_sink(queue_size)
 
         try:
             from spdl.lib import _libspdl
@@ -135,19 +135,26 @@ class BackgroundGenerator(Generic[T]):
         """
         sentinel = object()
 
+        coros = self.pipeline._build(num_items=num_items)
+
         async def _run():
             try:
-                await self.pipeline.run(num_items=num_items)
+                await self.pipeline._run(coros)
             finally:
-                self.queue.put(sentinel)
+                await self.pipeline.output_queue.put(sentinel)
 
         task = self.loop.create_task(_run())
+
+        def _get_item():
+            return asyncio.run_coroutine_threadsafe(
+                self.pipeline.output_queue.get(), self.loop
+            )
 
         with _run_in_thread(self.loop, self.timeout):
             while True:
                 try:
-                    item = self.queue.get(timeout=self.timeout)
-                except Empty:
+                    item = _get_item().result(timeout=self.timeout)
+                except concurrent.futures.TimeoutError:
                     # The pipeline is too slow or stuck.
                     raise TimeoutError(
                         f"The pipeline did not yield an item within {self.timeout} seconds."

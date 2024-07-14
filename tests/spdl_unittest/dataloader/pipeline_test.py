@@ -2,7 +2,6 @@ import asyncio
 import random
 import time
 from contextlib import asynccontextmanager
-from queue import Queue
 
 import pytest
 
@@ -16,13 +15,6 @@ def _put_aqueue(queue, vals, *, eof):
         queue.put_nowait(val)
     if eof:
         queue.put_nowait(_EOF)
-
-
-def _flush_queue(queue):
-    ret = []
-    while not queue.empty():
-        ret.append(queue.get())
-    return ret
 
 
 def _flush_aqueue(queue):
@@ -116,15 +108,15 @@ def test_async_enqueue_cancel():
 def test_async_dequeue_simple(empty: bool):
     """_dequeue pass the contents from input_queue to output_queue"""
     input_queue = asyncio.Queue()
-    output_queue = Queue()
+    output_queue = asyncio.Queue()
 
     data = [] if empty else list(range(3))
     _put_aqueue(input_queue, data, eof=True)
 
-    coro = _dequeue(input_queue, output_queue, None)
+    coro = _dequeue(input_queue, output_queue)
 
     asyncio.run(coro)
-    results = _flush_queue(output_queue)
+    results = _flush_aqueue(output_queue)
 
     assert results == data
 
@@ -132,15 +124,15 @@ def test_async_dequeue_simple(empty: bool):
 def test_async_dequeue_skip():
     """_dequeue does not pass the value if it is SKIP"""
     input_queue = asyncio.Queue()
-    output_queue = Queue()
+    output_queue = asyncio.Queue()
 
     data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
     _put_aqueue(input_queue, data, eof=True)
 
-    coro = _dequeue(input_queue, output_queue, None)
+    coro = _dequeue(input_queue, output_queue)
 
     asyncio.run(coro)
-    results = _flush_queue(output_queue)
+    results = _flush_aqueue(output_queue)
 
     assert results == [0, 1, 2]
 
@@ -150,9 +142,9 @@ def test_async_dequeue_cancel():
 
     async def _test():
         input_queue = asyncio.Queue()
-        output_queue = Queue()
+        output_queue = asyncio.Queue()
 
-        coro = _dequeue(input_queue, output_queue, None)
+        coro = _dequeue(input_queue, output_queue)
         task = asyncio.create_task(coro)
 
         await asyncio.sleep(0.1)
@@ -361,19 +353,13 @@ def test_async_pipe_concurrency_throughput():
 
 
 def test_async_pipeline_simple():
-    result_queue = Queue()
-
     pipeline = (
-        AsyncPipeline()
-        .add_source(range(10))
-        .pipe(adouble)
-        .pipe(aplus1)
-        .add_sink(result_queue)
+        AsyncPipeline().add_source(range(10)).pipe(adouble).pipe(aplus1).add_sink(1000)
     )
 
     async def _test():
         await pipeline.run()
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 10 == len(results)
         assert results == [1 + 2 * i for i in range(10)]
@@ -383,14 +369,12 @@ def test_async_pipeline_simple():
 
 def test_async_pipeline_noop():
     """AsyncPipeline functions without pipe"""
-    result_queue = Queue()
-
     src = list(range(10))
-    pipeline = AsyncPipeline().add_source(src).add_sink(result_queue)
+    pipeline = AsyncPipeline().add_source(src).add_sink(1000)
 
     async def _test():
         await pipeline.run()
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 10 == len(results)
         assert results == src
@@ -400,7 +384,6 @@ def test_async_pipeline_noop():
 
 def test_async_pipeline_skip():
     """AsyncPipeline functions without pipe"""
-    result_queue = Queue()
 
     def src():
         for i in range(10):
@@ -408,11 +391,11 @@ def test_async_pipeline_skip():
             yield _SKIP
         yield _SKIP
 
-    pipeline = AsyncPipeline().add_source(src()).add_sink(result_queue)
+    pipeline = AsyncPipeline().add_source(src()).add_sink(1000)
 
     async def _test():
         await pipeline.run()
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 10 == len(results)
         assert results == list(range(10))
@@ -422,18 +405,17 @@ def test_async_pipeline_skip():
 
 def test_async_pipeline_skip_odd():
     """AsyncPipeline functions without pipe"""
-    result_queue = Queue()
 
     src = list(range(10))
 
     async def odd(i):
         return i if i % 2 else _SKIP
 
-    pipeline = AsyncPipeline().add_source(src).pipe(odd).add_sink(result_queue)
+    pipeline = AsyncPipeline().add_source(src).pipe(odd).add_sink(1000)
 
     async def _test():
         await pipeline.run()
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 5 == len(results)
         assert results == [i for i in src if i % 2]
@@ -443,15 +425,14 @@ def test_async_pipeline_skip_odd():
 
 def test_async_pipeline_aggregate():
     """AsyncPipeline aggregates the input"""
-    result_queue = Queue()
 
     src = list(range(13))
 
-    pipeline = AsyncPipeline().add_source(src).aggregate(4).add_sink(result_queue)
+    pipeline = AsyncPipeline().add_source(src).aggregate(4).add_sink(1000)
 
     async def _test():
         await pipeline.run()
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 4 == len(results)
         assert results == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12]]
@@ -461,20 +442,16 @@ def test_async_pipeline_aggregate():
 
 def test_async_pipeline_aggregate_drop_last():
     """AsyncPipeline aggregates the input and drop the last"""
-    result_queue = Queue()
 
     src = list(range(13))
 
     pipeline = (
-        AsyncPipeline()
-        .add_source(src)
-        .aggregate(4, drop_last=True)
-        .add_sink(result_queue)
+        AsyncPipeline().add_source(src).aggregate(4, drop_last=True).add_sink(1000)
     )
 
     async def _test():
         await pipeline.run()
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 3 == len(results)
         assert results == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
@@ -484,7 +461,6 @@ def test_async_pipeline_aggregate_drop_last():
 
 def test_async_pipeline_source_failure():
     """AsyncPipeline continues when source fails."""
-    result_queue = Queue()
 
     def failing_range(i):
         yield from range(i)
@@ -495,13 +471,13 @@ def test_async_pipeline_source_failure():
         .add_source(failing_range(10))
         .pipe(adouble)
         .pipe(aplus1)
-        .add_sink(result_queue)
+        .add_sink(1000)
     )
 
     async def _test():
         await pipeline.run()
 
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 10 == len(results)
         assert results == [1 + 2 * i for i in range(10)]
@@ -511,14 +487,11 @@ def test_async_pipeline_source_failure():
 
 def test_async_pipeline_type_error():
     """AsyncPipeline immediately fails if pipe function has wrong signature"""
-    result_queue = Queue()
 
     async def wrong_sig(i, _):
         return i
 
-    pipeline = (
-        AsyncPipeline().add_source(range(10)).pipe(wrong_sig).add_sink(result_queue)
-    )
+    pipeline = AsyncPipeline().add_source(range(10)).pipe(wrong_sig).add_sink(1000)
 
     with pytest.raises(PipelineFailure) as einfo:
         asyncio.run(pipeline.run())
@@ -530,7 +503,6 @@ def test_async_pipeline_type_error():
 
 def test_async_pipeline_task_failure():
     """AsyncPipeline is robust against task-level failure."""
-    result_queue = Queue()
 
     async def areject_m3(i):
         if i % 3 == 0:
@@ -543,12 +515,12 @@ def test_async_pipeline_task_failure():
         .pipe(areject_m3)
         .pipe(adouble)
         .pipe(aplus1)
-        .add_sink(result_queue)
+        .add_sink(1000)
     )
 
     async def _test():
         await pipeline.run()
-        results = _flush_queue(result_queue)
+        results = _flush_aqueue(pipeline.output_queue)
 
         assert 6 == len(results)
         assert results == [1 + 2 * i for i in range(10) if i % 3]
@@ -558,7 +530,6 @@ def test_async_pipeline_task_failure():
 
 def test_async_pipeline_cancel():
     """AsyncPipeline is cancellable."""
-    result_queue = Queue()
 
     cancelled = False
 
@@ -572,10 +543,7 @@ def test_async_pipeline_cancel():
             raise
 
     pipeline = (
-        AsyncPipeline()
-        .add_source(range(10))
-        .pipe(astuck, concurrency=1)
-        .add_sink(result_queue)
+        AsyncPipeline().add_source(range(10)).pipe(astuck, concurrency=1).add_sink(1000)
     )
 
     async def _test():
@@ -653,8 +621,6 @@ def test_async_pipe_hook(drop_last: bool):
             finally:
                 self._exit_task_called += 1
 
-    result_queue = Queue()
-
     h1, h2, h3 = _hook(), _hook(), _hook()
 
     async def _fail(_):
@@ -666,12 +632,12 @@ def test_async_pipe_hook(drop_last: bool):
         .pipe(adouble, hooks=[h1])
         .aggregate(5, hooks=[h2], drop_last=drop_last)
         .pipe(_fail, hooks=[h3])
-        .add_sink(result_queue)
+        .add_sink(1000)
     )
 
     asyncio.run(pipeline.run())
 
-    assert result_queue.empty()
+    assert pipeline.output_queue.empty()
 
     assert h1._enter_stage_called == 1
     assert h1._exit_stage_called == 1
@@ -715,20 +681,18 @@ def test_async_pipe_hook_multiple():
             finally:
                 self._exit_task_called += 1
 
-    result_queue = Queue()
-
     hooks = [_hook(), _hook(), _hook()]
 
     pipeline = (
         AsyncPipeline()
         .add_source(range(10))
         .pipe(passthrough, hooks=hooks)
-        .add_sink(result_queue)
+        .add_sink(1000)
     )
 
     asyncio.run(pipeline.run())
 
-    assert list(range(10)) == _flush_queue(result_queue)
+    assert list(range(10)) == _flush_aqueue(pipeline.output_queue)
 
     for h in hooks:
         assert h._enter_stage_called == 1
@@ -772,13 +736,11 @@ def test_async_pipe_hook_failure_exit_stage():
         async def task_hook(self):
             yield
 
-    result_queue = Queue()
-
     pipeline = (
         AsyncPipeline()
         .add_source(range(10))
         .pipe(passthrough, hooks=[_exit_stage_fail()])
-        .add_sink(result_queue)
+        .add_sink(1000)
     )
 
     # Well this is supposed to be checking that it does not fail.
@@ -788,7 +750,7 @@ def test_async_pipe_hook_failure_exit_stage():
     with pytest.raises(PipelineFailure):
         asyncio.run(pipeline.run())
 
-    # results = _flush_queue(result_queue)
+    # results = _flush_aqueue(pipeline.output_queue)
     # assert 10 == len(results)
     # assert results == list(range(10))
 
@@ -805,18 +767,16 @@ def test_async_pipe_hook_failure_enter_task():
         async def stage_hook(self, *_):
             yield
 
-    result_queue = Queue()
-
     pipeline = (
         AsyncPipeline()
         .add_source(range(10))
         .pipe(passthrough, hooks=[_hook()])
-        .add_sink(result_queue)
+        .add_sink(1000)
     )
 
     asyncio.run(pipeline.run())
 
-    assert result_queue.empty()
+    assert pipeline.output_queue.empty()
 
 
 def test_async_pipe_hook_failure_exit_task():
@@ -831,18 +791,16 @@ def test_async_pipe_hook_failure_exit_task():
             yield
             raise RuntimeError("failing exit_task")
 
-    result_queue = Queue()
-
     pipeline = (
         AsyncPipeline()
         .add_source(range(10))
         .pipe(passthrough, hooks=[_exit_stage_fail()])
-        .add_sink(result_queue)
+        .add_sink(1000)
     )
 
     asyncio.run(pipeline.run())
 
-    assert result_queue.empty()
+    assert pipeline.output_queue.empty()
 
 
 def test_async_pipe_hook_exit_task_capture_error():
@@ -959,7 +917,7 @@ def test_async_pipeline_str_smoke():
 
     print(apl)
 
-    apl = AsyncPipeline().add_source(range(10)).pipe(foo).aggregate(1).add_sink(None)
+    apl = AsyncPipeline().add_source(range(10)).pipe(foo).aggregate(1).add_sink(1000)
 
     print(apl)
 
@@ -977,20 +935,18 @@ def test_async_pipeline_restart():
             for _ in range(5):
                 yield from range(10)
 
-    output_queue = Queue()
-
-    apl = AsyncPipeline().add_source(Generator()).add_sink(output_queue)
+    apl = AsyncPipeline().add_source(Generator()).add_sink(1000)
 
     async def _test():
         # Run multiple times
         for _ in range(5):
             await apl.run(num_items=10)
-            results = _flush_queue(output_queue)
+            results = _flush_aqueue(apl.output_queue)
             assert results == list(range(10))
 
         # Now it's empty
         await apl.run(num_items=10)
-        assert output_queue.empty()
+        assert apl.output_queue.empty()
 
     asyncio.run(_test())
 
@@ -1002,21 +958,19 @@ def test_async_pipeline_resume():
     # If we pass `range(10)` directly, new iterator is created at every run.
     src = iter(range(10))
 
-    queue = Queue()
-
-    apl = AsyncPipeline().add_source(src).add_sink(queue)
+    apl = AsyncPipeline().add_source(src).add_sink(1000)
 
     async def _test():
         await apl.run(num_items=2)
-        results = _flush_queue(queue)
+        results = _flush_aqueue(apl.output_queue)
         assert results == [0, 1]
 
         await apl.run(num_items=3)
-        results = _flush_queue(queue)
+        results = _flush_aqueue(apl.output_queue)
         assert results == [2, 3, 4]
 
         await apl.run()
-        results = _flush_queue(queue)
+        results = _flush_aqueue(apl.output_queue)
         assert results == [5, 6, 7, 8, 9]
 
     asyncio.run(_test())
@@ -1029,9 +983,7 @@ def test_async_pipeline_infinite_loop():
         while True:
             yield (i := i + 1)
 
-    output_queue = Queue()
-
-    apl = AsyncPipeline().add_source(src()).add_sink(output_queue)
+    apl = AsyncPipeline().add_source(src()).add_sink(1000)
 
     async def _test():
         i = 0
@@ -1039,7 +991,7 @@ def test_async_pipeline_infinite_loop():
 
             num_items = random.randint(0, 1028)
             await apl.run(num_items=num_items)
-            results = _flush_queue(output_queue)
+            results = _flush_aqueue(apl.output_queue)
             assert results == list(range(i, i + num_items))
 
             i += num_items
