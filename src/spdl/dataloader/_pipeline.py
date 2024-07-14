@@ -239,10 +239,10 @@ class AsyncPipeline:
     """
 
     def __init__(self, *, buffer_size: int = 1):
-        self.queues = [AsyncQueue(buffer_size)]
+        self.queues: list[AsyncQueue] = [AsyncQueue(buffer_size)]
 
         self._source = None
-        self._process_funcs: list[tuple[str, Callable, dict]] = []
+        self._process_args: list[tuple[str, dict]] = []
 
         self._sink = None
         self._sink_timeout = None
@@ -253,6 +253,11 @@ class AsyncPipeline:
             _libspdl.log_api_usage("spdl.dataloader.AsyncPipeline")
         except Exception:
             pass  # ignore if not supported.
+
+    @property
+    def output_queue(self) -> AsyncQueue:
+        """The output queue of the pipeline."""
+        return self.queues[-1]
 
     def add_source(self, source: Iterator[T]) -> "AsyncPipeline":
         """Attach an iterator to the source buffer.
@@ -331,22 +336,21 @@ class AsyncPipeline:
                 include one of :py:class:`~spdl.dataloader.TaskStatsHook`
                 instance with the desired interval.
         """
-        self.queues.append(AsyncQueue(maxsize=buffer_size))
-        in_queue, out_queue = self.queues[-2:]
         if name is None:
             if hasattr(afunc, "__name__"):
                 name = afunc.__name__
             else:
                 name = afunc.__class__.__name__
 
-        self._process_funcs.append(
+        self.queues.append(AsyncQueue(buffer_size))
+
+        self._process_args.append(
             (
-                f"{name}({concurrency=})",
-                _pipe,
+                "pipe",
                 {
-                    "input_queue": in_queue,
+                    "input_queue": self.queues[-2],
                     "afunc": afunc,
-                    "output_queue": out_queue,
+                    "output_queue": self.queues[-1],
                     "concurrency": concurrency,
                     "name": name,
                     "hooks": hooks,
@@ -358,7 +362,7 @@ class AsyncPipeline:
 
     def aggregate(
         self,
-        n: int,
+        num_aggregate: int,
         /,
         *,
         drop_last: bool = False,
@@ -381,24 +385,23 @@ class AsyncPipeline:
             if i is not _EOF:
                 vals[0].append(i)
 
-            if (i is _EOF and vals[0]) or (len(vals[0]) >= n):
+            if (i is _EOF and vals[0]) or (len(vals[0]) >= num_aggregate):
                 ret = vals.pop(0)
                 vals.append([])
                 return ret
             return _SKIP
 
-        self.queues.append(AsyncQueue(1))
-        in_queue, out_queue = self.queues[-2:]
-        name = f"aggregate({n})"
+        name = f"aggregate({num_aggregate}, {drop_last=})"
 
-        self._process_funcs.append(
+        self.queues.append(AsyncQueue(1))
+
+        self._process_args.append(
             (
-                name,
-                _pipe,
+                "aggregate",
                 {
-                    "input_queue": in_queue,
+                    "input_queue": self.queues[-2],
                     "afunc": aggregate,
-                    "output_queue": out_queue,
+                    "output_queue": self.queues[-1],
                     "concurrency": 1,
                     "name": name,
                     "hooks": hooks,
@@ -445,12 +448,24 @@ class AsyncPipeline:
     def __str__(self) -> str:
         parts = [repr(self)]
         parts.append(f"  - src: {self._source}")
+        parts.append(f"    Buffer: buffer_size={self.queues[0].maxsize}")
 
-        for name, _, _ in self._process_funcs:
-            parts.append(f"  - {name}")
+        for queue, (type_, args) in zip(self.queues[1:], self._process_args):
+            match type_:
+                case "pipe":
+                    part = f"{args['name']}(concurrency={args['concurrency']})"
+                case "aggregate":
+                    part = args["name"]
+                case _:
+                    part = type_
+            parts.append(f"  - {part}")
+
+            if type_ not in ["aggregate"]:
+                parts.append(f"    Buffer: buffer_size={queue.maxsize}")
 
         if self._sink is not None:
             parts.append(f"  - sink(timeout={self._sink_timeout})")
+
         return "\n".join(parts)
 
     # TODO [Python 3.11]: Try TaskGroup
@@ -482,10 +497,11 @@ class AsyncPipeline:
 
             PipelineFailure: Raised when a part of the pipeline has an error.
         """
-        tasks = set()
         if self._source is None:
             raise ValueError("Source is not set.")
 
+        # Build
+        tasks = set()
         # Source
         tasks.add(
             create_task(
@@ -493,17 +509,25 @@ class AsyncPipeline:
                 name="AsyncPipeline::0_source",
             )
         )
+
         # Rest
-        for i, (name, fn, args) in enumerate(self._process_funcs, start=1):
-            name = f"AsyncPipeline::{i}_{name}"
-            tasks.add(create_task(fn(**args), name=name))
+        for i, (type_, args) in enumerate(self._process_args, start=1):
+            match type_:
+                case "pipe":
+                    coro = _pipe(**args)
+                case "aggregate":
+                    coro = _pipe(**args)
+                case _:  # pragma: no cover
+                    raise ValueError(f"Unexpected process type: {type_}")
+
+            tasks.add(create_task(coro, name=f"AsyncPipeline::{i}_{args['name']}"))
 
         # sink
         if self._sink is not None:
             tasks.add(
                 create_task(
                     _dequeue(self.queues[-1], self._sink, timeout=self._sink_timeout),
-                    name=f"AsyncPipeline::{len(self._process_funcs) + 1}_sink",
+                    name=f"AsyncPipeline::{len(self._process_args) + 1}_sink",
                 )
             )
 
