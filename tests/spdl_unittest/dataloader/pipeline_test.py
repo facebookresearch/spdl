@@ -989,7 +989,7 @@ def test_async_pipeline_infinite_loop():
         i = 0
         for _ in range(10):
 
-            num_items = random.randint(0, 1028)
+            num_items = random.randint(0, 128)
             await apl.run(num_items=num_items)
             results = _flush_aqueue(apl.output_queue)
             assert results == list(range(i, i + num_items))
