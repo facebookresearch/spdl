@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from asyncio import Queue
-from collections.abc import Awaitable, Callable, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager
 from typing import TypeVar
 
@@ -222,6 +222,187 @@ async def _dequeue(
 ################################################################################
 
 
+class PipelineBuilder:
+    def __init__(self):
+        self._source = None
+        self._source_buffer_size = 1
+
+        self._process_args: list[tuple[str, dict, int]] = []
+
+        self._sink_buffer_size = None
+
+    def add_source(self, source: Iterable[T], **kwargs) -> "PipelineBuilder":
+        if self._source is not None:
+            raise ValueError("Source already set.")
+        self._source = source
+        if "buffer_size" in kwargs:
+            self._source_buffer_size = int(kwargs["buffer_size"])
+        return self
+
+    def pipe(
+        self,
+        afunc: Callable[[T], Awaitable[U]],
+        *,
+        concurrency: int = 1,
+        name: str | None = None,
+        hooks: Sequence[PipelineHook] | None = None,
+        report_stats_interval: float | None = None,
+        output_order: str = "completion",
+        **kwargs,
+    ) -> "PipelineBuilder":
+
+        if output_order not in ["completion", "input"]:
+            raise ValueError(
+                '`output_order` must be either "completion" or "input". '
+                f"Found: {output_order}"
+            )
+
+        if name is None:
+            if hasattr(afunc, "__name__"):
+                name = afunc.__name__
+            else:
+                name = afunc.__class__.__name__
+
+        self._process_args.append(
+            (
+                "pipe" if output_order == "completion" else "ordered_pipe",
+                {
+                    "afunc": afunc,
+                    "concurrency": concurrency,
+                    "name": name,
+                    "hooks": hooks,
+                    "report_stats_interval": report_stats_interval,
+                },
+                # TODO: change this to 1
+                kwargs.get("buffer_size", 10),
+            )
+        )
+        return self
+
+    def aggregate(
+        self,
+        num_aggregate: int,
+        /,
+        *,
+        drop_last: bool = False,
+        hooks: Sequence[PipelineHook] | None = None,
+        report_stats_interval: float | None = None,
+    ) -> "PipelineBuilder":
+        vals = [[]]
+
+        async def aggregate(i):
+            if i is not _EOF:
+                vals[0].append(i)
+
+            if (i is _EOF and vals[0]) or (len(vals[0]) >= num_aggregate):
+                ret = vals.pop(0)
+                vals.append([])
+                return ret
+            return _SKIP
+
+        name = f"aggregate({num_aggregate}, {drop_last=})"
+
+        self._process_args.append(
+            (
+                "aggregate",
+                {
+                    "afunc": aggregate,
+                    "concurrency": 1,
+                    "name": name,
+                    "hooks": hooks,
+                    "report_stats_interval": report_stats_interval,
+                    "_pipe_eof": not drop_last,
+                },
+                1,
+            )
+        )
+        return self
+
+    def add_sink(self, buffer_size: int) -> "PipelineBuilder":
+        self._sink_buffer_size = buffer_size
+        return self
+
+    def _build(self, num_items: int | None, queues: list[Queue]):
+        if self._source is None:
+            raise ValueError("Source is not set.")
+        if num_items is not None and num_items < 1:
+            raise ValueError("num_items must be >= 0")
+
+        construct_queues = len(queues) == 0
+
+        coros = []
+
+        # source
+        if construct_queues:
+            queues.append(Queue(self._source_buffer_size))
+
+        coros.append(
+            (
+                "AsyncPipeline::0_source",
+                _enqueue(self._source, queues[0], max_items=num_items),
+            )
+        )
+
+        # pipes
+        for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
+            if construct_queues:
+                queues.append(Queue(buffer_size))
+            in_queue, out_queue = queues[i - 1 : i + 1]
+
+            match type_:
+                case "pipe" | "aggregate":
+                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
+                case "ordered_pipe":
+                    coro = _ordered_pipe(
+                        **args, input_queue=in_queue, output_queue=out_queue
+                    )
+                case _:  # pragma: no cover
+                    raise ValueError(f"Unexpected process type: {type_}")
+
+            coros.append((f"AsyncPipeline::{i}_{args['name']}", coro))
+
+        if self._sink_buffer_size is not None:
+            if construct_queues:
+                queues.append(Queue(self._sink_buffer_size))
+
+            coros.append(
+                (
+                    f"AsyncPipeline::{len(self._process_args) + 1}_sink",
+                    _dequeue(*queues[-2:]),
+                )
+            )
+
+        return coros
+
+    def __str__(self) -> str:
+        parts = [repr(self)]
+        parts.append(f"  - src: {self._source}")
+        parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
+
+        for type_, args, buffer_size in self._process_args:
+            match type_:
+                case "pipe":
+                    part = f"{args['name']}(concurrency={args['concurrency']})"
+                case "ordered_pipe":
+                    part = (
+                        f"{args['name']}(concurrency={args['concurrency']}, "
+                        'output_order="input")'
+                    )
+                case "aggregate":
+                    part = args["name"]
+                case _:
+                    part = type_
+            parts.append(f"  - {part}")
+
+            if type_ not in ["aggregate"] and buffer_size > 1:
+                parts.append(f"    Buffer: buffer_size={buffer_size}")
+
+        if self._sink_buffer_size is not None:
+            parts.append(f"  - sink: buffer_size={self._sink_buffer_size}")
+
+        return "\n".join(parts)
+
+
 # TODO [Python 3.11]: Migrate to ExceptionGroup
 class PipelineFailure(Exception):
     """PipelineFailure()
@@ -315,12 +496,9 @@ class AsyncPipeline:
     """
 
     def __init__(self, **kwargs):
-        self._source = None
+        # TODO: move to add_source
         self._source_buffer_size = kwargs.get("buffer_size", 1)
-
-        self._process_args: list[tuple[str, dict, int]] = []
-
-        self._sink_buffer_size = None
+        self._builder = PipelineBuilder()
 
         self._queues: list[Queue] = []
 
@@ -362,9 +540,7 @@ class AsyncPipeline:
                    event loop. If the iterator performs a an operation that blocks,
                    the entire pipeline will be blocked.
         """
-        if self._source is not None:
-            raise ValueError("Source already set.")
-        self._source = iter(source)
+        self._builder.add_source(iter(source), buffer_size=self._source_buffer_size)
         return self
 
     def pipe(
@@ -420,31 +596,14 @@ class AsyncPipeline:
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
         """
-        if output_order not in ["completion", "input"]:
-            raise ValueError(
-                '`output_order` must be either "completion" or "input". '
-                f"Found: {output_order}"
-            )
-
-        if name is None:
-            if hasattr(afunc, "__name__"):
-                name = afunc.__name__
-            else:
-                name = afunc.__class__.__name__
-
-        self._process_args.append(
-            (
-                "pipe" if output_order == "completion" else "ordered_pipe",
-                {
-                    "afunc": afunc,
-                    "concurrency": concurrency,
-                    "name": name,
-                    "hooks": hooks,
-                    "report_stats_interval": report_stats_interval,
-                },
-                # TODO: change this to 1
-                kwargs.get("buffer_size", 10),
-            )
+        self._builder.pipe(
+            afunc,
+            concurrency=concurrency,
+            name=name,
+            hooks=hooks,
+            report_stats_interval=report_stats_interval,
+            output_order=output_order,
+            **kwargs,
         )
         return self
 
@@ -461,39 +620,16 @@ class AsyncPipeline:
 
 
         Args:
-            n: The number of items to buffer.
+            num_aggregate: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``n`` items.
             hooks: See :py:meth:`pipe`.
             report_stats_interval: See :py:meth:`pipe`.
         """
-
-        vals = [[]]
-
-        async def aggregate(i):
-            if i is not _EOF:
-                vals[0].append(i)
-
-            if (i is _EOF and vals[0]) or (len(vals[0]) >= num_aggregate):
-                ret = vals.pop(0)
-                vals.append([])
-                return ret
-            return _SKIP
-
-        name = f"aggregate({num_aggregate}, {drop_last=})"
-
-        self._process_args.append(
-            (
-                "aggregate",
-                {
-                    "afunc": aggregate,
-                    "concurrency": 1,
-                    "name": name,
-                    "hooks": hooks,
-                    "report_stats_interval": report_stats_interval,
-                    "_pipe_eof": not drop_last,
-                },
-                1,
-            )
+        self._builder.aggregate(
+            num_aggregate,
+            drop_last=drop_last,
+            hooks=hooks,
+            report_stats_interval=report_stats_interval,
         )
         return self
 
@@ -517,87 +653,14 @@ class AsyncPipeline:
         Args:
             buffer_size: The size of the last queue.
         """
-        assert isinstance(buffer_size, int)
-        self._sink_buffer_size = buffer_size
+        self._builder.add_sink(buffer_size)
         return self
 
     def __str__(self) -> str:
-        parts = [repr(self)]
-        parts.append(f"  - src: {self._source}")
-        parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
-
-        for type_, args, buffer_size in self._process_args:
-            match type_:
-                case "pipe":
-                    part = f"{args['name']}(concurrency={args['concurrency']})"
-                case "ordered_pipe":
-                    part = (
-                        f"{args['name']}(concurrency={args['concurrency']}, "
-                        'output_order="input")'
-                    )
-                case "aggregate":
-                    part = args["name"]
-                case _:
-                    part = type_
-            parts.append(f"  - {part}")
-
-            if type_ not in ["aggregate"] and buffer_size > 1:
-                parts.append(f"    Buffer: buffer_size={buffer_size}")
-
-        if self._sink_buffer_size is not None:
-            parts.append(f"  - sink: buffer_size={self._sink_buffer_size}")
-
-        return "\n".join(parts)
+        return str(self._builder)
 
     def _build(self, num_items):
-        if self._source is None:
-            raise ValueError("Source is not set.")
-
-        construct_queue = len(self._queues) == 0
-
-        coros = []
-
-        # source
-        if construct_queue:
-            self._queues.append(Queue(self._source_buffer_size))
-
-        coros.append(
-            (
-                "AsyncPipeline::0_source",
-                _enqueue(self._source, self._queues[0], max_items=num_items),
-            )
-        )
-
-        # pipes
-        for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
-            if construct_queue:
-                self._queues.append(Queue(buffer_size))
-
-            in_queue, out_queue = self._queues[i - 1 : i + 1]
-
-            match type_:
-                case "pipe" | "aggregate":
-                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
-                case "ordered_pipe":
-                    coro = _ordered_pipe(
-                        **args, input_queue=in_queue, output_queue=out_queue
-                    )
-                case _:  # pragma: no cover
-                    raise ValueError(f"Unexpected process type: {type_}")
-
-            coros.append((f"AsyncPipeline::{i}_{args['name']}", coro))
-
-        if self._sink_buffer_size is not None:
-            if construct_queue:
-                self._queues.append(Queue(self._sink_buffer_size))
-
-            coros.append(
-                (
-                    f"AsyncPipeline::{len(self._process_args) + 1}_sink",
-                    _dequeue(*self._queues[-2:]),
-                )
-            )
-
+        coros = self._builder._build(num_items, self._queues)
         return coros
 
     # TODO [Python 3.11]: Try TaskGroup
