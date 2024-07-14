@@ -239,13 +239,15 @@ class AsyncPipeline:
     """
 
     def __init__(self, *, buffer_size: int = 1):
-        self.queues: list[AsyncQueue] = [AsyncQueue(buffer_size)]
-
         self._source = None
-        self._process_args: list[tuple[str, dict]] = []
+        self._source_buffer_size = buffer_size
+
+        self._process_args: list[tuple[str, dict, int]] = []
 
         self._sink = None
         self._sink_timeout = None
+
+        self._queues: list[AsyncQueue] = []
 
         try:
             from spdl.lib import _libspdl
@@ -257,7 +259,9 @@ class AsyncPipeline:
     @property
     def output_queue(self) -> AsyncQueue:
         """The output queue of the pipeline."""
-        return self.queues[-1]
+        if not self._queues:
+            raise ValueError("No output queue is set.")
+        return self._queues[-1]
 
     def add_source(self, source: Iterator[T]) -> "AsyncPipeline":
         """Attach an iterator to the source buffer.
@@ -342,20 +346,17 @@ class AsyncPipeline:
             else:
                 name = afunc.__class__.__name__
 
-        self.queues.append(AsyncQueue(buffer_size))
-
         self._process_args.append(
             (
                 "pipe",
                 {
-                    "input_queue": self.queues[-2],
                     "afunc": afunc,
-                    "output_queue": self.queues[-1],
                     "concurrency": concurrency,
                     "name": name,
                     "hooks": hooks,
                     "report_stats_interval": report_stats_interval,
                 },
+                buffer_size,
             )
         )
         return self
@@ -393,21 +394,18 @@ class AsyncPipeline:
 
         name = f"aggregate({num_aggregate}, {drop_last=})"
 
-        self.queues.append(AsyncQueue(1))
-
         self._process_args.append(
             (
                 "aggregate",
                 {
-                    "input_queue": self.queues[-2],
                     "afunc": aggregate,
-                    "output_queue": self.queues[-1],
                     "concurrency": 1,
                     "name": name,
                     "hooks": hooks,
                     "report_stats_interval": report_stats_interval,
                     "_pipe_eof": not drop_last,
                 },
+                1,
             )
         )
         return self
@@ -448,9 +446,9 @@ class AsyncPipeline:
     def __str__(self) -> str:
         parts = [repr(self)]
         parts.append(f"  - src: {self._source}")
-        parts.append(f"    Buffer: buffer_size={self.queues[0].maxsize}")
+        parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
 
-        for queue, (type_, args) in zip(self.queues[1:], self._process_args):
+        for type_, args, buffer_size in self._process_args:
             match type_:
                 case "pipe":
                     part = f"{args['name']}(concurrency={args['concurrency']})"
@@ -461,7 +459,7 @@ class AsyncPipeline:
             parts.append(f"  - {part}")
 
             if type_ not in ["aggregate"]:
-                parts.append(f"    Buffer: buffer_size={queue.maxsize}")
+                parts.append(f"    Buffer: buffer_size={buffer_size}")
 
         if self._sink is not None:
             parts.append(f"  - sink(timeout={self._sink_timeout})")
@@ -500,23 +498,32 @@ class AsyncPipeline:
         if self._source is None:
             raise ValueError("Source is not set.")
 
+        construct_queue = len(self._queues) == 0
+
         # Build
         tasks = set()
         # Source
+        if construct_queue:
+            self._queues.append(AsyncQueue(self._source_buffer_size))
         tasks.add(
             create_task(
-                _enqueue(self._source, self.queues[0], max_items=num_items),
+                _enqueue(self._source, self._queues[0], max_items=num_items),
                 name="AsyncPipeline::0_source",
             )
         )
 
         # Rest
-        for i, (type_, args) in enumerate(self._process_args, start=1):
+        for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
+            if construct_queue:
+                self._queues.append(AsyncQueue(buffer_size))
+
+            in_queue, out_queue = self._queues[i - 1 : i + 1]
+
             match type_:
                 case "pipe":
-                    coro = _pipe(**args)
+                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
                 case "aggregate":
-                    coro = _pipe(**args)
+                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
                 case _:  # pragma: no cover
                     raise ValueError(f"Unexpected process type: {type_}")
 
@@ -526,7 +533,7 @@ class AsyncPipeline:
         if self._sink is not None:
             tasks.add(
                 create_task(
-                    _dequeue(self.queues[-1], self._sink, timeout=self._sink_timeout),
+                    _dequeue(self._queues[-1], self._sink, timeout=self._sink_timeout),
                     name=f"AsyncPipeline::{len(self._process_args) + 1}_sink",
                 )
             )
