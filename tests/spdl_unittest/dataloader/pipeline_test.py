@@ -565,7 +565,7 @@ def test_async_pipeline_cancel():
 ################################################################################
 
 
-def test_async_pipe_hook_wrong_def():
+def test_async_pipe_stage_hook_wrong_def1():
     """Pipeline fails if stage_hook is not properly overrode."""
 
     class _h3(PipelineHook):
@@ -588,12 +588,13 @@ def test_async_pipe_hook_wrong_def():
 
     async def _test(hook):
         pipeline = AsyncPipeline().add_source(range(10)).pipe(passthrough, hooks=[hook])
+        await pipeline.run()
 
-        with pytest.raises(PipelineFailure):
-            await pipeline.run()
+    with pytest.raises(ValueError):
+        asyncio.run(_test(_h3()))
 
-    asyncio.run(_test(_h3()))
-    asyncio.run(_test(_h4()))
+    with pytest.raises(ValueError):
+        asyncio.run(_test(_h4()))
 
 
 @pytest.mark.parametrize("drop_last", [False, True])
