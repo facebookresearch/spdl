@@ -273,8 +273,7 @@ class PipelineBuilder:
                     "hooks": hooks,
                     "report_stats_interval": report_stats_interval,
                 },
-                # TODO: change this to 1
-                kwargs.get("buffer_size", 10),
+                kwargs.get("buffer_size", 1),
             )
         )
         return self
