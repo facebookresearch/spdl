@@ -139,7 +139,7 @@ class BackgroundGenerator(Generic[T]):
 
         async def _run():
             try:
-                await self.pipeline._run(coros)
+                await coros
             finally:
                 await self.pipeline.output_queue.put(sentinel)
 
