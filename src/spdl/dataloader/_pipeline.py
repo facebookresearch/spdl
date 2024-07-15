@@ -222,6 +222,76 @@ async def _dequeue(
 ################################################################################
 
 
+# TODO [Python 3.11]: Migrate to ExceptionGroup
+class PipelineFailure(Exception):
+    """PipelineFailure()
+    Thrown by :py:meth:`spdl.dataloader.AsyncPipeline.run`
+    when pipeline encounters an error."""
+
+    def __init__(self, errs):
+        msg = []
+        for k, v in errs.items():
+            e = str(v)
+            msg.append(f"{k}:{e if e else type(v).__name__}")
+        msg.sort()
+
+        super().__init__(self, ", ".join(msg))
+
+        # This is for unittesting.
+        self._errs = errs
+
+
+async def _run_coroutines(coros) -> None:
+    tasks = {create_task(coro, name=name) for name, coro in coros}
+
+    while tasks:
+        # Note:
+        # `asyncio.wait` does not automatically propagate the cancellation to its children.
+        # For graceful shutdown, we manually cancel the child tasks.
+        #
+        # Also, it seems asyncio loop throws Cancellation on most outer task.
+        # I am not sure where this behavior is documented, but here is an example script to
+        # demonstrate the behavior.
+        # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
+        try:
+            done, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+        except asyncio.CancelledError:
+            for task in tasks:
+                task.cancel()
+            await asyncio.wait(tasks)
+            raise
+
+        # 1. check what kind of errors occured
+        # Note:
+        # By the above assumption about the cancellation, the following code assumes that
+        # CancelledError does not happen for done tasks.
+        errs = {}
+        for task in done:
+            # Note:
+            # `exception()` method can throw `CancelledError` or `InvalidStateError`,
+            # both of which are assumed to not happen here.
+            if (err := task.exception()) is not None:
+                errs[task.get_name()] = err
+
+        # 2. if a failure presents, cancel the remaining tasks
+        if errs:
+            if tasks:
+                for task in tasks:
+                    task.cancel()
+
+                done, _ = await asyncio.wait(tasks)
+
+                for task in done:
+                    try:
+                        err = task.exception()
+                    except asyncio.CancelledError:
+                        errs[task.get_name()] = "Cancelled"
+                    else:
+                        errs[task.get_name()] = err
+
+            raise PipelineFailure(errs)
+
+
 class PipelineBuilder:
     def __init__(self):
         self._source = None
@@ -321,7 +391,7 @@ class PipelineBuilder:
         self._sink_buffer_size = buffer_size
         return self
 
-    def _build(self, num_items: int | None, queues: list[Queue]):
+    def _build(self, num_items: int | None, queues: list[Queue]) -> Awaitable[None]:
         if self._source is None:
             raise ValueError("Source is not set.")
         if num_items is not None and num_items < 1:
@@ -371,7 +441,7 @@ class PipelineBuilder:
                 )
             )
 
-        return coros
+        return _run_coroutines(coros)
 
     def __str__(self) -> str:
         parts = [repr(self)]
@@ -400,25 +470,6 @@ class PipelineBuilder:
             parts.append(f"  - sink: buffer_size={self._sink_buffer_size}")
 
         return "\n".join(parts)
-
-
-# TODO [Python 3.11]: Migrate to ExceptionGroup
-class PipelineFailure(Exception):
-    """PipelineFailure()
-    Thrown by :py:meth:`spdl.dataloader.AsyncPipeline.run`
-    when pipeline encounters an error."""
-
-    def __init__(self, errs):
-        msg = []
-        for k, v in errs.items():
-            e = str(v)
-            msg.append(f"{k}:{e if e else type(v).__name__}")
-        msg.sort()
-
-        super().__init__(self, ", ".join(msg))
-
-        # This is for unittesting.
-        self._errs = errs
 
 
 class AsyncPipeline:
@@ -661,8 +712,7 @@ class AsyncPipeline:
         return str(self._builder)
 
     def _build(self, num_items):
-        coros = self._builder._build(num_items, self._queues)
-        return coros
+        return self._builder._build(num_items, queues=self._queues)
 
     # TODO [Python 3.11]: Try TaskGroup
     async def run(self, *, num_items: int | None = None) -> None:
@@ -693,57 +743,4 @@ class AsyncPipeline:
 
             PipelineFailure: Raised when a part of the pipeline has an error.
         """
-        coros = self._build(num_items)
-        await self._run(coros)
-
-    async def _run(self, coros):
-        tasks = {create_task(coro, name=name) for name, coro in coros}
-
-        while tasks:
-            # Note:
-            # `asyncio.wait` does not automatically propagate the cancellation to its children.
-            # For graceful shutdown, we manually cancel the child tasks.
-            #
-            # Also, it seems asyncio loop throws Cancellation on most outer task.
-            # I am not sure where this behavior is documented, but here is an example script to
-            # demonstrate the behavior.
-            # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
-            try:
-                done, tasks = await asyncio.wait(
-                    tasks, return_when=asyncio.FIRST_EXCEPTION
-                )
-            except asyncio.CancelledError:
-                for task in tasks:
-                    task.cancel()
-                await asyncio.wait(tasks)
-                raise
-
-            # 1. check what kind of errors occured
-            # Note:
-            # Byt the above assumption about the cancellation, the following code assumes that
-            # CancelledError does not happen for done tasks.
-            errs = {}
-            for task in done:
-                # Note:
-                # `exception()` method can throw `CancelledError` or `InvalidStateError`,
-                # both of which are assumed to not happen here.
-                if (err := task.exception()) is not None:
-                    errs[task.get_name()] = err
-
-            # 2. if a failure presents, cancel the remaining tasks
-            if errs:
-                if tasks:
-                    for task in tasks:
-                        task.cancel()
-
-                    done, _ = await asyncio.wait(tasks)
-
-                    for task in done:
-                        try:
-                            err = task.exception()
-                        except asyncio.CancelledError:
-                            errs[task.get_name()] = "Cancelled"
-                        else:
-                            errs[task.get_name()] = err
-
-                raise PipelineFailure(errs)
+        await self._build(num_items)
