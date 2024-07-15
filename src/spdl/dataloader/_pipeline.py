@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from asyncio import Queue
-from collections.abc import Awaitable, Callable, Iterable, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager
 from typing import TypeVar
 
@@ -44,7 +44,7 @@ async def _put_eof_when_done(queue, put_on_error=False):
 ################################################################################
 
 
-async def _pipe(
+def _pipe(
     input_queue: Queue[T],
     afunc: Callable[[T], Awaitable[U]],
     output_queue: Queue[U],
@@ -53,7 +53,7 @@ async def _pipe(
     hooks: Sequence[PipelineHook] | None = None,
     report_stats_interval: float | None = None,
     _pipe_eof: bool = False,
-) -> None:
+) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
@@ -72,7 +72,9 @@ async def _pipe(
 
         await output_queue.put(result)
 
-    async with _stage_hooks(hooks), _put_eof_when_done(output_queue):
+    @_stage_hooks(hooks)
+    @_put_eof_when_done(output_queue)
+    async def pipe():
         i, tasks = 0, set()
         while True:
             item = await input_queue.get()
@@ -96,8 +98,10 @@ async def _pipe(
         if tasks:
             await asyncio.wait(tasks)
 
+    return pipe()
 
-async def _ordered_pipe(
+
+def _ordered_pipe(
     input_queue: Queue[T],
     afunc: Callable[[T], Awaitable[U]],
     output_queue: Queue[U],
@@ -105,7 +109,7 @@ async def _ordered_pipe(
     name: str = "pipe",
     hooks: Sequence[PipelineHook] | None = None,
     report_stats_interval: float | None = None,
-) -> None:
+) -> Coroutine:
     """
 
     Implementation Note:
@@ -155,9 +159,12 @@ async def _ordered_pipe(
 
         return create_task(_with_hooks())
 
+    async def _unwrap(task: asyncio.Task[U]) -> U:
+        return await task
+
     inter_queue = Queue(concurrency)
 
-    coro1 = _pipe(
+    coro1 = _pipe(  # pyre-ignore: [1001]
         input_queue,
         _wrap,
         inter_queue,
@@ -166,21 +173,22 @@ async def _ordered_pipe(
         hooks=[],
     )
 
-    async def _unwrap(task: asyncio.Task[U]) -> U:
-        return await task
-
-    coro2 = _pipe(
+    coro2 = _pipe(  # pyre-ignore: [1001]
         inter_queue,
         _unwrap,
-        output_queue,  # pyre-ignore: [6]
+        output_queue,
         1,
         name,
         hooks=[],
     )
 
-    async with _stage_hooks(hooks), _put_eof_when_done(output_queue):
+    @_stage_hooks(hooks)
+    @_put_eof_when_done(output_queue)
+    async def ordered_pipe():
         tasks = {create_task(coro1), create_task(coro2)}
         await asyncio.wait(tasks)
+
+    return ordered_pipe()
 
 
 ################################################################################
@@ -188,12 +196,13 @@ async def _ordered_pipe(
 ################################################################################
 
 
-async def _enqueue(
+def _enqueue(
     iterator: Iterator[T],
     queue: Queue[T],
     max_items: int | None = None,
-) -> None:
-    async with _put_eof_when_done(queue, put_on_error=True):
+) -> Coroutine:
+    @_put_eof_when_done(queue, put_on_error=True)
+    async def enqueue():
         num_items = 0
         for item in iterator:
             if item is not _SKIP:
@@ -202,9 +211,11 @@ async def _enqueue(
                 if max_items is not None and num_items >= max_items:
                     return
 
+    return enqueue()
+
 
 ################################################################################
-# _enqueue
+# _dequeue
 ################################################################################
 
 
