@@ -137,38 +137,44 @@ class PipelineHook(ABC):
         yield
 
 
-@asynccontextmanager
-async def _stage_hooks(hooks: Sequence[PipelineHook]):
-    async with AsyncExitStack() as stack:
-        for h in hooks:
-            stage_hook = h.stage_hook()
-            if not hasattr(stage_hook, "__aenter__") or not hasattr(
-                stage_hook, "__aexit__"
-            ):
-                raise ValueError(
-                    "`stage_hook()` must return an object that has `__aenter__` and"
-                    " `__aexit__` method. "
-                    "Make sure that `stage_hook()` is decorated with `asynccontextmanager`."
-                )
-            await stack.enter_async_context(stage_hook)
-        yield
+def _stage_hooks(hooks: Sequence[PipelineHook]):
+    hs = [hook.stage_hook() for hook in hooks]
+
+    if not all(hasattr(h, "__aenter__") and hasattr(h, "__aexit__") for h in hs):
+        raise ValueError(
+            "`stage_hook()` must return an object that has `__aenter__` and"
+            " `__aexit__` method. "
+            "Make sure that `stage_hook()` is decorated with `asynccontextmanager`."
+        )
+
+    @asynccontextmanager
+    async def stage_hooks():
+        async with AsyncExitStack() as stack:
+            for h in hs:
+                await stack.enter_async_context(h)
+            yield
+
+    return stage_hooks()
 
 
-@asynccontextmanager
-async def _task_hooks(hooks: Sequence[PipelineHook]):
-    async with AsyncExitStack() as stack:
-        for h in hooks:
-            task_hook = h.task_hook()
-            if not hasattr(task_hook, "__aenter__") or not hasattr(
-                task_hook, "__aexit__"
-            ):
-                raise ValueError(
-                    "`task_hook()` must return an object that has `__aenter__` and"
-                    " `__aexit__` method. "
-                    "Make sure that `task_hook()` is decorated with `asynccontextmanager`."
-                )
-            await stack.enter_async_context(task_hook)
-        yield
+def _task_hooks(hooks: Sequence[PipelineHook]):
+    hs = [hook.task_hook() for hook in hooks]
+
+    if not all(hasattr(h, "__aenter__") or hasattr(h, "__aexit__") for h in hs):
+        raise ValueError(
+            "`task_hook()` must return an object that has `__aenter__` and"
+            " `__aexit__` method. "
+            "Make sure that `task_hook()` is decorated with `asynccontextmanager`."
+        )
+
+    @asynccontextmanager
+    async def task_hooks():
+        async with AsyncExitStack() as stack:
+            for h in hs:
+                await stack.enter_async_context(h)
+            yield
+
+    return task_hooks()
 
 
 async def _periodic_dispatch(afun, interval):
