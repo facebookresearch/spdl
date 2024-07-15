@@ -516,7 +516,7 @@ class AsyncPipeline:
             raise ValueError("No output queue is set.")
         return self._queues[-1]
 
-    def add_source(self, source: Iterator[T]) -> "AsyncPipeline":
+    def add_source(self, source: Iterator[T], **kwargs) -> "AsyncPipeline":
         """Attach an iterator to the source buffer.
 
         .. code-block::
@@ -540,6 +540,8 @@ class AsyncPipeline:
                    event loop. If the iterator performs a an operation that blocks,
                    the entire pipeline will be blocked.
         """
+        if "buffer_size" in kwargs:
+            self._source_buffer_size = kwargs["buffer_size"]
         self._builder.add_source(iter(source), buffer_size=self._source_buffer_size)
         return self
 
