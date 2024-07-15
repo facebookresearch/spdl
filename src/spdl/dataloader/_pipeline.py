@@ -305,6 +305,9 @@ class PipelineBuilder:
         if self._source is not None:
             raise ValueError("Source already set.")
         self._source = source
+
+        # Note: Do not document this option.
+        # See `pipe` method for detail.
         if "buffer_size" in kwargs:
             self._source_buffer_size = int(kwargs["buffer_size"])
         return self
@@ -343,6 +346,23 @@ class PipelineBuilder:
                     "hooks": hooks,
                     "report_stats_interval": report_stats_interval,
                 },
+                # Note:
+                # `buffer_size` option is an intentionally not documented.
+                #
+                # The pipeline practically buffers `concurrency + buffer_size`
+                # items, which leads to confusing behavior when writing tests.
+                #
+                # And it does not affect throughput, however, showing it as
+                # `buffer_size=1` often make users think that this needs to be
+                # increased to improve the performance.
+                #
+                # We hide the argument under `kwargs` to keep it undocumented,
+                # while allowing users to adjust if it's absolutely necessary.
+                #
+                # So please keep it undocumented. Thanks.
+                #
+                # Oh, but if you ever find the case that this does affect the
+                # performance, let us know.
                 kwargs.get("buffer_size", 1),
             )
         )
@@ -545,9 +565,7 @@ class AsyncPipeline:
            loop.run_until_complete(pipeline.run())
     """
 
-    def __init__(self, **kwargs):
-        # TODO: move to add_source
-        self._source_buffer_size = kwargs.get("buffer_size", 1)
+    def __init__(self):
         self._builder = PipelineBuilder()
 
         self._queues: list[Queue] = []
@@ -590,9 +608,7 @@ class AsyncPipeline:
                    event loop. If the iterator performs a an operation that blocks,
                    the entire pipeline will be blocked.
         """
-        if "buffer_size" in kwargs:
-            self._source_buffer_size = kwargs["buffer_size"]
-        self._builder.add_source(iter(source), buffer_size=self._source_buffer_size)
+        self._builder.add_source(iter(source), **kwargs)
         return self
 
     def pipe(
