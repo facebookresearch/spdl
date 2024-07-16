@@ -1,10 +1,13 @@
 # pyre-unsafe
 
 import asyncio
+import concurrent.futures
 import logging
 import sys
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+
+from threading import Thread
 
 __all__ = [
     "create_task",
@@ -64,3 +67,77 @@ def create_task(coro, name=None) -> asyncio.Task:
     task = asyncio.create_task(coro, name=name)
     task.add_done_callback(lambda t: _log_exception(t, stacklevel=3))
     return task
+
+
+##############################################################################
+# The utilities for running loop in a thread and stopping it from another thread
+##############################################################################
+
+
+class _EventLoopThread(Thread):
+    def __init__(self, loop):
+        super().__init__()
+        self.loop = loop
+
+    def run(self):
+        self.loop.run_forever()
+
+
+def _run_coro(loop, coro, timeout=None):
+    try:
+        return asyncio.run_coroutine_threadsafe(coro, loop).result(timeout)
+    except concurrent.futures.TimeoutError:
+        raise TimeoutError("Failed to execute coroutine") from None
+
+
+# Note:
+#
+# The following code are based off of
+# https://github.com/python/cpython/blob/3.10/Lib/asyncio/runners.py
+
+
+async def _cancel(tasks):
+    for task in tasks:
+        task.cancel()
+
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    loop = asyncio.get_running_loop()
+    for task in tasks:
+        if task.cancelled():
+            continue
+
+        if (err := task.exception()) is not None:
+            loop.call_exception_handler(
+                {
+                    "message": "unhandled exception during asyncio.run() shutdown",
+                    "exception": err,
+                    "task": task,
+                }
+            )
+
+
+def _cancel_all_tasks(loop):
+    # Note: `asyncio.all_tasks` must be called outside of loop.
+    # otherwise it includes the currently running coroutine.
+    tasks = asyncio.all_tasks(loop)
+    if not tasks:
+        return
+
+    _LG.debug("Cancelling %d tasks to cancel.", len(tasks))
+    _run_coro(loop, _cancel(tasks))
+
+
+def _stop_loop(loop):
+    try:
+        _cancel_all_tasks(loop)
+        _LG.debug("Shutting down asyncgens")
+        _run_coro(loop, loop.shutdown_asyncgens())
+        _LG.debug("Shutting executors")
+        _run_coro(loop, loop.shutdown_default_executor())
+    finally:
+        _LG.debug("stopping loop")
+        loop.call_soon_threadsafe(loop.stop)
+
+
+##############################################################################
