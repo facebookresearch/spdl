@@ -74,15 +74,16 @@ def test_async_enqueue_skip():
 
 
 def test_async_enqueue_iterator_failure():
-    """When `iterator` fails, the exception is not propagated."""
+    """When `iterator` fails, the exception is propagated."""
 
     def src():
-        yield 0
+        yield from range(10)
         raise RuntimeError("Failing the iterator.")
 
     coro = _enqueue(src(), asyncio.Queue())
 
-    asyncio.run(coro)  # Not raising
+    with pytest.raises(RuntimeError):
+        asyncio.run(coro)  # Not raising
 
 
 def test_async_enqueue_cancel():
@@ -235,7 +236,7 @@ def test_async_pipe_wrong_task_signature():
         assert remaining == ref[1:]
 
         result = _flush_aqueue(output_queue)
-        assert result == []
+        assert result == [_EOF]
 
     asyncio.run(test())
 
@@ -482,7 +483,8 @@ def test_async_pipeline_source_failure():
     )
 
     async def _test():
-        await pipeline.run()
+        with pytest.raises(PipelineFailure):
+            await pipeline.run()
 
         results = _flush_aqueue(pipeline.output_queue)
 
