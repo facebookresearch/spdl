@@ -7,7 +7,14 @@ import pytest
 
 from spdl.dataloader import AsyncPipeline, PipelineFailure, PipelineHook, TaskStatsHook
 from spdl.dataloader._hook import _periodic_dispatch
-from spdl.dataloader._pipeline import _dequeue, _enqueue, _EOF, _pipe, _SKIP
+from spdl.dataloader._pipeline import (
+    _dequeue,
+    _enqueue,
+    _EOF,
+    _pipe,
+    _SKIP,
+    PipelineBuilder,
+)
 
 
 def _put_aqueue(queue, vals, *, eof):
@@ -1059,3 +1066,20 @@ def test_async_pipeline_order_input():
         assert results == src
 
     asyncio.run(_test())
+
+
+################################################################################
+# AsyncPipeline2
+################################################################################
+
+
+def test_async_pipeline2_simple():
+    """AsyncPipeline2 can run a simple operation."""
+
+    apl = (
+        PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1000).build()
+    )
+    with apl.auto_stop():
+        for i in range(10):
+            print("fetching", i)
+            assert i == apl.get(timeout=1)
