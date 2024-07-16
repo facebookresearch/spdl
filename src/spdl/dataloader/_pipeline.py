@@ -1,18 +1,17 @@
 # pyre-unsafe
 
 import asyncio
-import concurrent.futures
 import inspect
 import logging
 import warnings
 from asyncio import AbstractEventLoop as EventLoop, Event as AsyncEvent, Queue
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager, contextmanager
-from threading import Thread
 from typing import Generic, TypeVar
 
+from . import _utils
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
-from ._utils import _get_loop, create_task
+from ._utils import create_task
 
 __all__ = ["AsyncPipeline", "PipelineFailure", "PipelineBuilder"]
 
@@ -276,43 +275,28 @@ async def _dequeue(
 ################################################################################
 
 
-def _run_coro_with_cancel(loop, coro, cancelled: AsyncEvent, name: str):
-    async def _run():
-        task = create_task(coro, name=name)
+async def _run_coro_with_cancel(loop, coro, cancelled: AsyncEvent, name: str):
+    task = create_task(coro, name=name)
 
-        while True:
-            # Note:
-            # There is nothing need to be done when pipeline execution
-            # changes its state (successful completion / failure).
-            # However, if a cancellation is requested, we want to react
-            # and cancel the pipeline a.s.a.p.
-            # For this reason, we wait on cancellation event, rather than
-            # waiting on the pipeline execution.
-            try:
-                await asyncio.wait_for(cancelled.wait(), timeout=0.1)
-            except TimeoutError:
-                if task.done():
-                    return
-            else:
-                task.cancel()
-                await task
-                return
+    while True:
+        # Note:
+        # There is nothing need to be done when pipeline execution
+        # changes its state (successful completion / failure).
+        # However, if a cancellation is requested, we want to react
+        # and cancel the pipeline a.s.a.p.
+        # For this reason, we wait on cancellation event, rather than
+        # waiting on the pipeline execution.
+        try:
+            await asyncio.wait_for(cancelled.wait(), timeout=0.1)
+        except TimeoutError:
+            pass
+        else:
+            task.cancel()
+            await task
+            return
 
-    loop.run_until_complete(_run())
-
-
-def _run_coro(loop, timeout, coro):
-    future = asyncio.run_coroutine_threadsafe(coro, loop)
-    # TODO: [Python 3.11]
-    # remove try ~ except. concurrent.futures.TimeoutError is  alias for TimeoutError
-    try:
-        return future.result(timeout=timeout)
-    except concurrent.futures.TimeoutError:
-        raise TimeoutError()
-
-
-def _run_func(loop, timeout, func, /, *args, **kwargs):
-    return _run_coro(loop, timeout, asyncio.to_thread(func, *args, **kwargs))
+        if task.done():
+            return
 
 
 class AsyncPipelineImpl(Generic[T]):
@@ -337,10 +321,7 @@ class AsyncPipelineImpl(Generic[T]):
         self._output_queue = queues[-1]
 
         self._cancelled = AsyncEvent()
-        self._thread = Thread(
-            target=_run_coro_with_cancel,
-            args=[loop, coro, self._cancelled, "AsyncPipeline::run"],
-        )
+        self._thread = _utils._EventLoopThread(loop)
 
     def __str__(self) -> str:
         return self._str
@@ -350,6 +331,13 @@ class AsyncPipelineImpl(Generic[T]):
         if not self._thread.is_alive():
             _LG.info("Starting the pipeline thread.")
             self._thread.start()
+
+            asyncio.run_coroutine_threadsafe(
+                _run_coro_with_cancel(
+                    self._loop, self._coro, self._cancelled, name="AsyncPipeline::main"
+                ),
+                loop=self._loop,
+            )
 
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
@@ -362,10 +350,11 @@ class AsyncPipelineImpl(Generic[T]):
             return
 
         _LG.info("Stopping the pipeline thread.")
-        _run_func(self._loop, timeout, self._cancelled.set)
+        _utils._stop_loop(self._loop)
         self._thread.join(timeout=timeout)
         if self._thread.is_alive():
             raise TimeoutError(f"Thread did not join after {timeout} seconds.")
+        self._loop.close()
         _LG.info("The pipeline thread is stopped.")
 
     @contextmanager
@@ -399,7 +388,9 @@ class AsyncPipelineImpl(Generic[T]):
               ``EOFError`` is raised.
         """
         if self._thread.is_alive():
-            return _run_coro(self._loop, timeout, self._output_queue.get())
+            return _utils._run_coro(
+                self._loop, self._output_queue.get(), timeout=timeout
+            )
         try:
             return self._output_queue.get_nowait()
         except asyncio.QueueEmpty:
@@ -706,7 +697,7 @@ class PipelineBuilder:
         """Build the pipeline."""
         queues = []
         coros = self._build(None, queues)
-        loop = _get_loop(num_threads)
+        loop = _utils._get_loop(num_threads)
 
         return AsyncPipelineImpl(queues, coros, loop, desc=self._get_desc())
 
