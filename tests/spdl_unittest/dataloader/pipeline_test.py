@@ -1081,17 +1081,99 @@ def test_async_pipeline2_simple():
     apl = (
         PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1000).build()
     )
+    with pytest.raises(EOFError):
+        apl.get(timeout=1)
+
     with apl.auto_stop():
         for i in range(10):
             print("fetching", i)
             assert i == apl.get(timeout=1)
 
+        with pytest.raises(TimeoutError):
+            apl.get(timeout=1)
 
-def test_async_pipeline2_cancel():
+    with pytest.raises(EOFError):
+        apl.get(timeout=1)
+
+
+def test_async_pipeline2_cancel_empty():
     """AsyncPipeline2 can be cancelled while it's blocked on the pipeline."""
 
     apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
+    # The nuffer and coroutinues will be blocked holding items as follows:
+    #
+    # [src] --|queue(1)|--> [passthrough] --|queue(1)|--> [sink] -->|queue(1)|
+    #   i+5        i+4           i+3            i+2         i+1        i
+    #
+
     with apl.auto_stop():
         for i in range(5):
             print("fetching", i)
             assert i == apl.get(timeout=1)
+
+        # Ensure that buffers are filled and the pipeline is blocked.
+        time.sleep(0.1)
+        # At this point, the output queue holds 5.
+
+    # Only the "5" is retrievable.
+    assert 5 == apl.get(timeout=1)
+
+    # The background thread is stopped, so no more data is coming.
+    for _ in range(3):
+        with pytest.raises(EOFError):
+            apl.get(timeout=1)
+
+
+def test_async_pipeline2_fail_middle():
+    """When a stage in the middle fails, downstream stages are not failing."""
+
+    # Note
+    # The pipeline function must be usually async-func.
+    # This is a huck to make the pipeline forcefully fail.
+    #
+    # The treatment of sync-function passed to pipe()
+    # is not well defined.
+    # If in future, we need to reject sync function, then this
+    # test needs revision.
+    def fail_after3(i):
+        if i >= 3:
+            raise RuntimeError("Failing")
+        return passthrough(i)
+
+    class PassthroughWithCache:
+        def __init__(self):
+            self.cache = []
+
+        async def __call__(self, i):
+            self.cache.append(i)
+            return i
+
+    pwc = PassthroughWithCache()
+
+    apl = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(passthrough)
+        .pipe(fail_after3)
+        .pipe(pwc)
+        .add_sink(1)
+        .build()
+    )
+
+    with pytest.raises(EOFError):
+        apl.get(timeout=1)
+
+    with apl.auto_stop():
+        for i in range(3):
+            assert i == apl.get(timeout=1)
+
+        # Now the pipeline should be dead.
+        with pytest.raises(TimeoutError):
+            apl.get(timeout=1)
+
+    assert pwc.cache == list(range(3))
+
+    # The background thread is stopped, and the output queue is empty.
+    for _ in range(3):
+        with pytest.raises(EOFError):
+            apl.get(timeout=1)
