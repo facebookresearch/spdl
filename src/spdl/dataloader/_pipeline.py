@@ -1,7 +1,10 @@
 # pyre-unsafe
 
 import asyncio
+import concurrent.futures
+import inspect
 import logging
+import warnings
 from asyncio import AbstractEventLoop as EventLoop, Event as AsyncEvent, Queue
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager, contextmanager
@@ -96,6 +99,9 @@ def _pipe(
 
     if concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
+
+    if inspect.iscoroutinefunction(afunc):
+        warnings.warn(f"`pipe` expects async function, but {afunc=} is not coroutine.")
 
     hooks = (
         [TaskStatsHook(name, concurrency, interval=report_stats_interval)]
@@ -327,11 +333,17 @@ class AsyncPipeline2:
     def __str__(self) -> str:
         return self._str
 
-    def _run_coro(self, coro):
-        return asyncio.run_coroutine_threadsafe(coro, self._loop)
+    def _run_coro(self, timeout, coro):
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        # TODO: [Python 3.11]
+        # remove try ~ except. concurrent.futures.TimeoutError is  alias for TimeoutError
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            raise TimeoutError()
 
-    def _run_func(self, func, /, *args, **kwargs):
-        return self._run_coro(asyncio.to_thread(func, *args, **kwargs))
+    def _run_func(self, timeout, func, /, *args, **kwargs):
+        return self._run_coro(timeout, asyncio.to_thread(func, *args, **kwargs))
 
     def start(self):
         """Start the pipeline in background thread."""
@@ -341,11 +353,15 @@ class AsyncPipeline2:
 
     def stop(self, timeout=None):
         """Stop the pipeline."""
+        if not self._thread.is_alive():
+            return
+
+        _LG.info("Stopping the pipeline thread.")
+        self._run_func(timeout, self._cancelled.set)
+        self._thread.join(timeout=timeout)
         if self._thread.is_alive():
-            _LG.info("Stopping the pipeline thread.")
-            self._run_func(self._cancelled.set).result(timeout=timeout)
-            self._thread.join(timeout=timeout)
-            _LG.info("The pipeline thread is stopped.")
+            raise TimeoutError(f"Thread did not join after {timeout} seconds.")
+        _LG.info("The pipeline thread is stopped.")
 
     @contextmanager
     def auto_stop(self, timeout=None):
@@ -357,8 +373,19 @@ class AsyncPipeline2:
             self.stop(timeout=timeout)
 
     def get(self, timeout=None):
-        """Get the next item"""
-        return self._run_coro(self._output_queue.get()).result(timeout=timeout)
+        """Get the next item.
+
+        If pipeline is not producing the next item within the given timeout,
+        then ``TimeoutError`` is raised.
+        If the background thread is not running and the queue is empty, then
+        ``EOFError`` is raised.
+        """
+        if self._thread.is_alive():
+            return self._run_coro(timeout, self._output_queue.get())
+        try:
+            return self._output_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            raise EOFError("Reached the end of the pipeline.")
 
 
 # TODO [Python 3.11]: Migrate to ExceptionGroup
