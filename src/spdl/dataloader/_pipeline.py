@@ -342,9 +342,10 @@ class PipelineFailure(Exception):
 
 
 async def _run_coroutines(coros) -> None:
-    tasks = {create_task(coro, name=name) for name, coro in coros}
+    tasks = [create_task(coro, name=name) for name, coro in coros]
+    pending = set(tasks)
 
-    while tasks:
+    while pending:
         # Note:
         # `asyncio.wait` does not automatically propagate the cancellation to its children.
         # For graceful shutdown, we manually cancel the child tasks.
@@ -354,11 +355,13 @@ async def _run_coroutines(coros) -> None:
         # demonstrate the behavior.
         # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
         try:
-            done, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+            done, pending = await asyncio.wait(
+                pending, return_when=asyncio.FIRST_EXCEPTION
+            )
         except asyncio.CancelledError:
-            for task in tasks:
+            for task in pending:
                 task.cancel()
-            await asyncio.wait(tasks)
+            await asyncio.wait(pending)
             raise
 
         # 1. check what kind of errors occured
@@ -375,11 +378,11 @@ async def _run_coroutines(coros) -> None:
 
         # 2. if a failure presents, cancel the remaining tasks
         if errs:
-            if tasks:
-                for task in tasks:
+            if pending:
+                for task in pending:
                     task.cancel()
 
-                done, _ = await asyncio.wait(tasks)
+                done, _ = await asyncio.wait(pending)
 
                 for task in done:
                     try:
