@@ -1083,3 +1083,13 @@ def test_async_pipeline2_simple():
         for i in range(10):
             print("fetching", i)
             assert i == apl.get(timeout=1)
+
+
+def test_async_pipeline2_cancel():
+    """AsyncPipeline2 can be cancelled while it's blocked on the pipeline."""
+
+    apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
+    with apl.auto_stop():
+        for i in range(5):
+            print("fetching", i)
+            assert i == apl.get(timeout=1)
