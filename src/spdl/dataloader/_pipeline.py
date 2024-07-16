@@ -275,7 +275,7 @@ async def _dequeue(
 ################################################################################
 
 
-async def _run_coro_with_cancel(loop, coro, cancelled: AsyncEvent, name: str):
+async def _run_coro_with_cancel(loop, coro, stop_requested: AsyncEvent, name: str):
     task = create_task(coro, name=name)
 
     while True:
@@ -287,7 +287,7 @@ async def _run_coro_with_cancel(loop, coro, cancelled: AsyncEvent, name: str):
         # For this reason, we wait on cancellation event, rather than
         # waiting on the pipeline execution.
         try:
-            await asyncio.wait_for(cancelled.wait(), timeout=0.1)
+            await asyncio.wait_for(stop_requested.wait(), timeout=0.1)
         except TimeoutError:
             pass
         else:
@@ -320,7 +320,7 @@ class AsyncPipelineImpl(Generic[T]):
 
         self._output_queue = queues[-1]
 
-        self._cancelled = AsyncEvent()
+        self._stop_requested = AsyncEvent()
         self._thread = _utils._EventLoopThread(loop)
 
     def __str__(self) -> str:
@@ -334,7 +334,10 @@ class AsyncPipelineImpl(Generic[T]):
 
             asyncio.run_coroutine_threadsafe(
                 _run_coro_with_cancel(
-                    self._loop, self._coro, self._cancelled, name="AsyncPipeline::main"
+                    self._loop,
+                    self._coro,
+                    self._stop_requested,
+                    name="AsyncPipeline::main",
                 ),
                 loop=self._loop,
             )
@@ -350,6 +353,7 @@ class AsyncPipelineImpl(Generic[T]):
             return
 
         _LG.info("Stopping the pipeline thread.")
+        self._stop_requested.set()
         _utils._stop_loop(self._loop)
         self._thread.join(timeout=timeout)
         if self._thread.is_alive():
@@ -388,7 +392,7 @@ class AsyncPipelineImpl(Generic[T]):
               ``EOFError`` is raised.
         """
         if self._thread.is_alive():
-            return _utils._run_coro(
+            return _utils._run_coro_threadsafe(
                 self._loop, self._output_queue.get(), timeout=timeout
             )
         try:
@@ -419,7 +423,7 @@ class AsyncPipelineIterator(Generic[T]):
         try:
             return self._pipeline.get_item(timeout=self._timeout)
         except EOFError:
-            raise StopAsyncIteration
+            raise StopIteration from None
 
 
 # TODO [Python 3.11]: Migrate to ExceptionGroup
