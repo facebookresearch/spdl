@@ -24,15 +24,53 @@ _EOF = object()  # Indicate the end of stream.
 _SKIP = object()  # Indicate that there is no data to process.
 
 
+# The following is how we intend pipeline to behave. If the implementation
+# is inconsistent with the following, it is a bug.
+#
+# 1. Successful execution.
+#
+#    Assumption: The consumer keeps consuming the data from the output queue.
+#
+#    Each stage completes without failure.
+#    The source will pass EOF, and each stage receiving EOF will shut down,
+#    then pass EOF.
+#    EOF is not propagated to the output queue.
+#
+# 2. Failures at some stage. One or more stages fail.
+#
+#    Assumption: The consumer keeps consuming the data from the output queue.
+#
+#    Resolution:
+#      We want to keep the tasks downstream to failed ones alive, so that they
+#      can finish the ongoing works.
+#
+#    Actions:
+#      - The stage must pass EOF to the next queue, so that downstream stages
+#        can exit cleanly.
+#      - Passing EOF to the next queue can be blocked if the queue is full.
+#      - For a graceful exit, the assumption must be met.
+#      - The stages upstream to the failure must be cancelled.
+#
+# 3. Cancelled: The pipeline execution is cancelled.
+#
+#    Assumption: The consumer stopped consuming the data from the output queue.
+#
+#    Actions:
+#      - All the stages must be cancelled.
+#        (If tasks are blocked on async await, cancelling should do).
+#
+# Following the above intention, each stage must pass EOF to the output queue
+# unless the task was cancelled.
+#
 @asynccontextmanager
-async def _put_eof_when_done(queue, put_on_error=False):
+async def _put_eof_when_done(queue):
     try:
         yield
+    except asyncio.TimeoutError:
+        raise
     except Exception:
-        if put_on_error:
-            await queue.put(_EOF)
-        else:
-            raise
+        await queue.put(_EOF)
+        raise
     else:
         await queue.put(_EOF)
 
@@ -199,7 +237,7 @@ def _enqueue(
     queue: Queue[T],
     max_items: int | None = None,
 ) -> Coroutine:
-    @_put_eof_when_done(queue, put_on_error=True)
+    @_put_eof_when_done(queue)
     async def enqueue():
         num_items = 0
         for item in iterator:
@@ -364,35 +402,26 @@ async def _run_coroutines(coros) -> None:
             await asyncio.wait(pending)
             raise
 
-        # 1. check what kind of errors occured
-        # Note:
-        # By the above assumption about the cancellation, the following code assumes that
-        # CancelledError does not happen for done tasks.
-        errs = {}
-        for task in done:
-            # Note:
-            # `exception()` method can throw `CancelledError` or `InvalidStateError`,
-            # both of which are assumed to not happen here.
-            if (err := task.exception()) is not None:
-                errs[task.get_name()] = err
+        if not pending:
+            break
 
-        # 2. if a failure presents, cancel the remaining tasks
-        if errs:
-            if pending:
-                for task in pending:
+        # Check if any of the task caused an error.
+        # If an error occured, we cancel the stages upstream to the failed one,
+        # then continue waiting the downstream ones.
+        for i in range(len(tasks) - 1, -1, -1):
+            task = tasks[i]
+            if task.done() and not task.cancelled() and task.exception() is not None:
+                for task in tasks[:i]:
                     task.cancel()
+                break
 
-                done, _ = await asyncio.wait(pending)
+    errs = {}
+    for task in tasks:
+        if not task.cancelled() and (err := task.exception()) is not None:
+            errs[task.get_name()] = err
 
-                for task in done:
-                    try:
-                        err = task.exception()
-                    except asyncio.CancelledError:
-                        errs[task.get_name()] = "Cancelled"
-                    else:
-                        errs[task.get_name()] = err
-
-            raise PipelineFailure(errs)
+    if errs:
+        raise PipelineFailure(errs)
 
 
 class PipelineBuilder:
