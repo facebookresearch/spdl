@@ -64,10 +64,11 @@ _SKIP = object()  # Indicate that there is no data to process.
 #
 @asynccontextmanager
 async def _put_eof_when_done(queue):
+    # Note:
+    # `asyncio.CancelledError` is a subclass of BaseException, so it won't be
+    # caught in the following, and EOF won't be passed to the output queue.
     try:
         yield
-    except asyncio.TimeoutError:
-        raise
     except Exception:
         await queue.put(_EOF)
         raise
