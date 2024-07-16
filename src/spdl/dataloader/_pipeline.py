@@ -2,18 +2,16 @@
 
 import asyncio
 import logging
-from asyncio import Queue
+from asyncio import AbstractEventLoop as EventLoop, Event as AsyncEvent, Queue
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
+from threading import Thread
 from typing import TypeVar
 
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
-from ._utils import create_task
+from ._utils import _get_loop, create_task
 
-__all__ = [
-    "AsyncPipeline",
-    "PipelineFailure",
-]
+__all__ = ["AsyncPipeline", "AsyncPipeline2", "PipelineFailure", "PipelineBuilder"]
 
 _LG = logging.getLogger(__name__)
 
@@ -233,6 +231,97 @@ async def _dequeue(
 ################################################################################
 
 
+def _run_coro_with_cancel(loop, coro, cancelled: AsyncEvent, name: str):
+    async def _run():
+        task = create_task(coro, name=name)
+
+        while True:
+            # Note:
+            # There is nothing need to be done when pipeline execution
+            # changes its state (successful completion / failure).
+            # However, if a cancellation is requested, we want to react
+            # and cancel the pipeline a.s.a.p.
+            # For this reason, we wait on cancellation event, rather than
+            # waiting on the pipeline execution.
+            try:
+                await asyncio.wait_for(cancelled.wait(), timeout=0.1)
+            except TimeoutError:
+                if task.done():
+                    return
+            else:
+                task.cancel()
+                await task
+                return
+
+    loop.run_until_complete(_run())
+
+
+class AsyncPipeline2:
+    """AsyncPipeline2()
+
+    [Experimental][WIP] An alternative implementation of :py:class:`~spdl.dataloader.AsyncPipeline`,
+    which will replace ``AsyncPipeline`` soon.
+
+    Use :py:class:`PipelineBuilder` to instantiate one.
+    """
+
+    def __init__(
+        self,
+        queues: list[Queue],
+        coro: Awaitable,
+        loop: EventLoop,
+        _str: str,
+    ):
+        self._queues = queues
+        self._coro = coro
+        self._str = _str
+        self._loop = loop
+
+        self._output_queue = queues[-1]
+
+        self._cancelled = AsyncEvent()
+        self._thread = Thread(
+            target=_run_coro_with_cancel,
+            args=[loop, coro, self._cancelled, "AsyncPipeline::run"],
+        )
+
+    def __str__(self) -> str:
+        return self._str
+
+    def _run_coro(self, coro):
+        return asyncio.run_coroutine_threadsafe(coro, self._loop)
+
+    def _run_func(self, func, /, *args, **kwargs):
+        return self._run_coro(asyncio.to_thread(func, *args, **kwargs))
+
+    def start(self):
+        """Start the pipeline in background thread."""
+        if not self._thread.is_alive():
+            _LG.info("Starting the pipeline thread.")
+            self._thread.start()
+
+    def stop(self, timeout=None):
+        """Stop the pipeline."""
+        if self._thread.is_alive():
+            _LG.info("Stopping the pipeline thread.")
+            self._run_func(self._cancelled.set).result(timeout=timeout)
+            self._thread.join(timeout=timeout)
+            _LG.info("The pipeline thread is stopped.")
+
+    @contextmanager
+    def auto_stop(self, timeout=None):
+        """Context manager to start/stop the background thread automatically."""
+        self.start()
+        try:
+            yield
+        finally:
+            self.stop(timeout=timeout)
+
+    def get(self, timeout=None):
+        """Get the next item"""
+        return self._run_coro(self._output_queue.get()).result(timeout=timeout)
+
+
 # TODO [Python 3.11]: Migrate to ExceptionGroup
 class PipelineFailure(Exception):
     """PipelineFailure()
@@ -304,6 +393,8 @@ async def _run_coroutines(coros) -> None:
 
 
 class PipelineBuilder:
+    """[Experimental] Build pipeline."""
+
     def __init__(self):
         self._source = None
         self._source_buffer_size = 1
@@ -313,6 +404,7 @@ class PipelineBuilder:
         self._sink_buffer_size = None
 
     def add_source(self, source: Iterable[T], **kwargs) -> "PipelineBuilder":
+        """See :py:meth:`spdl.dataloader.AsyncPipeline.add_source`."""
         if self._source is not None:
             raise ValueError("Source already set.")
         self._source = source
@@ -334,7 +426,7 @@ class PipelineBuilder:
         output_order: str = "completion",
         **kwargs,
     ) -> "PipelineBuilder":
-
+        """See :py:meth:`spdl.dataloader.AsyncPipeline.pipe`."""
         if output_order not in ["completion", "input"]:
             raise ValueError(
                 '`output_order` must be either "completion" or "input". '
@@ -388,6 +480,7 @@ class PipelineBuilder:
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
     ) -> "PipelineBuilder":
+        """See :py:meth:`spdl.dataloader.AsyncPipeline.aggregate`."""
         vals = [[]]
 
         async def aggregate(i):
@@ -419,6 +512,7 @@ class PipelineBuilder:
         return self
 
     def add_sink(self, buffer_size: int) -> "PipelineBuilder":
+        """See :py:meth:`spdl.dataloader.AsyncPipeline.add_sink`."""
         self._sink_buffer_size = buffer_size
         return self
 
@@ -501,6 +595,14 @@ class PipelineBuilder:
             parts.append(f"  - sink: buffer_size={self._sink_buffer_size}")
 
         return "\n".join(parts)
+
+    def build(self, num_threads: int = 4) -> AsyncPipeline2:
+        """Build the pipeline."""
+        queues = []
+        coros = self._build(None, queues)
+        loop = _get_loop(num_threads)
+
+        return AsyncPipeline2(queues, coros, loop, str(self))
 
 
 class AsyncPipeline:
@@ -697,7 +799,6 @@ class AsyncPipeline:
     ) -> "AsyncPipeline":
         """Buffer the items in the pipeline.
 
-
         Args:
             num_aggregate: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``n`` items.
@@ -712,7 +813,7 @@ class AsyncPipeline:
         )
         return self
 
-    def add_sink(self, buffer_size: int = 1) -> "AsyncPipeline":
+    def add_sink(self, buffer_size: int) -> "AsyncPipeline":
         """Attach a queue to the end of the pipeline.
 
         .. code-block::
