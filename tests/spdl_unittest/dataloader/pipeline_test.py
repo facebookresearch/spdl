@@ -1,20 +1,19 @@
 import asyncio
 import random
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 
 import pytest
 
-from spdl.dataloader import AsyncPipeline, PipelineFailure, PipelineHook, TaskStatsHook
-from spdl.dataloader._hook import _periodic_dispatch
-from spdl.dataloader._pipeline import (
-    _dequeue,
-    _enqueue,
-    _EOF,
-    _pipe,
-    _SKIP,
+from spdl.dataloader import (
+    AsyncPipeline,
     PipelineBuilder,
+    PipelineFailure,
+    PipelineHook,
+    TaskStatsHook,
 )
+from spdl.dataloader._hook import _periodic_dispatch
+from spdl.dataloader._pipeline import _dequeue, _enqueue, _EOF, _pipe, _SKIP
 
 
 def _put_aqueue(queue, vals, *, eof):
@@ -1082,18 +1081,18 @@ def test_async_pipeline2_simple():
         PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1000).build()
     )
     with pytest.raises(EOFError):
-        apl.get(timeout=1)
+        apl.get_item(timeout=1)
 
     with apl.auto_stop():
         for i in range(10):
             print("fetching", i)
-            assert i == apl.get(timeout=1)
+            assert i == apl.get_item(timeout=1)
 
         with pytest.raises(TimeoutError):
-            apl.get(timeout=1)
+            apl.get_item(timeout=1)
 
     with pytest.raises(EOFError):
-        apl.get(timeout=1)
+        apl.get_item(timeout=1)
 
 
 def test_async_pipeline2_cancel_empty():
@@ -1109,19 +1108,19 @@ def test_async_pipeline2_cancel_empty():
     with apl.auto_stop():
         for i in range(5):
             print("fetching", i)
-            assert i == apl.get(timeout=1)
+            assert i == apl.get_item(timeout=1)
 
         # Ensure that buffers are filled and the pipeline is blocked.
         time.sleep(0.1)
         # At this point, the output queue holds 5.
 
     # Only the "5" is retrievable.
-    assert 5 == apl.get(timeout=1)
+    assert 5 == apl.get_item(timeout=1)
 
     # The background thread is stopped, so no more data is coming.
     for _ in range(3):
         with pytest.raises(EOFError):
-            apl.get(timeout=1)
+            apl.get_item(timeout=1)
 
 
 def test_async_pipeline2_fail_middle():
@@ -1161,19 +1160,19 @@ def test_async_pipeline2_fail_middle():
     )
 
     with pytest.raises(EOFError):
-        apl.get(timeout=1)
+        apl.get_item(timeout=1)
 
     with apl.auto_stop():
         for i in range(3):
-            assert i == apl.get(timeout=1)
+            assert i == apl.get_item(timeout=1)
 
         # Now the pipeline should be dead.
         with pytest.raises(TimeoutError):
-            apl.get(timeout=1)
+            apl.get_item(timeout=1)
 
     assert pwc.cache == list(range(3))
 
     # The background thread is stopped, and the output queue is empty.
     for _ in range(3):
         with pytest.raises(EOFError):
-            apl.get(timeout=1)
+            apl.get_item(timeout=1)
