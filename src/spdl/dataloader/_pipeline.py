@@ -299,7 +299,7 @@ def _run_coro_with_cancel(loop, coro, queue, stop_requested: AsyncEvent, name: s
             # waiting on the pipeline execution.
             try:
                 await asyncio.wait_for(stop_requested.wait(), timeout=0.1)
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 pass
             else:
                 task.cancel()
