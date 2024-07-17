@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 import spdl.dataloader
-from spdl.dataloader._legacy_pipeline import AsyncPipeline  # pyre-ignore: [16]
+from spdl.dataloader import AsyncPipeline  # pyre-ignore: [16]
 
 
 async def adouble(i):

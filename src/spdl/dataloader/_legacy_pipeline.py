@@ -7,7 +7,7 @@ from asyncio import Queue
 from collections.abc import Awaitable, Callable, Iterator, Sequence
 from typing import TypeVar
 
-from ._builder import PipelineBuilder
+from . import _pipeline
 from ._hook import PipelineHook
 
 
@@ -99,7 +99,7 @@ class AsyncPipeline:
             stacklevel=2,
         )
 
-        self._builder = PipelineBuilder()
+        self._builder = _pipeline.PipelineBuilder()
 
         self._queues: list[Queue] = []
 
