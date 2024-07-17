@@ -14,7 +14,6 @@ from . import (  # noqa: E402
 _mods = [
     _bg_consumer,
     _bg_generator,
-    _flist,
     _hook,
     _pipeline,
     _utils,
@@ -28,7 +27,7 @@ def __dir__():
 
 
 def __getattr__(name: str):
-    for mod in _mods:
+    for mod in _mods + [_flist]:
         if name in mod.__all__:
             return getattr(mod, name)
 

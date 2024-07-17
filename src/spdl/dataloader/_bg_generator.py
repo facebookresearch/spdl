@@ -43,7 +43,9 @@ def _run_in_thread(loop: EventLoop, timeout: int | float | None):
 
 
 class BackgroundGenerator(Generic[T]):
-    """**[Experimental]** Run generator in background and iterate the items.
+    """**[Deprecated]** Use :py:class:`spdl.dataloader.PipelineBuilder`.
+
+    Run generator in background and iterate the items.
 
     Args:
         pipeline: Pipeline to run in the background.
@@ -90,6 +92,12 @@ class BackgroundGenerator(Generic[T]):
         timeout: int | float | None = 300,
         loop: EventLoop | None = None,
     ):
+        warnings.warn(
+            "`BackgroundGenerator` has been deprecated. Please use `PipelineBuilder`.",
+            category=FutureWarning,
+            stacklevel=2,
+        )
+
         self.pipeline = pipeline
         self.queue_size = queue_size
         self.loop = _get_loop(num_workers) if loop is None else loop

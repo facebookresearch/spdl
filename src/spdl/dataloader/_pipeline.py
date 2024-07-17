@@ -339,6 +339,13 @@ class AsyncPipelineImpl(Generic[T]):
         self._stop_requested = AsyncEvent()
         self._thread = _utils._EventLoopThread(loop)
 
+        try:
+            from spdl.lib import _libspdl
+
+            _libspdl.log_api_usage("spdl.dataloader.AsyncPipelineImpl")
+        except Exception:
+            pass  # ignore if not supported.
+
     def __str__(self) -> str:
         return self._str
 
@@ -521,7 +528,7 @@ async def _run_coroutines(coros) -> None:
 
 
 class PipelineBuilder:
-    """[Experimental] Build pipeline."""
+    """**[Experimental]** Build pipeline."""
 
     def __init__(self):
         self._source = None
@@ -738,7 +745,9 @@ class PipelineBuilder:
 
 
 class AsyncPipeline:
-    """**[Experimental]** Construct data processing pipeline.
+    """**[Deprecated]** Use :py:class:`spdl.dataloader.PipelineBuilder`.
+
+    Construct data processing pipeline.
 
     ``AsyncPipeline`` facilitates building data processing pipeline consists of multiple
     stages of async operations. It allows to configure the concurrency of each stage
@@ -811,6 +820,12 @@ class AsyncPipeline:
     """
 
     def __init__(self):
+        warnings.warn(
+            "`AsyncPipeline` has been deprecated. Please use `PipelineBuilder`.",
+            category=FutureWarning,
+            stacklevel=2,
+        )
+
         self._builder = PipelineBuilder()
 
         self._queues: list[Queue] = []
