@@ -1080,7 +1080,7 @@ def test_async_pipeline2_simple():
     apl = (
         PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1000).build()
     )
-    with pytest.raises(EOFError):
+    with pytest.raises(RuntimeError):
         apl.get_item(timeout=1)
 
     with apl.auto_stop():
@@ -1088,7 +1088,7 @@ def test_async_pipeline2_simple():
             print("fetching", i)
             assert i == apl.get_item(timeout=1)
 
-        with pytest.raises(TimeoutError):
+        with pytest.raises(EOFError):
             apl.get_item(timeout=1)
 
     with pytest.raises(EOFError):
@@ -1159,7 +1159,7 @@ def test_async_pipeline2_fail_middle():
         .build()
     )
 
-    with pytest.raises(EOFError):
+    with pytest.raises(RuntimeError):
         apl.get_item(timeout=1)
 
     with apl.auto_stop():
@@ -1167,7 +1167,7 @@ def test_async_pipeline2_fail_middle():
             assert i == apl.get_item(timeout=1)
 
         # Now the pipeline should be dead.
-        with pytest.raises(TimeoutError):
+        with pytest.raises(EOFError):
             apl.get_item(timeout=1)
 
     assert pwc.cache == list(range(3))
@@ -1176,3 +1176,28 @@ def test_async_pipeline2_fail_middle():
     for _ in range(3):
         with pytest.raises(EOFError):
             apl.get_item(timeout=1)
+
+
+def test_async_pipeline2_eof_stop():
+    """APL2 can be closed after eaching EOF."""
+    apl = (
+        PipelineBuilder().add_source(range(2)).pipe(passthrough).add_sink(1000).build()
+    )
+    with apl.auto_stop():
+        for i in range(2):
+            print("fetching", i)
+            assert i == apl.get_item(timeout=1)
+
+        with pytest.raises(EOFError):
+            apl.get_item(timeout=1)
+
+
+def test_async_pipeline2_iterator():
+    """Can iterate the pipeline."""
+
+    apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
+
+    with apl.auto_stop():
+        for i, item in enumerate(apl.get_iterator(timeout=1)):
+            print(i, item)
+            assert i == item

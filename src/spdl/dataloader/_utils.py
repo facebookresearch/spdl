@@ -83,11 +83,11 @@ class _EventLoopThread(Thread):
         self.loop.run_forever()
 
 
-def _run_coro_threadsafe(loop, coro, timeout=None):
+def _run_coro_threadsafe(loop, coro, name: str, timeout=None):
     try:
         return asyncio.run_coroutine_threadsafe(coro, loop).result(timeout)
     except concurrent.futures.TimeoutError:
-        raise TimeoutError("Failed to execute coroutine") from None
+        raise TimeoutError(f"Timeout occured while performing `{name}`") from None
 
 
 # Note:
@@ -125,16 +125,18 @@ def _cancel_pending_tasks(loop):
         return
 
     _LG.debug("Cancelling %d tasks to cancel.", len(tasks))
-    _run_coro_threadsafe(loop, _cancel_tasks(tasks))
+    _run_coro_threadsafe(loop, _cancel_tasks(tasks), "cancel_tasks")
 
 
 def _stop_loop(loop):
     try:
         _cancel_pending_tasks(loop)
         _LG.debug("Shutting down asyncgens")
-        _run_coro_threadsafe(loop, loop.shutdown_asyncgens())
+        _run_coro_threadsafe(loop, loop.shutdown_asyncgens(), "shutdown_asyncgens")
         _LG.debug("Shutting executors")
-        _run_coro_threadsafe(loop, loop.shutdown_default_executor())
+        _run_coro_threadsafe(
+            loop, loop.shutdown_default_executor(), "shutdown_default_executor"
+        )
     finally:
         _LG.debug("stopping loop")
         loop.call_soon_threadsafe(loop.stop)

@@ -275,28 +275,36 @@ async def _dequeue(
 ################################################################################
 
 
-async def _run_coro_with_cancel(loop, coro, stop_requested: AsyncEvent, name: str):
-    task = create_task(coro, name=name)
+def _run_coro_with_cancel(loop, coro, queue, stop_requested: AsyncEvent, name: str):
 
-    while True:
-        # Note:
-        # There is nothing need to be done when pipeline execution
-        # changes its state (successful completion / failure).
-        # However, if a cancellation is requested, we want to react
-        # and cancel the pipeline a.s.a.p.
-        # For this reason, we wait on cancellation event, rather than
-        # waiting on the pipeline execution.
-        try:
-            await asyncio.wait_for(stop_requested.wait(), timeout=0.1)
-        except TimeoutError:
-            pass
-        else:
-            task.cancel()
-            await task
-            return
+    @_put_eof_when_done(queue)
+    async def run_coro_with_cancel():
+        task = create_task(coro, name=name)
 
-        if task.done():
-            return
+        while True:
+            # Note:
+            # There is nothing need to be done when pipeline execution
+            # changes its state (successful completion / failure).
+            # However, if a cancellation is requested, we want to react
+            # and cancel the pipeline a.s.a.p.
+            # For this reason, we wait on cancellation event, rather than
+            # waiting on the pipeline execution.
+            try:
+                await asyncio.wait_for(stop_requested.wait(), timeout=0.1)
+            except TimeoutError:
+                pass
+            else:
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                return
+
+            if task.done():
+                return
+
+        # Wait for the foreground to acknowledge that EOF was received.
+        await stop_requested.wait()
+
+    return run_coro_with_cancel()
 
 
 class AsyncPipelineImpl(Generic[T]):
@@ -336,6 +344,7 @@ class AsyncPipelineImpl(Generic[T]):
                 _run_coro_with_cancel(
                     self._loop,
                     self._coro,
+                    self._output_queue,
                     self._stop_requested,
                     name="AsyncPipeline::main",
                 ),
@@ -391,14 +400,28 @@ class AsyncPipelineImpl(Generic[T]):
             - If the background thread is not running and the queue is empty, then
               ``EOFError`` is raised.
         """
-        if self._thread.is_alive():
-            return _utils._run_coro_threadsafe(
-                self._loop, self._output_queue.get(), timeout=timeout
-            )
-        try:
-            return self._output_queue.get_nowait()
-        except asyncio.QueueEmpty:
+        if self._stop_requested.is_set():
+            # The background thread has been stopped. Either cancellation or EOF acked.
+
+            # If the background thread has been stopped by user, then the queue might contain
+            # some items.
+            if not self._output_queue.empty():
+                item = self._output_queue.get_nowait()
+                if item is not _EOF:
+                    return item
+
             raise EOFError("Reached the end of the pipeline.")
+        elif not self._thread.is_alive():
+            # The background thread is not started.
+            raise RuntimeError("Pipeline is not started.")
+
+        item = _utils._run_coro_threadsafe(
+            self._loop, self._output_queue.get(), "output_queue.get()", timeout=timeout
+        )
+        if item is _EOF:
+            self._stop_requested.set()
+            raise EOFError("Reached the end of the pipeline.")
+        return item
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.
