@@ -5,6 +5,7 @@
 from . import (  # noqa: E402
     _bg_consumer,
     _bg_generator,
+    _builder,
     _flist,
     _hook,
     _pipeline,
@@ -14,6 +15,7 @@ from . import (  # noqa: E402
 _mods = [
     _bg_consumer,
     _bg_generator,
+    _builder,
     _hook,
     _pipeline,
     _utils,
