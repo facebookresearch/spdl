@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from threading import Thread
 from typing import Generic, TypeVar
 
-from ._legacy_pipeline import AsyncPipeline
+from ._pipeline import AsyncPipeline
 from ._utils import _get_loop
 
 _LG = logging.getLogger(__name__)
