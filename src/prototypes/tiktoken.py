@@ -14,7 +14,6 @@ import spdl.utils
 import tiktoken
 import torch
 from spdl.io import CUDAConfig, run_async
-from spdl.utils import iter_flist
 
 
 def _parse_args(args):
@@ -28,7 +27,7 @@ def _parse_args(args):
     parser.add_argument("--encoding", default="cl100k_base")
     parser.add_argument("--num-threads", type=int, default=4)
     parser.add_argument("--trace", type=Path)
-    parser.add_argument("--max", type=int)
+    parser.add_argument("--max", type=int, default=float("inf"))
     return parser.parse_args(args)
 
 
@@ -105,14 +104,22 @@ async def _run(file_gen, encoding, concurrency=32):
 
 
 def _test(input_flist, prefix, encoding, num_threads, max):
+    def file_gen():
+        with open(input_flist) as f:
+            i = 0
+            for line in f:
+                if line := line.strip():
+                    yield prefix + line
+                    if (i := i + 1) >= max:
+                        return
+
     encoding = tiktoken.get_encoding(encoding)
-    file_gen = iter_flist(input_flist, prefix=prefix, max=max)
 
     loop = asyncio.new_event_loop()
     loop.set_default_executor(
         concurrent.futures.ThreadPoolExecutor(max_workers=num_threads)
     )
-    loop.run_until_complete(_run(file_gen, encoding))
+    loop.run_until_complete(_run(file_gen(), encoding))
 
 
 def _main(args=None):

@@ -7,8 +7,7 @@ from pathlib import Path
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import AsyncPipeline, BackgroundGenerator
-from spdl.utils import iter_flist
+from spdl.dataloader import PipelineBuilder
 
 _LG = logging.getLogger(__name__)
 
@@ -22,6 +21,8 @@ def _parse_args(args=None):
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--queue-size", type=int, default=10)
     parser.add_argument("--max-samples", type=int, default=2000)
     parser.add_argument("--prefix", default="")
     parser.add_argument("--trace", type=Path)
@@ -31,13 +32,15 @@ def _parse_args(args=None):
 
 
 def _get_test_func(args, use_nvjpeg, width=224, height=224):
-    srcs_gen = iter_flist(
-        args.input_flist,
-        prefix=args.prefix,
-        batch_size=32,
-        max=args.max_samples,
-        drop_last=True,
-    )
+    def src():
+        with open(args.input_flist, "r") as f:
+            i = 0
+            for line in f:
+                if line := line.strip():
+                    yield args.prefix + line
+                    if (i := i + 1) >= args.max_samples:
+                        return
+
     cuda_config = spdl.io.cuda_config(
         device_index=args.device,
         allocator=(
@@ -65,9 +68,16 @@ def _get_test_func(args, use_nvjpeg, width=224, height=224):
             )
             return spdl.io.to_torch(buffer)
 
-    return (
-        AsyncPipeline().add_source(srcs_gen).pipe(_decode, concurrency=args.num_threads)
+    pipeline = (
+        PipelineBuilder()
+        .add_source(src())
+        .aggregate(args.batch_size, drop_last=True)
+        .pipe(_decode, concurrency=args.num_threads)
+        .add_sink(args.queue_size)
+        .build(num_threads=args.num_threads)
     )
+    print(pipeline)
+    return pipeline
 
 
 def _run(dataloader):
@@ -88,12 +98,14 @@ def _main():
 
     for use_nvjpeg in [True, True, False]:  # Run nvjpeg twice to warmup
         _LG.info("Testing %s.", "nvjpeg" if use_nvjpeg else "ffmpeg")
-        batch_gen = _get_test_func(args, use_nvjpeg)
+        pipeline = _get_test_func(args, use_nvjpeg)
 
-        dataloader = BackgroundGenerator(batch_gen, num_workers=args.num_threads)
         trace_path = f"{args.trace}_{'nvjpeg' if use_nvjpeg else 'ffmpeg'}.pftrace"
-        with (spdl.utils.tracing(trace_path, enable=args.trace is not None),):
-            _run(dataloader)
+        with (
+            pipeline.auto_stop(),
+            spdl.utils.tracing(trace_path, enable=args.trace is not None),
+        ):
+            _run(pipeline.get_iterator())
 
 
 def _init(debug, worker_id=None):

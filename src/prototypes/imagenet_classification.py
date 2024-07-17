@@ -11,7 +11,7 @@ import spdl.io
 import spdl.utils
 import timm
 import torch
-from spdl.dataloader import AsyncPipeline, BackgroundGenerator, iter_flist
+from spdl.dataloader import PipelineBuilder
 from spdl.dataset.imagenet import get_mappings, parse_wnid
 from torch.profiler import profile
 
@@ -26,14 +26,12 @@ def _parse_args(args):
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
-    parser.add_argument("--max-samples", type=int)
+    parser.add_argument("--max-samples", type=int, default=float("inf"))
     parser.add_argument("--prefix", default="")
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--queue-size", type=int, default=16)
     parser.add_argument("--num-threads", type=int, default=16)
-    parser.add_argument("--worker-id", type=int, default=0)
-    parser.add_argument("--num-workers", type=int, default=1)
     parser.add_argument("--no-compile", action="store_false", dest="compile")
     parser.add_argument("--no-bf16", action="store_false", dest="use_bf16")
     parser.add_argument("--use-nvdec", action="store_true")
@@ -143,15 +141,14 @@ def _run_inference(dataloader, model):
 
 
 def _get_batch_generator(args, device):
-    srcs_gen = iter_flist(
-        args.input_flist,
-        prefix=args.prefix,
-        batch_size=args.batch_size,
-        n=args.worker_id,
-        N=args.num_workers,
-        max=args.max_samples,
-        drop_last=True,
-    )
+    def src():
+        with open(args.input_flist) as f:
+            i = 0
+            for line in f:
+                if line := line.strip():
+                    yield args.prefix + line
+                    if (i := i + 1) >= args.max_samples:
+                        return
 
     class_mapping, _ = get_mappings()
 
@@ -223,7 +220,7 @@ def _get_batch_generator(args, device):
         batch = spdl.io.to_torch(buffer)
         return batch, classes
 
-    apl = AsyncPipeline().add_source(srcs_gen)
+    apl = PipelineBuilder().add_source(src()).aggregate(args.batch_size, drop_last=True)
 
     if args.use_nvdec:
         apl.pipe(_async_decode_nvdec, concurrency=7)
@@ -231,48 +228,46 @@ def _get_batch_generator(args, device):
         apl.pipe(_async_decode_nvjpeg, concurrency=args.num_threads)
     else:
         apl.pipe(_async_decode_func, concurrency=args.num_threads)
-    return apl
+    apl.add_sink(args.queue_size)
+    return apl.build(num_threads=args.num_threads)
 
 
 def _main(args=None):
     args = _parse_args(args)
-    _init(args.debug, args.worker_id)
+    _init(args.debug)
     _LG.info(args)
 
     device = torch.device("cuda:0")
     model = _get_model(args.batch_size, device, args.compile, args.use_bf16)
     pipeline = _get_batch_generator(args, device)
+    print(pipeline)
 
-    trace_path = f"{args.trace}.{args.worker_id}"
+    trace_path = f"{args.trace}"
     if args.use_nvjpeg:
         trace_path = f"{trace_path}.nvjpeg"
     if args.use_nvdec:
         trace_path = f"{trace_path}.nvdec"
-    dataloader = BackgroundGenerator(
-        pipeline, num_workers=args.num_threads, queue_size=args.queue_size
-    )
 
     with (
         torch.no_grad(),
         profile() if args.trace else contextlib.nullcontext() as prof,
         spdl.utils.tracing(f"{trace_path}.pftrace", enable=args.trace is not None),
+        pipeline.auto_stop(timeout=1),
     ):
-        _run_inference(dataloader, model)
+        _run_inference(pipeline.get_iterator(), model)
 
     if args.trace:
         prof.export_chrome_trace(f"{trace_path}.json")
 
 
-def _init(debug, worker_id):
-    _init_logging(debug, worker_id)
+def _init(debug):
+    _init_logging(debug)
 
     spdl.utils.set_ffmpeg_log_level(16)
 
 
-def _init_logging(debug=False, worker_id=None):
+def _init_logging(debug=False):
     fmt = "%(asctime)s [%(filename)s:%(lineno)d] [%(levelname)s] %(message)s"
-    if worker_id is not None:
-        fmt = f"[{worker_id}:%(thread)d] {fmt}"
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(format=fmt, level=level)
 

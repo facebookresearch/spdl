@@ -2,7 +2,6 @@
 
 # pyre-ignore-all-errors
 
-import asyncio
 import logging
 import signal
 import time
@@ -13,7 +12,7 @@ from threading import Event
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import AsyncPipeline, BackgroundGenerator, iter_flist
+from spdl.dataloader import PipelineBuilder
 
 _LG = logging.getLogger(__name__)
 
@@ -26,9 +25,8 @@ def _parse_args(args):
     )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
-    parser.add_argument("--max-samples", type=int)
+    parser.add_argument("--max-samples", type=int, default=float("inf"))
     parser.add_argument("--prefix", default="")
-    parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--queue-size", type=int, default=16)
     parser.add_argument("--num-threads", type=int, required=True)
@@ -37,7 +35,7 @@ def _parse_args(args):
     parser.add_argument("--nvdec", action="store_true")
     args = parser.parse_args(args)
     if args.trace:
-        args.max_samples = args.batch_size * 10
+        args.max_samples = 320
     return args
 
 
@@ -86,20 +84,28 @@ def _get_decode_fn(cuda_device_index, use_nvdec, width=222, height=222, pix_fmt=
     return _decode_nvdec if use_nvdec else _decode_ffmpeg
 
 
-def _get_batch_generator(args):
-    srcs_gen = iter_flist(
-        args.input_flist,
-        prefix=args.prefix,
-        n=args.worker_id,
-        N=args.num_workers,
-        max=args.max_samples,
-    )
+def _get_pipeline(args):
+    def src():
+        with open(args.input_flist, "r") as f:
+            for i, line in enumerate(f):
+                if i % args.num_workers != args.worker_id:
+                    continue
+                if line := line.strip():
+                    yield args.prefix + line
+
+                    if (i := i + 1) >= args.max_samples:
+                        return
+
     _decode_fn = _get_decode_fn(args.worker_id, args.nvdec)
-    return (
-        AsyncPipeline()
-        .add_source(srcs_gen)
-        .pipe(_decode_fn, concurrency=args.num_threads, report_stats_interval=10)
+    pipeline = (
+        PipelineBuilder()
+        .add_source(src())
+        .pipe(_decode_fn, concurrency=args.num_threads, report_stats_interval=15)
+        .add_sink(args.queue_size)
+        .build(num_threads=args.num_threads)
     )
+    print(pipeline)
+    return pipeline
 
 
 @dataclass
@@ -135,7 +141,7 @@ def _benchmark(args):
 
     _LG.info(args)
 
-    batch_gen = _get_batch_generator(args)
+    pipeline = _get_pipeline(args)
 
     device = torch.device(f"cuda:{args.worker_id}")
 
@@ -150,11 +156,11 @@ def _benchmark(args):
     torch.zeros([1, 1], device=device)
 
     trace_path = f"{args.trace}.{args.worker_id}"
-    dataloader = BackgroundGenerator(
-        batch_gen, num_workers=args.num_threads, queue_size=args.queue_size
-    )
-    with spdl.utils.tracing(trace_path, enable=args.trace is not None):
-        return _iter_dataloader(dataloader, ev)
+    with (
+        pipeline.auto_stop(),
+        spdl.utils.tracing(trace_path, enable=args.trace is not None),
+    ):
+        return _iter_dataloader(pipeline.get_iterator(), ev)
 
 
 def _init_logging(debug=False, worker_id=None):
