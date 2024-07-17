@@ -124,7 +124,7 @@ def _cancel_pending_tasks(loop):
     if not tasks:
         return
 
-    _LG.debug("Cancelling %d tasks to cancel.", len(tasks))
+    _LG.debug("Cancelling %d tasks.", len(tasks))
     _run_coro_threadsafe(loop, _cancel_tasks(tasks), "cancel_tasks")
 
 

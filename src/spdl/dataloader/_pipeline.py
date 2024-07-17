@@ -22,8 +22,16 @@ U = TypeVar("U")
 
 
 # Sentinel objects used to instruct AsyncPipeline to take special actions.
-_EOF = object()  # Indicate the end of stream.
-_SKIP = object()  # Indicate that there is no data to process.
+class _Sentinel:
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+
+_EOF = _Sentinel("EOF")  # Indicate the end of stream.
+_SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 
 
 # The following is how we intend pipeline to behave. If the implementation
@@ -406,8 +414,7 @@ class AsyncPipelineImpl(Generic[T]):
             # If the background thread has been stopped by user, then the queue might contain
             # some items.
             if not self._output_queue.empty():
-                item = self._output_queue.get_nowait()
-                if item is not _EOF:
+                if (item := self._output_queue.get_nowait()) is not _EOF:
                     return item
 
             raise EOFError("Reached the end of the pipeline.")
@@ -692,7 +699,8 @@ class PipelineBuilder:
     def _get_desc(self) -> list[str]:
         parts = []
         parts.append(f"  - src: {self._source}")
-        parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
+        if self._source_buffer_size != 1:
+            parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
 
         for type_, args, buffer_size in self._process_args:
             match type_:
