@@ -6,15 +6,14 @@ from contextlib import asynccontextmanager, contextmanager
 import pytest
 
 from spdl.dataloader import (
+    AsyncPipeline,
     PipelineBuilder,
     PipelineFailure,
     PipelineHook,
     TaskStatsHook,
 )
-from spdl.dataloader._builder import _dequeue, _enqueue, _pipe
 from spdl.dataloader._hook import _periodic_dispatch
-from spdl.dataloader._legacy_pipeline import AsyncPipeline
-from spdl.dataloader._pipeline import _EOF, _SKIP
+from spdl.dataloader._pipeline import _dequeue, _enqueue, _EOF, _pipe, _SKIP
 
 
 def _put_aqueue(queue, vals, *, eof):
