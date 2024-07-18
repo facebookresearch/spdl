@@ -4,7 +4,11 @@ import asyncio
 import inspect
 import logging
 import warnings
-from asyncio import AbstractEventLoop as EventLoop, Event as AsyncEvent, Queue
+from asyncio import (
+    AbstractEventLoop as EventLoop,
+    Event as AsyncEvent,
+    Queue as AsyncQueue,
+)
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from typing import Generic, TypeVar
@@ -14,7 +18,7 @@ from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
 from ._legacy_pipeline import AsyncPipeline
 from ._utils import create_task
 
-__all__ = ["AsyncPipeline", "PipelineFailure", "PipelineBuilder"]
+__all__ = ["AsyncPipeline", "Pipeline", "PipelineFailure", "PipelineBuilder"]
 
 _LG = logging.getLogger(__name__)
 
@@ -93,9 +97,9 @@ async def _put_eof_when_done(queue):
 
 
 def _pipe(
-    input_queue: Queue[T],
+    input_queue: AsyncQueue[T],
     afunc: Callable[[T], Awaitable[U]],
-    output_queue: Queue[U],
+    output_queue: AsyncQueue[U],
     concurrency: int = 1,
     name: str = "pipe",
     hooks: Sequence[PipelineHook] | None = None,
@@ -153,9 +157,9 @@ def _pipe(
 
 
 def _ordered_pipe(
-    input_queue: Queue[T],
+    input_queue: AsyncQueue[T],
     afunc: Callable[[T], Awaitable[U]],
-    output_queue: Queue[U],
+    output_queue: AsyncQueue[U],
     concurrency: int = 1,
     name: str = "pipe",
     hooks: Sequence[PipelineHook] | None = None,
@@ -169,7 +173,7 @@ def _ordered_pipe(
 
                   ┌─┐
                   │ │
-                  │ │ Queue: Input
+                  │ │ AsyncQueue: Input
                   │ │
                   └┬┘
                    │
@@ -178,7 +182,7 @@ def _ordered_pipe(
            └───────┬────────┘
                   ┌▼┐
                   │ │
-                  │ │ Queue: Intermediate queue:
+                  │ │ AsyncQueue: Intermediate queue:
                   │ │ contains tasks. queue size == concurrency
                   └┬┘
            ┌───────▼────────┐
@@ -186,7 +190,7 @@ def _ordered_pipe(
            └───────┬────────┘
                   ┌▼┐
                   │ │
-                  │ │ Queue: Output
+                  │ │ AsyncQueue: Output
                   │ │
                   └─┘
 
@@ -213,7 +217,7 @@ def _ordered_pipe(
     async def _unwrap(task: asyncio.Task[U]) -> U:
         return await task
 
-    inter_queue = Queue(concurrency)
+    inter_queue = AsyncQueue(concurrency)
 
     coro1 = _pipe(  # pyre-ignore: [1001]
         input_queue,
@@ -249,7 +253,7 @@ def _ordered_pipe(
 
 def _enqueue(
     iterator: Iterator[T],
-    queue: Queue[T],
+    queue: AsyncQueue[T],
     max_items: int | None = None,
 ) -> Coroutine:
     @_put_eof_when_done(queue)
@@ -266,13 +270,13 @@ def _enqueue(
 
 
 ################################################################################
-# _dequeue
+# _sink
 ################################################################################
 
 
-async def _dequeue(
-    input_queue: Queue[T],
-    output_queue: Queue[T],
+async def _sink(
+    input_queue: AsyncQueue[T],
+    output_queue: AsyncQueue[T],
 ):
     while (item := await input_queue.get()) is not _EOF:
         if item is not _SKIP:
@@ -280,15 +284,97 @@ async def _dequeue(
 
 
 ################################################################################
-# AsyncPipeline
+# Coroutine execution logics
 ################################################################################
 
 
-def _run_coro_with_cancel(loop, coro, queue, stop_requested: AsyncEvent, name: str):
+# TODO [Python 3.11]: Migrate to ExceptionGroup
+class PipelineFailure(Exception):
+    """PipelineFailure()
+    Thrown by :py:meth:`spdl.dataloader.AsyncPipeline.run`
+    when pipeline encounters an error."""
+
+    def __init__(self, errs):
+        msg = []
+        for k, v in errs.items():
+            e = str(v)
+            msg.append(f"{k}:{e if e else type(v).__name__}")
+        msg.sort()
+
+        super().__init__(self, ", ".join(msg))
+
+        # This is for unittesting.
+        self._errs = errs
+
+
+async def _run_pipeline_coroutines(
+    coros: list[tuple[str, Coroutine[None, None, None]]]
+) -> None:
+    """Run the pipeline coroutines and handle errors.
+
+    Args:
+        coros: The croutines each corresponds to a stage in pipelin.
+            IMPORTANT: The coroutinues must be in the order of src to sink.
+    """
+    tasks = [create_task(coro, name=name) for name, coro in coros]
+    pending = set(tasks)
+
+    while pending:
+        # Note:
+        # `asyncio.wait` does not automatically propagate the cancellation to its children.
+        # For graceful shutdown, we manually cancel the child tasks.
+        #
+        # Also, it seems asyncio loop throws Cancellation on most outer task.
+        # I am not sure where this behavior is documented, but here is an example script to
+        # demonstrate the behavior.
+        # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
+        try:
+            done, pending = await asyncio.wait(
+                pending, return_when=asyncio.FIRST_EXCEPTION
+            )
+        except asyncio.CancelledError:
+            for task in pending:
+                task.cancel()
+            await asyncio.wait(pending)
+            raise
+
+        if not pending:
+            break
+
+        # Check if any of the task caused an error.
+        # If an error occured, we cancel the stages upstream to the failed one,
+        # then continue waiting the downstream ones.
+        for i in range(len(tasks) - 1, -1, -1):
+            task = tasks[i]
+            if task.done() and not task.cancelled() and task.exception() is not None:
+                for task in tasks[:i]:
+                    task.cancel()
+                break
+
+    errs = {}
+    for task in tasks:
+        if not task.cancelled() and (err := task.exception()) is not None:
+            errs[task.get_name()] = err
+
+    if errs:
+        raise PipelineFailure(errs)
+
+
+def _run_coro_with_cancel(
+    coro: Coroutine[None, None, None], queue: AsyncQueue, stop_requested: AsyncEvent
+) -> Coroutine[None, None, None]:
+    """Execute pipeline coroutine while waiting on stop request.
+
+    Since pipeline coroutine is expected to be executed in background thread,
+    we need to add a way to cancel it.
+
+    So we add a stop_requested event, which is set from foreground thread when
+    the pipeline should be stopped before its completion.
+    """
 
     @_put_eof_when_done(queue)
     async def run_coro_with_cancel():
-        task = create_task(coro, name=name)
+        task = create_task(coro, name="AsyncPipeline::main")
 
         while True:
             # Note:
@@ -316,17 +402,94 @@ def _run_coro_with_cancel(loop, coro, queue, stop_requested: AsyncEvent, name: s
     return run_coro_with_cancel()
 
 
-class Pipeline(Generic[T]):
-    """class Pipeline()
+################################################################################
+# Pipeline
+################################################################################
 
-    Use :py:class:`PipelineBuilder` to instantiate one.
+
+class Pipeline(Generic[T]):
+    """Pipeline()
+
+    Data processing pipeline. Use :py:class:`PipelineBuilder` to instantiate.
+
+    ``Pipeline`` and ``PipelineBuilder`` facilitate building data processing pipeline
+    consists of multiple stages of async operations.
+    It allows to configure the concurrency of each stage independently.
+
+    Typically, the source is a lightweight (synchronous) iterable that generates the
+    source location of data, such as file paths and URLs.
+    The first stage retrieves  data from the (network) storage.
+
+    The subsequent stages process the data, such as decoding images and resizing them,
+    or decoding audio and resampling them.
+
+    After the preprocessings are done, the data are buffered in a sink, which is a queue.
+
+    The pipeline is executed in a background thread, so that the main thread can perform
+    other tasks while the data are being processed.
+
+    The following diagram illustrates this.
+
+    .. mermaid::
+
+       flowchart TD
+           Source["Source (Iterator)"]
+           Queue
+           subgraph Op1["Op1 (Concurrency = 4)"]
+               op1_1(Task 1-1)
+               op1_2(Task 1-2)
+               op1_3(Task 1-3)
+               op1_4(Task 1-4)
+           end
+           subgraph Op2["Op2 (Concurrency=2)"]
+               op2_1(Task 2-1)
+               op2_2(Task 2-2)
+           end
+           Queue["Sink (Queue)"]
+
+           Source --> Op1
+           Op1 --> Op2
+           Op2 --> Queue
+
+    .. admonition:: Example: Bulk loading images
+
+        .. code-block::
+
+           import asyncio
+
+           import spdl.io
+
+           def source():
+               with open("images.txt") as f:
+                   for path in f:
+                       yield path
+
+           async def decode(path):
+               return await spdl.io.async_decode_image(path)
+
+
+           pipeline = (
+               PipelineBuilder()
+               .add_source(source())
+               .pipe(decode, concurrency=10)
+               .add_sink(3)
+               .build(num_threads=10)
+           )
+
+           pipeline.start()
+           try:
+               for item in pipeline.get_iterator():
+                   # do something with the decoded image
+                   ...
+           finally:
+               pipeline.stop()
     """
 
     def __init__(
         self,
         loop: EventLoop,
         coro: Awaitable,
-        queues: list[Queue],
+        queues: list[AsyncQueue],
         stop_requested: AsyncEvent,
         *,
         desc: list[str],
@@ -438,7 +601,7 @@ class Pipeline(Generic[T]):
         return PipelineIterator(self, timeout)
 
     def __iter__(self) -> Iterator[T]:
-        """Alias for :py:meth:`~spdl.dataloader.Pipeline.get_iterator` without an argument."""
+        """Alias for :py:meth:`~spdl.dataloader.Pipeline.get_iterator` with default arguments."""
         return self.get_iterator()
 
 
@@ -449,7 +612,7 @@ class PipelineIterator(Generic[T]):
         self._pipeline = pipeline
         self._timeout = timeout
 
-    def __iter__(self):
+    def __iter__(self) -> "PipelineIterator":
         return self
 
     def __next__(self) -> T:
@@ -459,72 +622,11 @@ class PipelineIterator(Generic[T]):
             raise StopIteration from None
 
 
-# TODO [Python 3.11]: Migrate to ExceptionGroup
-class PipelineFailure(Exception):
-    """PipelineFailure()
-    Thrown by :py:meth:`spdl.dataloader.AsyncPipeline.run`
-    when pipeline encounters an error."""
-
-    def __init__(self, errs):
-        msg = []
-        for k, v in errs.items():
-            e = str(v)
-            msg.append(f"{k}:{e if e else type(v).__name__}")
-        msg.sort()
-
-        super().__init__(self, ", ".join(msg))
-
-        # This is for unittesting.
-        self._errs = errs
-
-
-async def _run_coroutines(coros) -> None:
-    tasks = [create_task(coro, name=name) for name, coro in coros]
-    pending = set(tasks)
-
-    while pending:
-        # Note:
-        # `asyncio.wait` does not automatically propagate the cancellation to its children.
-        # For graceful shutdown, we manually cancel the child tasks.
-        #
-        # Also, it seems asyncio loop throws Cancellation on most outer task.
-        # I am not sure where this behavior is documented, but here is an example script to
-        # demonstrate the behavior.
-        # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
-        try:
-            done, pending = await asyncio.wait(
-                pending, return_when=asyncio.FIRST_EXCEPTION
-            )
-        except asyncio.CancelledError:
-            for task in pending:
-                task.cancel()
-            await asyncio.wait(pending)
-            raise
-
-        if not pending:
-            break
-
-        # Check if any of the task caused an error.
-        # If an error occured, we cancel the stages upstream to the failed one,
-        # then continue waiting the downstream ones.
-        for i in range(len(tasks) - 1, -1, -1):
-            task = tasks[i]
-            if task.done() and not task.cancelled() and task.exception() is not None:
-                for task in tasks[:i]:
-                    task.cancel()
-                break
-
-    errs = {}
-    for task in tasks:
-        if not task.cancelled() and (err := task.exception()) is not None:
-            errs[task.get_name()] = err
-
-    if errs:
-        raise PipelineFailure(errs)
-
-
 class PipelineBuilder:
-    """**[Experimental]** Build pipeline."""
+    """**[Experimental]** Build :py:class:`~spdl.dataloader.Pipeline` object.
+
+    See :py:class:`~spdl.dataloader.Pipeline` for details.
+    """
 
     def __init__(self):
         self._source = None
@@ -535,7 +637,24 @@ class PipelineBuilder:
         self._sink_buffer_size = None
 
     def add_source(self, source: Iterable[T], **kwargs) -> "PipelineBuilder":
-        """See :py:meth:`spdl.dataloader.AsyncPipeline.add_source`."""
+        """Attach an iterator to the source buffer.
+
+        .. code-block::
+
+           ┌─────────────────┐
+           │ Iterator (sync) │
+           └───────┬─────────┘
+                   ▼
+
+        Args:
+            source: A lightweight iterator that generates data.
+
+                .. warning::
+
+                   The source iterator must be lightweight as it is executed in async
+                   event loop. If the iterator performs a an operation that blocks,
+                   the entire pipeline will be blocked.
+        """
         if self._source is not None:
             raise ValueError("Source already set.")
         self._source = source
@@ -557,7 +676,38 @@ class PipelineBuilder:
         output_order: str = "completion",
         **kwargs,
     ) -> "PipelineBuilder":
-        """See :py:meth:`spdl.dataloader.AsyncPipeline.pipe`."""
+        """Apply an async function to items in the pipeline.
+
+        .. code-block::
+
+                   │
+           ┌───────▼────────┐
+           │ Async Function │
+           └───────┬────────┘
+                   ▼
+
+        Args:
+            afunc: Async function applied to the items in the queue.
+            concurrency: The maximum number of async tasks executed concurrently.
+            name: The name (prefix) to give to the task.
+            hooks: Hook objects to be attached to the stage. Hooks are intended for
+                collecting stats of the stage.
+                If ``None``, a default hook,
+                :py:class:`~spdl.dataloader.TaskStatsHook` is used.
+            report_stats_interval:
+                The interval (in seconds) to log the stats of this stage when no
+                ``hooks`` is provided. This argument is passed to
+                :py:class:`~spdl.dataloader.TaskStatsHook`.
+                This argument is effective only when ``hooks`` are not provided.
+                If ``hooks`` is provided and stats report is needed,
+                the ``hooks`` argument should
+                include one of :py:class:`~spdl.dataloader.TaskStatsHook`
+                instance with the desired interval.
+            output_order: If ``"completion"`` (default), the items are put to output queue
+                in the order their process is completed.
+                If ``"input"``, then the items are put to output queue in the order given
+                in the input queue.
+        """
         if output_order not in ["completion", "input"]:
             raise ValueError(
                 '`output_order` must be either "completion" or "input". '
@@ -611,7 +761,14 @@ class PipelineBuilder:
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
     ) -> "PipelineBuilder":
-        """See :py:meth:`spdl.dataloader.AsyncPipeline.aggregate`."""
+        """Buffer the items in the pipeline.
+
+        Args:
+            num_aggregate: The number of items to buffer.
+            drop_last: Drop the last aggregation if it has less than ``n`` items.
+            hooks: See :py:meth:`pipe`.
+            report_stats_interval: See :py:meth:`pipe`.
+        """
         vals = [[]]
 
         async def aggregate(i):
@@ -643,11 +800,29 @@ class PipelineBuilder:
         return self
 
     def add_sink(self, buffer_size: int) -> "PipelineBuilder":
-        """See :py:meth:`spdl.dataloader.AsyncPipeline.add_sink`."""
+        """Attach a buffer to the end of the pipeline.
+
+        .. code-block::
+
+            │
+           ┌▼┐
+           │ │ buffer
+           └─┘
+
+        Args:
+            buffer_size: The size of the buffer
+        """
+        if self._sink_buffer_size is not None:
+            raise ValueError("Sink is already set.")
         self._sink_buffer_size = buffer_size
         return self
 
-    def _build(self, num_items: int | None, queues: list[Queue]) -> Awaitable[None]:
+    def _build(
+        self,
+        num_items: int | None,
+        # TODO: Once we remove AsyncPipeline, construct queues internally.
+        queues: list[AsyncQueue],
+    ) -> Coroutine[None, None, None]:
         if self._source is None:
             raise ValueError("Source is not set.")
         if num_items is not None and num_items < 1:
@@ -655,11 +830,14 @@ class PipelineBuilder:
 
         construct_queues = len(queues) == 0
 
+        # Note:
+        # Make sure that coroutines are ordered from source to sink.
+        # `_run_pipeline_coroutines` expects and rely on this ordering.
         coros = []
 
         # source
         if construct_queues:
-            queues.append(Queue(self._source_buffer_size))
+            queues.append(AsyncQueue(self._source_buffer_size))
 
         coros.append(
             (
@@ -671,7 +849,7 @@ class PipelineBuilder:
         # pipes
         for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
             if construct_queues:
-                queues.append(Queue(buffer_size))
+                queues.append(AsyncQueue(buffer_size))
             in_queue, out_queue = queues[i - 1 : i + 1]
 
             match type_:
@@ -686,18 +864,19 @@ class PipelineBuilder:
 
             coros.append((f"AsyncPipeline::{i}_{args['name']}", coro))
 
+        # sink
         if self._sink_buffer_size is not None:
             if construct_queues:
-                queues.append(Queue(self._sink_buffer_size))
+                queues.append(AsyncQueue(self._sink_buffer_size))
 
             coros.append(
                 (
                     f"AsyncPipeline::{len(self._process_args) + 1}_sink",
-                    _dequeue(*queues[-2:]),
+                    _sink(*queues[-2:]),
                 )
             )
 
-        return _run_coroutines(coros)
+        return _run_pipeline_coroutines(coros)
 
     def _get_desc(self) -> list[str]:
         parts = []
@@ -732,13 +911,16 @@ class PipelineBuilder:
         return "\n".join([repr(self)] + self._get_desc())
 
     def build(self, *, num_threads: int = 4) -> Pipeline:
-        """Build the pipeline."""
+        """Build the pipeline.
+
+        Args:
+            num_threads: The number of threads in the thread pool attached to
+                async event loop.
+        """
         queues = []
         coro = self._build(None, queues)
         loop = _utils._get_loop(num_threads)
         stop_requested = AsyncEvent()
-        coro = _run_coro_with_cancel(
-            loop, coro, queues[-1], stop_requested, name="AsyncPipeline::main"
-        )
+        coro = _run_coro_with_cancel(coro, queues[-1], stop_requested)
 
         return Pipeline(loop, coro, queues, stop_requested, desc=self._get_desc())
