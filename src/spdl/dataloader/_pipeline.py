@@ -316,8 +316,8 @@ def _run_coro_with_cancel(loop, coro, queue, stop_requested: AsyncEvent, name: s
     return run_coro_with_cancel()
 
 
-class AsyncPipelineImpl(Generic[T]):
-    """class AsyncPipelineImpl()
+class Pipeline(Generic[T]):
+    """class Pipeline()
 
     Use :py:class:`PipelineBuilder` to instantiate one.
     """
@@ -343,7 +343,7 @@ class AsyncPipelineImpl(Generic[T]):
         try:
             from spdl.lib import _libspdl
 
-            _libspdl.log_api_usage("spdl.dataloader.AsyncPipelineImpl")
+            _libspdl.log_api_usage("spdl.dataloader.Pipeline")
         except Exception:
             pass  # ignore if not supported.
 
@@ -435,13 +435,17 @@ class AsyncPipelineImpl(Generic[T]):
         Args:
             timeout: Timeout for each iteration.
         """
-        return AsyncPipelineIterator(self, timeout)
+        return PipelineIterator(self, timeout)
+
+    def __iter__(self) -> Iterator[T]:
+        """Alias for :py:meth:`~spdl.dataloader.Pipeline.get_iterator` without an argument."""
+        return self.get_iterator()
 
 
-class AsyncPipelineIterator(Generic[T]):
-    """AsyncPipelineIterator()"""
+class PipelineIterator(Generic[T]):
+    """PipelineIterator()"""
 
-    def __init__(self, pipeline: AsyncPipelineImpl[T], timeout):
+    def __init__(self, pipeline: Pipeline[T], timeout):
         self._pipeline = pipeline
         self._timeout = timeout
 
@@ -727,7 +731,7 @@ class PipelineBuilder:
     def __str__(self) -> str:
         return "\n".join([repr(self)] + self._get_desc())
 
-    def build(self, *, num_threads: int = 4) -> AsyncPipelineImpl:
+    def build(self, *, num_threads: int = 4) -> Pipeline:
         """Build the pipeline."""
         queues = []
         coro = self._build(None, queues)
@@ -737,6 +741,4 @@ class PipelineBuilder:
             loop, coro, queues[-1], stop_requested, name="AsyncPipeline::main"
         )
 
-        return AsyncPipelineImpl(
-            loop, coro, queues, stop_requested, desc=self._get_desc()
-        )
+        return Pipeline(loop, coro, queues, stop_requested, desc=self._get_desc())
