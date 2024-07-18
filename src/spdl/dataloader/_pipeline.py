@@ -15,10 +15,9 @@ from typing import Generic, TypeVar
 
 from . import _utils
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
-from ._legacy_pipeline import AsyncPipeline
 from ._utils import create_task
 
-__all__ = ["AsyncPipeline", "Pipeline", "PipelineFailure", "PipelineBuilder"]
+__all__ = ["Pipeline", "PipelineFailure", "PipelineBuilder"]
 
 _LG = logging.getLogger(__name__)
 

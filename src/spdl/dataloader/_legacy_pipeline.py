@@ -16,6 +16,8 @@ U = TypeVar("U")
 
 _LG = logging.getLogger(__name__)
 
+__all__ = ["AsyncPipeline"]
+
 
 class AsyncPipeline:
     """**[Deprecated]** Use :py:class:`spdl.dataloader.Pipeline`.
