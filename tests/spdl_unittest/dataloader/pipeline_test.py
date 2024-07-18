@@ -13,7 +13,7 @@ from spdl.dataloader import (
     TaskStatsHook,
 )
 from spdl.dataloader._hook import _periodic_dispatch
-from spdl.dataloader._pipeline import _dequeue, _enqueue, _EOF, _pipe, _SKIP
+from spdl.dataloader._pipeline import _enqueue, _EOF, _pipe, _sink, _SKIP
 
 
 def _put_aqueue(queue, vals, *, eof):
@@ -35,7 +35,7 @@ async def no_op(val):
 
 
 ################################################################################
-# _async_enqueue
+# _enqueue
 ################################################################################
 
 
@@ -107,20 +107,20 @@ def test_async_enqueue_cancel():
 
 
 ################################################################################
-# _async_dequeue
+# _sink
 ################################################################################
 
 
 @pytest.mark.parametrize("empty", [False, True])
-def test_async_dequeue_simple(empty: bool):
-    """_dequeue pass the contents from input_queue to output_queue"""
+def test_async_sink_simple(empty: bool):
+    """_sink pass the contents from input_queue to output_queue"""
     input_queue = asyncio.Queue()
     output_queue = asyncio.Queue()
 
     data = [] if empty else list(range(3))
     _put_aqueue(input_queue, data, eof=True)
 
-    coro = _dequeue(input_queue, output_queue)
+    coro = _sink(input_queue, output_queue)
 
     asyncio.run(coro)
     results = _flush_aqueue(output_queue)
@@ -128,15 +128,15 @@ def test_async_dequeue_simple(empty: bool):
     assert results == data
 
 
-def test_async_dequeue_skip():
-    """_dequeue does not pass the value if it is SKIP"""
+def test_async_sink_skip():
+    """_sink does not pass the value if it is SKIP"""
     input_queue = asyncio.Queue()
     output_queue = asyncio.Queue()
 
     data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
     _put_aqueue(input_queue, data, eof=True)
 
-    coro = _dequeue(input_queue, output_queue)
+    coro = _sink(input_queue, output_queue)
 
     asyncio.run(coro)
     results = _flush_aqueue(output_queue)
@@ -144,14 +144,14 @@ def test_async_dequeue_skip():
     assert results == [0, 1, 2]
 
 
-def test_async_dequeue_cancel():
-    """_async_dequeue is cancellable."""
+def test_async_sink_cancel():
+    """_async_sink is cancellable."""
 
     async def _test():
         input_queue = asyncio.Queue()
         output_queue = asyncio.Queue()
 
-        coro = _dequeue(input_queue, output_queue)
+        coro = _sink(input_queue, output_queue)
         task = asyncio.create_task(coro)
 
         await asyncio.sleep(0.1)
@@ -165,7 +165,7 @@ def test_async_dequeue_cancel():
 
 
 ################################################################################
-# async_pipe
+# _pipe
 ################################################################################
 async def adouble(val: int):
     return 2 * val

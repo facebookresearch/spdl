@@ -18,7 +18,7 @@ _LG = logging.getLogger(__name__)
 
 
 class AsyncPipeline:
-    """**[Deprecated]** Use :py:class:`spdl.dataloader.PipelineBuilder`.
+    """**[Deprecated]** Use :py:class:`spdl.dataloader.Pipeline`.
 
     Construct data processing pipeline.
 
