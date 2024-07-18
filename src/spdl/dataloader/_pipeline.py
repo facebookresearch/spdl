@@ -410,7 +410,8 @@ def _run_coro_with_cancel(
 class Pipeline(Generic[T]):
     """Pipeline()
 
-    Data processing pipeline. Use :py:class:`PipelineBuilder` to instantiate.
+    **[Experimental]** Data processing pipeline. Use :py:class:`PipelineBuilder` to
+    instantiate.
 
     ``Pipeline`` and ``PipelineBuilder`` facilitate building data processing pipeline
     consists of multiple stages of async operations.
@@ -565,10 +566,12 @@ class Pipeline(Generic[T]):
             timeout: Timeout for each iteration.
 
         Raises:
-            - If pipeline is not producing the next item within the given timeout,
-              then ``TimeoutError`` is raised.
-            - If the background thread is not running and the queue is empty, then
-              ``EOFError`` is raised.
+            TimeoutError: When pipeline is not producing the next item within the given time.
+
+            EOFError: When the pipeline is exhausted or cancelled and items in the sink are
+                emptied.
+
+            RuntimeError: The pipeline is not started.
         """
         if self._stop_requested.is_set():
             # The background thread has been stopped. Either cancellation or EOF acked.
@@ -601,7 +604,7 @@ class Pipeline(Generic[T]):
         return PipelineIterator(self, timeout)
 
     def __iter__(self) -> Iterator[T]:
-        """Alias for :py:meth:`~spdl.dataloader.Pipeline.get_iterator` with default arguments."""
+        """Call :py:meth:`~spdl.dataloader.Pipeline.get_iterator` without arguments."""
         return self.get_iterator()
 
 
