@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-import spdl.dataloader
+from spdl.dataloader._bg_generator import BackgroundGenerator
 from spdl.dataloader._legacy_pipeline import AsyncPipeline  # pyre-ignore: [16]
 
 
@@ -21,7 +21,7 @@ def test_bgg_simple():
 
     apl = AsyncPipeline().add_source(range(10)).pipe(adouble).pipe(aplus1)
 
-    bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=None)
+    bgg = BackgroundGenerator(apl, timeout=None)
     dataloader = iter(bgg)
     for i in range(10):
         assert 2 * i + 1 == next(dataloader)
@@ -40,7 +40,7 @@ def _get_apl(n=10):
 
 def test_bgg_timeout_none():
     # Iterate all.
-    bgg = spdl.dataloader.BackgroundGenerator(
+    bgg = BackgroundGenerator(
         _get_apl(),
         timeout=None,
     )
@@ -50,7 +50,7 @@ def test_bgg_timeout_none():
 
 def test_bgg_timeout_enough():
     # Iterate all.
-    bgg = spdl.dataloader.BackgroundGenerator(
+    bgg = BackgroundGenerator(
         _get_apl(),
         timeout=1.3,
     )
@@ -61,7 +61,7 @@ def test_bgg_timeout_enough():
 def test_bgg_timeout_not_enough():
     """Timeout shut down the background generator cleanly."""
     # Iterate none.
-    bgg = spdl.dataloader.BackgroundGenerator(
+    bgg = BackgroundGenerator(
         _get_apl(),
         timeout=0.01,
     )
@@ -81,7 +81,7 @@ def test_bgg_run_partial():
 
     apl = AsyncPipeline().add_source(Generator()).pipe(adouble).pipe(aplus1)
 
-    bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=5)
+    bgg = BackgroundGenerator(apl, timeout=5)
 
     dataloader = iter(bgg.run(3))
     for i in range(3):
@@ -119,7 +119,7 @@ def test_bgg_resume_from_cancelled():
         .pipe(aplus1, buffer_size=1)
     )
 
-    bgg = spdl.dataloader.BackgroundGenerator(apl, timeout=None)
+    bgg = BackgroundGenerator(apl, timeout=None)
 
     async def _test():
         for i, item in enumerate(bgg):
