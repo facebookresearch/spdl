@@ -324,20 +324,20 @@ class AsyncPipelineImpl(Generic[T]):
 
     def __init__(
         self,
-        queues: list[Queue],
-        coro: Awaitable,
         loop: EventLoop,
+        coro: Awaitable,
+        queues: list[Queue],
+        stop_requested: AsyncEvent,
         *,
         desc: list[str],
     ):
-        self._queues = queues
-        self._coro = coro
-        self._str = "\n".join([repr(self)] + desc)
         self._loop = loop
+        self._coro = coro
+        self._queues = queues
+        self._stop_requested = stop_requested
+        self._str = "\n".join([repr(self)] + desc)
 
         self._output_queue = queues[-1]
-
-        self._stop_requested = AsyncEvent()
         self._thread = _utils._EventLoopThread(loop)
 
         try:
@@ -356,16 +356,7 @@ class AsyncPipelineImpl(Generic[T]):
             _LG.info("Starting the pipeline thread.")
             self._thread.start()
 
-            asyncio.run_coroutine_threadsafe(
-                _run_coro_with_cancel(
-                    self._loop,
-                    self._coro,
-                    self._output_queue,
-                    self._stop_requested,
-                    name="AsyncPipeline::main",
-                ),
-                loop=self._loop,
-            )
+            asyncio.run_coroutine_threadsafe(self._coro, loop=self._loop)
 
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
@@ -739,7 +730,13 @@ class PipelineBuilder:
     def build(self, *, num_threads: int = 4) -> AsyncPipelineImpl:
         """Build the pipeline."""
         queues = []
-        coros = self._build(None, queues)
+        coro = self._build(None, queues)
         loop = _utils._get_loop(num_threads)
+        stop_requested = AsyncEvent()
+        coro = _run_coro_with_cancel(
+            loop, coro, queues[-1], stop_requested, name="AsyncPipeline::main"
+        )
 
-        return AsyncPipelineImpl(queues, coros, loop, desc=self._get_desc())
+        return AsyncPipelineImpl(
+            loop, coro, queues, stop_requested, desc=self._get_desc()
+        )
