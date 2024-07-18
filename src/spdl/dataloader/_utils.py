@@ -5,9 +5,10 @@ import concurrent.futures
 import logging
 import sys
 import traceback
+from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
 
-from threading import Thread
+from threading import Event as SyncEvent, Thread
 
 __all__ = [
     "create_task",
@@ -70,76 +71,123 @@ def create_task(coro, name=None) -> asyncio.Task:
 
 
 ##############################################################################
-# The utilities for running loop in a thread and stopping it from another thread
+# _EventLoop (Thread)
 ##############################################################################
-
-
-class _EventLoopThread(Thread):
-    def __init__(self, loop):
-        super().__init__()
-        self.loop = loop
-
-    def run(self):
-        self.loop.run_forever()
-
-
-def _run_coro_threadsafe(loop, coro, name: str, timeout=None):
-    try:
-        return asyncio.run_coroutine_threadsafe(coro, loop).result(timeout)
-    except concurrent.futures.TimeoutError:
-        raise TimeoutError(f"Timeout occured while performing `{name}`") from None
 
 
 # Note:
-#
-# The following code are based off of
-# https://github.com/python/cpython/blob/3.10/Lib/asyncio/runners.py
+# This class has a bit exessive debug logs, because it is tricky to debug
+# it from the outside.
+class _EventLoop:
+    def __init__(self, coro: Coroutine[None, None, None], num_threads: int):
+        self._coro = coro
+        self._num_threads = num_threads
 
+        self._loop = None
 
-async def _cancel_tasks(tasks):
-    for task in tasks:
-        task.cancel()
+        self._task_started = SyncEvent()
+        self._task_completed = SyncEvent()
+        self._stop_requested = SyncEvent()
 
-    await asyncio.gather(*tasks, return_exceptions=True)
+        self._thread = Thread(target=self._run)
 
-    loop = asyncio.get_running_loop()
-    for task in tasks:
-        if task.cancelled():
-            continue
+    def __str__(self):
+        return str(
+            {
+                "thread_alive": self._thread.is_alive(),
+                "task_started": self._task_started.is_set(),
+                "task_completed": self._task_completed.is_set(),
+                "stop_requested": self._stop_requested.is_set(),
+            }
+        )
 
-        if (err := task.exception()) is not None:
-            loop.call_exception_handler(
-                {
-                    "message": "unhandled exception during asyncio.run() shutdown",
-                    "exception": err,
-                    "task": task,
-                }
+    def _run(self):
+
+        async def _run():
+            _LG.debug("The event loop thread coroutine is started.")
+            _LG.debug("Initializing the thread pool of size=%d.", self._num_threads)
+            self._loop = asyncio.get_running_loop()
+            self._loop.set_default_executor(
+                ThreadPoolExecutor(
+                    max_workers=self._num_threads,
+                    thread_name_prefix="spdl_",
+                )
             )
 
+            _LG.debug("Starting the task.")
 
-def _cancel_pending_tasks(loop):
-    # Note: `asyncio.all_tasks` must be called outside of loop.
-    # otherwise it includes the currently running coroutine.
-    tasks = asyncio.all_tasks(loop)
-    if not tasks:
-        return
+            # Not using custom `create_task` because we are going to catch the error here
+            # as it's a good practice. (otherwise PyTest rightfully warns)
+            # And we log the full stack.
+            task = asyncio.create_task(self._coro, name="Pipeline::main")
 
-    _LG.debug("Cancelling %d tasks.", len(tasks))
-    _run_coro_threadsafe(loop, _cancel_tasks(tasks), "cancel_tasks")
+            self._task_started.set()
 
+            try:
+                while not task.done():
+                    try:
+                        await asyncio.wait([task], timeout=0.1)
+                    except asyncio.TimeoutError:
+                        if self._stop_requested.is_set():
+                            _LG.debug(
+                                "Stop request is received, but the task is not complete. Cancelling the task."
+                            )
+                            task.cancel()
+                            await asyncio.wait([task])
+                    except Exception:
+                        _LG.exception("The pipeline completed with an error.")
+            finally:
+                self._task_completed.set()
+                _LG.debug("%s", self)
+                _LG.debug("The task is completed.")
+                if not self._stop_requested.is_set():
+                    _LG.debug(
+                        "Keep the event loop alive until the stop request is made."
+                    )
+                    while not self._stop_requested.is_set():
+                        await asyncio.sleep(0.1)
+                    _LG.debug("The background task is completed.")
+                    _LG.debug("The event loop is now shutdown.")
 
-def _stop_loop(loop):
-    try:
-        _cancel_pending_tasks(loop)
-        _LG.debug("Shutting down asyncgens")
-        _run_coro_threadsafe(loop, loop.shutdown_asyncgens(), "shutdown_asyncgens")
-        _LG.debug("Shutting executors")
-        _run_coro_threadsafe(
-            loop, loop.shutdown_default_executor(), "shutdown_default_executor"
-        )
-    finally:
-        _LG.debug("stopping loop")
-        loop.call_soon_threadsafe(loop.stop)
+        asyncio.run(_run())
 
+    def start(self, *, timeout: float | None = None) -> None:
+        """Start the thread and block until the loop is initialized."""
+        _LG.debug("Starting the event loop thread.")
+        self._thread.start()
+        _LG.debug("Waiting for the loop to be initialized.")
+        self._task_started.wait(timeout=timeout)
+        _LG.debug("The event loop thread is initialized.")
 
-##############################################################################
+    def is_started(self) -> bool:
+        """Check if the event loop thread is started."""
+        return self._task_started.is_set()
+
+    def is_task_completed(self) -> bool:
+        """Check if the task is completed."""
+        return self._task_completed.is_set()
+
+    def stop(self):
+        """Issue loop stop request and wait for the thread to join."""
+        _LG.debug("Requesting the event loop thread to stop.")
+        self._stop_requested.set()
+
+    def join(self, *, timeout: float | None = None) -> None:
+        if not self._stop_requested.is_set():
+            raise RuntimeError(
+                "The event loop thread is not stopped. Call stop() first."
+            )
+
+        _LG.debug("Waiting the event loop thread to join.")
+        self._thread.join(timeout=timeout)
+        if self._thread.is_alive():
+            raise TimeoutError(f"Thread did not join after {timeout} seconds.")
+        _LG.debug("The event loop thread joined.")
+
+    def run_coroutine_threadsafe(self, coro) -> concurrent.futures.Future:
+        """Call coroutine in the loop thread."""
+        if not self._task_started.is_set():
+            raise RuntimeError("Event loop is not started.")
+        if not self._loop.is_running():
+            raise RuntimeError("Event loop is not running.")
+        return asyncio.run_coroutine_threadsafe(coro, self._loop)

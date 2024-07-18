@@ -1,21 +1,17 @@
 # pyre-unsafe
 
 import asyncio
+import concurrent.futures
 import inspect
 import logging
 import warnings
-from asyncio import (
-    AbstractEventLoop as EventLoop,
-    Event as AsyncEvent,
-    Queue as AsyncQueue,
-)
+from asyncio import Queue as AsyncQueue
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from typing import Generic, TypeVar
 
-from . import _utils
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
-from ._utils import create_task
+from ._utils import _EventLoop, create_task
 
 __all__ = ["Pipeline", "PipelineFailure", "PipelineBuilder"]
 
@@ -288,10 +284,10 @@ async def _sink(
 
 
 # TODO [Python 3.11]: Migrate to ExceptionGroup
-class PipelineFailure(Exception):
+class PipelineFailure(RuntimeError):
     """PipelineFailure()
-    Thrown by :py:meth:`spdl.dataloader.AsyncPipeline.run`
-    when pipeline encounters an error."""
+    Thrown by :py:class:`spdl.dataloader.Pipeline` when pipeline encounters an error.
+    """
 
     def __init__(self, errs):
         msg = []
@@ -300,7 +296,7 @@ class PipelineFailure(Exception):
             msg.append(f"{k}:{e if e else type(v).__name__}")
         msg.sort()
 
-        super().__init__(self, ", ".join(msg))
+        super().__init__(", ".join(msg))
 
         # This is for unittesting.
         self._errs = errs
@@ -357,48 +353,6 @@ async def _run_pipeline_coroutines(
 
     if errs:
         raise PipelineFailure(errs)
-
-
-def _run_coro_with_cancel(
-    coro: Coroutine[None, None, None], queue: AsyncQueue, stop_requested: AsyncEvent
-) -> Coroutine[None, None, None]:
-    """Execute pipeline coroutine while waiting on stop request.
-
-    Since pipeline coroutine is expected to be executed in background thread,
-    we need to add a way to cancel it.
-
-    So we add a stop_requested event, which is set from foreground thread when
-    the pipeline should be stopped before its completion.
-    """
-
-    @_put_eof_when_done(queue)
-    async def run_coro_with_cancel():
-        task = create_task(coro, name="AsyncPipeline::main")
-
-        while True:
-            # Note:
-            # There is nothing need to be done when pipeline execution
-            # changes its state (successful completion / failure).
-            # However, if a cancellation is requested, we want to react
-            # and cancel the pipeline a.s.a.p.
-            # For this reason, we wait on cancellation event, rather than
-            # waiting on the pipeline execution.
-            try:
-                await asyncio.wait_for(stop_requested.wait(), timeout=0.1)
-            except asyncio.TimeoutError:
-                pass
-            else:
-                task.cancel()
-                await asyncio.gather(task, return_exceptions=True)
-                return
-
-            if task.done():
-                return
-
-        # Wait for the foreground to acknowledge that EOF was received.
-        await stop_requested.wait()
-
-    return run_coro_with_cancel()
 
 
 ################################################################################
@@ -487,21 +441,18 @@ class Pipeline(Generic[T]):
 
     def __init__(
         self,
-        loop: EventLoop,
-        coro: Awaitable,
+        coro: Coroutine[None, None, None],
         queues: list[AsyncQueue],
-        stop_requested: AsyncEvent,
+        num_threads: int,
         *,
         desc: list[str],
     ):
-        self._loop = loop
-        self._coro = coro
         self._queues = queues
-        self._stop_requested = stop_requested
+
         self._str = "\n".join([repr(self)] + desc)
 
         self._output_queue = queues[-1]
-        self._thread = _utils._EventLoopThread(loop)
+        self._event_loop = _EventLoop(coro, num_threads)
 
         try:
             from spdl.lib import _libspdl
@@ -513,13 +464,9 @@ class Pipeline(Generic[T]):
     def __str__(self) -> str:
         return self._str
 
-    def start(self) -> None:
+    def start(self, *, timeout: float | None = None) -> None:
         """Start the pipeline in background thread."""
-        if not self._thread.is_alive():
-            _LG.info("Starting the pipeline thread.")
-            self._thread.start()
-
-            asyncio.run_coroutine_threadsafe(self._coro, loop=self._loop)
+        self._event_loop.start(timeout=timeout)
 
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
@@ -528,17 +475,8 @@ class Pipeline(Generic[T]):
             timeout: Timeout value used when stopping the pipeline and
                 waiting for the thread to join.
         """
-        if not self._thread.is_alive():
-            return
-
-        _LG.info("Stopping the pipeline thread.")
-        self._stop_requested.set()
-        _utils._stop_loop(self._loop)
-        self._thread.join(timeout=timeout)
-        if self._thread.is_alive():
-            raise TimeoutError(f"Thread did not join after {timeout} seconds.")
-        self._loop.close()
-        _LG.info("The pipeline thread is stopped.")
+        self._event_loop.stop()
+        self._event_loop.join(timeout=timeout)
 
     @contextmanager
     def auto_stop(self, *, timeout: float | None = None):
@@ -547,7 +485,7 @@ class Pipeline(Generic[T]):
         Args:
             timeout: Timeout value used when stopping the thread.
         """
-        self.start()
+        self.start(timeout=timeout)
         try:
             yield
         finally:
@@ -572,27 +510,53 @@ class Pipeline(Generic[T]):
 
             RuntimeError: The pipeline is not started.
         """
-        if self._stop_requested.is_set():
-            # The background thread has been stopped. Either cancellation or EOF acked.
 
-            # If the background thread has been stopped by user, then the queue might contain
-            # some items.
-            if not self._output_queue.empty():
-                if (item := self._output_queue.get_nowait()) is not _EOF:
-                    return item
-
-            raise EOFError("Reached the end of the pipeline.")
-        elif not self._thread.is_alive():
-            # The background thread is not started.
+        if not self._event_loop.is_started():
             raise RuntimeError("Pipeline is not started.")
 
-        item = _utils._run_coro_threadsafe(
-            self._loop, self._output_queue.get(), "output_queue.get()", timeout=timeout
-        )
-        if item is _EOF:
-            self._stop_requested.set()
+        # The event loop (thread) was started, but it might be stopped by now.
+        # However, what matters for `get_item` method is whether the task is running or not.
+        # Because if the task is running, then accessing the sink queue must be done through
+        # async method, otherwise, sync method can be used to access sink queue regardless of
+        # the state of the loop.
+
+        if self._event_loop.is_task_completed():
+            # The pipeline is stopped.
+            # The sink queue is not accessed by background event loop anymore, so we can use
+            # sync access without being worried about thread safety.
+
+            # There are remaining items from queue if the pipeline was stopped by client code
+            # before it processes all the items.
+            if not self._output_queue.empty():
+                return self._output_queue.get_nowait()
+
+            # Now, all the items from the queue are fetched. We can stop the pipeline loop/thread.
+            self._event_loop.stop()
             raise EOFError("Reached the end of the pipeline.")
-        return item
+
+        # The task is not completed. To access the sink queue, the async method must be used.
+        # The task can complete anytime, however, the loop keeps running until we request stop
+        # after the task is completed, so we can use async method.
+        future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            # The sink queue is empty.
+            # In this condition, we cannot tell if it is due to EOF or pipeline being too slow.
+
+            # One exception is that the task is now complete and queue is still empty.
+            # This case we can switch to EOFError.
+            # I don't know how practical this is. This can happen when using get_item
+            # right after the pipeline is exhausted.
+            # We happen to have such test case, so it was added just for that.
+            # See: `test_async_pipeline2_fail_middle`.
+            if self._event_loop.is_task_completed() and self._output_queue.empty():
+                raise EOFError("Reached the end of the pipeline.") from None
+
+            _LG.debug("EventLoop: %s", str(self._event_loop))
+            raise TimeoutError(
+                f"Waited for the next item to become available for {timeout} sec."
+            ) from None
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.
@@ -921,8 +885,5 @@ class PipelineBuilder:
         """
         queues = []
         coro = self._build(None, queues)
-        loop = _utils._get_loop(num_threads)
-        stop_requested = AsyncEvent()
-        coro = _run_coro_with_cancel(coro, queues[-1], stop_requested)
 
-        return Pipeline(loop, coro, queues, stop_requested, desc=self._get_desc())
+        return Pipeline(coro, queues, num_threads, desc=self._get_desc())
