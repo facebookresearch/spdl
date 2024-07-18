@@ -1,18 +1,18 @@
 import asyncio
 import random
 import time
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 
 import pytest
 
 from spdl.dataloader import (
-    AsyncPipeline,
     PipelineBuilder,
     PipelineFailure,
     PipelineHook,
     TaskStatsHook,
 )
 from spdl.dataloader._hook import _periodic_dispatch
+from spdl.dataloader._legacy_pipeline import AsyncPipeline
 from spdl.dataloader._pipeline import _enqueue, _EOF, _pipe, _sink, _SKIP
 
 
