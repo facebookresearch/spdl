@@ -1179,7 +1179,7 @@ def test_async_pipeline2_fail_middle():
 
 
 def test_async_pipeline2_eof_stop():
-    """APL2 can be closed after eaching EOF."""
+    """APL2 can be closed after reaching EOF."""
     apl = (
         PipelineBuilder().add_source(range(2)).pipe(passthrough).add_sink(1000).build()
     )
