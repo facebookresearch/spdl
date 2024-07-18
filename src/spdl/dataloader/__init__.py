@@ -2,10 +2,9 @@
 
 # pyre-unsafe
 
-from . import _bg_consumer, _flist, _hook, _pipeline, _utils  # noqa: E402
+from . import _flist, _hook, _pipeline, _utils  # noqa: E402
 
 _mods = [
-    _bg_consumer,
     _hook,
     _pipeline,
     _utils,
