@@ -21,7 +21,7 @@ def _get_loop(num_workers: int | None) -> asyncio.AbstractEventLoop:
     loop.set_default_executor(
         ThreadPoolExecutor(
             max_workers=num_workers,
-            thread_name_prefix="SPDL_BackgroundGenerator",
+            thread_name_prefix="spdl_",
         )
     )
     return loop
