@@ -89,7 +89,7 @@ class _EventLoop:
         self._task_completed = SyncEvent()
         self._stop_requested = SyncEvent()
 
-        self._thread = Thread(target=self._run)
+        self._thread = Thread(target=lambda: asyncio.run(self._execute_task()))
 
     def __str__(self):
         return str(
@@ -101,55 +101,43 @@ class _EventLoop:
             }
         )
 
-    def _run(self):
-
-        async def _run():
-            _LG.debug("The event loop thread coroutine is started.")
-            _LG.debug("Initializing the thread pool of size=%d.", self._num_threads)
-            self._loop = asyncio.get_running_loop()
-            self._loop.set_default_executor(
-                ThreadPoolExecutor(
-                    max_workers=self._num_threads,
-                    thread_name_prefix="spdl_",
-                )
+    async def _execute_task(self) -> None:
+        _LG.debug("The event loop thread coroutine is started.")
+        _LG.debug("Initializing the thread pool of size=%d.", self._num_threads)
+        self._loop = asyncio.get_running_loop()
+        self._loop.set_default_executor(
+            ThreadPoolExecutor(
+                max_workers=self._num_threads,
+                thread_name_prefix="spdl_",
             )
+        )
 
-            _LG.debug("Starting the task.")
+        _LG.debug("Starting the task.")
 
-            # Not using custom `create_task` because we are going to catch the error here
-            # as it's a good practice. (otherwise PyTest rightfully warns)
-            # And we log the full stack.
-            task = asyncio.create_task(self._coro, name="Pipeline::main")
+        task = create_task(self._coro, name="Pipeline::main")
+        task.add_done_callback(lambda t: self._task_completed.set())
 
-            self._task_started.set()
+        self._task_started.set()
+        while not task.done():
+            await asyncio.wait([task], timeout=0.1)
 
-            try:
-                while not task.done():
-                    try:
-                        await asyncio.wait([task], timeout=0.1)
-                    except asyncio.TimeoutError:
-                        if self._stop_requested.is_set():
-                            _LG.debug(
-                                "Stop request is received, but the task is not complete. Cancelling the task."
-                            )
-                            task.cancel()
-                            await asyncio.wait([task])
-                    except Exception:
-                        _LG.exception("The pipeline completed with an error.")
-            finally:
-                self._task_completed.set()
-                _LG.debug("%s", self)
-                _LG.debug("The task is completed.")
-                if not self._stop_requested.is_set():
-                    _LG.debug(
-                        "Keep the event loop alive until the stop request is made."
-                    )
-                    while not self._stop_requested.is_set():
-                        await asyncio.sleep(0.1)
-                    _LG.debug("The background task is completed.")
-                    _LG.debug("The event loop is now shutdown.")
+            if not task.done() and self._stop_requested.is_set():
+                _LG.debug(
+                    "Stop request is received, but the task is not complete. "
+                    "Cancelling the task."
+                )
+                task.cancel()
+                await asyncio.wait([task])
 
-        asyncio.run(_run())
+        _LG.debug("The task is completed.")
+
+        _LG.debug("%s", self)
+        if not self._stop_requested.is_set():
+            _LG.debug("Keep the event loop alive until the stop request is made.")
+            while not self._stop_requested.is_set():
+                await asyncio.sleep(0.1)
+        _LG.debug("The background task is completed.")
+        _LG.debug("The event loop is now shutdown.")
 
     def start(self, *, timeout: float | None = None) -> None:
         """Start the thread and block until the loop is initialized."""
@@ -169,8 +157,9 @@ class _EventLoop:
 
     def stop(self):
         """Issue loop stop request and wait for the thread to join."""
-        _LG.debug("Requesting the event loop thread to stop.")
-        self._stop_requested.set()
+        if not self._stop_requested.is_set():
+            _LG.debug("Requesting the event loop thread to stop.")
+            self._stop_requested.set()
 
     def join(self, *, timeout: float | None = None) -> None:
         if not self._stop_requested.is_set():
@@ -178,7 +167,7 @@ class _EventLoop:
                 "The event loop thread is not stopped. Call stop() first."
             )
 
-        _LG.debug("Waiting the event loop thread to join.")
+        _LG.debug("Waiting for the event loop thread to join.")
         self._thread.join(timeout=timeout)
         if self._thread.is_alive():
             raise TimeoutError(f"Thread did not join after {timeout} seconds.")
