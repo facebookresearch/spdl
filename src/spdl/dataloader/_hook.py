@@ -217,7 +217,9 @@ class TaskStatsHook(PipelineHook):
         if self.interval is not None:
             self._int_t0 = time.monotonic()
             self._int_task = create_task(
-                _periodic_dispatch(self._log_interval_stats, self.interval)
+                _periodic_dispatch(self._log_interval_stats, self.interval),
+                name="periodic_dispatch",
+                ignore_cancelled=True,
             )
 
         t0 = time.monotonic()

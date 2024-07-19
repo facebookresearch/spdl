@@ -39,11 +39,14 @@ def _get_loop(num_workers: int | None) -> asyncio.AbstractEventLoop:
 # task was created.
 # Otherwise the log will point to the location somewhere deep in `asyncio` module
 # which is not very helpful.
-def _log_exception(task, stacklevel):
+def _log_exception(task, stacklevel, ignore_cancelled):
     try:
         task.result()
     except asyncio.exceptions.CancelledError:
-        _LG.warning("Task [%s] was cancelled.", task.get_name(), stacklevel=stacklevel)
+        if not ignore_cancelled:
+            _LG.warning(
+                "Task [%s] was cancelled.", task.get_name(), stacklevel=stacklevel
+            )
     except (TimeoutError, asyncio.exceptions.TimeoutError):
         # Timeout does not contain any message
         _LG.error("Task [%s] timeout.", task.get_name(), stacklevel=stacklevel)
@@ -63,10 +66,14 @@ def _log_exception(task, stacklevel):
         )
 
 
-def create_task(coro, name=None) -> asyncio.Task:
+def create_task(
+    coro, name: str | None = None, ignore_cancelled: bool = True
+) -> asyncio.Task:
     """Wrapper around :py:func:`asyncio.create_task`. Add logging callback."""
     task = asyncio.create_task(coro, name=name)
-    task.add_done_callback(lambda t: _log_exception(t, stacklevel=3))
+    task.add_done_callback(
+        lambda t: _log_exception(t, stacklevel=3, ignore_cancelled=ignore_cancelled)
+    )
     return task
 
 
