@@ -11,9 +11,9 @@ from spdl.dataloader import (
     PipelineHook,
     TaskStatsHook,
 )
+from spdl.dataloader._builder import _enqueue, _EOF, _pipe, _sink, _SKIP
 from spdl.dataloader._hook import _periodic_dispatch
 from spdl.dataloader._legacy_pipeline import AsyncPipeline
-from spdl.dataloader._pipeline import _enqueue, _EOF, _pipe, _sink, _SKIP
 
 
 def _put_aqueue(queue, vals, *, eof):
