@@ -4,6 +4,7 @@ import asyncio
 import concurrent.futures
 import inspect
 import logging
+import time
 import warnings
 from asyncio import Queue as AsyncQueue
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
@@ -494,22 +495,18 @@ class Pipeline(Generic[T]):
     def get_item(self, *, timeout: float | None = None) -> T:
         """Get the next item.
 
-        If pipeline is not producing the next item within the given timeout,
-        then ``TimeoutError`` is raised.
-        If the background thread is not running and the queue is empty, then
-        ``EOFError`` is raised.
-
         Args:
             timeout: Timeout for each iteration.
 
         Raises:
+            RuntimeError: The pipeline is not started.
+
             TimeoutError: When pipeline is not producing the next item within the given time.
 
-            EOFError: When the pipeline is exhausted or cancelled and items in the sink are
-                emptied.
-
-            RuntimeError: The pipeline is not started.
+            EOFError: When the pipeline is exhausted or cancelled and there are no more items
+                in the sink.
         """
+        eof_message = "Reached the end of the pipeline."
 
         if not self._event_loop.is_started():
             raise RuntimeError("Pipeline is not started.")
@@ -532,31 +529,40 @@ class Pipeline(Generic[T]):
 
             # Now, all the items from the queue are fetched. We can stop the pipeline loop/thread.
             self._event_loop.stop()
-            raise EOFError("Reached the end of the pipeline.")
+            raise EOFError(eof_message)
 
         # The task is not completed. To access the sink queue, the async method must be used.
-        # The task can complete anytime, however, the loop keeps running until we request stop
-        # after the task is completed, so we can use async method.
-        future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
-        try:
-            return future.result(timeout=timeout)
-        except concurrent.futures.TimeoutError:
-            # The sink queue is empty.
-            # In this condition, we cannot tell if it is due to EOF or pipeline being too slow.
+        # The loop keeps running unless we explicitly request stop, so the use of async method
+        # itself is fine.
 
-            # One exception is that the task is now complete and queue is still empty.
-            # This case we can switch to EOFError.
-            # I don't know how practical this is. This can happen when using get_item
-            # right after the pipeline is exhausted.
-            # We happen to have such test case, so it was added just for that.
-            # See: `test_async_pipeline2_fail_middle`.
-            if self._event_loop.is_task_completed() and self._output_queue.empty():
-                raise EOFError("Reached the end of the pipeline.") from None
+        # However, the background task can complete at any ponit.
+        # It turned out to be very easy to hit the race condition where the foreground execution
+        # control reaches here, in the short time window between the background thread puts the
+        # last item and issues task completion.
+        # In this case, without timeout, the foreground gets stuck.
+        # Therefore, we split the timeout into small window and periodically check the state of
+        # the background task.
+        max_elapsed = float("inf") if timeout is None else timeout
 
-            _LG.debug("EventLoop: %s", str(self._event_loop))
-            raise TimeoutError(
-                f"Waited for the next item to become available for {timeout} sec."
-            ) from None
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < max_elapsed:
+            future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
+
+            try:
+                return future.result(timeout=min(0.1, max_elapsed))
+            except concurrent.futures.TimeoutError:
+                # The sink queue is empty.
+                # In this condition, we cannot really tell if it is due to EOF or
+                # pipeline being too slow.
+
+                # One exception is that the task is now complete and queue is still empty.
+                # This case we can switch to EOFError.
+                if self._event_loop.is_task_completed() and self._output_queue.empty():
+                    raise EOFError(eof_message) from None
+
+        _LG.debug("EventLoop: %s", str(self._event_loop))
+
+        raise TimeoutError(f"The next item is not available after {timeout} sec.")
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.
