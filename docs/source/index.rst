@@ -21,3 +21,9 @@ SPDL (Scalable and Performant Data Loading)
    getting_started/index
    api
    API Index <genindex>
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Development Notes
+
+   notes/index
