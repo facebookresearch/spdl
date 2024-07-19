@@ -342,6 +342,7 @@ class Pipeline(Generic[T]):
                 # One exception is that the task is now complete and queue is still empty.
                 # This case we can switch to EOFError.
                 if self._event_loop.is_task_completed() and self._output_queue.empty():
+                    self._event_loop.stop()
                     raise EOFError(eof_message) from None
 
         _LG.debug("EventLoop: %s", str(self._event_loop))
