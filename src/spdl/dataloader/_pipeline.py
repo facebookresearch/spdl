@@ -105,12 +105,13 @@ class _EventLoop:
         return self._task_completed.is_set()
 
     def stop(self):
-        """Issue loop stop request and wait for the thread to join."""
+        """Issue loop stop request."""
         if not self._stop_requested.is_set():
             _LG.debug("Requesting the event loop thread to stop.")
             self._stop_requested.set()
 
     def join(self, *, timeout: float | None = None) -> None:
+        """Let the thread join. ``stop`` must be called before calling ``join``."""
         if not self._stop_requested.is_set():
             raise RuntimeError(
                 "The event loop thread is not stopped. Call stop() first."
@@ -198,7 +199,7 @@ class Pipeline(Generic[T]):
                return await spdl.io.async_decode_image(path)
 
 
-           pipeline = (
+           pipeline: Pipeline = (
                PipelineBuilder()
                .add_source(source())
                .pipe(decode, concurrency=10)
@@ -241,7 +242,12 @@ class Pipeline(Generic[T]):
         return self._str
 
     def start(self, *, timeout: float | None = None) -> None:
-        """Start the pipeline in background thread."""
+        """Start the pipeline in background thread.
+
+        Args:
+            timeout: Timeout value used when starting the thread and
+                waiting for the pipeline to be initialized. [Unit: second]
+        """
         self._event_loop.start(timeout=timeout)
 
     def stop(self, *, timeout: float | None = None) -> None:
@@ -249,7 +255,7 @@ class Pipeline(Generic[T]):
 
         Args:
             timeout: Timeout value used when stopping the pipeline and
-                waiting for the thread to join.
+                waiting for the thread to join. [Unit: second]
         """
         self._event_loop.stop()
         self._event_loop.join(timeout=timeout)
@@ -259,7 +265,8 @@ class Pipeline(Generic[T]):
         """Context manager to start/stop the background thread automatically.
 
         Args:
-            timeout: Timeout value used when stopping the thread.
+            timeout: The duration to wait for the thread initialization / shutdown. [Unit: second]
+                If ``None`` (default), it waits indefinitely.
         """
         self.start(timeout=timeout)
         try:
@@ -271,7 +278,8 @@ class Pipeline(Generic[T]):
         """Get the next item.
 
         Args:
-            timeout: Timeout for each iteration.
+            timeout: The duration to wait for the next item to become available. [Unit: second]
+                If ``None`` (default), it waits indefinitely.
 
         Raises:
             RuntimeError: The pipeline is not started.
@@ -289,15 +297,16 @@ class Pipeline(Generic[T]):
         # The event loop (thread) was started, but it might be stopped by now.
         # However, what matters for `get_item` method is whether the task is running or not.
         # Because if the task is running, then accessing the sink queue must be done through
-        # async method, otherwise, sync method can be used to access sink queue regardless of
-        # the state of the loop.
+        # async method, invoked via event loop's `run_coroutine_threadsafe` method.
+        # If the task is not running, then, sync method can be used to access sink queue,
+        # even if the loop is not running.
 
         if self._event_loop.is_task_completed():
             # The pipeline is stopped.
             # The sink queue is not accessed by background event loop anymore, so we can use
             # sync access without being worried about thread safety.
 
-            # There are remaining items from queue if the pipeline was stopped by client code
+            # There are remaining items in the queue if the pipeline was stopped by client code
             # before it processes all the items.
             if not self._output_queue.empty():
                 return self._output_queue.get_nowait()
@@ -343,7 +352,7 @@ class Pipeline(Generic[T]):
         """Get an iterator, which iterates over the pipeline outputs.
 
         Args:
-            timeout: Timeout for each iteration.
+            timeout: Timeout value used for each `get_item` call.
         """
         return PipelineIterator(self, timeout)
 
