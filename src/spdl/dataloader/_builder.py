@@ -394,7 +394,7 @@ class PipelineBuilder:
                 .. warning::
 
                    The source iterator must be lightweight as it is executed in async
-                   event loop. If the iterator performs a an operation that blocks,
+                   event loop. If the iterator performs a blocking operation,
                    the entire pipeline will be blocked.
         """
         if self._source is not None:
@@ -472,8 +472,9 @@ class PipelineBuilder:
                     "hooks": hooks,
                     "report_stats_interval": report_stats_interval,
                 },
+                kwargs.get("buffer_size", 1),
                 # Note:
-                # `buffer_size` option is an intentionally not documented.
+                # `buffer_size` option is intentionally not documented.
                 #
                 # The pipeline practically buffers `concurrency + buffer_size`
                 # items, which leads to confusing behavior when writing tests.
@@ -489,7 +490,6 @@ class PipelineBuilder:
                 #
                 # Oh, but if you ever find the case that this does affect the
                 # performance, let us know.
-                kwargs.get("buffer_size", 1),
             )
         )
         return self
@@ -507,7 +507,7 @@ class PipelineBuilder:
 
         Args:
             num_aggregate: The number of items to buffer.
-            drop_last: Drop the last aggregation if it has less than ``n`` items.
+            drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
             hooks: See :py:meth:`pipe`.
             report_stats_interval: See :py:meth:`pipe`.
         """
