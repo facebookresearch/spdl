@@ -17,5 +17,7 @@ SPDL (Scalable and Performant Data Loading)
    :maxdepth: 2
    :caption: Contents:
 
+   overview
+   getting_started/index
    api
    API Index <genindex>
