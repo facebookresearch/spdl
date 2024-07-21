@@ -1,11 +1,18 @@
 Overview
 ========
 
-SPDL (Scalable and Performant Data Loading) is a research project to explore the design of fast data loading for ML training in free-threading (a.k.a no-GIL) Python, but makes its benefits available to the existing ML systems with as little changes as possible.
+What is SPDL?
+-------------
 
-It is composed of three independent components;
+SPDL (Scalable and Performant Data Loading) is a research project to explore the design of fast data loading for ML training in free-threading (a.k.a no-GIL) Python, but makes its benefits available to the current ML systems with as little changes as possible.
 
-1. Asynchronous data loading engine.
+SPDL implements an abstraction that facilitates building performant data processing pipelines that utilizes multithreading. These pipelines not only achieve high throughput but also provide various insights about its performance, which helps users optimize the its performance.
+
+Oftentimes, the bottleneck of dataloading is in media decoding and pre-processing. So, in addition to the pipline abstraction, SPDL also provides an I/O module for multimedia (audio, video and image) processing. This I/O module was designed from scratch to achieve high performance and high throughput.
+
+There are three main components in SPDL.
+
+1. Asynchronous data loading engine. (The pipeline abstraction)
 2. Utility functions to build asynchronous data loading pipelines.
 3. Efficient media processing operations that are thread-safe.
 
@@ -20,10 +27,6 @@ Many libraries used for dataloading release the GIL. To name a few;
 - Decord
 - tiktoken
 
-In addition, SPDL provides its own I/O module for processing multimedia. (audio, video and images) The I/O module was designed from scratch for performance and throughput.
-
-Often, the bottleneck of dataloading is in media decoding and pre-processing. So dataloading can be improved by simply using libraries that release GIL in thread pool.
-
 Why Async IO?
 -------------
 
@@ -32,10 +35,3 @@ When training a model with large amount of data, the data are retrieved from rem
 The Async I/O allows to easily build complex data preprocessing pipeline and execute them while automatically parallelizing parts of the pipline, achiving high throughput.
 
 Synchronous operations that release GIL can be converted to async operations easily by running them in a thread pool. So by converting the synchronous preprocessing functions that release GIL into asynchronous operations, the entire data preprocessing pipeline can be executed in async event loop. The event loop handles the scheduling of data processing functions, and execute them concurrently.
-
-SPDL Pipeline
--------------
-
-SPDL provides Pipeline abstraction which facilitates the construction of performant pipeline, while providing the knobs to tune the concurrency.
-
-Profiling is imporant when building high-throughput applications, so the pipeline built with SPDL by default comes with stats counter from which users can easily tell what stage of pipeline is the bottleneck. This information help users guide in optimizing the pipeline.
