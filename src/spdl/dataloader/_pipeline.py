@@ -328,10 +328,9 @@ class Pipeline(Generic[T]):
         # the background task.
         max_elapsed = float("inf") if timeout is None else timeout
 
+        future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
         t0 = time.monotonic()
-        while time.monotonic() - t0 < max_elapsed:
-            future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
-
+        while (elapsed := time.monotonic() - t0) < max_elapsed:
             try:
                 return future.result(timeout=min(0.1, max_elapsed))
             except concurrent.futures.TimeoutError:
@@ -347,7 +346,7 @@ class Pipeline(Generic[T]):
 
         _LG.debug("EventLoop: %s", str(self._event_loop))
 
-        raise TimeoutError(f"The next item is not available after {timeout} sec.")
+        raise TimeoutError(f"The next item is not available after {elapsed:.0f} sec.")
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.
