@@ -1248,3 +1248,20 @@ def test_async_pipeline2_iter_and_next():
         iterator = iter(apl)
         with pytest.raises(StopIteration):
             next(iterator)
+
+
+def test_async_pipeline2_stuck():
+    """`get_item` waits for slow pipeline."""
+
+    async def delay(i):
+        print(f"Sleeping: {i}")
+        await asyncio.sleep(0.5)
+        print(f"Sleeping: {i} - done")
+        return i
+
+    apl = PipelineBuilder().add_source(range(3)).pipe(delay).add_sink(1).build()
+
+    with apl.auto_stop():
+        for i, item in enumerate(apl.get_iterator(timeout=3)):
+            print(i, item)
+            assert i == item
