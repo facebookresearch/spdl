@@ -652,14 +652,23 @@ class PipelineBuilder:
     def __str__(self) -> str:
         return "\n".join([repr(self)] + self._get_desc())
 
-    def build(self, *, num_threads: int = 4) -> Pipeline:
+    def build(self, *, num_threads: int | None = None) -> Pipeline:
         """Build the pipeline.
 
         Args:
             num_threads: The number of threads in the thread pool attached to
                 async event loop.
+                If not specified, the maximum concurrency value is used.
         """
         queues = []
         coro = self._build(None, queues)
 
+        if num_threads is None:
+            concurrencies = [
+                args["concurrency"]
+                for _, args, _ in self._process_args
+                if "concurrency" in args
+            ]
+            num_threads = max(concurrencies) if concurrencies else 4
+        assert num_threads is not None
         return Pipeline(coro, queues, num_threads, desc=self._get_desc())
