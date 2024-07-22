@@ -3,10 +3,11 @@
 import asyncio
 import inspect
 import logging
+import time
 import warnings
 from asyncio import Queue as AsyncQueue
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from typing import TypeVar
 
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
@@ -273,13 +274,65 @@ def _enqueue(
 ################################################################################
 
 
-async def _sink(
-    input_queue: AsyncQueue[T],
-    output_queue: AsyncQueue[T],
-):
-    while (item := await input_queue.get()) is not _EOF:
-        if item is not _SKIP:
-            await output_queue.put(item)
+def _time_str(val: float) -> str:
+    return "{:.4f} [{:3s}]".format(
+        val * 1000 if val < 1 else val,
+        "ms" if val < 1 else "sec",
+    )
+
+
+class _Counter:
+    def __init__(self):
+        self.num_items = 0
+        self.ave_time = 0
+
+    @contextmanager
+    def count(self):
+        t0 = time.monotonic()
+        yield
+        elapsed = time.monotonic() - t0
+        self.num_items += 1
+        self.ave_time += (elapsed - self.ave_time) / self.num_items
+
+    def __str__(self):
+        return _time_str(self.ave_time)
+
+
+@contextmanager
+def _sink_stats():
+    get_counter = _Counter()
+    put_counter = _Counter()
+    t0 = time.monotonic()
+    try:
+        yield get_counter, put_counter
+    finally:
+        elapsed = time.monotonic() - t0
+        _LG.info(
+            "[sink]\tProcessed %5d items in %s. "
+            "QPS: %.2f. "
+            "Average wait time: Upstream: %s, Downstream: %s.",
+            put_counter.num_items,
+            _time_str(elapsed),
+            put_counter.num_items / elapsed if elapsed > 0.001 else float("nan"),
+            get_counter,
+            put_counter,
+        )
+
+
+async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]):
+    with _sink_stats() as (get_counter, put_counter):
+        while True:
+            with get_counter.count():
+                item = await input_queue.get()
+
+            if item is _EOF:
+                break
+
+            if item is _SKIP:
+                continue
+
+            with put_counter.count():
+                await output_queue.put(item)
 
 
 ################################################################################
