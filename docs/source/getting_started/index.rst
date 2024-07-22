@@ -6,5 +6,3 @@ Getting Started
    intro
    stages
    concurrency
-
-

@@ -15,10 +15,16 @@ SPDL (Scalable and Performant Data Loading)
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
    overview
    getting_started/index
+   performance_analysis/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API References
+
    api
    API Index <genindex>
 
