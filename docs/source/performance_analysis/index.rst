@@ -10,3 +10,4 @@ In this section, we look at how to analyze the pipeline performance and optimize
 .. toctree::
 
    bottleneck
+   stage_stats
