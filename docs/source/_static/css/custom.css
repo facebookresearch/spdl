@@ -24,3 +24,7 @@ div.custom_autosummary table.docutils tbody tr td {
 dl.py.function > dt.sig.sig-object.py {
     margin-bottom: 1em;
 }
+
+table.right-align > tbody > tr {
+    text-align: right
+}
