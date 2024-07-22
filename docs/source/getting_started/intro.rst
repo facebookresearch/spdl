@@ -1,5 +1,5 @@
-Quick Introduction
-==================
+Building and Running Pipeline
+=============================
 
 .. py:currentmodule:: spdl.dataloader
 
