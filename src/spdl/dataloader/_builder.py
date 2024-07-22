@@ -275,7 +275,7 @@ def _enqueue(
 
 
 def _time_str(val: float) -> str:
-    return "{:.4f} [{:3s}]".format(
+    return "{:.4f} [{:>3s}]".format(
         val * 1000 if val < 1 else val,
         "ms" if val < 1 else "sec",
     )
