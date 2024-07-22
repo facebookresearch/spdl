@@ -23,9 +23,15 @@ In Python, GIL (Global Interpreter Lock) practically prevents the use of multi-t
 
 Many libraries used for dataloading release the GIL. To name a few;
 
+- Pillow
 - OpenCV
 - Decord
 - tiktoken
+
+Typically, the bottleneck of model training in loading and preprocessing the media data.
+So even though there are still parts of pipelines that are constrained by GIL,
+by taking advantage of preprocessing functions that release GIL,
+we can achieve high throughput.
 
 Why Async IO?
 -------------

@@ -18,6 +18,25 @@ The source can be set with :py:meth:`PipelineBuilder.add_source`
 method. The only requirement for the source object is that it must implement
 :py:class:`~collections.abc.Iterable` interface.
 
+For example
+
+- Load a list of paths from a file.
+
+.. code-block::
+
+   def load_path_from_file(input_path: str):
+       with open(input_path, "r") as f:
+           for line in f:
+               if path := line.strip():
+                   yield path
+
+- Files in directories
+
+.. code-block::
+
+   def find_wav_files(path, ext):
+       yield from path.glob(f'**/*{ext}')
+
 .. note::
 
    Since the source object is executed in async event loop,
@@ -101,4 +120,4 @@ Sink
 
 Sink is a buffer where the results of the pipeline is accumulated.
 A sink can be attached to pipeline with :py:meth:`PipelineBuilder.add_sink` method.
-You can specify how many items should be buffered in the sink.
+You can specify how many items can be buffered in the sink.
