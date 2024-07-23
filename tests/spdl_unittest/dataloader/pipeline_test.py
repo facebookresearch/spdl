@@ -1069,6 +1069,31 @@ def test_async_pipeline_order_input():
     asyncio.run(_test())
 
 
+def test_async_pipeline_order_input_sync_func():
+    """The output is in the order of the input."""
+
+    def _sleep(i):
+        print(f"Sleeping: {i}")
+        time.sleep(i / 10)
+        print(f"Returning: {i}")
+        return i
+
+    src = list(reversed(range(10)))
+    apl = (
+        AsyncPipeline()
+        .add_source(src)
+        .pipe(_sleep, concurrency=10, output_order="input")
+        .add_sink(100)
+    )
+
+    async def _test():
+        await apl.run()
+        results = _flush_aqueue(apl.output_queue)
+        assert results == src
+
+    asyncio.run(_test())
+
+
 ################################################################################
 # AsyncPipeline2
 ################################################################################
@@ -1126,18 +1151,8 @@ def test_async_pipeline2_cancel_empty():
 def test_async_pipeline2_fail_middle():
     """When a stage in the middle fails, downstream stages are not failing."""
 
-    # Note
-    # The pipeline function must be usually async-func.
-    # This is a huck to make the pipeline forcefully fail.
-    #
-    # The treatment of sync-function passed to pipe()
-    # is not well defined.
-    # If in future, we need to reject sync function, then this
-    # test needs revision.
-    def fail_after3(i):
-        if i >= 3:
-            raise RuntimeError("Failing")
-        return passthrough(i)
+    async def fail(i, _):
+        return i
 
     class PassthroughWithCache:
         def __init__(self):
@@ -1153,7 +1168,7 @@ def test_async_pipeline2_fail_middle():
         PipelineBuilder()
         .add_source(range(10))
         .pipe(passthrough)
-        .pipe(fail_after3)
+        .pipe(fail)
         .pipe(pwc)
         .add_sink(1)
         .build()
@@ -1163,14 +1178,10 @@ def test_async_pipeline2_fail_middle():
         apl.get_item(timeout=1)
 
     with apl.auto_stop():
-        for i in range(3):
-            assert i == apl.get_item(timeout=1)
-
-        # Now the pipeline should be dead.
         with pytest.raises(EOFError):
             apl.get_item(timeout=1)
 
-    assert pwc.cache == list(range(3))
+    assert pwc.cache == []
 
     # The background thread is stopped, and the output queue is empty.
     for _ in range(3):

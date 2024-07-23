@@ -417,6 +417,14 @@ async def _run_pipeline_coroutines(
 ################################################################################
 
 
+def _to_async(func: Callable[[T], U]) -> Callable[[T], Awaitable[U]]:
+    async def afunc(item: T) -> U:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, func, item)
+
+    return afunc
+
+
 class PipelineBuilder:
     """**[Experimental]** Build :py:class:`~spdl.dataloader.Pipeline` object.
 
@@ -462,7 +470,7 @@ class PipelineBuilder:
 
     def pipe(
         self,
-        afunc: Callable[[T], Awaitable[U]],
+        afunc: Callable[[T], Awaitable[U]] | Callable[[T], U],
         *,
         concurrency: int = 1,
         name: str | None = None,
@@ -511,9 +519,12 @@ class PipelineBuilder:
 
         if name is None:
             if hasattr(afunc, "__name__"):
-                name = afunc.__name__
+                name = afunc.__name__  # type: ignore[attr-defined]
             else:
                 name = afunc.__class__.__name__
+
+        if not inspect.iscoroutinefunction(afunc):
+            afunc = _to_async(afunc)  # pyre-ignore: [6]
 
         self._process_args.append(
             (
