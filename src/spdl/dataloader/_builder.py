@@ -470,7 +470,8 @@ class PipelineBuilder:
 
     def pipe(
         self,
-        afunc: Callable[[T], Awaitable[U]] | Callable[[T], U],
+        op: Callable[[T], Awaitable[U]] | Callable[[T], U],
+        /,
         *,
         concurrency: int = 1,
         name: str | None = None,
@@ -479,18 +480,28 @@ class PipelineBuilder:
         output_order: str = "completion",
         **kwargs,
     ) -> "PipelineBuilder":
-        """Apply an async function to items in the pipeline.
+        """Apply an operation to items in the pipeline.
 
         .. code-block::
 
-                   │
-           ┌───────▼────────┐
-           │ Async Function │
-           └───────┬────────┘
-                   ▼
+                 │
+           ┌─────▼─────┐
+           │ Operation │
+           └─────┬─────┘
+                 ▼
 
         Args:
-            afunc: Async function applied to the items in the queue.
+            op: A function applied to items in the queue.
+                The function must take exactly one argument, which is the output
+                from the upstream. If passing around multiple objects, take
+                them as a tuple or use :py:class:`~dataclasses.dataclass` and
+                define a custom protocol.
+
+                Optionally, the op can be an async function. When passing an
+                async function, make sure that the function does not call sync
+                function inside. If calling a sync function, use
+                :py:func:`asyncio.loop.run_in_executor` or :py:func:`asyncio.to_thread`
+                to delegate the execution to the thread pool.
             concurrency: The maximum number of async tasks executed concurrently.
             name: The name (prefix) to give to the task.
             hooks: Hook objects to be attached to the stage. Hooks are intended for
@@ -518,19 +529,19 @@ class PipelineBuilder:
             )
 
         if name is None:
-            if hasattr(afunc, "__name__"):
-                name = afunc.__name__  # type: ignore[attr-defined]
+            if hasattr(op, "__name__"):
+                name = op.__name__  # type: ignore[attr-defined]
             else:
-                name = afunc.__class__.__name__
+                name = op.__class__.__name__
 
-        if not inspect.iscoroutinefunction(afunc):
-            afunc = _to_async(afunc)  # pyre-ignore: [6]
+        if not inspect.iscoroutinefunction(op):
+            op = _to_async(op)  # pyre-ignore: [6]
 
         self._process_args.append(
             (
                 "pipe" if output_order == "completion" else "ordered_pipe",
                 {
-                    "afunc": afunc,
+                    "afunc": op,
                     "concurrency": concurrency,
                     "name": name,
                     "hooks": hooks,
