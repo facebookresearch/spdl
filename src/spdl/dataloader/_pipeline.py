@@ -4,6 +4,7 @@ import asyncio
 import concurrent.futures
 import logging
 import time
+import warnings
 from asyncio import Queue as AsyncQueue
 from collections.abc import Coroutine, Iterator
 from contextlib import contextmanager
@@ -38,7 +39,7 @@ class _EventLoop:
         self._task_completed = SyncEvent()
         self._stop_requested = SyncEvent()
 
-        self._thread = Thread(target=lambda: asyncio.run(self._execute_task()))
+        self._thread = None
 
     def __str__(self):
         return str(
@@ -88,9 +89,27 @@ class _EventLoop:
         _LG.debug("The background task is completed.")
         _LG.debug("The event loop is now shutdown.")
 
-    def start(self, *, timeout: float | None = None) -> None:
+    def start(self, *, timeout: float | None = None, daemon: bool = False) -> None:
         """Start the thread and block until the loop is initialized."""
+        if self._thread is not None:
+            raise RuntimeError("The thread can start only once.")
         _LG.debug("Starting the event loop thread.")
+        if daemon:
+            warnings.warn(
+                "The event loop thread is started with daemon=True. "
+                "This will let Python interpreter terminate before the event loop thread is shutdown. "
+                "The event loop and the thread will be abruptly stopped while there might be "
+                "running coroutines. "
+                "This can cause various unexpected/unwanted side effects including abnormal exit. "
+                "This option is provided only as a last resort to just let Python interpreter "
+                "terminate, and it does not guarantee clean exit. "
+                "You should not rely on this and should implement a graceful shutdown.",
+                stacklevel=3,
+            )
+
+        self._thread = Thread(
+            target=lambda: asyncio.run(self._execute_task()), daemon=daemon
+        )
         self._thread.start()
         _LG.debug("Waiting for the loop to be initialized.")
         self._task_started.wait(timeout=timeout)
@@ -241,14 +260,14 @@ class Pipeline(Generic[T]):
     def __str__(self) -> str:
         return self._str
 
-    def start(self, *, timeout: float | None = None) -> None:
+    def start(self, *, timeout: float | None = None, **kwargs) -> None:
         """Start the pipeline in background thread.
 
         Args:
             timeout: Timeout value used when starting the thread and
                 waiting for the pipeline to be initialized. [Unit: second]
         """
-        self._event_loop.start(timeout=timeout)
+        self._event_loop.start(timeout=timeout, **kwargs)
 
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
