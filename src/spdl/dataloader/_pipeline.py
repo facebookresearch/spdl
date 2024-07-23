@@ -97,13 +97,17 @@ class _EventLoop:
         if daemon:
             warnings.warn(
                 "The event loop thread is started with daemon=True. "
-                "This will let Python interpreter terminate before the event loop thread is shutdown. "
-                "The event loop and the thread will be abruptly stopped while there might be "
-                "running coroutines. "
-                "This can cause various unexpected/unwanted side effects including abnormal exit. "
-                "This option is provided only as a last resort to just let Python interpreter "
-                "terminate, and it does not guarantee clean exit. "
-                "You should not rely on this and should implement a graceful shutdown.",
+                "This will let Python interpreter terminate before "
+                "the event loop thread is shutdown. "
+                "The event loop and the thread will be abruptly stopped "
+                "while there might be running coroutines. "
+                "This can cause various unexpected/unwanted side effects "
+                "including abnormal exit. "
+                "This option is provided only as a last resort to just "
+                "let Python interpreter terminate, and "
+                "it does not guarantee clean exit. "
+                "You should not rely on this and should implement "
+                "a graceful shutdown.",
                 stacklevel=3,
             )
 
