@@ -110,15 +110,10 @@ The following code snippet illustrates this.
        """A hypothetical preprocessing function. (not async)"""
        ...
 
-   async def async_preprocess(data):
-       """Run the `preprocess` function asynchronously."""
-       loop = asyncio.get_running_loop()
-       return await loop.run_in_executor(None, preprocess, data)
-
    pipeline = (
        PipelineBuilder()
        .add_source(source)
-       .pipe(async_preprocess, concurrency=3)
+       .pipe(preprocess, concurrency=3)
        # Run at most 3 `preprocess` functions concurrently.
        .add_sink(3)
        .build(num_threads=3)

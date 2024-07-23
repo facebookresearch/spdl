@@ -12,21 +12,11 @@ The following snippet demonstrates how one can construct a
 
    >>> from spdl.dataloader import PipelineBuilder
    >>>
-   >>> def source():
-   ...     for i in range(10):
-   ...         yield i
-   ...
-   >>> async def double(i: int):
-   ...     return 2 * i
-   ...
-   >>> async def plus1(i: int):
-   ...     return i + 1
-   ...
    >>> pipeline = (
    ...     PipelineBuilder()
    ...     .add_source(range(12))
-   ...     .pipe(double)
-   ...     .pipe(plus1)
+   ...     .pipe(lambda x: 2 * x)
+   ...     .pipe(lambda x: x + 1)
    ...     .aggregate(3)
    ...     .add_sink(3)
    ...     .build()
