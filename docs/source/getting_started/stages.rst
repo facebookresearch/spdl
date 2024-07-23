@@ -34,7 +34,7 @@ For example
 
 .. code-block::
 
-   def find_wav_files(path, ext):
+   def find_files(path: Path, ext: str):
        yield from path.glob(f'**/*{ext}')
 
 .. note::
@@ -53,11 +53,12 @@ Processing
 Preprocessing is where a variety of operations are applied to the items passed
 from the previous stages.
 
-You can define processing stage by passing a operator to either
+You can define processing stage by passing an operator function (callable) to either
 :py:meth:`~PipelineBuilder.pipe` or :py:meth:`~PipelineBuilder.aggregate` methods.
 
-The requirement for the operator is that it must be an async function (callable) that takes
-one argument†.
+The operator can be either async function or synchronous function. Either way,
+the operator must take exactly one argument†, which is an output from the earlier
+stage.
 
 .. note::
 
