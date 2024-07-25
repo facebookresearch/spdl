@@ -4,9 +4,16 @@ import asyncio
 import inspect
 import logging
 import time
-import warnings
 from asyncio import Queue as AsyncQueue
-from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator, Sequence
+from collections.abc import (
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Iterable,
+    Iterator,
+    Sequence,
+)
 from contextlib import asynccontextmanager, contextmanager
 from typing import TypeVar
 
@@ -108,24 +115,34 @@ def _pipe(
     if concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
 
-    if not inspect.iscoroutinefunction(afunc):
-        warnings.warn(
-            "`pipe` expects async function, "
-            f"but {afunc=} is not a coroutine function.",
-            stacklevel=4,
-        )
-
     hooks = (
         [TaskStatsHook(name, concurrency, interval=report_stats_interval)]
         if hooks is None
         else hooks
     )
 
-    async def _wrap(coro: Awaitable[U]) -> None:
-        async with _task_hooks(hooks):  # pyre-ignore: [16]
-            result = await coro
+    if inspect.iscoroutinefunction(afunc):
 
-        await output_queue.put(result)
+        async def _wrap(coro: Awaitable[U]) -> None:
+            async with _task_hooks(hooks):  # pyre-ignore: [16]
+                result = await coro
+
+            await output_queue.put(result)
+
+    elif inspect.isasyncgenfunction(afunc):
+
+        async def _wrap(coro: AsyncIterator[U]) -> None:
+            while True:
+                try:
+                    async with _task_hooks(hooks):  # pyre-ignore: [16]
+                        result = await anext(coro)
+
+                    await output_queue.put(result)
+                except StopAsyncIteration:
+                    return
+
+    else:
+        raise ValueError(f"{afunc=} must be either async function or async generator.")
 
     @_stage_hooks(hooks)
     @_put_eof_when_done(output_queue)
@@ -470,7 +487,11 @@ class PipelineBuilder:
 
     def pipe(
         self,
-        op: Callable[[T], Awaitable[U]] | Callable[[T], U],
+        op: (
+            Callable[[T], U]
+            | Callable[[T], Awaitable[U]]
+            | Callable[[T], AsyncIterator[U]]
+        ),
         /,
         *,
         concurrency: int = 1,
@@ -497,11 +518,15 @@ class PipelineBuilder:
                 them as a tuple or use :py:class:`~dataclasses.dataclass` and
                 define a custom protocol.
 
-                Optionally, the op can be an async function. When passing an
-                async function, make sure that the function does not call sync
-                function inside. If calling a sync function, use
-                :py:func:`asyncio.loop.run_in_executor` or :py:func:`asyncio.to_thread`
-                to delegate the execution to the thread pool.
+                Optionally, the op can be an async function or async generator function.
+                If async generator, the items are put in the output queue separately.
+
+                .. tip::
+
+                   When passing an async op, make sure that the op does not call sync
+                   function inside.
+                   If calling a sync function, use :py:func:`asyncio.loop.run_in_executor`
+                   or :py:func:`asyncio.to_thread` to delegate the execution to the thread pool.
             concurrency: The maximum number of async tasks executed concurrently.
             name: The name (prefix) to give to the task.
             hooks: Hook objects to be attached to the stage. Hooks are intended for
@@ -534,14 +559,18 @@ class PipelineBuilder:
             else:
                 name = op.__class__.__name__
 
-        if not inspect.iscoroutinefunction(op):
+        if inspect.iscoroutinefunction(op):
+            pass
+        elif inspect.isgeneratorfunction(op):
+            raise ValueError("pipe does not support generator function.")
+        elif inspect.isasyncgenfunction(op):
+            if output_order == "input":
+                raise ValueError(
+                    "pipe does not support async generator function "
+                    "when output_order is 'input'."
+                )
+        else:
             op = _to_async(op)  # pyre-ignore: [6]
-
-        if inspect.isgeneratorfunction(op):
-            raise ValueError("pipe does not support generator function. ")
-
-        if inspect.isasyncgenfunction(op):
-            raise ValueError("pipe does not support async generator function. ")
 
         self._process_args.append(
             (

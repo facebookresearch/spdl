@@ -1276,3 +1276,18 @@ def test_async_pipeline2_stuck():
         for i, item in enumerate(apl.get_iterator(timeout=3)):
             print(i, item)
             assert i == item
+
+
+def test_async_pipeline2_pipe_agen():
+    """pipe works with async generator function"""
+
+    async def dup_increment(v):
+        for i in range(3):
+            yield v + i
+
+    apl = PipelineBuilder().add_source(range(3)).pipe(dup_increment).add_sink(1).build()
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output
