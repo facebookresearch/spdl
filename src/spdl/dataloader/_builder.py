@@ -537,6 +537,12 @@ class PipelineBuilder:
         if not inspect.iscoroutinefunction(op):
             op = _to_async(op)  # pyre-ignore: [6]
 
+        if inspect.isgeneratorfunction(op):
+            raise ValueError("pipe does not support generator function. ")
+
+        if inspect.isasyncgenfunction(op):
+            raise ValueError("pipe does not support async generator function. ")
+
         self._process_args.append(
             (
                 "pipe" if output_order == "completion" else "ordered_pipe",
