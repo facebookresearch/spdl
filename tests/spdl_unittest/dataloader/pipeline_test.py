@@ -1291,3 +1291,18 @@ def test_async_pipeline2_pipe_agen():
     with apl.auto_stop():
         output = list(apl.get_iterator(timeout=3))
     assert expected == output
+
+
+def test_async_pipeline2_source_agen():
+    """source works with async generator function"""
+
+    async def source():
+        for i in range(3):
+            yield i
+
+    apl = PipelineBuilder().add_source(source()).add_sink(1).build()
+
+    expected = [0, 1, 2]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output

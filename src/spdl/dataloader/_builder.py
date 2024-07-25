@@ -6,6 +6,7 @@ import logging
 import time
 from asyncio import Queue as AsyncQueue
 from collections.abc import (
+    AsyncIterable,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -269,19 +270,36 @@ def _ordered_pipe(
 
 
 def _enqueue(
-    iterator: Iterator[T],
+    src: Iterable[T] | AsyncIterable[T],
     queue: AsyncQueue[T],
     max_items: int | None = None,
 ) -> Coroutine:
-    @_put_eof_when_done(queue)
-    async def enqueue():
-        num_items = 0
-        for item in iterator:
-            if item is not _SKIP:
-                await queue.put(item)
-                num_items += 1
-                if max_items is not None and num_items >= max_items:
-                    return
+    if hasattr(src, "__aiter__"):
+
+        @_put_eof_when_done(queue)
+        async def enqueue():
+            num_items = 0
+            async for item in src:
+                if item is not _SKIP:
+                    await queue.put(item)
+                    num_items += 1
+                    if max_items is not None and num_items >= max_items:
+                        return
+
+    elif hasattr(src, "__iter__"):
+
+        @_put_eof_when_done(queue)
+        async def enqueue():
+            num_items = 0
+            for item in src:
+                if item is not _SKIP:
+                    await queue.put(item)
+                    num_items += 1
+                    if max_items is not None and num_items >= max_items:
+                        return
+
+    else:
+        raise ValueError(f"{src=} must be either generator or async generator.")
 
     return enqueue()
 
@@ -456,13 +474,15 @@ class PipelineBuilder:
 
         self._sink_buffer_size = None
 
-    def add_source(self, source: Iterable[T], **kwargs) -> "PipelineBuilder":
+    def add_source(
+        self, source: Iterable[T] | AsyncIterable[T], **kwargs
+    ) -> "PipelineBuilder":
         """Attach an iterator to the source buffer.
 
         .. code-block::
 
            ┌─────────────────┐
-           │ Iterator (sync) │
+           │ (Async)Iterator │
            └───────┬─────────┘
                    ▼
 
@@ -477,6 +497,10 @@ class PipelineBuilder:
         """
         if self._source is not None:
             raise ValueError("Source already set.")
+
+        if not (hasattr(source, "__aiter__") or hasattr(source, "__iter__")):
+            raise ValueError("Source must be either generator or async generator.")
+
         self._source = source
 
         # Note: Do not document this option.
