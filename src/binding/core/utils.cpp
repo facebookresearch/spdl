@@ -34,7 +34,7 @@ void register_utils(nb::module_& m) {
   });
 
   m.def("log_api_usage", [](const std::string& name) {
-#ifdef SPDL_LOGGING_ENABLED
+#ifdef SPDL_LOG_API_USAGE
     C10_LOG_API_USAGE_ONCE(name);
 #endif
   });
