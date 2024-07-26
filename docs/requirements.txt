@@ -1,5 +1,7 @@
-sphinx
-babel
-furo
-breathe
-exhale
+furo==2024.7.18
+sphinx==7.4.7
+sphinxcontrib-mermaid==0.9.2
+#
+# C++
+# breathe
+# exhale
