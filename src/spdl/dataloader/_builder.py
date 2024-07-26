@@ -136,20 +136,24 @@ def _pipe(
             exhausted = False
             while not exhausted:
                 # NOTE:
-                # Nested `except StopAsyncIteration` would look strange, but here is the reasoning.
-                # We want to give hooks opportunity to react to StopAsyncIteration, for example
-                # so that StatsHook will note record the task stats for StopAsyncIteration case.
+                # Nested `except StopAsyncIteration` would look strange.
+                # The following explains why.
                 #
-                # When users implement hook, they might mistakenly absorb the StopAsyncIteration
-                # exception by blanket `except Exception`, and in this case, the StopAsyncIteration
-                # won't propagate to the outside of `_task_hooks`.
+                # We want to give hooks opportunity to react to StopAsyncIteration,
+                # for example, so that StatsHook will note record the task stats
+                # for StopAsyncIteration case.
+                #
+                # When users implement hook, they might mistakenly absorb the
+                # StopAsyncIteration exception by blanket `except Exception`,
+                # and in this case, the StopAsyncIteration won't propagate to
+                # the outside of `_task_hooks`.
                 # When that happens, the control flow cannot exit the while loop.
                 #
-                # So when `StopAsyncIteration` is raised, we catch it once to set the
-                # exhausted flag to True, then re-raise the execption so as to give hooks chance
-                # to react to it.
-                # If the hooks do not absorb the StopAsyncIteration, and it propagates them,
-                # then we catch it and exit.
+                # So when `StopAsyncIteration` is raised, we catch it once to set
+                # the exhausted flag to True, then re-raise the execption so as
+                # to give hooks chance to react to it.
+                # If the hooks do not absorb the StopAsyncIteration, and
+                # it propagates them, then we catch it and exit.
                 try:
                     async with _task_hooks(hooks):  # pyre-ignore: [16]
                         try:
