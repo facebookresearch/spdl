@@ -2,8 +2,7 @@
 
 # pyre-ignore-all-errors
 
-import asyncio
-import concurrent.futures
+import logging
 import time
 from pathlib import Path
 
@@ -13,7 +12,10 @@ import spdl.io
 import spdl.utils
 import tiktoken
 import torch
-from spdl.io import CUDAConfig, run_async
+from spdl.dataloader import PipelineBuilder
+
+
+_LG = logging.getLogger(__name__)
 
 
 def _parse_args(args):
@@ -27,107 +29,86 @@ def _parse_args(args):
     parser.add_argument("--encoding", default="cl100k_base")
     parser.add_argument("--num-threads", type=int, default=4)
     parser.add_argument("--trace", type=Path)
+    parser.add_argument("--cuda-index", type=int, default=0)
     parser.add_argument("--max", type=int, default=float("inf"))
     return parser.parse_args(args)
 
 
-def _read(path):
-    with open(path, "r") as fp:
-        return fp.read()
+def _iter_file(path, prefix: str, max: int = float("inf")):
+    with open(path, "r") as f:
+        i = 0
+        for line in f:
+            if line := line.strip():
+                yield prefix + line
+                if (i := i + 1) >= max:
+                    return
 
 
-def _tokenize(path, encoding, cuda_config: CUDAConfig | None = None):
+def _read_file(path):
     with spdl.utils.trace_event("read"):
-        data = _read(path)
-    with spdl.utils.trace_event("encode"):
-        tokens = encoding.encode(data)
-    with spdl.utils.trace_event("np.array"):
-        arr = np.array(tokens)
-    if cuda_config is not None:
-        buffer = spdl.io.transfer_buffer(
-            arr,
-            cuda_config=cuda_config,
-        )
-        arr = spdl.io.to_torch(buffer)
-    return arr
+        with open(path, "r") as fp:
+            return fp.read()
 
 
-async def _bulk_tokenize(
-    file_gen, encoding, queue, cuda_device: int = 0, concurrency=32
+def _get_pipeline(
+    flist, prefix, encoding, *, num_threads, max_items: int = float("inf")
 ):
+    tokenizer = tiktoken.get_encoding(encoding)
+
     cuda_config = spdl.io.cuda_config(
-        device_index=cuda_device,
+        device_index=0,
         allocator=(
             torch.cuda.caching_allocator_alloc,
             torch.cuda.caching_allocator_delete,
         ),
     )
 
-    semaphore = asyncio.BoundedSemaphore(concurrency)
+    def _tokenize(text):
+        with spdl.utils.trace_event("encode"):
+            tokens = tokenizer.encode(text)
+        with spdl.utils.trace_event("np.array"):
+            arr = np.array(tokens)
+        buffer = spdl.io.transfer_buffer(arr, cuda_config=cuda_config)
+        arr = spdl.io.to_torch(buffer)
+        return arr
 
-    async def _func(path):
-        async with semaphore:
-            buffer = await run_async(_tokenize, path, encoding, cuda_config=cuda_config)
-            await queue.put(buffer)
-
-    tasks = set()
-    for path in file_gen:
-        async with semaphore:
-            task = asyncio.create_task(_func(path))
-            tasks.add(task)
-            task.add_done_callback(tasks.discard)
-
-    while tasks:
-        await asyncio.sleep(0.1)
-
-
-async def _run(file_gen, encoding, concurrency=32):
-    sentinel = object()
-    queue = asyncio.Queue()
-
-    async def _task():
-        try:
-            await _bulk_tokenize(file_gen, encoding, queue)
-        finally:
-            await queue.put(sentinel)
-
-    task = asyncio.create_task(_task())
-    num_tokens = 0
-    t0 = time.monotonic()
-    while (item := await queue.get()) is not sentinel:
-        num_tokens += item.numel()
-    elapsed = time.monotonic() - t0
-    tps = num_tokens / elapsed
-    print(f"{tps} [token/sec] ({num_tokens=}, {elapsed=:.3f})")
-
-    await task
-
-
-def _test(input_flist, prefix, encoding, num_threads, max):
-    def file_gen():
-        with open(input_flist) as f:
-            i = 0
-            for line in f:
-                if line := line.strip():
-                    yield prefix + line
-                    if (i := i + 1) >= max:
-                        return
-
-    encoding = tiktoken.get_encoding(encoding)
-
-    loop = asyncio.new_event_loop()
-    loop.set_default_executor(
-        concurrent.futures.ThreadPoolExecutor(max_workers=num_threads)
+    pipeline = (
+        PipelineBuilder()
+        .add_source(_iter_file(flist, prefix, max_items))
+        .pipe(_read_file, concurrency=2, report_stats_interval=10)
+        .pipe(_tokenize, concurrency=1, report_stats_interval=10)
+        .add_sink(100)
+        .build()
     )
-    loop.run_until_complete(_run(file_gen(), encoding))
+
+    return pipeline
 
 
 def _main(args=None):
     args = _parse_args(args)
+    logging.basicConfig(level=logging.INFO)
 
     path = f"{args.trace}.pftrace"
+
+    pipeline = _get_pipeline(
+        args.input_flist,
+        args.prefix,
+        args.encoding,
+        num_threads=args.num_threads,
+        max_items=args.max,
+    )
+
     with spdl.utils.tracing(path, enable=args.trace):
-        _test(args.input_flist, args.prefix, args.encoding, args.num_threads, args.max)
+        t0 = time.monotonic()
+        with pipeline.auto_stop():
+            num_tokens, num_files = 0, 0
+            for tensor in pipeline:
+                num_files += 1
+                num_tokens += tensor.numel()
+        elapsed = time.monotonic() - t0
+    _LG.info("#files: %d", num_files)
+    _LG.info("#tokens: %d", num_tokens)
+    _LG.info("QPS: %.2f", num_tokens / elapsed)
 
 
 if __name__ == "__main__":
