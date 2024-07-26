@@ -88,6 +88,35 @@ class PipelineHook(ABC):
                   # Add logic that should be executed even if stage fails
                   ...
 
+    .. important::
+
+        When implementing a task hook, make sure that ``StopAsyncIteration``
+        exception is not absorbed. Otherwise, if `pipe` is given an async generator
+        the pipeline might run forever.
+
+        .. code-block:: python
+
+          @asynccontextmanager
+          async def stage_hook(self):
+              # Add initialization logic here
+              ...
+
+              try:
+                  yield
+                  # Add logic that should be executed only when stage succeeds
+                  ...
+              except StopAsyncIteration:
+                  # When passing async generator to `pipe`, StopAsyncIteration is raised
+                  # from inside and will be caught here.
+                  # Do no absort it and propagate it to the other.
+                  # Usually, you do not want to do anything here.
+                  raise
+              except Exception as e:
+                  # Add logic to react to specific exceptions
+                  ...
+              finally:
+                  # Add logic that should be executed even if stage fails
+                  ...
 
     """
 
@@ -234,13 +263,20 @@ class TaskStatsHook(PipelineHook):
     @asynccontextmanager
     async def task_hook(self):
         """Track task runtime and success rate."""
-        self.num_tasks += 1
         t0 = time.monotonic()
-        yield
-        # We only track the average runtime of successful tasks.
-        elapsed = time.monotonic() - t0
-        self.num_success += 1
-        self.ave_time += (elapsed - self.ave_time) / self.num_success
+        try:
+            yield
+        except StopAsyncIteration:
+            raise
+        except Exception:
+            self.num_tasks += 1
+            raise
+        else:
+            # We only track the average runtime of successful tasks.
+            elapsed = time.monotonic() - t0
+            self.num_tasks += 1
+            self.num_success += 1
+            self.ave_time += (elapsed - self.ave_time) / self.num_success
 
     async def _log_interval_stats(self):
         t0 = time.monotonic()

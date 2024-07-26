@@ -1293,6 +1293,35 @@ def test_async_pipeline2_pipe_agen():
     assert expected == output
 
 
+def test_async_pipeline2_pipe_agen_wrong_hook():
+    """pipe works with async generator function, even when hook abosrb the StopAsyncIteration"""
+
+    class _Hook(PipelineHook):
+        @asynccontextmanager
+        async def task_hook(self):
+            try:
+                yield
+            except StopAsyncIteration:
+                pass
+
+    async def dup_increment(v):
+        for i in range(3):
+            yield v + i
+
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment, hooks=[_Hook()])
+        .add_sink(1)
+        .build()
+    )
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output
+
+
 def test_async_pipeline2_source_agen():
     """source works with async generator function"""
 
