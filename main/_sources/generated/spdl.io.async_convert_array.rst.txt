@@ -1,0 +1,6 @@
+spdl.io.async\_convert\_array
+=============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_convert_array

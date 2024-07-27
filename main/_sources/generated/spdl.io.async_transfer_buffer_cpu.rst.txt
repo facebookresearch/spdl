@@ -1,0 +1,6 @@
+spdl.io.async\_transfer\_buffer\_cpu
+====================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_transfer_buffer_cpu
