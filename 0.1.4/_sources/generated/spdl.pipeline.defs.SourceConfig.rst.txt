@@ -1,0 +1,12 @@
+spdl.pipeline.defs.SourceConfig
+===============================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: SourceConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~SourceConfig.source

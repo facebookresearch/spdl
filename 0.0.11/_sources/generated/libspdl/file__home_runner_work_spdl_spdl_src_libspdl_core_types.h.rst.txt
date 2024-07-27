@@ -1,0 +1,130 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_types.h:
+
+File types.h
+============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/types.h``)
+---------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_types.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``map``
+
+- ``optional``
+
+- ``stdexcept``
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoding.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_storage.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structAVRational`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DecodeConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DemuxConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1EncodeConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1EncodeConfigBase`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1InternalError`
+
+
+Enums
+-----
+
+
+- :ref:`exhale_enum_types_8h_1a5422694500d2203e301dc182e5f63d22`
+
+- :ref:`exhale_enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f`
+
+- :ref:`exhale_enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c`
+
+
+Defines
+-------
+
+
+- :ref:`exhale_define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e`
+
+- :ref:`exhale_typedef_types_8h_1a23b168da4cdf96923387b92a43f20038`
+
+- :ref:`exhale_typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20`
+
+- :ref:`exhale_typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d`
+
+- :ref:`exhale_typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529`
+

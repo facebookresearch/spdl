@@ -1,0 +1,205 @@
+
+.. _namespace_spdl__core:
+
+Namespace spdl::core
+====================
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl__core__detail`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1BytesAdaptor`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1CPUBuffer`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DataInterface`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DecodeConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DemuxConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1EncodeConfigBase`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1promise__type`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Packets`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1RawPacketData`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1SourceAdaptor`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Storage`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1BSF`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Codec`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1CPUStorage`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Decoder`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Demuxer`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Encoder`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1FilterGraph`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Frames`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1InternalError`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Muxer`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1PacketSeries`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1StreamingDemuxer`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1TracingSession`
+
+
+Enums
+-----
+
+
+- :ref:`exhale_enum_types_8h_1a5422694500d2203e301dc182e5f63d22`
+
+- :ref:`exhale_enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f`
+
+- :ref:`exhale_enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349`
+
+- :ref:`exhale_function_conversion_8h_1ae55bfac2f391205603d77241fc25ca1a`
+
+- :ref:`exhale_function_conversion_8h_1a3f08ca7a5c09ab82603e239e50dff4d7`
+
+- :ref:`exhale_function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa`
+
+- :ref:`exhale_function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8`
+
+- :ref:`exhale_function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61`
+
+- :ref:`exhale_function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857`
+
+- :ref:`exhale_function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80`
+
+- :ref:`exhale_function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8`
+
+- :ref:`exhale_function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53`
+
+- :ref:`exhale_function_packets_8h_1a50ec9c8a7e6ab71e7827df2eb862dc40`
+
+- :ref:`exhale_function_utils_8h_1af82c781c7484afbad6cbac32ff925793`
+
+- :ref:`exhale_function_utils_8h_1abbebef003881d8734c12e03a47814732`
+
+- :ref:`exhale_function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4`
+
+- :ref:`exhale_function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f`
+
+- :ref:`exhale_function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16`
+
+- :ref:`exhale_function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3`
+
+- :ref:`exhale_function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d`
+
+- :ref:`exhale_function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11`
+
+- :ref:`exhale_function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6`
+
+- :ref:`exhale_function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa`
+
+- :ref:`exhale_typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b`
+
+- :ref:`exhale_typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba`
+
+- :ref:`exhale_typedef_types_8h_1a23b168da4cdf96923387b92a43f20038`
+
+- :ref:`exhale_typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d`
+
+- :ref:`exhale_typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6`
+
+- :ref:`exhale_typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf`
+
+- :ref:`exhale_typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62`
+
+- :ref:`exhale_typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3`
+
+- :ref:`exhale_typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c`
+
+- :ref:`exhale_typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101`
+
+- :ref:`exhale_typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6`
+
+- :ref:`exhale_typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b`
+
+- :ref:`exhale_typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b`
+
+- :ref:`exhale_typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339`
+
+- :ref:`exhale_typedef_filter__graph_8h_1a29554b40f89e4b227521ff86ccf69b8b`
+
+- :ref:`exhale_typedef_frames_8h_1ad628496b3863230dd76eeccc4fa66437`
+
+- :ref:`exhale_typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f`
+
+- :ref:`exhale_typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a`
+
+- :ref:`exhale_typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7`
+
+- :ref:`exhale_typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8`
+
+- :ref:`exhale_typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1`
+
+- :ref:`exhale_typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda`
+
+- :ref:`exhale_typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20`
+
+- :ref:`exhale_typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a`
+
+- :ref:`exhale_typedef_packets_8h_1aad5761fe07714efccc2be969a4397354`
+
+- :ref:`exhale_typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d`
+
+- :ref:`exhale_typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7`
+
+- :ref:`exhale_typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db`
+
+- :ref:`exhale_typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e`
+
+- :ref:`exhale_typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529`
+
+- :ref:`exhale_typedef_encoder_8h_1a383bf2b0ac1564702f10e3b5f3ef03f6`
+
+- :ref:`exhale_typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1`
+
+- :ref:`exhale_typedef_frames_8h_1af1892953097f3723455403752ef79fc5`
+
+- :ref:`exhale_typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d`
+
+- :ref:`exhale_typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c`
+
+- :ref:`exhale_typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691`

@@ -1,0 +1,7 @@
+spdl.io.CPUStorage
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: CPUStorage
+   :members:
