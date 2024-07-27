@@ -13,7 +13,6 @@ from spdl.dataloader import (
 )
 from spdl.dataloader._builder import _enqueue, _EOF, _pipe, _sink, _SKIP
 from spdl.dataloader._hook import _periodic_dispatch
-from spdl.dataloader._legacy_pipeline import AsyncPipeline
 
 
 def _put_aqueue(queue, vals, *, eof):
@@ -355,51 +354,14 @@ def test_async_pipe_concurrency_throughput():
 
 
 ################################################################################
-# AsyncPipeline
+# Pipeline
 ################################################################################
 
 
-def test_async_pipeline_cancel():
-    """AsyncPipeline is cancellable."""
-
-    cancelled = False
-
-    async def astuck(i):
-        try:
-            await asyncio.sleep(3)
-            return i
-        except asyncio.CancelledError:
-            nonlocal cancelled
-            cancelled = True
-            raise
-
-    pipeline = (
-        AsyncPipeline().add_source(range(10)).pipe(astuck, concurrency=1).add_sink(1000)
-    )
-
-    async def _test():
-        task = asyncio.create_task(pipeline.run())
-
-        await asyncio.sleep(1)
-        task.cancel()
-
-        with pytest.raises(asyncio.CancelledError):
-            await task
-
-    assert not cancelled
-    asyncio.run(_test())
-    assert cancelled
-
-
-################################################################################
-# _pipe + hook
-################################################################################
-
-
-def test_async_pipe_stage_hook_wrong_def1():
+def test_pipeline_stage_hook_wrong_def1():
     """Pipeline fails if stage_hook is not properly overrode."""
 
-    class _h3(PipelineHook):
+    class _hook(PipelineHook):
         # missing asynccontextmanager
         async def stage_hook(self):
             yield
@@ -408,7 +370,19 @@ def test_async_pipe_stage_hook_wrong_def1():
         async def task_hook(self):
             yield
 
-    class _h4(PipelineHook):
+    with pytest.raises(ValueError):
+        (
+            PipelineBuilder()
+            .add_source(range(10))
+            .pipe(passthrough, hooks=[_hook()])
+            .build()
+        )
+
+
+def test_pipeline_stage_hook_wrong_def2():
+    """Pipeline fails if task_hook is not properly overrode."""
+
+    class _hook(PipelineHook):
         # missing asynccontextmanager and async keyword
         def stage_hook(self):
             yield
@@ -417,19 +391,17 @@ def test_async_pipe_stage_hook_wrong_def1():
         async def task_hook(self):
             yield
 
-    async def _test(hook):
-        pipeline = AsyncPipeline().add_source(range(10)).pipe(passthrough, hooks=[hook])
-        await pipeline.run()
-
     with pytest.raises(ValueError):
-        asyncio.run(_test(_h3()))
-
-    with pytest.raises(ValueError):
-        asyncio.run(_test(_h4()))
+        (
+            PipelineBuilder()
+            .add_source(range(10))
+            .pipe(passthrough, hooks=[_hook()])
+            .build()
+        )
 
 
 @pytest.mark.parametrize("drop_last", [False, True])
-def test_async_pipe_hook(drop_last: bool):
+def test_pipeline_hook_drop_last(drop_last: bool):
     """Hook is executed properly"""
 
     class _hook(PipelineHook):
@@ -459,17 +431,17 @@ def test_async_pipe_hook(drop_last: bool):
         raise RuntimeError("Failing")
 
     pipeline = (
-        AsyncPipeline()
+        PipelineBuilder()
         .add_source(range(10))
         .pipe(adouble, hooks=[h1])
         .aggregate(5, hooks=[h2], drop_last=drop_last)
         .pipe(_fail, hooks=[h3])
         .add_sink(1000)
+        .build()
     )
 
-    asyncio.run(pipeline.run())
-
-    assert pipeline.output_queue.empty()
+    with pipeline.auto_stop():
+        assert [] == list(pipeline.get_iterator(timeout=3))
 
     assert h1._enter_stage_called == 1
     assert h1._exit_stage_called == 1
@@ -489,7 +461,7 @@ def test_async_pipe_hook(drop_last: bool):
     assert h3._exit_task_called == 2
 
 
-def test_async_pipe_hook_multiple():
+def test_pipeline_hook_multiple():
     """Multiple hooks are executed properly"""
 
     class _hook(PipelineHook):
@@ -516,15 +488,15 @@ def test_async_pipe_hook_multiple():
     hooks = [_hook(), _hook(), _hook()]
 
     pipeline = (
-        AsyncPipeline()
+        PipelineBuilder()
         .add_source(range(10))
         .pipe(passthrough, hooks=hooks)
         .add_sink(1000)
+        .build()
     )
 
-    asyncio.run(pipeline.run())
-
-    assert list(range(10)) == _flush_aqueue(pipeline.output_queue)
+    with pipeline.auto_stop():
+        assert list(range(10)) == list(pipeline.get_iterator(timeout=3))
 
     for h in hooks:
         assert h._enter_stage_called == 1
@@ -533,7 +505,7 @@ def test_async_pipe_hook_multiple():
         assert h._exit_task_called == 10
 
 
-def test_async_pipe_hook_failure_enter_stage():
+def test_pipeline_hook_failure_enter_stage():
     """If enter_stage fails, the pipeline is aborted."""
 
     class _enter_stage_fail(PipelineHook):
@@ -546,16 +518,18 @@ def test_async_pipe_hook_failure_enter_stage():
             yield
 
     pipeline = (
-        AsyncPipeline()
+        PipelineBuilder()
         .add_source(range(10))
         .pipe(passthrough, hooks=[_enter_stage_fail()])
+        .add_sink(1000)
+        .build()
     )
 
-    with pytest.raises(PipelineFailure):
-        asyncio.run(pipeline.run())
+    with pipeline.auto_stop():
+        assert [] == list(pipeline.get_iterator(timeout=3))
 
 
-def test_async_pipe_hook_failure_exit_stage():
+def test_pipeline_hook_failure_exit_stage():
     """If exit_stage fails, the pipeline does not fail."""
 
     class _exit_stage_fail(PipelineHook):
@@ -569,25 +543,17 @@ def test_async_pipe_hook_failure_exit_stage():
             yield
 
     pipeline = (
-        AsyncPipeline()
+        PipelineBuilder()
         .add_source(range(10))
         .pipe(passthrough, hooks=[_exit_stage_fail()])
         .add_sink(1000)
+        .build()
     )
-
-    # Well this is supposed to be checking that it does not fail.
-    # But somehow I ended up testing the opposite.
-    # TODO: Change the behavior so that stage hook failure at exit
-    # does not abort the pipeline. then rever the following assertions.
-    with pytest.raises(PipelineFailure):
-        asyncio.run(pipeline.run())
-
-    # results = _flush_aqueue(pipeline.output_queue)
-    # assert 10 == len(results)
-    # assert results == list(range(10))
+    with pipeline.auto_stop():
+        assert list(range(10)) == list(pipeline.get_iterator(timeout=3))
 
 
-def test_async_pipe_hook_failure_enter_task():
+def test_pipeline_hook_failure_enter_task():
     """If enter_task fails, the pipeline does not fail."""
 
     class _hook(PipelineHook):
@@ -600,18 +566,18 @@ def test_async_pipe_hook_failure_enter_task():
             yield
 
     pipeline = (
-        AsyncPipeline()
+        PipelineBuilder()
         .add_source(range(10))
         .pipe(passthrough, hooks=[_hook()])
         .add_sink(1000)
+        .build()
     )
 
-    asyncio.run(pipeline.run())
+    with pipeline.auto_stop():
+        assert [] == list(pipeline.get_iterator(timeout=3))
 
-    assert pipeline.output_queue.empty()
 
-
-def test_async_pipe_hook_failure_exit_task():
+def test_pipeline_hook_failure_exit_task():
     """If exit_task fails, the pipeline does not fail.
 
     IMPORTANT: The result is dropped.
@@ -624,18 +590,18 @@ def test_async_pipe_hook_failure_exit_task():
             raise RuntimeError("failing exit_task")
 
     pipeline = (
-        AsyncPipeline()
+        PipelineBuilder()
         .add_source(range(10))
         .pipe(passthrough, hooks=[_exit_stage_fail()])
         .add_sink(1000)
+        .build()
     )
 
-    asyncio.run(pipeline.run())
+    with pipeline.auto_stop():
+        assert [] == list(pipeline.get_iterator(timeout=3))
 
-    assert pipeline.output_queue.empty()
 
-
-def test_async_pipe_hook_exit_task_capture_error():
+def test_pipeline_hook_exit_task_capture_error():
     """If task fails exit_task captures the error."""
 
     exc_info = None
@@ -654,9 +620,16 @@ def test_async_pipe_hook_exit_task_capture_error():
     async def _fail(_):
         raise err
 
-    pipeline = AsyncPipeline().add_source([None]).pipe(_fail, hooks=[_capture()])
+    pipeline = (
+        PipelineBuilder()
+        .add_source([None])
+        .pipe(_fail, hooks=[_capture()])
+        .add_sink(100)
+        .build()
+    )
 
-    asyncio.run(pipeline.run())
+    with pipeline.auto_stop():
+        assert [] == list(pipeline.get_iterator(timeout=3))
 
     assert exc_info is err
 
@@ -729,37 +702,37 @@ def test_task_stats_log_interval_stats():
 ################################################################################
 
 
-def test_async_pipeline_str_smoke():
+def test_pipeline_str_smoke():
     async def passthrough(i):
         return i
 
-    apl = AsyncPipeline()
+    builder = PipelineBuilder()
 
-    print(apl)
+    print(builder)
 
-    apl = apl.add_source(range(10))
+    builder = builder.add_source(range(10))
 
-    print(apl)
+    print(builder)
 
-    apl = apl.pipe(passthrough)
+    builder = builder.pipe(passthrough)
 
-    print(apl)
+    print(builder)
 
-    apl = apl.aggregate(1)
+    builder = builder.aggregate(1)
 
-    print(apl)
+    print(builder)
 
-    apl = apl.pipe(passthrough, output_order="input")
+    builder = builder.pipe(passthrough, output_order="input")
 
-    print(apl)
+    print(builder)
 
-    apl = apl.aggregate(1)
+    builder = builder.aggregate(1)
 
-    print(apl)
+    print(builder)
 
-    apl = apl.add_sink(100)
+    builder = builder.add_sink(100)
 
-    print(apl)
+    print(builder)
 
 
 ################################################################################
@@ -767,76 +740,63 @@ def test_async_pipeline_str_smoke():
 ################################################################################
 
 
-def test_async_pipeline_restart():
-    """AsyncPipeline can run multiple times if source is reusable."""
+def test_pipeline_reiterate():
+    """Pipeline can be iterated multiple times as long as it's not stopped"""
 
-    class Generator:
-        def __iter__(self):
-            for _ in range(5):
-                yield from range(10)
+    pipeline = PipelineBuilder().add_source(range(20)).add_sink(1000).build()
 
-    apl = AsyncPipeline().add_source(Generator()).add_sink(1000)
-
-    async def _test():
-        # Run multiple times
-        for _ in range(5):
-            await apl.run(num_items=10)
-            results = _flush_aqueue(apl.output_queue)
-            assert results == list(range(10))
+    with pipeline.auto_stop():
+        for i in range(5):
+            for j, val in enumerate(pipeline.get_iterator(timeout=3)):
+                assert val == (i * 4) + j
 
         # Now it's empty
-        await apl.run(num_items=10)
-        assert apl.output_queue.empty()
-
-    asyncio.run(_test())
+        with pytest.raises(StopIteration):
+            next(pipeline.get_iterator(timeout=3))
 
 
-def test_async_pipeline_resume():
+def test_pipeline_resume():
     """AsyncPipeline can execute the source partially, then resumed"""
 
     # Note
     # If we pass `range(10)` directly, new iterator is created at every run.
     src = iter(range(10))
 
-    apl = AsyncPipeline().add_source(src).add_sink(1000)
+    pipeline = PipelineBuilder().add_source(src).add_sink(1000).build()
 
-    async def _test():
-        await apl.run(num_items=2)
-        results = _flush_aqueue(apl.output_queue)
-        assert results == [0, 1]
+    with pipeline.auto_stop():
+        iterator = pipeline.get_iterator(timeout=3)
+        assert [0, 1] == [next(iterator) for _ in range(2)]
 
-        await apl.run(num_items=3)
-        results = _flush_aqueue(apl.output_queue)
-        assert results == [2, 3, 4]
+        iterator = pipeline.get_iterator(timeout=3)
+        assert [2, 3, 4] == [next(iterator) for _ in range(3)]
 
-        await apl.run()
-        results = _flush_aqueue(apl.output_queue)
-        assert results == [5, 6, 7, 8, 9]
+        iterator = pipeline.get_iterator(timeout=3)
+        assert [5, 6, 7, 8, 9] == [next(iterator) for _ in range(5)]
 
-    asyncio.run(_test())
+        with pytest.raises(StopIteration):
+            next(iterator)
 
 
-def test_async_pipeline_infinite_loop():
+def test_pipeline_infinite_loop():
     """AsyncPipeline can execute inifinite iterable"""
 
     def src(i=-1):
         while True:
             yield (i := i + 1)
 
-    apl = AsyncPipeline().add_source(src()).add_sink(1000)
+    pipeline = PipelineBuilder().add_source(src()).add_sink(1000).build()
 
-    async def _test():
+    with pipeline.auto_stop():
         i = 0
         for _ in range(10):
-
             num_items = random.randint(1, 128)
-            await apl.run(num_items=num_items)
-            results = _flush_aqueue(apl.output_queue)
-            assert results == list(range(i, i + num_items))
+            for j, item in enumerate(pipeline.get_iterator(timeout=3)):
+                assert item == i
+                i += 1
 
-            i += num_items
-
-    asyncio.run(_test())
+                if num_items == j:
+                    break
 
 
 ################################################################################
@@ -844,7 +804,7 @@ def test_async_pipeline_infinite_loop():
 ################################################################################
 
 
-def test_async_pipeline_order_complete():
+def test_pipeline_order_complete():
     """The output is in the order of completion."""
 
     async def _sleep(i):
@@ -852,22 +812,19 @@ def test_async_pipeline_order_complete():
         return i
 
     src = list(reversed(range(10)))
-    apl = (
-        AsyncPipeline()
+    pipeline = (
+        PipelineBuilder()
         .add_source(src)
         .pipe(_sleep, concurrency=10, output_order="completion")
         .add_sink(100)
+        .build()
     )
 
-    async def _test():
-        await apl.run()
-        results = _flush_aqueue(apl.output_queue)
-        assert results == list(reversed(src))
-
-    asyncio.run(_test())
+    with pipeline.auto_stop():
+        assert list(range(10)) == list(pipeline.get_iterator(timeout=3))
 
 
-def test_async_pipeline_order_input():
+def test_pipeline_order_input():
     """The output is in the order of the input."""
 
     async def _sleep(i):
@@ -877,22 +834,19 @@ def test_async_pipeline_order_input():
         return i
 
     src = list(reversed(range(10)))
-    apl = (
-        AsyncPipeline()
+    pipeline = (
+        PipelineBuilder()
         .add_source(src)
         .pipe(_sleep, concurrency=10, output_order="input")
         .add_sink(100)
+        .build()
     )
 
-    async def _test():
-        await apl.run()
-        results = _flush_aqueue(apl.output_queue)
-        assert results == src
-
-    asyncio.run(_test())
+    with pipeline.auto_stop():
+        assert src == list(pipeline.get_iterator(timeout=3))
 
 
-def test_async_pipeline_order_input_sync_func():
+def test_pipeline_order_input_sync_func():
     """The output is in the order of the input."""
 
     def _sleep(i):
@@ -902,19 +856,16 @@ def test_async_pipeline_order_input_sync_func():
         return i
 
     src = list(reversed(range(10)))
-    apl = (
-        AsyncPipeline()
+    pipeline = (
+        PipelineBuilder()
         .add_source(src)
         .pipe(_sleep, concurrency=10, output_order="input")
         .add_sink(100)
+        .build()
     )
 
-    async def _test():
-        await apl.run()
-        results = _flush_aqueue(apl.output_queue)
-        assert results == src
-
-    asyncio.run(_test())
+    with pipeline.auto_stop():
+        assert src == list(pipeline.get_iterator(timeout=3))
 
 
 ################################################################################
@@ -922,7 +873,7 @@ def test_async_pipeline_order_input_sync_func():
 ################################################################################
 
 
-def test_async_pipeline2_noop():
+def test_pipeline_noop():
     """AsyncPipeline2 functions without pipe."""
 
     apl = PipelineBuilder().add_source(range(10)).add_sink(1).build()
@@ -941,7 +892,7 @@ def test_async_pipeline2_noop():
         apl.get_item(timeout=1)
 
 
-def test_async_pipeline2_passthrough():
+def test_pipeline_passthrough():
     """AsyncPipeline2 can passdown items operation."""
 
     apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
@@ -960,7 +911,7 @@ def test_async_pipeline2_passthrough():
         apl.get_item(timeout=1)
 
 
-def test_async_pipeline2_skip():
+def test_pipeline_skip():
     """AsyncPipeline2 does not output _SKIP items."""
 
     def src():
@@ -976,7 +927,7 @@ def test_async_pipeline2_skip():
             assert i == pipeline.get_item(timeout=3)
 
 
-def test_async_pipeline2_skip_odd():
+def test_pipeline_skip_odd():
     """AsyncPipeline2 does not output _SKIP items."""
 
     src = list(range(10))
@@ -994,7 +945,7 @@ def test_async_pipeline2_skip_odd():
             pipeline.get_item(timeout=3)
 
 
-def test_async_pipeline2_lambda():
+def test_pipeline_lambda():
     """AsyncPipeline2 pipe supports lambda items operation."""
 
     apl = PipelineBuilder().add_source(range(10)).pipe(lambda x: x).add_sink(1).build()
@@ -1013,7 +964,7 @@ def test_async_pipeline2_lambda():
         apl.get_item(timeout=1)
 
 
-def test_async_pipeline2_simple():
+def test_pipeline_simple():
     """AsyncPipeline2 can perform simple operation."""
     pipeline = (
         PipelineBuilder()
@@ -1029,7 +980,7 @@ def test_async_pipeline2_simple():
             assert item == i * 2 + 1
 
 
-def test_async_pipeline2_aggregate():
+def test_pipeline_aggregate():
     """AsyncPipeline aggregates the input"""
 
     src = list(range(13))
@@ -1041,7 +992,7 @@ def test_async_pipeline2_aggregate():
         assert results == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12]]
 
 
-def test_async_pipeline2_aggregate_drop_last():
+def test_pipeline_aggregate_drop_last():
     """AsyncPipeline aggregates the input and drop the last"""
 
     src = list(range(13))
@@ -1059,7 +1010,7 @@ def test_async_pipeline2_aggregate_drop_last():
         assert results == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
 
 
-def test_async_pipeline2_source_failure():
+def test_pipeline_source_failure():
     """AsyncPipeline continues when source fails."""
 
     def failing_range(i):
@@ -1080,7 +1031,7 @@ def test_async_pipeline2_source_failure():
         assert results == [1 + 2 * i for i in range(10)]
 
 
-def test_async_pipeline2_type_error():
+def test_pipeline_type_error():
     """AsyncPipeline immediately fails if pipe function has wrong signature"""
 
     async def wrong_sig(i, _):
@@ -1094,7 +1045,7 @@ def test_async_pipeline2_type_error():
         assert [] == list(pipeline.get_iterator(timeout=3))
 
 
-def test_async_pipeline2_task_failure():
+def test_pipeline_task_failure():
     """AsyncPipeline is robust against task-level failure."""
 
     async def areject_m3(i):
@@ -1117,7 +1068,7 @@ def test_async_pipeline2_task_failure():
         assert results == [1 + 2 * i for i in range(10) if i % 3]
 
 
-def test_async_pipeline2_cancel_empty():
+def test_pipeline_cancel_empty():
     """AsyncPipeline2 can be cancelled while it's blocked on the pipeline."""
 
     apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
@@ -1145,7 +1096,7 @@ def test_async_pipeline2_cancel_empty():
             apl.get_item(timeout=1)
 
 
-def test_async_pipeline2_fail_middle():
+def test_pipeline_fail_middle():
     """When a stage in the middle fails, downstream stages are not failing."""
 
     async def fail(i, _):
@@ -1186,7 +1137,7 @@ def test_async_pipeline2_fail_middle():
             apl.get_item(timeout=1)
 
 
-def test_async_pipeline2_eof_stop():
+def test_pipeline_eof_stop():
     """APL2 can be closed after reaching EOF."""
     apl = (
         PipelineBuilder().add_source(range(2)).pipe(passthrough).add_sink(1000).build()
@@ -1200,7 +1151,7 @@ def test_async_pipeline2_eof_stop():
             apl.get_item(timeout=1)
 
 
-def test_async_pipeline2_iterator():
+def test_pipeline_iterator():
     """Can iterate the pipeline."""
 
     apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
@@ -1211,7 +1162,7 @@ def test_async_pipeline2_iterator():
             assert i == item
 
 
-def test_async_pipeline2_iter_and_next():
+def test_pipeline_iter_and_next():
     """Pipeline `iter` and `next` fulfill the following contracts
 
     1. `iter(pipeline)` creates a new iterator.
@@ -1258,7 +1209,7 @@ def test_async_pipeline2_iter_and_next():
             next(iterator)
 
 
-def test_async_pipeline2_stuck():
+def test_pipeline_stuck():
     """`get_item` waits for slow pipeline."""
 
     async def delay(i):
@@ -1275,7 +1226,7 @@ def test_async_pipeline2_stuck():
             assert i == item
 
 
-def test_async_pipeline2_pipe_agen():
+def test_pipeline_pipe_agen():
     """pipe works with async generator function"""
 
     async def dup_increment(v):
@@ -1290,7 +1241,7 @@ def test_async_pipeline2_pipe_agen():
     assert expected == output
 
 
-def test_async_pipeline2_pipe_agen_wrong_hook():
+def test_pipeline_pipe_agen_wrong_hook():
     """pipe works with async generator function, even when hook abosrb the StopAsyncIteration"""
 
     class _Hook(PipelineHook):
@@ -1319,7 +1270,7 @@ def test_async_pipeline2_pipe_agen_wrong_hook():
     assert expected == output
 
 
-def test_async_pipeline2_source_agen():
+def test_pipeline_source_agen():
     """source works with async generator function"""
 
     async def source():
