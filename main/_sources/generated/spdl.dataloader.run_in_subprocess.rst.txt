@@ -1,0 +1,6 @@
+spdl.dataloader.run\_in\_subprocess
+===================================
+
+.. currentmodule:: spdl.dataloader
+
+.. autofunction:: run_in_subprocess

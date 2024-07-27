@@ -1,0 +1,6 @@
+spdl.io.async\_sample\_decode\_video
+====================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_sample_decode_video
