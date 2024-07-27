@@ -1,0 +1,21 @@
+spdl.io.VideoFrames
+===================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoFrames
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~VideoFrames.clone
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~VideoFrames.height
+      ~VideoFrames.num_frames
+      ~VideoFrames.num_planes
+      ~VideoFrames.pix_fmt
+      ~VideoFrames.width

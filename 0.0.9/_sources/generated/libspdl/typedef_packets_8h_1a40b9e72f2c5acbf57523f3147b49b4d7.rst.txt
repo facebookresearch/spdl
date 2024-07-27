@@ -1,0 +1,14 @@
+.. _exhale_typedef_packets_8h_1a40b9e72f2c5acbf57523f3147b49b4d7:
+
+Typedef spdl::core::ImagePacketsPtr
+===================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::ImagePacketsPtr
+   :project: libspdl

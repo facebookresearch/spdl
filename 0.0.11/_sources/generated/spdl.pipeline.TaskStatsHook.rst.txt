@@ -1,0 +1,18 @@
+spdl.pipeline.TaskStatsHook
+===========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: TaskStatsHook
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~TaskStatsHook.stage_hook
+      ~TaskStatsHook.task_hook
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~TaskStatsHook.num_failures

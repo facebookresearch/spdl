@@ -1,0 +1,14 @@
+.. _exhale_enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f:
+
+Enum ElemClass
+==============
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: spdl::core::ElemClass
+   :project: libspdl
