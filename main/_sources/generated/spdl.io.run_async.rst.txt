@@ -1,0 +1,6 @@
+spdl.io.run\_async
+==================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: run_async

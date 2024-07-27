@@ -1,0 +1,6 @@
+spdl.io.async\_decode\_image\_nvjpeg
+====================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_decode_image_nvjpeg

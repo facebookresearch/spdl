@@ -1,0 +1,7 @@
+spdl.dataloader.MergeIterator
+=============================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoclass:: MergeIterator
+   :members:

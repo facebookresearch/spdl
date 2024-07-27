@@ -1,0 +1,819 @@
+﻿..
+   Custom template for our custom_autosummary.
+   The purpose of using custom_autosummary is list the entries on
+   the right side bar instead of the left side bar.
+   This is achieved with the combination of custom directive, template and CSS.
+
+   The `custom_autosummary` directive functions mostly like `autosummary`. We
+   pass `:toctree:` option to generate a doc page for each entry, but we use
+   our custom `:hide_from_toctree:` option so as not to attach them in ToC tree.
+
+   This template inserts a section header for each entry, so that they show up
+   in the right-side bar. The headers are hidden by CSS.
+
+   Because each entry will have its own table and their borders no longer match,
+   table borders are hidden by CSS and instead we use horizontal line.
+
+.. raw:: html
+
+   <div class="custom_autosummary">
+
+spdl.io
+=======
+
+.. automodule:: spdl.io
+
+..
+   ############################################################################
+   Functions
+   ############################################################################
+
+
+
+.. rubric:: Functions
+
+
+async\_convert\_array
+---------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_convert_array
+
+
+async\_convert\_frames
+----------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_convert_frames
+
+
+async\_decode\_image\_nvjpeg
+----------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_decode_image_nvjpeg
+
+
+async\_decode\_packets
+----------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_decode_packets
+
+
+async\_decode\_packets\_nvdec
+-----------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_decode_packets_nvdec
+
+
+async\_demux\_audio
+-------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_demux_audio
+
+
+async\_demux\_image
+-------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_demux_image
+
+
+async\_demux\_video
+-------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_demux_video
+
+
+async\_encode\_image
+--------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_encode_image
+
+
+async\_load\_audio
+------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_load_audio
+
+
+async\_load\_image
+------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_load_image
+
+
+async\_load\_image\_batch
+-------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_load_image_batch
+
+
+async\_load\_image\_batch\_nvdec
+--------------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_load_image_batch_nvdec
+
+
+async\_load\_image\_batch\_nvjpeg
+---------------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_load_image_batch_nvjpeg
+
+
+async\_load\_video
+------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_load_video
+
+
+async\_sample\_decode\_video
+----------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_sample_decode_video
+
+
+async\_streaming\_decode\_packets
+---------------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_streaming_decode_packets
+
+
+async\_transfer\_buffer
+-----------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_transfer_buffer
+
+
+async\_transfer\_buffer\_cpu
+----------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.async_transfer_buffer_cpu
+
+
+convert\_array
+--------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.convert_array
+
+
+convert\_frames
+---------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.convert_frames
+
+
+cpu\_storage
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.cpu_storage
+
+
+cuda\_config
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.cuda_config
+
+
+decode\_config
+--------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.decode_config
+
+
+decode\_image\_nvjpeg
+---------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.decode_image_nvjpeg
+
+
+decode\_packets
+---------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.decode_packets
+
+
+decode\_packets\_nvdec
+----------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.decode_packets_nvdec
+
+
+demux\_audio
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.demux_audio
+
+
+demux\_config
+-------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.demux_config
+
+
+demux\_image
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.demux_image
+
+
+demux\_video
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.demux_video
+
+
+encode\_config
+--------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.encode_config
+
+
+encode\_image
+-------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.encode_image
+
+
+get\_audio\_filter\_desc
+------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.get_audio_filter_desc
+
+
+get\_filter\_desc
+-----------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.get_filter_desc
+
+
+get\_video\_filter\_desc
+------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.get_video_filter_desc
+
+
+load\_audio
+-----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.load_audio
+
+
+load\_image
+-----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.load_image
+
+
+load\_image\_batch\_nvjpeg
+--------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.load_image_batch_nvjpeg
+
+
+load\_video
+-----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.load_video
+
+
+run\_async
+----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.run_async
+
+
+sample\_decode\_video
+---------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.sample_decode_video
+
+
+streaming\_decode\_packets
+--------------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.streaming_decode_packets
+
+
+to\_jax
+-------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.to_jax
+
+
+to\_numba
+---------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.to_numba
+
+
+to\_numpy
+---------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.to_numpy
+
+
+to\_torch
+---------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.to_torch
+
+
+transfer\_buffer
+----------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.transfer_buffer
+
+
+transfer\_buffer\_cpu
+---------------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.io.transfer_buffer_cpu
+
+
+
+
+
+..
+   ############################################################################
+   Attributes
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Classes
+   ############################################################################
+
+
+
+.. rubric:: Classes
+
+
+AudioFrames
+-----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.AudioFrames
+
+
+AudioPackets
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.AudioPackets
+
+
+CPUBuffer
+---------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.CPUBuffer
+
+
+CPUStorage
+----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.CPUStorage
+
+
+CUDABuffer
+----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.CUDABuffer
+
+
+CUDAConfig
+----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.CUDAConfig
+
+
+DecodeConfig
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.DecodeConfig
+
+
+DemuxConfig
+-----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.DemuxConfig
+
+
+Demuxer
+-------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.Demuxer
+
+
+EncodeConfig
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.EncodeConfig
+
+
+Frames
+------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.Frames
+
+
+ImageFrames
+-----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.ImageFrames
+
+
+ImagePackets
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.ImagePackets
+
+
+Packets
+-------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.Packets
+
+
+VideoFrames
+-----------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.VideoFrames
+
+
+VideoPackets
+------------
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.io.VideoPackets
+
+
+
+
+
+..
+   ############################################################################
+   Exceptions
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Sub modules
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Others
+   ############################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. raw:: html
+
+   </div>

@@ -1,0 +1,14 @@
+.. _exhale_function_decoding_8h_1ad4f30cd883e8316d581e9af50c91ea9a:
+
+Template Function spdl::core::requires
+======================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::requires(media_type !)
+   :project: libspdl

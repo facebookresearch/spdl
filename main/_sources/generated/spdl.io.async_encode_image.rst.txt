@@ -1,0 +1,6 @@
+spdl.io.async\_encode\_image
+============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_encode_image
