@@ -1,0 +1,7 @@
+spdl.io.Packets
+===============
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: Packets
+   :members:

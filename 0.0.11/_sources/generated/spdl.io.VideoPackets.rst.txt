@@ -1,0 +1,22 @@
+spdl.io.VideoPackets
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoPackets
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~VideoPackets.clone
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~VideoPackets.codec
+      ~VideoPackets.frame_rate
+      ~VideoPackets.height
+      ~VideoPackets.pix_fmt
+      ~VideoPackets.timestamp
+      ~VideoPackets.width
