@@ -1,0 +1,14 @@
+.. _exhale_typedef_packets_8h_1a491d9af92f6473307b62089e5fd58655:
+
+Typedef spdl::core::VideoPackets
+================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::VideoPackets
+   :project: libspdl

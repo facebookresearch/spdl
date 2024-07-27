@@ -1,0 +1,69 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h:
+
+File filter_graph.h
+===================
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/filter_graph.h``)
+----------------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/frames.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`)
+
+- ``memory``
+
+- ``variant``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+- :ref:`namespace_spdl__core__detail`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1FilterGraph`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_filter__graph_8h_1a54ef17cf7b966b60bb81907e9b0e4c98`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_filter__graph_8h_1a29554b40f89e4b227521ff86ccf69b8b`
+

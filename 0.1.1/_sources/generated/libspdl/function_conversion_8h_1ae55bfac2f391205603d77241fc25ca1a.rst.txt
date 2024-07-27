@@ -1,0 +1,14 @@
+.. _exhale_function_conversion_8h_1ae55bfac2f391205603d77241fc25ca1a:
+
+Template Function spdl::core::convert_frames(const Frames<media> \*, std::shared_ptr<CPUStorage>)
+=================================================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::convert_frames(const Frames<media> *, std::shared_ptr<CPUStorage>)
+   :project: libspdl

@@ -1,0 +1,14 @@
+.. _exhale_function_demuxing_8h_1a4e41f148ebcb2f3132582668ec39ba10:
+
+Function spdl::core::apply_bsf
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::apply_bsf(VideoPacketsPtr, const std::string&)
+   :project: libspdl
