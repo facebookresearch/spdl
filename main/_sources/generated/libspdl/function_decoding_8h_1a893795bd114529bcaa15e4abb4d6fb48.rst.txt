@@ -1,0 +1,14 @@
+.. _exhale_function_decoding_8h_1a893795bd114529bcaa15e4abb4d6fb48:
+
+Template Function spdl::core::decode_packets_ffmpeg
+===================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::decode_packets_ffmpeg(PacketsPtr<media_type>, const std::optional<DecodeConfig>&, const std::optional<std::string>&)
+   :project: libspdl

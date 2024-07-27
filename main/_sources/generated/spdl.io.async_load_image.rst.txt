@@ -1,0 +1,6 @@
+spdl.io.async\_load\_image
+==========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_load_image

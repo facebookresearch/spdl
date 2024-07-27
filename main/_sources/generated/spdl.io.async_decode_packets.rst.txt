@@ -1,0 +1,6 @@
+spdl.io.async\_decode\_packets
+==============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_decode_packets

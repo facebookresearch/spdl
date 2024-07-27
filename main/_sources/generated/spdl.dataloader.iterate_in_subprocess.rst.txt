@@ -1,0 +1,6 @@
+spdl.dataloader.iterate\_in\_subprocess
+=======================================
+
+.. currentmodule:: spdl.dataloader
+
+.. autofunction:: iterate_in_subprocess

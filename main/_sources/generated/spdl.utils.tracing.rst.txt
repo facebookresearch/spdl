@@ -1,0 +1,6 @@
+spdl.utils.tracing
+==================
+
+.. currentmodule:: spdl.utils
+
+.. autofunction:: tracing

@@ -1,0 +1,6 @@
+spdl.io.async\_demux\_image
+===========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_demux_image

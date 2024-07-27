@@ -1,0 +1,6 @@
+spdl.io.async\_demux\_video
+===========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_demux_video
