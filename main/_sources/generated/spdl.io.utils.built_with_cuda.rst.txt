@@ -1,0 +1,6 @@
+spdl.io.utils.built\_with\_cuda
+===============================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: built_with_cuda

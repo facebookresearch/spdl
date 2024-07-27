@@ -1,0 +1,6 @@
+spdl.io.nvdec\_decoder
+======================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: nvdec_decoder
