@@ -1,0 +1,14 @@
+.. _exhale_function_decoding_8h_1acafd57b19ad7645662d774a0ef31d249:
+
+Template Function spdl::core::make_decoder
+==========================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::make_decoder(PacketsPtr<media_type>, const std::optional<DecodeConfig>&, const std::optional<std::string>&)
+   :project: libspdl
