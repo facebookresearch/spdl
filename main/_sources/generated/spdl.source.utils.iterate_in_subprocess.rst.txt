@@ -1,0 +1,6 @@
+spdl.source.utils.iterate\_in\_subprocess
+=========================================
+
+.. currentmodule:: spdl.source.utils
+
+.. autofunction:: iterate_in_subprocess

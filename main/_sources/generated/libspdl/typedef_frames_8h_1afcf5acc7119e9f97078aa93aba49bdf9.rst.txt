@@ -1,0 +1,14 @@
+.. _exhale_typedef_frames_8h_1afcf5acc7119e9f97078aa93aba49bdf9:
+
+Typedef spdl::core::FFmpegImageFrames
+=====================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::FFmpegImageFrames
+   :project: libspdl

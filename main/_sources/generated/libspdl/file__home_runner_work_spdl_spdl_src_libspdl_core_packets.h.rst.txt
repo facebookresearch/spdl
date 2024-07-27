@@ -1,0 +1,93 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h:
+
+File packets.h
+==============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/packets.h``)
+-----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``string``
+
+- ``tuple``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1DemuxedPackets`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_packets_8h_1a0b8ace1b86ac81585b1a8a4193637f84`
+
+- :ref:`exhale_function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_packets_8h_1ac32cc3efe73a9e4d350dea50de9bfc1a`
+
+- :ref:`exhale_typedef_packets_8h_1a7d8aab12ea6bbedd5f5ac3a61ca35052`
+
+- :ref:`exhale_typedef_packets_8h_1a9f1d8f8a824887584d6c7afeef0db0ba`
+
+- :ref:`exhale_typedef_packets_8h_1a40b9e72f2c5acbf57523f3147b49b4d7`
+
+- :ref:`exhale_typedef_packets_8h_1ad0bca8953615860b5cd7c018711defd2`
+
+- :ref:`exhale_typedef_packets_8h_1a491d9af92f6473307b62089e5fd58655`
+
+- :ref:`exhale_typedef_packets_8h_1ae3f1d293e78dbd0c27d6b9607cc7658e`
+

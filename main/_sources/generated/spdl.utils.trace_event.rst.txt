@@ -1,0 +1,6 @@
+spdl.utils.trace\_event
+=======================
+
+.. currentmodule:: spdl.utils
+
+.. autofunction:: trace_event
