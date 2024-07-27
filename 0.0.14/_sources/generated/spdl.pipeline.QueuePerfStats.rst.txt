@@ -1,0 +1,17 @@
+spdl.pipeline.QueuePerfStats
+============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: QueuePerfStats
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~QueuePerfStats.qps
+      ~QueuePerfStats.elapsed
+      ~QueuePerfStats.num_items
+      ~QueuePerfStats.ave_put_time
+      ~QueuePerfStats.ave_get_time
+      ~QueuePerfStats.occupancy_rate
