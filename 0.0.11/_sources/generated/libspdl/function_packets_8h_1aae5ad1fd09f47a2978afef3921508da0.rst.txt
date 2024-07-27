@@ -1,0 +1,14 @@
+.. _exhale_function_packets_8h_1aae5ad1fd09f47a2978afef3921508da0:
+
+Template Function spdl::core::get_pts
+=====================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::get_pts(const Packets<media>&)
+   :project: libspdl

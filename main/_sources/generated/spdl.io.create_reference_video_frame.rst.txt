@@ -1,0 +1,6 @@
+spdl.io.create\_reference\_video\_frame
+=======================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: create_reference_video_frame

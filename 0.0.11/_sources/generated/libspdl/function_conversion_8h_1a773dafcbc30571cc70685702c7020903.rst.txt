@@ -1,0 +1,14 @@
+.. _exhale_function_conversion_8h_1a773dafcbc30571cc70685702c7020903:
+
+Function spdl::core::convert_rgb_array
+======================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::convert_rgb_array(const void *, size_t, size_t, size_t, Rational, int)
+   :project: libspdl
