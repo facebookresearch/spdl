@@ -1,0 +1,14 @@
+.. _exhale_function_decoding_8h_1a6367f6b6ca933fc62638615e96a48fa0:
+
+Function spdl::core::decode_packets_nvdec(std::vector<ImagePacketsPtr>&&, const CUDAConfig&, const CropArea&, int, int, const std::optional<std::string>&, bool)
+================================================================================================================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::decode_packets_nvdec(std::vector<ImagePacketsPtr>&&, const CUDAConfig&, const CropArea&, int, int, const std::optional<std::string>&, bool)
+   :project: libspdl
