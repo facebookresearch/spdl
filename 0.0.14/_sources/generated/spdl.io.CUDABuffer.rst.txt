@@ -1,0 +1,12 @@
+spdl.io.CUDABuffer
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: CUDABuffer
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~CUDABuffer.device_index

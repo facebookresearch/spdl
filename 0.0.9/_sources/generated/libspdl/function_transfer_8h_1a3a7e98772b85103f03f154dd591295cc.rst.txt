@@ -1,0 +1,14 @@
+.. _exhale_function_transfer_8h_1a3a7e98772b85103f03f154dd591295cc:
+
+Function spdl::core::cp_to_cpu
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_transfer.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::cp_to_cpu(const void *, const std::vector<size_t>&)
+   :project: libspdl
