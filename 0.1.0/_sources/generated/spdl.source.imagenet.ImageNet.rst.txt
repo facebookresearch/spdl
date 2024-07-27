@@ -1,0 +1,13 @@
+spdl.source.imagenet.ImageNet
+=============================
+
+.. currentmodule:: spdl.source.imagenet
+
+.. autoclass:: ImageNet
+   :show-inheritance:
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~ImageNet.shuffle

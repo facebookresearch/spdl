@@ -1,0 +1,14 @@
+spdl.pipeline.TaskPerfStats
+===========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: TaskPerfStats
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~TaskPerfStats.num_tasks
+      ~TaskPerfStats.num_failures
+      ~TaskPerfStats.ave_time

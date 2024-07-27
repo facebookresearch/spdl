@@ -1,0 +1,6 @@
+spdl.io.to\_torch
+=================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: to_torch

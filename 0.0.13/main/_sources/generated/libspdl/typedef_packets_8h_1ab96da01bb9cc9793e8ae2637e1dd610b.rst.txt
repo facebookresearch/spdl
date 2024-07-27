@@ -1,0 +1,14 @@
+.. _exhale_typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b:
+
+Typedef spdl::core::AnyPackets
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::AnyPackets
+   :project: libspdl
