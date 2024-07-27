@@ -56,12 +56,46 @@ jobs:
           conda install -c conda-forge 'ffmpeg==6'
           pip install -r docs/requirements.txt
           ./docs/build.sh
-          mv docs/_build _site
+          mkdir upload
+          mv docs/_build upload/_site
 
       - uses: actions/upload-artifact@v4
         with:
           name: docs
-          path: _site
+          path: upload
           if-no-files-found: error
           retention-days: 1
           overwrite: true
+
+  deploy:
+    permissions:
+      # Required for `git push`
+      # Note:
+      #   This is not effective from fork.
+      #   When you debug this, make sure to make a branch on the upstream, and
+      #   make PR from there.
+      contents: write
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: gh-pages
+        fetch-depth: 5
+    - uses: actions/download-artifact@v4
+      with:
+        name: docs
+    - name: Update main doc
+      run: |
+        set -x
+
+        ls -alh
+        rm -rf main
+        mv _site main
+
+        git add --all main || true
+
+        git config user.name "ci"
+        git config user.email "noreply@meta.com"
+        git commit --amend -m "Update docs" || true
+        git push -f
