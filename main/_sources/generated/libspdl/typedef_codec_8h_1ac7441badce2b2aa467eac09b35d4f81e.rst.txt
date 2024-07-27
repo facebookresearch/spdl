@@ -1,0 +1,14 @@
+.. _exhale_typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e:
+
+Typedef spdl::core::VideoCodec
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::VideoCodec
+   :project: libspdl
