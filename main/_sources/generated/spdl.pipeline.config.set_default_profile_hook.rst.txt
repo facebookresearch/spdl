@@ -1,0 +1,6 @@
+spdl.pipeline.config.set\_default\_profile\_hook
+================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: set_default_profile_hook

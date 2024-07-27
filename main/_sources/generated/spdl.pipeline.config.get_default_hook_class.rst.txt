@@ -1,0 +1,6 @@
+spdl.pipeline.config.get\_default\_hook\_class
+==============================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: get_default_hook_class

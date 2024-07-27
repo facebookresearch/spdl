@@ -1,0 +1,6 @@
+spdl.pipeline.config.set\_default\_hook\_class
+==============================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: set_default_hook_class

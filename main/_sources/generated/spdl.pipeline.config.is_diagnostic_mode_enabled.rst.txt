@@ -1,0 +1,6 @@
+spdl.pipeline.config.is\_diagnostic\_mode\_enabled
+==================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: is_diagnostic_mode_enabled

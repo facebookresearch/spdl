@@ -1,0 +1,13 @@
+spdl.source.IterableWithShuffle
+===============================
+
+.. currentmodule:: spdl.source
+
+.. autoclass:: IterableWithShuffle
+   :show-inheritance:
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~IterableWithShuffle.shuffle

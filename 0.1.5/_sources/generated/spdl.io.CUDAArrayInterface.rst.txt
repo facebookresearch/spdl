@@ -1,0 +1,7 @@
+spdl.io.CUDAArrayInterface
+==========================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: CUDAArrayInterface
+   :members:

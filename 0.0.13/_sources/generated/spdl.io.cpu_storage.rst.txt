@@ -1,0 +1,6 @@
+spdl.io.cpu\_storage
+====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: cpu_storage
