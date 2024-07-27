@@ -1,0 +1,6 @@
+spdl.io.to\_numpy
+=================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: to_numpy
