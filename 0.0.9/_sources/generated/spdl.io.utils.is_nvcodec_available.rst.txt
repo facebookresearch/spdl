@@ -1,0 +1,6 @@
+spdl.io.utils.is\_nvcodec\_available
+====================================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: is_nvcodec_available
