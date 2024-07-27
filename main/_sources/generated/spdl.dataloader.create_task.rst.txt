@@ -1,0 +1,6 @@
+spdl.dataloader.create\_task
+============================
+
+.. currentmodule:: spdl.dataloader
+
+.. autofunction:: create_task

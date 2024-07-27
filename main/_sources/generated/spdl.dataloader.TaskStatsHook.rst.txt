@@ -1,0 +1,13 @@
+spdl.dataloader.TaskStatsHook
+=============================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoclass:: TaskStatsHook
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~TaskStatsHook.stage_hook
+      ~TaskStatsHook.task_hook

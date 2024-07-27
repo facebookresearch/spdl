@@ -1,0 +1,6 @@
+spdl.io.async\_load\_video
+==========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_load_video

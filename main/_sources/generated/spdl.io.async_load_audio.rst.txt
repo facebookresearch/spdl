@@ -1,0 +1,6 @@
+spdl.io.async\_load\_audio
+==========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_load_audio

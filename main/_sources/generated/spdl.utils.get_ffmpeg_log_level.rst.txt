@@ -1,0 +1,6 @@
+spdl.utils.get\_ffmpeg\_log\_level
+==================================
+
+.. currentmodule:: spdl.utils
+
+.. autofunction:: get_ffmpeg_log_level
