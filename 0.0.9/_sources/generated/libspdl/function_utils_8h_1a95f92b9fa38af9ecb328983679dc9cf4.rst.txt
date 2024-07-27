@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1a95f92b9fa38af9ecb328983679dc9cf4:
+
+Function spdl::core::is_nvcodec_available
+=========================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::is_nvcodec_available()
+   :project: libspdl

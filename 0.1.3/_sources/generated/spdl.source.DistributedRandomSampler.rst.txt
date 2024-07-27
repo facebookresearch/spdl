@@ -1,0 +1,13 @@
+spdl.source.DistributedRandomSampler
+====================================
+
+.. currentmodule:: spdl.source
+
+.. autoclass:: DistributedRandomSampler
+   :show-inheritance:
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~DistributedRandomSampler.shuffle

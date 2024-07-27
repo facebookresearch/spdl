@@ -1,0 +1,182 @@
+
+.. _namespace_spdl__core:
+
+Namespace spdl::core
+====================
+
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Buffer`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1BytesAdaptor`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1CPUBuffer`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1CropArea`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1CUDABuffer`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1CUDAConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DataInterface`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DecodeConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DemuxConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1EncodeConfig`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Rational`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1SourceAdaptor`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Storage`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1StreamingDecoder`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1CPUStorage`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1CUDAStorage`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1DemuxedPackets`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Demuxer`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1FFmpegFrames`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1InternalError`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1TracingSession`
+
+
+Enums
+-----
+
+
+- :ref:`exhale_enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f`
+
+- :ref:`exhale_enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_demuxing_8h_1a657f0fb3b23804653ed6c19e96d2b2e9`
+
+- :ref:`exhale_function_frames_8h_1a894f34ab7b592c43e2b3cb7e00da1e42`
+
+- :ref:`exhale_function_packets_8h_1a0b8ace1b86ac81585b1a8a4193637f84`
+
+- :ref:`exhale_function_conversion_8h_1a99743466504068e22a728f0ed8ae97bd`
+
+- :ref:`exhale_function_conversion_8h_1a0545c3f2ca11c468e1a0ee74f57e2b02`
+
+- :ref:`exhale_function_transfer_8h_1a3a7e98772b85103f03f154dd591295cc`
+
+- :ref:`exhale_function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa`
+
+- :ref:`exhale_function_decoding_8h_1a5b067f8b056f584a1f95ca9da44d875d`
+
+- :ref:`exhale_function_decoding_8h_1a343df1b3a19c73067200a302d052babd`
+
+- :ref:`exhale_function_decoding_8h_1a0647ad416e452c65cf1259c89e71189a`
+
+- :ref:`exhale_function_decoding_8h_1a2f5317d512083631645da5d55406ebb3`
+
+- :ref:`exhale_function_decoding_8h_1a6367f6b6ca933fc62638615e96a48fa0`
+
+- :ref:`exhale_function_encoding_8h_1aa2406e658aea82791bca3e4eddbbd7e0`
+
+- :ref:`exhale_function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857`
+
+- :ref:`exhale_function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80`
+
+- :ref:`exhale_function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8`
+
+- :ref:`exhale_function_utils_8h_1af82c781c7484afbad6cbac32ff925793`
+
+- :ref:`exhale_function_utils_8h_1abbebef003881d8734c12e03a47814732`
+
+- :ref:`exhale_function_utils_8h_1afa70a317592db745d0573211a10f98c8`
+
+- :ref:`exhale_function_utils_8h_1a95f92b9fa38af9ecb328983679dc9cf4`
+
+- :ref:`exhale_function_utils_8h_1a7b618d22fdc166caa554cdc64a00d2f7`
+
+- :ref:`exhale_function_decoding_8h_1acafd57b19ad7645662d774a0ef31d249`
+
+- :ref:`exhale_function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f`
+
+- :ref:`exhale_function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4`
+
+- :ref:`exhale_function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3`
+
+- :ref:`exhale_function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d`
+
+- :ref:`exhale_function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11`
+
+- :ref:`exhale_function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6`
+
+- :ref:`exhale_function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169`
+
+- :ref:`exhale_function_transfer_8h_1adf8f9d7df9379f5a27403fa4f1d495d8`
+
+- :ref:`exhale_function_transfer_8h_1a46f014da74eb97abf0c4af96c2de6e39`
+
+- :ref:`exhale_function_transfer_8h_1a37b4ea250aff54e99c9cb5d56350fcfb`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_packets_8h_1ac32cc3efe73a9e4d350dea50de9bfc1a`
+
+- :ref:`exhale_typedef_packets_8h_1a7d8aab12ea6bbedd5f5ac3a61ca35052`
+
+- :ref:`exhale_typedef_buffer_8h_1aa53ca0dad3d74ed660c4f0ae55bb3ca3`
+
+- :ref:`exhale_typedef_types_8h_1a58ee8c8a06f6695125b423a1a8532efc`
+
+- :ref:`exhale_typedef_types_8h_1a4b013fc972e599fc717bd1afd978b083`
+
+- :ref:`exhale_typedef_types_8h_1a8429006d88afae24621607926baef99e`
+
+- :ref:`exhale_typedef_buffer_8h_1a295ea6cb7bed7deb39f245f91beff04b`
+
+- :ref:`exhale_typedef_decoding_8h_1a8fd65cf6184acafacace029e6a2e20b8`
+
+- :ref:`exhale_typedef_demuxing_8h_1a77c7c5e3c314e95c84755ff4be0c7382`
+
+- :ref:`exhale_typedef_frames_8h_1a6f38c02e59d9bde7760a9662ec20d4f6`
+
+- :ref:`exhale_typedef_frames_8h_1aaa34b66b95f4cc27c8e9333bc20eb179`
+
+- :ref:`exhale_typedef_frames_8h_1af53bca5467cae4ea8c56a12f0c281d7d`
+
+- :ref:`exhale_typedef_frames_8h_1afcf5acc7119e9f97078aa93aba49bdf9`
+
+- :ref:`exhale_typedef_frames_8h_1a35f2f4ff658c5bf990288f605b286514`
+
+- :ref:`exhale_typedef_frames_8h_1ac65015b0c2d25150472229b1af78398a`
+
+- :ref:`exhale_typedef_frames_8h_1a37b07a783dc120ebfbf2bc1df02f63c9`
+
+- :ref:`exhale_typedef_packets_8h_1a9f1d8f8a824887584d6c7afeef0db0ba`
+
+- :ref:`exhale_typedef_packets_8h_1a40b9e72f2c5acbf57523f3147b49b4d7`
+
+- :ref:`exhale_typedef_types_8h_1a2e4149a86d8a55df8a689a1d40855fa8`
+
+- :ref:`exhale_typedef_packets_8h_1ad0bca8953615860b5cd7c018711defd2`
+
+- :ref:`exhale_typedef_adaptor_8h_1aeea90ffba3c9156c91a3f9cea6b1526c`
+
+- :ref:`exhale_typedef_packets_8h_1a491d9af92f6473307b62089e5fd58655`
+
+- :ref:`exhale_typedef_packets_8h_1ae3f1d293e78dbd0c27d6b9607cc7658e`

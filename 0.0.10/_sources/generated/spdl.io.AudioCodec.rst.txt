@@ -1,0 +1,12 @@
+spdl.io.AudioCodec
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: AudioCodec
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AudioCodec.name

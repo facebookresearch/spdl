@@ -1,0 +1,26 @@
+.. _exhale_struct_structspdl_1_1core_1_1CUDABuffer:
+
+Struct CUDABuffer
+=================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`
+
+
+Inheritance Relationships
+-------------------------
+
+Base Type
+*********
+
+- ``public spdl::core::Buffer`` (:ref:`exhale_struct_structspdl_1_1core_1_1Buffer`)
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: spdl::core::CUDABuffer
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:

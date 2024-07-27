@@ -1,0 +1,7 @@
+spdl.dataloader.CacheDataLoader
+===============================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoclass:: CacheDataLoader
+   :members:

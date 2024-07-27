@@ -1,0 +1,13 @@
+spdl.io.VideoEncoder
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoEncoder
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~VideoEncoder.encode
+      ~VideoEncoder.flush

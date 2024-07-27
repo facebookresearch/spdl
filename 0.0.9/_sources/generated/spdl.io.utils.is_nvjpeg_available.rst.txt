@@ -1,0 +1,6 @@
+spdl.io.utils.is\_nvjpeg\_available
+===================================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: is_nvjpeg_available

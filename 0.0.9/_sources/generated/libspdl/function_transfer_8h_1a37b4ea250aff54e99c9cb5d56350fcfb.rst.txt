@@ -1,0 +1,14 @@
+.. _exhale_function_transfer_8h_1a37b4ea250aff54e99c9cb5d56350fcfb:
+
+Function spdl::core::transfer_buffer(const std::vector<size_t>&, ElemClass, size_t, const void \*)
+==================================================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_transfer.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::transfer_buffer(const std::vector<size_t>&, ElemClass, size_t, const void *)
+   :project: libspdl

@@ -1,0 +1,6 @@
+spdl.io.load\_npz
+=================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: load_npz

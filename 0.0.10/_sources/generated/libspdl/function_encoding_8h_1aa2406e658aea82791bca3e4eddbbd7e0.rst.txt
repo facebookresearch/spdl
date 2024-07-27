@@ -1,0 +1,14 @@
+.. _exhale_function_encoding_8h_1aa2406e658aea82791bca3e4eddbbd7e0:
+
+Function spdl::core::encode_image
+=================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoding.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::encode_image(std::string, void *, std::vector<size_t>, int, const std::string&, const std::optional<EncodeConfig>&)
+   :project: libspdl

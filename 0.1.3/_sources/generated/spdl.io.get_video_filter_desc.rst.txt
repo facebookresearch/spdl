@@ -1,0 +1,6 @@
+spdl.io.get\_video\_filter\_desc
+================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: get_video_filter_desc

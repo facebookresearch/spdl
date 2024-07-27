@@ -1,0 +1,6 @@
+spdl.io.decode\_packets\_nvdec
+==============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: decode_packets_nvdec

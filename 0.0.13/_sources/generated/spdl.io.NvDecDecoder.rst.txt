@@ -1,0 +1,14 @@
+spdl.io.NvDecDecoder
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: NvDecDecoder
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~NvDecDecoder.decode
+      ~NvDecDecoder.flush
+      ~NvDecDecoder.init

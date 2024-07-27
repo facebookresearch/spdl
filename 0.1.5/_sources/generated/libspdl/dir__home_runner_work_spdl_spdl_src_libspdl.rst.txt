@@ -1,0 +1,21 @@
+.. _dir__home_runner_work_spdl_spdl_src_libspdl:
+
+
+Directory libspdl
+=================
+
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src>` (``/home/runner/work/spdl/spdl/src``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+
+*Directory path:* ``/home/runner/work/spdl/spdl/src/libspdl``
+
+Subdirectories
+--------------
+
+- :ref:`dir__home_runner_work_spdl_spdl_src_libspdl_core`
+
+
+

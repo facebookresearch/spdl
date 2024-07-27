@@ -1,0 +1,7 @@
+spdl.io.EncodeConfig
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: EncodeConfig
+   :members:

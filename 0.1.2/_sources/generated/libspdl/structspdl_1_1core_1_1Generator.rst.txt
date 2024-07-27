@@ -1,0 +1,27 @@
+.. _exhale_struct_structspdl_1_1core_1_1Generator:
+
+Template Struct Generator
+=========================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`
+
+
+Nested Relationships
+--------------------
+
+
+Nested Types
+************
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1promise__type`
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: spdl::core::Generator
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:

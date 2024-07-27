@@ -1,0 +1,6 @@
+spdl.io.load\_image\_batch
+==========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: load_image_batch

@@ -1,0 +1,14 @@
+.. _exhale_typedef_demuxing_8h_1a77c7c5e3c314e95c84755ff4be0c7382:
+
+Typedef spdl::core::DemuxerPtr
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::DemuxerPtr
+   :project: libspdl

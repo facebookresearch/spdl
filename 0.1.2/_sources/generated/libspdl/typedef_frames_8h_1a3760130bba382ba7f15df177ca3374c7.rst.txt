@@ -1,0 +1,14 @@
+.. _exhale_typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7:
+
+Typedef spdl::core::ImageFramesPtr
+==================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::ImageFramesPtr
+   :project: libspdl

@@ -1,0 +1,155 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h:
+
+Program Listing for File packets.h
+==================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/packets.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   
+   #include <libspdl/core/codec.h>
+   #include <libspdl/core/generator.h>
+   #include <libspdl/core/types.h>
+   
+   #include <memory>
+   #include <string>
+   #include <tuple>
+   #include <variant>
+   #include <vector>
+   
+   struct AVPacket;
+   
+   namespace spdl::core {
+   
+   template <MediaType media>
+   struct Packets;
+   
+   using AudioPackets = Packets<MediaType::Audio>;
+   using VideoPackets = Packets<MediaType::Video>;
+   using ImagePackets = Packets<MediaType::Image>;
+   
+   template <MediaType media>
+   using PacketsPtr = std::unique_ptr<Packets<media>>;
+   
+   using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
+   using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
+   using ImagePacketsPtr = PacketsPtr<MediaType::Image>;
+   
+   using AnyPackets =
+       std::variant<AudioPacketsPtr, VideoPacketsPtr, ImagePacketsPtr>;
+   
+   class PacketSeries;
+   using PacketSeriesPtr = std::unique_ptr<PacketSeries>;
+   
+   // Used to expose the row data without exposing AVPacket* struct
+   // This allows NVDEC decoder to not include the libavutil header.
+   struct RawPacketData {
+     uint8_t* data;
+     int size;
+     int64_t pts;
+   };
+   
+   // Helper struct which manages a series of AVPacket* pointers.
+   class PacketSeries {
+     friend struct Packets<MediaType::Audio>;
+     friend struct Packets<MediaType::Video>;
+     friend struct Packets<MediaType::Image>;
+   
+     std::vector<AVPacket*> container = {};
+   
+    public:
+     PacketSeries();
+   
+     // Destructor releases AVPacket* resources
+     ~PacketSeries();
+     explicit PacketSeries(const PacketSeries&);
+     PacketSeries& operator=(const PacketSeries&);
+     PacketSeries(PacketSeries&& other) noexcept;
+     PacketSeries& operator=(PacketSeries&& other) noexcept;
+   
+     // Add a new AVPacket
+     void push(AVPacket*);
+     // Iterate through the packets
+     const std::vector<AVPacket*>& get_packets() const;
+     Generator<RawPacketData> iter_data() const;
+   };
+   
+   // Struct passed from IO thread pool to decoder thread pool.
+   // Similar to Frames, AVFrame pointers are bulk released.
+   // Optionally, it carries codec information for decoding and bitstream filtering
+   template <MediaType media>
+   struct Packets {
+     uintptr_t id{};
+     std::string src;
+     int stream_index;
+   
+     PacketSeries pkts;
+     Rational time_base{};
+     // window timestamp specified by user
+     std::optional<std::tuple<double, double>> timestamp;
+   
+     // Code should be available only when it's demuxed by `demux_window`
+     // method. When streaming demuxing, codec object must be fetched from
+     // demuxer directly.
+     std::optional<Codec<media>> codec;
+   
+     Packets() = default;
+   
+     // Constructing Packets from demuxer for one-time decoding
+     // Need codec to initialize the decoder.
+     // Optionally remember the timestamp (window) user asked.
+     Packets(
+         const std::string& src,
+         int index,
+         Codec<media>&& codec,
+         const std::optional<std::tuple<double, double>>& timestamp = {});
+   
+     // Constructing Packets from demuxer for streaming
+     // No need for codec and time base, as decoder is initialized
+     // seprately.
+     // Note: index/time_base is not required for decoding as decoder is
+     // initialized separately using Codec class, but it's handy when
+     // debugging.
+     Packets(
+         const std::string& src,
+         int index,
+         const Rational& time_base,
+         const std::optional<std::tuple<double, double>>& timestamp = {});
+   
+     // Constructing Packets from encoder for muxing
+     Packets(uintptr_t id, int stream_index, Rational time_base);
+   
+     explicit Packets(const Packets<media>&);
+     Packets<media>& operator=(const Packets<media>&);
+     Packets(Packets<media>&&) noexcept;
+     Packets<media>& operator=(Packets<media>&&) noexcept;
+     ~Packets() = default;
+   };
+   
+   std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
+   extract_packets_at_indices(
+       const VideoPacketsPtr& src,
+       std::vector<size_t> indices);
+   
+   // Get the timestamps of packets in seconds.
+   // It is aware of user-specified window, and the result is sorted for video
+   // use case.
+   // Providing `raw=True` disable window filtering and sorting.
+   // It returns the timestamp of internal packets as-is.
+   template <MediaType media>
+   std::vector<double> get_timestamps(const Packets<media>&, bool raw = false);
+   
+   } // namespace spdl::core

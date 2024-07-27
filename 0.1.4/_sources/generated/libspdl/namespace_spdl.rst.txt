@@ -1,0 +1,13 @@
+
+.. _namespace_spdl:
+
+Namespace spdl
+==============
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl__core`

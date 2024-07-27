@@ -1,0 +1,13 @@
+spdl.pipeline.PipelineHook
+==========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: PipelineHook
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~PipelineHook.stage_hook
+      ~PipelineHook.task_hook

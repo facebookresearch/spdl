@@ -1,0 +1,36 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_encoding.h:
+
+Program Listing for File encoding.h
+===================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_encoding.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/encoding.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #include <libspdl/core/types.h>
+   
+   #include <string>
+   #include <vector>
+   
+   namespace spdl::core {
+   
+   void encode_image(
+       std::string uri,
+       void* data,
+       std::vector<size_t> shape,
+       int bit_depth,
+       const std::string& src_pix_fmt,
+       const std::optional<EncodeConfig>& enc_cfg);
+   
+   } // namespace spdl::core

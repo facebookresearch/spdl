@@ -1,0 +1,14 @@
+.. _exhale_typedef_types_8h_1a8429006d88afae24621607926baef99e:
+
+Typedef spdl::core::cuda_deleter_fn
+===================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::cuda_deleter_fn
+   :project: libspdl

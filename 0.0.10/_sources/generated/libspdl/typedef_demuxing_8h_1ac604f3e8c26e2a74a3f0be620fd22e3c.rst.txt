@@ -1,0 +1,14 @@
+.. _exhale_typedef_demuxing_8h_1ac604f3e8c26e2a74a3f0be620fd22e3c:
+
+Typedef spdl::core::AudioCodec
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::AudioCodec
+   :project: libspdl

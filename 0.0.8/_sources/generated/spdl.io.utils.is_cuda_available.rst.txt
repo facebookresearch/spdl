@@ -1,0 +1,6 @@
+spdl.io.utils.is\_cuda\_available
+=================================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: is_cuda_available

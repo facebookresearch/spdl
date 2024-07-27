@@ -1,0 +1,59 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_transfer.h:
+
+File transfer.h
+===============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/transfer.h``)
+------------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_transfer.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/buffer.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``vector``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_transfer_8h_1a3a7e98772b85103f03f154dd591295cc`
+
+- :ref:`exhale_function_transfer_8h_1a37b4ea250aff54e99c9cb5d56350fcfb`
+
+- :ref:`exhale_function_transfer_8h_1adf8f9d7df9379f5a27403fa4f1d495d8`
+
+- :ref:`exhale_function_transfer_8h_1a46f014da74eb97abf0c4af96c2de6e39`
+

@@ -1,0 +1,17 @@
+spdl.io.VideoCodec
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoCodec
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~VideoCodec.frame_rate
+      ~VideoCodec.height
+      ~VideoCodec.name
+      ~VideoCodec.pix_fmt
+      ~VideoCodec.time_base
+      ~VideoCodec.width

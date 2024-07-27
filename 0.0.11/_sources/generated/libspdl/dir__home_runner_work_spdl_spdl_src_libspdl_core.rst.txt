@@ -1,0 +1,36 @@
+.. _dir__home_runner_work_spdl_spdl_src_libspdl_core:
+
+
+Directory core
+==============
+
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl>` (``/home/runner/work/spdl/spdl/src/libspdl``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+
+*Directory path:* ``/home/runner/work/spdl/spdl/src/libspdl/core``
+
+
+Files
+-----
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoding.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_storage.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+

@@ -1,0 +1,198 @@
+﻿..
+   Custom template for our custom_autosummary.
+   The purpose of using custom_autosummary is list the entries on
+   the right side bar instead of the left side bar.
+   This is achieved with the combination of custom directive, template and CSS.
+
+   The `custom_autosummary` directive functions mostly like `autosummary`. We
+   pass `:toctree:` option to generate a doc page for each entry, but we use
+   our custom `:hide_from_toctree:` option so as not to attach them in ToC tree.
+
+   This template inserts a section header for each entry, so that they show up
+   in the right-side bar. The headers are hidden by CSS.
+
+   Because each entry will have its own table and their borders no longer match,
+   table borders are hidden by CSS and instead we use horizontal line.
+
+.. raw:: html
+
+   <div class="custom_autosummary">
+
+spdl.pipeline.defs
+==================
+
+Overview
+--------
+
+.. automodule:: spdl.pipeline.defs
+
+API Reference
+-------------
+
+..
+   ############################################################################
+   Functions
+   ############################################################################
+
+
+
+.. rubric:: Functions
+
+
+Aggregate
+^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.defs.Aggregate
+
+
+Disaggregate
+^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.defs.Disaggregate
+
+
+Merge
+^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.defs.Merge
+
+
+Pipe
+^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.defs.Pipe
+
+
+
+
+
+..
+   ############################################################################
+   Attributes
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Classes
+   ############################################################################
+
+
+
+.. rubric:: Classes
+
+
+MergeConfig
+^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.defs.MergeConfig
+
+
+PipeConfig
+^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.defs.PipeConfig
+
+
+PipelineConfig
+^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.defs.PipelineConfig
+
+
+SinkConfig
+^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.defs.SinkConfig
+
+
+SourceConfig
+^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.defs.SourceConfig
+
+
+
+
+
+..
+   ############################################################################
+   Exceptions
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Sub modules
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Others
+   ############################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+.. raw:: html
+
+   </div>

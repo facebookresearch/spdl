@@ -1,0 +1,6 @@
+spdl.io.streaming\_decode\_packets
+==================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: streaming_decode_packets

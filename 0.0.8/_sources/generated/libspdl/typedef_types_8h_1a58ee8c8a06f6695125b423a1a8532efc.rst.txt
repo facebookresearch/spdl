@@ -1,0 +1,14 @@
+.. _exhale_typedef_types_8h_1a58ee8c8a06f6695125b423a1a8532efc:
+
+Typedef spdl::core::cuda_allocator
+==================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::cuda_allocator
+   :project: libspdl

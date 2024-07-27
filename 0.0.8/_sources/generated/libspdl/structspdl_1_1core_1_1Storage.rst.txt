@@ -1,0 +1,27 @@
+.. _exhale_struct_structspdl_1_1core_1_1Storage:
+
+Struct Storage
+==============
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_storage.h`
+
+
+Inheritance Relationships
+-------------------------
+
+Derived Types
+*************
+
+- ``public spdl::core::CPUStorage`` (:ref:`exhale_class_classspdl_1_1core_1_1CPUStorage`)
+- ``public spdl::core::CUDAStorage`` (:ref:`exhale_class_classspdl_1_1core_1_1CUDAStorage`)
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: spdl::core::Storage
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:

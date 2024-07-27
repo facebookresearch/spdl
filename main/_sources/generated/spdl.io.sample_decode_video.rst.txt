@@ -1,0 +1,6 @@
+spdl.io.sample\_decode\_video
+=============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: sample_decode_video

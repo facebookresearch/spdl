@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3:
+
+Function spdl::core::register_avdevices
+=======================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::register_avdevices()
+   :project: libspdl

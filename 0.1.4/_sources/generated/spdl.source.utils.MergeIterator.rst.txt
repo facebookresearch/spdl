@@ -1,0 +1,8 @@
+spdl.source.utils.MergeIterator
+===============================
+
+.. currentmodule:: spdl.source.utils
+
+.. autoclass:: MergeIterator
+   :show-inheritance:
+   :members:

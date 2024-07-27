@@ -1,0 +1,14 @@
+.. _exhale_function_packets_8h_1a0b8ace1b86ac81585b1a8a4193637f84:
+
+Template Function spdl::core::clone(const DemuxedPackets<media_type>&)
+======================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::clone(const DemuxedPackets<media_type>&)
+   :project: libspdl

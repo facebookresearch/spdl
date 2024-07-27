@@ -1,0 +1,87 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h:
+
+File demuxing.h
+===============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/demuxing.h``)
+------------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/adaptor.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h`)
+
+- ``libspdl/core/codec.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`)
+
+- ``libspdl/core/generator.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`)
+
+- ``libspdl/core/packets.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``optional``
+
+- ``set``
+
+- ``string_view``
+
+- ``tuple``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+- :ref:`namespace_spdl__core__detail`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Demuxer`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1StreamingDemuxer`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f`
+
+- :ref:`exhale_function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b`
+
+- :ref:`exhale_typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db`
+

@@ -1,0 +1,14 @@
+.. _exhale_function_decoding_8h_1a343df1b3a19c73067200a302d052babd:
+
+Function spdl::core::decode_image_nvjpeg(const std::vector<std::string_view>&, const CUDAConfig&, int, int, const std::string&)
+===============================================================================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::decode_image_nvjpeg(const std::vector<std::string_view>&, const CUDAConfig&, int, int, const std::string&)
+   :project: libspdl

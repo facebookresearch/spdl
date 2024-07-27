@@ -1,0 +1,79 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h:
+
+File buffer.h
+=============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/buffer.h``)
+----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstddef``
+
+- ``libspdl/core/storage.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_storage.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1CPUBuffer`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101`
+

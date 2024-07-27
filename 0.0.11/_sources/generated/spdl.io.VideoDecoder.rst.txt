@@ -1,0 +1,12 @@
+spdl.io.VideoDecoder
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoDecoder
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~VideoDecoder.decode

@@ -1,0 +1,14 @@
+.. _exhale_typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20:
+
+Typedef spdl::core::OptionDict
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::OptionDict
+   :project: libspdl

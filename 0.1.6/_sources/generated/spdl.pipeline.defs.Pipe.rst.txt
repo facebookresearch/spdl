@@ -1,0 +1,6 @@
+spdl.pipeline.defs.Pipe
+=======================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autofunction:: Pipe

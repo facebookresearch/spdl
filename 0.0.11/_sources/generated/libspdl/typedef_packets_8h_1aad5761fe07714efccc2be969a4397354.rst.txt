@@ -1,0 +1,14 @@
+.. _exhale_typedef_packets_8h_1aad5761fe07714efccc2be969a4397354:
+
+Typedef spdl::core::PacketsPtr
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::PacketsPtr
+   :project: libspdl

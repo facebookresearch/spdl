@@ -1,0 +1,143 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h:
+
+Program Listing for File frames.h
+=================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/frames.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   
+   #include <libspdl/core/buffer.h>
+   #include <libspdl/core/types.h>
+   
+   #include <memory>
+   #include <variant>
+   #include <vector>
+   
+   struct AVFrame;
+   
+   namespace spdl::core {
+   
+   // FFmpeg Frames
+   
+   template <MediaType media>
+   class Frames;
+   
+   using AudioFrames = Frames<MediaType::Audio>;
+   using VideoFrames = Frames<MediaType::Video>;
+   using ImageFrames = Frames<MediaType::Image>;
+   
+   template <MediaType media>
+   using FramesPtr = std::unique_ptr<Frames<media>>;
+   
+   using AudioFramesPtr = FramesPtr<MediaType::Audio>;
+   using VideoFramesPtr = FramesPtr<MediaType::Video>;
+   using ImageFramesPtr = FramesPtr<MediaType::Image>;
+   
+   using AnyFrames = std::variant<AudioFramesPtr, VideoFramesPtr, ImageFramesPtr>;
+   
+   #define _IS_AUDIO (media == MediaType::Audio)
+   #define _IS_VIDEO (media == MediaType::Video)
+   #define _IS_IMAGE (media == MediaType::Image)
+   
+   template <MediaType media>
+   class Frames {
+    private:
+     uintptr_t id{0};
+   
+     Rational time_base;
+   
+    private:
+     std::vector<AVFrame*> frames{};
+   
+    public:
+     Frames(uintptr_t id, Rational time_base);
+   
+     Frames(const Frames&) = delete;
+     Frames& operator=(const Frames&) = delete;
+     Frames(Frames&&) noexcept;
+     Frames& operator=(Frames&&) noexcept;
+     ~Frames();
+   
+     uint64_t get_id() const;
+   
+     const std::vector<AVFrame*>& get_frames() const;
+   
+     // Common
+   
+     const char* get_media_format_name() const;
+   
+     OptionDict get_metadata() const;
+   
+     int get_num_frames() const;
+     // the behavior is different for audio
+   
+     Rational get_time_base() const;
+   
+     void push_back(AVFrame* frame);
+     // the behavior is different for image
+   
+     // Get to the PTS of the specified AVFrame as-is.
+     // throws if the index is not within the range
+     // Note: For Audio, this is the PTS of the first sample in the last AVFrame.
+     int64_t get_pts(size_t index) const;
+   
+     // Get the PTS of the specified AVFrame in seconds.
+     // throws if the index is not within the range
+     // Note: For Audio, this is the PTS of the first sample in the last AVFrame.
+     double get_timestamp(size_t index = 0) const;
+   
+     FramesPtr<media> clone() const;
+   
+     // Audio specific
+   
+     int get_sample_rate() const
+       requires _IS_AUDIO;
+   
+     int get_num_channels() const
+       requires _IS_AUDIO;
+   
+     // Common to Image/Video
+   
+     int get_num_planes() const
+       requires(_IS_IMAGE || _IS_VIDEO);
+   
+     int get_width() const
+       requires(_IS_IMAGE || _IS_VIDEO);
+   
+     int get_height() const
+       requires(_IS_IMAGE || _IS_VIDEO);
+   
+     // Video specific
+   
+     VideoFramesPtr slice(int start, int stop, int step) const
+       requires _IS_VIDEO;
+   
+     VideoFramesPtr slice(const std::vector<int64_t>& index) const
+       requires _IS_VIDEO;
+   
+     ImageFramesPtr slice(int64_t index) const
+       requires _IS_VIDEO;
+   };
+   
+   template <MediaType media>
+   FramesPtr<media> clone(const Frames<media>& src);
+   
+   #undef _IS_AUDIO
+   #undef _IS_VIDEO
+   #undef _IS_IMAGE
+   
+   } // namespace spdl::core

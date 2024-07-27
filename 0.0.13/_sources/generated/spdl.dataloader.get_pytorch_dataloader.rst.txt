@@ -1,0 +1,6 @@
+spdl.dataloader.get\_pytorch\_dataloader
+========================================
+
+.. currentmodule:: spdl.dataloader
+
+.. autofunction:: get_pytorch_dataloader

@@ -1,0 +1,14 @@
+.. _exhale_typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa:
+
+Typedef spdl::core::AnyFrames
+=============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::AnyFrames
+   :project: libspdl

@@ -1,0 +1,260 @@
+﻿..
+   Custom template for our custom_autosummary.
+   The purpose of using custom_autosummary is list the entries on
+   the right side bar instead of the left side bar.
+   This is achieved with the combination of custom directive, template and CSS.
+
+   The `custom_autosummary` directive functions mostly like `autosummary`. We
+   pass `:toctree:` option to generate a doc page for each entry, but we use
+   our custom `:hide_from_toctree:` option so as not to attach them in ToC tree.
+
+   This template inserts a section header for each entry, so that they show up
+   in the right-side bar. The headers are hidden by CSS.
+
+   Because each entry will have its own table and their borders no longer match,
+   table borders are hidden by CSS and instead we use horizontal line.
+
+.. raw:: html
+
+   <div class="custom_autosummary">
+
+spdl.pipeline
+=============
+
+Overview
+--------
+
+.. automodule:: spdl.pipeline
+
+API Reference
+-------------
+
+..
+   ############################################################################
+   Functions
+   ############################################################################
+
+
+
+.. rubric:: Functions
+
+
+build\_pipeline
+^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.build_pipeline
+
+
+cache\_iterator
+^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.cache_iterator
+
+
+create\_task
+^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.create_task
+
+
+iterate\_in\_subprocess
+^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.iterate_in_subprocess
+
+
+run\_pipeline\_in\_subprocess
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.run_pipeline_in_subprocess
+
+
+
+
+
+..
+   ############################################################################
+   Attributes
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Classes
+   ############################################################################
+
+
+
+.. rubric:: Classes
+
+
+Pipeline
+^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.Pipeline
+
+
+PipelineBuilder
+^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.PipelineBuilder
+
+
+TaskHook
+^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.TaskHook
+
+
+TaskStatsHook
+^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.TaskStatsHook
+
+
+TaskPerfStats
+^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.TaskPerfStats
+
+
+AsyncQueue
+^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.AsyncQueue
+
+
+StatsQueue
+^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.StatsQueue
+
+
+QueuePerfStats
+^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ~spdl.pipeline.QueuePerfStats
+
+
+
+
+
+..
+   ############################################################################
+   Exceptions
+   ############################################################################
+
+
+
+.. rubric:: Exceptions
+
+
+PipelineFailure
+^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.PipelineFailure
+
+
+
+
+
+..
+   ############################################################################
+   Sub modules
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Others
+   ############################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. raw:: html
+
+   </div>

@@ -1,0 +1,6 @@
+spdl.io.Decoder
+===============
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: Decoder
