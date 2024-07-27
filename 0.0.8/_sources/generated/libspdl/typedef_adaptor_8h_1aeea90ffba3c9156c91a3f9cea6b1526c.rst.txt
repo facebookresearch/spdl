@@ -1,0 +1,14 @@
+.. _exhale_typedef_adaptor_8h_1aeea90ffba3c9156c91a3f9cea6b1526c:
+
+Typedef spdl::core::SourceAdaptorPtr
+====================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::SourceAdaptorPtr
+   :project: libspdl
