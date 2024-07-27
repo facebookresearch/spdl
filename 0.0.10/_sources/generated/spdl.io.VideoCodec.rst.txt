@@ -1,0 +1,12 @@
+spdl.io.VideoCodec
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoCodec
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~VideoCodec.name

@@ -1,0 +1,19 @@
+spdl.io.AudioPackets
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: AudioPackets
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~AudioPackets.clone
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AudioPackets.num_channels
+      ~AudioPackets.sample_rate
+      ~AudioPackets.timestamp

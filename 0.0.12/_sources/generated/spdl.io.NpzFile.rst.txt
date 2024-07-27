@@ -1,0 +1,16 @@
+spdl.io.NpzFile
+===============
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: NpzFile
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~NpzFile.close
+      ~NpzFile.get
+      ~NpzFile.items
+      ~NpzFile.keys
+      ~NpzFile.values

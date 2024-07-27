@@ -1,0 +1,14 @@
+.. _exhale_typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339:
+
+Typedef spdl::core::EncoderPtr
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::EncoderPtr
+   :project: libspdl
