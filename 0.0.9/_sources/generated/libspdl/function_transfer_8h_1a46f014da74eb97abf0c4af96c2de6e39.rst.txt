@@ -1,0 +1,14 @@
+.. _exhale_function_transfer_8h_1a46f014da74eb97abf0c4af96c2de6e39:
+
+Function spdl::core::transfer_buffer(CPUBufferPtr, const CUDAConfig&)
+=====================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_transfer.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::transfer_buffer(CPUBufferPtr, const CUDAConfig&)
+   :project: libspdl
