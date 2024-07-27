@@ -1,0 +1,6 @@
+spdl.pipeline.create\_task
+==========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: create_task
