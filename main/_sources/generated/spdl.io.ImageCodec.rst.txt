@@ -1,0 +1,14 @@
+spdl.io.ImageCodec
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: ImageCodec
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ImageCodec.height
+      ~ImageCodec.name
+      ~ImageCodec.width

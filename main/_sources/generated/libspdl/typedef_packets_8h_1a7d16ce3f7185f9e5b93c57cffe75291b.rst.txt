@@ -1,0 +1,14 @@
+.. _exhale_typedef_packets_8h_1a7d16ce3f7185f9e5b93c57cffe75291b:
+
+Typedef spdl::core::AudioPackets
+================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::AudioPackets
+   :project: libspdl

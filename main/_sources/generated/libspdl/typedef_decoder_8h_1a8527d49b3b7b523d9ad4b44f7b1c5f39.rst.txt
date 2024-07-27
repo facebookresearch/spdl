@@ -1,0 +1,14 @@
+.. _exhale_typedef_decoder_8h_1a8527d49b3b7b523d9ad4b44f7b1c5f39:
+
+Typedef spdl::core::DecoderPtr
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::DecoderPtr
+   :project: libspdl

@@ -1,0 +1,14 @@
+spdl.io.VideoCodec
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoCodec
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~VideoCodec.height
+      ~VideoCodec.name
+      ~VideoCodec.width

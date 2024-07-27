@@ -1,0 +1,14 @@
+.. _exhale_typedef_frames_8h_1a36b74a790bdb82e42342e59c6bbdbe5e:
+
+Typedef spdl::core::FFmpegVideoFramesPtr
+========================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::FFmpegVideoFramesPtr
+   :project: libspdl

@@ -1,0 +1,99 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h:
+
+File packets.h
+==============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/packets.h``)
+-----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/codec.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`)
+
+- ``libspdl/core/generator.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``string``
+
+- ``tuple``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1RawPacketData`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1DemuxedPackets`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_packets_8h_1a0b8ace1b86ac81585b1a8a4193637f84`
+
+- :ref:`exhale_function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_packets_8h_1a7d16ce3f7185f9e5b93c57cffe75291b`
+
+- :ref:`exhale_typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c`
+
+- :ref:`exhale_typedef_packets_8h_1ae8322e5de2cbc1d7af5cf19462908b07`
+
+- :ref:`exhale_typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1`
+
+- :ref:`exhale_typedef_packets_8h_1ad220dcf1341c8fb6b3234ae57b75e84c`
+
+- :ref:`exhale_typedef_packets_8h_1a84bf21973574661b12112cd454b6d95d`
+
+- :ref:`exhale_typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691`
+

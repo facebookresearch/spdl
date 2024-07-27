@@ -1,0 +1,100 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h:
+
+File frames.h
+=============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/frames.h``)
+----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/buffer.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1FFmpegFrames`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_frames_8h_1a894f34ab7b592c43e2b3cb7e00da1e42`
+
+
+Defines
+-------
+
+
+- :ref:`exhale_define_frames_8h_1ac2ad95ac922a100ec27340436eb94940`
+
+- :ref:`exhale_define_frames_8h_1ac99c83df576500933a3691deb137be6d`
+
+- :ref:`exhale_define_frames_8h_1a9beaa64113e413112d43491ba5c13670`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_frames_8h_1abe386e7016237ed0bc68ac62cf4d5049`
+
+- :ref:`exhale_typedef_frames_8h_1af10268d2cb049305f88a7ab245cba3da`
+
+- :ref:`exhale_typedef_frames_8h_1a11b972beff3e8b2281b3b617d3fe9142`
+
+- :ref:`exhale_typedef_frames_8h_1a9184c87a1ed17e26881cc58c1744443f`
+
+- :ref:`exhale_typedef_frames_8h_1a3836c624fbe53e202c775bd3ea7dd41f`
+
+- :ref:`exhale_typedef_frames_8h_1a9315d7654ec3d5547250a30ca0cf385d`
+
+- :ref:`exhale_typedef_frames_8h_1a36b74a790bdb82e42342e59c6bbdbe5e`
+
