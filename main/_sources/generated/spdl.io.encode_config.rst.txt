@@ -1,0 +1,6 @@
+spdl.io.encode\_config
+======================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: encode_config

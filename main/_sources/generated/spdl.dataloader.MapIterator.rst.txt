@@ -1,0 +1,7 @@
+spdl.dataloader.MapIterator
+===========================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoclass:: MapIterator
+   :members:

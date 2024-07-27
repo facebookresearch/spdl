@@ -1,0 +1,6 @@
+spdl.io.async\_demux\_audio
+===========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: async_demux_audio
