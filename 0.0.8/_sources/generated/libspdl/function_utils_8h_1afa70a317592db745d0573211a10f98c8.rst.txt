@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1afa70a317592db745d0573211a10f98c8:
+
+Function spdl::core::is_cuda_available
+======================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::is_cuda_available()
+   :project: libspdl

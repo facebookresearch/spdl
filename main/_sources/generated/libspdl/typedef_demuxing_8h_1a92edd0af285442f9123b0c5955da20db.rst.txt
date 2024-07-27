@@ -1,0 +1,14 @@
+.. _exhale_typedef_demuxing_8h_1a92edd0af285442f9123b0c5955da20db:
+
+Typedef spdl::core::VideoCodec
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::VideoCodec
+   :project: libspdl

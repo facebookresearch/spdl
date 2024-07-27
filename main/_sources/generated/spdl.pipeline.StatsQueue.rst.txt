@@ -1,0 +1,26 @@
+spdl.pipeline.StatsQueue
+========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: StatsQueue
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~StatsQueue.empty
+      ~StatsQueue.full
+      ~StatsQueue.get
+      ~StatsQueue.get_nowait
+      ~StatsQueue.join
+      ~StatsQueue.put
+      ~StatsQueue.put_nowait
+      ~StatsQueue.qsize
+      ~StatsQueue.stage_hook
+      ~StatsQueue.task_done
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~StatsQueue.maxsize
