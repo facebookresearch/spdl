@@ -173,8 +173,8 @@ def _pipe(
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
 
-    @_stage_hooks(hooks)
     @_put_eof_when_done(output_queue)
+    @_stage_hooks(hooks)
     async def pipe():
         i, tasks = 0, set()
         while True:
@@ -283,8 +283,8 @@ def _ordered_pipe(
         hooks=[],
     )
 
-    @_stage_hooks(hooks)
     @_put_eof_when_done(output_queue)
+    @_stage_hooks(hooks)
     async def ordered_pipe():
         tasks = {create_task(coro1), create_task(coro2)}
         await asyncio.wait(tasks)
