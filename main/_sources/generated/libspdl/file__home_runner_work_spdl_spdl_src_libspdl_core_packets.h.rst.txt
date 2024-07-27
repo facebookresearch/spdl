@@ -1,0 +1,113 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h:
+
+File packets.h
+==============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/packets.h``)
+-----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/codec.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`)
+
+- ``libspdl/core/generator.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``string``
+
+- ``tuple``
+
+- ``variant``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_bsf.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Packets`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1RawPacketData`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1PacketSeries`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857`
+
+- :ref:`exhale_function_packets_8h_1a50ec9c8a7e6ab71e7827df2eb862dc40`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b`
+
+- :ref:`exhale_typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3`
+
+- :ref:`exhale_typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c`
+
+- :ref:`exhale_typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8`
+
+- :ref:`exhale_typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1`
+
+- :ref:`exhale_typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a`
+
+- :ref:`exhale_typedef_packets_8h_1aad5761fe07714efccc2be969a4397354`
+
+- :ref:`exhale_typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c`
+
+- :ref:`exhale_typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691`
+

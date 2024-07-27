@@ -1,0 +1,59 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h:
+
+File conversion.h
+=================
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/conversion.h``)
+--------------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/buffer.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`)
+
+- ``libspdl/core/frames.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``vector``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_conversion_8h_1ae55bfac2f391205603d77241fc25ca1a`
+
+- :ref:`exhale_function_conversion_8h_1a3f08ca7a5c09ab82603e239e50dff4d7`
+
+- :ref:`exhale_function_conversion_8h_1a773dafcbc30571cc70685702c7020903`
+
