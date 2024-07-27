@@ -1,0 +1,6 @@
+spdl.io.utils.trace\_gc
+=======================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: trace_gc
