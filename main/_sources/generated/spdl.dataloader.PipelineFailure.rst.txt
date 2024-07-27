@@ -1,0 +1,6 @@
+spdl.dataloader.PipelineFailure
+===============================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoexception:: PipelineFailure

@@ -1,0 +1,14 @@
+.. _exhale_function_frames_8h_1a90f0a97dc78248324bcf95c89ed16aa1:
+
+Template Function spdl::core::clone(const FFmpegFrames<media_type>&)
+====================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::clone(const FFmpegFrames<media_type>&)
+   :project: libspdl

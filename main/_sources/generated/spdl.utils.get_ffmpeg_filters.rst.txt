@@ -1,0 +1,6 @@
+spdl.utils.get\_ffmpeg\_filters
+===============================
+
+.. currentmodule:: spdl.utils
+
+.. autofunction:: get_ffmpeg_filters

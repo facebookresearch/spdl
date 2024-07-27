@@ -1,0 +1,13 @@
+spdl.dataloader.PipelineHook
+============================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoclass:: PipelineHook
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~PipelineHook.stage_hook
+      ~PipelineHook.task_hook
