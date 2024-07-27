@@ -1,0 +1,14 @@
+.. _exhale_typedef_frames_8h_1aaa34b66b95f4cc27c8e9333bc20eb179:
+
+Typedef spdl::core::FFmpegAudioFramesPtr
+========================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::FFmpegAudioFramesPtr
+   :project: libspdl

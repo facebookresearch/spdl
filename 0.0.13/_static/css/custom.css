@@ -1,0 +1,45 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/*
+ */
+div.custom_autosummary h3 {
+   color: #c95362;
+   display: none;
+   height: 0;
+   margin: 0;
+   border: 0;
+   padding: 0;
+}
+div.document div.custom_autosummary section section {
+   margin: 0;
+}
+div.custom_autosummary table.docutils {
+    margin-left: 0;
+    box-shadow: none;
+}
+
+div.custom_autosummary table.docutils tbody tr td {
+   border-color: transparent;
+}
+
+dl.py.function > dt.sig.sig-object.py {
+    margin-bottom: 1em;
+}
+
+table.right-align > tbody > tr {
+    text-align: right
+}
+
+/* For details in source code of Example sections */
+ section > details {
+    margin-bottom: 1rem;
+    padding: .8em;
+    background: #f8f8f8;
+    border-radius: 20px
+}
