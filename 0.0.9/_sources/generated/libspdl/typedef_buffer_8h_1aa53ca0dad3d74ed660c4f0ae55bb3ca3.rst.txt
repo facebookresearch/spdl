@@ -1,0 +1,14 @@
+.. _exhale_typedef_buffer_8h_1aa53ca0dad3d74ed660c4f0ae55bb3ca3:
+
+Typedef spdl::core::CPUBufferPtr
+================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::CPUBufferPtr
+   :project: libspdl

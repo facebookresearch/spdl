@@ -1,0 +1,73 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h:
+
+File decoding.h
+===============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/decoding.h``)
+------------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_decoding.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/frames.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`)
+
+- ``libspdl/core/packets.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``optional``
+
+- ``string``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1StreamingDecoder`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_decoding_8h_1a0647ad416e452c65cf1259c89e71189a`
+
+- :ref:`exhale_function_decoding_8h_1acafd57b19ad7645662d774a0ef31d249`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_decoding_8h_1a8fd65cf6184acafacace029e6a2e20b8`
+

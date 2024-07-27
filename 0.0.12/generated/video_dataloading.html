@@ -1,0 +1,1132 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Imagenet classification" href="imagenet_classification.html" /><link rel="prev" title="Image dataloading" href="image_dataloading.html" />
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
+        <title>Video dataloading - SPDL 0.0.12 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
+    <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=a8e03d5d" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SNXS50Q2E3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SNXS50Q2E3');
+</script>
+</head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">SPDL 0.0.12 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">SPDL 0.0.12 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/intro.html">Building and Running Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/stages.html">Pipeline Stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../performance_analysis/index.html">Performance Analysis</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Performance Analysis</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../performance_analysis/bottleneck.html">Is data loading bottleneck?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../performance_analysis/stage_stats.html">Which stage is the bottleneck?</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../examples.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Video dataloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="imagenet_classification.html">Imagenet classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multi_thread_preprocessing.html">Multi thread preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="streaming_nvdec_decoding.html">Streaming nvdec decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="streaming_video_processing.html">Streaming video processing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API References</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.html">spdl.pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spdl.dataloader.html">spdl.dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spdl.source.html">spdl.source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spdl.io.html">spdl.io</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spdl.io.utils.html">spdl.io.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_class.html">Class List</a></li>
+<li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_file.html">File List</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl.html">Namespace spdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_std.html">Namespace std</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structAVRational.html">Struct AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1BytesAdaptor.html">Struct BytesAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1CPUBuffer.html">Struct CPUBuffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1DataInterface.html">Struct DataInterface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1DecodeConfig.html">Struct DecodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Codec.html">Template Class Codec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1CPUStorage.html">Class CPUStorage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Decoder.html">Template Class Decoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Demuxer.html">Class Demuxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1detail_1_1DecoderImpl.html">Template Class DecoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1detail_1_1EncoderImpl.html">Template Class EncoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Encoder.html">Template Class Encoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1FilterGraph.html">Class FilterGraph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1StreamingDemuxer.html">Class StreamingDemuxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html">Enum MediaType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349.html">Template Function spdl::core::clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a3f08ca7a5c09ab82603e239e50dff4d7.html">Template Function spdl::core::convert_frames(const std::vector&lt;const Frames&lt;media&gt; *&gt;&amp;, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1ae55bfac2f391205603d77241fc25ca1a.html">Template Function spdl::core::convert_frames(const Frames&lt;media&gt; *, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8.html">Function spdl::core::create_reference_audio_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1aae5ad1fd09f47a2978afef3921508da0.html">Template Function spdl::core::get_pts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b.html">Typedef spdl::core::AnyPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d.html">Typedef spdl::core::AudioEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html">Typedef spdl::core::AudioPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html">Typedef spdl::core::AudioPacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b.html">Typedef spdl::core::DemuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339.html">Typedef spdl::core::EncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_filter__graph_8h_1a29554b40f89e4b227521ff86ccf69b8b.html">Typedef spdl::core::FilterGraphPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1ad628496b3863230dd76eeccc4fa66437.html">Typedef spdl::core::FramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html">Typedef spdl::core::ImagePackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html">Typedef spdl::core::ImagePacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html">Typedef spdl::core::PacketSeriesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db.html">Typedef spdl::core::StreamingDemuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1a383bf2b0ac1564702f10e3b5f3ef03f6.html">Typedef spdl::core::VideoEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html">Typedef spdl::core::VideoPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html">Typedef spdl::core::VideoPacketsPtr</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../genindex.html">API Index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+<div class="sidebar-tree">
+<ul>
+  <li class="toctree-l1 has-children">
+    <span class="reference">Versions</span>
+    <input class="toctree-checkbox" id="toctree-checkbox-versions" name="toctree-checkbox-versions" role="switch" type="checkbox">
+    <label for="toctree-checkbox-versions">
+      <div class="visually-hidden">Toggle navigattion of Versions</div>
+      <i class="icon">
+        <svg>
+          <use href="#svg-arrow-right"></use>
+        </svg>
+      </i>
+    </label>
+    <ul>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.12">0.0.12</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.11">0.0.11</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.10">0.0.10</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.9">0.0.9</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.8">0.0.8</a></li>
+    </ul>
+  </li>
+</ul>
+</div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/generated/video_dataloading.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <div class="custom_autosummary"><section id="module-video_dataloading">
+<span id="video-dataloading"></span><h1>Video dataloading<a class="headerlink" href="#module-video_dataloading" title="Link to this heading">¶</a></h1>
+<p>This example uses SPDL to decode and batch video frames, then send them to GPU.</p>
+<p>The structure of the pipeline is identical to that of
+<a class="reference internal" href="image_dataloading.html#module-image_dataloading" title="image_dataloading"><code class="xref py py-mod docutils literal notranslate"><span class="pre">image_dataloading</span></code></a>.</p>
+<section id="basic-usage">
+<h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
+<p>Running this example requires a dataset consists of videos.</p>
+<p>For example, to run this example with Kinetics dataset.</p>
+<ol class="arabic">
+<li><p>Download Kinetics dataset.
+<a class="reference external" href="https://github.com/cvdfoundation/kinetics-dataset">https://github.com/cvdfoundation/kinetics-dataset</a> provides scripts to facilitate this.</p></li>
+<li><p>Create a list containing the downloaded videos.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">users</span><span class="o">/</span><span class="n">moto</span><span class="o">/</span><span class="n">kinetics</span><span class="o">-</span><span class="n">dataset</span><span class="o">/</span><span class="n">k400</span><span class="o">/</span>
+<span class="n">find</span> <span class="n">train</span> <span class="o">-</span><span class="n">name</span> <span class="s1">&#39;*.mp4&#39;</span> <span class="o">&gt;</span> <span class="o">~/</span><span class="n">imagenet</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">flist</span>
+</pre></div>
+</div>
+</li>
+<li><p>Run the script.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/video_dataloading.py
+<span class="w">  </span>--input-flist<span class="w"> </span>~/kinetics400.train.flist
+<span class="w">  </span>--prefix<span class="w"> </span>/data/users/moto/kinetics-dataset/k400/
+<span class="w">  </span>--num-threads<span class="w"> </span><span class="m">8</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="using-gpu-video-decoder">
+<h2>Using GPU video decoder<a class="headerlink" href="#using-gpu-video-decoder" title="Link to this heading">¶</a></h2>
+<p>When SPDL is built with NVDEC integration enabled, and the GPUs support NVDEC,
+providing <code class="docutils literal notranslate"><span class="pre">--nvdec</span></code> option switches the video decoder to NVDEC, using
+<a class="reference internal" href="spdl.io.decode_packets_nvdec.html#spdl.io.decode_packets_nvdec" title="spdl.io.decode_packets_nvdec"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.decode_packets_nvdec()</span></code></a>. When using this option, adjust the
+number of threads (the number of concurrent decoding) to accomodate
+the number of hardware video decoder availabe on GPUs.
+For the details, please refer to <a class="reference external" href="https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new">https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new</a></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This example decodes videos from the beginning to the end, so using NVDEC
+speeds up the whole decoding speed. But in cases where framees are sampled,
+CPU decoding with higher concurrency often yields higher throughput.</p>
+</div>
+</section>
+<section id="source">
+<h2>Source<a class="headerlink" href="#source" title="Link to this heading">¶</a></h2>
+<p class="rubric">Source</p>
+<details>
+<summary><u>Click here to see the source.</u></summary><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">  1</span><span class="c1"># Copyright (c) Meta Platforms, Inc. and affiliates.</span>
+<span class="linenos">  2</span><span class="c1"># All rights reserved.</span>
+<span class="linenos">  3</span><span class="c1">#</span>
+<span class="linenos">  4</span><span class="c1"># This source code is licensed under the BSD-style license found in the</span>
+<span class="linenos">  5</span><span class="c1"># LICENSE file in the root directory of this source tree.</span>
+<span class="linenos">  6</span>
+<span class="linenos">  7</span><span class="sd">&quot;&quot;&quot;This example uses SPDL to decode and batch video frames, then send them to GPU.</span>
+<span class="linenos">  8</span>
+<span class="linenos">  9</span><span class="sd">The structure of the pipeline is identical to that of</span>
+<span class="linenos"> 10</span><span class="sd">:py:mod:`image_dataloading`.</span>
+<span class="linenos"> 11</span>
+<span class="linenos"> 12</span><span class="sd">Basic Usage</span>
+<span class="linenos"> 13</span><span class="sd">-----------</span>
+<span class="linenos"> 14</span>
+<span class="linenos"> 15</span><span class="sd">Running this example requires a dataset consists of videos.</span>
+<span class="linenos"> 16</span>
+<span class="linenos"> 17</span><span class="sd">For example, to run this example with Kinetics dataset.</span>
+<span class="linenos"> 18</span>
+<span class="linenos"> 19</span><span class="sd">1. Download Kinetics dataset.</span>
+<span class="linenos"> 20</span><span class="sd">   https://github.com/cvdfoundation/kinetics-dataset provides scripts to facilitate this.</span>
+<span class="linenos"> 21</span><span class="sd">2. Create a list containing the downloaded videos.</span>
+<span class="linenos"> 22</span>
+<span class="linenos"> 23</span><span class="sd">   .. code-block::</span>
+<span class="linenos"> 24</span>
+<span class="linenos"> 25</span><span class="sd">      cd /data/users/moto/kinetics-dataset/k400/</span>
+<span class="linenos"> 26</span><span class="sd">      find train -name &#39;*.mp4&#39; &gt; ~/imagenet.train.flist</span>
+<span class="linenos"> 27</span>
+<span class="linenos"> 28</span><span class="sd">3. Run the script.</span>
+<span class="linenos"> 29</span>
+<span class="linenos"> 30</span><span class="sd">   .. code-block:: shell</span>
+<span class="linenos"> 31</span>
+<span class="linenos"> 32</span><span class="sd">      python examples/video_dataloading.py</span>
+<span class="linenos"> 33</span><span class="sd">        --input-flist ~/kinetics400.train.flist</span>
+<span class="linenos"> 34</span><span class="sd">        --prefix /data/users/moto/kinetics-dataset/k400/</span>
+<span class="linenos"> 35</span><span class="sd">        --num-threads 8</span>
+<span class="linenos"> 36</span>
+<span class="linenos"> 37</span><span class="sd">Using GPU video decoder</span>
+<span class="linenos"> 38</span><span class="sd">-----------------------</span>
+<span class="linenos"> 39</span>
+<span class="linenos"> 40</span><span class="sd">When SPDL is built with NVDEC integration enabled, and the GPUs support NVDEC,</span>
+<span class="linenos"> 41</span><span class="sd">providing ``--nvdec`` option switches the video decoder to NVDEC, using</span>
+<span class="linenos"> 42</span><span class="sd">:py:func:`spdl.io.decode_packets_nvdec`. When using this option, adjust the</span>
+<span class="linenos"> 43</span><span class="sd">number of threads (the number of concurrent decoding) to accomodate</span>
+<span class="linenos"> 44</span><span class="sd">the number of hardware video decoder availabe on GPUs.</span>
+<span class="linenos"> 45</span><span class="sd">For the details, please refer to https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new</span>
+<span class="linenos"> 46</span>
+<span class="linenos"> 47</span><span class="sd">.. note::</span>
+<span class="linenos"> 48</span>
+<span class="linenos"> 49</span><span class="sd">   This example decodes videos from the beginning to the end, so using NVDEC</span>
+<span class="linenos"> 50</span><span class="sd">   speeds up the whole decoding speed. But in cases where framees are sampled,</span>
+<span class="linenos"> 51</span><span class="sd">   CPU decoding with higher concurrency often yields higher throughput.</span>
+<span class="linenos"> 52</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 53</span>
+<span class="linenos"> 54</span><span class="c1"># pyre-ignore-all-errors</span>
+<span class="linenos"> 55</span>
+<span class="linenos"> 56</span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="linenos"> 57</span><span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
+<span class="linenos"> 58</span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="linenos"> 59</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span>
+<span class="linenos"> 60</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="linenos"> 61</span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="linenos"> 62</span><span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Event</span>
+<span class="linenos"> 63</span>
+<span class="linenos"> 64</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+<span class="linenos"> 65</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io.utils</span>
+<span class="linenos"> 66</span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="linenos"> 67</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span><span class="p">,</span> <span class="n">PipelineBuilder</span>
+<span class="linenos"> 68</span><span class="kn">from</span><span class="w"> </span><span class="nn">torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+<span class="linenos"> 69</span>
+<span class="linenos"> 70</span><span class="n">_LG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="linenos"> 71</span>
+<span class="linenos"> 72</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos"> 73</span>    <span class="s2">&quot;entrypoint&quot;</span><span class="p">,</span>
+<span class="linenos"> 74</span>    <span class="s2">&quot;worker_entrypoint&quot;</span><span class="p">,</span>
+<span class="linenos"> 75</span>    <span class="s2">&quot;benchmark&quot;</span><span class="p">,</span>
+<span class="linenos"> 76</span>    <span class="s2">&quot;source&quot;</span><span class="p">,</span>
+<span class="linenos"> 77</span>    <span class="s2">&quot;decode_video&quot;</span><span class="p">,</span>
+<span class="linenos"> 78</span>    <span class="s2">&quot;decode_video_nvdec&quot;</span><span class="p">,</span>
+<span class="linenos"> 79</span>    <span class="s2">&quot;get_pipeline&quot;</span><span class="p">,</span>
+<span class="linenos"> 80</span>    <span class="s2">&quot;PerfResult&quot;</span><span class="p">,</span>
+<span class="linenos"> 81</span><span class="p">]</span>
+<span class="linenos"> 82</span>
+<span class="linenos"> 83</span>
+<span class="linenos"> 84</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_args</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+<span class="linenos"> 85</span>    <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="linenos"> 86</span>
+<span class="linenos"> 87</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+<span class="linenos"> 88</span>        <span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span>
+<span class="linenos"> 89</span>    <span class="p">)</span>
+<span class="linenos"> 90</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--debug&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">)</span>
+<span class="linenos"> 91</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--input-flist&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos"> 92</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--max-samples&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">))</span>
+<span class="linenos"> 93</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--prefix&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="linenos"> 94</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--trace&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">)</span>
+<span class="linenos"> 95</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--queue-size&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="linenos"> 96</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--num-threads&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos"> 97</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--worker-id&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos"> 98</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--num-workers&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos"> 99</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--nvdec&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">)</span>
+<span class="linenos">100</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<span class="linenos">101</span>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">trace</span><span class="p">:</span>
+<span class="linenos">102</span>        <span class="n">args</span><span class="o">.</span><span class="n">max_samples</span> <span class="o">=</span> <span class="mi">320</span>
+<span class="linenos">103</span>    <span class="k">return</span> <span class="n">args</span>
+<span class="linenos">104</span>
+<span class="linenos">105</span>
+<span class="linenos">106</span><span class="k">def</span><span class="w"> </span><span class="nf">source</span><span class="p">(</span>
+<span class="linenos">107</span>    <span class="n">input_flist</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="linenos">108</span>    <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="linenos">109</span>    <span class="n">max_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">110</span>    <span class="n">split_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="linenos">111</span>    <span class="n">split_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="linenos">112</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="linenos">113</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Iterate a file containing a list of paths, while optionally skipping some.</span>
+<span class="linenos">114</span>
+<span class="linenos">115</span><span class="sd">    Args:</span>
+<span class="linenos">116</span><span class="sd">        input_flist: A file contains list of video paths.</span>
+<span class="linenos">117</span><span class="sd">        prefix: Prepended to the paths in the list.</span>
+<span class="linenos">118</span><span class="sd">        max_samples: The maximum number of items to yield.</span>
+<span class="linenos">119</span><span class="sd">        split_size: Split the paths in to this number of subsets.</span>
+<span class="linenos">120</span><span class="sd">        split_id: The index of this split. Paths at ``line_number % split_size == split_id`` are returned.</span>
+<span class="linenos">121</span>
+<span class="linenos">122</span><span class="sd">    Yields:</span>
+<span class="linenos">123</span><span class="sd">        The paths of the specified split.</span>
+<span class="linenos">124</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">125</span>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_flist</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="linenos">126</span>        <span class="n">num_yielded</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="linenos">127</span>        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+<span class="linenos">128</span>            <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">split_size</span> <span class="o">!=</span> <span class="n">split_id</span><span class="p">:</span>
+<span class="linenos">129</span>                <span class="k">continue</span>
+<span class="linenos">130</span>            <span class="k">if</span> <span class="n">line</span> <span class="o">:=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+<span class="linenos">131</span>                <span class="k">yield</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">line</span>
+<span class="linenos">132</span>
+<span class="linenos">133</span>                <span class="k">if</span> <span class="p">(</span><span class="n">num_yielded</span> <span class="o">:=</span> <span class="n">num_yielded</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">max_samples</span><span class="p">:</span>
+<span class="linenos">134</span>                    <span class="k">return</span>
+<span class="linenos">135</span>
+<span class="linenos">136</span>
+<span class="linenos">137</span><span class="k">def</span><span class="w"> </span><span class="nf">decode_video</span><span class="p">(</span>
+<span class="linenos">138</span>    <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">,</span>
+<span class="linenos">139</span>    <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">140</span>    <span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">141</span>    <span class="n">device_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">142</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="linenos">143</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode video and send decoded frames to GPU.</span>
+<span class="linenos">144</span>
+<span class="linenos">145</span><span class="sd">    Args:</span>
+<span class="linenos">146</span><span class="sd">        src: Data source. Passed to :py:func:`spdl.io.demux_video`.</span>
+<span class="linenos">147</span><span class="sd">        width, height: The target resolution.</span>
+<span class="linenos">148</span><span class="sd">        device_index: The index of the target GPU.</span>
+<span class="linenos">149</span>
+<span class="linenos">150</span><span class="sd">    Returns:</span>
+<span class="linenos">151</span><span class="sd">        A GPU tensor represents decoded video frames.</span>
+<span class="linenos">152</span><span class="sd">        The dtype is uint8, the shape is ``[N, C, H, W]``, where ``N`` is the number</span>
+<span class="linenos">153</span><span class="sd">        of frames in the video, ``C`` is RGB channels.</span>
+<span class="linenos">154</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">155</span>    <span class="n">packets</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">demux_video</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+<span class="linenos">156</span>    <span class="n">frames</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">decode_packets</span><span class="p">(</span>
+<span class="linenos">157</span>        <span class="n">packets</span><span class="p">,</span>
+<span class="linenos">158</span>        <span class="n">filter_desc</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_filter_desc</span><span class="p">(</span>
+<span class="linenos">159</span>            <span class="n">packets</span><span class="p">,</span>
+<span class="linenos">160</span>            <span class="n">scale_width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+<span class="linenos">161</span>            <span class="n">scale_height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
+<span class="linenos">162</span>            <span class="n">pix_fmt</span><span class="o">=</span><span class="s2">&quot;rgb24&quot;</span><span class="p">,</span>
+<span class="linenos">163</span>        <span class="p">),</span>
+<span class="linenos">164</span>    <span class="p">)</span>
+<span class="linenos">165</span>    <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">convert_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+<span class="linenos">166</span>    <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">transfer_buffer</span><span class="p">(</span>
+<span class="linenos">167</span>        <span class="n">buffer</span><span class="p">,</span>
+<span class="linenos">168</span>        <span class="n">device_config</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">cuda_config</span><span class="p">(</span>
+<span class="linenos">169</span>            <span class="n">device_index</span><span class="o">=</span><span class="n">device_index</span><span class="p">,</span>
+<span class="linenos">170</span>            <span class="n">allocator</span><span class="o">=</span><span class="p">(</span>
+<span class="linenos">171</span>                <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">caching_allocator_alloc</span><span class="p">,</span>
+<span class="linenos">172</span>                <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">caching_allocator_delete</span><span class="p">,</span>
+<span class="linenos">173</span>            <span class="p">),</span>
+<span class="linenos">174</span>        <span class="p">),</span>
+<span class="linenos">175</span>    <span class="p">)</span>
+<span class="linenos">176</span>    <span class="k">return</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="linenos">177</span>
+<span class="linenos">178</span>
+<span class="linenos">179</span><span class="k">def</span><span class="w"> </span><span class="nf">decode_video_nvdec</span><span class="p">(</span>
+<span class="linenos">180</span>    <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="linenos">181</span>    <span class="n">device_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">182</span>    <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">183</span>    <span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">184</span><span class="p">):</span>
+<span class="linenos">185</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode video using NVDEC.</span>
+<span class="linenos">186</span>
+<span class="linenos">187</span><span class="sd">    Args:</span>
+<span class="linenos">188</span><span class="sd">        src: Data source. Passed to :py:func:`spdl.io.demux_video`.</span>
+<span class="linenos">189</span><span class="sd">        device_index: The index of the target GPU.</span>
+<span class="linenos">190</span><span class="sd">        width, height: The target resolution.</span>
+<span class="linenos">191</span>
+<span class="linenos">192</span><span class="sd">    Returns:</span>
+<span class="linenos">193</span><span class="sd">        A GPU tensor represents decoded video frames.</span>
+<span class="linenos">194</span><span class="sd">        The dtype is uint8, the shape is ``[N, C, H, W]``, where ``N`` is the number</span>
+<span class="linenos">195</span><span class="sd">        of frames in the video, ``C`` is RGB channels.</span>
+<span class="linenos">196</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">197</span>    <span class="n">packets</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">demux_video</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+<span class="linenos">198</span>    <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">decode_packets_nvdec</span><span class="p">(</span>
+<span class="linenos">199</span>        <span class="n">packets</span><span class="p">,</span>
+<span class="linenos">200</span>        <span class="n">device_config</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">cuda_config</span><span class="p">(</span>
+<span class="linenos">201</span>            <span class="n">device_index</span><span class="o">=</span><span class="n">device_index</span><span class="p">,</span>
+<span class="linenos">202</span>            <span class="n">allocator</span><span class="o">=</span><span class="p">(</span>
+<span class="linenos">203</span>                <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">caching_allocator_alloc</span><span class="p">,</span>
+<span class="linenos">204</span>                <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">caching_allocator_delete</span><span class="p">,</span>
+<span class="linenos">205</span>            <span class="p">),</span>
+<span class="linenos">206</span>        <span class="p">),</span>
+<span class="linenos">207</span>        <span class="n">scale_width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+<span class="linenos">208</span>        <span class="n">scale_height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
+<span class="linenos">209</span>        <span class="n">pix_fmt</span><span class="o">=</span><span class="s2">&quot;rgb&quot;</span><span class="p">,</span>
+<span class="linenos">210</span>    <span class="p">)</span>
+<span class="linenos">211</span>    <span class="k">return</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">buffer</span><span class="p">)[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="linenos">212</span>
+<span class="linenos">213</span>
+<span class="linenos">214</span><span class="k">def</span><span class="w"> </span><span class="nf">_get_decode_fn</span><span class="p">(</span><span class="n">device_index</span><span class="p">,</span> <span class="n">use_nvdec</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">222</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">222</span><span class="p">):</span>
+<span class="linenos">215</span>    <span class="k">if</span> <span class="n">use_nvdec</span><span class="p">:</span>
+<span class="linenos">216</span>
+<span class="linenos">217</span>        <span class="k">def</span><span class="w"> </span><span class="nf">_decode_func</span><span class="p">(</span><span class="n">src</span><span class="p">):</span>
+<span class="linenos">218</span>            <span class="k">return</span> <span class="n">decode_video_nvdec</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">device_index</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+<span class="linenos">219</span>
+<span class="linenos">220</span>    <span class="k">else</span><span class="p">:</span>
+<span class="linenos">221</span>
+<span class="linenos">222</span>        <span class="k">def</span><span class="w"> </span><span class="nf">_decode_func</span><span class="p">(</span><span class="n">src</span><span class="p">):</span>
+<span class="linenos">223</span>            <span class="k">return</span> <span class="n">decode_video</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">device_index</span><span class="p">)</span>
+<span class="linenos">224</span>
+<span class="linenos">225</span>    <span class="k">return</span> <span class="n">_decode_func</span>
+<span class="linenos">226</span>
+<span class="linenos">227</span>
+<span class="linenos">228</span><span class="k">def</span><span class="w"> </span><span class="nf">get_pipeline</span><span class="p">(</span>
+<span class="linenos">229</span>    <span class="n">src</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="linenos">230</span>    <span class="n">decode_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Tensor</span><span class="p">],</span>
+<span class="linenos">231</span>    <span class="n">decode_concurrency</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">232</span>    <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">233</span>    <span class="n">buffer_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="linenos">234</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Pipeline</span><span class="p">:</span>
+<span class="linenos">235</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Construct the video loading pipeline.</span>
+<span class="linenos">236</span>
+<span class="linenos">237</span><span class="sd">    Args:</span>
+<span class="linenos">238</span><span class="sd">        src: Pipeline source. Generator that yields image paths. See :py:func:`source`.</span>
+<span class="linenos">239</span><span class="sd">        decode_fn: Function that decode the given image and send the decoded frames to GPU.</span>
+<span class="linenos">240</span><span class="sd">        decode_concurrency: The maximum number of decoding scheduled concurrently.</span>
+<span class="linenos">241</span><span class="sd">        num_threads: The number of threads in the pipeline.</span>
+<span class="linenos">242</span><span class="sd">        buffer_size: The size of buffer for the resulting batch image Tensor.</span>
+<span class="linenos">243</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">244</span>    <span class="k">return</span> <span class="p">(</span>
+<span class="linenos">245</span>        <span class="n">PipelineBuilder</span><span class="p">()</span>
+<span class="linenos">246</span>        <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+<span class="linenos">247</span>        <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">decode_fn</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="n">decode_concurrency</span><span class="p">)</span>
+<span class="linenos">248</span>        <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">buffer_size</span><span class="p">)</span>
+<span class="linenos">249</span>        <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span> <span class="n">report_stats_interval</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+<span class="linenos">250</span>    <span class="p">)</span>
+<span class="linenos">251</span>
+<span class="linenos">252</span>
+<span class="linenos">253</span><span class="k">def</span><span class="w"> </span><span class="nf">_get_pipeline</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+<span class="linenos">254</span>    <span class="n">src</span> <span class="o">=</span> <span class="n">source</span><span class="p">(</span>
+<span class="linenos">255</span>        <span class="n">input_flist</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">input_flist</span><span class="p">,</span>
+<span class="linenos">256</span>        <span class="n">prefix</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">prefix</span><span class="p">,</span>
+<span class="linenos">257</span>        <span class="n">max_samples</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">max_samples</span><span class="p">,</span>
+<span class="linenos">258</span>        <span class="n">split_id</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">worker_id</span><span class="p">,</span>
+<span class="linenos">259</span>        <span class="n">split_size</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_workers</span><span class="p">,</span>
+<span class="linenos">260</span>    <span class="p">)</span>
+<span class="linenos">261</span>
+<span class="linenos">262</span>    <span class="n">decode_fn</span> <span class="o">=</span> <span class="n">_get_decode_fn</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">worker_id</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">nvdec</span><span class="p">)</span>
+<span class="linenos">263</span>    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">get_pipeline</span><span class="p">(</span>
+<span class="linenos">264</span>        <span class="n">src</span><span class="p">,</span>
+<span class="linenos">265</span>        <span class="n">decode_fn</span><span class="p">,</span>
+<span class="linenos">266</span>        <span class="n">decode_concurrency</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_threads</span><span class="p">,</span>
+<span class="linenos">267</span>        <span class="n">num_threads</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_threads</span> <span class="o">+</span> <span class="mi">3</span><span class="p">,</span>
+<span class="linenos">268</span>        <span class="n">buffer_size</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">queue_size</span><span class="p">,</span>
+<span class="linenos">269</span>    <span class="p">)</span>
+<span class="linenos">270</span>    <span class="nb">print</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)</span>
+<span class="linenos">271</span>    <span class="k">return</span> <span class="n">pipeline</span>
+<span class="linenos">272</span>
+<span class="linenos">273</span>
+<span class="linenos">274</span><span class="nd">@dataclass</span>
+<span class="linenos">275</span><span class="k">class</span><span class="w"> </span><span class="nc">PerfResult</span><span class="p">:</span>
+<span class="linenos">276</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Used to report the worker performance to the main process.&quot;&quot;&quot;</span>
+<span class="linenos">277</span>
+<span class="linenos">278</span>    <span class="n">elapsed</span><span class="p">:</span> <span class="nb">float</span>
+<span class="linenos">279</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;The time it took to process all the inputs.&quot;&quot;&quot;</span>
+<span class="linenos">280</span>
+<span class="linenos">281</span>    <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">282</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;The number of batches processed.&quot;&quot;&quot;</span>
+<span class="linenos">283</span>
+<span class="linenos">284</span>    <span class="n">num_frames</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">285</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;The number of frames processed.&quot;&quot;&quot;</span>
+<span class="linenos">286</span>
+<span class="linenos">287</span>
+<span class="linenos">288</span><span class="k">def</span><span class="w"> </span><span class="nf">benchmark</span><span class="p">(</span>
+<span class="linenos">289</span>    <span class="n">dataloader</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+<span class="linenos">290</span>    <span class="n">stop_requested</span><span class="p">:</span> <span class="n">Event</span><span class="p">,</span>
+<span class="linenos">291</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PerfResult</span><span class="p">:</span>
+<span class="linenos">292</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;The main loop that measures the performance of dataloading.</span>
+<span class="linenos">293</span>
+<span class="linenos">294</span><span class="sd">    Args:</span>
+<span class="linenos">295</span><span class="sd">        dataloader: The dataloader to benchmark.</span>
+<span class="linenos">296</span><span class="sd">        stop_requested: Used to interrupt the benchmark loop.</span>
+<span class="linenos">297</span>
+<span class="linenos">298</span><span class="sd">    Returns:</span>
+<span class="linenos">299</span><span class="sd">        The performance result.</span>
+<span class="linenos">300</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">301</span>    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+<span class="linenos">302</span>    <span class="n">num_frames</span> <span class="o">=</span> <span class="n">num_batches</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="linenos">303</span>    <span class="k">try</span><span class="p">:</span>
+<span class="linenos">304</span>        <span class="k">for</span> <span class="n">batches</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+<span class="linenos">305</span>            <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">:</span>
+<span class="linenos">306</span>                <span class="n">num_frames</span> <span class="o">+=</span> <span class="n">batch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="linenos">307</span>                <span class="n">num_batches</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="linenos">308</span>
+<span class="linenos">309</span>            <span class="k">if</span> <span class="n">stop_requested</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+<span class="linenos">310</span>                <span class="k">break</span>
+<span class="linenos">311</span>
+<span class="linenos">312</span>    <span class="k">finally</span><span class="p">:</span>
+<span class="linenos">313</span>        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+<span class="linenos">314</span>        <span class="n">fps</span> <span class="o">=</span> <span class="n">num_frames</span> <span class="o">/</span> <span class="n">elapsed</span>
+<span class="linenos">315</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FPS=</span><span class="si">{</span><span class="n">fps</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">num_frames</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">elapsed</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">), (Done </span><span class="si">{</span><span class="n">num_frames</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+<span class="linenos">316</span>
+<span class="linenos">317</span>    <span class="k">return</span> <span class="n">PerfResult</span><span class="p">(</span><span class="n">elapsed</span><span class="p">,</span> <span class="n">num_batches</span><span class="p">,</span> <span class="n">num_frames</span><span class="p">)</span>
+<span class="linenos">318</span>
+<span class="linenos">319</span>
+<span class="linenos">320</span><span class="k">def</span><span class="w"> </span><span class="nf">worker_entrypoint</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PerfResult</span><span class="p">:</span>
+<span class="linenos">321</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Entrypoint for worker process. Load images to a GPU and measure its performance.</span>
+<span class="linenos">322</span>
+<span class="linenos">323</span><span class="sd">    It builds a Pipeline object using :py:func:`get_pipeline` function and run it with</span>
+<span class="linenos">324</span><span class="sd">    :py:func:`benchmark` function.</span>
+<span class="linenos">325</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">326</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_args</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<span class="linenos">327</span>    <span class="n">_init</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">debug</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">worker_id</span><span class="p">)</span>
+<span class="linenos">328</span>
+<span class="linenos">329</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<span class="linenos">330</span>
+<span class="linenos">331</span>    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">_get_pipeline</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<span class="linenos">332</span>
+<span class="linenos">333</span>    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cuda:</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">worker_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos">334</span>
+<span class="linenos">335</span>    <span class="n">ev</span> <span class="o">=</span> <span class="n">Event</span><span class="p">()</span>
+<span class="linenos">336</span>
+<span class="linenos">337</span>    <span class="k">def</span><span class="w"> </span><span class="nf">handler_stop_signals</span><span class="p">(</span><span class="n">_signum</span><span class="p">,</span> <span class="n">_frame</span><span class="p">):</span>
+<span class="linenos">338</span>        <span class="n">ev</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+<span class="linenos">339</span>
+<span class="linenos">340</span>    <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">handler_stop_signals</span><span class="p">)</span>
+<span class="linenos">341</span>
+<span class="linenos">342</span>    <span class="c1"># Warm up</span>
+<span class="linenos">343</span>    <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+<span class="linenos">344</span>
+<span class="linenos">345</span>    <span class="n">trace_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">trace</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">worker_id</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="linenos">346</span>    <span class="k">with</span> <span class="p">(</span>
+<span class="linenos">347</span>        <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">(),</span>
+<span class="linenos">348</span>        <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">tracing</span><span class="p">(</span><span class="n">trace_path</span><span class="p">,</span> <span class="n">enable</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">trace</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>
+<span class="linenos">349</span>    <span class="p">):</span>
+<span class="linenos">350</span>        <span class="k">return</span> <span class="n">benchmark</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(),</span> <span class="n">ev</span><span class="p">)</span>
+<span class="linenos">351</span>
+<span class="linenos">352</span>
+<span class="linenos">353</span><span class="k">def</span><span class="w"> </span><span class="nf">_init_logging</span><span class="p">(</span><span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">worker_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="linenos">354</span>    <span class="n">fmt</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> [</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">&quot;</span>
+<span class="linenos">355</span>    <span class="k">if</span> <span class="n">worker_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">356</span>        <span class="n">fmt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">worker_id</span><span class="si">}</span><span class="s2">:%(thread)d] </span><span class="si">{</span><span class="n">fmt</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="linenos">357</span>    <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="k">if</span> <span class="n">debug</span> <span class="k">else</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span>
+<span class="linenos">358</span>    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">)</span>
+<span class="linenos">359</span>
+<span class="linenos">360</span>
+<span class="linenos">361</span><span class="k">def</span><span class="w"> </span><span class="nf">_init</span><span class="p">(</span><span class="n">debug</span><span class="p">,</span> <span class="n">worker_id</span><span class="p">):</span>
+<span class="linenos">362</span>    <span class="n">_init_logging</span><span class="p">(</span><span class="n">debug</span><span class="p">,</span> <span class="n">worker_id</span><span class="p">)</span>
+<span class="linenos">363</span>
+<span class="linenos">364</span>
+<span class="linenos">365</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_process_args</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+<span class="linenos">366</span>    <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="linenos">367</span>
+<span class="linenos">368</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+<span class="linenos">369</span>        <span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span>
+<span class="linenos">370</span>    <span class="p">)</span>
+<span class="linenos">371</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--num-workers&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="linenos">372</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_known_args</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<span class="linenos">373</span>
+<span class="linenos">374</span>
+<span class="linenos">375</span><span class="k">def</span><span class="w"> </span><span class="nf">entrypoint</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="linenos">376</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;CLI entrypoint. Launch the worker processes, each of which load videos and send them to GPU.&quot;&quot;&quot;</span>
+<span class="linenos">377</span>    <span class="n">ns</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_process_args</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<span class="linenos">378</span>
+<span class="linenos">379</span>    <span class="n">args_set</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos">380</span>        <span class="p">[</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;--worker-id=</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;--num-workers=</span><span class="si">{</span><span class="n">ns</span><span class="o">.</span><span class="n">num_workers</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+<span class="linenos">381</span>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ns</span><span class="o">.</span><span class="n">num_workers</span><span class="p">)</span>
+<span class="linenos">382</span>    <span class="p">]</span>
+<span class="linenos">383</span>
+<span class="linenos">384</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span>
+<span class="linenos">385</span>
+<span class="linenos">386</span>    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">ns</span><span class="o">.</span><span class="n">num_workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+<span class="linenos">387</span>        <span class="n">_init_logging</span><span class="p">()</span>
+<span class="linenos">388</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Spawned: </span><span class="si">%d</span><span class="s2"> workers&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="o">.</span><span class="n">num_workers</span><span class="p">)</span>
+<span class="linenos">389</span>
+<span class="linenos">390</span>        <span class="n">vals</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">worker_entrypoint</span><span class="p">,</span> <span class="n">args_set</span><span class="p">)</span>
+<span class="linenos">391</span>
+<span class="linenos">392</span>    <span class="n">ave_time</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">elapsed</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vals</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+<span class="linenos">393</span>    <span class="n">total_frames</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">num_frames</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vals</span><span class="p">)</span>
+<span class="linenos">394</span>    <span class="n">total_batches</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">num_batches</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vals</span><span class="p">)</span>
+<span class="linenos">395</span>
+<span class="linenos">396</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ave_time</span><span class="si">=:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">total_frames</span><span class="si">=}</span><span class="s2">, </span><span class="si">{</span><span class="n">total_batches</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos">397</span>
+<span class="linenos">398</span>    <span class="n">FPS</span> <span class="o">=</span> <span class="n">total_frames</span> <span class="o">/</span> <span class="n">ave_time</span>
+<span class="linenos">399</span>    <span class="n">BPS</span> <span class="o">=</span> <span class="n">total_batches</span> <span class="o">/</span> <span class="n">ave_time</span>
+<span class="linenos">400</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Aggregated </span><span class="si">{</span><span class="n">FPS</span><span class="si">=:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">BPS</span><span class="si">=:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos">401</span>
+<span class="linenos">402</span>
+<span class="linenos">403</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="linenos">404</span>    <span class="n">entrypoint</span><span class="p">()</span>
+</pre></div>
+</div>
+</details></section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<p class="rubric">Functions</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="video_dataloading.entrypoint">
+<span class="sig-name descname"><span class="pre">entrypoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L375-L400"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.entrypoint" title="Link to this definition">¶</a></dt>
+<dd><p>CLI entrypoint. Launch the worker processes, each of which load videos and send them to GPU.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="video_dataloading.worker_entrypoint">
+<span class="sig-name descname"><span class="pre">worker_entrypoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#video_dataloading.PerfResult" title="video_dataloading.PerfResult"><span class="pre">PerfResult</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L320-L350"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.worker_entrypoint" title="Link to this definition">¶</a></dt>
+<dd><p>Entrypoint for worker process. Load images to a GPU and measure its performance.</p>
+<p>It builds a Pipeline object using <a class="reference internal" href="#video_dataloading.get_pipeline" title="video_dataloading.get_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_pipeline()</span></code></a> function and run it with
+<a class="reference internal" href="#video_dataloading.benchmark" title="video_dataloading.benchmark"><code class="xref py py-func docutils literal notranslate"><span class="pre">benchmark()</span></code></a> function.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="video_dataloading.benchmark">
+<span class="sig-name descname"><span class="pre">benchmark</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataloader</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.13)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.6)"><span class="pre">Tensor</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop_requested</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Event" title="(in Python v3.13)"><span class="pre">Event</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#video_dataloading.PerfResult" title="video_dataloading.PerfResult"><span class="pre">PerfResult</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L288-L317"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.benchmark" title="Link to this definition">¶</a></dt>
+<dd><p>The main loop that measures the performance of dataloading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloader</strong> – The dataloader to benchmark.</p></li>
+<li><p><strong>stop_requested</strong> – Used to interrupt the benchmark loop.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The performance result.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="video_dataloading.source">
+<span class="sig-name descname"><span class="pre">source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_flist</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.13)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L106-L134"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.source" title="Link to this definition">¶</a></dt>
+<dd><p>Iterate a file containing a list of paths, while optionally skipping some.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_flist</strong> – A file contains list of video paths.</p></li>
+<li><p><strong>prefix</strong> – Prepended to the paths in the list.</p></li>
+<li><p><strong>max_samples</strong> – The maximum number of items to yield.</p></li>
+<li><p><strong>split_size</strong> – Split the paths in to this number of subsets.</p></li>
+<li><p><strong>split_id</strong> – The index of this split. Paths at <code class="docutils literal notranslate"><span class="pre">line_number</span> <span class="pre">%</span> <span class="pre">split_size</span> <span class="pre">==</span> <span class="pre">split_id</span></code> are returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Yields<span class="colon">:</span></dt>
+<dd class="field-even"><p>The paths of the specified split.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="video_dataloading.decode_video">
+<span class="sig-name descname"><span class="pre">decode_video</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.6)"><span class="pre">Tensor</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L137-L176"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.decode_video" title="Link to this definition">¶</a></dt>
+<dd><p>Decode video and send decoded frames to GPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> – Data source. Passed to <a class="reference internal" href="spdl.io.demux_video.html#spdl.io.demux_video" title="spdl.io.demux_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.demux_video()</span></code></a>.</p></li>
+<li><p><strong>width</strong> – The target resolution.</p></li>
+<li><p><strong>height</strong> – The target resolution.</p></li>
+<li><p><strong>device_index</strong> – The index of the target GPU.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A GPU tensor represents decoded video frames.
+The dtype is uint8, the shape is <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">C,</span> <span class="pre">H,</span> <span class="pre">W]</span></code>, where <code class="docutils literal notranslate"><span class="pre">N</span></code> is the number
+of frames in the video, <code class="docutils literal notranslate"><span class="pre">C</span></code> is RGB channels.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="video_dataloading.decode_video_nvdec">
+<span class="sig-name descname"><span class="pre">decode_video_nvdec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L179-L211"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.decode_video_nvdec" title="Link to this definition">¶</a></dt>
+<dd><p>Decode video using NVDEC.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> – Data source. Passed to <a class="reference internal" href="spdl.io.demux_video.html#spdl.io.demux_video" title="spdl.io.demux_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.demux_video()</span></code></a>.</p></li>
+<li><p><strong>device_index</strong> – The index of the target GPU.</p></li>
+<li><p><strong>width</strong> – The target resolution.</p></li>
+<li><p><strong>height</strong> – The target resolution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A GPU tensor represents decoded video frames.
+The dtype is uint8, the shape is <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">C,</span> <span class="pre">H,</span> <span class="pre">W]</span></code>, where <code class="docutils literal notranslate"><span class="pre">N</span></code> is the number
+of frames in the video, <code class="docutils literal notranslate"><span class="pre">C</span></code> is RGB channels.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="video_dataloading.get_pipeline">
+<span class="sig-name descname"><span class="pre">get_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.13)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.13)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.6)"><span class="pre">Tensor</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode_concurrency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_threads</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline._pipeline.Pipeline"><span class="pre">Pipeline</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L228-L250"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.get_pipeline" title="Link to this definition">¶</a></dt>
+<dd><p>Construct the video loading pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> – Pipeline source. Generator that yields image paths. See <a class="reference internal" href="#video_dataloading.source" title="video_dataloading.source"><code class="xref py py-func docutils literal notranslate"><span class="pre">source()</span></code></a>.</p></li>
+<li><p><strong>decode_fn</strong> – Function that decode the given image and send the decoded frames to GPU.</p></li>
+<li><p><strong>decode_concurrency</strong> – The maximum number of decoding scheduled concurrently.</p></li>
+<li><p><strong>num_threads</strong> – The number of threads in the pipeline.</p></li>
+<li><p><strong>buffer_size</strong> – The size of buffer for the resulting batch image Tensor.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h2>
+<p class="rubric">Classes</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="video_dataloading.PerfResult">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PerfResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elapsed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/video_dataloading.py?#L274-L285"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#video_dataloading.PerfResult" title="Link to this definition">¶</a></dt>
+<dd><p>Used to report the worker performance to the main process.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="video_dataloading.PerfResult.elapsed">
+<span class="sig-name descname"><span class="pre">elapsed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></em><a class="headerlink" href="#video_dataloading.PerfResult.elapsed" title="Link to this definition">¶</a></dt>
+<dd><p>The time it took to process all the inputs.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="video_dataloading.PerfResult.num_batches">
+<span class="sig-name descname"><span class="pre">num_batches</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#video_dataloading.PerfResult.num_batches" title="Link to this definition">¶</a></dt>
+<dd><p>The number of batches processed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="video_dataloading.PerfResult.num_frames">
+<span class="sig-name descname"><span class="pre">num_frames</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#video_dataloading.PerfResult.num_frames" title="Link to this definition">¶</a></dt>
+<dd><p>The number of frames processed.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div></section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="imagenet_classification.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Imagenet classification</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="image_dataloading.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Image dataloading</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Meta Platforms, Inc.
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Video dataloading</a><ul>
+<li><a class="reference internal" href="#basic-usage">Basic Usage</a></li>
+<li><a class="reference internal" href="#using-gpu-video-decoder">Using GPU video decoder</a></li>
+<li><a class="reference internal" href="#source">Source</a></li>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#video_dataloading.entrypoint"><code class="docutils literal notranslate"><span class="pre">entrypoint()</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.worker_entrypoint"><code class="docutils literal notranslate"><span class="pre">worker_entrypoint()</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.benchmark"><code class="docutils literal notranslate"><span class="pre">benchmark()</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.source"><code class="docutils literal notranslate"><span class="pre">source()</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.decode_video"><code class="docutils literal notranslate"><span class="pre">decode_video()</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.decode_video_nvdec"><code class="docutils literal notranslate"><span class="pre">decode_video_nvdec()</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.get_pipeline"><code class="docutils literal notranslate"><span class="pre">get_pipeline()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#classes">Classes</a><ul>
+<li><a class="reference internal" href="#video_dataloading.PerfResult"><code class="docutils literal notranslate"><span class="pre">PerfResult</span></code></a><ul>
+<li><a class="reference internal" href="#video_dataloading.PerfResult.elapsed"><code class="docutils literal notranslate"><span class="pre">PerfResult.elapsed</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.PerfResult.num_batches"><code class="docutils literal notranslate"><span class="pre">PerfResult.num_batches</span></code></a></li>
+<li><a class="reference internal" href="#video_dataloading.PerfResult.num_frames"><code class="docutils literal notranslate"><span class="pre">PerfResult.num_frames</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=c249dd19"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../_static/collapsible-lists/js/CollapsibleLists.compressed.js?v=73120307"></script>
+    <script src="../_static/collapsible-lists/js/apply-collapsible-lists.js?v=660e4f45"></script>
+    </body>
+</html>

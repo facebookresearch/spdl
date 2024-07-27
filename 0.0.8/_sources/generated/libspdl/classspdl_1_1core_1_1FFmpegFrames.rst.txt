@@ -1,0 +1,17 @@
+.. _exhale_class_classspdl_1_1core_1_1FFmpegFrames:
+
+Template Class FFmpegFrames
+===========================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: spdl::core::FFmpegFrames
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:
