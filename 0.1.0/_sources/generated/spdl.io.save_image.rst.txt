@@ -1,0 +1,6 @@
+spdl.io.save\_image
+===================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: save_image

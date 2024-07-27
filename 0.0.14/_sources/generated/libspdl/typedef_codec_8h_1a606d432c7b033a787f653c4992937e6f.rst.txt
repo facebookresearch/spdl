@@ -1,0 +1,14 @@
+.. _exhale_typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f:
+
+Typedef spdl::core::ImageCodec
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::ImageCodec
+   :project: libspdl

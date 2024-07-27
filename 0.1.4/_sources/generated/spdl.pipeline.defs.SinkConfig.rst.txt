@@ -1,0 +1,12 @@
+spdl.pipeline.defs.SinkConfig
+=============================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: SinkConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~SinkConfig.buffer_size
