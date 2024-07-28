@@ -2,6 +2,7 @@ import asyncio
 import random
 import time
 from contextlib import asynccontextmanager
+from multiprocessing import Process
 
 import pytest
 
@@ -1312,3 +1313,20 @@ def test_pipeline_stop_multiple_times():
     pipeline.stop()
     pipeline.stop()
     pipeline.stop()
+
+
+def _run_pipeline_without_closing():
+    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build()
+    pipeline.start()
+
+
+def test_pipeline_no_close():
+    """Python interpreter can terminate even when Pipeline is not explicitly closed."""
+
+    p = Process(target=_run_pipeline_without_closing)
+    p.start()
+    p.join(timeout=10)
+
+    if p.exitcode is None:
+        p.kill()
+        raise RuntimeError("Process did not self-terminate.")
