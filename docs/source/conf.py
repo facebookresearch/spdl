@@ -29,7 +29,6 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.linkcode",
     "sphinx.ext.napoleon",
     "sphinxcontrib.mermaid",
     # "breathe",
@@ -96,39 +95,6 @@ html_css_files = ["css/custom.css"]
 html_theme_options = {
     "navigation_with_keys": True,
 }
-
-def linkcode_resolve(domain, info):
-    import importlib
-    import inspect
-
-    if domain != "py":
-        return None
-    if not info["module"]:
-        return None
-
-    base = "https://github.com/facebookresearch/spdl/tree/main"
-
-    mod = importlib.import_module(info["module"])
-
-    parts = info["fullname"].split(".")
-    obj = getattr(mod, parts[0])
-    filename = obj.__module__.replace(".", "/")
-    for part in parts[1:]:
-        obj = getattr(obj, part)
-
-    try:
-        src, ln = inspect.getsourcelines(obj)
-        return f"{base}/src/{filename}.py?#L{ln}-L{ln + len(src)}"
-    except Exception:
-        pass
-
-    # Fallback for property
-    try:
-        src, ln = inspect.getsourcelines(obj.fget)
-        return f"{base}/src/{filename}.py?#L{ln}-L{ln + len(src)}"
-    except Exception:
-        return None
-
 
 # -- Options for HTML output -------------------------------------------------
 # Custom directives
