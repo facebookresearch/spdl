@@ -272,6 +272,21 @@ class Pipeline(Generic[T]):
     def __str__(self) -> str:
         return self._str
 
+    def __del__(self) -> None:
+        """Stop the pipeline if running."""
+        if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
+            warnings.warn(
+                f"Pipeline ({repr(self)}) is running in the background, but "
+                "there is no valid reference pointing the foreground object. "
+                "Stopping the background thread. "
+                "It is strongly advised to stop the pipeline explicity, "
+                "using the `auto_stop` context manager. "
+                "If you are using a framework and you cannot use the "
+                "context manager, try calling `stop` in done callback and "
+                "error callback."
+            )
+            self.stop()
+
     def start(self, *, timeout: float | None = None, **kwargs) -> None:
         """Start the pipeline in background thread.
 
