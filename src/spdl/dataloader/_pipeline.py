@@ -8,6 +8,7 @@ import warnings
 from asyncio import Queue as AsyncQueue
 from collections.abc import Coroutine, Iterator
 from contextlib import contextmanager
+from enum import IntEnum
 from threading import Event as SyncEvent, Thread
 from typing import Generic, TypeVar
 
@@ -160,6 +161,12 @@ class _EventLoop:
 ################################################################################
 
 
+class _EventLoopState(IntEnum):
+    NOT_STARTED = 0
+    STARTED = 1
+    STOPPED = 2
+
+
 class Pipeline(Generic[T]):
     """Pipeline()
 
@@ -253,6 +260,7 @@ class Pipeline(Generic[T]):
 
         self._output_queue = queues[-1]
         self._event_loop = _EventLoop(coro, num_threads)
+        self._event_loop_state = _EventLoopState.NOT_STARTED
 
         try:
             from spdl.lib import _libspdl
@@ -270,8 +278,16 @@ class Pipeline(Generic[T]):
         Args:
             timeout: Timeout value used when starting the thread and
                 waiting for the pipeline to be initialized. [Unit: second]
+
+        .. note::
+
+           Calling ``start`` multiple times raises ``RuntimeError``.
         """
+        if self._event_loop_state >= _EventLoopState.STARTED:
+            raise RuntimeError("The pipeline was already started.")
+
         self._event_loop.start(timeout=timeout, **kwargs)
+        self._event_loop_state = _EventLoopState.STARTED
 
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
@@ -279,9 +295,15 @@ class Pipeline(Generic[T]):
         Args:
             timeout: Timeout value used when stopping the pipeline and
                 waiting for the thread to join. [Unit: second]
+
+        .. note::
+
+           It is safe to call ``stop`` multiple times.
         """
-        self._event_loop.stop()
-        self._event_loop.join(timeout=timeout)
+        if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
+            self._event_loop.stop()
+            self._event_loop.join(timeout=timeout)
+            self._event_loop_state = _EventLoopState.STOPPED
 
     @contextmanager
     def auto_stop(self, *, timeout: float | None = None):
