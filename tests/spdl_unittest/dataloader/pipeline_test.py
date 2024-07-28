@@ -1283,3 +1283,32 @@ def test_pipeline_source_agen():
     with apl.auto_stop():
         output = list(apl.get_iterator(timeout=3))
     assert expected == output
+
+
+def test_pipeline_start_multiple_times():
+    """`Pipeline.start` cannot be called multiple times."""
+
+    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build()
+
+    with pipeline.auto_stop():
+        with pytest.raises(RuntimeError):
+            pipeline.start()
+
+
+def test_pipeline_stop_multiple_times():
+    """`Pipeline.stop` can be called multiple times."""
+
+    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build()
+
+    pipeline.stop()
+    pipeline.stop()
+    pipeline.stop()
+
+    with pipeline.auto_stop():
+        pipeline.stop()
+        pipeline.stop()
+        pipeline.stop()
+
+    pipeline.stop()
+    pipeline.stop()
+    pipeline.stop()
