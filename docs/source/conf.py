@@ -12,6 +12,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath("."))
+sys.path.append(os.path.abspath("../../examples"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -37,7 +38,9 @@ extensions = [
 ]
 autosummary_generate = True
 autosummary_imported_members = True
+autosummary_ignore_module_all = False
 autoclass_content = "class"
+add_module_names = False
 autodoc_default_options = {
     "special-members": ",".join(["__len__", "__getitem__", "__iter__"]),
     "undoc-members": True,
@@ -99,6 +102,7 @@ html_theme_options = {
 
 
 def linkcode_resolve(domain, info):
+    import dataclasses
     import importlib
     import inspect
 
@@ -107,26 +111,35 @@ def linkcode_resolve(domain, info):
     if not info["module"]:
         return None
 
-    base = "https://github.com/facebookresearch/spdl/tree/main"
+    base = "https://github.com/facebookresearch/spdl/tree/main/"
+
+    if info["module"].startswith("spdl"):
+        base = f"{base}/src"
+    else:
+        base = f"{base}/examples"
 
     mod = importlib.import_module(info["module"])
 
     parts = info["fullname"].split(".")
     obj = getattr(mod, parts[0])
     filename = obj.__module__.replace(".", "/")
+    if dataclasses.is_dataclass(obj):
+        if len(parts) > 1:
+            return None
+
     for part in parts[1:]:
         obj = getattr(obj, part)
 
     try:
         src, ln = inspect.getsourcelines(obj)
-        return f"{base}/src/{filename}.py?#L{ln}-L{ln + len(src)}"
+        return f"{base}/{filename}.py?#L{ln}-L{ln + len(src) - 1}"
     except Exception:
         pass
 
     # Fallback for property
     try:
         src, ln = inspect.getsourcelines(obj.fget)
-        return f"{base}/src/{filename}.py?#L{ln}-L{ln + len(src)}"
+        return f"{base}/{filename}.py?#L{ln}-L{ln + len(src) - 1}"
     except Exception:
         return None
 
