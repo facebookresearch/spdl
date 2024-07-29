@@ -18,7 +18,7 @@ sys.path.append(os.path.abspath("../../examples"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "SPDL"
-copyright = "2024, Moto Hira"
+copyright = "2024, Meta Platforms, Inc."
 author = "Moto Hira"
 release = "0.0.6"
 
