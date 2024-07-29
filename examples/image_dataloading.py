@@ -52,6 +52,7 @@ To run the benchmark,  pass it to the script like the following.
    python image_dataloading.py
        --input-flist ~/imagenet.train.flist
        --prefix /data/users/moto/imagenet/
+       --num-workers 8 # The number of GPUs
 """
 
 # pyre-ignore-all-errors
