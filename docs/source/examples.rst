@@ -8,3 +8,4 @@ Examples
    :recursive:
 
    image_dataloading
+   imagenet_classification
