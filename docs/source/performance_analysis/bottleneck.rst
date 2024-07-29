@@ -95,6 +95,7 @@ Next, we modify the pipeline as follow to introduce an artificial delay in the d
 We execute the pipeline, like the first time without any delay in the foreground thread.
 
 .. code-block::
+
    >>> with pipeline.auto_stop():
    ...     for item in pipeline:
    ...         pass
