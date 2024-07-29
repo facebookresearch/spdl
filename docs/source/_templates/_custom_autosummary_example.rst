@@ -35,7 +35,7 @@ Source
 .. raw:: html
 
    <details>
-   <summary>Click here to see the source.</summary>
+   <summary><u>Click here to see the source.</u></summary>
 
 .. literalinclude:: ../../../examples/{{name}}.py
    :linenos:
@@ -43,8 +43,7 @@ Source
 .. raw:: html
 
    </details>
-   </br>
-                
+
 ..
    ############################################################################
    Functions

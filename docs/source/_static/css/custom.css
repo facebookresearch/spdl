@@ -35,3 +35,11 @@ dl.py.function > dt.sig.sig-object.py {
 table.right-align > tbody > tr {
     text-align: right
 }
+
+/* For details in source code of Example sections */
+ section > details {
+    margin-bottom: 1rem;
+    padding: .8em;
+    background: #f8f8f8;
+    border-radius: 20px
+}
