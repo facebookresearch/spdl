@@ -16,7 +16,8 @@ Source
 Source specifies where the data are located. This is typically file paths or URLs.
 The source can be set with :py:meth:`PipelineBuilder.add_source`
 method. The only requirement for the source object is that it must implement
-:py:class:`~collections.abc.Iterable` interface.
+:py:class:`~collections.abc.Iterable` or :py:class:`~collections.abc.AsyncIterable`
+interface.
 
 For example
 
@@ -37,11 +38,21 @@ For example
    def find_files(path: Path, ext: str):
        yield from path.glob(f'**/*{ext}')
 
+- Asynchronously list files in remote storage
+
+.. code-block::
+
+   # Using some imaginary client
+   async def list_bucket(bucket: str) -> AsyncIterator[str]:
+       client = client.connect()
+       async for route in client.list_bucket(bucket):
+           yield route
+
 .. note::
 
-   Since the source object is executed in async event loop,
-   the source object should be lightweight and refrain from performing blocking
-   operation.
+   Since the source object is executed in async event loop, if the source is
+   ``Iterable`` (synchronous iterator), the source object must be lightweight
+   and refrain from performing blocking operation.
 
    Running a blocking operation in async event loop can, in turn, prevent the
    loop from scheduling callbacks, prevent tasks from being cancelled, and
@@ -53,8 +64,9 @@ Processing
 Preprocessing is where a variety of operations are applied to the items passed
 from the previous stages.
 
-You can define processing stage by passing an operator function (callable) to either
-:py:meth:`~PipelineBuilder.pipe` or :py:meth:`~PipelineBuilder.aggregate` methods.
+You can define processing stage by passing an operator function (callable) to
+:py:meth:`~PipelineBuilder.pipe`. (Also there is :py:meth:`~PipelineBuilder.aggregate`
+method, which can be used to stack multiple items.)
 
 The operator can be either async function or synchronous function. Either way,
 the operator must take exactly one argument†, which is an output from the earlier
