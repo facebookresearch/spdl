@@ -2,6 +2,7 @@
 /src/spdl/include
 /docs/source/generated/
 /docs/_build/
+fb
 *.zip
 *.tar.gz
 *.tar.xz
