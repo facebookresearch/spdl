@@ -21,6 +21,7 @@ SPDL (Scalable and Performant Data Loading)
    getting_started/index
    performance_analysis/index
    examples
+   fb/examples
 
 .. toctree::
    :maxdepth: 2
