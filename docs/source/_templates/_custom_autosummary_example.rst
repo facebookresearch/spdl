@@ -37,7 +37,7 @@ Source
    <details>
    <summary><u>Click here to see the source.</u></summary>
 
-.. literalinclude:: ../../../examples/{{name}}.py
+.. literalinclude:: ../../../examples/{{ fullname | replace(".", "/")}}.py
    :linenos:
 
 .. raw:: html
