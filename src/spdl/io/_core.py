@@ -15,7 +15,13 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import overload, TypeVar
 
 import numpy as np
-from numpy.typing import NDArray
+
+try:
+    from numpy.typing import NDArray
+
+    UintArray = NDArray[np.uint8]
+except ImportError:
+    UintArray = np.ndarray
 
 from spdl.io import (
     AudioFrames,
@@ -118,7 +124,7 @@ class Demuxer:
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: str | bytes | NDArray[np.uint8], **kwargs):
+    def __init__(self, src: str | bytes | UintArray, **kwargs):
         self._demuxer = _libspdl._demuxer(src, **kwargs)
 
     def demux_audio(
@@ -178,7 +184,7 @@ class Demuxer:
 
 
 def demux_audio(
-    src: str | bytes | NDArray[np.uint8],
+    src: str | bytes | UintArray,
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
@@ -198,7 +204,7 @@ def demux_audio(
 
 
 async def async_demux_audio(
-    src: str | bytes | NDArray[np.uint8],
+    src: str | bytes | UintArray,
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
@@ -208,7 +214,7 @@ async def async_demux_audio(
 
 
 def demux_video(
-    src: str | bytes | NDArray[np.uint8],
+    src: str | bytes | UintArray,
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
@@ -229,7 +235,7 @@ def demux_video(
 
 
 async def async_demux_video(
-    src: str | bytes | NDArray[np.uint8],
+    src: str | bytes | UintArray,
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
@@ -238,7 +244,7 @@ async def async_demux_video(
     return await run_async(demux_video, src, timestamp=timestamp, **kwargs)
 
 
-def demux_image(src: str | bytes | NDArray[np.uint8], **kwargs) -> ImagePackets:
+def demux_image(src: str | bytes | UintArray, **kwargs) -> ImagePackets:
     """Demux image from the source.
 
     Args:

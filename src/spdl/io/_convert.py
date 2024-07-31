@@ -7,7 +7,11 @@
 # pyre-unsafe
 
 import numpy as np
-from numpy.typing import NDArray
+
+try:
+    from numpy.typing import NDArray
+except ImportError:
+    NDArray = np.ndarray
 
 from spdl._internal import import_utils
 from spdl.io import CPUBuffer, CUDABuffer
