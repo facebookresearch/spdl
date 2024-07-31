@@ -39,6 +39,7 @@ __all__ = [
     "load_image_batch_nvjpeg",
     "async_load_image_batch_nvjpeg",
     "async_sample_decode_video",
+    "sample_decode_video",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -897,4 +898,36 @@ async def async_sample_decode_video(
             _LG.error(f"Failed to decode {task.get_name()}. Reason: {e}")
     if strict and len(ret) != len(indices):
         raise RuntimeError("Failed to decode some frames.")
+    return ret
+
+
+def sample_decode_video(
+    packets: VideoPackets,
+    indices: list[int],
+    decode_config: DecodeConfig | None = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    strict: bool = True,
+) -> list[ImagePackets]:
+    """Synchronous version of :py:func:`~async_sample_decode_video`.
+
+    This function performs the same operation as :py:func:`~async_sample_decode_video`,
+    but the operations are performed sequentially.
+    """
+    if not indices:
+        raise ValueError("Frame indices must be non-empty.")
+
+    num_packets = len(packets)
+    if any(not (0 <= i < num_packets) for i in indices):
+        raise IndexError(f"Frame index must be [0, {num_packets}).")
+    if sorted(indices) != indices:
+        raise ValueError("Frame indices must be sorted in ascending order.")
+    if len(set(indices)) != len(indices):
+        raise ValueError("Frame indices must be unique.")
+
+    if filter_desc == _FILTER_DESC_DEFAULT:
+        filter_desc = _preprocessing.get_video_filter_desc()
+
+    ret = []
+    for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
+        ret.extend(_decode_partial(split, idxes, decode_config, filter_desc))
     return ret
