@@ -193,6 +193,43 @@ def test_sample_decoding_time(get_sample):
     asyncio.run(_test(sample.path))
 
 
+def test_sample_decoding_time_sync(get_sample):
+    """Sample decoding works"""
+    # https://stackoverflow.com/questions/63725248/how-can-i-set-gop-size-to-be-a-multiple-of-the-input-framerate
+    cmd = (
+        "ffmpeg -hide_banner -y -f lavfi -i testsrc "
+        "-force_key_frames 'expr:eq(mod(n, 25), 0)' "
+        "-frames:v 5000 sample.mp4"
+    )
+    # Note: You can use the following command to check that the generated video has the keyframes
+    # at the expected positions:
+    # Ref: https://www.reddit.com/r/ffmpeg/comments/k6su5f/how_can_i_get_an_output_of_all_keyframe/
+    # Use ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__
+    sample = get_sample(cmd)
+
+    indices = list(range(0, 5000, 100))
+
+    packets = spdl.io.demux_video(sample.path)
+    t0 = time.monotonic()
+    frames = spdl.io.decode_packets(packets.clone())
+    frames = frames[indices]
+    elapsed_ref = time.monotonic() - t0
+    buffer = spdl.io.convert_frames(frames)
+    array_ref = spdl.io.to_numpy(buffer)
+
+    t0 = time.monotonic()
+    frames = spdl.io.sample_decode_video(packets, indices)
+    elapsed = time.monotonic() - t0
+    buffer = spdl.io.convert_frames(frames)
+    array = spdl.io.to_numpy(buffer)
+
+    print(f"{elapsed_ref=}, {elapsed=}")
+    assert np.all(array == array_ref)
+
+    # should be much faster than 2x
+    assert elapsed_ref / 2 > elapsed
+
+
 def test_packet_len(get_sample):
     """VideoPackets length should exclude the preceeding packets when timestamp is not None"""
     # 3 seconds of video with only one keyframe at the beginning.
@@ -252,6 +289,37 @@ def test_sample_decoding_window(get_sample):
     asyncio.run(_test(sample.path))
 
 
+def test_sample_decoding_window_sync(get_sample):
+    """async_sample_decode_video returns the correct frame when timestamps is specified."""
+    # 10 seconds of video with only one keyframe at the beginning.
+    # Use the following command to check
+    # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
+    sample = get_sample(cmd)
+
+    # 250 frames
+    ref_array = spdl.io.to_numpy(spdl.io.load_video(sample.path))
+    assert len(ref_array) == 250
+
+    # frames from 25 - 50, but internally it holds 0 - 50
+    packets = spdl.io.demux_video(sample.path, timestamp=(1.0, 2.0))
+    assert len(packets) == 25
+
+    # decode all to verify the pre-condition
+    frames = spdl.io.decode_packets(packets.clone())
+    assert len(frames) == 25
+    array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
+    assert np.all(array == ref_array[25:50])
+
+    # Sample decode should offset the indices
+    indices = list(range(0, 25, 2))
+    frames = spdl.io.sample_decode_video(packets, indices)
+    assert len(indices) == len(frames) == 13
+    array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
+    print(f"{array.shape=}, {ref_array[25:50:2].shape=}")
+    assert np.all(array == ref_array[25:50:2])
+
+
 def test_sample_decode_video_default_color_space(get_sample):
     """sample_decode_video should return rgb24 frames by default."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
@@ -266,3 +334,16 @@ def test_sample_decode_video_default_color_space(get_sample):
             assert f.pix_fmt == "rgb24"
 
     asyncio.run(_test(sample.path))
+
+
+def test_sample_decode_video_default_color_space_sync(get_sample):
+    """sample_decode_video should return rgb24 frames by default."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+    sample = get_sample(cmd)
+
+    packets = spdl.io.demux_video(sample.path)
+    assert packets.pix_fmt != "rgb24"  # precondition
+    frames = spdl.io.sample_decode_video(packets, list(range(10)))
+
+    for f in frames:
+        assert f.pix_fmt == "rgb24"
