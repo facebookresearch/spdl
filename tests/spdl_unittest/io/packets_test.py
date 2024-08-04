@@ -347,3 +347,21 @@ def test_sample_decode_video_default_color_space_sync(get_sample):
 
     for f in frames:
         assert f.pix_fmt == "rgb24"
+
+
+def test_sample_decode_video_with_windowed_packets_and_filter(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 30 sample.mp4"
+    sample = get_sample(cmd)
+
+    timestamp = (0.55, 2.05)
+    packets = spdl.io.demux_video(sample.path, timestamp=timestamp)
+    filter_desc = spdl.io.get_video_filter_desc(
+        scale_width=224,
+        scale_height=224,
+        pix_fmt="rgb24",
+    )
+
+    assert len(packets) == 15
+    idx = [0, 2, 4, 6, 8, 10, 12, 14]
+    frames = spdl.io.sample_decode_video(packets, idx, filter_desc=filter_desc)
+    assert [f.pts for f in frames] == [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
