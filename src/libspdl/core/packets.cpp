@@ -165,17 +165,90 @@ template PacketsPtr<MediaType::Video> clone(const VideoPackets& src);
 template PacketsPtr<MediaType::Image> clone(const ImagePackets& src);
 
 namespace {
-std::vector<std::tuple<size_t, size_t>> get_keyframe_indices(
-    const std::vector<AVPacket*>& src_packets) {
-  std::vector<std::tuple<size_t, size_t>> ret;
-  size_t start = 0;
-  for (size_t i = 1; i < src_packets.size(); ++i) {
-    if (src_packets[i]->flags & AV_PKT_FLAG_KEY) {
-      ret.push_back({start, i});
-      start = i;
+std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
+    const std::vector<AVPacket*>& packets) {
+  // Split the input video packets into multiple sets of packets,
+  // each of which starts with a key frame.
+  //
+  // Originally, the algorithm was simply splitting the packets at key frames,
+  // but it turned out that there are video files that have packets of which
+  // PTSs are below the PTS of corresponding key frames. Decoders, once receive
+  // a key frame packet, discard packets with PTS below the PTS of the key frame
+  // packets, so this resulted in discarding some frames.
+  //
+  // Therefore, in this split algorithm, packets are split in a way so that all
+  // the non-key frame packets of which PTS are below the PTS of the key frame
+  // of the next split are contained in the current split, along with the key
+  // frame packets.
+  //
+  // For example, say we have packets with the following PTS.
+  //
+  // 1, 3, 4, 5,  2, 6, 8, 7
+  // I        I  ^^^
+  //
+  // The PTS of the key frame of the second split is 5, but the packet with
+  // PTS=2 comes after that. If we simply split at key frames, then PTS=2 will
+  // be dicarded.
+  //
+  // 1, 3, 4,                -> 1, 3, 4
+  // I
+  //          5, 2, 6, 8, 7  -> 5, 6, 7, 8
+  //          I
+  //
+  // So we split in a way that the stray packets are included in the previous
+  // split.
+  //
+  // 1, 3, 4, 5, 2           -> 1, 2, 3, 4, 5
+  //
+  //          5, 2, 6, 8, 7  -> 5, 6, 7, 8
+  //
+  // The downside is that if we decode them as-is, the key frames are
+  // duplicated. So care must be taken. The splitting algorithm is only used by
+  // sample decoding, so we make sure that frames are not duplicated there.
+
+  if (packets.size() == 0) {
+    SPDL_FAIL("Packets cannot be empty");
+  }
+
+  // 1. Extract the PTS of key frames.
+  std::vector<std::tuple<size_t, int64_t>> keyframe_pts;
+  keyframe_pts.push_back({0, packets[0]->pts});
+  for (size_t i = 1; i < packets.size(); ++i) {
+    auto pkt = packets[i];
+    if (pkt->flags & AV_PKT_FLAG_KEY) {
+      keyframe_pts.push_back({i, pkt->pts});
     }
   }
-  ret.push_back({start, src_packets.size()});
+  keyframe_pts.push_back({packets.size(), LLONG_MAX});
+
+  // 2. Split the packets.
+  // For N-th split, we extract the packets from the N-th key frame to the last
+  // packet of which PTS is bellow the next split's key PTS.
+  std::vector<std::tuple<size_t, size_t, size_t>> ret;
+  ret.reserve(keyframe_pts.size() - 1);
+  for (size_t split = 0; split < keyframe_pts.size() - 1; ++split) {
+    auto [start, min_pts] = keyframe_pts[split];
+    auto [end, max_pts] = keyframe_pts[split + 1];
+
+    // Check if there are stray packets
+    for (size_t i = end + 1; i < packets.size(); ++i) {
+      auto pkt = packets[i];
+      if (pkt->pts < max_pts) {
+        end = i + 1;
+      }
+    }
+
+    // obtain the number of invalid packets
+    // invalid packets mean the PTS are less than min_pts.
+    // Such packet should have been part of the previous split.
+    size_t num_invalid = 0;
+    for (size_t i = start; i < end; ++i) {
+      if (packets[i]->pts < min_pts) {
+        num_invalid += 1;
+      }
+    }
+    ret.push_back({start, end, num_invalid});
+  }
   return ret;
 }
 
@@ -221,12 +294,10 @@ extract_packets_at_indices(
 
   std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>> ret;
   size_t i = 0;
-  for (auto& window : split_indices) {
-    auto& [start, end] = window;
-
+  for (auto& [start, end, num_invalid] : split_indices) {
     std::vector<size_t> indices_in_window;
     while (i < indices.size() && (start <= indices[i] && indices[i] < end)) {
-      indices_in_window.push_back(indices[i] - start);
+      indices_in_window.push_back(indices[i] - start - num_invalid);
       ++i;
     }
     if (indices_in_window.size() > 0) {
