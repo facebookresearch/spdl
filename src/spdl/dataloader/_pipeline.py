@@ -176,8 +176,7 @@ class _EventLoopState(IntEnum):
 class Pipeline(Generic[T]):
     """Pipeline()
 
-    **[Experimental]** Data processing pipeline. Use :py:class:`PipelineBuilder` to
-    instantiate.
+    Data processing pipeline. Use :py:class:`PipelineBuilder` to instantiate.
 
     ``Pipeline`` and ``PipelineBuilder`` facilitate building data processing pipeline
     consists of multiple stages of async operations.
