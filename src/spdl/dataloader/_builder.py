@@ -495,7 +495,7 @@ def _to_async(func: Callable[[T], U]) -> Callable[[T], Awaitable[U]]:
 
 
 class PipelineBuilder:
-    """**[Experimental]** Build :py:class:`~spdl.dataloader.Pipeline` object.
+    """Build :py:class:`~spdl.dataloader.Pipeline` object.
 
     See :py:class:`~spdl.dataloader.Pipeline` for details.
     """
@@ -727,39 +727,28 @@ class PipelineBuilder:
         self._sink_buffer_size = buffer_size
         return self
 
-    def _build(
-        self,
-        num_items: int | None,
-        # TODO: Once we remove AsyncPipeline, construct queues internally.
-        queues: list[AsyncQueue],
-    ) -> Coroutine[None, None, None]:
+    def _build(self) -> tuple[Coroutine[None, None, None], list[AsyncQueue]]:
         if self._source is None:
             raise ValueError("Source is not set.")
-        if num_items is not None and num_items < 1:
-            raise ValueError("num_items must be >= 0")
-
-        construct_queues = len(queues) == 0
 
         # Note:
         # Make sure that coroutines are ordered from source to sink.
         # `_run_pipeline_coroutines` expects and rely on this ordering.
         coros = []
+        queues: list[AsyncQueue] = []
 
         # source
-        if construct_queues:
-            queues.append(AsyncQueue(self._source_buffer_size))
-
+        queues.append(AsyncQueue(self._source_buffer_size))
         coros.append(
             (
                 "AsyncPipeline::0_source",
-                _enqueue(self._source, queues[0], max_items=num_items),
+                _enqueue(self._source, queues[0]),
             )
         )
 
         # pipes
         for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
-            if construct_queues:
-                queues.append(AsyncQueue(buffer_size))
+            queues.append(AsyncQueue(buffer_size))
             in_queue, out_queue = queues[i - 1 : i + 1]
 
             match type_:
@@ -776,9 +765,7 @@ class PipelineBuilder:
 
         # sink
         if self._sink_buffer_size is not None:
-            if construct_queues:
-                queues.append(AsyncQueue(self._sink_buffer_size))
-
+            queues.append(AsyncQueue(self._sink_buffer_size))
             coros.append(
                 (
                     f"AsyncPipeline::{len(self._process_args) + 1}_sink",
@@ -786,7 +773,7 @@ class PipelineBuilder:
                 )
             )
 
-        return _run_pipeline_coroutines(coros)
+        return _run_pipeline_coroutines(coros), queues
 
     def _get_desc(self) -> list[str]:
         parts = []
@@ -828,8 +815,7 @@ class PipelineBuilder:
                 async event loop.
                 If not specified, the maximum concurrency value is used.
         """
-        queues = []
-        coro = self._build(None, queues)
+        coro, queues = self._build()
 
         if num_threads is None:
             concurrencies = [
