@@ -8,6 +8,8 @@
 
 # pyre-unsafe
 
+from typing import Any
+
 from . import _builder, _flist, _hook, _pipeline, _utils  # noqa: E402
 
 _mods = [
@@ -24,7 +26,7 @@ def __dir__():
     return __all__
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     for mod in _mods + [_flist]:
         if name in mod.__all__:
             return getattr(mod, name)
