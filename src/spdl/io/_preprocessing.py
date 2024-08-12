@@ -19,7 +19,7 @@ def get_audio_filter_desc(
     *,
     sample_rate: int | None = None,
     num_channels: int | None = None,
-    sample_fmt: str | None = None,
+    sample_fmt: str | None = "fltp",
     timestamp: tuple[float, float] | None = None,
     num_frames: int | None = None,
     filter_desc: str | None = None,
@@ -38,6 +38,13 @@ def get_audio_filter_desc(
             Valid values are (``"u8"``, ``"u8p"``, ``"s16"``, ``"s16p"``,
             ``"s32"``, ``"s32p"``, ``"flt"``, ``"fltp"``, ``"s64"``,
             ``"s64p"``, ``"dbl"``, ``"dblp"``).
+
+            The suffix ``"p"`` means planar format, i.e. when data are converted
+            to Tensor, the shape is ``(num_channels, num_frames)`` instead of
+            ``(num_frames, num_channels)``.
+
+            Default `"fltp"`. The audio samples are converted to 32-bit floating
+            point in [-1, 1] range.
 
         timestamp (tuple[float, float]):
             *Optional:* Trim the audio by start and end time.
