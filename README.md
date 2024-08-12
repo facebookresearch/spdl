@@ -7,9 +7,9 @@ audio/video/image data loading for machine learning training.
 
 Please checkout prototypes.
 
-- [ImageNet evaluation](./src/prototypes/imagenet_classification.py)
+- [ImageNet evaluation](./examples/imagenet_classification.py)
 
-- [Image dataloading](./src/prototypes/image_dataloading.py)
+- [Image dataloading](./examples/image_dataloading.py)
 Loads the training set (1281167 images) in 40 seconds.
 
 - [Video dataloading](./src/prototypes/video_dataloading.py)
@@ -17,17 +17,54 @@ Loads the Kinetics 400 trainig dataset in 15 mins.
 
 ## Installation
 
-Please refer to [the documentation](./docs/installation.md).
+### Installing from source
 
-## Documentation
+The following command will build and install `spdl` Python package.
 
-Documentations are found in the [docs](./docs) directory.
+_Note_ Make sure to use `-v` to see the log from the build process.
 
-Please use mkdocs to build and browse the documentation after installing SPDL.
+_Regular installation_
 
 ```
-mkdoc serve
+pip install . -v
 ```
+
+_Development installation_
+
+```
+pip install -e . -v
+```
+
+The build process first downloads/builds/installs some third-party dependencies, then it builds SPDL and its binding code.
+
+Once dependencies are built, set the environment variable
+`SKIP_1ST_DEPS=1` and the build will skip the Folly dependency in subsequent builds.
+
+Build can be customized through the environment variables;
+
+- `SPDL_USE_CUDA=1` to enable CUDA integration, such as background data transfer.
+- `SPDL_USE_NVCODEC=1` to enable [NVIDIA VIDEO CODEC](https://developer.nvidia.com/video-codec-sdk) integration, i.e. GPU video decoder and direct CUDA memory placement
+- `SPDL_USE_TRACING=1` to [Perfetto](https://perfetto.dev/) integration for performance profiling.
+- `SPDL_USE_FFMPEG_VERSION` to specify the version of FFmpeg you want to use to reduce the build time.
+   By default, SPDL compiles against FFmpeg 4, 5, 6 and 7, and pick available one at run time.
+
+See [setup.py](https://github.com/facebookresearch/spdl/blob/main/setup.py) for the up-to-date available options.
+
+## Requirements
+
+* Supported OS: Linux, macOS
+
+* Build requirements
+    - C++20 compiler (Tested on GCC 11 and Clang 15)
+    - CMake, Ninja
+    - (Optional) CUDA Toolkit
+
+* Runtime Requirements and dependencies
+    - Python 3.10+
+    - NumPy
+    - (Optional) PyTorch
+    - (Optional) Numba
+    - (Optional) CUDA runtime
 
 ## Dependencies
 
