@@ -6,18 +6,15 @@
 
 import asyncio
 import random
+import threading
 import time
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from multiprocessing import Process
 
 import pytest
 
-from spdl.dataloader import (
-    PipelineBuilder,
-    PipelineFailure,
-    PipelineHook,
-    TaskStatsHook,
-)
+from spdl.dataloader import PipelineBuilder, PipelineHook, TaskStatsHook
 from spdl.dataloader._builder import _enqueue, _EOF, _pipe, _sink, _SKIP
 from spdl.dataloader._hook import _periodic_dispatch
 
@@ -1336,3 +1333,96 @@ def test_pipeline_no_close():
     if p.exitcode is None:
         p.kill()
         raise RuntimeError("Process did not self-terminate.")
+
+
+def test_pipeline_custom_pipe_executor():
+    """`pipe` accepts custom ThreadPoolExecutor.
+
+    The primal goal of custom executor is to make it easy to use
+    thread local storages.
+
+    So in this test, we initialize a custom executor with some thread
+    local storages, and then we access it without any check (hasattr)
+    in pipe function.
+    """
+    num_threads = 10
+    sleep = 0.5
+
+    ref = set(range(num_threads))
+
+    ref_copy = ref.copy()
+    thread_local_storage = threading.local()
+
+    def init_storage():
+        print("Initializing thread:", threading.get_ident())
+        thread_local_storage.value = ref_copy.pop()
+
+    executor = ThreadPoolExecutor(
+        max_workers=num_threads,
+        initializer=init_storage,
+    )
+
+    def op(i: int) -> int:
+        # sleep to block this thread, so that
+        # we use all the threads in the pool
+        time.sleep(sleep)
+        print(i, thread_local_storage.value)
+        return thread_local_storage.value
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(num_threads))
+        .pipe(op, executor=executor, concurrency=num_threads)
+        .add_sink(1)
+        .build()
+    )
+
+    t0 = time.monotonic()
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+    elapsed = time.monotonic() - t0
+
+    assert len(ref_copy) == 0
+    assert set(vals) == ref
+    assert elapsed < sleep * 2
+
+
+def get_pid(_):
+    import os
+
+    time.sleep(0.5)
+    pid = os.getpid()
+    print(f"{pid=}")
+    return pid
+
+
+def test_pipeline_custom_pipe_executor_process():
+    """`pipe` accepts custom ProcessPoolExecutor."""
+    num_processes = 5
+
+    executor = ProcessPoolExecutor(max_workers=num_processes)
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(num_processes))
+        .pipe(get_pid, executor=executor, concurrency=num_processes)
+        .add_sink(1)
+        .build()
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+
+    assert len(set(vals)) == num_processes
+
+
+def test_pipeline_custom_pipe_executor_async():
+    """pipe rejects custom executor if op is async"""
+
+    async def op(i: int) -> int:
+        return i
+
+    with pytest.raises(ValueError):
+        PipelineBuilder().add_source(range(10)).pipe(
+            op, executor=ThreadPoolExecutor()
+        ).add_sink(1).build()

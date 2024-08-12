@@ -18,9 +18,9 @@ from collections.abc import (
     Callable,
     Coroutine,
     Iterable,
-    Iterator,
     Sequence,
 )
+from concurrent.futures import Executor
 from contextlib import asynccontextmanager, contextmanager
 from typing import TypeVar
 
@@ -486,10 +486,13 @@ async def _run_pipeline_coroutines(
 ################################################################################
 
 
-def _to_async(func: Callable[[T], U]) -> Callable[[T], Awaitable[U]]:
+def _to_async(
+    func: Callable[[T], U],
+    executor: type[Executor] | None,
+) -> Callable[[T], Awaitable[U]]:
     async def afunc(item: T) -> U:
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, func, item)
+        return await loop.run_in_executor(executor, func, item)
 
     return afunc
 
@@ -553,6 +556,7 @@ class PipelineBuilder:
         /,
         *,
         concurrency: int = 1,
+        executor: type[Executor] | None = None,
         name: str | None = None,
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
@@ -586,6 +590,10 @@ class PipelineBuilder:
                    If calling a sync function, use :py:func:`asyncio.loop.run_in_executor`
                    or :py:func:`asyncio.to_thread` to delegate the execution to the thread pool.
             concurrency: The maximum number of async tasks executed concurrently.
+            executor: A custom executor object to be used to convert the synchronous operation
+                into asynchronous one. If ``None``, the default executor is used.
+
+                It is invalid to provide this argument when the given op is already async.
             name: The name (prefix) to give to the task.
             hooks: Hook objects to be attached to the stage. Hooks are intended for
                 collecting stats of the stage.
@@ -617,10 +625,17 @@ class PipelineBuilder:
             else:
                 name = op.__class__.__name__
 
+        if executor is not None:
+            if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
+                raise ValueError("`executor` cannot be specified when op is async.")
+
         if inspect.iscoroutinefunction(op):
             pass
         elif inspect.isgeneratorfunction(op):
-            raise ValueError("pipe does not support generator function.")
+            raise ValueError(
+                "pipe does not support generator functions. "
+                "Consider converting it to async generator functoin or regular function."
+            )
         elif inspect.isasyncgenfunction(op):
             if output_order == "input":
                 raise ValueError(
@@ -628,7 +643,7 @@ class PipelineBuilder:
                     "when output_order is 'input'."
                 )
         else:
-            op = _to_async(op)  # pyre-ignore: [6]
+            op = _to_async(op, executor=executor)  # pyre-ignore: [6]
 
         self._process_args.append(
             (
