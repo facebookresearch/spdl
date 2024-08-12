@@ -8,6 +8,8 @@
 
 # pyre-unsafe
 
+from typing import Any
+
 # This has to happen before other sub modules are imporeted.
 # Otherwise circular import would occur.
 #
@@ -58,7 +60,7 @@ _deprecated = {
 }
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name in _deprecated:
         import warnings
 
