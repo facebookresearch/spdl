@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
-import concurrent.futures
 from random import randbytes
 
 import pytest
@@ -24,7 +23,7 @@ def test_decode_pix_fmt(get_sample):
     async def _test(data, pix_fmt):
         buffer = await spdl.io.async_decode_image_nvjpeg(
             data,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             pix_fmt=pix_fmt,
         )
         tensor = spdl.io.to_torch(buffer)
@@ -56,13 +55,13 @@ def test_decode_rubbish(get_samples):
         with pytest.raises(RuntimeError):
             spdl.io.decode_image_nvjpeg(
                 rubbish,
-                cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+                device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             )
 
     for path in flist:
         buffer = spdl.io.decode_image_nvjpeg(
             path,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
         )
 
         tensor = spdl.io.to_torch(buffer)
@@ -81,7 +80,7 @@ def test_decode_resize(get_sample):
     async def _test(data):
         buffer = await spdl.io.async_decode_image_nvjpeg(
             data,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             scale_width=160,
             scale_height=120,
         )
@@ -108,7 +107,7 @@ def test_decode_zero_clear(get_sample):
     async def _test(data):
         buffer = await spdl.io.async_decode_image_nvjpeg(
             data,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             scale_width=160,
             scale_height=120,
             _zero_clear=True,
@@ -133,7 +132,7 @@ def test_batch_decode_zero_clear(get_samples):
     async def _test(dataset):
         buffer = await spdl.io.async_load_image_batch_nvjpeg(
             dataset,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             width=160,
             height=120,
             _zero_clear=True,

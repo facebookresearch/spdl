@@ -146,7 +146,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_config"),
+      nb::arg("device_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
@@ -162,7 +162,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_config"),
+      nb::arg("device_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
@@ -201,7 +201,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_config"),
+      nb::arg("device_config"),
       nb::arg("crop_left") = 0,
       nb::arg("crop_top") = 0,
       nb::arg("crop_right") = 0,
@@ -239,7 +239,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_config"),
+      nb::arg("device_config"),
       nb::arg("scale_width") = -1,
       nb::arg("scale_height") = -1,
       nb::arg("pix_fmt") = "rgb",
@@ -272,7 +272,7 @@ void register_decoding(nb::module_& m) {
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
 #endif
-      nb::arg("cuda_config"),
+      nb::arg("device_config"),
       nb::arg("scale_width"),
       nb::arg("scale_height"),
       nb::arg("pix_fmt") = "rgb",
