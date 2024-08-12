@@ -81,14 +81,14 @@ void register_transfer(nb::module_& m) {
       &_transfer_buffer,
       nb::arg("buffer"),
       nb::kw_only(),
-      nb::arg("cuda_config"));
+      nb::arg("device_config"));
 
   m.def(
       "transfer_buffer",
       &_transfer_cpu_array,
       nb::arg("buffer"),
       nb::kw_only(),
-      nb::arg("cuda_config"));
+      nb::arg("device_config"));
 
   // CUDA -> CPU
   m.def("transfer_buffer_cpu", &_transfer_cuda_array, nb::arg("buffer"));

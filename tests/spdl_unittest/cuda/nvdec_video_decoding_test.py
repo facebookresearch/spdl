@@ -23,13 +23,13 @@ DEFAULT_CUDA = 0
 
 
 def _decode_video(src, timestamp=None, allocator=None, **decode_options):
-    cuda_config = spdl.io.cuda_config(
+    device_config = spdl.io.cuda_config(
         device_index=DEFAULT_CUDA,
         allocator=allocator,
     )
     packets = spdl.io.demux_video(src, timestamp=timestamp)
     buffer = spdl.io.decode_packets_nvdec(
-        packets, cuda_config=cuda_config, **decode_options
+        packets, device_config=device_config, **decode_options
     )
     return spdl.io.to_torch(buffer)
 
@@ -43,7 +43,7 @@ def _decode_videos(src, timestamps):
         ):
             coro = spdl.io.async_decode_packets_nvdec(
                 packets,
-                cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+                device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             )
             decoding.append(asyncio.create_task(coro))
 

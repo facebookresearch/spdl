@@ -312,7 +312,7 @@ def get_decode_func(
             pix_fmt=None,
             strict=True,
             filter_desc=filter_desc,
-            cuda_config=spdl.io.cuda_config(
+            device_config=spdl.io.cuda_config(
                 device_index=0,
                 allocator=(
                     torch.cuda.caching_allocator_alloc,
@@ -333,7 +333,7 @@ def _get_experimental_nvjpeg_decode_function(
     height: int = 224,
 ):
     device = torch.device(f"cuda:{device_index}")
-    cuda_config = spdl.io.cuda_config(
+    device_config = spdl.io.cuda_config(
         device_index=device_index,
         allocator=(
             torch.cuda.caching_allocator_alloc,
@@ -347,7 +347,7 @@ def _get_experimental_nvjpeg_decode_function(
         labels = torch.tensor(labels, dtype=torch.int64).to(device)
         buffer = await spdl.io.async_load_image_batch_nvjpeg(
             paths,
-            cuda_config=cuda_config,
+            device_config=device_config,
             width=width,
             height=height,
             pix_fmt="rgb",
@@ -365,7 +365,7 @@ def _get_experimental_nvdec_decode_function(
     height: int = 224,
 ):
     device = torch.device(f"cuda:{device_index}")
-    cuda_config = spdl.io.cuda_config(
+    device_config = spdl.io.cuda_config(
         device_index=device_index,
         allocator=(
             torch.cuda.caching_allocator_alloc,
@@ -379,7 +379,7 @@ def _get_experimental_nvdec_decode_function(
         labels = torch.tensor(labels, dtype=torch.int64).to(device)
         buffer = await spdl.io.async_load_image_batch_nvdec(
             paths,
-            cuda_config=cuda_config,
+            device_config=device_config,
             width=width,
             height=height,
             pix_fmt="rgba",

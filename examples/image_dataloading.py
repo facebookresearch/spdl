@@ -138,14 +138,14 @@ async def batch_decode(
     srcs: list[str],
     width: int = 224,
     height: int = 224,
-    cuda_config: spdl.io.CUDAConfig | None = None,
+    device_config: spdl.io.CUDAConfig | None = None,
 ) -> Tensor:
     """Given image paths, decode, resize, batch and optionally send them to GPU.
 
     Args:
         srcs: List of image paths.
         width, height: The size of the images to batch.
-        cuda_config: When provided, the data are sent to the specified GPU.
+        device_config: When provided, the data are sent to the specified GPU.
 
     Returns:
         The batch tensor.
@@ -155,7 +155,7 @@ async def batch_decode(
         width=width,
         height=height,
         pix_fmt="rgb24",
-        cuda_config=cuda_config,
+        device_config=device_config,
         strict=False,
     )
     return spdl.io.to_torch(buffer)
@@ -164,7 +164,7 @@ async def batch_decode(
 def get_pipeline(
     src: Iterator[str],
     batch_size: int,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
     buffer_size: int,
     num_threads: int,
 ) -> Pipeline:
@@ -177,7 +177,7 @@ def get_pipeline(
         src: Pipeline source. Generator that yields image paths.
             See :py:func:`source`.
         batch_size: The number of images in a batch.
-        cuda_config: The configuration of target CUDA device.
+        device_config: The configuration of target CUDA device.
         buffer_size: The size of buffer for the resulting batch image Tensor.
         num_threads: The number of threads in the pipeline.
 
@@ -186,7 +186,7 @@ def get_pipeline(
     """
 
     async def _batch_decode(srcs):
-        return await batch_decode(srcs, cuda_config=cuda_config)
+        return await batch_decode(srcs, device_config=device_config)
 
     pipeline = (
         PipelineBuilder()
@@ -203,7 +203,7 @@ def _get_pipeline(args):
     return get_pipeline(
         source(args.input_flist, args.prefix, args.num_workers, args.worker_id),
         args.batch_size,
-        cuda_config=(
+        device_config=(
             None
             if args.worker_id is None
             else spdl.io.cuda_config(

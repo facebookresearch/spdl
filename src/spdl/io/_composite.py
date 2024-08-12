@@ -9,6 +9,7 @@
 import asyncio
 import builtins
 import logging
+import warnings
 from typing import Any, overload
 
 from spdl.io import (
@@ -54,14 +55,21 @@ def _load_packets(
     packets,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDAConfig | None = None,
+    device_config: CUDAConfig | None = None,
+    **kwargs,
 ):
+    if device_config is None and "cuda_config" in kwargs:
+        warnings.warn(
+            "`cuda_config` argument has been renamed to `device_config`.", stacklevel=3
+        )
+        device_config = kwargs["cuda_config"]
+
     frames = _core.decode_packets(
         packets, decode_config=decode_config, filter_desc=filter_desc
     )
     buffer = _core.convert_frames(frames)
-    if cuda_config is not None:
-        buffer = _core.transfer_buffer(buffer, cuda_config=cuda_config)
+    if device_config is not None:
+        buffer = _core.transfer_buffer(buffer, device_config=device_config)
     return buffer
 
 
@@ -73,7 +81,8 @@ def load_audio(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: None = None,
+    device_config: None = None,
+    **kwargs,
 ) -> CPUBuffer: ...
 @overload
 def load_audio(
@@ -83,7 +92,8 @@ def load_audio(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
+    **kwargs,
 ) -> CUDABuffer: ...
 
 
@@ -94,7 +104,8 @@ def load_audio(
     demux_config=None,
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
-    cuda_config=None,
+    device_config=None,
+    **kwargs,
 ):
     """Load audio from source into buffer.
 
@@ -106,7 +117,7 @@ def load_audio(
     Args:
         src, timestamp, demux_config: See :py:func:`~spdl.io.demux_audio`.
         decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
-        cuda_config: See :py:func:`~spdl.io.transfer_buffer`.
+        device_config: See :py:func:`~spdl.io.transfer_buffer`.
             Providing this argument will move the buffer to CUDA device.
 
     Returns:
@@ -117,7 +128,8 @@ def load_audio(
         packets,
         decode_config=decode_config,
         filter_desc=filter_desc,
-        cuda_config=cuda_config,
+        device_config=device_config,
+        **kwargs,
     )
 
 
@@ -129,7 +141,8 @@ async def async_load_audio(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: None = None,
+    device_config: None = None,
+    **kwargs,
 ) -> CPUBuffer: ...
 @overload
 async def async_load_audio(
@@ -139,7 +152,8 @@ async def async_load_audio(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
+    **kwargs,
 ) -> CUDABuffer: ...
 
 
@@ -150,7 +164,8 @@ async def async_load_audio(
     demux_config=None,
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
-    cuda_config=None,
+    device_config=None,
+    **kwargs,
 ):
     """Async version of :py:func:`~spdl.io.load_audio`."""
     return await run_async(
@@ -160,7 +175,8 @@ async def async_load_audio(
         demux_config=demux_config,
         decode_config=decode_config,
         filter_desc=filter_desc,
-        cuda_config=cuda_config,
+        device_config=device_config,
+        **kwargs,
     )
 
 
@@ -172,7 +188,8 @@ def load_video(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: None = None,
+    device_config: None = None,
+    **kwargs,
 ) -> CPUBuffer: ...
 @overload
 def load_video(
@@ -182,7 +199,8 @@ def load_video(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
+    **kwargs,
 ) -> CUDABuffer: ...
 
 
@@ -193,7 +211,8 @@ def load_video(
     demux_config=None,
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
-    cuda_config=None,
+    device_config=None,
+    **kwargs,
 ):
     """Load video from source into buffer.
 
@@ -205,7 +224,7 @@ def load_video(
     Args:
         src, timestamp, demux_config: See :py:func:`~spdl.io.demux_video`.
         decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
-        cuda_config: See :py:func:`~spdl.io.transfer_buffer`.
+        device_config: See :py:func:`~spdl.io.transfer_buffer`.
             Providing this argument will move the buffer to CUDA device.
 
     Returns:
@@ -216,7 +235,8 @@ def load_video(
         packets,
         decode_config=decode_config,
         filter_desc=filter_desc,
-        cuda_config=cuda_config,
+        device_config=device_config,
+        **kwargs,
     )
 
 
@@ -228,7 +248,8 @@ async def async_load_video(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: None = None,
+    device_config: None = None,
+    **kwargs,
 ) -> CPUBuffer: ...
 
 
@@ -240,7 +261,8 @@ async def async_load_video(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
+    **kwargs,
 ) -> CUDABuffer: ...
 
 
@@ -251,7 +273,8 @@ async def async_load_video(
     demux_config=None,
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
-    cuda_config=None,
+    device_config=None,
+    **kwargs,
 ):
     """Async version of :py:func:`~spdl.io.load_video`."""
     return await run_async(
@@ -261,7 +284,8 @@ async def async_load_video(
         demux_config=demux_config,
         decode_config=decode_config,
         filter_desc=filter_desc,
-        cuda_config=cuda_config,
+        device_config=device_config,
+        **kwargs,
     )
 
 
@@ -272,7 +296,8 @@ def load_image(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: None = None,
+    device_config: None = None,
+    **kwargs,
 ) -> CPUBuffer: ...
 @overload
 def load_image(
@@ -281,7 +306,8 @@ def load_image(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDABuffer,
+    device_config: CUDABuffer,
+    **kwargs,
 ) -> CUDABuffer: ...
 
 
@@ -291,7 +317,8 @@ def load_image(
     demux_config=None,
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
-    cuda_config=None,
+    device_config=None,
+    **kwargs,
 ):
     """Load image from source into buffer.
 
@@ -303,7 +330,7 @@ def load_image(
     Args:
         src, demux_config: See :py:func:`~spdl.io.demux_video`.
         decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
-        cuda_config: See :py:func:`~spdl.io.transfer_buffer`.
+        device_config: See :py:func:`~spdl.io.transfer_buffer`.
             Providing this argument will move the buffer to CUDA device.
 
     Returns:
@@ -314,7 +341,8 @@ def load_image(
         packets,
         decode_config=decode_config,
         filter_desc=filter_desc,
-        cuda_config=cuda_config,
+        device_config=device_config,
+        **kwargs,
     )
 
 
@@ -325,7 +353,8 @@ async def async_load_image(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: None = None,
+    device_config: None = None,
+    **kwargs,
 ) -> CPUBuffer: ...
 @overload
 async def async_load_image(
@@ -334,7 +363,8 @@ async def async_load_image(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDABuffer,
+    device_config: CUDABuffer,
+    **kwargs,
 ) -> CUDABuffer: ...
 
 
@@ -344,7 +374,8 @@ async def async_load_image(
     demux_config=None,
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
-    cuda_config=None,
+    device_config=None,
+    **kwargs,
 ):
     """Async version of :py:func:`~spdl.io.load_image`."""
     return await run_async(
@@ -353,7 +384,8 @@ async def async_load_image(
         demux_config=demux_config,
         decode_config=decode_config,
         filter_desc=filter_desc,
-        cuda_config=cuda_config,
+        device_config=device_config,
+        **kwargs,
     )
 
 
@@ -388,9 +420,10 @@ async def async_load_image_batch(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: None = None,
+    device_config: None = None,
     pin_memory: bool = False,
     strict: bool = True,
+    **kwargs,
 ) -> CPUBuffer: ...
 
 
@@ -404,9 +437,10 @@ async def async_load_image_batch(
     demux_config: DemuxConfig | None = None,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
     pin_memory: bool = False,
     strict: bool = True,
+    **kwargs,
 ) -> CUDABuffer: ...
 
 
@@ -419,9 +453,10 @@ async def async_load_image_batch(
     demux_config=None,
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
-    cuda_config=None,
+    device_config=None,
     pin_memory=False,
     strict=True,
+    **kwargs,
 ):
     """Batch load images.
 
@@ -478,7 +513,7 @@ async def async_load_image_batch(
             *Optional:* Filter description passed to
             :py:func:`~spdl.io.async_decode_packets`.
 
-        cuda_config:
+        device_config:
             *Optional:* The CUDA device passed to
             :py:func:`~spdl.io.async_transfer_buffer`.
             Providing this argument will move the resulting buffer to
@@ -509,6 +544,13 @@ async def async_load_image_batch(
     """
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
+
+    if device_config is None and "cuda_config" in kwargs:
+        warnings.warn(
+            "The `cuda_config` argument has ben renamed to `device_config`.",
+            stacklevel=2,
+        )
+        device_config = kwargs["cuda_config"]
 
     if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_video_filter_desc(
@@ -543,8 +585,8 @@ async def async_load_image_batch(
 
     buffer = await _core.async_convert_frames(frames, pin_memory=pin_memory)
 
-    if cuda_config is not None:
-        buffer = await _core.async_transfer_buffer(buffer, cuda_config=cuda_config)
+    if device_config is not None:
+        buffer = await _core.async_transfer_buffer(buffer, device_config=device_config)
 
     return buffer
 
@@ -552,13 +594,14 @@ async def async_load_image_batch(
 async def async_load_image_batch_nvdec(
     srcs: list[str | bytes],
     *,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgba",
     demux_config: DemuxConfig | None = None,
     decode_options: dict[str, Any] | None = None,
     strict: bool = True,
+    **kwargs,
 ) -> CUDABuffer:
     """**[Experimental]** Batch load images with NVDEC.
 
@@ -573,7 +616,7 @@ async def async_load_image_batch_nvdec(
     Args:
         srcs: List of source identifiers.
 
-        cuda_device_index: The CUDA device to use for decoding images.
+        device_config: The CUDA device config. See :py:func:`~spdl.io.transfer_buffer`.
 
         width: *Optional:* Resize the frame.
 
@@ -617,6 +660,13 @@ async def async_load_image_batch_nvdec(
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
 
+    if device_config is None and "cuda_config" in kwargs:
+        warnings.warn(
+            "The `cuda_config` argument has ben renamed to `device_config`.",
+            stacklevel=2,
+        )
+        device_config = kwargs["cuda_config"]
+
     decode_options = decode_options or {}
     width = -1 if width is None else width
     height = -1 if height is None else height
@@ -643,7 +693,7 @@ async def async_load_image_batch_nvdec(
 
     return await _core.async_decode_packets_nvdec(
         packets,
-        cuda_config=cuda_config,
+        device_config=device_config,
         width=width,
         height=height,
         pix_fmt=pix_fmt,
@@ -670,7 +720,7 @@ def _get_bytes(srcs: list[str | bytes]) -> list[bytes]:
 async def async_load_image_batch_nvjpeg(
     srcs: list[str | bytes],
     *,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb",
@@ -688,7 +738,7 @@ async def async_load_image_batch_nvjpeg(
         srcs_,
         scale_width=width,
         scale_height=height,
-        cuda_config=cuda_config,
+        device_config=device_config,
         pix_fmt=pix_fmt,
         **kwargs,
     )
@@ -697,7 +747,7 @@ async def async_load_image_batch_nvjpeg(
 def load_image_batch_nvjpeg(
     srcs: list[str | bytes],
     *,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig,
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb",
@@ -711,7 +761,7 @@ def load_image_batch_nvjpeg(
 
     Args:
         srcs: Input images.
-        cuda_config: The CUDA device to use for decoding images.
+        device_config: The CUDA device to use for decoding images.
         width: *Optional:* Resize the frame.
 
         height: *Optional:* Resize the frame.
@@ -730,7 +780,7 @@ def load_image_batch_nvjpeg(
         srcs_,
         scale_width=width,
         scale_height=height,
-        cuda_config=cuda_config,
+        device_config=device_config,
         pix_fmt=pix_fmt,
         **kwargs,
     )

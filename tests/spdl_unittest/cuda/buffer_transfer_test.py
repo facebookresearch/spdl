@@ -48,7 +48,7 @@ def test_async_transfer_buffer_to_cuda(media_type, get_sample):
         cuda_tensor = spdl.io.to_torch(
             await spdl.io.async_transfer_buffer(
                 buffer,
-                cuda_config=spdl.io.cuda_config(
+                device_config=spdl.io.cuda_config(
                     device_index=DEFAULT_CUDA,
                 ),
             )
@@ -97,7 +97,7 @@ def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sa
         assert not allocator_called
         cuda_buffer = await spdl.io.async_transfer_buffer(
             buffer,
-            cuda_config=spdl.io.cuda_config(
+            device_config=spdl.io.cuda_config(
                 device_index=DEFAULT_CUDA,
                 allocator=(allocator, deleter),
             ),
@@ -128,7 +128,7 @@ def test_array_transfer_numpy():
 
     async def test(array):
         buffer = await spdl.io.async_transfer_buffer(
-            array, cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+            array, device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
         )
         tensor = spdl.io.to_torch(buffer)
 
@@ -147,11 +147,11 @@ def test_array_transfer_numpy():
 def test_array_transfer_torch():
     """smoke test for transfer_buffer function"""
 
-    cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+    device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
     async def test(cpu_tensor):
         buffer = await spdl.io.async_transfer_buffer(
-            cpu_tensor, cuda_config=cuda_config
+            cpu_tensor, device_config=device_config
         )
         cuda_tensor = spdl.io.to_torch(buffer)
 
@@ -170,13 +170,13 @@ def test_array_transfer_torch():
 def test_array_transfer_non_contiguous_torch():
     """passing noncontiguous array/tensor to transfer_buffer works."""
 
-    cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+    device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
     async def test():
         cpu_tensor = torch.arange(24).reshape(6, 4).T[::2, :]
         assert not cpu_tensor.is_contiguous()
         buffer = await spdl.io.async_transfer_buffer(
-            cpu_tensor, cuda_config=cuda_config
+            cpu_tensor, device_config=device_config
         )
         cuda_tensor = spdl.io.to_torch(buffer)
 
@@ -192,14 +192,14 @@ def test_array_transfer_non_contiguous_torch():
 def test_array_transfer_non_contiguous_numpy():
     """passing noncontiguous array/tensor to transfer_buffer works"""
 
-    cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+    device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
     async def test():
         array0 = np.arange(24)
         assert array0.data.contiguous
         arr = array0.reshape(6, 4).T[:, ::2]
         assert not arr.data.contiguous
-        buffer = await spdl.io.async_transfer_buffer(arr, cuda_config=cuda_config)
+        buffer = await spdl.io.async_transfer_buffer(arr, device_config=device_config)
         tensor = spdl.io.to_torch(buffer)
 
         device = torch.device(f"cuda:{DEFAULT_CUDA}")
@@ -215,9 +215,9 @@ def test_array_transfer_concurrent():
     """smoke test for transfering multiple arrays concurrently"""
 
     async def test(array):
-        cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+        device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
         tasks = [
-            spdl.io.async_transfer_buffer(array, cuda_config=cuda_config)
+            spdl.io.async_transfer_buffer(array, device_config=device_config)
             for _ in range(100)
         ]
         await asyncio.wait(tasks)
