@@ -29,13 +29,14 @@ def test_decode_video_nvdec(get_sample):
 
     async def _test():
         decode_tasks = []
-        async for packets in spdl.io.async_streaming_demux_video(
-            sample.path, timestamps=timestamps
-        ):
+        demuxer = spdl.io.Demuxer(sample.path)
+        for ts in timestamps:
+            packets = demuxer.demux_video(ts)
             print(packets)
             decode_tasks.append(
                 spdl.io.async_decode_packets_nvdec(
-                    packets, cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+                    packets,
+                    device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
                 )
             )
         results = await asyncio.gather(*decode_tasks)
@@ -50,7 +51,7 @@ async def _decode_image(path):
     packets = await spdl.io.async_demux_image(path)
     print(packets)
     frames = await spdl.io.async_decode_packets_nvdec(
-        packets, cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+        packets, device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
     )
     print(frames)
     return frames
@@ -82,7 +83,7 @@ def test_batch_decode_image(get_samples):
     async def _test():
         buffer = await spdl.io.async_load_image_batch_nvdec(
             flist,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             pix_fmt="rgba",
             width=320,
             height=240,
@@ -94,7 +95,7 @@ def test_batch_decode_image(get_samples):
         with pytest.raises(RuntimeError):
             await spdl.io.async_load_image_batch_nvdec(
                 flist,
-                cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+                device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
                 width=320,
                 height=240,
                 strict=True,
@@ -127,7 +128,7 @@ def test_batch_decode_torch_allocator(get_samples):
         assert not deleter_called
         buffer = await spdl.io.async_load_image_batch_nvdec(
             flist,
-            cuda_config=spdl.io.cuda_config(
+            device_config=spdl.io.cuda_config(
                 device_index=DEFAULT_CUDA,
                 allocator=(
                     allocator,

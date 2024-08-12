@@ -24,7 +24,7 @@ def _decode_image(path, pix_fmt="rgba"):
     packets = spdl.io.demux_image(path)
     buffer = spdl.io.decode_packets_nvdec(
         packets,
-        cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+        device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
         pix_fmt=pix_fmt,
     )
     return spdl.io.to_torch(buffer)
@@ -134,7 +134,7 @@ def test_batch_decode_images_async(get_samples):
     async def _test(srcs):
         buffer = await spdl.io.async_load_image_batch_nvdec(
             srcs,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             width=None,
             height=None,
         )
@@ -154,7 +154,7 @@ def test_batch_decode_images(get_samples):
     buffer = asyncio.run(
         spdl.io.async_load_image_batch_nvdec(
             flist,
-            cuda_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             width=None,
             height=None,
         )

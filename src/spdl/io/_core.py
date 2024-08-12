@@ -10,6 +10,7 @@ import asyncio
 import contextlib
 import functools
 import logging
+import warnings
 from collections.abc import AsyncIterator, Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import overload, TypeVar
@@ -333,7 +334,7 @@ async def async_decode_packets(packets, **kwargs):
 def decode_packets_nvdec(
     packets: VideoPackets | ImagePackets | list[ImagePackets],
     *,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig | None = None,
     **kwargs,
 ) -> CUDABuffer:
     """**[Experimental]** Decode packets with NVDEC.
@@ -354,7 +355,7 @@ def decode_packets_nvdec(
     Args:
         packets: Packets object.
 
-        cuda_config: The CUDA device to use for decoding.
+        device_config: The device to use for decoding. See :py:func:`spdl.io.cuda_config`.
 
         crop_left, crop_top, crop_right, crop_bottom (int):
             *Optional:* Crop the given number of pixels from each side.
@@ -368,22 +369,34 @@ def decode_packets_nvdec(
     Returns:
         A CUDABuffer object.
     """
-    return _libspdl.decode_packets_nvdec(packets, cuda_config=cuda_config, **kwargs)
+    if device_config is None:
+        if "cuda_config" not in kwargs:
+            raise ValueError("device_config must be provided.")
+        if "cuda_config" in kwargs:
+            warnings.warn(
+                "`cuda_config` argument has been renamed to `device_config`.",
+                stacklevel=2,
+            )
+            device_config = kwargs["cuda_config"]
+
+    return _libspdl.decode_packets_nvdec(packets, device_config=device_config, **kwargs)
 
 
 async def async_decode_packets_nvdec(
     packets: VideoPackets | ImagePackets | list[ImagePackets],
     *,
-    cuda_config: CUDAConfig,
+    device_config: CUDAConfig | None = None,
     **kwargs,
 ) -> CUDABuffer:
     """**[Experimental]** Async version of :py:func:`~spdl.io.decode_packets_nvdec`."""
     return await run_async(
-        decode_packets_nvdec, packets, cuda_config=cuda_config, **kwargs
+        decode_packets_nvdec, packets, device_config=device_config, **kwargs
     )
 
 
-def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDABuffer:
+def decode_image_nvjpeg(
+    src: str | bytes, *, device_config: CUDAConfig | None = None, **kwargs
+) -> CUDABuffer:
     """**[Experimental]** Decode image with nvJPEG.
 
     .. warning::
@@ -397,7 +410,7 @@ def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDA
 
     Args:
         src: File path to a JPEG image or data in bytes.
-        cuda_config: The CUDA device to use for decoding.
+        device_config: The CUDA device to use for decoding.
 
         scale_width, scale_height (int): Resize image.
         pix_fmt (str): *Optional* Output pixel format.
@@ -406,19 +419,31 @@ def decode_image_nvjpeg(src: str | bytes, *, cuda_config: int, **kwargs) -> CUDA
     Returns:
         A CUDABuffer object. Shape is ``[C==3, H, W]``.
     """
+    if device_config is None:
+        if "cuda_config" not in kwargs:
+            raise ValueError("device_config must be provided.")
+        if "cuda_config" in kwargs:
+            warnings.warn(
+                "`cuda_config` argument has been renamed to `device_config`.",
+                stacklevel=2,
+            )
+            device_config = kwargs["cuda_config"]
+
     if isinstance(src, bytes):
         data = src
     else:
         with open(src, "rb") as f:
             data = f.read()
-    return _libspdl.decode_image_nvjpeg(data, cuda_config=cuda_config, **kwargs)
+    return _libspdl.decode_image_nvjpeg(data, device_config=device_config, **kwargs)
 
 
 async def async_decode_image_nvjpeg(
-    src: str | bytes, *, cuda_config: CUDAConfig, **kwargs
+    src: str | bytes, *, device_config: CUDAConfig | None = None, **kwargs
 ) -> CUDABuffer:
     """**[Experimental]** Async version of :py:func:`~spdl.io.decode_image_nvjpeg`."""
-    return await run_async(decode_image_nvjpeg, src, cuda_config=cuda_config, **kwargs)
+    return await run_async(
+        decode_image_nvjpeg, src, device_config=device_config, **kwargs
+    )
 
 
 def streaming_decode_packets(
@@ -540,24 +565,38 @@ async def async_convert_frames(
 ################################################################################
 # Device data transfer
 ################################################################################
-def transfer_buffer(buffer: CPUBuffer, *, cuda_config: CUDAConfig) -> CUDABuffer:
+def transfer_buffer(
+    buffer: CPUBuffer, *, device_config: CUDAConfig | None = None, **kwargs
+) -> CUDABuffer:
     """Move the given CPU buffer to CUDA device.
 
     Args:
         buffer: Source data.
-        cuda_config: Target CUDA device configuration.
+        device_config: Target CUDA device configuration.
 
     Returns:
         Buffer data on the target GPU device.
     """
-    return _libspdl.transfer_buffer(buffer, cuda_config=cuda_config)
+    if device_config is None:
+        if "cuda_config" not in kwargs:
+            raise ValueError("device_config must be provided.")
+        if "cuda_config" in kwargs:
+            warnings.warn(
+                "`cuda_config` argument has been renamed to `device_config`.",
+                stacklevel=2,
+            )
+            device_config = kwargs["cuda_config"]
+
+    return _libspdl.transfer_buffer(buffer, device_config=device_config)
 
 
 async def async_transfer_buffer(
-    buffer: CPUBuffer, *, cuda_config: CUDAConfig
+    buffer: CPUBuffer, *, device_config: CUDAConfig | None = None, **kwargs
 ) -> CUDABuffer:
     """Async version of :py:func:`~spdl.io.transfer_buffer`."""
-    return await run_async(transfer_buffer, buffer, cuda_config=cuda_config)
+    return await run_async(
+        transfer_buffer, buffer, device_config=device_config, **kwargs
+    )
 
 
 def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
