@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
-import io
 
 import numpy as np
 import pytest
@@ -70,7 +69,7 @@ def test_async_decode_audio_bytes(get_sample):
         with open(path, "rb") as f:
             hyp = await _decode("audio", f.read())
 
-        assert hyp.shape == (48000, 1)
+        assert hyp.shape == (1, 48000)
         assert np.all(ref == hyp)
 
     asyncio.run(_test(sample.path))

@@ -61,8 +61,8 @@ def test_decode_audio_clips(get_sample):
         assert len(arrays) == 2
         for i, arr in enumerate(arrays):
             print(i, arr.shape, arr.dtype)
-            assert arr.shape == (48000, 1)
-            assert arr.dtype == np.int16
+            assert arr.shape == (1, 48000)
+            assert arr.dtype == np.float32
 
     asyncio.run(_test())
 
@@ -75,7 +75,9 @@ def test_decode_audio_clips_num_frames(get_sample):
     async def _decode(src, num_frames=None):
         with spdl.io.Demuxer(src) as demuxer:
             packets = demuxer.demux_audio(window=(0, 1))
-            filter_desc = get_audio_filter_desc(timestamp=(0, 1), num_frames=num_frames)
+            filter_desc = get_audio_filter_desc(
+                timestamp=(0, 1), num_frames=num_frames, sample_fmt="s16"
+            )
             frames = await spdl.io.async_decode_packets(
                 packets, filter_desc=filter_desc
             )
@@ -253,7 +255,7 @@ def test_async_convert_audio(get_sample):
         arrays = await _test_async_decode(demuxer.demux_audio, ts)
         array = arrays[0]
         print(array.dtype, array.shape)
-        assert array.shape == (48000, 1)
+        assert array.shape == (1, 48000)
 
     asyncio.run(_test(sample.path))
 

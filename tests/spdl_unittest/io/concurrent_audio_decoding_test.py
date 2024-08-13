@@ -78,4 +78,4 @@ def test_batch_audio_conversion(get_sample):
 
     array = asyncio.run(_test())
 
-    assert array.shape == (3, 8000, 2)
+    assert array.shape == (3, 2, 8000)
