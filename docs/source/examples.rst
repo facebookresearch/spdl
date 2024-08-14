@@ -9,3 +9,4 @@ Examples
 
    image_dataloading
    imagenet_classification
+   multi_thread_preprocessing
