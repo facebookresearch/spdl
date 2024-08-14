@@ -7,96 +7,142 @@
    document.addEventListener('DOMContentLoaded', function() {
 
     var data = [
-        {
-            x: [1, 2, 4, 8, 16, 32],
-            y: [306.11, 550.49, 1105.64, 1685.54, 1853.27, 1326.22],
-            name: "Decode + Resize",
-            xaxis: "x",
-            line: {
-                color: '#fd7f6f',
-            },
-        },{
-            x: [1, 2, 4, 8, 16, 32],
-            y: [317.53, 601.28, 1092.95, 1740.57, 2165.12, 1843.40],
-            name: "+ Batch",
-            xaxis: "x",
-            line: {
-                color: '#7eb0d5',
-            },
-            marker : {
-                symbol: 'x',
-            },
-        },{
-            x: [1, 2, 4, 8, 16, 32],
-            y: [257.40, 487.94, 765.89, 1494.01, 1784.53, 1487.82],
-            name: "+ Pixel Normalization",
-            xaxis: "x",
-            line: {
-                color: '#b2e061',
-            },
-            marker : {
-                symbol: 'star-triangle-up',
-            },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [306.11, 550.49, 1105.64, 1685.54, 1853.27, 1326.22],
+        name: "1. Decode + Resize",
+        xaxis: "x",
+        line: {
+          color: '#fd7f6f',
+          size: 8,
         },
-        {
-            x: [1, 2, 4, 8, 16, 32],
-            y: [264.52, 489.17, 869.53, 1205.80, 1144.01, 606.51],
-            name: "+ GPU Transfer",
-            xaxis: "x",
-            line: {
-                color: '#bd7ebe',
-            },
-            marker : {
-                symbol: 'diamond',
-            },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [317.53, 601.28, 1092.95, 1740.57, 2165.12, 1843.40],
+        name: "2. + Batch",
+        xaxis: "x",
+        line: {
+          color: '#7eb0d5',
         },
-        {
-            x: [1, 2, 4, 8, 16, 32],
-            y: [340.80, 644.50, 1206.08, 1770.46, 1857.97, 1639.57],
-            name: "Decode + Resize",
-            xaxis: "x2",
-            showlegend: false,
-            line: {
-                color: '#fd7f6f',
-            },
-        },{
-            x: [1, 2, 4, 8, 16, 32],
-            y: [340.60, 672.39, 1305.51, 2457.21, 3820.37, 3208.99],
-            name: "+ Batch",
-            xaxis: "x2",
-            showlegend: false,
-            line: {
-                color: '#7eb0d5',
-            },
-            marker : {
-                symbol: 'x',
-            },
-        },{
-            x: [1, 2, 4, 8, 16, 32],
-            y: [337.13, 658.79, 1314.90, 2302.96, 3126.44, 3012.59],
-            name: "+ Pixel Normalization",
-            xaxis: "x2",
-            showlegend: false,
-            line: {
-                color: '#b2e061',
-            },
-            marker : {
-                symbol: 'star-triangle-up',
-            },
+        marker : {
+          symbol: 'x',
+          size: 8,
         },
-        {
-            x: [1, 2, 4, 8, 16, 32],
-            y: [333.16, 655.54, 1260.57, 2292.90, 3278.45, 2668.53],
-            xaxis: "x2",
-            name: "+ GPU Transfer",
-            showlegend: false,
-            line: {
-                color: '#bd7ebe',
-            },
-            marker : {
-                symbol: 'diamond',
-            },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [257.40, 487.94, 765.89, 1494.01, 1784.53, 1487.82],
+        name: "3. + Pixel Normalization",
+        xaxis: "x",
+        line: {
+          color: '#b2e061',
         },
+        marker : {
+          symbol: 'star-triangle-up',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [264.52, 489.17, 869.53, 1205.80, 1144.01, 606.51],
+        name: "4. + GPU Transfer",
+        xaxis: "x",
+        line: {
+          color: '#bd7ebe',
+        },
+        marker : {
+          symbol: 'diamond',
+          size: 8,
+        },
+      },
+      {
+        x: [8],
+        y: [1205.80],
+        name: "Peak Performance",
+        mode: "markers",
+        marker: {
+          symbol: 'star',
+          size: 12,
+          color: '#ffee65',
+          line: {
+            color: '#d2980d',
+            width: 1
+          }
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [340.80, 644.50, 1206.08, 1770.46, 1857.97, 1639.57],
+        name: "Decode + Resize",
+        xaxis: "x2",
+        showlegend: false,
+        line: {
+          color: '#fd7f6f',
+        },
+        marker: {
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [340.60, 672.39, 1305.51, 2457.21, 3820.37, 3208.99],
+        name: "+ Batch",
+        xaxis: "x2",
+        showlegend: false,
+        line: {
+          color: '#7eb0d5',
+        },
+        marker : {
+          symbol: 'x',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [337.13, 658.79, 1314.90, 2302.96, 3126.44, 3012.59],
+        name: "+ Pixel Normalization",
+        xaxis: "x2",
+        showlegend: false,
+        line: {
+          color: '#b2e061',
+        },
+        marker : {
+          symbol: 'star-triangle-up',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [333.16, 655.54, 1260.57, 2292.90, 3278.45, 2668.53],
+        xaxis: "x2",
+        name: "+ GPU Transfer",
+        showlegend: false,
+        line: {
+          color: '#bd7ebe',
+        },
+        marker : {
+          symbol: 'diamond',
+          size: 8,
+        },
+      },
+      {
+        x: [16],
+        y: [3278.45],
+        xaxis: "x2",
+        name: "Peak Performance",
+        showlegend: false,
+        mode: "markers",
+        marker: {
+          symbol: 'star',
+          size: 12,
+          color: '#ffee65',
+          line: {
+            color: '#d2980d',
+            width: 1
+          }
+        },
+      },
     ];
 
     Plotly.newPlot(
@@ -132,7 +178,7 @@
               showarrow: false,
               align: 'center',
               x: 0.03,
-              y: 1.01,
+              y: 0.98,
               xref: 'paper',
               yref: 'paper',
             },
@@ -141,7 +187,7 @@
               showarrow: false,
               align: 'center',
               x: 0.57,
-              y: 1.01,
+              y: 0.98,
               xref: 'paper',
               yref: 'paper',
             }
@@ -149,6 +195,7 @@
         },
       },
     );
+
 
     }, false);
    </script>
