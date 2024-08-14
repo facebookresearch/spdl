@@ -1,0 +1,68 @@
+.. raw:: html
+
+   <div id='plot1'></div>
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+   <script>
+   document.addEventListener('DOMContentLoaded', function() {
+
+    var data = [
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [280.47, 453.31, 538.37, 383.88, 248.95, 190.12],
+        name: "PyTorch DataLoader",
+        line: {
+          color: '#fd7f6f',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [313.27, 543.71, 814.35, 1002.36, 690.77, 812.93],
+        name: "SPDL Pipeline",
+        xaxis: "x",
+        line: {
+          color: '#7eb0d5',
+        },
+        marker : {
+          symbol: 'x',
+          size: 8,
+        },
+      },
+    ];
+
+    Plotly.newPlot(
+      'plot1', {
+        data: data,
+        layout: {
+          title:'Comparison of PyTorch DataLoader and SPDL Pipeline (No Batching)',
+          xaxis: {
+            title: {
+              text: "Number of workers",
+            },
+            tickmode: "array",
+            tickvals: [1, 2, 4, 8, 16, 32],
+            tickangle: 0,
+          },
+          yaxis: {
+            title: {
+              text: "FPS",
+            }
+          },
+          annotations: [
+            {
+              text: "",
+              showarrow: false,
+              align: 'center',
+              x: 0.03,
+              y: 0.98,
+              xref: 'paper',
+              yref: 'paper',
+            },
+          ]
+        },
+      },
+    );
+
+    }, false);
+   </script>
