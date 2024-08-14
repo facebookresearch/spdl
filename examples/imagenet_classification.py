@@ -12,35 +12,7 @@ classification model in a GPU.
 The pipeline transfer the batch image data to the GPU concurrently, and
 the foreground thread run the model on data one by one.
 
-.. mermaid::
-
-   flowchart LR
-        subgraph MP [Main Process]
-            subgraph BG [Background Thread]
-                A[Source]
-                subgraph TP1[Thread Pool]
-                    direction LR
-                    T1[Thread]
-                    T2[Thread]
-                    T3[Thread]
-                end
-            end
-            subgraph FG [Main Thread]
-                ML[Main loop]
-            end
-        end
-        subgraph G[GPU]
-            direction TB
-            GM[Memory]
-            T[Transform]
-            M[Model]
-        end
-
-        A --> T1 -- Batch --> GM
-        A --> T2 -- Batch --> GM
-        A --> T3 -- Batch --> GM
-        ML -.-> GM
-        GM -.-> T -.-> M
+.. include:: ../plots/imagenet_classification_chart.txt
 
 A file list can be created, for example, by:
 
