@@ -11,32 +11,7 @@ Given a list of image files to process, this script spawns subprocesses,
 each of which load images and send them to the corresponding GPUs, then
 collect the runtime statistics.
 
-.. mermaid::
-
-   flowchart
-       A[Main Process]
-       subgraph P1[Worker Process 1]
-           subgraph TP1[Thread Pool]
-              t11[Thread]
-              t12[Thread]
-           end
-       end
-       G1[GPU 1]
-
-       subgraph P3[Worker Process N]
-           subgraph TP3[Thread Pool]
-              t31[Thread]
-              t32[Thread]
-           end
-       end
-       G3[GPU N]
-
-       A --> P1
-       A --> P3
-       t11 --> G1
-       t12 --> G1
-       t31 --> G3
-       t32 --> G3
+.. include:: ../plots/image_dataloading_chart.txt
 
 A file list can be created, for example, by:
 

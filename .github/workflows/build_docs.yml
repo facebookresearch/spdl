@@ -55,7 +55,7 @@ jobs:
           conda install -c file://${HOME}/package/ spdl
           conda install -c conda-forge 'ffmpeg==6'
           pip install -r docs/requirements.txt
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           ./docs/build.sh
           mkdir upload
           mv docs/_build upload/_site

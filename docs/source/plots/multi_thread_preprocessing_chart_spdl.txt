@@ -1,0 +1,11 @@
+.. mermaid::
+
+   flowchart LR
+        subgraph MP[Main Process]
+            direction LR
+            subgraph Decode[SPDL I/O]
+            Source --Decode--> F0[YUV] --Resize--> F1[YUV] --Convert--> F2[RGB] --Copy--> B1[Batch]
+            F3[RGB] --Copy--> B1
+            end
+            B1 --Pixel Normalization--> B2[Batch] --Transfer--> GPU
+        end
