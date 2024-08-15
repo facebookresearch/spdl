@@ -241,7 +241,7 @@ Let's do a back-of-the-envelope calculation to see how wasteful this can be.
 Suppose we want to create a batch of 32 images at 224x224 and all the source images are
 720x480 YUV420 format.
 
-One image decoded ant kept at YUV420 format occupies 720x480x12 = 4147200 bits ~= 0.52 MB.
+One decoded image kept at YUV420 format occupies 720x480x12 = 4147200 bits ~= 0.52 MB.
 When this images is converted to RGB, then it occupies twice the size of YUV420, 1.04 MB.
 So converting images to RGB after loading consumes extra 32x0.52 = 16 MB of memory.
 
@@ -350,6 +350,6 @@ pipeline.
 We recommend to use :py:mod:`spdl.io` module for processing media data. It is
 designed for scaling througput and has small memory footprint.
 
-For more complete performance analysis on the SPDL-based pipelien, please refer
+For more complete performance analysis on the SPDL-based pipeline, please refer
 to :py:mod:`multi_thread_preprocessing`.
 This example measures the pipeline with more processing and GPU data transfer.
