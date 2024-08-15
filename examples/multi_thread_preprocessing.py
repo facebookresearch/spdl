@@ -265,20 +265,28 @@ def _print(data, kwargs):
         print("\t".join(f"{v:.2f}" for v in y))
 
 
-def entrypoint():
-    """The main entrypoint for CLI."""
-    args = _parse_args()
+def entrypoint(
+    root_dir: str,
+    batch_size: int,
+    max_items: int = 3200,
+):
+    """The main entrypoint for CLI.
 
+    Args:
+        root_dir: The root directory of the ImageNet dataset.
+        batch_size: The batch size to use.
+        max_items: The maximum number of items to process.
+    """
     argset = (
         {"batch_size": None},
-        {"batch_size": args.batch_size},
-        {"batch_size": args.batch_size, "normalize": True},
-        {"batch_size": args.batch_size, "normalize": True, "transfer": True},
+        {"batch_size": batch_size},
+        {"batch_size": batch_size, "normalize": True},
+        {"batch_size": batch_size, "normalize": True, "transfer": True},
     )
 
     for kwargs in argset:
         print(kwargs)
-        data = run_test(root_dir=args.root_dir, max_items=args.max_items, **kwargs)
+        data = run_test(root_dir=root_dir, max_items=max_items, **kwargs)
         _print(data, kwargs)
 
 
@@ -302,4 +310,9 @@ def _parse_args():
 
 
 if __name__ == "__main__":
-    entrypoint()
+    _args = _parse_args()
+    entrypoint(
+        _args.root_dir,
+        _args.batch_size,
+        _args.max_items,
+    )
