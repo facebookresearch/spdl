@@ -54,6 +54,7 @@ The following observations can be made.
 """
 
 import logging
+import multiprocessing
 import time
 from collections.abc import Iterable
 from multiprocessing import Process, Queue
@@ -102,6 +103,7 @@ def run_dataloader(
 
 
 def exp_torch(
+    *,
     root_dir: str,
     split: str,
     num_workers: int,
@@ -150,6 +152,7 @@ def exp_torch(
         num_workers=num_workers,
         collate_fn=None if batch_size is None else collate,
         prefetch_factor=1,
+        multiprocessing_context="fork",
     )
 
     if transfer:
@@ -166,6 +169,7 @@ def exp_torch(
 
 
 def exp_spdl(
+    *,
     root_dir: str,
     split: str,
     num_workers: int,
@@ -296,6 +300,8 @@ def entrypoint(
         batch_size: The batch size to use.
         max_items: The maximum number of items to process.
     """
+    multiprocessing.set_start_method("spawn")
+
     argset = (
         {"batch_size": None},
         {"batch_size": batch_size},
