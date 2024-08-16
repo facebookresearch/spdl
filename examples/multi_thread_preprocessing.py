@@ -56,7 +56,7 @@ The following observations can be made.
 import logging
 import time
 from collections.abc import Iterable
-from typing import Any
+from multiprocessing import Process, Queue
 
 import spdl.io
 import torch
@@ -67,7 +67,7 @@ from torchvision.transforms import Compose, Normalize, PILToTensor, Resize
 
 __all__ = [
     "entrypoint",
-    "exp_torch_native",
+    "exp_torch",
     "exp_spdl",
     "run_dataloader",
 ]
@@ -75,13 +75,10 @@ __all__ = [
 
 logging.getLogger().setLevel(logging.ERROR)
 
-PREFETCH_FACTOR = 10_000
-# so as to prevent the pipeline from being blocked on the foreground
-
 
 def run_dataloader(
     dataloader: Iterable,
-    max_items: int = 3200,
+    max_items: int,
 ) -> tuple[int, float]:
     """Run the given dataloader and measure its performance.
 
@@ -92,34 +89,23 @@ def run_dataloader(
     Returns:
         The number of items processed and the elapsed time in seconds.
     """
-    num_images = 0
+    num_items = 0
     t0 = time.monotonic()
     try:
-        for data, _ in dataloader:
-            num_images += 1 if data.ndim == 3 else len(data)
-            if num_images >= max_items:
+        for i, (data, _) in enumerate(dataloader, start=1):
+            num_items += 1 if data.ndim == 3 else len(data)
+            if i >= max_items:
                 break
     finally:
         elapsed = time.monotonic() - t0
-    return num_images, elapsed
+    return num_items, elapsed
 
 
-def get_dataset(
-    root: str,
-    *,
-    disable_loader: bool = False,
-) -> ImageNet:
-    if disable_loader:
-        return ImageNet(root=root, loader=lambda x: x)
-
-    transforms: list[Any] = [Resize((224, 224)), PILToTensor()]
-
-    return ImageNet(root=root, transform=Compose(transforms))
-
-
-def exp_torch_native(
+def exp_torch(
     root_dir: str,
+    split: str,
     num_workers: int,
+    max_items: int,
     batch_size: int | None = None,
     normalize: bool = False,
     transfer: bool = False,
@@ -130,7 +116,9 @@ def exp_torch_native(
 
     Args:
         root_dir: The root directory of the ImageNet dataset.
+        split: The dataset split, such as "train" and "val".
         num_workers: The number of workers to use.
+        max_items: The maximum number of items to process.
         batch: Whether to batch the data.
         normalize: Whether to normalize the data. Only applicable when ``batch`` is True.
         transfer: Whether to transfer the data to GPU.
@@ -138,10 +126,15 @@ def exp_torch_native(
     Returns:
         The number of items processed and the elapsed time in seconds.
     """
-    dataset = get_dataset(root_dir)
+    dataset = ImageNet(
+        root=root_dir,
+        split=split,
+        transform=Compose([Resize((224, 224)), PILToTensor()]),
+    )
 
     normalize_transform = Normalize(
-        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225],
     )
 
     def collate(item):
@@ -156,7 +149,7 @@ def exp_torch_native(
         batch_size=batch_size,
         num_workers=num_workers,
         collate_fn=None if batch_size is None else collate,
-        prefetch_factor=PREFETCH_FACTOR,
+        prefetch_factor=1,
     )
 
     if transfer:
@@ -169,12 +162,14 @@ def exp_torch_native(
         dataloader = with_transfer(dataloader)
 
     with torch.no_grad():
-        return run_dataloader(dataloader)
+        return run_dataloader(dataloader, max_items)
 
 
 def exp_spdl(
     root_dir: str,
+    split: str,
     num_workers: int,
+    max_items: int,
     batch_size: int | None = None,
     normalize: bool = False,
     transfer: bool = False,
@@ -183,27 +178,30 @@ def exp_spdl(
 
     Args:
         root_dir: The root directory of the ImageNet dataset.
+        split: The dataset split, such as "train" and "val".
         num_workers: The number of workers to use.
+        max_items: The maximum number of items to process.
         batch: Whether to batch the data.
         normalize: Whether to normalize the data. Only applicable when ``batch`` is True.
         transfer: Whether to transfer the data to GPU.
 
     Returns:
         The number of items processed and the elapsed time in seconds.
-
     """
-    dataset = get_dataset(root_dir, disable_loader=True)
-
     filter_desc = spdl.io.get_video_filter_desc(
         scale_width=224,
         scale_height=224,
     )
 
-    def decode_image(item):
-        path, cls = item
+    def decode_image(path):
         packets = spdl.io.demux_image(path)
-        frames = spdl.io.decode_packets(packets, filter_desc=filter_desc)
-        return frames, cls
+        return spdl.io.decode_packets(packets, filter_desc=filter_desc)
+
+    dataset = ImageNet(
+        root=root_dir,
+        split=split,
+        loader=decode_image,
+    )
 
     def convert(items):
         frames, cls = list(zip(*items))
@@ -213,8 +211,8 @@ def exp_spdl(
 
     builder = (
         PipelineBuilder()
-        .add_source(iter(dataset))
-        .pipe(decode_image, concurrency=num_workers)
+        .add_source(range(len(dataset)))
+        .pipe(dataset.__getitem__, concurrency=num_workers)
         .aggregate(batch_size or 1)
         .pipe(convert)
     )
@@ -233,22 +231,41 @@ def exp_spdl(
     if transfer:
         builder = builder.pipe(lambda item: (item[0].cuda(), item[1]))
 
-    builder = builder.add_sink(PREFETCH_FACTOR)
+    builder = builder.add_sink(num_workers)
     pipeline = builder.build(num_threads=num_workers)
 
     with torch.no_grad(), pipeline.auto_stop():
-        return run_dataloader(pipeline)
+        return run_dataloader(pipeline, max_items)
 
 
-def run_test(root_dir, max_items, **kwargs):
+##############################################################################
+# Execute the test function in subprocess, so as to isolate them
+##############################################################################
+def exp_torch_(queue, **kwargs):
+    queue.put(exp_torch(**kwargs))
+
+
+def exp_spdl_(queue, **kwargs):
+    queue.put(exp_spdl(**kwargs))
+
+
+def run_in_process(func, **kwargs):
+    queue = Queue()
+    Process(target=func, args=[queue], kwargs=kwargs).run()
+    return queue.get()
+
+
+def run_test(**kwargs):
     data = {}
     num_workers_ = [1, 2, 4, 8, 16, 32]
-    for func in [exp_torch_native, exp_spdl]:  # exp_torch_thread, exp_spdl]:
+    for func in [exp_torch_, exp_spdl_]:  # exp_torch_thread, exp_spdl]:
         print(func.__name__)
         print("\tnum_workers\tFPS")
         y = []
         for num_workers in num_workers_:
-            num_images, elapsed = func(root_dir, num_workers, **kwargs)
+            num_images, elapsed = run_in_process(
+                func, num_workers=num_workers, **kwargs
+            )
             qps = num_images / elapsed
             y.append(qps)
             print(f"\t{num_workers}\t{qps:8.2f} ({num_images} / {elapsed:5.2f})")
@@ -267,13 +284,15 @@ def _print(data, kwargs):
 
 def entrypoint(
     root_dir: str,
+    split: str,
     batch_size: int,
-    max_items: int = 3200,
+    max_items: int,
 ):
     """The main entrypoint for CLI.
 
     Args:
         root_dir: The root directory of the ImageNet dataset.
+        split: Dataset split, such as "train" and "val".
         batch_size: The batch size to use.
         max_items: The maximum number of items to process.
     """
@@ -286,7 +305,7 @@ def entrypoint(
 
     for kwargs in argset:
         print(kwargs)
-        data = run_test(root_dir=root_dir, max_items=max_items, **kwargs)
+        data = run_test(root_dir=root_dir, split=split, max_items=max_items, **kwargs)
         _print(data, kwargs)
 
 
@@ -302,9 +321,13 @@ def _parse_args():
     parser.add_argument("--batch-size", default=32, type=int)
     parser.add_argument(
         "--max-items",
-        default=3200,
         type=int,
-        help="The maximum number of items (images) to process.",
+        help="The maximum number of items (images or batches) to process.",
+        default=100,
+    )
+    parser.add_argument(
+        "--split",
+        default="val",
     )
     return parser.parse_args()
 
@@ -313,6 +336,7 @@ if __name__ == "__main__":
     _args = _parse_args()
     entrypoint(
         _args.root_dir,
+        _args.split,
         _args.batch_size,
         _args.max_items,
     )
