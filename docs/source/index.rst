@@ -24,6 +24,7 @@ SPDL (Scalable and Performant Data Loading)
    migration/index
    examples
    fb/examples
+   faq
 
 .. toctree::
    :maxdepth: 2
