@@ -18,6 +18,7 @@ SPDL (Scalable and Performant Data Loading)
    :caption: Contents
 
    overview
+   installation
    getting_started/index
    performance_analysis/index
    migration/index
