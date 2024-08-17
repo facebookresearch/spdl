@@ -122,7 +122,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         ],
         # fmt: on
     ]
-    if _env("SKIP_1ST_DEPS"):
+    if _env("SPDL_SKIP_DEPS"):
         return main_build_cmd
     return deps_cmd + main_build_cmd
 
