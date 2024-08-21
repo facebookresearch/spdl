@@ -16,7 +16,6 @@ namespace nb = nanobind;
 
 namespace spdl::core {
 void register_types(nb::module_&);
-void register_adaptors(nb::module_&);
 void register_packets(nb::module_&);
 void register_frames(nb::module_&);
 void register_buffers(nb::module_&);
@@ -32,7 +31,6 @@ void register_encoding(nb::module_&);
 namespace {
 NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_types(m);
-  spdl::core::register_adaptors(m);
   spdl::core::register_packets(m);
   spdl::core::register_frames(m);
   spdl::core::register_buffers(m);
