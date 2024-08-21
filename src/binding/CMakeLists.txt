@@ -10,7 +10,6 @@ message(STATUS "########################################")
 
 set(src
   bind.cpp
-  core/adaptors.cpp
   core/frames.cpp
   core/buffer.cpp
   core/packets.cpp
