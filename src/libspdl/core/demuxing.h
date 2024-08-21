@@ -42,11 +42,13 @@ class Demuxer {
       const std::optional<std::string>& bsf = std::nullopt);
 };
 
+// Create a demuxer from an URI (file path, http, etc.)
 DemuxerPtr make_demuxer(
     const std::string& src,
     const SourceAdaptorPtr& adaptor = nullptr,
     const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
+// Create a demuxer from an externally managed in-memory data
 DemuxerPtr make_demuxer(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
