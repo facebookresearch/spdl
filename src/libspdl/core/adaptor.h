@@ -11,7 +11,6 @@
 #include <libspdl/core/types.h>
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 
