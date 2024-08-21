@@ -185,16 +185,11 @@ FilterGraph get_filter(
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-int add_frame(AVFilterContext* src_ctx, AVFrame* frame) {
-  int ret;
-  {
-    TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
-    ret = av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
-  }
-  if (ret < 0 && ret != AVERROR_EOF) {
-    CHECK_AVERROR_NUM(ret, "Failed to pass a frame to filter.");
-  }
-  return ret;
+void add_frame(AVFilterContext* src_ctx, AVFrame* frame) {
+  TRACE_EVENT("decoding", "av_buffersrc_add_frame_flags");
+  CHECK_AVERROR(
+      av_buffersrc_add_frame_flags(src_ctx, frame, AV_BUFFERSRC_FLAG_KEEP_REF),
+      "Failed to pass a frame to filter.");
 }
 
 int get_frame(AVFilterContext* sink_ctx, AVFrame* frame) {
@@ -220,10 +215,7 @@ Generator<AVFramePtr> FilterGraph::filter(AVFrame* frame) {
                       frame->pts)
                 : fmt::format(" --- flush filter graph"));
 
-  if (add_frame(graph->filters[0], frame) == AVERROR_EOF) {
-    co_return;
-  }
-
+  add_frame(graph->filters[0], frame);
   int errnum;
   do {
     AVFramePtr ret = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
