@@ -52,11 +52,31 @@ jobs:
           retention-days: 1
           overwrite: true
 
-      - name: Unit test
+      - name: Unit test - ffmpeg 7
+        if: matrix.python-version == '3.10'
+        run: |
+          conda install -c file://${HOME}/package/ spdl
+          conda install -c conda-forge 'ffmpeg==7'
+          conda install -c pytorch numpy pytest pytorch numba
+          pytest -v \
+              tests/spdl_unittest/io/ \
+              tests/spdl_unittest/dataloader/
+
+      - name: Unit test - ffmpeg 6
         if: matrix.python-version == '3.10'
         run: |
           conda install -c file://${HOME}/package/ spdl
           conda install -c conda-forge 'ffmpeg==6'
+          conda install -c pytorch numpy pytest pytorch numba
+          pytest -v \
+              tests/spdl_unittest/io/ \
+              tests/spdl_unittest/dataloader/
+
+      - name: Unit test - ffmpeg 5
+        if: matrix.python-version == '3.10'
+        run: |
+          conda install -c file://${HOME}/package/ spdl
+          conda install -c conda-forge 'ffmpeg==5'
           conda install -c pytorch numpy pytest pytorch numba
           pytest -v \
               tests/spdl_unittest/io/ \
