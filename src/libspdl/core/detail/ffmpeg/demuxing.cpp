@@ -22,14 +22,14 @@
 
 namespace spdl::core::detail {
 
-void init_fmt_ctx(AVFormatContext* fmt_ctx) {
+void init_fmt_ctx(DataInterface* di) {
   TRACE_EVENT("demuxing", "avformat_find_stream_info");
   CHECK_AVERROR(
-      avformat_find_stream_info(fmt_ctx, nullptr),
-      fmt::format("Failed to find stream information: {}.", fmt_ctx->url));
+      avformat_find_stream_info(di->get_fmt_ctx(), nullptr),
+      fmt::format("Failed to find stream information: {}.", di->get_src()));
 }
 
-AVStream* get_stream(AVFormatContext* fmt_ctx, enum MediaType type_) {
+AVStream* get_stream(DataInterface* di, enum MediaType type_) {
   AVMediaType type = [&]() {
     switch (type_) {
       case MediaType::Audio:
@@ -42,6 +42,7 @@ AVStream* get_stream(AVFormatContext* fmt_ctx, enum MediaType type_) {
         SPDL_FAIL("Unexpected media type.");
     }
   }();
+  auto* fmt_ctx = di->get_fmt_ctx();
   int idx;
   {
     TRACE_EVENT("demuxing", "av_find_best_stream");
@@ -51,7 +52,7 @@ AVStream* get_stream(AVFormatContext* fmt_ctx, enum MediaType type_) {
     SPDL_FAIL(fmt::format(
         "No {} stream was found in {}.",
         av_get_media_type_string(type),
-        fmt_ctx->url));
+        di->get_src()));
   }
   // Disable other streams
   for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
@@ -98,7 +99,7 @@ std::tuple<double, double> NO_WINDOW{
 
 template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
-    AVFormatContext* fmt_ctx,
+    DataInterface* di,
     AVStream* stream,
     const std::optional<std::tuple<double, double>>& window = std::nullopt,
     const std::optional<std::string>& bsf = std::nullopt) {
@@ -112,6 +113,7 @@ PacketsPtr<media_type> demux_window(
     end += 0.3;
   }
 
+  auto* fmt_ctx = di->get_fmt_ctx();
   if (!std::isinf(start)) {
     int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
     {
@@ -131,7 +133,7 @@ PacketsPtr<media_type> demux_window(
   }();
 
   auto ret = std::make_unique<DemuxedPackets<media_type>>(
-      fmt_ctx->url,
+      di->get_src(),
       bsf ? filter->get_output_codec_par() : stream->codecpar,
       Rational{stream->time_base.num, stream->time_base.den});
   ret->timestamp = window;
@@ -147,19 +149,19 @@ PacketsPtr<media_type> demux_window(
 }
 
 template PacketsPtr<MediaType::Audio> demux_window(
-    AVFormatContext* fmt_ctx,
+    DataInterface* fmt_ctx,
     AVStream* stream,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Video> demux_window(
-    AVFormatContext* fmt_ctx,
+    DataInterface* fmt_ctx,
     AVStream* stream,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Image> demux_window(
-    AVFormatContext* fmt_ctx,
+    DataInterface* fmt_ctx,
     AVStream* stream,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);

@@ -476,7 +476,7 @@ void open_format(
     CHECK_AVERROR(
         avio_open2(
             &format_ctx->pb, format_ctx->url, AVIO_FLAG_WRITE, nullptr, option),
-        fmt::format("Failed to open custom output: {}", format_ctx->url));
+        fmt::format("Failed to open output: {}", format_ctx->url));
   }
 
   CHECK_AVERROR(

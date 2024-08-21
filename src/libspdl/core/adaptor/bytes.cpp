@@ -75,6 +75,9 @@ class Bytes {
   static int64_t seek(void* opaque, int64_t offset, int whence) {
     return static_cast<Bytes*>(opaque)->seek(offset, whence);
   }
+  const char* get_src() const {
+    return buffer.data();
+  }
 };
 
 class BytesInterface : public DataInterface {
@@ -93,13 +96,13 @@ class BytesInterface : public DataInterface {
         fmt_ctx(get_input_format_ctx(
             io_ctx.get(),
             dmx_cfg.format,
-            dmx_cfg.format_options)) {
-    std::string url = fmt::format("<Bytes: {}>", (void*)data.data());
-    fmt_ctx->url = av_strdup(url.data());
-  }
+            dmx_cfg.format_options)) {}
 
   AVFormatContext* get_fmt_ctx() override {
     return fmt_ctx.get();
+  }
+  std::string get_src() const override {
+    return fmt::format("<Bytes: {}>", (void*)obj.get_src());
   }
 };
 } // namespace
