@@ -9,7 +9,6 @@
 #pragma once
 
 #include <coroutine>
-#include <cstdint>
 #include <exception>
 
 namespace spdl::core::detail {

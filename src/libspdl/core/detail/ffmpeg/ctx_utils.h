@@ -12,10 +12,8 @@
 
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 
-#include <map>
 #include <optional>
 #include <string>
-#include <string_view>
 
 namespace spdl::core::detail {
 
