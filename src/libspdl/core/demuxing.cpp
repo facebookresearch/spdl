@@ -37,9 +37,9 @@ std::unique_ptr<DataInterface> get_interface(
     const std::optional<DemuxConfig>& dmx_cfg) {
   if (!adaptor) {
     thread_local auto p = std::make_shared<SourceAdaptor>();
-    return p->get(src, dmx_cfg.value_or(DemuxConfig{}));
+    return p->get_interface(src, dmx_cfg.value_or(DemuxConfig{}));
   }
-  return adaptor->get(src, dmx_cfg.value_or(DemuxConfig{}));
+  return adaptor->get_interface(src, dmx_cfg.value_or(DemuxConfig{}));
 }
 
 std::unique_ptr<DataInterface> get_in_memory_interface(
