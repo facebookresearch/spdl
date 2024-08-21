@@ -17,6 +17,7 @@ on:
 
 jobs:
   conda-build-cpu:
+    name: Build Conda Package
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +44,6 @@ jobs:
         run: |
           mkdir ~/package
           conda build ./packaging/conda --python=${{ matrix.python-version }} --output-folder ~/package
-
       - uses: actions/upload-artifact@v4
         with:
           name: spdl.${{ matrix.os }}.${{ matrix.python-version }}
@@ -52,11 +52,37 @@ jobs:
           retention-days: 1
           overwrite: true
 
+  unit-test:
+    name: Run unit test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-latest, ubuntu-latest ]
+        ffmpeg-version: ["4.4.2", "5.1", "6", "7"]
+        python-version: ["3.10"]
+    runs-on:  ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    needs: [ conda-build-cpu ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: spdl.${{ matrix.os }}.${{ matrix.python-version }}
+          path: ~/package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "3.10"
+
       - name: Unit test
-        if: matrix.python-version == '3.10'
         run: |
           conda install -c file://${HOME}/package/ spdl
-          conda install -c conda-forge 'ffmpeg==6'
+          conda install -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version}}"
           conda install -c pytorch numpy pytest pytorch numba
           pytest -v \
               tests/spdl_unittest/io/ \
