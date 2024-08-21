@@ -13,8 +13,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <tuple>
-#include <vector>
 
 #define SPDL_DEFAULT_BUFFER_SIZE 8096
 
