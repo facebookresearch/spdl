@@ -34,7 +34,6 @@ set(srcs
   libspdl/core/frames/ffmpeg.cpp
   libspdl/core/adaptor/adaptor.cpp
   libspdl/core/adaptor/bytes.cpp
-  libspdl/core/adaptor/mmap.cpp
   libspdl/core/storage/cpu.cpp
   libspdl/core/transfer.cpp
   libspdl/core/decoder.cpp
