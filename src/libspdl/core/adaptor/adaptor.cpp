@@ -31,7 +31,7 @@ class BasicInterface : public DataInterface {
   }
 };
 } // namespace
-std::unique_ptr<DataInterface> SourceAdaptor::get(
+std::unique_ptr<DataInterface> SourceAdaptor::get_interface(
     std::string_view url,
     const DemuxConfig& dmx_cfg) const {
   return std::unique_ptr<DataInterface>(new BasicInterface(url, dmx_cfg));

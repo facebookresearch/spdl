@@ -105,7 +105,7 @@ class BytesInterface : public DataInterface {
 } // namespace
 } // namespace detail
 
-std::unique_ptr<DataInterface> BytesAdaptor::get(
+std::unique_ptr<DataInterface> BytesAdaptor::get_interface(
     std::string_view data,
     const DemuxConfig& dmx_cfg) const {
   return std::unique_ptr<DataInterface>(
