@@ -48,9 +48,7 @@ struct DataInterface {
 struct SourceAdaptor {
   virtual ~SourceAdaptor() = default;
 
-  // This returns a pointer to DataInterface classes, but for the sake of
-  // exposing this via PyBind11, we use void*
-  virtual std::unique_ptr<DataInterface> get(
+  virtual std::unique_ptr<DataInterface> get_interface(
       std::string_view url,
       const DemuxConfig& dmx_cfg) const;
 };
@@ -59,7 +57,7 @@ struct SourceAdaptor {
 // MMap
 ////////////////////////////////////////////////////////////////////////////////
 struct MMapAdaptor : public SourceAdaptor {
-  std::unique_ptr<DataInterface> get(
+  std::unique_ptr<DataInterface> get_interface(
       std::string_view url,
       const DemuxConfig& dmx_cfg) const override;
 };
@@ -68,7 +66,7 @@ struct MMapAdaptor : public SourceAdaptor {
 // Bytes
 ////////////////////////////////////////////////////////////////////////////////
 struct BytesAdaptor : public SourceAdaptor {
-  std::unique_ptr<DataInterface> get(
+  std::unique_ptr<DataInterface> get_interface(
       std::string_view data,
       const DemuxConfig& dmx_cfg) const override;
 };

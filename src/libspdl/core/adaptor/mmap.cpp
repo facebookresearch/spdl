@@ -114,7 +114,7 @@ class MMapInterface : public DataInterface {
 } // namespace
 } // namespace detail
 
-std::unique_ptr<DataInterface> MMapAdaptor::get(
+std::unique_ptr<DataInterface> MMapAdaptor::get_interface(
     std::string_view url,
     const DemuxConfig& dmx_cfg) const {
   return std::unique_ptr<DataInterface>(
