@@ -37,6 +37,7 @@ using SourceAdaptorPtr = std::shared_ptr<SourceAdaptor>;
 struct DataInterface {
   virtual ~DataInterface() = default;
   virtual AVFormatContext* get_fmt_ctx() = 0;
+  virtual std::string get_src() const = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
