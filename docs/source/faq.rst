@@ -18,6 +18,42 @@ So even though there are still parts of pipelines that are constrained by GIL,
 by taking advantage of preprocessing functions that release GIL,
 we can achieve high throughput.
 
+What if a function does not release GIL?
+----------------------------------------
+
+In case you need to use a function that takes long time to execute (e.g. network utilities)
+but it does not release GIL, you can delegate the stage to subprocess.
+
+:py:meth:`spdl.dataloader.PipelineBuilder.pipe` method takes an optional ``executor`` argument.
+The default behavior of the ``Pipeline`` is to use the thread pool shared among all stages.
+You can pass an instance of :py:class:`concurrent.futures.ProcessPoolExecutor`,
+and that stage will execute the function in the subprocess.
+
+.. code-block::
+
+   executor = ProcessPoolExecutor(max_workers=num_processes)
+
+   pipeline = (
+       PipelineBuilder()
+       .add_source(src)
+       .pipe(stage1, executor=executor, concurrency=num_processes)
+       .pipe(stage2, ...)
+       .pipe(stage3, ...)
+       .add_sink(1)
+       .build()
+   )
+
+This will build pipeline like the following.
+
+.. include:: ./plots/faq_subprocess_chart.txt
+
+.. note::
+
+   Along with the function arguments and return values, the function itself is also
+   serialized and passed to the subprocess. Therefore, the function to be executed
+   must be a plain function. Closures and class methods cannot be passed.
+
+
 Why Async IO?
 -------------
 
