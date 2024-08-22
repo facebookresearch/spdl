@@ -34,6 +34,8 @@ To run the benchmark,  pass it to the script like the following.
 
 import contextlib
 import logging
+import os.path
+import re
 import time
 from collections.abc import Awaitable, Callable, Iterator
 from pathlib import Path
@@ -43,7 +45,6 @@ import spdl.utils
 
 import torch
 from spdl.dataloader import Pipeline, PipelineBuilder
-from spdl.dataset.imagenet import get_mappings, parse_wnid
 from torch import Tensor
 from torch.profiler import profile
 
@@ -60,6 +61,8 @@ __all__ = [
     "ModelBundle",
     "Classification",
     "Preprocessing",
+    "get_mapping",
+    "parse_wnid",
 ]
 
 
@@ -234,7 +237,7 @@ def source(
     Yields:
         The path of the image and its class label.
     """
-    class_mapping, _ = get_mappings()
+    class_mapping = get_mappings()
 
     with open(path) as f:
         i = 0
@@ -492,6 +495,49 @@ def _init_logging(debug=False):
     logging.basicConfig(format=fmt, level=level)
 
     spdl.utils.set_ffmpeg_log_level(16)
+
+
+def get_mappings() -> dict[str, int]:
+    """Get the mapping from WordNet ID to class and label.
+
+    1000 IDs from ILSVRC2012 is used. The class indices are the index of
+    sorted WordNet ID, which corresponds to most models publicly available.
+
+    Returns:
+        Mapping from WordNet ID to class index.
+
+    .. Example::
+
+        .. code-block::
+           >>> class_mapping = get_mappings()
+           >>> print(class_mapping["n03709823"])
+           636
+
+    """
+    class_mapping = {}
+
+    path = os.path.join(os.path.dirname(__file__), "imagenet_class.tsv")
+    with open(path, mode="r", encoding="utf-8") as f:
+        for line in f:
+            if line := line.strip():
+                class_, wnid = line.split("\t")[:2]
+                class_mapping[wnid] = int(class_)
+    return class_mapping
+
+
+def parse_wnid(s: str):
+    """Parse a WordNet ID (nXXXXXXXX) from string.
+
+    Args:
+        s (str): String to parse
+
+    Returns:
+        (str): Wordnet ID if found otherwise an exception is raised.
+            If the string contain multiple WordNet IDs, the first one is returned.
+    """
+    if match := re.search(r"n\d{8}", s):
+        return match.group(0)
+    raise ValueError(f"The given string does not contain WNID: {s}")
 
 
 if __name__ == "__main__":
