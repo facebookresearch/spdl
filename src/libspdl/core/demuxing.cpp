@@ -21,12 +21,12 @@ namespace spdl::core {
 
 // Implemented in core/detail/ffmpeg/demuxing.cpp
 namespace detail {
-void init_fmt_ctx(AVFormatContext* fmt_ctx);
-AVStream* get_stream(AVFormatContext* fmt_ctx, enum MediaType type_);
+void init_fmt_ctx(DataInterface*);
+AVStream* get_stream(DataInterface*, enum MediaType);
 
 template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
-    AVFormatContext* fmt_ctx,
+    DataInterface*,
     AVStream* stream,
     const std::optional<std::tuple<double, double>>& window = std::nullopt,
     const std::optional<std::string>& bsf = std::nullopt);
@@ -56,7 +56,7 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
 
 Demuxer::Demuxer(std::unique_ptr<DataInterface> di_)
     : di(std::move(di_)), fmt_ctx(di->get_fmt_ctx()) {
-  detail::init_fmt_ctx(fmt_ctx);
+  detail::init_fmt_ctx(di.get());
 };
 
 Demuxer::~Demuxer() {
@@ -80,8 +80,9 @@ template <MediaType media_type>
 PacketsPtr<media_type> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
-  auto stream = detail::get_stream(fmt_ctx, media_type);
-  auto packets = detail::demux_window<media_type>(fmt_ctx, stream, window, bsf);
+  auto stream = detail::get_stream(di.get(), media_type);
+  auto packets =
+      detail::demux_window<media_type>(di.get(), stream, window, bsf);
   if constexpr (media_type == MediaType::Video) {
     auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
     packets->frame_rate = Rational{frame_rate.num, frame_rate.den};
