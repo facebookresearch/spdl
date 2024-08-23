@@ -16,8 +16,8 @@ from pathlib import Path
 import spdl.io
 import spdl.utils
 import torch
+from dataset.librispeech import get_flist
 from spdl.dataloader import PipelineBuilder
-from spdl.dataset.librispeech import get_flist
 
 _LG = logging.getLogger(__name__)
 
