@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ "3.10", "3.11", "3.12" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         cu_version: [ "11.8.0", "12.1.0" ]
     runs-on: ${{ matrix.os }}
     defaults:
