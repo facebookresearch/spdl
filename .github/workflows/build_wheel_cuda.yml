@@ -50,7 +50,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: spdl.manylinux.${{ matrix.python-version }}.${{ matrix.cu_version }}
+          name: spdl.manylinux.${{ matrix.python-version }}.${{ matrix.cu-version }}
           path: ./wheelhouse
           if-no-files-found: error
           retention-days: 1
