@@ -21,6 +21,14 @@ jobs:
   #############################################################################
   # macOS
   #############################################################################
+  mac-313:
+    name: "Conda Package (mac-3.13)"
+    uses: ./.github/workflows/conda_build.yml
+    with:
+      os: macos-latest
+      python-version: "3.13"
+      run-test: true
+
   mac-312:
     name: "Conda Package (mac-3.12)"
     uses: ./.github/workflows/conda_build.yml
@@ -46,6 +54,14 @@ jobs:
   #############################################################################
   # ubuntu (CPU)
   #############################################################################
+  ubuntu-313:
+    name: "Conda Package (ubuntu-3.13)"
+    uses: ./.github/workflows/conda_build.yml
+    with:
+      os: ubuntu-latest
+      python-version: "3.13"
+      run-test: true
+
   ubuntu-312:
     name: "Conda Package (ubuntu-3.12)"
     uses: ./.github/workflows/conda_build.yml
