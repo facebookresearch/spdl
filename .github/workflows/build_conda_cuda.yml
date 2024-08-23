@@ -5,12 +5,14 @@ on:
   pull_request:
     paths-ignore:
       - "docs/**"
+      - "examples/**"
       - "README.md"
     branches:
       - main
   push:
     paths-ignore:
       - "docs/**"
+      - "examples/**"
       - "README.md"
     branches:
       - main
