@@ -18,3 +18,6 @@ Loads the Kinetics 400 trainig dataset in 15 mins.
 ## Installation & Usage
 
 Please checkout [the documenatation](https://facebookresearch.github.io/spdl).
+
+## License
+SPDL is BSD 2-Clause licensed, as found in the LICENSE file.
