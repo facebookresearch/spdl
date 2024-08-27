@@ -30,7 +30,8 @@ SPDL (Scalable and Performant Data Loading)
    :maxdepth: 2
    :caption: API References
 
-   api
+   API Reference <api>
+   API Reference (Meta) <fb/api>
    API Index <genindex>
 
 .. toctree::
