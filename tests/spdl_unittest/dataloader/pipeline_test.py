@@ -1245,6 +1245,21 @@ def test_pipeline_pipe_agen():
     assert expected == output
 
 
+def test_pipeline_pipe_gen():
+    """pipe works with sync generator function"""
+
+    def dup_increment(v):
+        for i in range(3):
+            yield v + i
+
+    apl = PipelineBuilder().add_source(range(3)).pipe(dup_increment).add_sink(1).build()
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output
+
+
 def test_pipeline_pipe_agen_wrong_hook():
     """pipe works with async generator function, even when hook abosrb the StopAsyncIteration"""
 
@@ -1414,6 +1429,30 @@ def test_pipeline_custom_pipe_executor_process():
         vals = list(pipeline.get_iterator(timeout=3))
 
     assert len(set(vals)) == num_processes
+
+
+def _range(item):
+    print(item)
+    for i in range(item):
+        print(f"yielding {item} - {i}")
+        yield i
+
+
+def test_pipeline_custom_pipe_executor_process_generator():
+    """`pipe` accepts custom ProcessPoolExecutor and generator function."""
+    executor = ProcessPoolExecutor(max_workers=1)
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(4))
+        .pipe(_range, executor=executor, concurrency=1)
+        .add_sink(1)
+        .build()
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [0, 0, 1, 0, 1, 2]
 
 
 def test_pipeline_custom_pipe_executor_async():

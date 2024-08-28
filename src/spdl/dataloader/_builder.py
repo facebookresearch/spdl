@@ -497,6 +497,22 @@ def _to_async(
     return afunc
 
 
+def _wrap_gen(generator, item):
+    return list(generator(item))
+
+
+def _to_async_gen(
+    func: Callable[[T], Iterable[U]],
+    executor: type[Executor] | None,
+) -> Callable[[T], AsyncIterable[U]]:
+    async def afunc(item: T) -> AsyncIterable[U]:
+        loop = asyncio.get_running_loop()
+        for result in await loop.run_in_executor(executor, _wrap_gen, func, item):
+            yield result
+
+    return afunc
+
+
 class PipelineBuilder:
     """Build :py:class:`~spdl.dataloader.Pipeline` object.
 
@@ -550,8 +566,9 @@ class PipelineBuilder:
         self,
         op: (
             Callable[[T], U]
+            | Callable[[T], Iterable[U]]
             | Callable[[T], Awaitable[U]]
-            | Callable[[T], AsyncIterator[U]]
+            | Callable[[T], AsyncIterable[U]]
         ),
         /,
         *,
@@ -580,8 +597,19 @@ class PipelineBuilder:
                 them as a tuple or use :py:class:`~dataclasses.dataclass` and
                 define a custom protocol.
 
-                Optionally, the op can be an async function or async generator function.
-                If async generator, the items are put in the output queue separately.
+                Optionally, the op can be a generator function, async function or
+                async generator function.
+
+                If ``op`` is (async) generator, the items yielded are put in the output
+                queue separately.
+
+                .. warning::
+
+                   If ``op`` is synchronous geneartor, any item is not put in the queue
+                   util the generator is exhausted.
+
+                   Async generator does not have this issue, and the yielded items are
+                   put in the queue immediately.
 
                 .. tip::
 
@@ -589,6 +617,7 @@ class PipelineBuilder:
                    function inside.
                    If calling a sync function, use :py:func:`asyncio.loop.run_in_executor`
                    or :py:func:`asyncio.to_thread` to delegate the execution to the thread pool.
+
             concurrency: The maximum number of async tasks executed concurrently.
             executor: A custom executor object to be used to convert the synchronous operation
                 into asynchronous one. If ``None``, the default executor is used.
@@ -632,10 +661,7 @@ class PipelineBuilder:
         if inspect.iscoroutinefunction(op):
             pass
         elif inspect.isgeneratorfunction(op):
-            raise ValueError(
-                "pipe does not support generator functions. "
-                "Consider converting it to async generator functoin or regular function."
-            )
+            op = _to_async_gen(op, executor=executor)
         elif inspect.isasyncgenfunction(op):
             if output_order == "input":
                 raise ValueError(
