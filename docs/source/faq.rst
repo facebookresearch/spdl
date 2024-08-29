@@ -53,6 +53,48 @@ This will build pipeline like the following.
    serialized and passed to the subprocess. Therefore, the function to be executed
    must be a plain function. Closures and class methods cannot be passed.
 
+.. tip::
+
+   If you need to perform one-time initialization in subporcess, you can use
+   ``initializer`` and ``initargs`` arguments.
+
+   The values passed as ``initializer`` and ``initargs`` must be picklable.
+   If constructing an object in a process that does not support picke, then
+   you can pass constructor arguments instead and store the resulting object
+   in global scope. See also https://stackoverflow.com/a/68783184/3670924.
+
+   Example
+
+   .. code-block::
+
+      def init_resource(*args):
+          global rsc
+          rsc = ResourceClass(*args)
+
+      def process_with_resource(item):
+          global rsc
+
+          return rsc.process(item)
+
+      executor = ProcessPoolExecutor(
+          max_workers=4,
+          mp_context=None,
+          initializer=init_resource,
+          initargs=(...),
+      )
+
+      pipeline = (
+          PipelineBuilder()
+          .add_source()
+          .pipe(
+              process_with_resource,
+              executor=executor,
+              concurrency=4,
+          )
+          .add_sink(3)
+          .build()
+      )
+
 
 Why Async IO?
 -------------
