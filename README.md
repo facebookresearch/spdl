@@ -1,7 +1,8 @@
 # SPDL /spiːdl/
 
-SPDL (Scalable and Performant Data Loading) is a library to provide fast
-audio/video/image data loading for machine learning training.
+SPDL (Scalable and Performant Data Loading) is a library and project to
+explore the design and peformance of data loading with thread-based
+parallelism.
 
 ## Documentation
 
