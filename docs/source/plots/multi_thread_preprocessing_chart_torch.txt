@@ -1,0 +1,18 @@
+.. mermaid::
+
+   flowchart TB
+        subgraph SP[Subprocess]
+            subgraph TV[TorchVision/Pillow]
+            Source --Decode--> F0[YUV] --Convert--> F1[RGB] --Resize--> F2[RGB] --To Contiguous--> T1[Tensor]
+            T2[Tensor]
+            end
+            T1 --Copy--> B1[Batch] --Pixel Normalization--> B2[Batch]
+            T2 --Copy--> B1
+        end
+        Pipe
+        subgraph MP[Main Process]
+            B3[Batch] --GPU Transfer--> B4[Batch]
+
+        end
+
+        SP --Deserialize--> Pipe --Serialize--> MP

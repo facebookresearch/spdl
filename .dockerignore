@@ -1,0 +1,17 @@
+*
+!setup.py
+!cmake
+!**/CMakeLists.txt
+!src/libspdl
+!src/binding
+!src/spdl
+!third_party
+!packaging/*.sh
+**/*.tar.gz
+**/*.tar.xz
+**/*.so
+**/*.dylib
+**/*.pyc
+**/__pycache__
+**/*.egg-info
+build

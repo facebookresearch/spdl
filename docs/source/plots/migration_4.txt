@@ -1,0 +1,96 @@
+.. raw:: html
+
+   <div id='plot4'></div>
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+   <script>
+   document.addEventListener('DOMContentLoaded', function() {
+
+    var data = [
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [299.32863054890163, 521.2738145426497, 636.7112970156704, 805.540312136391, 774.2887606843312, 656.1341519286198],
+        name: "Batch size: 32",
+        line: {
+          color: '#1984c5',
+        },
+        marker : {
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [309.12709790257793, 533.5636837173543, 782.6485036524888, 961.9161569894544, 983.338992149255, 1008.5413883853007],
+        name: "64",
+        xaxis: "x",
+        line: {
+          color: '#22a7f0',
+        },
+        marker : {
+          symbol: 'x',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [313.62267945432677, 523.7491634186161, 781.6572602273175, 909.238129213959, 1038.2839298453534, 1082.324863228146],
+        name: "128",
+        xaxis: "x",
+        line: {
+          color: '#63bff0',
+        },
+        marker : {
+          symbol: 'diamond',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [308.81126501151203, 554.0675704811672, 807.7339173136127, 1006.1029865532029, 1028.271712798735, 1070.1808294068285],
+        name: "256",
+        xaxis: "x",
+        line: {
+          color: '#a7d5ed',
+        },
+        marker : {
+          symbol: 'star-triangle-up',
+          size: 8,
+        },
+      },
+    ];
+
+    Plotly.newPlot(
+      'plot4', {
+        data: data,
+        layout: {
+          title:'How SPDL Pipeline scale with different batch size',
+          xaxis: {
+            title: {
+              text: "Number of workers",
+            },
+            tickmode: "array",
+            tickvals: [1, 2, 4, 8, 16, 32],
+            tickangle: 0,
+          },
+          yaxis: {
+            title: {
+              text: "FPS",
+            }
+          },
+          annotations: [
+            {
+              text: "",
+              showarrow: false,
+              align: 'center',
+              x: 0.03,
+              y: 0.98,
+              xref: 'paper',
+              yref: 'paper',
+            },
+          ]
+        },
+      },
+    );
+
+    }, false);
+   </script>

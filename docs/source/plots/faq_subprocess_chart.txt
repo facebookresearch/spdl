@@ -1,0 +1,30 @@
+.. mermaid::
+
+   flowchart LR
+        subgraph PP[Process Pool]
+            subgraph S1[Stage 1]
+                direction TB
+                P1[Process]
+                P2[Process]
+            end
+        end
+
+        subgraph MP[Main Process]
+            src
+            subgraph TP[Thread Pool]
+                subgraph S2[Stage 2]
+                    direction TB
+                    T1[Thread]
+                    T2[Thread]
+                end
+                subgraph S3[Stage 3]
+                    direction TB
+                    T3[Thread]
+                    T4[Thread]
+                end
+                S2 --> S3
+            end
+        end
+
+        src --> PP --> S2
+

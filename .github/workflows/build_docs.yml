@@ -1,0 +1,102 @@
+name: "Build Docs"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - "tests/**"
+      - "third_party/**"
+      - "README.md"
+    branches:
+      - main
+  push:
+    paths-ignore:
+      - "tests/**"
+      - "third_party/**"
+      - "README.md"
+    branches:
+      - main
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "ubuntu-latest" ]
+        python-version: [ "3.10" ]
+    runs-on:  "${{ matrix.os }}"
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "${{ matrix.python-version }}"
+
+      - name: Install conda-build
+        run: conda install conda-build
+
+      - name: Build package
+        run: |
+          mkdir ~/package
+          conda build ./packaging/conda --python=${{ matrix.python-version }} --output-folder ~/package
+
+      - name: Build docs
+        run: |
+          conda install -c file://${HOME}/package/ spdl
+          conda install -c conda-forge 'ffmpeg==6'
+          pip install -r docs/requirements.txt
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          ./docs/build.sh
+          mkdir upload
+          mv docs/_build upload/_site
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: upload
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+  deploy:
+    permissions:
+      # Required for `git push`
+      # Note:
+      #   This is not effective from fork.
+      #   When you debug this, make sure to make a branch on the upstream, and
+      #   make PR from there.
+      contents: write
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: gh-pages
+        fetch-depth: 5
+    - uses: actions/download-artifact@v4
+      with:
+        name: docs
+    - name: Update main doc
+      run: |
+        set -x
+
+        ls -alh
+        rm -rf main
+        mv _site main
+
+        git add --all main || true
+
+        git config user.name "ci"
+        git config user.email "noreply@meta.com"
+        git commit --amend -m "Update docs" || true
+        git push -f

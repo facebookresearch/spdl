@@ -1,0 +1,97 @@
+.. raw:: html
+
+   <div id='plot3'></div>
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+   <script>
+   document.addEventListener('DOMContentLoaded', function() {
+
+    var data = [
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [301.5644774376562, 552.5811731298824, 1049.7137752041854, 1551.5779812300989, 1648.395135552321, 1205.7405046319166],
+        name: "Batch size: 32",
+        line: {
+          color: '#c23728',
+          dash: "dashdot"
+        },
+        marker : {
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [297.5708990305781, 582.5580997660737, 976.77763373665, 1227.7370795434795, 1145.3328444419305, 524.4662522482384],
+        name: "64",
+        line: {
+          color: '#e14b31',
+          dash: 'dashdot',
+        },
+        marker : {
+          symbol: 'x',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [308.7868774220196, 556.1609897991053, 898.6674650693486, 1106.5238879935084, 1062.508824198048, 609.2062900440113],
+        name: "128",
+        line: {
+          color: '#de6e56',
+          dash: "dashdot",
+        },
+        marker : {
+          symbol: 'diamond',
+          size: 8,
+        },
+      },
+      {
+        x: [1, 2, 4, 8, 16, 32],
+        y: [302.6738133368564, 527.32510416939, 755.1745124865847, 974.958483718321, 942.6697816312729, 629.6534754853249],
+        name: "256",
+        line: {
+          color: '#e1a692',
+          dash: "dashdot",
+        },
+        marker : {
+          symbol: 'star-triangle-up',
+          size: 8,
+        },
+      },
+    ];
+
+    Plotly.newPlot(
+      'plot3', {
+        data: data,
+        layout: {
+          title:'How PyTorch DataLoader with different batch size',
+          xaxis: {
+            title: {
+              text: "Number of workers",
+            },
+            tickmode: "array",
+            tickvals: [1, 2, 4, 8, 16, 32],
+            tickangle: 0,
+          },
+          yaxis: {
+            title: {
+              text: "FPS",
+            }
+          },
+          annotations: [
+            {
+              text: "",
+              showarrow: false,
+              align: 'center',
+              x: 0.03,
+              y: 0.98,
+              xref: 'paper',
+              yref: 'paper',
+            },
+          ]
+        },
+      },
+    );
+
+    }, false);
+   </script>
