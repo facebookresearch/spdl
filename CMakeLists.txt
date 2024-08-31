@@ -9,6 +9,7 @@ option(SPDL_USE_NPPI "Enable NVIDIA 2D Image And Signal Performance Primitives s
 option(SPDL_LINK_STATIC_NVJPEG "Link nvJPEG and NPPI statically." OFF)
 
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
+option(SPDL_HOLD_GIL "Hold GIL in IO functions." OFF)
 option(SPDL_BUILD_STUB "Build Python binding stub file" OFF)
 option(SPDL_BUILD_PYTHON_BINDING "Build Python binding" ON)
 

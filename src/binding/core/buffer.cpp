@@ -15,6 +15,8 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
+#include "gil.h"
+
 namespace nb = nanobind;
 
 namespace spdl::core {
@@ -89,7 +91,7 @@ void register_buffers(nb::module_& m) {
           IF_CUDABUFFER_ENABLED(
               [](CUDABuffer& self) { return get_cuda_array_interface(self); }))
       .def_prop_ro("device_index", IF_CUDABUFFER_ENABLED([](CUDABuffer& self) {
-                     nb::gil_scoped_release g;
+                     RELEASE_GIL();
                      return self.device_index;
                    }));
 }

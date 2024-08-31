@@ -17,6 +17,8 @@
 
 #include <fmt/core.h>
 
+#include "gil.h"
+
 namespace nb = nanobind;
 
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
@@ -25,7 +27,7 @@ using cuda_array = nb::ndarray<nb::device::cuda, nb::c_contig>;
 namespace spdl::core {
 namespace {
 CUDABufferPtr _transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return transfer_buffer(std::move(buffer), cfg);
 }
 
@@ -44,7 +46,7 @@ ElemClass _get_elemclass(uint8_t code) {
 }
 
 CUDABufferPtr _transfer_cpu_array(cpu_array array, const CUDAConfig& cfg) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   std::vector<size_t> shape;
   auto src_ptr = array.shape_ptr();
   for (size_t i = 0; i < array.ndim(); ++i) {
@@ -59,7 +61,7 @@ CUDABufferPtr _transfer_cpu_array(cpu_array array, const CUDAConfig& cfg) {
 }
 
 CPUBufferPtr _transfer_cuda_array(cuda_array array) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   std::vector<size_t> shape;
   auto src_ptr = array.shape_ptr();
   for (size_t i = 0; i < array.ndim(); ++i) {

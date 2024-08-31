@@ -18,6 +18,8 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
+#include "gil.h"
+
 #include <cstring>
 
 namespace nb = nanobind;
@@ -29,7 +31,7 @@ FFmpegFramesPtr<media_type> decode(
     PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return decode_packets_ffmpeg(std::move(packets), cfg, filter_desc);
 }
 
@@ -44,7 +46,7 @@ CUDABufferPtr decode_nvdec(
     int width,
     int height,
     const std::optional<std::string>& pix_fmt) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return decode_packets_nvdec(
       std::move(packets),
       cuda_config,
@@ -63,13 +65,13 @@ DecoderPtr<media_type> _make_decoder(
     PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::optional<std::string>& filter_desc) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return make_decoder(std::move(packets), decode_cfg, filter_desc);
 }
 
 template <MediaType media_type>
 void _drop(DecoderPtr<media_type> decoder) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   decoder.reset();
 }
 
@@ -77,7 +79,7 @@ template <MediaType media_type>
 std::optional<FFmpegFramesPtr<media_type>> _decode(
     StreamingDecoder<media_type>& decoder,
     int num_frames) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return decoder.decode(num_frames);
 }
 
@@ -183,7 +185,7 @@ void register_decoding(nb::module_& m) {
          int height,
          const std::optional<std::string>& pix_fmt,
          bool strict) {
-        nb::gil_scoped_release g;
+        RELEASE_GIL();
         return decode_packets_nvdec(
             std::move(packets),
             cuda_config,
@@ -222,7 +224,7 @@ void register_decoding(nb::module_& m) {
          int scale_height,
          const std::string& pix_fmt,
          bool _zero_clear) {
-        nb::gil_scoped_release g;
+        RELEASE_GIL();
         auto ret = decode_image_nvjpeg(
             std::string_view{data.c_str(), data.size()},
             cuda_config,
@@ -257,7 +259,7 @@ void register_decoding(nb::module_& m) {
         for (const auto& d : data) {
           dataset.push_back(std::string_view{d.c_str(), d.size()});
         }
-        nb::gil_scoped_release g;
+        RELEASE_GIL();
         auto ret = decode_image_nvjpeg(
             dataset, cuda_config, scale_width, scale_height, pix_fmt);
         if (_zero_clear) {

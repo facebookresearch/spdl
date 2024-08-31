@@ -30,15 +30,17 @@ Once dependencies are built, set the environment variable
 
 Build can be customized through the environment variables;
 
-- ``SPDL_USE_CUDA=1`` to enable CUDA integration, such as background data transfer.
-- ``SPDL_USE_NVCODEC=1`` to enable
+- ``SPDL_USE_CUDA=1``: Enable CUDA integration, such as background data transfer.
+- ``SPDL_USE_NVCODEC=1``: Enable
   `NVIDIA VIDEO CODEC <https://developer.nvidia.com/video-codec-sdk>`_
   integration, i.e. GPU video decoder and direct CUDA memory placement
-- ``SPDL_USE_TRACING=1`` to `Perfetto <https://perfetto.dev/>`_
+- ``SPDL_USE_TRACING=1``: Enable `Perfetto <https://perfetto.dev/>`_
   integration for performance profiling.
-- ``SPDL_USE_FFMPEG_VERSION`` to specify the version of FFmpeg you want to use
+- ``SPDL_USE_FFMPEG_VERSION``: Specify the version of FFmpeg you want to use
   to reduce the build time. By default, SPDL compiles against FFmpeg 4, 5, 6 and 7,
   and pick available one at run time.
+- ``SPDL_RELASE_GIL=0``: I/O module does not release GIL. This is intended to be used for
+  experimenting with free-threading Python (3.13+).
 
 See `setup.py <https://github.com/facebookresearch/spdl/blob/main/setup.py>`_ for the up-to-date available options.
 

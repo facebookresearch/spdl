@@ -18,6 +18,8 @@
 #include <fmt/core.h>
 #endif
 
+#include "gil.h"
+
 namespace nb = nanobind;
 
 namespace spdl::core {
@@ -29,16 +31,16 @@ void register_utils(nb::module_& m) {
   m.def("get_ffmpeg_filters", &get_ffmpeg_filters);
 
   m.def("is_cuda_available", []() {
-    nb::gil_scoped_release g;
+    RELEASE_GIL();
     return is_cuda_available();
   });
   m.def("is_nvcodec_available", []() {
-    nb::gil_scoped_release g;
+    RELEASE_GIL();
     return is_nvcodec_available();
   });
 
   m.def("init_glog", [](char const* name) {
-    nb::gil_scoped_release g;
+    RELEASE_GIL();
     init_glog(name);
   });
 

@@ -15,6 +15,8 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
+#include "gil.h"
+
 #include <cstring>
 
 namespace nb = nanobind;
@@ -25,7 +27,7 @@ template <MediaType media_type>
 CPUBufferPtr convert(
     const FFmpegFramesPtr<media_type>&& frames,
     bool pin_memory) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return convert_frames(frames.get(), pin_memory);
 }
 
@@ -43,7 +45,7 @@ template <MediaType media_type>
 CPUBufferPtr batch_convert(
     std::vector<FFmpegFramesPtr<media_type>>&& frames,
     bool pin_memory) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return convert_frames(_ref(frames), pin_memory);
 }
 } // namespace
