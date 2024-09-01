@@ -22,6 +22,7 @@ SPDL (Scalable and Performant Data Loading)
    getting_started/index
    performance_analysis/index
    migration/index
+   best_practice
    examples
    fb/examples
    faq
