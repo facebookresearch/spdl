@@ -8,5 +8,6 @@ Examples
    :recursive:
 
    image_dataloading
+   video_dataloading
    imagenet_classification
    multi_thread_preprocessing
