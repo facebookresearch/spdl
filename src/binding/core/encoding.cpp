@@ -18,6 +18,8 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 
+#include "gil.h"
+
 namespace nb = nanobind;
 
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
@@ -46,7 +48,7 @@ void encode(
     throw std::runtime_error("Only unsigned interger type is supported");
   }
   auto depth = data.dtype().bits / 8;
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   encode_image(path, src, shape, depth, pix_fmt, encode_cfg);
 }
 
@@ -61,7 +63,7 @@ void encode_cuda(
     throw std::runtime_error("Only unsigned interger type is supported");
   }
   auto depth = data.dtype().bits / 8;
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   auto storage = cp_to_cpu(src, shape);
   encode_image(uri, storage.data(), shape, depth, pix_fmt, encode_cfg);
 }

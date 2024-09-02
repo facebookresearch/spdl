@@ -21,6 +21,8 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
+#include "gil.h"
+
 namespace nb = nanobind;
 
 using cpu_array = nb::ndarray<const uint8_t, nb::ndim<1>, nb::device::cpu>;
@@ -44,7 +46,7 @@ struct PyDemuxer {
       : demuxer(std::move(demuxer_)), data(data_), zero_clear(zero_clear_) {}
 
   bool has_audio() {
-    nb::gil_scoped_release g;
+    RELEASE_GIL();
     return demuxer->has_audio();
   }
 
@@ -52,18 +54,18 @@ struct PyDemuxer {
   PacketsPtr<media_type> demux(
       const std::optional<std::tuple<double, double>>& window,
       const std::optional<std::string>& bsf) {
-    nb::gil_scoped_release g;
+    RELEASE_GIL();
     return demuxer->demux_window<media_type>(window, bsf);
   }
 
   PacketsPtr<MediaType::Image> demux_image(
       const std::optional<std::string>& bsf) {
-    nb::gil_scoped_release g;
+    RELEASE_GIL();
     return demuxer->demux_window<MediaType::Image>(std::nullopt, bsf);
   }
 
   void _drop() {
-    nb::gil_scoped_release g;
+    RELEASE_GIL();
     if (zero_clear) {
       std::memset((void*)data.data(), 0, data.size());
     }
@@ -78,7 +80,7 @@ PyDemuxerPtr _make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
     SourceAdaptorPtr _adaptor) {
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return std::make_unique<PyDemuxer>(
       make_demuxer(src, std::move(_adaptor), dmx_cfg));
 }
@@ -88,7 +90,7 @@ PyDemuxerPtr _make_demuxer_bytes(
     const std::optional<DemuxConfig>& dmx_cfg,
     bool zero_clear = false) {
   auto data_ = std::string_view{data.c_str(), data.size()};
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return std::make_unique<PyDemuxer>(
       make_demuxer(data_, dmx_cfg), data_, zero_clear);
 }
@@ -100,7 +102,7 @@ PyDemuxerPtr _make_demuxer_array(
   auto ptr = reinterpret_cast<const char*>(data.data());
   // Note size() returns the number of elements, not the size in bytes.
   auto data_ = std::string_view{ptr, data.size()};
-  nb::gil_scoped_release g;
+  RELEASE_GIL();
   return std::make_unique<PyDemuxer>(
       make_demuxer(data_, dmx_cfg), data_, zero_clear);
 }

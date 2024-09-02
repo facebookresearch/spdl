@@ -22,6 +22,8 @@ extern "C" {
 #include <libavutil/frame.h>
 }
 
+#include "gil.h"
+
 namespace nb = nanobind;
 
 namespace spdl::core {
@@ -30,25 +32,25 @@ void register_frames(nb::module_& m) {
       .def_prop_ro(
           "num_frames",
           [](FFmpegAudioFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_num_frames();
           })
       .def_prop_ro(
           "sample_rate",
           [](FFmpegAudioFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_sample_rate();
           })
       .def_prop_ro(
           "num_channels",
           [](FFmpegAudioFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_num_channels();
           })
       .def_prop_ro(
           "sample_fmt",
           [](FFmpegAudioFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_media_format_name();
           })
       .def(
@@ -74,7 +76,7 @@ void register_frames(nb::module_& m) {
                 pts);
           })
       .def("clone", [](const FFmpegAudioFrames& self) {
-        nb::gil_scoped_release g;
+        RELEASE_GIL();
         return clone(self);
       });
 
@@ -82,31 +84,31 @@ void register_frames(nb::module_& m) {
       .def_prop_ro(
           "num_frames",
           [](FFmpegVideoFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_num_frames();
           })
       .def_prop_ro(
           "num_planes",
           [](FFmpegVideoFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_num_planes();
           })
       .def_prop_ro(
           "width",
           [](FFmpegVideoFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_width();
           })
       .def_prop_ro(
           "height",
           [](FFmpegVideoFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_height();
           })
       .def_prop_ro(
           "pix_fmt",
           [](FFmpegVideoFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_media_format_name();
           })
       .def(
@@ -135,7 +137,7 @@ void register_frames(nb::module_& m) {
       .def(
           "_get_pts",
           [](const FFmpegVideoFrames& self) -> std::vector<double> {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             std::vector<double> ret;
             auto base = self.time_base;
             for (auto& frame : self.get_frames()) {
@@ -164,7 +166,7 @@ void register_frames(nb::module_& m) {
                 pts);
           })
       .def("clone", [](const FFmpegVideoFrames& self) {
-        nb::gil_scoped_release g;
+        RELEASE_GIL();
         return clone(self);
       });
 
@@ -172,31 +174,31 @@ void register_frames(nb::module_& m) {
       .def_prop_ro(
           "num_planes",
           [](const FFmpegImageFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_num_planes();
           })
       .def_prop_ro(
           "width",
           [](const FFmpegImageFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_width();
           })
       .def_prop_ro(
           "height",
           [](const FFmpegImageFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_height();
           })
       .def_prop_ro(
           "pix_fmt",
           [](FFmpegImageFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_media_format_name();
           })
       .def_prop_ro(
           "metadata",
           [](const FFmpegImageFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return self.get_metadata();
           })
       .def(
@@ -212,11 +214,11 @@ void register_frames(nb::module_& m) {
       .def(
           "clone",
           [](const FFmpegImageFrames& self) {
-            nb::gil_scoped_release g;
+            RELEASE_GIL();
             return clone(self);
           })
       .def_prop_ro("pts", [](const FFmpegImageFrames& self) -> double {
-        nb::gil_scoped_release g;
+        RELEASE_GIL();
         auto base = self.time_base;
         auto& frame = self.get_frames().at(0);
         return double(frame->pts) * base.num / base.den;
