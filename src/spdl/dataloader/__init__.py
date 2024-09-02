@@ -10,7 +10,7 @@
 
 from typing import Any
 
-from . import _builder, _flist, _hook, _pipeline, _utils
+from . import _builder, _hook, _pipeline, _utils
 
 _mods = [
     _builder,
@@ -27,7 +27,7 @@ def __dir__():
 
 
 def __getattr__(name: str) -> Any:
-    for mod in [*_mods, _flist]:
+    for mod in _mods:
         if name in mod.__all__:
             return getattr(mod, name)
 
