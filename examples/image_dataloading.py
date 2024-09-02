@@ -299,7 +299,7 @@ def entrypoint(args: list[str] | None = None):
     ns, args = _parse_process_args(args)
 
     args_set = [
-        args + [f"--worker-id={i}", f"--num-workers={ns.num_workers}"]
+        [*args, f"--worker-id={i}", f"--num-workers={ns.num_workers}"]
         for i in range(ns.num_workers)
     ]
 

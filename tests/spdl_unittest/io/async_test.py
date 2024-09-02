@@ -233,7 +233,7 @@ def test_batch_decode_image(get_samples):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
     samples = get_samples(cmd)
 
-    flist = ["NON_EXISTING_FILE.JPG"] + samples
+    flist = ["NON_EXISTING_FILE.JPG", *samples]
 
     async def _test():
         buffer = await spdl.io.async_load_image_batch(

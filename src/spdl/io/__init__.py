@@ -19,17 +19,9 @@ from typing import Any
 # (black, flake8 and pyre) and documentation tools, this seems like
 # the simplest solution.
 # This import is just for annotation, so please overlook this one.
-from ._type_stub import *  # noqa
+from ._type_stub import *  # noqa: F403
 
-from . import (  # noqa: E402
-    _composite,
-    _config,
-    _convert,
-    _core,
-    _preprocessing,
-    _type_stub,
-)
-
+from . import _composite, _config, _convert, _core, _preprocessing
 
 _mods = [
     _composite,
@@ -37,7 +29,6 @@ _mods = [
     _convert,
     _core,
     _preprocessing,
-    _type_stub,
 ]
 
 
