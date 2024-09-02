@@ -415,7 +415,6 @@ def benchmark(dataloader: Iterator[tuple[Tensor, Tensor]], model: ModelBundle) -
                 torch.profiler.record_function(f"iter_{i}"),
                 spdl.utils.trace_event(f"iter_{i}"),
             ):
-
                 top1, top5 = model(batch, labels)
 
                 num_frames += batch.shape[0]
@@ -435,7 +434,6 @@ def benchmark(dataloader: Iterator[tuple[Tensor, Tensor]], model: ModelBundle) -
 
 
 def _get_pipeline(args, device_index) -> Pipeline:
-
     src = source(args.input_flist, args.prefix, args.max_samples)
 
     if args.use_nvjpeg:

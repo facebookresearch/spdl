@@ -429,7 +429,7 @@ class PipelineFailure(RuntimeError):
 
 
 async def _run_pipeline_coroutines(
-    coros: list[tuple[str, Coroutine[None, None, None]]]
+    coros: list[tuple[str, Coroutine[None, None, None]]],
 ) -> None:
     """Run the pipeline coroutines and handle errors.
 

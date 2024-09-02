@@ -1187,7 +1187,6 @@ def test_pipeline_iter_and_next():
     apl = PipelineBuilder().add_source(range(12)).add_sink(1).build()
 
     with apl.auto_stop():
-
         iterator = iter(apl)
         assert next(iterator) == 0
         assert next(iterator) == 1
