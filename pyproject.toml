@@ -24,6 +24,7 @@ extend-select = [
   "RUF",  # Ruff-specific
 ]
 
+# Note: These settings are picked to match meta-internal linting
 [tool.ruff.lint.isort]
 case-sensitive = false
 combine-as-imports = true

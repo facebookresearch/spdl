@@ -11,7 +11,6 @@ from contextlib import contextmanager
 
 from spdl.lib import _libspdl
 
-
 __all__ = [
     "trace_counter",
     "trace_event",

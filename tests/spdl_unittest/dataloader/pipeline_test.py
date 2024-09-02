@@ -13,7 +13,6 @@ from contextlib import asynccontextmanager
 from multiprocessing import Process
 
 import pytest
-
 from spdl.dataloader import PipelineBuilder, PipelineHook, TaskStatsHook
 from spdl.dataloader._builder import _enqueue, _EOF, _pipe, _sink, _SKIP
 from spdl.dataloader._hook import _periodic_dispatch

@@ -8,10 +8,8 @@ import asyncio
 import gc
 
 import pytest
-
 import spdl.io
 import spdl.utils
-
 import torch
 
 DEFAULT_CUDA = 0
