@@ -1,8 +1,8 @@
 Best Practices
 ==============
 
-Skip the use of unbatched tensor
---------------------------------
+Avoid creating intermediate tensors
+-----------------------------------
 
 For efficient and performant data processing, it is advised to not create
 an intermediate Tensor for each individual media object (such as single image),
