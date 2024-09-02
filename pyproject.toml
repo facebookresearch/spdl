@@ -1,3 +1,12 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    "ninja",
+    "cmake>=3.24",
+]
+build-backend = "setuptools.build_meta"
+
 [tool.ruff]
 
 extend-exclude = [
