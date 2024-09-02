@@ -52,7 +52,7 @@ def _get_ext_modules():
             )
     if ext_modules and _SPDL_BUILD_STUB:
         ext_modules.append(
-            Extension(f"spdl.lib.__STUB__", sources=[]),
+            Extension("spdl.lib.__STUB__", sources=[]),
         )
 
     return ext_modules

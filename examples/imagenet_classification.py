@@ -61,7 +61,7 @@ __all__ = [
     "ModelBundle",
     "Classification",
     "Preprocessing",
-    "get_mapping",
+    "get_mappings",
     "parse_wnid",
 ]
 

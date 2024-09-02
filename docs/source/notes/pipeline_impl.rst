@@ -132,4 +132,3 @@ background thread to complete the loop and join.
        Event Loop ->> BG Thread: Loop Stopped
        FG Thread  ->>+ BG Thread: Join thread
        BG Thread  ->>- FG Thread: Return
-
