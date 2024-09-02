@@ -846,7 +846,7 @@ class PipelineBuilder:
         return parts
 
     def __str__(self) -> str:
-        return "\n".join([repr(self)] + self._get_desc())
+        return "\n".join([repr(self), *self._get_desc()])
 
     def build(self, *, num_threads: int | None = None) -> Pipeline:
         """Build the pipeline.

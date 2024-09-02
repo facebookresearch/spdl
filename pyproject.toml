@@ -15,3 +15,10 @@ extend-exclude = [
   "third_party",
   "setup.py",
 ]
+
+[tool.ruff.lint]
+extend-select = [
+  "B",    # flake8-bugbear
+  "PGH",  # pygrep-hooks
+  "RUF",  # Ruff-specific
+]

@@ -261,7 +261,7 @@ class Pipeline(Generic[T]):
     ):
         self._queues = queues
 
-        self._str = "\n".join([repr(self)] + desc)
+        self._str = "\n".join([repr(self), *desc])
 
         self._output_queue = queues[-1]
         self._event_loop = _EventLoop(coro, num_threads)
@@ -281,14 +281,15 @@ class Pipeline(Generic[T]):
         """Stop the pipeline if running."""
         if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
             warnings.warn(
-                f"Pipeline ({repr(self)}) is running in the background, but "
+                f"Pipeline ({self!r}) is running in the background, but "
                 "there is no valid reference pointing the foreground object. "
                 "Stopping the background thread. "
                 "It is strongly advised to stop the pipeline explicity, "
                 "using the `auto_stop` context manager. "
                 "If you are using a framework and you cannot use the "
                 "context manager, try calling `stop` in done callback and "
-                "error callback."
+                "error callback.",
+                stacklevel=1,
             )
             self.stop()
 

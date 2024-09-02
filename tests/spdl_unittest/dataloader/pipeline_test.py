@@ -57,7 +57,7 @@ def test_async_enqueue_simple():
     coro = _enqueue(src, queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
-    assert vals == src + [_EOF]
+    assert vals == [*src, _EOF]
 
 
 def test_async_enqueue_skip():
@@ -72,7 +72,7 @@ def test_async_enqueue_skip():
     coro = _enqueue(src(), queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
-    assert vals == list(range(6)) + [_EOF]
+    assert vals == [*list(range(6)), _EOF]
 
 
 def test_async_enqueue_iterator_failure():
@@ -650,7 +650,7 @@ def test_task_stats():
 
     async def _test():
         async with hook.stage_hook():
-            for i in range(3):
+            for _ in range(3):
                 async with hook.task_hook():
                     await asyncio.sleep(0.5)
 
@@ -658,7 +658,7 @@ def test_task_stats():
             assert hook.num_success == 3
             assert 0.3 < hook.ave_time < 0.7
 
-            for i in range(2):
+            for _ in range(2):
                 with pytest.raises(RuntimeError):
                     async with hook.task_hook():
                         await asyncio.sleep(1.0)
