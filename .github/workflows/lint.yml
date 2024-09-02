@@ -1,0 +1,26 @@
+name: Lint
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "packaging/**"
+      - "*.md"
+    branches:
+      - main
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "packaging/**"
+      - "*.md"
+    branches:
+      - main
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - uses: pre-commit/action@v3.0.1

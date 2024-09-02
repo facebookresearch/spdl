@@ -35,7 +35,6 @@ def _decode_video(src, timestamp=None, allocator=None, **decode_options):
 
 
 def _decode_videos(src, timestamps):
-
     async def _decode():
         decoding = []
         async for packets in spdl.io.async_streaming_demux_video(

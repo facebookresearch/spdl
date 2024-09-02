@@ -1,0 +1,8 @@
+[tool.ruff]
+
+extend-exclude = [
+  "setup.py",
+  "docs/source",
+  "third_party",
+  "setup.py",
+]
