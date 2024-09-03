@@ -26,12 +26,18 @@ requirements:
   run:
     - python
     - numpy
+    {{ environ.get('CONDA_CUDARUNTIME_CONSTRAINT', '') }}
 
 build:
   string: py{{py}}_{{ environ.get('CU_VERSION', 'cpu') }}
   script_env:
     - SPDL_USE_CUDA
     - SPDL_USE_NVCODEC
+    - SPDL_USE_NVJPEG
+    - SPDL_LINK_STATIC_NVJPEG
+    - SPDL_USE_NPPI
+    - SPDL_USE_TRACING
+    - SPDL_BUILD_STUB
 
 test:
   imports:
