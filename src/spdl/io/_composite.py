@@ -799,6 +799,7 @@ def _decode_partial(packets, indices, decode_config, filter_desc):
 async def async_sample_decode_video(
     packets: VideoPackets,
     indices: list[int],
+    *,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     strict: bool = True,
@@ -950,9 +951,9 @@ async def async_sample_decode_video(
 def sample_decode_video(
     packets: VideoPackets,
     indices: list[int],
+    *,
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    strict: bool = True,
 ) -> list[ImagePackets]:
     """Synchronous version of :py:func:`~async_sample_decode_video`.
 
