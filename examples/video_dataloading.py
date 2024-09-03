@@ -334,7 +334,7 @@ def worker_entrypoint(args: list[str]) -> PerfResult:
 
     ev = Event()
 
-    def handler_stop_signals(signum, frame):
+    def handler_stop_signals(_signum, _frame):
         ev.set()
 
     signal.signal(signal.SIGTERM, handler_stop_signals)

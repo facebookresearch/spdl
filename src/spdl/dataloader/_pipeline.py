@@ -72,7 +72,7 @@ class _EventLoop:
         _LG.debug("Starting the task.")
 
         task = create_task(self._coro, name="Pipeline::main")
-        task.add_done_callback(lambda t: self._task_completed.set())
+        task.add_done_callback(lambda _: self._task_completed.set())
 
         self._task_started.set()
         while not task.done():
