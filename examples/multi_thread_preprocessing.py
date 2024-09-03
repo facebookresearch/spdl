@@ -62,7 +62,6 @@ from multiprocessing import Process, Queue
 import spdl.io
 import torch
 from spdl.dataloader import PipelineBuilder
-
 from torchvision.datasets import ImageNet
 from torchvision.transforms import Compose, Normalize, PILToTensor, Resize
 

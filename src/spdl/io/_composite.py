@@ -22,7 +22,6 @@ from spdl.io import (
     ImagePackets,
     VideoPackets,
 )
-
 from spdl.lib import _libspdl
 
 from . import _core, _preprocessing

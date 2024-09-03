@@ -42,7 +42,6 @@ from threading import Event
 
 import spdl.io
 import spdl.utils
-
 import torch
 from spdl.dataloader import Pipeline, PipelineBuilder
 from spdl.io import CUDAConfig

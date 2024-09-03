@@ -9,7 +9,6 @@
 import math
 
 from spdl.io import AudioPackets, ImagePackets, VideoPackets
-
 from spdl.lib import _libspdl
 
 __all__ = ["get_audio_filter_desc", "get_video_filter_desc", "get_filter_desc"]

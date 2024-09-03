@@ -9,9 +9,7 @@ from itertools import product
 from tempfile import NamedTemporaryFile
 
 import pytest
-
 import spdl.io
-
 import torch
 from spdl.io import encode_config
 

@@ -8,9 +8,7 @@ import asyncio
 
 import numpy as np
 import pytest
-
 import spdl.io
-
 
 CMDS = {
     "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",

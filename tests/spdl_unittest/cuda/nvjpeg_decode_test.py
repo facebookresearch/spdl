@@ -8,7 +8,6 @@ import asyncio
 from random import randbytes
 
 import pytest
-
 import spdl.io
 import torch
 

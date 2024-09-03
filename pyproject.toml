@@ -19,6 +19,14 @@ extend-exclude = [
 [tool.ruff.lint]
 extend-select = [
   "B",    # flake8-bugbear
+  "I",    # isort
   "PGH",  # pygrep-hooks
   "RUF",  # Ruff-specific
 ]
+
+# Note: These settings are picked to match meta-internal linting
+[tool.ruff.lint.isort]
+case-sensitive = false
+combine-as-imports = true
+default-section = "first-party"
+order-by-type = false

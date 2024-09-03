@@ -19,7 +19,7 @@ from typing import Any
 # (black, flake8 and pyre) and documentation tools, this seems like
 # the simplest solution.
 # This import is just for annotation, so please overlook this one.
-from ._type_stub import *  # noqa: F403
+from ._type_stub import *  # noqa: F403  # isort: skip
 
 from . import _composite, _config, _convert, _core, _preprocessing
 
