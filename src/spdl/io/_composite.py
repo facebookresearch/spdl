@@ -723,7 +723,6 @@ async def async_load_image_batch_nvjpeg(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb",
-    strict: bool = True,
     **kwargs,
 ):
     """**[Experimental]** Async version of :py:func:`~spdl.io.load_image_batch_nvjpeg`.
@@ -731,13 +730,12 @@ async def async_load_image_batch_nvjpeg(
     Unlike other async batch functions, this function does not employ intra-operation
     parallelism. (Decoding is done sequentially.)
     """
-    srcs_ = _get_bytes(srcs)
     return await run_async(
-        _libspdl.decode_image_nvjpeg,
-        srcs_,
-        scale_width=width,
-        scale_height=height,
+        load_image_batch_nvjpeg,
+        srcs,
         device_config=device_config,
+        width=width,
+        height=height,
         pix_fmt=pix_fmt,
         **kwargs,
     )
@@ -750,7 +748,6 @@ def load_image_batch_nvjpeg(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb",
-    strict: bool = True,
     **kwargs,
 ) -> CUDABuffer:
     """**[Experimental]** Batch load images with nvJPEG.
