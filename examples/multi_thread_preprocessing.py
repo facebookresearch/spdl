@@ -278,7 +278,7 @@ def run_test(**kwargs):
     return data
 
 
-def _print(data, kwargs):
+def _print(data):
     for i, (x, y) in enumerate(data.values()):
         if i == 0:
             print("\t".join(str(v) for v in x))
@@ -311,7 +311,7 @@ def entrypoint(
     for kwargs in argset:
         print(kwargs)
         data = run_test(root_dir=root_dir, split=split, max_items=max_items, **kwargs)
-        _print(data, kwargs)
+        _print(data)
 
 
 def _parse_args():

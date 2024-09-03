@@ -97,7 +97,7 @@ def trace_gc():
     """Attach tracer to garbage collection."""
     import gc
 
-    def _func(phase, info):
+    def _func(phase, _info):
         if phase == "start":
             _libspdl.trace_event_begin("gc")
         else:
