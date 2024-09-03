@@ -22,6 +22,7 @@ extend-select = [
   "I",    # isort
   "PGH",  # pygrep-hooks
   "RUF",  # Ruff-specific
+  "T20",  # flake8-print
 ]
 
 # Note: These settings are picked to match meta-internal linting
@@ -30,3 +31,7 @@ case-sensitive = false
 combine-as-imports = true
 default-section = "first-party"
 order-by-type = false
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["T20"]
+"examples/**" = ["T20"]
