@@ -32,6 +32,7 @@ SPDL (Scalable and Performant Data Loading)
    :caption: API References
 
    API Reference <api>
+   API Reference (C++) <cpp>
    API Reference (Meta) <fb/api>
    API Index <genindex>
 

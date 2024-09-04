@@ -10,7 +10,3 @@ API Reference
    spdl.io
    spdl.dataloader
    spdl.utils
-
-.. toctree::
-
-   generated/libspdl/root

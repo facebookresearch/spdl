@@ -8,7 +8,8 @@
 set -eux
 
 cd "$(dirname "$0")"
-rm -rf _build source/generated
+
+find source/generated ! -name 'libspdl_*.rst' -type f -exec rm -f {} +
 
 mkdir -p _build/breathe/doxygen/libspdl/xml/
 
