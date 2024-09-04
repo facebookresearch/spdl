@@ -6,14 +6,14 @@ on:
     paths-ignore:
       - "tests/**"
       - "third_party/**"
-      - "README.md"
+      - "*.md"
     branches:
       - main
   push:
     paths-ignore:
       - "tests/**"
       - "third_party/**"
-      - "README.md"
+      - "*.md"
     branches:
       - main
 
@@ -26,9 +26,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu-latest" ]
         python-version: [ "3.10" ]
-    runs-on:  "${{ matrix.os }}"
+    runs-on:  ubuntu-latest
     defaults:
       run:
         shell: bash -el {0}
@@ -52,6 +51,8 @@ jobs:
 
       - name: Build docs
         run: |
+          set -x
+          sudo apt update && sudo apt install -yqq doxygen
           conda install -c file://${HOME}/package/ spdl
           conda install -c conda-forge 'ffmpeg==6'
           pip install -r docs/requirements.txt

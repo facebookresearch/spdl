@@ -33,8 +33,8 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx.ext.napoleon",
     "sphinxcontrib.mermaid",
-    # "breathe",
-    # "exhale",
+    "breathe",
+    "exhale",
 ]
 autosummary_generate = True
 autosummary_imported_members = True
