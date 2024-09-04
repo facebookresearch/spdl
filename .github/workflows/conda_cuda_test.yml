@@ -1,0 +1,57 @@
+name: Test Conda Package
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: "4-core-ubuntu-gpu-t4"
+      python-version:
+        required: true
+        type: string
+      cu-version:
+        required: true
+        type: string
+      artifact:
+        required: true
+        type: string
+
+jobs:
+  unit-test:
+    name: "Unit test (ffmpeg ${{ matrix.ffmpeg-version }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg-version: ["6"]
+    runs-on: "${{ inputs.os }}"
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ inputs.artifact }}"
+          path: ~/package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Unit test
+        run: |
+          conda install -c file://${HOME}/package/ spdl
+          conda install -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version}}"
+          conda install pytorch pytorch-cuda=${{ inputs.cu-version }} -c pytorch -c nvidia
+          conda install pytest numba
+          ffmpeg -version
+          python -c 'import logging;logging.basicConfig(level=logging.DEBUG);from spdl.lib import _libspdl;_libspdl.Demuxer'
+          pytest -v \
+              tests/spdl_unittest/cuda/

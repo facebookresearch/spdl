@@ -1,31 +1,24 @@
-name: "Build Conda: CUDA"
+name: Build Conda Package
 
 on:
-  workflow_dispatch:
-  pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "examples/**"
-      - "README.md"
-    branches:
-      - main
-  push:
-    paths-ignore:
-      - "docs/**"
-      - "examples/**"
-      - "README.md"
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: "32-core-ubuntu"
+      python-version:
+        required: true
+        type: string
+      cu-version:
+        required: true
+        type: string
+      artifact:
+        required: true
+        type: string
 
 jobs:
-  conda-build-cuda:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest ]
-        python-version: [ "3.10", "3.11", "3.12" ]
-        cu_version: [ "11.8.0", "12.1.0" ]
-    runs-on: ${{ matrix.os }}
+  build:
+    runs-on: ${{ inputs.os }}
     defaults:
       run:
         shell: bash -el {0}
@@ -46,13 +39,14 @@ jobs:
         run: |
           mkdir ~/package
           conda build \
-            -c nvidia/label/cuda-${{ matrix.cu_version }} \
+            -c nvidia/label/cuda-${{ inputs.cu-version }} \
             ./packaging/conda \
-            --python=${{ matrix.python-version }} \
+            --python=${{ inputs.python-version }} \
             --output-folder ~/package
         env:
-          CU_VERSION: ${{ matrix.cu_version }}
-          CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-${{ matrix.cu_version }}::cuda-toolkit"
+          CU_VERSION: ${{ inputs.cu-version }}
+          CONDA_CUDATOOLKIT_CONSTRAINT: "- nvidia/label/cuda-${{ inputs.cu-version }}::cuda-toolkit"
+          CONDA_CUDARUNTIME_CONSTRAINT: "- nvidia/label/cuda-${{ inputs.cu-version }}::cuda-runtime"
           SPDL_USE_CUDA: "1"
           SPDL_USE_NVCODEC: "1"
           SPDL_USE_NVJPEG: "1"
@@ -62,8 +56,9 @@ jobs:
           SPDL_BUILD_STUB: "0"
 
       - uses: actions/upload-artifact@v4
+        name: Upload build artifact
         with:
-          name: spdl.${{ matrix.os }}.${{ matrix.python-version }}.${{ matrix.cu_version }}
+          name: "${{ inputs.artifact }}"
           path: ~/package
           if-no-files-found: error
           retention-days: 1
