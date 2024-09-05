@@ -48,10 +48,8 @@ jobs:
       - name: Unit test
         run: |
           conda install -c file://${HOME}/package/ spdl
-          conda install -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version}}"
+          conda install -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
           conda install pytorch pytorch-cuda=${{ inputs.cu-version }} -c pytorch -c nvidia
           conda install pytest numba
-          ffmpeg -version
-          python -c 'import logging;logging.basicConfig(level=logging.DEBUG);from spdl.lib import _libspdl;_libspdl.Demuxer'
           pytest -v \
               tests/spdl_unittest/cuda/
