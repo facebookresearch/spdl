@@ -1,4 +1,4 @@
-name: Test Wheel
+name: Test Wheel (CUDA)
 
 on:
   workflow_call:

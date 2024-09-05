@@ -1,4 +1,4 @@
-name: Build Wheel
+name: Build Wheel (CUDA)
 
 on:
   workflow_call:

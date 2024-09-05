@@ -1,4 +1,4 @@
-name: Test Conda Package
+name: Test Conda Package (CPU)
 
 on:
   workflow_call:

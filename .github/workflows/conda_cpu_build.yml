@@ -1,4 +1,4 @@
-name: Build Conda Package
+name: Build Conda Package (CPU)
 
 on:
   workflow_call:
