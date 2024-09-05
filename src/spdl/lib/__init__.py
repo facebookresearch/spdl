@@ -47,12 +47,14 @@ def _import_libspdl() -> ModuleType:
     ]
     # Newer FFmpeg first
     libs.sort(reverse=True)
+    err_msgs = {}
     for lib in libs:
         _LG.debug("Importing %s", lib)
         try:
             ext = importlib.import_module(lib)
-        except Exception:
+        except Exception as err:
             _LG.debug("Failed to import %s.", lib, exc_info=True)
+            err_msgs[lib] = str(err)
             continue
 
         try:
@@ -77,7 +79,9 @@ def _import_libspdl() -> ModuleType:
 
         return ext
 
-    raise RuntimeError(
-        f"Failed to import libspdl. Tried {libs}. "
-        "Enable DEBUG logging to see details about the failure."
+    msg = ", ".join(f'"{k}: {v}"' for k, v in err_msgs.items())
+    msg = (
+        f"Failed to import libspdl. {msg} "
+        "Enable DEBUG logging to see details about the failure. "
     )
+    raise RuntimeError(msg)

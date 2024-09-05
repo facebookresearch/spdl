@@ -41,7 +41,7 @@ jobs:
       - name: Unit test
         run: |
           conda install -c file://${HOME}/package/ spdl
-          conda install -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version}}"
+          conda install -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
           conda install -c pytorch numpy pytest pytorch numba
           pytest -v \
               tests/spdl_unittest/io/ \
