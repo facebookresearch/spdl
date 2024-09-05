@@ -23,7 +23,7 @@ jobs:
   #############################################################################
   conda-cpu-py312:
     name: "Conda: py3.12, CPU"
-    uses: ./.github/workflows/conda_cpu_build.yml
+    uses: ./.github/workflows/_conda_cpu_build.yml
     with:
       os: ubuntu-latest
       python-version: "3.12"
@@ -31,7 +31,7 @@ jobs:
 
   conda-cpu-py311:
     name: "Conda: py3.11, CPU"
-    uses: ./.github/workflows/conda_cpu_build.yml
+    uses: ./.github/workflows/_conda_cpu_build.yml
     with:
       os: ubuntu-latest
       python-version: "3.11"
@@ -39,7 +39,7 @@ jobs:
 
   conda-cpu-py310:
     name: "Conda: py3.10, CPU"
-    uses: ./.github/workflows/conda_cpu_build.yml
+    uses: ./.github/workflows/_conda_cpu_build.yml
     with:
       os: ubuntu-latest
       python-version: "3.10"
@@ -48,7 +48,7 @@ jobs:
   conda-cpu-py310-test:
     name: "Test Conda: py3.10, CPU"
     needs: [ "conda-cpu-py310" ]
-    uses: ./.github/workflows/conda_cpu_test.yml
+    uses: ./.github/workflows/_conda_cpu_test.yml
     with:
       os: ubuntu-latest
       python-version: "3.10"
@@ -59,7 +59,7 @@ jobs:
   #############################################################################
   conda-cuda-py312-cu118:
     name: "Conda: py3.12, cu11.8"
-    uses: ./.github/workflows/conda_cuda_build.yml
+    uses: ./.github/workflows/_conda_cuda_build.yml
     with:
       python-version: "3.12"
       cu-version: "11.8.0"
@@ -67,7 +67,7 @@ jobs:
 
   conda-cuda-py311-cu118:
     name: "Conda: py3.11, cu11.8"
-    uses: ./.github/workflows/conda_cuda_build.yml
+    uses: ./.github/workflows/_conda_cuda_build.yml
     with:
       python-version: "3.11"
       cu-version: "11.8.0"
@@ -75,7 +75,7 @@ jobs:
 
   conda-cuda-py310-cu118:
     name: "Conda: py3.10, cu11.8"
-    uses: ./.github/workflows/conda_cuda_build.yml
+    uses: ./.github/workflows/_conda_cuda_build.yml
     with:
       python-version: "3.10"
       cu-version: "11.8.0"
@@ -83,7 +83,7 @@ jobs:
 
   conda-cuda-py310-cu118-test:
     name: "Test Conda: py3.10, cu11.8"
-    uses: ./.github/workflows/conda_cuda_test.yml
+    uses: ./.github/workflows/_conda_cuda_test.yml
     needs: [ "conda-cuda-py310-cu118" ]
     with:
       python-version: "3.10"
@@ -95,7 +95,7 @@ jobs:
   #############################################################################
   conda-cuda-py312-cu121:
     name: "Conda: py3.12, cu12.1"
-    uses: ./.github/workflows/conda_cuda_build.yml
+    uses: ./.github/workflows/_conda_cuda_build.yml
     with:
       python-version: "3.12"
       cu-version: "12.1.0"
@@ -103,7 +103,7 @@ jobs:
 
   conda-cuda-py311-cu121:
     name: "Conda: py3.11, cu12.1"
-    uses: ./.github/workflows/conda_cuda_build.yml
+    uses: ./.github/workflows/_conda_cuda_build.yml
     with:
       python-version: "3.11"
       cu-version: "12.1.0"
@@ -111,7 +111,7 @@ jobs:
 
   conda-cuda-py310-cu121:
     name: "Conda: py3.10, cu12.1"
-    uses: ./.github/workflows/conda_cuda_build.yml
+    uses: ./.github/workflows/_conda_cuda_build.yml
     with:
       python-version: "3.10"
       cu-version: "12.1.0"
@@ -119,7 +119,7 @@ jobs:
 
   conda-cuda-py310-cu121-test:
     name: "Test Conda: py3.10, cu12.1"
-    uses: ./.github/workflows/conda_cuda_test.yml
+    uses: ./.github/workflows/_conda_cuda_test.yml
     needs: [ conda-cuda-py310-cu121 ]
     with:
       python-version: "3.10"
@@ -131,7 +131,7 @@ jobs:
   #############################################################################
   wheel-cuda-py312-cu121:
     name: "Wheel: py3.12, cu12.1"
-    uses: ./.github/workflows/wheel_cuda_build.yml
+    uses: ./.github/workflows/_wheel_cuda_build.yml
     with:
       python-version: "3.12"
       cu-version: "12.1"
@@ -139,7 +139,7 @@ jobs:
 
   wheel-cuda-py311-cu121:
     name: "Wheel: py3.11, cu12.1"
-    uses: ./.github/workflows/wheel_cuda_build.yml
+    uses: ./.github/workflows/_wheel_cuda_build.yml
     with:
       python-version: "3.11"
       cu-version: "12.1"
@@ -147,7 +147,7 @@ jobs:
 
   wheel-cuda-py310-cu121:
     name: "Wheel: py3.10, cu12.1"
-    uses: ./.github/workflows/wheel_cuda_build.yml
+    uses: ./.github/workflows/_wheel_cuda_build.yml
     with:
       python-version: "3.10"
       cu-version: "12.1"
