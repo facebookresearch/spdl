@@ -526,6 +526,7 @@ class PipelineBuilder:
         self._process_args: list[tuple[str, dict, int]] = []
 
         self._sink_buffer_size = None
+        self._num_aggregate = 0
 
     def add_source(
         self, source: Iterable[T] | AsyncIterable[T], **kwargs
@@ -705,7 +706,7 @@ class PipelineBuilder:
 
     def aggregate(
         self,
-        num_aggregate: int,
+        num_items: int,
         /,
         *,
         drop_last: bool = False,
@@ -715,7 +716,7 @@ class PipelineBuilder:
         """Buffer the items in the pipeline.
 
         Args:
-            num_aggregate: The number of items to buffer.
+            num_items: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
             hooks: See :py:meth:`pipe`.
             report_stats_interval: See :py:meth:`pipe`.
@@ -726,13 +727,14 @@ class PipelineBuilder:
             if i is not _EOF:
                 vals[0].append(i)
 
-            if (i is _EOF and vals[0]) or (len(vals[0]) >= num_aggregate):
+            if (i is _EOF and vals[0]) or (len(vals[0]) >= num_items):
                 ret = vals.pop(0)
                 vals.append([])
                 return ret
             return _SKIP
 
-        name = f"aggregate({num_aggregate}, {drop_last=})"
+        name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
+        self._num_aggregate += 1
 
         self._process_args.append(
             (
