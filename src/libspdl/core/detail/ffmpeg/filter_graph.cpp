@@ -117,7 +117,7 @@ AVFilterContext* create_filter(
   TRACE_EVENT("decoding", "avfilter_graph_create_filter");
   CHECK_AVERROR(
       avfilter_graph_create_filter(&flt_ctx, flt, name, args, nullptr, graph),
-      "Failed to create input filter: {}({})",
+      "Failed to create input filter: filter={}, args=`{}`",
       flt->name,
       args);
   return flt_ctx;
