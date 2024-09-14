@@ -11,7 +11,9 @@
 #include <cstring>
 
 #include <nanobind/nanobind.h>
+#ifdef SPDL_USE_NDARRAY
 #include <nanobind/ndarray.h>
+#endif
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
@@ -25,7 +27,9 @@
 
 namespace nb = nanobind;
 
+#ifdef SPDL_USE_NDARRAY
 using cpu_array = nb::ndarray<const uint8_t, nb::ndim<1>, nb::device::cpu>;
+#endif
 
 namespace spdl::core {
 namespace {
@@ -95,6 +99,7 @@ PyDemuxerPtr _make_demuxer_bytes(
       make_demuxer(data_, dmx_cfg), data_, zero_clear);
 }
 
+#ifdef SPDL_USE_NDARRAY
 PyDemuxerPtr _make_demuxer_array(
     cpu_array data,
     const std::optional<DemuxConfig>& dmx_cfg,
@@ -106,6 +111,7 @@ PyDemuxerPtr _make_demuxer_array(
   return std::make_unique<PyDemuxer>(
       make_demuxer(data_, dmx_cfg), data_, zero_clear);
 }
+#endif
 
 } // namespace
 
@@ -143,6 +149,7 @@ void register_demuxing(nb::module_& m) {
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("_zero_clear") = false);
+#ifdef SPDL_USE_NDARRAY
   m.def(
       "_demuxer",
       &_make_demuxer_array,
@@ -150,5 +157,6 @@ void register_demuxing(nb::module_& m) {
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("_zero_clear") = false);
+#endif
 }
 } // namespace spdl::core

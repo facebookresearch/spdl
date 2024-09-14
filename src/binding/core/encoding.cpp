@@ -10,7 +10,9 @@
 #include <libspdl/core/transfer.h>
 
 #include <nanobind/nanobind.h>
+#ifdef SPDL_USE_NDARRAY
 #include <nanobind/ndarray.h>
+#endif
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
@@ -22,12 +24,15 @@
 
 namespace nb = nanobind;
 
+#ifdef SPDL_USE_NDARRAY
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
 using u8_cuda_array = nb::ndarray<uint8_t, nb::device::cuda, nb::c_contig>;
+#endif
 
 namespace spdl::core {
 namespace {
 
+#ifdef SPDL_USE_NDARRAY
 template <typename... Ts>
 std::vector<size_t> get_shape(nb::ndarray<Ts...>& arr) {
   std::vector<size_t> ret;
@@ -67,9 +72,11 @@ void encode_cuda(
   auto storage = cp_to_cpu(src, shape);
   encode_image(uri, storage.data(), shape, depth, pix_fmt, encode_cfg);
 }
+#endif
 } // namespace
 
 void register_encoding(nb::module_& m) {
+#ifdef SPDL_USE_NDARRAY
   m.def(
       "encode_image",
       &encode,
@@ -91,6 +98,7 @@ void register_encoding(nb::module_& m) {
 #endif
       nb::arg("pix_fmt") = "rgb24",
       nb::arg("encode_config") = nb::none());
+#endif
 }
 
 } // namespace spdl::core
