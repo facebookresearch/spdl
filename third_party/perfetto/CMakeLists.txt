@@ -8,7 +8,7 @@ FetchContent_Declare(
   URL_HASH SHA256=4c8fe8a609fcc77ca653ec85f387ab6c3a048fcd8df9275a1aa8087984b89db8
   DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
   )
-FetchContent_Populate(perfetto_src)
+FetchContent_MakeAvailable(perfetto_src)
 
 set(base_dir "${perfetto_src_SOURCE_DIR}")
 add_library(perfetto STATIC "${base_dir}/sdk/perfetto.cc")
