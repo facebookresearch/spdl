@@ -13,16 +13,24 @@ import logging
 import warnings
 from collections.abc import AsyncIterator, Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
-from typing import overload, TypeVar
+from typing import overload, TYPE_CHECKING, TypeVar
 
-import numpy as np
+# We import NumPy only when type-checkng.
+# The functions of this module do not need NumPy itself to run.
+# This is for experimenting with FT (no-GIL) Python.
+# Once NumPy supports FT Python, we can import normally.
+if TYPE_CHECKING:
+    import numpy as np
 
-try:
-    from numpy.typing import NDArray
+    try:
+        from numpy.typing import NDArray
 
-    UintArray = NDArray[np.uint8]
-except ImportError:
-    UintArray = np.ndarray
+        UintArray = NDArray[np.uint8]
+    except ImportError:
+        UintArray = np.ndarray
+else:
+    UintArray = object
+
 
 from spdl.io import (
     AudioFrames,

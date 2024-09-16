@@ -6,18 +6,12 @@
 
 # pyre-unsafe
 
-import numpy as np
-
-try:
-    from numpy.typing import NDArray
-except ImportError:
-    NDArray = np.ndarray
-
 from spdl._internal import import_utils
 from spdl.io import CPUBuffer, CUDABuffer
 
 torch = import_utils.lazy_import("torch")
 cuda = import_utils.lazy_import("numba.cuda")
+np = import_utils.lazy_import("numpy")
 
 __all__ = [
     "to_numba",
@@ -26,7 +20,7 @@ __all__ = [
 ]
 
 
-def to_numpy(buffer: CPUBuffer) -> NDArray:
+def to_numpy(buffer: CPUBuffer):
     """Convert to NumPy NDArray.
 
     Args:
