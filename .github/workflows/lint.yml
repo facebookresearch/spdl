@@ -3,10 +3,6 @@ name: Lint
 on:
   workflow_dispatch:
   pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "packaging/**"
-      - "*.md"
     branches:
       - main
   push:

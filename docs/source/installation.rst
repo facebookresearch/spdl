@@ -25,9 +25,6 @@ The following command will build and install `spdl` Python package.
 The build process first downloads/builds/installs some third-party
 dependencies, then it builds SPDL and its binding code.
 
-Once dependencies are built, set the environment variable
-``SPDL_SKIP_DEPS=1`` and the build will skip secondary dependencies in subsequent builds.
-
 Build can be customized through the environment variables;
 
 - ``SPDL_USE_CUDA=1``: Enable CUDA integration, such as background data transfer.
@@ -40,7 +37,7 @@ Build can be customized through the environment variables;
   to reduce the build time. By default, SPDL compiles against FFmpeg 4, 5, 6 and 7,
   and pick available one at run time.
 - ``SPDL_RELASE_GIL=0``: I/O module does not release GIL. This is intended to be used for
-  experimenting with free-threading Python (3.13+).
+  experimenting with free-threaded Python (3.13+).
 
 See `setup.py <https://github.com/facebookresearch/spdl/blob/main/setup.py>`_ for the up-to-date available options.
 
@@ -64,7 +61,7 @@ Requirements
 Dependencies
 ------------
 
-The libspdl uses the following third party libraries.
+The libspdl uses the following third party libraries, which are fetched and built automatically during the build process.
 
 * `{fmt} <https://github.com/fmtlib/fmt>`_ (`MIT <https://github.com/fmtlib/fmt/blob/10.1.1/LICENSE.rst>`_)
 * `gflags <https://github.com/gflags/gflags>`_ (`BSD-3 <https://github.com/gflags/gflags/blob/v2.2.0/COPYING.txt>`_)
@@ -104,3 +101,14 @@ Optional Dependencies
 .. note::
 
    **††** This software contains source code provided by NVIDIA Corporation.
+
+Building with Free-Threaded Python
+----------------------------------
+
+To build SPDL with Free-Threaded Python, the following manual changes are required.
+We intend to incorporate these changes in build process, once Python 3.13 and
+FT-aware nanobind is released.
+
+1. Replace the source code of nanobind with `the one in free-threaded branch <https://github.com/wjakob/nanobind/pull/695>`_.
+   You need to update the corresponding `CMakeLists.txt <https://github.com/facebookresearch/spdl/blob/main/third_party/nanobind/CMakeLists.txt>`_.
+2. Add ``FREE_THREADED`` to ``nanobind_add_module``. Please refer to `the doc <https://github.com/wjakob/nanobind/blob/23dcbabf5b1aae3da4b92363b75e685feb19642b/docs/free_threaded.rst>`_.

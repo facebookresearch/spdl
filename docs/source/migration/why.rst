@@ -37,12 +37,9 @@ Cons
     (from subprocess-based parallelism to thread-based parallelism, and from object-oriented
     composition to functional composition), it is inevitable to require some changes on the
     model training code.
-2. *Async I/O*
-    We made the exposure of Async I/O minimum in :py:class:`spdl.dataloader.Pipeline`,
-    however, for those who are not familiar with the concept of async io, it might be
-    confusing at first.
-3. *Requires functions that are thread-safe and release GIL*
-    Until free-threading (a.k.a no-GIL) Python becomes available, to achieve high throughput
+
+2. *Requires functions that release GIL*
+    Until free-threaded (a.k.a no-GIL) Python becomes available, to achieve high throughput
     with :py:class:`spdl.dataloader.Pipeline`, one must use functions that are thread-safe
     and release GIL.
 
@@ -53,7 +50,9 @@ Cons
 
     † The tokenizers is not thread-safe so it requires
     `a workaround <https://github.com/huggingface/tokenizers/issues/537#issuecomment-1372231603>`_.
-4. *New library*
+    (note: You can use `thread local storage <https://docs.python.org/3/library/threading.html#thread-local-data>`_.)
+
+3. *New library*
     SPDL is a new attempt in data loading. Although the development team is making every
     efforts to make sure that the code works in intended way and easy to use, unseen
     issues would arise. We make our best efforts to resolve them, but initially some
