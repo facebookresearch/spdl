@@ -10,8 +10,8 @@
 
 #include <nanobind/nanobind.h>
 
-#ifdef SPDL_HOLD_GIL
-#define RELEASE_GIL()
+#ifdef NB_FREE_THREADED
+#define RELEASE_GIL() // do not release GIL in FT Python
 #else
 #define RELEASE_GIL() nb::gil_scoped_release __g;
 #endif
