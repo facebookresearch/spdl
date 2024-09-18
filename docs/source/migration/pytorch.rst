@@ -46,7 +46,7 @@ and :py:class:`~torchvision.transforms.PILToTensor` transforms.
 Decoding images in threads
 --------------------------
 
-When adopting SPDL before free-threading (a.k.a no-GIL) Python becomes available
+When adopting SPDL before free-threaded (a.k.a no-GIL) Python becomes available
 and stable, we need to check whether the dataset instance can be used
 in threaded environment in a performant manner.
 
@@ -168,7 +168,7 @@ Now, PyTorch DataLoader is faster than SPDL Pipeline.
 This means that, simply running the existing data loading pipeline, which
 is designed for multi-processing, does not improve the performance.
 
-This might change with free-threading, but that's the current state, and
+This might change with free-threaded, but that's the current state, and
 also the reason why SPDL cannot provide a simple drop-in replacement of
 PyTorch DataLoader class.
 
