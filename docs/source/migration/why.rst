@@ -20,11 +20,15 @@ Pros
     Thread-based parallelism uses smaller compute resource to achieve the same throughput
     as subprocess-based parallelism.
     This leaves spare capacity for increased data loading demand in the future.
-3. *Better Controllability*
+3. *Tunability*
     The :py:class:`spdl.dataloader.Pipeline` allows to configure the concurrency stage by stage.
     This makes the pipeline flexible to fit different environments that the pipeline is running.
     You can adjust them based on the network bandwidth and CPU capacity independently.
-4. *Debuggability*
+4. *Flexibility*
+    The :py:class:`spdl.dataloader.Pipeline` executes the functions you provide. SPDL
+    does not put any restriction on what data can go through the pipeline. Stages can
+    aggregate/disaggregate data along the way.
+5. *Debuggability*
     As we have seen in :ref:`Performance Analysis<Performance Analysis>` section, SPDL's
     pipeline abstraction gives insights of stage-wise runtime peformance, which makes it
     easier to understand how the data loading is performing and how to optimize the pipeline.
