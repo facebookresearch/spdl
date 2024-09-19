@@ -45,8 +45,8 @@ Python in Machine Learning, by first solving the bottleneck (media decoding)
 in data loading, then later performing other parts of preprocessings within
 multi-threading paradigm.
 
-How to use SPDL?
-----------------
+When to use SPDL?
+-----------------
 
 SPDL is highly flexible. You can use it in variety of ways.
 
@@ -70,3 +70,15 @@ SPDL is highly flexible. You can use it in variety of ways.
    SPDL provides option to enable GIL in its I/O module when building from source.
    The ability to enable/disable GIL helps performing controlled experiments.
    Please check out the `Installation <./installation.html>`_ for how to customize the build.
+
+Expectations for OSS Support
+----------------------------
+
+We can't commit to providing active support, including fixing external bug reports
+or reviewing pull requests.
+We made SPDL publicly available to facilitate communicating our insights on
+free threading for data loading.
+While we do use it in production, if you choose to do so, you are on your own.
+We make sure SPDL is sufficiently stable and fast for our production workloads,
+but we make no assurances about its stability or
+correctness or performance for any external workloads or use-cases.

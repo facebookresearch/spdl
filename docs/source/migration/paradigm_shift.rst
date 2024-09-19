@@ -4,7 +4,7 @@ Paradigm Shift
 Concurrency Structure
 ---------------------
 
-When adopting SPDL, it is important to understand the difference in how SPDL structure
+When using SPDL, it is important to understand the difference in how SPDL structure
 the concurrency, compared against common process-based data loaders.
 
 In process-based data loading, each process runs the entire pipeline.
@@ -51,5 +51,5 @@ This approach is better fit for achieving higher throughput.
 
 It is worth noting that in this setup, there is no equivalent of DataSet class.
 
-This paradigm shift makes it difficult to achieve mechanical migration (such as
-one-line-change or swap-the-class type of migration) to SPDL.
+This paradigm shift makes it difficult to achieve mechanical update (such as
+one-line-change or swap-the-class type of update) to SPDL.
