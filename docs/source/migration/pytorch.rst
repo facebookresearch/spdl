@@ -17,8 +17,6 @@ It prohibits the access to the data source or data itself, and it does not
 distinguish the steps for data acquisition, decoding and preprocessing nor
 expose them.
 
-This pattern makes it difficult to achieve mechanical migration (such as
-one-line-change or swap-the-class type of migration) to SPDL.
 So as to achieve high throughput, it is important to separate the operations of
 different natures and configure them, but there is no native support for
 that in :py:class:`torch.utils.data.Dataset`.
