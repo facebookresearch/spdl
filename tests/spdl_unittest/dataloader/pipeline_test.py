@@ -1013,6 +1013,18 @@ def test_pipeline_aggregate_drop_last():
         assert results == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
 
 
+def test_pipeline_disaggregate():
+    """AsyncPipeline disaggregates the input"""
+
+    src = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12]]
+
+    pipeline = PipelineBuilder().add_source(src).disaggregate().add_sink(1000).build()
+
+    with pipeline.auto_stop():
+        results = list(pipeline.get_iterator(timeout=3))
+    assert results == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+
 def test_pipeline_source_failure():
     """AsyncPipeline continues when source fails."""
 

@@ -513,6 +513,11 @@ def _to_async_gen(
     return afunc
 
 
+async def disaggregate(items):
+    for item in items:
+        yield item
+
+
 class PipelineBuilder:
     """Build :py:class:`~spdl.dataloader.Pipeline` object.
 
@@ -527,6 +532,7 @@ class PipelineBuilder:
 
         self._sink_buffer_size = None
         self._num_aggregate = 0
+        self._num_disaggregate = 0
 
     def add_source(
         self, source: Iterable[T] | AsyncIterable[T], **kwargs
@@ -752,6 +758,37 @@ class PipelineBuilder:
         )
         return self
 
+    def disaggregate(
+        self,
+        /,
+        *,
+        hooks: Sequence[PipelineHook] | None = None,
+        report_stats_interval: float | None = None,
+    ) -> "PipelineBuilder":
+        """Disaggregate the items in the pipeline.
+
+        Args:
+            hooks: See :py:meth:`pipe`.
+            report_stats_interval: See :py:meth:`pipe`.
+        """
+        name = f"disaggregate_{self._num_disaggregate}()"
+        self._num_disaggregate += 1
+
+        self._process_args.append(
+            (
+                "disaggregate",
+                {
+                    "afunc": disaggregate,
+                    "concurrency": 1,
+                    "name": name,
+                    "hooks": hooks,
+                    "report_stats_interval": report_stats_interval,
+                },
+                1,
+            )
+        )
+        return self
+
     def add_sink(self, buffer_size: int) -> "PipelineBuilder":
         """Attach a buffer to the end of the pipeline.
 
@@ -795,7 +832,7 @@ class PipelineBuilder:
             in_queue, out_queue = queues[i - 1 : i + 1]
 
             match type_:
-                case "pipe" | "aggregate":
+                case "pipe" | "aggregate" | "disaggregate":
                     coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
                 case "ordered_pipe":
                     coro = _ordered_pipe(
