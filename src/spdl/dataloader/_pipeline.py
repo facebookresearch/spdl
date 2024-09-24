@@ -412,7 +412,7 @@ class Pipeline(Generic[T]):
 
         _LG.debug("EventLoop: %s", str(self._event_loop))
 
-        raise TimeoutError(f"The next item is not available after {elapsed:.0f} sec.")
+        raise TimeoutError(f"The next item is not available after {elapsed:.1f} sec.")
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.
