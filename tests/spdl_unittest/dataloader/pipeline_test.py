@@ -1270,6 +1270,27 @@ def test_pipeline_pipe_gen():
     assert expected == output
 
 
+def test_pipeline_pipe_gen_incremental():
+    """pipe returns output of generator function immediately if not in ProcessPoolExecutor"""
+
+    # We introduce delay in each iteration, so that, if the pipeline is returning
+    # the yielded value immediately, the output will be obtained quickly.
+    # If the pipeline is not returning the yielded value immediately, the output
+    # won't be available until the iteration ends, and by that time
+    # the foreground pipeline should timeout.
+    def dup_increment(v):
+        for i in range(3):
+            time.sleep(0.1)
+            yield v + i
+
+    apl = PipelineBuilder().add_source(range(3)).pipe(dup_increment).add_sink(1).build()
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=0.2))
+    assert expected == output
+
+
 def test_pipeline_pipe_agen_wrong_hook():
     """pipe works with async generator function, even when hook abosrb the StopAsyncIteration"""
 
