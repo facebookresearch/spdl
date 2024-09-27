@@ -1,10 +1,10 @@
-Why migrate to SPDL?
-====================
+Why use to SPDL?
+================
 
-When migrating your data loading solution to SPDL, you should ask why you want to do that,
+When trying SPDL, you should ask why you want to do that,
 and what's the benefit and what's the drawback?
 
-Here are the pros and cons of migrating to SPDL.
+Here are the pros and cons of SPDL.
 
 Pros
 ----
@@ -13,7 +13,7 @@ Pros
     When switching to SPDL, it is not uncommon to see x3 throughput in data loading.
     The improvement is not directly reflected to model training performance,
     but considering how uniquietous the data loading bottleneck is,
-    there is a good chance adopting SPDL increases the model training performance.
+    there is a good chance using SPDL increases the model training performance.
 2. *Efficiency*
     Switching to SPDL essentially means to switching from subprocess-based parallelism to
     thread-based parallelism.
@@ -36,8 +36,8 @@ Pros
 Cons
 ----
 
-1. *Migration Cost*
-    Although we are working to make the migration easier, since SPDL involves paradigm shift
+1. *Onboarding Cost*
+    Although we are working to make the onboarding easier, since SPDL involves paradigm shift
     (from subprocess-based parallelism to thread-based parallelism, and from object-oriented
     composition to functional composition), it is inevitable to require some changes on the
     model training code.
