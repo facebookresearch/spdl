@@ -14,7 +14,7 @@ There are three distinguished components in PyTorch's DataLoader.
 One notable thing about this composition is that dataset contains the logic
 to convert the data source to Tensor, and it directly maps keys to Tensors.
 It prohibits the access to the data source or data itself, and it does not
-distinguish the steps for data acquisition, decoding and preprocessing nor
+distinguish the steps for data acquisition, decoding and pre-processing nor
 expose them.
 
 So as to achieve high throughput, it is important to separate the operations of
@@ -105,7 +105,7 @@ performance.
 
 SPDL Pipeline is faster than PyTorch DataLoader at all stages,
 which suggests that the operations executed here
-(Image decoding, resising and Tensor conversions) all release GIL.
+(Image decoding, resizing and Tensor conversions) all release GIL.
 
 Many PyTorch operators (and also NumPy operators) release GIL,
 so there is a good chance that they work fine in thread-based pipeline.
@@ -188,7 +188,7 @@ We can make the following observations.
    while SPDL Pipeline can achieve similar or higher throughput.
 2. As the batch size increases, PyTorch DataLoader's peak throughput drops,
    while SPDL Pipeline sustain similar or even higher throughput.
-3. The way SPDL Pipeline's performance scale is consistant for different batch sizes.
+3. The way SPDL Pipeline's performance scale is consistent for different batch sizes.
 
 Why does the performance of PyTorch DataLoader drops as the batch size increase?
 And why it's not the case for SPDL Pipeline?
@@ -205,7 +205,7 @@ DataLoader.
 
 The batch created in a background process is serialized into byte string and written to
 the memory space shared between the main process and the background process.
-The main process then de-serialize the byte string and re-create the batch.
+The main process then deserialize the byte string and re-create the batch.
 
 This means that the batch tensor is at least copied twice after its creation.
 
@@ -224,13 +224,13 @@ are few more memory-related inefficiency in the pipelines.
 
 The image data coming out of :py:class:`~torchvision.datasets.ImageNet` is Tensor, which is
 contiguous memory format. In media processing, the data are more often represented as
-non-contiguouos memories regions (like separate image planes),
+non-contiguous memories regions (like separate image planes),
 and usually they are not in the size.
-For example, YUV420 format, which is one of the most commoly used format uses 12 bits per
-pixel to store data, while RGB tensors uses 24 bits per pixel of contiguous memeory.
+For example, YUV420 format, which is one of the most commonly used format uses 12 bits per
+pixel to store data, while RGB tensors uses 24 bits per pixel of contiguous memory.
 
-Loadidng JPEG files using Pillow converts the data to RGB.
-This RGB data is then resized to the target resolution, and coverted to a Tensor representing
+Loading JPEG files using Pillow converts the data to RGB.
+This RGB data is then resized to the target resolution, and converted to a Tensor representing
 a single image. Finally, image tensors are copied into batch Tensor.
 
 This process adds multiple of redundant memory allocations and copying.
@@ -250,7 +250,7 @@ allocated, copied but discarded when batch tensor is created.
 Therefore, when using Pillow and TorchVision, creating a batch of 32 images at 224x224
 (which is 4.8 MB) allocates, copies and discards redundant memory of about 20MB.
 
-When this data is transfered from subprocess to the main process, 2x4.8 MB extra copies
+When this data is transferred from sub-process to the main process, 2x4.8 MB extra copies
 are created.
 
 In SPDL, we implemented the I/O module, which avoids these redundant memory allocations and
@@ -328,7 +328,7 @@ Then we put them together to build the Pipeline.
        .build(num_threads=num_workers)
    )
 
-Running the pipelinn with different number of threads, we get the following result.
+Running the pipeline with different number of threads, we get the following result.
 
 .. include:: ../plots/migration_5.txt
 
@@ -342,11 +342,11 @@ We looked at how one can replace PyTorch DataLoader with SPDL Pipeline while
 improving the performance of data loading.
 
 The initial step can be mechanically applied, but to ensure that the resulting
-pipeline is more perfomant, it is necessary to benchmark and adjust parts of the
+pipeline is more performant, it is necessary to benchmark and adjust parts of the
 pipeline.
 
 We recommend to use :py:mod:`spdl.io` module for processing media data. It is
-designed for scaling througput and has small memory footprint.
+designed for scaling throughput and has small memory footprint.
 
 For more complete performance analysis on the SPDL-based pipeline, please refer
 to :py:mod:`multi_thread_preprocessing`.

@@ -45,13 +45,13 @@ We execute the pipeline without downstream load, and we obtain the following log
    the total duration of the stage include everything from task execution
    to the time it waited on input/output queues.
 
-``QPS`` (queries per second, though it is not query) is the number of tasks successfully completed, devided by the duration of the stage. It is an indication of how fast the stage is processing items.
+``QPS`` (queries per second, though it is not query) is the number of tasks successfully completed, divided by the duration of the stage. It is an indication of how fast the stage is processing items.
 
 From source to the sink, ``QPS`` can only decrease, as it is impossible for downstream stages to process items faster than upstream stages.
-If a downstream stage is fast enough to catch up its upstream stage, then the QPS values are raoughly the same between these stages.
+If a downstream stage is fast enough to catch up its upstream stage, then the QPS values are roughly the same between these stages.
 If a downstream stage is not as fast as its upstream stage, then the QPS value of the downstream stage is smaller than that of the upstream stage.
 
-Therefore, by locating the stage at which QPS drops significantly, we can determine the stage which is the bottleneck within the pipline.
+Therefore, by locating the stage at which QPS drops significantly, we can determine the stage which is the bottleneck within the pipeline.
 
 In the above example, QPS drops from 137 to 126 in the ``process`` stage. This indicates that data processing is not up to the speed of data acquisition. To optimize the pipeline throughput, one needs to improve the performance of the ``process`` stage. Increasing the throughput of the ``download`` stage does not help. How to optimize the ``process`` stage depends on the other factors. For example if the machine executing the pipeline has spare computation resource, then increasing the concurrency and the number of threads can help.
 
@@ -60,7 +60,7 @@ Tuning Pipeline Performance
 
 Let's look at another example.
 
-This time, we download images from the remote source, decode, batch and send them to GPU device. We create decoding/preprocessing and batch stage using :py:mod:`spdl.io`.
+This time, we download images from the remote source, decode, batch and send them to GPU device. We create decoding/pre-processing and batch stage using :py:mod:`spdl.io`.
 
 .. code-block::
 
@@ -209,9 +209,9 @@ The following table summarizes the above result.
      7                  256                 32       954.30       951.55                945.92
    === ==================== ================== ============ ============ =====================
 
-Looking at the first pipeline (``Run 1``), we do not see a siginficant QPS drop in the stages.
+Looking at the first pipeline (``Run 1``), we do not see a significant QPS drop in the stages.
 It is around 241 at the beginning and the at the end of the pipeline.
-This suggests that the firsta stage (download) is dominating the QPS of the whole pipeline.
+This suggests that the first stage (download) is dominating the QPS of the whole pipeline.
 So we increase the download concurrency.
 
 As we increase the concurrency of download (``Run 2 - 4``), QPS increases, but QPS is saturated

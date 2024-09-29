@@ -112,4 +112,4 @@ The average upstream wait time is increased to 100 millisecond.
 Summary
 -------
 
-Using :py:class:`Pipeline`, it becomes easy to determine if the bottleneck is in data loading or not. When the data loading is the bottleneck, the sink stage gets blocked on the input queue. So if the upstream wait time is larger than that of downstream, the dataloading is the bottleneck.
+Using :py:class:`Pipeline`, it becomes easy to determine if the bottleneck is in data loading or not. When the data loading is the bottleneck, the sink stage gets blocked on the input queue. So if the upstream wait time is larger than that of downstream, the data loading is the bottleneck.
