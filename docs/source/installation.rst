@@ -109,6 +109,4 @@ To build SPDL with Free-Threaded Python, the following manual changes are requir
 We intend to incorporate these changes in build process, once Python 3.13 and
 FT-aware nanobind is released.
 
-1. Replace the source code of nanobind with `the one in free-threaded branch <https://github.com/wjakob/nanobind/pull/695>`_.
-   You need to update the corresponding `CMakeLists.txt <https://github.com/facebookresearch/spdl/blob/main/third_party/nanobind/CMakeLists.txt>`_.
-2. Add ``FREE_THREADED`` to ``nanobind_add_module``. Please refer to `the doc <https://github.com/wjakob/nanobind/blob/23dcbabf5b1aae3da4b92363b75e685feb19642b/docs/free_threaded.rst>`_.
+1. Add ``FREE_THREADED`` to ``nanobind_add_module``. Please refer to `the doc <https://nanobind.readthedocs.io/en/latest/free_threaded.html>`_.
