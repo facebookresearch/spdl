@@ -6,28 +6,28 @@ How to work around GIL?
 
 In Python, GIL (Global Interpreter Lock) practically prevents the use of multi-threading, however extension modules that are written in low-level languages, such as C, C++ and Rust, can release GIL when executing operations that do not interact with Python interpreter.
 
-Many libraries used for dataloading release the GIL. To name a few;
+Many libraries used for data loading release the GIL. To name a few;
 
 - Pillow
 - OpenCV
 - Decord
 - tiktoken
 
-Typically, the bottleneck of model training in loading and preprocessing the media data.
+Typically, the bottleneck of model training in loading and pre-processing the media data.
 So even though there are still parts of pipelines that are constrained by GIL,
-by taking advantage of preprocessing functions that release GIL,
+by taking advantage of pre-processing functions that release GIL,
 we can achieve high throughput.
 
 What if a function does not release GIL?
 ----------------------------------------
 
 In case you need to use a function that takes long time to execute (e.g. network utilities)
-but it does not release GIL, you can delegate the stage to subprocess.
+but it does not release GIL, you can delegate the stage to sub-process.
 
 :py:meth:`spdl.dataloader.PipelineBuilder.pipe` method takes an optional ``executor`` argument.
 The default behavior of the ``Pipeline`` is to use the thread pool shared among all stages.
 You can pass an instance of :py:class:`concurrent.futures.ProcessPoolExecutor`,
-and that stage will execute the function in the subprocess.
+and that stage will execute the function in the sub-process.
 
 .. code-block::
 
@@ -50,12 +50,12 @@ This will build pipeline like the following.
 .. note::
 
    Along with the function arguments and return values, the function itself is also
-   serialized and passed to the subprocess. Therefore, the function to be executed
+   serialized and passed to the sub-process. Therefore, the function to be executed
    must be a plain function. Closures and class methods cannot be passed.
 
 .. tip::
 
-   If you need to perform one-time initialization in subporcess, you can use
+   If you need to perform one-time initialization in sub-process, you can use
    ``initializer`` and ``initargs`` arguments.
 
    The values passed as ``initializer`` and ``initargs`` must be picklable.
@@ -101,6 +101,6 @@ Why Async IO?
 
 When training a model with large amount of data, the data are retrieved from remote locations. Network utilities often provide APIs based on Async I/O.
 
-The Async I/O allows to easily build complex data preprocessing pipeline and execute them while automatically parallelizing parts of the pipline, achiving high throughput.
+The Async I/O allows to easily build complex data pre-processing pipeline and execute them while automatically parallelizing parts of the pipeline, achieving high throughput.
 
-Synchronous operations that release GIL can be converted to async operations easily by running them in a thread pool. So by converting the synchronous preprocessing functions that release GIL into asynchronous operations, the entire data preprocessing pipeline can be executed in async event loop. The event loop handles the scheduling of data processing functions, and execute them concurrently.
+Synchronous operations that release GIL can be converted to async operations easily by running them in a thread pool. So by converting the synchronous pre-processing functions that release GIL into asynchronous operations, the entire data pre-processing pipeline can be executed in async event loop. The event loop handles the scheduling of data processing functions, and execute them concurrently.

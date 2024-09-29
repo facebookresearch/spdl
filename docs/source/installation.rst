@@ -95,7 +95,7 @@ Optional Dependencies
 * The header files of `Video Codec SDK <https://gitlab.com/nvidia/video/video-codec-sdk>`_ ††
 
   The header files of video codec SDK (``nvcuvid.h`` and ``cuviddec.h``),
-  which are distribtued under MIT license, is used when compiling SPDL with
+  which are distributed under MIT license, is used when compiling SPDL with
   hardware video decoder enabled.
 
 .. note::

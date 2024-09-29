@@ -1,7 +1,7 @@
 Performance Analysis
 ====================
 
-When optimizing ML model pipeline, it is imporatnt to determine if data loading is bottleneck.
+When optimizing ML model pipeline, it is important to determine if data loading is bottleneck.
 SPDL facilitates the pipeline performance analysis.
 
 :py:class:`Pipeline` records runtime statistics and report them at the end of the execution.

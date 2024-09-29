@@ -49,7 +49,7 @@ This approach is better fit for achieving higher throughput.
         end
         src --> P1 --> P2 --> P3
 
-It is worth noting that in this setup, there is no equivalent of DataSet class.
+It is worth noting that in this setup, there is no equivalent of Dataset class.
 
 This paradigm shift makes it difficult to achieve mechanical update (such as
 one-line-change or swap-the-class type of update) to SPDL.

@@ -55,13 +55,13 @@ For example
    and refrain from performing blocking operation.
 
    Running a blocking operation in async event loop can, in turn, prevent the
-   loop from scheduling callbacks, prevent tasks from being cancelled, and
+   loop from scheduling callbacks, prevent tasks from being canceled, and
    prevent the background thread from joining.
 
 Processing
 ----------
 
-Preprocessing is where a variety of operations are applied to the items passed
+Pre-processing is where a variety of operations are applied to the items passed
 from the previous stages.
 
 You can define processing stage by passing an operator function (callable) to
@@ -85,7 +85,7 @@ locations, batch decode and send data to GPU.
    flowchart TD
        A[Source] --> B(Acquire data)
        B --> C(Batch)
-       C --> D(Decode & Preprocess &Transfer to GPU & Convert to Tensor)
+       C --> D(Decode & Pre-process &Transfer to GPU & Convert to Tensor)
        D --> E[Sink]
 
 An implementation could look like this.

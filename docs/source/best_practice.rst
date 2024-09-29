@@ -16,7 +16,7 @@ that should go together into a same batch, use
 :py:func:`spdl.io.load_image_batch` (or its async variant
 :py:func:`spdl.io.async_load_image_batch`).
 
-Otherwise, demux, decode and preprocess multiple media, then combine them with
+Otherwise, demux, decode and pre-process multiple media, then combine them with
 :py:func:`spdl.io.convert_frames` (or :py:func:`spdl.io.async_convert_frames`).
 For example, the following functions implement decoding and tensor creation
 separately.
@@ -36,7 +36,7 @@ separately.
 
 They can be combined in :py:class:`~spdl.dataloader.Pipeline`, which automatically
 discards the items failed to process (for example due to invalid data), and
-keep the batch size consistent by using other items successefully processed.
+keep the batch size consistent by using other items successfully processed.
 
 .. code-block::
 
@@ -67,7 +67,7 @@ returns Tensors, make the components of the ``Dataset``
 implementation available by breaking down the implementation into
 
 * Iterator (or map) interface that returns paths instead of Tensors.
-* A helper function that loads the soure path into Tensor.
+* A helper function that loads the source path into Tensor.
 
 For example, the interface of a ``Dataset`` for image classification
 might look like the following.
@@ -80,7 +80,7 @@ might look like the following.
 
 We recommend to separate the source and process and make them additional
 public interface.
-(Also, as descibed above, we recommend to not convert each item into
+(Also, as described above, we recommend to not convert each item into
 ``Tensor`` for the performance reasons.)
 
 .. code-block::
