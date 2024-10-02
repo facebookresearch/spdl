@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["5", "6", "7" ]
+        ffmpeg-version: ["5.1", "6.1", "7.1" ]
     runs-on:  ${{ inputs.os }}
     defaults:
       run:
@@ -43,7 +43,8 @@ jobs:
       - name: Unit test
         run: |
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
-          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
           conda install -q -c pytorch numpy pytest pytorch numba
           # For some reason, the dynamic libraries are not found.
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
