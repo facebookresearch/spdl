@@ -1,5 +1,5 @@
-Why use to SPDL?
-================
+Why try SPDL?
+=============
 
 When trying SPDL, you should ask why you want to do that,
 and what's the benefit and what's the drawback?
