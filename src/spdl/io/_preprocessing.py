@@ -113,9 +113,15 @@ def get_video_filter_desc(
 
         scale_width:
             `Video`, `Image`: *Optional:* Change the resolution of the frame.
+            If ``0``, the original width is used. If ``-n``, the image is rescaled
+            so that aspect ratio is maintained, then adjusted so that the size is
+            divisible by ``n``.
 
         scale_height:
             `Video`, `Image`: *Optional:* Change the resolution of the frame.
+            If ``0``, the original height is used. If ``-1``, the image is rescaled
+            so that aspect ratio is maintained, then adjusted so that the size is
+            divisible by ``n``.
 
         scale_algo:
             `Video`, `Image`: *Optional:* Scaling algorithm.
