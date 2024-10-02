@@ -61,5 +61,5 @@ jobs:
           name: "${{ inputs.artifact }}"
           path: ~/package
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
           overwrite: true
