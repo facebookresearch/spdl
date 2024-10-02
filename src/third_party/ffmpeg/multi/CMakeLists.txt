@@ -36,8 +36,8 @@ if (APPLE)
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/2024-04-05/macos_arm64/7.0.tar.gz
-      URL_HASH SHA256=f73dc42e96eb59ac34689f59e59cd140f0c865574aee5b9f7ded9ef16b6738e8
+      URL ${base_url}/2024-10-02/macos_arm64/7.1.tar.gz
+      URL_HASH SHA256=5b2a8c1861ec6b7c73187857669bbcdfd284a303283abf6478a373adb99f2659
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
@@ -61,8 +61,8 @@ if (APPLE)
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/2024-04-05/macos_x86_64/7.0.tar.gz
-      URL_HASH SHA256=a7ea9df684f90993a213d458427b21b13fb8672b2734637701c1f75282530041
+      URL ${base_url}/2024-10-02/macos_x86_64/7.1.tar.gz
+      URL_HASH SHA256=59e51d7f3cfc510d284876a0bc1828654847d977fa5ecedb0340b46ff7df0316
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -97,8 +97,8 @@ elseif (UNIX)
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/2024-04-05/linux_aarch64/7.0.tar.gz
-      URL_HASH SHA256=4bb2a2a5b8c547bfcc631073d6f97939666db8f5a85e85d3262ab07608e0fe67
+      URL ${base_url}/2024-10-02/linux_aarch64/7.1.tar.gz
+      URL_HASH SHA256=ec4dba7c4474130545f561b2ab100ab1c62de5fd9d0eadcba07db25d7b286997
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
@@ -122,8 +122,8 @@ elseif (UNIX)
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/2024-04-05/linux_x86_64/7.0.tar.gz
-      URL_HASH SHA256=4b21ce39cc821c371d9cd1fb64d0f1d7a74279ed10675cf7116ae04b4ad8c58b
+      URL ${base_url}/2024-10-02/linux_x86_64/7.1.tar.gz
+      URL_HASH SHA256=02149515fb01ac1f9c7a080eec4ab79a2c6bab87ee086b216de7fbfc0286f721
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -158,8 +158,8 @@ elseif(MSVC)
     )
   FetchContent_Declare(
     f7
-    URL ${base_url}/2024-04-05/windows/7.0.tar.gz
-    URL_HASH SHA256=a53658b53d6da34a67dade6edd529beb33b250b8ed906c89832805f2226d430f
+    URL ${base_url}/2024-10-02/windows/7.1.tar.gz
+    URL_HASH SHA256=a145f93da178ff9a87e04d8ee9d6ea3dc73d38f20864d4fc8dfadd9429fb39b2
     DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
 endif()
