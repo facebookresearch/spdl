@@ -21,7 +21,7 @@ from typing import Any
 # This import is just for annotation, so please overlook this one.
 from ._type_stub import *  # noqa: F403  # isort: skip
 
-from . import _composite, _config, _convert, _core, _preprocessing
+from . import _composite, _config, _convert, _core, _preprocessing, _type_stub
 
 _mods = [
     _composite,
@@ -32,7 +32,7 @@ _mods = [
 ]
 
 
-__all__ = sorted(item for mod in _mods for item in mod.__all__)
+__all__ = sorted(item for mod in [*_mods, _type_stub] for item in mod.__all__)
 
 
 def __dir__():
