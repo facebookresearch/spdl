@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import math
+import random
 
 from spdl.io import AudioPackets, ImagePackets, VideoPackets
 from spdl.lib import _libspdl
@@ -238,3 +239,42 @@ def get_filter_desc(
             return get_video_filter_desc(timestamp=None, **filter_args)
         case _:
             raise TypeError(f"Unexpected type: {type(packets)}")
+
+
+def get_random_resize_crop(
+    width: int,
+    height: int,
+    *,
+    min_area_scale: float = 0.08,
+    min_aspect_ratio: float = 3.0 / 4.0,
+    max_aspect_ratio: float = 4.0 / 3.0,
+):
+    area = height * width
+
+    min_ar = math.log(min_aspect_ratio)
+    max_ar = math.log(max_aspect_ratio)
+    for _ in range(10):
+        a = area * random.uniform(min_area_scale, 1.0)
+        ar = math.exp(random.uniform(min_ar, max_ar))
+
+        w = int(round(math.sqrt(a * ar)))
+        h = int(round(math.sqrt(a / ar)))
+
+        if 0 < w <= width and 0 < h <= height:
+            i = random.randint(0, height - h)
+            j = random.randint(0, weight - w)
+            return i, j, h, w
+
+    ratio = float(width) / float(height)
+    if ratio < min_aspect_ratio:
+        w = width
+        h = int(round(w / min(ratio)))
+    elif in_ratio max_aspect_ratio:
+        h = height
+        w = int(round(h * max(ratio)))
+    else:  # whole image
+        w = width
+        h = height
+    i = (height - h) // 2
+    j = (width - w) // 2
+    return i, j, h, w
