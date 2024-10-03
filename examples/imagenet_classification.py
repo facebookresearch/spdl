@@ -503,9 +503,10 @@ def get_mappings() -> dict[str, int]:
     Returns:
         Mapping from WordNet ID to class index.
 
-    .. Example::
+    Example:
 
         .. code-block::
+
            >>> class_mapping = get_mappings()
            >>> print(class_mapping["n03709823"])
            636
