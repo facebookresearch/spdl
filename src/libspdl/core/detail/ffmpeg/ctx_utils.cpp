@@ -128,10 +128,26 @@ AVFormatInputContextPtr get_input_format_ctx(
         src ? av_error(errnum, "Failed to open the input: {}", src)
             : av_error(errnum, "Failed to open custom input."));
   }
+
+  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
+    LOG(INFO) << "@@@ av_dump_format, stream: " << i;
+    av_dump_format(fmt_ctx, i, src, 0);
+
+    auto s = fmt_ctx->streams[i];
+    LOG(INFO) << fmt::format(
+        "stream index: {}\n"
+        "width: {}\n"
+        "height: {}\n",
+        s->index,
+        s->codecpar->width,
+        s->codecpar->height);
+  }
+
   // Now pass down the responsibility of resource clean up to RAII.
   AVFormatInputContextPtr ret{fmt_ctx};
 
   check_empty(option);
+
   return ret;
 }
 
