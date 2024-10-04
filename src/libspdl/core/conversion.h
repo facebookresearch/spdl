@@ -15,6 +15,8 @@
 
 namespace spdl::core {
 
+// The actual implementation is found in
+// detail/ffmpeg/conversion.cpp
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
     const std::vector<const FFmpegFrames<media_type>*>& batch,
