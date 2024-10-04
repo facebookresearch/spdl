@@ -27,7 +27,7 @@ struct CUDABuffer;
 using CPUBufferPtr = std::unique_ptr<CPUBuffer>;
 using CUDABufferPtr = std::unique_ptr<CUDABuffer>;
 
-/// Abstract base buffer class (to be exposed to Python)
+/// Abstract base buffer class (technically not needed)
 /// Represents contiguous array memory.
 struct Buffer {
   ///
@@ -40,44 +40,43 @@ struct Buffer {
   /// Size of unit element
   size_t depth = sizeof(uint8_t);
 
-  ///
-  /// The actual data.
-  std::shared_ptr<Storage> storage;
-
-  Buffer(
-      std::vector<size_t> shape,
-      ElemClass elem_class,
-      size_t depth,
-      Storage* storage);
+  Buffer(std::vector<size_t> shape, ElemClass elem_class, size_t depth);
   virtual ~Buffer() = default;
 
   ///
   /// Returns the pointer to the head of the data buffer.
-  void* data();
+  virtual void* data() = 0;
 };
 
 ///
 /// Contiguous array data on CPU memory.
 struct CPUBuffer : public Buffer {
+  std::shared_ptr<CPUStorage> storage;
+
   CPUBuffer(
       const std::vector<size_t>& shape,
       ElemClass elem_class,
       size_t depth,
-      CPUStorage* storage);
+      std::shared_ptr<CPUStorage> storage);
+
+  void* data() override;
 };
 
 ///
 /// Contiguous array data on a CUDA device.
 struct CUDABuffer : Buffer {
 #ifdef SPDL_USE_CUDA
+  std::shared_ptr<CUDAStorage> storage;
   int device_index;
 
   CUDABuffer(
       std::vector<size_t> shape,
       ElemClass elem_class,
       size_t depth,
-      CUDAStorage* storage,
+      std::shared_ptr<CUDAStorage> storage,
       int device_index);
+
+  void* data() override;
 
   uintptr_t get_cuda_stream() const;
 

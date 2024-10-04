@@ -18,19 +18,8 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Buffer
 ////////////////////////////////////////////////////////////////////////////////
-Buffer::Buffer(
-    std::vector<size_t> shape_,
-    ElemClass elem_class_,
-    size_t depth_,
-    Storage* storage_)
-    : shape(std::move(shape_)),
-      elem_class(elem_class_),
-      depth(depth_),
-      storage(storage_) {}
-
-void* Buffer::data() {
-  return storage->data();
-}
+Buffer::Buffer(std::vector<size_t> shape_, ElemClass elem_class_, size_t depth_)
+    : shape(std::move(shape_)), elem_class(elem_class_), depth(depth_) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // CPUBuffer
@@ -39,8 +28,12 @@ CPUBuffer::CPUBuffer(
     const std::vector<size_t>& shape_,
     ElemClass elem_class_,
     size_t depth_,
-    CPUStorage* storage_)
-    : Buffer(shape_, elem_class_, depth_, (Storage*)storage_) {}
+    std::shared_ptr<CPUStorage> storage_)
+    : Buffer(shape_, elem_class_, depth_), storage(std::move(storage_)) {}
+
+void* CPUBuffer::data() {
+  return storage->data();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Factory functions
@@ -67,7 +60,7 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
       fmt::join(shape, ", "),
       depth);
   return std::make_unique<CPUBuffer>(
-      shape, elem_class, depth, new CPUStorage{size, pin_memory});
+      shape, elem_class, depth, std::make_shared<CPUStorage>(size, pin_memory));
 }
 
 } // namespace spdl::core
