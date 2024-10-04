@@ -17,18 +17,14 @@
 
 #include "gil.h"
 
-#include <cstring>
-
 namespace nb = nanobind;
 
 namespace spdl::core {
 namespace {
 template <MediaType media_type>
-CPUBufferPtr convert(
-    const FFmpegFramesPtr<media_type>&& frames,
-    bool pin_memory) {
+CPUBufferPtr convert(const FFmpegFramesPtr<media_type>&& frames) {
   RELEASE_GIL();
-  return convert_frames(frames.get(), pin_memory);
+  return convert_frames(frames.get());
 }
 
 template <MediaType media_type>
@@ -42,11 +38,9 @@ std::vector<const spdl::core::FFmpegFrames<media_type>*> _ref(
 }
 
 template <MediaType media_type>
-CPUBufferPtr batch_convert(
-    std::vector<FFmpegFramesPtr<media_type>>&& frames,
-    bool pin_memory) {
+CPUBufferPtr batch_convert(std::vector<FFmpegFramesPtr<media_type>>&& frames) {
   RELEASE_GIL();
-  return convert_frames(_ref(frames), pin_memory);
+  return convert_frames(_ref(frames));
 }
 } // namespace
 
@@ -54,36 +48,12 @@ void register_conversion(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Frame conversion
   ////////////////////////////////////////////////////////////////////////////////
-  m.def(
-      "convert_frames",
-      &convert<MediaType::Audio>,
-      nb::arg("frames"),
-      nb::arg("pin_memory") = false);
-  m.def(
-      "convert_frames",
-      &convert<MediaType::Video>,
-      nb::arg("frames"),
-      nb::arg("pin_memory") = false);
-  m.def(
-      "convert_frames",
-      &convert<MediaType::Image>,
-      nb::arg("frames"),
-      nb::arg("pin_memory") = false);
+  m.def("convert_frames", &convert<MediaType::Audio>, nb::arg("frames"));
+  m.def("convert_frames", &convert<MediaType::Video>, nb::arg("frames"));
+  m.def("convert_frames", &convert<MediaType::Image>, nb::arg("frames"));
 
-  m.def(
-      "convert_frames",
-      &batch_convert<MediaType::Audio>,
-      nb::arg("frames"),
-      nb::arg("pin_memory") = false);
-  m.def(
-      "convert_frames",
-      &batch_convert<MediaType::Video>,
-      nb::arg("frames"),
-      nb::arg("pin_memory") = false);
-  m.def(
-      "convert_frames",
-      &batch_convert<MediaType::Image>,
-      nb::arg("frames"),
-      nb::arg("pin_memory") = false);
+  m.def("convert_frames", &batch_convert<MediaType::Audio>, nb::arg("frames"));
+  m.def("convert_frames", &batch_convert<MediaType::Video>, nb::arg("frames"));
+  m.def("convert_frames", &batch_convert<MediaType::Image>, nb::arg("frames"));
 }
 } // namespace spdl::core

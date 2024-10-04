@@ -420,7 +420,6 @@ async def async_load_image_batch(
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
-    pin_memory: bool = False,
     strict: bool = True,
     **kwargs,
 ) -> CPUBuffer: ...
@@ -437,7 +436,6 @@ async def async_load_image_batch(
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: CUDAConfig,
-    pin_memory: bool = False,
     strict: bool = True,
     **kwargs,
 ) -> CUDABuffer: ...
@@ -453,7 +451,6 @@ async def async_load_image_batch(
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
     device_config=None,
-    pin_memory=False,
     strict=True,
     **kwargs,
 ):
@@ -544,6 +541,13 @@ async def async_load_image_batch(
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
 
+    if "pin_memory" in kwargs:
+        warnings.warn(
+            "`pin_memory` argument has been removed. Use `storage` instead.",
+            stacklevel=2,
+        )
+        kwargs.pop("pin_memory")
+
     if device_config is None and "cuda_config" in kwargs:
         warnings.warn(
             "The `cuda_config` argument has ben renamed to `device_config`.",
@@ -582,7 +586,7 @@ async def async_load_image_batch(
     if not frames:
         raise RuntimeError("Failed to load all the images.")
 
-    buffer = await _core.async_convert_frames(frames, pin_memory=pin_memory)
+    buffer = await _core.async_convert_frames(frames)
 
     if device_config is not None:
         buffer = await _core.async_transfer_buffer(buffer, device_config=device_config)
