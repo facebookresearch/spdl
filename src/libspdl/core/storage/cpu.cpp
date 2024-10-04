@@ -33,6 +33,8 @@ CPUStorage::CPUStorage(size_t size, bool pin_memory) {
     LOG(WARNING)
         << "`pin_memory` requires SPDL with CUDA support. Falling back to CPU memory.";
 #else
+    LOG(WARNING)
+        << "`pin_memory` is under development and is currently known to be slower and unstable";
     CHECK_CUDA(
         cudaHostAlloc(&data_, size, cudaHostAllocDefault),
         "Failed to allocate pinned memory.");
