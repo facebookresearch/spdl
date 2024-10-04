@@ -48,6 +48,10 @@ cuda_allocator default_alloc = {default_allocator, default_deleter};
 
 CUDAStorage::CUDAStorage(size_t size, const CUDAConfig& cfg)
     : stream(static_cast<CUstream>((void*)cfg.stream)) {
+  if (size == 0) {
+    SPDL_FAIL("`size` must be greater than 0.");
+  }
+
   TRACE_EVENT("decoding", "custom_cuda_allocator_fn");
   auto [allocator_fn, deleter_fn] = cfg.allocator.value_or(default_alloc);
   data_ =

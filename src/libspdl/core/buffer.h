@@ -92,7 +92,7 @@ CPUBufferPtr cpu_buffer(
     const std::vector<size_t>& shape,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t),
-    bool pin_memory = false);
+    std::shared_ptr<CPUStorage> storage = nullptr);
 
 #ifdef SPDL_USE_CUDA
 ///

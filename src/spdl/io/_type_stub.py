@@ -25,6 +25,7 @@ __all__ = [
     "DecodeConfig",
     "EncodeConfig",
     "CUDAConfig",
+    "CPUStorage",
 ]
 
 
@@ -480,3 +481,10 @@ class CUDAConfig:
     Specify the CUDA devie and memory management.
 
     See the factory function :py:func:`~spdl.io.cuda_config`."""
+
+
+class CPUStorage:
+    """CPUStorage()
+    Allocate a block of CPU memory.
+
+    See the factory function :py:func:`~spdl.io.cpu_storage`."""

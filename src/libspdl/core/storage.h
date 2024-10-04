@@ -26,12 +26,19 @@ struct Storage {
   virtual ~Storage() = default;
 };
 
-class CPUStorage : Storage {
+class CPUStorage : public Storage {
+ public:
+  size_t size;
+  // So far, we only need this in CPUStorage. So we are not adding it
+  // in CUDAStorage. If we need to add that to CUDAStorage, revisit
+  // the interface/abstraction. (Is virtual `get_size` better?)
+ private:
   void* data_ = nullptr;
   bool memory_pinned = false;
 
  public:
   void* data() const override;
+  bool is_pinned() const;
 
   CPUStorage() = default;
   explicit CPUStorage(size_t size, bool pin_memory = false);
@@ -45,7 +52,7 @@ class CPUStorage : Storage {
   ~CPUStorage() override;
 };
 
-class CUDAStorage : Storage {
+class CUDAStorage : public Storage {
 #ifdef SPDL_USE_CUDA
   void* data_ = nullptr;
 
