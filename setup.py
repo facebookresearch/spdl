@@ -111,6 +111,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DSPDL_USE_FFMPEG_VERSION={_SPDL_USE_FFMPEG_VERSION}",
             f"-DSPDL_DEBUG_REFCOUNT={_b(_env('SPDL_DEBUG_REFCOUNT'))}",
             f"-DSPDL_BUILD_STUB={_b(_SPDL_BUILD_STUB)}",
+            f"-DSPDL_HOLD_GIL={_b(_env('SPDL_HOLD_GIL', False))}",
             ###################################################################
             f"-DPython_INCLUDE_DIR={sysconfig.get_paths()['include']}",
             "-GNinja",
