@@ -552,6 +552,12 @@ def convert_frames(
             - ``W``: width
             - ``H``: height
     """
+    if "pin_memory" in kwargs:
+        warnings.warn(
+            "`pin_memory` argument has been removed. Use `storage` instead.",
+            stacklevel=2,
+        )
+        kwargs.pop("pin_memory")
     return _libspdl.convert_frames(frames, **kwargs)
 
 
@@ -567,6 +573,12 @@ async def async_convert_frames(
     **kwargs,
 ) -> CPUBuffer:
     """Async version of :py:func:`~spdl.io.convert_frames`."""
+    if "pin_memory" in kwargs:
+        warnings.warn(
+            "`pin_memory` argument has been removed. Use `storage` instead.",
+            stacklevel=2,
+        )
+        kwargs.pop("pin_memory")
     return await run_async(convert_frames, frames, **kwargs)
 
 

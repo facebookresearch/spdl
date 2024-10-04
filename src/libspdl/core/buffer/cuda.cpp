@@ -17,10 +17,15 @@ CUDABuffer::CUDABuffer(
     std::vector<size_t> shape_,
     ElemClass elem_class_,
     size_t depth_,
-    CUDAStorage* storage_,
+    std::shared_ptr<CUDAStorage> storage_,
     int device_index_)
-    : Buffer(std::move(shape_), elem_class_, depth_, (Storage*)storage_),
+    : Buffer(std::move(shape_), elem_class_, depth_),
+      storage(std::move(storage_)),
       device_index(device_index_) {}
+
+void* CUDABuffer::data() {
+  return storage->data();
+}
 
 uintptr_t CUDABuffer::get_cuda_stream() const {
   return (uintptr_t)(((CUDAStorage*)(storage.get()))->stream);
@@ -48,7 +53,7 @@ CUDABufferPtr cuda_buffer(
       shape,
       elem_class,
       depth,
-      new CUDAStorage{depth * prod(shape), cfg},
+      std::make_shared<CUDAStorage>(depth * prod(shape), cfg),
       cfg.device_index);
 }
 
