@@ -20,15 +20,15 @@ namespace spdl::core {
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    bool pin_memory = false);
+    std::shared_ptr<CPUStorage> storage = nullptr);
 
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
     const FFmpegFrames<media_type>* frames,
-    bool pin_memory = false) {
+    std::shared_ptr<CPUStorage> storage = nullptr) {
   const std::vector<const FFmpegFrames<media_type>*> batch{frames};
   // Use the same impl as batch conversion
-  auto ret = convert_frames<media_type>(batch, pin_memory);
+  auto ret = convert_frames<media_type>(batch, std::move(storage));
   ret->shape.erase(ret->shape.begin()); // Trim the batch dim
   return ret;
 }

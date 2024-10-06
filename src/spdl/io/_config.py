@@ -6,7 +6,7 @@
 
 # pyre-unsafe
 
-from spdl.io import CUDAConfig, DecodeConfig, DemuxConfig, EncodeConfig
+from spdl.io import CPUStorage, CUDAConfig, DecodeConfig, DemuxConfig, EncodeConfig
 from spdl.lib import _libspdl
 
 __all__ = [
@@ -14,6 +14,7 @@ __all__ = [
     "decode_config",
     "encode_config",
     "cuda_config",
+    "cpu_storage",
 ]
 
 
@@ -177,3 +178,35 @@ def encode_config(**kwargs) -> EncodeConfig:
         max_bframes (int): *Optional* Override maximum number of B-Frames.
     """
     return _libspdl.EncodeConfig(**kwargs)
+
+
+def cpu_storage(size: int, pin_memory=True) -> CPUStorage:
+    """Allocate a block of memory.
+
+    This function allocates a block of memory. The intended usage is to make
+    the data transfer from CPU to GPU faster and overlaps the data tansfer
+    and GPU computation.
+
+    .. admonition:: Example: Use page-locked memory for faster CUDA transfer.
+
+       >>> packets = spdl.io.demux_image(sample.path)
+       >>> frames = spdl.io.decode_packets(packets)
+
+       >>> size = frames.width * frames.height * 3
+       >>> storage = spdl.lib._libspdl.cpu_storage(size, pin_memory=True)
+
+       >>> buffer = spdl.io.convert_frames(frames, storage=storage)
+       >>> stream = torch.cuda.Stream(device=0)
+       >>> cuda_config = spdl.io.cuda_config(device_index=0, stream=stream.cuda_stream)
+       >>> buffer = spdl.io.transfer_buffer(buffer, cuda_config=cuda_config)
+       >>> tensor = spdl.io.to_torch(buffer)
+
+    Args:
+        size: The size of memory to allocate in bytes.
+        pin_memory: If ``True``, the memory region is page-locked, so that GPUs
+            can access them independently without help from CPU.
+
+    Returns:
+        The resulting memory block.
+    """
+    return _libspdl.cpu_storage(size=size, pin_memory=pin_memory)

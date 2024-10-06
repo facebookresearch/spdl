@@ -16,6 +16,7 @@ namespace spdl::core {
 
 // CPU -> CUDA
 CUDABufferPtr transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg);
+// For transfering generic arrays like NumPy.
 CUDABufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
     ElemClass elem_class,

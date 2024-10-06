@@ -22,9 +22,11 @@ namespace nb = nanobind;
 namespace spdl::core {
 namespace {
 template <MediaType media_type>
-CPUBufferPtr convert(const FFmpegFramesPtr<media_type>&& frames) {
+CPUBufferPtr convert(
+    const FFmpegFramesPtr<media_type>&& frames,
+    std::shared_ptr<CPUStorage> storage) {
   RELEASE_GIL();
-  return convert_frames(frames.get());
+  return convert_frames(frames.get(), storage);
 }
 
 template <MediaType media_type>
@@ -38,9 +40,11 @@ std::vector<const spdl::core::FFmpegFrames<media_type>*> _ref(
 }
 
 template <MediaType media_type>
-CPUBufferPtr batch_convert(std::vector<FFmpegFramesPtr<media_type>>&& frames) {
+CPUBufferPtr batch_convert(
+    std::vector<FFmpegFramesPtr<media_type>>&& frames,
+    std::shared_ptr<CPUStorage> storage) {
   RELEASE_GIL();
-  return convert_frames(_ref(frames));
+  return convert_frames(_ref(frames), storage);
 }
 } // namespace
 
@@ -48,12 +52,36 @@ void register_conversion(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Frame conversion
   ////////////////////////////////////////////////////////////////////////////////
-  m.def("convert_frames", &convert<MediaType::Audio>, nb::arg("frames"));
-  m.def("convert_frames", &convert<MediaType::Video>, nb::arg("frames"));
-  m.def("convert_frames", &convert<MediaType::Image>, nb::arg("frames"));
+  m.def(
+      "convert_frames",
+      &convert<MediaType::Audio>,
+      nb::arg("frames"),
+      nb::arg("storage") = nullptr);
+  m.def(
+      "convert_frames",
+      &convert<MediaType::Video>,
+      nb::arg("frames"),
+      nb::arg("storage") = nullptr);
+  m.def(
+      "convert_frames",
+      &convert<MediaType::Image>,
+      nb::arg("frames"),
+      nb::arg("storage") = nullptr);
 
-  m.def("convert_frames", &batch_convert<MediaType::Audio>, nb::arg("frames"));
-  m.def("convert_frames", &batch_convert<MediaType::Video>, nb::arg("frames"));
-  m.def("convert_frames", &batch_convert<MediaType::Image>, nb::arg("frames"));
+  m.def(
+      "convert_frames",
+      &batch_convert<MediaType::Audio>,
+      nb::arg("frames"),
+      nb::arg("storage") = nullptr);
+  m.def(
+      "convert_frames",
+      &batch_convert<MediaType::Video>,
+      nb::arg("frames"),
+      nb::arg("storage") = nullptr);
+  m.def(
+      "convert_frames",
+      &batch_convert<MediaType::Image>,
+      nb::arg("frames"),
+      nb::arg("storage") = nullptr);
 }
 } // namespace spdl::core

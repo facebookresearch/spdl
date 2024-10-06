@@ -23,18 +23,20 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Storage
 ////////////////////////////////////////////////////////////////////////////////
-CPUStorage::CPUStorage(size_t size, bool pin_memory) {
+CPUStorage::CPUStorage(size_t size_, bool pin_memory) : size(size_) {
   TRACE_EVENT(
       "decoding",
       "CPUStorage::CPUStorage",
       perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
+
+  if (size == 0) {
+    SPDL_FAIL("`size` must be greater than 0.");
+  }
+
   if (pin_memory) {
 #ifndef SPDL_USE_CUDA
-    LOG(WARNING)
-        << "`pin_memory` requires SPDL with CUDA support. Falling back to CPU memory.";
+    SPDL_FAIL("`pin_memory` requires SPDL with CUDA support.");
 #else
-    LOG(WARNING)
-        << "`pin_memory` is under development and is currently known to be slower and unstable";
     CHECK_CUDA(
         cudaHostAlloc(&data_, size, cudaHostAllocDefault),
         "Failed to allocate pinned memory.");
@@ -46,6 +48,9 @@ CPUStorage::CPUStorage(size_t size, bool pin_memory) {
 }
 CPUStorage::CPUStorage(CPUStorage&& other) noexcept {
   *this = std::move(other);
+}
+bool CPUStorage::is_pinned() const {
+  return memory_pinned;
 }
 CPUStorage& CPUStorage::operator=(CPUStorage&& other) noexcept {
   using std::swap;

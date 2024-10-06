@@ -12,6 +12,7 @@ set(src
   bind.cpp
   core/frames.cpp
   core/buffer.cpp
+  core/storage.cpp
   core/packets.cpp
   core/types.cpp
   core/tracing.cpp

@@ -18,6 +18,7 @@ namespace spdl::core {
 void register_types(nb::module_&);
 void register_packets(nb::module_&);
 void register_frames(nb::module_&);
+void register_storage(nb::module_&);
 void register_buffers(nb::module_&);
 void register_tracing(nb::module_&);
 void register_utils(nb::module_&);
@@ -33,6 +34,7 @@ NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_types(m);
   spdl::core::register_packets(m);
   spdl::core::register_frames(m);
+  spdl::core::register_storage(m);
   spdl::core::register_buffers(m);
   spdl::core::register_tracing(m);
   spdl::core::register_utils(m);

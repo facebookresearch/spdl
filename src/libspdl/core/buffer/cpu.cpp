@@ -52,15 +52,28 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
     const std::vector<size_t>& shape,
     ElemClass elem_class,
     size_t depth,
-    bool pin_memory) {
+    std::shared_ptr<CPUStorage> storage) {
   size_t size = depth * prod(shape);
   VLOG(0) << fmt::format(
       "Allocating {} bytes. (shape: {}, elem: {})",
       size,
       fmt::join(shape, ", "),
       depth);
+
+  if (storage) {
+    if (storage->size < size) [[unlikely]] {
+      SPDL_FAIL(fmt::format(
+          "The provided storage does not have enough capacity. ({} < {})",
+          storage->size,
+          size));
+    }
+  }
+
   return std::make_unique<CPUBuffer>(
-      shape, elem_class, depth, std::make_shared<CPUStorage>(size, pin_memory));
+      shape,
+      elem_class,
+      depth,
+      storage ? std::move(storage) : std::make_shared<CPUStorage>(size));
 }
 
 } // namespace spdl::core
