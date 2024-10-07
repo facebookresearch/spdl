@@ -491,8 +491,6 @@ def _init_logging(debug=False):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(format=fmt, level=level)
 
-    spdl.utils.set_ffmpeg_log_level(16)
-
 
 def get_mappings() -> dict[str, int]:
     """Get the mapping from WordNet ID to class and label.
