@@ -9,6 +9,7 @@
 #include <libspdl/core/conversion.h>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
@@ -18,6 +19,8 @@
 #include "gil.h"
 
 namespace nb = nanobind;
+
+using int_array = nb::ndarray<nb::device::cpu, nb::c_contig, int64_t>;
 
 namespace spdl::core {
 namespace {
@@ -46,6 +49,30 @@ CPUBufferPtr batch_convert(
   RELEASE_GIL();
   return convert_frames(_ref(frames), storage);
 }
+
+CPUBufferPtr convert_array(
+    int_array vals,
+    std::shared_ptr<CPUStorage> storage) {
+  auto in_size = vals.nbytes();
+  if (in_size == 0) {
+    throw std::runtime_error("The array be empty.");
+  }
+  // Obtain shape
+  std::vector<size_t> shape;
+  for (size_t i = 0; i < vals.ndim(); ++i) {
+    shape.push_back(vals.shape(i));
+  }
+  auto src = vals.data();
+
+  RELEASE_GIL(); // do not access vals from here.
+  auto buf = cpu_buffer(shape, ElemClass::Int, 8, std::move(storage));
+
+  // copy
+  int64_t* dst = static_cast<int64_t*>(buf->data());
+  memcpy(dst, src, in_size);
+  return buf;
+}
+
 } // namespace
 
 void register_conversion(nb::module_& m) {
@@ -82,6 +109,15 @@ void register_conversion(nb::module_& m) {
       "convert_frames",
       &batch_convert<MediaType::Image>,
       nb::arg("frames"),
+      nb::arg("storage") = nullptr);
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Conversion from int list
+  ////////////////////////////////////////////////////////////////////////////////
+  m.def(
+      "convert_array",
+      &convert_array,
+      nb::arg("vals"),
       nb::arg("storage") = nullptr);
 }
 } // namespace spdl::core
