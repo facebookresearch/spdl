@@ -4,9 +4,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import numpy as np
 import pytest
 import spdl.io
-import spdl.lib
 import torch
 
 
@@ -26,7 +26,7 @@ def test_pin_memory_smoke_test(get_sample, pin_memory):
     frames = spdl.io.decode_packets(packets)
 
     size = frames.width * frames.height * 3
-    storage = spdl.lib._libspdl.cpu_storage(size, pin_memory=pin_memory)
+    storage = spdl.io.cpu_storage(size, pin_memory=pin_memory)
 
     buffer = spdl.io.convert_frames(frames, storage=storage)
     stream = torch.cuda.Stream(device=0)
@@ -44,23 +44,48 @@ def test_pin_memory_small(get_sample):
 
     packets = spdl.io.demux_image(sample.path)
     frames = spdl.io.decode_packets(packets)
-
-    storage = spdl.lib._libspdl.cpu_storage(1, pin_memory=False)
+    storage = spdl.io.cpu_storage(1, pin_memory=False)
 
     with pytest.raises(RuntimeError):
         spdl.io.convert_frames(frames, storage=storage)
 
 
 @pytest.mark.parametrize(
-    "size,pin_memory",
+    "pin_memory",
     [
-        (0, True),
-        (-1, False),
-        (0, True),
-        (-1, False),
+        (True),
+        (False),
     ],
 )
-def test_pin_memory_invalid_size(size, pin_memory):
+def test_pin_memory_invalid_size(pin_memory):
     """convert_frames fails if size is invalid."""
     with pytest.raises(RuntimeError):
-        spdl.lib._libspdl.cpu_storage(size, pin_memory=pin_memory)
+        spdl.io.cpu_storage(0, pin_memory=pin_memory)
+
+    with pytest.raises(TypeError):
+        spdl.io.cpu_storage(-1, pin_memory=pin_memory)
+
+
+def test_pin_memory_convert_array():
+    """convert_array can handle pinned memory."""
+    vals = np.arange(0, 10)
+    storage = spdl.io.cpu_storage(vals.nbytes, pin_memory=True)
+    buffer = spdl.io.convert_array(vals, storage=storage)
+    buffer = spdl.io.transfer_buffer(
+        buffer,
+        device_config=spdl.io.cuda_config(device_index=0),
+    )
+    tensor = spdl.io.to_torch(buffer)
+
+    assert tensor.shape == (10,)
+    assert tensor.dtype == torch.int64
+    assert tensor.device == torch.device("cuda:0")
+    assert (vals == tensor.cpu().numpy()).all()
+
+
+def test_pin_memory_convert_array_invalid_size():
+    """convert_array fails if storage is small."""
+    vals = np.arange(0, 10)
+    storage = spdl.io.cpu_storage(vals.nbytes // 2, pin_memory=True)
+    with pytest.raises(RuntimeError):
+        spdl.io.convert_array(vals, storage=storage)

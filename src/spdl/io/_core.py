@@ -36,6 +36,7 @@ from spdl.io import (
     AudioFrames,
     AudioPackets,
     CPUBuffer,
+    CPUStorage,
     CUDABuffer,
     CUDAConfig,
     DecodeConfig,
@@ -67,7 +68,9 @@ __all__ = [
     "decode_image_nvjpeg",
     "async_decode_image_nvjpeg",
     # FRAME CONVERSION
+    "convert_array",
     "convert_frames",
+    "async_convert_array",
     "async_convert_frames",
     # DATA TRANSFER
     "transfer_buffer",
@@ -526,12 +529,14 @@ def convert_frames(
         | list[VideoFrames]
         | list[ImageFrames]
     ),
+    storage: CPUStorage | None = None,
     **kwargs,
 ) -> CPUBuffer:
     """Convert the decoded frames to buffer.
 
     Args:
         frames: Frames objects.
+        storage (spdl.io.CPUStorage): Storage object. See :py:func:`spdl.io.cpu_storage`.
 
     Returns:
         A Buffer object.
@@ -558,7 +563,7 @@ def convert_frames(
             stacklevel=2,
         )
         kwargs.pop("pin_memory")
-    return _libspdl.convert_frames(frames, **kwargs)
+    return _libspdl.convert_frames(frames, storage=storage, **kwargs)
 
 
 async def async_convert_frames(
@@ -570,6 +575,7 @@ async def async_convert_frames(
         | list[VideoFrames]
         | list[ImageFrames]
     ),
+    storage: CPUStorage | None = None,
     **kwargs,
 ) -> CPUBuffer:
     """Async version of :py:func:`~spdl.io.convert_frames`."""
@@ -579,7 +585,29 @@ async def async_convert_frames(
             stacklevel=2,
         )
         kwargs.pop("pin_memory")
-    return await run_async(convert_frames, frames, **kwargs)
+    return await run_async(convert_frames, frames, storage=storage, **kwargs)
+
+
+def convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
+    """Convert the given array to buffer.
+
+    This function is intended to be used when sending class labels (which is
+    generated from list of integer) to GPU while overlapping the transfer with
+    kenrel execution. See :py:func:`spdl.io.cpu_storage` for the detail.
+
+    Args:
+        vals: NumPy array with int64 dtype..
+        storage (spdl.io.CPUStorage): Storage object. See :py:func:`spdl.io.cpu_storage`.
+
+    Returns:
+        A Buffer object.
+    """
+    return _libspdl.convert_array(vals, storage=storage)
+
+
+async def async_convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
+    """Async version of :py:func:`~spdl.io.convert_array`."""
+    return await run_async(convert_array, vals, storage=storage)
 
 
 ################################################################################
