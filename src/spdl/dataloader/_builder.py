@@ -850,10 +850,12 @@ class PipelineBuilder:
            └─┘
 
         Args:
-            buffer_size: The size of the buffer
+            buffer_size: The size of the buffer. Pass ``0`` for unlimited buffering.
         """
         if self._sink_buffer_size is not None:
             raise ValueError("Sink is already set.")
+        if not isinstance(buffer_size, int):
+            raise ValueError(f"`buffer_size` must be int. Found: {type(buffer_size)}.")
         self._sink_buffer_size = buffer_size
         return self
 
