@@ -58,13 +58,13 @@ std::tuple<CUDABufferPtr, SizeMeta> get_output(
     std::optional<size_t> batch_size = std::nullopt) {
   auto [num_channels, interleaved] = get_shape(out_fmt);
 
-  auto buffer = [&](const size_t ch, bool interleaved) {
+  auto buffer = [&](const size_t ch, bool interleaved_2) {
     return batch_size
-        ? (interleaved
+        ? (interleaved_2
                ? cuda_buffer({*batch_size, height, width, ch}, cuda_config)
                : cuda_buffer({*batch_size, ch, height, width}, cuda_config))
-        : (interleaved ? cuda_buffer({height, width, ch}, cuda_config)
-                       : cuda_buffer({ch, height, width}, cuda_config));
+        : (interleaved_2 ? cuda_buffer({height, width, ch}, cuda_config)
+                         : cuda_buffer({ch, height, width}, cuda_config));
   }(num_channels, interleaved);
 
   return {
