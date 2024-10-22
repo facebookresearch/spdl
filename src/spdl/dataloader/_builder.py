@@ -20,10 +20,12 @@ from collections.abc import (
     Iterable,
     Sequence,
 )
-from concurrent.futures import Executor, ProcessPoolExecutor
+from concurrent.futures import Executor
 from contextlib import asynccontextmanager, contextmanager
 from typing import TypeVar
 
+from . import _convert
+from ._convert import Callables
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
 from ._pipeline import Pipeline
 from ._utils import create_task
@@ -486,72 +488,6 @@ async def _run_pipeline_coroutines(
 ################################################################################
 
 
-def _to_async(
-    func: Callable[[T], U],
-    executor: type[Executor] | None,
-) -> Callable[[T], Awaitable[U]]:
-    async def afunc(item: T) -> U:
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(executor, func, item)
-
-    return afunc
-
-
-def _wrap_gen(generator, item):
-    return list(generator(item))
-
-
-def _to_batch_async_gen(
-    func: Callable[[T], Iterable[U]],
-    executor: ProcessPoolExecutor,
-) -> Callable[[T], AsyncIterable[U]]:
-    async def afunc(item: T) -> AsyncIterable[U]:
-        loop = asyncio.get_running_loop()
-        for result in await loop.run_in_executor(executor, _wrap_gen, func, item):
-            yield result
-
-    return afunc
-
-
-def _to_async_gen(
-    func: Callable[[T], Iterable[U]],
-    executor: type[Executor] | None,
-) -> Callable[[T], AsyncIterable[U]]:
-    async def afunc(item: T) -> AsyncIterable[U]:
-        loop = asyncio.get_running_loop()
-        gen = await loop.run_in_executor(executor, func, item)
-        # Note on the use of sentinel
-        #
-        # One would think that catching StopIteration is simpler here, like
-        #
-        # while True:
-        #     try:
-        #         yield await run_async(next, gen)
-        #     except StopIteration:
-        #         break
-        #
-        # Unfortunately, this does not work. It throws an error like
-        # `TypeError: StopIteration interacts badly with generators and
-        # cannot be raised into a Future`
-        #
-        # To workaround, we handle StopIteration in the sync function, and notify
-        # the end of Iteratoin with sentinel object.
-        sentinel: object = object()
-
-        def _next() -> U:
-            """Wrapper around generator.
-            This is necessary as we cannot raise StopIteration in async func."""
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel  # type: ignore[return-value]
-
-        while (val := await loop.run_in_executor(executor, _next)) is not sentinel:
-            yield val
-
-    return afunc
-
-
 async def disaggregate(items):
     for item in items:
         yield item
@@ -610,12 +546,7 @@ class PipelineBuilder:
 
     def pipe(
         self,
-        op: (
-            Callable[[T], U]
-            | Callable[[T], Iterable[U]]
-            | Callable[[T], Awaitable[U]]
-            | Callable[[T], AsyncIterable[U]]
-        ),
+        op: Callables[T, U],
         /,
         *,
         concurrency: int = 1,
@@ -702,31 +633,8 @@ class PipelineBuilder:
             else:
                 name = op.__class__.__name__
 
-        if executor is not None:
-            if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
-                raise ValueError("`executor` cannot be specified when op is async.")
-
-        # Convert the op to async function if necessary.
-        if inspect.iscoroutinefunction(op):
-            # op is async function. No need to convert.
-            pass
-        elif inspect.isgeneratorfunction(op):
-            # op is sync generator. Convert to async generator.
-            if isinstance(executor, ProcessPoolExecutor):
-                # If executing in subprocess, data can be only exchanged at the end
-                # of the generator.
-                op = _to_batch_async_gen(op, executor=executor)
-            else:
-                op = _to_async_gen(op, executor=executor)
-        elif inspect.isasyncgenfunction(op):
-            # op is async generator. No need to convert.
-            if output_order == "input":
-                raise ValueError(
-                    "pipe does not support async generator function "
-                    "when output_order is 'input'."
-                )
-        else:  # Convert sync function to async function.
-            op = _to_async(op, executor=executor)  # pyre-ignore: [6]
+        _convert.validate_op(op, executor, output_order)
+        op = _convert.convert_to_async(op, executor, output_order)
 
         self._process_args.append(
             (
