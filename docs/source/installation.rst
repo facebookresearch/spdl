@@ -46,7 +46,7 @@ Trouble Shooting
 
 If you hit an error like the following, ``--no-build-isolation`` can help.
 
-.. code-block::
+.. code-block:: text
 
    Installing collected packages: ninja, wheel, setuptools, cmake
      Creating /tmp/pip-build-env-1ac3bsc_/overlay/bin
