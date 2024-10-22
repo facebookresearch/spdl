@@ -121,7 +121,9 @@ class _EventLoop:
             )
 
         self._thread = Thread(
-            target=lambda: asyncio.run(self._execute_task()), daemon=daemon
+            # Using lambda to delay the creation of coroutine object.
+            target=lambda: asyncio.run(self._execute_task()),
+            daemon=daemon,
         )
         self._thread.start()
         _LG.debug("Waiting for the loop to be initialized.")
@@ -391,7 +393,7 @@ class Pipeline(Generic[T]):
         # The loop keeps running unless we explicitly request stop, so the use of async method
         # itself is fine.
 
-        # However, the background task can complete at any ponit.
+        # However, the background task can complete at any point.
         # It turned out to be very easy to hit the race condition where the foreground execution
         # control reaches here, in the short time window between the background thread puts the
         # last item and issues task completion.
