@@ -41,6 +41,40 @@ Build can be customized through the environment variables;
 
 See `setup.py <https://github.com/facebookresearch/spdl/blob/main/setup.py>`_ for the up-to-date available options.
 
+Trouble Shooting
+----------------
+
+If you hit an error like the following, ``--no-build-isolation`` can help.
+
+.. code-block::
+
+   Installing collected packages: ninja, wheel, setuptools, cmake
+     Creating /tmp/pip-build-env-1ac3bsc_/overlay/bin
+     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/ninja to 775
+     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/wheel to 775
+     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/cmake to 775
+     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/cpack to 775
+     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/ctest to 775
+   Successfully installed cmake-3.30.5 ninja-1.11.1.1 setuptools-75.2.0 wheel-0.44.0
+
+   ...
+
+   CMake Error at CMakeLists.txt:3 (project):
+     Running
+
+      '/tmp/pip-build-env-xic7ygls/overlay/bin/ninja' '--version'
+
+     failed with:
+
+      no such file or directory
+
+This happens because, somehow ``cmake`` command is not pointing the ``ninja`` installed
+by ``pip``.
+
+One workaround is to use ``--no-build-isolation`` option.
+e.g. ``TMPDIR="${PWD}/build" pip install . -v  --no-build-isolation``
+
+
 Requirements
 ------------
 
