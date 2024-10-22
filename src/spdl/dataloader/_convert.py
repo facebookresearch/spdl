@@ -93,28 +93,13 @@ def _to_async_gen(
     return afunc
 
 
-def validate_op(
-    op: Callables[T, U],
-    executor: type[Executor] | None,
-    output_order: str,
-) -> None:
-    if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
-        if executor is not None:
-            raise ValueError("`executor` cannot be specified when op is async.")
-    if inspect.isasyncgenfunction(op):
-        if output_order == "input":
-            raise ValueError(
-                "pipe does not support async generator function "
-                "when output_order is 'input'."
-            )
-
-
 def convert_to_async(
     op: Callables[T, U],
     executor: type[Executor] | None,
 ) -> AsyncCallables[T, U]:
     if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
         # op is async function. No need to convert.
+        assert executor is None  # This has been checked in `PipelineBuilder.pipe()`
         return op  # pyre-ignore: [7]
 
     if inspect.isgeneratorfunction(op):
