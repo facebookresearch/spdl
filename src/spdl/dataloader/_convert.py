@@ -111,11 +111,8 @@ def validate_op(
 
 def convert_to_async(
     op: Callables[T, U],
-    executor: type[Executor],
-    output_order: str,
+    executor: type[Executor] | None,
 ) -> AsyncCallables[T, U]:
-    validate_op(op, executor, output_order)
-
     if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
         # op is async function. No need to convert.
         return op  # pyre-ignore: [7]
@@ -129,4 +126,4 @@ def convert_to_async(
         return _to_async_gen(op, executor=executor)
 
     # Convert a regular sync function to async function.
-    return _to_async(op, executor=executor)  # pyre-ignore: [6]
+    return _to_async(op, executor=executor)

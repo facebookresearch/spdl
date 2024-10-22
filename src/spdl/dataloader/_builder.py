@@ -15,7 +15,6 @@ from collections.abc import (
     AsyncIterable,
     AsyncIterator,
     Awaitable,
-    Callable,
     Coroutine,
     Iterable,
     Sequence,
@@ -110,8 +109,9 @@ async def _put_eof_when_done(queue):
 
 def _pipe(
     input_queue: AsyncQueue[T],
-    afunc: Callable[[T], Awaitable[U]],
+    op: Callables[T, U],
     output_queue: AsyncQueue[U],
+    executor: type[Executor] | None = None,
     concurrency: int = 1,
     name: str = "pipe",
     hooks: Sequence[PipelineHook] | None = None,
@@ -129,6 +129,8 @@ def _pipe(
         if hooks is None
         else hooks
     )
+
+    afunc = _convert.convert_to_async(op, executor)
 
     if inspect.iscoroutinefunction(afunc):
 
@@ -212,8 +214,9 @@ def _pipe(
 
 def _ordered_pipe(
     input_queue: AsyncQueue[T],
-    afunc: Callable[[T], Awaitable[U]],
+    op: Callables[T, U],
     output_queue: AsyncQueue[U],
+    executor: type[Executor] | None = None,
     concurrency: int = 1,
     name: str = "pipe",
     hooks: Sequence[PipelineHook] | None = None,
@@ -261,6 +264,8 @@ def _ordered_pipe(
         else hooks
     )
 
+    afunc = _convert.convert_to_async(op, executor)
+
     async def _wrap(item: T) -> asyncio.Task[U]:
         async def _with_hooks():
             async with _task_hooks(hooks):  # pyre-ignore: [16]
@@ -277,6 +282,7 @@ def _ordered_pipe(
         input_queue,
         _wrap,
         inter_queue,
+        executor,
         1,
         name,
         hooks=[],
@@ -286,6 +292,7 @@ def _ordered_pipe(
         inter_queue,
         _unwrap,
         output_queue,
+        executor,
         1,
         name,
         hooks=[],
@@ -634,13 +641,13 @@ class PipelineBuilder:
                 name = op.__class__.__name__
 
         _convert.validate_op(op, executor, output_order)
-        op = _convert.convert_to_async(op, executor, output_order)
 
         self._process_args.append(
             (
                 "pipe" if output_order == "completion" else "ordered_pipe",
                 {
-                    "afunc": op,
+                    "op": op,
+                    "executor": executor,
                     "concurrency": concurrency,
                     "name": name,
                     "hooks": hooks,
@@ -704,7 +711,8 @@ class PipelineBuilder:
             (
                 "aggregate",
                 {
-                    "afunc": aggregate,
+                    "op": aggregate,
+                    "executor": None,
                     "concurrency": 1,
                     "name": name,
                     "hooks": hooks,
@@ -736,7 +744,8 @@ class PipelineBuilder:
             (
                 "disaggregate",
                 {
-                    "afunc": disaggregate,
+                    "op": disaggregate,
+                    "executor": None,
                     "concurrency": 1,
                     "name": name,
                     "hooks": hooks,
