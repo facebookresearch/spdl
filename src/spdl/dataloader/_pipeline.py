@@ -4,25 +4,25 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import asyncio
 import concurrent.futures
 import logging
 import time
 import warnings
-from asyncio import Queue as AsyncQueue
+from asyncio import AbstractEventLoop, Queue as AsyncQueue
 from collections.abc import Coroutine, Iterator
 from contextlib import contextmanager
 from enum import IntEnum
 from threading import Event as SyncEvent, Thread
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from ._utils import create_task
 
 __all__ = ["Pipeline"]
 
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -36,22 +36,24 @@ T = TypeVar("T")
 # This class has a bit exessive debug logs, because it is tricky to debug
 # it from the outside.
 class _EventLoop:
-    def __init__(self, coro: Coroutine[None, None, None], num_threads: int):
+    def __init__(self, coro: Coroutine[None, None, None], num_threads: int) -> None:
         self._coro = coro
         self._num_threads = num_threads
 
-        self._loop = None
+        self._loop: AbstractEventLoop | None = None
 
         self._task_started = SyncEvent()
         self._task_completed = SyncEvent()
         self._stop_requested = SyncEvent()
 
-        self._thread = None
+        self._thread: Thread | None = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(
             {
-                "thread_alive": self._thread.is_alive(),
+                "thread_alive": False
+                if self._thread is None
+                else self._thread.is_alive(),
                 "task_started": self._task_started.is_set(),
                 "task_completed": self._task_completed.is_set(),
                 "stop_requested": self._stop_requested.is_set(),
@@ -134,7 +136,7 @@ class _EventLoop:
         """Check if the task is completed."""
         return self._task_completed.is_set()
 
-    def stop(self):
+    def stop(self) -> None:
         """Issue loop stop request."""
         if not self._stop_requested.is_set():
             _LG.debug("Requesting the event loop thread to stop.")
@@ -148,18 +150,22 @@ class _EventLoop:
             )
 
         _LG.debug("Waiting for the event loop thread to join.")
+        assert self._thread is not None
         self._thread.join(timeout=timeout)
-        if self._thread.is_alive():
+        if self._thread.is_alive():  # pyre-ignore[undefined-attribute]
             raise TimeoutError(f"Thread did not join after {timeout} seconds.")
         _LG.debug("The event loop thread joined.")
 
-    def run_coroutine_threadsafe(self, coro) -> concurrent.futures.Future:
+    def run_coroutine_threadsafe(
+        self, coro: Coroutine[None, None, T]
+    ) -> concurrent.futures.Future[T]:
         """Call coroutine in the loop thread."""
         if not self._task_started.is_set():
             raise RuntimeError("Event loop is not started.")
+        assert self._loop is not None
         if not self._loop.is_running():
             raise RuntimeError("Event loop is not running.")
-        return asyncio.run_coroutine_threadsafe(coro, self._loop)
+        return asyncio.run_coroutine_threadsafe(coro, self._loop)  # pyre-ignore[6]
 
 
 ################################################################################
@@ -258,14 +264,14 @@ class Pipeline(Generic[T]):
         num_threads: int,
         *,
         desc: list[str],
-    ):
+    ) -> None:
         self._queues = queues
 
-        self._str = "\n".join([repr(self), *desc])
+        self._str: str = "\n".join([repr(self), *desc])
 
-        self._output_queue = queues[-1]
+        self._output_queue: AsyncQueue = queues[-1]
         self._event_loop = _EventLoop(coro, num_threads)
-        self._event_loop_state = _EventLoopState.NOT_STARTED
+        self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
 
         try:
             from spdl.lib import _libspdl
@@ -293,7 +299,7 @@ class Pipeline(Generic[T]):
             )
             self.stop()
 
-    def start(self, *, timeout: float | None = None, **kwargs) -> None:
+    def start(self, *, timeout: float | None = None, **kwargs: Any) -> None:
         """Start the pipeline in background thread.
 
         Args:
@@ -327,7 +333,7 @@ class Pipeline(Generic[T]):
             self._event_loop_state = _EventLoopState.STOPPED
 
     @contextmanager
-    def auto_stop(self, *, timeout: float | None = None):
+    def auto_stop(self, *, timeout: float | None = None) -> Iterator[None]:
         """Context manager to start/stop the background thread automatically.
 
         Args:
@@ -430,11 +436,11 @@ class Pipeline(Generic[T]):
 class PipelineIterator(Generic[T]):
     """PipelineIterator()"""
 
-    def __init__(self, pipeline: Pipeline[T], timeout):
+    def __init__(self, pipeline: Pipeline[T], timeout: float | None) -> None:
         self._pipeline = pipeline
         self._timeout = timeout
 
-    def __iter__(self) -> "PipelineIterator":
+    def __iter__(self) -> "PipelineIterator[T]":
         return self
 
     def __next__(self) -> T:
