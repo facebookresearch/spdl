@@ -18,6 +18,10 @@ on:
       python-version:
         required: true
         type: string
+      free-threaded:
+        description: 'Whether FT Python or not. Valid value is "ft" or not.'
+        default: ''
+        type: string
       cuda-version:
         required: true
         type: string
@@ -31,7 +35,7 @@ on:
         type: string
 
 env:
-  ARTIFACT: wheel-linux-py${{ inputs.python-version }}-cuda${{ inputs.cuda-version }}${{ inputs.use-nvdec }}
+  ARTIFACT: wheel-linux-py${{ inputs.python-version }}${{ inputs.free-threaded }}-cuda${{ inputs.cuda-version }}${{ inputs.use-nvdec }}
   SPDL_USE_TRACING: 1
   SPDL_BUILD_STUB: 0
   SPDL_USE_CUDA: 1
@@ -64,11 +68,21 @@ jobs:
           
           wget -qO- https://astral.sh/uv/install.sh | sh
           source $HOME/.local/bin/env
+          uv --version
           uv python list --only-installed
 
-          py_ver="$(echo '${{ inputs.python-version }}' | sed 's|[^0-9]*||g')"
-          python_exe="/opt/python/cp${py_ver}-cp${py_ver}/bin/python"
+          # note: 3.13t is in cp313-cp313t directory, others are in cp313-cp313 directory
+          v=${{ inputs.python-version }}
+          dir="cp${v//[.t]/}-cp${v//[.]/}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            dir="${dir}t"
+          fi
+          python_exe="/opt/python/${dir}/bin/python"
+          "${python_exe}" --version
           uv venv --python "${python_exe}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            source .venv/bin/activate
+          fi
           uv build --no-python-downloads --all-packages --wheel
 
           ./packaging/repair_wheels.sh "manylinux_2_27_${{ inputs.arch }}" ./dist ~/package
@@ -84,9 +98,12 @@ jobs:
 
       - name: Check package
         run: |
-          py_ver="$(echo '${{ inputs.python-version }}' | sed 's|[^0-9]*||g')"
-          python_exe="/opt/python/cp${py_ver}-cp${py_ver}/bin/python"
-
+          # CFFI is not available yet for 3.13t, which prevents the installation of twine
+          # https://github.com/python-cffi/cffi/releases/tag/v1.17.0
+          # So we use the regular 3.13
+          v=${{ inputs.python-version }}
+          dir="cp${v//[.t]/}-cp${v//[.t]/}"
+          python_exe="/opt/python/${dir}/bin/python"
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
 
@@ -113,13 +130,24 @@ jobs:
           path: ~/package
 
       - uses: conda-incubator/setup-miniconda@v3
+        if: ${{ inputs.free-threaded == 'ft' }}
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: ${{ inputs.python-version }}t
+          conda-remove-defaults: "true"
+
+      - uses: conda-incubator/setup-miniconda@v3
+        if: ${{ inputs.free-threaded != 'ft' }}
+        with:
+          python-version: ${{ inputs.python-version }}
           conda-remove-defaults: "true"
 
       - name: Unit test
         run: |
           set -ex
+
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            conda install -q -c conda-forge python-freethreading
+          fi
 
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
@@ -178,9 +206,17 @@ jobs:
           path: ~/package
 
       - uses: conda-incubator/setup-miniconda@v3
+        if: ${{ inputs.free-threaded == 'ft' }}
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ inputs.python-version }}t
           conda-remove-defaults: "true"
+
+      - uses: conda-incubator/setup-miniconda@v3
+        if: ${{ inputs.free-threaded != 'ft' }}
+        with:
+          python-version: ${{ inputs.python-version }}t
+          conda-remove-defaults: "true"
+
 
       - name: Unit test
         run: |

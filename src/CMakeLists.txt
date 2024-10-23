@@ -43,12 +43,6 @@ find_package(gflags REQUIRED NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_PACKAGE_REGISTR
 find_package(glog REQUIRED NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_PACKAGE_REGISTRY NO_CMAKE_SYSTEM_PACKAGE_REGISTRY)
 find_package(libzip REQUIRED NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_PACKAGE_REGISTRY NO_CMAKE_SYSTEM_PACKAGE_REGISTRY)
 
-set(deps fmt::fmt gflags glog::glog libzip::zip)
-foreach(dep IN LISTS deps)
-  get_target_property(location "${dep}" IMPORTED_LOCATION_RELEASE)
-  message(STATUS "Found ${dep}: ${location}")
-endforeach()
-
 add_subdirectory(third_party/ffmpeg/multi)
 if (SPDL_USE_TRACING)
   add_subdirectory(third_party/perfetto)
@@ -64,6 +58,8 @@ endif ()
 add_subdirectory(libspdl)
 
 if (SPDL_BUILD_PYTHON_BINDING)
+  message(STATUS "Python_EXECUTABLE: ${Python_EXECUTABLE}")
+  message(STATUS "Python_INCLUDE_DIR: ${Python_INCLUDE_DIR}")
   find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
   add_subdirectory(third_party/nanobind)
   add_subdirectory(spdl/io/lib)
