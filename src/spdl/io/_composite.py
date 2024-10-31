@@ -14,6 +14,7 @@ from typing import Any, overload
 
 from spdl.io import (
     CPUBuffer,
+    CPUStorage,
     CUDABuffer,
     CUDAConfig,
     DecodeConfig,
@@ -420,6 +421,7 @@ async def async_load_image_batch(
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
+    storage: CPUStorage | None = None,
     strict: bool = True,
     **kwargs,
 ) -> CPUBuffer: ...
@@ -436,6 +438,7 @@ async def async_load_image_batch(
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: CUDAConfig,
+    storage: CPUStorage | None = None,
     strict: bool = True,
     **kwargs,
 ) -> CUDABuffer: ...
@@ -451,6 +454,7 @@ async def async_load_image_batch(
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
     device_config=None,
+    storage: CPUStorage | None = None,
     strict=True,
     **kwargs,
 ):
@@ -514,6 +518,10 @@ async def async_load_image_batch(
             :py:func:`~spdl.io.async_transfer_buffer`.
             Providing this argument will move the resulting buffer to
             the CUDA device.
+
+        storage:
+            *Optional:* The storage object passed to
+            :py:func:`~spdl.io.async_convert_frames`.
 
         strict:
             *Optional:* If True, raise an error if any of the images failed to load.
@@ -586,7 +594,7 @@ async def async_load_image_batch(
     if not frames:
         raise RuntimeError("Failed to load all the images.")
 
-    buffer = await _core.async_convert_frames(frames)
+    buffer = await _core.async_convert_frames(frames, storage=storage)
 
     if device_config is not None:
         buffer = await _core.async_transfer_buffer(buffer, device_config=device_config)
