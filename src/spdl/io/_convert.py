@@ -11,12 +11,14 @@ from spdl.io import CPUBuffer, CUDABuffer
 
 torch = import_utils.lazy_import("torch")
 cuda = import_utils.lazy_import("numba.cuda")
+jax = import_utils.lazy_import("jax")
 np = import_utils.lazy_import("numpy")
 
 __all__ = [
     "to_numba",
     "to_numpy",
     "to_torch",
+    "to_jax",
 ]
 
 
@@ -88,3 +90,15 @@ def to_numba(buffer: CPUBuffer | CUDABuffer):
         return cuda.as_cuda_array(buffer)
 
     return np.array(buffer, copy=False)
+
+
+def to_jax(buffer: CPUBuffer):
+    """Convert to JAX Array.
+
+    Args:
+        buffer: Object implements the array interface protocol.
+
+    Returns:
+        (jax.Array): A JAX Array.
+    """
+    return jax.numpy.array(buffer, copy=False)
