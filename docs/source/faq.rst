@@ -95,6 +95,13 @@ This will build pipeline like the following.
           .build()
       )
 
+Which functions hold the GIL?
+-----------------------------
+
+The following is the list of functions that we are aware that they hold the GIL. So it is advised to use them with ``ProcessPoolExecutor`` or avoid using them in SPDL.
+
+* `np.load <https://github.com/numpy/numpy/blob/maintenance/2.1.x/numpy/lib/_npyio_impl.py#L312-L500>`_
+      
 
 Why Async IO?
 -------------
