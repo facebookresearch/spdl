@@ -15,7 +15,7 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
-#include "gil.h"
+#include "spdl_gil.h"
 
 namespace nb = nanobind;
 

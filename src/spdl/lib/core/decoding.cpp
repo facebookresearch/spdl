@@ -18,7 +18,7 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-#include "gil.h"
+#include "spdl_gil.h"
 
 #include <cstring>
 

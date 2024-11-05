@@ -22,7 +22,7 @@ extern "C" {
 #include <libavutil/frame.h>
 }
 
-#include "gil.h"
+#include "spdl_gil.h"
 
 namespace nb = nanobind;
 

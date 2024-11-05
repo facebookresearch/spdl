@@ -11,7 +11,7 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
 
-#include "gil.h"
+#include "spdl_gil.h"
 
 namespace nb = nanobind;
 
