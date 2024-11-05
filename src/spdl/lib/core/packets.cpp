@@ -17,7 +17,7 @@
 
 #include <fmt/format.h>
 
-#include "gil.h"
+#include "spdl_gil.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>

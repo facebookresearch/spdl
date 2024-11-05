@@ -18,7 +18,7 @@
 #include <fmt/core.h>
 #endif
 
-#include "gil.h"
+#include "spdl_gil.h"
 
 namespace nb = nanobind;
 
