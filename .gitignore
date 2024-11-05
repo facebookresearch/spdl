@@ -9,6 +9,7 @@ fb
 *.db
 *.pftrace
 
+
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
@@ -181,3 +182,15 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+
+!/src/spdl/lib/
+/src/spdl/lib/*
+!/src/spdl/lib/*.h
+!/src/spdl/lib/*.py
+!/src/spdl/lib/*.cpp
+!/src/spdl/lib/core/
+!/src/spdl/lib/core/*.h
+!/src/spdl/lib/core/*.py
+!/src/spdl/lib/core/*.cpp
+!/src/spdl/lib/CMakeLists.txt
