@@ -60,7 +60,7 @@ class Packets:
        >>> tasks = []
        >>> async for packets in spdl.io.async_streaming_demux_video(src, windows):
        >>>     # Kick off decoding job while demux function is demuxing the next window
-       >>>     task = asyncio.create_task(decode_packets(packets))
+       >>>     task = asyncio.create_task(async_decode_packets(packets))
        >>>     task.append(task)
        >>>
        >>> # Wait for all the decoding to be complete
@@ -77,7 +77,7 @@ class Packets:
        .. code-block:: python
 
           >>> # Demux an image
-          >>> packets = spdl.io.demux_image("foo.png").result()
+          >>> packets = spdl.io.demux_image("foo.png")
           >>> packets  # this works.
           ImagePackets<src="foo.png", pixel_format="rgb24", bit_rate=0, bits_per_sample=0, codec="png", width=320, height=240>
           >>>
@@ -117,7 +117,7 @@ class Packets:
 
        .. code-block:: python
 
-          >>> packets = spdl.io.demux_image("foo.png").result()
+          >>> packets = spdl.io.demux_image("foo.png")
           >>> # Decode the cloned packets
           >>> packets2 = packets.clone()
           >>> packets2
@@ -143,6 +143,16 @@ class Packets:
 class AudioPackets(Packets):
     """AudioPackets()
     Packets object containing audio samples."""
+
+    @property
+    def sample_rate(self) -> int:
+        """The sampel rate of the audio."""
+        ...
+
+    @property
+    def num_channels(self) -> int:
+        """The number of channels."""
+        ...
 
     @property
     def timestamp(self) -> tuple[float, float] | None:
@@ -413,7 +423,16 @@ class ImageFrames(Frames):
         """Metadata attached to the frame."""
         ...
 
-    def clone(self) -> VideoFrames:
+    @property
+    def pts(self) -> float:
+        """The presentation time stamp of the image in the source video.
+
+        This property is valid only when the ``ImageFrames`` is created from slicing
+        :py:class:`~spdl.io.VideoFrames` object.
+        """
+        ...
+
+    def clone(self) -> ImageFrames:
         """Clone the frames, so that data can be converted to buffer multiple times.
 
         Returns:
