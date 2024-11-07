@@ -831,7 +831,12 @@ class PipelineBuilder:
 
     def _get_desc(self) -> list[str]:
         parts = []
-        parts.append(f"  - src: {self._source}")
+        src_repr = (
+            self._source.__name__
+            if hasattr(self._source, "__name__")
+            else type(self._source).__name__
+        )
+        parts.append(f"  - src: {src_repr}")
         if self._source_buffer_size != 1:
             parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
 
