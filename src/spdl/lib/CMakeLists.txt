@@ -9,19 +9,19 @@ message(STATUS "# Configuring SPDL Python binding")
 message(STATUS "########################################")
 
 set(src
-  bind.cpp
-  core/frames.cpp
-  core/buffer.cpp
-  core/storage.cpp
-  core/packets.cpp
-  core/types.cpp
-  core/tracing.cpp
-  core/utils.cpp
-  core/demuxing.cpp
-  core/decoding.cpp
-  core/conversion.cpp
-  core/transfer.cpp
-  core/encoding.cpp
+  io.cpp
+  io/frames.cpp
+  io/buffer.cpp
+  io/storage.cpp
+  io/packets.cpp
+  io/types.cpp
+  io/tracing.cpp
+  io/utils.cpp
+  io/demuxing.cpp
+  io/decoding.cpp
+  io/conversion.cpp
+  io/transfer.cpp
+  io/encoding.cpp
 )
 
 # This adds the library directory to search path
