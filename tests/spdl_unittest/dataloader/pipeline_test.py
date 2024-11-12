@@ -8,6 +8,7 @@ import asyncio
 import random
 import threading
 import time
+from collections.abc import AsyncIterable, Iterable
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from multiprocessing import Process
@@ -1496,3 +1497,81 @@ def test_pipeline_custom_pipe_executor_async():
         PipelineBuilder().add_source(range(10)).pipe(
             op, executor=ThreadPoolExecutor()
         ).add_sink(1).build()
+
+
+def test_pipeline_pipe_kwargs():
+    """pipe can pass kwargs to op"""
+
+    def op(i: int, j: int) -> int:
+        return i + j
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(op, kwargs={"j": 2})
+        .add_sink(1)
+        .build()
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [i + 2 for i in range(10)]
+
+
+def test_pipeline_pipe_kwargs_async():
+    """pipe can pass kwargs to op"""
+
+    async def op(i: int, j: int) -> int:
+        return i + j
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(op, kwargs={"j": 2})
+        .add_sink(1)
+        .build()
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [i + 2 for i in range(10)]
+
+
+def test_pipeline_pipe_kwargs_iter():
+    """pipe can pass kwargs to op"""
+
+    def op(i: int, vals: list[int]) -> Iterable[int]:
+        for v in vals:
+            yield i + v
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source([1])
+        .pipe(op, kwargs={"vals": list(range(10))})
+        .add_sink(1)
+        .build()
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [1 + i for i in range(10)]
+
+
+def test_pipeline_pipe_kwargs_async_iter():
+    """pipe can pass kwargs to op"""
+
+    async def op(i: int, vals: list[int]) -> AsyncIterable[int]:
+        for v in vals:
+            yield i + v
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source([1])
+        .pipe(op, kwargs={"vals": list(range(10))})
+        .add_sink(1)
+        .build()
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [1 + i for i in range(10)]
