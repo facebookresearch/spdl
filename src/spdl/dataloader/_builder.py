@@ -21,6 +21,7 @@ from collections.abc import (
 )
 from concurrent.futures import Executor
 from contextlib import asynccontextmanager, contextmanager
+from functools import partial
 from typing import TypeVar
 
 from . import _convert
@@ -520,7 +521,7 @@ class PipelineBuilder:
         self._num_disaggregate = 0
 
     def add_source(
-        self, source: Iterable[T] | AsyncIterable[T], **kwargs
+        self, source: Iterable[T] | AsyncIterable[T], **_kwargs
     ) -> "PipelineBuilder":
         """Attach an iterator to the source buffer.
 
@@ -550,8 +551,8 @@ class PipelineBuilder:
 
         # Note: Do not document this option.
         # See `pipe` method for detail.
-        if "buffer_size" in kwargs:
-            self._source_buffer_size = int(kwargs["buffer_size"])
+        if "_buffer_size" in _kwargs:
+            self._source_buffer_size = int(_kwargs["_buffer_size"])
         return self
 
     def pipe(
@@ -565,7 +566,8 @@ class PipelineBuilder:
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
         output_order: str = "completion",
-        **kwargs,
+        kwargs: dict[str, ...] | None = None,
+        **_kwargs,
     ) -> "PipelineBuilder":
         """Apply an operation to items in the pipeline.
 
@@ -630,6 +632,7 @@ class PipelineBuilder:
                 in the order their process is completed.
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
+            kwargs: Keyword arguments to be passed to the ``op``.
         """
         if output_order not in ["completion", "input"]:
             raise ValueError(
@@ -647,6 +650,12 @@ class PipelineBuilder:
                     "when `output_order` is 'input'."
                 )
 
+        name = name or getattr(op, "__name__", op.__class__.__name__)
+
+        if kwargs:
+            # pyre-ignore
+            op = partial(op, **kwargs)
+
         self._process_args.append(
             (
                 "pipe" if output_order == "completion" else "ordered_pipe",
@@ -654,19 +663,19 @@ class PipelineBuilder:
                     "op": op,
                     "executor": executor,
                     "concurrency": concurrency,
-                    "name": name or getattr(op, "__name__", op.__class__.__name__),
+                    "name": name,
                     "hooks": hooks,
                     "report_stats_interval": report_stats_interval,
                 },
-                kwargs.get("buffer_size", 1),
+                _kwargs.get("_buffer_size", 1),
                 # Note:
-                # `buffer_size` option is intentionally not documented.
+                # `_buffer_size` option is intentionally not documented.
                 #
-                # The pipeline practically buffers `concurrency + buffer_size`
+                # The pipeline practically buffers `concurrency + _buffer_size`
                 # items, which leads to confusing behavior when writing tests.
                 #
                 # And it does not affect throughput, however, showing it as
-                # `buffer_size=1` often make users think that this needs to be
+                # `_buffer_size=1` often make users think that this needs to be
                 # increased to improve the performance.
                 #
                 # We hide the argument under `kwargs` to keep it undocumented,
