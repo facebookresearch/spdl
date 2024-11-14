@@ -8,13 +8,16 @@
 
 # pyre-unsafe
 
-import warnings
 from typing import Any
 
-import spdl.pipeline
+from . import _builder, _hook, _pipeline, _utils
 
-# For backward compatibility
-_mods = [spdl.pipeline]
+_mods = [
+    _builder,
+    _hook,
+    _pipeline,
+    _utils,
+]
 
 __all__ = sorted(item for mod in _mods for item in mod.__all__)
 
@@ -26,14 +29,6 @@ def __dir__():
 def __getattr__(name: str) -> Any:
     for mod in _mods:
         if name in mod.__all__:
-            if mod is spdl.pipeline:
-                warnings.warn(
-                    f"{name} has been moved to {mod.__name__}. "
-                    "Please update the import statement to "
-                    f"`from {mod.__name__} import {name}`.",
-                    stacklevel=2,
-                )
-
             return getattr(mod, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
