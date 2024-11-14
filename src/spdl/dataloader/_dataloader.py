@@ -46,10 +46,6 @@ class DataLoader(Generic[Source, Output]):
     It generates source items, preprocess them concurrently, and aggergates them and store
     the result in buffer.
 
-    .. seealso::
-
-       - :py:class:`~spdl.pipeline.Pipeline`
-
     .. code-block::
 
        ┌────────┐
@@ -80,8 +76,8 @@ class DataLoader(Generic[Source, Output]):
         src: Data source. An object impelements :py:class:`~collections.abc.Iterable` interface
             or :py:class:`~collections.abc.AsyncIterable` interface.
             Typically, a generator that yields file paths or URLs.
-            To iterate over an object that implements :py:class:`~collections.abc.Mapping`,
-            use :py:class:`MapIterator`.
+            To iterate over an object that implements :py:class:`~collections.abc.Mapping`
+            protocol, and optionally with sampling, use :py:class:`MapIterator`.
 
         preprocessor: A [async] function or [async] generator that process the individual data
             source. Often times it loads data into array format.
@@ -100,6 +96,87 @@ class DataLoader(Generic[Source, Output]):
 
         timeout: The timeout until the next item becomes available.
             Default behavior is to wait indefinitely.
+
+        output_order: If 'completion' (default), items processed by the preprocessor are
+            passed to the aggregator in order of completion. If 'input', then they are passed
+            to the aggregator in the order of the source input.
+
+    Exapmles:
+        >>> import spdl.io
+        >>> from spdl.io import ImageFrames
+        >>>
+        >>> import torch
+        >>> from torch import Tensor
+        >>>
+        >>> ##################################################################
+        >>> # Source
+        >>> ##################################################################
+        >>> def source(root_dir: str) -> Iterable[str]:
+        ...     # Iterate the directory and find images.
+        ...     yield from glob.iglob(f"{root_dir}/**/*.JPEG", recursive=True)
+        >>>
+        >>>
+        >>> ##################################################################
+        >>> # Preprocessor
+        >>> ##################################################################
+        >>> width, height, batch_size = 224, 224, 32
+        >>>
+        >>> # Filter description that scales the image and convert to RGB
+        >>> filter_desc = spdl.io.get_filter_desc(
+        ...     scale_width=width,
+        ...     scale_height=height,
+        ...     pix_fmt="rgb24"
+        ... )
+        >>>
+        >>> def decode_image(path: str) -> ImageFrames:
+        ...     # Decode image and resize
+        ...     packets = spdl.io.demux_image(path)
+        ...     return spdl.io.decode_packets(packets, filter_desc=filter_desc)
+        ...
+        >>>
+        >>> ##################################################################
+        >>> # Aggregator (batch + device transfer)
+        >>> ##################################################################
+        >>> cuda_device_index = 0
+        >>> size = width * height * batch_size * 3
+        >>> storage = spdl.io.cpu_storage(size, pin_memory=True)
+        >>> stream = torch.cuda.Stream(device=cuda_device_index)
+        >>>
+        >>> cuda_config = spdl.io.cuda_config(
+        ...     device_index=cuda_device_index,
+        ...     stream=stream.cuda_stream,
+        ... )
+        >>>
+        >>> def batchify(data: list[ImageFrames]) -> Tensor:
+        ...     # Merge the decoded frames into the pre-allocated pinned-memory.
+        ...     cpu_buffer = spdl.io.convert_frames(data, storage=storage)
+        ...     # Send to CUDA in a separate stream.
+        ...     cuda_buffer = spdl.io.transfer_buffer(cpu_buffer, cuda_config=cuda_config)
+        ...     # Cast to Torch Tensor type.
+        ...     return spdl.io.to_torch(cuda_buffer)
+        ...
+        >>>
+        >>> dataloader = DataLoader(
+        ...     src=source(root_dir),
+        ...     preprocessor=decode_image,
+        ...     batch_size=batch_size,
+        ...     aggregator=batchify,
+        ... )
+        >>>
+        >>> for batch in dataloader:
+        ...     ...
+        >>>
+
+    .. seealso::
+
+       - :py:class:`spdl.pipeline.Pipeline`: The abstraction used for executing the logics.
+       - :py:func:`spdl.io.demux_image`, :py:func:`spdl.io.decode_packets`: Decoding image.
+       - :py:func:`spdl.io.cpu_storage`: Allocate page-locked memory.
+       - :py:func:`spdl.io.convert_frames`: Merging the decoded frames into pre-allocated memory
+          without creating intermediate arrays.
+       - :py:func:`spdl.io.transfer_buffer`: Sending the data to GPU.
+       - :py:func:`spdl.io.to_torch`, :py:func:`spdl.io.to_numba`, :py:func:`spdl.io.to_jax`: Casting
+         the memroy buffer to array type.
     """
 
     def __init__(
@@ -148,6 +225,11 @@ class DataLoader(Generic[Source, Output]):
         return builder.build(num_threads=self.num_threads)
 
     def __iter__(self) -> Iterable[Output]:
+        """Run the data loading pipeline in background.
+
+        Yields:
+            The items processed by processor and aggregator.
+        """
         pipeline = self._get_pipeline()
 
         with pipeline.auto_stop():
