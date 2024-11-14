@@ -193,7 +193,7 @@ def cpu_storage(size: int, pin_memory=True) -> CPUStorage:
        >>> frames = spdl.io.decode_packets(packets)
 
        >>> size = frames.width * frames.height * 3
-       >>> storage = spdl.lib._libspdl.cpu_storage(size, pin_memory=True)
+       >>> storage = spdl.io.cpu_storage(size, pin_memory=True)
 
        >>> buffer = spdl.io.convert_frames(frames, storage=storage)
        >>> stream = torch.cuda.Stream(device=0)
