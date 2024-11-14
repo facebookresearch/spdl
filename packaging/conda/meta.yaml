@@ -44,6 +44,7 @@ test:
     - spdl.io
     - spdl.utils
     - spdl.dataloader
+    - spdl.pipeline
 
   source_files:
     - tests/spdl_unittest
