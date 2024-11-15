@@ -210,7 +210,7 @@ class PerfResult:
 def worker_entrypoint(args: list[str]) -> PerfResult:
     """Entrypoint for worker process. Load images to a GPU and measure its performance.
 
-    It builds a :py:class:`~spdl.dataloader.Pipeline` object using :py:func:`get_pipeline`
+    It builds a :py:class:`~spdl.pipeline.Pipeline` object using :py:func:`get_pipeline`
     function and run it with :py:func:`benchmark` function.
     """
     args = _parse_args(args)

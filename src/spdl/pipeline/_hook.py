@@ -66,7 +66,7 @@ class PipelineHook(ABC):
 
     To add custom hook, subclass this class and override ``task_hook`` and
     optionally ``stage_hook`` method, and pass an instance to methods such as
-    :py::meth:`spdl.dataloader.AsyncPipeline.pipe`.
+    :py:meth:`spdl.pipeline.Pipeline.pipe`.
 
     .. tip::
 
@@ -74,7 +74,7 @@ class PipelineHook(ABC):
        choosing the location of specific logics.
 
        See :py:obj:`contextlib.contextmanager` for detail, and
-       :py:class:`spdl.dataloader.TaskStatsHook` for an example implementation.
+       :py:class:`spdl.pipeline.TaskStatsHook` for an example implementation.
 
        .. code-block:: python
 

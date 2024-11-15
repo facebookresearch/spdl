@@ -11,8 +11,6 @@
 import warnings
 from typing import Any
 
-import spdl.pipeline
-
 from . import _dataloader
 
 _mods = [
@@ -32,6 +30,8 @@ def __getattr__(name: str) -> Any:
             return getattr(mod, name)
 
     # For backward compatibility
+    import spdl.pipeline
+
     if name in spdl.pipeline.__all__:
         warnings.warn(
             f"{name} has been moved to {spdl.pipeline.__name__}. "

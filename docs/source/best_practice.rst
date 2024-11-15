@@ -34,13 +34,13 @@ separately.
        buffer = spdl.io.convert_frames(frames)
        return spdl.io.to_torch(buffer)
 
-They can be combined in :py:class:`~spdl.dataloader.Pipeline`, which automatically
+They can be combined in :py:class:`~spdl.pipeline.Pipeline`, which automatically
 discards the items failed to process (for example due to invalid data), and
 keep the batch size consistent by using other items successfully processed.
 
 .. code-block::
 
-   from spdl.dataloader import PipelineBuilder
+   from spdl.pipeline import PipelineBuilder
 
    pipeline = (
        PipelineBuilder()

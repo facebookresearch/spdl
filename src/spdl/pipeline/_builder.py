@@ -425,7 +425,7 @@ async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]):
 # TODO [Python 3.11]: Migrate to ExceptionGroup
 class PipelineFailure(RuntimeError):
     """PipelineFailure()
-    Thrown by :py:class:`spdl.dataloader.Pipeline` when pipeline encounters an error.
+    Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
     """
 
     def __init__(self, errs):
@@ -505,9 +505,9 @@ async def disaggregate(items):
 
 
 class PipelineBuilder:
-    """Build :py:class:`~spdl.dataloader.Pipeline` object.
+    """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
-    See :py:class:`~spdl.dataloader.Pipeline` for details.
+    See :py:class:`~spdl.pipeline.Pipeline` for details.
     """
 
     def __init__(self):
@@ -618,15 +618,15 @@ class PipelineBuilder:
             hooks: Hook objects to be attached to the stage. Hooks are intended for
                 collecting stats of the stage.
                 If ``None``, a default hook,
-                :py:class:`~spdl.dataloader.TaskStatsHook` is used.
+                :py:class:`~spdl.pipeline.TaskStatsHook` is used.
             report_stats_interval:
                 The interval (in seconds) to log the stats of this stage when no
                 ``hooks`` is provided. This argument is passed to
-                :py:class:`~spdl.dataloader.TaskStatsHook`.
+                :py:class:`~spdl.pipeline.TaskStatsHook`.
                 This argument is effective only when ``hooks`` are not provided.
                 If ``hooks`` is provided and stats report is needed,
                 the ``hooks`` argument should
-                include one of :py:class:`~spdl.dataloader.TaskStatsHook`
+                include one of :py:class:`~spdl.pipeline.TaskStatsHook`
                 instance with the desired interval.
             output_order: If ``"completion"`` (default), the items are put to output queue
                 in the order their process is completed.
