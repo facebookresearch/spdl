@@ -24,7 +24,7 @@ What if a function does not release GIL?
 In case you need to use a function that takes long time to execute (e.g. network utilities)
 but it does not release GIL, you can delegate the stage to sub-process.
 
-:py:meth:`spdl.dataloader.PipelineBuilder.pipe` method takes an optional ``executor`` argument.
+:py:meth:`spdl.pipeline.PipelineBuilder.pipe` method takes an optional ``executor`` argument.
 The default behavior of the ``Pipeline`` is to use the thread pool shared among all stages.
 You can pass an instance of :py:class:`concurrent.futures.ProcessPoolExecutor`,
 and that stage will execute the function in the sub-process.
@@ -101,7 +101,6 @@ Which functions hold the GIL?
 The following is the list of functions that we are aware that they hold the GIL. So it is advised to use them with ``ProcessPoolExecutor`` or avoid using them in SPDL.
 
 * `np.load <https://github.com/numpy/numpy/blob/maintenance/2.1.x/numpy/lib/_npyio_impl.py#L312-L500>`_
-      
 
 Why Async IO?
 -------------

@@ -278,7 +278,7 @@ class Pipeline(Generic[T]):
         try:
             from spdl.lib import _libspdl
 
-            _libspdl.log_api_usage("spdl.dataloader.Pipeline")
+            _libspdl.log_api_usage("spdl.pipeline.Pipeline")
         except Exception:
             pass  # ignore if not supported.
 
@@ -431,7 +431,7 @@ class Pipeline(Generic[T]):
         return PipelineIterator(self, timeout)
 
     def __iter__(self) -> Iterator[T]:
-        """Call :py:meth:`~spdl.dataloader.Pipeline.get_iterator` without arguments."""
+        """Call :py:meth:`~spdl.pipeline.Pipeline.get_iterator` without arguments."""
         return self.get_iterator()
 
 

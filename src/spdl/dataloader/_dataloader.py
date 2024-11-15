@@ -173,7 +173,7 @@ class DataLoader(Generic[Source, Output]):
        - :py:func:`spdl.io.demux_image`, :py:func:`spdl.io.decode_packets`: Decoding image.
        - :py:func:`spdl.io.cpu_storage`: Allocate page-locked memory.
        - :py:func:`spdl.io.convert_frames`: Merging the decoded frames into pre-allocated memory
-          without creating intermediate arrays.
+         without creating intermediate arrays.
        - :py:func:`spdl.io.transfer_buffer`: Sending the data to GPU.
        - :py:func:`spdl.io.to_torch`, :py:func:`spdl.io.to_numba`, :py:func:`spdl.io.to_jax`: Casting
          the memroy buffer to array type.
