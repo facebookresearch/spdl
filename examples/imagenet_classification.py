@@ -43,7 +43,7 @@ from pathlib import Path
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import Pipeline, PipelineBuilder
+from spdl.pipeline import Pipeline, PipelineBuilder
 from torch import Tensor
 from torch.profiler import profile
 

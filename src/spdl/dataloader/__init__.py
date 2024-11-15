@@ -34,9 +34,9 @@ def __getattr__(name: str) -> Any:
     # For backward compatibility
     if name in spdl.pipeline.__all__:
         warnings.warn(
-            f"{name} has been moved to {mod.__name__}. "
+            f"{name} has been moved to {spdl.pipeline.__name__}. "
             "Please update the import statement to "
-            f"`from {mod.__name__} import {name}`.",
+            f"`from {spdl.pipeline.__name__} import {name}`.",
             stacklevel=2,
         )
         return getattr(spdl.pipeline, name)
