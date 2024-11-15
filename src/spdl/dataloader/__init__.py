@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Utilities to run I/O operations efficiently."""
+"""Task specific data loading solutions based on :py:class:`~spdl.pipeline.Pipeline`."""
 
 # pyre-unsafe
 
