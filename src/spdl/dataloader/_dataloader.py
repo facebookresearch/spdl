@@ -183,11 +183,15 @@ class DataLoader(Generic[Source, Output]):
         self,
         src: Iterable[Source] | AsyncIterable[Source],
         *,
+        # Pre-processing
         preprocessor: Callables[[Source], T] | None = None,
+        # Aggregation
         batch_size: int | None = None,
         drop_last: bool = False,
         aggregator: Functions[[list[T]], Output] | None = None,
+        # Buffering
         buffer_size: int = 3,
+        # Execution config
         num_threads: int = 8,
         timeout: float | None = None,
         output_order: str = "completion",
