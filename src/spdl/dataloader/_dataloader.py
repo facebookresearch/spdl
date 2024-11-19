@@ -101,6 +101,8 @@ class DataLoader(Generic[Source, Output]):
             passed to the aggregator in order of completion. If 'input', then they are passed
             to the aggregator in the order of the source input.
 
+    :ivar src: The source object provided in the constructor.
+
     Exapmles:
         >>> import spdl.io
         >>> from spdl.io import ImageFrames
@@ -178,7 +180,6 @@ class DataLoader(Generic[Source, Output]):
        - :py:func:`spdl.io.to_torch`, :py:func:`spdl.io.to_numba`, :py:func:`spdl.io.to_jax`: Casting
          the memroy buffer to array type.
 
-    :ivar src: The source object provided in the constructor.
     """
 
     def __init__(
