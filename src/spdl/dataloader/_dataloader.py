@@ -384,7 +384,7 @@ class MergeIterator(Iterable[T]):
         ... ]
         >>>
         >>> print(list(MergeIterator(iterables)))
-        [0, 10, 20, 1, 21, 2]  # 22 is not included
+        [0, 10, 20, 1, 11, 21, 2]  # 22 is not included
         >>>
         >>> # Stop after yielding the given number of items
         >>> print(list(MergeIterator(iterables, stop_after=5)))
