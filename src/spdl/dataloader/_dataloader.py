@@ -288,7 +288,7 @@ class MapIterator(Iterable[V]):
             yield self.mapping[key]
 
 
-_FIRST_EXHAUSTION = 0
+_FIRST_EXHAUSTION = -1
 
 
 def _ordered_iter(iterators: list[Iterator[T]], stop_after: float) -> Iterable[T]:
@@ -351,19 +351,20 @@ class MergeIterator(Iterable[T]):
 
     Args:
         iterables: The source iterables
-        probabilities: The probability to choose the next iterable.
+        weights: The sampling weight used to choose the next iterable.
             If not provided, the given iterables are visited in the given order
             repeatedly.
         stop_after: Determines the stop criteria or the behavior when one of
             the input iterables gets exhausted,
             Available values are;
 
-            - ``0``: The iteration stops when one of the iterator is exhausted.
+            - ``0``: The iteration continues until all the input iterables are
+              exhausted. (default)
             - ``n > 0``: The iteration stops when the specified number of items
-              are yielded or all the input iterables are exhausted.
-            - ``-1``: The iteration continues until all the input iterables are
-              exhausted.
-        seed: Used to seed the random generator when probabilities is provided.
+              are yielded or all the input iterables are exhausted before yielding
+              ``n`` items.
+            - ``-1``: The iteration stops when one of the iterator is exhausted.
+        seed: Used to seed the random generator when ``weights`` is provided.
 
     Example:
 
@@ -404,7 +405,7 @@ class MergeIterator(Iterable[T]):
         iterables: Sequence[Iterable[T]],
         *,
         weights: Sequence[float] | None = None,
-        stop_after: int = _FIRST_EXHAUSTION,
+        stop_after: int = 0,
         seed: int = 0,
     ) -> None:
         if not iterables:
