@@ -206,7 +206,7 @@ def test_mergeiterator_ordered_stop_after_first_exhaustion():
         [20, 21, 22],
     ]
 
-    result = list(MergeIterator(iterables, stop_after=0))
+    result = list(MergeIterator(iterables, stop_after=-1))
     assert result == [0, 10, 20]
 
     iterables = [
@@ -215,7 +215,7 @@ def test_mergeiterator_ordered_stop_after_first_exhaustion():
         [20, 21, 22],
     ]
 
-    result = list(MergeIterator(iterables, stop_after=0))
+    result = list(MergeIterator(iterables, stop_after=-1))
     assert result == [0, 10, 20, 1]
 
     iterables = [
@@ -224,7 +224,7 @@ def test_mergeiterator_ordered_stop_after_first_exhaustion():
         [20],
     ]
 
-    result = list(MergeIterator(iterables, stop_after=0))
+    result = list(MergeIterator(iterables, stop_after=-1))
     assert result == [0, 10, 20, 1, 11]
 
 
@@ -256,7 +256,7 @@ def test_mergeiterator_ordered_stop_after_minus1():
         [20, 21, 22],
     ]
 
-    result = list(MergeIterator(iterables, stop_after=-1))
+    result = list(MergeIterator(iterables))
     assert result == [0, 10, 20, 1, 11, 21, 2, 12, 22]
 
     iterables = [
@@ -265,7 +265,7 @@ def test_mergeiterator_ordered_stop_after_minus1():
         [20, 21, 22],
     ]
 
-    result = list(MergeIterator(iterables, stop_after=-1))
+    result = list(MergeIterator(iterables))
     assert result == [0, 10, 20, 1, 21, 2, 22]
 
     iterables = [
@@ -274,7 +274,7 @@ def test_mergeiterator_ordered_stop_after_minus1():
         [20],
     ]
 
-    result = list(MergeIterator(iterables, stop_after=-1))
+    result = list(MergeIterator(iterables))
     assert result == [0, 10, 20, 1, 11, 2, 12]
 
 
@@ -307,7 +307,7 @@ def test_mergeiterator_stochastic_smoke_test():
 
     weights = [1, 1, 1]
 
-    result = list(MergeIterator(iterables, weights=weights, stop_after=-1))
+    result = list(MergeIterator(iterables, weights=weights))
     assert set(result) == {0, 1, 2, 10, 11, 12, 20, 21, 22}
 
 
@@ -346,5 +346,5 @@ def test_mergeiterator_stochastic_stop_after_first_exhaustion():
         [10, 11, 12, 13],
     ]
 
-    result = list(MergeIterator(iterables, weights=weights, stop_after=0))
+    result = list(MergeIterator(iterables, weights=weights, stop_after=-1))
     assert result == [0, 1, 2, 3]
