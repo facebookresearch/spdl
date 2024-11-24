@@ -19,7 +19,7 @@ from collections.abc import (
     Iterable,
     Sequence,
 )
-from concurrent.futures import Executor
+from concurrent.futures import Executor, ThreadPoolExecutor
 from contextlib import asynccontextmanager, contextmanager
 from functools import partial
 from typing import TypeVar
@@ -893,4 +893,8 @@ class PipelineBuilder:
             ]
             num_threads = max(concurrencies) if concurrencies else 4
         assert num_threads is not None
-        return Pipeline(coro, queues, num_threads, desc=self._get_desc())
+        executor = ThreadPoolExecutor(
+            max_workers=num_threads,
+            thread_name_prefix="spdl_",
+        )
+        return Pipeline(coro, queues, executor, desc=self._get_desc())
