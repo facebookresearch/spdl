@@ -861,14 +861,28 @@ class PipelineBuilder:
     def __str__(self) -> str:
         return "\n".join([repr(self), *self._get_desc()])
 
-    def build(self, *, num_threads: int | None = None) -> Pipeline:
+    def build(
+        self,
+        *,
+        num_threads: int | None = None,
+        executor: ThreadPoolExecutor | None = None,
+    ) -> Pipeline:
         """Build the pipeline.
 
         Args:
-            num_threads: The number of threads in the thread pool attached to
-                async event loop.
+            num_threads: The size of the default thread pool.
+                This option is mutually exclusive with ``executor``.
                 If not specified, the maximum concurrency value is used.
+            executor: The default thread pool to use.
+                This option is mutually exclusive with ``num_threads``.
+                Intended usage is to re-use the executors across multiple
+                pipeline execution, so that thread local data are reused.
         """
+        if num_threads is not None and executor is not None:
+            raise ValueError(
+                "`num_threads` and `executor` cannot be specified at the same time."
+            )
+
         coro, queues = self._build()
 
         if num_threads is None:
@@ -878,9 +892,9 @@ class PipelineBuilder:
                 if "concurrency" in args
             ]
             num_threads = max(concurrencies) if concurrencies else 4
-        assert num_threads is not None
-        executor = ThreadPoolExecutor(
-            max_workers=num_threads,
-            thread_name_prefix="spdl_",
-        )
+            executor = ThreadPoolExecutor(
+                max_workers=num_threads,
+                thread_name_prefix="spdl_",
+            )
+        assert executor is not None
         return Pipeline(coro, queues, executor, desc=self._get_desc())
