@@ -499,7 +499,7 @@ async def _run_pipeline_coroutines(
 ################################################################################
 
 
-async def disaggregate(items):
+def disaggregate(items):
     for item in items:
         yield item
 
@@ -708,7 +708,7 @@ class PipelineBuilder:
         """
         vals = [[]]
 
-        async def aggregate(i):
+        def aggregate(i):
             if i is not _EOF:
                 vals[0].append(i)
 
