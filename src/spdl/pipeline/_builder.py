@@ -17,6 +17,7 @@ from collections.abc import (
     Awaitable,
     Coroutine,
     Iterable,
+    Iterator,
     Sequence,
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
@@ -316,37 +317,62 @@ def _ordered_pipe(
 ################################################################################
 
 
+def _to_async_gen(
+    src: Iterable[U],
+    executor: type[Executor] | None,
+) -> AsyncIterable[U]:
+    async def afunc() -> AsyncIterable[U]:
+        loop = asyncio.get_running_loop()
+        gen: Iterator[U] = await loop.run_in_executor(executor, iter, src)
+        # Note on the use of sentinel
+        #
+        # One would think that catching StopIteration is simpler here, like
+        #
+        # while True:
+        #     try:
+        #         yield await run_async(next, gen)
+        #     except StopIteration:
+        #         break
+        #
+        # Unfortunately, this does not work. It throws an error like
+        # `TypeError: StopIteration interacts badly with generators and
+        # cannot be raised into a Future`
+        #
+        # To workaround, we handle StopIteration in the sync function, and notify
+        # the end of Iteratoin with sentinel object.
+        sentinel: object = object()
+
+        def _next() -> U:
+            """Wrapper around generator.
+            This is necessary as we cannot raise StopIteration in async func."""
+            try:
+                return next(gen)
+            except StopIteration:
+                return sentinel  # type: ignore[return-value]
+
+        while (val := await loop.run_in_executor(executor, _next)) is not sentinel:
+            yield val
+
+    return afunc()
+
+
 def _enqueue(
     src: Iterable[T] | AsyncIterable[T],
     queue: AsyncQueue[T],
     max_items: int | None = None,
 ) -> Coroutine:
-    if hasattr(src, "__aiter__"):
+    if not hasattr(src, "__aiter__"):
+        src = _to_async_gen(src, None)  # pyre-ignore: [6]
 
-        @_put_eof_when_done(queue)
-        async def enqueue():
-            num_items = 0
-            async for item in src:
-                if item is not _SKIP:
-                    await queue.put(item)
-                    num_items += 1
-                    if max_items is not None and num_items >= max_items:
-                        return
-
-    elif hasattr(src, "__iter__"):
-
-        @_put_eof_when_done(queue)
-        async def enqueue():
-            num_items = 0
-            for item in src:
-                if item is not _SKIP:
-                    await queue.put(item)
-                    num_items += 1
-                    if max_items is not None and num_items >= max_items:
-                        return
-
-    else:
-        raise ValueError(f"{src=} must be either generator or async generator.")
+    @_put_eof_when_done(queue)
+    async def enqueue():
+        num_items = 0
+        async for item in src:
+            if item is not _SKIP:
+                await queue.put(item)
+                num_items += 1
+                if max_items is not None and num_items >= max_items:
+                    return
 
     return enqueue()
 
