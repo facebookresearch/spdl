@@ -487,7 +487,8 @@ CPUBufferPtr convert_frames(
       case AV_PIX_FMT_GRAY8:
         // Technically, not a planer format, but it's the same.
         return convert_planer(batch, 1, sizeof(uint8_t), std::move(storage));
-      case AV_PIX_FMT_GRAY16:
+      case AV_PIX_FMT_GRAY16BE:
+      case AV_PIX_FMT_GRAY16LE:
         return convert_planer(batch, 1, sizeof(uint16_t), std::move(storage));
       case AV_PIX_FMT_RGBA:
         return convert_interleaved(batch, 4, std::move(storage));
