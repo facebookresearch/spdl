@@ -42,15 +42,15 @@ std::tuple<size_t, size_t> get_image_size(
       }
       return {shape[1], shape[0]};
     }
-    case AV_PIX_FMT_GRAY16BE: {
+    case AV_PIX_FMT_GRAY16: {
       if (shape.size() != 2) {
         SPDL_FAIL(fmt::format(
-            "Array must be 2D when pixel format is \"gray16be\", but found {}D",
+            "Array must be 2D when pixel format is \"gray16\", but found {}D",
             shape.size()));
       }
       if (depth != 2) {
         SPDL_FAIL(fmt::format(
-            "Pixel must be 2 byte when pixel format is \"gray16be\", but found {}",
+            "Pixel must be 2 byte when pixel format is \"gray16\", but found {}",
             depth));
       }
       return {shape[1], shape[0]};

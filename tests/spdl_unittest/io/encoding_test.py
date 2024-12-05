@@ -51,7 +51,7 @@ def test_encode_png_gray16be():
             await spdl.io.async_encode_image(
                 f.name,
                 arr,
-                pix_fmt="gray16be",
+                pix_fmt="gray16",
                 encode_config=enc_cfg,
             )
 
