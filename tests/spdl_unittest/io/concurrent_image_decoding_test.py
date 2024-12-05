@@ -30,30 +30,36 @@ def _batch_load_image(srcs, pix_fmt="rgb24"):
     return spdl.io.to_numpy(buffer)
 
 
-def test_decode_image_gray_black(get_sample):
-    """PNG image (gray) can be decoded."""
-    # Note: the output of this command is in limited color range. So [0, 255] -> [16, 235]
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
+def test_decode_image_gray16_black(get_sample):
+    """16-bit PNG image (gray16be) can be decoded."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray16be -frames:v 1 sample.png"
     sample = get_sample(cmd, width=320, height=240)
 
-    gray = _decode_image(sample.path, pix_fmt=None)
-
-    assert gray.dtype == np.uint8
+    gray = _decode_image(sample.path, pix_fmt="gray16")
+    assert gray.dtype == np.uint16
     assert gray.shape == (1, sample.height, sample.width)
-    assert np.all(gray == 16)
+    assert np.all(gray == 1)
+
+    gray = _decode_image(sample.path, pix_fmt="rgb24")
+    assert gray.dtype == np.uint8
+    assert gray.shape == (sample.height, sample.width, 3)
+    assert np.all(gray == 0)
 
 
-def test_decode_image_gray_white(get_sample):
-    """PNG image (gray) can be decoded."""
-    # Note: the output of this command is in limited color range. So [0, 255] -> [16, 235]
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xFFFFFF,format=gray -frames:v 1 sample.png"
+def test_decode_image_gray16_white(get_sample):
+    """16-bit PNG image (gray16be) can be decoded."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xFFFFFF,format=gray16be -frames:v 1 sample.png"
     sample = get_sample(cmd, width=320, height=240)
 
-    gray = _decode_image(sample.path, pix_fmt=None)
-
-    assert gray.dtype == np.uint8
+    gray = _decode_image(sample.path, pix_fmt="gray16")
+    assert gray.dtype == np.uint16
     assert gray.shape == (1, sample.height, sample.width)
-    assert np.all(gray == 235)
+    assert np.all(gray == 65277)
+
+    gray = _decode_image(sample.path, pix_fmt="rgb24")
+    assert gray.dtype == np.uint8
+    assert gray.shape == (sample.height, sample.width, 3)
+    assert np.all(gray == 255)
 
 
 def test_decode_image_yuv422(get_sample):
@@ -132,25 +138,23 @@ def test_decode_image_16be(get_sample):
         -f lavfi -i color=white:size=32x32,format=gray16be \
         -f lavfi -i color=black:size=32x32,format=gray16be \
         -filter_complex hstack=inputs=2                    \
-        -frames:v 1 -pix_fmt gray16be sample_%03d.png
+        -frames:v 1 -pix_fmt gray16 sample_%03d.png
     """
+    # fmt: on
     height, width = 32, 64
     sample = get_sample(cmd, width=width, height=height)
 
-    async def _load(src):
-        packets = await spdl.io.async_demux_image(src)
-        frames = await spdl.io.async_decode_packets(packets, filter_desc=None)
-        buffer = await spdl.io.async_convert_frames(frames)
-        array = spdl.io.to_numpy(buffer)
-        return array
-
-    array = asyncio.run(_load(sample.path))
-
+    array = _decode_image(sample.path, pix_fmt="gray16")
     assert array.dtype == np.uint16
     assert array.shape == (1, height, width)
+    assert np.all(array[..., :32] == 65277)
+    assert np.all(array[..., 32:] == 1)
 
-    assert np.all(array[..., :32] == 65022)
-    assert np.all(array[..., 32:] == 256)
+    array = _decode_image(sample.path, pix_fmt="rgb24")
+    assert array.dtype == np.uint8
+    assert array.shape == (height, width, 3)
+    assert np.all(array[:, :32, :] == 255)
+    assert np.all(array[:, 32:, :] == 0)
 
 
 def test_batch_decode_image_slice(get_samples):
