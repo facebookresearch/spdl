@@ -4,6 +4,13 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# This adds the library directory to search path
+if (APPLE)
+  set(CMAKE_INSTALL_RPATH "@loader_path")
+elseif (UNIX)
+  set(CMAKE_INSTALL_RPATH $ORIGIN)
+endif ()
+
 message(STATUS "########################################")
 message(STATUS "# Configuring SPDL Python binding")
 message(STATUS "########################################")
@@ -23,13 +30,6 @@ set(src
   io/transfer.cpp
   io/encoding.cpp
 )
-
-# This adds the library directory to search path
-if (APPLE)
-  set(CMAKE_INSTALL_RPATH "@loader_path")
-elseif (UNIX)
-  set(CMAKE_INSTALL_RPATH $ORIGIN)
-endif ()
 
 function(add_spdl_extension ffmpeg_version)
   set(name "_spdl_ffmpeg${ffmpeg_version}")
@@ -86,3 +86,23 @@ add_spdl_extension(5)
 add_spdl_extension(6)
 add_spdl_extension(7)
 endif()
+
+###############################################################################
+# zip extension
+###############################################################################
+
+set(name _zip)
+message(STATUS "Building ${name}")
+
+set(srcs zip.cpp)
+set(deps libzip::zip fmt::fmt glog::glog)
+nanobind_add_module("${name}" "${srcs}")
+target_link_libraries("${name}" PRIVATE "${deps}")
+target_include_directories("${name}" PRIVATE "${Python_INCLUDE_DIR}")
+target_include_directories(nanobind-static PRIVATE "${Python_INCLUDE_DIR}")
+
+install(
+  TARGETS ${name}
+  LIBRARY DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
+  RUNTIME DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
+  )

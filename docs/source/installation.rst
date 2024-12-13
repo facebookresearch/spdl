@@ -100,6 +100,7 @@ The libspdl uses the following third party libraries, which are fetched and buil
 * `{fmt} <https://github.com/fmtlib/fmt>`_ (`MIT <https://github.com/fmtlib/fmt/blob/10.1.1/LICENSE.rst>`_)
 * `gflags <https://github.com/gflags/gflags>`_ (`BSD-3 <https://github.com/gflags/gflags/blob/v2.2.0/COPYING.txt>`_)
 * `glog <https://github.com/google/glog>`_ (`BSD-3 <https://github.com/google/glog/blob/v0.5.0/COPYING>`_)
+* `libzip <https://libzip.org/>`_ (`BSD-3 <https://github.com/nih-at/libzip/blob/v1.11.2/LICENSE>`_)
 * `nanobind <https://github.com/wjakob/nanobind>`_ (`BSD-3 <https://github.com/wjakob/nanobind/blob/v2.0.0/LICENSE>`_) and its dependency `robin-map <https://github.com/Tessil/robin-map/>`_ (`MIT <https://github.com/Tessil/robin-map/blob/v1.3.0/LICENSE>`_)
 * `FFmpeg <https://github.com/FFmpeg/FFmpeg>`_ (`LGPL <https://github.com/FFmpeg/FFmpeg/blob/master/COPYING.LGPLv2.1>`_ †)
 
@@ -123,7 +124,7 @@ Optional Dependencies
 ---------------------
 
 * `Perfetto <https://perfetto.dev/docs/instrumentation/tracing-sdk>`_ (`Apache 2.0 <https://github.com/google/perfetto/blob/v41.0/LICENSE>`_)
-* `CUDA Toolkit <https://developer.nvidia.com/cuda-toolkit>`_ †† (`CUDA Toolkit EULA <https://docs.nvidia.com/cuda/eula/index.html>`_) and the following family of libraries covered by the same EULA    
+* `CUDA Toolkit <https://developer.nvidia.com/cuda-toolkit>`_ †† (`CUDA Toolkit EULA <https://docs.nvidia.com/cuda/eula/index.html>`_) and the following family of libraries covered by the same EULA
     * `nvJPEG <https://docs.nvidia.com/cuda/nvjpeg/index.html>`_
     * `NPP <https://developer.nvidia.com/npp>`_
 * The header files of `Video Codec SDK <https://gitlab.com/nvidia/video/video-codec-sdk>`_ ††

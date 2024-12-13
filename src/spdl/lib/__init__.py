@@ -24,6 +24,7 @@ _LG = logging.getLogger(__name__)
 
 __all__ = [
     "_libspdl",
+    "_zip",
 ]
 
 
@@ -36,6 +37,12 @@ def __getattr__(name: str) -> Any:
         from spdl._internal.import_utils import _LazilyImportedModule
 
         return _LazilyImportedModule(name, _import_libspdl)
+
+    if name == "_zip":
+        import spdl.lib._zip  # pyre-ignore: [21]
+
+        return spdl.lib._zip
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
