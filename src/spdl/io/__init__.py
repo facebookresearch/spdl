@@ -21,7 +21,7 @@ from typing import Any
 # This import is just for annotation, so please overlook this one.
 from ._type_stub import *  # noqa: F403  # isort: skip
 
-from . import _composite, _config, _convert, _core, _preprocessing, _type_stub
+from . import _composite, _config, _convert, _core, _preprocessing, _type_stub, _zip
 
 _mods = [
     _composite,
@@ -29,6 +29,7 @@ _mods = [
     _convert,
     _core,
     _preprocessing,
+    _zip,
 ]
 
 
