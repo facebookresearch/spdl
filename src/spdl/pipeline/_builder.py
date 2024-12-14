@@ -17,7 +17,6 @@ from collections.abc import (
     Awaitable,
     Coroutine,
     Iterable,
-    Iterator,
     Sequence,
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
@@ -26,7 +25,7 @@ from functools import partial
 from typing import TypeVar
 
 from . import _convert
-from ._convert import Callables
+from ._convert import _to_async_gen, Callables
 from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
 from ._pipeline import Pipeline
 from ._utils import create_task
@@ -317,52 +316,13 @@ def _ordered_pipe(
 ################################################################################
 
 
-def _to_async_gen(
-    src: Iterable[U],
-    executor: type[Executor] | None,
-) -> AsyncIterable[U]:
-    async def afunc() -> AsyncIterable[U]:
-        loop = asyncio.get_running_loop()
-        gen: Iterator[U] = await loop.run_in_executor(executor, iter, src)
-        # Note on the use of sentinel
-        #
-        # One would think that catching StopIteration is simpler here, like
-        #
-        # while True:
-        #     try:
-        #         yield await run_async(next, gen)
-        #     except StopIteration:
-        #         break
-        #
-        # Unfortunately, this does not work. It throws an error like
-        # `TypeError: StopIteration interacts badly with generators and
-        # cannot be raised into a Future`
-        #
-        # To workaround, we handle StopIteration in the sync function, and notify
-        # the end of Iteratoin with sentinel object.
-        sentinel: object = object()
-
-        def _next() -> U:
-            """Wrapper around generator.
-            This is necessary as we cannot raise StopIteration in async func."""
-            try:
-                return next(gen)
-            except StopIteration:
-                return sentinel  # type: ignore[return-value]
-
-        while (val := await loop.run_in_executor(executor, _next)) is not sentinel:
-            yield val
-
-    return afunc()
-
-
 def _enqueue(
     src: Iterable[T] | AsyncIterable[T],
     queue: AsyncQueue[T],
     max_items: int | None = None,
 ) -> Coroutine:
     if not hasattr(src, "__aiter__"):
-        src = _to_async_gen(src, None)  # pyre-ignore: [6]
+        src = _to_async_gen(iter, None)(src)
 
     @_put_eof_when_done(queue)
     async def enqueue():
