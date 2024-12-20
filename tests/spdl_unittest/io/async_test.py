@@ -110,12 +110,18 @@ def test_decode_video_clips(get_sample):
     N = 10
 
     async def _test():
-        timestamps = [(i, i + 1) for i in range(N)]
         demuxer = spdl.io.Demuxer(sample.path)
-        arrays = await _test_async_decode(demuxer.demux_video, timestamps)
-        assert len(arrays) == N
-        for i, arr in enumerate(arrays):
-            print(i, arr.shape, arr.dtype)
+        print(demuxer)
+        for n in range(N):
+            timestamp = (n, n + 1)
+            packets = demuxer.demux_video((n, n+1))
+            print(packets)
+            frames = await spdl.io.async_decode_packets(packets)
+            print(frames)
+            buffer = await spdl.io.async_convert_frames(frames)
+            print(buffer)
+            arr = spdl.io.to_numpy(buffer)
+            print(arr.shape, arr.dtype)
             assert arr.shape == (25, 240, 320, 3)
             assert arr.dtype == np.uint8
 
