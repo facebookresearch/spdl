@@ -11,10 +11,11 @@
 import warnings
 from typing import Any
 
-from . import _dataloader
+from . import _dataloader, _iterators
 
 _mods = [
     _dataloader,
+    _iterators,
 ]
 
 __all__ = sorted(item for mod in _mods for item in mod.__all__)
