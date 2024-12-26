@@ -7,7 +7,7 @@
 import time
 
 import pytest
-from spdl.dataloader import DataLoader, MapIterator, MergeIterator
+from spdl.dataloader import DataLoader, MergeIterator
 
 
 def get_dl(*args, timeout=3, num_threads=2, **kwargs):
@@ -163,25 +163,6 @@ def test_dataloader_aggregate():
     ]
 
     assert list(dl) == expected
-
-
-def test_mapiterator():
-    """MapIterator iterates the mapped values"""
-
-    mapping = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e"}
-
-    result = list(MapIterator(mapping))
-    assert result == list(mapping.values())
-
-
-def test_mapiterator_sampler():
-    """MapIterator iterates the mapped values picked by sampler"""
-
-    mapping = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e"}
-    sampler = [4, 2, 0]
-
-    result = list(MapIterator(mapping, sampler))
-    assert result == ["e", "c", "a"]
 
 
 def test_mergeiterator_ordered():

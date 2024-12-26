@@ -14,12 +14,11 @@ from collections.abc import (
     Callable,
     Iterable,
     Iterator,
-    Mapping,
     Sequence,
 )
 from typing import Any, TypeVar
 
-__all__ = ["run_in_subprocess", "MapIterator", "MergeIterator"]
+__all__ = ["run_in_subprocess", "MergeIterator"]
 
 T = TypeVar("T")
 
@@ -335,49 +334,3 @@ class MergeIterator(Iterable[T]):
             yield from _stocastic_iter(
                 iterators, self.weights, self.stop_after, self.seed
             )
-
-
-################################################################################
-# MapIterator
-################################################################################
-
-
-class MapIterator(Iterable[V]):
-    """Combine Mapping object and iterable to iterate over mapped objects
-
-    Args:
-        mapping: Object implements :py:class:`~collections.abc.Mapping` interface.
-        sampler: **Optional** Generator that yields key for the mapping.
-            Used to specify the iteration order over the mapping and/or to sample
-            from a subset of the mapping.
-
-    Example:
-        >>> mapping = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e"}
-        >>> for item in MapIterator(mapping):
-        ...    print(item)
-        ...
-        a
-        b
-        c
-        d
-        e
-        >>> sampler = range(4, -2, -1)
-        >>> for item in MapIterator(mapping, sampler):
-        ...    print(item)
-        ...
-        e
-        c
-        a
-    """
-
-    def __init__(
-        self,
-        mapping: Mapping[K, V],
-        sampler: Iterable[K] | None = None,
-    ) -> None:
-        self.mapping = mapping
-        self.sampler = sampler
-
-    def __iter__(self) -> Iterator[V]:
-        for key in self.sampler or self.mapping:
-            yield self.mapping[key]
