@@ -39,7 +39,7 @@ _MSG_PARENT_REQUEST_STOP = "PARENT_REQUEST_STOP"
 # Message from worker to the parent
 _MSG_GENERATOR_FAILED = "GENERATOR_FAILED_TO_INITIALIZE"
 _MSG_ITERATION_FINISHED = "ITERATION_FINISHED"
-_MSG_DATA_QUEUE_FULL = "DATA_QUEUE_FULL"
+_MSG_DATA_QUEUE_FAILED = "DATA_QUEUE_FAILED"
 
 
 def _execute_iterator(
@@ -63,7 +63,7 @@ def _execute_iterator(
         else:
             if msg == _MSG_PARENT_REQUEST_STOP:
                 return
-            raise ValueError(f"Unexpected message redeived: {msg}")
+            raise ValueError(f"[INTERNAL ERROR] Unexpected message received: {msg}")
 
         try:
             item = next(gen)
@@ -76,8 +76,8 @@ def _execute_iterator(
 
         try:
             data_queue.put(item)
-        except queue.Full:
-            msg_queue.put(_MSG_DATA_QUEUE_FULL)
+        except Exception:
+            msg_queue.put(_MSG_DATA_QUEUE_FAILED)
             return
 
 
@@ -111,7 +111,11 @@ def run_in_subprocess(
     """
     ctx = mp.get_context(mp_context)
     msg_q = ctx.Queue()
-    data_q = ctx.Queue(maxsize=queue_size)
+    data_q: mp.Queue = ctx.Queue(maxsize=queue_size)
+
+    def _drain() -> Iterator[T]:
+        while not data_q.empty():
+            yield data_q.get_nowait()
 
     process = ctx.Process(
         target=_execute_iterator,
@@ -127,18 +131,21 @@ def run_in_subprocess(
             except queue.Empty:
                 pass
             else:
+                # When a message is found, the child process stopped putting data.
+                yield from _drain()
+
                 if msg == _MSG_ITERATION_FINISHED:
                     return
                 if msg == _MSG_GENERATOR_FAILED:
                     raise RuntimeError(
                         "The worker process quit because the generator failed."
                     )
-                if msg == _MSG_DATA_QUEUE_FULL:
+                if msg == _MSG_DATA_QUEUE_FAILED:
                     raise RuntimeError(
-                        "The worker process quit because the data queue is full for too long."
+                        "The worker process quit because it failed at passing the data."
                     )
 
-                raise ValueError(f"Unexpected message received: {msg}")
+                raise ValueError(f"[INTERNAL ERROR] Unexpected message received: {msg}")
 
             try:
                 yield data_q.get(timeout=1)
@@ -153,12 +160,11 @@ def run_in_subprocess(
                         f"The worker process did not produce any data for {elapsed:.2f} seconds."
                     )
 
-    except Exception:
+    except (Exception, KeyboardInterrupt):
         msg_q.put(_MSG_PARENT_REQUEST_STOP)
         raise
     finally:
-        while not data_q.empty():
-            data_q.get_nowait()
+        yield from _drain()
         process.join(3)
 
         if process.exitcode is None:
