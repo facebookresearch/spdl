@@ -42,7 +42,7 @@ autosummary_ignore_module_all = False
 autoclass_content = "class"
 add_module_names = False
 autodoc_default_options = {
-    "special-members": ",".join(["__len__", "__getitem__", "__iter__"]),
+    "special-members": ",".join(["__len__", "__getitem__", "__iter__", "__aiter__"]),
     "undoc-members": True,
     "exclude-members": ",".join(
         [
