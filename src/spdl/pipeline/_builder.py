@@ -196,7 +196,7 @@ def _pipe(
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            task = create_task(_wrap(afunc(item)), name=f"{name}_{(i := i + 1)}")
+            task = create_task(_wrap(afunc(item)), name=f"{name}:{(i := i + 1)}")
             tasks.add(task)
 
             if len(tasks) >= concurrency:
