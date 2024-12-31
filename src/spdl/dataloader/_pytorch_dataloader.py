@@ -14,7 +14,7 @@ import os
 import pickle
 import time
 from collections.abc import Callable, Iterable, Iterator
-from concurrent.futures import Executor, ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.shared_memory import SharedMemory
 from types import ModuleType
 from typing import cast, Sized, TYPE_CHECKING, TypeVar
@@ -31,82 +31,9 @@ else:
 K = TypeVar("K")
 T = TypeVar("T")
 U = TypeVar("U")
+V = TypeVar("V")
 
 _LG: logging.Logger = logging.getLogger(__name__)
-
-
-class PyTorchDataLoader(Iterable[U]):
-    """PyTorchDataLoader()
-
-    A PyTorch-style data loader that works on map-style dataset.
-    Use :py:func:`get_pytorch_dataloader` to instantiate this class.
-    You can use this class as almost drop-in replacement of PyTorch's DataLoader class.
-
-    The architecture of data loader is different in following ways:
-
-    - Only the dataset and the collate function are copied to the worker process.
-      (Sampler and Generator are not copied)
-    - The dataset is copied to worker processed via shared memory.
-    - Sampler is executed in the main process and the resulting indices are passed to the
-      worker processes.
-    - Worker processes share the same input/output queues.
-      (PyTorch creates a set of i/o queues for each worker process.)
-
-    Due to the way Dataset is defined, this class still has to copy the dataset to
-    each worker process. So the memory consumption is not reduced.
-    However, fast initialization and reduced inter-process communication makes
-    this implementation faster than PyTorch DataLoader.
-
-    :ivar: dataset: The source dataset.
-    """
-
-    def __init__(
-        self,
-        *,
-        dataset: "torch.utils.data.dataset.Dataset[T]",
-        shmem: SharedMemory,  # to keep the reference alive
-        sampler: "torch.utils.data.sampler.Sampler[K]",
-        fetch_fn: Callable[[K], U] | Callable[[list[K]], U],
-        executor: Executor,
-        num_workers: int,
-        timeout: float | None,
-        buffer_size: int,
-        output_order: str = "completion",
-    ) -> None:
-        self.dataset = dataset  # For external access.
-        self._shmem: SharedMemory = shmem
-        self._sampler = sampler
-        self._fetch_fn = fetch_fn
-        self._executor = executor
-        self._num_workers = num_workers
-        self._buffer_size = buffer_size
-        self._timeout = timeout
-        self._output_order = output_order
-
-    def __len__(self) -> int:
-        """Returns the number of samples/batches this data loader returns."""
-        return len(cast(Sized, self._sampler))
-
-    def _get_pipeline(self) -> Pipeline:
-        return (
-            PipelineBuilder()
-            .add_source(self._sampler)
-            .pipe(
-                self._fetch_fn,
-                executor=self._executor,
-                output_order=self._output_order,
-                concurrency=self._num_workers,
-            )
-            .add_sink(self._buffer_size)
-            .build(num_threads=1)
-        )
-
-    def __iter__(self) -> Iterator[U]:
-        """Iterate on the dataset and yields samples/batches."""
-        pipeline = self._get_pipeline()
-        with pipeline.auto_stop():
-            for item in pipeline.get_iterator(timeout=self._timeout):
-                yield item
 
 
 ################################################################################
@@ -160,12 +87,92 @@ def _serialize_dataset(dataset: "torch.utils.data.dataset.Dataset[T]") -> Shared
     shmem.buf[:] = data
     elapsed = time.monotonic() - t0
     _LG.info(
-        "Written dataset into shared memory %s (%s bytes) in %.2f seconds",
+        "Written dataset into shared memory %s (%s MB) in %.2f seconds",
         shmem.name,
-        f"{len(data):_d}",
+        f"{len(data) // 1_000_000:_d}",
         elapsed,
     )
     return shmem
+
+
+class PyTorchDataLoader(Iterable[V]):
+    """PyTorchDataLoader()
+
+    A PyTorch-style data loader that works on map-style dataset.
+    Use :py:func:`get_pytorch_dataloader` to instantiate this class.
+    You can use this class as almost drop-in replacement of PyTorch's DataLoader class.
+
+    The architecture of data loader is different in following ways:
+
+    - Only the dataset and the collate function are copied to the worker process.
+      (Sampler and Generator are not copied)
+    - The dataset is copied to worker processed via shared memory.
+    - Sampler is executed in the main process and the resulting indices are passed to the
+      worker processes.
+    - Worker processes share the same input/output queues.
+      (PyTorch creates a set of i/o queues for each worker process.)
+
+    Due to the way Dataset is defined, this class still has to copy the dataset to
+    each worker process. So the memory consumption is not reduced.
+    However, fast initialization and reduced inter-process communication makes
+    this implementation faster than PyTorch DataLoader.
+
+    :ivar: dataset: The source dataset.
+    """
+
+    def __init__(
+        self,
+        *,
+        dataset: "torch.utils.data.dataset.Dataset[T]",
+        shmem: SharedMemory,  # to keep the reference alive
+        sampler: "torch.utils.data.sampler.Sampler[K]",
+        fetch_fn: Callable[[K], U] | Callable[[list[K]], U],
+        collate_fn: Callable[[list[T]], U],
+        mp_ctx: mp.context.BaseContext,
+        num_workers: int,
+        timeout: float | None,
+        buffer_size: int,
+        output_order: str = "completion",
+    ) -> None:
+        self.dataset = dataset  # For external access.
+        self._shmem: SharedMemory = shmem
+        self._sampler = sampler
+        self._fetch_fn = fetch_fn
+        self._collate_fn = collate_fn
+        self._mp_ctx = mp_ctx
+        self._num_workers = num_workers
+        self._buffer_size = buffer_size
+        self._timeout = timeout
+        self._output_order = output_order
+
+    def __len__(self) -> int:
+        """Returns the number of samples/batches this data loader returns."""
+        return len(cast(Sized, self._sampler))
+
+    def _get_pipeline(self) -> Pipeline:
+        executor = _get_executor(
+            self._shmem.name, self._collate_fn, self._num_workers, self._mp_ctx
+        )
+        pipeline = (
+            PipelineBuilder()
+            .add_source(self._sampler)
+            .pipe(
+                self._fetch_fn,
+                executor=executor,
+                output_order=self._output_order,
+                concurrency=self._num_workers,
+            )
+            .add_sink(self._buffer_size)
+            .build(num_threads=1)
+        )
+        return executor, pipeline
+
+    def __iter__(self) -> Iterator[V]:
+        """Iterate on the dataset and yields samples/batches."""
+        executor, pipeline = self._get_pipeline()
+        with executor, pipeline.auto_stop():
+            for item in pipeline.get_iterator(timeout=self._timeout):
+                yield item
 
 
 ################################################################################
@@ -263,7 +270,7 @@ def get_pytorch_dataloader(
     generator: "torch.Generator | None" = None,
     *,
     prefetch_factor: int = 2,
-    persistent_workers: bool = True,
+    persistent_workers: bool = False,
     pin_memory_device: str | None = None,
 ) -> PyTorchDataLoader[U]:
     from torch.utils.data.dataloader import IterableDataset
@@ -280,8 +287,8 @@ def get_pytorch_dataloader(
     if pin_memory_device is not None:
         raise ValueError("`pin_memory_device` is not supported (yet).")
 
-    if not persistent_workers:
-        raise ValueError("`persistent_workers=False` is not supported.  ")
+    if persistent_workers:
+        raise ValueError("`persistent_workers` is not supported.")
 
     if timeout is not None and timeout < 0:
         raise ValueError(f"`timeout` must be positive. Found: {timeout}.")
@@ -309,14 +316,14 @@ def get_pytorch_dataloader(
     )
     _LG.info("Using multiprocessing context: %s", mp_ctx.get_start_method())
     shmem = _serialize_dataset(dataset)
-    executor = _get_executor(shmem.name, _collate_fn, num_workers, mp_ctx)
 
     return PyTorchDataLoader(
         dataset=dataset,
         shmem=shmem,
         sampler=_sampler,
         fetch_fn=_fetch_fn,
-        executor=executor,
+        collate_fn=_collate_fn,
+        mp_ctx=mp_ctx,
         num_workers=num_workers,
         timeout=timeout,
         buffer_size=buffer_size,
