@@ -18,7 +18,7 @@ from collections.abc import (
 )
 from typing import Any, TypeVar
 
-__all__ = ["run_in_subprocess", "MergeIterator"]
+__all__ = ["iterate_in_subprocess", "MergeIterator"]
 
 T = TypeVar("T")
 
@@ -30,7 +30,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 # pyre-strict
 
 ################################################################################
-# run_in_subprocess
+# iterate_in_subprocess
 ################################################################################
 
 # Message from parent to worker
@@ -45,12 +45,10 @@ _MSG_DATA_QUEUE_FAILED = "DATA_QUEUE_FAILED"
 def _execute_iterator(
     msg_queue: mp.Queue,
     data_queue: mp.Queue,
-    fn: Callable[..., Iterator[T]],
-    args: tuple[...] | None,
-    kwargs: dict[str, Any] | None,
+    fn: Callable[[], Iterator[T]],
 ) -> None:
     try:
-        gen = fn(*(args or ()), **(kwargs or {}))
+        gen = iter(fn())
     except Exception:
         msg_queue.put(_MSG_GENERATOR_FAILED)
         raise
@@ -81,10 +79,8 @@ def _execute_iterator(
             return
 
 
-def run_in_subprocess(
-    fn: Callable[..., Iterator[T]],
-    args: tuple[...] | None = None,
-    kwargs: dict[str, Any] | None = None,
+def iterate_in_subprocess(
+    fn: Callable[[], Iterable[T]],
     queue_size: int = 64,
     mp_context: str = "forkserver",
     timeout: float | None = None,
@@ -93,9 +89,8 @@ def run_in_subprocess(
     """Run an iterator in a separate process, and yield the results one by one.
 
     Args:
-        fn: Generator function.
-        args: Arguments to pass to the generator function.
-        kwargs: Keyword arguments to pass to the generator function.
+        fn: Function that returns an iterator. Use :py:func:`functools.partial` to
+            pass arguments to the function.
         queue_size: Maximum number of items to buffer in the queue.
         mp_context: Context to use for multiprocessing.
         timeout: Timeout for inactivity. If the generator function does not yield
@@ -107,7 +102,7 @@ def run_in_subprocess(
 
     .. note::
 
-       The generator function, its arguments and the result of generator must be picklable.
+       The function and the values yielded by the iterator of generator must be picklable.
     """
     ctx = mp.get_context(mp_context)
     msg_q = ctx.Queue()
@@ -119,7 +114,7 @@ def run_in_subprocess(
 
     process = ctx.Process(
         target=_execute_iterator,
-        args=(msg_q, data_q, fn, args, kwargs),
+        args=(msg_q, data_q, fn),
         daemon=daemon,
     )
     process.start()
@@ -179,6 +174,26 @@ def run_in_subprocess(
 
         if process.exitcode is None:
             _LG.warning("Failed to kill the worker process.")
+
+
+def run_in_subprocess(
+    fn: Callable[..., Iterable[T]],
+    args: tuple[...] | None = None,
+    kwargs: dict[str, Any] | None = None,
+    queue_size: int = 64,
+    mp_context: str = "forkserver",
+    timeout: float | None = None,
+    daemon: bool = False,
+) -> Iterator[T]:
+    from functools import partial
+
+    return iterate_in_subprocess(
+        fn=partial(fn, *(args or ()), **(kwargs or {})),
+        queue_size=queue_size,
+        mp_context=mp_context,
+        timeout=timeout,
+        daemon=daemon,
+    )
 
 
 ################################################################################
