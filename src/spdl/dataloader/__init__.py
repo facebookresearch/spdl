@@ -43,4 +43,12 @@ def __getattr__(name: str) -> Any:
         )
         return getattr(spdl.pipeline, name)
 
+    if name == "run_in_subprocess":
+        warnings.warn(
+            "`run_in_subprocess` has been deprecated. "
+            "Use `iterate_in_subprocess` instead.",
+            stacklevel=2,
+        )
+        return _iterators.run_in_subprocess
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
