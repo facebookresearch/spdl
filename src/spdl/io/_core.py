@@ -55,33 +55,19 @@ __all__ = [
     "demux_audio",
     "demux_video",
     "demux_image",
-    "async_demux_audio",
-    "async_demux_video",
-    "async_demux_image",
     # DECODING
     "decode_packets",
-    "async_decode_packets",
     "decode_packets_nvdec",
-    "async_decode_packets_nvdec",
     "streaming_decode_packets",
-    "async_streaming_decode_packets",
     "decode_image_nvjpeg",
-    "async_decode_image_nvjpeg",
     # FRAME CONVERSION
     "convert_array",
     "convert_frames",
-    "async_convert_array",
-    "async_convert_frames",
     # DATA TRANSFER
     "transfer_buffer",
-    "async_transfer_buffer",
     "transfer_buffer_cpu",
-    "async_transfer_buffer_cpu",
     # ENCODING
     "encode_image",
-    "async_encode_image",
-    # MISC
-    "run_async",
 ]
 
 _LG = logging.getLogger(__name__)
@@ -699,7 +685,7 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
         >>> import spdl.io
         >>>
         >>> data = np.random.randint(255, size=(32, 16, 3), dtype=np.uint8)
-        >>> coro = spdl.io.async_encode_image(
+        >>> img = spdl.io.encode_image(
         ...     "foo.png",
         ...     data,
         ...     pix_fmt="rgb24",
@@ -709,7 +695,6 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
         ...         scale_algo="neighbor",
         ...     ),
         ... )
-        >>> asyncio.run(coro)
         >>>
 
     Example - Save CUDA tensor as image
@@ -718,15 +703,15 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
         >>>
         >>> data = torch.randint(255, size=(32, 16, 3), dtype=torch.uint8, device="cuda")
         >>>
-        >>> async def encode(data):
-        >>>     buffer = await spdl.io.async_transfer_buffer_cpu(data)
-        >>>     return await spdl.io.async_encode_image(
+        >>> def encode(data):
+        ...     buffer = spdl.io.transfer_buffer_cpu(data)
+        ...     return spdl.io.encode_image(
         ...         "foo.png",
         ...         buffer,
         ...         pix_fmt="rgb24",
         ...     )
         ...
-        >>> asyncio.run(encode(data))
+        >>> encode(data)
         >>>
     """
     return _libspdl.encode_image(path, data, pix_fmt=pix_fmt, **kwargs)

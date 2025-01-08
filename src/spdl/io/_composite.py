@@ -32,14 +32,7 @@ __all__ = [
     "load_audio",
     "load_video",
     "load_image",
-    "async_load_audio",
-    "async_load_video",
-    "async_load_image",
-    "async_load_image_batch",
-    "async_load_image_batch_nvdec",
     "load_image_batch_nvjpeg",
-    "async_load_image_batch_nvjpeg",
-    "async_sample_decode_video",
     "sample_decode_video",
 ]
 
@@ -967,10 +960,95 @@ def sample_decode_video(
     decode_config: DecodeConfig | None = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
 ) -> list[ImagePackets]:
-    """Synchronous version of :py:func:`~async_sample_decode_video`.
+    """Decode specified frames from the packets.
 
-    This function performs the same operation as :py:func:`~async_sample_decode_video`,
-    but the operations are performed sequentially.
+    This function decodes the input video packets and returns the frames
+    specified by ``indices``. Internally, it splits the packets into
+    smaller set of packets and decode the minimum number of frames to
+    retrieve the specified frames.
+
+    .. mermaid::
+
+       block-beta
+         columns 15
+           A["Input Packets"]:15
+
+           space:15
+
+           block:B1:3
+             columns 3
+             P1["1"] P2["2"] P3["3"]
+           end
+           block:B2:3
+             columns 3
+             P4["4"] P5["5"] P6["6"]
+           end
+           block:B3:3
+             columns 3
+             P7["7"] P8["8"] P9["9"]
+           end
+           block:B4:3
+             columns 3
+             P10["10"] P11["11"] P12["12"]
+           end
+           block:B5:3
+             columns 3
+             P13["13"] P14["14"] P15["15"]
+           end
+
+           space:15
+
+           block:d1:3
+             columns 3
+             F1["Frame 1"] space:2
+           end
+           space:3
+           block:d2:3
+             columns 3
+             F7["Frame 7"] F8["Frame 8"] space
+           end
+           space:3
+           block:d3:3
+             columns 3
+             F13["Frame 13"] F14["Frame 14"] F15["Frame 15"]
+           end
+
+           space:15
+
+           space:6
+           block:out:3
+             columns 3
+             O1["Frame 1"] O8["Frame 8"] O15["Frame 15"]
+           end
+           space:6
+           A -- "Split 1" --> B1
+           A -- "Split 2" --> B2
+           A -- "Split 3" --> B3
+           A -- "Split 4" --> B4
+           A -- "Split 5" --> B5
+
+           B1 -- "Decode 1" --> d1
+           B3 -- "Decode 3" --> d2
+           B5 -- "Decode 5" --> d3
+
+           F1 --> O1
+           F8 --> O8
+           F15 --> O15
+
+    Args:
+        packets: The input video packets.
+        indices: The list of frame indices.
+        decode_config:
+            *Optional:* Decode config.
+            See :py:func:`~spdl.io.decode_config`.
+        filter_desc: *Optional:* Filter description.
+            See :py:func:`~spdl.io.decode_packets` for detail.
+
+        strict: *Optional:* If True, raise an error
+            if any of the frames failed to decode.
+
+    Returns:
+        Decoded frames.
     """
     if not indices:
         raise ValueError("Frame indices must be non-empty.")

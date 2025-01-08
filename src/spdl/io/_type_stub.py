@@ -38,15 +38,6 @@ class Packets:
 
     Decode functions receive Packets objects and generate audio samples and
     visual frames.
-    The ``Packets`` objects are exposed to public API to allow composing
-    demux/decoding functions in ways that they are executed concurrently.
-
-    For example, when decoding multiple clips from a single audio and video file,
-    by emitting ``Packets`` objects in between, decoding can be started while the
-    demuxer is demuxing the subsequent windows.
-
-    The following code will kick-off the decoding job as soon as the streaming
-    demux function yields a ``VideoPackets`` object.
 
     .. admonition:: Example
 
@@ -57,14 +48,12 @@ class Packets:
        ...     (13, 15),
        ... ]
        >>>
-       >>> tasks = []
-       >>> async for packets in spdl.io.async_streaming_demux_video(src, windows):
-       >>>     # Kick off decoding job while demux function is demuxing the next window
-       >>>     task = asyncio.create_task(async_decode_packets(packets))
-       >>>     task.append(task)
+       >>> demuxer = spdl.io.Demuxer(src)
+       >>> for window in windows:
+       ...     packets = demuxer.demux_video(window)
+       ...     frames = decode_packets(packets)
+       ...
        >>>
-       >>> # Wait for all the decoding to be complete
-       >>> asyncio.wait(tasks)
 
     .. important::
 
