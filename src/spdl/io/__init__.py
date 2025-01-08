@@ -40,28 +40,43 @@ def __dir__():
     return __all__
 
 
-_deprecated = {
-    "streaming_demux_audio",
-    "streaming_demux_video",
-    "async_streaming_demux_audio",
-    "async_streaming_demux_video",
-    "streaming_load_audio",
-    "streaming_load_video",
-    "async_streaming_load_audio",
-    "async_streaming_load_video",
+_deprecated_core = {
+    "async_demux_audio",
+    "async_demux_video",
+    "async_demux_image",
+    "async_decode_packets",
+    "async_decode_packets_nvdec",
+    "async_streaming_decode_packets",
+    "async_decode_image_nvjpeg",
+    "async_convert_array",
+    "async_convert_frames",
+    "async_transfer_buffer",
+    "async_transfer_buffer_cpu",
+    "async_encode_image",
+    "run_async",
+}
+_deprecated_composite = {
+    "async_load_audio",
+    "async_load_video",
+    "async_load_image",
+    "async_load_image_batch",
+    "async_load_image_batch_nvdec",
+    "async_load_image_batch_nvjpeg",
+    "async_sample_decode_video",
 }
 
 
 def __getattr__(name: str) -> Any:
-    if name in _deprecated:
+    if name in _deprecated_core or name in _deprecated_composite:
         import warnings
 
         warnings.warn(
-            f"`{name}` has been deprecated. Please use `spdl.io.Demuxer`.",
+            f"`{name}` has been deprecated. Please use synchronous variant.",
             category=FutureWarning,
             stacklevel=2,
         )
-        if "demux" in name:
+
+        if name in _deprecated_core:
             return getattr(_core, name)
         return getattr(_composite, name)
 
