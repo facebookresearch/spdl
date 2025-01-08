@@ -20,7 +20,13 @@
 
 {{ fullname | escape | underline }}
 
+Overview
+--------
+
 .. automodule:: {{ fullname }}
+
+API Reference
+-------------
 
 ..
    ############################################################################
@@ -32,7 +38,7 @@
 .. rubric:: {{ _('Functions') }}
 
 {% for item in functions %}
-{{ item | escape | underline(line='-')}}
+{{ item | escape | underline(line='^')}}
 .. autosummary::
    :toctree:
    :nosignatures:
@@ -54,7 +60,7 @@
 .. rubric:: {{ _('Module Attributes') }}
 
 {% for item in attributes %}
-{{ item | escape | underline(line='-')}}
+{{ item | escape | underline(line='^')}}
 .. autosummary::
    :toctree:
    :nosignatures:
@@ -76,7 +82,7 @@
 .. rubric:: {{ _('Classes') }}
 
 {% for item in classes %}
-{{ item | escape | underline(line='-')}}
+{{ item | escape | underline(line='^')}}
 .. autosummary::
    :toctree:
    :nosignatures:
@@ -99,7 +105,7 @@
 .. rubric:: {{ _('Exceptions') }}
 
 {% for item in exceptions %}
-{{ item | escape | underline(line='-')}}
+{{ item | escape | underline(line='^')}}
 .. autosummary::
    :toctree:
    :nosignatures:
@@ -121,7 +127,7 @@
 .. rubric:: Modules
 
 {% for item in modules %}
-{{ item | escape | underline(line='-')}}
+{{ item | escape | underline(line='^')}}
 .. autosummary::
    :toctree:
    :hide_from_toctree:
@@ -151,7 +157,7 @@
 .. rubric:: Others
 
 {%- for item in others %}
-{{ item | escape | underline(line='-')}}
+{{ item | escape | underline(line='^')}}
 
 .. autosummary::
    :template: _custom_autosummary_others.rst
