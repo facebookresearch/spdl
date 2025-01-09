@@ -18,7 +18,9 @@ from collections.abc import (
 )
 from typing import Any, TypeVar
 
-__all__ = ["iterate_in_subprocess", "MergeIterator"]
+from ._source._type import IterableWithShuffle
+
+__all__ = ["iterate_in_subprocess", "MergeIterator", "repeat_source"]
 
 T = TypeVar("T")
 
@@ -355,3 +357,51 @@ class MergeIterator(Iterable[T]):
             yield from _stocastic_iter(
                 iterators, self.weights, self.stop_after, self.seed
             )
+
+
+################################################################################
+# repeat_source
+################################################################################
+
+
+def repeat_source(
+    src: Iterable[T] | IterableWithShuffle[T],
+    epoch: int = 0,
+) -> Iterator[T]:
+    """Convert an iterable into an infinite iterator with optional shuffling.
+
+    Roughly equivalent to the following code snippet.
+
+    .. code-block::
+
+       while True:
+           if hasattr(src, "shuffle"):
+               src.shuffle(seed=epoch)
+           yield from src
+           epoch += 1
+
+    Args:
+        src: The source to repeat.
+        epoch: The epoch number to start with.
+    """
+    while True:
+        _LG.info("Starting source epoch %d.", epoch)
+        t0 = time.monotonic()
+        if hasattr(src, "shuffle"):
+            src.shuffle(seed=epoch)  # pyre-ignore: [16]
+            if (elapsed := time.monotonic() - t0) > 3:
+                _LG.warning("Shuffling took %.2f sec.", elapsed)
+        num_rows = 0
+        for batch in src:
+            num_rows += 1
+            yield batch
+        elapsed = time.monotonic() - t0
+        qps = num_rows / elapsed
+        _LG.info(
+            "Finished source epoch %d. (Yielded %d rows in %.2f sec. QPS: %.2f)",
+            epoch,
+            num_rows,
+            elapsed,
+            qps,
+        )
+        epoch += 1
