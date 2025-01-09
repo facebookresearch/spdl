@@ -10,4 +10,5 @@ API Reference
    spdl.io
    spdl.pipeline
    spdl.dataloader
+   spdl.source
    spdl.utils

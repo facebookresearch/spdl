@@ -21,9 +21,9 @@ from collections.abc import (
     Iterator,
     Sequence,
 )
-from typing import Any, TypeVar
+from typing import TypeVar
 
-from ._source._type import IterableWithShuffle
+from ._type import IterableWithShuffle
 
 T = TypeVar("T")
 K = TypeVar("K")
@@ -178,26 +178,6 @@ def iterate_in_subprocess(
 
         if process.exitcode is None:
             _LG.warning("Failed to kill the worker process.")
-
-
-def run_in_subprocess(
-    fn: Callable[..., Iterable[T]],
-    args: tuple[...] | None = None,
-    kwargs: dict[str, Any] | None = None,
-    queue_size: int = 64,
-    mp_context: str = "forkserver",
-    timeout: float | None = None,
-    daemon: bool = False,
-) -> Iterator[T]:
-    from functools import partial
-
-    return iterate_in_subprocess(
-        fn=partial(fn, *(args or ()), **(kwargs or {})),
-        queue_size=queue_size,
-        mp_context=mp_context,
-        timeout=timeout,
-        daemon=daemon,
-    )
 
 
 ################################################################################

@@ -13,8 +13,8 @@ from collections.abc import Iterator
 from os import PathLike
 from pathlib import Path
 
-from ._local_directory import LocalDirectory
 from ._type import IterableWithShuffle
+from .local_directory import LocalDirectory
 
 # pyre-strict
 
