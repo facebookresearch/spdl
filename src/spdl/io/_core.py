@@ -13,6 +13,7 @@ import logging
 import warnings
 from collections.abc import AsyncIterator, Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import overload, TYPE_CHECKING, TypeVar
 
 # We import NumPy only when type-checkng.
@@ -122,7 +123,9 @@ class Demuxer:
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: str | bytes | UintArray, **kwargs):
+    def __init__(self, src: str | Path | bytes | UintArray, **kwargs):
+        if isinstance(src, Path):
+            src = str(src)
         self._demuxer = _libspdl._demuxer(src, **kwargs)
 
     def demux_audio(
