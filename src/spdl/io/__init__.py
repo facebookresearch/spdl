@@ -33,6 +33,7 @@ from ._type_stub import (  # isort: skip
 from ._composite import (
     load_audio,
     load_image,
+    load_image_batch,
     load_image_batch_nvjpeg,
     load_video,
     sample_decode_video,
@@ -80,6 +81,7 @@ __all__ = [
     "load_audio",
     "load_video",
     "load_image",
+    "load_image_batch",
     "load_image_batch_nvjpeg",
     "sample_decode_video",
     # DEMUXING

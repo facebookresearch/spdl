@@ -4,22 +4,12 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
 
 import numpy as np
 import pytest
 import spdl.io
 import spdl.utils
 from spdl.io import get_audio_filter_desc, get_filter_desc
-
-
-def _decode_audio(src, sample_fmt=None):
-    buffer = asyncio.run(
-        spdl.io.async_load_audio(
-            src, filter_desc=get_audio_filter_desc(sample_fmt=sample_fmt)
-        )
-    )
-    return spdl.io.to_numpy(buffer)
 
 
 @pytest.mark.parametrize(
@@ -38,7 +28,9 @@ def test_audio_buffer_conversion_s16p(sample_fmts, get_sample):
     sample = get_sample(cmd)
 
     sample_fmt, expected = sample_fmts
-    array = _decode_audio(src=sample.path, sample_fmt=sample_fmt)
+    filter_desc = get_audio_filter_desc(sample_fmt=sample_fmt)
+    buffer = spdl.io.load_audio(src=sample.path, filter_desc=filter_desc)
+    array = spdl.io.to_numpy(buffer)
 
     assert array.ndim == 2
     assert array.dtype == np.dtype(expected)
@@ -59,22 +51,14 @@ def test_batch_audio_conversion(get_sample):
 
     timestamps = [(0, 1), (1, 1.5), (2, 2.7)]
 
-    async def _test():
-        decoding = []
+    frames = []
+    demuxer = spdl.io.Demuxer(sample.path)
+    for ts in timestamps:
+        packets = demuxer.demux_audio(ts)
+        filter_desc = get_filter_desc(packets, num_frames=8_000)
+        frames_ = spdl.io.decode_packets(packets, filter_desc=filter_desc)
+        frames.append(frames_)
 
-        demuxer = spdl.io.Demuxer(sample.path)
-        for ts in timestamps:
-            packets = demuxer.demux_audio(ts)
-            filter_desc = get_filter_desc(packets, num_frames=8_000)
-            coro = spdl.io.async_decode_packets(packets, filter_desc=filter_desc)
-            decoding.append(asyncio.create_task(coro))
-
-        frames = await asyncio.gather(*decoding)
-
-        buffer = await spdl.io.async_convert_frames(frames)
-        array = spdl.io.to_numpy(buffer)
-        return array
-
-    array = asyncio.run(_test())
-
+    buffer = spdl.io.convert_frames(frames)
+    array = spdl.io.to_numpy(buffer)
     assert array.shape == (3, 2, 8000)

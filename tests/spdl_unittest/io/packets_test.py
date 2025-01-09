@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
 import time
 
 import numpy as np
@@ -18,9 +17,9 @@ CMDS = {
 }
 
 
-async def _load_from_packets(packets):
-    frames = await spdl.io.async_decode_packets(packets)
-    buffer = await spdl.io.async_convert_frames(frames)
+def _load_from_packets(packets):
+    frames = spdl.io.decode_packets(packets)
+    buffer = spdl.io.convert_frames(frames)
     return spdl.io.to_numpy(buffer)
 
 
@@ -36,12 +35,9 @@ def test_audio_packets_attribtues(get_sample):
     # fmt: on
     sample = get_sample(cmd)
 
-    async def _test(src):
-        packets = await spdl.io.async_demux_audio(src)
-        assert packets.sample_rate == 8000
-        assert packets.num_channels == 2
-
-    asyncio.run(_test(sample.path))
+    packets = spdl.io.demux_audio(sample.path)
+    assert packets.sample_rate == 8000
+    assert packets.num_channels == 2
 
 
 @pytest.mark.parametrize(
@@ -58,14 +54,11 @@ def test_video_packets_attribtues(get_sample, rate):
     cmd = f"ffmpeg -hide_banner -y -f lavfi -r {rate[0]}/{rate[1]} -i testsrc -frames:v 25 sample.mp4"
     sample = get_sample(cmd)
 
-    async def _test(src):
-        packets = await spdl.io.async_demux_video(src)
-        assert packets.width == 320
-        assert packets.height == 240
-        assert packets.pix_fmt == "yuv444p"
-        assert packets.frame_rate == rate
-
-    asyncio.run(_test(sample.path))
+    packets = spdl.io.demux_video(sample.path)
+    assert packets.width == 320
+    assert packets.height == 240
+    assert packets.pix_fmt == "yuv444p"
+    assert packets.frame_rate == rate
 
 
 def test_image_packets_attribtues(get_sample):
@@ -73,13 +66,10 @@ def test_image_packets_attribtues(get_sample):
     cmd = CMDS["image"]
     sample = get_sample(cmd)
 
-    async def _test(src):
-        packets = await spdl.io.async_demux_image(src)
-        assert packets.width == 320
-        assert packets.height == 240
-        assert packets.pix_fmt == "gray"
-
-    asyncio.run(_test(sample.path))
+    packets = spdl.io.demux_image(sample.path)
+    assert packets.width == 320
+    assert packets.height == 240
+    assert packets.pix_fmt == "gray"
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
@@ -89,21 +79,18 @@ def test_clone_packets(media_type, get_sample):
     sample = get_sample(cmd)
 
     demux_func = {
-        "audio": spdl.io.async_demux_audio,
-        "video": spdl.io.async_demux_video,
-        "image": spdl.io.async_demux_image,
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
     }[media_type]
 
-    async def _test(src):
-        packets1 = await demux_func(src)
-        packets2 = packets1.clone()
+    packets1 = demux_func(sample.path)
+    packets2 = packets1.clone()
 
-        array1 = await _load_from_packets(packets1)
-        array2 = await _load_from_packets(packets2)
+    array1 = _load_from_packets(packets1)
+    array2 = _load_from_packets(packets2)
 
-        assert np.all(array1 == array2)
-
-    asyncio.run(_test(sample.path))
+    assert np.all(array1 == array2)
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
@@ -113,18 +100,15 @@ def test_clone_invalid_packets(media_type, get_sample):
     sample = get_sample(cmd)
 
     demux_func = {
-        "audio": spdl.io.async_demux_audio,
-        "video": spdl.io.async_demux_video,
-        "image": spdl.io.async_demux_image,
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
     }[media_type]
 
-    async def _test(src):
-        packets = await demux_func(src)
-        _ = await spdl.io.async_decode_packets(packets)
-        with pytest.raises(TypeError):
-            packets.clone()
-
-    asyncio.run(_test(sample.path))
+    packets = demux_func(sample.path)
+    _ = spdl.io.decode_packets(packets)
+    with pytest.raises(TypeError):
+        packets.clone()
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
@@ -132,24 +116,22 @@ def test_clone_packets_multi(media_type, get_sample):
     """Can clone multiple times"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
+    N = 100
 
     demux_func = {
-        "audio": spdl.io.async_demux_audio,
-        "video": spdl.io.async_demux_video,
-        "image": spdl.io.async_demux_image,
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
     }[media_type]
 
-    async def _test(src, N=100):
-        packets = await demux_func(src)
-        clones = [packets.clone() for _ in range(N)]
+    packets = demux_func(sample.path)
+    clones = [packets.clone() for _ in range(N)]
 
-        array = await _load_from_packets(packets)
-        arrays = [await _load_from_packets(c) for c in clones]
+    array = _load_from_packets(packets)
+    arrays = [_load_from_packets(c) for c in clones]
 
-        for i in range(N):
-            assert np.all(array == arrays[i])
-
-    asyncio.run(_test(sample.path))
+    for i in range(N):
+        assert np.all(array == arrays[i])
 
 
 def test_sample_decoding_time(get_sample):
@@ -166,30 +148,27 @@ def test_sample_decoding_time(get_sample):
     # Use ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__
     sample = get_sample(cmd)
 
-    async def _test(path):
-        indices = list(range(0, 5000, 100))
+    indices = list(range(0, 5000, 100))
 
-        packets = await spdl.io.async_demux_video(path)
-        t0 = time.monotonic()
-        frames = await spdl.io.async_decode_packets(packets.clone())
-        frames = frames[indices]
-        elapsed_ref = time.monotonic() - t0
-        buffer = await spdl.io.async_convert_frames(frames)
-        array_ref = spdl.io.to_numpy(buffer)
+    packets = spdl.io.demux_video(sample.path)
+    t0 = time.monotonic()
+    frames = spdl.io.decode_packets(packets.clone())
+    frames = frames[indices]
+    elapsed_ref = time.monotonic() - t0
+    buffer = spdl.io.convert_frames(frames)
+    array_ref = spdl.io.to_numpy(buffer)
 
-        t0 = time.monotonic()
-        frames = await spdl.io.async_sample_decode_video(packets, indices)
-        elapsed = time.monotonic() - t0
-        buffer = await spdl.io.async_convert_frames(frames)
-        array = spdl.io.to_numpy(buffer)
+    t0 = time.monotonic()
+    frames = spdl.io.sample_decode_video(packets, indices)
+    elapsed = time.monotonic() - t0
+    buffer = spdl.io.convert_frames(frames)
+    array = spdl.io.to_numpy(buffer)
 
-        print(f"{elapsed_ref=}, {elapsed=}")
-        assert np.all(array == array_ref)
+    print(f"{elapsed_ref=}, {elapsed=}")
+    assert np.all(array == array_ref)
 
-        # should be much faster than 2x
-        assert elapsed_ref / 2 > elapsed
-
-    asyncio.run(_test(sample.path))
+    # should be much faster than 2x
+    assert elapsed_ref / 2 > elapsed
 
 
 def test_sample_decoding_time_sync(get_sample):
@@ -237,59 +216,53 @@ def test_packet_len(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 75 sample.mp4"
     sample = get_sample(cmd)
 
-    async def _test(src):
-        ref_array = spdl.io.to_numpy(await spdl.io.async_load_video(src))
+    ref_array = spdl.io.to_numpy(spdl.io.load_video(sample.path))
 
-        packets = await spdl.io.async_demux_video(src, timestamp=(1.0, 2.0))
-        num_packets = len(packets)
+    packets = spdl.io.demux_video(sample.path, timestamp=(1.0, 2.0))
+    num_packets = len(packets)
 
-        frames = await spdl.io.async_decode_packets(packets)
-        num_frames = len(frames)
-        print(f"{num_packets=}, {num_frames=}")
-        assert num_packets == num_frames == 25
+    frames = spdl.io.decode_packets(packets)
+    num_frames = len(frames)
+    print(f"{num_packets=}, {num_frames=}")
+    assert num_packets == num_frames == 25
 
-        array = spdl.io.to_numpy(await spdl.io.async_convert_frames(frames))
-        assert np.all(array == ref_array[25:50])
-
-    asyncio.run(_test(sample.path))
+    array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
+    assert np.all(array == ref_array[25:50])
 
 
 def test_sample_decoding_window(get_sample):
-    """async_sample_decode_video returns the correct frame when timestamps is specified."""
+    """sample_decode_video returns the correct frame when timestamps is specified."""
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
     sample = get_sample(cmd)
 
-    async def _test(src):
-        # 250 frames
-        ref_array = spdl.io.to_numpy(await spdl.io.async_load_video(src))
-        assert len(ref_array) == 250
+    # 250 frames
+    ref_array = spdl.io.to_numpy(spdl.io.load_video(sample.path))
+    assert len(ref_array) == 250
 
-        # frames from 25 - 50, but internally it holds 0 - 50
-        packets = await spdl.io.async_demux_video(src, timestamp=(1.0, 2.0))
-        assert len(packets) == 25
+    # frames from 25 - 50, but internally it holds 0 - 50
+    packets = spdl.io.demux_video(sample.path, timestamp=(1.0, 2.0))
+    assert len(packets) == 25
 
-        # decode all to verify the pre-condition
-        frames = await spdl.io.async_decode_packets(packets.clone())
-        assert len(frames) == 25
-        array = spdl.io.to_numpy(await spdl.io.async_convert_frames(frames))
-        assert np.all(array == ref_array[25:50])
+    # decode all to verify the pre-condition
+    frames = spdl.io.decode_packets(packets.clone())
+    assert len(frames) == 25
+    array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
+    assert np.all(array == ref_array[25:50])
 
-        # Sample decode should offset the indices
-        indices = list(range(0, 25, 2))
-        frames = await spdl.io.async_sample_decode_video(packets, indices)
-        assert len(indices) == len(frames) == 13
-        array = spdl.io.to_numpy(await spdl.io.async_convert_frames(frames))
-        print(f"{array.shape=}, {ref_array[25:50:2].shape=}")
-        assert np.all(array == ref_array[25:50:2])
-
-    asyncio.run(_test(sample.path))
+    # Sample decode should offset the indices
+    indices = list(range(0, 25, 2))
+    frames = spdl.io.sample_decode_video(packets, indices)
+    assert len(indices) == len(frames) == 13
+    array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
+    print(f"{array.shape=}, {ref_array[25:50:2].shape=}")
+    assert np.all(array == ref_array[25:50:2])
 
 
 def test_sample_decoding_window_sync(get_sample):
-    """async_sample_decode_video returns the correct frame when timestamps is specified."""
+    """sample_decode_video returns the correct frame when timestamps is specified."""
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
@@ -324,15 +297,12 @@ def test_sample_decode_video_default_color_space(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
 
-    async def _test(src):
-        packets = await spdl.io.async_demux_video(src)
-        assert packets.pix_fmt != "rgb24"  # precondition
-        frames = await spdl.io.async_sample_decode_video(packets, list(range(10)))
+    packets = spdl.io.demux_video(sample.path)
+    assert packets.pix_fmt != "rgb24"  # precondition
+    frames = spdl.io.sample_decode_video(packets, list(range(10)))
 
-        for f in frames:
-            assert f.pix_fmt == "rgb24"
-
-    asyncio.run(_test(sample.path))
+    for f in frames:
+        assert f.pix_fmt == "rgb24"
 
 
 def test_sample_decode_video_default_color_space_sync(get_sample):
