@@ -4,8 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from collections.abc import Iterator
+from unittest.mock import patch
+
 import pytest
-from spdl.dataloader import MergeIterator
+from spdl.dataloader import MergeIterator, repeat_source
 
 
 def test_mergeiterator_ordered():
@@ -172,3 +175,61 @@ def test_mergeiterator_stochastic_stop_after_first_exhaustion():
 
     result = list(MergeIterator(iterables, weights=weights, stop_after=-1))
     assert result == [0, 1, 2, 3]
+
+
+def test_repeat_source_iterable_with_shuffle():
+    """repeat_source repeats souce while calling shuffle"""
+
+    class _IteWithShuffle:
+        def __init__(self) -> None:
+            self.vals = list(range(3))
+
+        def shuffle(self, seed: int) -> None:
+            assert isinstance(seed, int)
+            self.vals = self.vals[1:] + self.vals[:1]
+
+        def __iter__(self) -> Iterator[int]:
+            yield from self.vals
+
+    src = _IteWithShuffle()
+    gen = iter(repeat_source(src, epoch=2))
+
+    with patch.object(src, "shuffle", side_effect=src.shuffle) as mock_method:
+        assert next(gen) == 1
+        mock_method.assert_called_with(seed=2)
+        assert next(gen) == 2
+        assert next(gen) == 0
+
+        assert next(gen) == 2
+        mock_method.assert_called_with(seed=3)
+        assert next(gen) == 0
+        assert next(gen) == 1
+
+        assert next(gen) == 0
+        mock_method.assert_called_with(seed=4)
+        assert next(gen) == 1
+        assert next(gen) == 2
+
+        assert next(gen) == 1
+        mock_method.assert_called_with(seed=5)
+        assert next(gen) == 2
+        assert next(gen) == 0
+
+
+def test_repeat_source_iterable():
+    """repeat_source works Iterable without shuffle method"""
+
+    class _IteWithoutShuffle:
+        def __init__(self) -> None:
+            self.vals = list(range(3))
+
+        def __iter__(self) -> Iterator[int]:
+            yield from self.vals
+
+    src = _IteWithoutShuffle()
+    gen = iter(repeat_source(src, epoch=2))
+
+    for _ in range(100):
+        assert next(gen) == 0
+        assert next(gen) == 1
+        assert next(gen) == 2

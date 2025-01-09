@@ -12,11 +12,13 @@ import warnings
 from typing import Any
 
 from . import _dataloader, _iterators, _pytorch_dataloader
+from ._source import _type
 
 _mods = [
     _dataloader,
     _iterators,
     _pytorch_dataloader,
+    _type,
 ]
 
 __all__ = sorted(item for mod in _mods for item in mod.__all__)
