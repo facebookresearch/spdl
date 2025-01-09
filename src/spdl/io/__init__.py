@@ -12,28 +12,128 @@ from typing import Any
 
 # This has to happen before other sub modules are imporeted.
 # Otherwise circular import would occur.
-#
-# I know, I should not use `*`. I don't want to either, but
-# for creating annotation for types from C++ code, which might not be
-# available at the runtime, while simultaneously pleasing all the linters
-# (black, flake8 and pyre) and documentation tools, this seems like
-# the simplest solution.
-# This import is just for annotation, so please overlook this one.
-from ._type_stub import *  # noqa: F403  # isort: skip
+from ._type_stub import (  # isort: skip
+    CPUBuffer,
+    CUDABuffer,
+    Packets,
+    AudioPackets,
+    VideoPackets,
+    ImagePackets,
+    Frames,
+    AudioFrames,
+    VideoFrames,
+    ImageFrames,
+    DemuxConfig,
+    DecodeConfig,
+    EncodeConfig,
+    CUDAConfig,
+    CPUStorage,
+)
 
-from . import _composite, _config, _convert, _core, _preprocessing, _type_stub, _zip
+from ._composite import (
+    load_audio,
+    load_image,
+    load_image_batch_nvjpeg,
+    load_video,
+    sample_decode_video,
+)
+from ._config import (
+    cpu_storage,
+    cuda_config,
+    decode_config,
+    demux_config,
+    encode_config,
+)
+from ._convert import (
+    to_jax,
+    to_numba,
+    to_numpy,
+    to_torch,
+)
+from ._core import (
+    convert_array,
+    convert_frames,
+    decode_image_nvjpeg,
+    decode_packets,
+    decode_packets_nvdec,
+    demux_audio,
+    demux_image,
+    demux_video,
+    Demuxer,
+    encode_image,
+    streaming_decode_packets,
+    transfer_buffer,
+    transfer_buffer_cpu,
+)
+from ._preprocessing import (
+    get_audio_filter_desc,
+    get_filter_desc,
+    get_video_filter_desc,
+)
+from ._zip import (
+    load_npz,
+    NpzFile,
+)
 
-_mods = [
-    _composite,
-    _config,
-    _convert,
-    _core,
-    _preprocessing,
-    _zip,
+__all__ = [
+    # HIGH LEVEL API
+    "load_audio",
+    "load_video",
+    "load_image",
+    "load_image_batch_nvjpeg",
+    "sample_decode_video",
+    # DEMUXING
+    "Demuxer",
+    "demux_audio",
+    "demux_video",
+    "demux_image",
+    "Packets",
+    "AudioPackets",
+    "VideoPackets",
+    "ImagePackets",
+    # DECODING
+    "decode_packets",
+    "decode_packets_nvdec",
+    "streaming_decode_packets",
+    "decode_image_nvjpeg",
+    "Frames",
+    "AudioFrames",
+    "VideoFrames",
+    "ImageFrames",
+    # PREPROCESSING
+    "get_audio_filter_desc",
+    "get_video_filter_desc",
+    "get_filter_desc",
+    # FRAME CONVERSION
+    "convert_array",
+    "convert_frames",
+    "CPUBuffer",
+    "CUDABuffer",
+    # DATA TRANSFER
+    "transfer_buffer",
+    "transfer_buffer_cpu",
+    # CAST
+    "to_numba",
+    "to_numpy",
+    "to_torch",
+    "to_jax",
+    # ENCODING
+    "encode_image",
+    # CONFIG
+    "demux_config",
+    "DemuxConfig",
+    "decode_config",
+    "DecodeConfig",
+    "encode_config",
+    "EncodeConfig",
+    "cuda_config",
+    "CUDAConfig",
+    "cpu_storage",
+    "CPUStorage",
+    # NUMPY
+    "NpzFile",
+    "load_npz",
 ]
-
-
-__all__ = sorted(item for mod in [*_mods, _type_stub] for item in mod.__all__)
 
 
 def __dir__():
@@ -77,11 +177,12 @@ def __getattr__(name: str) -> Any:
         )
 
         if name in _deprecated_core:
-            return getattr(_core, name)
-        return getattr(_composite, name)
+            from . import _core
 
-    for mod in _mods:
-        if name in mod.__all__:
-            return getattr(mod, name)
+            return getattr(_core, name)
+
+        from . import _composite
+
+        return getattr(_composite, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

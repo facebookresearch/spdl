@@ -29,8 +29,16 @@ if TYPE_CHECKING:
         UintArray = NDArray[np.uint8]
     except ImportError:
         UintArray = np.ndarray
+
+    try:
+        import torch
+
+        Tensor = torch.Tensor
+    except ImportError:
+        Tensor = object
 else:
     UintArray = object
+    Tensor = object
 
 
 from spdl.io import (
@@ -123,7 +131,7 @@ class Demuxer:
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: str | Path | bytes | UintArray, **kwargs):
+    def __init__(self, src: str | Path | bytes | UintArray | Tensor, **kwargs):
         if isinstance(src, Path):
             src = str(src)
         self._demuxer = _libspdl._demuxer(src, **kwargs)
@@ -185,7 +193,7 @@ class Demuxer:
 
 
 def demux_audio(
-    src: str | bytes | UintArray,
+    src: str | bytes | UintArray | Tensor,
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
@@ -215,7 +223,7 @@ async def async_demux_audio(
 
 
 def demux_video(
-    src: str | bytes | UintArray,
+    src: str | bytes | UintArray | Tensor,
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
@@ -245,7 +253,7 @@ async def async_demux_video(
     return await run_async(demux_video, src, timestamp=timestamp, **kwargs)
 
 
-def demux_image(src: str | bytes | UintArray, **kwargs) -> ImagePackets:
+def demux_image(src: str | bytes | UintArray | Tensor, **kwargs) -> ImagePackets:
     """Demux image from the source.
 
     Args:
