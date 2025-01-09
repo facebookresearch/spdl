@@ -12,12 +12,14 @@ import warnings
 from typing import Any
 
 from . import _dataloader, _iterators, _pytorch_dataloader
-from ._source import _type
+from ._source import _imagenet, _local_directory, _type
 
 _mods = [
     _dataloader,
     _iterators,
     _pytorch_dataloader,
+    _imagenet,
+    _local_directory,
     _type,
 ]
 
