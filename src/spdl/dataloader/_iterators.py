@@ -4,6 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""Implements meta-transformations on iterables/iterators."""
+
+__all__ = ["iterate_in_subprocess", "MergeIterator", "repeat_source"]
+
+
 import logging
 import multiprocessing as mp
 import queue
@@ -20,10 +25,7 @@ from typing import Any, TypeVar
 
 from ._source._type import IterableWithShuffle
 
-__all__ = ["iterate_in_subprocess", "MergeIterator", "repeat_source"]
-
 T = TypeVar("T")
-
 K = TypeVar("K")
 V = TypeVar("V")
 
