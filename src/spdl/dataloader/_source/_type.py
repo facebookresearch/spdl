@@ -13,7 +13,8 @@ T = TypeVar("T")
 
 
 class IterableWithShuffle(Protocol[T]):
-    """A protocol that is often used to represent data source."""
+    """IterableWithShuffle()
+    A protocol that is often used to represent data source."""
 
     def shuffle(self, seed: int) -> None:
         """Apply in-place shuffling"""

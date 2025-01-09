@@ -4,7 +4,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-__all__ = ["ImageNet"]
+"""Iterable for ImageNet dataset."""
+
+__all__ = ["ImageNet", "get_mappings", "parse_wnid"]
 
 import re
 from collections.abc import Iterator
@@ -14,27 +16,45 @@ from pathlib import Path
 from ._local_directory import LocalDirectory
 from ._type import IterableWithShuffle
 
+# pyre-strict
 
-class ImageNet(IterableWithShuffle):
-    def __init__(self, root: str | PathLike, split: str = "test") -> None:
+
+class ImageNet(IterableWithShuffle[tuple[Path, int]]):
+    """Traverse the local file directory contains ImageNet dataset.
+
+    Args:
+        root: The root directory where ``"val"`` and ``"train"`` subdirectory is found.
+        split: Dataset split. The valid choices are ``"val"`` or ``"train"``.
+    """
+
+    def __init__(self, root: str | PathLike[str], split: str = "val") -> None:
         splits = ["train", "val"]
         if split not in splits:
             raise ValueError(f"`split` must be one of {splits}")
 
-        self._mappings = _get_mappings()
+        self._mappings: dict[str, int] = get_mappings()
         self._src = LocalDirectory(root, f"{split}/*/*.JPEG")
 
     def shuffle(self, seed: int) -> None:
         self._src.shuffle(seed=seed)
 
     def __iter__(self) -> Iterator[tuple[Path, int]]:
+        """
+        Yields:
+            Path and class: Path to an image file and the class ID of the image.
+
+        .. seealso::
+
+           :py:func:`parse_wnid`, :py:func:`get_mappings`: Functions used to retrieve
+           class ID from path.
+        """
         for path in self._src:
-            wnid = _parse_wnid(str(path))
+            wnid = parse_wnid(str(path))
             cls = self._mappings[wnid]
             yield path, cls
 
 
-def _parse_wnid(s: str):
+def parse_wnid(s: str) -> str:
     """Parse a WordNet ID (nXXXXXXXX) from string.
 
     Args:
@@ -49,7 +69,7 @@ def _parse_wnid(s: str):
     raise ValueError(f"The given string does not contain WNID: {s}")
 
 
-def _get_mappings() -> dict[str, int]:
+def get_mappings() -> dict[str, int]:
     """Get the mapping from WordNet ID to class and label.
 
     1000 IDs from ILSVRC2012 is used. The class indices are the index of
