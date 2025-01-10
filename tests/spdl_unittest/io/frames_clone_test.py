@@ -4,8 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
-
 import numpy as np
 import pytest
 import spdl.io
@@ -17,8 +15,8 @@ CMDS = {
 }
 
 
-async def _load_from_frames(frames):
-    buffer = await spdl.io.async_convert_frames(frames)
+def _load_from_frames(frames):
+    buffer = spdl.io.convert_frames(frames)
     return spdl.io.to_numpy(buffer)
 
 
@@ -29,21 +27,18 @@ def test_clone_frames(media_type, get_sample):
     sample = get_sample(cmd)
 
     demux_func = {
-        "audio": spdl.io.async_demux_audio,
-        "video": spdl.io.async_demux_video,
-        "image": spdl.io.async_demux_image,
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
     }[media_type]
 
-    async def _test(src):
-        frames1 = await spdl.io.async_decode_packets(await demux_func(src))
-        frames2 = frames1.clone()
+    frames1 = spdl.io.decode_packets(demux_func(sample.path))
+    frames2 = frames1.clone()
 
-        array1 = await _load_from_frames(frames1)
-        array2 = await _load_from_frames(frames2)
+    array1 = _load_from_frames(frames1)
+    array2 = _load_from_frames(frames2)
 
-        assert np.all(array1 == array2)
-
-    asyncio.run(_test(sample.path))
+    assert np.all(array1 == array2)
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
@@ -53,18 +48,15 @@ def test_clone_invalid_frames(media_type, get_sample):
     sample = get_sample(cmd)
 
     demux_func = {
-        "audio": spdl.io.async_demux_audio,
-        "video": spdl.io.async_demux_video,
-        "image": spdl.io.async_demux_image,
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
     }[media_type]
 
-    async def _test(src):
-        frames = await spdl.io.async_decode_packets(await demux_func(src))
-        _ = await spdl.io.async_convert_frames(frames)
-        with pytest.raises(TypeError):
-            frames.clone()
-
-    asyncio.run(_test(sample.path))
+    frames = spdl.io.decode_packets(demux_func(sample.path))
+    _ = spdl.io.convert_frames(frames)
+    with pytest.raises(TypeError):
+        frames.clone()
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
@@ -72,21 +64,19 @@ def test_clone_frames_multi(media_type, get_sample):
     """Can clone multiple times"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
+    N = 100
 
     demux_func = {
-        "audio": spdl.io.async_demux_audio,
-        "video": spdl.io.async_demux_video,
-        "image": spdl.io.async_demux_image,
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
     }[media_type]
 
-    async def _test(src, N=100):
-        frames = await spdl.io.async_decode_packets(await demux_func(src))
-        clones = [frames.clone() for _ in range(N)]
+    frames = spdl.io.decode_packets(demux_func(sample.path))
+    clones = [frames.clone() for _ in range(N)]
 
-        array = await _load_from_frames(frames)
-        arrays = [await _load_from_frames(c) for c in clones]
+    array = _load_from_frames(frames)
+    arrays = [_load_from_frames(c) for c in clones]
 
-        for i in range(N):
-            assert np.all(array == arrays[i])
-
-    asyncio.run(_test(sample.path))
+    for i in range(N):
+        assert np.all(array == arrays[i])

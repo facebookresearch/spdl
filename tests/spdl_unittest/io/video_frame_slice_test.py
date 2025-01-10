@@ -4,8 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
-
 import numpy as np
 import pytest
 import spdl.io
@@ -14,18 +12,15 @@ from spdl.io import get_video_filter_desc
 
 
 def _to_numpy(frames):
-    buffer = asyncio.run(spdl.io.async_convert_frames(frames))
+    buffer = spdl.io.convert_frames(frames)
     return spdl.io.to_numpy(buffer)
 
 
 def _decode_video(src, pix_fmt=None):
-    async def _decode():
-        return await spdl.io.async_decode_packets(
-            await spdl.io.async_demux_video(src),
-            filter_desc=get_video_filter_desc(pix_fmt=pix_fmt),
-        )
-
-    return asyncio.run(_decode())
+    return spdl.io.decode_packets(
+        spdl.io.demux_video(src),
+        filter_desc=get_video_filter_desc(pix_fmt=pix_fmt),
+    )
 
 
 def test_video_frames_getitem_slice(get_sample):

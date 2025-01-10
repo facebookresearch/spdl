@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
 from itertools import product
 from tempfile import NamedTemporaryFile
 
@@ -29,47 +28,44 @@ def test_encode_smoketest(fmt, enc_cfg):
     shape, pix_fmt = fmt
     data = np.random.randint(255, size=shape, dtype=np.uint8)
 
-    async def _test(arr):
+    def _test(arr):
         with NamedTemporaryFile(suffix=".png") as f:
-            await spdl.io.async_encode_image(
+            spdl.io.encode_image(
                 f.name,
                 arr,
                 pix_fmt=pix_fmt,
                 encode_config=enc_cfg,
             )
 
-    asyncio.run(_test(data))
-    asyncio.run(_test(torch.from_numpy(data)))
+    _test(data)
+    _test(torch.from_numpy(data))
 
 
 def test_encode_png_gray16be():
     data = np.random.randint(256, size=(32, 64), dtype=np.uint16)
     enc_cfg = spdl.io.encode_config(format="gray16be")
 
-    async def _test(arr):
+    def _test(arr):
         with NamedTemporaryFile(suffix=".png") as f:
-            await spdl.io.async_encode_image(
+            spdl.io.encode_image(
                 f.name,
                 arr,
                 pix_fmt="gray16",
                 encode_config=enc_cfg,
             )
 
-    asyncio.run(_test(data))
+    _test(data)
 
 
 def _test_rejects(pix_fmt, dtype):
-    async def _test(arr):
-        with NamedTemporaryFile(suffix=".png") as f:
-            with pytest.raises(RuntimeError):
-                await spdl.io.async_encode_image(
-                    f.name,
-                    arr,
-                    pix_fmt=pix_fmt,
-                )
-
     data = np.ones((32, 64), dtype=dtype)
-    asyncio.run(_test(data))
+    with NamedTemporaryFile(suffix=".png") as f:
+        with pytest.raises(RuntimeError):
+            spdl.io.encode_image(
+                f.name,
+                data,
+                pix_fmt=pix_fmt,
+            )
 
 
 @pytest.mark.parametrize(

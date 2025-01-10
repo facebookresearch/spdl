@@ -4,8 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
-
 import numpy as np
 import pytest
 import spdl.io
@@ -14,19 +12,15 @@ from spdl.io import get_filter_desc, get_video_filter_desc
 
 
 def _decode_image(src, pix_fmt=None):
-    buffer = asyncio.run(
-        spdl.io.async_load_image(
-            src,
-            filter_desc=get_video_filter_desc(pix_fmt=pix_fmt),
-        )
+    buffer = spdl.io.load_image(
+        src,
+        filter_desc=get_video_filter_desc(pix_fmt=pix_fmt),
     )
     return spdl.io.to_numpy(buffer)
 
 
 def _batch_load_image(srcs, pix_fmt="rgb24"):
-    buffer = asyncio.run(
-        spdl.io.async_load_image_batch(srcs, width=None, height=None, pix_fmt=pix_fmt)
-    )
+    buffer = spdl.io.load_image_batch(srcs, width=None, height=None, pix_fmt=pix_fmt)
     return spdl.io.to_numpy(buffer)
 
 
@@ -162,7 +156,8 @@ def test_batch_decode_image_slice(get_samples):
     n, h, w = 32, 240, 320
     flist = get_samples(cmd)
 
-    array = _batch_load_image(flist, pix_fmt="rgb24")
+    buffer = spdl.io.load_image_batch(flist, width=None, height=None, pix_fmt="rgb24")
+    array = spdl.io.to_numpy(buffer)
     print(array.shape)
     assert array.shape == (n, h, w, 3)
 
@@ -186,7 +181,8 @@ def test_batch_decode_image_rgb24(get_samples):
     # fmt: on
     flist = get_samples(cmd)
 
-    arrays = _batch_load_image(flist, pix_fmt="rgb24")
+    buffer = spdl.io.load_image_batch(flist, width=None, height=None, pix_fmt="rgb24")
+    arrays = spdl.io.to_numpy(buffer)
     assert arrays.shape == (32, h, 3 * w, 3)
 
     for i in range(32):
@@ -221,20 +217,14 @@ def test_batch_video_conversion(get_sample):
 
     timestamps = [(0, 1), (1, 1.5), (2, 2.7), (3, 3.6)]
 
-    async def _test():
-        decoding = []
-        async for packets in spdl.io.async_streaming_demux_video(
-            src=sample.path, timestamps=timestamps
-        ):
-            filter_desc = get_filter_desc(packets, num_frames=15)
-            coro = spdl.io.async_decode_packets(packets, filter_desc=filter_desc)
-            decoding.append(asyncio.create_task(coro))
+    demuxer = spdl.io.Demuxer(sample.path)
+    frames = []
+    for ts in timestamps:
+        packets = demuxer.demux_video(timestamp=ts)
+        filter_desc = get_filter_desc(packets, num_frames=15)
+        frames_ = spdl.io.decode_packets(packets, filter_desc=filter_desc)
+        frames.append(frames_)
 
-        frames = await asyncio.gather(*decoding)
-
-        buffer = await spdl.io.async_convert_frames(frames)
-        return spdl.io.to_numpy(buffer)
-
-    array = asyncio.run(_test())
-
+    buffer = spdl.io.convert_frames(frames)
+    array = spdl.io.to_numpy(buffer)
     assert array.shape == (4, 15, 3, 240, 320)

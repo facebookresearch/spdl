@@ -4,8 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
-
 import spdl.io
 
 
@@ -18,10 +16,7 @@ def test_image_frame_metadata(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd)
 
-    async def test(src):
-        packets = await spdl.io.async_demux_image(src)
-        frames = await spdl.io.async_decode_packets(packets)
+    packets = spdl.io.demux_image(sample.path)
+    frames = spdl.io.decode_packets(packets)
 
-        assert frames.metadata == {}
-
-    asyncio.run(test(sample.path))
+    assert frames.metadata == {}
