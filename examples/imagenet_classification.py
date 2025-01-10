@@ -34,7 +34,8 @@ from pathlib import Path
 import spdl.io
 import spdl.utils
 import torch
-from spdl.dataloader import DataLoader, ImageNet
+from spdl.dataloader import DataLoader
+from spdl.source.imagenet import ImageNet
 from torch import Tensor
 from torch.profiler import profile
 

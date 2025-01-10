@@ -8,7 +8,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from spdl.dataloader import ImageNet, LocalDirectory
+from spdl.source.imagenet import ImageNet
+from spdl.source.local_directory import LocalDirectory
 
 
 def _make_files(paths: Iterable[Path]) -> None:
