@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from unittest.mock import patch
 
 import pytest
-from spdl.dataloader import MergeIterator, repeat_source
+from spdl.source.utils import MergeIterator, repeat_source
 
 
 def test_mergeiterator_ordered():

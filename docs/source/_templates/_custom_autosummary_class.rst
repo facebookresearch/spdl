@@ -10,6 +10,9 @@
 .. currentmodule:: {{ module }}
 
 .. autoclass:: {{ objname }}
+   {%- if module.startswith("spdl.source") %}
+   :show-inheritance:
+   {%- endif %}
    :members:
 
    {%- block meths %}

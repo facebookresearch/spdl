@@ -8,19 +8,13 @@
 
 # pyre-unsafe
 
-import warnings
 from typing import Any
 
-from . import _dataloader, _iterators, _pytorch_dataloader
-from ._source import _imagenet, _local_directory, _type
+from . import _dataloader, _pytorch_dataloader
 
 _mods = [
     _dataloader,
-    _iterators,
     _pytorch_dataloader,
-    _imagenet,
-    _local_directory,
-    _type,
 ]
 
 __all__ = sorted(item for mod in _mods for item in mod.__all__)
@@ -36,23 +30,17 @@ def __getattr__(name: str) -> Any:
             return getattr(mod, name)
 
     # For backward compatibility
-    import spdl.pipeline
+    if name == "iterate_in_subprocess":
+        import warnings
 
-    if name in spdl.pipeline.__all__:
         warnings.warn(
-            f"{name} has been moved to {spdl.pipeline.__name__}. "
+            "`iterate_in_subprocess` has been moved to `spdl.source.utils`. "
             "Please update the import statement to "
-            f"`from {spdl.pipeline.__name__} import {name}`.",
+            "`from spdl.source.utils import iterate_in_subprocess`.",
             stacklevel=2,
         )
-        return getattr(spdl.pipeline, name)
+        import spdl.source.utils
 
-    if name == "run_in_subprocess":
-        warnings.warn(
-            "`run_in_subprocess` has been deprecated. "
-            "Use `iterate_in_subprocess` instead.",
-            stacklevel=2,
-        )
-        return _iterators.run_in_subprocess
+        return spdl.source.utils.iterate_in_subprocess
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
