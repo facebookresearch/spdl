@@ -228,20 +228,23 @@ class DataLoader(Generic[Source, Output]):
         self._output_order = output_order
 
     def _get_pipeline(self) -> Pipeline:
-        pipe_args = {
-            "concurrency": self._num_threads,
-            "output_order": self._output_order,
-        }
-
         builder = PipelineBuilder().add_source(self._src)
         if self._preprocessor:
-            builder.pipe(self._preprocessor, **pipe_args)
+            builder.pipe(
+                self._preprocessor,
+                concurrency=self._num_threads,
+                output_order=self._output_order,
+            )
 
         if self._batch_size:
             builder.aggregate(self._batch_size, drop_last=self._drop_last)
 
         if self._aggregator:
-            builder.pipe(self._aggregator, **pipe_args)
+            builder.pipe(
+                self._aggregator,
+                concurrency=self._num_threads,
+                output_order=self._output_order,
+            )
 
         # Transfer runs in the default thread pool (with num_threads=1)
         # because GPU data transfer cannot be parallelized.
