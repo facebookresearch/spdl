@@ -6,13 +6,9 @@
 
 # pyre-unsafe
 
-import asyncio
-import contextlib
-import functools
 import logging
 import warnings
-from collections.abc import AsyncIterator, Callable, Iterator
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Iterator
 from pathlib import Path
 from typing import overload, TYPE_CHECKING, TypeVar
 
@@ -83,31 +79,6 @@ _LG = logging.getLogger(__name__)
 T = TypeVar("T")
 
 _FILTER_DESC_DEFAULT = "__PLACEHOLDER__"
-
-
-async def run_async(
-    func: Callable[..., T],
-    *args,
-    _executor: ThreadPoolExecutor | None = None,
-    **kwargs,
-) -> T:
-    """Run the given synchronous function asynchronously (in a thread).
-
-    .. note::
-
-       To achieve the true concurrency, the function must be thread-safe and must
-       release the GIL.
-
-    Args:
-        func: The function to run.
-        args: Positional arguments to the ``func``.
-        _executor: Custom executor.
-            If ``None`` the default executor of the current event loop is used.
-        kwargs: Keyword arguments to the ``func``.
-    """
-    loop = asyncio.get_running_loop()
-    _func = functools.partial(func, *args, **kwargs)
-    return await loop.run_in_executor(_executor, _func)  # pyre-ignore: [6]
 
 
 ################################################################################
@@ -185,12 +156,6 @@ class Demuxer:
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         self._demuxer._drop()
 
-    async def __aenter__(self) -> "Demuxer":
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, exc_traceback) -> None:
-        await run_async(self._demuxer._drop)
-
 
 def demux_audio(
     src: str | bytes | UintArray | Tensor,
@@ -210,16 +175,6 @@ def demux_audio(
     """
     with Demuxer(src, **kwargs) as demuxer:
         return demuxer.demux_audio(window=timestamp)
-
-
-async def async_demux_audio(
-    src: str | bytes | UintArray,
-    *,
-    timestamp: tuple[float, float] | None = None,
-    **kwargs,
-) -> AudioPackets:
-    """Async version of :py:func:`~spdl.io.demux_audio`."""
-    return await run_async(demux_audio, src, timestamp=timestamp, **kwargs)
 
 
 def demux_video(
@@ -243,16 +198,6 @@ def demux_video(
         return demuxer.demux_video(window=timestamp)
 
 
-async def async_demux_video(
-    src: str | bytes | UintArray,
-    *,
-    timestamp: tuple[float, float] | None = None,
-    **kwargs,
-) -> VideoPackets:
-    """Async version of :py:func:`~spdl.io.demux_video`."""
-    return await run_async(demux_video, src, timestamp=timestamp, **kwargs)
-
-
 def demux_image(src: str | bytes | UintArray | Tensor, **kwargs) -> ImagePackets:
     """Demux image from the source.
 
@@ -265,11 +210,6 @@ def demux_image(src: str | bytes | UintArray | Tensor, **kwargs) -> ImagePackets
     """
     with Demuxer(src, **kwargs) as demuxer:
         return demuxer.demux_image()
-
-
-async def async_demux_image(src: str | bytes, **kwargs) -> ImagePackets:
-    """Async version of :py:func:`~spdl.io.demux_image`."""
-    return await run_async(demux_image, src, **kwargs)
 
 
 ################################################################################
@@ -326,19 +266,6 @@ def decode_packets(packets, filter_desc=_FILTER_DESC_DEFAULT, **kwargs):
     return _libspdl.decode_packets(packets, filter_desc=filter_desc, **kwargs)
 
 
-@overload
-async def async_decode_packets(packets: AudioPackets, **kwargs) -> AudioFrames: ...
-@overload
-async def async_decode_packets(packets: VideoPackets, **kwargs) -> VideoFrames: ...
-@overload
-async def async_decode_packets(packets: ImagePackets, **kwargs) -> ImageFrames: ...
-
-
-async def async_decode_packets(packets, **kwargs):
-    """Async version of :py:func:`~spdl.io.decode_packets`."""
-    return await run_async(decode_packets, packets, **kwargs)
-
-
 def decode_packets_nvdec(
     packets: VideoPackets | ImagePackets | list[ImagePackets],
     *,
@@ -390,18 +317,6 @@ def decode_packets_nvdec(
     return _libspdl.decode_packets_nvdec(packets, device_config=device_config, **kwargs)
 
 
-async def async_decode_packets_nvdec(
-    packets: VideoPackets | ImagePackets | list[ImagePackets],
-    *,
-    device_config: CUDAConfig | None = None,
-    **kwargs,
-) -> CUDABuffer:
-    """**[Experimental]** Async version of :py:func:`~spdl.io.decode_packets_nvdec`."""
-    return await run_async(
-        decode_packets_nvdec, packets, device_config=device_config, **kwargs
-    )
-
-
 def decode_image_nvjpeg(
     src: str | bytes, *, device_config: CUDAConfig | None = None, **kwargs
 ) -> CUDABuffer:
@@ -445,15 +360,6 @@ def decode_image_nvjpeg(
     return _libspdl.decode_image_nvjpeg(data, device_config=device_config, **kwargs)
 
 
-async def async_decode_image_nvjpeg(
-    src: str | bytes, *, device_config: CUDAConfig | None = None, **kwargs
-) -> CUDABuffer:
-    """**[Experimental]** Async version of :py:func:`~spdl.io.decode_image_nvjpeg`."""
-    return await run_async(
-        decode_image_nvjpeg, src, device_config=device_config, **kwargs
-    )
-
-
 def streaming_decode_packets(
     packets: VideoPackets,
     num_frames: int,
@@ -481,35 +387,6 @@ def streaming_decode_packets(
     )
     while (frames := decoder.decode(num_frames)) is not None:
         yield frames
-
-
-class _streaming_decoder_wrpper:
-    def __init__(self, decoder):
-        self.decoder = decoder
-
-    async def decode(self, num_frames):
-        return await run_async(self.decoder.decode, num_frames)
-
-
-@contextlib.asynccontextmanager
-async def _streaming_decoder(packets, **kwargs):
-    if "filter_desc" not in kwargs:
-        kwargs["filter_desc"] = _preprocessing.get_filter_desc(packets)
-    decoder = await run_async(_libspdl._streaming_decoder, packets, **kwargs)
-    wrapper = _streaming_decoder_wrpper(decoder)
-    try:
-        yield wrapper
-    finally:
-        await run_async(_libspdl._drop, wrapper.decoder)
-
-
-async def async_streaming_decode_packets(
-    packets: VideoPackets, num_frames: int, **kwargs
-) -> AsyncIterator[VideoFrames]:
-    """Async version of :py:func:`~spdl.io.streaming_decode_packets`."""
-    async with _streaming_decoder(packets, **kwargs) as decoder:
-        while (item := await decoder.decode(num_frames)) is not None:
-            yield item
 
 
 ################################################################################
@@ -563,28 +440,6 @@ def convert_frames(
     return _libspdl.convert_frames(frames, storage=storage, **kwargs)
 
 
-async def async_convert_frames(
-    frames: (
-        AudioFrames
-        | VideoFrames
-        | ImageFrames
-        | list[AudioFrames]
-        | list[VideoFrames]
-        | list[ImageFrames]
-    ),
-    storage: CPUStorage | None = None,
-    **kwargs,
-) -> CPUBuffer:
-    """Async version of :py:func:`~spdl.io.convert_frames`."""
-    if "pin_memory" in kwargs:
-        warnings.warn(
-            "`pin_memory` argument has been removed. Use `storage` instead.",
-            stacklevel=2,
-        )
-        kwargs.pop("pin_memory")
-    return await run_async(convert_frames, frames, storage=storage, **kwargs)
-
-
 def convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
     """Convert the given array to buffer.
 
@@ -600,11 +455,6 @@ def convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
         A Buffer object.
     """
     return _libspdl.convert_array(vals, storage=storage)
-
-
-async def async_convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
-    """Async version of :py:func:`~spdl.io.convert_array`."""
-    return await run_async(convert_array, vals, storage=storage)
 
 
 ################################################################################
@@ -635,15 +485,6 @@ def transfer_buffer(
     return _libspdl.transfer_buffer(buffer, device_config=device_config)
 
 
-async def async_transfer_buffer(
-    buffer: CPUBuffer, *, device_config: CUDAConfig | None = None, **kwargs
-) -> CUDABuffer:
-    """Async version of :py:func:`~spdl.io.transfer_buffer`."""
-    return await run_async(
-        transfer_buffer, buffer, device_config=device_config, **kwargs
-    )
-
-
 def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
     """Move the given CUDA buffer to CPU.
 
@@ -654,11 +495,6 @@ def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
         Buffer data on CPU.
     """
     return _libspdl.transfer_buffer_cpu(buffer)
-
-
-async def async_transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
-    """Async version of :py:func:`~spdl.io.transfer_buffer_cpu`."""
-    return await run_async(transfer_buffer_cpu, buffer)
 
 
 ################################################################################
@@ -691,7 +527,6 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
 
     Example - Save image as PNG with resizing
 
-        >>> import asyncio
         >>> import numpy as np
         >>> import spdl.io
         >>>
@@ -726,8 +561,3 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
         >>>
     """
     return _libspdl.encode_image(path, data, pix_fmt=pix_fmt, **kwargs)
-
-
-async def async_encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
-    """Async version of :py:func:`~spdl.io.encode_image`."""
-    return await run_async(encode_image, path, data, pix_fmt, **kwargs)
