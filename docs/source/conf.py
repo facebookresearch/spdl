@@ -10,6 +10,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import os
 import sys
+from datetime import datetime
 
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath("../../examples"))
@@ -18,7 +19,7 @@ sys.path.append(os.path.abspath("../../examples"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "SPDL"
-copyright = "2024, Meta Platforms, Inc."
+copyright = f"{datetime.today().strftime('%Y')}, Meta Platforms, Inc."
 author = "Moto Hira"
 release = "0.0.6"
 
