@@ -547,7 +547,7 @@ class PipelineBuilder:
         /,
         *,
         concurrency: int = 1,
-        executor: type[Executor] | None = None,
+        executor: Executor | None = None,
         name: str | None = None,
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,

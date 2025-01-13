@@ -126,8 +126,8 @@ class PyTorchDataLoader(Iterable[V]):
         dataset: "torch.utils.data.dataset.Dataset[T]",
         shmem: SharedMemory,  # to keep the reference alive
         sampler: "torch.utils.data.sampler.Sampler[K]",
-        fetch_fn: Callable[[K], U] | Callable[[list[K]], U],
-        collate_fn: Callable[[list[T]], U],
+        fetch_fn: Callable[[K], U],
+        collate_fn: Callable[[list[U]], V],
         mp_ctx: mp.context.BaseContext,
         num_workers: int,
         timeout: float | None,
@@ -149,7 +149,7 @@ class PyTorchDataLoader(Iterable[V]):
         """Returns the number of samples/batches this data loader returns."""
         return len(cast(Sized, self._sampler))
 
-    def _get_pipeline(self) -> Pipeline:
+    def _get_pipeline(self) -> tuple[ProcessPoolExecutor, Pipeline]:
         executor = _get_executor(
             self._shmem.name, self._collate_fn, self._num_workers, self._mp_ctx
         )
@@ -321,7 +321,7 @@ def get_pytorch_dataloader(
         dataset=dataset,
         shmem=shmem,
         sampler=_sampler,
-        fetch_fn=_fetch_fn,
+        fetch_fn=_fetch_fn,  # pyre-ignore
         collate_fn=_collate_fn,
         mp_ctx=mp_ctx,
         num_workers=num_workers,

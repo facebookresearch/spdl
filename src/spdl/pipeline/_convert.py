@@ -48,6 +48,7 @@ def _to_batch_async_gen(
 ) -> Callable[[T], AsyncIterable[U]]:
     async def afunc(item: T) -> AsyncIterable[U]:
         loop = asyncio.get_running_loop()
+        # pyre-ignore: [6]
         for result in await loop.run_in_executor(executor, _wrap_gen, func, item):
             yield result
 
@@ -111,4 +112,4 @@ def convert_to_async(
         return _to_async_gen(op, executor=executor)
 
     # Convert a regular sync function to async function.
-    return _to_async(op, executor=executor)
+    return _to_async(op, executor=executor)  # pyre-ignore: [7]
