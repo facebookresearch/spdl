@@ -41,6 +41,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 _MSG_PARENT_REQUEST_STOP = "PARENT_REQUEST_STOP"
 
 # Message from worker to the parent
+_MSG_INITIALIZER_FAILED = "INITIALIZER_FAILED"
 _MSG_GENERATOR_FAILED = "GENERATOR_FAILED_TO_INITIALIZE"
 _MSG_ITERATION_FINISHED = "ITERATION_FINISHED"
 _MSG_DATA_QUEUE_FAILED = "DATA_QUEUE_FAILED"
@@ -50,7 +51,15 @@ def _execute_iterator(
     msg_queue: mp.Queue,
     data_queue: mp.Queue,
     fn: Callable[[], Iterator[T]],
+    initializer: Callable[[], None],
 ) -> None:
+    if initializer is not None:
+        try:
+            initializer()
+        except Exception:
+            msg_queue.put(_MSG_INITIALIZER_FAILED)
+            raise
+
     try:
         gen = iter(fn())
     except Exception:
@@ -85,8 +94,10 @@ def _execute_iterator(
 
 def iterate_in_subprocess(
     fn: Callable[[], Iterable[T]],
-    queue_size: int = 64,
-    mp_context: str = "forkserver",
+    *,
+    buffer_size: int = 3,
+    initializer: Callable[[], None] | None = None,
+    mp_context: str | None = None,
     timeout: float | None = None,
     daemon: bool = False,
 ) -> Iterator[T]:
@@ -95,11 +106,13 @@ def iterate_in_subprocess(
     Args:
         fn: Function that returns an iterator. Use :py:func:`functools.partial` to
             pass arguments to the function.
-        queue_size: Maximum number of items to buffer in the queue.
+        buffer_size: Maximum number of items to buffer in the queue.
+        initializer: A function executed in the subprocess before iteration starts.
         mp_context: Context to use for multiprocessing.
+            If not specified, a default method is used.
         timeout: Timeout for inactivity. If the generator function does not yield
             any item for this amount of time, the process is terminated.
-        daemnon: Whether to run the process as a daemon.
+        daemon: Whether to run the process as a daemon. Use it only for debugging.
 
     Returns:
         Iterator over the results of the generator function.
@@ -110,7 +123,7 @@ def iterate_in_subprocess(
     """
     ctx = mp.get_context(mp_context)
     msg_q = ctx.Queue()
-    data_q: mp.Queue = ctx.Queue(maxsize=queue_size)
+    data_q: mp.Queue = ctx.Queue(maxsize=buffer_size)
 
     def _drain() -> Iterator[T]:
         while not data_q.empty():
@@ -118,7 +131,7 @@ def iterate_in_subprocess(
 
     process = ctx.Process(
         target=_execute_iterator,
-        args=(msg_q, data_q, fn),
+        args=(msg_q, data_q, fn, initializer),
         daemon=daemon,
     )
     process.start()
@@ -135,6 +148,10 @@ def iterate_in_subprocess(
 
                 if msg == _MSG_ITERATION_FINISHED:
                     return
+                if msg == _MSG_INITIALIZER_FAILED:
+                    raise RuntimeError(
+                        "The worker process quit because the initializer failed."
+                    )
                 if msg == _MSG_GENERATOR_FAILED:
                     raise RuntimeError(
                         "The worker process quit because the generator failed."
@@ -156,7 +173,8 @@ def iterate_in_subprocess(
             if timeout is not None:
                 if (elapsed := time.monotonic() - t0) > timeout:
                     raise RuntimeError(
-                        f"The worker process did not produce any data for {elapsed:.2f} seconds."
+                        "The worker process did not produce any data for "
+                        f"{elapsed:.2f} seconds."
                     )
 
     except (Exception, KeyboardInterrupt):

@@ -6,11 +6,16 @@
 
 # pyre-unsafe
 
-from collections.abc import Iterator
+import os.path
+import random
+import tempfile
+import time
+from collections.abc import Iterable, Iterator
+from functools import partial
 from unittest.mock import patch
 
 import pytest
-from spdl.source.utils import MergeIterator, repeat_source
+from spdl.source.utils import iterate_in_subprocess, MergeIterator, repeat_source
 
 
 def test_mergeiterator_ordered():
@@ -235,3 +240,111 @@ def test_repeat_source_iterable():
         assert next(gen) == 0
         assert next(gen) == 1
         assert next(gen) == 2
+
+
+def iter_range(n: int) -> Iterable[int]:
+    yield from range(n)
+
+
+def test_iterate_in_subprocess():
+    """iterate_in_subprocess iterates"""
+    N = 10
+
+    src = iterate_in_subprocess(fn=partial(iter_range, n=N))
+    assert list(src) == list(range(N))
+
+
+def initializer(path: str, val: str) -> None:
+    with open(path, "w") as f:
+        f.write(val)
+
+
+def test_iterate_in_subprocess_initializer():
+    """iterate_in_subprocess initializer is called before iteration starts"""
+
+    N = 10
+    val = str(random.random())
+    with tempfile.TemporaryDirectory() as dir:
+        path = os.path.join(dir, "foo.txt")
+
+        assert not os.path.exists(path)
+        src = iterate_in_subprocess(
+            fn=partial(iter_range, n=N),
+            initializer=partial(initializer, path=path, val=val),
+            buffer_size=1,
+        )
+        assert not os.path.exists(path)
+
+        assert next(src) == 0
+
+        assert os.path.exists(path)
+
+        with open(path, "r") as f:
+            assert f.read() == val
+
+    for i in range(1, N):
+        assert next(src) == i
+
+    with pytest.raises(StopIteration):
+        next(src)
+
+
+def iter_range_and_store(n: int, path: str) -> Iterable[int]:
+    yield 0
+    for i in range(n):
+        yield i
+        with open(path, "w") as f:
+            f.write(str(i))
+
+
+def test_iterate_in_subprocess_buffer_size_1():
+    """buffer_size=1 makes iterate_in_subprocess works sort-of interactively"""
+
+    N = 10
+
+    with tempfile.TemporaryDirectory() as dir:
+        path = os.path.join(dir, "foo.txt")
+
+        src = iterate_in_subprocess(
+            fn=partial(iter_range_and_store, n=N, path=path),
+            daemon=True,
+            buffer_size=1,
+        )
+        assert src.send(None) == 0
+
+        for i in range(N):
+            time.sleep(0.1)
+
+            with open(path, "r") as f:
+                assert int(f.read()) == i
+
+            assert next(src) == i
+
+        with pytest.raises(StopIteration):
+            next(src)
+
+
+def test_iterate_in_subprocess_buffer_size_64():
+    """big buffer_size makes iterate_in_subprocess processes data in one go"""
+
+    N = 10
+
+    with tempfile.TemporaryDirectory() as dir:
+        path = os.path.join(dir, "foo.txt")
+
+        src = iterate_in_subprocess(
+            fn=partial(iter_range_and_store, n=N, path=path),
+            daemon=True,
+            buffer_size=64,
+        )
+        assert src.send(None) == 0
+
+        time.sleep(0.1)
+        for i in range(N):
+            with open(path, "r") as f:
+                assert int(f.read()) == 9
+
+            assert next(src) == i
+
+        with pytest.raises(StopIteration):
+            next(src)
