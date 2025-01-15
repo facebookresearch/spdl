@@ -21,7 +21,7 @@ from collections.abc import (
     Iterator,
     Sequence,
 )
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from ._type import IterableWithShuffle
 
@@ -364,26 +364,7 @@ class MergeIterator(Iterable[T]):
 ################################################################################
 
 
-def repeat_source(
-    src: Iterable[T] | IterableWithShuffle[T],
-    epoch: int = 0,
-) -> Iterator[T]:
-    """Convert an iterable into an infinite iterator with optional shuffling.
-
-    Roughly equivalent to the following code snippet.
-
-    .. code-block::
-
-       while True:
-           if hasattr(src, "shuffle"):
-               src.shuffle(seed=epoch)
-           yield from src
-           epoch += 1
-
-    Args:
-        src: The source to repeat.
-        epoch: The epoch number to start with.
-    """
+def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T]:
     while True:
         _LG.info("Starting source epoch %d.", epoch)
         t0 = time.monotonic()
@@ -405,3 +386,51 @@ def repeat_source(
             qps,
         )
         epoch += 1
+
+
+class _RepeatIterator(Iterator[T]):
+    def __init__(
+        self,
+        src: Iterable[T] | IterableWithShuffle[T],
+        epoch: int = 0,
+    ) -> None:
+        self.src = src
+        self.epoch = epoch
+        self._iter: Iterator[T] | None = None
+
+    def __iter__(self) -> Iterator[T]:
+        return self
+
+    def __getstate__(self) -> dict[str, Any]:  # pyre-ignore: [11]
+        if self._iter is not None:
+            raise ValueError("Cannot pickle after iteration is started.")
+        return self.__dict__
+
+    def __next__(self) -> T:
+        if self._iter is None:
+            self._iter = _repeat(self.src, self.epoch)
+        return next(self._iter)
+
+
+def repeat_source(
+    src: Iterable[T] | IterableWithShuffle[T],
+    epoch: int = 0,
+) -> Iterator[T]:
+    """Convert an iterable into an infinite iterator with optional shuffling.
+
+    Roughly equivalent to the following code snippet.
+
+    .. code-block::
+
+       while True:
+           if hasattr(src, "shuffle"):
+               src.shuffle(seed=epoch)
+           yield from src
+           epoch += 1
+
+    Args:
+        src: The source to repeat.
+        epoch: The epoch number to start with.
+    """
+    # Returning object so that it can be passed to a subprocess.
+    return _RepeatIterator(src, epoch)
