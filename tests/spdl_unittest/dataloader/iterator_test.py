@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import os.path
+import pickle
 import random
 import tempfile
 import time
@@ -240,6 +241,20 @@ def test_repeat_source_iterable():
         assert next(gen) == 0
         assert next(gen) == 1
         assert next(gen) == 2
+
+
+def test_repeat_source_picklable():
+    """repeat_source is picklable."""
+
+    src = list(range(10))
+    src = repeat_source(src)
+
+    serialized = pickle.dumps(src)
+    src2 = pickle.loads(serialized)
+
+    for _ in range(3):
+        for i in range(10):
+            assert next(src) == next(src2) == i
 
 
 def iter_range(n: int) -> Iterable[int]:
