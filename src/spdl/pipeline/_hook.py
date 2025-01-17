@@ -10,21 +10,56 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from contextlib import asynccontextmanager, AsyncExitStack
-from typing import TypeVar
+from collections.abc import AsyncIterator, Iterator, Sequence
+from contextlib import asynccontextmanager, AsyncExitStack, contextmanager
+from typing import AsyncContextManager, TypeVar
 
 from ._utils import create_task
 
 __all__ = [
+    "_stage_hooks",
+    "_task_hooks",
+    "_time_str",
     "PipelineHook",
     "TaskStatsHook",
+    "StatsCounter",
 ]
 
 _LG = logging.getLogger(__name__)
 
 
 T = TypeVar("T")
+
+
+def _time_str(val: float) -> str:
+    return "{:.4f} [{:>3s}]".format(
+        val * 1000 if val < 1 else val,
+        "ms" if val < 1 else "sec",
+    )
+
+
+class StatsCounter:
+    def __init__(self):
+        self.num_items: int = 0
+        self.ave_time: float = 0.0
+
+    def reset(self) -> None:
+        self.num_items = 0
+        self.ave_time = 0
+
+    def update(self, val: float) -> None:
+        self.num_items += 1
+        self.ave_time += (val - self.ave_time) / self.num_items
+
+    @contextmanager
+    def count(self) -> Iterator[None]:
+        t0 = time.monotonic()
+        yield
+        elapsed = time.monotonic() - t0
+        self.update(elapsed)
+
+    def __str__(self):
+        return _time_str(self.ave_time)
 
 
 class PipelineHook(ABC):
@@ -149,7 +184,7 @@ class PipelineHook(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    async def task_hook(self):
+    async def task_hook(self) -> AsyncIterator[None]:
         """Perform custom action before and after task is executed.
 
         .. important::
@@ -183,7 +218,7 @@ def _stage_hooks(hooks: Sequence[PipelineHook]):
         )
 
     @asynccontextmanager
-    async def stage_hooks():
+    async def stage_hooks() -> AsyncIterator[None]:
         async with AsyncExitStack() as stack:
             for h in hs:
                 await stack.enter_async_context(h)
@@ -192,7 +227,7 @@ def _stage_hooks(hooks: Sequence[PipelineHook]):
     return stage_hooks()
 
 
-def _task_hooks(hooks: Sequence[PipelineHook]):
+def _task_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
     hs = [hook.task_hook() for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") or hasattr(h, "__aexit__") for h in hs):
@@ -203,7 +238,7 @@ def _task_hooks(hooks: Sequence[PipelineHook]):
         )
 
     @asynccontextmanager
-    async def task_hooks():
+    async def task_hooks() -> AsyncIterator[None]:
         async with AsyncExitStack() as stack:
             for h in hs:
                 await stack.enter_async_context(h)
@@ -241,7 +276,7 @@ class TaskStatsHook(PipelineHook):
 
         # For interval
         self._int_task = None
-        self._int_t0 = 0
+        self._int_t0 = 0.0
         self._int_num_tasks = 0
         self._int_num_success = 0
         self._int_ave_time = 0.0
@@ -262,7 +297,7 @@ class TaskStatsHook(PipelineHook):
             yield
         finally:
             elapsed = time.monotonic() - t0
-            if self.interval is not None:
+            if self._int_task is not None:
                 self._int_task.cancel()
             self._log_stats(elapsed, self.num_tasks, self.num_success, self.ave_time)
 
@@ -312,17 +347,15 @@ class TaskStatsHook(PipelineHook):
 
     def _log_stats(self, elapsed, num_tasks, num_success, ave_time):
         _LG.info(
-            "[%s]\tCompleted %5d tasks (%3d failed) in %.4f [%3s]. "
+            "[%s]\tCompleted %5d tasks (%3d failed) in %s. "
             "QPS: %.2f (Concurrency: %3d). "
-            "Average task time: %.4f [%3s].",
+            "Average task time: %s.",
             self.name,
             num_tasks,
             num_tasks - num_success,
-            elapsed * 1000 if elapsed < 1 else elapsed,
-            "ms" if elapsed < 1 else "sec",
+            _time_str(elapsed),
             num_success / elapsed if elapsed > 0.001 else float("nan"),
             self.concurrency,
-            ave_time * 1000 if ave_time < 1 else ave_time,
-            "ms" if ave_time < 1 else "sec",
+            _time_str(ave_time),
             stacklevel=2,
         )

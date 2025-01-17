@@ -26,7 +26,14 @@ from typing import TypeVar
 
 from . import _convert
 from ._convert import _to_async_gen, Callables
-from ._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
+from ._hook import (
+    _stage_hooks,
+    _task_hooks,
+    _time_str,
+    PipelineHook,
+    StatsCounter,
+    TaskStatsHook,
+)
 from ._pipeline import Pipeline
 from ._utils import create_task
 
@@ -136,7 +143,7 @@ def _pipe(
     if inspect.iscoroutinefunction(afunc):
 
         async def _wrap(coro: Awaitable[U]) -> None:
-            async with _task_hooks(hooks):  # pyre-ignore: [16]
+            async with _task_hooks(hooks):
                 result = await coro
 
             await output_queue.put(result)
@@ -272,7 +279,7 @@ def _ordered_pipe(
 
     async def _wrap(item: T) -> asyncio.Task[U]:
         async def _with_hooks():
-            async with _task_hooks(hooks):  # pyre-ignore: [16]
+            async with _task_hooks(hooks):
                 return await afunc(item)
 
         return create_task(_with_hooks())
@@ -342,34 +349,10 @@ def _enqueue(
 ################################################################################
 
 
-def _time_str(val: float) -> str:
-    return "{:.4f} [{:>3s}]".format(
-        val * 1000 if val < 1 else val,
-        "ms" if val < 1 else "sec",
-    )
-
-
-class _Counter:
-    def __init__(self):
-        self.num_items = 0
-        self.ave_time = 0
-
-    @contextmanager
-    def count(self):
-        t0 = time.monotonic()
-        yield
-        elapsed = time.monotonic() - t0
-        self.num_items += 1
-        self.ave_time += (elapsed - self.ave_time) / self.num_items
-
-    def __str__(self):
-        return _time_str(self.ave_time)
-
-
 @contextmanager
 def _sink_stats():
-    get_counter = _Counter()
-    put_counter = _Counter()
+    get_counter = StatsCounter()
+    put_counter = StatsCounter()
     t0 = time.monotonic()
     try:
         yield get_counter, put_counter
