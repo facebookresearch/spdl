@@ -128,6 +128,7 @@ class PyTorchDataLoader(Iterable[V]):
         sampler: "torch.utils.data.sampler.Sampler[K]",
         fetch_fn: Callable[[K], U],
         collate_fn: Callable[[list[U]], V],
+        transfer_fn: Callable[[V], V],
         mp_ctx: mp.context.BaseContext,
         num_workers: int,
         timeout: float | None,
@@ -139,6 +140,7 @@ class PyTorchDataLoader(Iterable[V]):
         self._sampler = sampler
         self._fetch_fn = fetch_fn
         self._collate_fn = collate_fn
+        self._transfer_fn = transfer_fn
         self._mp_ctx = mp_ctx
         self._num_workers = num_workers
         self._buffer_size = buffer_size
@@ -153,7 +155,7 @@ class PyTorchDataLoader(Iterable[V]):
         executor = _get_executor(
             self._shmem.name, self._collate_fn, self._num_workers, self._mp_ctx
         )
-        pipeline = (
+        builder = (
             PipelineBuilder()
             .add_source(self._sampler)
             .pipe(
@@ -162,9 +164,14 @@ class PyTorchDataLoader(Iterable[V]):
                 output_order=self._output_order,
                 concurrency=self._num_workers,
             )
-            .add_sink(self._buffer_size)
-            .build(num_threads=1)
         )
+        if self._transfer_fn:
+            builder.pipe(
+                self._transfer_fn,
+                output_order=self._output_order,
+            )
+
+        pipeline = builder.add_sink(self._buffer_size).build(num_threads=1)
         return executor, pipeline
 
     def __iter__(self) -> Iterator[V]:
@@ -231,7 +238,7 @@ def _resolve_sampler(
         _collate_fn = collate_fn or default_collate
     elif batch_size is not None:
         _sampler = BatchSampler(
-            sampler or _get_sampler(dataset, shuffle, generator),  # pyre-ignore: [6]
+            sampler or _get_sampler(dataset, shuffle, generator),
             batch_size,
             drop_last,
         )
@@ -281,11 +288,8 @@ def get_pytorch_dataloader(
     if worker_init_fn is not None:
         raise ValueError("`worker_init_fn` is not supported.")
 
-    if pin_memory:
-        raise ValueError("`pin_memory` is not supported (yet).")
-
     if pin_memory_device is not None:
-        raise ValueError("`pin_memory_device` is not supported (yet).")
+        raise ValueError("`pin_memory_device` is not supported.")
 
     if persistent_workers:
         raise ValueError("`persistent_workers` is not supported.")
@@ -309,6 +313,10 @@ def get_pytorch_dataloader(
         generator,
     )
 
+    from torch.utils.data._utils.pin_memory import pin_memory as pin_memory_fn
+
+    transfer_fn = pin_memory_fn if pin_memory else None
+
     mp_ctx = (
         multiprocessing_context
         if isinstance(multiprocessing_context, mp.context.BaseContext)
@@ -321,8 +329,9 @@ def get_pytorch_dataloader(
         dataset=dataset,
         shmem=shmem,
         sampler=_sampler,
-        fetch_fn=_fetch_fn,  # pyre-ignore
+        fetch_fn=_fetch_fn,
         collate_fn=_collate_fn,
+        transfer_fn=transfer_fn,
         mp_ctx=mp_ctx,
         num_workers=num_workers,
         timeout=timeout,
