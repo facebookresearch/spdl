@@ -15,6 +15,7 @@ from collections.abc import (
     AsyncIterable,
     AsyncIterator,
     Awaitable,
+    Callable,
     Coroutine,
     Iterable,
     Sequence,
@@ -37,7 +38,7 @@ from ._hook import (
 from ._pipeline import Pipeline
 from ._utils import create_task
 
-__all__ = ["PipelineFailure", "PipelineBuilder"]
+__all__ = ["PipelineFailure", "PipelineBuilder", "_get_op_name"]
 
 _LG = logging.getLogger(__name__)
 
@@ -113,6 +114,12 @@ async def _put_eof_when_done(queue):
 ################################################################################
 # _pipe
 ################################################################################
+
+
+def _get_op_name(op: Callable) -> str:
+    if isinstance(op, partial):
+        return _get_op_name(op.func)
+    return getattr(op, "__name__", op.__class__.__name__)
 
 
 def _pipe(
@@ -619,7 +626,7 @@ class PipelineBuilder:
                     "when `output_order` is 'input'."
                 )
 
-        name = name or getattr(op, "__name__", op.__class__.__name__)
+        name = name or _get_op_name(op)
 
         if kwargs:
             # pyre-ignore
