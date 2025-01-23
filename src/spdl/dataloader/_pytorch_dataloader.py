@@ -323,7 +323,15 @@ def get_pytorch_dataloader(
 
     from torch.utils.data._utils.pin_memory import pin_memory as pin_memory_fn
 
-    transfer_fn = pin_memory_fn if pin_memory else None
+    if pin_memory and not torch.cuda.is_available():
+        _LG.warning(
+            "'pin_memory' argument is set as true but no accelerator is found, "
+            "then device pinned memory won't be used."
+        )
+
+    transfer_fn = (
+        pin_memory_fn if pin_memory and torch.accelerator.is_available() else None
+    )
 
     mp_ctx = (
         multiprocessing_context
