@@ -4,13 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Iterator, Sequence
+from asyncio import Task
+from collections.abc import AsyncIterator, Callable, Coroutine, Iterator, Sequence
 from contextlib import asynccontextmanager, AsyncExitStack, contextmanager
 from typing import AsyncContextManager, TypeVar
 
@@ -25,7 +26,7 @@ __all__ = [
     "StatsCounter",
 ]
 
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
 
 T = TypeVar("T")
@@ -39,7 +40,7 @@ def _time_str(val: float) -> str:
 
 
 class StatsCounter:
-    def __init__(self):
+    def __init__(self) -> None:
         self.num_items: int = 0
         self.ave_time: float = 0.0
 
@@ -58,7 +59,7 @@ class StatsCounter:
         elapsed = time.monotonic() - t0
         self.update(elapsed)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return _time_str(self.ave_time)
 
 
@@ -162,7 +163,7 @@ class PipelineHook(ABC):
     """
 
     @asynccontextmanager
-    async def stage_hook(self):
+    async def stage_hook(self) -> AsyncIterator[None]:
         """Perform custom action when the pipeline stage is initialized and completed.
 
         .. important::
@@ -207,8 +208,8 @@ class PipelineHook(ABC):
         yield
 
 
-def _stage_hooks(hooks: Sequence[PipelineHook]):
-    hs = [hook.stage_hook() for hook in hooks]
+def _stage_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
+    hs: list[AsyncContextManager[None]] = [hook.stage_hook() for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") and hasattr(h, "__aexit__") for h in hs):
         raise ValueError(
@@ -228,7 +229,7 @@ def _stage_hooks(hooks: Sequence[PipelineHook]):
 
 
 def _task_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
-    hs = [hook.task_hook() for hook in hooks]
+    hs: list[AsyncContextManager[None]] = [hook.task_hook() for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") or hasattr(h, "__aexit__") for h in hs):
         raise ValueError(
@@ -247,8 +248,10 @@ def _task_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
     return task_hooks()
 
 
-async def _periodic_dispatch(afun, interval):
-    tasks = set()
+async def _periodic_dispatch(
+    afun: Callable[[], Coroutine[None, None, None]], interval: float
+) -> None:
+    tasks: set[Task] = set()
     while True:
         await asyncio.sleep(interval)
 
@@ -265,7 +268,12 @@ class TaskStatsHook(PipelineHook):
         concurrency: Concurrency of the stage. Only used for logging.
     """
 
-    def __init__(self, name: str, concurrency: int, interval: float | None = None):
+    def __init__(
+        self,
+        name: str,
+        concurrency: int,
+        interval: float | None = None,
+    ) -> None:
         self.name = name
         self.concurrency = concurrency
         self.interval = interval
@@ -275,21 +283,20 @@ class TaskStatsHook(PipelineHook):
         self.ave_time = 0.0
 
         # For interval
-        self._int_task = None
+        self._int_task: Task | None = None
         self._int_t0 = 0.0
         self._int_num_tasks = 0
         self._int_num_success = 0
         self._int_ave_time = 0.0
 
     @asynccontextmanager
-    async def stage_hook(self):
+    async def stage_hook(self) -> AsyncIterator[None]:
         """Track the stage runtime and log the task stats."""
         if self.interval is not None:
+            coro = _periodic_dispatch(self._log_interval_stats, self.interval)
             self._int_t0 = time.monotonic()
             self._int_task = create_task(
-                _periodic_dispatch(self._log_interval_stats, self.interval),
-                name="periodic_dispatch",
-                ignore_cancelled=True,
+                coro, name="periodic_dispatch", ignore_cancelled=True
             )
 
         t0 = time.monotonic()
@@ -302,7 +309,7 @@ class TaskStatsHook(PipelineHook):
             self._log_stats(elapsed, self.num_tasks, self.num_success, self.ave_time)
 
     @asynccontextmanager
-    async def task_hook(self):
+    async def task_hook(self) -> AsyncIterator[None]:
         """Track task runtime and success rate."""
         t0 = time.monotonic()
         try:
@@ -319,7 +326,7 @@ class TaskStatsHook(PipelineHook):
             self.num_success += 1
             self.ave_time += (elapsed - self.ave_time) / self.num_success
 
-    async def _log_interval_stats(self):
+    async def _log_interval_stats(self) -> None:
         t0 = time.monotonic()
         num_success = self.num_success
         num_tasks = self.num_tasks
@@ -345,7 +352,13 @@ class TaskStatsHook(PipelineHook):
         self._int_num_success = num_success
         self._int_ave_time = ave_time
 
-    def _log_stats(self, elapsed, num_tasks, num_success, ave_time):
+    def _log_stats(
+        self,
+        elapsed: float,
+        num_tasks: int,
+        num_success: int,
+        ave_time: float,
+    ) -> None:
         _LG.info(
             "[%s]\tCompleted %5d tasks (%3d failed) in %s. "
             "QPS: %.2f (Concurrency: %3d). "

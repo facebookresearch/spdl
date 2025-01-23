@@ -8,14 +8,24 @@
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from queue import Empty, Queue
 from threading import Event, Thread
-
-from ._utils import _get_loop
 
 __all__ = ["BackgroundConsumer"]
 
 _LG = logging.getLogger(__name__)
+
+
+def _get_loop(num_workers: int | None) -> asyncio.AbstractEventLoop:
+    loop = asyncio.new_event_loop()
+    loop.set_default_executor(
+        ThreadPoolExecutor(
+            max_workers=num_workers,
+            thread_name_prefix="spdl_",
+        )
+    )
+    return loop
 
 
 def _async_executor(loop: asyncio.AbstractEventLoop, queue: Queue, stopped: Event):

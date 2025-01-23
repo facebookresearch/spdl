@@ -4,30 +4,23 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import asyncio
 import logging
 import sys
 import traceback
-from concurrent.futures import ThreadPoolExecutor
+from asyncio import Task
+from collections.abc import Coroutine, Generator
+from typing import Any, TypeVar
 
 __all__ = [
     "create_task",
 ]
 
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
-
-def _get_loop(num_workers: int | None) -> asyncio.AbstractEventLoop:
-    loop = asyncio.new_event_loop()
-    loop.set_default_executor(
-        ThreadPoolExecutor(
-            max_workers=num_workers,
-            thread_name_prefix="spdl_",
-        )
-    )
-    return loop
+T = TypeVar("T")
 
 
 # Note:
@@ -41,7 +34,7 @@ def _get_loop(num_workers: int | None) -> asyncio.AbstractEventLoop:
 # task was created.
 # Otherwise the log will point to the location somewhere deep in `asyncio` module
 # which is not very helpful.
-def _log_exception(task, stacklevel, ignore_cancelled):
+def _log_exception(task: Task, stacklevel: int, ignore_cancelled: bool) -> None:
     try:
         task.result()
     except asyncio.exceptions.CancelledError:
@@ -69,8 +62,10 @@ def _log_exception(task, stacklevel, ignore_cancelled):
 
 
 def create_task(
-    coro, name: str | None = None, ignore_cancelled: bool = True
-) -> asyncio.Task:
+    coro: Coroutine[Any, Any, T] | Generator[Any, None, T],  # pyre-ignore: [2]
+    name: str | None = None,
+    ignore_cancelled: bool = True,
+) -> Task[T]:
     """Wrapper around :py:func:`asyncio.create_task`. Add logging callback."""
     task = asyncio.create_task(coro, name=name)
     task.add_done_callback(
