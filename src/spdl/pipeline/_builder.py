@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import asyncio
 import inspect
@@ -18,15 +18,15 @@ from collections.abc import (
     Callable,
     Coroutine,
     Iterable,
+    Iterator,
     Sequence,
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
 from contextlib import asynccontextmanager, contextmanager
 from functools import partial
-from typing import TypeVar
+from typing import Any, AsyncGenerator, Generic, TypeVar
 
-from . import _convert
-from ._convert import _to_async_gen, Callables
+from ._convert import _to_async_gen, Callables, convert_to_async
 from ._hook import (
     _stage_hooks,
     _task_hooks,
@@ -40,7 +40,7 @@ from ._utils import create_task
 
 __all__ = ["PipelineFailure", "PipelineBuilder", "_get_op_name"]
 
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -48,10 +48,10 @@ U = TypeVar("U")
 
 # Sentinel objects used to instruct AsyncPipeline to take special actions.
 class _Sentinel:
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -98,7 +98,7 @@ _SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 # unless the task was cancelled.
 #
 @asynccontextmanager
-async def _put_eof_when_done(queue):
+async def _put_eof_when_done(queue: AsyncQueue) -> AsyncGenerator[None, None]:
     # Note:
     # `asyncio.CancelledError` is a subclass of BaseException, so it won't be
     # caught in the following, and EOF won't be passed to the output queue.
@@ -145,7 +145,9 @@ def _pipe(
         else hooks
     )
 
-    afunc = _convert.convert_to_async(op, executor)
+    afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
+        convert_to_async(op, executor)
+    )
 
     if inspect.iscoroutinefunction(afunc):
 
@@ -200,7 +202,7 @@ def _pipe(
 
     @_put_eof_when_done(output_queue)
     @_stage_hooks(hooks)
-    async def pipe():
+    async def pipe() -> None:
         i, tasks = 0, set()
         while True:
             item = await input_queue.get()
@@ -273,7 +275,7 @@ def _ordered_pipe(
     if concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
 
-    hooks = (
+    hooks_: Sequence[PipelineHook] = (
         [TaskStatsHook(name, concurrency, interval=report_stats_interval)]
         if hooks is None
         else hooks
@@ -282,11 +284,13 @@ def _ordered_pipe(
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(op)
 
-    afunc = _convert.convert_to_async(op, executor)
+    afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
+        convert_to_async(op, executor)
+    )
 
     async def _wrap(item: T) -> asyncio.Task[U]:
-        async def _with_hooks():
-            async with _task_hooks(hooks):
+        async def _with_hooks() -> U:
+            async with _task_hooks(hooks_):
                 return await afunc(item)
 
         return create_task(_with_hooks())
@@ -296,7 +300,7 @@ def _ordered_pipe(
 
     inter_queue = AsyncQueue(concurrency)
 
-    coro1 = _pipe(  # pyre-ignore: [1001]
+    coro1: Awaitable[None] = _pipe(  # pyre-ignore: [1001]
         input_queue,
         _wrap,
         inter_queue,
@@ -306,7 +310,7 @@ def _ordered_pipe(
         hooks=[],
     )
 
-    coro2 = _pipe(  # pyre-ignore: [1001]
+    coro2: Awaitable[None] = _pipe(  # pyre-ignore: [1001]
         inter_queue,
         _unwrap,
         output_queue,
@@ -317,10 +321,9 @@ def _ordered_pipe(
     )
 
     @_put_eof_when_done(output_queue)
-    @_stage_hooks(hooks)
-    async def ordered_pipe():
-        tasks = {create_task(coro1), create_task(coro2)}
-        await asyncio.wait(tasks)
+    @_stage_hooks(hooks_)
+    async def ordered_pipe() -> None:
+        await asyncio.wait({create_task(coro1), create_task(coro2)})
 
     return ordered_pipe()
 
@@ -335,13 +338,14 @@ def _enqueue(
     queue: AsyncQueue[T],
     max_items: int | None = None,
 ) -> Coroutine:
-    if not hasattr(src, "__aiter__"):
-        src = _to_async_gen(iter, None)(src)
+    src_: AsyncIterable[T] = (  # pyre-ignore: [9]
+        src if hasattr(src, "__aiter__") else _to_async_gen(iter, None)(src)
+    )
 
     @_put_eof_when_done(queue)
-    async def enqueue():
+    async def enqueue() -> None:
         num_items = 0
-        async for item in src:
+        async for item in src_:
             if item is not _SKIP:
                 await queue.put(item)
                 num_items += 1
@@ -357,7 +361,7 @@ def _enqueue(
 
 
 @contextmanager
-def _sink_stats():
+def _sink_stats() -> Iterator[tuple[StatsCounter, StatsCounter]]:
     get_counter = StatsCounter()
     put_counter = StatsCounter()
     t0 = time.monotonic()
@@ -377,7 +381,7 @@ def _sink_stats():
         )
 
 
-async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]):
+async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]) -> None:
     with _sink_stats() as (get_counter, put_counter):
         while True:
             with get_counter.count():
@@ -404,7 +408,7 @@ class PipelineFailure(RuntimeError):
     Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
     """
 
-    def __init__(self, errs):
+    def __init__(self, errs: dict[str, Exception]) -> None:
         msg = []
         for k, v in errs.items():
             e = str(v)
@@ -439,7 +443,7 @@ async def _run_pipeline_coroutines(
         # demonstrate the behavior.
         # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
         try:
-            done, pending = await asyncio.wait(
+            _, pending = await asyncio.wait(
                 pending, return_when=asyncio.FIRST_EXCEPTION
             )
         except asyncio.CancelledError:
@@ -475,30 +479,32 @@ async def _run_pipeline_coroutines(
 ################################################################################
 
 
-def disaggregate(items):
+def disaggregate(items: Sequence[T]) -> Iterator[T]:
     for item in items:
         yield item
 
 
-class PipelineBuilder:
+class PipelineBuilder(Generic[T]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
     See :py:class:`~spdl.pipeline.Pipeline` for details.
     """
 
-    def __init__(self):
-        self._source = None
+    def __init__(self) -> None:
+        self._source: Iterable | AsyncIterable | None = None
         self._source_buffer_size = 1
 
-        self._process_args: list[tuple[str, dict, int]] = []
+        self._process_args: list[tuple[str, dict[str, Any], int]] = []
 
-        self._sink_buffer_size = None
+        self._sink_buffer_size: int | None = None
         self._num_aggregate = 0
         self._num_disaggregate = 0
 
     def add_source(
-        self, source: Iterable[T] | AsyncIterable[T], **_kwargs
-    ) -> "PipelineBuilder":
+        self,
+        source: Iterable[T] | AsyncIterable[T],
+        **_kwargs,  # pyre-ignore: [2]
+    ) -> "PipelineBuilder[T]":
         """Attach an iterator to the source buffer.
 
         .. code-block::
@@ -543,8 +549,8 @@ class PipelineBuilder:
         report_stats_interval: float | None = None,
         output_order: str = "completion",
         kwargs: dict[str, ...] | None = None,
-        **_kwargs,
-    ) -> "PipelineBuilder":
+        **_kwargs,  # pyre-ignore: [2]
+    ) -> "PipelineBuilder[T]":
         """Apply an operation to items in the pipeline.
 
         .. code-block::
@@ -673,7 +679,7 @@ class PipelineBuilder:
         drop_last: bool = False,
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-    ) -> "PipelineBuilder":
+    ) -> "PipelineBuilder[T]":
         """Buffer the items in the pipeline.
 
         Args:
@@ -682,9 +688,9 @@ class PipelineBuilder:
             hooks: See :py:meth:`pipe`.
             report_stats_interval: See :py:meth:`pipe`.
         """
-        vals = [[]]
+        vals: list[list[T]] = [[]]
 
-        def aggregate(i):
+        def aggregate(i: T) -> list[T]:
             if i is not _EOF:
                 vals[0].append(i)
 
@@ -692,7 +698,7 @@ class PipelineBuilder:
                 ret = vals.pop(0)
                 vals.append([])
                 return ret
-            return _SKIP
+            return _SKIP  # pyre-ignore: [7]
 
         name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
         self._num_aggregate += 1
@@ -720,7 +726,7 @@ class PipelineBuilder:
         *,
         hooks: Sequence[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-    ) -> "PipelineBuilder":
+    ) -> "PipelineBuilder[T]":
         """Disaggregate the items in the pipeline.
 
         Args:
@@ -746,7 +752,7 @@ class PipelineBuilder:
         )
         return self
 
-    def add_sink(self, buffer_size: int) -> "PipelineBuilder":
+    def add_sink(self, buffer_size: int) -> "PipelineBuilder[T]":
         """Attach a buffer to the end of the pipeline.
 
         .. code-block::
@@ -778,6 +784,7 @@ class PipelineBuilder:
 
         # source
         queues.append(AsyncQueue(self._source_buffer_size))
+        assert self._source is not None
         coros.append(
             (
                 "AsyncPipeline::0_source",
@@ -816,12 +823,12 @@ class PipelineBuilder:
 
     def _get_desc(self) -> list[str]:
         parts = []
-        src_repr = (
-            self._source.__name__
-            if hasattr(self._source, "__name__")
-            else type(self._source).__name__
-        )
-        parts.append(f"  - src: {src_repr}")
+        if self._source is not None:
+            src_repr = getattr(self._source, "__name__", type(self._source).__name__)
+            parts.append(f"  - src: {src_repr}")
+        else:
+            parts.append("  - src: n/a")
+
         if self._source_buffer_size != 1:
             parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
 
@@ -851,7 +858,7 @@ class PipelineBuilder:
     def __str__(self) -> str:
         return "\n".join([repr(self), *self._get_desc()])
 
-    def build(self, *, num_threads: int | None = None) -> Pipeline:
+    def build(self, *, num_threads: int | None = None) -> Pipeline[T]:
         """Build the pipeline.
 
         Args:
