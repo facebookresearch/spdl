@@ -300,7 +300,7 @@ def _ordered_pipe(
 
     inter_queue = AsyncQueue(concurrency)
 
-    coro1: Awaitable[None] = _pipe(  # pyre-ignore: [1001]
+    coro1: Coroutine[None, None, None] = _pipe(  # pyre-ignore: [1001]
         input_queue,
         _wrap,
         inter_queue,
@@ -310,7 +310,7 @@ def _ordered_pipe(
         hooks=[],
     )
 
-    coro2: Awaitable[None] = _pipe(  # pyre-ignore: [1001]
+    coro2: Coroutine[None, None, None] = _pipe(  # pyre-ignore: [1001]
         inter_queue,
         _unwrap,
         output_queue,

@@ -8,7 +8,6 @@
 
 from typing import Any
 
-# pyre-unsafe
 from ._dataloader import DataLoader
 from ._pytorch_dataloader import get_pytorch_dataloader, PyTorchDataLoader
 
@@ -18,12 +17,14 @@ __all__ = [
     "PyTorchDataLoader",
 ]
 
+# pyre-strict
+
 
 def __dir__() -> list[str]:
     return __all__
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> Any:  # pyre-ignore: [3]
     # For backward compatibility
     if name == "iterate_in_subprocess":
         import warnings
