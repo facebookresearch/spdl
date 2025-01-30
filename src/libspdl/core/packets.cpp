@@ -14,6 +14,7 @@
 
 #include <glog/logging.h>
 
+#include <algorithm>
 #include <cassert>
 
 extern "C" {
