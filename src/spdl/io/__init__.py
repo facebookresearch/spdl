@@ -30,6 +30,9 @@ from ._type_stub import (  # isort: skip
     CPUStorage,
 )
 
+from ._array import (
+    load_npy,
+)
 from ._composite import (
     load_audio,
     load_image,
@@ -135,6 +138,7 @@ __all__ = [
     # NUMPY
     "NpzFile",
     "load_npz",
+    "load_npy",
 ]
 
 
