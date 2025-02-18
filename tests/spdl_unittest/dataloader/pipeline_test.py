@@ -476,8 +476,8 @@ def test_pipeline_hook_drop_last(drop_last: bool):
 
     assert h2._enter_stage_called == 1
     assert h2._exit_stage_called == 1
-    assert h2._enter_task_called == 10 if drop_last else 11
-    assert h2._exit_task_called == 10 if drop_last else 11
+    assert h2._enter_task_called == 11
+    assert h2._exit_task_called == 11
 
     # Even when the stage task fails,
     # the exit_stage and exit_task are still called.

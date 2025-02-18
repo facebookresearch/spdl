@@ -131,7 +131,14 @@ class _PipeArgs:
     concurrency: int = 1
     hooks: list[PipelineHook] | None = None
     report_stats_interval: float | None = None
-    _op_expects_eof: bool = False
+    op_requires_eof: bool = False
+    # Used to pass EOF to op.
+    # Usually pipe does not pas EOF to op. This is because op is expected to be
+    #  stateless, and requiring users to handle EOF is cumbersome, and there is
+    # no real benefit.
+    # However, some ops are exception. The aggregation (with drop_last=False)
+    # requires to benotified when the pipeline reached the EOF, so that it can
+    # flush the buffered items.
 
 
 def _get_default_hook(args: _PipeArgs) -> list[PipelineHook]:
@@ -216,7 +223,7 @@ def _pipe(
             item = await input_queue.get()
             if item is _SKIP:
                 continue
-            if item is _EOF and not args._op_expects_eof:
+            if item is _EOF and not args.op_requires_eof:
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
@@ -470,7 +477,25 @@ async def _run_pipeline_coroutines(
 ################################################################################
 
 
-def disaggregate(items: Sequence[T]) -> Iterator[T]:
+class _Aggregate(Generic[T]):
+    def __init__(self, n: int, drop_last: bool) -> None:
+        self.n = n
+        self.drop_last = drop_last
+        self._vals: list[T] = []
+
+    def __call__(self, item: T) -> list[T]:
+        if item is not _EOF:
+            self._vals.append(item)
+
+        if (len(self._vals) >= self.n) or (
+            item is _EOF and not self.drop_last and self._vals
+        ):
+            ret, self._vals = self._vals, []
+            return ret
+        return _SKIP  # pyre-ignore: [7]
+
+
+def _disaggregate(items: Sequence[T]) -> Iterator[T]:
     for item in items:
         yield item
 
@@ -514,7 +539,7 @@ def _get_pipe_args(
     concurrency: int = 1,
     hooks: list[PipelineHook] | None = None,
     report_stats_interval: float | None = None,
-    _op_expects_eof: bool = False,
+    op_requires_eof: bool = False,
 ) -> _PipeArgs:
     if kwargs:
         op = partial(op, **kwargs)
@@ -526,7 +551,7 @@ def _get_pipe_args(
         concurrency=concurrency,
         hooks=hooks,
         report_stats_interval=report_stats_interval,
-        _op_expects_eof=_op_expects_eof,
+        op_requires_eof=op_requires_eof,
     )
 
 
@@ -732,17 +757,6 @@ class PipelineBuilder(Generic[T]):
             hooks: See :py:meth:`pipe`.
             report_stats_interval: See :py:meth:`pipe`.
         """
-        vals: list[list[T]] = [[]]
-
-        def aggregate(i: T) -> list[T]:
-            if i is not _EOF:
-                vals[0].append(i)
-
-            if (i is _EOF and vals[0]) or (len(vals[0]) >= num_items):
-                ret = vals.pop(0)
-                vals.append([])
-                return ret
-            return _SKIP  # pyre-ignore: [7]
 
         name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
         self._num_aggregate += 1
@@ -752,10 +766,10 @@ class PipelineBuilder(Generic[T]):
                 _PType.Aggregate,
                 _PipeArgs(
                     name=name,
-                    op=aggregate,
+                    op=_Aggregate(num_items, drop_last),
                     hooks=hooks,
                     report_stats_interval=report_stats_interval,
-                    _op_expects_eof=not drop_last,
+                    op_requires_eof=True,
                 ),
             )
         )
@@ -782,7 +796,7 @@ class PipelineBuilder(Generic[T]):
                 _PType.Disaggregate,
                 _PipeArgs(
                     name=name,
-                    op=disaggregate,
+                    op=_disaggregate,
                     hooks=hooks,
                     report_stats_interval=report_stats_interval,
                 ),
