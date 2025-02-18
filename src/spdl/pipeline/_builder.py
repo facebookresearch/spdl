@@ -11,6 +11,7 @@ import enum
 import inspect
 import logging
 import time
+import warnings
 from asyncio import Queue as AsyncQueue
 from collections.abc import (
     AsyncIterable,
@@ -531,30 +532,6 @@ def _get_op_name(op: Callable) -> str:
     return getattr(op, "__name__", op.__class__.__name__)
 
 
-def _get_pipe_args(
-    name: str | None,
-    op: Callables[Any, Any],  # pyre-ignore
-    kwargs: dict[str, Any] | None = None,
-    executor: Executor | None = None,
-    concurrency: int = 1,
-    hooks: list[PipelineHook] | None = None,
-    report_stats_interval: float | None = None,
-    op_requires_eof: bool = False,
-) -> _PipeArgs:
-    if kwargs:
-        op = partial(op, **kwargs)
-
-    return _PipeArgs(
-        name=name or _get_op_name(op),
-        op=op,
-        executor=executor,
-        concurrency=concurrency,
-        hooks=hooks,
-        report_stats_interval=report_stats_interval,
-        op_requires_eof=op_requires_eof,
-    )
-
-
 class PipelineBuilder(Generic[T]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
@@ -620,7 +597,6 @@ class PipelineBuilder(Generic[T]):
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
         output_order: str = "completion",
-        kwargs: dict[str, ...] | None = None,
         **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T]":
         """Apply an operation to items in the pipeline.
@@ -686,7 +662,6 @@ class PipelineBuilder(Generic[T]):
                 in the order their process is completed.
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
-            kwargs: Keyword arguments to be passed to the ``op``.
         """
         if output_order not in ["completion", "input"]:
             raise ValueError(
@@ -703,16 +678,24 @@ class PipelineBuilder(Generic[T]):
                     "pipe does not support async generator function "
                     "when `output_order` is 'input'."
                 )
+        name_ = name or _get_op_name(op)
+
+        if (op_kwargs := _kwargs.get("kwargs")) is not None:
+            warnings.warn(
+                "`kwargs` argument is deprecated. "
+                "Please use `functools.partial` to bind function arguments.",
+                stacklevel=2,
+            )
+            op = partial(op, **op_kwargs)  # pyre-ignore: [9]
 
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
 
         self._process_args.append(
             _ProcessConfig(
                 type=type_,
-                args=_get_pipe_args(
-                    name=name,
+                args=_PipeArgs(
+                    name=name_,
                     op=op,
-                    kwargs=kwargs,
                     executor=executor,
                     concurrency=concurrency,
                     hooks=hooks,
