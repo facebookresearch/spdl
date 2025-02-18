@@ -23,6 +23,7 @@ from collections.abc import (
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
 from contextlib import asynccontextmanager, contextmanager
+from dataclasses import dataclass
 from functools import partial
 from typing import Any, AsyncGenerator, Generic, TypeVar
 
@@ -484,6 +485,12 @@ def disaggregate(items: Sequence[T]) -> Iterator[T]:
         yield item
 
 
+@dataclass
+class _SourceConfig:
+    source: Iterable | AsyncIterable
+    buffer_size: int
+
+
 class PipelineBuilder(Generic[T]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
@@ -491,8 +498,7 @@ class PipelineBuilder(Generic[T]):
     """
 
     def __init__(self) -> None:
-        self._source: Iterable | AsyncIterable | None = None
-        self._source_buffer_size = 1
+        self._src: _SourceConfig | None = None
 
         self._process_args: list[tuple[str, dict[str, Any], int]] = []
 
@@ -523,18 +529,21 @@ class PipelineBuilder(Generic[T]):
                    event loop. If the iterator performs a blocking operation,
                    the entire pipeline will be blocked.
         """
-        if self._source is not None:
+        if self._src is not None:
             raise ValueError("Source already set.")
 
         if not (hasattr(source, "__aiter__") or hasattr(source, "__iter__")):
             raise ValueError("Source must be either generator or async generator.")
 
-        self._source = source
-
         # Note: Do not document this option.
         # See `pipe` method for detail.
-        if "_buffer_size" in _kwargs:
-            self._source_buffer_size = int(_kwargs["_buffer_size"])
+        buffer_size = int(_kwargs.get("_buffer_size", 1))
+        if buffer_size < 1:
+            raise ValueError(
+                f"buffer_size must be greater than 0. Found: {buffer_size}"
+            )
+
+        self._src = _SourceConfig(source, buffer_size)
         return self
 
     def pipe(
@@ -773,7 +782,7 @@ class PipelineBuilder(Generic[T]):
         return self
 
     def _build(self) -> tuple[Coroutine[None, None, None], list[AsyncQueue]]:
-        if self._source is None:
+        if self._src is None:
             raise ValueError("Source is not set.")
 
         # Note:
@@ -783,14 +792,10 @@ class PipelineBuilder(Generic[T]):
         queues: list[AsyncQueue] = []
 
         # source
-        queues.append(AsyncQueue(self._source_buffer_size))
-        assert self._source is not None
-        coros.append(
-            (
-                "AsyncPipeline::0_source",
-                _enqueue(self._source, queues[0]),
-            )
-        )
+        assert self._src is not None
+        cfg = self._src
+        queues.append(AsyncQueue(cfg.buffer_size))
+        coros.append(("AsyncPipeline::0_source", _enqueue(cfg.source, queues[0])))
 
         # pipes
         for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
@@ -823,14 +828,14 @@ class PipelineBuilder(Generic[T]):
 
     def _get_desc(self) -> list[str]:
         parts = []
-        if self._source is not None:
-            src_repr = getattr(self._source, "__name__", type(self._source).__name__)
+        if self._src is not None:
+            src = self._src
+            src_repr = getattr(src.source, "__name__", type(src.source).__name__)
             parts.append(f"  - src: {src_repr}")
+            if src.buffer_size != 1:
+                parts.append(f"    Buffer: buffer_size={src.buffer_size}")
         else:
             parts.append("  - src: n/a")
-
-        if self._source_buffer_size != 1:
-            parts.append(f"    Buffer: buffer_size={self._source_buffer_size}")
 
         for type_, args, buffer_size in self._process_args:
             match type_:
