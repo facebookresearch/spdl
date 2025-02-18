@@ -10,15 +10,19 @@ import asyncio
 import random
 import threading
 import time
-from collections.abc import AsyncIterable, Iterable
+from collections.abc import AsyncIterable, Iterable, Iterator
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from functools import partial
 from multiprocessing import Process
+from typing import TypeVar
 
 import pytest
 from spdl.pipeline import PipelineBuilder, PipelineHook, TaskStatsHook
 from spdl.pipeline._builder import _enqueue, _EOF, _pipe, _sink, _SKIP
 from spdl.pipeline._hook import _periodic_dispatch
+
+T = TypeVar("T")
 
 
 def _put_aqueue(queue, vals, *, eof):
@@ -1577,3 +1581,59 @@ def test_pipeline_pipe_kwargs_async_iter():
     with pipeline.auto_stop():
         vals = list(pipeline.get_iterator(timeout=3))
     assert vals == [1 + i for i in range(10)]
+
+
+class _PicklableSource:
+    def __init__(self, n: int) -> None:
+        self.n = n
+
+    def __iter__(self) -> Iterator[int]:
+        yield from range(self.n)
+
+
+def plusN(x: int, N: int) -> int:
+    return x + N
+
+
+# TODO: Make this an API
+def run_pipeline(builder: PipelineBuilder[T], num_threads: int) -> Iterator[T]:
+    pipeline = builder.build(num_threads=num_threads)
+    with pipeline.auto_stop():
+        yield from pipeline
+
+
+def test_pipelinebuilder_picklable():
+    """PipelineBuilder can be passed to subprocess (==picklable)"""
+
+    builder = (
+        PipelineBuilder()
+        .add_source(_PicklableSource(10))
+        .pipe(
+            adouble,
+            concurrency=3,
+        )
+        .pipe(
+            aplus1,
+            concurrency=3,
+        )
+        .pipe(plusN, kwargs={"N": 2})
+        .pipe(partial(plusN, N=3))
+        .pipe(passthrough)
+        .aggregate(3)
+        .disaggregate()
+        .add_sink(10)
+    )
+
+    from spdl.source.utils import iterate_in_subprocess
+
+    results = list(
+        iterate_in_subprocess(
+            fn=partial(run_pipeline, builder=builder, num_threads=5),
+            buffer_size=-1,
+        )
+    )
+
+    def _ref(x: int) -> int:
+        return 2 * x + 1 + 2 + 3
+
+    assert results == [_ref(i) for i in range(10)]
