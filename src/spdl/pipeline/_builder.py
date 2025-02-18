@@ -38,9 +38,14 @@ from ._hook import (
     TaskStatsHook,
 )
 from ._pipeline import Pipeline
-from ._utils import create_task
+from ._utils import create_task, iterate_in_subprocess
 
-__all__ = ["PipelineFailure", "PipelineBuilder", "_get_op_name"]
+__all__ = [
+    "PipelineFailure",
+    "PipelineBuilder",
+    "_get_op_name",
+    "run_pipeline_in_subprocess",
+]
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -890,3 +895,31 @@ class PipelineBuilder(Generic[T]):
             thread_name_prefix="spdl_",
         )
         return Pipeline(coro, queues, executor, desc=self._get_desc())
+
+
+def _run_pipeline(builder: PipelineBuilder[T], num_threads: int) -> Iterator[T]:
+    pipeline = builder.build(num_threads=num_threads)
+    with pipeline.auto_stop():
+        yield from pipeline
+
+
+def run_pipeline_in_subprocess(
+    builder: PipelineBuilder[T],
+    *,
+    num_threads: int,
+    **kwargs: dict[str, Any],
+) -> Iterator[T]:
+    """Run the given Pipeline in a subprocess, and iterate on the result.
+
+    Args:
+        builder: The definition of :py:class:`Pipeline`.
+        num_threads: Passed to :py:meth:`PipelineBuilder.build`.
+        kwargs: Passed to :py:func:`iterate_in_subprocess`.
+
+    Yields:
+        The results yielded from the pipeline.
+    """
+    yield from iterate_in_subprocess(
+        fn=partial(_run_pipeline, builder=builder, num_threads=num_threads),
+        **kwargs,  # pyre-ignore: [6]
+    )

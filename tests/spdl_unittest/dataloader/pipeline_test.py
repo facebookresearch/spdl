@@ -19,9 +19,9 @@ from typing import TypeVar
 
 import pytest
 from spdl.pipeline import (
-    iterate_in_subprocess,
     PipelineBuilder,
     PipelineHook,
+    run_pipeline_in_subprocess,
     TaskStatsHook,
 )
 from spdl.pipeline._builder import _enqueue, _EOF, _pipe, _PipeArgs, _sink, _SKIP
@@ -1611,13 +1611,6 @@ def plusN(x: int, N: int) -> int:
     return x + N
 
 
-# TODO: Make this an API
-def run_pipeline(builder: PipelineBuilder[T], num_threads: int) -> Iterator[T]:
-    pipeline = builder.build(num_threads=num_threads)
-    with pipeline.auto_stop():
-        yield from pipeline
-
-
 def test_pipelinebuilder_picklable():
     """PipelineBuilder can be passed to subprocess (==picklable)"""
 
@@ -1640,12 +1633,7 @@ def test_pipelinebuilder_picklable():
         .add_sink(10)
     )
 
-    results = list(
-        iterate_in_subprocess(
-            fn=partial(run_pipeline, builder=builder, num_threads=5),
-            buffer_size=-1,
-        )
-    )
+    results = list(run_pipeline_in_subprocess(builder, num_threads=5, buffer_size=-1))
 
     def _ref(x: int) -> int:
         return 2 * x + 1 + 2 + 3
