@@ -8,7 +8,7 @@
 
 # pyre-strict
 
-from ._builder import PipelineBuilder, PipelineFailure
+from ._builder import PipelineBuilder, PipelineFailure, run_pipeline_in_subprocess
 from ._hook import PipelineHook, TaskStatsHook
 from ._pipeline import Pipeline
 from ._utils import create_task, iterate_in_subprocess
@@ -21,4 +21,5 @@ __all__ = [
     "PipelineHook",
     "TaskStatsHook",
     "iterate_in_subprocess",
+    "run_pipeline_in_subprocess",
 ]
