@@ -140,6 +140,12 @@ class _PipeArgs:
     # requires to benotified when the pipeline reached the EOF, so that it can
     # flush the buffered items.
 
+    def __post_init__(self) -> None:
+        if self.concurrency < 1:
+            raise ValueError(
+                f"`concurrency` value must be >= 1. Found: {self.concurrency}"
+            )
+
 
 def _get_default_hook(args: _PipeArgs) -> list[PipelineHook]:
     if args.hooks is not None:
@@ -154,9 +160,6 @@ def _pipe(
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
-
-    if args.concurrency < 1:
-        raise ValueError("`concurrency` value must be >= 1")
 
     hooks: list[PipelineHook] = _get_default_hook(args)
 
@@ -281,9 +284,6 @@ def _ordered_pipe(
     """
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
-
-    if args.concurrency < 1:
-        raise ValueError("`concurrency` value must be >= 1")
 
     hooks: list[PipelineHook] = _get_default_hook(args)
 
