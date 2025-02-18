@@ -410,32 +410,33 @@ def test_pipeline_stage_hook_wrong_def2():
         )
 
 
+class CountHook(PipelineHook):
+    def __init__(self):
+        self._enter_task_called = 0
+        self._enter_stage_called = 0
+        self._exit_task_called = 0
+        self._exit_stage_called = 0
+
+    @asynccontextmanager
+    async def stage_hook(self):
+        self._enter_stage_called += 1
+        yield
+        self._exit_stage_called += 1
+
+    @asynccontextmanager
+    async def task_hook(self):
+        self._enter_task_called += 1
+        try:
+            yield
+        finally:
+            self._exit_task_called += 1
+
+
 @pytest.mark.parametrize("drop_last", [False, True])
 def test_pipeline_hook_drop_last(drop_last: bool):
     """Hook is executed properly"""
 
-    class _hook(PipelineHook):
-        def __init__(self):
-            self._enter_task_called = 0
-            self._enter_stage_called = 0
-            self._exit_task_called = 0
-            self._exit_stage_called = 0
-
-        @asynccontextmanager
-        async def stage_hook(self):
-            self._enter_stage_called += 1
-            yield
-            self._exit_stage_called += 1
-
-        @asynccontextmanager
-        async def task_hook(self):
-            self._enter_task_called += 1
-            try:
-                yield
-            finally:
-                self._exit_task_called += 1
-
-    h1, h2, h3 = _hook(), _hook(), _hook()
+    h1, h2, h3 = CountHook(), CountHook(), CountHook()
 
     async def _fail(_):
         raise RuntimeError("Failing")
@@ -1616,9 +1617,9 @@ def test_pipelinebuilder_picklable():
             aplus1,
             concurrency=3,
         )
-        .pipe(plusN, kwargs={"N": 2})
-        .pipe(partial(plusN, N=3))
-        .pipe(passthrough)
+        .pipe(plusN, kwargs={"N": 2}, hooks=[CountHook()])
+        .pipe(partial(plusN, N=3), hooks=[CountHook()])
+        .pipe(passthrough, report_stats_interval=4)
         .aggregate(3)
         .disaggregate()
         .add_sink(10)
