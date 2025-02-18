@@ -18,7 +18,12 @@ from multiprocessing import Process
 from typing import TypeVar
 
 import pytest
-from spdl.pipeline import PipelineBuilder, PipelineHook, TaskStatsHook
+from spdl.pipeline import (
+    iterate_in_subprocess,
+    PipelineBuilder,
+    PipelineHook,
+    TaskStatsHook,
+)
 from spdl.pipeline._builder import _enqueue, _EOF, _pipe, _PipeArgs, _sink, _SKIP
 from spdl.pipeline._hook import _periodic_dispatch
 
@@ -1634,8 +1639,6 @@ def test_pipelinebuilder_picklable():
         .disaggregate()
         .add_sink(10)
     )
-
-    from spdl.source.utils import iterate_in_subprocess
 
     results = list(
         iterate_in_subprocess(

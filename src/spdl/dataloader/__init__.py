@@ -30,13 +30,13 @@ def __getattr__(name: str) -> Any:  # pyre-ignore: [3]
         import warnings
 
         warnings.warn(
-            "`iterate_in_subprocess` has been moved to `spdl.source.utils`. "
+            "`iterate_in_subprocess` has been moved to `spdl.pipeline.iterate_in_subprocess`. "
             "Please update the import statement to "
-            "`from spdl.source.utils import iterate_in_subprocess`.",
+            "`from spdl.pipeline import iterate_in_subprocess`.",
             stacklevel=2,
         )
-        import spdl.source.utils
+        from spdl.pipeline import iterate_in_subprocess
 
-        return spdl.source.utils.iterate_in_subprocess
+        return iterate_in_subprocess
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
