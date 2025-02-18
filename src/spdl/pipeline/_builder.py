@@ -123,12 +123,6 @@ async def _put_eof_when_done(queue: AsyncQueue) -> AsyncGenerator[None, None]:
 ################################################################################
 
 
-def _get_op_name(op: Callable) -> str:
-    if isinstance(op, partial):
-        return _get_op_name(op.func)
-    return getattr(op, "__name__", op.__class__.__name__)
-
-
 @dataclass
 class _PipeArgs:
     name: str
@@ -506,6 +500,36 @@ class _SinkConfig:
     buffer_size: int
 
 
+def _get_op_name(op: Callable) -> str:
+    if isinstance(op, partial):
+        return _get_op_name(op.func)
+    return getattr(op, "__name__", op.__class__.__name__)
+
+
+def _get_pipe_args(
+    name: str | None,
+    op: Callables[Any, Any],  # pyre-ignore
+    kwargs: dict[str, Any] | None = None,
+    executor: Executor | None = None,
+    concurrency: int = 1,
+    hooks: list[PipelineHook] | None = None,
+    report_stats_interval: float | None = None,
+    _op_expects_eof: bool = False,
+) -> _PipeArgs:
+    if kwargs:
+        op = partial(op, **kwargs)
+
+    return _PipeArgs(
+        name=name or _get_op_name(op),
+        op=op,
+        executor=executor,
+        concurrency=concurrency,
+        hooks=hooks,
+        report_stats_interval=report_stats_interval,
+        _op_expects_eof=_op_expects_eof,
+    )
+
+
 class PipelineBuilder(Generic[T]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
@@ -655,20 +679,15 @@ class PipelineBuilder(Generic[T]):
                     "when `output_order` is 'input'."
                 )
 
-        name = name or _get_op_name(op)
-
-        if kwargs:
-            # pyre-ignore
-            op = partial(op, **kwargs)
-
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
 
         self._process_args.append(
             _ProcessConfig(
                 type=type_,
-                args=_PipeArgs(
+                args=_get_pipe_args(
                     name=name,
                     op=op,
+                    kwargs=kwargs,
                     executor=executor,
                     concurrency=concurrency,
                     hooks=hooks,
