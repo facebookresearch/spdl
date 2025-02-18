@@ -7,6 +7,7 @@
 # pyre-strict
 
 import asyncio
+import enum
 import inspect
 import logging
 import time
@@ -123,31 +124,38 @@ def _get_op_name(op: Callable) -> str:
     return getattr(op, "__name__", op.__class__.__name__)
 
 
+@dataclass
+class _PipeArgs:
+    name: str
+    op: Callables[Any, Any]  # pyre-ignore
+    executor: Executor | None = None
+    concurrency: int = 1
+    hooks: list[PipelineHook] | None = None
+    report_stats_interval: float | None = None
+    _op_expects_eof: bool = False
+
+
+def _get_default_hook(args: _PipeArgs) -> list[PipelineHook]:
+    if args.hooks is not None:
+        return args.hooks
+    return [TaskStatsHook(args.name, args.concurrency, args.report_stats_interval)]
+
+
 def _pipe(
     input_queue: AsyncQueue[T],
-    op: Callables[T, U],
     output_queue: AsyncQueue[U],
-    executor: type[Executor] | None = None,
-    concurrency: int = 1,
-    name: str = "pipe",
-    hooks: Sequence[PipelineHook] | None = None,
-    report_stats_interval: float | None = None,
-    _pipe_eof: bool = False,
+    args: _PipeArgs,
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    if concurrency < 1:
+    if args.concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
 
-    hooks = (
-        [TaskStatsHook(name, concurrency, interval=report_stats_interval)]
-        if hooks is None
-        else hooks
-    )
+    hooks: list[PipelineHook] = _get_default_hook(args)
 
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
-        convert_to_async(op, executor)
+        convert_to_async(args.op, args.executor)
     )
 
     if inspect.iscoroutinefunction(afunc):
@@ -183,7 +191,7 @@ def _pipe(
                 # If the hooks do not absorb the StopAsyncIteration, and
                 # it propagates them, then we catch it and exit.
                 try:
-                    async with _task_hooks(hooks):  # pyre-ignore: [16]
+                    async with _task_hooks(hooks):
                         try:
                             result = await anext(coro)
                         except StopAsyncIteration:
@@ -209,15 +217,15 @@ def _pipe(
             item = await input_queue.get()
             if item is _SKIP:
                 continue
-            if item is _EOF and not _pipe_eof:
+            if item is _EOF and not args._op_expects_eof:
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            task = create_task(_wrap(afunc(item)), name=f"{name}:{(i := i + 1)}")
+            task = create_task(_wrap(afunc(item)), name=f"{args.name}:{(i := i + 1)}")
             tasks.add(task)
 
-            if len(tasks) >= concurrency:
-                done, tasks = await asyncio.wait(
+            if len(tasks) >= args.concurrency:
+                _, tasks = await asyncio.wait(
                     tasks, return_when=asyncio.FIRST_COMPLETED
                 )
 
@@ -232,13 +240,8 @@ def _pipe(
 
 def _ordered_pipe(
     input_queue: AsyncQueue[T],
-    op: Callables[T, U],
     output_queue: AsyncQueue[U],
-    executor: type[Executor] | None = None,
-    concurrency: int = 1,
-    name: str = "pipe",
-    hooks: Sequence[PipelineHook] | None = None,
-    report_stats_interval: float | None = None,
+    args: _PipeArgs,
 ) -> Coroutine:
     """
 
@@ -273,25 +276,21 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    if concurrency < 1:
+    if args.concurrency < 1:
         raise ValueError("`concurrency` value must be >= 1")
 
-    hooks_: Sequence[PipelineHook] = (
-        [TaskStatsHook(name, concurrency, interval=report_stats_interval)]
-        if hooks is None
-        else hooks
-    )
+    hooks: list[PipelineHook] = _get_default_hook(args)
 
     # This has been checked in `PipelineBuilder.pipe()`
-    assert not inspect.isasyncgenfunction(op)
+    assert not inspect.isasyncgenfunction(args.op)
 
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
-        convert_to_async(op, executor)
+        convert_to_async(args.op, args.executor)
     )
 
     async def _wrap(item: T) -> asyncio.Task[U]:
         async def _with_hooks() -> U:
-            async with _task_hooks(hooks_):
+            async with _task_hooks(hooks):
                 return await afunc(item)
 
         return create_task(_with_hooks())
@@ -299,30 +298,22 @@ def _ordered_pipe(
     async def _unwrap(task: asyncio.Task[U]) -> U:
         return await task
 
-    inter_queue = AsyncQueue(concurrency)
+    inter_queue = AsyncQueue(args.concurrency)
 
     coro1: Coroutine[None, None, None] = _pipe(  # pyre-ignore: [1001]
         input_queue,
-        _wrap,
         inter_queue,
-        executor,
-        1,
-        name,
-        hooks=[],
+        _PipeArgs(args.name, op=_wrap, executor=args.executor, hooks=[]),
     )
 
     coro2: Coroutine[None, None, None] = _pipe(  # pyre-ignore: [1001]
         inter_queue,
-        _unwrap,
         output_queue,
-        executor,
-        1,
-        name,
-        hooks=[],
+        _PipeArgs(args.name, op=_unwrap, executor=args.executor, hooks=[]),
     )
 
     @_put_eof_when_done(output_queue)
-    @_stage_hooks(hooks_)
+    @_stage_hooks(hooks)
     async def ordered_pipe() -> None:
         await asyncio.wait({create_task(coro1), create_task(coro2)})
 
@@ -491,6 +482,20 @@ class _SourceConfig:
     buffer_size: int
 
 
+class _PType(enum.IntEnum):
+    Pipe = 1
+    OrderedPipe = 2
+    Aggregate = 3
+    Disaggregate = 4
+
+
+@dataclass
+class _ProcessConfig:
+    type: _PType
+    args: _PipeArgs
+    buffer_size: int = 1
+
+
 class PipelineBuilder(Generic[T]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
@@ -500,7 +505,7 @@ class PipelineBuilder(Generic[T]):
     def __init__(self) -> None:
         self._src: _SourceConfig | None = None
 
-        self._process_args: list[tuple[str, dict[str, Any], int]] = []
+        self._process_args: list[_ProcessConfig] = []
 
         self._sink_buffer_size: int | None = None
         self._num_aggregate = 0
@@ -554,7 +559,7 @@ class PipelineBuilder(Generic[T]):
         concurrency: int = 1,
         executor: Executor | None = None,
         name: str | None = None,
-        hooks: Sequence[PipelineHook] | None = None,
+        hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
         output_order: str = "completion",
         kwargs: dict[str, ...] | None = None,
@@ -647,18 +652,20 @@ class PipelineBuilder(Generic[T]):
             # pyre-ignore
             op = partial(op, **kwargs)
 
+        type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
+
         self._process_args.append(
-            (
-                "pipe" if output_order == "completion" else "ordered_pipe",
-                {
-                    "op": op,
-                    "executor": executor,
-                    "concurrency": concurrency,
-                    "name": name,
-                    "hooks": hooks,
-                    "report_stats_interval": report_stats_interval,
-                },
-                _kwargs.get("_buffer_size", 1),
+            _ProcessConfig(
+                type=type_,
+                args=_PipeArgs(
+                    name=name,
+                    op=op,
+                    executor=executor,
+                    concurrency=concurrency,
+                    hooks=hooks,
+                    report_stats_interval=report_stats_interval,
+                ),
+                buffer_size=_kwargs.get("_buffer_size", 1),
                 # Note:
                 # `_buffer_size` option is intentionally not documented.
                 #
@@ -686,7 +693,7 @@ class PipelineBuilder(Generic[T]):
         /,
         *,
         drop_last: bool = False,
-        hooks: Sequence[PipelineHook] | None = None,
+        hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
     ) -> "PipelineBuilder[T]":
         """Buffer the items in the pipeline.
@@ -713,18 +720,15 @@ class PipelineBuilder(Generic[T]):
         self._num_aggregate += 1
 
         self._process_args.append(
-            (
-                "aggregate",
-                {
-                    "op": aggregate,
-                    "executor": None,
-                    "concurrency": 1,
-                    "name": name,
-                    "hooks": hooks,
-                    "report_stats_interval": report_stats_interval,
-                    "_pipe_eof": not drop_last,
-                },
-                1,
+            _ProcessConfig(
+                _PType.Aggregate,
+                _PipeArgs(
+                    name=name,
+                    op=aggregate,
+                    hooks=hooks,
+                    report_stats_interval=report_stats_interval,
+                    _op_expects_eof=not drop_last,
+                ),
             )
         )
         return self
@@ -733,7 +737,7 @@ class PipelineBuilder(Generic[T]):
         self,
         /,
         *,
-        hooks: Sequence[PipelineHook] | None = None,
+        hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
     ) -> "PipelineBuilder[T]":
         """Disaggregate the items in the pipeline.
@@ -746,17 +750,14 @@ class PipelineBuilder(Generic[T]):
         self._num_disaggregate += 1
 
         self._process_args.append(
-            (
-                "disaggregate",
-                {
-                    "op": disaggregate,
-                    "executor": None,
-                    "concurrency": 1,
-                    "name": name,
-                    "hooks": hooks,
-                    "report_stats_interval": report_stats_interval,
-                },
-                1,
+            _ProcessConfig(
+                _PType.Disaggregate,
+                _PipeArgs(
+                    name=name,
+                    op=disaggregate,
+                    hooks=hooks,
+                    report_stats_interval=report_stats_interval,
+                ),
             )
         )
         return self
@@ -793,26 +794,24 @@ class PipelineBuilder(Generic[T]):
 
         # source
         assert self._src is not None
-        cfg = self._src
-        queues.append(AsyncQueue(cfg.buffer_size))
-        coros.append(("AsyncPipeline::0_source", _enqueue(cfg.source, queues[0])))
+        src = self._src
+        queues.append(AsyncQueue(src.buffer_size))
+        coros.append(("AsyncPipeline::0_source", _enqueue(src.source, queues[0])))
 
         # pipes
-        for i, (type_, args, buffer_size) in enumerate(self._process_args, start=1):
-            queues.append(AsyncQueue(buffer_size))
+        for i, cfg in enumerate(self._process_args, start=1):
+            queues.append(AsyncQueue(cfg.buffer_size))
             in_queue, out_queue = queues[i - 1 : i + 1]
 
-            match type_:
-                case "pipe" | "aggregate" | "disaggregate":
-                    coro = _pipe(**args, input_queue=in_queue, output_queue=out_queue)
-                case "ordered_pipe":
-                    coro = _ordered_pipe(
-                        **args, input_queue=in_queue, output_queue=out_queue
-                    )
+            match cfg.type:
+                case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
+                    coro = _pipe(in_queue, out_queue, cfg.args)
+                case _PType.OrderedPipe:
+                    coro = _ordered_pipe(in_queue, out_queue, cfg.args)
                 case _:  # pragma: no cover
-                    raise ValueError(f"Unexpected process type: {type_}")
+                    raise ValueError(f"Unexpected process type: {cfg.type}")
 
-            coros.append((f"AsyncPipeline::{i}_{args['name']}", coro))
+            coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
 
         # sink
         if self._sink_buffer_size is not None:
@@ -837,23 +836,24 @@ class PipelineBuilder(Generic[T]):
         else:
             parts.append("  - src: n/a")
 
-        for type_, args, buffer_size in self._process_args:
-            match type_:
-                case "pipe":
-                    part = f"{args['name']}(concurrency={args['concurrency']})"
-                case "ordered_pipe":
+        for cfg in self._process_args:
+            args = cfg.args
+            match cfg.type:
+                case _PType.Pipe:
+                    part = f"{args.name}(concurrency={args.concurrency})"
+                case _PType.OrderedPipe:
                     part = (
-                        f"{args['name']}(concurrency={args['concurrency']}, "
+                        f"{args.name}(concurrency={args.concurrency}, "
                         'output_order="input")'
                     )
-                case "aggregate":
-                    part = args["name"]
+                case _PType.Aggregate | _PType.Disaggregate:
+                    part = args.name
                 case _:
-                    part = type_
+                    part = str(cfg.type)
             parts.append(f"  - {part}")
 
-            if type_ not in ["aggregate"] and buffer_size > 1:
-                parts.append(f"    Buffer: buffer_size={buffer_size}")
+            if cfg.buffer_size > 1:
+                parts.append(f"    Buffer: buffer_size={cfg.buffer_size}")
 
         if self._sink_buffer_size is not None:
             parts.append(f"  - sink: buffer_size={self._sink_buffer_size}")
@@ -874,11 +874,7 @@ class PipelineBuilder(Generic[T]):
         coro, queues = self._build()
 
         if num_threads is None:
-            concurrencies = [
-                args["concurrency"]
-                for _, args, _ in self._process_args
-                if "concurrency" in args
-            ]
+            concurrencies = [cfg.args.concurrency for cfg in self._process_args]
             num_threads = max(concurrencies) if concurrencies else 4
         assert num_threads is not None
         executor = ThreadPoolExecutor(

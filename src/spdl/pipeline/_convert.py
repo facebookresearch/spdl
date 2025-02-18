@@ -57,7 +57,7 @@ def _to_batch_async_gen(
 
 def _to_async_gen(
     func: Callable[[T], Iterable[U]],
-    executor: type[Executor] | None,
+    executor: Executor | None,
 ) -> Callable[[T], AsyncIterable[U]]:
     async def afunc(item: T) -> AsyncIterable[U]:
         loop = asyncio.get_running_loop()
@@ -96,7 +96,7 @@ def _to_async_gen(
 
 def convert_to_async(
     op: Callables[T, U],
-    executor: type[Executor] | None,
+    executor: Executor | None,
 ) -> AsyncCallables[T, U]:
     if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
         # op is async function. No need to convert.
