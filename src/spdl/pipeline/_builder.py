@@ -496,6 +496,11 @@ class _ProcessConfig:
     buffer_size: int = 1
 
 
+@dataclass
+class _SinkConfig:
+    buffer_size: int
+
+
 class PipelineBuilder(Generic[T]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
@@ -504,10 +509,9 @@ class PipelineBuilder(Generic[T]):
 
     def __init__(self) -> None:
         self._src: _SourceConfig | None = None
-
         self._process_args: list[_ProcessConfig] = []
+        self._sink: _SinkConfig | None = None
 
-        self._sink_buffer_size: int | None = None
         self._num_aggregate = 0
         self._num_disaggregate = 0
 
@@ -775,11 +779,15 @@ class PipelineBuilder(Generic[T]):
         Args:
             buffer_size: The size of the buffer. Pass ``0`` for unlimited buffering.
         """
-        if self._sink_buffer_size is not None:
+        if self._sink is not None:
             raise ValueError("Sink is already set.")
         if not isinstance(buffer_size, int):
             raise ValueError(f"`buffer_size` must be int. Found: {type(buffer_size)}.")
-        self._sink_buffer_size = buffer_size
+        if buffer_size < 1:
+            raise ValueError(
+                f"`buffer_size` must be greater than 0. Found: {buffer_size}"
+            )
+        self._sink = _SinkConfig(buffer_size)
         return self
 
     def _build(self) -> tuple[Coroutine[None, None, None], list[AsyncQueue]]:
@@ -814,8 +822,8 @@ class PipelineBuilder(Generic[T]):
             coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
 
         # sink
-        if self._sink_buffer_size is not None:
-            queues.append(AsyncQueue(self._sink_buffer_size))
+        if (sink := self._sink) is not None:
+            queues.append(AsyncQueue(sink.buffer_size))
             coros.append(
                 (
                     f"AsyncPipeline::{len(self._process_args) + 1}_sink",
@@ -855,8 +863,8 @@ class PipelineBuilder(Generic[T]):
             if cfg.buffer_size > 1:
                 parts.append(f"    Buffer: buffer_size={cfg.buffer_size}")
 
-        if self._sink_buffer_size is not None:
-            parts.append(f"  - sink: buffer_size={self._sink_buffer_size}")
+        if (sink := self._sink) is not None:
+            parts.append(f"  - sink: buffer_size={sink.buffer_size}")
 
         return parts
 
