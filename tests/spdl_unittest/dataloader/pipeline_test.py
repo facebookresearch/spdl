@@ -19,7 +19,7 @@ from typing import TypeVar
 
 import pytest
 from spdl.pipeline import PipelineBuilder, PipelineHook, TaskStatsHook
-from spdl.pipeline._builder import _enqueue, _EOF, _pipe, _sink, _SKIP
+from spdl.pipeline._builder import _enqueue, _EOF, _pipe, _PipeArgs, _sink, _SKIP
 from spdl.pipeline._hook import _periodic_dispatch
 
 T = TypeVar("T")
@@ -198,7 +198,7 @@ def test_async_pipe():
         ref = list(range(6))
         _put_aqueue(input_queue, ref, eof=True)
 
-        await _pipe(input_queue, adouble, output_queue)
+        await _pipe(input_queue, output_queue, _PipeArgs(name="adouble", op=adouble))
 
         result = _flush_aqueue(output_queue)
 
@@ -216,7 +216,7 @@ def test_async_pipe_skip():
         data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
         _put_aqueue(input_queue, data, eof=True)
 
-        await _pipe(input_queue, adouble, output_queue)
+        await _pipe(input_queue, output_queue, _PipeArgs(name="adouble", op=adouble))
 
         result = _flush_aqueue(output_queue)
 
@@ -238,7 +238,11 @@ def test_async_pipe_wrong_task_signature():
         _put_aqueue(input_queue, ref, eof=False)
 
         with pytest.raises(TypeError):
-            await _pipe(input_queue, _2args, output_queue, concurrency=3)
+            await _pipe(
+                input_queue,
+                output_queue,
+                _PipeArgs(name="_2args", op=_2args, concurrency=3),
+            )
 
         remaining = _flush_aqueue(input_queue)
         assert remaining == ref[1:]
@@ -272,7 +276,7 @@ def test_async_pipe_cancel(full):
             raise
 
     async def test():
-        coro = _pipe(input_queue, astuck, output_queue)
+        coro = _pipe(input_queue, output_queue, _PipeArgs(name="astuck", op=astuck))
         task = asyncio.create_task(coro)
 
         await asyncio.sleep(0.5)
@@ -303,9 +307,12 @@ def test_async_pipe_concurrency():
 
         coro = _pipe(
             input_queue,
-            delay,
             output_queue,
-            concurrency=concurrency,
+            _PipeArgs(
+                name="delay",
+                op=delay,
+                concurrency=concurrency,
+            ),
         )
 
         task = asyncio.create_task(coro)
@@ -344,9 +351,12 @@ def test_async_pipe_concurrency_throughput():
         t0 = time.monotonic()
         await _pipe(
             input_queue,
-            delay,
             output_queue,
-            concurrency=concurrency,
+            _PipeArgs(
+                name="delay",
+                op=delay,
+                concurrency=concurrency,
+            ),
         )
         elapsed = time.monotonic() - t0
 
