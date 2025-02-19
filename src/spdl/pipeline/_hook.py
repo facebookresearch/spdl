@@ -21,9 +21,9 @@ __all__ = [
     "_stage_hooks",
     "_task_hooks",
     "_time_str",
+    "_StatsCounter",
     "PipelineHook",
     "TaskStatsHook",
-    "StatsCounter",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -39,26 +39,26 @@ def _time_str(val: float) -> str:
     )
 
 
-class StatsCounter:
+class _StatsCounter:
     def __init__(self) -> None:
-        self._num_items: int = 0
-        self._ave_time: float = 0.0
+        self._n: int = 0
+        self._t: float = 0.0
 
     @property
     def num_items(self) -> int:
-        return self._num_items
+        return self._n
 
     @property
     def ave_time(self) -> float:
-        return self._ave_time
+        return self._t
 
-    def reset(self) -> None:
-        self._num_items = 0
-        self._ave_time = 0
+    def update(self, t: float, n: int = 1) -> None:
+        self._n += n
+        self._t += (t - self._t) * n / self._n
 
-    def update(self, val: float) -> None:
-        self._num_items += 1
-        self._ave_time += (val - self._ave_time) / self._num_items
+    def __iadd__(self, other: "_StatsCounter") -> "_StatsCounter":
+        self.update(other._t, other._n)
+        return self
 
     @contextmanager
     def count(self) -> Iterator[None]:
@@ -66,9 +66,6 @@ class StatsCounter:
         yield
         elapsed = time.monotonic() - t0
         self.update(elapsed)
-
-    def __str__(self) -> str:
-        return _time_str(self.ave_time)
 
 
 class PipelineHook(ABC):

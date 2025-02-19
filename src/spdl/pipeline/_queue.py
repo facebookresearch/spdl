@@ -13,7 +13,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import TypeVar
 
-from ._hook import _time_str, StatsCounter
+from ._hook import _StatsCounter, _time_str
 
 __all__ = [
     "AsyncQueue",
@@ -66,8 +66,8 @@ class StatsQueue(AsyncQueue[T]):
     def __init__(self, name: str, buffer_size: int = 0) -> None:
         super().__init__(name, buffer_size)
 
-        self._getc = StatsCounter()
-        self._putc = StatsCounter()
+        self._getc = _StatsCounter()
+        self._putc = _StatsCounter()
 
     async def get(self) -> T:
         """Remove and return an item from the queue, track the time."""
