@@ -11,7 +11,7 @@ import concurrent.futures
 import logging
 import time
 import warnings
-from asyncio import AbstractEventLoop, Queue as AsyncQueue
+from asyncio import AbstractEventLoop
 from collections.abc import Coroutine, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -19,6 +19,7 @@ from enum import IntEnum
 from threading import Event as SyncEvent, Thread
 from typing import Any, Generic, TypeVar
 
+from ._queue import AsyncQueue
 from ._utils import create_task
 
 __all__ = ["Pipeline"]
@@ -261,7 +262,7 @@ class Pipeline(Generic[T]):
     def __init__(
         self,
         coro: Coroutine[None, None, None],
-        queues: list[AsyncQueue],
+        queues: list[AsyncQueue[Any]],  # pyre-ignore: [2]
         executor: ThreadPoolExecutor,
         *,
         desc: list[str],
@@ -270,7 +271,7 @@ class Pipeline(Generic[T]):
 
         self._str: str = "\n".join([repr(self), *desc])
 
-        self._output_queue: AsyncQueue = queues[-1]
+        self._output_queue: AsyncQueue[T] = queues[-1]
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
 
