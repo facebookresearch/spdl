@@ -41,16 +41,24 @@ def _time_str(val: float) -> str:
 
 class StatsCounter:
     def __init__(self) -> None:
-        self.num_items: int = 0
-        self.ave_time: float = 0.0
+        self._num_items: int = 0
+        self._ave_time: float = 0.0
+
+    @property
+    def num_items(self) -> int:
+        return self._num_items
+
+    @property
+    def ave_time(self) -> float:
+        return self._ave_time
 
     def reset(self) -> None:
-        self.num_items = 0
-        self.ave_time = 0
+        self._num_items = 0
+        self._ave_time = 0
 
     def update(self, val: float) -> None:
-        self.num_items += 1
-        self.ave_time += (val - self.ave_time) / self.num_items
+        self._num_items += 1
+        self._ave_time += (val - self._ave_time) / self._num_items
 
     @contextmanager
     def count(self) -> Iterator[None]:
