@@ -10,7 +10,6 @@ import asyncio
 import enum
 import inspect
 import logging
-import time
 import warnings
 from collections.abc import (
     AsyncIterable,
@@ -23,7 +22,7 @@ from collections.abc import (
     Sequence,
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, AsyncGenerator, Generic, TypeVar
@@ -32,9 +31,7 @@ from ._convert import _to_async_gen, Callables, convert_to_async
 from ._hook import (
     _stage_hooks,
     _task_hooks,
-    _time_str,
     PipelineHook,
-    StatsCounter,
     TaskStatsHook,
 )
 from ._pipeline import Pipeline
@@ -366,32 +363,10 @@ def _enqueue(
 ################################################################################
 
 
-@contextmanager
-def _sink_stats() -> Iterator[tuple[StatsCounter, StatsCounter]]:
-    get_counter = StatsCounter()
-    put_counter = StatsCounter()
-    t0 = time.monotonic()
-    try:
-        yield get_counter, put_counter
-    finally:
-        elapsed = time.monotonic() - t0
-        _LG.info(
-            "[sink]\tProcessed %5d items in %s. "
-            "QPS: %.2f. "
-            "Average wait time: Upstream: %s, Downstream: %s.",
-            put_counter.num_items,
-            _time_str(elapsed),
-            put_counter.num_items / elapsed if elapsed > 0.001 else float("nan"),
-            get_counter,
-            put_counter,
-        )
-
-
 async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]) -> None:
-    with _sink_stats() as (get_counter, put_counter):
+    async with output_queue.stage_hook():
         while True:
-            with get_counter.count():
-                item = await input_queue.get()
+            item = await input_queue.get()
 
             if item is _EOF:
                 break
@@ -399,8 +374,7 @@ async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]) -> None
             if item is _SKIP:
                 continue
 
-            with put_counter.count():
-                await output_queue.put(item)
+            await output_queue.put(item)
 
 
 ################################################################################
