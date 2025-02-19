@@ -13,7 +13,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import TypeVar
 
-from ._hook import _StatsCounter, _time_str
+from ._hook import _periodic_dispatch, _StatsCounter, _time_str
+from ._utils import create_task
 
 __all__ = [
     "AsyncQueue",
@@ -63,11 +64,26 @@ class StatsQueue(AsyncQueue[T]):
         buffer_size: The buffer size. Assigned by :py:class:`PipelineBuilder`.
     """
 
-    def __init__(self, name: str, buffer_size: int = 0) -> None:
+    def __init__(
+        self,
+        name: str,
+        buffer_size: int = 0,
+        interval: float | None = None,
+    ) -> None:
         super().__init__(name, buffer_size)
+
+        self.interval = interval
 
         self._getc = _StatsCounter()
         self._putc = _StatsCounter()
+
+        # Accumurate
+        self._getc_acc = _StatsCounter()
+        self._putc_acc = _StatsCounter()
+
+        # For interval
+        self._int_task: asyncio.Task | None = None
+        self._int_t0 = 0.0
 
     async def get(self) -> T:
         """Remove and return an item from the queue, track the time."""
@@ -82,28 +98,54 @@ class StatsQueue(AsyncQueue[T]):
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
         t0 = time.monotonic()
+        if self.interval is not None:
+            coro = _periodic_dispatch(self._log_interval_stats, self.interval)
+            self._int_t0 = t0
+            self._int_task = create_task(
+                coro, name=f"{self.name}_periodic_report", ignore_cancelled=True
+            )
+
         try:
             yield
         finally:
             elapsed = time.monotonic() - t0
+
+            self._getc_acc += self._getc
+            self._putc_acc += self._putc
+
             self._log_stats(
-                self._getc.num_items,
+                self._getc_acc.num_items,
                 elapsed,
-                self._putc.ave_time,
-                self._getc.ave_time,
+                self._putc_acc.ave_time,
+                self._getc_acc.ave_time,
             )
+
+    async def _log_interval_stats(self) -> None:
+        now = time.monotonic()
+        elapsed, self._int_t0 = now - self._int_t0, now
+        getc, self._getc = self._getc, _StatsCounter()
+        putc, self._putc = self._putc, _StatsCounter()
+
+        self._getc_acc += getc
+        self._putc_acc += putc
+
+        self._log_stats(
+            getc.num_items,
+            elapsed,
+            putc.ave_time,
+            getc.ave_time,
+        )
 
     def _log_stats(
         self, num_items: int, elapsed: float, put_time: float, get_time: float
     ) -> None:
-        qps = num_items / elapsed
         _LG.info(
             "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
             "Ave wait time: Upstream (put): %s, Downstream (get): %s.",
             self.name,
             num_items,
             _time_str(elapsed),
-            qps,
+            num_items / elapsed,
             _time_str(put_time),
             _time_str(get_time),
         )

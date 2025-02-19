@@ -135,7 +135,6 @@ class _PipeArgs(Generic[T, U]):
     executor: Executor | None = None
     concurrency: int = 1
     hooks: list[PipelineHook] | None = None
-    report_stats_interval: float | None = None
     op_requires_eof: bool = False
     # Used to pass EOF to op.
     # Usually pipe does not pas EOF to op. This is because op is expected to be
@@ -152,21 +151,24 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-def _get_default_hook(args: _PipeArgs[T, U]) -> list[PipelineHook]:
+def _get_default_hook(
+    args: _PipeArgs[T, U], interval: float | None
+) -> list[PipelineHook]:
     if args.hooks is not None:
         return args.hooks
-    return [TaskStatsHook(args.name, args.concurrency, args.report_stats_interval)]
+    return [TaskStatsHook(args.name, args.concurrency, interval)]
 
 
 def _pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
+    report_stats_interval: float | None = None,
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks: list[PipelineHook] = _get_default_hook(args)
+    hooks: list[PipelineHook] = _get_default_hook(args, report_stats_interval)
 
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
         convert_to_async(args.op, args.executor)
@@ -256,6 +258,7 @@ def _ordered_pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
+    report_stats_interval: float | None = None,
 ) -> Coroutine:
     """
 
@@ -290,7 +293,7 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks: list[PipelineHook] = _get_default_hook(args)
+    hooks: list[PipelineHook] = _get_default_hook(args, report_stats_interval)
 
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
@@ -497,7 +500,8 @@ class _PType(enum.IntEnum):
 class _ProcessConfig(Generic[T, U]):
     type_: _PType
     args: _PipeArgs[T, U]
-    queue_class: type[AsyncQueue[U]]
+    queue_class: type[AsyncQueue[U]] | None
+    report_stats_interval: float | None = None
     buffer_size: int = 1
 
 
@@ -690,9 +694,9 @@ class PipelineBuilder(Generic[T, U]):
                     executor=executor,
                     concurrency=concurrency,
                     hooks=hooks,
-                    report_stats_interval=report_stats_interval,
                 ),
-                queue_class=queue_class or DefaultQueue,  # pyre-ignore: [6]
+                report_stats_interval=report_stats_interval,
+                queue_class=queue_class,  # pyre-ignore: [6]
                 buffer_size=_kwargs.get("_buffer_size", 1),
                 # Note:
                 # `_buffer_size` option is intentionally not documented.
@@ -750,10 +754,10 @@ class PipelineBuilder(Generic[T, U]):
                     name=name,
                     op=_Aggregate(num_items, drop_last),
                     hooks=hooks,
-                    report_stats_interval=report_stats_interval,
                     op_requires_eof=True,
                 ),
-                queue_class=queue_class or DefaultQueue,
+                report_stats_interval=report_stats_interval,
+                queue_class=queue_class,
             )
         )
         return self
@@ -786,9 +790,9 @@ class PipelineBuilder(Generic[T, U]):
                     name=name,
                     op=_disaggregate,  # pyre-ignore: [6]
                     hooks=hooks,
-                    report_stats_interval=report_stats_interval,
                 ),
-                queue_class=queue_class or DefaultQueue,
+                report_stats_interval=report_stats_interval,
+                queue_class=queue_class,
             ),
         )
         return self
@@ -845,7 +849,10 @@ class PipelineBuilder(Generic[T, U]):
         # pipes
         for i, cfg in enumerate(self._process_args, start=1):
             queue_name = f"{cfg.args.name.split('(')[0]}_queue"
-            queues.append(cfg.queue_class(queue_name, cfg.buffer_size))
+            queue_class = cfg.queue_class or partial(
+                DefaultQueue, interval=cfg.report_stats_interval
+            )
+            queues.append(queue_class(queue_name, cfg.buffer_size))
             in_queue, out_queue = queues[i - 1 : i + 1]
 
             match cfg.type_:
