@@ -130,9 +130,9 @@ async def _queue_stage_hook(queue: AsyncQueue[T]) -> AsyncGenerator[None, None]:
 
 
 @dataclass
-class _PipeArgs:
+class _PipeArgs(Generic[T, U]):
     name: str
-    op: Callables[Any, Any]  # pyre-ignore
+    op: Callables[T, U]
     executor: Executor | None = None
     concurrency: int = 1
     hooks: list[PipelineHook] | None = None
@@ -153,7 +153,7 @@ class _PipeArgs:
             )
 
 
-def _get_default_hook(args: _PipeArgs) -> list[PipelineHook]:
+def _get_default_hook(args: _PipeArgs[T, U]) -> list[PipelineHook]:
     if args.hooks is not None:
         return args.hooks
     return [TaskStatsHook(args.name, args.concurrency, args.report_stats_interval)]
@@ -162,7 +162,7 @@ def _get_default_hook(args: _PipeArgs) -> list[PipelineHook]:
 def _pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
-    args: _PipeArgs,
+    args: _PipeArgs[T, U],
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
@@ -256,7 +256,7 @@ def _pipe(
 def _ordered_pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
-    args: _PipeArgs,
+    args: _PipeArgs[T, U],
 ) -> Coroutine:
     """
 
@@ -507,7 +507,7 @@ def _disaggregate(items: Sequence[T]) -> Iterator[T]:
 
 
 @dataclass
-class _SourceConfig:
+class _SourceConfig(Generic[T]):
     source: Iterable | AsyncIterable
     buffer_size: int
 
@@ -520,14 +520,14 @@ class _PType(enum.IntEnum):
 
 
 @dataclass
-class _ProcessConfig:
+class _ProcessConfig(Generic[T, U]):
     type: _PType
-    args: _PipeArgs
+    args: _PipeArgs[T, U]
     buffer_size: int = 1
 
 
 @dataclass
-class _SinkConfig:
+class _SinkConfig(Generic[T]):
     buffer_size: int
 
 
@@ -537,16 +537,16 @@ def _get_op_name(op: Callable) -> str:
     return getattr(op, "__name__", op.__class__.__name__)
 
 
-class PipelineBuilder(Generic[T]):
+class PipelineBuilder(Generic[T, U]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
     See :py:class:`~spdl.pipeline.Pipeline` for details.
     """
 
     def __init__(self) -> None:
-        self._src: _SourceConfig | None = None
-        self._process_args: list[_ProcessConfig] = []
-        self._sink: _SinkConfig | None = None
+        self._src: _SourceConfig[T] | None = None
+        self._process_args: list[_ProcessConfig] = []  # pyre-ignore: [24]
+        self._sink: _SinkConfig[U] | None = None
 
         self._num_aggregate = 0
         self._num_disaggregate = 0
@@ -555,7 +555,7 @@ class PipelineBuilder(Generic[T]):
         self,
         source: Iterable[T] | AsyncIterable[T],
         **_kwargs,  # pyre-ignore: [2]
-    ) -> "PipelineBuilder[T]":
+    ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
 
         .. code-block::
@@ -603,7 +603,7 @@ class PipelineBuilder(Generic[T]):
         report_stats_interval: float | None = None,
         output_order: str = "completion",
         **_kwargs,  # pyre-ignore: [2]
-    ) -> "PipelineBuilder[T]":
+    ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
 
         .. code-block::
@@ -736,7 +736,7 @@ class PipelineBuilder(Generic[T]):
         drop_last: bool = False,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-    ) -> "PipelineBuilder[T]":
+    ) -> "PipelineBuilder[T, U]":
         """Buffer the items in the pipeline.
 
         Args:
@@ -769,7 +769,7 @@ class PipelineBuilder(Generic[T]):
         *,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-    ) -> "PipelineBuilder[T]":
+    ) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline.
 
         Args:
@@ -784,7 +784,7 @@ class PipelineBuilder(Generic[T]):
                 _PType.Disaggregate,
                 _PipeArgs(
                     name=name,
-                    op=_disaggregate,
+                    op=_disaggregate,  # pyre-ignore: [6]
                     hooks=hooks,
                     report_stats_interval=report_stats_interval,
                 ),
@@ -792,7 +792,7 @@ class PipelineBuilder(Generic[T]):
         )
         return self
 
-    def add_sink(self, buffer_size: int) -> "PipelineBuilder[T]":
+    def add_sink(self, buffer_size: int) -> "PipelineBuilder[T, U]":
         """Attach a buffer to the end of the pipeline.
 
         .. code-block::
@@ -899,7 +899,7 @@ class PipelineBuilder(Generic[T]):
     def __str__(self) -> str:
         return "\n".join([repr(self), *self._get_desc()])
 
-    def build(self, *, num_threads: int | None = None) -> Pipeline[T]:
+    def build(self, *, num_threads: int | None = None) -> Pipeline[U]:
         """Build the pipeline.
 
         Args:
@@ -920,14 +920,14 @@ class PipelineBuilder(Generic[T]):
         return Pipeline(coro, queues, executor, desc=self._get_desc())
 
 
-def _run_pipeline(builder: PipelineBuilder[T], num_threads: int) -> Iterator[T]:
+def _run_pipeline(builder: PipelineBuilder[T, U], num_threads: int) -> Iterator[U]:
     pipeline = builder.build(num_threads=num_threads)
     with pipeline.auto_stop():
         yield from pipeline
 
 
 def run_pipeline_in_subprocess(
-    builder: PipelineBuilder[T],
+    builder: PipelineBuilder[T, U],
     *,
     num_threads: int,
     **kwargs: dict[str, Any],
