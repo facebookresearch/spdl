@@ -33,7 +33,7 @@ T = TypeVar("T")
 
 
 def _time_str(val: float) -> str:
-    return "{:.4f} [{:>3s}]".format(
+    return "{:6.1f} [{:>3s}]".format(
         val * 1000 if val < 1 else val,
         "ms" if val < 1 else "sec",
     )
@@ -307,14 +307,12 @@ class TaskStatsHook(PipelineHook):
                 coro, name="periodic_dispatch", ignore_cancelled=True
             )
 
-        t0 = time.monotonic()
         try:
             yield
         finally:
-            elapsed = time.monotonic() - t0
             if self._int_task is not None:
                 self._int_task.cancel()
-            self._log_stats(elapsed, self.num_tasks, self.num_success, self.ave_time)
+            self._log_stats(self.num_tasks, self.num_success, self.ave_time)
 
     @asynccontextmanager
     async def task_hook(self) -> AsyncIterator[None]:
@@ -335,7 +333,6 @@ class TaskStatsHook(PipelineHook):
             self.ave_time += (elapsed - self.ave_time) / self.num_success
 
     async def _log_interval_stats(self) -> None:
-        t0 = time.monotonic()
         num_success = self.num_success
         num_tasks = self.num_tasks
         ave_time = self.ave_time
@@ -349,33 +346,27 @@ class TaskStatsHook(PipelineHook):
             int_ave = 0.0
 
         self._log_stats(
-            t0 - self._int_t0,
             num_tasks - self._int_num_tasks,
             num_success - self._int_num_success,
             int_ave,
         )
 
-        self._int_t0 = t0
         self._int_num_tasks = num_tasks
         self._int_num_success = num_success
         self._int_ave_time = ave_time
 
     def _log_stats(
         self,
-        elapsed: float,
         num_tasks: int,
         num_success: int,
         ave_time: float,
     ) -> None:
         _LG.info(
-            "[%s]\tCompleted %5d tasks (%3d failed) in %s. "
-            "QPS: %.2f (Concurrency: %3d). "
-            "Average task time: %s.",
+            "[%s]\tCompleted %5d tasks (%3d failed). "
+            "(Concurrency: %3d). Ave task time: %s.",
             self.name,
             num_tasks,
             num_tasks - num_success,
-            _time_str(elapsed),
-            num_success / elapsed if elapsed > 0.001 else float("nan"),
             self.concurrency,
             _time_str(ave_time),
             stacklevel=2,

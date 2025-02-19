@@ -737,7 +737,10 @@ class PipelineBuilder(Generic[T, U]):
                 Default: :py:class:`StatsQueue`.
         """
 
-        name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
+        if drop_last:
+            name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
+        else:
+            name = f"aggregate_{self._num_aggregate}({num_items})"
         self._num_aggregate += 1
 
         self._process_args.append(
@@ -836,12 +839,13 @@ class PipelineBuilder(Generic[T, U]):
         if (src := self._src) is None:
             raise ValueError("Source is not set.")
         else:
-            queues.append(src.queue_class("src_output", src.buffer_size))
+            queues.append(src.queue_class("src_queue", src.buffer_size))
             coros.append(("AsyncPipeline::0_source", _enqueue(src.source, queues[0])))
 
         # pipes
         for i, cfg in enumerate(self._process_args, start=1):
-            queues.append(cfg.queue_class(f"{cfg.args.name}_output", cfg.buffer_size))
+            queue_name = f"{cfg.args.name.split('(')[0]}_queue"
+            queues.append(cfg.queue_class(queue_name, cfg.buffer_size))
             in_queue, out_queue = queues[i - 1 : i + 1]
 
             match cfg.type_:
@@ -856,7 +860,7 @@ class PipelineBuilder(Generic[T, U]):
 
         # sink
         if (sink := self._sink) is not None:
-            queues.append(sink.queue_class("src_output", sink.buffer_size))
+            queues.append(sink.queue_class("sink_queue", sink.buffer_size))
             coros.append(
                 (
                     f"AsyncPipeline::{len(self._process_args) + 1}_sink",

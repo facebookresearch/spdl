@@ -98,8 +98,8 @@ class StatsQueue(AsyncQueue[T]):
     ) -> None:
         qps = num_items / elapsed
         _LG.info(
-            "[%s]\tProcessed %5d items in %s. "
-            "QPS: %.2f. Ave wait time: %s (upstream/put), %s (downstream/get).",
+            "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
+            "Ave wait time: Upstream (put): %s, Downstream (get): %s.",
             self.name,
             num_items,
             _time_str(elapsed),
