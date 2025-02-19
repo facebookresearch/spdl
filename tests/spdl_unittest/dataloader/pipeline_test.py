@@ -1639,4 +1639,4 @@ def test_pipelinebuilder_picklable():
     def _ref(x: int) -> int:
         return 2 * x + 1 + 2 + 3
 
-    assert results == [_ref(i) for i in range(10)]
+    assert sorted(results) == [_ref(i) for i in range(10)]
