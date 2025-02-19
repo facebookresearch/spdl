@@ -12,7 +12,6 @@ import inspect
 import logging
 import time
 import warnings
-from asyncio import Queue as AsyncQueue
 from collections.abc import (
     AsyncIterable,
     AsyncIterator,
@@ -39,6 +38,7 @@ from ._hook import (
     TaskStatsHook,
 )
 from ._pipeline import Pipeline
+from ._queue import AsyncQueue
 from ._utils import create_task, iterate_in_subprocess
 
 __all__ = [
@@ -106,17 +106,17 @@ _SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 # unless the task was cancelled.
 #
 @asynccontextmanager
-async def _put_eof_when_done(queue: AsyncQueue) -> AsyncGenerator[None, None]:
+async def _put_eof_when_done(queue: AsyncQueue[T]) -> AsyncGenerator[None, None]:
     # Note:
     # `asyncio.CancelledError` is a subclass of BaseException, so it won't be
     # caught in the following, and EOF won't be passed to the output queue.
     try:
         yield
     except Exception:
-        await queue.put(_EOF)
+        await queue.put(_EOF)  # pyre-ignore: [6]
         raise
     else:
-        await queue.put(_EOF)
+        await queue.put(_EOF)  # pyre-ignore: [6]
 
 
 ################################################################################
@@ -811,7 +811,9 @@ class PipelineBuilder(Generic[T]):
         self._sink = _SinkConfig(buffer_size)
         return self
 
-    def _build(self) -> tuple[Coroutine[None, None, None], list[AsyncQueue]]:
+    def _build(  # pyre-ignore: [3]
+        self,
+    ) -> tuple[Coroutine[None, None, None], list[AsyncQueue[Any]]]:
         if self._src is None:
             raise ValueError("Source is not set.")
 
@@ -819,7 +821,7 @@ class PipelineBuilder(Generic[T]):
         # Make sure that coroutines are ordered from source to sink.
         # `_run_pipeline_coroutines` expects and rely on this ordering.
         coros = []
-        queues: list[AsyncQueue] = []
+        queues = []
 
         # source
         assert self._src is not None
