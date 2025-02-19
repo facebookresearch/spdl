@@ -52,6 +52,8 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 U = TypeVar("U")
+T_ = TypeVar("T_")
+U_ = TypeVar("U_")
 
 
 # Sentinel objects used to instruct AsyncPipeline to take special actions.
@@ -501,7 +503,7 @@ class _Aggregate(Generic[T]):
         return _SKIP  # pyre-ignore: [7]
 
 
-def _disaggregate(items: Sequence[T]) -> Iterator[T]:
+def _disaggregate(items: Sequence[T_]) -> Iterator[T_]:
     for item in items:
         yield item
 
@@ -510,6 +512,7 @@ def _disaggregate(items: Sequence[T]) -> Iterator[T]:
 class _SourceConfig(Generic[T]):
     source: Iterable | AsyncIterable
     buffer_size: int
+    queue_class: type[AsyncQueue[T]]
 
 
 class _PType(enum.IntEnum):
@@ -521,14 +524,16 @@ class _PType(enum.IntEnum):
 
 @dataclass
 class _ProcessConfig(Generic[T, U]):
-    type: _PType
+    type_: _PType
     args: _PipeArgs[T, U]
+    queue_class: type[AsyncQueue[U]]
     buffer_size: int = 1
 
 
 @dataclass
 class _SinkConfig(Generic[T]):
     buffer_size: int
+    queue_class: type[AsyncQueue[T]]
 
 
 def _get_op_name(op: Callable) -> str:
@@ -554,6 +559,8 @@ class PipelineBuilder(Generic[T, U]):
     def add_source(
         self,
         source: Iterable[T] | AsyncIterable[T],
+        *,
+        queue_class: type[AsyncQueue[T]] = AsyncQueue,
         **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
@@ -573,6 +580,9 @@ class PipelineBuilder(Generic[T, U]):
                    The source iterator must be lightweight as it is executed in async
                    event loop. If the iterator performs a blocking operation,
                    the entire pipeline will be blocked.
+
+            queue_class: A queue class, used to connect this stage and the next stage.
+                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
         """
         if self._src is not None:
             raise ValueError("Source already set.")
@@ -588,12 +598,12 @@ class PipelineBuilder(Generic[T, U]):
                 f"buffer_size must be greater than 0. Found: {buffer_size}"
             )
 
-        self._src = _SourceConfig(source, buffer_size)
+        self._src = _SourceConfig(source, buffer_size, queue_class)
         return self
 
     def pipe(
         self,
-        op: Callables[T, U],
+        op: Callables[T_, U_],
         /,
         *,
         concurrency: int = 1,
@@ -602,6 +612,7 @@ class PipelineBuilder(Generic[T, U]):
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
         output_order: str = "completion",
+        queue_class: type[AsyncQueue[U_]] = AsyncQueue,
         **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
@@ -667,6 +678,8 @@ class PipelineBuilder(Generic[T, U]):
                 in the order their process is completed.
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
+            queue_class: A queue class, used to connect this stage and the next stage.
+                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
         """
         if output_order not in ["completion", "input"]:
             raise ValueError(
@@ -697,7 +710,7 @@ class PipelineBuilder(Generic[T, U]):
 
         self._process_args.append(
             _ProcessConfig(
-                type=type_,
+                type_=type_,
                 args=_PipeArgs(
                     name=name_,
                     op=op,
@@ -706,6 +719,7 @@ class PipelineBuilder(Generic[T, U]):
                     hooks=hooks,
                     report_stats_interval=report_stats_interval,
                 ),
+                queue_class=queue_class,  # pyre-ignore: [6]
                 buffer_size=_kwargs.get("_buffer_size", 1),
                 # Note:
                 # `_buffer_size` option is intentionally not documented.
@@ -736,6 +750,7 @@ class PipelineBuilder(Generic[T, U]):
         drop_last: bool = False,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
+        queue_class: type[AsyncQueue[T]] = AsyncQueue,
     ) -> "PipelineBuilder[T, U]":
         """Buffer the items in the pipeline.
 
@@ -744,6 +759,8 @@ class PipelineBuilder(Generic[T, U]):
             drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
             hooks: See :py:meth:`pipe`.
             report_stats_interval: See :py:meth:`pipe`.
+            queue_class: A queue class, used to connect this stage and the next stage.
+                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
         """
 
         name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
@@ -759,6 +776,7 @@ class PipelineBuilder(Generic[T, U]):
                     report_stats_interval=report_stats_interval,
                     op_requires_eof=True,
                 ),
+                queue_class=queue_class,
             )
         )
         return self
@@ -769,12 +787,16 @@ class PipelineBuilder(Generic[T, U]):
         *,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
+        queue_class: type[AsyncQueue[T_]] = AsyncQueue,
     ) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline.
 
         Args:
             hooks: See :py:meth:`pipe`.
             report_stats_interval: See :py:meth:`pipe`.
+
+            queue_class: A queue class, used to connect this stage and the next stage.
+                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
         """
         name = f"disaggregate_{self._num_disaggregate}()"
         self._num_disaggregate += 1
@@ -788,11 +810,16 @@ class PipelineBuilder(Generic[T, U]):
                     hooks=hooks,
                     report_stats_interval=report_stats_interval,
                 ),
-            )
+                queue_class=queue_class,
+            ),
         )
         return self
 
-    def add_sink(self, buffer_size: int) -> "PipelineBuilder[T, U]":
+    def add_sink(
+        self,
+        buffer_size: int,
+        queue_class: type[AsyncQueue[U]] = AsyncQueue,
+    ) -> "PipelineBuilder[T, U]":
         """Attach a buffer to the end of the pipeline.
 
         .. code-block::
@@ -804,6 +831,9 @@ class PipelineBuilder(Generic[T, U]):
 
         Args:
             buffer_size: The size of the buffer. Pass ``0`` for unlimited buffering.
+
+            queue_class: A queue class, used to connect this stage and the next stage.
+                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
         """
         if self._sink is not None:
             raise ValueError("Sink is already set.")
@@ -813,15 +843,12 @@ class PipelineBuilder(Generic[T, U]):
             raise ValueError(
                 f"`buffer_size` must be greater than 0. Found: {buffer_size}"
             )
-        self._sink = _SinkConfig(buffer_size)
+        self._sink = _SinkConfig(buffer_size, queue_class)
         return self
 
     def _build(  # pyre-ignore: [3]
         self,
     ) -> tuple[Coroutine[None, None, None], list[AsyncQueue[Any]]]:
-        if self._src is None:
-            raise ValueError("Source is not set.")
-
         # Note:
         # Make sure that coroutines are ordered from source to sink.
         # `_run_pipeline_coroutines` expects and rely on this ordering.
@@ -829,29 +856,30 @@ class PipelineBuilder(Generic[T, U]):
         queues = []
 
         # source
-        assert self._src is not None
-        src = self._src
-        queues.append(AsyncQueue("src_output", src.buffer_size))
-        coros.append(("AsyncPipeline::0_source", _enqueue(src.source, queues[0])))
+        if (src := self._src) is None:
+            raise ValueError("Source is not set.")
+        else:
+            queues.append(src.queue_class("src_output", src.buffer_size))
+            coros.append(("AsyncPipeline::0_source", _enqueue(src.source, queues[0])))
 
         # pipes
         for i, cfg in enumerate(self._process_args, start=1):
-            queues.append(AsyncQueue(f"{cfg.args.name}_output", cfg.buffer_size))
+            queues.append(cfg.queue_class(f"{cfg.args.name}_output", cfg.buffer_size))
             in_queue, out_queue = queues[i - 1 : i + 1]
 
-            match cfg.type:
+            match cfg.type_:
                 case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
                     coro = _pipe(in_queue, out_queue, cfg.args)
                 case _PType.OrderedPipe:
                     coro = _ordered_pipe(in_queue, out_queue, cfg.args)
                 case _:  # pragma: no cover
-                    raise ValueError(f"Unexpected process type: {cfg.type}")
+                    raise ValueError(f"Unexpected process type: {cfg.type_}")
 
             coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
 
         # sink
         if (sink := self._sink) is not None:
-            queues.append(AsyncQueue("src_output", sink.buffer_size))
+            queues.append(sink.queue_class("src_output", sink.buffer_size))
             coros.append(
                 (
                     f"AsyncPipeline::{len(self._process_args) + 1}_sink",
@@ -874,7 +902,7 @@ class PipelineBuilder(Generic[T, U]):
 
         for cfg in self._process_args:
             args = cfg.args
-            match cfg.type:
+            match cfg.type_:
                 case _PType.Pipe:
                     part = f"{args.name}(concurrency={args.concurrency})"
                 case _PType.OrderedPipe:
@@ -885,7 +913,7 @@ class PipelineBuilder(Generic[T, U]):
                 case _PType.Aggregate | _PType.Disaggregate:
                     part = args.name
                 case _:
-                    part = str(cfg.type)
+                    part = str(cfg.type_)
             parts.append(f"  - {part}")
 
             if cfg.buffer_size > 1:
