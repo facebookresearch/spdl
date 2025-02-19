@@ -7,19 +7,25 @@
 # pyre-strict
 
 import asyncio
+import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import TypeVar
 
+from ._hook import _time_str, StatsCounter
+
 __all__ = [
     "AsyncQueue",
+    "StatsQueue",
 ]
 
 T = TypeVar("T")
+_LG: logging.Logger = logging.getLogger(__name__)
 
 
 class AsyncQueue(asyncio.Queue[T]):
-    """Extend :py:class:`asyncio.Queue` with init/finalize logic.
+    """Extends :py:class:`asyncio.Queue` with init/finalize logic.
 
     When a pipeline stage starts, :py:class:`PipelineBuilder` calls
     :py:meth:`~AsyncQueue.stage_hook` method, and the initialization logic
@@ -30,7 +36,7 @@ class AsyncQueue(asyncio.Queue[T]):
 
     One intended usage is to overload the ``get``/``put`` methods to capture the
     time each pipeline stage waits, then publish the stats. This helps identifying
-    the bottleneck in the pipeline.
+    the bottleneck in the pipeline. See :py:class:`StatsQueue`.
 
     Args:
         name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.
@@ -44,4 +50,60 @@ class AsyncQueue(asyncio.Queue[T]):
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
+        """Context manager, which handles init/final logic for the stage."""
         yield
+
+
+class StatsQueue(AsyncQueue[T]):
+    """Measures the time stages are blocked on upstream/downstream stage.
+    Extends :py:class:`AsyncQueue`.
+
+    Args:
+        name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.
+        buffer_size: The buffer size. Assigned by :py:class:`PipelineBuilder`.
+    """
+
+    def __init__(self, name: str, buffer_size: int = 0) -> None:
+        super().__init__(name, buffer_size)
+
+        self._getc = StatsCounter()
+        self._putc = StatsCounter()
+
+    async def get(self) -> T:
+        """Remove and return an item from the queue, track the time."""
+        with self._getc.count():
+            return await super().get()
+
+    async def put(self, item: T) -> None:
+        """Remove and return an item from the queue, track the time."""
+        with self._putc.count():
+            return await super().put(item)
+
+    @asynccontextmanager
+    async def stage_hook(self) -> AsyncIterator[None]:
+        t0 = time.monotonic()
+        try:
+            yield
+        finally:
+            elapsed = time.monotonic() - t0
+            self._log_stats(
+                self._getc.num_items,
+                elapsed,
+                self._putc.ave_time,
+                self._getc.ave_time,
+            )
+
+    def _log_stats(
+        self, num_items: int, elapsed: float, put_time: float, get_time: float
+    ) -> None:
+        qps = num_items / elapsed
+        _LG.info(
+            "[%s]\tProcessed %5d items in %s. "
+            "QPS: %.2f. Ave wait time: %s (upstream/put), %s (downstream/get).",
+            self.name,
+            num_items,
+            _time_str(elapsed),
+            qps,
+            _time_str(put_time),
+            _time_str(get_time),
+        )

@@ -38,7 +38,7 @@ from ._hook import (
     TaskStatsHook,
 )
 from ._pipeline import Pipeline
-from ._queue import AsyncQueue
+from ._queue import AsyncQueue, StatsQueue
 from ._utils import create_task, iterate_in_subprocess
 
 __all__ = [
@@ -560,7 +560,7 @@ class PipelineBuilder(Generic[T, U]):
         self,
         source: Iterable[T] | AsyncIterable[T],
         *,
-        queue_class: type[AsyncQueue[T]] = AsyncQueue,
+        queue_class: type[AsyncQueue[T]] = StatsQueue,
         **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
@@ -612,7 +612,7 @@ class PipelineBuilder(Generic[T, U]):
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
         output_order: str = "completion",
-        queue_class: type[AsyncQueue[U_]] = AsyncQueue,
+        queue_class: type[AsyncQueue[U_]] = StatsQueue,
         **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
@@ -750,7 +750,7 @@ class PipelineBuilder(Generic[T, U]):
         drop_last: bool = False,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-        queue_class: type[AsyncQueue[T]] = AsyncQueue,
+        queue_class: type[AsyncQueue[T]] = StatsQueue,
     ) -> "PipelineBuilder[T, U]":
         """Buffer the items in the pipeline.
 
@@ -787,7 +787,7 @@ class PipelineBuilder(Generic[T, U]):
         *,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-        queue_class: type[AsyncQueue[T_]] = AsyncQueue,
+        queue_class: type[AsyncQueue[T_]] = StatsQueue,
     ) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline.
 
@@ -818,7 +818,7 @@ class PipelineBuilder(Generic[T, U]):
     def add_sink(
         self,
         buffer_size: int,
-        queue_class: type[AsyncQueue[U]] = AsyncQueue,
+        queue_class: type[AsyncQueue[U]] = StatsQueue,
     ) -> "PipelineBuilder[T, U]":
         """Attach a buffer to the end of the pipeline.
 
