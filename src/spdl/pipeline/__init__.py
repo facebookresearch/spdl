@@ -11,9 +11,11 @@
 from ._builder import PipelineBuilder, PipelineFailure, run_pipeline_in_subprocess
 from ._hook import PipelineHook, TaskStatsHook
 from ._pipeline import Pipeline
+from ._queue import AsyncQueue
 from ._utils import create_task, iterate_in_subprocess
 
 __all__ = [
+    "AsyncQueue",
     "Pipeline",
     "PipelineBuilder",
     "PipelineFailure",
