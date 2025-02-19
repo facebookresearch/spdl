@@ -106,17 +106,22 @@ _SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 # unless the task was cancelled.
 #
 @asynccontextmanager
-async def _put_eof_when_done(queue: AsyncQueue[T]) -> AsyncGenerator[None, None]:
+async def _queue_stage_hook(queue: AsyncQueue[T]) -> AsyncGenerator[None, None]:
+    # Responsibility
+    #   1. Call the `stage_hook`` context manager
+    #   2. Put _EOF when the stage is done for reasons other than cancell.
+
     # Note:
     # `asyncio.CancelledError` is a subclass of BaseException, so it won't be
     # caught in the following, and EOF won't be passed to the output queue.
-    try:
-        yield
-    except Exception:
-        await queue.put(_EOF)  # pyre-ignore: [6]
-        raise
-    else:
-        await queue.put(_EOF)  # pyre-ignore: [6]
+    async with queue.stage_hook():
+        try:
+            yield
+        except Exception:
+            await queue.put(_EOF)  # pyre-ignore: [6]
+            raise
+        else:
+            await queue.put(_EOF)  # pyre-ignore: [6]
 
 
 ################################################################################
@@ -219,7 +224,7 @@ def _pipe(
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
 
-    @_put_eof_when_done(output_queue)
+    @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def pipe() -> None:
         i, tasks = 0, set()
@@ -305,7 +310,7 @@ def _ordered_pipe(
     async def _unwrap(task: asyncio.Task[U]) -> U:
         return await task
 
-    inter_queue = AsyncQueue(args.concurrency)
+    inter_queue = AsyncQueue(f"{args.name}_interqueue", args.concurrency)
 
     coro1: Coroutine[None, None, None] = _pipe(  # pyre-ignore: [1001]
         input_queue,
@@ -319,7 +324,7 @@ def _ordered_pipe(
         _PipeArgs(args.name, op=_unwrap, executor=args.executor, hooks=[]),
     )
 
-    @_put_eof_when_done(output_queue)
+    @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def ordered_pipe() -> None:
         await asyncio.wait({create_task(coro1), create_task(coro2)})
@@ -341,7 +346,7 @@ def _enqueue(
         src if hasattr(src, "__aiter__") else _to_async_gen(iter, None)(src)
     )
 
-    @_put_eof_when_done(queue)
+    @_queue_stage_hook(queue)
     async def enqueue() -> None:
         num_items = 0
         async for item in src_:
@@ -826,12 +831,12 @@ class PipelineBuilder(Generic[T]):
         # source
         assert self._src is not None
         src = self._src
-        queues.append(AsyncQueue(src.buffer_size))
+        queues.append(AsyncQueue("src_output", src.buffer_size))
         coros.append(("AsyncPipeline::0_source", _enqueue(src.source, queues[0])))
 
         # pipes
         for i, cfg in enumerate(self._process_args, start=1):
-            queues.append(AsyncQueue(cfg.buffer_size))
+            queues.append(AsyncQueue(f"{cfg.args.name}_output", cfg.buffer_size))
             in_queue, out_queue = queues[i - 1 : i + 1]
 
             match cfg.type:
@@ -846,7 +851,7 @@ class PipelineBuilder(Generic[T]):
 
         # sink
         if (sink := self._sink) is not None:
-            queues.append(AsyncQueue(sink.buffer_size))
+            queues.append(AsyncQueue("src_output", sink.buffer_size))
             coros.append(
                 (
                     f"AsyncPipeline::{len(self._process_args) + 1}_sink",

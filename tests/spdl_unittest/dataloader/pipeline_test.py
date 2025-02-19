@@ -56,7 +56,7 @@ async def no_op(val):
 
 def test_async_enqueue_empty():
     """_async_enqueue can handle empty iterator"""
-    queue = AsyncQueue()
+    queue = AsyncQueue(name="foo")
     coro = _enqueue([], queue)
     asyncio.run(coro)
     assert _flush_aqueue(queue) == [_EOF]
@@ -65,7 +65,7 @@ def test_async_enqueue_empty():
 def test_async_enqueue_simple():
     """_async_enqueue should put the values in the queue."""
     src = list(range(6))
-    queue = AsyncQueue()
+    queue = AsyncQueue(name="foo")
     coro = _enqueue(src, queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
@@ -80,7 +80,7 @@ def test_async_enqueue_skip():
             yield i
             yield _SKIP
 
-    queue = AsyncQueue()
+    queue = AsyncQueue(name="foo")
     coro = _enqueue(src(), queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
@@ -94,7 +94,7 @@ def test_async_enqueue_iterator_failure():
         yield from range(10)
         raise RuntimeError("Failing the iterator.")
 
-    coro = _enqueue(src(), AsyncQueue())
+    coro = _enqueue(src(), AsyncQueue(name="foo"))
 
     with pytest.raises(RuntimeError):
         asyncio.run(coro)  # Not raising
@@ -104,7 +104,7 @@ def test_async_enqueue_cancel():
     """_async_enqueue is cancellable."""
 
     async def _test():
-        queue = AsyncQueue(1)
+        queue = AsyncQueue(name="foo", buffer_size=1)
 
         src = list(range(3))
 
@@ -129,8 +129,8 @@ def test_async_enqueue_cancel():
 @pytest.mark.parametrize("empty", [False, True])
 def test_async_sink_simple(empty: bool):
     """_sink pass the contents from input_queue to output_queue"""
-    input_queue: AsyncQueue = AsyncQueue()
-    output_queue: AsyncQueue = AsyncQueue()
+    input_queue: AsyncQueue = AsyncQueue(name="input")
+    output_queue: AsyncQueue = AsyncQueue(name="output")
 
     data = [] if empty else list(range(3))
     _put_aqueue(input_queue, data, eof=True)
@@ -145,8 +145,8 @@ def test_async_sink_simple(empty: bool):
 
 def test_async_sink_skip():
     """_sink does not pass the value if it is SKIP"""
-    input_queue = AsyncQueue()
-    output_queue = AsyncQueue()
+    input_queue = AsyncQueue(name="input")
+    output_queue = AsyncQueue(name="output")
 
     data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
     _put_aqueue(input_queue, data, eof=True)
@@ -163,8 +163,8 @@ def test_async_sink_cancel():
     """_async_sink is cancellable."""
 
     async def _test():
-        input_queue = AsyncQueue()
-        output_queue = AsyncQueue()
+        input_queue = AsyncQueue(name="input")
+        output_queue = AsyncQueue(name="output")
 
         coro = _sink(input_queue, output_queue)
         task = asyncio.create_task(coro)
@@ -197,8 +197,8 @@ async def passthrough(val):
 
 def test_async_pipe():
     """_pipe processes the data in input queue and pass it to output queue."""
-    input_queue = AsyncQueue()
-    output_queue = AsyncQueue()
+    input_queue = AsyncQueue(name="input")
+    output_queue = AsyncQueue(name="output")
 
     async def test():
         ref = list(range(6))
@@ -215,8 +215,8 @@ def test_async_pipe():
 
 def test_async_pipe_skip():
     """_pipe skips the data if it is SKIP."""
-    input_queue = AsyncQueue()
-    output_queue = AsyncQueue()
+    input_queue = AsyncQueue(name="input")
+    output_queue = AsyncQueue(name="output")
 
     async def test():
         data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
@@ -233,8 +233,8 @@ def test_async_pipe_skip():
 
 def test_async_pipe_wrong_task_signature():
     """_pipe fails immediately if user provided incompatible iterator/afunc."""
-    input_queue = AsyncQueue()
-    output_queue = AsyncQueue()
+    input_queue = AsyncQueue(name="input")
+    output_queue = AsyncQueue(name="output")
 
     async def _2args(val: int, _):
         return val
@@ -262,8 +262,8 @@ def test_async_pipe_wrong_task_signature():
 @pytest.mark.parametrize("full", [False, True])
 def test_async_pipe_cancel(full):
     """_pipe is cancellable."""
-    input_queue = AsyncQueue()
-    output_queue = AsyncQueue(1)
+    input_queue = AsyncQueue(name="input")
+    output_queue = AsyncQueue(name="output", buffer_size=1)
 
     _put_aqueue(input_queue, list(range(3)), eof=False)
 
@@ -305,8 +305,8 @@ def test_async_pipe_concurrency():
         return val
 
     async def test(concurrency):
-        input_queue = AsyncQueue()
-        output_queue = AsyncQueue()
+        input_queue = AsyncQueue(name="input")
+        output_queue = AsyncQueue(name="output")
 
         ref = [1, 2, 3, 4]
         _put_aqueue(input_queue, ref, eof=False)
@@ -348,8 +348,8 @@ def test_async_pipe_concurrency_throughput():
         return val
 
     async def test(concurrency):
-        input_queue = AsyncQueue()
-        output_queue = AsyncQueue()
+        input_queue = AsyncQueue(name="input")
+        output_queue = AsyncQueue(name="output")
 
         ref = [4, 5, 6, 7, _EOF]
         _put_aqueue(input_queue, ref, eof=False)
