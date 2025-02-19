@@ -38,7 +38,7 @@ from ._hook import (
     TaskStatsHook,
 )
 from ._pipeline import Pipeline
-from ._queue import AsyncQueue, StatsQueue
+from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from ._utils import create_task, iterate_in_subprocess
 
 __all__ = [
@@ -560,7 +560,7 @@ class PipelineBuilder(Generic[T, U]):
         self,
         source: Iterable[T] | AsyncIterable[T],
         *,
-        queue_class: type[AsyncQueue[T]] = StatsQueue,
+        queue_class: type[AsyncQueue[T]] | None = None,
         **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
@@ -583,6 +583,7 @@ class PipelineBuilder(Generic[T, U]):
 
             queue_class: A queue class, used to connect this stage and the next stage.
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
+                Default: :py:class:`StatsQueue`.
         """
         if self._src is not None:
             raise ValueError("Source already set.")
@@ -598,7 +599,7 @@ class PipelineBuilder(Generic[T, U]):
                 f"buffer_size must be greater than 0. Found: {buffer_size}"
             )
 
-        self._src = _SourceConfig(source, buffer_size, queue_class)
+        self._src = _SourceConfig(source, buffer_size, queue_class or DefaultQueue)
         return self
 
     def pipe(
@@ -612,7 +613,7 @@ class PipelineBuilder(Generic[T, U]):
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
         output_order: str = "completion",
-        queue_class: type[AsyncQueue[U_]] = StatsQueue,
+        queue_class: type[AsyncQueue[U_]] | None = None,
         **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
@@ -680,6 +681,7 @@ class PipelineBuilder(Generic[T, U]):
                 in the input queue.
             queue_class: A queue class, used to connect this stage and the next stage.
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
+                Default: :py:class:`StatsQueue`.
         """
         if output_order not in ["completion", "input"]:
             raise ValueError(
@@ -719,7 +721,7 @@ class PipelineBuilder(Generic[T, U]):
                     hooks=hooks,
                     report_stats_interval=report_stats_interval,
                 ),
-                queue_class=queue_class,  # pyre-ignore: [6]
+                queue_class=queue_class or DefaultQueue,  # pyre-ignore: [6]
                 buffer_size=_kwargs.get("_buffer_size", 1),
                 # Note:
                 # `_buffer_size` option is intentionally not documented.
@@ -750,7 +752,7 @@ class PipelineBuilder(Generic[T, U]):
         drop_last: bool = False,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-        queue_class: type[AsyncQueue[T]] = StatsQueue,
+        queue_class: type[AsyncQueue[T]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Buffer the items in the pipeline.
 
@@ -761,6 +763,7 @@ class PipelineBuilder(Generic[T, U]):
             report_stats_interval: See :py:meth:`pipe`.
             queue_class: A queue class, used to connect this stage and the next stage.
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
+                Default: :py:class:`StatsQueue`.
         """
 
         name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
@@ -776,7 +779,7 @@ class PipelineBuilder(Generic[T, U]):
                     report_stats_interval=report_stats_interval,
                     op_requires_eof=True,
                 ),
-                queue_class=queue_class,
+                queue_class=queue_class or DefaultQueue,
             )
         )
         return self
@@ -787,7 +790,7 @@ class PipelineBuilder(Generic[T, U]):
         *,
         hooks: list[PipelineHook] | None = None,
         report_stats_interval: float | None = None,
-        queue_class: type[AsyncQueue[T_]] = StatsQueue,
+        queue_class: type[AsyncQueue[T_]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline.
 
@@ -797,6 +800,7 @@ class PipelineBuilder(Generic[T, U]):
 
             queue_class: A queue class, used to connect this stage and the next stage.
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
+                Default: :py:class:`StatsQueue`.
         """
         name = f"disaggregate_{self._num_disaggregate}()"
         self._num_disaggregate += 1
@@ -810,7 +814,7 @@ class PipelineBuilder(Generic[T, U]):
                     hooks=hooks,
                     report_stats_interval=report_stats_interval,
                 ),
-                queue_class=queue_class,
+                queue_class=queue_class or DefaultQueue,
             ),
         )
         return self
@@ -818,7 +822,7 @@ class PipelineBuilder(Generic[T, U]):
     def add_sink(
         self,
         buffer_size: int,
-        queue_class: type[AsyncQueue[U]] = StatsQueue,
+        queue_class: type[AsyncQueue[U]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Attach a buffer to the end of the pipeline.
 
@@ -834,6 +838,7 @@ class PipelineBuilder(Generic[T, U]):
 
             queue_class: A queue class, used to connect this stage and the next stage.
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
+                Default: :py:class:`StatsQueue`.
         """
         if self._sink is not None:
             raise ValueError("Sink is already set.")
@@ -843,7 +848,8 @@ class PipelineBuilder(Generic[T, U]):
             raise ValueError(
                 f"`buffer_size` must be greater than 0. Found: {buffer_size}"
             )
-        self._sink = _SinkConfig(buffer_size, queue_class)
+
+        self._sink = _SinkConfig(buffer_size, queue_class or DefaultQueue)
         return self
 
     def _build(  # pyre-ignore: [3]
