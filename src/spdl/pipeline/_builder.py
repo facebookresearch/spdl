@@ -339,17 +339,16 @@ def _ordered_pipe(
 ################################################################################
 
 
-def _enqueue(
+async def _enqueue(
     src: Iterable[T] | AsyncIterable[T],
     queue: AsyncQueue[T],
     max_items: int | None = None,
-) -> Coroutine:
+) -> None:
     src_: AsyncIterable[T] = (  # pyre-ignore: [9]
         src if hasattr(src, "__aiter__") else _to_async_gen(iter, None)(src)
     )
 
-    @_queue_stage_hook(queue)
-    async def enqueue() -> None:
+    async with _queue_stage_hook(queue):
         num_items = 0
         async for item in src_:
             if item is not _SKIP:
@@ -357,8 +356,6 @@ def _enqueue(
                 num_items += 1
                 if max_items is not None and num_items >= max_items:
                     return
-
-    return enqueue()
 
 
 ################################################################################
