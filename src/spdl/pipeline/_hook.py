@@ -53,8 +53,9 @@ class _StatsCounter:
         return self._t
 
     def update(self, t: float, n: int = 1) -> None:
-        self._n += n
-        self._t += (t - self._t) * n / self._n
+        if n > 0:
+            self._n += n
+            self._t += (t - self._t) * n / self._n
 
     def __iadd__(self, other: "_StatsCounter") -> "_StatsCounter":
         self.update(other._t, other._n)
