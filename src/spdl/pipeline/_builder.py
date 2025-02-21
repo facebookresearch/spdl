@@ -13,27 +13,28 @@ import logging
 import warnings
 from collections.abc import (
     AsyncIterable,
-    AsyncIterator,
-    Awaitable,
     Callable,
     Coroutine,
     Iterable,
     Iterator,
-    Sequence,
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, AsyncGenerator, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
-from ._convert import _to_async_gen, Callables, convert_to_async
-from ._hook import (
-    _stage_hooks,
-    _task_hooks,
-    PipelineHook,
-    TaskStatsHook,
+from ._components._common import _SKIP
+from ._components._pipe import (
+    _Aggregate,
+    _disaggregate,
+    _ordered_pipe,
+    _pipe,
+    _PipeArgs,
 )
+from ._components._sink import _sink
+from ._components._source import _source
+from ._convert import Callables
+from ._hook import PipelineHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from ._utils import create_task, iterate_in_subprocess
@@ -43,6 +44,7 @@ __all__ = [
     "PipelineBuilder",
     "_get_op_name",
     "run_pipeline_in_subprocess",
+    "_SKIP",  # TEMP
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -51,19 +53,6 @@ T = TypeVar("T")
 U = TypeVar("U")
 T_ = TypeVar("T_")
 U_ = TypeVar("U_")
-
-
-# Sentinel objects used to instruct AsyncPipeline to take special actions.
-class _Sentinel:
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __str__(self) -> str:
-        return self.name
-
-
-_EOF = _Sentinel("EOF")  # Indicate the end of stream.
-_SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 
 
 # The following is how we intend pipeline to behave. If the implementation
@@ -102,279 +91,8 @@ _SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 #        (If tasks are blocked on async await, cancelling should do).
 #
 # Following the above intention, each stage must pass EOF to the output queue
-# unless the task was cancelled.
+# unless the task was cancelled. See `_queue_stage_hook`.
 #
-@asynccontextmanager
-async def _queue_stage_hook(queue: AsyncQueue[T]) -> AsyncGenerator[None, None]:
-    # Responsibility
-    #   1. Call the `stage_hook`` context manager
-    #   2. Put _EOF when the stage is done for reasons other than cancell.
-
-    # Note:
-    # `asyncio.CancelledError` is a subclass of BaseException, so it won't be
-    # caught in the following, and EOF won't be passed to the output queue.
-    async with queue.stage_hook():
-        try:
-            yield
-        except Exception:
-            await queue.put(_EOF)  # pyre-ignore: [6]
-            raise
-        else:
-            await queue.put(_EOF)  # pyre-ignore: [6]
-
-
-################################################################################
-# _pipe
-################################################################################
-
-
-@dataclass
-class _PipeArgs(Generic[T, U]):
-    name: str
-    op: Callables[T, U]
-    executor: Executor | None = None
-    concurrency: int = 1
-    hooks: list[PipelineHook] | None = None
-    op_requires_eof: bool = False
-    # Used to pass EOF to op.
-    # Usually pipe does not pas EOF to op. This is because op is expected to be
-    #  stateless, and requiring users to handle EOF is cumbersome, and there is
-    # no real benefit.
-    # However, some ops are exception. The aggregation (with drop_last=False)
-    # requires to benotified when the pipeline reached the EOF, so that it can
-    # flush the buffered items.
-
-    def __post_init__(self) -> None:
-        if self.concurrency < 1:
-            raise ValueError(
-                f"`concurrency` value must be >= 1. Found: {self.concurrency}"
-            )
-
-
-def _get_default_hook(
-    args: _PipeArgs[T, U], interval: float | None
-) -> list[PipelineHook]:
-    if args.hooks is not None:
-        return args.hooks
-    return [TaskStatsHook(args.name, args.concurrency, interval)]
-
-
-def _pipe(
-    input_queue: AsyncQueue[T],
-    output_queue: AsyncQueue[U],
-    args: _PipeArgs[T, U],
-    report_stats_interval: float | None = None,
-) -> Coroutine:
-    if input_queue is output_queue:
-        raise ValueError("input queue and output queue must be different")
-
-    hooks: list[PipelineHook] = _get_default_hook(args, report_stats_interval)
-
-    afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
-        convert_to_async(args.op, args.executor)
-    )
-
-    if inspect.iscoroutinefunction(afunc):
-
-        async def _wrap(coro: Awaitable[U]) -> None:
-            async with _task_hooks(hooks):
-                result = await coro
-
-            await output_queue.put(result)
-
-    elif inspect.isasyncgenfunction(afunc):
-
-        async def _wrap(coro: AsyncIterator[U]) -> None:
-            exhausted = False
-            while not exhausted:
-                # NOTE:
-                # Nested `except StopAsyncIteration` would look strange.
-                # The following explains why.
-                #
-                # We want to give hooks opportunity to react to StopAsyncIteration,
-                # for example, so that StatsHook will note record the task stats
-                # for StopAsyncIteration case.
-                #
-                # When users implement hook, they might mistakenly absorb the
-                # StopAsyncIteration exception by blanket `except Exception`,
-                # and in this case, the StopAsyncIteration won't propagate to
-                # the outside of `_task_hooks`.
-                # When that happens, the control flow cannot exit the while loop.
-                #
-                # So when `StopAsyncIteration` is raised, we catch it once to set
-                # the exhausted flag to True, then re-raise the execption so as
-                # to give hooks chance to react to it.
-                # If the hooks do not absorb the StopAsyncIteration, and
-                # it propagates them, then we catch it and exit.
-                try:
-                    async with _task_hooks(hooks):
-                        try:
-                            result = await anext(coro)
-                        except StopAsyncIteration:
-                            exhausted = True
-                            raise
-
-                    # If task_hooks absorb the `StopAsyncIteration`, we need to exit here.
-                    if exhausted:
-                        return
-
-                    await output_queue.put(result)
-                except StopAsyncIteration:
-                    return
-
-    else:
-        raise ValueError(f"{afunc=} must be either async function or async generator.")
-
-    @_queue_stage_hook(output_queue)
-    @_stage_hooks(hooks)
-    async def pipe() -> None:
-        i, tasks = 0, set()
-        while True:
-            item = await input_queue.get()
-            if item is _SKIP:
-                continue
-            if item is _EOF and not args.op_requires_eof:
-                break
-            # note: Make sure that `afunc` is called directly in this function,
-            # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            task = create_task(_wrap(afunc(item)), name=f"{args.name}:{(i := i + 1)}")
-            tasks.add(task)
-
-            if len(tasks) >= args.concurrency:
-                _, tasks = await asyncio.wait(
-                    tasks, return_when=asyncio.FIRST_COMPLETED
-                )
-
-            if item is _EOF:
-                break
-
-        if tasks:
-            await asyncio.wait(tasks)
-
-    return pipe()
-
-
-def _ordered_pipe(
-    input_queue: AsyncQueue[T],
-    output_queue: AsyncQueue[U],
-    args: _PipeArgs[T, U],
-    report_stats_interval: float | None = None,
-) -> Coroutine:
-    """
-
-    Implementation Note:
-
-    The core idea of ordered pipe implementation is to use queue as buffer for active tasks.
-
-                  ┌─┐
-                  │ │
-                  │ │ AsyncQueue: Input
-                  │ │
-                  └┬┘
-                   │
-           ┌───────▼────────┐
-           │ Async Function │
-           └───────┬────────┘
-                  ┌▼┐
-                  │ │
-                  │ │ AsyncQueue: Intermediate queue:
-                  │ │ contains tasks. queue size == concurrency
-                  └┬┘
-           ┌───────▼────────┐
-           │     enqueue    │
-           └───────┬────────┘
-                  ┌▼┐
-                  │ │
-                  │ │ AsyncQueue: Output
-                  │ │
-                  └─┘
-
-    """
-    if input_queue is output_queue:
-        raise ValueError("input queue and output queue must be different")
-
-    hooks: list[PipelineHook] = _get_default_hook(args, report_stats_interval)
-
-    # This has been checked in `PipelineBuilder.pipe()`
-    assert not inspect.isasyncgenfunction(args.op)
-
-    afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
-        convert_to_async(args.op, args.executor)
-    )
-
-    async def _wrap(item: T) -> asyncio.Task[U]:
-        async def _with_hooks() -> U:
-            async with _task_hooks(hooks):
-                return await afunc(item)
-
-        return create_task(_with_hooks())
-
-    async def _unwrap(task: asyncio.Task[U]) -> U:
-        return await task
-
-    inter_queue = AsyncQueue(f"{args.name}_interqueue", args.concurrency)
-
-    coro1: Coroutine[None, None, None] = _pipe(  # pyre-ignore: [1001]
-        input_queue,
-        inter_queue,
-        _PipeArgs(args.name, op=_wrap, executor=args.executor, hooks=[]),
-    )
-
-    coro2: Coroutine[None, None, None] = _pipe(  # pyre-ignore: [1001]
-        inter_queue,
-        output_queue,
-        _PipeArgs(args.name, op=_unwrap, executor=args.executor, hooks=[]),
-    )
-
-    @_queue_stage_hook(output_queue)
-    @_stage_hooks(hooks)
-    async def ordered_pipe() -> None:
-        await asyncio.wait({create_task(coro1), create_task(coro2)})
-
-    return ordered_pipe()
-
-
-################################################################################
-# _enqueue
-################################################################################
-
-
-async def _enqueue(
-    src: Iterable[T] | AsyncIterable[T],
-    queue: AsyncQueue[T],
-    max_items: int | None = None,
-) -> None:
-    src_: AsyncIterable[T] = (  # pyre-ignore: [9]
-        src if hasattr(src, "__aiter__") else _to_async_gen(iter, None)(src)
-    )
-
-    async with _queue_stage_hook(queue):
-        num_items = 0
-        async for item in src_:
-            if item is not _SKIP:
-                await queue.put(item)
-                num_items += 1
-                if max_items is not None and num_items >= max_items:
-                    return
-
-
-################################################################################
-# _sink
-################################################################################
-
-
-async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]) -> None:
-    async with output_queue.stage_hook():
-        while True:
-            item = await input_queue.get()
-
-            if item is _EOF:
-                break
-
-            if item is _SKIP:
-                continue
-
-            await output_queue.put(item)
 
 
 ################################################################################
@@ -457,29 +175,6 @@ async def _run_pipeline_coroutines(
 ################################################################################
 # Build
 ################################################################################
-
-
-class _Aggregate(Generic[T]):
-    def __init__(self, n: int, drop_last: bool) -> None:
-        self.n = n
-        self.drop_last = drop_last
-        self._vals: list[T] = []
-
-    def __call__(self, item: T) -> list[T]:
-        if item is not _EOF:
-            self._vals.append(item)
-
-        if (len(self._vals) >= self.n) or (
-            item is _EOF and not self.drop_last and self._vals
-        ):
-            ret, self._vals = self._vals, []
-            return ret
-        return _SKIP  # pyre-ignore: [7]
-
-
-def _disaggregate(items: Sequence[T_]) -> Iterator[T_]:
-    for item in items:
-        yield item
 
 
 @dataclass
@@ -844,7 +539,7 @@ class PipelineBuilder(Generic[T, U]):
             raise ValueError("Source is not set.")
         else:
             queues.append(src.queue_class("src_queue", src.buffer_size))
-            coros.append(("AsyncPipeline::0_source", _enqueue(src.source, queues[0])))
+            coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
 
         # pipes
         for i, cfg in enumerate(self._process_args, start=1):
