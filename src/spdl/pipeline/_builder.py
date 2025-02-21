@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any, Generic, TypeVar
 
-from ._components._common import _SKIP
 from ._components._pipe import (
     _Aggregate,
     _disaggregate,
@@ -44,7 +43,6 @@ __all__ = [
     "PipelineBuilder",
     "_get_op_name",
     "run_pipeline_in_subprocess",
-    "_SKIP",  # TEMP
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
