@@ -24,7 +24,10 @@ from spdl.pipeline import (
     run_pipeline_in_subprocess,
     TaskStatsHook,
 )
-from spdl.pipeline._builder import _enqueue, _EOF, _pipe, _PipeArgs, _sink, _SKIP
+from spdl.pipeline._components._common import _EOF, _SKIP
+from spdl.pipeline._components._pipe import _pipe, _PipeArgs
+from spdl.pipeline._components._sink import _sink
+from spdl.pipeline._components._source import _source
 from spdl.pipeline._hook import _periodic_dispatch
 from spdl.pipeline._queue import AsyncQueue
 
@@ -50,14 +53,14 @@ async def no_op(val):
 
 
 ################################################################################
-# _enqueue
+# _source
 ################################################################################
 
 
 def test_async_enqueue_empty():
     """_async_enqueue can handle empty iterator"""
     queue = AsyncQueue(name="foo")
-    coro = _enqueue([], queue)
+    coro = _source([], queue)
     asyncio.run(coro)
     assert _flush_aqueue(queue) == [_EOF]
 
@@ -66,7 +69,7 @@ def test_async_enqueue_simple():
     """_async_enqueue should put the values in the queue."""
     src = list(range(6))
     queue = AsyncQueue(name="foo")
-    coro = _enqueue(src, queue)
+    coro = _source(src, queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
     assert vals == [*src, _EOF]
@@ -81,7 +84,7 @@ def test_async_enqueue_skip():
             yield _SKIP
 
     queue = AsyncQueue(name="foo")
-    coro = _enqueue(src(), queue)
+    coro = _source(src(), queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
     assert vals == [*list(range(6)), _EOF]
@@ -94,7 +97,7 @@ def test_async_enqueue_iterator_failure():
         yield from range(10)
         raise RuntimeError("Failing the iterator.")
 
-    coro = _enqueue(src(), AsyncQueue(name="foo"))
+    coro = _source(src(), AsyncQueue(name="foo"))
 
     with pytest.raises(RuntimeError):
         asyncio.run(coro)  # Not raising
@@ -108,7 +111,7 @@ def test_async_enqueue_cancel():
 
         src = list(range(3))
 
-        coro = _enqueue(src, queue)
+        coro = _source(src, queue)
         task = asyncio.create_task(coro)
 
         await asyncio.sleep(0.1)
