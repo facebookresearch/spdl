@@ -108,11 +108,11 @@ class _SinkConfig(Generic[T]):
 #
 
 
-def _build_pipeline(  # pyre-ignore: [2]
+def _build_pipeline(
     src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
     sink: _SinkConfig[U],
-) -> tuple[Coroutine[None, None, None], list[AsyncQueue[Any]]]:
+) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
     # Note:
     # Make sure that coroutines are ordered from source to sink.
     # `_run_pipeline_coroutines` expects and rely on this ordering.
@@ -143,15 +143,15 @@ def _build_pipeline(  # pyre-ignore: [2]
         coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
 
     # sink
-    queues.append(sink.queue_class("sink_queue", sink.buffer_size))
+    output_queue = sink.queue_class("sink_queue", sink.buffer_size)
     coros.append(
         (
             f"AsyncPipeline::{len(process_args) + 1}_sink",
-            _sink(*queues[-2:]),
+            _sink(queues[-1], output_queue),
         )
     )
 
-    return _run_pipeline_coroutines(coros), queues
+    return _run_pipeline_coroutines(coros), output_queue
 
 
 ################################################################################
