@@ -6,37 +6,37 @@
 
 # pyre-strict
 
-import asyncio
-import enum
 import inspect
 import logging
 import warnings
 from collections.abc import (
     AsyncIterable,
     Callable,
-    Coroutine,
     Iterable,
     Iterator,
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
-from dataclasses import dataclass
 from functools import partial
 from typing import Any, Generic, TypeVar
 
+from ._components._build import (
+    _build_pipeline,
+    _ProcessConfig,
+    _PType,
+    _SinkConfig,
+    _SourceConfig,
+    PipelineFailure,
+)
 from ._components._pipe import (
     _Aggregate,
     _disaggregate,
-    _ordered_pipe,
-    _pipe,
     _PipeArgs,
 )
-from ._components._sink import _sink
-from ._components._source import _source
 from ._convert import Callables
 from ._hook import PipelineHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
-from ._utils import create_task, iterate_in_subprocess
+from ._utils import iterate_in_subprocess
 
 __all__ = [
     "PipelineFailure",
@@ -53,155 +53,9 @@ T_ = TypeVar("T_")
 U_ = TypeVar("U_")
 
 
-# The following is how we intend pipeline to behave. If the implementation
-# is inconsistent with the following, it is a bug.
-#
-# 1. Successful execution.
-#
-#    Assumption: The consumer keeps consuming the data from the output queue.
-#
-#    Each stage completes without failure.
-#    The source will pass EOF, and each stage receiving EOF will shut down,
-#    then pass EOF.
-#    EOF is not propagated to the output queue.
-#
-# 2. Failures at some stage. One or more stages fail.
-#
-#    Assumption: The consumer keeps consuming the data from the output queue.
-#
-#    Resolution:
-#      We want to keep the tasks downstream to failed ones alive, so that they
-#      can finish the ongoing works.
-#
-#    Actions:
-#      - The stage must pass EOF to the next queue, so that downstream stages
-#        can exit cleanly.
-#      - Passing EOF to the next queue can be blocked if the queue is full.
-#      - For a graceful exit, the assumption must be met.
-#      - The stages upstream to the failure must be cancelled.
-#
-# 3. Cancelled: The pipeline execution is cancelled.
-#
-#    Assumption: The consumer stopped consuming the data from the output queue.
-#
-#    Actions:
-#      - All the stages must be cancelled.
-#        (If tasks are blocked on async await, cancelling should do).
-#
-# Following the above intention, each stage must pass EOF to the output queue
-# unless the task was cancelled. See `_queue_stage_hook`.
-#
-
-
-################################################################################
-# Coroutine execution logics
-################################################################################
-
-
-# TODO [Python 3.11]: Migrate to ExceptionGroup
-class PipelineFailure(RuntimeError):
-    """PipelineFailure()
-    Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
-    """
-
-    def __init__(self, errs: dict[str, Exception]) -> None:
-        msg = []
-        for k, v in errs.items():
-            e = str(v)
-            msg.append(f"{k}:{e if e else type(v).__name__}")
-        msg.sort()
-
-        super().__init__(", ".join(msg))
-
-        # This is for unittesting.
-        self._errs = errs
-
-
-async def _run_pipeline_coroutines(
-    coros: list[tuple[str, Coroutine[None, None, None]]],
-) -> None:
-    """Run the pipeline coroutines and handle errors.
-
-    Args:
-        coros: The croutines each corresponds to a stage in pipelin.
-            IMPORTANT: The coroutinues must be in the order of src to sink.
-    """
-    tasks = [create_task(coro, name=name) for name, coro in coros]
-    pending = set(tasks)
-
-    while pending:
-        # Note:
-        # `asyncio.wait` does not automatically propagate the cancellation to its children.
-        # For graceful shutdown, we manually cancel the child tasks.
-        #
-        # Also, it seems asyncio loop throws Cancellation on most outer task.
-        # I am not sure where this behavior is documented, but here is an example script to
-        # demonstrate the behavior.
-        # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
-        try:
-            _, pending = await asyncio.wait(
-                pending, return_when=asyncio.FIRST_EXCEPTION
-            )
-        except asyncio.CancelledError:
-            for task in pending:
-                task.cancel()
-            await asyncio.wait(pending)
-            raise
-
-        if not pending:
-            break
-
-        # Check if any of the task caused an error.
-        # If an error occured, we cancel the stages upstream to the failed one,
-        # then continue waiting the downstream ones.
-        for i in range(len(tasks) - 1, -1, -1):
-            task = tasks[i]
-            if task.done() and not task.cancelled() and task.exception() is not None:
-                for task in tasks[:i]:
-                    task.cancel()
-                break
-
-    errs = {}
-    for task in tasks:
-        if not task.cancelled() and (err := task.exception()) is not None:
-            errs[task.get_name()] = err
-
-    if errs:
-        raise PipelineFailure(errs)
-
-
 ################################################################################
 # Build
 ################################################################################
-
-
-@dataclass
-class _SourceConfig(Generic[T]):
-    source: Iterable | AsyncIterable
-    buffer_size: int
-    queue_class: type[AsyncQueue[T]]
-
-
-class _PType(enum.IntEnum):
-    Pipe = 1
-    OrderedPipe = 2
-    Aggregate = 3
-    Disaggregate = 4
-
-
-@dataclass
-class _ProcessConfig(Generic[T, U]):
-    type_: _PType
-    args: _PipeArgs[T, U]
-    queue_class: type[AsyncQueue[U]] | None
-    report_stats_interval: float | None = None
-    buffer_size: int = 1
-
-
-@dataclass
-class _SinkConfig(Generic[T]):
-    buffer_size: int
-    queue_class: type[AsyncQueue[T]]
 
 
 def _get_op_name(op: Callable) -> str:
@@ -523,53 +377,6 @@ class PipelineBuilder(Generic[T, U]):
         self._sink = _SinkConfig(buffer_size, queue_class or DefaultQueue)
         return self
 
-    def _build(  # pyre-ignore: [3]
-        self,
-    ) -> tuple[Coroutine[None, None, None], list[AsyncQueue[Any]]]:
-        # Note:
-        # Make sure that coroutines are ordered from source to sink.
-        # `_run_pipeline_coroutines` expects and rely on this ordering.
-        coros = []
-        queues = []
-
-        # source
-        if (src := self._src) is None:
-            raise ValueError("Source is not set.")
-        else:
-            queues.append(src.queue_class("src_queue", src.buffer_size))
-            coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
-
-        # pipes
-        for i, cfg in enumerate(self._process_args, start=1):
-            queue_name = f"{cfg.args.name.split('(')[0]}_queue"
-            queue_class = cfg.queue_class or partial(
-                DefaultQueue, interval=cfg.report_stats_interval
-            )
-            queues.append(queue_class(queue_name, cfg.buffer_size))
-            in_queue, out_queue = queues[i - 1 : i + 1]
-
-            match cfg.type_:
-                case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
-                    coro = _pipe(in_queue, out_queue, cfg.args)
-                case _PType.OrderedPipe:
-                    coro = _ordered_pipe(in_queue, out_queue, cfg.args)
-                case _:  # pragma: no cover
-                    raise ValueError(f"Unexpected process type: {cfg.type_}")
-
-            coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
-
-        # sink
-        if (sink := self._sink) is not None:
-            queues.append(sink.queue_class("sink_queue", sink.buffer_size))
-            coros.append(
-                (
-                    f"AsyncPipeline::{len(self._process_args) + 1}_sink",
-                    _sink(*queues[-2:]),
-                )
-            )
-
-        return _run_pipeline_coroutines(coros), queues
-
     def _get_desc(self) -> list[str]:
         parts = []
         if self._src is not None:
@@ -616,7 +423,7 @@ class PipelineBuilder(Generic[T, U]):
                 async event loop.
                 If not specified, the maximum concurrency value is used.
         """
-        coro, queues = self._build()
+        coro, queues = _build_pipeline(self._src, self._process_args, self._sink)
 
         if num_threads is None:
             concurrencies = [cfg.args.concurrency for cfg in self._process_args]
