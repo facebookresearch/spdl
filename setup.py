@@ -46,13 +46,13 @@ def _get_ext_modules():
         if _SPDL_USE_FFMPEG_VERSION == "all" or _SPDL_USE_FFMPEG_VERSION == v:
             ext_modules.extend(
                 [
-                    Extension(f"spdl.lib.libspdl_ffmpeg{v}", sources=[]),
-                    Extension(f"spdl.lib._spdl_ffmpeg{v}", sources=[]),
+                    Extension(f"spdl.io.lib.libspdl_ffmpeg{v}", sources=[]),
+                    Extension(f"spdl.io.lib._spdl_ffmpeg{v}", sources=[]),
                 ]
             )
     if ext_modules and _SPDL_BUILD_STUB:
         ext_modules.append(
-            Extension("spdl.lib.__STUB__", sources=[]),
+            Extension("spdl.io.lib.__STUB__", sources=[]),
         )
 
     return ext_modules
