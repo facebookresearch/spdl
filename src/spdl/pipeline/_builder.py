@@ -346,7 +346,7 @@ class PipelineBuilder(Generic[T, U]):
 
     def add_sink(
         self,
-        buffer_size: int,
+        buffer_size: int = 3,
         queue_class: type[AsyncQueue[U]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Attach a buffer to the end of the pipeline.
@@ -423,7 +423,13 @@ class PipelineBuilder(Generic[T, U]):
                 async event loop.
                 If not specified, the maximum concurrency value is used.
         """
-        coro, queues = _build_pipeline(self._src, self._process_args, self._sink)
+        if (src := self._src) is None:
+            raise RuntimeError("Source is not set.")
+
+        if (sink := self._sink) is None:
+            raise RuntimeError("Sink is not set.")
+
+        coro, queues = _build_pipeline(src, self._process_args, sink)
 
         if num_threads is None:
             concurrencies = [cfg.args.concurrency for cfg in self._process_args]
