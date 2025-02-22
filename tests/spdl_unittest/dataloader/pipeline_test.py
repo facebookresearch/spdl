@@ -405,7 +405,7 @@ def test_pipeline_stage_hook_wrong_def1():
             .add_source(range(10))
             .pipe(passthrough, hooks=[_hook()])
             .add_sink()
-            .build()
+            .build(num_threads=1)
         )
 
 
@@ -427,7 +427,7 @@ def test_pipeline_stage_hook_wrong_def2():
             .add_source(range(10))
             .pipe(passthrough, hooks=[_hook()])
             .add_sink()
-            .build()
+            .build(num_threads=1)
         )
 
 
@@ -469,7 +469,7 @@ def test_pipeline_hook_drop_last(drop_last: bool):
         .aggregate(5, hooks=[h2], drop_last=drop_last)
         .pipe(_fail, hooks=[h3])
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -524,7 +524,7 @@ def test_pipeline_hook_multiple():
         .add_source(range(10))
         .pipe(passthrough, hooks=hooks)
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -554,7 +554,7 @@ def test_pipeline_hook_failure_enter_stage():
         .add_source(range(10))
         .pipe(passthrough, hooks=[_enter_stage_fail()])
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -579,7 +579,7 @@ def test_pipeline_hook_failure_exit_stage():
         .add_source(range(10))
         .pipe(passthrough, hooks=[_exit_stage_fail()])
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
     with pipeline.auto_stop():
         assert list(range(10)) == list(pipeline.get_iterator(timeout=3))
@@ -602,7 +602,7 @@ def test_pipeline_hook_failure_enter_task():
         .add_source(range(10))
         .pipe(passthrough, hooks=[_hook()])
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -626,7 +626,7 @@ def test_pipeline_hook_failure_exit_task():
         .add_source(range(10))
         .pipe(passthrough, hooks=[_exit_stage_fail()])
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -657,7 +657,7 @@ def test_pipeline_hook_exit_task_capture_error():
         .add_source([None])
         .pipe(_fail, hooks=[_capture()])
         .add_sink(100)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -775,7 +775,9 @@ def test_pipeline_str_smoke():
 def test_pipeline_reiterate():
     """Pipeline can be iterated multiple times as long as it's not stopped"""
 
-    pipeline = PipelineBuilder().add_source(range(20)).add_sink(1000).build()
+    pipeline = (
+        PipelineBuilder().add_source(range(20)).add_sink(1000).build(num_threads=1)
+    )
 
     with pipeline.auto_stop():
         for i in range(5):
@@ -794,7 +796,7 @@ def test_pipeline_resume():
     # If we pass `range(10)` directly, new iterator is created at every run.
     src = iter(range(10))
 
-    pipeline = PipelineBuilder().add_source(src).add_sink(1000).build()
+    pipeline = PipelineBuilder().add_source(src).add_sink(1000).build(num_threads=1)
 
     with pipeline.auto_stop():
         iterator = pipeline.get_iterator(timeout=3)
@@ -817,7 +819,7 @@ def test_pipeline_infinite_loop():
         while True:
             yield (i := i + 1)
 
-    pipeline = PipelineBuilder().add_source(src()).add_sink(1000).build()
+    pipeline = PipelineBuilder().add_source(src()).add_sink(1000).build(num_threads=1)
 
     with pipeline.auto_stop():
         i = 0
@@ -849,7 +851,7 @@ def test_pipeline_order_complete():
         .add_source(src)
         .pipe(_sleep, concurrency=10, output_order="completion")
         .add_sink(100)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -871,7 +873,7 @@ def test_pipeline_order_input():
         .add_source(src)
         .pipe(_sleep, concurrency=10, output_order="input")
         .add_sink(100)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -893,7 +895,7 @@ def test_pipeline_order_input_sync_func():
         .add_source(src)
         .pipe(_sleep, concurrency=10, output_order="input")
         .add_sink(100)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -908,7 +910,7 @@ def test_pipeline_order_input_sync_func():
 def test_pipeline_noop():
     """AsyncPipeline2 functions without pipe."""
 
-    apl = PipelineBuilder().add_source(range(10)).add_sink(1).build()
+    apl = PipelineBuilder().add_source(range(10)).add_sink(1).build(num_threads=1)
     with pytest.raises(RuntimeError):
         apl.get_item(timeout=1)
 
@@ -927,7 +929,13 @@ def test_pipeline_noop():
 def test_pipeline_passthrough():
     """AsyncPipeline2 can passdown items operation."""
 
-    apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(passthrough)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
     with pytest.raises(RuntimeError):
         apl.get_item(timeout=1)
 
@@ -952,7 +960,7 @@ def test_pipeline_skip():
             yield _SKIP
         yield _SKIP
 
-    pipeline = PipelineBuilder().add_source(src()).add_sink(1000).build()
+    pipeline = PipelineBuilder().add_source(src()).add_sink(1000).build(num_threads=1)
 
     with pipeline.auto_stop():
         for i in range(10):
@@ -967,7 +975,9 @@ def test_pipeline_skip_odd():
     async def odd(i):
         return i if i % 2 else _SKIP
 
-    pipeline = PipelineBuilder().add_source(src).pipe(odd).add_sink(1000).build()
+    pipeline = (
+        PipelineBuilder().add_source(src).pipe(odd).add_sink(1000).build(num_threads=1)
+    )
 
     with pipeline.auto_stop():
         for i in range(5):
@@ -980,7 +990,13 @@ def test_pipeline_skip_odd():
 def test_pipeline_lambda():
     """AsyncPipeline2 pipe supports lambda items operation."""
 
-    apl = PipelineBuilder().add_source(range(10)).pipe(lambda x: x).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(lambda x: x)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
     with pytest.raises(RuntimeError):
         apl.get_item(timeout=1)
 
@@ -1004,7 +1020,7 @@ def test_pipeline_simple():
         .pipe(adouble)
         .pipe(aplus1)
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1017,7 +1033,13 @@ def test_pipeline_aggregate():
 
     src = list(range(13))
 
-    pipeline = PipelineBuilder().add_source(src).aggregate(4).add_sink(1000).build()
+    pipeline = (
+        PipelineBuilder()
+        .add_source(src)
+        .aggregate(4)
+        .add_sink(1000)
+        .build(num_threads=1)
+    )
 
     with pipeline.auto_stop():
         results = list(pipeline.get_iterator(timeout=3))
@@ -1034,7 +1056,7 @@ def test_pipeline_aggregate_drop_last():
         .add_source(src)
         .aggregate(4, drop_last=True)
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1047,7 +1069,13 @@ def test_pipeline_disaggregate():
 
     src = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12]]
 
-    pipeline = PipelineBuilder().add_source(src).disaggregate().add_sink(1000).build()
+    pipeline = (
+        PipelineBuilder()
+        .add_source(src)
+        .disaggregate()
+        .add_sink(1000)
+        .build(num_threads=1)
+    )
 
     with pipeline.auto_stop():
         results = list(pipeline.get_iterator(timeout=3))
@@ -1067,7 +1095,7 @@ def test_pipeline_source_failure():
         .pipe(adouble)
         .pipe(aplus1)
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1082,7 +1110,11 @@ def test_pipeline_type_error():
         return i
 
     pipeline = (
-        PipelineBuilder().add_source(range(10)).pipe(wrong_sig).add_sink(1000).build()
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(wrong_sig)
+        .add_sink(1000)
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1104,7 +1136,7 @@ def test_pipeline_task_failure():
         .pipe(adouble)
         .pipe(aplus1)
         .add_sink(1000)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1115,7 +1147,13 @@ def test_pipeline_task_failure():
 def test_pipeline_cancel_empty():
     """AsyncPipeline2 can be cancelled while it's blocked on the pipeline."""
 
-    apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(passthrough)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
     # The nuffer and coroutinues will be blocked holding items as follows:
     #
     # [src] --|queue(1)|--> [passthrough] --|queue(1)|--> [sink] -->|queue(1)|
@@ -1163,7 +1201,7 @@ def test_pipeline_fail_middle():
         .pipe(fail)
         .pipe(pwc)
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     with pytest.raises(RuntimeError):
@@ -1184,7 +1222,11 @@ def test_pipeline_fail_middle():
 def test_pipeline_eof_stop():
     """APL2 can be closed after reaching EOF."""
     apl = (
-        PipelineBuilder().add_source(range(2)).pipe(passthrough).add_sink(1000).build()
+        PipelineBuilder()
+        .add_source(range(2))
+        .pipe(passthrough)
+        .add_sink(1000)
+        .build(num_threads=1)
     )
     with apl.auto_stop():
         for i in range(2):
@@ -1198,7 +1240,13 @@ def test_pipeline_eof_stop():
 def test_pipeline_iterator():
     """Can iterate the pipeline."""
 
-    apl = PipelineBuilder().add_source(range(10)).pipe(passthrough).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(passthrough)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
 
     with apl.auto_stop():
         for i, item in enumerate(apl.get_iterator(timeout=1)):
@@ -1224,7 +1272,7 @@ def test_pipeline_iter_and_next():
        the previous iterator.
     """
 
-    apl = PipelineBuilder().add_source(range(12)).add_sink(1).build()
+    apl = PipelineBuilder().add_source(range(12)).add_sink(1).build(num_threads=1)
 
     with apl.auto_stop():
         iterator = iter(apl)
@@ -1261,7 +1309,13 @@ def test_pipeline_stuck():
         print(f"Sleeping: {i} - done")
         return i
 
-    apl = PipelineBuilder().add_source(range(3)).pipe(delay).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(delay)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
 
     with apl.auto_stop():
         for i, item in enumerate(apl.get_iterator(timeout=3)):
@@ -1276,7 +1330,13 @@ def test_pipeline_pipe_agen():
         for i in range(3):
             yield v + i
 
-    apl = PipelineBuilder().add_source(range(3)).pipe(dup_increment).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
 
     expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
     with apl.auto_stop():
@@ -1291,7 +1351,13 @@ def test_pipeline_pipe_gen():
         for i in range(3):
             yield v + i
 
-    apl = PipelineBuilder().add_source(range(3)).pipe(dup_increment).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
 
     expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
     with apl.auto_stop():
@@ -1312,7 +1378,13 @@ def test_pipeline_pipe_gen_incremental():
             time.sleep(0.1)
             yield v + i
 
-    apl = PipelineBuilder().add_source(range(3)).pipe(dup_increment).add_sink(1).build()
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
 
     expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
     with apl.auto_stop():
@@ -1340,7 +1412,7 @@ def test_pipeline_pipe_agen_wrong_hook():
         .add_source(range(3))
         .pipe(dup_increment, hooks=[_Hook()])
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
@@ -1356,7 +1428,7 @@ def test_pipeline_source_agen():
         for i in range(3):
             yield i
 
-    apl = PipelineBuilder().add_source(source()).add_sink(1).build()
+    apl = PipelineBuilder().add_source(source()).add_sink(1).build(num_threads=1)
 
     expected = [0, 1, 2]
     with apl.auto_stop():
@@ -1367,7 +1439,7 @@ def test_pipeline_source_agen():
 def test_pipeline_start_multiple_times():
     """`Pipeline.start` cannot be called multiple times."""
 
-    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build()
+    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build(num_threads=1)
 
     with pipeline.auto_stop():
         with pytest.raises(RuntimeError):
@@ -1377,7 +1449,7 @@ def test_pipeline_start_multiple_times():
 def test_pipeline_stop_multiple_times():
     """`Pipeline.stop` can be called multiple times."""
 
-    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build()
+    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build(num_threads=1)
 
     pipeline.stop()
     pipeline.stop()
@@ -1394,7 +1466,7 @@ def test_pipeline_stop_multiple_times():
 
 
 def _run_pipeline_without_closing():
-    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build()
+    pipeline = PipelineBuilder().add_source(range(10)).add_sink(1).build(num_threads=1)
     pipeline.start()
 
 
@@ -1449,7 +1521,7 @@ def test_pipeline_custom_pipe_executor():
         .add_source(range(num_threads))
         .pipe(op, executor=executor, concurrency=num_threads)
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     t0 = time.monotonic()
@@ -1482,7 +1554,7 @@ def test_pipeline_custom_pipe_executor_process():
         .add_source(range(num_processes))
         .pipe(get_pid, executor=executor, concurrency=num_processes)
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1507,7 +1579,7 @@ def test_pipeline_custom_pipe_executor_process_generator():
         .add_source(range(4))
         .pipe(_range, executor=executor, concurrency=1)
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1524,7 +1596,7 @@ def test_pipeline_custom_pipe_executor_async():
     with pytest.raises(ValueError):
         PipelineBuilder().add_source(range(10)).pipe(
             op, executor=ThreadPoolExecutor()
-        ).add_sink(1).build()
+        ).add_sink(1).build(num_threads=1)
 
 
 def test_pipeline_pipe_kwargs():
@@ -1538,7 +1610,7 @@ def test_pipeline_pipe_kwargs():
         .add_source(range(10))
         .pipe(op, kwargs={"j": 2})
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1557,7 +1629,7 @@ def test_pipeline_pipe_kwargs_async():
         .add_source(range(10))
         .pipe(op, kwargs={"j": 2})
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1577,7 +1649,7 @@ def test_pipeline_pipe_kwargs_iter():
         .add_source([1])
         .pipe(op, kwargs={"vals": list(range(10))})
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():
@@ -1597,7 +1669,7 @@ def test_pipeline_pipe_kwargs_async_iter():
         .add_source([1])
         .pipe(op, kwargs={"vals": list(range(10))})
         .add_sink(1)
-        .build()
+        .build(num_threads=1)
     )
 
     with pipeline.auto_stop():

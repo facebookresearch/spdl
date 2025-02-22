@@ -415,13 +415,12 @@ class PipelineBuilder(Generic[T, U]):
     def __str__(self) -> str:
         return "\n".join([repr(self), *self._get_desc()])
 
-    def build(self, *, num_threads: int | None = None) -> Pipeline[U]:
+    def build(self, *, num_threads: int) -> Pipeline[U]:
         """Build the pipeline.
 
         Args:
             num_threads: The number of threads in the thread pool attached to
                 async event loop.
-                If not specified, the maximum concurrency value is used.
         """
         if (src := self._src) is None:
             raise RuntimeError("Source is not set.")
@@ -431,10 +430,6 @@ class PipelineBuilder(Generic[T, U]):
 
         coro, queues = _build_pipeline(src, self._process_args, sink)
 
-        if num_threads is None:
-            concurrencies = [cfg.args.concurrency for cfg in self._process_args]
-            num_threads = max(concurrencies) if concurrencies else 4
-        assert num_threads is not None
         executor = ThreadPoolExecutor(
             max_workers=num_threads,
             thread_name_prefix="spdl_",
