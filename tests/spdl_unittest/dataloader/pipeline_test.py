@@ -404,6 +404,7 @@ def test_pipeline_stage_hook_wrong_def1():
             PipelineBuilder()
             .add_source(range(10))
             .pipe(passthrough, hooks=[_hook()])
+            .add_sink()
             .build()
         )
 
@@ -425,6 +426,7 @@ def test_pipeline_stage_hook_wrong_def2():
             PipelineBuilder()
             .add_source(range(10))
             .pipe(passthrough, hooks=[_hook()])
+            .add_sink()
             .build()
         )
 

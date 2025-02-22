@@ -109,9 +109,9 @@ class _SinkConfig(Generic[T]):
 
 
 def _build_pipeline(  # pyre-ignore: [2]
-    src: _SourceConfig[T] | None,
+    src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
-    sink: _SinkConfig[U] | None,
+    sink: _SinkConfig[U],
 ) -> tuple[Coroutine[None, None, None], list[AsyncQueue[Any]]]:
     # Note:
     # Make sure that coroutines are ordered from source to sink.
@@ -120,11 +120,8 @@ def _build_pipeline(  # pyre-ignore: [2]
     queues = []
 
     # source
-    if src is not None:
-        queues.append(src.queue_class("src_queue", src.buffer_size))
-        coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
-    else:
-        raise RuntimeError("Source is not set.")
+    queues.append(src.queue_class("src_queue", src.buffer_size))
+    coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
@@ -146,14 +143,13 @@ def _build_pipeline(  # pyre-ignore: [2]
         coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
 
     # sink
-    if sink is not None:
-        queues.append(sink.queue_class("sink_queue", sink.buffer_size))
-        coros.append(
-            (
-                f"AsyncPipeline::{len(process_args) + 1}_sink",
-                _sink(*queues[-2:]),
-            )
+    queues.append(sink.queue_class("sink_queue", sink.buffer_size))
+    coros.append(
+        (
+            f"AsyncPipeline::{len(process_args) + 1}_sink",
+            _sink(*queues[-2:]),
         )
+    )
 
     return _run_pipeline_coroutines(coros), queues
 
