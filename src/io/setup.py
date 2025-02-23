@@ -146,7 +146,7 @@ class CMakeBuild(build_ext):
             return
         BUILT_ONCE = True
 
-        install_dir = os.path.abspath(os.path.join(self.build_lib, "spdl"))
+        install_dir = os.path.abspath(os.path.join(self.build_lib, "spdl", "io"))
 
         cmds = _get_cmake_commands(self.build_temp, install_dir, self.debug)
 
@@ -184,14 +184,14 @@ class CMakeBuild(build_ext):
 
 
 def main():
+    print(find_packages(include="spdl*"))
     setup(
         name="spdl",
-        version="0.0.6",
+        version="0.0.7",
         author="Moto Hira",
         description="SPDL: Scalable and Performant Data Loading.",
         long_description="Fast multimedia data loading and processing.",
-        packages=find_packages(where="src"),
-        package_dir={"": "src"},
+        packages=find_packages(include="spdl*"),
         ext_modules=_get_ext_modules(),
         cmdclass={"build_ext": CMakeBuild},
         python_requires=">=3.10",
