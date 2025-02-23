@@ -32,7 +32,7 @@ from collections.abc import Awaitable, Callable, Iterator
 from pathlib import Path
 
 import spdl.io
-import spdl.utils
+import spdl.io.utils
 import torch
 from spdl.dataloader import DataLoader
 from spdl.source.imagenet import ImageNet
@@ -381,7 +381,7 @@ def benchmark(
 
             with (
                 torch.profiler.record_function(f"iter_{i}"),
-                spdl.utils.trace_event(f"iter_{i}"),
+                spdl.io.utils.trace_event(f"iter_{i}"),
             ):
                 top1, top5 = model(batch, labels)
 
@@ -443,7 +443,7 @@ def entrypoint(args: list[int] | None = None):
     with (
         torch.no_grad(),
         profile() if args.trace else contextlib.nullcontext() as prof,
-        spdl.utils.tracing(f"{trace_path}.pftrace", enable=args.trace is not None),
+        spdl.io.utils.tracing(f"{trace_path}.pftrace", enable=args.trace is not None),
     ):
         benchmark(dataloader, model, args.max_batches)
 

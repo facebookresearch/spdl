@@ -11,9 +11,9 @@ import time
 import numpy as np
 import pytest
 import spdl.io
-import spdl.utils
+import spdl.io.utils
 from spdl.io import get_audio_filter_desc, get_video_filter_desc
-from spdl.lib import _libspdl
+from spdl.io.lib import _libspdl
 
 
 def test_failure():
@@ -125,7 +125,7 @@ def test_decode_video_clips(get_sample):
 
 def test_decode_video_clips_num_frames(get_sample):
     """Can decode video clips with padding/dropping."""
-    if "tpad" not in spdl.utils.get_ffmpeg_filters():
+    if "tpad" not in spdl.io.utils.get_ffmpeg_filters():
         raise pytest.skip("tpad filter is not available. Install FFmepg >= 4.2.")
 
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"

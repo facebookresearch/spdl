@@ -9,7 +9,7 @@
 import numpy as np
 import pytest
 import spdl.io
-import spdl.utils
+import spdl.io.utils
 from spdl.io import get_filter_desc, get_video_filter_desc
 
 
@@ -211,7 +211,7 @@ def test_batch_decode_image_rgb24(get_samples):
 
 def test_batch_video_conversion(get_sample):
     """Can decode video clips."""
-    if "tpad" not in spdl.utils.get_ffmpeg_filters():
+    if "tpad" not in spdl.io.utils.get_ffmpeg_filters():
         raise pytest.skip("tpad filter is not available. Install FFmepg >= 4.2.")
 
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"

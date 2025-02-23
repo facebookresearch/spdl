@@ -50,9 +50,9 @@ from spdl.io import (
     VideoFrames,
     VideoPackets,
 )
-from spdl.lib import _libspdl
 
 from . import _preprocessing
+from .lib import _libspdl
 
 __all__ = [
     # DEMUXING

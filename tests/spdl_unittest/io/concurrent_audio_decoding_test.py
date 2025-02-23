@@ -10,7 +10,7 @@
 import numpy as np
 import pytest
 import spdl.io
-import spdl.utils
+import spdl.io.utils
 from spdl.io import get_audio_filter_desc, get_filter_desc
 
 

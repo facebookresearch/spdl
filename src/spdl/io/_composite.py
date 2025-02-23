@@ -22,10 +22,10 @@ from spdl.io import (
     ImagePackets,
     VideoPackets,
 )
-from spdl.lib import _libspdl
 
 from . import _core, _preprocessing
 from ._core import _FILTER_DESC_DEFAULT
+from .lib import _libspdl
 
 __all__ = [
     "load_audio",

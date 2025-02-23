@@ -8,8 +8,9 @@
 
 from collections.abc import Mapping
 
-import spdl.lib
 from numpy.lib import format as np_format
+
+from . import lib as _libspdl
 
 __all__ = [
     "NpzFile",
@@ -57,7 +58,7 @@ class ZipArchive:
 
 
 def zip_archive(data: bytes) -> ZipArchive:
-    handle = spdl.lib._zip.zip_archive(data)
+    handle = _libspdl._zip.zip_archive(data)
     return ZipArchive(handle, data)
 
 
