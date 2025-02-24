@@ -58,7 +58,7 @@ class _ProcessConfig(Generic[T, U]):
     type_: _PType
     args: _PipeArgs[T, U]
     queue_class: type[AsyncQueue[U]] | None
-    report_stats_interval: float | None = None
+    report_stats_interval: float = -1
     buffer_size: int = 1
 
 
@@ -108,10 +108,23 @@ class _SinkConfig(Generic[T]):
 #
 
 
+def _get_queue(
+    queue_class: type[AsyncQueue[T]] | None,
+    interval2: float,
+    interval1: float = -1,
+) -> type[AsyncQueue[T]]:
+    if queue_class is not None:
+        return queue_class
+
+    interval = interval2 if interval1 < 0 else interval1
+    return partial(DefaultQueue, interval=interval)  # pyre-ignore: [7]
+
+
 def _build_pipeline(
     src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
     sink: _SinkConfig[U],
+    report_stats_interval: float,
 ) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
     # Note:
     # Make sure that coroutines are ordered from source to sink.
@@ -120,15 +133,16 @@ def _build_pipeline(
     queues = []
 
     # source
+    queue_class = _get_queue(src.queue_class, report_stats_interval)
     queues.append(src.queue_class("src_queue", src.buffer_size))
     coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
-        queue_name = f"{cfg.args.name.split('(')[0]}_queue"
-        queue_class = cfg.queue_class or partial(
-            DefaultQueue, interval=cfg.report_stats_interval
+        queue_class = _get_queue(
+            cfg.queue_class, report_stats_interval, cfg.report_stats_interval
         )
+        queue_name = f"{cfg.args.name.split('(')[0]}_queue"
         queues.append(queue_class(queue_name, cfg.buffer_size))
         in_queue, out_queue = queues[i - 1 : i + 1]
 
@@ -143,7 +157,8 @@ def _build_pipeline(
         coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
 
     # sink
-    output_queue = sink.queue_class("sink_queue", sink.buffer_size)
+    queue_class = _get_queue(sink.queue_class, report_stats_interval)
+    output_queue = queue_class("sink_queue", sink.buffer_size)
     coros.append(
         (
             f"AsyncPipeline::{len(process_args) + 1}_sink",

@@ -133,7 +133,7 @@ class PipelineBuilder(Generic[T, U]):
         executor: Executor | None = None,
         name: str | None = None,
         hooks: list[PipelineHook] | None = None,
-        report_stats_interval: float | None = None,
+        report_stats_interval: float = -1,
         output_order: str = "completion",
         queue_class: type[AsyncQueue[U_]] | None = None,
         **_kwargs,  # pyre-ignore: [2]
@@ -273,7 +273,7 @@ class PipelineBuilder(Generic[T, U]):
         *,
         drop_last: bool = False,
         hooks: list[PipelineHook] | None = None,
-        report_stats_interval: float | None = None,
+        report_stats_interval: float = -1,
         queue_class: type[AsyncQueue[T]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Buffer the items in the pipeline.
@@ -314,7 +314,7 @@ class PipelineBuilder(Generic[T, U]):
         /,
         *,
         hooks: list[PipelineHook] | None = None,
-        report_stats_interval: float | None = None,
+        report_stats_interval: float = -1,
         queue_class: type[AsyncQueue[T_]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline.
@@ -415,12 +415,22 @@ class PipelineBuilder(Generic[T, U]):
     def __str__(self) -> str:
         return "\n".join([repr(self), *self._get_desc()])
 
-    def build(self, *, num_threads: int) -> Pipeline[U]:
+    def build(
+        self,
+        *,
+        num_threads: int,
+        report_stats_interval: float = -1,
+    ) -> Pipeline[U]:
         """Build the pipeline.
 
         Args:
             num_threads: The number of threads in the thread pool attached to
                 async event loop.
+            report_stats_interval: When provided, report the pipline performance stats
+                every given interval. Unit: [sec]
+
+                This is only effective if there is no custom hook or custom AsyncQueue
+                provided for stages.
         """
         if (src := self._src) is None:
             raise RuntimeError("Source is not set.")
@@ -428,7 +438,9 @@ class PipelineBuilder(Generic[T, U]):
         if (sink := self._sink) is None:
             raise RuntimeError("Sink is not set.")
 
-        coro, queues = _build_pipeline(src, self._process_args, sink)
+        coro, queues = _build_pipeline(
+            src, self._process_args, sink, report_stats_interval
+        )
 
         executor = ThreadPoolExecutor(
             max_workers=num_threads,

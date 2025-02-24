@@ -67,7 +67,7 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-def _get_hooks(args: _PipeArgs[T, U], interval: float | None) -> list[PipelineHook]:
+def _get_hooks(args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
     if args.hooks is not None:
         return args.hooks
     return [TaskStatsHook(args.name, args.concurrency, interval)]
@@ -127,7 +127,7 @@ def _pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
-    report_stats_interval: float | None = None,
+    report_stats_interval: float = -1,
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
@@ -184,7 +184,7 @@ def _ordered_pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
-    report_stats_interval: float | None = None,
+    report_stats_interval: float = -1,
 ) -> Coroutine:
     """
 
