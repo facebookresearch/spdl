@@ -184,13 +184,13 @@ cython_debug/
 #.idea/
 
 
-!/src/spdl/lib/
-/src/spdl/lib/*
-!/src/spdl/lib/*.h
-!/src/spdl/lib/*.py
-!/src/spdl/lib/*.cpp
-!/src/spdl/lib/core/
-!/src/spdl/lib/core/*.h
-!/src/spdl/lib/core/*.py
-!/src/spdl/lib/core/*.cpp
-!/src/spdl/lib/CMakeLists.txt
+!/src/spdl/io/lib/
+/src/spdl/io/lib/*
+!/src/spdl/io/lib/*.h
+!/src/spdl/io/lib/*.py
+!/src/spdl/io/lib/*.cpp
+!/src/spdl/io/lib/core/
+!/src/spdl/io/lib/core/*.h
+!/src/spdl/io/lib/core/*.py
+!/src/spdl/io/lib/core/*.cpp
+!/src/spdl/io/lib/CMakeLists.txt
