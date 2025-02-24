@@ -16,8 +16,6 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-#include <glog/logging.h>
-
 extern "C" {
 #include <libavutil/frame.h>
 }
