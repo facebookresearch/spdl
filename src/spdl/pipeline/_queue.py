@@ -68,7 +68,7 @@ class StatsQueue(AsyncQueue[T]):
         self,
         name: str,
         buffer_size: int = 0,
-        interval: float | None = None,
+        interval: float = -1,
     ) -> None:
         super().__init__(name, buffer_size)
 
@@ -98,7 +98,7 @@ class StatsQueue(AsyncQueue[T]):
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
         t0 = time.monotonic()
-        if self.interval is not None:
+        if self.interval > 0:
             coro = _periodic_dispatch(self._log_interval_stats, self.interval)
             self._int_t0 = t0
             self._int_task = create_task(

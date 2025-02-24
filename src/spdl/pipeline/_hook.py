@@ -257,6 +257,7 @@ def _task_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
 async def _periodic_dispatch(
     afun: Callable[[], Coroutine[None, None, None]], interval: float
 ) -> None:
+    assert interval > 0, "[InternalError] `interval` must be greater than 0."
     tasks: set[Task] = set()
     while True:
         await asyncio.sleep(interval)
@@ -278,8 +279,9 @@ class TaskStatsHook(PipelineHook):
         self,
         name: str,
         concurrency: int,
-        interval: float | None = None,
+        interval: float = -1,
     ) -> None:
+        assert interval is not None
         self.name = name
         self.concurrency = concurrency
         self.interval = interval
@@ -298,7 +300,7 @@ class TaskStatsHook(PipelineHook):
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
         """Track the stage runtime and log the task stats."""
-        if self.interval is not None:
+        if self.interval > 0:
             coro = _periodic_dispatch(self._log_interval_stats, self.interval)
             self._int_t0 = time.monotonic()
             self._int_task = create_task(
