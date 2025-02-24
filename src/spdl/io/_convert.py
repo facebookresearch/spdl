@@ -6,8 +6,9 @@
 
 # pyre-unsafe
 
-from spdl._internal import import_utils
 from spdl.io import CPUBuffer, CUDABuffer
+
+from ._internal import import_utils
 
 torch = import_utils.lazy_import("torch")
 cuda = import_utils.lazy_import("numba.cuda")

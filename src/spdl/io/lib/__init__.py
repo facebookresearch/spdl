@@ -20,6 +20,8 @@ import sys
 from types import ModuleType
 from typing import Any
 
+from spdl.io._internal import _log_api_usage_once
+
 _LG = logging.getLogger(__name__)
 
 __all__ = [
@@ -34,7 +36,7 @@ def __dir__() -> list[str]:
 
 def __getattr__(name: str) -> Any:
     if name == "_libspdl":
-        from spdl._internal.import_utils import _LazilyImportedModule
+        from spdl.io._internal.import_utils import _LazilyImportedModule
 
         return _LazilyImportedModule(name, _import_libspdl)
 
@@ -65,7 +67,7 @@ def _import_libspdl() -> ModuleType:
             continue
 
         try:
-            ext.log_api_usage("spdl")
+            _log_api_usage_once("spdl")
         except Exception:
             _LG.debug("Failed to log API usage.", exc_info=True)
 

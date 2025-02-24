@@ -19,6 +19,8 @@ from enum import IntEnum
 from threading import Event as SyncEvent, Thread
 from typing import Any, Generic, TypeVar
 
+from spdl._internal import _log_api_usage_once
+
 from ._queue import AsyncQueue
 from ._utils import create_task
 
@@ -273,12 +275,7 @@ class Pipeline(Generic[T]):
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
 
-        try:
-            import spdl.io.lib
-
-            spdl.io.lib._libspdl.log_api_usage("spdl.pipeline.Pipeline")
-        except Exception:
-            pass  # ignore if not supported.
+        _log_api_usage_once("spdl.pipeline.Pipeline")
 
     def __str__(self) -> str:
         return self._str
