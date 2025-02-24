@@ -7,8 +7,9 @@ API Reference
    :caption: API Reference
    :recursive:
 
-   spdl.io
    spdl.pipeline
    spdl.dataloader
    spdl.source
-   spdl.utils
+
+   spdl.io
+   spdl.io.utils

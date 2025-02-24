@@ -10,10 +10,10 @@ import gc
 import numpy as np
 import pytest
 import spdl.io
-import spdl.utils
+import spdl.io.utils
 import torch
 
-if not spdl.utils.is_cuda_available():
+if not spdl.io.utils.is_cuda_available():
     pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
 
 

@@ -6,7 +6,7 @@
 
 # pyre-unsafe
 
-from spdl.lib import _libspdl
+from spdl.io.lib import _libspdl
 
 __all__ = [
     "get_ffmpeg_log_level",

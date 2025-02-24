@@ -7,7 +7,8 @@
 # pyre-unsafe
 
 from spdl.io import CPUStorage, CUDAConfig, DecodeConfig, DemuxConfig, EncodeConfig
-from spdl.lib import _libspdl
+
+from .lib import _libspdl
 
 __all__ = [
     "demux_config",

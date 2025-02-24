@@ -9,7 +9,7 @@
 import sys
 from contextlib import contextmanager
 
-from spdl.lib import _libspdl
+from spdl.io.lib import _libspdl
 
 __all__ = [
     "trace_counter",

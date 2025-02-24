@@ -123,7 +123,7 @@ API Reference
    ############################################################################
 
 {% block modules %}
-{% if modules %}
+{% if fullname == "spdl.source" and modules %}
 .. rubric:: Modules
 
 {% for item in modules %}

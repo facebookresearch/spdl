@@ -62,7 +62,7 @@ from pathlib import Path
 from threading import Event
 
 import spdl.io
-import spdl.utils
+import spdl.io.utils
 import torch
 from spdl.pipeline import Pipeline, PipelineBuilder
 from torch import Tensor
@@ -345,7 +345,7 @@ def worker_entrypoint(args: list[str]) -> PerfResult:
     trace_path = f"{args.trace}.{args.worker_id}"
     with (
         pipeline.auto_stop(),
-        spdl.utils.tracing(trace_path, enable=args.trace is not None),
+        spdl.io.utils.tracing(trace_path, enable=args.trace is not None),
     ):
         return benchmark(pipeline.get_iterator(), ev)
 

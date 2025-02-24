@@ -39,9 +39,9 @@ def __getattr__(name: str) -> Any:
         return _LazilyImportedModule(name, _import_libspdl)
 
     if name == "_zip":
-        import spdl.lib._zip  # pyre-ignore: [21]
+        import spdl.io.lib._zip  # pyre-ignore: [21]
 
-        return spdl.lib._zip
+        return spdl.io.lib._zip
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

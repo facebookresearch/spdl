@@ -274,9 +274,9 @@ class Pipeline(Generic[T]):
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
 
         try:
-            from spdl.lib import _libspdl
+            import spdl.io.lib
 
-            _libspdl.log_api_usage("spdl.pipeline.Pipeline")
+            spdl.io.lib._libspdl.log_api_usage("spdl.pipeline.Pipeline")
         except Exception:
             pass  # ignore if not supported.
 
