@@ -1,0 +1,28 @@
+extend-exclude = [
+  "setup.py",
+  "docs/source",
+  "third_party",
+  "setup.py",
+]
+
+[lint]
+extend-select = [
+  "ARG",  # flake8-unused-arguments
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "I",    # isort
+  "PGH",  # pygrep-hooks
+  "RUF",  # Ruff-specific
+  "T20",  # flake8-print
+]
+
+# Note: These settings are picked to match meta-internal linting
+[lint.isort]
+case-sensitive = false
+combine-as-imports = true
+default-section = "first-party"
+order-by-type = false
+
+[lint.per-file-ignores]
+"tests/**" = ["T20"]
+"examples/**" = ["T20"]
