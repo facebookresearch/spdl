@@ -146,7 +146,7 @@ class CMakeBuild(build_ext):
             return
         BUILT_ONCE = True
 
-        install_dir = os.path.abspath(os.path.join(self.build_lib, "spdl"))
+        install_dir = os.path.abspath(os.path.join(self.build_lib, "spdl", "io"))
 
         cmds = _get_cmake_commands(self.build_temp, install_dir, self.debug)
 
