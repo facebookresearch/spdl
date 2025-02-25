@@ -61,7 +61,7 @@ if (NOT DEFINED SPDL_PYTHON_BINDING_INSTALL_PREFIX)
   set(SPDL_PYTHON_BINDING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 endif ()
 
-add_subdirectory(src)
+add_subdirectory(src/libspdl)
 
 if (SPDL_BUILD_PYTHON_BINDING)
   add_subdirectory(third_party/nanobind)
