@@ -71,7 +71,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         # fmt: off
         [
             "cmake",
-            "-S", TP_DIR,
+            "-S", str(TP_DIR),
             "-B", deps_build_dir,
             "-DCMAKE_VERBOSE_MAKEFILE=OFF",
             "-DCMAKE_INSTALL_MESSAGE=NEVER",
@@ -91,7 +91,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         [
             "cmake",
             "-LAH",
-            "-S", SRC_DIR,
+            "-S", str(SRC_DIR),
             "-B", main_build_dir,
             f"-DCMAKE_VERBOSE_MAKEFILE={'ON' if debug else 'OFF'}",
             f"-DCMAKE_INSTALL_MESSAGE={'ALWAYS' if debug else 'LAZY'}",
@@ -189,28 +189,24 @@ def main():
     with open(THIS_DIR / "VERSION", "r") as f:
         version = f.read().strip()
 
-    with open(THIS_DIR / "AUTHORS", "r") as f:
-        authors = ", ".join(l.strip() for l in f if not l.startswith("#"))
+    exclude = find_packages(where="src", exclude=["spdl.io*"])
+    packages = find_packages(where="src", exclude=exclude)
 
-    with open(THIS_DIR / "README.md", "r") as f:
-        long_description = f.read()
+    if "bdist_wheel" in sys.argv:
+        print("*" * 40)
+        print("* BUILDING SPDL IO (EXPERIMENTAL)")
+        for pkg in packages:
+            print(f"* {pkg}")
+        print("*" * 40)
 
     setup(
-        name="spdl",
+        name="spdl_io",
         version=version,
-        author=authors,
-        description="SPDL: Scalable and Performant Data Loading.",
-        long_description=long_description,
-        long_description_content_type='text/markdown',
-        license_files=('LICENSE'),
-        packages=find_packages(where="src"),
+        packages=packages,
         package_dir={"": "src"},
+        license_files=('LICENSE', ),
         ext_modules=_get_ext_modules(),
         cmdclass={"build_ext": CMakeBuild},
-        python_requires=">=3.10",
-        install_requires=[
-            "numpy >= 1.21",
-        ],
     )
 
 
