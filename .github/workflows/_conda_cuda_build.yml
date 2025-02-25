@@ -31,6 +31,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: ${{ inputs.python-version }}
+          conda-remove-defaults: "true"
 
       - name: Install conda-build
         run: conda install conda-build

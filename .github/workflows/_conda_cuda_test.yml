@@ -44,7 +44,8 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: ${{ inputs.python-version }}
-
+          conda-remove-defaults: "true"
+  
       - name: Unit test
         run: |
           conda install -c file://${HOME}/package/ spdl

@@ -26,6 +26,7 @@ jobs:
     uses: ./.github/workflows/_conda_cpu_build.yml
     with:
       os: macos-latest
+      container: null
       python-version: "3.12"
       artifact: conda-cpu-py312
 
@@ -34,6 +35,7 @@ jobs:
     uses: ./.github/workflows/_conda_cpu_build.yml
     with:
       os: macos-latest
+      container: null
       python-version: "3.11"
       artifact: conda-cpu-py311
 
@@ -42,6 +44,7 @@ jobs:
     uses: ./.github/workflows/_conda_cpu_build.yml
     with:
       os: macos-latest
+      container: null
       python-version: "3.10"
       artifact: conda-cpu-py310
 

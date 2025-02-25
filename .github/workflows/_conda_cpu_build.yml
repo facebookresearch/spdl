@@ -6,6 +6,10 @@ on:
       os:
         required: true
         type: string
+      container:
+        type: string
+        required: false
+        default: quay.io/pypa/manylinux_2_34_x86_64
       python-version:
         required: true
         type: string
@@ -16,6 +20,7 @@ on:
 jobs:
   build:
     runs-on:  ${{ inputs.os }}
+    container: ${{ inputs.container }}
     defaults:
       run:
         shell: bash -el {0}
@@ -25,20 +30,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          python-version: ${{ inputs.python-version }}
-
-      - name: Install conda-build
-        run: conda install conda-build
-
-      - name: Build SPDL
+      - name: Build
         run: |
-          mkdir ~/package
-          conda build \
-            ./packaging/conda \
-            --python=${{ inputs.python-version }} \
-            --output-folder ~/package
+          # For mac
+          if ! command -v uv &> /dev/null; then
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+          fi
+          set -ex
+          cd packaging
+          uv python list --only-installed
+          uv python pin "${{ inputs.python-version }}"
+          uv venv
+          ./build_wheels.sh
+          mv dist ~/package
+
       - uses: actions/upload-artifact@v4
         name: Upload build artifact
         with:
@@ -47,3 +52,8 @@ jobs:
           if-no-files-found: error
           retention-days: 7
           overwrite: true
+
+      - name: Check package
+        run: |
+          /opt/python/cp310-cp310/bin/python -m pip install twine
+          /opt/python/cp310-cp310/bin/python -m twine check --strict ~/package/*.whl
