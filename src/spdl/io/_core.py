@@ -52,6 +52,7 @@ from spdl.io import (
 )
 
 from . import _preprocessing
+from ._internal import _log_api_usage_once
 from .lib import _libspdl
 
 __all__ = [
@@ -119,7 +120,7 @@ class Demuxer:
         Returns:
             Demuxed audio packets.
         """
-        _libspdl.log_api_usage("spdl.io.demux_audio")
+        _log_api_usage_once("spdl.io.demux_audio")
         return self._demuxer.demux_audio(window=window, **kwargs)
 
     def demux_video(
@@ -134,7 +135,7 @@ class Demuxer:
         Returns:
             Demuxed video packets.
         """
-        _libspdl.log_api_usage("spdl.io.demux_video")
+        _log_api_usage_once("spdl.io.demux_video")
         return self._demuxer.demux_video(window=window, **kwargs)
 
     def demux_image(self, **kwargs) -> ImagePackets:
@@ -143,7 +144,7 @@ class Demuxer:
         Returns:
             Demuxed image packets.
         """
-        _libspdl.log_api_usage("spdl.io.demux_image")
+        _log_api_usage_once("spdl.io.demux_image")
         return self._demuxer.demux_image(**kwargs)
 
     def has_audio(self) -> bool:
