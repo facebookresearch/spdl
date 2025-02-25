@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
 project(first-stage-deps)
 
-include(../../cmake/spdl_common_config.cmake)
+include(../_cmake/spdl_common_config.cmake)
 
 # Make all the symbols from third party libraries private
 set(CMAKE_C_VISIBILITY_PRESET hidden)
