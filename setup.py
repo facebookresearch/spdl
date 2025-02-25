@@ -13,7 +13,7 @@ from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 ROOT_DIR = os.path.dirname(__file__)
-TP_DIR = os.path.join(ROOT_DIR, "third_party")
+TP_DIR = os.path.join(ROOT_DIR, "src", "third_party")
 
 
 def _env(var, default=False):
