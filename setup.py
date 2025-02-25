@@ -13,7 +13,8 @@ from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 ROOT_DIR = os.path.dirname(__file__)
-TP_DIR = os.path.join(ROOT_DIR, "src", "third_party")
+SRC_DIR = os.path.join(ROOT_DIR, "src")
+TP_DIR = os.path.join(SRC_DIR, "third_party")
 
 
 def _env(var, default=False):
@@ -62,7 +63,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
     def _b(var):
         return "ON" if var else "OFF"
 
-    cfg = "Debug" if debug else "Release"
+    cfg = "Release"
     deps_build_dir = os.path.join(build_dir, "deps_first_stage")
     main_build_dir = os.path.join(build_dir, "main")
     deps_cmd = [
@@ -89,7 +90,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
         [
             "cmake",
             "-LAH",
-            "-S", ROOT_DIR,
+            "-S", SRC_DIR,
             "-B", main_build_dir,
             f"-DCMAKE_VERBOSE_MAKEFILE={'ON' if debug else 'OFF'}",
             f"-DCMAKE_INSTALL_MESSAGE={'ALWAYS' if debug else 'LAZY'}",
