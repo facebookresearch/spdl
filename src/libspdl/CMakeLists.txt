@@ -20,50 +20,50 @@ endif()
 set(defs)
 set(deps fmt::fmt glog::glog)
 set(srcs
-  libspdl/core/detail/ffmpeg/conversion.cpp
-  libspdl/core/detail/ffmpeg/ctx_utils.cpp
-  libspdl/core/detail/ffmpeg/bsf.cpp
-  libspdl/core/detail/ffmpeg/decoder.cpp
-  libspdl/core/detail/ffmpeg/demuxer.cpp
-  libspdl/core/detail/ffmpeg/demuxing.cpp
-  libspdl/core/detail/ffmpeg/encoding.cpp
-  libspdl/core/detail/ffmpeg/filter_graph.cpp
-  libspdl/core/detail/ffmpeg/wrappers.cpp
-  libspdl/core/detail/logging.cpp
-  libspdl/core/buffer/cpu.cpp
-  libspdl/core/frames/ffmpeg.cpp
-  libspdl/core/adaptor/adaptor.cpp
-  libspdl/core/adaptor/bytes.cpp
-  libspdl/core/storage/cpu.cpp
-  libspdl/core/transfer.cpp
-  libspdl/core/decoder.cpp
-  libspdl/core/decoding.cpp
-  libspdl/core/demuxing.cpp
-  libspdl/core/encoding.cpp
-  libspdl/core/packets.cpp
-  libspdl/core/utils.cpp
+  core/detail/ffmpeg/conversion.cpp
+  core/detail/ffmpeg/ctx_utils.cpp
+  core/detail/ffmpeg/bsf.cpp
+  core/detail/ffmpeg/decoder.cpp
+  core/detail/ffmpeg/demuxer.cpp
+  core/detail/ffmpeg/demuxing.cpp
+  core/detail/ffmpeg/encoding.cpp
+  core/detail/ffmpeg/filter_graph.cpp
+  core/detail/ffmpeg/wrappers.cpp
+  core/detail/logging.cpp
+  core/buffer/cpu.cpp
+  core/frames/ffmpeg.cpp
+  core/adaptor/adaptor.cpp
+  core/adaptor/bytes.cpp
+  core/storage/cpu.cpp
+  core/transfer.cpp
+  core/decoder.cpp
+  core/decoding.cpp
+  core/demuxing.cpp
+  core/encoding.cpp
+  core/packets.cpp
+  core/utils.cpp
   )
 
 if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
   list(APPEND deps CUDA::cudart CUDA::cuda_driver)
   list(APPEND srcs
-    libspdl/core/detail/cuda.cpp
-    libspdl/core/buffer/cuda.cpp
-    libspdl/core/storage/cuda.cpp
+    core/detail/cuda.cpp
+    core/buffer/cuda.cpp
+    core/storage/cuda.cpp
     )
 endif()
 
 if (SPDL_USE_NVCODEC)
   list(APPEND defs SPDL_USE_NVCODEC)
   list(APPEND srcs
-    libspdl/core/detail/nvdec/buffer.cpp
-    libspdl/core/detail/nvdec/converter.cpp
-    libspdl/core/detail/nvdec/color_conversion.cu
-    libspdl/core/detail/nvdec/decoder.cpp
-    libspdl/core/detail/nvdec/decoding.cpp
-    libspdl/core/detail/nvdec/utils.cpp
-    libspdl/core/detail/nvdec/wrapper.cpp
+    core/detail/nvdec/buffer.cpp
+    core/detail/nvdec/converter.cpp
+    core/detail/nvdec/color_conversion.cu
+    core/detail/nvdec/decoder.cpp
+    core/detail/nvdec/decoding.cpp
+    core/detail/nvdec/utils.cpp
+    core/detail/nvdec/wrapper.cpp
     )
   list(APPEND deps nvcuvid-stub)
 endif()
@@ -71,14 +71,14 @@ endif()
 if (SPDL_USE_NVJPEG)
   list(APPEND defs SPDL_USE_NVJPEG)
   list(APPEND srcs
-    libspdl/core/detail/nvjpeg/utils.cpp
-    libspdl/core/detail/nvjpeg/decoding.cpp
+    core/detail/nvjpeg/utils.cpp
+    core/detail/nvjpeg/decoding.cpp
   )
   if (SPDL_USE_NPPI)
     list(APPEND defs SPDL_USE_NPPI)
     list(APPEND srcs
-      libspdl/core/detail/npp/resize.cpp
-      libspdl/core/detail/npp/utils.cpp
+      core/detail/npp/resize.cpp
+      core/detail/npp/utils.cpp
     )
   endif()
 
@@ -98,7 +98,7 @@ endif()
 if(SPDL_USE_TRACING)
   list(APPEND deps perfetto)
   list(APPEND defs SPDL_USE_TRACING)
-  list(APPEND srcs libspdl/core/detail/tracing.cpp)
+  list(APPEND srcs core/detail/tracing.cpp)
 endif()
 
 if (SPDL_DEBUG_REFCOUNT)
@@ -121,7 +121,7 @@ function(add_libspdl ffmpeg_version)
   target_include_directories(
     "${name}"
     PUBLIC
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/.."
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
   install(
