@@ -7,6 +7,8 @@
 # pyre-unsafe
 
 import asyncio
+import os
+import platform
 import random
 import threading
 import time
@@ -1365,6 +1367,10 @@ def test_pipeline_pipe_gen():
     assert expected == output
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin" and "CI" in os.environ,
+    reason="GitHub macOS CI is not timely enough.",
+)
 def test_pipeline_pipe_gen_incremental():
     """pipe returns output of generator function immediately if not in ProcessPoolExecutor"""
 
