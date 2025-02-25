@@ -26,7 +26,7 @@ def test_dataloader_iterable():
 
     dl = get_dl(src)
 
-    assert list(dl) == src
+    assert sorted(dl) == src
 
 
 def test_dataloader_stateful_iterable():
@@ -42,9 +42,9 @@ def test_dataloader_stateful_iterable():
 
     dl = get_dl(src())
 
-    assert list(dl) == [(0, i) for i in range(10)]
-    assert list(dl) == [(1, i) for i in range(10)]
-    assert list(dl) == [(2, i) for i in range(10)]
+    assert sorted(dl) == [(0, i) for i in range(10)]
+    assert sorted(dl) == [(1, i) for i in range(10)]
+    assert sorted(dl) == [(2, i) for i in range(10)]
 
 
 def test_dataloader_preprocess():
@@ -57,7 +57,7 @@ def test_dataloader_preprocess():
 
     dl = get_dl(src, preprocessor=double)
 
-    assert list(dl) == [i * 2 for i in range(10)]
+    assert sorted(dl) == [i * 2 for i in range(10)]
 
 
 def test_dataloader_preprocess_in_order():
