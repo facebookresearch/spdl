@@ -58,7 +58,6 @@ class _ProcessConfig(Generic[T, U]):
     type_: _PType
     args: _PipeArgs[T, U]
     queue_class: type[AsyncQueue[U]] | None
-    report_stats_interval: float = -1
     buffer_size: int = 1
 
 
@@ -110,13 +109,11 @@ class _SinkConfig(Generic[T]):
 
 def _get_queue(
     queue_class: type[AsyncQueue[T]] | None,
-    interval2: float,
-    interval1: float = -1,
+    interval: float,
 ) -> type[AsyncQueue[T]]:
     if queue_class is not None:
         return queue_class
 
-    interval = interval2 if interval1 < 0 else interval1
     return partial(DefaultQueue, interval=interval)  # pyre-ignore: [7]
 
 
@@ -139,9 +136,7 @@ def _build_pipeline(
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
-        queue_class = _get_queue(
-            cfg.queue_class, report_stats_interval, cfg.report_stats_interval
-        )
+        queue_class = _get_queue(cfg.queue_class, report_stats_interval)
         queue_name = f"{cfg.args.name.split('(')[0]}_queue"
         queues.append(queue_class(queue_name, cfg.buffer_size))
         in_queue, out_queue = queues[i - 1 : i + 1]

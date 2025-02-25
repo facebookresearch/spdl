@@ -133,7 +133,6 @@ class PipelineBuilder(Generic[T, U]):
         executor: Executor | None = None,
         name: str | None = None,
         hooks: list[PipelineHook] | None = None,
-        report_stats_interval: float = -1,
         output_order: str = "completion",
         queue_class: type[AsyncQueue[U_]] | None = None,
         **_kwargs,  # pyre-ignore: [2]
@@ -188,15 +187,6 @@ class PipelineBuilder(Generic[T, U]):
                 collecting stats of the stage.
                 If ``None``, a default hook,
                 :py:class:`~spdl.pipeline.TaskStatsHook` is used.
-            report_stats_interval:
-                The interval (in seconds) to log the stats of this stage when no
-                ``hooks`` is provided. This argument is passed to
-                :py:class:`~spdl.pipeline.TaskStatsHook`.
-                This argument is effective only when ``hooks`` are not provided.
-                If ``hooks`` is provided and stats report is needed,
-                the ``hooks`` argument should
-                include one of :py:class:`~spdl.pipeline.TaskStatsHook`
-                instance with the desired interval.
             output_order: If ``"completion"`` (default), the items are put to output queue
                 in the order their process is completed.
                 If ``"input"``, then the items are put to output queue in the order given
@@ -242,7 +232,6 @@ class PipelineBuilder(Generic[T, U]):
                     concurrency=concurrency,
                     hooks=hooks,
                 ),
-                report_stats_interval=report_stats_interval,
                 queue_class=queue_class,  # pyre-ignore: [6]
                 buffer_size=_kwargs.get("_buffer_size", 1),
                 # Note:
@@ -273,7 +262,6 @@ class PipelineBuilder(Generic[T, U]):
         *,
         drop_last: bool = False,
         hooks: list[PipelineHook] | None = None,
-        report_stats_interval: float = -1,
         queue_class: type[AsyncQueue[T]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Buffer the items in the pipeline.
@@ -282,7 +270,6 @@ class PipelineBuilder(Generic[T, U]):
             num_items: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
             hooks: See :py:meth:`pipe`.
-            report_stats_interval: See :py:meth:`pipe`.
             queue_class: A queue class, used to connect this stage and the next stage.
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
                 Default: :py:class:`StatsQueue`.
@@ -303,7 +290,6 @@ class PipelineBuilder(Generic[T, U]):
                     hooks=hooks,
                     op_requires_eof=True,
                 ),
-                report_stats_interval=report_stats_interval,
                 queue_class=queue_class,
             )
         )
@@ -314,14 +300,12 @@ class PipelineBuilder(Generic[T, U]):
         /,
         *,
         hooks: list[PipelineHook] | None = None,
-        report_stats_interval: float = -1,
         queue_class: type[AsyncQueue[T_]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline.
 
         Args:
             hooks: See :py:meth:`pipe`.
-            report_stats_interval: See :py:meth:`pipe`.
 
             queue_class: A queue class, used to connect this stage and the next stage.
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
@@ -338,7 +322,6 @@ class PipelineBuilder(Generic[T, U]):
                     op=_disaggregate,  # pyre-ignore: [6]
                     hooks=hooks,
                 ),
-                report_stats_interval=report_stats_interval,
                 queue_class=queue_class,
             ),
         )
@@ -430,7 +413,15 @@ class PipelineBuilder(Generic[T, U]):
                 every given interval. Unit: [sec]
 
                 This is only effective if there is no custom hook or custom AsyncQueue
-                provided for stages.
+                provided for stages. The argument is passed to
+                :py:class:`~TaskStatsHook` and :py:class:`~StatusQueue`.
+
+                If a custom stage hook is provided and stats report is needed,
+                you can instantiate :py:class:`~spdl.pipeline.TaskStatsHook` and include
+                it in the hooks provided to :py:meth:`PipelineBuilder.pipe`.
+
+                Similarly if you are providing a custom :py:class:`~AsyncQueue` class,
+                you need to implement the same logic by your self.
         """
         if (src := self._src) is None:
             raise RuntimeError("Source is not set.")
