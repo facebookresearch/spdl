@@ -16,8 +16,8 @@ message(STATUS "########################################")
 
 FetchContent_Declare(
   nanobind
-  URL https://github.com/wjakob/nanobind/archive/refs/tags/v2.2.0.zip
-  URL_HASH SHA256=f7f96f730faf78a9d88761f7fd883f2ba7d851d33be3d9a103a1bdbb270cce14
+  URL https://github.com/wjakob/nanobind/archive/refs/tags/v2.5.0.zip
+  URL_HASH SHA256=5b4e10166dc7ce8600a1a11e2e9c8babd280af7eb29428af47943425fbfb0282
   DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
   )
 if(NOT nanobind_POPULATED)
