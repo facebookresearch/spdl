@@ -1,4 +1,4 @@
-name: "Package macOS"
+name: "Package"
 
 on:
   workflow_dispatch:
@@ -21,35 +21,43 @@ jobs:
   #############################################################################
   # Conda
   #############################################################################
-  conda-cpu-py312:
-    name: "Conda: py3.12"
-    uses: ./.github/workflows/_conda_cpu_build.yml
+  py313:
+    name: "macOS 3.13"
+    uses: ./.github/workflows/_wheel_macos.yml
+    with:
+      os: macos-latest
+      python-version: "3.13"
+      artifact: wheel-macos-py312
+
+  py312:
+    name: "macOS 3.12"
+    uses: ./.github/workflows/_wheel_macos.yml
     with:
       os: macos-latest
       python-version: "3.12"
-      artifact: conda-cpu-py312
+      artifact: wheel-macos-py312
 
-  conda-cpu-py311:
-    name: "Conda: py3.11"
-    uses: ./.github/workflows/_conda_cpu_build.yml
+  py311:
+    name: "macOS 3.11"
+    uses: ./.github/workflows/_wheel_macos.yml
     with:
       os: macos-latest
       python-version: "3.11"
-      artifact: conda-cpu-py311
+      artifact: wheel-macos-py311
 
-  conda-cpu-py310:
-    name: "Conda: py3.10"
-    uses: ./.github/workflows/_conda_cpu_build.yml
+  py310:
+    name: "macOS 3.10"
+    uses: ./.github/workflows/_wheel_macos.yml
     with:
       os: macos-latest
       python-version: "3.10"
-      artifact: conda-cpu-py310
+      artifact: wheel-macos-py310
 
-  conda-cpu-py310-test:
-    name: "Test Conda: py3.10"
-    needs: [ "conda-cpu-py310" ]
-    uses: ./.github/workflows/_conda_cpu_test.yml
+  py310-test:
+    name: "macOS 3.10"
+    needs: [ "py310" ]
+    uses: ./.github/workflows/_test_macos.yml
     with:
       os: macos-latest
       python-version: "3.10"
-      artifact: conda-cpu-py310
+      artifact: wheel-macos-py310
