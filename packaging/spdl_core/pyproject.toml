@@ -1,0 +1,17 @@
+[project]
+name = "spdl_core"
+authors = [
+    { name = "Moto Hira", email = "moto@meta.com" },
+]
+readme = "README.md"
+description = "SPDL: Scalable and Performant Data Loading."
+license = { text = "BSD-2-Clause" }
+dynamic = ["version"]
+requires-python = ">= 3.10"
+
+[project.urls]
+Documentation = "https://facebookresearch.github.io/spdl/main/index.html"
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,37 @@
+[project]
+name = "spdl"
+authors = [
+    { name = "Moto Hira", email = "moto@meta.com" },
+]
+readme = "README.md"
+description = "Scalable and Performant Data Loading"
+license = { text = "BSD-2-Clause" }
+dynamic = ["version"]
+requires-python = ">=3.10"
+dependencies = [
+  "spdl_io",
+  "spdl_core",
+]
+
+[project.urls]
+Documentation = "https://facebookresearch.github.io/spdl/main/index.html"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.uv.sources]
+spdl_core = { workspace = true }
+spdl_io = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+  "spdl_core",
+  "spdl_io",
+]
