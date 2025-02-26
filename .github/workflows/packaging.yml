@@ -101,3 +101,14 @@ jobs:
     with:
       python-version: "3.10"
       artifact: wheel-linux-py310
+
+  #############################################################################
+  # Linux (CUDA)
+  #############################################################################
+  linux-py313-cuda12:
+    name: "Linux 3.13 cu12"
+    uses: ./.github/workflows/_build_linux_cuda.yml
+    with:
+      python-version: "313"
+      artifact: wheel-linux-py313-cuda
+      cuda-version: 12.6
