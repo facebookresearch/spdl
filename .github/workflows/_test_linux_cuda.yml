@@ -1,8 +1,12 @@
-name: Test Wheel (macOS)
+name: Test Wheel (CPU Linux)
 
 on:
   workflow_call:
     inputs:
+      os:
+        required: false
+        type: string
+        default: "4-core-ubuntu-gpu-t4"
       python-version:
         required: true
         type: string
@@ -17,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         ffmpeg-version: ["5", "6", "7" ]
-    runs-on:  macos-latest
+    runs-on:  ${{ inputs.os }}
     defaults:
       run:
         shell: bash -el {0}
@@ -40,7 +44,11 @@ jobs:
         run: |
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
-          conda install -q -c pytorch numpy pytest pytorch numba
+          # For some reason, the FFmpeg dynamic libraries are not found.
+          export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
+          # TODO: clean up the logic for versions
+          pip install nvidia-cuda-runtime-cu12 torch --index-url https://download.pytorch.org/whl/cu126
+          pip install pytest
           pytest -v \
-              tests/spdl_unittest/io/ \
-              tests/spdl_unittest/dataloader/
+              tests/spdl_unittest/cuda/ \
+              tests/spdl_unittest/io/
