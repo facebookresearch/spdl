@@ -1,0 +1,61 @@
+name: "Package"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "examples/**"
+      - "*.md"
+    branches:
+      - main
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "examples/**"
+      - "*.md"
+    branches:
+      - main
+
+jobs:
+  #############################################################################
+  # Build
+  #############################################################################
+  py313-cpu:
+    name: "Linux 3.13"
+    uses: ./.github/workflows/_build_linux.yml
+    with:
+      python-version: "3.13"
+      artifact: wheel-linux-py313
+
+  py312-cpu:
+    name: "Linux 3.12"
+    uses: ./.github/workflows/_build_linux.yml
+    with:
+      python-version: "3.12"
+      artifact: wheel-linux-py312
+
+  py311-cpu:
+    name: "Linux 3.11"
+    uses: ./.github/workflows/_build_linux.yml
+    with:
+      python-version: "3.11"
+      artifact: wheel-linux-py311
+
+  py310-cpu:
+    name: "Linux 3.10"
+    uses: ./.github/workflows/_build_linux.yml
+    with:
+      python-version: "3.10"
+      artifact: wheel-linux-py310
+
+  #############################################################################
+  # Test
+  #############################################################################
+  py310-cpu-test:
+    name: "Linux 3.10"
+    needs: [ "py310-cpu" ]
+    uses: ./.github/workflows/_test_linux.yml
+    with:
+      python-version: "3.10"
+      artifact: wheel-linux-py310
