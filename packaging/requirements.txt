@@ -1,3 +1,2 @@
-uv
 twine
 packaging>=24.2
