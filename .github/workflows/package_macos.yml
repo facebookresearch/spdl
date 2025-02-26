@@ -23,33 +23,29 @@ jobs:
   #############################################################################
   py313:
     name: "macOS 3.13"
-    uses: ./.github/workflows/_wheel_macos.yml
+    uses: ./.github/workflows/_build_macos.yml
     with:
-      os: macos-latest
       python-version: "3.13"
       artifact: wheel-macos-py312
 
   py312:
     name: "macOS 3.12"
-    uses: ./.github/workflows/_wheel_macos.yml
+    uses: ./.github/workflows/_build_macos.yml
     with:
-      os: macos-latest
       python-version: "3.12"
       artifact: wheel-macos-py312
 
   py311:
     name: "macOS 3.11"
-    uses: ./.github/workflows/_wheel_macos.yml
+    uses: ./.github/workflows/_build_macos.yml
     with:
-      os: macos-latest
       python-version: "3.11"
       artifact: wheel-macos-py311
 
   py310:
     name: "macOS 3.10"
-    uses: ./.github/workflows/_wheel_macos.yml
+    uses: ./.github/workflows/_build_macos.yml
     with:
-      os: macos-latest
       python-version: "3.10"
       artifact: wheel-macos-py310
 
@@ -58,6 +54,5 @@ jobs:
     needs: [ "py310" ]
     uses: ./.github/workflows/_test_macos.yml
     with:
-      os: macos-latest
       python-version: "3.10"
       artifact: wheel-macos-py310
