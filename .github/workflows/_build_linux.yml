@@ -26,9 +26,10 @@ jobs:
           SPDL_BUILD_STUB: 1
         run: |
           set -ex
-          uv python pin "${{ inputs.python-version }}"
           uv python list --only-installed
-          uv venv
+
+          python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
+          uv venv --python "${python_exe}"
           uv build --all-packages --wheel --directory packaging
 
           ./packaging/repair_wheels.sh manylinux_2_27_x86_64 ./packaging/dist ~/package
@@ -44,5 +45,6 @@ jobs:
 
       - name: Check package
         run: |
-          /opt/python/cp312-cp312/bin/python -m pip install -r ./packaging/requirements.txt
-          /opt/python/cp312-cp312/bin/python -m twine check --strict ~/package/*.whl
+          python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
+          "${python_exe}" -m pip install -r ./packaging/requirements.txt
+          "${python_exe}" -m twine check --strict ~/package/*.whl
