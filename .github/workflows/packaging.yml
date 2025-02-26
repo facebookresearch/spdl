@@ -67,28 +67,28 @@ jobs:
     name: "Linux 3.13"
     uses: ./.github/workflows/_build_linux.yml
     with:
-      python-version: "3.13"
+      python-version: "313"
       artifact: wheel-linux-py313
 
   linux-py312:
     name: "Linux 3.12"
     uses: ./.github/workflows/_build_linux.yml
     with:
-      python-version: "3.12"
+      python-version: "312"
       artifact: wheel-linux-py312
 
   linux-py311:
     name: "Linux 3.11"
     uses: ./.github/workflows/_build_linux.yml
     with:
-      python-version: "3.11"
+      python-version: "311"
       artifact: wheel-linux-py311
 
   linux-py310:
     name: "Linux 3.10"
     uses: ./.github/workflows/_build_linux.yml
     with:
-      python-version: "3.10"
+      python-version: "310"
       artifact: wheel-linux-py310
 
   #############################################################################
