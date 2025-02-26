@@ -19,42 +19,6 @@ on:
 
 jobs:
   #############################################################################
-  # Conda (CPU)
-  #############################################################################
-  conda-cpu-py312:
-    name: "Conda: py3.12, CPU"
-    uses: ./.github/workflows/_conda_cpu_build.yml
-    with:
-      os: ubuntu-latest
-      python-version: "3.12"
-      artifact: conda-cpu-py312
-
-  conda-cpu-py311:
-    name: "Conda: py3.11, CPU"
-    uses: ./.github/workflows/_conda_cpu_build.yml
-    with:
-      os: ubuntu-latest
-      python-version: "3.11"
-      artifact: conda-cpu-py311
-
-  conda-cpu-py310:
-    name: "Conda: py3.10, CPU"
-    uses: ./.github/workflows/_conda_cpu_build.yml
-    with:
-      os: ubuntu-latest
-      python-version: "3.10"
-      artifact: conda-cpu-py310
-
-  conda-cpu-py310-test:
-    name: "Test Conda: py3.10, CPU"
-    needs: [ "conda-cpu-py310" ]
-    uses: ./.github/workflows/_conda_cpu_test.yml
-    with:
-      os: ubuntu-latest
-      python-version: "3.10"
-      artifact: conda-cpu-py310
-
-  #############################################################################
   # Conda (CUDA-11.8)
   #############################################################################
   conda-cuda-py312-cu118:
