@@ -43,7 +43,7 @@ U = TypeVar("U")
 class _SourceConfig(Generic[T]):
     source: Iterable | AsyncIterable
     buffer_size: int
-    queue_class: type[AsyncQueue[T]]
+    queue_class: type[AsyncQueue[T]] | None
 
 
 class _PType(enum.IntEnum):
@@ -64,7 +64,7 @@ class _ProcessConfig(Generic[T, U]):
 @dataclass
 class _SinkConfig(Generic[T]):
     buffer_size: int
-    queue_class: type[AsyncQueue[T]]
+    queue_class: type[AsyncQueue[T]] | None
 
 
 # The following is how we intend pipeline to behave. If the implementation
@@ -131,7 +131,7 @@ def _build_pipeline(
 
     # source
     queue_class = _get_queue(src.queue_class, report_stats_interval)
-    queues.append(src.queue_class("src_queue", src.buffer_size))
+    queues.append(queue_class("src_queue", src.buffer_size))
     coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
 
     # pipes
@@ -143,9 +143,11 @@ def _build_pipeline(
 
         match cfg.type_:
             case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
-                coro = _pipe(in_queue, out_queue, cfg.args)
+                coro = _pipe(in_queue, out_queue, cfg.args, report_stats_interval)
             case _PType.OrderedPipe:
-                coro = _ordered_pipe(in_queue, out_queue, cfg.args)
+                coro = _ordered_pipe(
+                    in_queue, out_queue, cfg.args, report_stats_interval
+                )
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg.type_}")
 
