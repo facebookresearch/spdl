@@ -30,9 +30,9 @@ jobs:
 
           python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
           uv venv --python "${python_exe}"
-          uv build --all-packages --wheel --directory packaging
+          uv build --all-packages --wheel
 
-          ./packaging/repair_wheels.sh manylinux_2_27_x86_64 ./packaging/dist ~/package
+          ./packaging/repair_wheels.sh manylinux_2_27_x86_64 ./dist ~/package
 
       - uses: actions/upload-artifact@v4
         name: Upload build artifact
