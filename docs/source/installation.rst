@@ -4,23 +4,20 @@ Installation
 From source
 -----------
 
-The following command will build and install `spdl` Python package.
+To install SPDL, you need ``uv``.
+Please check out `the official documentation <https://docs.astral.sh/uv>`_
+for the installation instruction.
+
+The following command will build and install ``spdl`` Python package.
+
+.. code-block::
+
+   uv pip install . -v
 
 .. note::
 
-   Make sure to use `-v` to see the log from the actual build process.
-
-**Regular installation**
-
-.. code-block::
-
-   pip install . -v
-
-**Development installation**
-
-.. code-block::
-
-   pip install -e . -v
+   Make sure to use ``-v`` to see the log from the actual build process.
+   The build front end by defaults hide the log of build process.
 
 The build process first downloads/builds/installs some third-party
 dependencies, then it builds SPDL and its binding code.
@@ -39,41 +36,8 @@ Build can be customized through the environment variables;
 - ``SPDL_RELASE_GIL=0``: I/O module does not release GIL. This is intended to be used for
   experimenting with free-threaded Python (3.13+).
 
-See `setup.py <https://github.com/facebookresearch/spdl/blob/main/setup.py>`_ for the up-to-date available options.
-
-Trouble Shooting
-----------------
-
-If you hit an error like the following, ``--no-build-isolation`` can help.
-
-.. code-block:: text
-
-   Installing collected packages: ninja, wheel, setuptools, cmake
-     Creating /tmp/pip-build-env-1ac3bsc_/overlay/bin
-     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/ninja to 775
-     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/wheel to 775
-     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/cmake to 775
-     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/cpack to 775
-     changing mode of /tmp/pip-build-env-1ac3bsc_/overlay/bin/ctest to 775
-   Successfully installed cmake-3.30.5 ninja-1.11.1.1 setuptools-75.2.0 wheel-0.44.0
-
-   ...
-
-   CMake Error at CMakeLists.txt:3 (project):
-     Running
-
-      '/tmp/pip-build-env-xic7ygls/overlay/bin/ninja' '--version'
-
-     failed with:
-
-      no such file or directory
-
-This happens because, somehow ``cmake`` command is not pointing the ``ninja`` installed
-by ``pip``.
-
-One workaround is to use ``--no-build-isolation`` option.
-e.g. ``TMPDIR="${PWD}/build" pip install . -v  --no-build-isolation``
-
+See `setup.py <https://github.com/facebookresearch/spdl/blob/main/packaging/spdl_io/setup.py>`_
+for the up-to-date available options.
 
 Requirements
 ------------
