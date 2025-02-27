@@ -44,7 +44,7 @@ jobs:
         run: |
           set -x
           wget -qO- https://astral.sh/uv/install.sh | sh
-          uv pip install ./packaging -v
+          uv pip install . -v
           sudo apt update && sudo apt install -yqq doxygen
           conda install -c conda-forge 'ffmpeg==6'
           pip install -r docs/requirements.txt

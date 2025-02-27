@@ -32,6 +32,6 @@ spdl_io = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-  "spdl_core",
-  "spdl_io",
+  "packaging/spdl_core",
+  "packaging/spdl_io",
 ]
