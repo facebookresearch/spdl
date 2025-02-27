@@ -35,7 +35,7 @@ from ._components._pipe import (
 from ._convert import Callables
 from ._hook import PipelineHook
 from ._pipeline import Pipeline
-from ._queue import AsyncQueue, StatsQueue as DefaultQueue
+from ._queue import AsyncQueue
 from ._utils import iterate_in_subprocess
 
 __all__ = [
@@ -121,7 +121,7 @@ class PipelineBuilder(Generic[T, U]):
                 f"buffer_size must be greater than 0. Found: {buffer_size}"
             )
 
-        self._src = _SourceConfig(source, buffer_size, queue_class or DefaultQueue)
+        self._src = _SourceConfig(source, buffer_size, queue_class)
         return self
 
     def pipe(
@@ -357,7 +357,7 @@ class PipelineBuilder(Generic[T, U]):
                 f"`buffer_size` must be greater than 0. Found: {buffer_size}"
             )
 
-        self._sink = _SinkConfig(buffer_size, queue_class or DefaultQueue)
+        self._sink = _SinkConfig(buffer_size, queue_class)
         return self
 
     def _get_desc(self) -> list[str]:
