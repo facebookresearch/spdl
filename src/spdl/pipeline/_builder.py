@@ -214,23 +214,6 @@ class PipelineBuilder(Generic[T, U]):
                     hooks=hooks,
                 ),
                 queue_class=queue_class,  # pyre-ignore: [6]
-                # Note:
-                # `_buffer_size` option is intentionally not documented.
-                #
-                # The pipeline practically buffers `concurrency + _buffer_size`
-                # items, which leads to confusing behavior when writing tests.
-                #
-                # And it does not affect throughput, however, showing it as
-                # `_buffer_size=1` often make users think that this needs to be
-                # increased to improve the performance.
-                #
-                # We hide the argument under `kwargs` to keep it undocumented,
-                # while allowing users to adjust if it's absolutely necessary.
-                #
-                # So please keep it undocumented. Thanks.
-                #
-                # Oh, but if you ever find the case that this does affect the
-                # performance, let us know.
             )
         )
         return self
