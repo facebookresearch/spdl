@@ -1,0 +1,69 @@
+name: "Build Wheel"
+
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: true
+        type: string
+      artifact:
+        required: true
+        type: string
+      cuda-version:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: "pytorch/manylinux2_28-builder:cuda${{ inputs.cuda-version}}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build
+        env:
+          SPDL_USE_TRACING: 1
+          SPDL_BUILD_STUB: 0
+          SPDL_USE_CUDA: 1
+        run: |
+          set -ex
+
+          # Quick sanity check
+          nvcc --version
+
+          # We need zlib, which is usually found by default,
+          # but this custom docker does not have one in locations
+          # that are managed by the OS package manager.
+          #
+          # Conda has one so we use it.
+          # $ find / -name zlib.h -type f
+          # /opt/conda/include/zlib.h
+          export PATH="${PATH}:/opt/conda/"
+          
+          wget -qO- https://astral.sh/uv/install.sh | sh
+          source $HOME/.local/bin/env
+          uv python list --only-installed
+
+          python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
+          uv venv --python "${python_exe}"
+          uv build --all-packages --wheel --directory packaging
+
+          ./packaging/repair_wheels.sh manylinux_2_27_x86_64 ./packaging/dist ~/package
+
+      - uses: actions/upload-artifact@v4
+        name: Upload build artifact
+        with:
+          name: "${{ inputs.artifact }}"
+          path: ~/package
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Check package
+        run: |
+          python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
+          "${python_exe}" -m pip install -r ./packaging/requirements.txt
+          "${python_exe}" -m twine check --strict ~/package/*.whl

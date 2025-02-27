@@ -140,6 +140,11 @@ class CMakeBuild(build_ext):
             subprocess.check_output(["cmake", "--version"])
         except OSError:
             raise RuntimeError("CMake is not available.") from None
+        if _SPDL_USE_CUDA:
+            try:
+                subprocess.check_output(["nvcc", "--version"])
+            except OSError:
+                raise RuntimeError("`nvcc` is not available.") from None
         super().run()
 
     def build_extension(self, ext):

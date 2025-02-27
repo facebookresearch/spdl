@@ -91,9 +91,9 @@ jobs:
       python-version: "310"
       artifact: wheel-linux-py310
 
-  #############################################################################
+  #----------------------------------------------------------------------------
   # Test
-  #############################################################################
+  #----------------------------------------------------------------------------
   linux-py310-test:
     name: "Linux 3.10"
     needs: [ "linux-py310" ]
@@ -101,3 +101,49 @@ jobs:
     with:
       python-version: "3.10"
       artifact: wheel-linux-py310
+
+  #############################################################################
+  # Linux (CUDA)
+  #############################################################################
+  linux-py313-cuda12:
+    name: "Linux 3.13 cu12"
+    uses: ./.github/workflows/_build_linux_cuda.yml
+    with:
+      python-version: "313"
+      artifact: wheel-linux-py313-cuda12
+      cuda-version: 12.6
+
+  linux-py312-cuda12:
+    name: "Linux 3.12 cu12"
+    uses: ./.github/workflows/_build_linux_cuda.yml
+    with:
+      python-version: "312"
+      artifact: wheel-linux-py312-cuda12
+      cuda-version: 12.6
+
+  linux-py311-cuda12:
+    name: "Linux 3.11 cu12"
+    uses: ./.github/workflows/_build_linux_cuda.yml
+    with:
+      python-version: "311"
+      artifact: wheel-linux-py311-cuda12
+      cuda-version: 12.6
+
+  linux-py310-cuda12:
+    name: "Linux 3.10 cu12"
+    uses: ./.github/workflows/_build_linux_cuda.yml
+    with:
+      python-version: "310"
+      artifact: wheel-linux-py310-cuda12
+      cuda-version: 12.6
+
+  #----------------------------------------------------------------------------
+  # Test
+  #----------------------------------------------------------------------------
+  linux-py310-cuda12-test:
+    name: "Linux 3.10 cu12"
+    needs: [ "linux-py310-cuda12" ]
+    uses: ./.github/workflows/_test_linux_cuda.yml
+    with:
+      python-version: "3.10"
+      artifact: wheel-linux-py310-cuda12
