@@ -8,7 +8,6 @@
 
 import inspect
 import logging
-import warnings
 from collections.abc import (
     AsyncIterable,
     Callable,
@@ -83,7 +82,6 @@ class PipelineBuilder(Generic[T, U]):
         source: Iterable[T] | AsyncIterable[T],
         *,
         queue_class: type[AsyncQueue[T]] | None = None,
-        **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
 
@@ -113,15 +111,7 @@ class PipelineBuilder(Generic[T, U]):
         if not (hasattr(source, "__aiter__") or hasattr(source, "__iter__")):
             raise ValueError("Source must be either generator or async generator.")
 
-        # Note: Do not document this option.
-        # See `pipe` method for detail.
-        buffer_size = int(_kwargs.get("_buffer_size", 1))
-        if buffer_size < 1:
-            raise ValueError(
-                f"buffer_size must be greater than 0. Found: {buffer_size}"
-            )
-
-        self._src = _SourceConfig(source, buffer_size, queue_class)
+        self._src = _SourceConfig(source, queue_class)
         return self
 
     def pipe(
@@ -135,7 +125,6 @@ class PipelineBuilder(Generic[T, U]):
         hooks: list[PipelineHook] | None = None,
         output_order: str = "completion",
         queue_class: type[AsyncQueue[U_]] | None = None,
-        **_kwargs,  # pyre-ignore: [2]
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
 
@@ -212,14 +201,6 @@ class PipelineBuilder(Generic[T, U]):
                 )
         name_ = name or _get_op_name(op)
 
-        if (op_kwargs := _kwargs.get("kwargs")) is not None:
-            warnings.warn(
-                "`kwargs` argument is deprecated. "
-                "Please use `functools.partial` to bind function arguments.",
-                stacklevel=2,
-            )
-            op = partial(op, **op_kwargs)  # pyre-ignore: [9]
-
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
 
         self._process_args.append(
@@ -233,7 +214,6 @@ class PipelineBuilder(Generic[T, U]):
                     hooks=hooks,
                 ),
                 queue_class=queue_class,  # pyre-ignore: [6]
-                buffer_size=_kwargs.get("_buffer_size", 1),
                 # Note:
                 # `_buffer_size` option is intentionally not documented.
                 #
@@ -366,8 +346,6 @@ class PipelineBuilder(Generic[T, U]):
             src = self._src
             src_repr = getattr(src.source, "__name__", type(src.source).__name__)
             parts.append(f"  - src: {src_repr}")
-            if src.buffer_size != 1:
-                parts.append(f"    Buffer: buffer_size={src.buffer_size}")
         else:
             parts.append("  - src: n/a")
 
@@ -386,9 +364,6 @@ class PipelineBuilder(Generic[T, U]):
                 case _:
                     part = str(cfg.type_)
             parts.append(f"  - {part}")
-
-            if cfg.buffer_size > 1:
-                parts.append(f"    Buffer: buffer_size={cfg.buffer_size}")
 
         if (sink := self._sink) is not None:
             parts.append(f"  - sink: buffer_size={sink.buffer_size}")

@@ -12,7 +12,7 @@ import platform
 import random
 import threading
 import time
-from collections.abc import AsyncIterable, Iterable, Iterator
+from collections.abc import Iterator
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from functools import partial
@@ -1605,84 +1605,6 @@ def test_pipeline_custom_pipe_executor_async():
         ).add_sink(1).build(num_threads=1)
 
 
-def test_pipeline_pipe_kwargs():
-    """pipe can pass kwargs to op"""
-
-    def op(i: int, j: int) -> int:
-        return i + j
-
-    pipeline = (
-        PipelineBuilder()
-        .add_source(range(10))
-        .pipe(op, kwargs={"j": 2})
-        .add_sink(1)
-        .build(num_threads=1)
-    )
-
-    with pipeline.auto_stop():
-        vals = list(pipeline.get_iterator(timeout=3))
-    assert vals == [i + 2 for i in range(10)]
-
-
-def test_pipeline_pipe_kwargs_async():
-    """pipe can pass kwargs to op"""
-
-    async def op(i: int, j: int) -> int:
-        return i + j
-
-    pipeline = (
-        PipelineBuilder()
-        .add_source(range(10))
-        .pipe(op, kwargs={"j": 2})
-        .add_sink(1)
-        .build(num_threads=1)
-    )
-
-    with pipeline.auto_stop():
-        vals = list(pipeline.get_iterator(timeout=3))
-    assert vals == [i + 2 for i in range(10)]
-
-
-def test_pipeline_pipe_kwargs_iter():
-    """pipe can pass kwargs to op"""
-
-    def op(i: int, vals: list[int]) -> Iterable[int]:
-        for v in vals:
-            yield i + v
-
-    pipeline = (
-        PipelineBuilder()
-        .add_source([1])
-        .pipe(op, kwargs={"vals": list(range(10))})
-        .add_sink(1)
-        .build(num_threads=1)
-    )
-
-    with pipeline.auto_stop():
-        vals = list(pipeline.get_iterator(timeout=3))
-    assert vals == [1 + i for i in range(10)]
-
-
-def test_pipeline_pipe_kwargs_async_iter():
-    """pipe can pass kwargs to op"""
-
-    async def op(i: int, vals: list[int]) -> AsyncIterable[int]:
-        for v in vals:
-            yield i + v
-
-    pipeline = (
-        PipelineBuilder()
-        .add_source([1])
-        .pipe(op, kwargs={"vals": list(range(10))})
-        .add_sink(1)
-        .build(num_threads=1)
-    )
-
-    with pipeline.auto_stop():
-        vals = list(pipeline.get_iterator(timeout=3))
-    assert vals == [1 + i for i in range(10)]
-
-
 class _PicklableSource:
     def __init__(self, n: int) -> None:
         self.n = n
@@ -1709,9 +1631,8 @@ def test_pipelinebuilder_picklable():
             aplus1,
             concurrency=3,
         )
-        .pipe(plusN, kwargs={"N": 2}, hooks=[CountHook()])
         .pipe(partial(plusN, N=3), hooks=[CountHook()])
-        .pipe(passthrough, report_stats_interval=4)
+        .pipe(passthrough)
         .aggregate(3)
         .disaggregate()
         .add_sink(10)
@@ -1720,6 +1641,6 @@ def test_pipelinebuilder_picklable():
     results = list(run_pipeline_in_subprocess(builder, num_threads=5, buffer_size=-1))
 
     def _ref(x: int) -> int:
-        return 2 * x + 1 + 2 + 3
+        return 2 * x + 1 + 3
 
     assert sorted(results) == [_ref(i) for i in range(10)]

@@ -42,7 +42,6 @@ U = TypeVar("U")
 @dataclass
 class _SourceConfig(Generic[T]):
     source: Iterable | AsyncIterable
-    buffer_size: int
     queue_class: type[AsyncQueue[T]] | None
 
 
@@ -58,7 +57,6 @@ class _ProcessConfig(Generic[T, U]):
     type_: _PType
     args: _PipeArgs[T, U]
     queue_class: type[AsyncQueue[U]] | None
-    buffer_size: int = 1
 
 
 @dataclass
@@ -131,14 +129,14 @@ def _build_pipeline(
 
     # source
     queue_class = _get_queue(src.queue_class, report_stats_interval)
-    queues.append(queue_class("src_queue", src.buffer_size))
+    queues.append(queue_class("src_queue", 1))
     coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
         queue_class = _get_queue(cfg.queue_class, report_stats_interval)
         queue_name = f"{cfg.args.name.split('(')[0]}_queue"
-        queues.append(queue_class(queue_name, cfg.buffer_size))
+        queues.append(queue_class(queue_name, 1))
         in_queue, out_queue = queues[i - 1 : i + 1]
 
         match cfg.type_:
