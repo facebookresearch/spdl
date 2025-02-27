@@ -8,6 +8,10 @@ SPDL
 
 SPDL (Scalable and Performant Data Loading)
 
+Blog
+
+- `Introducing SPDL: Faster AI model training with thread-based data loading <https://ai.meta.com/blog/spdl-faster-ai-model-training-with-thread-based-data-loading-reality-labs/>`_ (Meta Engineering Blog)
+
 .. toctree::
    :hidden:
 
