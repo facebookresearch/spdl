@@ -21,7 +21,7 @@ sys.path.append(os.path.abspath("../../examples"))
 project = "SPDL"
 copyright = f"{datetime.today().strftime('%Y')}, Meta Platforms, Inc."
 author = "Moto Hira"
-release = "0.0.6"
+release = "0.0.9"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
