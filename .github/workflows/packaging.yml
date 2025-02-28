@@ -21,6 +21,13 @@ jobs:
   #############################################################################
   # macOS
   #############################################################################
+  macos-py313t:
+    name: "macOS 3.13t"
+    uses: ./.github/workflows/_build_macos.yml
+    with:
+      python-version: "3.13t"
+      artifact: wheel-macos-py313t
+
   macos-py313:
     name: "macOS 3.13"
     uses: ./.github/workflows/_build_macos.yml
@@ -52,6 +59,14 @@ jobs:
   #----------------------------------------------------------------------------
   # Test
   #----------------------------------------------------------------------------
+  macos-py313t-test:
+    name: "macOS 3.13t"
+    needs: [ "macos-py313t" ]
+    uses: ./.github/workflows/_test_macos.yml
+    with:
+      python-version: "3.13t"
+      artifact: wheel-macos-py313t
+
   macos-py310-test:
     name: "macOS 3.10"
     needs: [ "macos-py310" ]
@@ -63,6 +78,13 @@ jobs:
   #############################################################################
   # Linux (CPU)
   #############################################################################
+  linux-py313t:
+    name: "Linux 3.13t"
+    uses: ./.github/workflows/_build_linux.yml
+    with:
+      python-version: "313t"
+      artifact: wheel-linux-py313t
+
   linux-py313:
     name: "Linux 3.13"
     uses: ./.github/workflows/_build_linux.yml
@@ -94,6 +116,14 @@ jobs:
   #----------------------------------------------------------------------------
   # Test
   #----------------------------------------------------------------------------
+  linux-py313t-test:
+    name: "Linux 3.13t"
+    needs: [ "linux-py313t" ]
+    uses: ./.github/workflows/_test_linux.yml
+    with:
+      python-version: "3.13t"
+      artifact: wheel-linux-py313t
+
   linux-py310-test:
     name: "Linux 3.10"
     needs: [ "linux-py310" ]
@@ -105,6 +135,14 @@ jobs:
   #############################################################################
   # Linux (CUDA)
   #############################################################################
+  linux-py313t-cuda12:
+    name: "Linux 3.13t cu12"
+    uses: ./.github/workflows/_build_linux_cuda.yml
+    with:
+      python-version: "313t"
+      artifact: wheel-linux-py313t-cuda12
+      cuda-version: 12.6
+
   linux-py313-cuda12:
     name: "Linux 3.13 cu12"
     uses: ./.github/workflows/_build_linux_cuda.yml
