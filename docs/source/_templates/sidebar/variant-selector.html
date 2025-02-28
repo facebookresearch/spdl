@@ -1,0 +1,23 @@
+{%- if doc_versions %}
+<div class="sidebar-tree">
+<ul>
+  <li class="toctree-l1 has-children">
+    <span class="reference">Versions</span>
+    <input class="toctree-checkbox" id="toctree-checkbox-versions" name="toctree-checkbox-versions" role="switch" type="checkbox">
+    <label for="toctree-checkbox-versions">
+      <div class="visually-hidden">Toggle navigattion of Versions</div>
+      <i class="icon">
+        <svg>
+          <use href="#svg-arrow-right"></use>
+        </svg>
+      </i>
+    </label>
+    <ul>
+      {%- for slug, url in doc_versions %}
+      <li class="toctree-l2"><a class="reference internal" href="{{ url }}">{{ slug }}</a></li>
+      {%- endfor %}
+    </ul>
+  </li>
+</ul>
+</div>
+{%- endif %}
