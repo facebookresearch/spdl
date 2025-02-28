@@ -104,8 +104,8 @@ html_theme_options = {
 }
 html_context = {
     "doc_versions": [
-        ("dev", "/main"),
-        ("0.0.8", "/0.0.8"),
+        ("dev", "/spdl/main"),
+        ("0.0.8", "/spdl/0.0.8"),
     ]
 }
 
