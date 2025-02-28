@@ -191,4 +191,12 @@ def __getattr__(name: str) -> Any:
 
         return getattr(_composite, name)
 
+    if name == "__version__":
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            return version("spdl.io")
+        except PackageNotFoundError:
+            return "unknown"
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

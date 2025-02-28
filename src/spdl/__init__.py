@@ -9,4 +9,17 @@
 Do not add anything here, thanks.
 """
 
+
+def __getattr__(name: str):
+    if name == "__version__":
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            return version("spdl")
+        except PackageNotFoundError:
+            return "unknown"
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 # pyre-strict

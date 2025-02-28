@@ -11,6 +11,7 @@
 import os
 import sys
 from datetime import datetime
+import importlib.metadata
 
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath("../../examples"))
@@ -21,7 +22,7 @@ sys.path.append(os.path.abspath("../../examples"))
 project = "SPDL"
 copyright = f"{datetime.today().strftime('%Y')}, Meta Platforms, Inc."
 author = "Moto Hira"
-release = "0.0.9"
+release = importlib.metadata.version('spdl')
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
