@@ -102,6 +102,12 @@ html_css_files = ["css/custom.css"]
 html_theme_options = {
     "navigation_with_keys": True,
 }
+html_context = {
+    "doc_versions": [
+        ("dev", "/main"),
+        ("0.0.8", "/0.0.8"),
+    ]
+}
 
 
 def linkcode_resolve(domain, info):
