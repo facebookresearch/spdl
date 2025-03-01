@@ -8,10 +8,10 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import importlib.metadata
 import os
 import sys
 from datetime import datetime
-import importlib.metadata
 
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath("../../examples"))
@@ -22,7 +22,7 @@ sys.path.append(os.path.abspath("../../examples"))
 project = "SPDL"
 copyright = f"{datetime.today().strftime('%Y')}, Meta Platforms, Inc."
 author = "Moto Hira"
-release = importlib.metadata.version('spdl')
+release = importlib.metadata.version("spdl")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
