@@ -50,9 +50,9 @@ from spdl.io import (
     VideoFrames,
     VideoPackets,
 )
+from spdl.io._internal.import_utils import lazy_import
 
 from . import _preprocessing
-from ._internal import _log_api_usage_once
 from .lib import _libspdl
 
 __all__ = [
@@ -75,6 +75,8 @@ __all__ = [
     # ENCODING
     "encode_image",
 ]
+
+torch = lazy_import("torch")  # pyre-ignore: [31]
 
 _LG = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -120,7 +122,15 @@ class Demuxer:
         Returns:
             Demuxed audio packets.
         """
-        _log_api_usage_once("spdl.io.demux_audio")
+        # NOTE:
+        # DO NOT REFACTOR (EXTRACT) FUNCTION CALL. IT WILL BREAK
+        # THE META INTERNAL API LOGGING.
+        # It's no-op for OSS.
+        try:
+            torch._C._log_api_usage_once("spdl.io.demux_audio")
+        except Exception:
+            pass
+
         return self._demuxer.demux_audio(window=window, **kwargs)
 
     def demux_video(
@@ -135,7 +145,15 @@ class Demuxer:
         Returns:
             Demuxed video packets.
         """
-        _log_api_usage_once("spdl.io.demux_video")
+        # NOTE:
+        # DO NOT REFACTOR (EXTRACT) FUNCTION CALL. IT WILL BREAK
+        # THE META INTERNAL API LOGGING.
+        # It's no-op for OSS.
+        try:
+            torch._C._log_api_usage_once("spdl.io.demux_video")
+        except Exception:
+            pass
+
         return self._demuxer.demux_video(window=window, **kwargs)
 
     def demux_image(self, **kwargs) -> ImagePackets:
@@ -144,7 +162,15 @@ class Demuxer:
         Returns:
             Demuxed image packets.
         """
-        _log_api_usage_once("spdl.io.demux_image")
+        # NOTE:
+        # DO NOT REFACTOR (EXTRACT) FUNCTION CALL. IT WILL BREAK
+        # THE META INTERNAL API LOGGING.
+        # It's no-op for OSS.
+        try:
+            torch._C._log_api_usage_once("spdl.io.demux_image")
+        except Exception:
+            pass
+
         return self._demuxer.demux_image(**kwargs)
 
     def has_audio(self) -> bool:

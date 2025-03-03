@@ -11,18 +11,15 @@ lazy access to the module so that the module won't be loaded until
 it's used by user code.
 """
 
-# pyre-unsafe
+# pyre-strict
 
 import importlib
 import importlib.resources
 import logging
 import sys
 from types import ModuleType
-from typing import Any
 
-from spdl.io._internal import _log_api_usage_once
-
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
     "_libspdl",
@@ -34,7 +31,7 @@ def __dir__() -> list[str]:
     return sorted(__all__)
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> ModuleType:
     if name == "_libspdl":
         from spdl.io._internal.import_utils import _LazilyImportedModule
 
@@ -65,11 +62,6 @@ def _import_libspdl() -> ModuleType:
             _LG.debug("Failed to import %s.", lib, exc_info=True)
             err_msgs[lib] = str(err)
             continue
-
-        try:
-            _log_api_usage_once("spdl")
-        except Exception:
-            _LG.debug("Failed to log API usage.", exc_info=True)
 
         try:
             ext.init_glog(sys.argv[0])
