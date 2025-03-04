@@ -9,6 +9,10 @@
 import importlib
 from types import ModuleType
 
+__all__ = [
+    "lazy_import",
+]
+
 
 class _LazilyImportedModule(ModuleType):
     """Delay module import until its attribute is accessed."""
@@ -44,7 +48,7 @@ class _LazilyImportedModule(ModuleType):
             self.__dict__.update(self.module.__dict__)
 
 
-def lazy_import(name):
+def lazy_import(name: str) -> ModuleType:
     """Import module lazily.
 
     Example
