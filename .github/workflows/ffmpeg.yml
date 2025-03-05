@@ -1,0 +1,122 @@
+# This job is not directly related to regular CI pipeline.
+# It is intended to create FFmpeg binaries that we upload on S3,
+# which then will be used during all the build process in CI or local.
+#
+# This job does not include uploading part.
+# Upload needs to be done manually, and it should be done only once
+# par new major release of FFmepg.
+name: FFmpeg Binaries
+
+on:
+  workflow_dispatch:
+  # pull_request:
+  #   paths-ignore:
+  #     - "docs/**"
+  #     - "examples/**"
+  #     - "*.md"
+  #   branches:
+  #     - main
+
+jobs:
+  LGPL-manylinux_x86_64:
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "master"]
+        arch: ["manylinux_2_28_x86_64"]
+    runs-on: ubuntu-latest
+    container: "quay.io/pypa/${{ matrix.arch }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: |
+          export FFMPEG_VERSION="${{ matrix.ffmpeg_version }}"
+          export FFMPEG_ROOT="${PWD}/ffmpeg"
+
+          .github/scripts/build_ffmpeg.sh
+
+          tar -cf ffmpeg.tar.gz ffmpeg/include ffmpeg/lib
+
+          artifact_dir="${GITHUB_WORKSPACE}/artifacts/$(date +%Y-%m-%d)/"
+          mkdir -p "${artifact_dir}"
+          mv ffmpeg.tar.gz "${artifact_dir}/ffmpeg_${FFMPEG_VERSION}_${{ matrix.arch }}.tar.gz"
+
+      - uses: actions/upload-artifact@v4
+        name: Upload build artifact
+        with:
+          name: "ffmpg_${{ matrix.ffmpeg_version }}_${{ matrix.arch }}"
+          path: "${{ github.workspace }}/artifacts"
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  LGPL-manylinux_aarch64:
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "master"]
+        arch: ["manylinux_2_28_aarch64"]
+    runs-on: ubuntu-24.04-arm
+    container: "quay.io/pypa/${{ matrix.arch }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: |
+          export FFMPEG_VERSION="${{ matrix.ffmpeg_version }}"
+          export FFMPEG_ROOT="${PWD}/ffmpeg"
+
+          .github/scripts/build_ffmpeg.sh
+
+          tar -cf ffmpeg.tar.gz ffmpeg/include ffmpeg/lib
+
+          artifact_dir="${GITHUB_WORKSPACE}/artifacts/$(date +%Y-%m-%d)/"
+          mkdir -p "${artifact_dir}"
+          mv ffmpeg.tar.gz "${artifact_dir}/ffmpeg_${FFMPEG_VERSION}_${{ matrix.arch }}.tar.gz"
+
+      - uses: actions/upload-artifact@v4
+        name: Upload build artifact
+        with:
+          name: "ffmpg_${{ matrix.ffmpeg_version }}_${{ matrix.arch }}"
+          path: "${{ github.workspace }}/artifacts"
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  LGPL-macOS:
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "master"]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: |
+          export FFMPEG_VERSION="${{ matrix.ffmpeg_version }}"
+          export FFMPEG_ROOT="${PWD}/ffmpeg"
+
+          .github/scripts/build_ffmpeg.sh
+
+          tar -cf ffmpeg.tar.gz ffmpeg/include ffmpeg/lib
+
+          artifact_dir="${GITHUB_WORKSPACE}/artifacts/$(date +%Y-%m-%d)/"
+          mkdir -p "${artifact_dir}"
+          mv ffmpeg.tar.gz "${artifact_dir}/ffmpeg_${FFMPEG_VERSION}_macos_aarch64.tar.gz"
+
+      - uses: actions/upload-artifact@v4
+        name: Upload build artifact
+        with:
+          name: "ffmpg_${{ matrix.ffmpeg_version }}_macos_aarch64"
+          path: "${{ github.workspace }}/artifacts"
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
