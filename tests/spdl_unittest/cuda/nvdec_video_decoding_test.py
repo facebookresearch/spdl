@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
 import gc
 
 import pytest
@@ -32,22 +31,15 @@ def _decode_video(src, timestamp=None, allocator=None, **decode_options):
 
 
 def _decode_videos(src, timestamps):
-    async def _decode():
-        decoding = []
-        async for packets in spdl.io.async_streaming_demux_video(
-            src, timestamps=timestamps
-        ):
-            coro = spdl.io.async_decode_packets_nvdec(
-                packets,
-                device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
-            )
-            decoding.append(asyncio.create_task(coro))
+    frames = [
+        spdl.io.decode_packets_nvdec(
+            packets,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+        )
+        for packets in spdl.io.streaming_demux_video(src, timestamps=timestamps)
+    ]
 
-        frames = await asyncio.gather(*decoding)
-
-        return [spdl.io.to_torch(f) for f in frames]
-
-    return asyncio.run(_decode())
+    return [spdl.io.to_torch(f) for f in frames]
 
 
 @pytest.fixture

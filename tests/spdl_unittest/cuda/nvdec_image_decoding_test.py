@@ -4,8 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
-
 import pytest
 import spdl.io
 import spdl.io.utils
@@ -124,38 +122,16 @@ def test_decode_multiple_invalid_input(get_sample):
             _decode_image(sample.path)
 
 
-def test_batch_decode_images_async(get_samples):
-    """Smoke test for batch decoding of images."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=rgba -frames:v 250 sample_%d.jpeg"
-    flist = get_samples(cmd)
-
-    async def _test(srcs):
-        buffer = await spdl.io.async_load_image_batch_nvdec(
-            srcs,
-            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
-            width=None,
-            height=None,
-        )
-        batch = spdl.io.to_torch(buffer)
-        assert batch.shape == torch.Size([250, 4, 240, 320])
-        assert batch.dtype == torch.uint8
-        assert batch.device == torch.device("cuda", DEFAULT_CUDA)
-
-    asyncio.run(_test(flist))
-
-
 def test_batch_decode_images(get_samples):
     """Smoke test for batch decoding of images."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=rgba -frames:v 250 sample_%d.jpeg"
     flist = get_samples(cmd)
 
-    buffer = asyncio.run(
-        spdl.io.async_load_image_batch_nvdec(
-            flist,
-            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
-            width=None,
-            height=None,
-        )
+    buffer = spdl.io.load_image_batch_nvdec(
+        flist,
+        device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+        width=None,
+        height=None,
     )
     batch = spdl.io.to_torch(buffer)
     assert batch.shape == torch.Size([250, 4, 240, 320])

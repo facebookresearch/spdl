@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
 import gc
 
 import numpy as np
@@ -14,7 +13,7 @@ import spdl.io.utils
 import torch
 
 if not spdl.io.utils.is_cuda_available():
-    pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
+    pytest.skip("SPDL is not compiled with CUDA support", allow_module_level=True)
 
 
 DEFAULT_CUDA = 0
@@ -27,42 +26,41 @@ CMDS = {
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_async_transfer_buffer_to_cuda(media_type, get_sample):
+def test_transfer_buffer_to_cuda(media_type, get_sample):
     """smoke test for transfer_buffer_to_cuda function"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
 
-    async def _test(src):
-        _ = torch.zeros([0], device=torch.device(f"cuda:{DEFAULT_CUDA}"))
+    demux_func = {
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
+    }[media_type]
 
-        demux_func = {
-            "audio": spdl.io.async_demux_audio,
-            "video": spdl.io.async_demux_video,
-            "image": spdl.io.async_demux_image,
-        }[media_type]
+    _ = torch.zeros([0], device=torch.device(f"cuda:{DEFAULT_CUDA}"))
 
-        frames = await spdl.io.async_decode_packets(await demux_func(src))
-        buffer = await spdl.io.async_convert_frames(frames)
-        cpu_tensor = spdl.io.to_torch(buffer).clone()
-        cuda_tensor = spdl.io.to_torch(
-            await spdl.io.async_transfer_buffer(
-                buffer,
-                device_config=spdl.io.cuda_config(
-                    device_index=DEFAULT_CUDA,
-                ),
-            )
+    packets = demux_func(sample.path)
+    frames = spdl.io.decode_packets(packets)
+    buffer = spdl.io.convert_frames(frames)
+    cpu_tensor = spdl.io.to_torch(buffer).clone()
+
+    cuda_tensor = spdl.io.to_torch(
+        spdl.io.transfer_buffer(
+            buffer,
+            device_config=spdl.io.cuda_config(
+                device_index=DEFAULT_CUDA,
+            ),
         )
+    )
 
-        assert cuda_tensor.is_cuda
-        assert cuda_tensor.device == torch.device(f"cuda:{DEFAULT_CUDA}")
+    assert cuda_tensor.is_cuda
+    assert cuda_tensor.device == torch.device(f"cuda:{DEFAULT_CUDA}")
 
-        assert torch.allclose(cpu_tensor, cuda_tensor.cpu())
-
-    asyncio.run(_test(sample.path))
+    assert torch.allclose(cpu_tensor, cuda_tensor.cpu())
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sample):
+def test_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sample):
     """smoke test for transfer_buffer_to_cuda function"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -83,36 +81,43 @@ def test_async_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sa
         deleter_called = True
 
     demux_func = {
-        "audio": spdl.io.async_demux_audio,
-        "video": spdl.io.async_demux_video,
-        "image": spdl.io.async_demux_image,
+        "audio": spdl.io.demux_audio,
+        "video": spdl.io.demux_video,
+        "image": spdl.io.demux_image,
     }[media_type]
 
-    async def _test(src):
-        frames = await spdl.io.async_decode_packets(await demux_func(src))
-        buffer = await spdl.io.async_convert_frames(frames)
+    def test():
+        packets = demux_func(sample.path)
+        frames = spdl.io.decode_packets(packets)
+        buffer = spdl.io.convert_frames(frames)
         cpu_tensor = spdl.io.to_torch(buffer).clone()
 
+        print("Asserting allocator was not yet called")
         assert not allocator_called
-        cuda_buffer = await spdl.io.async_transfer_buffer(
+        print("Transferring")
+        cuda_buffer = spdl.io.transfer_buffer(
             buffer,
             device_config=spdl.io.cuda_config(
                 device_index=DEFAULT_CUDA,
                 allocator=(allocator, deleter),
             ),
         )
+        print("Asserting allocator was called")
         assert allocator_called
-        cuda_tensor = spdl.io.to_torch(cuda_buffer)
 
+        cuda_tensor = spdl.io.to_torch(cuda_buffer)
         assert cuda_tensor.is_cuda
         assert cuda_tensor.device == torch.device(f"cuda:{DEFAULT_CUDA}")
         assert torch.allclose(cpu_tensor, cuda_tensor.cpu())
 
+        print("Asserting deleter was not yet called")
         assert not deleter_called
 
-    asyncio.run(_test(sample.path))
+    test()
 
+    print("Calling GC")
     gc.collect()
+    print("Asserting deleter was called")
     assert deleter_called
 
 
@@ -125,8 +130,8 @@ def test_array_transfer_numpy():
         np.dtype("int64"): torch.int64,
     }
 
-    async def test(array):
-        buffer = await spdl.io.async_transfer_buffer(
+    def test(array):
+        buffer = spdl.io.transfer_buffer(
             array, device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
         )
         tensor = spdl.io.to_torch(buffer)
@@ -140,7 +145,7 @@ def test_array_transfer_numpy():
     for dtype in [np.uint8, np.int32, np.int64]:
         max_val = np.iinfo(dtype).max
         array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
-        asyncio.run(test(array))
+        test(array)
 
 
 def test_array_transfer_torch():
@@ -148,10 +153,8 @@ def test_array_transfer_torch():
 
     device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
-    async def test(cpu_tensor):
-        buffer = await spdl.io.async_transfer_buffer(
-            cpu_tensor, device_config=device_config
-        )
+    def test(cpu_tensor):
+        buffer = spdl.io.transfer_buffer(cpu_tensor, device_config=device_config)
         cuda_tensor = spdl.io.to_torch(buffer)
 
         device = torch.device(f"cuda:{DEFAULT_CUDA}")
@@ -163,7 +166,7 @@ def test_array_transfer_torch():
     for dtype in [np.uint8, np.int32, np.int64]:
         max_val = np.iinfo(dtype).max
         array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
-        asyncio.run(test(torch.from_numpy(array)))
+        test(torch.from_numpy(array))
 
 
 def test_array_transfer_non_contiguous_torch():
@@ -171,21 +174,16 @@ def test_array_transfer_non_contiguous_torch():
 
     device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
-    async def test():
-        cpu_tensor = torch.arange(24).reshape(6, 4).T[::2, :]
-        assert not cpu_tensor.is_contiguous()
-        buffer = await spdl.io.async_transfer_buffer(
-            cpu_tensor, device_config=device_config
-        )
-        cuda_tensor = spdl.io.to_torch(buffer)
+    cpu_tensor = torch.arange(24).reshape(6, 4).T[::2, :]
+    assert not cpu_tensor.is_contiguous()
+    buffer = spdl.io.transfer_buffer(cpu_tensor, device_config=device_config)
+    cuda_tensor = spdl.io.to_torch(buffer)
 
-        device = torch.device(f"cuda:{DEFAULT_CUDA}")
-        assert cuda_tensor.dtype == cpu_tensor.dtype
-        assert cuda_tensor.shape == cpu_tensor.shape
-        assert cuda_tensor.device == device
-        assert torch.allclose(cuda_tensor, cpu_tensor.to(device))
-
-    asyncio.run(test())
+    device = torch.device(f"cuda:{DEFAULT_CUDA}")
+    assert cuda_tensor.dtype == cpu_tensor.dtype
+    assert cuda_tensor.shape == cpu_tensor.shape
+    assert cuda_tensor.device == device
+    assert torch.allclose(cuda_tensor, cpu_tensor.to(device))
 
 
 def test_array_transfer_non_contiguous_numpy():
@@ -193,51 +191,39 @@ def test_array_transfer_non_contiguous_numpy():
 
     device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
-    async def test():
-        array0 = np.arange(24)
-        assert array0.data.contiguous
-        arr = array0.reshape(6, 4).T[:, ::2]
-        assert not arr.data.contiguous
-        buffer = await spdl.io.async_transfer_buffer(arr, device_config=device_config)
-        tensor = spdl.io.to_torch(buffer)
+    array0 = np.arange(24)
+    assert array0.data.contiguous
+    arr = array0.reshape(6, 4).T[:, ::2]
+    assert not arr.data.contiguous
+    buffer = spdl.io.transfer_buffer(arr, device_config=device_config)
+    tensor = spdl.io.to_torch(buffer)
 
-        device = torch.device(f"cuda:{DEFAULT_CUDA}")
-        assert tensor.dtype == torch.int64
-        assert tensor.shape == torch.Size(arr.shape)
-        assert tensor.device == torch.device(device)
-        assert torch.allclose(tensor, torch.from_numpy(arr).to(device))
-
-    asyncio.run(test())
+    device = torch.device(f"cuda:{DEFAULT_CUDA}")
+    assert tensor.dtype == torch.int64
+    assert tensor.shape == torch.Size(arr.shape)
+    assert tensor.device == torch.device(device)
+    assert torch.allclose(tensor, torch.from_numpy(arr).to(device))
 
 
-def test_array_transfer_concurrent():
+def test_array_transfer_smoke_test():
     """smoke test for transfering multiple arrays concurrently"""
 
-    async def test(array):
-        device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
-        tasks = [
-            spdl.io.async_transfer_buffer(array, device_config=device_config)
-            for _ in range(100)
-        ]
-        await asyncio.wait(tasks)
-
     array = np.random.randint(0, 256, size=(1, 64_000), dtype=np.uint8)
-    asyncio.run(test(array))
+    device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+    for _ in range(100):
+        spdl.io.transfer_buffer(array, device_config=device_config)
 
 
 def test_transfer_cpu():
     """smoke test for transfer_buffer function"""
-
-    async def test(cuda_tensor):
-        buffer = await spdl.io.async_transfer_buffer_cpu(cuda_tensor)
-        return spdl.io.to_torch(buffer)
 
     for dtype in [np.uint8, np.int32, np.int64]:
         max_val = np.iinfo(dtype).max
         array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
         ref = torch.from_numpy(array)
         cuda_tensor = ref.cuda(device=DEFAULT_CUDA)
-        cpu_tensor = asyncio.run(test(cuda_tensor))
+        buffer = spdl.io.transfer_buffer_cpu(cuda_tensor)
+        cpu_tensor = spdl.io.to_torch(buffer)
 
         assert ref.dtype == cpu_tensor.dtype
         assert ref.shape == cpu_tensor.shape

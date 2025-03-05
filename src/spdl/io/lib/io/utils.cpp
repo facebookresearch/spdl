@@ -33,6 +33,10 @@ void register_utils(nb::module_& m) {
     RELEASE_GIL();
     return is_nvcodec_available();
   });
+  m.def("is_nvjpeg_available", []() {
+    RELEASE_GIL();
+    return is_nvjpeg_available();
+  });
 
   m.def("init_glog", [](char const* name) {
     RELEASE_GIL();
