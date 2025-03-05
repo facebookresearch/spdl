@@ -74,9 +74,6 @@ class PipelineBuilder(Generic[T, U]):
         self._process_args: list[_ProcessConfig] = []  # pyre-ignore: [24]
         self._sink: _SinkConfig[U] | None = None
 
-        self._num_aggregate = 0
-        self._num_disaggregate = 0
-
     def add_source(
         self,
         source: Iterable[T] | AsyncIterable[T],
@@ -200,6 +197,8 @@ class PipelineBuilder(Generic[T, U]):
                     "when `output_order` is 'input'."
                 )
         name_ = name or _get_op_name(op)
+        n = len(self._process_args) + 1
+        name_ = f"{n}:{name_}"
 
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
 
@@ -238,11 +237,13 @@ class PipelineBuilder(Generic[T, U]):
                 Default: :py:class:`StatsQueue`.
         """
 
-        if drop_last:
-            name = f"aggregate_{self._num_aggregate}({num_items}, {drop_last=})"
-        else:
-            name = f"aggregate_{self._num_aggregate}({num_items})"
-        self._num_aggregate += 1
+        name = (
+            f"aggregate({num_items}, {drop_last=})"
+            if drop_last
+            else f"aggregate({num_items})"
+        )
+        n = len(self._process_args) + 1
+        name = f"{n}:{name}"
 
         self._process_args.append(
             _ProcessConfig(
@@ -274,14 +275,12 @@ class PipelineBuilder(Generic[T, U]):
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
                 Default: :py:class:`StatsQueue`.
         """
-        name = f"disaggregate_{self._num_disaggregate}()"
-        self._num_disaggregate += 1
-
+        n = len(self._process_args) + 1
         self._process_args.append(
             _ProcessConfig(
                 _PType.Disaggregate,
                 _PipeArgs(
-                    name=name,
+                    name=f"{n}:disaggregate",
                     op=_disaggregate,  # pyre-ignore: [6]
                     hooks=hooks,
                 ),

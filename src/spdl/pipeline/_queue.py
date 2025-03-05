@@ -141,7 +141,7 @@ class StatsQueue(AsyncQueue[T]):
     ) -> None:
         _LG.info(
             "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
-            "Ave wait time: Upstream (put): %s, Downstream (get): %s.",
+            "Ave wait time: put: %s, get (by next stage): %s.",
             self.name,
             num_items,
             _time_str(elapsed),
