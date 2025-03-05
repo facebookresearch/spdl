@@ -11,6 +11,7 @@ from spdl.io.lib import _libspdl
 __all__ = [
     "is_cuda_available",
     "is_nvcodec_available",
+    "is_nvjpeg_available",
 ]
 
 
@@ -30,3 +31,12 @@ def is_nvcodec_available() -> bool:
         True if SPDL is compiled with NVCODEC support.
     """
     return _libspdl.is_nvcodec_available()
+
+
+def is_nvjpeg_available() -> bool:
+    """Check if SPDL is compiled with NVJPEG support.
+
+    Returns:
+        True if SPDL is compiled with NVJPEG support.
+    """
+    return _libspdl.is_nvjpeg_available()
