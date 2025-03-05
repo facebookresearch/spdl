@@ -129,13 +129,13 @@ def _build_pipeline(
 
     # source
     queue_class = _get_queue(src.queue_class, report_stats_interval)
-    queues.append(queue_class("0_src_queue", 1))
-    coros.append(("AsyncPipeline::0_source", _source(src.source, queues[0])))
+    queues.append(queue_class("0:src_queue", 1))
+    coros.append(("Pipeline::0:src", _source(src.source, queues[0])))
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
         queue_class = _get_queue(cfg.queue_class, report_stats_interval)
-        queue_name = f"{i}_{cfg.args.name.split('(')[0]}_queue"
+        queue_name = f"{cfg.args.name}_queue"
         queues.append(queue_class(queue_name, 1))
         in_queue, out_queue = queues[i - 1 : i + 1]
 
@@ -149,15 +149,15 @@ def _build_pipeline(
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg.type_}")
 
-        coros.append((f"AsyncPipeline::{i}_{cfg.args.name}", coro))
+        coros.append((f"Pipeline::{cfg.args.name}", coro))
 
     # sink
     n = len(process_args) + 1
     queue_class = _get_queue(sink.queue_class, report_stats_interval)
-    output_queue = queue_class(f"{n}_sink_queue", sink.buffer_size)
+    output_queue = queue_class(f"{n}:sink_queue", sink.buffer_size)
     coros.append(
         (
-            f"AsyncPipeline::{n}_sink",
+            f"Pipeline::{n}:sink",
             _sink(queues[-1], output_queue),
         )
     )
