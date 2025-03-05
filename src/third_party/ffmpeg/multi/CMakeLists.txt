@@ -12,57 +12,32 @@ add_library(ffmpeg7 INTERFACE)
 
 ################################################################################
 
-set(base_url https://pytorch.s3.amazonaws.com/torchaudio/ffmpeg)
+set(base_url https://github.com/facebookresearch/spdl/releases/download/release-assets/)
 
 if (APPLE)
   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64")
     FetchContent_Declare(
       f4
-      URL ${base_url}/2023-08-14/macos_arm64/4.4.4.tar.gz
-      URL_HASH SHA256=9a593eb241eb8b23bc557856ee6db5d9aecd2d8895c614a949f3a1ad9799c1a1
+      URL ${base_url}/ffmpeg_4.4.5_macos_aarch64.tar.gz
+      URL_HASH SHA256=703ee367571cf8f64f5f0535cbfa1f3b2889fde64461717a55bcce45f0a41ca0
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f5
-      URL ${base_url}/2023-07-06/macos_arm64/5.0.3.tar.gz
-      URL_HASH SHA256=316fe8378afadcf63089acf3ad53a626fd3c26cc558b96ce1dc94d2a78f4deb4
+      URL ${base_url}/ffmpeg_5.1.6_macos_aarch64.tar.gz
+      URL_HASH SHA256=d5a4f24b948462287f9198c5fc5d3ea0e85114ad0d13089799a76b57a96c9d03
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f6
-      URL ${base_url}/2023-07-06/macos_arm64/6.0.tar.gz
-      URL_HASH SHA256=5d1da9626f8cb817d6c558a2c61085a3d39a8d9f725a6f69f4658bea8efa9389
+      URL ${base_url}/ffmpeg_6.1.2_macos_aarch64.tar.gz
+      URL_HASH SHA256=581100ff990a053de84361cf6517ec880674f159196ba208beec70178fd29807
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/2024-04-05/macos_arm64/7.0.tar.gz
-      URL_HASH SHA256=f73dc42e96eb59ac34689f59e59cd140f0c865574aee5b9f7ded9ef16b6738e8
-      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-      )
-  elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-    FetchContent_Declare(
-      f4
-      URL ${base_url}/2023-08-14/macos_x86_64/4.4.4.tar.gz
-      URL_HASH SHA256=0935e359c0864969987d908397f9208d6dc4dc0ef8bfe2ec730bb2c44eae89fc
-      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-      )
-    FetchContent_Declare(
-      f5
-      URL ${base_url}/2023-07-06/macos_x86_64/5.0.3.tar.gz
-      URL_HASH SHA256=d0b49575d3b174cfcca53b3049641855e48028cf22dd32f3334bbec4ca94f43e
-      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-      )
-    FetchContent_Declare(
-      f6
-      URL ${base_url}/2023-07-06/macos_x86_64/6.0.tar.gz
-      URL_HASH SHA256=eabc01eb7d9e714e484d5e1b27bf7d921e87c1f3c00334abd1729e158d6db862
-      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-      )
-    FetchContent_Declare(
-      f7
-      URL ${base_url}/2024-04-05/macos_x86_64/7.0.tar.gz
-      URL_HASH SHA256=a7ea9df684f90993a213d458427b21b13fb8672b2734637701c1f75282530041
+      URL ${base_url}/ffmpeg_7.1.1_macos_aarch64.tar.gz
+      URL_HASH SHA256=90499be8992dbcddf541c62caa06e759a8e5a9ce670a1497495768a095af1199
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -79,51 +54,51 @@ elseif (UNIX)
   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
     FetchContent_Declare(
       f4
-      URL ${base_url}/2023-08-14/linux_aarch64/4.4.4.tar.gz
-      URL_HASH SHA256=6f00437d13a3b3812ebe81c6e6f3a84a58f260d946a1995df87ba09aae234504
+      URL ${base_url}/ffmpeg_4.4.5_manylinux_2_28_aarch64.tar.gz
+      URL_HASH SHA256=0f07b8e76be3d03b8e074d3da7a07c2030ca62137fe78282424d428d23efdf09
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f5
-      URL ${base_url}/2023-07-06/linux_aarch64/5.0.3.tar.gz
-      URL_HASH SHA256=65c663206982ee3f0ff88436d8869d191b46061e01e753518c77ecc13ea0236d
+      URL ${base_url}/ffmpeg_5.1.6_manylinux_2_28_aarch64.tar.gz
+      URL_HASH SHA256=f00a05aae720ce1c9eb40450c4f8f45436c47807efe6cd04b37a9cfb3df0ad5a
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f6
-      URL ${base_url}/2023-07-06/linux_aarch64/6.0.tar.gz
-      URL_HASH SHA256=ec762fd41ea7b8d9ad4f810f53fd78a565f2bc6f680afe56d555c80f3d35adef
+      URL ${base_url}/ffmpeg_6.1.2_manylinux_2_28_aarch64.tar.gz
+      URL_HASH SHA256=99f2bea858c189c76e63fb937069569b24acd9f8fc2ee00ea6eeb6a0a449bcb6
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/2024-04-05/linux_aarch64/7.0.tar.gz
-      URL_HASH SHA256=4bb2a2a5b8c547bfcc631073d6f97939666db8f5a85e85d3262ab07608e0fe67
+      URL ${base_url}/ffmpeg_7.1.1_manylinux_2_28_aarch64.tar.gz
+      URL_HASH SHA256=220e80ec9594a1980c709f73784aeb4f66f22560194d0594fe07674f88aafa76
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
     FetchContent_Declare(
       f4
-      URL ${base_url}/2023-08-14/linux_x86_64/4.4.4.tar.gz
-      URL_HASH SHA256=9b87eeba9b6975e25f28ba12163bd713228ed84f4c2b3721bc5ebe92055edb51
+      URL ${base_url}/ffmpeg_4.4.5_manylinux_2_28_x86_64.tar.gz
+      URL_HASH SHA256=f2aefe3ef4dd8841b2092c2b50c6342444da1b13d1dc9dc722b23c0632013457
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f5
-      URL ${base_url}/2023-07-06/linux_x86_64/5.0.3.tar.gz
-      URL_HASH SHA256=de3c75c99b9ce33de7efdc144566804ae5880457ce71e185b3f592dc452edce7
+      URL ${base_url}/ffmpeg_5.1.6_manylinux_2_28_x86_64.tar.gz
+      URL_HASH SHA256=f94aa7a59b0b6bc78b5a92a2298147d89f748c9d1335c97b248f09aae3088757
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f6
-      URL ${base_url}/2023-07-06/linux_x86_64/6.0.tar.gz
-      URL_HASH SHA256=04d3916404bab5efadd29f68361b7d13ea71e6242c6473edcb747a41a9fb97a6
+      URL ${base_url}/ffmpeg_6.1.2_manylinux_2_28_x86_64.tar.gz
+      URL_HASH SHA256=91a126132d71665a16cc63e74746e3a618deae5220340bc57bfb7befbceaf9b7
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/2024-04-05/linux_x86_64/7.0.tar.gz
-      URL_HASH SHA256=4b21ce39cc821c371d9cd1fb64d0f1d7a74279ed10675cf7116ae04b4ad8c58b
+      URL ${base_url}/ffmpeg_7.1.1_manylinux_2_28_x86_64.tar.gz
+      URL_HASH SHA256=55529e1fd0de8f81c4d3c1a22e0ac6373a9523628a1fdbcbfcf912ca3c539a3d
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -138,30 +113,11 @@ elseif (UNIX)
       "If you do not need the FFmpeg integration, setting USE_FFMPEG=0 will bypass the issue.")
   endif()
 elseif(MSVC)
-  FetchContent_Declare(
-    f4
-    URL ${base_url}/2023-08-14/windows/4.4.4.tar.gz
-    URL_HASH SHA256=9f9a65cf03a3e164edca601ba18180a504e44e03fae48ce706ca3120b55a4db5
-    DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-  FetchContent_Declare(
-    f5
-    URL ${base_url}/2023-07-06/windows/5.0.3.tar.gz
-    URL_HASH SHA256=e2daa10799909e366cb1b4b91a217d35f6749290dcfeea40ecae3d5b05a46cb3
-    DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-  FetchContent_Declare(
-    f6
-    URL ${base_url}/2023-07-06/windows/6.0.tar.gz
-    URL_HASH SHA256=098347eca8cddb5aaa61e9ecc1a00548c645fc59b4f7346b3d91414aa00a9cf6
-    DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-  FetchContent_Declare(
-    f7
-    URL ${base_url}/2024-04-05/windows/7.0.tar.gz
-    URL_HASH SHA256=a53658b53d6da34a67dade6edd529beb33b250b8ed906c89832805f2226d430f
-    DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
+  message(
+    FATAL_ERROR
+    "Windows is not supported.")
+else()
+  message(FATAL_ERROR "Unsupported platform.")
 endif()
 
 FetchContent_MakeAvailable(f4 f5 f6 f7)
