@@ -168,7 +168,7 @@ FetchContent_MakeAvailable(f4 f5 f6 f7)
 target_include_directories(ffmpeg4 INTERFACE ${f4_SOURCE_DIR}/include)
 target_include_directories(ffmpeg5 INTERFACE ${f5_SOURCE_DIR}/include)
 target_include_directories(ffmpeg6 INTERFACE ${f6_SOURCE_DIR}/include)
-target_include_directories(ffmpeg7 INTERFACE ${f6_SOURCE_DIR}/include)
+target_include_directories(ffmpeg7 INTERFACE ${f7_SOURCE_DIR}/include)
 
 if(APPLE)
   target_link_libraries(
