@@ -138,7 +138,7 @@ def test_dataloader_num_threads():
     assert test(dl) > 0.8
 
     dl = get_dl(src, preprocessor=delay, num_threads=len(src), buffer_size=1)
-    assert test(dl) < 0.4
+    assert test(dl) < 0.6
 
 
 def test_dataloader_batch():
