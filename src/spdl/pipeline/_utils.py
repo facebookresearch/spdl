@@ -20,6 +20,7 @@ from typing import Any, TypeVar
 __all__ = [
     "create_task",
     "iterate_in_subprocess",
+    "cache_iterator",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -241,3 +242,51 @@ def iterate_in_subprocess(
 
         if process.exitcode is None:
             _LG.warning("Failed to kill the worker process.")
+
+
+def cache_iterator(
+    src: Iterable[T],
+    num_caches: int,
+    *,
+    return_caches_after: int | None = None,
+    delete_src: bool = True,
+) -> Iterator[T]:
+    """Iterate over the source but returns cached values after the given iteration.
+
+    The function is intended for estimating the maximum performance gain achieved
+    by optimizing the data loader.
+
+    You can wrap your data loader with this function, and run it in the training
+    pipeline, and compare the performance to see if the training pipeline is
+    bottlenecked with data loading.
+
+    Args:
+        src: Source iterator. Expected to be a data loader object.
+        num_caches: The number of items (batches) to cache.
+        return_caches_after: The number of iterations to use the original
+            iterator. By default, it uses the same value as ``num_caches``.
+        delete_src: When this iterator starts returning the cached value,
+            call ``del`` on the original data loader so that resources are
+            released.
+
+    Returns:
+        The new iterator.
+    """
+    cache = []
+
+    run_for = num_caches if return_caches_after is None else return_caches_after
+
+    for i, data in enumerate(src, start=1):
+        yield data
+
+        if len(cache) < num_caches:
+            cache.append(data)
+
+        if i >= run_for:
+            break
+
+    if delete_src:
+        del src
+
+    while True:
+        yield from cache
