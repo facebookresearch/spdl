@@ -17,7 +17,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: "pytorch/manylinux2_28-builder:cuda${{ inputs.cuda-version}}"
+    container: "pytorch/manylinux2_28-builder:cuda${{ inputs.cuda-version }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,7 +47,9 @@ jobs:
           source $HOME/.local/bin/env
           uv python list --only-installed
 
-          python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
+          v=${{ inputs.python-version }}
+          # note: 3.13t is in cp313-cp313t directory
+          python_exe="/opt/python/cp${v//[^0-9]/}-cp${v}/bin/python"
           uv venv --python "${python_exe}"
           uv build --all-packages --wheel
 
@@ -63,7 +65,12 @@ jobs:
           overwrite: true
 
       - name: Check package
+        # CFFI is not available yet for 3.13t, which prevents the installation of twine
+        # https://github.com/python-cffi/cffi/releases/tag/v1.17.0
+        if: ${{ inputs.python-version != '313t' }}
         run: |
-          python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
+          v=${{ inputs.python-version }}
+          # note: 3.13t is in cp313-cp313t directory
+          python_exe="/opt/python/cp${v//[^0-9]/}-cp${v}/bin/python"
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl

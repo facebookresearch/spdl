@@ -42,6 +42,13 @@ _SPDL_USE_CUDA = _env("SPDL_USE_CUDA", _SPDL_USE_NVCODEC or _SPDL_USE_NVJPEG)
 _SPDL_BUILD_STUB = _env("SPDL_BUILD_STUB")
 
 
+def _is_gil_enabled():
+    try:
+        return sys._is_gil_enabled()
+    except AttributeError:
+        return True
+
+
 def _get_ext_modules():
     ext_modules = []
     for v in ["4", "5", "6", "7"]:
@@ -101,6 +108,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DPython_EXECUTABLE={sys.executable}",
             "-DSPDL_BUILD_PYTHON_BINDING=ON",
             f"-DSPDL_PYTHON_BINDING_INSTALL_PREFIX={install_dir}",
+            f"-DSPDL_IS_GIL_ENABLED={_b(_is_gil_enabled())}",
             ###################################################################
             # Options based on env vars
             ###################################################################
