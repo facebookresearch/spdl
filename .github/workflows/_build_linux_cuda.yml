@@ -1,5 +1,4 @@
-name: "Build Wheel"
-
+name: "Build Linux Wheel (CUDA)"
 
 on:
   workflow_call:

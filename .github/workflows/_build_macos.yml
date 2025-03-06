@@ -1,4 +1,4 @@
-name: "Build Wheel"
+name: "Build macOS Wheel"
 
 on:
   workflow_call:
