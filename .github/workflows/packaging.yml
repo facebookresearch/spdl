@@ -21,130 +21,45 @@ jobs:
   #############################################################################
   # macOS
   #############################################################################
-  macos-py313:
-    name: "macOS 3.13"
+  macos:
+    name: "macOS"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     uses: ./.github/workflows/_build_macos.yml
     with:
-      python-version: "3.13"
-      artifact: wheel-macos-py313
-
-  macos-py312:
-    name: "macOS 3.12"
-    uses: ./.github/workflows/_build_macos.yml
-    with:
-      python-version: "3.12"
-      artifact: wheel-macos-py312
-
-  macos-py311:
-    name: "macOS 3.11"
-    uses: ./.github/workflows/_build_macos.yml
-    with:
-      python-version: "3.11"
-      artifact: wheel-macos-py311
-
-  macos-py310:
-    name: "macOS 3.10"
-    uses: ./.github/workflows/_build_macos.yml
-    with:
-      python-version: "3.10"
-      artifact: wheel-macos-py310
-
-  #----------------------------------------------------------------------------
-  # Test
-  #----------------------------------------------------------------------------
-  macos-py310-test:
-    name: "macOS 3.10"
-    needs: [ "macos-py310" ]
-    uses: ./.github/workflows/_test_macos.yml
-    with:
-      python-version: "3.10"
-      artifact: wheel-macos-py310
+      python-version: "${{ matrix.python-version }}"
+      run-test: "${{ matrix.python-version == '3.10'}}"
 
   #############################################################################
   # Linux (CPU)
   #############################################################################
-  linux-py313-x86:
-    name: "Linux 3.13 x86_64"
+  linux-x86:
+    name: "Linux x86_64"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     uses: ./.github/workflows/_build_linux.yml
     with:
-      python-version: "313"
-      artifact: wheel-linux-py313-x86
-      arch: manylinux_2_28_x86_64
       os: ubuntu-latest
+      arch: x86_64
+      python-version: "${{ matrix.python-version }}"
+      run-test: "${{ matrix.python-version == '3.10'}}"
 
-  linux-py313-aarch64:
-    name: "Linux 3.13 aarch64"
+  linux-aarch64:
+    name: "Linux aarch64"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     uses: ./.github/workflows/_build_linux.yml
     with:
-      python-version: "313"
-      artifact: wheel-linux-py313-aarch64
-      arch: manylinux_2_28_aarch64
       os: ubuntu-24.04-arm
-
-  linux-py312-x86:
-    name: "Linux 3.12 x86_64"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      python-version: "312"
-      artifact: wheel-linux-py312-x86
-      arch: manylinux_2_28_x86_64
-      os: ubuntu-latest
-
-  linux-py312-aarch64:
-    name: "Linux 3.12 aarch64"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      python-version: "312"
-      artifact: wheel-linux-py312-aarch64
-      arch: manylinux_2_28_aarch64
-      os: ubuntu-24.04-arm
-
-  linux-py311-x86:
-    name: "Linux 3.11 x86_64"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      python-version: "311"
-      artifact: wheel-linux-py311-x86
-      arch: manylinux_2_28_x86_64
-      os: ubuntu-latest
-
-  linux-py311-aarch64:
-    name: "Linux 3.11 aarch64"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      python-version: "311"
-      artifact: wheel-linux-py311-aarch64
-      arch: manylinux_2_28_aarch64
-      os: ubuntu-24.04-arm
-
-  linux-py310-x86:
-    name: "Linux 3.10 x86_64"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      python-version: "310"
-      artifact: wheel-linux-py310-x86
-      arch: manylinux_2_28_x86_64
-      os: ubuntu-latest
-
-  linux-py310-aarch64:
-    name: "Linux 3.10 aarch64"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      python-version: "310"
-      artifact: wheel-linux-py310-aarch64
-      arch: manylinux_2_28_aarch64
-      os: ubuntu-24.04-arm
-
-  #----------------------------------------------------------------------------
-  # Test
-  #----------------------------------------------------------------------------
-  linux-py310-x86-test:
-    name: "Linux 3.10"
-    needs: [ "linux-py310-x86" ]
-    uses: ./.github/workflows/_test_linux.yml
-    with:
-      python-version: "3.10"
-      artifact: wheel-linux-py310-x86
+      arch: aarch64
+      python-version: "${{ matrix.python-version }}"
+      run-test: "${{ matrix.python-version == '3.10'}}"
 
   #############################################################################
   # Linux (CUDA)
@@ -180,14 +95,4 @@ jobs:
       python-version: "310"
       artifact: wheel-linux-py310-cuda12
       cuda-version: 12.6
-
-  #----------------------------------------------------------------------------
-  # Test
-  #----------------------------------------------------------------------------
-  linux-py310-cuda12-test:
-    name: "Linux 3.10 cu12"
-    needs: [ "linux-py310-cuda12" ]
-    uses: ./.github/workflows/_test_linux_cuda.yml
-    with:
-      python-version: "3.10"
-      artifact: wheel-linux-py310-cuda12
+      run-test: 'true'
