@@ -6,10 +6,14 @@ on:
       python-version:
         required: true
         type: string
-      artifact:
-        required: true
+      run-test:
+        required: false
+        default: 'false'
         type: string
 
+env:
+  ARTIFACT: wheel-macos-py${{ inputs.python-version }}
+        
 jobs:
   build:
     runs-on:  macos-latest
@@ -34,7 +38,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         name: Upload build artifact
         with:
-          name: "${{ inputs.artifact }}"
+          name: "${{ env.ARTIFACT }}"
           path: ~/package
           if-no-files-found: error
           retention-days: 7
@@ -44,3 +48,39 @@ jobs:
         run: |
           pip install -r ./packaging/requirements.txt
           twine check --strict ~/package/*.whl
+
+  test:
+    if: "${{ inputs.run-test == 'true' }}"
+    name: "test ffmpeg"
+    needs: ["build"]
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg-version: ["5.1", "6.1", "7.1" ]
+    runs-on:  macos-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: ~/package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          conda-remove-defaults: "true"
+
+      - name: Unit test
+        run: |
+          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+          conda install -q -c pytorch numpy pytest pytorch numba
+          pytest -v \
+              tests/spdl_unittest/io/ \
+              tests/spdl_unittest/dataloader/

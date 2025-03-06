@@ -13,6 +13,10 @@ on:
       cuda-version:
         required: true
         type: string
+      run-test:
+        required: false
+        default: 'false'
+        type: string
 
 jobs:
   build:
@@ -67,3 +71,43 @@ jobs:
           python_exe="/opt/python/cp${{ inputs.python-version }}-cp${{ inputs.python-version }}/bin/python"
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
+
+  test:
+    if: ${{ inputs.run-test == 'true' }}
+    needs: ["build"]
+    name: "test ffmpeg ${{ matrix.ffmpeg-version }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg-version: ["5", "6", "7" ]
+    runs-on:  ${{ inputs.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ inputs.artifact }}"
+          path: ~/package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          conda-remove-defaults: "true"
+
+      - name: Unit test
+        run: |
+          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+          # For some reason, the FFmpeg dynamic libraries are not found.
+          export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
+          # TODO: clean up the logic for versions
+          pip install nvidia-cuda-runtime-cu12 torch --index-url https://download.pytorch.org/whl/cu126
+          pip install pytest
+          pytest -v \
+              tests/spdl_unittest/cuda/ \
+              tests/spdl_unittest/io/
