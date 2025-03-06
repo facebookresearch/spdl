@@ -10,11 +10,17 @@ on:
       artifact:
         required: true
         type: string
+      arch:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    container: quay.io/pypa/manylinux_2_28_x86_64
+    runs-on: ${{ inputs.os }}
+    container: "quay.io/pypa/${{ inputs.arch }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,7 +38,7 @@ jobs:
           uv venv --python "${python_exe}"
           uv build --all-packages --wheel
 
-          ./packaging/repair_wheels.sh manylinux_2_27_x86_64 ./dist ~/package
+          ./packaging/repair_wheels.sh ${{ inputs.arch }} ./dist ~/package
 
       - uses: actions/upload-artifact@v4
         name: Upload build artifact
