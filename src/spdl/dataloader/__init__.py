@@ -8,11 +8,13 @@
 
 from typing import Any
 
+from ._cache_dataloader import CacheDataLoader
 from ._dataloader import DataLoader
 from ._pytorch_dataloader import get_pytorch_dataloader, PyTorchDataLoader
 
 __all__ = [
     "DataLoader",
+    "CacheDataLoader",
     "get_pytorch_dataloader",
     "PyTorchDataLoader",
 ]
