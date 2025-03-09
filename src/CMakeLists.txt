@@ -9,6 +9,7 @@ option(SPDL_USE_NPPI "Enable NVIDIA 2D Image And Signal Performance Primitives s
 option(SPDL_LINK_STATIC_NVJPEG "Link nvJPEG and NPPI statically." OFF)
 
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
+option(SPDL_IS_GIL_ENABLED "Whether the target Python has the GIL enabled" ON)
 option(SPDL_HOLD_GIL "Hold GIL in IO functions." OFF)
 option(SPDL_BUILD_STUB "Build Python binding stub file" OFF)
 option(SPDL_BUILD_PYTHON_BINDING "Build Python binding" ON)
@@ -64,6 +65,7 @@ endif ()
 add_subdirectory(libspdl)
 
 if (SPDL_BUILD_PYTHON_BINDING)
+  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
   add_subdirectory(third_party/nanobind)
   add_subdirectory(spdl/io/lib)
 endif()
