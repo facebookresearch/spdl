@@ -78,9 +78,15 @@ jobs:
 
       - name: Unit test
         run: |
+          # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+
+          # Install PyTorch and others
+          pip install torch numpy numba pytest
+
+          # Install FFmpeg
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
-          conda install -q -c pytorch numpy pytest pytorch numba
+
           pytest -v \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/

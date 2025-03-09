@@ -89,12 +89,20 @@ jobs:
 
       - name: Unit test
         run: |
+          # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+
+          # Install PyTorch and others
+          pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
+          conda install -q numba pytest
+
+          # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
-          conda install -q -c pytorch numpy pytest pytorch numba
           # For some reason, the dynamic libraries are not found.
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
+
+          # Run test
           pytest -v \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/
