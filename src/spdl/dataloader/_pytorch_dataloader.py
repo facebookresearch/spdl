@@ -239,7 +239,7 @@ def _resolve_sampler(
         _collate_fn = collate_fn or default_collate
     elif batch_size is not None:
         _sampler = BatchSampler(
-            sampler or _get_sampler(dataset, shuffle, generator),
+            sampler or _get_sampler(dataset, shuffle, generator),  # pyre-ignore: [6]
             batch_size,
             drop_last,
         )
@@ -345,7 +345,7 @@ def get_pytorch_dataloader(
         dataset=dataset,
         shmem=shmem,
         sampler=_sampler,
-        fetch_fn=_fetch_fn,
+        fetch_fn=_fetch_fn,  # pyre-ignore: [6]
         collate_fn=_collate_fn,
         transfer_fn=transfer_fn,
         mp_ctx=mp_ctx,

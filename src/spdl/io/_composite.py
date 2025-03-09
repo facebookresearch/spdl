@@ -6,11 +6,10 @@
 
 # pyre-unsafe
 
-import asyncio
 import builtins
 import logging
 import warnings
-from typing import Any, overload
+from typing import overload
 
 from spdl.io import (
     CPUBuffer,
@@ -418,117 +417,6 @@ def load_image_batch(
         buffer = _core.transfer_buffer(buffer, device_config=device_config)
 
     return buffer
-
-
-async def async_load_image_batch_nvdec(
-    srcs: list[str | bytes],
-    *,
-    device_config: CUDAConfig,
-    width: int | None,
-    height: int | None,
-    pix_fmt: str | None = "rgba",
-    demux_config: DemuxConfig | None = None,
-    decode_options: dict[str, Any] | None = None,
-    strict: bool = True,
-    **kwargs,
-) -> CUDABuffer:
-    """**[Experimental]** Batch load images with NVDEC.
-
-    This function combines :py:func:`~spdl.io.demux_image` and
-    :py:func:`~spdl.io.decode_packets_nvdec` to produce
-    buffer object from source in one step.
-
-    It concurrently demuxes the input images, using
-    the :py:class:`~concurrent.futures.ThreadPoolExecutor` attached to
-    the running async event loop, fetched by :py:func:`~asyncio.get_running_loop`.
-
-    Args:
-        srcs: List of source identifiers.
-
-        device_config: The CUDA device config. See :py:func:`~spdl.io.transfer_buffer`.
-
-        width: *Optional:* Resize the frame.
-
-        height: *Optional:* Resize the frame.
-
-        pix_fmt:
-            *Optional:* Change the format of the pixel.
-
-        demux_config:
-            *Optional:* Demux options passed to
-            :py:func:`~spdl.io.async_demux_media`.
-
-        decode_options:
-            *Optional:* Other decode options passed to
-            :py:func:`~spdl.io.async_decode_packets_nvdec`.
-
-        strict:
-            *Optional:* If True, raise an error if any of the images failed to load.
-
-    Returns:
-        A buffer object.
-
-    .. admonition:: Example
-
-        >>> srcs = [
-        ...     "sample1.jpg",
-        ...     "sample2.png",
-        ... ]
-        >>> coro = async_load_image_batch_nvdec(
-        ...     srcs,
-        ...     cuda_device_index=0,
-        ...     width=124,
-        ...     height=96,
-        ...     pix_fmt="rgba",
-        ... )
-        >>> buffer = asyncio.run(coro)
-        >>> array = spdl.io.to_torch(buffer)
-        >>> # An array with shape NCHW==[2, 4, 96, 124] on CUDA device 0
-        >>>
-    """
-    if not srcs:
-        raise ValueError("`srcs` must not be empty.")
-
-    if device_config is None and "cuda_config" in kwargs:
-        warnings.warn(
-            "The `cuda_config` argument has ben renamed to `device_config`.",
-            stacklevel=2,
-        )
-        device_config = kwargs["cuda_config"]
-
-    decode_options = decode_options or {}
-    width = -1 if width is None else width
-    height = -1 if height is None else height
-
-    tasks = [
-        asyncio.create_task(_core.async_demux_image(src, demux_config=demux_config))
-        for src in srcs
-    ]
-
-    await asyncio.wait(tasks)
-
-    packets = []
-    for src, task in zip(srcs, tasks):
-        if err := task.exception():
-            _LG.error(_get_err_msg(src, err))
-            continue
-        packets.append(task.result())
-
-    if strict and len(packets) != len(srcs):
-        raise RuntimeError("Failed to demux some images.")
-
-    if not packets:
-        raise RuntimeError("Failed to demux all images.")
-
-    return await _core.async_decode_packets_nvdec(
-        packets,
-        device_config=device_config,
-        width=width,
-        height=height,
-        pix_fmt=pix_fmt,
-        strict=strict,
-        **decode_options,
-    )
 
 
 def _get_bytes(srcs: list[str | bytes]) -> list[bytes]:

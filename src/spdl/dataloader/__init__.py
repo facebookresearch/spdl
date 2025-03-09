@@ -6,8 +6,6 @@
 
 """Task specific data loading solutions based on :py:class:`~spdl.pipeline.Pipeline`."""
 
-from typing import Any
-
 from ._cache_dataloader import CacheDataLoader
 from ._dataloader import DataLoader
 from ._pytorch_dataloader import get_pytorch_dataloader, PyTorchDataLoader
@@ -20,25 +18,3 @@ __all__ = [
 ]
 
 # pyre-strict
-
-
-def __dir__() -> list[str]:
-    return __all__
-
-
-def __getattr__(name: str) -> Any:  # pyre-ignore: [3]
-    # For backward compatibility
-    if name == "iterate_in_subprocess":
-        import warnings
-
-        warnings.warn(
-            "`iterate_in_subprocess` has been moved to `spdl.pipeline.iterate_in_subprocess`. "
-            "Please update the import statement to "
-            "`from spdl.pipeline import iterate_in_subprocess`.",
-            stacklevel=2,
-        )
-        from spdl.pipeline import iterate_in_subprocess
-
-        return iterate_in_subprocess
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
