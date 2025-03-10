@@ -196,17 +196,13 @@ class PipelineBuilder(Generic[T, U]):
                     "pipe does not support async generator function "
                     "when `output_order` is 'input'."
                 )
-        name_ = name or _get_op_name(op)
-        n = len(self._process_args) + 1
-        name_ = f"{n}:{name_}"
-
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
 
         self._process_args.append(
             _ProcessConfig(
                 type_=type_,
+                name=name or _get_op_name(op),
                 args=_PipeArgs(
-                    name=name_,
                     op=op,
                     executor=executor,
                     concurrency=concurrency,
@@ -236,20 +232,16 @@ class PipelineBuilder(Generic[T, U]):
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
                 Default: :py:class:`StatsQueue`.
         """
-
         name = (
             f"aggregate({num_items}, {drop_last=})"
             if drop_last
             else f"aggregate({num_items})"
         )
-        n = len(self._process_args) + 1
-        name = f"{n}:{name}"
-
         self._process_args.append(
             _ProcessConfig(
                 _PType.Aggregate,
-                _PipeArgs(
-                    name=name,
+                name=name,
+                args=_PipeArgs(
                     op=_Aggregate(num_items, drop_last),
                     hooks=hooks,
                     op_requires_eof=True,
@@ -275,12 +267,11 @@ class PipelineBuilder(Generic[T, U]):
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
                 Default: :py:class:`StatsQueue`.
         """
-        n = len(self._process_args) + 1
         self._process_args.append(
             _ProcessConfig(
                 _PType.Disaggregate,
-                _PipeArgs(
-                    name=f"{n}:disaggregate",
+                name="disaggregate",
+                args=_PipeArgs(
                     op=_disaggregate,  # pyre-ignore: [6]
                     hooks=hooks,
                 ),
@@ -335,14 +326,14 @@ class PipelineBuilder(Generic[T, U]):
             args = cfg.args
             match cfg.type_:
                 case _PType.Pipe:
-                    part = f"{args.name}(concurrency={args.concurrency})"
+                    part = f"{cfg.name}(concurrency={args.concurrency})"
                 case _PType.OrderedPipe:
                     part = (
-                        f"{args.name}(concurrency={args.concurrency}, "
+                        f"{cfg.name}(concurrency={args.concurrency}, "
                         'output_order="input")'
                     )
                 case _PType.Aggregate | _PType.Disaggregate:
-                    part = args.name
+                    part = cfg.name
                 case _:
                     part = str(cfg.type_)
             parts.append(f"  - {part}")

@@ -209,7 +209,7 @@ def test_async_pipe():
         ref = list(range(6))
         _put_aqueue(input_queue, ref, eof=True)
 
-        await _pipe(input_queue, output_queue, _PipeArgs(name="adouble", op=adouble))
+        await _pipe("adouble", input_queue, output_queue, _PipeArgs(op=adouble))
 
         result = _flush_aqueue(output_queue)
 
@@ -227,7 +227,7 @@ def test_async_pipe_skip():
         data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
         _put_aqueue(input_queue, data, eof=True)
 
-        await _pipe(input_queue, output_queue, _PipeArgs(name="adouble", op=adouble))
+        await _pipe("adouble", input_queue, output_queue, _PipeArgs(op=adouble))
 
         result = _flush_aqueue(output_queue)
 
@@ -250,9 +250,10 @@ def test_async_pipe_wrong_task_signature():
 
         with pytest.raises(TypeError):
             await _pipe(
+                "_2args",
                 input_queue,
                 output_queue,
-                _PipeArgs(name="_2args", op=_2args, concurrency=3),
+                _PipeArgs(op=_2args, concurrency=3),
             )
 
         remaining = _flush_aqueue(input_queue)
@@ -287,7 +288,7 @@ def test_async_pipe_cancel(full):
             raise
 
     async def test():
-        coro = _pipe(input_queue, output_queue, _PipeArgs(name="astuck", op=astuck))
+        coro = _pipe("astuck", input_queue, output_queue, _PipeArgs(op=astuck))
         task = asyncio.create_task(coro)
 
         await asyncio.sleep(0.5)
@@ -317,10 +318,10 @@ def test_async_pipe_concurrency():
         _put_aqueue(input_queue, ref, eof=False)
 
         coro = _pipe(
+            "delay",
             input_queue,
             output_queue,
             _PipeArgs(
-                name="delay",
                 op=delay,
                 concurrency=concurrency,
             ),
@@ -361,10 +362,10 @@ def test_async_pipe_concurrency_throughput():
 
         t0 = time.monotonic()
         await _pipe(
+            "delay",
             input_queue,
             output_queue,
             _PipeArgs(
-                name="delay",
                 op=delay,
                 concurrency=concurrency,
             ),

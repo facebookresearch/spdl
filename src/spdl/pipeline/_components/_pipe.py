@@ -46,7 +46,6 @@ U = TypeVar("U")
 
 @dataclass
 class _PipeArgs(Generic[T, U]):
-    name: str
     op: Callables[T, U]
     executor: Executor | None = None
     concurrency: int = 1
@@ -67,10 +66,10 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-def _get_hooks(args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
+def _get_hooks(name: str, args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
     if args.hooks is not None:
         return args.hooks
-    return [TaskStatsHook(args.name, args.concurrency, interval)]
+    return [TaskStatsHook(name, args.concurrency, interval)]
 
 
 async def _wrap_afunc(
@@ -124,6 +123,7 @@ async def _wrap_agen(
 
 
 def _pipe(
+    name: str,
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
@@ -132,7 +132,7 @@ def _pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks = _get_hooks(args, report_stats_interval)
+    hooks = _get_hooks(name, args, report_stats_interval)
 
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
         convert_to_async(args.op, args.executor)
@@ -163,7 +163,7 @@ def _pipe(
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            task = create_task(_wrap(afunc(item)), name=f"{args.name}:{(i := i + 1)}")
+            task = create_task(_wrap(afunc(item)), name=f"{name}:{(i := i + 1)}")
             tasks.add(task)
 
             if len(tasks) >= args.concurrency:
@@ -181,6 +181,7 @@ def _pipe(
 
 
 def _ordered_pipe(
+    name: str,
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
@@ -219,7 +220,7 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks: list[PipelineHook] = _get_hooks(args, report_stats_interval)
+    hooks: list[PipelineHook] = _get_hooks(name, args, report_stats_interval)
 
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
@@ -238,18 +239,20 @@ def _ordered_pipe(
     async def _unwrap(task: asyncio.Task[U]) -> U:
         return await task
 
-    inter_queue = AsyncQueue(f"{args.name}_interqueue", args.concurrency)
+    inter_queue = AsyncQueue(f"{name}_interqueue", args.concurrency)
 
     coro1: Coroutine = _pipe(  # pyre-ignore: [1001]
+        name,
         input_queue,
         inter_queue,
-        _PipeArgs(args.name, op=_wrap, executor=args.executor, hooks=[]),
+        _PipeArgs(op=_wrap, executor=args.executor, hooks=[]),
     )
 
     coro2: Coroutine = _pipe(  # pyre-ignore: [1001]
+        name,
         inter_queue,
         output_queue,
-        _PipeArgs(args.name, op=_unwrap, executor=args.executor, hooks=[]),
+        _PipeArgs(op=_unwrap, executor=args.executor, hooks=[]),
     )
 
     @_queue_stage_hook(output_queue)
@@ -276,6 +279,13 @@ class _Aggregate(Generic[T]):
             ret, self._vals = self._vals, []
             return ret
         return _SKIP  # pyre-ignore: [7]
+
+    def __repr__(self) -> str:
+        return (
+            f"aggregate({self.n}, drop_last={self.drop_last})"
+            if self.drop_last
+            else f"aggregate({self.n})"
+        )
 
 
 def _disaggregate(items: list[T]) -> Iterator[T]:
