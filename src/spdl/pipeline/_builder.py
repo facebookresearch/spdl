@@ -6,31 +6,21 @@
 
 # pyre-strict
 
-import inspect
 import logging
-from collections.abc import (
-    AsyncIterable,
-    Callable,
-    Iterable,
-    Iterator,
-)
+from collections.abc import AsyncIterable, Callable, Iterable, Iterator
 from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
 from typing import Any, Generic, TypeVar
 
 from ._components._build import (
-    _build_pipeline,
+    _build_pipeline_coro,
     _ProcessConfig,
     _PType,
     _SinkConfig,
     _SourceConfig,
     PipelineFailure,
 )
-from ._components._pipe import (
-    _Aggregate,
-    _disaggregate,
-    _PipeArgs,
-)
+from ._components._pipe import _Aggregate, _disaggregate, _PipeArgs
 from ._convert import Callables
 from ._hook import PipelineHook
 from ._pipeline import Pipeline
@@ -50,6 +40,60 @@ T = TypeVar("T")
 U = TypeVar("U")
 T_ = TypeVar("T_")
 U_ = TypeVar("U_")
+
+
+################################################################################
+# Build function
+################################################################################
+def _get_desc(
+    src: _SourceConfig[T] | None,
+    process_args: list[_ProcessConfig],  # pyre-ignore: [24]
+    sink: _SinkConfig[U] | None,
+) -> str:
+    parts = []
+    if (src_ := src) is not None:
+        src_repr = getattr(src_.source, "__name__", type(src_.source).__name__)
+        parts.append(f"  - src: {src_repr}")
+    else:
+        parts.append("  - src: n/a")
+
+    for cfg in process_args:
+        args = cfg.args
+        match cfg.type_:
+            case _PType.Pipe:
+                part = f"{cfg.name}(concurrency={args.concurrency})"
+            case _PType.OrderedPipe:
+                part = (
+                    f"{cfg.name}(concurrency={args.concurrency}, "
+                    'output_order="input")'
+                )
+            case _PType.Aggregate | _PType.Disaggregate:
+                part = cfg.name
+            case _:
+                part = str(cfg.type_)
+        parts.append(f"  - {part}")
+
+    if (sink_ := sink) is not None:
+        parts.append(f"  - sink: buffer_size={sink_.buffer_size}")
+
+    return "\n".join(parts)
+
+
+def _build_pipeline(
+    src: _SourceConfig[T],
+    process_args: list[_ProcessConfig],  # pyre-ignore: [24]
+    sink: _SinkConfig[U],
+    *,
+    num_threads: int,
+    report_stats_interval: float,
+) -> Pipeline[U]:
+    coro, queues = _build_pipeline_coro(src, process_args, sink, report_stats_interval)
+
+    executor = ThreadPoolExecutor(
+        max_workers=num_threads,
+        thread_name_prefix="spdl_",
+    )
+    return Pipeline(coro, queues, executor, desc=_get_desc(src, process_args, sink))
 
 
 ################################################################################
@@ -104,9 +148,6 @@ class PipelineBuilder(Generic[T, U]):
         """
         if self._src is not None:
             raise ValueError("Source already set.")
-
-        if not (hasattr(source, "__aiter__") or hasattr(source, "__iter__")):
-            raise ValueError("Source must be either generator or async generator.")
 
         self._src = _SourceConfig(source, queue_class)
         return self
@@ -187,15 +228,6 @@ class PipelineBuilder(Generic[T, U]):
                 f"Found: {output_order}"
             )
 
-        if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
-            if executor is not None:
-                raise ValueError("`executor` cannot be specified when op is async.")
-        if inspect.isasyncgenfunction(op):
-            if output_order == "input":
-                raise ValueError(
-                    "pipe does not support async generator function "
-                    "when `output_order` is 'input'."
-                )
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
 
         self._process_args.append(
@@ -208,7 +240,7 @@ class PipelineBuilder(Generic[T, U]):
                     concurrency=concurrency,
                     hooks=hooks,
                 ),
-                queue_class=queue_class,  # pyre-ignore: [6]
+                queue_class=queue_class,
             )
         )
         return self
@@ -303,48 +335,14 @@ class PipelineBuilder(Generic[T, U]):
         """
         if self._sink is not None:
             raise ValueError("Sink is already set.")
-        if not isinstance(buffer_size, int):
-            raise ValueError(f"`buffer_size` must be int. Found: {type(buffer_size)}.")
-        if buffer_size < 1:
-            raise ValueError(
-                f"`buffer_size` must be greater than 0. Found: {buffer_size}"
-            )
 
         self._sink = _SinkConfig(buffer_size, queue_class)
         return self
 
-    def _get_desc(self) -> list[str]:
-        parts = []
-        if self._src is not None:
-            src = self._src
-            src_repr = getattr(src.source, "__name__", type(src.source).__name__)
-            parts.append(f"  - src: {src_repr}")
-        else:
-            parts.append("  - src: n/a")
-
-        for cfg in self._process_args:
-            args = cfg.args
-            match cfg.type_:
-                case _PType.Pipe:
-                    part = f"{cfg.name}(concurrency={args.concurrency})"
-                case _PType.OrderedPipe:
-                    part = (
-                        f"{cfg.name}(concurrency={args.concurrency}, "
-                        'output_order="input")'
-                    )
-                case _PType.Aggregate | _PType.Disaggregate:
-                    part = cfg.name
-                case _:
-                    part = str(cfg.type_)
-            parts.append(f"  - {part}")
-
-        if (sink := self._sink) is not None:
-            parts.append(f"  - sink: buffer_size={sink.buffer_size}")
-
-        return parts
-
     def __str__(self) -> str:
-        return "\n".join([repr(self), *self._get_desc()])
+        return "\n".join(
+            [repr(self), _get_desc(self._src, self._process_args, self._sink)]
+        )
 
     def build(
         self,
@@ -377,15 +375,18 @@ class PipelineBuilder(Generic[T, U]):
         if (sink := self._sink) is None:
             raise RuntimeError("Sink is not set.")
 
-        coro, queues = _build_pipeline(
-            src, self._process_args, sink, report_stats_interval
+        return _build_pipeline(
+            src,
+            self._process_args,
+            sink,
+            num_threads=num_threads,
+            report_stats_interval=report_stats_interval,
         )
 
-        executor = ThreadPoolExecutor(
-            max_workers=num_threads,
-            thread_name_prefix="spdl_",
-        )
-        return Pipeline(coro, queues, executor, desc=self._get_desc())
+
+################################################################################
+# run in subprocess
+################################################################################
 
 
 def _run_pipeline(builder: PipelineBuilder[T, U], num_threads: int) -> Iterator[U]:
