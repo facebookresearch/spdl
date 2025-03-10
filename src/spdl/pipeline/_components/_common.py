@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-__all__ = ["_queue_stage_hook", "_EOF", "_SKIP"]
+__all__ = ["_queue_stage_hook", "_EOF"]
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, TypeVar
@@ -28,7 +28,6 @@ class _Sentinel:
 
 
 _EOF = _Sentinel("EOF")  # Indicate the end of stream.
-_SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 
 
 @asynccontextmanager

@@ -26,8 +26,8 @@ from spdl.pipeline import (
     run_pipeline_in_subprocess,
     TaskStatsHook,
 )
-from spdl.pipeline._components._common import _EOF, _SKIP
-from spdl.pipeline._components._pipe import _pipe, _PipeArgs
+from spdl.pipeline._components._common import _EOF
+from spdl.pipeline._components._pipe import _pipe, _PipeArgs, _SKIP
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
 from spdl.pipeline._hook import _periodic_dispatch
@@ -75,21 +75,6 @@ def test_async_enqueue_simple():
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
     assert vals == [*src, _EOF]
-
-
-def test_async_enqueue_skip():
-    """_async_enqueue should skip if the value is SKIP_SENTINEL"""
-
-    def src():
-        for i in range(6):
-            yield i
-            yield _SKIP
-
-    queue = AsyncQueue(name="foo")
-    coro = _source(src(), queue)
-    asyncio.run(coro)
-    vals = _flush_aqueue(queue)
-    assert vals == [*list(range(6)), _EOF]
 
 
 def test_async_enqueue_iterator_failure():
@@ -146,22 +131,6 @@ def test_async_sink_simple(empty: bool):
     results = _flush_aqueue(output_queue)
 
     assert results == data
-
-
-def test_async_sink_skip():
-    """_sink does not pass the value if it is SKIP"""
-    input_queue = AsyncQueue(name="input")
-    output_queue = AsyncQueue(name="output")
-
-    data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
-    _put_aqueue(input_queue, data, eof=True)
-
-    coro = _sink(input_queue, output_queue)
-
-    asyncio.run(coro)
-    results = _flush_aqueue(output_queue)
-
-    assert results == [0, 1, 2]
 
 
 def test_async_sink_cancel():
@@ -952,22 +921,6 @@ def test_pipeline_passthrough():
 
     with pytest.raises(EOFError):
         apl.get_item(timeout=1)
-
-
-def test_pipeline_skip():
-    """AsyncPipeline2 does not output _SKIP items."""
-
-    def src():
-        for i in range(10):
-            yield i
-            yield _SKIP
-        yield _SKIP
-
-    pipeline = PipelineBuilder().add_source(src()).add_sink(1000).build(num_threads=1)
-
-    with pipeline.auto_stop():
-        for i in range(10):
-            assert i == pipeline.get_item(timeout=3)
 
 
 def test_pipeline_skip_odd():
