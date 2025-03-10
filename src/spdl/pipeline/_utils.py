@@ -39,11 +39,11 @@ T = TypeVar("T")
 # task was created.
 # Otherwise the log will point to the location somewhere deep in `asyncio` module
 # which is not very helpful.
-def _log_exception(task: Task, stacklevel: int, ignore_cancelled: bool) -> None:
+def _log_exception(task: Task, stacklevel: int, log_cancelled: bool) -> None:
     try:
         task.result()
     except asyncio.exceptions.CancelledError:
-        if not ignore_cancelled:
+        if log_cancelled:
             _LG.warning(
                 "Task [%s] was cancelled.", task.get_name(), stacklevel=stacklevel
             )
@@ -69,12 +69,12 @@ def _log_exception(task: Task, stacklevel: int, ignore_cancelled: bool) -> None:
 def create_task(
     coro: Coroutine[Any, Any, T] | Generator[Any, None, T],  # pyre-ignore: [2]
     name: str | None = None,
-    ignore_cancelled: bool = True,
+    log_cancelled: bool = False,
 ) -> Task[T]:
     """Wrapper around :py:func:`asyncio.create_task`. Add logging callback."""
     task = asyncio.create_task(coro, name=name)
     task.add_done_callback(
-        lambda t: _log_exception(t, stacklevel=3, ignore_cancelled=ignore_cancelled)
+        lambda t: _log_exception(t, stacklevel=3, log_cancelled=log_cancelled)
     )
     return task
 

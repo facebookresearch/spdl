@@ -304,7 +304,7 @@ class TaskStatsHook(PipelineHook):
             coro = _periodic_dispatch(self._log_interval_stats, self.interval)
             self._int_t0 = time.monotonic()
             self._int_task = create_task(
-                coro, name="f{self.name}_periodic_report", ignore_cancelled=True
+                coro, name="f{self.name}_periodic_report", log_cancelled=False
             )
 
         try:
