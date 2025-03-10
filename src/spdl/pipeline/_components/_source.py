@@ -11,7 +11,7 @@ from typing import TypeVar
 
 from .._convert import _to_async_gen
 from .._queue import AsyncQueue
-from ._common import _queue_stage_hook, _SKIP
+from ._common import _queue_stage_hook
 
 # pyre-strict
 
@@ -31,8 +31,7 @@ async def _source(
     async with _queue_stage_hook(queue):
         num_items = 0
         async for item in src_:
-            if item is not _SKIP:
-                await queue.put(item)
-                num_items += 1
-                if max_items is not None and num_items >= max_items:
-                    return
+            await queue.put(item)
+            num_items += 1
+            if max_items is not None and num_items >= max_items:
+                return

@@ -35,13 +35,16 @@ from .._hook import (
 )
 from .._queue import AsyncQueue
 from .._utils import create_task
-from ._common import _EOF, _queue_stage_hook, _SKIP
+from ._common import _EOF, _queue_stage_hook, _Sentinel
 
 # pyre-strict
 
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+
+_SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
 
 
 @dataclass
@@ -77,6 +80,9 @@ async def _wrap_afunc(
 ) -> None:
     async with _task_hooks(hooks):
         result = await coro
+
+    if result is _SKIP:
+        return
 
     await queue.put(result)
 
@@ -116,6 +122,9 @@ async def _wrap_agen(
             # If task_hooks absorb the `StopAsyncIteration`, we need to exit here.
             if exhausted:
                 return
+
+            if result is _SKIP:
+                continue
 
             await queue.put(result)
         except StopAsyncIteration:
@@ -157,8 +166,6 @@ def _pipe(
         i, tasks = 0, set()
         while True:
             item = await input_queue.get()
-            if item is _SKIP:
-                continue
             if item is _EOF and not args.op_requires_eof:
                 break
             # note: Make sure that `afunc` is called directly in this function,
