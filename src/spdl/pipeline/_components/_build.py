@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
-    "_build_pipeline",
+    "_build_pipeline_coro",
     "PipelineFailure",
     "_SourceConfig",
     "_ProcessConfig",
@@ -14,6 +14,7 @@ __all__ = [
 
 import asyncio
 import enum
+import inspect
 from collections.abc import (
     AsyncIterable,
     Coroutine,
@@ -44,6 +45,10 @@ class _SourceConfig(Generic[T]):
     source: Iterable | AsyncIterable
     queue_class: type[AsyncQueue[T]] | None
 
+    def __post_init__(self) -> None:
+        if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
+            raise ValueError("Source must be either generator or async generator.")
+
 
 class _PType(enum.IntEnum):
     Pipe = 1
@@ -59,11 +64,33 @@ class _ProcessConfig(Generic[T, U]):
     args: _PipeArgs[T, U]
     queue_class: type[AsyncQueue[U]] | None
 
+    def __post_init__(self) -> None:
+        op = self.args.op
+        if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
+            if self.args.executor is not None:
+                raise ValueError("`executor` cannot be specified when op is async.")
+        if inspect.isasyncgenfunction(op):
+            if self.type_ == _PType.OrderedPipe:
+                raise ValueError(
+                    "pipe does not support async generator function "
+                    "when `output_order` is 'input'."
+                )
+
 
 @dataclass
 class _SinkConfig(Generic[T]):
     buffer_size: int
     queue_class: type[AsyncQueue[T]] | None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.buffer_size, int):
+            raise ValueError(
+                f"`buffer_size` must be int. Found: {type(self.buffer_size)}."
+            )
+        if self.buffer_size < 1:
+            raise ValueError(
+                f"`buffer_size` must be greater than 0. Found: {self.buffer_size}"
+            )
 
 
 # The following is how we intend pipeline to behave. If the implementation
@@ -116,7 +143,7 @@ def _get_queue(
     return partial(DefaultQueue, interval=interval)  # pyre-ignore: [7]
 
 
-def _build_pipeline(
+def _build_pipeline_coro(
     src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
     sink: _SinkConfig[U],

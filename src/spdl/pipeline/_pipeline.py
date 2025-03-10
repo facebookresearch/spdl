@@ -269,9 +269,9 @@ class Pipeline(Generic[T]):
         output_queue: AsyncQueue[T],
         executor: ThreadPoolExecutor,
         *,
-        desc: list[str],
+        desc: str,
     ) -> None:
-        self._str: str = "\n".join([repr(self), *desc])
+        self._str: str = "\n".join([repr(self), desc])
 
         self._output_queue: AsyncQueue[T] = output_queue
         self._event_loop = _EventLoop(coro, executor)
