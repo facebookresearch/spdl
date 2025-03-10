@@ -55,6 +55,7 @@ class _PType(enum.IntEnum):
 @dataclass
 class _ProcessConfig(Generic[T, U]):
     type_: _PType
+    name: str
     args: _PipeArgs[T, U]
     queue_class: type[AsyncQueue[U]] | None
 
@@ -134,22 +135,23 @@ def _build_pipeline(
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
+        name = f"{i}:{cfg.name}"
         queue_class = _get_queue(cfg.queue_class, report_stats_interval)
-        queue_name = f"{cfg.args.name}_queue"
+        queue_name = f"{name}_queue"
         queues.append(queue_class(queue_name, 1))
         in_queue, out_queue = queues[i - 1 : i + 1]
 
         match cfg.type_:
             case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
-                coro = _pipe(in_queue, out_queue, cfg.args, report_stats_interval)
+                coro = _pipe(name, in_queue, out_queue, cfg.args, report_stats_interval)
             case _PType.OrderedPipe:
                 coro = _ordered_pipe(
-                    in_queue, out_queue, cfg.args, report_stats_interval
+                    name, in_queue, out_queue, cfg.args, report_stats_interval
                 )
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg.type_}")
 
-        coros.append((f"Pipeline::{cfg.args.name}", coro))
+        coros.append((f"Pipeline::{name}", coro))
 
     # sink
     n = len(process_args) + 1
