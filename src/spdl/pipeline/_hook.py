@@ -33,10 +33,16 @@ T = TypeVar("T")
 
 
 def _time_str(val: float) -> str:
-    return "{:6.1f} [{:>3s}]".format(
-        val * 1000 if val < 1 else val,
-        "ms" if val < 1 else "sec",
-    )
+    if val < 0.0001:
+        val *= 10e6
+        unit = "us"
+    elif val < 1:
+        val *= 10e3
+        unit = "ms"
+    else:
+        unit = "sec"
+
+    return f"{val:6.1f} [{unit:>3s}]"
 
 
 class _StatsCounter:
