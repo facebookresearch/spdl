@@ -34,10 +34,10 @@ T = TypeVar("T")
 
 def _time_str(val: float) -> str:
     if val < 0.0001:
-        val *= 10e6
+        val *= 1e6
         unit = "us"
     elif val < 1:
-        val *= 10e3
+        val *= 1e3
         unit = "ms"
     else:
         unit = "sec"
