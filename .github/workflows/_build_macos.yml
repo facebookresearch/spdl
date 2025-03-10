@@ -72,12 +72,23 @@ jobs:
           path: ~/package
 
       - uses: conda-incubator/setup-miniconda@v3
+        if: ${{ inputs.python-version != '3.13t' }}
         with:
           python-version: ${{ inputs.python-version }}
           conda-remove-defaults: "true"
 
+      - uses: conda-incubator/setup-miniconda@v3
+        if: ${{ inputs.python-version == '3.13t' }}
+        with:
+          python-version: '3.13'
+          conda-remove-defaults: "true"
+
       - name: Unit test
         run: |
+          if [[ "${{ inputs.python-version }}" == '3.13t' ]]; then
+            conda install -q -c conda-forge python-freethreading
+          fi
+          
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
@@ -87,6 +98,7 @@ jobs:
           # Install FFmpeg
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
 
+          # Run test
           pytest -v \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/
