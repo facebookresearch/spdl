@@ -147,6 +147,7 @@ def _build_pipeline_coro(
     src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
     sink: _SinkConfig[U],
+    max_failures: int,
     report_stats_interval: float,
 ) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
     # Note:
@@ -170,10 +171,22 @@ def _build_pipeline_coro(
 
         match cfg.type_:
             case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
-                coro = _pipe(name, in_queue, out_queue, cfg.args, report_stats_interval)
+                coro = _pipe(
+                    name,
+                    in_queue,
+                    out_queue,
+                    cfg.args,
+                    max_failures,
+                    report_stats_interval,
+                )
             case _PType.OrderedPipe:
                 coro = _ordered_pipe(
-                    name, in_queue, out_queue, cfg.args, report_stats_interval
+                    name,
+                    in_queue,
+                    out_queue,
+                    cfg.args,
+                    max_failures,
+                    report_stats_interval,
                 )
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg.type_}")

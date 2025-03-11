@@ -1598,3 +1598,30 @@ def test_pipelinebuilder_picklable():
         return 2 * x + 1 + 3
 
     assert sorted(results) == [_ref(i) for i in range(10)]
+
+
+@pytest.mark.parametrize("output_order", ["completion", "input"])
+def test_pipeline_failures(output_order: str):
+    """max_failures stop the pipeline."""
+
+    def fail_odd(x):
+        if x % 2:
+            raise ValueError(f"Only evan numbers are allowed. {x}")
+        return x
+
+    src = range(10)
+
+    builder = (
+        PipelineBuilder()
+        .add_source(src)
+        .pipe(fail_odd, output_order=output_order, concurrency=10)
+        .add_sink(1)
+    )
+
+    pipeline = builder.build(num_threads=1)
+    with pipeline.auto_stop():
+        assert list(pipeline) == [i for i in src if not (i % 2)]
+
+    pipeline = builder.build(num_threads=1, max_failures=2)
+    with pipeline.auto_stop():
+        assert list(pipeline) == [i for i in range(6) if not (i % 2)]

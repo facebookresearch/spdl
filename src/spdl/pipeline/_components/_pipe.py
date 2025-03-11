@@ -69,9 +69,9 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-def _get_hooks(name: str, args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
+def _get_hooks(args: _PipeArgs[T, U], stats: TaskStatsHook) -> list[PipelineHook]:
     hooks = [] if args.hooks is None else list(args.hooks)
-    hooks.append(TaskStatsHook(name, args.concurrency, interval))
+    hooks.append(stats)
     return hooks
 
 
@@ -136,16 +136,18 @@ def _pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
+    max_failures: int = -1,
     report_stats_interval: float = -1,
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks = _get_hooks(name, args, report_stats_interval)
-
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
         convert_to_async(args.op, args.executor)
     )
+
+    stats: TaskStatsHook = TaskStatsHook(name, args.concurrency, report_stats_interval)
+    hooks = _get_hooks(args, stats)
 
     if inspect.iscoroutinefunction(afunc):
         _wrap: Callable[[Awaitable[U]], Coroutine] = partial(
@@ -160,11 +162,16 @@ def _pipe(
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
 
+    def _too_many_failures() -> bool:
+        if max_failures < 0:
+            return False
+        return stats.num_failures >= max_failures
+
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def pipe() -> None:
         i, tasks = 0, set()
-        while True:
+        while not _too_many_failures():
             item = await input_queue.get()
             if item is _EOF and not args.op_requires_eof:
                 break
@@ -184,6 +191,12 @@ def _pipe(
         if tasks:
             await asyncio.wait(tasks)
 
+        if _too_many_failures():
+            raise RuntimeError(
+                f"The pipeline stage ({name}) failed more than "
+                f"the given threshold. ({max_failures})."
+            )
+
     return pipe()
 
 
@@ -192,6 +205,7 @@ def _ordered_pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
+    max_failures: int = -1,
     report_stats_interval: float = -1,
 ) -> Coroutine:
     """
@@ -227,7 +241,8 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks: list[PipelineHook] = _get_hooks(name, args, report_stats_interval)
+    stats: TaskStatsHook = TaskStatsHook(name, args.concurrency, report_stats_interval)
+    hooks: list[PipelineHook] = _get_hooks(args, stats)
 
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
@@ -240,21 +255,27 @@ def _ordered_pipe(
         f"{name}_interqueue", args.concurrency
     )
 
+    def _too_many_failures() -> bool:
+        if max_failures < 0:
+            return False
+        return stats.num_failures >= max_failures
+
     async def _run(item: T) -> U:
         async with _task_hooks(hooks):
             return await afunc(item)
 
     async def get_run_put() -> None:
         i = 0
-        while True:
+        while not _too_many_failures():
             item = await input_queue.get()
 
             if item is _EOF:
-                await inter_queue.put(item)  # pyre-ignore: [6]
-                return
+                break
 
             task = create_task(_run(item), name=f"{name}:{(i := i + 1)}")
             await inter_queue.put(task)
+
+        await inter_queue.put(item)  # pyre-ignore: [6]
 
     async def get_test_put() -> None:
         while True:
@@ -277,6 +298,12 @@ def _ordered_pipe(
     @_stage_hooks(hooks)
     async def ordered_pipe() -> None:
         await asyncio.wait({create_task(get_run_put()), create_task(get_test_put())})
+
+        if _too_many_failures():
+            raise RuntimeError(
+                f"The pipeline stage ({name}) failed more than "
+                f"the given threshold. ({max_failures})."
+            )
 
     return ordered_pipe()
 

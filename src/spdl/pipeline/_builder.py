@@ -85,9 +85,12 @@ def _build_pipeline(
     sink: _SinkConfig[U],
     *,
     num_threads: int,
+    max_failures: int,
     report_stats_interval: float,
 ) -> Pipeline[U]:
-    coro, queues = _build_pipeline_coro(src, process_args, sink, report_stats_interval)
+    coro, queues = _build_pipeline_coro(
+        src, process_args, sink, max_failures, report_stats_interval
+    )
 
     executor = ThreadPoolExecutor(
         max_workers=num_threads,
@@ -346,6 +349,7 @@ class PipelineBuilder(Generic[T, U]):
         self,
         *,
         num_threads: int,
+        max_failures: int = -1,
         report_stats_interval: float = -1,
     ) -> Pipeline[U]:
         """Build the pipeline.
@@ -353,6 +357,8 @@ class PipelineBuilder(Generic[T, U]):
         Args:
             num_threads: The number of threads in the thread pool attached to
                 async event loop.
+            max_failures: The maximum number of failures each pipe stage can have before
+                the pipeline is halted. Setting ``-1`` (default) disables it.
             report_stats_interval: When provided, report the pipline performance stats
                 every given interval. Unit: [sec]
         """
@@ -367,6 +373,7 @@ class PipelineBuilder(Generic[T, U]):
             self._process_args,
             sink,
             num_threads=num_threads,
+            max_failures=max_failures,
             report_stats_interval=report_stats_interval,
         )
 
