@@ -104,6 +104,69 @@ def test_decode_audio_clips_num_frames(get_sample):
     _test(sample.path)
 
 
+def test_decode_audio_many_channels_6(get_sample):
+    """Can decode audio with more than 6 channels.
+
+    See https://github.com/facebookresearch/spdl/issues/449
+    """
+    cmd = """
+    ffmpeg \
+        -y \
+        -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1001:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1002:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1003:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1004:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1005:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -filter_complex [0:a][1:a][2:a][3:a][4:a][5:a]join=inputs=6:channel_layout=6.0[a] \
+        -map [a] \
+        sample.wav
+    """
+    sample = get_sample(cmd)
+
+    buffer = spdl.io.load_audio(
+        sample.path,
+        filter_desc="aformat=channel_layouts=2c",
+    )
+    array = spdl.io.to_numpy(buffer)
+
+    assert array.dtype == np.dtype("int16")
+    assert array.ndim == 2
+    assert array.shape[1] == 2
+
+
+def test_decode_audio_many_channels_7(get_sample):
+    """Can decode audio with more than 6 channels.
+
+    See https://github.com/facebookresearch/spdl/issues/449
+    """
+    cmd = """
+    ffmpeg \
+        -y \
+        -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1001:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1002:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1003:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1004:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1005:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -f lavfi -i sine=frequency=1006:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
+        -filter_complex [0:a][1:a][2:a][3:a][4:a][5:a][6:a]join=inputs=7:channel_layout=7.0[a] \
+        -map [a] \
+        sample.wav
+    """
+    sample = get_sample(cmd)
+
+    buffer = spdl.io.load_audio(
+        sample.path,
+        filter_desc="aformat=channel_layouts=2c",
+    )
+    array = spdl.io.to_numpy(buffer)
+
+    assert array.dtype == np.dtype("int16")
+    assert array.ndim == 2
+    assert array.shape[1] == 2
+
+
 def test_decode_video_clips(get_sample):
     """Can decode video clips."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
