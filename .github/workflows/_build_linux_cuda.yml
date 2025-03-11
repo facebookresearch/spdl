@@ -92,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["5", "6", "7" ]
+        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1" ]
     runs-on: "${{ inputs.os_test }}"
     defaults:
       run:
@@ -119,13 +119,14 @@ jobs:
 
           # Install PyTorch and others
           pip install pytest
+          # TODO: clean up the logic for CUDA versions
           pip install numpy nvidia-cuda-runtime-cu12 torch --index-url https://download.pytorch.org/whl/cu126
 
           # Install FFmpeg
-          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
           # For some reason, the FFmpeg dynamic libraries are not found.
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
-          # TODO: clean up the logic for versions
 
           # Run test
           pytest -v \

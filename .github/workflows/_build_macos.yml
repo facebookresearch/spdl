@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["5.1", "6.1", "7.1" ]
+        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1"]
     runs-on:  macos-latest
     defaults:
       run:
