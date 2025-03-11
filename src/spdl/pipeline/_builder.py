@@ -210,10 +210,8 @@ class PipelineBuilder(Generic[T, U]):
 
                 It is invalid to provide this argument when the given op is already async.
             name: The name (prefix) to give to the task.
-            hooks: Hook objects to be attached to the stage. Hooks are intended for
-                collecting stats of the stage.
-                If ``None``, a default hook,
-                :py:class:`~spdl.pipeline.TaskStatsHook` is used.
+            hooks: Custom hooks to be attached to the stage.
+                :py:class:`~spdl.pipeline.TaskStatsHook` is used in addition to the given hooks.
             output_order: If ``"completion"`` (default), the items are put to output queue
                 in the order their process is completed.
                 If ``"input"``, then the items are put to output queue in the order given
@@ -357,17 +355,6 @@ class PipelineBuilder(Generic[T, U]):
                 async event loop.
             report_stats_interval: When provided, report the pipline performance stats
                 every given interval. Unit: [sec]
-
-                This is only effective if there is no custom hook or custom AsyncQueue
-                provided for stages. The argument is passed to
-                :py:class:`~TaskStatsHook` and :py:class:`~StatusQueue`.
-
-                If a custom stage hook is provided and stats report is needed,
-                you can instantiate :py:class:`~spdl.pipeline.TaskStatsHook` and include
-                it in the hooks provided to :py:meth:`PipelineBuilder.pipe`.
-
-                Similarly if you are providing a custom :py:class:`~AsyncQueue` class,
-                you need to implement the same logic by your self.
         """
         if (src := self._src) is None:
             raise RuntimeError("Source is not set.")
