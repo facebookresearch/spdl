@@ -39,6 +39,13 @@ Build can be customized through the environment variables;
 See `setup.py <https://github.com/facebookresearch/spdl/blob/main/packaging/spdl_io/setup.py>`_
 for the up-to-date available options.
 
+To rebuild the extension module of SPDL IO, you can do the following.
+
+.. code-block::
+
+   uv pip uninstall spdl_io
+   uv pip install -v --no-cache --refresh --upgrade .
+
 Requirements
 ------------
 
