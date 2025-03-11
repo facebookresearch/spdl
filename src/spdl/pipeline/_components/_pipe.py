@@ -275,9 +275,9 @@ def _ordered_pipe(
             task = create_task(_run(item), name=f"{name}:{(i := i + 1)}")
             await inter_queue.put(task)
 
-        await inter_queue.put(item)  # pyre-ignore: [6]
+        await inter_queue.put(_EOF)  # pyre-ignore: [6]
 
-    async def get_test_put() -> None:
+    async def get_check_put() -> None:
         while True:
             task = await inter_queue.get()
 
@@ -297,7 +297,7 @@ def _ordered_pipe(
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def ordered_pipe() -> None:
-        await asyncio.wait({create_task(get_run_put()), create_task(get_test_put())})
+        await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
 
         if _too_many_failures():
             raise RuntimeError(
