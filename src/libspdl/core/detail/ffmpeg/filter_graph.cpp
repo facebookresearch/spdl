@@ -178,7 +178,7 @@ FilterGraph get_filter(
   //   LOG(INFO) << "Filter " << i << ": " << p->filters[i]->name;
   // }
 
-  VLOG(5) << describe_graph(filter_graph.get());
+  VLOG(5) << desc << "\n" << describe_graph(filter_graph.get());
 
   return FilterGraph{std::move(filter_graph)};
 }
