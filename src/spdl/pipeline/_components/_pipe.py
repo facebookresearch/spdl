@@ -236,36 +236,47 @@ def _ordered_pipe(
         convert_to_async(args.op, args.executor)
     )
 
-    async def _wrap(item: T) -> asyncio.Task[U]:
-        async def _with_hooks() -> U:
-            async with _task_hooks(hooks):
-                return await afunc(item)
-
-        return create_task(_with_hooks())
-
-    async def _unwrap(task: asyncio.Task[U]) -> U:
-        return await task
-
-    inter_queue = AsyncQueue(f"{name}_interqueue", args.concurrency)
-
-    coro1: Coroutine = _pipe(  # pyre-ignore: [1001]
-        name,
-        input_queue,
-        inter_queue,
-        _PipeArgs(op=_wrap, executor=args.executor, hooks=[]),
+    inter_queue: AsyncQueue[asyncio.Task[U]] = AsyncQueue(
+        f"{name}_interqueue", args.concurrency
     )
 
-    coro2: Coroutine = _pipe(  # pyre-ignore: [1001]
-        name,
-        inter_queue,
-        output_queue,
-        _PipeArgs(op=_unwrap, executor=args.executor, hooks=[]),
-    )
+    async def _run(item: T) -> U:
+        async with _task_hooks(hooks):
+            return await afunc(item)
+
+    async def get_run_put() -> None:
+        i = 0
+        while True:
+            item = await input_queue.get()
+
+            if item is _EOF:
+                await inter_queue.put(item)  # pyre-ignore: [6]
+                return
+
+            task = create_task(_run(item), name=f"{name}:{(i := i + 1)}")
+            await inter_queue.put(task)
+
+    async def get_test_put() -> None:
+        while True:
+            task = await inter_queue.get()
+
+            if task is _EOF:
+                # Propagating EOF is done by `_queue_stage_hook`
+                return
+
+            await asyncio.wait([task])
+
+            try:
+                result = task.result()
+            except Exception:
+                pass
+            else:
+                await output_queue.put(result)
 
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def ordered_pipe() -> None:
-        await asyncio.wait({create_task(coro1), create_task(coro2)})
+        await asyncio.wait({create_task(get_run_put()), create_task(get_test_put())})
 
     return ordered_pipe()
 
