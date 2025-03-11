@@ -114,13 +114,18 @@ jobs:
 
       - name: Unit test
         run: |
+          set -ex
+
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
           pip install pytest
-          # TODO: clean up the logic for CUDA versions
-          pip install numpy nvidia-cuda-runtime-cu12 torch --index-url https://download.pytorch.org/whl/cu126
+
+          cu_ver="${{ inputs.cuda-version }}"
+          # Remove dots
+          cu_ver="${cu_ver//[.]/}"
+          pip install numpy torch --index-url "https://download.pytorch.org/whl/cu${cu_ver}"
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
