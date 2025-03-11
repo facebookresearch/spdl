@@ -70,9 +70,9 @@ class _PipeArgs(Generic[T, U]):
 
 
 def _get_hooks(name: str, args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
-    if args.hooks is not None:
-        return args.hooks
-    return [TaskStatsHook(name, args.concurrency, interval)]
+    hooks = [] if args.hooks is None else list(args.hooks)
+    hooks.append(TaskStatsHook(name, args.concurrency, interval))
+    return hooks
 
 
 async def _wrap_afunc(
