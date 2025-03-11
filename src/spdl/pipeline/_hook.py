@@ -303,6 +303,10 @@ class TaskStatsHook(PipelineHook):
         self._int_num_success = 0
         self._int_ave_time = 0.0
 
+    @property
+    def num_failures(self) -> int:
+        return self.num_tasks - self.num_success
+
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
         """Track the stage runtime and log the task stats."""
