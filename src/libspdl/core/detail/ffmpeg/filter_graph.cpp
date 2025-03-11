@@ -93,7 +93,18 @@ std::string get_abuffer_arg(
     AVRational time_base,
     int sample_rate,
     const char* sample_fmt_name,
+    uint64_t channel_layout,
     int nb_channels) {
+  // Prefer to use channel_layout
+  if (channel_layout) {
+    return fmt::format(
+        "time_base={}/{}:sample_rate={}:sample_fmt={}:channel_layout={:#x}",
+        time_base.num,
+        time_base.den,
+        sample_rate,
+        sample_fmt_name,
+        channel_layout);
+  }
   return fmt::format(
       "time_base={}/{}:sample_rate={}:sample_fmt={}:channel_layout={}c",
       time_base.num,
@@ -271,8 +282,10 @@ FilterGraph get_audio_filter(
       codec_ctx->sample_rate,
       av_get_sample_fmt_name(codec_ctx->sample_fmt),
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+      codec_ctx->ch_layout.u.mask,
       codec_ctx->ch_layout.nb_channels
 #else
+      codec_ctx->channel_layout,
       codec_ctx->channels
 #endif
   );
