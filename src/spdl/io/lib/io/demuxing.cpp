@@ -35,6 +35,28 @@ namespace {
 // 2. Allow explicit deallocation with `drop` method, so that it can be
 //    deallocated in a thread other than the main thread.
 // 3. Add `zero_clear`, method for testing purpose.
+
+template <MediaType media_type>
+struct PyStreamingDemuxer {
+  StreamingDemuxerPtr<media_type> demuxer;
+
+  explicit PyStreamingDemuxer(StreamingDemuxerPtr<media_type>&& d)
+      : demuxer(std::move(d)) {}
+
+  bool done() {
+    RELEASE_GIL();
+    return demuxer->done();
+  }
+
+  PacketsPtr<media_type> next() {
+    RELEASE_GIL();
+    return demuxer->next();
+  }
+};
+
+template <MediaType media_type>
+using PyStreamingDemuxerPtr = std::unique_ptr<PyStreamingDemuxer<media_type>>;
+
 struct PyDemuxer {
   DemuxerPtr demuxer;
 
@@ -62,6 +84,15 @@ struct PyDemuxer {
       const std::optional<std::string>& bsf) {
     RELEASE_GIL();
     return demuxer->demux_window<MediaType::Image>(std::nullopt, bsf);
+  }
+
+  template <MediaType media_type>
+  PyStreamingDemuxerPtr<media_type> streaming_demux(
+      int num_packets,
+      const std::optional<std::string>& bsf) {
+    RELEASE_GIL();
+    return std::make_unique<PyStreamingDemuxer<media_type>>(
+        demuxer->stream_demux<media_type>(num_packets, bsf));
   }
 
   void _drop() {
@@ -113,6 +144,10 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   // Demuxer
   ///////////////////////////////////////////////////////////////////////////////
+  nb::class_<PyStreamingDemuxer<MediaType::Video>>(m, "StreamingVideoDemuxer")
+      .def("done", &PyStreamingDemuxer<MediaType::Video>::done)
+      .def("next", &PyStreamingDemuxer<MediaType::Video>::next);
+
   nb::class_<PyDemuxer>(m, "Demuxer")
       .def(
           "demux_audio",
@@ -126,6 +161,11 @@ void register_demuxing(nb::module_& m) {
           nb::arg("bsf") = nb::none())
       .def("demux_image", &PyDemuxer::demux_image, nb::arg("bsf") = nb::none())
       .def("has_audio", &PyDemuxer::has_audio)
+      .def(
+          "streaming_demux_video",
+          &PyDemuxer::streaming_demux<MediaType::Video>,
+          nb::arg("num_packets"),
+          nb::arg("bsf") = nb::none())
       .def("_drop", &PyDemuxer::_drop);
 
   m.def(

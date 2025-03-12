@@ -173,6 +173,19 @@ class Demuxer:
 
         return self._demuxer.demux_image(**kwargs)
 
+    def streaming_demux_video(
+        self,
+        num_packets: int,
+        bsf: str | None = None,
+    ) -> Iterator[VideoPackets]:
+        """Demux video frames in streaming fashion.
+
+        Args:
+            num_packets: The number of packets to return at a time.
+        """
+        ite = self._demuxer.streaming_demux_video(num_packets, bsf)
+        return _StreamingVideoDemuxer(ite, self)
+
     def has_audio(self) -> bool:
         """Returns true if the source has audio stream."""
         return self._demuxer.has_audio()
@@ -182,6 +195,20 @@ class Demuxer:
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         self._demuxer._drop()
+
+
+class _StreamingVideoDemuxer:
+    def __init__(self, ite, demuxer: Demuxer) -> None:
+        self._demuxer = demuxer  # For keeping the reference.
+        self._ite = ite
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._ite.done():
+            raise StopIteration
+        return self._ite.next()
 
 
 def demux_audio(

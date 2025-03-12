@@ -65,3 +65,19 @@ def test_demuxer_accept_torch_tensor(get_sample):
     with spdl.io.Demuxer(src, _zero_clear=True) as demuxer:
         demuxer.demux_video()
     assert not torch.any(src)
+
+
+def test_streaming_video_demuxing(get_sample):
+    """`streaming_demux_video` can decode packets in streaming fashion."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
+    sample = get_sample(cmd)
+
+    demuxer = spdl.io.Demuxer(sample.path)
+    num_packets = 0
+    for packets in demuxer.streaming_demux_video(5):
+        num_packets += len(packets)
+
+    demuxer = spdl.io.Demuxer(sample.path)
+    packets = demuxer.demux_video()
+
+    assert num_packets == len(packets)
