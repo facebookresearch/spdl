@@ -8,11 +8,11 @@
 
 #pragma once
 
+#include <libspdl/core/generator.h>
 #include <libspdl/core/types.h>
 
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
-#include "libspdl/core/detail/generator.h"
 
 namespace spdl::core::detail {
 

@@ -24,7 +24,7 @@ struct StreamingDecoder<media_type>::Impl {
   detail::Decoder decoder;
   std::optional<detail::FilterGraph> filter_graph;
 
-  detail::Generator<detail::AVFramePtr> gen;
+  Generator<detail::AVFramePtr> gen;
   Impl(
       PacketsPtr<media_type> packets_,
       const std::optional<DecodeConfig>& cfg_,

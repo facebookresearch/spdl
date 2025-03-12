@@ -11,7 +11,7 @@
 #include <coroutine>
 #include <exception>
 
-namespace spdl::core::detail {
+namespace spdl::core {
 
 template <typename T>
 struct Generator {
@@ -70,4 +70,4 @@ struct Generator {
     }
   }
 };
-} // namespace spdl::core::detail
+} // namespace spdl::core

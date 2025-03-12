@@ -8,8 +8,9 @@
 
 #pragma once
 
+#include <libspdl/core/generator.h>
+
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
-#include "libspdl/core/detail/generator.h"
 
 namespace spdl::core::detail {
 
