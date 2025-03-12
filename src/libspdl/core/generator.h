@@ -44,6 +44,10 @@ struct Generator {
   handle_type h_;
 
   explicit Generator(handle_type h) : h_(h) {}
+  Generator(const Generator&) = delete;
+  Generator& operator=(const Generator&) = delete;
+  Generator(Generator&&) = default;
+  Generator& operator=(Generator&&) = default;
   ~Generator() {
     h_.destroy();
   }
