@@ -36,7 +36,7 @@ namespace spdl::core::detail {
 //
 // If the previous decoder configuration is not compatible with the new
 // config, then the decoder object is re-created.
-class NvDecDecoder {
+class NvDecDecoderCore {
   //---------------------------------------------------------------------------
   // Objects used to check if decoder configuration needs to be updated.
   // The device associated with the CUcontext.
@@ -80,12 +80,12 @@ class NvDecDecoder {
   bool cb_disabled = false;
 
  public:
-  NvDecDecoder() = default;
-  NvDecDecoder(const NvDecDecoder&) = delete;
-  NvDecDecoder& operator=(const NvDecDecoder&) = delete;
-  NvDecDecoder(NvDecDecoder&&) = delete;
-  NvDecDecoder& operator=(NvDecDecoder&&) noexcept = delete;
-  ~NvDecDecoder() = default;
+  NvDecDecoderCore() = default;
+  NvDecDecoderCore(const NvDecDecoderCore&) = delete;
+  NvDecDecoderCore& operator=(const NvDecDecoderCore&) = delete;
+  NvDecDecoderCore(NvDecDecoderCore&&) = delete;
+  NvDecDecoderCore& operator=(NvDecDecoderCore&&) noexcept = delete;
+  ~NvDecDecoderCore() = default;
 
   // Needs to be called before the start of new decoding stream.
   void init(

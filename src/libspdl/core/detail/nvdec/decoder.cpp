@@ -30,26 +30,26 @@ CUvideoctxlock get_lock(CUcontext ctx) {
 }
 
 CUvideoparserPtr get_parser(
-    NvDecDecoder* decoder,
+    NvDecDecoderCore* decoder,
     cudaVideoCodec codec_id,
     unsigned int max_num_decode_surfaces = 1,
     unsigned int max_display_delay = 2,
     bool extract_sei_message = true // temp
 ) {
   static const auto cb_vseq = [](void* p, CUVIDEOFORMAT* data) -> int {
-    return ((NvDecDecoder*)p)->handle_video_sequence(data);
+    return ((NvDecDecoderCore*)p)->handle_video_sequence(data);
   };
   static const auto cb_decode = [](void* p, CUVIDPICPARAMS* data) -> int {
-    return ((NvDecDecoder*)p)->handle_decode_picture(data);
+    return ((NvDecDecoderCore*)p)->handle_decode_picture(data);
   };
   static const auto cb_disp = [](void* p, CUVIDPARSERDISPINFO* data) -> int {
-    return ((NvDecDecoder*)p)->handle_display_picture(data);
+    return ((NvDecDecoderCore*)p)->handle_display_picture(data);
   };
   static const auto cb_op = [](void* p, CUVIDOPERATINGPOINTINFO* data) -> int {
-    return ((NvDecDecoder*)p)->handle_operating_point(data);
+    return ((NvDecDecoderCore*)p)->handle_operating_point(data);
   };
   static const auto cb_sei = [](void* p, CUVIDSEIMESSAGEINFO* data) -> int {
-    return ((NvDecDecoder*)p)->handle_sei_msg(data);
+    return ((NvDecDecoderCore*)p)->handle_sei_msg(data);
   };
   CUVIDPARSERPARAMS parser_params{
       .CodecType = codec_id,
@@ -151,7 +151,7 @@ std::tuple<double, double> NO_WINDOW{
     std::numeric_limits<double>::infinity()};
 } // namespace
 
-void NvDecDecoder::init(
+void NvDecDecoderCore::init(
     CUdevice device_index_,
     cudaVideoCodec codec_,
     CUDABufferTracker* tracker_,
@@ -214,7 +214,7 @@ void NvDecDecoder::init(
   pix_fmt = pix_fmt_;
 }
 
-int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
+int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   // This function is called by the parser when the first video sequence is
   // received, or when there is a change.
   //
@@ -300,7 +300,7 @@ int NvDecDecoder::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   return ret;
 }
 
-int NvDecDecoder::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
+int NvDecDecoderCore::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   // This function is called by the parser when the input bit stream is parsed
   // and ready for decodings It just kicks off the decoding work.
   //
@@ -325,7 +325,7 @@ int NvDecDecoder::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   return 1;
 }
 
-int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
+int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // This function is called by the parser when the decoding (including
   // post-processing, such as rescaling) is done.
   //
@@ -380,7 +380,7 @@ int NvDecDecoder::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   return 1;
 }
 
-int NvDecDecoder::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
+int NvDecDecoderCore::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
   // Return values:
   // * <0: fail
   // * >=0: succeess
@@ -399,7 +399,7 @@ int NvDecDecoder::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
   return 0;
 }
 
-int NvDecDecoder::handle_sei_msg(CUVIDSEIMESSAGEINFO* msg_info) {
+int NvDecDecoderCore::handle_sei_msg(CUVIDSEIMESSAGEINFO* msg_info) {
   // Return values:
   // * 0: fail
   // * >=1: succeeded
@@ -413,7 +413,7 @@ int NvDecDecoder::handle_sei_msg(CUVIDSEIMESSAGEINFO* msg_info) {
   return 0;
 }
 
-void NvDecDecoder::decode(
+void NvDecDecoderCore::decode(
     const uint8_t* data,
     const uint size,
     int64_t pts,
@@ -429,7 +429,7 @@ void NvDecDecoder::decode(
       "Failed to parse video data.");
 }
 
-void NvDecDecoder::reset() {
+void NvDecDecoderCore::reset() {
   if (!parser) {
     return;
   }
