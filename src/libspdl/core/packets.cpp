@@ -37,8 +37,8 @@ DemuxedPackets<media_type>::DemuxedPackets(
     AVCodecParameters* codecpar_,
     Rational time_base_)
     : id(reinterpret_cast<uintptr_t>(this)),
-      src(src_),
-      timestamp(timestamp_),
+      src(std::move(src_)),
+      timestamp(std::move(timestamp_)),
       codecpar(copy(codecpar_)),
       time_base(time_base_) {
   TRACE_EVENT(
@@ -53,9 +53,26 @@ DemuxedPackets<media_type>::DemuxedPackets(
     AVCodecParameters* codecpar_,
     Rational time_base_)
     : id(reinterpret_cast<uintptr_t>(this)),
-      src(src_),
+      src(std::move(src_)),
       codecpar(copy(codecpar_)),
       time_base(time_base_) {
+  TRACE_EVENT(
+      "decoding",
+      "DemuxedPackets::DemuxedPackets",
+      perfetto::Flow::ProcessScoped(id));
+};
+
+template <MediaType media_type>
+DemuxedPackets<media_type>::DemuxedPackets(
+    std::string src_,
+    AVCodecParameters* codecpar_,
+    Rational time_base_,
+    std::vector<AVPacket*>&& packets_)
+    : id(reinterpret_cast<uintptr_t>(this)),
+      src(std::move(src_)),
+      codecpar(copy(codecpar_)),
+      time_base(time_base_),
+      packets(std::move(packets_)) {
   TRACE_EVENT(
       "decoding",
       "DemuxedPackets::DemuxedPackets",

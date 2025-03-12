@@ -68,6 +68,12 @@ class DemuxedPackets {
       AVCodecParameters* codecpar,
       Rational time_base);
 
+  DemuxedPackets(
+      std::string src,
+      AVCodecParameters* codecpar,
+      Rational time_base,
+      std::vector<AVPacket*>&& packets);
+
   // Destructor releases AVPacket* resources
   ~DemuxedPackets();
   // No copy/move constructors

@@ -19,10 +19,15 @@ extern "C" {
 
 namespace spdl::core {
 
-// Implemented in core/detail/ffmpeg/demuxing.cpp
 namespace detail {
+// Implemented in core/detail/ffmpeg/demuxing.cpp
 void init_fmt_ctx(DataInterface*);
 AVStream* get_stream(DataInterface*, enum MediaType);
+template <MediaType media_type>
+Generator<PacketsPtr<media_type>> streaming_demux(
+    DataInterface* di,
+    int num_packets,
+    const std::optional<std::string> bsf);
 
 template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
@@ -49,6 +54,28 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
   return get_interface(data, adaptor, dmx_cfg);
 }
 } // namespace detail
+
+////////////////////////////////////////////////////////////////////////////////
+// StreamingDemuxer
+////////////////////////////////////////////////////////////////////////////////
+template <MediaType media_type>
+StreamingDemuxer<media_type>::StreamingDemuxer(
+    DataInterface* di,
+    int num_packets,
+    const std::optional<std::string>& bsf)
+    : gen(detail::streaming_demux<media_type>(di, num_packets, bsf)) {}
+
+template <MediaType media_type>
+bool StreamingDemuxer<media_type>::done() {
+  return !bool(gen);
+}
+
+template <MediaType media_type>
+PacketsPtr<media_type> StreamingDemuxer<media_type>::next() {
+  return gen();
+}
+
+template class StreamingDemuxer<MediaType::Video>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
@@ -100,6 +127,18 @@ template PacketsPtr<MediaType::Video> Demuxer::demux_window(
 
 template PacketsPtr<MediaType::Image> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
+    const std::optional<std::string>& bsf);
+
+template <MediaType media_type>
+StreamingDemuxerPtr<media_type> Demuxer::stream_demux(
+    int num_packets,
+    const std::optional<std::string>& bsf) {
+  return std::make_unique<StreamingDemuxer<media_type>>(
+      di.get(), num_packets, bsf);
+}
+
+template StreamingDemuxerPtr<MediaType::Video> Demuxer::stream_demux(
+    int num_packets,
     const std::optional<std::string>& bsf);
 
 DemuxerPtr make_demuxer(

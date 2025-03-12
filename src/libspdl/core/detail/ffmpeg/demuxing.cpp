@@ -20,6 +20,8 @@
 #include <cmath>
 #include <optional>
 
+#include <iostream>
+
 namespace spdl::core::detail {
 
 void init_fmt_ctx(DataInterface* di) {
@@ -67,7 +69,7 @@ Generator<AVPacketPtr> demux_and_filter(
     AVFormatContext* fmt_ctx,
     AVStream* stream,
     std::optional<BitStreamFilter>& filter,
-    double end) {
+    double end = std::numeric_limits<double>::infinity()) {
   auto demuxer = Demuxer{fmt_ctx};
   auto demuxing = demuxer.demux();
   while (demuxing) {
@@ -79,6 +81,7 @@ Generator<AVPacketPtr> demux_and_filter(
       if (packet->pts * av_q2d(stream->time_base) > end) {
         co_return;
       }
+      std::cerr << "@@@ packet:" << packet->pts << std::endl;
       co_yield std::move(packet);
     } else {
       auto filtering = filter->filter(packet.get());
@@ -87,6 +90,7 @@ Generator<AVPacketPtr> demux_and_filter(
         if (filtered->pts * av_q2d(stream->time_base) > end) {
           co_return;
         }
+        std::cerr << "@@@ packet:" << packet->pts << std::endl;
         co_yield std::move(filtered);
       }
     }
@@ -165,5 +169,52 @@ template PacketsPtr<MediaType::Image> demux_window(
     AVStream* stream,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
+
+template <MediaType media_type>
+Generator<PacketsPtr<media_type>> streaming_demux(
+    DataInterface* di,
+    int num_packets,
+    // Note: This is generator, so pass by value, not by reference.
+    const std::optional<std::string> bsf) {
+  auto* fmt_ctx = di->get_fmt_ctx();
+  auto stream = get_stream(di, media_type);
+
+  auto filter = [&]() -> std::optional<BitStreamFilter> {
+    if (!bsf) {
+      return std::nullopt;
+    }
+    return BitStreamFilter{*bsf, stream->codecpar};
+  }();
+
+  auto demuxing = demux_and_filter(fmt_ctx, stream, filter);
+  std::vector<AVPacket*> packets;
+  packets.reserve(num_packets);
+  while (demuxing) {
+    packets.push_back(demuxing().release());
+    if (packets.size() >= num_packets) {
+      co_yield std::make_unique<DemuxedPackets<media_type>>(
+          di->get_src(),
+          bsf ? filter->get_output_codec_par() : stream->codecpar,
+          Rational{stream->time_base.num, stream->time_base.den},
+          std::move(packets));
+
+      packets = std::vector<AVPacket*>();
+      packets.reserve(num_packets);
+    }
+  }
+
+  if (packets.size() > 0) {
+    co_yield std::make_unique<DemuxedPackets<media_type>>(
+        di->get_src(),
+        bsf ? filter->get_output_codec_par() : stream->codecpar,
+        Rational{stream->time_base.num, stream->time_base.den},
+        std::move(packets));
+  }
+}
+
+template Generator<PacketsPtr<MediaType::Video>> streaming_demux(
+    DataInterface* di,
+    int num_packets,
+    const std::optional<std::string> bsf);
 
 } // namespace spdl::core::detail

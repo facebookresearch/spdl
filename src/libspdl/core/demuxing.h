@@ -9,6 +9,7 @@
 #pragma once
 
 #include <libspdl/core/adaptor.h>
+#include <libspdl/core/generator.h>
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
@@ -21,9 +22,21 @@ struct AVStream;
 
 namespace spdl::core {
 
-class Demuxer;
+template <MediaType media_type>
+class StreamingDemuxer {
+  Generator<PacketsPtr<media_type>> gen;
 
-using DemuxerPtr = std::unique_ptr<Demuxer>;
+ public:
+  StreamingDemuxer(
+      DataInterface* di,
+      int num_packets,
+      const std::optional<std::string>& bsf);
+  bool done();
+  PacketsPtr<media_type> next();
+};
+
+template <MediaType media_type>
+using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
 
 class Demuxer {
   std::unique_ptr<DataInterface> di;
@@ -40,7 +53,14 @@ class Demuxer {
   PacketsPtr<media_type> demux_window(
       const std::optional<std::tuple<double, double>>& window = std::nullopt,
       const std::optional<std::string>& bsf = std::nullopt);
+
+  template <MediaType media_type>
+  StreamingDemuxerPtr<media_type> stream_demux(
+      int num_packets,
+      const std::optional<std::string>& bsf = std::nullopt);
 };
+
+using DemuxerPtr = std::unique_ptr<Demuxer>;
 
 // Create a demuxer from an URI (file path, http, etc.)
 DemuxerPtr make_demuxer(
