@@ -15,22 +15,14 @@ __all__ = [
 import asyncio
 import enum
 import inspect
-from collections.abc import (
-    AsyncIterable,
-    Coroutine,
-    Iterable,
-)
+from collections.abc import AsyncIterable, Coroutine, Iterable
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Generic, TypeVar
 
 from .._queue import AsyncQueue, StatsQueue as DefaultQueue
 from .._utils import create_task
-from ._pipe import (
-    _ordered_pipe,
-    _pipe,
-    _PipeArgs,
-)
+from ._pipe import _FailCounter, _ordered_pipe, _pipe, _PipeArgs
 from ._sink import _sink
 from ._source import _source
 
@@ -133,6 +125,14 @@ class _SinkConfig(Generic[T]):
 #
 
 
+# Use different class variables per pipeline
+def _get_fail_counter() -> type[_FailCounter]:
+    class _FC(_FailCounter):
+        num_failures: int = 0
+
+    return _FC
+
+
 def _get_queue(
     queue_class: type[AsyncQueue[T]] | None,
     interval: float,
@@ -161,6 +161,8 @@ def _build_pipeline_coro(
     queues.append(queue_class("0:src_queue", 1))
     coros.append(("Pipeline::0:src", _source(src.source, queues[0])))
 
+    _FailCounter = _get_fail_counter()
+
     # pipes
     for i, cfg in enumerate(process_args, start=1):
         name = f"{i}:{cfg.name}"
@@ -176,6 +178,7 @@ def _build_pipeline_coro(
                     in_queue,
                     out_queue,
                     cfg.args,
+                    _FailCounter(),
                     max_failures,
                     report_stats_interval,
                 )
@@ -185,6 +188,7 @@ def _build_pipeline_coro(
                     in_queue,
                     out_queue,
                     cfg.args,
+                    _FailCounter(),
                     max_failures,
                     report_stats_interval,
                 )

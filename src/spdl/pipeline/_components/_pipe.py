@@ -14,25 +14,15 @@ __all__ = [
 
 import asyncio
 import inspect
-from collections.abc import (
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Coroutine,
-    Iterator,
-)
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Iterator
 from concurrent.futures import Executor
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import partial
 from typing import Generic, TypeVar
 
 from .._convert import Callables, convert_to_async
-from .._hook import (
-    _stage_hooks,
-    _task_hooks,
-    PipelineHook,
-    TaskStatsHook,
-)
+from .._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
 from .._queue import AsyncQueue
 from .._utils import create_task
 from ._common import _EOF, _queue_stage_hook, _Sentinel
@@ -69,10 +59,26 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-def _get_hooks(args: _PipeArgs[T, U], stats: TaskStatsHook) -> list[PipelineHook]:
-    hooks = [] if args.hooks is None else list(args.hooks)
-    hooks.append(stats)
-    return hooks
+class _FailCounter(PipelineHook):
+    num_failures: int = 0
+
+    @classmethod
+    def _increment(cls) -> None:
+        cls.num_failures += 1
+
+    @asynccontextmanager
+    async def task_hook(self) -> AsyncIterator[None]:
+        try:
+            yield
+        except Exception:
+            self._increment()
+            raise
+
+
+def _get_hooks(name: str, args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
+    if args.hooks is not None:
+        return list(args.hooks)
+    return [TaskStatsHook(name, args.concurrency, interval)]
 
 
 async def _wrap_afunc(
@@ -136,6 +142,7 @@ def _pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
+    fail_counter: _FailCounter,
     max_failures: int = -1,
     report_stats_interval: float = -1,
 ) -> Coroutine:
@@ -146,8 +153,8 @@ def _pipe(
         convert_to_async(args.op, args.executor)
     )
 
-    stats: TaskStatsHook = TaskStatsHook(name, args.concurrency, report_stats_interval)
-    hooks = _get_hooks(args, stats)
+    hooks: list[PipelineHook] = _get_hooks(name, args, report_stats_interval)
+    hooks.append(fail_counter)
 
     if inspect.iscoroutinefunction(afunc):
         _wrap: Callable[[Awaitable[U]], Coroutine] = partial(
@@ -165,7 +172,7 @@ def _pipe(
     def _too_many_failures() -> bool:
         if max_failures < 0:
             return False
-        return stats.num_failures >= max_failures
+        return fail_counter.num_failures >= max_failures
 
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
@@ -205,6 +212,7 @@ def _ordered_pipe(
     input_queue: AsyncQueue[T],
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
+    fail_counter: _FailCounter,
     max_failures: int = -1,
     report_stats_interval: float = -1,
 ) -> Coroutine:
@@ -241,8 +249,8 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    stats: TaskStatsHook = TaskStatsHook(name, args.concurrency, report_stats_interval)
-    hooks: list[PipelineHook] = _get_hooks(args, stats)
+    hooks: list[PipelineHook] = _get_hooks(name, args, report_stats_interval)
+    hooks.append(fail_counter)
 
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
@@ -258,7 +266,7 @@ def _ordered_pipe(
     def _too_many_failures() -> bool:
         if max_failures < 0:
             return False
-        return stats.num_failures >= max_failures
+        return fail_counter.num_failures >= max_failures
 
     async def _run(item: T) -> U:
         async with _task_hooks(hooks):
