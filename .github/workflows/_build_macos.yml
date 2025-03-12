@@ -6,13 +6,17 @@ on:
       python-version:
         required: true
         type: string
+      free-threaded:
+        description: 'Whether FT Python or not. Valid value is "ft" or not.'
+        default: ''
+        type: string
       run-test:
         required: false
         default: 'false'
         type: string
 
 env:
-  ARTIFACT: wheel-macos-py${{ inputs.python-version }}
+  ARTIFACT: wheel-macos-py${{ inputs.python-version }}${{ inputs.free-threaded }}
         
 jobs:
   build:
@@ -29,7 +33,13 @@ jobs:
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           set -ex
-          uv python pin "${{ inputs.python-version }}"
+
+          py_ver="${{ inputs.python-version }}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            py_ver="${py_ver}t"
+          fi
+
+          uv python pin "${py_ver}"
           uv python list --only-installed
           uv venv
           uv build --all-packages --wheel
@@ -78,11 +88,19 @@ jobs:
 
       - name: Unit test
         run: |
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            conda install -q -c conda-forge python-freethreading
+          fi
+
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
-          pip install torch numpy numba pytest
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            pip install torch numpy pytest
+          else
+            pip install torch numpy numba pytest
+          fi
 
           # Install FFmpeg
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
