@@ -27,7 +27,7 @@ from spdl.pipeline import (
     TaskStatsHook,
 )
 from spdl.pipeline._components._common import _EOF
-from spdl.pipeline._components._pipe import _pipe, _PipeArgs, _SKIP
+from spdl.pipeline._components._pipe import _FailCounter, _pipe, _PipeArgs, _SKIP
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
 from spdl.pipeline._hook import _periodic_dispatch
@@ -178,7 +178,9 @@ def test_async_pipe():
         ref = list(range(6))
         _put_aqueue(input_queue, ref, eof=True)
 
-        await _pipe("adouble", input_queue, output_queue, _PipeArgs(op=adouble))
+        await _pipe(
+            "adouble", input_queue, output_queue, _PipeArgs(op=adouble), _FailCounter()
+        )
 
         result = _flush_aqueue(output_queue)
 
@@ -196,7 +198,9 @@ def test_async_pipe_skip():
         data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
         _put_aqueue(input_queue, data, eof=True)
 
-        await _pipe("adouble", input_queue, output_queue, _PipeArgs(op=adouble))
+        await _pipe(
+            "adouble", input_queue, output_queue, _PipeArgs(op=adouble), _FailCounter()
+        )
 
         result = _flush_aqueue(output_queue)
 
@@ -223,6 +227,7 @@ def test_async_pipe_wrong_task_signature():
                 input_queue,
                 output_queue,
                 _PipeArgs(op=_2args, concurrency=3),
+                _FailCounter(),
             )
 
         remaining = _flush_aqueue(input_queue)
@@ -257,7 +262,9 @@ def test_async_pipe_cancel(full):
             raise
 
     async def test():
-        coro = _pipe("astuck", input_queue, output_queue, _PipeArgs(op=astuck))
+        coro = _pipe(
+            "astuck", input_queue, output_queue, _PipeArgs(op=astuck), _FailCounter()
+        )
         task = asyncio.create_task(coro)
 
         await asyncio.sleep(0.5)
@@ -294,6 +301,7 @@ def test_async_pipe_concurrency():
                 op=delay,
                 concurrency=concurrency,
             ),
+            _FailCounter(),
         )
 
         task = asyncio.create_task(coro)
@@ -338,6 +346,7 @@ def test_async_pipe_concurrency_throughput():
                 op=delay,
                 concurrency=concurrency,
             ),
+            _FailCounter(),
         )
         elapsed = time.monotonic() - t0
 
@@ -1620,8 +1629,46 @@ def test_pipeline_failures(output_order: str):
 
     pipeline = builder.build(num_threads=1)
     with pipeline.auto_stop():
-        assert list(pipeline) == [i for i in src if not (i % 2)]
+        ite = pipeline.get_iterator(timeout=3)
+        assert list(ite) == [i for i in src if not (i % 2)]
 
     pipeline = builder.build(num_threads=1, max_failures=2)
     with pipeline.auto_stop():
-        assert list(pipeline) == [i for i in range(6) if not (i % 2)]
+        ite = pipeline.get_iterator(timeout=3)
+        assert list(ite) == [i for i in range(6) if not (i % 2)]
+
+
+@pytest.mark.parametrize("output_order", ["completion", "input"])
+def test_pipeline_failures_multiple_pipeline(output_order: str):
+    """When using multiple pipelines with different error caps, they work
+
+    Note: FailCounter uses class method to combines the errors
+    from the different stages. We create a different child class
+    for each pipeline construction so that class counter are separate for
+    each pipeline object. This test ensures that.
+    """
+
+    def fail_odd(x):
+        if x % 2:
+            raise ValueError(f"Only evan numbers are allowed. {x}")
+        return x
+
+    src = range(10)
+
+    builder = (
+        PipelineBuilder()
+        .add_source(src)
+        .pipe(fail_odd, output_order=output_order, concurrency=10)
+        .add_sink(1)
+    )
+
+    pipeline1 = builder.build(num_threads=1, max_failures=1)
+    pipeline2 = builder.build(num_threads=1, max_failures=2)
+
+    with pipeline2.auto_stop():
+        ite = pipeline2.get_iterator(timeout=3)
+        assert list(ite) == [i for i in range(6) if not (i % 2)]
+
+    with pipeline1.auto_stop():
+        ite = pipeline1.get_iterator(timeout=3)
+        assert list(ite) == [i for i in range(4) if not (i % 2)]
