@@ -20,8 +20,6 @@
 #include <cmath>
 #include <optional>
 
-#include <iostream>
-
 namespace spdl::core::detail {
 
 void init_fmt_ctx(DataInterface* di) {
@@ -81,7 +79,6 @@ Generator<AVPacketPtr> demux_and_filter(
       if (packet->pts * av_q2d(stream->time_base) > end) {
         co_return;
       }
-      std::cerr << "@@@ packet:" << packet->pts << std::endl;
       co_yield std::move(packet);
     } else {
       auto filtering = filter->filter(packet.get());
@@ -90,7 +87,6 @@ Generator<AVPacketPtr> demux_and_filter(
         if (filtered->pts * av_q2d(stream->time_base) > end) {
           co_return;
         }
-        std::cerr << "@@@ packet:" << packet->pts << std::endl;
         co_yield std::move(filtered);
       }
     }
