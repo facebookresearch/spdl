@@ -134,7 +134,7 @@ def source(
                     return
 
 
-async def decode_video(
+def decode_video(
     src: str | bytes,
     width: int,
     height: int,
@@ -152,8 +152,8 @@ async def decode_video(
         The dtype is uint8, the shape is ``[N, C, H, W]``, where ``N`` is the number
         of frames in the video, ``C`` is RGB channels.
     """
-    packets = await spdl.io.async_demux_video(src)
-    frames = await spdl.io.async_decode_packets(
+    packets = spdl.io.demux_video(src)
+    frames = spdl.io.decode_packets(
         packets,
         filter_desc=spdl.io.get_filter_desc(
             packets,
@@ -162,8 +162,8 @@ async def decode_video(
             pix_fmt="rgb24",
         ),
     )
-    buffer = await spdl.io.async_convert_frames(frames)
-    buffer = await spdl.io.async_transfer_buffer(
+    buffer = spdl.io.convert_frames(frames)
+    buffer = spdl.io.transfer_buffer(
         buffer,
         device_config=spdl.io.cuda_config(
             device_index=device_index,
@@ -176,7 +176,7 @@ async def decode_video(
     return spdl.io.to_torch(buffer).permute(0, 2, 3, 1)
 
 
-async def decode_video_nvdec(
+def decode_video_nvdec(
     src: str,
     device_index: int,
     width: int,
@@ -194,8 +194,8 @@ async def decode_video_nvdec(
         The dtype is uint8, the shape is ``[N, C, H, W]``, where ``N`` is the number
         of frames in the video, ``C`` is RGB channels.
     """
-    packets = await spdl.io.async_demux_video(src)
-    buffer = await spdl.io.async_decode_packets_nvdec(
+    packets = spdl.io.demux_video(src)
+    buffer = spdl.io.decode_packets_nvdec(
         packets,
         device_config=spdl.io.cuda_config(
             device_index=device_index,
@@ -214,13 +214,13 @@ async def decode_video_nvdec(
 def _get_decode_fn(device_index, use_nvdec, width=222, height=222):
     if use_nvdec:
 
-        async def _decode_func(src):
-            return await decode_video_nvdec(src, device_index, width, height)
+        def _decode_func(src):
+            return decode_video_nvdec(src, device_index, width, height)
 
     else:
 
-        async def _decode_func(src):
-            return await decode_video(src, width, height, device_index)
+        def _decode_func(src):
+            return decode_video(src, width, height, device_index)
 
     return _decode_func
 
@@ -244,9 +244,9 @@ def get_pipeline(
     return (
         PipelineBuilder()
         .add_source(src)
-        .pipe(decode_fn, concurrency=decode_concurrency, report_stats_interval=15)
+        .pipe(decode_fn, concurrency=decode_concurrency)
         .add_sink(buffer_size)
-        .build(num_threads=num_threads)
+        .build(num_threads=num_threads, report_stats_interval=15)
     )
 
 
