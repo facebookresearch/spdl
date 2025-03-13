@@ -27,7 +27,7 @@ extern "C" {
 namespace spdl::core::detail {
 namespace {
 struct _Decoder {
-  NvDecDecoder decoder{};
+  NvDecDecoderCore decoder{};
   bool decoding_ongoing = false;
 };
 
