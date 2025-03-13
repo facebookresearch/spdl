@@ -154,7 +154,6 @@ std::tuple<double, double> NO_WINDOW{
 void NvDecDecoderCore::init(
     CUdevice device_index_,
     cudaVideoCodec codec_,
-    CUDABufferTracker* tracker_,
     Rational timebase_,
     const std::optional<std::tuple<double, double>>& timestamp_,
     CropArea crop_,
@@ -204,7 +203,6 @@ void NvDecDecoderCore::init(
     decoder_param.ulMaxHeight = 720;
     decoder_param.ulMaxWidth = 1280;
   }
-  tracker = tracker_;
   timebase = timebase_;
   std::tie(start_time, end_time) = timestamp_ ? *timestamp_ : NO_WINDOW;
 
