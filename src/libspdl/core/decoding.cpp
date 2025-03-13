@@ -15,6 +15,10 @@
 #include "libspdl/core/detail/nvdec/decoding.h"
 #include "libspdl/core/detail/tracing.h"
 
+#ifdef SPDL_USE_NVCODEC
+#include "libspdl/core/detail/nvdec/decoder.h"
+#endif
+
 #include <fmt/core.h>
 
 namespace spdl::core {
@@ -192,6 +196,64 @@ CUDABufferPtr decode_image_nvjpeg(
 #else
   return detail::decode_image_nvjpeg(
       data, cuda_config, scale_width, scale_height, pix_fmt);
+#endif
+}
+
+#ifndef SPDL_USE_NVCODEC
+NvDecDecoder::NvDecDecoder() : decoder(nullptr) {
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+}
+#else
+NvDecDecoder::NvDecDecoder() : decoder(new detail::NvDecDecoderInternal()) {}
+#endif
+
+NvDecDecoder::~NvDecDecoder() {
+  if (decoder) {
+    delete decoder;
+  }
+}
+
+void NvDecDecoder::reset() {
+#ifndef SPDL_USE_NVCODEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+  decoder->reset();
+#endif
+}
+
+void NvDecDecoder::set_init_flag() {
+#ifndef SPDL_USE_NVCODEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+  init = true;
+#endif
+}
+
+CUDABufferPtr NvDecDecoder::decode(
+    VideoPacketsPtr&& packets,
+    const CUDAConfig& cuda_config,
+    const CropArea& crop,
+    int width,
+    int height,
+    const std::optional<std::string>& pix_fmt) {
+#ifndef SPDL_USE_NVCODEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
+  validate_nvdec_params(cuda_config.device_index, crop, width, height);
+  if (init) {
+    decoder->init(
+        cuda_config.device_index,
+        packets->codecpar->codec_id,
+        packets->time_base,
+        packets->timestamp,
+        crop,
+        width,
+        height,
+        pix_fmt);
+    init = false;
+  }
+  return decoder->decode(
+      std::move(packets), cuda_config, crop, width, height, pix_fmt);
 #endif
 }
 

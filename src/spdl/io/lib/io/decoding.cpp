@@ -141,6 +141,58 @@ void register_decoding(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC
   ////////////////////////////////////////////////////////////////////////////////
+  nb::class_<NvDecDecoder>(m, "NvDecDecoder")
+      .def(
+          "reset",
+          &NvDecDecoder::reset,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "set_init_flag",
+          &NvDecDecoder::set_init_flag,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "decode",
+          [](NvDecDecoder& self,
+             PacketsPtr<MediaType::Video>&& packets,
+             const CUDAConfig& cuda_config,
+             int crop_left,
+             int crop_top,
+             int crop_right,
+             int crop_bottom,
+             int width,
+             int height,
+             const std::optional<std::string>& pix_fmt) {
+            return self.decode(
+                std::move(packets),
+                cuda_config,
+                CropArea{
+                    static_cast<short>(crop_left),
+                    static_cast<short>(crop_top),
+                    static_cast<short>(crop_right),
+                    static_cast<short>(crop_bottom)},
+                width,
+                height,
+                pix_fmt);
+          },
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("packets"),
+#if NB_VERSION_MAJOR >= 2
+          nb::kw_only(),
+#endif
+          nb::arg("device_config"),
+          nb::arg("crop_left") = 0,
+          nb::arg("crop_top") = 0,
+          nb::arg("crop_right") = 0,
+          nb::arg("crop_bottom") = 0,
+          nb::arg("width") = -1,
+          nb::arg("height") = -1,
+          nb::arg("pix_fmt").none() = "rgba");
+
+  m.def(
+      "_nvdec_decoder",
+      []() { return std::make_unique<NvDecDecoder>(); },
+      nb::call_guard<nb::gil_scoped_release>());
+
   m.def(
       "decode_packets_nvdec",
       &decode_nvdec<MediaType::Video>,

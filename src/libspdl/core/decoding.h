@@ -84,4 +84,36 @@ CUDABufferPtr decode_image_nvjpeg(
     int scale_height,
     const std::string& pix_fmt);
 
+namespace detail {
+class NvDecDecoderInternal;
+};
+
+class NvDecDecoder {
+  bool init = false;
+
+  detail::NvDecDecoderInternal* decoder;
+
+ public:
+  NvDecDecoder();
+  NvDecDecoder(const NvDecDecoder&) = delete;
+  NvDecDecoder& operator=(const NvDecDecoder&) = delete;
+  // Deleting the move constructor for now.
+  NvDecDecoder(NvDecDecoder&&) = delete;
+  NvDecDecoder& operator=(NvDecDecoder&&) = delete;
+
+  ~NvDecDecoder();
+
+  void reset();
+
+  void set_init_flag();
+
+  CUDABufferPtr decode(
+      VideoPacketsPtr&& packets,
+      const CUDAConfig& cuda_config,
+      const CropArea& crop,
+      int width,
+      int height,
+      const std::optional<std::string>& pix_fmt);
+};
+
 } // namespace spdl::core

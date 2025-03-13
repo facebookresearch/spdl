@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import logging
+import threading
 import warnings
 from collections.abc import Iterator
 from pathlib import Path
@@ -66,6 +67,7 @@ __all__ = [
     "decode_packets_nvdec",
     "streaming_decode_packets",
     "decode_image_nvjpeg",
+    "NvDecDecoder",
     # FRAME CONVERSION
     "convert_array",
     "convert_frames",
@@ -441,6 +443,38 @@ def streaming_decode_packets(
     )
     while (frames := decoder.decode(num_frames)) is not None:
         yield frames
+
+
+class _DecoderCache:
+    def __init__(self, decoder) -> None:
+        self.decoder = decoder
+        self.decoding = False
+
+
+_THREAD_LOCAL = threading.local()
+
+
+def _get_decoder_cache() -> _DecoderCache:
+    if not hasattr(_THREAD_LOCAL, "_cache"):
+        _THREAD_LOCAL._cache = _DecoderCache(_libspdl._nvdec_decoder())
+    return _THREAD_LOCAL._cache
+
+
+class NvDecDecoder:
+    def __init__(self) -> None:
+        self._cache: _DecoderCache = _get_decoder_cache()
+        if self._cache.decoding:
+            self._cache.decoder.reset()
+            self._cache.decoding = False
+        self._cache.decoder.set_init_flag()
+
+    def decode(
+        self, packets: VideoPackets, device_config: CUDAConfig | None = None, **kwargs
+    ) -> VideoFrames:
+        self._cache.decoding = True
+        ret = self._cache.decoder.decode(packets, device_config=device_config, **kwargs)
+        self._cache.decoding = False
+        return ret
 
 
 ################################################################################
