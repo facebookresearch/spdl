@@ -151,6 +151,10 @@ std::tuple<double, double> NO_WINDOW{
     std::numeric_limits<double>::infinity()};
 } // namespace
 
+////////////////////////////////////////////////////////////////////////////////
+// NvDecDecoderCore
+////////////////////////////////////////////////////////////////////////////////
+
 void NvDecDecoderCore::init(
     CUdevice device_index_,
     cudaVideoCodec codec_,
@@ -447,5 +451,138 @@ void NvDecDecoderCore::reset() {
 
   cb_disabled = false;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// NvDecDecoderInternal
+////////////////////////////////////////////////////////////////////////////////
+
+void NvDecDecoderInternal::reset() {
+  core.reset();
+}
+
+void NvDecDecoderInternal::init(
+    int device_index,
+    enum AVCodecID codec_id,
+    Rational time_base,
+    const std::optional<std::tuple<double, double>>& timestamp,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string>& pix_fmt) {
+  core.init(
+      device_index,
+      covert_codec_id(codec_id),
+      time_base,
+      timestamp,
+      crop,
+      target_width,
+      target_height,
+      pix_fmt);
+}
+
+// TEMP
+CUDABufferTracker get_buffer_tracker(
+    const CUDAConfig& cuda_config,
+    size_t num_packets,
+    AVCodecParameters* codecpar,
+    const CropArea& crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string>& pix_fmt,
+    bool is_image);
+
+template <MediaType media_type>
+CUDABufferPtr NvDecDecoderInternal::decode(
+    PacketsPtr<media_type> packets,
+    const CUDAConfig& cuda_config,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string>& pix_fmt) {
+  auto num_packets = packets->num_packets();
+
+  if (num_packets == 0) {
+    SPDL_FAIL("No packets to decode.");
+  }
+
+  ensure_cuda_initialized();
+
+  TRACE_EVENT("nvdec", "decode_packets");
+
+  auto tracker = detail::get_buffer_tracker(
+      cuda_config,
+      num_packets,
+      packets->codecpar,
+      crop,
+      target_width,
+      target_height,
+      pix_fmt,
+      media_type == MediaType::Image);
+  core.tracker = &tracker;
+
+  size_t it = 0;
+  unsigned long flags = CUVID_PKT_TIMESTAMP;
+  switch (packets->codecpar->codec_id) {
+    case AV_CODEC_ID_MPEG4: {
+      // TODO: Add special handling par
+      // Video_Codec_SDK_12.1.14/blob/main/Samples/Utils/FFmpegDemuxer.h#L326-L345
+      // TODO: Test this with MP4 file.
+      SPDL_FAIL("NOT IMPLEMENTED.");
+      ++it;
+    }
+    case AV_CODEC_ID_AV1:
+      // TODO handle
+      // https://github.com/FFmpeg/FFmpeg/blob/5e2b0862eb1d408625232b37b7a2420403cd498f/libavcodec/cuviddec.c#L1001-L1009
+      SPDL_FAIL("NOT IMPLEMENTED.");
+      ++it;
+    default:;
+  }
+
+#define _PKT(i) packets->get_packets()[i]
+#define _PTS(pkt)                                           \
+  (static_cast<double>(pkt->pts) * packets->time_base.num / \
+   packets->time_base.den)
+
+  flags |= CUVID_PKT_ENDOFPICTURE;
+  for (; it < num_packets - 1; ++it) {
+    auto pkt = _PKT(it);
+    VLOG(9) << fmt::format(" -- packet  PTS={:.3f} ({})", _PTS(pkt), pkt->pts);
+
+    core.decode(pkt->data, pkt->size, pkt->pts, flags);
+  }
+  auto pkt = _PKT(it);
+  flags |= CUVID_PKT_ENDOFSTREAM;
+  core.decode(pkt->data, pkt->size, pkt->pts, flags);
+
+#undef _PKT
+#undef _PTS
+
+  VLOG(5) << fmt::format(
+      "Decoded {} frames from {} packets.", tracker.i, packets->num_packets());
+
+  if constexpr (media_type == MediaType::Video) {
+    // We preallocated the buffer with the number of packets, but these packets
+    // could contains the frames outside of specified timestamps.
+    // So we update the shape with the actual number of frames.
+    tracker.buffer->shape[0] = tracker.i;
+  }
+  return std::move(tracker.buffer);
+}
+
+template CUDABufferPtr NvDecDecoderInternal::decode(
+    PacketsPtr<MediaType::Video> packets,
+    const CUDAConfig& cuda_config,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string>& pix_fmt);
+
+template CUDABufferPtr NvDecDecoderInternal::decode(
+    PacketsPtr<MediaType::Image> packets,
+    const CUDAConfig& cuda_config,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string>& pix_fmt);
 
 } // namespace spdl::core::detail

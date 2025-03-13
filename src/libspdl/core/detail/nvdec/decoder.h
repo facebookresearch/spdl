@@ -9,6 +9,7 @@
 #pragma once
 
 #include <libspdl/core/buffer.h>
+#include <libspdl/core/packets.h>
 
 #include "libspdl/core/detail/nvdec/buffer.h"
 #include "libspdl/core/detail/nvdec/converter.h"
@@ -117,6 +118,33 @@ class NvDecDecoderCore {
   int handle_display_picture(CUVIDPARSERDISPINFO*);
   int handle_operating_point(CUVIDOPERATINGPOINTINFO*);
   int handle_sei_msg(CUVIDSEIMESSAGEINFO*);
+};
+
+// Wraps NvDecDecoderCore to make the interface (slightly) simpler
+class NvDecDecoderInternal {
+  NvDecDecoderCore core;
+
+ public:
+  void reset();
+
+  void init(
+      int device_index,
+      enum AVCodecID codec_id,
+      Rational time_base,
+      const std::optional<std::tuple<double, double>>& timestamp,
+      const CropArea crop,
+      int target_width,
+      int target_height,
+      const std::optional<std::string>& pix_fmt);
+
+  template <MediaType media_type>
+  CUDABufferPtr decode(
+      PacketsPtr<media_type> packets,
+      const CUDAConfig& cuda_config,
+      const CropArea crop,
+      int target_width,
+      int target_height,
+      const std::optional<std::string>& pix_fmt);
 };
 
 } // namespace spdl::core::detail
