@@ -112,13 +112,13 @@ CUDABufferPtr decode_nvdec(
   _dec.decoder.init(
       cuda_config.device_index,
       covert_codec_id(codecpar->codec_id),
-      &tracker,
       packets->time_base,
       packets->timestamp,
       crop,
       target_width,
       target_height,
       pix_fmt);
+  _dec.decoder.tracker = &tracker;
 
   _dec.decoding_ongoing = true;
   size_t it = 0;
@@ -243,6 +243,7 @@ CUDABufferPtr decode_nvdec(
       target_height,
       pix_fmt,
       false);
+  _dec.decoder.tracker = &tracker;
 
   auto decode_fn = [&](ImagePacketsPtr& packet) {
     if (_dec.decoding_ongoing) {
@@ -256,7 +257,6 @@ CUDABufferPtr decode_nvdec(
     _dec.decoder.init(
         cuda_config.device_index,
         covert_codec_id(packet->codecpar->codec_id),
-        &tracker,
         packet->time_base,
         packet->timestamp,
         crop,

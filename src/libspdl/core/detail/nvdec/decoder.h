@@ -61,7 +61,10 @@ class NvDecDecoderCore {
   CUvideodecoderPtr decoder{nullptr};
 
   // Where the output frames will be stored.
+ public:
   CUDABufferTracker* tracker = nullptr;
+
+ private:
   std::unique_ptr<Converter> converter{nullptr};
 
   // Timebase of the incomding packets/decoded frames
@@ -91,7 +94,6 @@ class NvDecDecoderCore {
   void init(
       CUdevice device_index,
       cudaVideoCodec codec,
-      CUDABufferTracker* tracker,
       Rational timebase,
       const std::optional<std::tuple<double, double>>& timestamp,
       CropArea crop,
