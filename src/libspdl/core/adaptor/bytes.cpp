@@ -36,10 +36,10 @@ class Bytes {
 
  private:
   int read_packet(uint8_t* buf, int buf_size) {
-    if (int remining = buffer.size() - pos; remining < buf_size) {
-      buf_size = remining;
+    if (int remaining = buffer.size() - pos; remaining < buf_size) {
+      buf_size = remaining;
     }
-    if (!buf_size) {
+    if (buf_size <= 0) {
       return AVERROR_EOF;
     }
     memcpy(buf, buffer.data() + pos, buf_size);
@@ -48,9 +48,10 @@ class Bytes {
   }
 
   int64_t seek(int64_t offset, int whence) {
+    auto size = buffer.size();
     switch (whence) {
       case AVSEEK_SIZE:
-        return static_cast<int64_t>(buffer.size());
+        return static_cast<int64_t>(size);
       case SEEK_SET:
         pos = offset;
         break;
@@ -63,6 +64,9 @@ class Bytes {
       default:
         LOG(ERROR) << "Unexpected whence value was found: " << whence;
         return -1;
+    }
+    if (pos > size) {
+      pos = size;
     }
     return pos;
   }
