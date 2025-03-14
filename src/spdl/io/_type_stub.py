@@ -14,8 +14,11 @@ __all__ = [
     "CPUBuffer",
     "CUDABuffer",
     "Packets",
+    "AudioCodec",
     "AudioPackets",
+    "VideoCodec",
     "VideoPackets",
+    "ImageCodec",
     "ImagePackets",
     "Frames",
     "AudioFrames",
@@ -27,6 +30,39 @@ __all__ = [
     "CUDAConfig",
     "CPUStorage",
 ]
+
+
+class VideoCodec:
+    """VideoCodec()
+    Codec metadata
+    """
+
+    @property
+    def name(self) -> str:
+        """The name of the codec"""
+        ...
+
+
+class AudioCodec:
+    """AudioCodec()
+    Codec metadata
+    """
+
+    @property
+    def name(self) -> str:
+        """The name of the codec"""
+        ...
+
+
+class ImageCodec:
+    """ImageCodec()
+    Codec metadata
+    """
+
+    @property
+    def name(self) -> str:
+        """The name of the codec"""
+        ...
 
 
 class Packets:

@@ -39,6 +39,7 @@ else:
 
 
 from spdl.io import (
+    AudioCodec,
     AudioFrames,
     AudioPackets,
     CPUBuffer,
@@ -46,8 +47,10 @@ from spdl.io import (
     CUDABuffer,
     CUDAConfig,
     DecodeConfig,
+    ImageCodec,
     ImageFrames,
     ImagePackets,
+    VideoCodec,
     VideoFrames,
     VideoPackets,
 )
@@ -191,6 +194,21 @@ class Demuxer:
     def has_audio(self) -> bool:
         """Returns true if the source has audio stream."""
         return self._demuxer.has_audio()
+
+    @property
+    def audio_codec(self) -> AudioCodec:
+        """The codec metadata of the default audio stream."""
+        return self._demuxer.audio_codec
+
+    @property
+    def video_codec(self) -> VideoCodec:
+        """The codec metadata of the default video stream."""
+        return self._demuxer.video_codec
+
+    @property
+    def image_codec(self) -> ImageCodec:
+        """The codec metadata  of the default image stream."""
+        return self._demuxer.image_codec
 
     def __enter__(self) -> "Demuxer":
         return self

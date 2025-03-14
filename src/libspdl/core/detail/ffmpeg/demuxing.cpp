@@ -54,13 +54,17 @@ AVStream* get_stream(DataInterface* di, enum MediaType type_) {
         av_get_media_type_string(type),
         di->get_src()));
   }
+  return fmt_ctx->streams[idx];
+}
+
+void enable_for_stream(AVFormatContext* fmt_ctx, int idx) {
   // Disable other streams
+  fmt_ctx->streams[idx]->discard = AVDISCARD_DEFAULT;
   for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
     if (i != idx) {
       fmt_ctx->streams[i]->discard = AVDISCARD_ALL;
     }
   }
-  return fmt_ctx->streams[idx];
 }
 
 Generator<AVPacketPtr> demux_and_filter(
@@ -105,7 +109,9 @@ PacketsPtr<media_type> demux_window(
   TRACE_EVENT("demuxing", "detail::demux_window");
   auto [start, end] = window ? *window : NO_WINDOW;
 
+  auto* fmt_ctx = di->get_fmt_ctx();
   auto stream = get_stream(di, media_type);
+  enable_for_stream(fmt_ctx, stream->index);
 
   if constexpr (media_type == MediaType::Video) {
     // Note:
@@ -114,7 +120,6 @@ PacketsPtr<media_type> demux_window(
     end += 0.3;
   }
 
-  auto* fmt_ctx = di->get_fmt_ctx();
   if (!std::isinf(start)) {
     int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
     {
@@ -176,6 +181,7 @@ Generator<PacketsPtr<media_type>> streaming_demux(
     const std::optional<std::string> bsf) {
   auto* fmt_ctx = di->get_fmt_ctx();
   auto stream = get_stream(di, media_type);
+  enable_for_stream(fmt_ctx, stream->index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
     if (!bsf) {

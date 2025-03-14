@@ -20,6 +20,7 @@ extern "C" {
 namespace spdl::core {
 
 namespace detail {
+// ----------------------------------------------------------------------------
 // Implemented in core/detail/ffmpeg/demuxing.cpp
 void init_fmt_ctx(DataInterface*);
 template <MediaType media_type>
@@ -33,6 +34,9 @@ PacketsPtr<media_type> demux_window(
     DataInterface*,
     const std::optional<std::tuple<double, double>>& window = std::nullopt,
     const std::optional<std::string>& bsf = std::nullopt);
+
+AVStream* get_stream(DataInterface* di, enum MediaType type_);
+// ----------------------------------------------------------------------------
 
 std::unique_ptr<DataInterface> get_interface(
     const std::string_view src,
@@ -100,6 +104,19 @@ bool Demuxer::has_audio() {
   }
   return false;
 }
+
+template <MediaType media_type>
+Codec<media_type> Demuxer::get_default_codec() const {
+  auto* stream = detail::get_stream(di.get(), media_type);
+  return Codec<media_type>{
+      std::string(avcodec_get_name(stream->codecpar->codec_id))};
+}
+template Codec<MediaType::Audio> Demuxer::get_default_codec<MediaType::Audio>()
+    const;
+template Codec<MediaType::Video> Demuxer::get_default_codec<MediaType::Video>()
+    const;
+template Codec<MediaType::Image> Demuxer::get_default_codec<MediaType::Image>()
+    const;
 
 template <MediaType media_type>
 PacketsPtr<media_type> Demuxer::demux_window(
