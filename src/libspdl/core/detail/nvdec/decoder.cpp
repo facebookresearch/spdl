@@ -469,6 +469,7 @@ void NvDecDecoderInternal::init(
     int target_width,
     int target_height,
     const std::optional<std::string>& pix_fmt) {
+  ensure_cuda_initialized();
   core.init(
       device_index,
       covert_codec_id(codec_id),
@@ -480,7 +481,6 @@ void NvDecDecoderInternal::init(
       pix_fmt);
 }
 
-// TEMP
 CUDABufferPtr get_buffer(
     const CUDAConfig& cuda_config,
     size_t num_packets,
@@ -488,7 +488,24 @@ CUDABufferPtr get_buffer(
     const CropArea& crop,
     int target_width,
     int target_height,
-    const std::optional<std::string>& pix_fmt);
+    const std::optional<std::string>& pix_fmt) {
+  size_t w = target_width > 0 ? target_width
+                              : (codecpar->width - crop.left - crop.right);
+  size_t h = target_height > 0 ? target_height
+                               : (codecpar->height - crop.top - crop.bottom);
+
+  size_t c;
+  auto pix_fmt_val = pix_fmt.value_or("nv12");
+  if (pix_fmt_val == "nv12") {
+    c = 1;
+    h = h + h / 2;
+  } else if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
+    c = 4;
+  } else {
+    SPDL_FAIL(fmt::format("Unsupported pixel format: {}", pix_fmt_val));
+  }
+  return cuda_buffer(std::vector<size_t>{num_packets, c, h, w}, cuda_config);
+}
 
 template <MediaType media_type>
 void NvDecDecoderInternal::decode_packets(
@@ -553,8 +570,6 @@ CUDABufferPtr NvDecDecoderInternal::decode(
     int target_height,
     const std::optional<std::string>& pix_fmt) {
   TRACE_EVENT("nvdec", "decode");
-
-  ensure_cuda_initialized();
 
   auto num_packets = packets->num_packets();
 

@@ -52,24 +52,6 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
     const std::optional<DecodeConfig>& cfg = std::nullopt,
     const std::optional<std::string>& filter_desc = std::nullopt);
 
-template <MediaType media_type>
-CUDABufferPtr decode_packets_nvdec(
-    PacketsPtr<media_type> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea& crop,
-    int width,
-    int height,
-    const std::optional<std::string>& pix_fmt);
-
-CUDABufferPtr decode_packets_nvdec(
-    std::vector<ImagePacketsPtr>&& packets,
-    const CUDAConfig& cuda_config,
-    const CropArea& crop,
-    int width,
-    int height,
-    const std::optional<std::string>& pix_fmt,
-    bool strict);
-
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
     const CUDAConfig& cuda_config,
