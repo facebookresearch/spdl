@@ -492,32 +492,16 @@ CUDABufferTracker get_buffer_tracker(
     bool is_image);
 
 template <MediaType media_type>
-CUDABufferPtr NvDecDecoderInternal::decode(
+void NvDecDecoderInternal::decode_packets(
     PacketsPtr<media_type> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea crop,
-    int target_width,
-    int target_height,
-    const std::optional<std::string>& pix_fmt) {
-  auto num_packets = packets->num_packets();
+    CUDABufferTracker& tracker) {
+  TRACE_EVENT("nvdec", "decode_packets");
 
+  auto num_packets = packets->num_packets();
   if (num_packets == 0) {
     SPDL_FAIL("No packets to decode.");
   }
 
-  ensure_cuda_initialized();
-
-  TRACE_EVENT("nvdec", "decode_packets");
-
-  auto tracker = detail::get_buffer_tracker(
-      cuda_config,
-      num_packets,
-      packets->codecpar,
-      crop,
-      target_width,
-      target_height,
-      pix_fmt,
-      media_type == MediaType::Image);
   core.tracker = &tracker;
 
   size_t it = 0;
@@ -566,6 +550,38 @@ CUDABufferPtr NvDecDecoderInternal::decode(
     // So we update the shape with the actual number of frames.
     tracker.buffer->shape[0] = tracker.i;
   }
+}
+
+template <MediaType media_type>
+CUDABufferPtr NvDecDecoderInternal::decode(
+    PacketsPtr<media_type> packets,
+    const CUDAConfig& cuda_config,
+    const CropArea crop,
+    int target_width,
+    int target_height,
+    const std::optional<std::string>& pix_fmt) {
+  TRACE_EVENT("nvdec", "decode");
+
+  ensure_cuda_initialized();
+
+  auto num_packets = packets->num_packets();
+
+  if (num_packets == 0) {
+    SPDL_FAIL("No packets to decode.");
+  }
+
+  auto tracker = detail::get_buffer_tracker(
+      cuda_config,
+      num_packets,
+      packets->codecpar,
+      crop,
+      target_width,
+      target_height,
+      pix_fmt,
+      media_type == MediaType::Image);
+
+  decode_packets(std::move(packets), tracker);
+
   return std::move(tracker.buffer);
 }
 

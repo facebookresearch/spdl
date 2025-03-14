@@ -138,6 +138,11 @@ class NvDecDecoderInternal {
       const std::optional<std::string>& pix_fmt);
 
   template <MediaType media_type>
+  void decode_packets(
+      PacketsPtr<media_type> packets,
+      CUDABufferTracker& tracker);
+
+  template <MediaType media_type>
   CUDABufferPtr decode(
       PacketsPtr<media_type> packets,
       const CUDAConfig& cuda_config,
