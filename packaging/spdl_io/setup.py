@@ -59,6 +59,11 @@ def _get_ext_modules():
                     Extension(f"spdl.io.lib._spdl_ffmpeg{v}", sources=[]),
                 ]
             )
+            if _SPDL_USE_NVCODEC:
+                ext_modules.append(
+                    Extension(f"spdl.io.lib.libspdl_nvdec_ffmpeg{v}", sources=[]),
+                )
+
     if ext_modules and _SPDL_BUILD_STUB:
         ext_modules.append(
             Extension("spdl.io.lib.__STUB__", sources=[]),
