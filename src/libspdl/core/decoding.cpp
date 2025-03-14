@@ -12,7 +12,6 @@
 #include "libspdl/core/detail/ffmpeg/decoder.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/nvdec/decoding.h"
 #include "libspdl/core/detail/tracing.h"
 
 #ifdef SPDL_USE_NVCODEC
@@ -101,34 +100,6 @@ void validate_nvdec_params(
 } // namespace
 #endif
 
-template <MediaType media_type>
-CUDABufferPtr decode_packets_nvdec(
-    PacketsPtr<media_type> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea& crop,
-    int width,
-    int height,
-    const std::optional<std::string>& pix_fmt) {
-#ifndef SPDL_USE_NVCODEC
-  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-#else
-  validate_nvdec_params(cuda_config.device_index, crop, width, height);
-  if constexpr (media_type == MediaType::Video) {
-    packets = apply_bsf(std::move(packets));
-  }
-  return detail::decode_nvdec<media_type>(
-      std::move(packets), cuda_config, crop, width, height, pix_fmt);
-#endif
-}
-
-template CUDABufferPtr decode_packets_nvdec(
-    PacketsPtr<MediaType::Video> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea& crop,
-    int width,
-    int height,
-    const std::optional<std::string>& pix_fmt);
-
 #ifdef SPDL_USE_NVJPEG
 namespace detail {
 CUDABufferPtr decode_image_nvjpeg(
@@ -215,6 +186,9 @@ CUDABufferPtr NvDecDecoder::decode(
   SPDL_FAIL("SPDL is not compiled with NVDEC support.");
 #else
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
+
+  packets = apply_bsf(std::move(packets));
+
   if (init) {
     decoder->init(
         cuda_config.device_index,

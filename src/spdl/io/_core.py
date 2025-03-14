@@ -384,7 +384,9 @@ def decode_packets_nvdec(
             )
             device_config = kwargs["cuda_config"]
 
-    return _libspdl.decode_packets_nvdec(packets, device_config=device_config, **kwargs)
+    decoder = NvDecDecoder()
+
+    return decoder.decode(packets, device_config=device_config, **kwargs)
 
 
 def decode_image_nvjpeg(
