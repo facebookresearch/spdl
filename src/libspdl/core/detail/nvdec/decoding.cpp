@@ -41,7 +41,7 @@ _Decoder& get_decoder() {
 
 } // namespace
 
-CUDABufferTracker get_buffer_tracker(
+CUDABufferPtr get_buffer(
     const CUDAConfig& cuda_config,
     size_t num_packets,
     AVCodecParameters* codecpar,
@@ -69,7 +69,7 @@ CUDABufferTracker get_buffer_tracker(
   auto shape = is_image ? std::vector<size_t>{c, h, w}
                         : std::vector<size_t>{num_packets, c, h, w};
 
-  return CUDABufferTracker{cuda_config, shape};
+  return cuda_buffer(shape, cuda_config);
 }
 
 template <MediaType media_type>
@@ -198,7 +198,7 @@ CUDABufferPtr decode_nvdec(
 
   _DecoderLegacy& _dec = get_decoder_legacy();
 
-  auto tracker = get_buffer_tracker(
+  auto buffer = get_buffer(
       cuda_config,
       num_packets,
       p0->codecpar,
@@ -207,6 +207,7 @@ CUDABufferPtr decode_nvdec(
       target_height,
       pix_fmt,
       false);
+  auto tracker = CUDABufferTracker{buffer->storage, buffer->shape};
   _dec.decoder.tracker = &tracker;
 
   auto decode_fn = [&](ImagePacketsPtr& packet) {
@@ -262,7 +263,7 @@ CUDABufferPtr decode_nvdec(
     }
   }
 
-  return std::move(tracker.buffer);
+  return buffer;
 }
 
 } // namespace spdl::core::detail

@@ -16,19 +16,19 @@ namespace spdl::core {
 /// Contiguous array data on a CUDA device.
 /// This class is used to hold data decoded with NVDEC.
 struct CUDABufferTracker {
-  CUDABufferPtr buffer;
+  std::shared_ptr<CUDAStorage> storage;
 
   // ``i`` keeps track of how many frames are written.
   // ``i`` < ``n``;
-  // ``i`` is updated by writer.
+  // ``i`` is updated by writer. (should we encapsulate it?)
   size_t n, c, h, w;
 
   size_t i{0};
 
   // For batch image / video
   CUDABufferTracker(
-      const CUDAConfig& cuda_config,
-      const std::vector<size_t>& shape);
+      std::shared_ptr<CUDAStorage>& storage,
+      std::vector<size_t>& shape);
 
   // Get the pointer to the head of the next frame.
   uint8_t* get_next_frame();
