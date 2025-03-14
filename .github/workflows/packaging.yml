@@ -76,6 +76,11 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         cuda-version: ["12.6"]
+        use-nvdec: [""]
+        include:
+          - python-version: "3.11"
+            cuda-version: "12.6"
+            use-nvdec: "nvdec"
     uses: ./.github/workflows/_build_linux_cuda.yml
     with:
       os_build: ubuntu-latest
@@ -84,4 +89,5 @@ jobs:
       arch: x86_64
       python-version: "${{ matrix.python-version }}"
       cuda-version: "${{ matrix.cuda-version }}"
+      use-nvdec: "${{ matrix.use-nvdec }}"
       run-test: "${{ matrix.python-version == '3.10'}}"

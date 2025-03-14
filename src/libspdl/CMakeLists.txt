@@ -61,7 +61,6 @@ if (SPDL_USE_NVCODEC)
     core/detail/nvdec/converter.cpp
     core/detail/nvdec/color_conversion.cu
     core/detail/nvdec/decoder.cpp
-    core/detail/nvdec/decoding.cpp
     core/detail/nvdec/utils.cpp
     core/detail/nvdec/wrapper.cpp
     )
