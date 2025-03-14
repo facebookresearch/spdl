@@ -15,9 +15,9 @@
 namespace spdl::core {
 
 CUDABufferTracker::CUDABufferTracker(
-    const CUDAConfig& cuda_config,
-    const std::vector<size_t>& shape)
-    : buffer(cuda_buffer(shape, cuda_config)) {
+    std::shared_ptr<CUDAStorage>& s,
+    std::vector<size_t>& shape)
+    : storage(s) {
   switch (shape.size()) {
     case 3:
       n = 1, c = shape[0], h = shape[1], w = shape[2];
@@ -37,7 +37,7 @@ uint8_t* CUDABufferTracker::get_next_frame() {
         n,
         i));
   }
-  return (uint8_t*)(buffer->data()) + i * c * h * w;
+  return (uint8_t*)(storage->data()) + i * c * h * w;
 }
 
 } // namespace spdl::core

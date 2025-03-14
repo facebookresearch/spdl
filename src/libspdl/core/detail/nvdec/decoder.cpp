@@ -481,7 +481,7 @@ void NvDecDecoderInternal::init(
 }
 
 // TEMP
-CUDABufferTracker get_buffer_tracker(
+CUDABufferPtr get_buffer(
     const CUDAConfig& cuda_config,
     size_t num_packets,
     AVCodecParameters* codecpar,
@@ -543,13 +543,6 @@ void NvDecDecoderInternal::decode_packets(
 
   VLOG(5) << fmt::format(
       "Decoded {} frames from {} packets.", tracker.i, packets->num_packets());
-
-  if constexpr (media_type == MediaType::Video) {
-    // We preallocated the buffer with the number of packets, but these packets
-    // could contains the frames outside of specified timestamps.
-    // So we update the shape with the actual number of frames.
-    tracker.buffer->shape[0] = tracker.i;
-  }
 }
 
 template <MediaType media_type>
@@ -570,7 +563,7 @@ CUDABufferPtr NvDecDecoderInternal::decode(
     SPDL_FAIL("No packets to decode.");
   }
 
-  auto tracker = detail::get_buffer_tracker(
+  auto buffer = detail::get_buffer(
       cuda_config,
       num_packets,
       packets->codecpar,
@@ -579,10 +572,18 @@ CUDABufferPtr NvDecDecoderInternal::decode(
       target_height,
       pix_fmt,
       media_type == MediaType::Image);
+  auto tracker = CUDABufferTracker{buffer->storage, buffer->shape};
 
   decode_packets(std::move(packets), tracker);
 
-  return std::move(tracker.buffer);
+  if constexpr (media_type == MediaType::Video) {
+    // We preallocated the buffer with the number of packets, but these packets
+    // could contain the frames outside of specified timestamps.
+    // So we update the shape with the actual number of frames.
+    buffer->shape[0] = tracker.i;
+  }
+
+  return std::move(buffer);
 }
 
 template CUDABufferPtr NvDecDecoderInternal::decode(
