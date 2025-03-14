@@ -22,7 +22,6 @@ namespace spdl::core {
 namespace detail {
 // Implemented in core/detail/ffmpeg/demuxing.cpp
 void init_fmt_ctx(DataInterface*);
-AVStream* get_stream(DataInterface*, enum MediaType);
 template <MediaType media_type>
 Generator<PacketsPtr<media_type>> streaming_demux(
     DataInterface* di,
@@ -32,7 +31,6 @@ Generator<PacketsPtr<media_type>> streaming_demux(
 template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
     DataInterface*,
-    AVStream* stream,
     const std::optional<std::tuple<double, double>>& window = std::nullopt,
     const std::optional<std::string>& bsf = std::nullopt);
 
@@ -107,14 +105,7 @@ template <MediaType media_type>
 PacketsPtr<media_type> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
-  auto stream = detail::get_stream(di.get(), media_type);
-  auto packets =
-      detail::demux_window<media_type>(di.get(), stream, window, bsf);
-  if constexpr (media_type == MediaType::Video) {
-    auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-    packets->frame_rate = Rational{frame_rate.num, frame_rate.den};
-  }
-  return packets;
+  return detail::demux_window<media_type>(di.get(), window, bsf);
 }
 
 template PacketsPtr<MediaType::Audio> Demuxer::demux_window(

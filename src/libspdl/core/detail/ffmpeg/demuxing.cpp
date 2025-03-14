@@ -100,11 +100,12 @@ std::tuple<double, double> NO_WINDOW{
 template <MediaType media_type>
 PacketsPtr<media_type> demux_window(
     DataInterface* di,
-    AVStream* stream,
     const std::optional<std::tuple<double, double>>& window = std::nullopt,
     const std::optional<std::string>& bsf = std::nullopt) {
   TRACE_EVENT("demuxing", "detail::demux_window");
   auto [start, end] = window ? *window : NO_WINDOW;
+
+  auto stream = get_stream(di, media_type);
 
   if constexpr (media_type == MediaType::Video) {
     // Note:
@@ -145,24 +146,25 @@ PacketsPtr<media_type> demux_window(
       break;
     }
   }
+  if constexpr (media_type == MediaType::Video) {
+    auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
+    ret->frame_rate = Rational{frame_rate.num, frame_rate.den};
+  }
   return ret;
 }
 
 template PacketsPtr<MediaType::Audio> demux_window(
     DataInterface* fmt_ctx,
-    AVStream* stream,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Video> demux_window(
     DataInterface* fmt_ctx,
-    AVStream* stream,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Image> demux_window(
     DataInterface* fmt_ctx,
-    AVStream* stream,
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
@@ -182,17 +184,27 @@ Generator<PacketsPtr<media_type>> streaming_demux(
     return BitStreamFilter{*bsf, stream->codecpar};
   }();
 
+  Rational frame_rate;
+  if constexpr (media_type == MediaType::Video) {
+    auto fr = av_guess_frame_rate(fmt_ctx, stream, nullptr);
+    frame_rate = Rational{fr.num, fr.den};
+  }
+  auto make_packets = [&](std::vector<AVPacket*>&& pkts) {
+    auto ret = std::make_unique<DemuxedPackets<media_type>>(
+        di->get_src(),
+        bsf ? filter->get_output_codec_par() : stream->codecpar,
+        Rational{stream->time_base.num, stream->time_base.den},
+        std::move(pkts));
+    ret->frame_rate = frame_rate;
+    return std::move(ret);
+  };
   auto demuxing = demux_and_filter(fmt_ctx, stream, filter);
   std::vector<AVPacket*> packets;
   packets.reserve(num_packets);
   while (demuxing) {
     packets.push_back(demuxing().release());
     if (packets.size() >= num_packets) {
-      co_yield std::make_unique<DemuxedPackets<media_type>>(
-          di->get_src(),
-          bsf ? filter->get_output_codec_par() : stream->codecpar,
-          Rational{stream->time_base.num, stream->time_base.den},
-          std::move(packets));
+      co_yield make_packets(std::move(packets));
 
       packets = std::vector<AVPacket*>();
       packets.reserve(num_packets);
@@ -200,11 +212,7 @@ Generator<PacketsPtr<media_type>> streaming_demux(
   }
 
   if (packets.size() > 0) {
-    co_yield std::make_unique<DemuxedPackets<media_type>>(
-        di->get_src(),
-        bsf ? filter->get_output_codec_par() : stream->codecpar,
-        Rational{stream->time_base.num, stream->time_base.den},
-        std::move(packets));
+    co_yield make_packets(std::move(packets));
   }
 }
 
