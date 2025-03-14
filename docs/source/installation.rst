@@ -61,6 +61,7 @@ Requirements
     - NumPy
     - (Optional) PyTorch
     - (Optional) Numba
+    - (Optional) Jax
     - (Optional) CUDA runtime
 
 Dependencies
