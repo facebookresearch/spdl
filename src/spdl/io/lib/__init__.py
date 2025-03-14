@@ -53,8 +53,9 @@ def _import_libspdl() -> ModuleType:
     ]
     # Newer FFmpeg first
     libs.sort(reverse=True)
+    nvdec_libs.sort(reverse=True)
     err_msgs = {}
-    for lib in libs:
+    for lib, nvdec_lib in zip(libs, nvdec_libs):
         _LG.debug("Importing %s", lib)
         try:
             ext = importlib.import_module(lib)

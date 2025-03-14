@@ -56,14 +56,6 @@ endif()
 
 if (SPDL_USE_NVCODEC)
   list(APPEND defs SPDL_USE_NVCODEC)
-  list(APPEND srcs
-    core/detail/nvdec/buffer.cpp
-    core/detail/nvdec/converter.cpp
-    core/detail/nvdec/color_conversion.cu
-    core/detail/nvdec/decoder.cpp
-    core/detail/nvdec/utils.cpp
-    core/detail/nvdec/wrapper.cpp
-    )
   list(APPEND deps nvcuvid-stub)
 endif()
 
@@ -140,4 +132,52 @@ add_libspdl(4)
 add_libspdl(5)
 add_libspdl(6)
 add_libspdl(7)
+endif()
+
+# -------
+# NVDEC extension
+
+if (SPDL_USE_NVCODEC)
+  SET(srcs
+    core/detail/nvdec/foo.cpp
+    core/detail/nvdec/buffer.cpp
+    core/detail/nvdec/converter.cpp
+    core/detail/nvdec/color_conversion.cu
+    core/detail/nvdec/decoder.cpp
+    core/detail/nvdec/utils.cpp
+    core/detail/nvdec/wrapper.cpp
+    )
+
+
+  function(add_libspdl_nvcodec ffmpeg_version)
+    set(name "spdl_nvcodec_ffmpeg${ffmpeg_version}")
+    message(STATUS "Building ${name}")
+    add_library("${name}" SHARED "${srcs}")
+    target_compile_definitions("${name}" PRIVATE "${defs}")
+    target_link_libraries("${name}" PUBLIC nvcuvid-stub "spdl_ffmpeg${ffmpeg_version}")
+    target_include_directories(
+      "${name}"
+      PUBLIC
+      "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/.."
+      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+    
+    install(
+      TARGETS "${name}"
+      EXPORT "${name}Targets"
+      LIBRARY DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
+      RUNTIME DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
+      )
+    
+  endfunction()
+
+  set(ffmpeg_versions 4 5 6 7)
+  if (SPDL_USE_FFMPEG_VERSION IN_LIST ffmpeg_versions)
+    add_libspdl_nvcodec("${SPDL_USE_FFMPEG_VERSION}")
+  else()
+    add_libspdl_nvcodec(4)
+    add_libspdl_nvcodec(5)
+    add_libspdl_nvcodec(6)
+    add_libspdl_nvcodec(7)
+  endif()
+
 endif()
