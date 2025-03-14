@@ -341,7 +341,7 @@ def decode_packets(packets, filter_desc=_FILTER_DESC_DEFAULT, **kwargs):
 
 
 def decode_packets_nvdec(
-    packets: VideoPackets | ImagePackets | list[ImagePackets],
+    packets: VideoPackets,
     *,
     device_config: CUDAConfig | None = None,
     **kwargs,
@@ -356,10 +356,6 @@ def decode_packets_nvdec(
     .. note::
 
        Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
-
-    .. note::
-
-       For image, only baseline (non-progressive) JPEG formats are supported.
 
     Args:
         packets: Packets object.

@@ -18,7 +18,6 @@
 #include <optional>
 #include <string>
 #include <tuple>
-#include <vector>
 
 namespace spdl::core::detail {
 
@@ -30,14 +29,5 @@ CUDABufferPtr decode_nvdec(
     int target_width = -1,
     int target_height = -1,
     const std::optional<std::string>& pix_fmt = std::nullopt);
-
-CUDABufferPtr decode_nvdec(
-    std::vector<ImagePacketsPtr>&& packets,
-    const CUDAConfig& cuda_config,
-    const CropArea crop,
-    int target_width = -1,
-    int target_height = -1,
-    const std::optional<std::string>& pix_fmt = std::nullopt,
-    bool strict = true);
 
 } // namespace spdl::core::detail
