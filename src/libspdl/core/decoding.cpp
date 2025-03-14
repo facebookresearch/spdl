@@ -183,9 +183,13 @@ NvDecDecoder::NvDecDecoder() : decoder(new detail::NvDecDecoderInternal()) {}
 #endif
 
 NvDecDecoder::~NvDecDecoder() {
+#ifndef SPDL_USE_NVCODEC
+  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
+#else
   if (decoder) {
     delete decoder;
   }
+#endif
 }
 
 void NvDecDecoder::reset() {
