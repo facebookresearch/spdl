@@ -21,16 +21,20 @@ on:
       cuda-version:
         required: true
         type: string
+      use-nvdec:
+        default: ""
+        type: string
       run-test:
         required: false
         default: 'false'
         type: string
 
 env:
-  ARTIFACT: wheel-linux-py${{ inputs.python-version }}-cuda${{ inputs.cuda-version }}
+  ARTIFACT: wheel-linux-py${{ inputs.python-version }}-cuda${{ inputs.cuda-version }}${{ inputs.use-nvdec }}
   SPDL_USE_TRACING: 1
   SPDL_BUILD_STUB: 0
   SPDL_USE_CUDA: 1
+  SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
 
 jobs:
   build:
