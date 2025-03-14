@@ -67,7 +67,7 @@ def test_demuxer_accept_torch_tensor(get_sample):
     assert not torch.any(src)
 
 
-def test_streaming_video_demuxing(get_sample):
+def test_streaming_video_demuxing_smoke_test(get_sample):
     """`streaming_demux_video` can decode packets in streaming fashion."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
@@ -81,3 +81,24 @@ def test_streaming_video_demuxing(get_sample):
     packets = demuxer.demux_video()
 
     assert num_packets == len(packets)
+
+
+def test_streaming_video_demuxing_parity(get_sample):
+    """`streaming_demux_video` can decode packets in streaming fashion."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
+    sample = get_sample(cmd)
+
+    def _decode_packets(packets):
+        frames = spdl.io.decode_packets(packets)
+        buffer = spdl.io.convert_frames(frames)
+        return spdl.io.to_numpy(buffer)
+
+    demuxer = spdl.io.Demuxer(sample.path)
+    ite = iter(demuxer.streaming_demux_video(30))
+    pkts = next(ite)
+    hyp = _decode_packets(pkts)
+
+    pkts = spdl.io.demux_video(sample.path)
+    ref = _decode_packets(pkts)
+
+    assert np.array_equal(hyp, ref)
