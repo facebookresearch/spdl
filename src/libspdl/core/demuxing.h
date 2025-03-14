@@ -22,6 +22,14 @@ struct AVStream;
 
 namespace spdl::core {
 
+// Struct to pass around codec info.
+// For now, we storeonly the necessary ones.
+// TOD: Generalize it by storing AVCodecParameter
+template <MediaType media_type>
+struct Codec {
+  std::string name;
+};
+
 template <MediaType media_type>
 class StreamingDemuxer {
   Generator<PacketsPtr<media_type>> gen;
@@ -34,6 +42,9 @@ class StreamingDemuxer {
   bool done();
   PacketsPtr<media_type> next();
 };
+using AudioCodec = Codec<MediaType::Audio>;
+using VideoCodec = Codec<MediaType::Video>;
+using ImageCodec = Codec<MediaType::Image>;
 
 template <MediaType media_type>
 using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
@@ -48,6 +59,9 @@ class Demuxer {
   ~Demuxer();
 
   bool has_audio();
+  // Get the codec of the default stream of the given media type
+  template <MediaType media_type>
+  Codec<media_type> get_default_codec() const;
 
   template <MediaType media_type>
   PacketsPtr<media_type> demux_window(

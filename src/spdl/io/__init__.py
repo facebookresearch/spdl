@@ -16,6 +16,9 @@ from ._type_stub import (  # isort: skip
     CPUBuffer,
     CUDABuffer,
     Packets,
+    AudioCodec,
+    VideoCodec,
+    ImageCodec,
     AudioPackets,
     VideoPackets,
     ImagePackets,
@@ -87,6 +90,10 @@ __all__ = [
     "load_image_batch",
     "load_image_batch_nvjpeg",
     "sample_decode_video",
+    # Metadata
+    "AudioCodec",
+    "VideoCodec",
+    "ImageCodec",
     # DEMUXING
     "Demuxer",
     "demux_audio",

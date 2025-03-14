@@ -73,6 +73,11 @@ struct PyDemuxer {
   }
 
   template <MediaType media_type>
+  Codec<media_type> get_default_codec() const {
+    return demuxer->get_default_codec<media_type>();
+  }
+
+  template <MediaType media_type>
   PacketsPtr<media_type> demux(
       const std::optional<std::tuple<double, double>>& window,
       const std::optional<std::string>& bsf) {
@@ -148,6 +153,13 @@ void register_demuxing(nb::module_& m) {
       .def("done", &PyStreamingDemuxer<MediaType::Video>::done)
       .def("next", &PyStreamingDemuxer<MediaType::Video>::next);
 
+  nb::class_<AudioCodec>(m, "AudioCodec")
+      .def_prop_ro("name", [](AudioCodec& self) { return self.name; });
+  nb::class_<VideoCodec>(m, "VideoCodec")
+      .def_prop_ro("name", [](VideoCodec& self) { return self.name; });
+  nb::class_<ImageCodec>(m, "ImageCodec")
+      .def_prop_ro("name", [](ImageCodec& self) { return self.name; });
+
   nb::class_<PyDemuxer>(m, "Demuxer")
       .def(
           "demux_audio",
@@ -161,6 +173,12 @@ void register_demuxing(nb::module_& m) {
           nb::arg("bsf") = nb::none())
       .def("demux_image", &PyDemuxer::demux_image, nb::arg("bsf") = nb::none())
       .def("has_audio", &PyDemuxer::has_audio)
+      .def_prop_ro(
+          "audio_codec", &PyDemuxer::get_default_codec<MediaType::Audio>)
+      .def_prop_ro(
+          "video_codec", &PyDemuxer::get_default_codec<MediaType::Video>)
+      .def_prop_ro(
+          "image_codec", &PyDemuxer::get_default_codec<MediaType::Image>)
       .def(
           "streaming_demux_video",
           &PyDemuxer::streaming_demux<MediaType::Video>,
