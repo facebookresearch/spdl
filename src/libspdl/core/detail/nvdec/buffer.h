@@ -25,7 +25,7 @@ struct CUDABufferTracker {
 
   size_t i{0};
 
-  // For batch image / video
+  // For video frames
   CUDABufferTracker(
       std::shared_ptr<CUDAStorage>& storage,
       std::vector<size_t>& shape);

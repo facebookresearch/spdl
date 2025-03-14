@@ -71,7 +71,6 @@ def _parse_args(args):
     parser.add_argument("--num-threads", type=int, default=16)
     parser.add_argument("--no-compile", action="store_false", dest="compile")
     parser.add_argument("--no-bf16", action="store_false", dest="use_bf16")
-    parser.add_argument("--use-nvdec", action="store_true")
     parser.add_argument("--use-nvjpeg", action="store_true")
     args = parser.parse_args(args)
     if args.trace:
@@ -294,38 +293,6 @@ def _get_experimental_nvjpeg_decode_function(
     return decode_images_nvjpeg
 
 
-def _get_experimental_nvdec_decode_function(
-    device_index: int,
-    width: int = 224,
-    height: int = 224,
-):
-    device = torch.device(f"cuda:{device_index}")
-    device_config = spdl.io.cuda_config(
-        device_index=device_index,
-        allocator=(
-            torch.cuda.caching_allocator_alloc,
-            torch.cuda.caching_allocator_delete,
-        ),
-    )
-
-    async def decode_images_nvdec(items: list[tuple[str, int]]):
-        paths = [item for item, _ in items]
-        labels = [[item] for _, item in items]
-        labels = torch.tensor(labels, dtype=torch.int64).to(device)
-        buffer = await spdl.io.async_load_image_batch_nvdec(
-            paths,
-            device_config=device_config,
-            width=width,
-            height=height,
-            pix_fmt="rgba",
-            strict=True,
-        )
-        batch = spdl.io.to_torch(buffer)[:, :-1, :, :]
-        return batch, labels
-
-    return decode_images_nvdec
-
-
 def get_dataloader(
     src: Iterator[tuple[str, int]],
     batch_size: int,
@@ -409,8 +376,6 @@ def _get_dataloader(args, device_index) -> DataLoader:
 
     if args.use_nvjpeg:
         decode_func = _get_experimental_nvjpeg_decode_function(device_index)
-    elif args.use_nvdec:
-        decode_func = _get_experimental_nvdec_decode_function(device_index)
     else:
         decode_func = get_decode_func(device_index)
 
@@ -437,8 +402,6 @@ def entrypoint(args: list[int] | None = None):
     trace_path = f"{args.trace}"
     if args.use_nvjpeg:
         trace_path = f"{trace_path}.nvjpeg"
-    if args.use_nvdec:
-        trace_path = f"{trace_path}.nvdec"
 
     with (
         torch.no_grad(),

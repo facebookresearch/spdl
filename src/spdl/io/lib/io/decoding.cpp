@@ -209,62 +209,6 @@ void register_decoding(nb::module_& m) {
       nb::arg("height") = -1,
       nb::arg("pix_fmt").none() = "rgba");
 
-  m.def(
-      "decode_packets_nvdec",
-      &decode_nvdec<MediaType::Image>,
-      nb::arg("packets"),
-#if NB_VERSION_MAJOR >= 2
-      nb::kw_only(),
-#endif
-      nb::arg("device_config"),
-      nb::arg("crop_left") = 0,
-      nb::arg("crop_top") = 0,
-      nb::arg("crop_right") = 0,
-      nb::arg("crop_bottom") = 0,
-      nb::arg("width") = -1,
-      nb::arg("height") = -1,
-      nb::arg("pix_fmt").none() = "rgba");
-
-  m.def(
-      "decode_packets_nvdec",
-      [](std::vector<ImagePacketsPtr>&& packets,
-         const CUDAConfig& cuda_config,
-         int crop_left,
-         int crop_top,
-         int crop_right,
-         int crop_bottom,
-         int width,
-         int height,
-         const std::optional<std::string>& pix_fmt,
-         bool strict) {
-        RELEASE_GIL();
-        return decode_packets_nvdec(
-            std::move(packets),
-            cuda_config,
-            CropArea{
-                static_cast<short>(crop_left),
-                static_cast<short>(crop_top),
-                static_cast<short>(crop_right),
-                static_cast<short>(crop_bottom)},
-            width,
-            height,
-            pix_fmt,
-            strict);
-      },
-      nb::arg("packets"),
-#if NB_VERSION_MAJOR >= 2
-      nb::kw_only(),
-#endif
-      nb::arg("device_config"),
-      nb::arg("crop_left") = 0,
-      nb::arg("crop_top") = 0,
-      nb::arg("crop_right") = 0,
-      nb::arg("crop_bottom") = 0,
-      nb::arg("width") = -1,
-      nb::arg("height") = -1,
-      nb::arg("pix_fmt").none() = "rgba",
-      nb::arg("strict") = true);
-
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVJPEG
   ////////////////////////////////////////////////////////////////////////////////

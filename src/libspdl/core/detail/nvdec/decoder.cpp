@@ -488,8 +488,7 @@ CUDABufferPtr get_buffer(
     const CropArea& crop,
     int target_width,
     int target_height,
-    const std::optional<std::string>& pix_fmt,
-    bool is_image);
+    const std::optional<std::string>& pix_fmt);
 
 template <MediaType media_type>
 void NvDecDecoderInternal::decode_packets(
@@ -570,8 +569,7 @@ CUDABufferPtr NvDecDecoderInternal::decode(
       crop,
       target_width,
       target_height,
-      pix_fmt,
-      media_type == MediaType::Image);
+      pix_fmt);
   auto tracker = CUDABufferTracker{buffer->storage, buffer->shape};
 
   decode_packets(std::move(packets), tracker);
@@ -588,14 +586,6 @@ CUDABufferPtr NvDecDecoderInternal::decode(
 
 template CUDABufferPtr NvDecDecoderInternal::decode(
     PacketsPtr<MediaType::Video> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea crop,
-    int target_width,
-    int target_height,
-    const std::optional<std::string>& pix_fmt);
-
-template CUDABufferPtr NvDecDecoderInternal::decode(
-    PacketsPtr<MediaType::Image> packets,
     const CUDAConfig& cuda_config,
     const CropArea crop,
     int target_width,

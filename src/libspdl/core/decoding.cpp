@@ -129,31 +129,6 @@ template CUDABufferPtr decode_packets_nvdec(
     int height,
     const std::optional<std::string>& pix_fmt);
 
-template CUDABufferPtr decode_packets_nvdec(
-    PacketsPtr<MediaType::Image> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea& crop,
-    int width,
-    int height,
-    const std::optional<std::string>& pix_fmt);
-
-CUDABufferPtr decode_packets_nvdec(
-    std::vector<ImagePacketsPtr>&& packets,
-    const CUDAConfig& cuda_config,
-    const CropArea& crop,
-    int width,
-    int height,
-    const std::optional<std::string>& pix_fmt,
-    bool strict) {
-#ifndef SPDL_USE_NVCODEC
-  SPDL_FAIL("SPDL is not compiled with NVDEC support.");
-#else
-  validate_nvdec_params(cuda_config.device_index, crop, width, height);
-  return detail::decode_nvdec(
-      std::move(packets), cuda_config, crop, width, height, pix_fmt, strict);
-#endif
-}
-
 #ifdef SPDL_USE_NVJPEG
 namespace detail {
 CUDABufferPtr decode_image_nvjpeg(
