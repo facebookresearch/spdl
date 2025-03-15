@@ -20,6 +20,8 @@
 #endif
 
 namespace spdl::core {
+void* alloc_pinned(size_t s);
+void dealloc_pinned(void* p);
 
 struct Storage {
   virtual void* data() const = 0;
@@ -27,6 +29,15 @@ struct Storage {
 };
 
 class CPUStorage : public Storage {
+  using allocator_type = std::add_pointer_t<void*(size_t)>;
+  using deallocator_type = std::add_pointer_t<void(void*)>;
+
+  static void* default_alloc(size_t s);
+  static void default_dealloc(void* p);
+
+  allocator_type allocator;
+  deallocator_type deallocator;
+
  public:
   size_t size;
   // So far, we only need this in CPUStorage. So we are not adding it
@@ -41,7 +52,11 @@ class CPUStorage : public Storage {
   bool is_pinned() const;
 
   CPUStorage() = default;
-  explicit CPUStorage(size_t size, bool pin_memory = false);
+  explicit CPUStorage(
+      size_t size,
+      allocator_type = default_alloc,
+      deallocator_type = default_dealloc,
+      bool pin_memory = false);
 
   CPUStorage(const CPUStorage&) = delete;
   CPUStorage& operator=(const CPUStorage&) = delete;
