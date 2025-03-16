@@ -9,6 +9,7 @@
 #pragma once
 #include <libspdl/core/buffer.h>
 #include <libspdl/core/types.h>
+#include <libspdl/cuda/buffer.h>
 
 #include <vector>
 

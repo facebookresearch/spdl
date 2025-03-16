@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <libspdl/core/transfer.h>
+#include <libspdl/cuda/transfer.h>
 
 #ifdef SPDL_USE_CUDA
 #include "libspdl/cuda/utils.h"

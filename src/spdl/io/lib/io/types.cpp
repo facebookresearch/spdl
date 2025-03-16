@@ -7,6 +7,7 @@
  */
 
 #include <libspdl/core/types.h>
+#include <libspdl/cuda/types.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>

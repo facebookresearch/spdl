@@ -7,6 +7,7 @@
  */
 
 #include <libspdl/core/decoding.h>
+#include <libspdl/cuda/decoding.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
@@ -116,6 +117,7 @@ void register_decoding(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC
   ////////////////////////////////////////////////////////////////////////////////
+#ifdef SPDL_USE_NVCODEC
   nb::class_<NvDecDecoder>(m, "NvDecDecoder")
       .def(
           "reset",
@@ -162,15 +164,23 @@ void register_decoding(nb::module_& m) {
           nb::arg("width") = -1,
           nb::arg("height") = -1,
           nb::arg("pix_fmt").none() = "rgba");
+#endif
 
   m.def(
       "_nvdec_decoder",
-      []() { return std::make_unique<NvDecDecoder>(); },
+      []() {
+#ifdef SPDL_USE_NVCODEC
+        return std::make_unique<NvDecDecoder>();
+#else
+        throw std::runtime_error("SPDL is not built with NVDEC support.");
+#endif
+      },
       nb::call_guard<nb::gil_scoped_release>());
 
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVJPEG
   ////////////////////////////////////////////////////////////////////////////////
+#ifdef SPDL_USE_NVJPEG
   m.def(
       "decode_image_nvjpeg",
       [](nb::bytes data,
@@ -234,6 +244,6 @@ void register_decoding(nb::module_& m) {
       nb::arg("scale_height"),
       nb::arg("pix_fmt") = "rgb",
       nb::arg("_zero_clear") = false);
+#endif
 }
-
 } // namespace spdl::core

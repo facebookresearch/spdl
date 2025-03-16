@@ -7,7 +7,7 @@
  */
 
 #pragma once
-#include <libspdl/core/buffer.h>
+#include <libspdl/cuda/buffer.h>
 
 #include <array>
 

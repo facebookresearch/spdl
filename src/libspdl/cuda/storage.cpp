@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <libspdl/core/storage.h>
+#include <libspdl/cuda/storage.h>
 
 #include "libspdl/core/detail/tracing.h"
 #include "libspdl/cuda/utils.h"

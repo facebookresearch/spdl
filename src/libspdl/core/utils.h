@@ -14,6 +14,7 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <vector>
 
 namespace spdl::core {
 

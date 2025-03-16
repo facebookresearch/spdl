@@ -15,10 +15,6 @@
 #include <functional>
 #include <optional>
 
-#ifdef SPDL_USE_CUDA
-#include <cuda.h>
-#endif
-
 namespace spdl::core {
 void* alloc_pinned(size_t s);
 void dealloc_pinned(void* p);
@@ -64,31 +60,6 @@ class CPUStorage : public Storage {
   CPUStorage& operator=(CPUStorage&&) noexcept;
 
   ~CPUStorage() override;
-};
-
-class CUDAStorage : public Storage {
-#ifdef SPDL_USE_CUDA
-  void* data_ = nullptr;
-
- public:
-  CUstream stream = nullptr;
-
-  cuda_deleter_fn deleter;
-
-  void* data() const override;
-
-  CUDAStorage() = default;
-  CUDAStorage(size_t size, int device, CUstream stream);
-  CUDAStorage(size_t size, const CUDAConfig& cfg);
-
-  CUDAStorage(const CUDAStorage&) = delete;
-  CUDAStorage& operator=(const CUDAStorage&) = delete;
-
-  CUDAStorage(CUDAStorage&&) noexcept;
-  CUDAStorage& operator=(CUDAStorage&&) noexcept;
-
-  ~CUDAStorage() override;
-#endif
 };
 
 } // namespace spdl::core
