@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "libspdl/core/detail/nvdec/buffer.h"
+#include "libspdl/cuda/nvdec/detail/buffer.h"
 
 #include <cuviddec.h>
 

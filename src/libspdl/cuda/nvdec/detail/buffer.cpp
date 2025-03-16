@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/nvdec/buffer.h"
+#include "libspdl/cuda/nvdec/detail/buffer.h"
 
 #include "libspdl/core/detail/logging.h"
 

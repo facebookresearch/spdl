@@ -11,10 +11,10 @@
 #include <libspdl/core/buffer.h>
 #include <libspdl/core/packets.h>
 
-#include "libspdl/core/detail/nvdec/buffer.h"
-#include "libspdl/core/detail/nvdec/converter.h"
-#include "libspdl/core/detail/nvdec/utils.h"
-#include "libspdl/core/detail/nvdec/wrapper.h"
+#include "libspdl/cuda/nvdec/detail/buffer.h"
+#include "libspdl/cuda/nvdec/detail/converter.h"
+#include "libspdl/cuda/nvdec/detail/utils.h"
+#include "libspdl/cuda/nvdec/detail/wrapper.h"
 
 #include <cuda.h>
 #include <nvcuvid.h>

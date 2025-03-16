@@ -57,12 +57,12 @@ endif()
 if (SPDL_USE_NVCODEC)
   list(APPEND defs SPDL_USE_NVCODEC)
   list(APPEND srcs
-    core/detail/nvdec/buffer.cpp
-    core/detail/nvdec/converter.cpp
-    core/detail/nvdec/color_conversion.cu
-    core/detail/nvdec/decoder.cpp
-    core/detail/nvdec/utils.cpp
-    core/detail/nvdec/wrapper.cpp
+    cuda/nvdec/detail/buffer.cpp
+    cuda/nvdec/detail/converter.cpp
+    cuda/nvdec/detail/color_conversion.cu
+    cuda/nvdec/detail/decoder.cpp
+    cuda/nvdec/detail/utils.cpp
+    cuda/nvdec/detail/wrapper.cpp
     )
   list(APPEND deps nvcuvid-stub)
 endif()
