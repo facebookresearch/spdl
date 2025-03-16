@@ -70,8 +70,8 @@ endif()
 if (SPDL_USE_NVJPEG)
   list(APPEND defs SPDL_USE_NVJPEG)
   list(APPEND srcs
-    core/detail/nvjpeg/utils.cpp
-    core/detail/nvjpeg/decoding.cpp
+    cuda/nvjpeg/detail/utils.cpp
+    cuda/nvjpeg/detail/decoding.cpp
   )
   if (SPDL_USE_NPPI)
     list(APPEND defs SPDL_USE_NPPI)

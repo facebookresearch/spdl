@@ -10,8 +10,8 @@
 #include <libspdl/core/detail/cuda.h>
 #include <libspdl/core/detail/logging.h>
 
-#include "libspdl/core/detail/nvjpeg/utils.h"
 #include "libspdl/core/detail/tracing.h"
+#include "libspdl/cuda/nvjpeg/detail/utils.h"
 
 #ifdef SPDL_USE_NPPI
 #include "libspdl/core/detail/npp/resize.h"
