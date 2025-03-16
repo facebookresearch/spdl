@@ -9,8 +9,8 @@
 #include "libspdl/core/detail/npp/resize.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/npp/utils.h"
-#include "libspdl/core/detail/nvjpeg/utils.h"
 #include "libspdl/core/detail/tracing.h"
+#include "libspdl/cuda/nvjpeg/detail/utils.h"
 
 #include <fmt/core.h>
 
