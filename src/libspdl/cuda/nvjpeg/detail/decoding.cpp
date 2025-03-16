@@ -14,7 +14,7 @@
 #include "libspdl/cuda/nvjpeg/detail/utils.h"
 
 #ifdef SPDL_USE_NPPI
-#include "libspdl/core/detail/npp/resize.h"
+#include "libspdl/cuda/npp/detail/resize.h"
 #endif
 
 #include <fmt/format.h>

@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/npp/utils.h"
+#include "libspdl/cuda/npp/detail/utils.h"
 
 namespace spdl::core::detail {
 

@@ -76,8 +76,8 @@ if (SPDL_USE_NVJPEG)
   if (SPDL_USE_NPPI)
     list(APPEND defs SPDL_USE_NPPI)
     list(APPEND srcs
-      core/detail/npp/resize.cpp
-      core/detail/npp/utils.cpp
+      cuda/npp/detail/resize.cpp
+      cuda/npp/detail/utils.cpp
     )
   endif()
 
