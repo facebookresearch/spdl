@@ -19,7 +19,7 @@ void register_storage(nb::module_& m) {
 
   m.def(
       "cpu_storage",
-      [](int64_t size, bool pin_memory) {
+      [](size_t size, bool pin_memory) {
         return pin_memory ? std::make_shared<CPUStorage>(
                                 size, &alloc_pinned, &dealloc_pinned, true)
                           : std::make_shared<CPUStorage>(size);

@@ -35,7 +35,6 @@ class CPUStorage : public Storage {
   static void* default_alloc(size_t s);
   static void default_dealloc(void* p);
 
-  allocator_type allocator;
   deallocator_type deallocator;
 
  public:

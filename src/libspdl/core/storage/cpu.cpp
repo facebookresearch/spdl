@@ -64,10 +64,7 @@ CPUStorage::CPUStorage(
     allocator_type alloc,
     deallocator_type dealloc,
     bool pin_memory)
-    : allocator(alloc),
-      deallocator(dealloc),
-      size(s),
-      memory_pinned(pin_memory) {
+    : deallocator(dealloc), size(s), memory_pinned(pin_memory) {
   TRACE_EVENT(
       "decoding",
       "CPUStorage::CPUStorage",
@@ -76,7 +73,7 @@ CPUStorage::CPUStorage(
   if (size == 0) {
     SPDL_FAIL("`size` must be greater than 0.");
   }
-  data_ = alloc(s);
+  data_ = alloc(size);
 }
 CPUStorage::CPUStorage(CPUStorage&& other) noexcept {
   *this = std::move(other);
@@ -87,7 +84,6 @@ bool CPUStorage::is_pinned() const {
 CPUStorage& CPUStorage::operator=(CPUStorage&& other) noexcept {
   using std::swap;
   swap(data_, other.data_);
-  swap(allocator, other.allocator);
   swap(deallocator, other.deallocator);
   return *this;
 }
