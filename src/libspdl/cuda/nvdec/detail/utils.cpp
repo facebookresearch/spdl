@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/nvdec/utils.h"
+#include "libspdl/cuda/nvdec/detail/utils.h"
 
 #include "libspdl/core/detail/cuda.h"
 #include "libspdl/core/detail/logging.h"

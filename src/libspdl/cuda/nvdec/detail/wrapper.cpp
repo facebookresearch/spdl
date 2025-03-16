@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/nvdec/wrapper.h"
+#include "libspdl/cuda/nvdec/detail/wrapper.h"
 
 #include "libspdl/core/detail/cuda.h"
 #include "libspdl/core/detail/tracing.h"

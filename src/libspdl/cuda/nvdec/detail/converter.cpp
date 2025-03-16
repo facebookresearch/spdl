@@ -6,12 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/nvdec/converter.h"
+#include "libspdl/cuda/nvdec/detail/converter.h"
 
 #include "libspdl/core/detail/cuda.h"
-#include "libspdl/core/detail/nvdec/color_conversion.h"
-#include "libspdl/core/detail/nvdec/utils.h"
 #include "libspdl/core/detail/tracing.h"
+#include "libspdl/cuda/nvdec/detail/color_conversion.h"
+#include "libspdl/cuda/nvdec/detail/utils.h"
 
 namespace spdl::core::detail {
 namespace {

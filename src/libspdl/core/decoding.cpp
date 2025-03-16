@@ -15,7 +15,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #ifdef SPDL_USE_NVCODEC
-#include "libspdl/core/detail/nvdec/decoder.h"
+#include "libspdl/cuda/nvdec/detail/decoder.h"
 #endif
 
 #include <fmt/core.h>
