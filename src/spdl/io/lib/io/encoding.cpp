@@ -57,6 +57,9 @@ void encode_cuda(
     u8_cuda_array data,
     const std::string& pix_fmt,
     const std::optional<EncodeConfig>& encode_cfg) {
+#ifndef SPDL_USE_CUDA
+  throw std::runtime_error("SPDL is not built with CUDA,");
+#else
   auto src = reinterpret_cast<void*>(data.data());
   auto shape = get_shape(data);
   if (data.dtype().code != (uint8_t)nb::dlpack::dtype_code::UInt) {
@@ -66,6 +69,7 @@ void encode_cuda(
   RELEASE_GIL();
   auto storage = cp_to_cpu(src, shape);
   encode_image(uri, storage.data(), shape, depth, pix_fmt, encode_cfg);
+#endif
 }
 } // namespace
 
