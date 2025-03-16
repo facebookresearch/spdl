@@ -8,12 +8,8 @@
 
 #include <libspdl/core/storage.h>
 
-#include "libspdl/core/detail/tracing.h"
-#ifdef SPDL_USE_CUDA
-#include "libspdl/cuda/utils.h"
-#else
 #include "libspdl/core/detail/logging.h"
-#endif
+#include "libspdl/core/detail/tracing.h"
 
 #include <glog/logging.h>
 
@@ -21,32 +17,16 @@
 
 namespace spdl::core {
 
-void* alloc_pinned(size_t s) {
 #ifndef SPDL_USE_CUDA
+void* alloc_pinned(size_t s) {
   SPDL_FAIL("`pin_memory` requires SPDL with CUDA support.");
-#else
-  void* p;
-  CHECK_CUDA(
-      cudaHostAlloc(&p, s, cudaHostAllocDefault),
-      "Failed to allocate pinned memory.");
-  return p;
-#endif
 }
 
 void dealloc_pinned(void* p) {
-#ifndef SPDL_USE_CUDA
   LOG(WARNING) << "SPDL is not compiled with CUDA support, and "
                   "`memory_pinned` attribute should not be true.";
-#else
-  auto status = cudaFreeHost(p);
-  if (status != cudaSuccess) {
-    LOG(ERROR) << fmt::format(
-        "Failed to free CUDA memory ({}: {})",
-        cudaGetErrorName(status),
-        cudaGetErrorString(status));
-  }
-#endif
 }
+#endif
 
 void* CPUStorage::default_alloc(size_t s) {
   return operator new(s);

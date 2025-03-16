@@ -16,6 +16,30 @@
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
+// Pinned allocator for CPUStorage
+////////////////////////////////////////////////////////////////////////////////
+
+#ifdef SPDL_USE_CUDA
+void* alloc_pinned(size_t s) {
+  void* p;
+  CHECK_CUDA(
+      cudaHostAlloc(&p, s, cudaHostAllocDefault),
+      "Failed to allocate pinned memory.");
+  return p;
+}
+
+void dealloc_pinned(void* p) {
+  auto status = cudaFreeHost(p);
+  if (status != cudaSuccess) {
+    LOG(ERROR) << fmt::format(
+        "Failed to free CUDA memory ({}: {})",
+        cudaGetErrorName(status),
+        cudaGetErrorString(status));
+  }
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
 // CUDAStorage
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
