@@ -9,7 +9,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <optional>
 #include <stdexcept>
@@ -40,16 +39,6 @@ struct DemuxConfig {
 struct DecodeConfig {
   std::optional<std::string> decoder = std::nullopt;
   std::optional<OptionDict> decoder_options = std::nullopt;
-};
-
-using cuda_allocator_fn = std::function<uintptr_t(int, int, uintptr_t)>;
-using cuda_deleter_fn = std::function<void(uintptr_t)>;
-using cuda_allocator = std::pair<cuda_allocator_fn, cuda_deleter_fn>;
-
-struct CUDAConfig {
-  int device_index;
-  uintptr_t stream = 0;
-  std::optional<cuda_allocator> allocator;
 };
 
 // Used to construct Dtype when converting buffer to array

@@ -12,6 +12,8 @@
 
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 
+#include <vector>
+
 namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // Utils

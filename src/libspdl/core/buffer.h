@@ -20,13 +20,6 @@ namespace spdl::core {
 // Buffer
 ////////////////////////////////////////////////////////////////////////////////
 
-struct Buffer;
-struct CPUBuffer;
-struct CUDABuffer;
-
-using CPUBufferPtr = std::unique_ptr<CPUBuffer>;
-using CUDABufferPtr = std::unique_ptr<CUDABuffer>;
-
 /// Abstract base buffer class (technically not needed)
 /// Represents contiguous array memory.
 struct Buffer {
@@ -62,26 +55,7 @@ struct CPUBuffer : public Buffer {
   void* data() override;
 };
 
-///
-/// Contiguous array data on a CUDA device.
-struct CUDABuffer : Buffer {
-#ifdef SPDL_USE_CUDA
-  std::shared_ptr<CUDAStorage> storage;
-  int device_index;
-
-  CUDABuffer(
-      std::vector<size_t> shape,
-      ElemClass elem_class,
-      size_t depth,
-      std::shared_ptr<CUDAStorage> storage,
-      int device_index);
-
-  void* data() override;
-
-  uintptr_t get_cuda_stream() const;
-
-#endif
-};
+using CPUBufferPtr = std::unique_ptr<CPUBuffer>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Factory functions
@@ -93,15 +67,5 @@ CPUBufferPtr cpu_buffer(
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t),
     std::shared_ptr<CPUStorage> storage = nullptr);
-
-#ifdef SPDL_USE_CUDA
-///
-/// Create ``CUDABuffer``.
-CUDABufferPtr cuda_buffer(
-    const std::vector<size_t>& shape,
-    const CUDAConfig& cfg,
-    ElemClass elem_class = ElemClass::UInt,
-    size_t depth = sizeof(uint8_t));
-#endif
 
 } // namespace spdl::core

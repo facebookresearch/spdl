@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <libspdl/core/buffer.h>
+#include <libspdl/cuda/buffer.h>
 
 namespace spdl::core {
 

@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <libspdl/core/transfer.h>
+#include <libspdl/cuda/transfer.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>

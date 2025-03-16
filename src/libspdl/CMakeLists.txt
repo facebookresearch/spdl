@@ -51,6 +51,7 @@ if (SPDL_USE_CUDA)
     cuda/utils.cpp
     cuda/buffer.cpp
     cuda/storage.cpp
+    cuda/decoding.cpp
     )
 endif()
 
