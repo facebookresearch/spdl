@@ -9,7 +9,7 @@
 #include <libspdl/core/transfer.h>
 
 #ifdef SPDL_USE_CUDA
-#include "libspdl/core/detail/cuda.h"
+#include "libspdl/cuda/utils.h"
 #endif
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"

@@ -7,8 +7,8 @@
  */
 
 #include <libspdl/core/decoding.h>
-#include <libspdl/core/detail/cuda.h>
 #include <libspdl/core/detail/logging.h>
+#include <libspdl/cuda/utils.h>
 
 #include "libspdl/core/detail/tracing.h"
 #include "libspdl/cuda/nvjpeg/detail/utils.h"
