@@ -10,7 +10,7 @@
 
 #include "libspdl/core/detail/tracing.h"
 #ifdef SPDL_USE_CUDA
-#include "libspdl/core/detail/cuda.h"
+#include "libspdl/cuda/utils.h"
 #else
 #include "libspdl/core/detail/logging.h"
 #endif

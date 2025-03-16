@@ -48,7 +48,7 @@ if (SPDL_USE_CUDA)
   list(APPEND defs SPDL_USE_CUDA)
   list(APPEND deps CUDA::cudart CUDA::cuda_driver)
   list(APPEND srcs
-    core/detail/cuda.cpp
+    cuda/utils.cpp
     core/buffer/cuda.cpp
     core/storage/cuda.cpp
     )
