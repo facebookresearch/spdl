@@ -11,24 +11,20 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
 
-#include "spdl_gil.h"
-
 namespace nb = nanobind;
 
 namespace spdl::core {
-namespace {
-std::shared_ptr<CPUStorage> _cpu_storage(size_t size, bool pin_memory) {
-  RELEASE_GIL();
-  return std::make_shared<CPUStorage>(size, pin_memory);
-}
-} // namespace
-
 void register_storage(nb::module_& m) {
   nb::class_<CPUStorage>(m, "CPUStorage");
 
   m.def(
       "cpu_storage",
-      &_cpu_storage,
+      [](size_t size, bool pin_memory) {
+        return pin_memory ? std::make_shared<CPUStorage>(
+                                size, &alloc_pinned, &dealloc_pinned, true)
+                          : std::make_shared<CPUStorage>(size);
+      },
+      nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("size"),
       nb::arg("pin_memory") = false);
 }
