@@ -28,13 +28,13 @@ set(srcs
   utils.cpp
   buffer.cpp
   storage.cpp
-  decoding.cpp
   transfer.cpp
 )
 
 if (SPDL_USE_NVCODEC)
   list(APPEND defs SPDL_USE_NVCODEC)
   list(APPEND srcs
+    nvdec/decoder.cpp
     nvdec/detail/buffer.cpp
     nvdec/detail/converter.cpp
     nvdec/detail/color_conversion.cu
@@ -48,6 +48,7 @@ endif()
 if (SPDL_USE_NVJPEG)
   list(APPEND defs SPDL_USE_NVJPEG)
   list(APPEND srcs
+    nvjpeg/decoding.cpp
     nvjpeg/detail/utils.cpp
     nvjpeg/detail/decoding.cpp
   )
