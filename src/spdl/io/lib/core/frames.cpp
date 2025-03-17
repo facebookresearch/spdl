@@ -16,10 +16,6 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-extern "C" {
-#include <libavutil/frame.h>
-}
-
 #include "spdl_gil.h"
 
 namespace nb = nanobind;
@@ -56,14 +52,14 @@ void register_frames(nb::module_& m) {
           [](FFmpegAudioFrames& self) { return self.get_num_frames(); })
       .def(
           "__repr__",
-          [](const FFmpegAudioFrames& self) {
+          [](const FFmpegAudioFrames& self) -> std::string {
             auto num_frames = self.get_num_frames();
             auto pts = [&]() {
               if (num_frames == 0) {
                 return std::numeric_limits<double>::quiet_NaN();
               }
-              return double(self.get_frames().front()->pts) *
-                  self.time_base.num / self.time_base.den;
+              return double(self.get_pts()) * self.time_base.num /
+                  self.time_base.den;
             }();
             return fmt::format(
                 "FFmpegAudioFrames<num_frames={}, sample_format=\"{}\", sample_rate={}, num_channels={}, pts={}>",
@@ -138,21 +134,21 @@ void register_frames(nb::module_& m) {
             RELEASE_GIL();
             std::vector<double> ret;
             auto base = self.time_base;
-            for (auto& frame : self.get_frames()) {
-              ret.push_back(double(frame->pts) * base.num / base.den);
+            for (size_t i = 0; i < self.get_num_frames(); ++i) {
+              ret.push_back(double(self.get_pts(i)) * base.num / base.den);
             }
             return ret;
           })
       .def(
           "__repr__",
-          [](const FFmpegVideoFrames& self) {
+          [](const FFmpegVideoFrames& self) -> std::string {
             auto num_frames = self.get_num_frames();
             auto pts = [&]() {
               if (num_frames == 0) {
                 return std::numeric_limits<double>::quiet_NaN();
               }
-              return double(self.get_frames().front()->pts) *
-                  self.time_base.num / self.time_base.den;
+              return double(self.get_pts()) * self.time_base.num /
+                  self.time_base.den;
             }();
             return fmt::format(
                 "FFmpegVideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, pts={}>",
@@ -218,8 +214,7 @@ void register_frames(nb::module_& m) {
       .def_prop_ro("pts", [](const FFmpegImageFrames& self) -> double {
         RELEASE_GIL();
         auto base = self.time_base;
-        auto& frame = self.get_frames().at(0);
-        return double(frame->pts) * base.num / base.den;
+        return double(self.get_pts()) * base.num / base.den;
       });
 }
 } // namespace spdl::core

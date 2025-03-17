@@ -85,6 +85,16 @@ void FFmpegFrames<media_type>::push_back(AVFrame* frame) {
   frames.push_back(frame);
 }
 
+template <MediaType media_type>
+int64_t FFmpegFrames<media_type>::get_pts(size_t index) const {
+  auto num_frames = frames.size();
+  if (index >= num_frames) {
+    throw std::out_of_range(
+        fmt::format("{} is out of range [0, {})", index, num_frames));
+  }
+  return frames.at(index)->pts;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Common
 ////////////////////////////////////////////////////////////////////////////////

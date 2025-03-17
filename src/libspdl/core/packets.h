@@ -96,6 +96,18 @@ class DemuxedPackets {
   // This is the number of packets visible to users.
   size_t num_packets() const
     requires(media_type == MediaType::Video || media_type == MediaType::Image);
+
+  // Get the PTS of the specified frame.
+  // throws if the index is not within the range
+  int64_t get_pts(size_t index = 0) const;
+
+  int get_num_channels() const
+    requires(media_type == MediaType::Audio);
+
+  int get_sample_rate() const
+    requires(media_type == MediaType::Audio);
+
+  std::string get_summary() const;
 };
 
 template <MediaType media_type>
