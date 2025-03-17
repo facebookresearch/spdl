@@ -7,7 +7,6 @@
  */
 
 #include <libspdl/core/types.h>
-#include <libspdl/cuda/types.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
@@ -36,13 +35,6 @@ void register_types(nb::module_& m) {
               const std::optional<OptionDict>&>(),
           nb::arg("decoder") = nb::none(),
           nb::arg("decoder_options") = nb::none());
-
-  nb::class_<CUDAConfig>(m, "CUDAConfig")
-      .def(
-          nb::init<int, uintptr_t, std::optional<cuda_allocator>>(),
-          nb::arg("device_index"),
-          nb::arg("stream") = 0,
-          nb::arg("allocator") = nb::none());
 
   nb::class_<EncodeConfig>(m, "EncodeConfig")
       .def(

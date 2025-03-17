@@ -193,4 +193,8 @@ cython_debug/
 !/src/spdl/io/lib/core/*.h
 !/src/spdl/io/lib/core/*.py
 !/src/spdl/io/lib/core/*.cpp
+!/src/spdl/io/lib/cuda/
+!/src/spdl/io/lib/cuda/*.h
+!/src/spdl/io/lib/cuda/*.py
+!/src/spdl/io/lib/cuda/*.cpp
 !/src/spdl/io/lib/CMakeLists.txt

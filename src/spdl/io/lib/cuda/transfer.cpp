@@ -22,8 +22,10 @@ namespace nb = nanobind;
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
 using cuda_array = nb::ndarray<nb::device::cuda, nb::c_contig>;
 
-namespace spdl::core {
+namespace spdl::cuda {
+using namespace spdl::core;
 namespace {
+
 ElemClass _get_elemclass(uint8_t code) {
   switch ((nb::dlpack::dtype_code)code) {
     case nb::dlpack::dtype_code::Int:
@@ -102,4 +104,4 @@ void register_transfer(nb::module_& m) {
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("buffer"));
 }
-} // namespace spdl::core
+} // namespace spdl::cuda
