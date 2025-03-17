@@ -14,7 +14,7 @@
 
 namespace spdl::cuda {
 
-using cuda_allocator_fn = std::function<uintptr_t(int, int, uintptr_t)>;
+using cuda_allocator_fn = std::function<uintptr_t(size_t, int, uintptr_t)>;
 using cuda_deleter_fn = std::function<void(uintptr_t)>;
 using cuda_allocator = std::pair<cuda_allocator_fn, cuda_deleter_fn>;
 
