@@ -17,25 +17,12 @@
 
 namespace spdl::core {
 
-CUDABufferPtr decode_image_nvjpeg(
-    const std::string_view& data,
-    const CUDAConfig& cuda_config,
-    int scale_width,
-    int scale_height,
-    const std::string& pix_fmt);
-
-CUDABufferPtr decode_image_nvjpeg(
-    const std::vector<std::string_view>& data,
-    const CUDAConfig& cuda_config,
-    int scale_width,
-    int scale_height,
-    const std::string& pix_fmt);
-
 namespace detail {
 class NvDecDecoderInternal;
 };
 
 class NvDecDecoder {
+#ifdef SPDL_USE_NVCODEC
   bool init = false;
 
   detail::NvDecDecoderInternal* decoder;
@@ -61,6 +48,7 @@ class NvDecDecoder {
       int width,
       int height,
       const std::optional<std::string>& pix_fmt);
+#endif
 };
 
 } // namespace spdl::core
