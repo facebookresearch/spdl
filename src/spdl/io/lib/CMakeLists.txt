@@ -16,19 +16,24 @@ message(STATUS "# Configuring SPDL Python binding")
 message(STATUS "########################################")
 
 set(src
-  io.cpp
-  io/frames.cpp
-  io/buffer.cpp
-  io/storage.cpp
-  io/packets.cpp
-  io/types.cpp
-  io/tracing.cpp
-  io/utils.cpp
-  io/demuxing.cpp
-  io/decoding.cpp
-  io/conversion.cpp
-  io/transfer.cpp
-  io/encoding.cpp
+  register.cpp
+  core/buffer.cpp
+  core/conversion.cpp
+  core/decoding.cpp
+  core/demuxing.cpp
+  core/encoding.cpp
+  core/frames.cpp
+  core/packets.cpp
+  core/storage.cpp
+  core/tracing.cpp
+  core/types.cpp
+  core/utils.cpp
+
+  cuda/buffer.cpp
+  cuda/decoding.cpp
+  cuda/encoding.cpp
+  cuda/transfer.cpp
+  cuda/types.cpp
 )
 
 if (NOT SPDL_IS_GIL_ENABLED)
