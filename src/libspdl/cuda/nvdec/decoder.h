@@ -15,7 +15,7 @@
 #include <optional>
 #include <string>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 namespace detail {
 class NvDecDecoderInternal;
@@ -42,7 +42,7 @@ class NvDecDecoder {
   void set_init_flag();
 
   CUDABufferPtr decode(
-      VideoPacketsPtr&& packets,
+      spdl::core::VideoPacketsPtr&& packets,
       const CUDAConfig& cuda_config,
       const CropArea& crop,
       int width,
@@ -51,4 +51,4 @@ class NvDecDecoder {
 #endif
 };
 
-} // namespace spdl::core
+} // namespace spdl::cuda

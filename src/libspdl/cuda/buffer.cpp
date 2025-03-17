@@ -8,14 +8,14 @@
 
 #include <libspdl/cuda/buffer.h>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 ////////////////////////////////////////////////////////////////////////////////
 // CUDABuffer
 ////////////////////////////////////////////////////////////////////////////////
 CUDABuffer::CUDABuffer(
     std::vector<size_t> shape_,
-    ElemClass elem_class_,
+    core::ElemClass elem_class_,
     size_t depth_,
     std::shared_ptr<CUDAStorage> storage_,
     int device_index_)
@@ -47,7 +47,7 @@ inline size_t prod(const std::vector<size_t>& shape) {
 CUDABufferPtr cuda_buffer(
     const std::vector<size_t>& shape,
     const CUDAConfig& cfg,
-    ElemClass elem_class,
+    core::ElemClass elem_class,
     size_t depth) {
   return std::make_unique<CUDABuffer>(
       shape,
@@ -57,4 +57,4 @@ CUDABufferPtr cuda_buffer(
       cfg.device_index);
 }
 
-} // namespace spdl::core
+} // namespace spdl::cuda

@@ -21,7 +21,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 const char* get_codec_name(cudaVideoCodec codec);
 const char* get_chroma_name(cudaVideoChromaFormat chroma);
@@ -781,4 +781,4 @@ std::string get_diff(
   return fmt::format("{}", fmt::join(diffs, "\n    "));
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

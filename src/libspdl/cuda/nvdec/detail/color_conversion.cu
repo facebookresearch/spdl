@@ -12,7 +12,7 @@
 
 #include <cstdint>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 namespace {
 // YUV to RGB conversion matrix.
 // They correspond to
@@ -181,4 +181,4 @@ void nv12_to_planar_bgra(
       cudaPeekAtLastError(),
       "Failed to launch kernel nv12_to_planar_rgb32<BGRA32>");
 }
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

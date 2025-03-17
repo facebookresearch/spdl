@@ -7,6 +7,7 @@
  */
 
 #include "libspdl/cuda/nvjpeg/detail/utils.h"
+#include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <glog/logging.h>
@@ -14,7 +15,7 @@
 #include <mutex>
 #include <set>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // NVJPEG library handle Singletons
 ////////////////////////////////////////////////////////////////////////////////
@@ -180,4 +181,4 @@ std::string to_string(nvjpegOutputFormat_t f) {
   }
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

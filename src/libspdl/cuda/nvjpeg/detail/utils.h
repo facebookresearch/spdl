@@ -18,7 +18,7 @@
 
 #include <nvjpeg.h>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 //////////////////////////////////////////////////////////////////////////////
 // nvjpeg handle
@@ -48,13 +48,13 @@ std::string to_string(nvjpegOutputFormat_t);
 nvjpegBackend_t get_nvjpeg_backend(const std::optional<std::string>&);
 nvjpegOutputFormat_t get_nvjpeg_output_format(const std::string&);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail
 
 #define CHECK_NVJPEG(expr, msg)                                     \
   do {                                                              \
     auto _status = expr;                                            \
     if (_status != NVJPEG_STATUS_SUCCESS) {                         \
       SPDL_FAIL(fmt::format(                                        \
-          "{} ({})", msg, spdl::core::detail::to_string(_status))); \
+          "{} ({})", msg, spdl::cuda::detail::to_string(_status))); \
     }                                                               \
   } while (0)

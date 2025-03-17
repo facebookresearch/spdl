@@ -12,8 +12,7 @@
 
 #include <fmt/core.h>
 
-namespace spdl::core {
-
+namespace spdl::cuda {
 CUDABufferTracker::CUDABufferTracker(
     std::shared_ptr<CUDAStorage>& s,
     std::vector<size_t>& shape)
@@ -40,4 +39,4 @@ uint8_t* CUDABufferTracker::get_next_frame() {
   return (uint8_t*)(storage->data()) + i * c * h * w;
 }
 
-} // namespace spdl::core
+} // namespace spdl::cuda

@@ -8,7 +8,7 @@
 
 #include "libspdl/cuda/npp/detail/utils.h"
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 const char* to_string(NppStatus status) {
   switch (status) {
@@ -147,4 +147,4 @@ const char* to_string(NppStatus status) {
   }
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

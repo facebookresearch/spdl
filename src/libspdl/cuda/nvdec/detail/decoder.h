@@ -22,7 +22,7 @@
 #include <optional>
 #include <vector>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 // NOTE
 // This class is designed to be used as thread local.
@@ -69,7 +69,7 @@ class NvDecDecoderCore {
   std::unique_ptr<Converter> converter{nullptr};
 
   // Timebase of the incomding packets/decoded frames
-  Rational timebase;
+  spdl::core::Rational timebase;
   double start_time, end_time;
 
   // Resize option
@@ -95,7 +95,7 @@ class NvDecDecoderCore {
   void init(
       CUdevice device_index,
       cudaVideoCodec codec,
-      Rational timebase,
+      spdl::core::Rational timebase,
       const std::optional<std::tuple<double, double>>& timestamp,
       CropArea crop,
       int target_width = -1,
@@ -130,21 +130,21 @@ class NvDecDecoderInternal {
   void init(
       int device_index,
       enum AVCodecID codec_id,
-      Rational time_base,
+      spdl::core::Rational time_base,
       const std::optional<std::tuple<double, double>>& timestamp,
       const CropArea crop,
       int target_width,
       int target_height,
       const std::optional<std::string>& pix_fmt);
 
-  template <MediaType media_type>
+  template <spdl::core::MediaType media_type>
   void decode_packets(
-      PacketsPtr<media_type> packets,
+      spdl::core::PacketsPtr<media_type> packets,
       CUDABufferTracker& tracker);
 
-  template <MediaType media_type>
+  template <spdl::core::MediaType media_type>
   CUDABufferPtr decode(
-      PacketsPtr<media_type> packets,
+      spdl::core::PacketsPtr<media_type> packets,
       const CUDAConfig& cuda_config,
       const CropArea crop,
       int target_width,
@@ -152,4 +152,4 @@ class NvDecDecoderInternal {
       const std::optional<std::string>& pix_fmt);
 };
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

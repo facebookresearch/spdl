@@ -12,7 +12,7 @@
 
 #include <cuviddec.h>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 struct Converter {
   CUstream stream;
@@ -34,4 +34,4 @@ std::unique_ptr<Converter> get_converter(
     unsigned char matrix_coeff,
     const std::optional<std::string>& pix_fmt);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

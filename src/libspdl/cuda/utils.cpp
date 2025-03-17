@@ -15,7 +15,7 @@
 #include <shared_mutex>
 #include <unordered_map>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 const char* get_error_name(CUresult error) {
   const char* p;
@@ -94,4 +94,4 @@ void ensure_cuda_initialized() {
   });
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

@@ -23,12 +23,12 @@
       LOG(WARNING) << fmt::format(                       \
           "{} ({}: {})",                                 \
           msg,                                           \
-          spdl::core::detail::get_error_name(__status),  \
-          spdl::core::detail::get_error_desc(__status)); \
+          spdl::cuda::detail::get_error_name(__status),  \
+          spdl::cuda::detail::get_error_desc(__status)); \
     }                                                    \
   } while (0)
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 void CUvideoparserDeleter::operator()(CUvideoparser p) {
   WARN_IF_NOT_SUCCESS(
@@ -70,4 +70,4 @@ MapGuard::~MapGuard() {
   }
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

@@ -13,24 +13,26 @@
 
 #include <vector>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 // CPU -> CUDA
-CUDABufferPtr transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg);
+CUDABufferPtr transfer_buffer(core::CPUBufferPtr buffer, const CUDAConfig& cfg);
 // For transfering generic arrays like NumPy.
 CUDABufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
-    ElemClass elem_class,
+    core::ElemClass elem_class,
     size_t depth,
     void* ptr,
     const CUDAConfig& cfg);
 
 // CUDA -> CPU
-CPUBufferPtr transfer_buffer(
+spdl::core::CPUBufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
-    ElemClass elem_class,
+    core::ElemClass elem_class,
     size_t depth,
     const void* ptr);
 
-CPUStorage cp_to_cpu(const void* src, const std::vector<size_t>& shape);
-} // namespace spdl::core
+spdl::core::CPUStorage cp_to_cpu(
+    const void* src,
+    const std::vector<size_t>& shape);
+} // namespace spdl::cuda

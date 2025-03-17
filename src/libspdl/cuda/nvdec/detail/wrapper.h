@@ -12,7 +12,7 @@
 
 #include <nvcuvid.h>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 struct CUvideoparserDeleter {
   void operator()(CUvideoparser p);
@@ -54,4 +54,4 @@ struct MapGuard {
   MapGuard& operator=(MapGuard&&) noexcept = delete;
 };
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

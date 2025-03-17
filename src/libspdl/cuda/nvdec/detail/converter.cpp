@@ -8,12 +8,13 @@
 
 #include "libspdl/cuda/nvdec/detail/converter.h"
 
+#include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 #include "libspdl/cuda/nvdec/detail/color_conversion.h"
 #include "libspdl/cuda/nvdec/detail/utils.h"
 #include "libspdl/cuda/utils.h"
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 namespace {
 
 class NV12Passthrough : public Converter {
@@ -118,4 +119,4 @@ std::unique_ptr<Converter> get_converter(
       get_surface_format_name(param->OutputFormat)));
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

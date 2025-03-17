@@ -13,7 +13,7 @@
 
 #include <string>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::string_view& data,
@@ -28,4 +28,4 @@ CUDABufferPtr decode_image_nvjpeg(
     int scale_width,
     int scale_height,
     const std::string& pix_fmt);
-} // namespace spdl::core
+} // namespace spdl::cuda

@@ -15,7 +15,7 @@
 
 #include <utility>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 #ifndef SPDL_USE_CUDA
 void* alloc_pinned(size_t s) {
@@ -27,6 +27,9 @@ void dealloc_pinned(void* p) {
                   "`memory_pinned` attribute should not be true.";
 }
 #endif
+} // namespace spdl::cuda
+
+namespace spdl::core {
 
 void* CPUStorage::default_alloc(size_t s) {
   return operator new(s);

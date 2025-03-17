@@ -11,7 +11,7 @@
 
 #include <array>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 /// Contiguous array data on a CUDA device.
 /// This class is used to hold data decoded with NVDEC.
@@ -34,4 +34,4 @@ struct CUDABufferTracker {
   uint8_t* get_next_frame();
 };
 
-} // namespace spdl::core
+} // namespace spdl::cuda

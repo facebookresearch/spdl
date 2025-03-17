@@ -21,7 +21,7 @@
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLOCKRATE 1
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 namespace {
 CUvideoctxlock get_lock(CUcontext ctx) {
   CUvideoctxlock lock;
@@ -158,7 +158,7 @@ std::tuple<double, double> NO_WINDOW{
 void NvDecDecoderCore::init(
     CUdevice device_index_,
     cudaVideoCodec codec_,
-    Rational timebase_,
+    core::Rational timebase_,
     const std::optional<std::tuple<double, double>>& timestamp_,
     CropArea crop_,
     int tgt_w,
@@ -463,7 +463,7 @@ void NvDecDecoderInternal::reset() {
 void NvDecDecoderInternal::init(
     int device_index,
     enum AVCodecID codec_id,
-    Rational time_base,
+    spdl::core::Rational time_base,
     const std::optional<std::tuple<double, double>>& timestamp,
     const CropArea crop,
     int target_width,
@@ -507,9 +507,9 @@ CUDABufferPtr get_buffer(
   return cuda_buffer(std::vector<size_t>{num_packets, c, h, w}, cuda_config);
 }
 
-template <MediaType media_type>
+template <spdl::core::MediaType media_type>
 void NvDecDecoderInternal::decode_packets(
-    PacketsPtr<media_type> packets,
+    spdl::core::PacketsPtr<media_type> packets,
     CUDABufferTracker& tracker) {
   TRACE_EVENT("nvdec", "decode_packets");
 
@@ -561,9 +561,9 @@ void NvDecDecoderInternal::decode_packets(
       "Decoded {} frames from {} packets.", tracker.i, packets->num_packets());
 }
 
-template <MediaType media_type>
+template <spdl::core::MediaType media_type>
 CUDABufferPtr NvDecDecoderInternal::decode(
-    PacketsPtr<media_type> packets,
+    spdl::core::PacketsPtr<media_type> packets,
     const CUDAConfig& cuda_config,
     const CropArea crop,
     int target_width,
@@ -589,7 +589,7 @@ CUDABufferPtr NvDecDecoderInternal::decode(
 
   decode_packets(std::move(packets), tracker);
 
-  if constexpr (media_type == MediaType::Video) {
+  if constexpr (media_type == spdl::core::MediaType::Video) {
     // We preallocated the buffer with the number of packets, but these packets
     // could contain the frames outside of specified timestamps.
     // So we update the shape with the actual number of frames.
@@ -600,11 +600,11 @@ CUDABufferPtr NvDecDecoderInternal::decode(
 }
 
 template CUDABufferPtr NvDecDecoderInternal::decode(
-    PacketsPtr<MediaType::Video> packets,
+    spdl::core::PacketsPtr<spdl::core::MediaType::Video> packets,
     const CUDAConfig& cuda_config,
     const CropArea crop,
     int target_width,
     int target_height,
     const std::optional<std::string>& pix_fmt);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

@@ -21,7 +21,7 @@
 #include <fmt/format.h>
 #include <glog/logging.h>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 namespace {
 
 std::tuple<size_t, bool> get_shape(nvjpegOutputFormat_t out_fmt) {
@@ -235,4 +235,4 @@ CUDABufferPtr decode_image_nvjpeg(
 #endif
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail
