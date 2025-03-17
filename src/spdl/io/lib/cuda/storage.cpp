@@ -7,21 +7,27 @@
  */
 
 #include <libspdl/core/storage.h>
+#include <libspdl/cuda/storage.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
 
 namespace nb = nanobind;
 
-namespace spdl::core {
+namespace spdl::cuda {
 void register_storage(nb::module_& m) {
-  nb::class_<CPUStorage>(m, "CPUStorage");
-
   m.def(
       "cpu_storage",
-      [](size_t size) { return std::make_shared<CPUStorage>(size); },
+      [](size_t size) -> std::shared_ptr<core::CPUStorage> {
+#ifndef SPDL_USE_CUDA
+        throw std::runtime_error("SPDL is not built with CUDA support.");
+#else
+        return std::make_shared<spdl::core::CPUStorage>(
+            size, &alloc_pinned, &dealloc_pinned, true);
+#endif
+      },
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("size"));
 }
 
-} // namespace spdl::core
+} // namespace spdl::cuda

@@ -57,7 +57,7 @@ from spdl.io import (
 from spdl.io._internal.import_utils import lazy_import
 
 from . import _preprocessing
-from .lib import _libspdl
+from .lib import _libspdl, _libspdl_cuda
 
 __all__ = [
     # DEMUXING
@@ -429,7 +429,9 @@ def decode_image_nvjpeg(
     else:
         with open(src, "rb") as f:
             data = f.read()
-    return _libspdl.decode_image_nvjpeg(data, device_config=device_config, **kwargs)
+    return _libspdl_cuda.decode_image_nvjpeg(
+        data, device_config=device_config, **kwargs
+    )
 
 
 def streaming_decode_packets(
@@ -472,7 +474,7 @@ _THREAD_LOCAL = threading.local()
 
 def _get_decoder_cache() -> _DecoderCache:
     if not hasattr(_THREAD_LOCAL, "_cache"):
-        _THREAD_LOCAL._cache = _DecoderCache(_libspdl._nvdec_decoder())
+        _THREAD_LOCAL._cache = _DecoderCache(_libspdl_cuda._nvdec_decoder())
     return _THREAD_LOCAL._cache
 
 
@@ -586,7 +588,7 @@ def transfer_buffer(
             )
             device_config = kwargs["cuda_config"]
 
-    return _libspdl.transfer_buffer(buffer, device_config=device_config)
+    return _libspdl_cuda.transfer_buffer(buffer, device_config=device_config)
 
 
 def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
@@ -598,7 +600,7 @@ def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
     Returns:
         Buffer data on CPU.
     """
-    return _libspdl.transfer_buffer_cpu(buffer)
+    return _libspdl_cuda.transfer_buffer_cpu(buffer)
 
 
 ################################################################################

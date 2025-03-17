@@ -8,7 +8,7 @@
 
 from spdl.io import CPUStorage, CUDAConfig, DecodeConfig, DemuxConfig, EncodeConfig
 
-from .lib import _libspdl
+from .lib import _libspdl, _libspdl_cuda
 
 __all__ = [
     "demux_config",
@@ -140,7 +140,7 @@ def cuda_config(device_index: int, **kwargs) -> CUDAConfig:
             :py:func:`~torch.cuda.caching_allocator_alloc` and
             :py:func:`~torch.cuda.caching_allocator_delete`.
     """
-    return _libspdl.CUDAConfig(device_index=device_index, **kwargs)
+    return _libspdl_cuda.CUDAConfig(device_index=device_index, **kwargs)
 
 
 def encode_config(**kwargs) -> EncodeConfig:
@@ -210,4 +210,7 @@ def cpu_storage(size: int, pin_memory=True) -> CPUStorage:
     Returns:
         The resulting memory block.
     """
-    return _libspdl.cpu_storage(size=size, pin_memory=pin_memory)
+    if pin_memory:
+        return _libspdl_cuda.cpu_storage(size=size)
+    else:
+        return _libspdl.cpu_storage(size=size)
