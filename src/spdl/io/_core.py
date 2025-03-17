@@ -355,7 +355,7 @@ def decode_packets_nvdec(
 
     .. note::
 
-       Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
+       Unlike FFmpeg-based decoding, NVDEC returns GPU buffer directly.
 
     Args:
         packets: Packets object.
@@ -385,7 +385,7 @@ def decode_packets_nvdec(
             device_config = kwargs["cuda_config"]
 
     decoder = NvDecDecoder()
-
+    packets = _libspdl._apply_bsf(packets)
     return decoder.decode(packets, device_config=device_config, **kwargs)
 
 

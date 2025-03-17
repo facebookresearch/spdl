@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <libspdl/core/demuxing.h>
 #include <libspdl/cuda/nvdec/decoder.h>
 
 #include "libspdl/core/detail/logging.h"
@@ -82,8 +81,6 @@ CUDABufferPtr NvDecDecoder::decode(
     int height,
     const std::optional<std::string>& pix_fmt) {
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
-
-  packets = apply_bsf(std::move(packets));
 
   if (init) {
     decoder->init(

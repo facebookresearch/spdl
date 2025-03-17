@@ -208,5 +208,8 @@ void register_demuxing(nb::module_& m) {
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
       nb::arg("_zero_clear") = false);
+
+  // TEMP: as a preprocessing for NVDEC decoding
+  m.def("_apply_bsf", &apply_bsf, nb::arg("packets"));
 }
 } // namespace spdl::core
