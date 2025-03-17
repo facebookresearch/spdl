@@ -45,8 +45,10 @@ function(add_spdl_extension ffmpeg_version)
   message(STATUS "Building ${name}")
 
   set(defs "-DSPDL_FFMPEG_EXT_NAME=${name}")
+  set(deps "spdl_ffmpeg${ffmpeg_version}")
   if (SPDL_USE_CUDA)
     list(APPEND defs SPDL_USE_CUDA)
+    list(APPEND deps "spdl_cuda${ffmpeg_version}")
   endif()
   if (SPDL_USE_NVCODEC)
     list(APPEND defs SPDL_USE_NVCODEC)
@@ -57,7 +59,7 @@ function(add_spdl_extension ffmpeg_version)
 
   nanobind_add_module(${name} ${ft} ${src})
   target_compile_definitions(${name} PRIVATE "${defs}")
-  target_link_libraries(${name} PRIVATE "spdl_ffmpeg${ffmpeg_version}")
+  target_link_libraries(${name} PRIVATE "${deps}")
   target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
 
   install(
