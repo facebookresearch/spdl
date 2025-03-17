@@ -70,4 +70,4 @@ jobs:
       python-version: "${{ matrix.python-version }}"
       cuda-version: "${{ matrix.cuda-version }}"
       use-nvdec: "${{ matrix.use-nvdec }}"
-      run-test: "${{ matrix.python-version == '3.10'}}"
+      run-test: "${{ matrix.python-version == '3.11'}}"

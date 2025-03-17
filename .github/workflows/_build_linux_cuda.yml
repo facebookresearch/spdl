@@ -143,7 +143,6 @@ jobs:
               python -c 'import spdl.io.utils;assert spdl.io.utils.is_nvcodec_available()'
           fi
           pytest -v \
-              -k 'not nvdec' \
               tests/spdl_unittest/cuda/ \
               tests/spdl_unittest/io/
 
