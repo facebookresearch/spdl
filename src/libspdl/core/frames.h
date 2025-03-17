@@ -115,6 +115,10 @@ class FFmpegFrames {
   void push_back(AVFrame* frame);
   // the behavior is different for image
 
+  // Get the PTS of the specified frame.
+  // throws if the index is not within the range
+  int64_t get_pts(size_t index = 0) const;
+
   //////////////////////////////////////////////////////////////////////////////
   // Audio specific
   //////////////////////////////////////////////////////////////////////////////

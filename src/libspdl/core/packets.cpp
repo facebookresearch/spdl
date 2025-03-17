@@ -12,6 +12,7 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
 
+#include <fmt/format.h>
 #include <glog/logging.h>
 
 #include <algorithm>
@@ -131,6 +132,111 @@ size_t DemuxedPackets<media_type>::num_packets() const
     }
     return packets.size();
   }
+}
+
+template <MediaType media_type>
+int64_t DemuxedPackets<media_type>::get_pts(size_t index) const {
+  auto num_packets = packets.size();
+  if (index >= num_packets) {
+    throw std::out_of_range(
+        fmt::format("{} is out of range [0, {})", index, num_packets));
+  }
+  return packets.at(index)->pts;
+}
+
+template <MediaType media_type>
+int DemuxedPackets<media_type>::get_num_channels() const
+  requires(media_type == MediaType::Audio)
+{
+  assert(codecpar);
+  return
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+      codecpar->ch_layout.nb_channels;
+#else
+      codecpar->channels;
+#endif
+  ;
+}
+
+template <MediaType media_type>
+int DemuxedPackets<media_type>::get_sample_rate() const
+  requires(media_type == MediaType::Audio)
+{
+  assert(codecpar);
+  return codecpar->sample_rate;
+}
+
+namespace {
+template <MediaType media_type>
+std::string get_codec_info(AVCodecParameters* codecpar) {
+  if (!codecpar) {
+    return "<No codec information>";
+  }
+
+  std::vector<std::string> parts;
+
+  parts.emplace_back(fmt::format("bit_rate={}", codecpar->bit_rate));
+  parts.emplace_back(
+      fmt::format("bits_per_sample={}", codecpar->bits_per_raw_sample));
+  const AVCodecDescriptor* desc = avcodec_descriptor_get(codecpar->codec_id);
+  parts.emplace_back(
+      fmt::format("codec=\"{}\"", desc ? desc->name : "unknown"));
+
+  if constexpr (media_type == MediaType::Audio) {
+    parts.emplace_back(fmt::format("sample_rate={}", codecpar->sample_rate));
+    parts.emplace_back(fmt::format(
+        "num_channels={}",
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+        codecpar->ch_layout.nb_channels
+#else
+        codecpar->channels
+#endif
+        ));
+  }
+  if constexpr (
+      media_type == MediaType::Video || media_type == MediaType::Image) {
+    parts.emplace_back(
+        fmt::format("width={}, height={}", codecpar->width, codecpar->height));
+  }
+  return fmt::format("{}", fmt::join(parts, ", "));
+}
+
+std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
+  return ts ? fmt::format("({}, {})", std::get<0>(*ts), std::get<1>(*ts))
+            : "n/a";
+}
+} // namespace
+
+template <>
+std::string AudioPackets::get_summary() const {
+  return fmt::format(
+      "AudioPackets<src=\"{}\", timestamp={}, sample_format=\"{}\", {}>",
+      src,
+      get_ts(timestamp),
+      get_media_format_name(),
+      get_codec_info<MediaType::Audio>(codecpar));
+}
+
+template <>
+std::string VideoPackets::get_summary() const {
+  return fmt::format(
+      "VideoPackets<src=\"{}\", timestamp={}, frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
+      src,
+      get_ts(timestamp),
+      frame_rate.num,
+      frame_rate.den,
+      num_packets(),
+      get_media_format_name(),
+      get_codec_info<MediaType::Video>(codecpar));
+}
+
+template <>
+std::string ImagePackets::get_summary() const {
+  return fmt::format(
+      "ImagePackets<src=\"{}\", pixel_format=\"{}\", {}>",
+      src,
+      get_media_format_name(),
+      get_codec_info<MediaType::Image>(codecpar));
 }
 
 template <MediaType media_type>
