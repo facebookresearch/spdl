@@ -15,20 +15,6 @@
 
 #include <utility>
 
-namespace spdl::cuda {
-
-#ifndef SPDL_USE_CUDA
-void* alloc_pinned(size_t s) {
-  SPDL_FAIL("`pin_memory` requires SPDL with CUDA support.");
-}
-
-void dealloc_pinned(void* p) {
-  LOG(WARNING) << "SPDL is not compiled with CUDA support, and "
-                  "`memory_pinned` attribute should not be true.";
-}
-#endif
-} // namespace spdl::cuda
-
 namespace spdl::core {
 
 void* CPUStorage::default_alloc(size_t s) {

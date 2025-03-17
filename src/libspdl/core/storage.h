@@ -15,11 +15,6 @@
 #include <functional>
 #include <optional>
 
-namespace spdl::cuda {
-void* alloc_pinned(size_t s);
-void dealloc_pinned(void* p);
-} // namespace spdl::cuda
-
 namespace spdl::core {
 struct Storage {
   virtual void* data() const = 0;

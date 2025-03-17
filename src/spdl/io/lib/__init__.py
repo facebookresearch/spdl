@@ -23,6 +23,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
     "_libspdl",
+    "_libspdl_cuda",
     "_zip",
 ]
 
@@ -36,6 +37,11 @@ def __getattr__(name: str) -> ModuleType:
         from spdl.io._internal.import_utils import _LazilyImportedModule
 
         return _LazilyImportedModule(name, _import_libspdl)
+
+    if name == "_libspdl_cuda":
+        from spdl.io._internal.import_utils import _LazilyImportedModule
+
+        return _LazilyImportedModule(name, _import_libspdl_cuda)
 
     if name == "_zip":
         import spdl.io.lib._zip  # pyre-ignore: [21]
@@ -83,6 +89,34 @@ def _import_libspdl() -> ModuleType:
     msg = ", ".join(f'"{k}: {v}"' for k, v in err_msgs.items())
     msg = (
         f"Failed to import libspdl. {msg} "
+        "Enable DEBUG logging to see details about the failure. "
+    )
+    raise RuntimeError(msg)
+
+
+def _import_libspdl_cuda() -> ModuleType:
+    libs = [
+        f"{__package__}.{t.name.split('.')[0]}"
+        for t in importlib.resources.files(__package__).iterdir()
+        if t.name.startswith("_spdl_cuda")
+    ]
+    # Newer FFmpeg first
+    libs.sort(reverse=True)
+    err_msgs = {}
+    for lib in libs:
+        _LG.debug("Importing %s", lib)
+        try:
+            ext = importlib.import_module(lib)
+        except Exception as err:
+            _LG.debug("Failed to import %s.", lib, exc_info=True)
+            err_msgs[lib] = str(err)
+            continue
+
+        return ext
+
+    msg = ", ".join(f'"{k}: {v}"' for k, v in err_msgs.items())
+    msg = (
+        f"Failed to import libspdl_cuda. {msg} "
         "Enable DEBUG logging to see details about the failure. "
     )
     raise RuntimeError(msg)

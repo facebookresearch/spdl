@@ -25,7 +25,6 @@ using cuda_array = nb::ndarray<nb::device::cuda, nb::c_contig>;
 namespace spdl::cuda {
 using namespace spdl::core;
 namespace {
-
 ElemClass _get_elemclass(uint8_t code) {
   switch ((nb::dlpack::dtype_code)code) {
     case nb::dlpack::dtype_code::Int:
