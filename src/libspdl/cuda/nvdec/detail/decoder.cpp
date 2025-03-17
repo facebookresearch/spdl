@@ -20,10 +20,6 @@
 
 #include <sys/types.h>
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-}
-
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLOCKRATE 1
 
@@ -545,21 +541,24 @@ void NvDecDecoderInternal::decode_packets(
     default:;
   }
 
-#define _PKT(i) packets->get_packets()[i]
-#define _PTS(pkt)                                           \
-  (static_cast<double>(pkt->pts) * packets->time_base.num / \
-   packets->time_base.den)
+#define _PTS(pts) \
+  (static_cast<double>(pts) * packets->time_base.num / packets->time_base.den)
 
   flags |= CUVID_PKT_ENDOFPICTURE;
-  for (; it < num_packets - 1; ++it) {
-    auto pkt = _PKT(it);
-    VLOG(9) << fmt::format(" -- packet  PTS={:.3f} ({})", _PTS(pkt), pkt->pts);
-
-    core.decode(pkt->data, pkt->size, pkt->pts, flags);
+  auto ite = packets->iter_packets();
+  // TODO: Improve the handling of the last packet
+  while (ite) {
+    it += 1;
+    auto pkt = ite();
+    VLOG(9) << fmt::format(
+        " -- packet  PTS={:.3f} ({})", _PTS(pkt.pts), pkt.pts);
+    if (it == num_packets) {
+      flags |= CUVID_PKT_ENDOFSTREAM;
+      core.decode(pkt.data, pkt.size, pkt.pts, flags);
+    } else {
+      core.decode(pkt.data, pkt.size, pkt.pts, flags);
+    }
   }
-  auto pkt = _PKT(it);
-  flags |= CUVID_PKT_ENDOFSTREAM;
-  core.decode(pkt->data, pkt->size, pkt->pts, flags);
 
 #undef _PKT
 #undef _PTS

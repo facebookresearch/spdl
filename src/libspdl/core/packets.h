@@ -9,6 +9,7 @@
 #pragma once
 
 #include <libspdl/core/codec.h>
+#include <libspdl/core/generator.h>
 #include <libspdl/core/types.h>
 
 #include <memory>
@@ -34,6 +35,14 @@ using PacketsPtr = std::unique_ptr<DemuxedPackets<media_type>>;
 using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
 using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
 using ImagePacketsPtr = PacketsPtr<MediaType::Image>;
+
+// Used to expose the row data without exposing AVPacket* struct
+// This allows NVDEC decoder to not include the libavutil header.
+struct RawPacketData {
+  uint8_t* data;
+  int size;
+  int64_t pts;
+};
 
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to FFmpegFrames, AVFrame pointers are bulk released.
@@ -109,6 +118,8 @@ class DemuxedPackets {
     requires(media_type == MediaType::Audio);
 
   Codec<media_type> get_codec() const;
+
+  Generator<RawPacketData> iter_packets() const;
 
   std::string get_summary() const;
 };
