@@ -25,9 +25,16 @@ void register_utils(nb::module_&);
 void register_demuxing(nb::module_&);
 void register_decoding(nb::module_&);
 void register_conversion(nb::module_&);
-void register_transfer(nb::module_&);
 void register_encoding(nb::module_&);
 } // namespace spdl::core
+
+namespace spdl::cuda {
+void register_types(nb::module_&);
+void register_buffers(nb::module_&);
+void register_decoding(nb::module_&);
+void register_transfer(nb::module_&);
+void register_encoding(nb::module_&);
+} // namespace spdl::cuda
 
 namespace {
 NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
@@ -41,7 +48,12 @@ NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_demuxing(m);
   spdl::core::register_decoding(m);
   spdl::core::register_conversion(m);
-  spdl::core::register_transfer(m);
   spdl::core::register_encoding(m);
+
+  spdl::cuda::register_types(m);
+  spdl::cuda::register_buffers(m);
+  spdl::cuda::register_decoding(m);
+  spdl::cuda::register_transfer(m);
+  spdl::cuda::register_encoding(m);
 }
 } // namespace

@@ -7,7 +7,6 @@
  */
 
 #include <libspdl/core/buffer.h>
-#include <libspdl/cuda/buffer.h>
 
 #include <fmt/core.h>
 
@@ -15,8 +14,6 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
-
-#include "spdl_gil.h"
 
 namespace nb = nanobind;
 
@@ -54,46 +51,12 @@ nb::dict get_array_interface(CPUBuffer& b) {
       std::vector<std::tuple<std::string, std::string>>{{"", typestr}};
   return ret;
 }
-
-#ifdef SPDL_USE_CUDA
-nb::dict get_cuda_array_interface(CUDABuffer& b) {
-  auto typestr = get_typestr(b.elem_class, b.depth);
-  nb::dict ret;
-  ret["version"] = 2;
-  ret["shape"] = nb::tuple(nb::cast(b.shape));
-  ret["typestr"] = typestr;
-  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)b.data(), false};
-  ret["strides"] = nb::none();
-  ret["stream"] = b.get_cuda_stream();
-  return ret;
-}
-#endif
-
 } // namespace
 
 void register_buffers(nb::module_& m) {
-#ifdef SPDL_USE_CUDA
-#define IF_CUDABUFFER_ENABLED(x) x
-#else
-#define IF_CUDABUFFER_ENABLED(x)                                         \
-  [](const CUDABuffer&) {                                                \
-    throw std::runtime_error("SPDL is not compiled with CUDA support."); \
-  }
-#endif
-
   nb::class_<CPUBuffer>(m, "CPUBuffer")
       .def_prop_ro("__array_interface__", [](CPUBuffer& self) {
         return get_array_interface(self);
       });
-
-  nb::class_<CUDABuffer>(m, "CUDABuffer")
-      .def_prop_ro(
-          "__cuda_array_interface__",
-          IF_CUDABUFFER_ENABLED(
-              [](CUDABuffer& self) { return get_cuda_array_interface(self); }))
-      .def_prop_ro("device_index", IF_CUDABUFFER_ENABLED([](CUDABuffer& self) {
-                     RELEASE_GIL();
-                     return self.device_index;
-                   }));
 }
 } // namespace spdl::core

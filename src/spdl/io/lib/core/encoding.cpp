@@ -7,7 +7,6 @@
  */
 
 #include <libspdl/core/encoding.h>
-#include <libspdl/cuda/transfer.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -23,7 +22,6 @@
 namespace nb = nanobind;
 
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
-using u8_cuda_array = nb::ndarray<uint8_t, nb::device::cuda, nb::c_contig>;
 
 namespace spdl::core {
 namespace {
@@ -52,42 +50,12 @@ void encode(
   encode_image(path, src, shape, depth, pix_fmt, encode_cfg);
 }
 
-void encode_cuda(
-    std::string uri,
-    u8_cuda_array data,
-    const std::string& pix_fmt,
-    const std::optional<EncodeConfig>& encode_cfg) {
-#ifndef SPDL_USE_CUDA
-  throw std::runtime_error("SPDL is not built with CUDA,");
-#else
-  auto src = reinterpret_cast<void*>(data.data());
-  auto shape = get_shape(data);
-  if (data.dtype().code != (uint8_t)nb::dlpack::dtype_code::UInt) {
-    throw std::runtime_error("Only unsigned interger type is supported");
-  }
-  auto depth = data.dtype().bits / 8;
-  RELEASE_GIL();
-  auto storage = cp_to_cpu(src, shape);
-  encode_image(uri, storage.data(), shape, depth, pix_fmt, encode_cfg);
-#endif
-}
 } // namespace
 
 void register_encoding(nb::module_& m) {
   m.def(
       "encode_image",
       &encode,
-      nb::arg("path"),
-      nb::arg("data"),
-#if NB_VERSION_MAJOR >= 2
-      nb::kw_only(),
-#endif
-      nb::arg("pix_fmt") = "rgb24",
-      nb::arg("encode_config") = nb::none());
-
-  m.def(
-      "encode_image",
-      &encode_cuda,
       nb::arg("path"),
       nb::arg("data"),
 #if NB_VERSION_MAJOR >= 2
