@@ -166,6 +166,11 @@ int DemuxedPackets<media_type>::get_sample_rate() const
   return codecpar->sample_rate;
 }
 
+template <MediaType media_type>
+Codec<media_type> DemuxedPackets<media_type>::get_codec() const {
+  return Codec<media_type>(codecpar);
+}
+
 namespace {
 template <MediaType media_type>
 std::string get_codec_info(AVCodecParameters* codecpar) {

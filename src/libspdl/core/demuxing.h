@@ -9,6 +9,7 @@
 #pragma once
 
 #include <libspdl/core/adaptor.h>
+#include <libspdl/core/codec.h>
 #include <libspdl/core/generator.h>
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
@@ -21,14 +22,6 @@ struct AVFormatContext;
 struct AVStream;
 
 namespace spdl::core {
-
-// Struct to pass around codec info.
-// For now, we storeonly the necessary ones.
-// TOD: Generalize it by storing AVCodecParameter
-template <MediaType media_type>
-struct Codec {
-  std::string name;
-};
 
 template <MediaType media_type>
 class StreamingDemuxer {

@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <libspdl/core/types.h>
 #include <libspdl/cuda/types.h>
 
 #include <cuviddec.h>
@@ -17,13 +18,9 @@
 #include <string>
 #include <vector>
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-}
-
 namespace spdl::cuda::detail {
 
-cudaVideoCodec covert_codec_id(AVCodecID);
+cudaVideoCodec convert_codec_id(spdl::core::CodecID);
 
 void check_support(CUVIDEOFORMAT* fmt, CUVIDDECODECAPS caps);
 

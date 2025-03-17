@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <libspdl/core/codec.h>
+
 #include "libspdl/cuda/nvdec/detail/decoder.h"
 
 #include "libspdl/core/detail/logging.h"
@@ -17,6 +19,10 @@
 #include <glog/logging.h>
 
 #include <sys/types.h>
+
+extern "C" {
+#include <libavcodec/avcodec.h>
+}
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLOCKRATE 1
@@ -462,7 +468,7 @@ void NvDecDecoderInternal::reset() {
 
 void NvDecDecoderInternal::init(
     int device_index,
-    enum AVCodecID codec_id,
+    spdl::core::CodecID codec_id,
     spdl::core::Rational time_base,
     const std::optional<std::tuple<double, double>>& timestamp,
     const CropArea crop,
@@ -472,7 +478,7 @@ void NvDecDecoderInternal::init(
   ensure_cuda_initialized();
   core.init(
       device_index,
-      covert_codec_id(codec_id),
+      convert_codec_id(codec_id),
       time_base,
       timestamp,
       crop,
@@ -481,18 +487,19 @@ void NvDecDecoderInternal::init(
       pix_fmt);
 }
 
+template <spdl::core::MediaType media_type>
 CUDABufferPtr get_buffer(
     const CUDAConfig& cuda_config,
     size_t num_packets,
-    AVCodecParameters* codecpar,
+    spdl::core::Codec<media_type> codec,
     const CropArea& crop,
     int target_width,
     int target_height,
     const std::optional<std::string>& pix_fmt) {
   size_t w = target_width > 0 ? target_width
-                              : (codecpar->width - crop.left - crop.right);
+                              : (codec.get_width() - crop.left - crop.right);
   size_t h = target_height > 0 ? target_height
-                               : (codecpar->height - crop.top - crop.bottom);
+                               : (codec.get_height() - crop.top - crop.bottom);
 
   size_t c;
   auto pix_fmt_val = pix_fmt.value_or("nv12");
@@ -522,15 +529,15 @@ void NvDecDecoderInternal::decode_packets(
 
   size_t it = 0;
   unsigned long flags = CUVID_PKT_TIMESTAMP;
-  switch (packets->codecpar->codec_id) {
-    case AV_CODEC_ID_MPEG4: {
+  switch (packets->get_codec().get_codec_id()) {
+    case spdl::core::CodecID::MPEG4: {
       // TODO: Add special handling par
       // Video_Codec_SDK_12.1.14/blob/main/Samples/Utils/FFmpegDemuxer.h#L326-L345
       // TODO: Test this with MP4 file.
       SPDL_FAIL("NOT IMPLEMENTED.");
       ++it;
     }
-    case AV_CODEC_ID_AV1:
+    case spdl::core::CodecID::AV1:
       // TODO handle
       // https://github.com/FFmpeg/FFmpeg/blob/5e2b0862eb1d408625232b37b7a2420403cd498f/libavcodec/cuviddec.c#L1001-L1009
       SPDL_FAIL("NOT IMPLEMENTED.");
@@ -580,7 +587,7 @@ CUDABufferPtr NvDecDecoderInternal::decode(
   auto buffer = detail::get_buffer(
       cuda_config,
       num_packets,
-      packets->codecpar,
+      packets->get_codec(),
       crop,
       target_width,
       target_height,

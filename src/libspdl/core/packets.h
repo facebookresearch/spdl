@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <libspdl/core/codec.h>
 #include <libspdl/core/types.h>
 
 #include <memory>
@@ -106,6 +107,8 @@ class DemuxedPackets {
 
   int get_sample_rate() const
     requires(media_type == MediaType::Audio);
+
+  Codec<media_type> get_codec() const;
 
   std::string get_summary() const;
 };

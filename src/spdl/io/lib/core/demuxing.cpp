@@ -154,11 +154,11 @@ void register_demuxing(nb::module_& m) {
       .def("next", &PyStreamingDemuxer<MediaType::Video>::next);
 
   nb::class_<AudioCodec>(m, "AudioCodec")
-      .def_prop_ro("name", [](AudioCodec& self) { return self.name; });
+      .def_prop_ro("name", &AudioCodec::get_name);
   nb::class_<VideoCodec>(m, "VideoCodec")
-      .def_prop_ro("name", [](VideoCodec& self) { return self.name; });
+      .def_prop_ro("name", &VideoCodec::get_name);
   nb::class_<ImageCodec>(m, "ImageCodec")
-      .def_prop_ro("name", [](ImageCodec& self) { return self.name; });
+      .def_prop_ro("name", &ImageCodec::get_name);
 
   nb::class_<PyDemuxer>(m, "Demuxer")
       .def(
