@@ -13,11 +13,11 @@
 #include <fmt/core.h>
 #include <glog/logging.h>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 const char* to_string(NppStatus);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail
 
 #define CHECK_NPP(expr, msg)                                              \
   do {                                                                    \

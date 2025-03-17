@@ -16,21 +16,21 @@
 #include <memory>
 #include <vector>
 
-namespace spdl::core {
+namespace spdl::cuda {
 ////////////////////////////////////////////////////////////////////////////////
 // Buffer
 ////////////////////////////////////////////////////////////////////////////////
 
 ///
 /// Contiguous array data on a CUDA device.
-struct CUDABuffer : Buffer {
+struct CUDABuffer : core::Buffer {
 #ifdef SPDL_USE_CUDA
   std::shared_ptr<CUDAStorage> storage;
   int device_index;
 
   CUDABuffer(
       std::vector<size_t> shape,
-      ElemClass elem_class,
+      core::ElemClass elem_class,
       size_t depth,
       std::shared_ptr<CUDAStorage> storage,
       int device_index);
@@ -55,8 +55,8 @@ using CUDABufferPtr = std::unique_ptr<CUDABuffer>;
 CUDABufferPtr cuda_buffer(
     const std::vector<size_t>& shape,
     const CUDAConfig& cfg,
-    ElemClass elem_class = ElemClass::UInt,
+    core::ElemClass elem_class = core::ElemClass::UInt,
     size_t depth = sizeof(uint8_t));
 #endif
 
-} // namespace spdl::core
+} // namespace spdl::cuda

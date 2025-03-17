@@ -29,7 +29,7 @@
       int,                  \
       NppStreamContext)
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 namespace {
 
 template <RESIZE_FUNC>
@@ -111,4 +111,4 @@ void resize_npp(
 #endif
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

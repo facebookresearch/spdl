@@ -18,11 +18,11 @@
 #include <cuda.h>
 #endif
 
-namespace spdl::core {
+namespace spdl::cuda {
 void* alloc_pinned(size_t s);
 void dealloc_pinned(void* p);
 
-class CUDAStorage : public Storage {
+class CUDAStorage : public core::Storage {
 #ifdef SPDL_USE_CUDA
   void* data_ = nullptr;
 
@@ -47,4 +47,4 @@ class CUDAStorage : public Storage {
 #endif
 };
 
-} // namespace spdl::core
+} // namespace spdl::cuda

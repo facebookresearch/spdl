@@ -12,7 +12,7 @@
 #include <functional>
 #include <optional>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 using cuda_allocator_fn = std::function<uintptr_t(int, int, uintptr_t)>;
 using cuda_deleter_fn = std::function<void(uintptr_t)>;
@@ -24,4 +24,11 @@ struct CUDAConfig {
   std::optional<cuda_allocator> allocator;
 };
 
-} // namespace spdl::core
+struct CropArea {
+  short left = 0;
+  short top = 0;
+  short right = 0;
+  short bottom = 0;
+};
+
+} // namespace spdl::cuda

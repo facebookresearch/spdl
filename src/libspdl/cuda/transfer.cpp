@@ -18,7 +18,7 @@
 
 #include <mutex>
 
-namespace spdl::core {
+namespace spdl::cuda {
 namespace {
 size_t prod(const std::vector<size_t>& shape) {
   size_t ret = 1;
@@ -38,7 +38,7 @@ void warn_default_stream() noexcept {
 
 CUDABufferPtr transfer_buffer_impl(
     const std::vector<size_t>& shape,
-    ElemClass elem_class,
+    spdl::core::ElemClass elem_class,
     size_t depth,
     void* ptr,
     const CUDAConfig& cfg,
@@ -73,7 +73,9 @@ CUDABufferPtr transfer_buffer_impl(
 
 } // namespace
 
-CUDABufferPtr transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg) {
+CUDABufferPtr transfer_buffer(
+    spdl::core::CPUBufferPtr buffer,
+    const CUDAConfig& cfg) {
   return transfer_buffer_impl(
       buffer->shape,
       buffer->elem_class,
@@ -85,16 +87,16 @@ CUDABufferPtr transfer_buffer(CPUBufferPtr buffer, const CUDAConfig& cfg) {
 
 CUDABufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
-    ElemClass elem_class,
+    spdl::core::ElemClass elem_class,
     size_t depth,
     void* ptr,
     const CUDAConfig& cfg) {
   return transfer_buffer_impl(shape, elem_class, depth, ptr, cfg);
 }
 
-CPUBufferPtr transfer_buffer(
+spdl::core::CPUBufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
-    ElemClass elem_class,
+    spdl::core::ElemClass elem_class,
     size_t depth,
     const void* ptr) {
 #ifndef SPDL_USE_CUDA
@@ -112,13 +114,15 @@ CPUBufferPtr transfer_buffer(
 #endif
 }
 
-CPUStorage cp_to_cpu(const void* src, const std::vector<size_t>& shape) {
+spdl::core::CPUStorage cp_to_cpu(
+    const void* src,
+    const std::vector<size_t>& shape) {
 #ifndef SPDL_USE_CUDA
   SPDL_FAIL("SPDL is not compiled with CUDA support.");
 #else
 
   size_t size = prod(shape);
-  CPUStorage storage{size};
+  spdl::core::CPUStorage storage{size};
 
   CHECK_CUDA(
       cudaMemcpy(storage.data(), src, size, cudaMemcpyDeviceToHost),
@@ -128,4 +132,4 @@ CPUStorage cp_to_cpu(const void* src, const std::vector<size_t>& shape) {
 #endif
 }
 
-} // namespace spdl::core
+} // namespace spdl::cuda

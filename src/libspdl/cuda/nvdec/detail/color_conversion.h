@@ -13,7 +13,7 @@
 struct CUstream_st;
 typedef CUstream_st* CUstream;
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 void nv12_to_planar_rgba(
     CUstream stream,
@@ -35,4 +35,4 @@ void nv12_to_planar_bgra(
     int height,
     int matrix_coefficients);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

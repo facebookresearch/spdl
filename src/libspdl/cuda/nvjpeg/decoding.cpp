@@ -14,7 +14,7 @@
 
 #include <fmt/core.h>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 #ifdef SPDL_USE_NVJPEG
 namespace detail {
@@ -61,4 +61,4 @@ CUDABufferPtr decode_image_nvjpeg(
 #endif
 }
 
-} // namespace spdl::core
+} // namespace spdl::cuda

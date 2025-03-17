@@ -14,7 +14,7 @@
 #include <fmt/core.h>
 #include <glog/logging.h>
 
-namespace spdl::core {
+namespace spdl::cuda {
 ////////////////////////////////////////////////////////////////////////////////
 // Pinned allocator for CPUStorage
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,4 +106,4 @@ void* CUDAStorage::data() const {
   return data_;
 }
 
-} // namespace spdl::core
+} // namespace spdl::cuda

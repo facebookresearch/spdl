@@ -17,7 +17,6 @@
 namespace nb = nanobind;
 
 namespace spdl::cuda {
-using namespace spdl::core;
 void register_types(nb::module_& m) {
   nb::class_<CUDAConfig>(m, "CUDAConfig")
       .def(

@@ -18,7 +18,7 @@
 
 #include <fmt/core.h>
 
-namespace spdl::core {
+namespace spdl::cuda {
 
 #ifdef SPDL_USE_NVCODEC
 namespace {
@@ -75,7 +75,7 @@ void NvDecDecoder::set_init_flag() {
 }
 
 CUDABufferPtr NvDecDecoder::decode(
-    VideoPacketsPtr&& packets,
+    spdl::core::VideoPacketsPtr&& packets,
     const CUDAConfig& cuda_config,
     const CropArea& crop,
     int width,
@@ -101,4 +101,4 @@ CUDABufferPtr NvDecDecoder::decode(
       std::move(packets), cuda_config, crop, width, height, pix_fmt);
 }
 #endif
-} // namespace spdl::core
+} // namespace spdl::cuda

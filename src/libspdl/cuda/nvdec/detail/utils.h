@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <libspdl/core/types.h>
+#include <libspdl/cuda/types.h>
 
 #include <cuviddec.h>
 #include <nvcuvid.h>
@@ -21,7 +21,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 cudaVideoCodec covert_codec_id(AVCodecID);
 
@@ -66,4 +66,4 @@ std::string get_diff(
     const CUVIDDECODECREATEINFO& i1,
     const CUVIDDECODECREATEINFO& i2);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

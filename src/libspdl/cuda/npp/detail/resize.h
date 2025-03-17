@@ -10,7 +10,7 @@
 
 #include <nvjpeg.h>
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 void resize_npp(
     nvjpegOutputFormat_t fmt,
@@ -21,4 +21,4 @@ void resize_npp(
     int dst_width,
     int dst_height);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

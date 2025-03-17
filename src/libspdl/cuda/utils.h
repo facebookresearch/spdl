@@ -27,10 +27,10 @@
     }                                    \
   } while (0)
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 const char* get_error_name(CUresult error);
 const char* get_error_desc(CUresult error);
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail
 
 #define CHECK_CU(expr, msg)                              \
   do {                                                   \
@@ -39,12 +39,12 @@ const char* get_error_desc(CUresult error);
       SPDL_FAIL(fmt::format(                             \
           "{} ({}: {})",                                 \
           msg,                                           \
-          spdl::core::detail::get_error_name(_status),   \
-          spdl::core::detail::get_error_desc(_status))); \
+          spdl::cuda::detail::get_error_name(_status),   \
+          spdl::cuda::detail::get_error_desc(_status))); \
     }                                                    \
   } while (0)
 
-namespace spdl::core::detail {
+namespace spdl::cuda::detail {
 
 void ensure_cuda_initialized();
 
@@ -58,4 +58,4 @@ CUcontext get_cucontext(CUdevice device);
 // Set the current context to the primary context of the given device
 void set_cuda_primary_context(int device_index);
 
-} // namespace spdl::core::detail
+} // namespace spdl::cuda::detail

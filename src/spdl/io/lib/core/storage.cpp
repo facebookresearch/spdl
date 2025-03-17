@@ -21,7 +21,10 @@ void register_storage(nb::module_& m) {
       "cpu_storage",
       [](size_t size, bool pin_memory) {
         return pin_memory ? std::make_shared<CPUStorage>(
-                                size, &alloc_pinned, &dealloc_pinned, true)
+                                size,
+                                &spdl::cuda::alloc_pinned,
+                                &spdl::cuda::dealloc_pinned,
+                                true)
                           : std::make_shared<CPUStorage>(size);
       },
       nb::call_guard<nb::gil_scoped_release>(),
