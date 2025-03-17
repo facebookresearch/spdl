@@ -35,7 +35,6 @@ set(srcs
   core/adaptor/adaptor.cpp
   core/adaptor/bytes.cpp
   core/storage/cpu.cpp
-  cuda/transfer.cpp
   core/decoder.cpp
   core/decoding.cpp
   core/demuxing.cpp
@@ -52,6 +51,7 @@ if (SPDL_USE_CUDA)
     cuda/buffer.cpp
     cuda/storage.cpp
     cuda/decoding.cpp
+    cuda/transfer.cpp
     )
 endif()
 
