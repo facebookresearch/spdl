@@ -44,7 +44,7 @@ function(add_spdl_extension ffmpeg_version)
   nanobind_add_module(${name} ${ft} ${src})
   target_compile_definitions(${name} PRIVATE "${defs}")
   target_link_libraries(${name} PRIVATE "${deps}")
-  target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
+  target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}")
 
   install(
     TARGETS ${name}
