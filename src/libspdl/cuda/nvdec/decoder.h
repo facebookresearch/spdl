@@ -47,7 +47,8 @@ class NvDecDecoder {
       const CropArea& crop,
       int width,
       int height,
-      const std::optional<std::string>& pix_fmt);
+      const std::optional<std::string>& pix_fmt,
+      bool flush);
 #endif
 };
 

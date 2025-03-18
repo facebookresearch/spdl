@@ -121,7 +121,7 @@ def test_nvdec_decode_h264_420p_basic(h264):
     # _save(v, "./base_v")
 
     assert array.dtype == torch.uint8
-    assert array.shape == (24, 4, h264.height, h264.width)
+    assert array.shape == (25, 4, h264.height, h264.width)
 
 
 # TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
@@ -155,7 +155,7 @@ def test_nvdec_decode_video_torch_allocator(h264):
         assert allocator_called
         assert not deleter_called
         assert array.dtype == torch.uint8
-        assert array.shape == (24, 4, h264.height, h264.width)
+        assert array.shape == (25, 4, h264.height, h264.width)
 
     _test()
 
@@ -201,7 +201,7 @@ def test_nvdec_decode_h264_420p_resize(h264):
     # _save(array, "./resize")
 
     assert array.dtype == torch.uint8
-    assert array.shape == (24, 4, height, width)
+    assert array.shape == (25, 4, height, width)
 
 
 def test_nvdec_decode_h264_420p_crop(h264):
@@ -220,7 +220,7 @@ def test_nvdec_decode_h264_420p_crop(h264):
     )
 
     assert rgba.dtype == torch.uint8
-    assert rgba.shape == (24, 4, h, w)
+    assert rgba.shape == (25, 4, h, w)
 
     rgba0 = _decode_video(
         h264.path,
@@ -249,7 +249,7 @@ def test_nvdec_decode_crop_resize(h264):
     )
 
     assert array.dtype == torch.uint8
-    assert array.shape == (24, 4, h, w)
+    assert array.shape == (25, 4, h, w)
 
 
 def _is_ffmpeg4():

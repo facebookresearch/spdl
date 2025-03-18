@@ -386,7 +386,7 @@ def decode_packets_nvdec(
 
     decoder = NvDecDecoder()
     packets = _libspdl._apply_bsf(packets)
-    return decoder.decode(packets, device_config=device_config, **kwargs)
+    return decoder.decode(packets, device_config=device_config, flush=True, **kwargs)
 
 
 def decode_image_nvjpeg(
@@ -487,10 +487,16 @@ class NvDecDecoder:
         self._cache.decoder.set_init_flag()
 
     def decode(
-        self, packets: VideoPackets, device_config: CUDAConfig | None = None, **kwargs
+        self,
+        packets: VideoPackets,
+        device_config: CUDAConfig | None = None,
+        flush: bool = False,
+        **kwargs,
     ) -> VideoFrames:
         self._cache.decoding = True
-        ret = self._cache.decoder.decode(packets, device_config=device_config, **kwargs)
+        ret = self._cache.decoder.decode(
+            packets, device_config=device_config, flush=flush, **kwargs
+        )
         self._cache.decoding = False
         return ret
 

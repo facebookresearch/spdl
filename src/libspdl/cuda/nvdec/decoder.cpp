@@ -79,7 +79,8 @@ CUDABufferPtr NvDecDecoder::decode(
     const CropArea& crop,
     int width,
     int height,
-    const std::optional<std::string>& pix_fmt) {
+    const std::optional<std::string>& pix_fmt,
+    bool flush) {
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
 
   if (init) {
@@ -95,7 +96,7 @@ CUDABufferPtr NvDecDecoder::decode(
     init = false;
   }
   return decoder->decode(
-      std::move(packets), cuda_config, crop, width, height, pix_fmt);
+      std::move(packets), cuda_config, crop, width, height, pix_fmt, flush);
 }
 #endif
 } // namespace spdl::cuda
