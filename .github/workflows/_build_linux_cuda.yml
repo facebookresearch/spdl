@@ -127,15 +127,23 @@ jobs:
           pip install pytest
 
           cu_ver="${{ inputs.cuda-version }}"
-          # Remove dots
-          cu_ver="${cu_ver//[.]/}"
+          cu_ver="${cu_ver//[.]/}"  # Remove dots
           pip install numpy torch --index-url "https://download.pytorch.org/whl/cu${cu_ver}"
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
-          # For some reason, the FFmpeg dynamic libraries are not found.
+
+          # Sort out library paths
+          # 1. For some reason, the FFmpeg dynamic libraries are not found.
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
+          # 2. CUDA runtime PyPI package is installed as part of PyTorch installation.
+          # However, it is installed in site-packages dir, which is not in PATH by default.
+          # (PyTorch has a special way to load it, but we don't do that)
+          cudart_dir="$(
+            python -c 'import os.path,nvidia.cuda_runtime;print(os.path.join(nvidia.cuda_runtime.__path__[0], "lib"))'
+          )"
+          export "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${cudart_dir}"
 
           # Run test
           python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_cuda()'

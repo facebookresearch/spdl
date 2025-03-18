@@ -6,7 +6,7 @@
 
 # pyre-unsafe
 
-from spdl.io.lib import _libspdl
+from spdl.io.lib import _libspdl_cuda
 
 __all__ = [
     "built_with_cuda",
@@ -19,24 +19,36 @@ def built_with_cuda() -> bool:
     """Check if SPDL is compiled with CUDA support.
 
     Returns:
-        True if SPDL is compiled with CUDA support.
+        True if SPDL is compiled with CUDA support and
+        the related libraries are properly loaded.
     """
-    return _libspdl.built_with_cuda()
+    try:
+        return _libspdl_cuda.built_with_cuda()
+    except Exception:
+        return False
 
 
 def built_with_nvcodec() -> bool:
     """Check if SPDL is compiled with NVCODEC support.
 
     Returns:
-        True if SPDL is compiled with NVCODEC support.
+        True if SPDL is compiled with NVCODEC support and
+        the related libraries are properly loaded.
     """
-    return _libspdl.built_with_nvcodec()
+    try:
+        return _libspdl_cuda.built_with_nvcodec()
+    except Exception:
+        return False
 
 
 def built_with_nvjpeg() -> bool:
     """Check if SPDL is compiled with NVJPEG support.
 
     Returns:
-        True if SPDL is compiled with NVJPEG support.
+        True if SPDL is compiled with NVJPEG support and
+        the related libraries are properly loaded.
     """
-    return _libspdl.built_with_nvjpeg()
+    try:
+        return _libspdl_cuda.built_with_nvjpeg()
+    except Exception:
+        return False
