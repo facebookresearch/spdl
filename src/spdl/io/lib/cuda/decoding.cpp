@@ -52,7 +52,8 @@ void register_decoding(nb::module_& m) {
              int crop_bottom,
              int width,
              int height,
-             const std::optional<std::string>& pix_fmt) {
+             const std::optional<std::string>& pix_fmt,
+             bool flush) {
             return self.decode(
                 std::move(packets),
                 cuda_config,
@@ -63,7 +64,8 @@ void register_decoding(nb::module_& m) {
                     static_cast<short>(crop_bottom)},
                 width,
                 height,
-                pix_fmt);
+                pix_fmt,
+                flush);
           },
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("packets"),
@@ -75,9 +77,10 @@ void register_decoding(nb::module_& m) {
           nb::arg("crop_bottom") = 0,
           nb::arg("width") = -1,
           nb::arg("height") = -1,
-          nb::arg("pix_fmt").none() = "rgba")
+          nb::arg("pix_fmt").none() = "rgba",
+          nb::arg("flush") = false);
 #endif
-      ;
+  ;
 
   m.def(
       "_nvdec_decoder",

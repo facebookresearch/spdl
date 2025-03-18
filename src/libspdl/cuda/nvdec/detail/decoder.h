@@ -108,6 +108,8 @@ class NvDecDecoderCore {
       int64_t pts,
       unsigned long flags);
 
+  void flush();
+
   void reset();
 
   ////////////////////////////////////////////////////////////////////////////
@@ -137,11 +139,14 @@ class NvDecDecoderInternal {
       int target_height,
       const std::optional<std::string>& pix_fmt);
 
+ private:
   template <spdl::core::MediaType media_type>
   void decode_packets(
       spdl::core::PacketsPtr<media_type> packets,
-      CUDABufferTracker& tracker);
+      CUDABufferTracker& tracker,
+      bool flush);
 
+ public:
   template <spdl::core::MediaType media_type>
   CUDABufferPtr decode(
       spdl::core::PacketsPtr<media_type> packets,
@@ -149,7 +154,8 @@ class NvDecDecoderInternal {
       const CropArea crop,
       int target_width,
       int target_height,
-      const std::optional<std::string>& pix_fmt);
+      const std::optional<std::string>& pix_fmt,
+      bool flush);
 };
 
 } // namespace spdl::cuda::detail

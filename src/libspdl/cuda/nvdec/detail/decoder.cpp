@@ -433,13 +433,7 @@ void NvDecDecoderCore::decode(
       "Failed to parse video data.");
 }
 
-void NvDecDecoderCore::reset() {
-  if (!parser) {
-    return;
-  }
-
-  cb_disabled = true;
-
+void NvDecDecoderCore::flush() {
   const unsigned char data{};
   CUVIDSOURCEDATAPACKET packet{
       .flags = CUVID_PKT_ENDOFSTREAM,
@@ -450,8 +444,14 @@ void NvDecDecoderCore::reset() {
   CHECK_CU(
       cuvidParseVideoData(parser.get(), &packet),
       "Failed to parse video data.");
+}
 
-  cb_disabled = false;
+void NvDecDecoderCore::reset() {
+  if (parser) {
+    cb_disabled = true;
+    flush();
+    cb_disabled = false;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -513,7 +513,8 @@ CUDABufferPtr get_buffer(
 template <spdl::core::MediaType media_type>
 void NvDecDecoderInternal::decode_packets(
     spdl::core::PacketsPtr<media_type> packets,
-    CUDABufferTracker& tracker) {
+    CUDABufferTracker& tracker,
+    bool flush) {
   TRACE_EVENT("nvdec", "decode_packets");
 
   auto num_packets = packets->num_packets();
@@ -523,21 +524,20 @@ void NvDecDecoderInternal::decode_packets(
 
   core.tracker = &tracker;
 
-  size_t it = 0;
   unsigned long flags = CUVID_PKT_TIMESTAMP;
+  auto ite = packets->iter_packets();
   switch (packets->get_codec().get_codec_id()) {
     case spdl::core::CodecID::MPEG4: {
       // TODO: Add special handling par
       // Video_Codec_SDK_12.1.14/blob/main/Samples/Utils/FFmpegDemuxer.h#L326-L345
       // TODO: Test this with MP4 file.
       SPDL_FAIL("NOT IMPLEMENTED.");
-      ++it;
     }
-    case spdl::core::CodecID::AV1:
+    case spdl::core::CodecID::AV1: {
       // TODO handle
       // https://github.com/FFmpeg/FFmpeg/blob/5e2b0862eb1d408625232b37b7a2420403cd498f/libavcodec/cuviddec.c#L1001-L1009
       SPDL_FAIL("NOT IMPLEMENTED.");
-      ++it;
+    }
     default:;
   }
 
@@ -545,19 +545,14 @@ void NvDecDecoderInternal::decode_packets(
   (static_cast<double>(pts) * packets->time_base.num / packets->time_base.den)
 
   flags |= CUVID_PKT_ENDOFPICTURE;
-  auto ite = packets->iter_packets();
-  // TODO: Improve the handling of the last packet
   while (ite) {
-    it += 1;
     auto pkt = ite();
     VLOG(9) << fmt::format(
         " -- packet  PTS={:.3f} ({})", _PTS(pkt.pts), pkt.pts);
-    if (it == num_packets) {
-      flags |= CUVID_PKT_ENDOFSTREAM;
-      core.decode(pkt.data, pkt.size, pkt.pts, flags);
-    } else {
-      core.decode(pkt.data, pkt.size, pkt.pts, flags);
-    }
+    core.decode(pkt.data, pkt.size, pkt.pts, flags);
+  }
+  if (flush) {
+    core.flush();
   }
 
 #undef _PKT
@@ -574,7 +569,8 @@ CUDABufferPtr NvDecDecoderInternal::decode(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string>& pix_fmt) {
+    const std::optional<std::string>& pix_fmt,
+    bool flush) {
   TRACE_EVENT("nvdec", "decode");
 
   auto num_packets = packets->num_packets();
@@ -593,7 +589,7 @@ CUDABufferPtr NvDecDecoderInternal::decode(
       pix_fmt);
   auto tracker = CUDABufferTracker{buffer->storage, buffer->shape};
 
-  decode_packets(std::move(packets), tracker);
+  decode_packets(std::move(packets), tracker, flush);
 
   if constexpr (media_type == spdl::core::MediaType::Video) {
     // We preallocated the buffer with the number of packets, but these packets
@@ -611,6 +607,7 @@ template CUDABufferPtr NvDecDecoderInternal::decode(
     const CropArea crop,
     int target_width,
     int target_height,
-    const std::optional<std::string>& pix_fmt);
+    const std::optional<std::string>& pix_fmt,
+    bool flush);
 
 } // namespace spdl::cuda::detail
