@@ -129,7 +129,7 @@ class NvDecDecoderInternal {
 
   void init(
       int device_index,
-      enum AVCodecID codec_id,
+      spdl::core::CodecID codec_id,
       spdl::core::Rational time_base,
       const std::optional<std::tuple<double, double>>& timestamp,
       const CropArea crop,

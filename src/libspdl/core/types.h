@@ -44,6 +44,22 @@ struct DecodeConfig {
 // Used to construct Dtype when converting buffer to array
 enum class ElemClass { Int, UInt, Float };
 
+// Subset of AVCodecID used by nvdec so that we can build NVDEC without
+// including FFmpeg headers
+enum class CodecID {
+  MPEG1VIDEO,
+  MPEG2VIDEO,
+  MPEG4,
+  WMV3,
+  VC1,
+  H264,
+  HEVC,
+  VP8,
+  VP9,
+  MJPEG,
+  AV1
+};
+
 struct EncodeConfig {
   // Muxer format or device name
   std::optional<std::string> muxer = std::nullopt;

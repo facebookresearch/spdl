@@ -85,7 +85,7 @@ CUDABufferPtr NvDecDecoder::decode(
   if (init) {
     decoder->init(
         cuda_config.device_index,
-        packets->codecpar->codec_id,
+        packets->get_codec().get_codec_id(),
         packets->time_base,
         packets->timestamp,
         crop,

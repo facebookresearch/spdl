@@ -38,6 +38,7 @@ set(srcs
   decoder.cpp
   decoding.cpp
   demuxing.cpp
+  codec.cpp
   encoding.cpp
   packets.cpp
   utils.cpp

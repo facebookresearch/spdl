@@ -9,6 +9,7 @@
 #include <libspdl/core/demuxing.h>
 
 #include "libspdl/core/detail/ffmpeg/bsf.h"
+#include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
@@ -105,11 +106,19 @@ bool Demuxer::has_audio() {
   return false;
 }
 
+namespace {
+inline AVCodecParameters* copy(const AVCodecParameters* src) {
+  auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
+  CHECK_AVERROR(
+      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
+  return dst;
+}
+} // namespace
+
 template <MediaType media_type>
 Codec<media_type> Demuxer::get_default_codec() const {
   auto* stream = detail::get_stream(di.get(), media_type);
-  return Codec<media_type>{
-      std::string(avcodec_get_name(stream->codecpar->codec_id))};
+  return Codec<media_type>{copy(stream->codecpar)};
 }
 template Codec<MediaType::Audio> Demuxer::get_default_codec<MediaType::Audio>()
     const;

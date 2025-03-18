@@ -17,40 +17,34 @@
 
 #include <span>
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-}
-
 namespace spdl::cuda::detail {
 
 const char* get_codec_name(cudaVideoCodec codec);
 const char* get_chroma_name(cudaVideoChromaFormat chroma);
 
-cudaVideoCodec covert_codec_id(AVCodecID id) {
+cudaVideoCodec convert_codec_id(spdl::core::CodecID id) {
   switch (id) {
-    case AV_CODEC_ID_MPEG1VIDEO:
+    case spdl::core::CodecID::MPEG1VIDEO:
       return cudaVideoCodec_MPEG1;
-    case AV_CODEC_ID_MPEG2VIDEO:
+    case spdl::core::CodecID::MPEG2VIDEO:
       return cudaVideoCodec_MPEG2;
-    case AV_CODEC_ID_MPEG4:
+    case spdl::core::CodecID::MPEG4:
       return cudaVideoCodec_MPEG4;
-    case AV_CODEC_ID_WMV3:
-    case AV_CODEC_ID_VC1:
+    case spdl::core::CodecID::WMV3:
+    case spdl::core::CodecID::VC1:
       return cudaVideoCodec_VC1;
-    case AV_CODEC_ID_H264:
+    case spdl::core::CodecID::H264:
       return cudaVideoCodec_H264;
-    case AV_CODEC_ID_HEVC:
+    case spdl::core::CodecID::HEVC:
       return cudaVideoCodec_HEVC;
-    case AV_CODEC_ID_VP8:
+    case spdl::core::CodecID::VP8:
       return cudaVideoCodec_VP8;
-    case AV_CODEC_ID_VP9:
+    case spdl::core::CodecID::VP9:
       return cudaVideoCodec_VP9;
-    case AV_CODEC_ID_MJPEG:
+    case spdl::core::CodecID::MJPEG:
       return cudaVideoCodec_JPEG;
-    case AV_CODEC_ID_AV1:
+    case spdl::core::CodecID::AV1:
       return cudaVideoCodec_AV1;
-    default:
-      SPDL_FAIL(fmt::format("Unsupported codec ID: {}", avcodec_get_name(id)));
   }
 }
 
