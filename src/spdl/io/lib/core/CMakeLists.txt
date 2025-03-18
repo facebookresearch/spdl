@@ -39,7 +39,7 @@ function(add_spdl_extension ffmpeg_version)
   message(STATUS "Building ${name}")
 
   set(defs "-DSPDL_FFMPEG_EXT_NAME=${name}")
-  set(deps "spdl_ffmpeg${ffmpeg_version}")
+  set(deps fmt::fmt glog::glog "spdl_ffmpeg${ffmpeg_version}")
 
   nanobind_add_module(${name} ${ft} ${src})
   target_compile_definitions(${name} PRIVATE "${defs}")

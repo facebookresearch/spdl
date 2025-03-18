@@ -34,7 +34,7 @@ function(add_spdl_cuda_extension ffmpeg_version)
   message(STATUS "Building ${name}")
 
   set(defs "-DSPDL_CUDA_EXT_NAME=${name}")
-  set(deps "spdl_ffmpeg${ffmpeg_version}")
+  set(deps fmt::fmt glog::glog "spdl_ffmpeg${ffmpeg_version}")
   if (SPDL_USE_CUDA)
     list(APPEND deps "spdl_cuda${ffmpeg_version}")
   endif()
