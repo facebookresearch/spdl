@@ -17,8 +17,6 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 
-#include "spdl_gil.h"
-
 namespace nb = nanobind;
 
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
@@ -46,7 +44,7 @@ void encode(
     throw std::runtime_error("Only unsigned interger type is supported");
   }
   auto depth = data.dtype().bits / 8;
-  RELEASE_GIL();
+  nb::gil_scoped_release __g;
   encode_image(path, src, shape, depth, pix_fmt, encode_cfg);
 }
 
