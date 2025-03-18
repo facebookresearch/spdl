@@ -12,6 +12,7 @@ __all__ = [
     "get_ffmpeg_log_level",
     "set_ffmpeg_log_level",
     "get_ffmpeg_filters",
+    "get_ffmpeg_versions",
 ]
 
 
@@ -59,3 +60,17 @@ def set_ffmpeg_log_level(val: int, /) -> None:
 
     """
     _libspdl.set_ffmpeg_log_level(val)
+
+
+def get_ffmpeg_versions() -> dict[str, tuple[int, int, int]]:
+    """Get the versions of FFmpeg libraries
+
+    Returns:
+        dict: mapping from library names to version string,
+
+    .. admonition:: Example:
+
+       >>> get_ffmpeg_versions()
+       {'libavcodec': (60, 3, 100), 'libavdevice': (60, 1, 100), 'libavfilter': (9, 3, 100), 'libavformat': (60, 3, 100), 'libavutil': (58, 2, 100)}
+    """
+    return _libspdl.get_ffmpeg_versions()

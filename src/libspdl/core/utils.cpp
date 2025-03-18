@@ -51,6 +51,31 @@ std::vector<std::string> get_ffmpeg_filters() {
   return detail::get_filters();
 }
 
+std::map<std::string, std::tuple<int64_t, int64_t, int64_t>>
+get_ffmpeg_versions() {
+  std::map<std::string, std::tuple<int64_t, int64_t, int64_t>> ret;
+
+#define add_version(NAME)            \
+  {                                  \
+    int ver = NAME##_version();      \
+    ret.emplace(                     \
+        "lib" #NAME,                 \
+        std::make_tuple<>(           \
+            AV_VERSION_MAJOR(ver),   \
+            AV_VERSION_MINOR(ver),   \
+            AV_VERSION_MICRO(ver))); \
+  }
+
+  add_version(avutil);
+  add_version(avcodec);
+  add_version(avformat);
+  add_version(avfilter);
+  add_version(avdevice);
+  return ret;
+
+#undef add_version
+}
+
 //////////////////////////////////////////////////////////////////////////////////
 // Utilities for Glog
 //////////////////////////////////////////////////////////////////////////////////
