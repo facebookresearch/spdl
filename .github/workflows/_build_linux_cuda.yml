@@ -139,7 +139,7 @@ jobs:
 
           # Run test
           python -c 'import spdl.io.utils;assert spdl.io.utils.is_cuda_available()'
-          if [[ "${{ inputs.use-nvdec == 'nvdec' }}" ]]; then
+          if "${{ inputs.use-nvdec == 'nvdec' }}" ; then
               python -c 'import spdl.io.utils;assert spdl.io.utils.is_nvcodec_available()'
           fi
           pytest -v \

@@ -46,23 +46,7 @@ set(srcs
 
 if(SPDL_USE_TRACING)
   list(APPEND deps perfetto)
-  list(APPEND defs SPDL_USE_TRACING)
   list(APPEND srcs detail/tracing.cpp)
-endif()
-
-if (SPDL_USE_CUDA)
-  list(APPEND defs SPDL_USE_CUDA)
-
-  if (SPDL_USE_NVCODEC)
-    list(APPEND defs SPDL_USE_NVCODEC)
-  endif()
-
-  if (SPDL_USE_NVJPEG)
-    list(APPEND defs SPDL_USE_NVJPEG)
-    if (SPDL_USE_NPPI)
-      list(APPEND defs SPDL_USE_NPPI)
-    endif()
-  endif()
 endif()
 
 if (SPDL_DEBUG_REFCOUNT)
@@ -80,6 +64,7 @@ function(add_libspdl ffmpeg_version)
   set(name "spdl_ffmpeg${ffmpeg_version}")
   message(STATUS "Building ${name}")
   add_library("${name}" SHARED "${srcs}")
+  target_compile_definitions("${name}" PUBLIC "${SPDL_COMMON_DEFS}")
   target_compile_definitions("${name}" PRIVATE "${defs}")
   target_link_libraries("${name}" PUBLIC "${deps}" "ffmpeg${ffmpeg_version}")
   target_include_directories(
