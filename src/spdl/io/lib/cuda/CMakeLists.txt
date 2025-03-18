@@ -23,6 +23,7 @@ set(src
   storage.cpp
   transfer.cpp
   types.cpp
+  utils.cpp
 )
 
 if (NOT SPDL_IS_GIL_ENABLED)
@@ -41,6 +42,9 @@ function(add_spdl_cuda_extension ffmpeg_version)
   endif()
   if (SPDL_USE_NVCODEC)
     list(APPEND defs SPDL_USE_NVCODEC)
+  endif ()
+  if (SPDL_USE_NVJPEG)
+    list(APPEND defs SPDL_USE_NVJPEG)
   endif ()
 
   nanobind_add_module(${name} ${ft} ${src})
