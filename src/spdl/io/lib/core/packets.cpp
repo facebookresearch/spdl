@@ -55,9 +55,9 @@ void register_packets(nb::module_& m) {
             RELEASE_GIL();
             std::vector<double> ret;
             auto base = self.time_base;
-            size_t num_packets = self.get_packets().size();
-            for (size_t i = 0; i < num_packets; ++i) {
-              ret.push_back(double(self.get_pts(i)) * base.num / base.den);
+            auto pkts = self.iter_packets();
+            while (pkts) {
+              ret.push_back(double(pkts().pts) * base.num / base.den);
             }
             return ret;
           })
