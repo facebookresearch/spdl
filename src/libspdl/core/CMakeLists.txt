@@ -64,12 +64,13 @@ function(add_libspdl ffmpeg_version)
   set(name "spdl_ffmpeg${ffmpeg_version}")
   message(STATUS "Building ${name}")
   add_library("${name}" SHARED "${srcs}")
-  target_compile_definitions("${name}" PRIVATE "${SPDL_COMMON_DEFS}" "${defs}")
+  target_compile_definitions("${name}" PUBLIC "${SPDL_COMMON_DEFS}")
+  target_compile_definitions("${name}" PRIVATE "${defs}")
   target_link_libraries("${name}" PRIVATE "${deps}" "ffmpeg${ffmpeg_version}")
   target_include_directories(
     "${name}"
-    PRIVATE
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/../.."
+    PUBLIC
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>"
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
   install(
