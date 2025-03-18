@@ -18,36 +18,6 @@
 
 namespace spdl::core {
 
-constexpr bool is_cuda_available() {
-  return
-#ifdef SPDL_USE_CUDA
-      true
-#else
-      false
-#endif
-      ;
-}
-
-constexpr bool is_nvcodec_available() {
-  return
-#ifdef SPDL_USE_NVCODEC
-      true
-#else
-      false
-#endif
-      ;
-}
-
-constexpr bool is_nvjpeg_available() {
-  return
-#ifdef SPDL_USE_NVJPEG
-      true
-#else
-      false
-#endif
-      ;
-}
-
 //////////////////////////////////////////////////////////////////////////////////
 // Utilities for FFmpeg
 //////////////////////////////////////////////////////////////////////////////////

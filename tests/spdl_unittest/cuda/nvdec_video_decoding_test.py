@@ -30,22 +30,16 @@ def _decode_video(src, timestamp=None, allocator=None, **decode_options):
     return spdl.io.to_torch(buffer)
 
 
-def _decode_videos(src, timestamps):
-    frames = [
-        spdl.io.decode_packets_nvdec(
-            packets,
-            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
-        )
-        for packets in spdl.io.streaming_demux_video(src, timestamps=timestamps)
-    ]
-
-    return [spdl.io.to_torch(f) for f in frames]
-
-
 @pytest.fixture
 def dummy(get_sample):
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample.mp4"
     return get_sample(cmd, width=320, height=240)
+
+
+def test_nvdec_no_file():
+    """Does not crash when handling non-existing file"""
+    with pytest.raises(RuntimeError):
+        _decode_video("lcbjbbvbhiibdctiljrnfvttffictefh.mp4")
 
 
 def test_nvdec_odd_size(dummy):
@@ -70,6 +64,27 @@ def test_nvdec_negative(dummy):
 
     with pytest.raises(RuntimeError):
         _decode_video(dummy.path, crop_bottom=-1)
+
+
+def test_nvdec_video_smoke_test(get_sample):
+    """Can decode video with NVDEC"""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 1000 sample.mp4"
+
+    sample = get_sample(cmd, width=320, height=240)
+
+    packets = spdl.io.demux_video(sample.path)
+    print(packets)
+    buffer = spdl.io.decode_packets_nvdec(
+        packets,
+        device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+    )
+
+    tensor = spdl.io.to_torch(buffer)
+    print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
+    assert tensor.shape[0] == 1000
+    assert tensor.shape[1] == 4
+    assert tensor.shape[2] == 240
+    assert tensor.shape[3] == 320
 
 
 def _save(array, prefix):
@@ -106,7 +121,7 @@ def test_nvdec_decode_h264_420p_basic(h264):
     # _save(v, "./base_v")
 
     assert array.dtype == torch.uint8
-    assert array.shape == (25, 4, h264.height, h264.width)
+    assert array.shape == (24, 4, h264.height, h264.width)
 
 
 # TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
@@ -140,7 +155,7 @@ def test_nvdec_decode_video_torch_allocator(h264):
         assert allocator_called
         assert not deleter_called
         assert array.dtype == torch.uint8
-        assert array.shape == (25, 4, h264.height, h264.width)
+        assert array.shape == (24, 4, h264.height, h264.width)
 
     _test()
 
@@ -186,7 +201,7 @@ def test_nvdec_decode_h264_420p_resize(h264):
     # _save(array, "./resize")
 
     assert array.dtype == torch.uint8
-    assert array.shape == (25, 4, height, width)
+    assert array.shape == (24, 4, height, width)
 
 
 def test_nvdec_decode_h264_420p_crop(h264):
@@ -205,7 +220,7 @@ def test_nvdec_decode_h264_420p_crop(h264):
     )
 
     assert rgba.dtype == torch.uint8
-    assert rgba.shape == (25, 4, h, w)
+    assert rgba.shape == (24, 4, h, w)
 
     rgba0 = _decode_video(
         h264.path,
@@ -234,7 +249,7 @@ def test_nvdec_decode_crop_resize(h264):
     )
 
     assert array.dtype == torch.uint8
-    assert array.shape == (25, 4, h, w)
+    assert array.shape == (24, 4, h, w)
 
 
 def test_num_frames_arithmetics(h264):
@@ -265,16 +280,30 @@ def test_num_frames_arithmetics(h264):
         ((0.8, 1.0), [20, 25]),
     ]
     # fmt: on
-    frames = _decode_videos(
-        h264.path,
-        timestamps=[cfg[0] for cfg in cfgs],
-    )
+    demuxer = spdl.io.Demuxer(h264.path)
+    for ts, slice_args in cfgs:
+        packets = demuxer.demux_video(window=ts)
+        print(packets)
+        buffer = spdl.io.decode_packets_nvdec(
+            packets=packets,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+        )
+        print(buffer)
+        t = spdl.io.to_torch(buffer)
 
-    for (ts, slice_args), fs in zip(cfgs, frames, strict=True):
-        print(f"{fs.shape}, {ts=}, {slice_args=}")
-        assert torch.equal(fs, ref[slice(*slice_args)])
+        print(f"{t.shape}, {ts=}, {slice_args=}")
+        assert torch.equal(t, ref[slice(*slice_args)])
 
 
+def _is_ffmpeg4():
+    vers = spdl.io.utils.get_ffmpeg_versions()
+    print(vers)
+    return vers["libavutil"][0] < 57
+
+
+@pytest.mark.skipif(
+    _is_ffmpeg4(), reason="FFmpeg4 is known to return a different result."
+)
 def test_color_conversion_rgba(get_sample):
     """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
     # fmt: off

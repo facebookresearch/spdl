@@ -40,31 +40,23 @@ jobs:
   #############################################################################
   # Linux (CPU)
   #############################################################################
-  linux-x86:
-    name: "Linux x86_64"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      os: ubuntu-latest
-      arch: x86_64
-      python-version: "${{ matrix.python-version }}"
-      run-test: "${{ matrix.python-version == '3.10'}}"
-
   linux-aarch64:
     name: "Linux aarch64"
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.13t"]
+        free-threaded: [""]
+        include:
+          - python-version: "3.13"
+            free-threaded: "ft"
     uses: ./.github/workflows/_build_linux.yml
     with:
       os: ubuntu-24.04-arm
       arch: aarch64
       python-version: "${{ matrix.python-version }}"
-      run-test: "${{ matrix.python-version == '3.10'}}"
+      free-threaded: "${{ matrix.free-threaded }}"
+      run-test: "${{ matrix.python-version == '3.10' || matrix.free-threaded == 'ft' }}"
 
   #############################################################################
   # Linux (CUDA)
@@ -76,18 +68,17 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         cuda-version: ["12.6"]
-        use-nvdec: [""]
+        use-nvdec: ["nvdec"]
+        free-threaded: [""]
         include:
-          - python-version: "3.11"
+          - python-version: "3.13"
             cuda-version: "12.6"
-            use-nvdec: "nvdec"
+            free-threaded: "ft"
     uses: ./.github/workflows/_build_linux_cuda.yml
     with:
-      os_build: ubuntu-latest
-      os_test: "4-core-ubuntu-gpu-t4"
-      container: "pytorch/manylinux2_28-builder:cuda${{ matrix.cuda-version }}"
-      arch: x86_64
+      build_container: "pytorch/manylinux2_28-builder:cuda${{ matrix.cuda-version }}"
       python-version: "${{ matrix.python-version }}"
+      free-threaded: "${{ matrix.free-threaded }}"
       cuda-version: "${{ matrix.cuda-version }}"
       use-nvdec: "${{ matrix.use-nvdec }}"
-      run-test: "${{ matrix.python-version == '3.10'}}"
+      run-test: "${{ matrix.python-version == '3.11' || matrix.free-threaded == 'ft' }}"

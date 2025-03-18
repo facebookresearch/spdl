@@ -6,7 +6,7 @@
 
 # pyre-unsafe
 
-from spdl.io.lib import _libspdl
+from spdl.io.lib import _libspdl_cuda
 
 __all__ = [
     "is_cuda_available",
@@ -21,7 +21,10 @@ def is_cuda_available() -> bool:
     Returns:
         True if SPDL is compiled with CUDA support.
     """
-    return _libspdl.is_cuda_available()
+    try:
+        return _libspdl_cuda.is_cuda_available()
+    except Exception:
+        return False
 
 
 def is_nvcodec_available() -> bool:
@@ -30,7 +33,10 @@ def is_nvcodec_available() -> bool:
     Returns:
         True if SPDL is compiled with NVCODEC support.
     """
-    return _libspdl.is_nvcodec_available()
+    try:
+        return _libspdl_cuda.is_nvcodec_available()
+    except Exception:
+        return False
 
 
 def is_nvjpeg_available() -> bool:
@@ -39,4 +45,7 @@ def is_nvjpeg_available() -> bool:
     Returns:
         True if SPDL is compiled with NVJPEG support.
     """
-    return _libspdl.is_nvjpeg_available()
+    try:
+        return _libspdl_cuda.is_nvjpeg_available()
+    except Exception:
+        return False
