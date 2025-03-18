@@ -17,7 +17,6 @@ if (SPDL_BUILD_PYTHON_BINDING)
   endif ()
 endif()
 
-set(defs SPDL_USE_CUDA)
 set(deps
   fmt::fmt
   glog::glog
@@ -32,7 +31,6 @@ set(srcs
 )
 
 if (SPDL_USE_NVCODEC)
-  list(APPEND defs SPDL_USE_NVCODEC)
   list(APPEND srcs
     nvdec/decoder.cpp
     nvdec/detail/buffer.cpp
@@ -46,14 +44,12 @@ if (SPDL_USE_NVCODEC)
 endif()
 
 if (SPDL_USE_NVJPEG)
-  list(APPEND defs SPDL_USE_NVJPEG)
   list(APPEND srcs
     nvjpeg/decoding.cpp
     nvjpeg/detail/utils.cpp
     nvjpeg/detail/decoding.cpp
   )
   if (SPDL_USE_NPPI)
-    list(APPEND defs SPDL_USE_NPPI)
     list(APPEND srcs
       npp/detail/resize.cpp
       npp/detail/utils.cpp
@@ -75,15 +71,14 @@ endif()
 
 if(SPDL_USE_TRACING)
   list(APPEND deps perfetto)
-  list(APPEND defs SPDL_USE_TRACING)
 endif()
 
 function(add_libspdl ffmpeg_version)
   set(name "spdl_cuda${ffmpeg_version}")
   message(STATUS "Building ${name}")
   add_library("${name}" SHARED "${srcs}")
-  target_compile_definitions("${name}" PRIVATE "${defs}")
-  target_link_libraries("${name}" PUBLIC "${deps}")
+  target_compile_definitions("${name}" PUBLIC "${SPDL_COMMON_DEFS}")
+  target_link_libraries("${name}" PUBLIC "${deps}" "spdl_ffmpeg${ffmpeg_version}")
   target_include_directories(
     "${name}"
     PUBLIC
