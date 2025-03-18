@@ -53,12 +53,6 @@ if (SPDL_DEBUG_REFCOUNT)
   list(APPEND defs SPDL_DEBUG_REFCOUNT)
 endif()
 
-# Required because the use of CUDA interferes with the source_location in
-# logging module, and it must be consistent across core/cuda modules.
-if (SPDL_USE_CUDA)
-  list(APPEND defs SPDL_USE_CUDA)
-endif()
-
 # install(
 #   DIRECTORY libspdl
 #   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
