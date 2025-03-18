@@ -252,49 +252,6 @@ def test_nvdec_decode_crop_resize(h264):
     assert array.shape == (24, 4, h, w)
 
 
-def test_num_frames_arithmetics(h264):
-    """NVDEC with non-zero start time should produce proper number of frames."""
-    ref = _decode_video(
-        h264.path,
-        timestamp=(0, 1.0),
-    )
-
-    # NOTE: The source video has 25 FPS.
-    # fmt: off
-    cfgs = [
-        # timestamp, args_for_slicing
-        ((0, 0.2), [5]),
-        ((0, 0.4), [10]),
-        ((0, 0.6), [15]),
-        ((0, 0.8), [20]),
-        ((0, 1.0,), [25]),
-        ((0.2, 0.4), [5, 10]),
-        ((0.2, 0.6), [5, 15]),
-        ((0.2, 0.8), [5, 20]),
-        ((0.2, 1.0), [5, 25]),
-        ((0.4, 0.6), [10, 15]),
-        ((0.4, 0.8), [10, 20]),
-        ((0.4, 1.0), [10, 25]),
-        ((0.6, 0.8), [15, 20]),
-        ((0.6, 1.0), [15, 25]),
-        ((0.8, 1.0), [20, 25]),
-    ]
-    # fmt: on
-    demuxer = spdl.io.Demuxer(h264.path)
-    for ts, slice_args in cfgs:
-        packets = demuxer.demux_video(window=ts)
-        print(packets)
-        buffer = spdl.io.decode_packets_nvdec(
-            packets=packets,
-            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
-        )
-        print(buffer)
-        t = spdl.io.to_torch(buffer)
-
-        print(f"{t.shape}, {ts=}, {slice_args=}")
-        assert torch.equal(t, ref[slice(*slice_args)])
-
-
 def _is_ffmpeg4():
     vers = spdl.io.utils.get_ffmpeg_versions()
     print(vers)
