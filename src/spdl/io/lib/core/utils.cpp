@@ -10,7 +10,9 @@
 #include <libspdl/core/utils.h>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/map.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
 #include "spdl_gil.h"
@@ -24,6 +26,7 @@ void register_utils(nb::module_& m) {
   m.def("set_ffmpeg_log_level", &set_ffmpeg_log_level);
   m.def("register_avdevices", &register_avdevices);
   m.def("get_ffmpeg_filters", &get_ffmpeg_filters);
+  m.def("get_ffmpeg_versions", &get_ffmpeg_versions);
 
   m.def("is_cuda_available", []() {
     RELEASE_GIL();
