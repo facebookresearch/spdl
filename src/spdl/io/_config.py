@@ -140,7 +140,7 @@ def cuda_config(device_index: int, **kwargs) -> CUDAConfig:
             :py:func:`~torch.cuda.caching_allocator_alloc` and
             :py:func:`~torch.cuda.caching_allocator_delete`.
     """
-    return _libspdl_cuda.CUDAConfig(device_index=device_index, **kwargs)
+    return _libspdl_cuda.cuda_config(device_index, **kwargs)
 
 
 def encode_config(**kwargs) -> EncodeConfig:
