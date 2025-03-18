@@ -3,18 +3,18 @@ name: " - Wheel (Linux / CUDA)"
 on:
   workflow_call:
     inputs:
-      os_build:
-        required: true
+      machine:
         type: string
-      os_test:
-        required: true
+        default: "8-core-ubuntu-22.04"
+      machine_gpu:
         type: string
-      container:
+        default: "4-core-ubuntu-gpu-t4"
+      build_container:
         required: true
         type: string
       arch:
-        required: true
         type: string
+        default: x86_64
       python-version:
         required: true
         type: string
@@ -38,8 +38,8 @@ env:
 
 jobs:
   build:
-    runs-on: "${{ inputs.os_build }}"
-    container: "${{ inputs.container }}"
+    runs-on: "${{ inputs.machine }}"
+    container: "${{ inputs.build_container }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,15 +89,15 @@ jobs:
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
 
-  test:
+  test-gpu:
     if: ${{ inputs.run-test == 'true' }}
     needs: ["build"]
-    name: "test ffmpeg"
+    name: "test-cuda ffmpeg"
     strategy:
       fail-fast: false
       matrix:
         ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1" ]
-    runs-on: "${{ inputs.os_test }}"
+    runs-on: "${{ inputs.machine_gpu }}"
     defaults:
       run:
         shell: bash -el {0}
@@ -143,5 +143,53 @@ jobs:
               python -c 'import spdl.io.utils;assert spdl.io.utils.is_nvcodec_available()'
           fi
           pytest -v \
+              -k 'not nvdec' \
               tests/spdl_unittest/cuda/ \
               tests/spdl_unittest/io/
+
+  test-cpu:
+    if: "${{ inputs.run-test == 'true' }}"
+    needs: ["build"]
+    name: "test-cpu ffmpeg ${{ matrix.ffmpeg-version }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1"]
+    runs-on:  ${{ inputs.machine }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: ~/package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          conda-remove-defaults: "true"
+
+      - name: Unit test
+        run: |
+          # Install SPDL
+          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+
+          # Install PyTorch and others
+          pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
+          conda install -q numba pytest
+
+          # Install FFmpeg
+          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
+          # For some reason, the dynamic libraries are not found.
+          export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
+
+          # Run test
+          pytest -v \
+              tests/spdl_unittest/io/ \
+              tests/spdl_unittest/dataloader/
