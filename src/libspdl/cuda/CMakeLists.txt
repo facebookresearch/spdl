@@ -83,7 +83,7 @@ function(add_libspdl ffmpeg_version)
   message(STATUS "Building ${name}")
   add_library("${name}" SHARED "${srcs}")
   target_compile_definitions("${name}" PRIVATE "${defs}")
-  target_link_libraries("${name}" PUBLIC "${deps}" "ffmpeg${ffmpeg_version}")
+  target_link_libraries("${name}" PUBLIC "${deps}")
   target_include_directories(
     "${name}"
     PUBLIC
