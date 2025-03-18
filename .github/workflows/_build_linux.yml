@@ -103,7 +103,7 @@ jobs:
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
 
           # Run test
-          python -c 'import spdl.io.utils;assert not spdl.io.utils.is_cuda_available()'
+          python -c 'import spdl.io.utils;assert not spdl.io.utils.built_with_cuda()'
           pytest -v \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/

@@ -12,7 +12,7 @@ import spdl.io
 import spdl.io.utils
 import torch
 
-if not spdl.io.utils.is_cuda_available():
+if not spdl.io.utils.built_with_cuda():
     pytest.skip("SPDL is not compiled with CUDA support", allow_module_level=True)
 
 

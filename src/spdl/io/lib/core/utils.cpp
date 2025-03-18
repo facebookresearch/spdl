@@ -26,17 +26,17 @@ void register_utils(nb::module_& m) {
   m.def("get_ffmpeg_filters", &get_ffmpeg_filters);
   m.def("get_ffmpeg_versions", &get_ffmpeg_versions);
 
-  m.def("is_cuda_available", []() {
+  m.def("built_with_cuda", []() {
     nb::gil_scoped_release __g;
-    return is_cuda_available();
+    return built_with_cuda();
   });
-  m.def("is_nvcodec_available", []() {
+  m.def("built_with_nvcodec", []() {
     nb::gil_scoped_release __g;
-    return is_nvcodec_available();
+    return built_with_nvcodec();
   });
-  m.def("is_nvjpeg_available", []() {
+  m.def("built_with_nvjpeg", []() {
     nb::gil_scoped_release __g;
-    return is_nvjpeg_available();
+    return built_with_nvjpeg();
   });
 
   m.def("init_glog", [](char const* name) {
