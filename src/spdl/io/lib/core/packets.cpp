@@ -17,8 +17,6 @@
 
 #include <fmt/format.h>
 
-#include "spdl_gil.h"
-
 namespace nb = nanobind;
 
 namespace spdl::core {
@@ -28,23 +26,23 @@ void register_packets(nb::module_& m) {
       .def_prop_ro(
           "timestamp",
           [](const AudioPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.timestamp;
           })
       .def_prop_ro(
           "sample_rate",
           [](const AudioPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_sample_rate();
           })
       .def_prop_ro(
           "num_channels",
           [](const AudioPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_num_channels();
           })
       .def("clone", [](const AudioPackets& self) {
-        RELEASE_GIL();
+        nb::gil_scoped_release __g;
         return clone(self);
       });
 
@@ -52,7 +50,7 @@ void register_packets(nb::module_& m) {
       .def(
           "_get_pts",
           [](const VideoPackets& self) -> std::vector<double> {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             std::vector<double> ret;
             auto base = self.time_base;
             auto pkts = self.iter_packets();
@@ -64,45 +62,45 @@ void register_packets(nb::module_& m) {
       .def_prop_ro(
           "timestamp",
           [](const VideoPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.timestamp;
           })
       .def_prop_ro(
           "pix_fmt",
           [](const VideoPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_media_format_name();
           })
       .def_prop_ro(
           "width",
           [](const VideoPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_width();
           })
       .def_prop_ro(
           "height",
           [](const VideoPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_height();
           })
       .def_prop_ro(
           "frame_rate",
           [](const VideoPackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             auto rate = self.get_frame_rate();
             return std::tuple<int, int>(rate.num, rate.den);
           })
       .def("__len__", &VideoPackets::num_packets)
       .def("__repr__", &VideoPackets::get_summary)
       .def("clone", [](const VideoPackets& self) {
-        RELEASE_GIL();
+        nb::gil_scoped_release __g;
         return clone(self);
       });
 
   m.def(
       "_extract_packets_at_indices",
       [](VideoPacketsPtr packets, const std::vector<size_t>& indices) {
-        RELEASE_GIL();
+        nb::gil_scoped_release __g;
         return extract_packets_at_indices(packets, indices);
       });
 
@@ -110,31 +108,31 @@ void register_packets(nb::module_& m) {
       .def(
           "_get_pts",
           [](const ImagePackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             auto base = self.time_base;
             return double(self.get_pts()) * base.num / base.den;
           })
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_media_format_name();
           })
       .def_prop_ro(
           "width",
           [](const ImagePackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_width();
           })
       .def_prop_ro(
           "height",
           [](const ImagePackets& self) {
-            RELEASE_GIL();
+            nb::gil_scoped_release __g;
             return self.get_height();
           })
       .def("__repr__", &ImagePackets::get_summary)
       .def("clone", [](const ImagePackets& self) {
-        RELEASE_GIL();
+        nb::gil_scoped_release __g;
         return clone(self);
       });
 }

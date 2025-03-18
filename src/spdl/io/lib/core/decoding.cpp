@@ -18,8 +18,6 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-#include "spdl_gil.h"
-
 #include <cstring>
 
 namespace nb = nanobind;
@@ -31,7 +29,7 @@ FFmpegFramesPtr<media_type> decode(
     PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc) {
-  RELEASE_GIL();
+  nb::gil_scoped_release __g;
   return decode_packets_ffmpeg(std::move(packets), cfg, filter_desc);
 }
 
@@ -40,13 +38,13 @@ DecoderPtr<media_type> _make_decoder(
     PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::optional<std::string>& filter_desc) {
-  RELEASE_GIL();
+  nb::gil_scoped_release __g;
   return make_decoder(std::move(packets), decode_cfg, filter_desc);
 }
 
 template <MediaType media_type>
 void _drop(DecoderPtr<media_type> decoder) {
-  RELEASE_GIL();
+  nb::gil_scoped_release __g;
   decoder.reset();
 }
 
@@ -54,7 +52,7 @@ template <MediaType media_type>
 std::optional<FFmpegFramesPtr<media_type>> _decode(
     StreamingDecoder<media_type>& decoder,
     int num_frames) {
-  RELEASE_GIL();
+  nb::gil_scoped_release __g;
   return decoder.decode(num_frames);
 }
 

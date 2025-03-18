@@ -16,8 +16,6 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-#include "spdl_gil.h"
-
 namespace nb = nanobind;
 
 using int_array = nb::ndarray<nb::device::cpu, nb::c_contig, int64_t>;
@@ -28,7 +26,7 @@ template <MediaType media_type>
 CPUBufferPtr convert(
     const FFmpegFramesPtr<media_type>&& frames,
     std::shared_ptr<CPUStorage> storage) {
-  RELEASE_GIL();
+  nb::gil_scoped_release __g;
   return convert_frames(frames.get(), storage);
 }
 
@@ -46,7 +44,7 @@ template <MediaType media_type>
 CPUBufferPtr batch_convert(
     std::vector<FFmpegFramesPtr<media_type>>&& frames,
     std::shared_ptr<CPUStorage> storage) {
-  RELEASE_GIL();
+  nb::gil_scoped_release __g;
   return convert_frames(_ref(frames), storage);
 }
 
@@ -64,7 +62,7 @@ CPUBufferPtr convert_array(
   }
   auto src = vals.data();
 
-  RELEASE_GIL(); // do not access vals from here.
+  nb::gil_scoped_release __g; // do not access vals from here.
   auto buf = cpu_buffer(shape, ElemClass::Int, 8, std::move(storage));
 
   // copy

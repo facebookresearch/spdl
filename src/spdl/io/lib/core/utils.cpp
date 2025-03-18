@@ -15,8 +15,6 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
-#include "spdl_gil.h"
-
 namespace nb = nanobind;
 
 namespace spdl::core {
@@ -29,20 +27,20 @@ void register_utils(nb::module_& m) {
   m.def("get_ffmpeg_versions", &get_ffmpeg_versions);
 
   m.def("is_cuda_available", []() {
-    RELEASE_GIL();
+    nb::gil_scoped_release __g;
     return is_cuda_available();
   });
   m.def("is_nvcodec_available", []() {
-    RELEASE_GIL();
+    nb::gil_scoped_release __g;
     return is_nvcodec_available();
   });
   m.def("is_nvjpeg_available", []() {
-    RELEASE_GIL();
+    nb::gil_scoped_release __g;
     return is_nvjpeg_available();
   });
 
   m.def("init_glog", [](char const* name) {
-    RELEASE_GIL();
+    nb::gil_scoped_release __g;
     init_glog(name);
   });
 }
