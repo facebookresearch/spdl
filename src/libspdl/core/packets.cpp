@@ -270,6 +270,12 @@ template <MediaType media_type>
 Rational DemuxedPackets<media_type>::get_frame_rate() const {
   return frame_rate;
 }
+template <MediaType media_type>
+Generator<RawPacketData> DemuxedPackets<media_type>::iter_packets() const {
+  for (auto& pkt : packets) {
+    co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
+  }
+}
 
 template class DemuxedPackets<MediaType::Audio>;
 template class DemuxedPackets<MediaType::Video>;
