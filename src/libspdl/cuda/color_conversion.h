@@ -15,12 +15,12 @@
 
 namespace spdl::cuda {
 
-CUDABufferPtr nv12_to_planar_rgba(
+CUDABufferPtr nv12_to_planar_rgb(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1);
 
-CUDABufferPtr nv12_to_planar_bgra(
+CUDABufferPtr nv12_to_planar_bgr(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1);

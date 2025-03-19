@@ -502,8 +502,8 @@ CUDABufferPtr get_buffer(
   if (pix_fmt_val == "nv12") {
     c = 1;
     h = h + h / 2;
-  } else if (pix_fmt_val == "rgba" || pix_fmt_val == "bgra") {
-    c = 4;
+  } else if (pix_fmt_val == "rgb" || pix_fmt_val == "bgr") {
+    c = 3;
   } else {
     SPDL_FAIL(fmt::format("Unsupported pixel format: {}", pix_fmt_val));
   }

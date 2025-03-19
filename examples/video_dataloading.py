@@ -206,7 +206,7 @@ def decode_video_nvdec(
         ),
         width=width,
         height=height,
-        pix_fmt="rgba",
+        pix_fmt="rgb",
     )
     return spdl.io.to_torch(buffer)[..., :3].permute(0, 2, 3, 1)
 

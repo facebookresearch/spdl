@@ -101,16 +101,16 @@ std::unique_ptr<Converter> get_converter(
       return std::unique_ptr<Converter>(new NV12Passthrough{stream, tracker});
     }
     auto pix_fmt_val = pix_fmt.value();
-    if (pix_fmt_val == "rgba") {
+    if (pix_fmt_val == "rgb") {
       return std::unique_ptr<Converter>(
-          new NV12ToRGB<nv12_to_planar_rgba>{stream, tracker, matrix_coeff});
+          new NV12ToRGB<nv12_to_planar_rgb>{stream, tracker, matrix_coeff});
     }
-    if (pix_fmt_val == "bgra") {
+    if (pix_fmt_val == "bgr") {
       return std::unique_ptr<Converter>(
-          new NV12ToRGB<nv12_to_planar_bgra>{stream, tracker, matrix_coeff});
+          new NV12ToRGB<nv12_to_planar_bgr>{stream, tracker, matrix_coeff});
     }
     SPDL_FAIL(fmt::format(
-        "Unsupported pixel format: {}. Supported formats are 'rgba', 'bgra'.",
+        "Unsupported pixel format: {}. Supported formats are 'rgb', 'bgr'.",
         pix_fmt_val));
   }
 

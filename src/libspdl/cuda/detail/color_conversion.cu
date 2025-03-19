@@ -73,21 +73,20 @@ __device__ static uint8_t clamp8(float x) {
   return x < 0.0f ? 0 : (x > 255.0f ? 255 : static_cast<uint8_t>(x));
 }
 
-template <class COLOR32>
-__device__ inline COLOR32
+template <class COLOR24>
+__device__ inline COLOR24
 yuv_to_rgb_pixel(uint8_t y, uint8_t u, uint8_t v, float mat[3][3]) {
   const int low = 16, mid = 128;
   float fy = (int)y - low, fu = (int)u - mid, fv = (int)v - mid;
-  COLOR32 rgb{};
+  COLOR24 rgb{};
   rgb.c.r = clamp8(mat[0][0] * fy + mat[0][1] * fu + mat[0][2] * fv);
   rgb.c.g = clamp8(mat[1][0] * fy + mat[1][1] * fu + mat[1][2] * fv);
   rgb.c.b = clamp8(mat[2][0] * fy + mat[2][1] * fu + mat[2][2] * fv);
-  rgb.c.a = 255;
   return rgb;
 }
 
-template <class COLOR32>
-__global__ static void nv12_to_planar_rgb32(
+template <class COLOR24>
+__global__ static void nv12_to_planar_rgb24(
     uint8_t* yuv_ptr,
     int yuv_pitch,
     uint8_t* rgb_ptr,
@@ -114,13 +113,13 @@ __global__ static void nv12_to_planar_rgb32(
   }
   auto mat = yuv2rgb[matrix_coefficients - 1];
 
-  auto rgb00 = yuv_to_rgb_pixel<COLOR32>(*y00, *u, *v, mat),
-       rgb01 = yuv_to_rgb_pixel<COLOR32>(*y01, *u, *v, mat),
-       rgb10 = yuv_to_rgb_pixel<COLOR32>(*y10, *u, *v, mat),
-       rgb11 = yuv_to_rgb_pixel<COLOR32>(*y11, *u, *v, mat);
+  auto rgb00 = yuv_to_rgb_pixel<COLOR24>(*y00, *u, *v, mat),
+       rgb01 = yuv_to_rgb_pixel<COLOR24>(*y01, *u, *v, mat),
+       rgb10 = yuv_to_rgb_pixel<COLOR24>(*y10, *u, *v, mat),
+       rgb11 = yuv_to_rgb_pixel<COLOR24>(*y11, *u, *v, mat);
 
   rgb_ptr += x + y * rgb_pitch;
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 3; ++i) {
     *rgb_ptr = rgb00.v[i];
     *(rgb_ptr + 1) = rgb01.v[i];
     *(rgb_ptr + rgb_pitch) = rgb10.v[i];
@@ -129,22 +128,22 @@ __global__ static void nv12_to_planar_rgb32(
   }
 }
 
-union BGRA32 {
-  uint8_t v[4];
+union BGR24 {
+  uint8_t v[3];
   struct {
-    uint8_t b, g, r, a;
+    uint8_t b, g, r;
   } c;
 };
 
-union RGBA32 {
-  uint8_t v[4];
+union RGB24 {
+  uint8_t v[3];
   struct {
-    uint8_t r, g, b, a;
+    uint8_t r, g, b;
   } c;
 };
 } // namespace
 
-void nv12_to_planar_rgba(
+void nv12_to_planar_rgb(
     CUstream stream,
     uint8_t* src,
     int src_pitch,
@@ -155,15 +154,15 @@ void nv12_to_planar_rgba(
     int matrix_coefficients) {
   auto dimGrid = dim3((width + 63) / 64, (height + 3) / 4);
   auto dimBlock = dim3(32, 2);
-  TRACE_EVENT("nvdec", "nv12_to_planar_rgba");
-  nv12_to_planar_rgb32<RGBA32><<<dimGrid, dimBlock, 0, stream>>>(
+  TRACE_EVENT("nvdec", "nv12_to_planar_rgb");
+  nv12_to_planar_rgb24<RGB24><<<dimGrid, dimBlock, 0, stream>>>(
       src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
   CHECK_CUDA(
       cudaPeekAtLastError(),
-      "Failed to launch kernel nv12_to_planar_rgb32<RGBA32>");
+      "Failed to launch kernel nv12_to_planar_rgb<RGB24>");
 }
 
-void nv12_to_planar_bgra(
+void nv12_to_planar_bgr(
     CUstream stream,
     uint8_t* src,
     int src_pitch,
@@ -175,10 +174,10 @@ void nv12_to_planar_bgra(
   auto dimGrid = dim3((width + 63) / 64, (height + 3) / 4);
   auto dimBlock = dim3(32, 2);
   TRACE_EVENT("nvdec", "nv12_to_planar_bgra");
-  nv12_to_planar_rgb32<BGRA32><<<dimGrid, dimBlock, 0, stream>>>(
+  nv12_to_planar_rgb24<BGR24><<<dimGrid, dimBlock, 0, stream>>>(
       src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
   CHECK_CUDA(
       cudaPeekAtLastError(),
-      "Failed to launch kernel nv12_to_planar_rgb32<BGRA32>");
+      "Failed to launch kernel nv12_to_planar_bgr<BGR24>");
 }
 } // namespace spdl::cuda::detail

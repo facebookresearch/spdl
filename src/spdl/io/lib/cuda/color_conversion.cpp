@@ -22,13 +22,13 @@ namespace nb = nanobind;
 namespace spdl::cuda {
 void register_color_conversion(nb::module_& m) {
   m.def(
-      "nv12_to_planar_rgba",
+      "nv12_to_planar_rgb",
 #ifndef SPDL_USE_CUDA
       [](nb::object, const CUDAConfig&, int) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else
-      &nv12_to_planar_rgba,
+      &nv12_to_planar_rgb,
 #endif
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("buffers"),
@@ -36,13 +36,13 @@ void register_color_conversion(nb::module_& m) {
       nb::arg("device_config"),
       nb::arg("matrix_coeff") = 1);
   m.def(
-      "nv12_to_planar_bgra",
+      "nv12_to_planar_bgr",
 #ifndef SPDL_USE_CUDA
       [](nb::object, const CUDAConfig&, int) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else
-      &nv12_to_planar_bgra,
+      &nv12_to_planar_bgr,
 #endif
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("buffers"),

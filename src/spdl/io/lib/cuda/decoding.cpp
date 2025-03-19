@@ -77,7 +77,7 @@ void register_decoding(nb::module_& m) {
           nb::arg("crop_bottom") = 0,
           nb::arg("width") = -1,
           nb::arg("height") = -1,
-          nb::arg("pix_fmt").none() = "rgba",
+          nb::arg("pix_fmt").none() = "rgb",
           nb::arg("flush") = false);
 #endif
   ;
