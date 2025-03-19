@@ -14,7 +14,7 @@
 
 namespace spdl::cuda {
 CUDABufferTracker::CUDABufferTracker(
-    std::shared_ptr<CUDAStorage>& s,
+    CUDAStoragePtr& s,
     std::vector<size_t>& shape)
     : storage(s) {
   switch (shape.size()) {

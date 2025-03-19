@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 #ifdef SPDL_USE_CUDA
 #include <cuda.h>
@@ -46,5 +47,7 @@ class CUDAStorage : public core::Storage {
   ~CUDAStorage() override;
 #endif
 };
+
+using CUDAStoragePtr = std::shared_ptr<CUDAStorage>;
 
 } // namespace spdl::cuda

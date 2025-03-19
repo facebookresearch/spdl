@@ -25,14 +25,14 @@ namespace spdl::cuda {
 /// Contiguous array data on a CUDA device.
 struct CUDABuffer : core::Buffer {
 #ifdef SPDL_USE_CUDA
-  std::shared_ptr<CUDAStorage> storage;
+  CUDAStoragePtr storage;
   int device_index;
 
   CUDABuffer(
       std::vector<size_t> shape,
       core::ElemClass elem_class,
       size_t depth,
-      std::shared_ptr<CUDAStorage> storage,
+      CUDAStoragePtr storage,
       int device_index);
 
   void* data() override;
