@@ -20,7 +20,7 @@ using cuda_allocator = std::pair<cuda_allocator_fn, cuda_deleter_fn>;
 
 struct CUDAConfig {
   int device_index;
-  uintptr_t stream = 0;
+  uintptr_t stream = 0x2; // Per-thread-default stream
   std::optional<cuda_allocator> allocator;
 };
 

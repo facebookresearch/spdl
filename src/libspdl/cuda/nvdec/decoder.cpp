@@ -13,6 +13,7 @@
 
 #ifdef SPDL_USE_NVCODEC
 #include "libspdl/cuda/nvdec/detail/decoder.h"
+#include "libspdl/cuda/nvdec/detail/decoder_core.h"
 #endif
 
 #include <fmt/core.h>
@@ -98,5 +99,47 @@ CUDABufferPtr NvDecDecoder::decode(
   return decoder->decode(
       std::move(packets), cuda_config, crop, width, height, pix_fmt, flush);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// NvDecoder2
+////////////////////////////////////////////////////////////////////////////////
+
+NvDecDecoder2::NvDecDecoder2() : core(new detail::NvDecDecoderCore2()) {}
+
+NvDecDecoder2::~NvDecDecoder2() {
+  if (core) {
+    delete core;
+  }
+}
+
+void NvDecDecoder2::reset() {
+  core->reset();
+}
+
+void NvDecDecoder2::init(
+    // device config
+    const CUDAConfig& cuda_config,
+    // Source codec information
+    const spdl::core::VideoCodec& codec,
+    // Post-decoding processing params
+    CropArea crop,
+    int target_width,
+    int target_height) {
+  core->init(cuda_config, codec, crop, target_width, target_height);
+}
+
+std::vector<CUDABuffer> NvDecDecoder2::decode(
+    spdl::core::VideoPacketsPtr packets) {
+  std::vector<CUDABuffer> ret;
+  core->decode_packets(packets.get(), &ret);
+  return ret;
+}
+
+std::vector<CUDABuffer> NvDecDecoder2::flush() {
+  std::vector<CUDABuffer> ret;
+  core->flush(&ret);
+  return ret;
+}
+
 #endif
 } // namespace spdl::cuda
