@@ -11,7 +11,7 @@
 #include <libspdl/cuda/color_conversion.h>
 
 #include "libspdl/core/detail/logging.h"
-#include "libspdl/cuda/nvdec/detail/color_conversion.h"
+#include "libspdl/cuda/detail/color_conversion.h"
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>

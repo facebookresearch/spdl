@@ -10,7 +10,7 @@
 
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
-#include "libspdl/cuda/nvdec/detail/color_conversion.h"
+#include "libspdl/cuda/detail/color_conversion.h"
 #include "libspdl/cuda/nvdec/detail/utils.h"
 #include "libspdl/cuda/utils.h"
 
