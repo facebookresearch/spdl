@@ -30,6 +30,12 @@ set(srcs
   transfer.cpp
 )
 
+if (SPDL_USE_CUDA)
+  list(APPEND srcs
+    color_conversion.cpp
+  )
+endif()
+
 if (SPDL_USE_NVCODEC)
   list(APPEND srcs
     nvdec/decoder.cpp

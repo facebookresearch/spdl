@@ -22,6 +22,7 @@ void register_storage(nb::module_&);
 void register_transfer(nb::module_&);
 void register_encoding(nb::module_&);
 void register_utils(nb::module_&);
+void register_color_conversion(nb::module_&);
 } // namespace spdl::cuda
 
 namespace {
@@ -33,5 +34,6 @@ NB_MODULE(SPDL_CUDA_EXT_NAME, m) {
   spdl::cuda::register_transfer(m);
   spdl::cuda::register_encoding(m);
   spdl::cuda::register_utils(m);
+  spdl::cuda::register_color_conversion(m);
 }
 } // namespace
