@@ -23,6 +23,7 @@ set(src
   storage.cpp
   transfer.cpp
   types.cpp
+  utils.cpp
 )
 
 if (NOT SPDL_IS_GIL_ENABLED)
