@@ -7,12 +7,10 @@
  */
 
 #include <libspdl/core/storage.h>
-#include <libspdl/cuda/buffer.h>
 #include <libspdl/cuda/storage.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
-#include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
 

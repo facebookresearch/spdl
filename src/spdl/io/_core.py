@@ -370,7 +370,8 @@ def decode_packets(packets, filter_desc=_FILTER_DESC_DEFAULT, **kwargs):
 def decode_packets_nvdec(
     packets: VideoPackets,
     *,
-    device_config: CUDAConfig | None = None,
+    device_config: CUDAConfig,
+    pix_fmt: str = "rgb",
     **kwargs,
 ) -> CUDABuffer:
     """**[Experimental]** Decode packets with NVDEC.
@@ -401,16 +402,6 @@ def decode_packets_nvdec(
     Returns:
         A CUDABuffer object.
     """
-    if device_config is None:
-        if "cuda_config" not in kwargs:
-            raise ValueError("device_config must be provided.")
-        if "cuda_config" in kwargs:
-            warnings.warn(
-                "`cuda_config` argument has been renamed to `device_config`.",
-                stacklevel=2,
-            )
-            device_config = kwargs["cuda_config"]
-
     # Note
     # FFmpeg's implementation applies BSF to all H264/HEVC formats,
     #
@@ -429,7 +420,21 @@ def decode_packets_nvdec(
             pass
 
     decoder = NvDecDecoder()
-    return decoder.decode(packets, device_config=device_config, flush=True, **kwargs)
+    decoder.init(device_config, packets.codec, **kwargs)
+    buffer = decoder.decode(packets)
+    buffer += decoder.flush()
+
+    match pix_fmt:
+        case "rgb":
+            buffer = _libspdl_cuda.nv12_to_planar_rgb(
+                buffer, device_config=device_config
+            )
+        case "bgr":
+            buffer = _libspdl_cuda.nv12_to_planar_bgr(
+                buffer, device_config=device_config
+            )
+
+    return buffer
 
 
 def decode_image_nvjpeg(
@@ -506,42 +511,48 @@ def streaming_decode_packets(
         yield frames
 
 
-class _DecoderCache:
-    def __init__(self, decoder) -> None:
-        self.decoder = decoder
-        self.decoding = False
-
-
 _THREAD_LOCAL = threading.local()
 
 
-def _get_decoder_cache() -> _DecoderCache:
-    if not hasattr(_THREAD_LOCAL, "_cache"):
-        _THREAD_LOCAL._cache = _DecoderCache(_libspdl_cuda._nvdec_decoder())
-    return _THREAD_LOCAL._cache
+def _get_decoder():
+    if not hasattr(_THREAD_LOCAL, "_decoder"):
+        _THREAD_LOCAL._decoder = _libspdl_cuda._nvdec_decoder()
+    return _THREAD_LOCAL._decoder
 
 
 class NvDecDecoder:
-    def __init__(self) -> None:
-        self._cache: _DecoderCache = _get_decoder_cache()
-        if self._cache.decoding:
-            self._cache.decoder.reset()
-            self._cache.decoding = False
-        self._cache.decoder.set_init_flag()
+    def __init__(self, *, use_cache: bool = True) -> None:
+        self._decoder = _get_decoder() if use_cache else _libspdl_cuda._nvdec_decoder()
+        self._decoder.reset()
 
-    def decode(
+    def init(
         self,
-        packets: VideoPackets,
-        device_config: CUDAConfig | None = None,
-        flush: bool = False,
-        **kwargs,
-    ) -> VideoFrames:
-        self._cache.decoding = True
-        ret = self._cache.decoder.decode(
-            packets, device_config=device_config, flush=flush, **kwargs
+        cuda_config: CUDAConfig,
+        codec: VideoCodec,
+        *,
+        crop_left: int = 0,
+        crop_top: int = 0,
+        crop_right: int = 0,
+        crop_bottom: int = 0,
+        width: int = -1,
+        height: int = -1,
+    ) -> None:
+        self._decoder.init(
+            cuda_config,
+            codec,
+            crop_left=crop_left,
+            crop_top=crop_top,
+            crop_right=crop_right,
+            crop_bottom=crop_bottom,
+            scale_width=width,
+            scale_height=height,
         )
-        self._cache.decoding = False
-        return ret
+
+    def decode(self, packets: VideoPackets) -> list[CUDABuffer]:
+        return self._decoder.decode(packets)
+
+    def flush(self) -> list[CUDABuffer]:
+        return self._decoder.flush()
 
 
 ################################################################################

@@ -8,18 +8,14 @@
 
 #pragma once
 
-#include <libspdl/core/buffer.h>
 #include <libspdl/core/packets.h>
+#include <libspdl/cuda/buffer.h>
 
-#include "libspdl/cuda/nvdec/detail/buffer.h"
-#include "libspdl/cuda/nvdec/detail/converter.h"
-#include "libspdl/cuda/nvdec/detail/utils.h"
 #include "libspdl/cuda/nvdec/detail/wrapper.h"
 
 #include <cuda.h>
 #include <nvcuvid.h>
 
-#include <optional>
 #include <vector>
 
 namespace spdl::cuda::detail {
@@ -39,49 +35,71 @@ namespace spdl::cuda::detail {
 // config, then the decoder object is re-created.
 class NvDecDecoderCore {
   //---------------------------------------------------------------------------
-  // Objects used to check if decoder configuration needs to be updated.
-  // The device associated with the CUcontext.
-  CUdevice device = -1;
+  // Device config
+  //---------------------------------------------------------------------------
+  // used to check if decoder configuration needs to be updated.
+  // or allocating new memory
+  CUDAConfig device_config{
+      .device_index = -1
+      // Initialize with invalid index, otherwise when `init` is called, it
+      // cannot tell whether it's genuinely initialized.
+  };
+  //---------------------------------------------------------------------------
+
+  //---------------------------------------------------------------------------
+  // Codec config
+  //---------------------------------------------------------------------------
   // Codec associated with the parser
   cudaVideoCodec codec{};
   // Params from previous decoder creation.
   CUVIDDECODECREATEINFO decoder_param{};
   //---------------------------------------------------------------------------
 
+  //---------------------------------------------------------------------------
   // Global objects (handle to device)
+  //---------------------------------------------------------------------------
   CUcontext cu_ctx;
   CUvideoctxlock lock;
+  //---------------------------------------------------------------------------
 
   // Cache the result of `cuvidGetDecoderCaps` as
   // `cuvidGetDecoderCaps` is expensive.
   std::vector<CUVIDDECODECAPS> cap_cache{};
 
   // Core decoder objects
-  CUstream stream = CU_STREAM_PER_THREAD;
   CUvideoparserPtr parser{nullptr};
   CUvideodecoderPtr decoder{nullptr};
 
-  // Where the output frames will be stored.
- public:
-  CUDABufferTracker* tracker = nullptr;
-
  private:
-  std::unique_ptr<Converter> converter{nullptr};
+  int src_width = 0;
+  int src_height = 0;
 
-  // Timebase of the incomding packets/decoded frames
-  spdl::core::Rational timebase;
-  double start_time, end_time;
-
-  // Resize option
+  //---------------------------------------------------------------------------
+  // Post processing params
+  //---------------------------------------------------------------------------
+  // Resize option Negative values mean not resizing.
   int target_width = -1;
   int target_height = -1;
   // Cropping options
   CropArea crop;
-  // Color conversion
-  std::optional<std::string> pix_fmt;
+  //---------------------------------------------------------------------------
 
-  // Used to disable all the callbacks just in case.
+  // Used to disable all the callbacks during reset.
   bool cb_disabled = false;
+
+  //---------------------------------------------------------------------------
+  // Attributes used for decoding, only during the decoding.
+  // Should be set at the beginning of decoding, and should be only accessed
+  // from callbacks.
+  //---------------------------------------------------------------------------
+  // Storage for the output frames
+  // Used as a reference point for the callback during the decoding.
+  std::vector<CUDABuffer>* frame_buffer;
+  // The user-specified timestamp. Frames outside of this will be discarded.
+  double start_time, end_time;
+  // Time base of the PTS
+  spdl::core::Rational timebase;
+  //---------------------------------------------------------------------------
 
  public:
   NvDecDecoderCore() = default;
@@ -91,26 +109,33 @@ class NvDecDecoderCore {
   NvDecDecoderCore& operator=(NvDecDecoderCore&&) noexcept = delete;
   ~NvDecDecoderCore() = default;
 
+  // Reset the state of decoder
+  void reset();
+
   // Needs to be called before the start of new decoding stream.
   void init(
-      CUdevice device_index,
-      cudaVideoCodec codec,
-      spdl::core::Rational timebase,
-      const std::optional<std::tuple<double, double>>& timestamp,
-      CropArea crop,
+      const CUDAConfig& device_config,
+      const spdl::core::VideoCodec& codec,
+      const CropArea& crop,
       int target_width = -1,
-      int target_height = -1,
-      const std::optional<std::string>& pix_fmt = std::nullopt);
+      int target_height = -1);
 
-  void decode(
+ private:
+  // Decode packets using `cuvidParseVideoData`. It synchronously triggers
+  // callbacks.
+  void decode_packet(
       const uint8_t* data,
       const uint size,
       int64_t pts,
       unsigned long flags);
 
-  void flush();
+ public:
+  void decode_packets(
+      spdl::core::VideoPackets* packets,
+      std::vector<CUDABuffer>* buffer);
 
-  void reset();
+  // Same as `decode` but notify the decode of the end of the stream.
+  void flush(std::vector<CUDABuffer>* buffer);
 
   ////////////////////////////////////////////////////////////////////////////
   // Callbacks required by CUVID API
@@ -120,42 +145,6 @@ class NvDecDecoderCore {
   int handle_display_picture(CUVIDPARSERDISPINFO*);
   int handle_operating_point(CUVIDOPERATINGPOINTINFO*);
   int handle_sei_msg(CUVIDSEIMESSAGEINFO*);
-};
-
-// Wraps NvDecDecoderCore to make the interface (slightly) simpler
-class NvDecDecoderInternal {
-  NvDecDecoderCore core;
-
- public:
-  void reset();
-
-  void init(
-      int device_index,
-      spdl::core::CodecID codec_id,
-      spdl::core::Rational time_base,
-      const std::optional<std::tuple<double, double>>& timestamp,
-      const CropArea crop,
-      int target_width,
-      int target_height,
-      const std::optional<std::string>& pix_fmt);
-
- private:
-  template <spdl::core::MediaType media_type>
-  void decode_packets(
-      spdl::core::PacketsPtr<media_type> packets,
-      CUDABufferTracker& tracker,
-      bool flush);
-
- public:
-  template <spdl::core::MediaType media_type>
-  CUDABufferPtr decode(
-      spdl::core::PacketsPtr<media_type> packets,
-      const CUDAConfig& cuda_config,
-      const CropArea crop,
-      int target_width,
-      int target_height,
-      const std::optional<std::string>& pix_fmt,
-      bool flush);
 };
 
 } // namespace spdl::cuda::detail

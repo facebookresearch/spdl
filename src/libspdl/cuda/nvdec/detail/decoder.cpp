@@ -8,14 +8,14 @@
 
 #include <libspdl/core/codec.h>
 
-#include "libspdl/cuda/nvdec/detail/decoder.h"
-
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
+
 #include "libspdl/cuda/detail/utils.h"
-#include "libspdl/cuda/nvdec/detail/converter.h"
+#include "libspdl/cuda/nvdec/detail/decoder.h"
 #include "libspdl/cuda/nvdec/detail/utils.h"
 
+#include <fmt/core.h>
 #include <glog/logging.h>
 
 #include <sys/types.h>
@@ -147,10 +147,6 @@ inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
     }
   }
 }
-
-std::tuple<double, double> NO_WINDOW{
-    -std::numeric_limits<double>::infinity(),
-    std::numeric_limits<double>::infinity()};
 } // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -158,14 +154,11 @@ std::tuple<double, double> NO_WINDOW{
 ////////////////////////////////////////////////////////////////////////////////
 
 void NvDecDecoderCore::init(
-    CUdevice device_index_,
-    cudaVideoCodec codec_,
-    core::Rational timebase_,
-    const std::optional<std::tuple<double, double>>& timestamp_,
-    CropArea crop_,
+    const CUDAConfig& device_config_,
+    const spdl::core::VideoCodec& codec_,
+    const CropArea& crop_,
     int tgt_w,
-    int tgt_h,
-    const std::optional<std::string>& pix_fmt_) {
+    int tgt_h) {
   if (crop_.left < 0) {
     SPDL_FAIL(
         fmt::format("crop_left must be non-negative. Found: {}", crop_.left));
@@ -188,34 +181,31 @@ void NvDecDecoderCore::init(
   if (tgt_h > 0 && tgt_h % 2) {
     SPDL_FAIL(fmt::format("target_height must be positive. Found: {}", tgt_h));
   }
-  if (device != device_index_) {
-    device = device_index_;
-    cu_ctx = get_cucontext(device);
+  if (device_config.device_index != device_config_.device_index) {
+    device_config = device_config_;
+    cu_ctx = get_cucontext(device_config.device_index);
     lock = get_lock(cu_ctx);
     CHECK_CU(cuCtxSetCurrent(cu_ctx), "Failed to set current context.");
 
     parser = nullptr;
     decoder = nullptr; // will be re-initialized in the callback
   }
-  if (timebase_.num <= 0 || timebase_.den <= 0) {
-    SPDL_FAIL_INTERNAL(fmt::format(
-        "Invalid time base was found: {}/{}", timebase_.num, timebase_.den));
-  }
-  if (!parser || codec != codec_) {
+
+  auto cdc = convert_codec_id(codec_.get_codec_id());
+  if (!parser || codec != cdc) {
     VLOG(9) << "initializing parser";
-    codec = codec_;
+    codec = cdc;
     parser = get_parser(this, codec);
     decoder = nullptr;
     decoder_param.ulMaxHeight = 720;
     decoder_param.ulMaxWidth = 1280;
   }
-  timebase = timebase_;
-  std::tie(start_time, end_time) = timestamp_ ? *timestamp_ : NO_WINDOW;
 
+  src_width = codec_.get_width();
+  src_height = codec_.get_height();
   crop = crop_;
   target_width = tgt_w;
   target_height = tgt_h;
-  pix_fmt = pix_fmt_;
 }
 
 int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
@@ -256,6 +246,12 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   CUVIDDECODECAPS caps = check_capacity(video_fmt, cap_cache);
   auto output_fmt = get_output_sufrace_format(video_fmt, &caps);
 
+  if (output_fmt != cudaVideoSurfaceFormat_NV12) {
+    SPDL_FAIL(fmt::format(
+        "Only NV12 output is supported. Found: {}",
+        get_surface_format_name(output_fmt)));
+  }
+
   auto max_width = MAX(video_fmt->coded_width, decoder_param.ulMaxWidth);
   auto max_height = MAX(video_fmt->coded_height, decoder_param.ulMaxHeight);
 
@@ -295,12 +291,6 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   }();
   decoder_param = new_decoder_param;
 
-  converter = get_converter(
-      stream,
-      tracker,
-      &decoder_param,
-      video_fmt->video_signal_description.matrix_coefficients,
-      pix_fmt);
   return ret;
 }
 
@@ -364,6 +354,7 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   VLOG(9) << fmt::format(
       "{} x {}", decoder_param.ulTargetWidth, decoder_param.ulTargetHeight);
 
+  CUstream stream = (CUstream)device_config.stream;
   warn_if_error(decoder.get(), disp_info->picture_index);
   CUVIDPROCPARAMS proc_params{
       .progressive_frame = disp_info->progressive_frame,
@@ -376,11 +367,50 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   MapGuard mapping(decoder.get(), &proc_params, disp_info->picture_index);
 
   // Copy the surface to user-owning buffer
-  converter->convert((uint8_t*)mapping.frame, mapping.pitch);
-  tracker->i += 1;
+  auto width = decoder_param.ulTargetWidth;
+  auto height = decoder_param.ulTargetHeight;
 
-  TRACE_EVENT("nvdec", "cuStreamSynchronize");
+  if (decoder_param.OutputFormat != cudaVideoSurfaceFormat_NV12) {
+    SPDL_FAIL(fmt::format(
+        "Only NV12 is supported. Found: {}",
+        get_surface_format_name(decoder_param.OutputFormat)));
+  }
+  auto h2 = height + height / 2;
+  auto frame = std::make_shared<CUDAStorage>(width * h2, device_config);
+
+  auto cfg = CUDA_MEMCPY2D{
+      .srcXInBytes = 0,
+      .srcY = 0,
+      .srcMemoryType = CU_MEMORYTYPE_DEVICE,
+      .srcHost = nullptr,
+      .srcDevice = (CUdeviceptr)mapping.frame,
+      .srcArray = nullptr,
+      .srcPitch = mapping.pitch,
+
+      .dstXInBytes = 0,
+      .dstY = 0,
+      .dstMemoryType = CU_MEMORYTYPE_DEVICE,
+      .dstHost = nullptr,
+      .dstDevice = (CUdeviceptr)(frame->data()),
+      .dstArray = nullptr,
+      .dstPitch = width,
+
+      .WidthInBytes = width,
+      .Height = h2,
+  };
+  TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
+  CHECK_CU(
+      cuMemcpy2DAsync(&cfg, stream),
+      "Failed to copy Y plane from decoder output surface.");
   CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
+
+  frame_buffer->emplace_back(CUDABuffer{
+      {h2, width},
+      core::ElemClass::UInt,
+      sizeof(uint8_t),
+      frame,
+      device_config.device_index});
+
   return 1;
 }
 
@@ -417,7 +447,7 @@ int NvDecDecoderCore::handle_sei_msg(CUVIDSEIMESSAGEINFO* msg_info) {
   return 0;
 }
 
-void NvDecDecoderCore::decode(
+void NvDecDecoderCore::decode_packet(
     const uint8_t* data,
     const uint size,
     int64_t pts,
@@ -433,98 +463,30 @@ void NvDecDecoderCore::decode(
       "Failed to parse video data.");
 }
 
-void NvDecDecoderCore::flush() {
-  const unsigned char data{};
-  CUVIDSOURCEDATAPACKET packet{
-      .flags = CUVID_PKT_ENDOFSTREAM,
-      .payload_size = 0,
-      .payload = &data,
-      .timestamp = 0};
-  TRACE_EVENT("nvdec", "cuvidParseVideoData");
-  CHECK_CU(
-      cuvidParseVideoData(parser.get(), &packet),
-      "Failed to parse video data.");
-}
-
-void NvDecDecoderCore::reset() {
-  if (parser) {
-    cb_disabled = true;
-    flush();
-    cb_disabled = false;
+void NvDecDecoderCore::decode_packets(
+    spdl::core::VideoPackets* packets,
+    std::vector<CUDABuffer>* buffer) {
+  if (device_config.device_index < 0) {
+    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// NvDecDecoderInternal
-////////////////////////////////////////////////////////////////////////////////
-
-void NvDecDecoderInternal::reset() {
-  core.reset();
-}
-
-void NvDecDecoderInternal::init(
-    int device_index,
-    spdl::core::CodecID codec_id,
-    spdl::core::Rational time_base,
-    const std::optional<std::tuple<double, double>>& timestamp,
-    const CropArea crop,
-    int target_width,
-    int target_height,
-    const std::optional<std::string>& pix_fmt) {
-  core.init(
-      device_index,
-      convert_codec_id(codec_id),
-      time_base,
-      timestamp,
-      crop,
-      target_width,
-      target_height,
-      pix_fmt);
-}
-
-template <spdl::core::MediaType media_type>
-CUDABufferPtr get_buffer(
-    const CUDAConfig& cuda_config,
-    size_t num_packets,
-    spdl::core::Codec<media_type> codec,
-    const CropArea& crop,
-    int target_width,
-    int target_height,
-    const std::optional<std::string>& pix_fmt) {
-  size_t w = target_width > 0 ? target_width
-                              : (codec.get_width() - crop.left - crop.right);
-  size_t h = target_height > 0 ? target_height
-                               : (codec.get_height() - crop.top - crop.bottom);
-
-  size_t c;
-  auto pix_fmt_val = pix_fmt.value_or("nv12");
-  if (pix_fmt_val == "nv12") {
-    c = 1;
-    h = h + h / 2;
-  } else if (pix_fmt_val == "rgb" || pix_fmt_val == "bgr") {
-    c = 3;
-  } else {
-    SPDL_FAIL(fmt::format("Unsupported pixel format: {}", pix_fmt_val));
-  }
-  return cuda_buffer(std::vector<size_t>{num_packets, c, h, w}, cuda_config);
-}
-
-template <spdl::core::MediaType media_type>
-void NvDecDecoderInternal::decode_packets(
-    spdl::core::PacketsPtr<media_type> packets,
-    CUDABufferTracker& tracker,
-    bool flush) {
   TRACE_EVENT("nvdec", "decode_packets");
 
-  auto num_packets = packets->num_packets();
-  if (num_packets == 0) {
-    SPDL_FAIL("No packets to decode.");
+  // Init the temporary state used by the decoder callback during the decoding
+  this->frame_buffer = buffer;
+  if (auto& tb = packets->time_base; tb.num <= 0 || tb.den <= 0) {
+    SPDL_FAIL_INTERNAL(
+        fmt::format("Invalid time base was found: {}/{}", tb.num, tb.den));
+  }
+  this->timebase = packets->time_base;
+  if (packets->timestamp) {
+    std::tie(start_time, end_time) = *(packets->timestamp);
+  } else {
+    start_time = -std::numeric_limits<double>::infinity();
+    end_time = std::numeric_limits<double>::infinity();
   }
 
-  core.tracker = &tracker;
-
-  unsigned long flags = CUVID_PKT_TIMESTAMP;
   auto ite = packets->iter_packets();
+  unsigned long flags = CUVID_PKT_TIMESTAMP;
   switch (packets->get_codec().get_codec_id()) {
     case spdl::core::CodecID::MPEG4: {
       // TODO: Add special handling par
@@ -540,73 +502,26 @@ void NvDecDecoderInternal::decode_packets(
     default:;
   }
 
-#define _PTS(pts) \
-  (static_cast<double>(pts) * packets->time_base.num / packets->time_base.den)
-
   flags |= CUVID_PKT_ENDOFPICTURE;
   while (ite) {
     auto pkt = ite();
-    VLOG(9) << fmt::format(
-        " -- packet  PTS={:.3f} ({})", _PTS(pkt.pts), pkt.pts);
-    core.decode(pkt.data, pkt.size, pkt.pts, flags);
+    VLOG(9) << fmt::format("pkt.pts {}:", pkt.pts);
+    decode_packet(pkt.data, pkt.size, pkt.pts, flags);
   }
-  if (flush) {
-    core.flush();
-  }
-
-#undef _PKT
-#undef _PTS
-
-  VLOG(5) << fmt::format(
-      "Decoded {} frames from {} packets.", tracker.i, packets->num_packets());
 }
 
-template <spdl::core::MediaType media_type>
-CUDABufferPtr NvDecDecoderInternal::decode(
-    spdl::core::PacketsPtr<media_type> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea crop,
-    int target_width,
-    int target_height,
-    const std::optional<std::string>& pix_fmt,
-    bool flush) {
-  TRACE_EVENT("nvdec", "decode");
-
-  auto num_packets = packets->num_packets();
-
-  if (num_packets == 0) {
-    SPDL_FAIL("No packets to decode.");
-  }
-
-  auto buffer = detail::get_buffer(
-      cuda_config,
-      num_packets,
-      packets->get_codec(),
-      crop,
-      target_width,
-      target_height,
-      pix_fmt);
-  auto tracker = CUDABufferTracker{buffer->storage, buffer->shape};
-
-  decode_packets(std::move(packets), tracker, flush);
-
-  if constexpr (media_type == spdl::core::MediaType::Video) {
-    // We preallocated the buffer with the number of packets, but these packets
-    // could contain the frames outside of specified timestamps.
-    // So we update the shape with the actual number of frames.
-    buffer->shape[0] = tracker.i;
-  }
-
-  return std::move(buffer);
+void NvDecDecoderCore::flush(std::vector<CUDABuffer>* buffer) {
+  this->frame_buffer = buffer;
+  const unsigned char data{};
+  decode_packet(&data, 0, 0, CUVID_PKT_ENDOFSTREAM);
 }
 
-template CUDABufferPtr NvDecDecoderInternal::decode(
-    spdl::core::PacketsPtr<spdl::core::MediaType::Video> packets,
-    const CUDAConfig& cuda_config,
-    const CropArea crop,
-    int target_width,
-    int target_height,
-    const std::optional<std::string>& pix_fmt,
-    bool flush);
+void NvDecDecoderCore::reset() {
+  if (parser) {
+    cb_disabled = true;
+    flush(nullptr);
+    cb_disabled = false;
+  }
+}
 
 } // namespace spdl::cuda::detail
