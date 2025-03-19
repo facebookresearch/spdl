@@ -65,6 +65,7 @@ __all__ = [
     "demux_audio",
     "demux_video",
     "demux_image",
+    "apply_bsf",
     # DECODING
     "decode_packets",
     "decode_packets_nvdec",
@@ -286,6 +287,29 @@ def demux_image(src: str | bytes | UintArray | Tensor, **kwargs) -> ImagePackets
         return demuxer.demux_image()
 
 
+@overload
+def apply_bsf(packets: AudioPackets, bsf: str) -> AudioPackets: ...
+@overload
+def apply_bsf(packets: VideoPackets, bsf: str) -> VideoPackets: ...
+@overload
+def apply_bsf(packets: ImagePackets, bsf: str) -> ImagePackets: ...
+
+
+def apply_bsf(packets, bsf):
+    """Apply bit stream filter to packets.
+
+    Args:
+        packets: Packets (audio/video/image) object
+        bsf: A bitstream filter description.
+
+    .. seealso::
+
+       - https://ffmpeg.org/ffmpeg-bitstream-filters.html The list of available
+         bit stream filters.
+    """
+    return _libspdl.apply_bsf(packets, bsf)
+
+
 ################################################################################
 # Decoding
 ################################################################################
@@ -384,8 +408,24 @@ def decode_packets_nvdec(
             )
             device_config = kwargs["cuda_config"]
 
+    # Note
+    # FFmpeg's implementation applies BSF to all H264/HEVC formats,
+    #
+    # https://github.com/FFmpeg/FFmpeg/blob/5e2b0862eb1d408625232b37b7a2420403cd498f/libavcodec/cuviddec.c#L1185-L1191
+    #
+    # while NVidia SDK samples exclude those with the following substrings in
+    # long_name attribute
+    #
+    #  "QuickTime / MOV", "FLV (Flash Video)", "Matroska / WebM"
+    match packets.codec.name:
+        case "h264":
+            packets = apply_bsf(packets, "h264_mp4toannexb")
+        case "hevc":
+            packets = apply_bsf(packets, "hevc_mp4toannexb")
+        case _:
+            pass
+
     decoder = NvDecDecoder()
-    packets = _libspdl._apply_bsf(packets)
     return decoder.decode(packets, device_config=device_config, flush=True, **kwargs)
 
 

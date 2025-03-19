@@ -80,7 +80,7 @@ DemuxerPtr make_demuxer(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
 
-// Apply bitstream filter for NVDEC video decoding
-VideoPacketsPtr apply_bsf(VideoPacketsPtr packets);
+// Apply bitstream filter (originally for NVDEC video decoding)
+VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& bsf);
 
 } // namespace spdl::core
