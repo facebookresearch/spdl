@@ -17,7 +17,7 @@ CUDABuffer::CUDABuffer(
     std::vector<size_t> shape_,
     core::ElemClass elem_class_,
     size_t depth_,
-    std::shared_ptr<CUDAStorage> storage_,
+    CUDAStoragePtr storage_,
     int device_index_)
     : Buffer(std::move(shape_), elem_class_, depth_),
       storage(std::move(storage_)),
