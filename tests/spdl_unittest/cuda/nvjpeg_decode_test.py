@@ -14,7 +14,7 @@ import torch
 DEFAULT_CUDA = 0
 
 
-if not spdl.io.utils.is_nvjpeg_available():
+if not spdl.io.utils.built_with_nvjpeg():
     pytest.skip("SPDL is not compiled with NVJPEG support", allow_module_level=True)
 
 

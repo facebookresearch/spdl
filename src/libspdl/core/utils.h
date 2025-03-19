@@ -18,7 +18,7 @@
 
 namespace spdl::core {
 
-constexpr bool is_cuda_available() {
+constexpr bool built_with_cuda() {
   return
 #ifdef SPDL_USE_CUDA
       true
@@ -28,7 +28,7 @@ constexpr bool is_cuda_available() {
       ;
 }
 
-constexpr bool is_nvcodec_available() {
+constexpr bool built_with_nvcodec() {
   return
 #ifdef SPDL_USE_NVCODEC
       true
@@ -38,7 +38,7 @@ constexpr bool is_nvcodec_available() {
       ;
 }
 
-constexpr bool is_nvjpeg_available() {
+constexpr bool built_with_nvjpeg() {
   return
 #ifdef SPDL_USE_NVJPEG
       true

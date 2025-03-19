@@ -9,34 +9,34 @@
 from spdl.io.lib import _libspdl
 
 __all__ = [
-    "is_cuda_available",
-    "is_nvcodec_available",
-    "is_nvjpeg_available",
+    "built_with_cuda",
+    "built_with_nvcodec",
+    "built_with_nvjpeg",
 ]
 
 
-def is_cuda_available() -> bool:
+def built_with_cuda() -> bool:
     """Check if SPDL is compiled with CUDA support.
 
     Returns:
         True if SPDL is compiled with CUDA support.
     """
-    return _libspdl.is_cuda_available()
+    return _libspdl.built_with_cuda()
 
 
-def is_nvcodec_available() -> bool:
+def built_with_nvcodec() -> bool:
     """Check if SPDL is compiled with NVCODEC support.
 
     Returns:
         True if SPDL is compiled with NVCODEC support.
     """
-    return _libspdl.is_nvcodec_available()
+    return _libspdl.built_with_nvcodec()
 
 
-def is_nvjpeg_available() -> bool:
+def built_with_nvjpeg() -> bool:
     """Check if SPDL is compiled with NVJPEG support.
 
     Returns:
         True if SPDL is compiled with NVJPEG support.
     """
-    return _libspdl.is_nvjpeg_available()
+    return _libspdl.built_with_nvjpeg()

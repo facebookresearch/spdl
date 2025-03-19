@@ -11,7 +11,7 @@ import spdl.io
 import spdl.io.utils
 import torch
 
-if not spdl.io.utils.is_nvcodec_available():
+if not spdl.io.utils.built_with_nvcodec():
     pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
 
 

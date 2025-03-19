@@ -138,9 +138,9 @@ jobs:
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
 
           # Run test
-          python -c 'import spdl.io.utils;assert spdl.io.utils.is_cuda_available()'
+          python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_cuda()'
           if "${{ inputs.use-nvdec == 'nvdec' }}" ; then
-              python -c 'import spdl.io.utils;assert spdl.io.utils.is_nvcodec_available()'
+              python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_nvcodec()'
           fi
           pytest -v \
               tests/spdl_unittest/cuda/ \
