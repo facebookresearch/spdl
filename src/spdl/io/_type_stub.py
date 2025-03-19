@@ -187,6 +187,11 @@ class AudioPackets(Packets):
         """
         ...
 
+    @property
+    def codec(self) -> AudioCodec:
+        """The codec."""
+        ...
+
     def clone(self) -> AudioPackets:
         """Clone the packets, so that data can be decoded multiple times.
 
@@ -227,6 +232,11 @@ class VideoPackets(Packets):
         """The frame rate of the video in the form of ``(numerator, denominator)``."""
         ...
 
+    @property
+    def codec(self) -> VideoCodec:
+        """The codec."""
+        ...
+
     def clone(self) -> VideoPackets:
         """Clone the packets, so that data can be decoded multiple times.
 
@@ -262,6 +272,11 @@ class ImagePackets(Packets):
     @property
     def height(self) -> int:
         """The height of image."""
+        ...
+
+    @property
+    def codec(self) -> ImageCodec:
+        """The codec."""
         ...
 
     def clone(self) -> ImagePackets:
