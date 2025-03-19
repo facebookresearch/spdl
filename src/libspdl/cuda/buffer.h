@@ -36,6 +36,7 @@ struct CUDABuffer : core::Buffer {
       int device_index);
 
   void* data() override;
+  void* data() const;
 
   uintptr_t get_cuda_stream() const;
 

@@ -27,6 +27,10 @@ void* CUDABuffer::data() {
   return storage->data();
 }
 
+void* CUDABuffer::data() const {
+  return storage->data();
+}
+
 uintptr_t CUDABuffer::get_cuda_stream() const {
   return (uintptr_t)(((CUDAStorage*)(storage.get()))->stream);
 }
