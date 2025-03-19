@@ -55,6 +55,8 @@ std::string get_internal_err_str(
   throw spdl::core::InternalError(spdl::core::detail::get_internal_err_str( \
       msg, spdl::core::detail::source_location::current()))
 
+#include <glog/logging.h>
+
 #define SPDL_WARN(msg)                              \
   LOG(WARNING) << (spdl::core::detail::get_err_str( \
       msg, spdl::core::detail::source_location::current()))
