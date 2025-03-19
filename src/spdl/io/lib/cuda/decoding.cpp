@@ -93,6 +93,65 @@ void register_decoding(nb::module_& m) {
       },
       nb::call_guard<nb::gil_scoped_release>());
 
+  nb::class_<NvDecDecoder2>(m, "NvDecDecoder2")
+#ifdef SPDL_USE_NVCODEC
+      .def(
+          "reset",
+          &NvDecDecoder2::reset,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "init",
+          [](NvDecDecoder2& self,
+             CUDAConfig cuda_config,
+             spdl::core::VideoCodec codec,
+             int crop_left,
+             int crop_top,
+             int crop_right,
+             int crop_bottom,
+             int width,
+             int height) {
+            self.init(
+                std::move(cuda_config),
+                std::move(codec),
+                CropArea{
+                    static_cast<short>(crop_left),
+                    static_cast<short>(crop_top),
+                    static_cast<short>(crop_right),
+                    static_cast<short>(crop_bottom)},
+                width,
+                height);
+          },
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("device_config"),
+          nb::arg("codec"),
+          nb::arg("crop_left") = 0,
+          nb::arg("crop_top") = 0,
+          nb::arg("crop_right") = 0,
+          nb::arg("crop_bottom") = 0,
+          nb::arg("width") = -1,
+          nb::arg("height") = -1)
+      .def(
+          "decode",
+          &NvDecDecoder2::decode,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "flush",
+          &NvDecDecoder2::flush,
+          nb::call_guard<nb::gil_scoped_release>());
+#endif
+  ;
+
+  m.def(
+      "_nvdec_decoder2",
+      []() {
+#ifdef SPDL_USE_NVCODEC
+        return std::make_unique<NvDecDecoder2>();
+#else
+        throw std::runtime_error("SPDL is not built with NVDEC support.");
+#endif
+      },
+      nb::call_guard<nb::gil_scoped_release>());
+
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVJPEG
   ////////////////////////////////////////////////////////////////////////////////

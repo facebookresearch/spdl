@@ -8,9 +8,11 @@
 
 #pragma once
 
+#include <libspdl/cuda/buffer.h>
+#include <libspdl/cuda/storage.h>
+
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
-#include <libspdl/cuda/buffer.h>
 
 #include <optional>
 #include <string>
@@ -49,6 +51,60 @@ class NvDecDecoder {
       int height,
       const std::optional<std::string>& pix_fmt,
       bool flush);
+#endif
+};
+
+namespace detail {
+class NvDecDecoderCore2;
+} // namespace detail
+
+// Usage:
+// NvDecDecoder2 decoder{};
+// decoder.init(...)
+// for (auto packets : src) {
+//   frames = decoder.decode(std::move(packets));
+//   ...
+// }
+// frames = decoder.flush();
+//
+// If there was an error, then reset before
+// initializing it again.
+//
+// decoder.reset();
+// decoder.init();
+class NvDecDecoder2 {
+#ifdef SPDL_USE_NVCODEC
+  detail::NvDecDecoderCore2* core;
+
+ public:
+  NvDecDecoder2();
+  NvDecDecoder2(const NvDecDecoder2&) = delete;
+  NvDecDecoder2& operator=(const NvDecDecoder2&) = delete;
+  // Deleting the move constructor for now.
+  NvDecDecoder2(NvDecDecoder2&&) = delete;
+  NvDecDecoder2& operator=(NvDecDecoder2&&) = delete;
+
+  ~NvDecDecoder2();
+
+  void reset();
+
+  // Initialize the decoder object for a new stream of
+  // video packets
+  void init(
+      // device config
+      const CUDAConfig& cuda_config,
+      // Source codec information
+      const spdl::core::VideoCodec& codec,
+      // Post-decoding processing params
+      CropArea crop,
+      int target_width = -1,
+      int target_height = -1);
+
+  // decode one stream of video packets
+  std::vector<CUDABuffer> decode(spdl::core::VideoPacketsPtr packets);
+
+  // Call this method at the end of video stream.
+  std::vector<CUDABuffer> flush();
 #endif
 };
 
