@@ -178,28 +178,7 @@ DemuxerPtr make_demuxer(
 ////////////////////////////////////////////////////////////////////////////////
 // Bit Stream Filtering for NVDEC
 ////////////////////////////////////////////////////////////////////////////////
-VideoPacketsPtr apply_bsf(VideoPacketsPtr packets) {
-  // Note
-  // FFmpeg's implementation applies BSF to all H264/HEVC formats,
-  //
-  // https://github.com/FFmpeg/FFmpeg/blob/5e2b0862eb1d408625232b37b7a2420403cd498f/libavcodec/cuviddec.c#L1185-L1191
-  //
-  // while NVidia SDK samples exclude those with the following substrings in
-  // long_name attribute
-  //
-  //  "QuickTime / MOV", "FLV (Flash Video)", "Matroska / WebM"
-  const char* name;
-  switch (packets->codecpar->codec_id) {
-    case AV_CODEC_ID_H264:
-      name = "h264_mp4toannexb";
-      break;
-    case AV_CODEC_ID_HEVC:
-      name = "hevc_mp4toannexb";
-      break;
-    default:
-      return packets;
-  }
-
+VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
   TRACE_EVENT("demuxing", "apply_bsf");
   auto bsf = detail::BitStreamFilter{name, packets->codecpar};
 

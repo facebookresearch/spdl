@@ -58,6 +58,7 @@ from ._convert import (
     to_torch,
 )
 from ._core import (
+    apply_bsf,
     convert_array,
     convert_frames,
     decode_image_nvjpeg,
@@ -104,6 +105,7 @@ __all__ = [
     "AudioPackets",
     "VideoPackets",
     "ImagePackets",
+    "apply_bsf",
     # DECODING
     "decode_packets",
     "NvDecDecoder",
