@@ -12,6 +12,12 @@
 
 #include <fmt/core.h>
 
+// Make sure CUDA_API_PER_THREAD_DEFAULT_STREAM is defined by compiler
+// so that it is applied globally
+#ifndef CUDA_API_PER_THREAD_DEFAULT_STREAM
+#error CUDA_API_PER_THREAD_DEFAULT_STREAM must be defined.
+#endif
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 
