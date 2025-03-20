@@ -82,7 +82,7 @@ def test_nvdec_video_smoke_test(get_sample):
     tensor = spdl.io.to_torch(buffer)
     print(f"{tensor.shape=}, {tensor.dtype=}, {tensor.device=}")
     assert tensor.shape[0] == 1000
-    assert tensor.shape[1] == 4
+    assert tensor.shape[1] == 3
     assert tensor.shape[2] == 240
     assert tensor.shape[3] == 320
 
@@ -121,7 +121,7 @@ def test_nvdec_decode_h264_420p_basic(h264):
     # _save(v, "./base_v")
 
     assert array.dtype == torch.uint8
-    assert array.shape == (25, 4, h264.height, h264.width)
+    assert array.shape == (25, 3, h264.height, h264.width)
 
 
 # TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
@@ -155,7 +155,7 @@ def test_nvdec_decode_video_torch_allocator(h264):
         assert allocator_called
         assert not deleter_called
         assert array.dtype == torch.uint8
-        assert array.shape == (25, 4, h264.height, h264.width)
+        assert array.shape == (25, 3, h264.height, h264.width)
 
     _test()
 
@@ -201,7 +201,7 @@ def test_nvdec_decode_h264_420p_resize(h264):
     # _save(array, "./resize")
 
     assert array.dtype == torch.uint8
-    assert array.shape == (25, 4, height, width)
+    assert array.shape == (25, 3, height, width)
 
 
 def test_nvdec_decode_h264_420p_crop(h264):
@@ -210,7 +210,7 @@ def test_nvdec_decode_h264_420p_crop(h264):
     h = h264.height - top - bottom
     w = h264.width - left - right
 
-    rgba = _decode_video(
+    rgb = _decode_video(
         h264.path,
         timestamp=(0, 1.0),
         crop_top=top,
@@ -219,16 +219,16 @@ def test_nvdec_decode_h264_420p_crop(h264):
         crop_right=right,
     )
 
-    assert rgba.dtype == torch.uint8
-    assert rgba.shape == (25, 4, h, w)
+    assert rgb.dtype == torch.uint8
+    assert rgb.shape == (25, 3, h, w)
 
     rgba0 = _decode_video(
         h264.path,
         timestamp=(0, 1.0),
     )
 
-    for i in range(4):
-        assert torch.equal(rgba[:, i], rgba0[:, i, top : top + h, left : left + w])
+    for i in range(3):
+        assert torch.equal(rgb[:, i], rgba0[:, i, top : top + h, left : left + w])
 
 
 def test_nvdec_decode_crop_resize(h264):
@@ -249,7 +249,7 @@ def test_nvdec_decode_crop_resize(h264):
     )
 
     assert array.dtype == torch.uint8
-    assert array.shape == (25, 4, h, w)
+    assert array.shape == (25, 3, h, w)
 
 
 def _is_ffmpeg4():
@@ -275,10 +275,10 @@ def test_color_conversion_rgba(get_sample):
     height, width = 64, 32
     sample = get_sample(cmd, height=height, width=3 * width)
 
-    array = _decode_video(sample.path, pix_fmt="rgba")
+    array = _decode_video(sample.path, pix_fmt="rgb")
 
     assert array.dtype == torch.uint8
-    assert array.shape == (25, 4, sample.height, sample.width)
+    assert array.shape == (25, 3, sample.height, sample.width)
 
     # Red
     assert torch.all(array[:, 0, :, :width] == 255)

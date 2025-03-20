@@ -71,7 +71,7 @@ CUDABufferPtr nv12_to_rgb(
   }
   auto h0 = height / 3 * 2;
 
-  auto ret = cuda_buffer({frames.size(), 4, h0, width}, cfg);
+  auto ret = cuda_buffer({frames.size(), 3, h0, width}, cfg);
 
   auto* dst = (uint8_t*)ret->data();
   for (auto& frame : frames) {
@@ -83,26 +83,26 @@ CUDABufferPtr nv12_to_rgb(
        width,
        h0,
        matrix_coefficients);
-    dst += 4 * h0 * width;
+    dst += 3 * h0 * width;
   }
   return ret;
 }
 
 } // namespace
 
-CUDABufferPtr nv12_to_planar_rgba(
+CUDABufferPtr nv12_to_planar_rgb(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
     int matrix_coefficients) {
-  return nv12_to_rgb<detail::nv12_to_planar_rgba>(
+  return nv12_to_rgb<detail::nv12_to_planar_rgb>(
       frames, cfg, matrix_coefficients);
 }
 
-CUDABufferPtr nv12_to_planar_bgra(
+CUDABufferPtr nv12_to_planar_bgr(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
     int matrix_coefficients) {
-  return nv12_to_rgb<detail::nv12_to_planar_bgra>(
+  return nv12_to_rgb<detail::nv12_to_planar_bgr>(
       frames, cfg, matrix_coefficients);
 }
 }; // namespace spdl::cuda

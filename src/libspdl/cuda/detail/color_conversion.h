@@ -15,7 +15,7 @@ typedef CUstream_st* CUstream;
 
 namespace spdl::cuda::detail {
 
-void nv12_to_planar_rgba(
+void nv12_to_planar_rgb(
     CUstream stream,
     uint8_t* src,
     int src_pitch,
@@ -25,7 +25,7 @@ void nv12_to_planar_rgba(
     int height,
     int matrix_coefficients);
 
-void nv12_to_planar_bgra(
+void nv12_to_planar_bgr(
     CUstream stream,
     uint8_t* src,
     int src_pitch,

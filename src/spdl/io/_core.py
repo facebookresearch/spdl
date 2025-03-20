@@ -393,7 +393,7 @@ def decode_packets_nvdec(
             cropping.
 
         pix_fmt (str or `None`): *Optional:* Change the format of the pixel.
-            Supported value is ``"rgba"``. Default: ``"rgba"``.
+            Supported value is ``"rgb"`` and ``"bgr"``. Default: ``"rgb"``.
 
     Returns:
         A CUDABuffer object.
