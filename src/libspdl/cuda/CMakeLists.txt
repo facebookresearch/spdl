@@ -33,6 +33,7 @@ set(srcs
 if (SPDL_USE_CUDA)
   list(APPEND srcs
     color_conversion.cpp
+    detail/color_conversion.cu
   )
 endif()
 
@@ -41,7 +42,6 @@ if (SPDL_USE_NVCODEC)
     nvdec/decoder.cpp
     nvdec/detail/buffer.cpp
     nvdec/detail/converter.cpp
-    nvdec/detail/color_conversion.cu
     nvdec/detail/decoder.cpp
     nvdec/detail/utils.cpp
     nvdec/detail/wrapper.cpp

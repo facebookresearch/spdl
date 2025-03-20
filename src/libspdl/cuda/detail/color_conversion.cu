@@ -7,7 +7,7 @@
  */
 
 #include "libspdl/core/detail/tracing.h"
-#include "libspdl/cuda/nvdec/detail/color_conversion.h"
+#include "libspdl/cuda/detail/color_conversion.h"
 #include "libspdl/cuda/utils.h"
 
 #include <cstdint>
