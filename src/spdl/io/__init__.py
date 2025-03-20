@@ -69,6 +69,8 @@ from ._core import (
     demux_video,
     Demuxer,
     encode_image,
+    nv12_to_bgr,
+    nv12_to_rgb,
     NvDecDecoder,
     streaming_decode_packets,
     transfer_buffer,
@@ -129,6 +131,9 @@ __all__ = [
     # DATA TRANSFER
     "transfer_buffer",
     "transfer_buffer_cpu",
+    # COLORSPACE CONVERSION
+    "nv12_to_rgb",
+    "nv12_to_bgr",
     # CAST
     "to_numba",
     "to_numpy",

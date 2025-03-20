@@ -78,6 +78,9 @@ __all__ = [
     # DATA TRANSFER
     "transfer_buffer",
     "transfer_buffer_cpu",
+    # COLOR CONVERSION
+    "nv12_to_rgb",
+    "nv12_to_bgr",
     # ENCODING
     "encode_image",
 ]
@@ -647,6 +650,66 @@ def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
         Buffer data on CPU.
     """
     return _libspdl_cuda.transfer_buffer_cpu(buffer)
+
+
+################################################################################
+# Color conversion
+################################################################################
+def nv12_to_rgb(
+    buffers: list[CUDABuffer],
+    *,
+    device_config: CUDAConfig,
+    coeff: int = 1,
+) -> CUDABuffer:
+    """Given CUDA buffers of NV12 images, batch and convert them to (interleaved) RGB.
+
+    The pixel values are converted with the following formula;
+
+    .. code-block::
+
+       ┌ R ┐   ┌     ┐   ┌ Y - 16  ┐
+       │ G │ = │  M  │ * │ U - 128 │
+       └ B ┘   └     ┘   └ V - 128 ┘
+
+    The value of 3x3 matrix ``M`` can be changed with the argument ``coeff``.
+    By default, it uses BT709 conversion.
+
+    Args:
+        buffers: A list of buffers. The size of images must be same.
+            Since it's NV12 format, the expected input size is ``(H + H/2, W)``.
+        device_config: Secifies the target CUDA device, and stream to use.
+        coeff: Select the matrix coefficient used for color conversion.
+            The following values are supported.
+
+            - ``1``: BT709 (default)
+            - ``4``: FCC
+            - ``5``: BT470
+            - ``6``: BT601
+            - ``7``: SMPTE240M
+            - ``8``: YCgCo
+            - ``9``: BT2020
+            - ``10``: BT2020C
+
+            If other values are provided, they are silently mapped to ``1``.
+
+    Returns:
+        A CUDA buffer object with the shape ``(batch, height, width, color=3)``.
+    """
+    return _libspdl_cuda.nv12_to_planar_rgb(
+        buffers, device_config=device_config, matrix_coeff=coeff
+    )
+
+
+def nv12_to_bgr(
+    buffers: list[CUDABuffer],
+    *,
+    device_config: CUDAConfig,
+    coeff: int = 1,
+) -> CUDABuffer:
+    """Same as :py:func:`nv12_to_rgb`, but the order of the color channel is BGR."""
+    return _libspdl_cuda.nv12_to_planar_bgr(
+        buffers, device_config=device_config, matrix_coeff=coeff
+    )
 
 
 ################################################################################
