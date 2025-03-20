@@ -57,46 +57,43 @@ void validate_nvdec_params(
 }
 } // namespace
 
-NvDecDecoder::NvDecDecoder() : decoder(new detail::NvDecDecoderInternal()) {}
+NvDecDecoder::NvDecDecoder() : core(new detail::NvDecDecoderCore()) {}
 
 NvDecDecoder::~NvDecDecoder() {
-  if (decoder) {
-    delete decoder;
+  if (core) {
+    delete core;
   }
 }
 
 void NvDecDecoder::reset() {
-  decoder->reset();
+  core->reset();
 }
 
-void NvDecDecoder::set_init_flag() {
-  init = true;
-}
-
-CUDABufferPtr NvDecDecoder::decode(
-    spdl::core::VideoPacketsPtr&& packets,
+void NvDecDecoder::init(
+    // device config
     const CUDAConfig& cuda_config,
-    const CropArea& crop,
+    // Source codec information
+    const spdl::core::VideoCodec& codec,
+    // Post-decoding processing params
+    CropArea crop,
     int width,
-    int height,
-    const std::optional<std::string>& pix_fmt,
-    bool flush) {
+    int height) {
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
-
-  if (init) {
-    decoder->init(
-        cuda_config.device_index,
-        packets->get_codec().get_codec_id(),
-        packets->time_base,
-        packets->timestamp,
-        crop,
-        width,
-        height,
-        pix_fmt);
-    init = false;
-  }
-  return decoder->decode(
-      std::move(packets), cuda_config, crop, width, height, pix_fmt, flush);
+  core->init(cuda_config, codec, crop, width, height);
 }
+
+std::vector<CUDABuffer> NvDecDecoder::decode(
+    spdl::core::VideoPacketsPtr packets) {
+  std::vector<CUDABuffer> ret;
+  core->decode_packets(packets.get(), &ret);
+  return ret;
+}
+
+std::vector<CUDABuffer> NvDecDecoder::flush() {
+  std::vector<CUDABuffer> ret;
+  core->flush(&ret);
+  return ret;
+}
+
 #endif
 } // namespace spdl::cuda
