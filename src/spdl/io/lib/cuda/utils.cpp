@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <libspdl/cuda/utils.h>
+
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
@@ -15,6 +17,15 @@ namespace nb = nanobind;
 namespace spdl::cuda {
 
 void register_utils(nb::module_& m) {
+  m.def(
+      "init",
+      []() {
+#ifdef SPDL_USE_CUDA
+        init_cuda();
+#endif
+      },
+      nb::call_guard<nb::gil_scoped_release>());
+
   m.def(
       "built_with_cuda",
       []() {

@@ -160,7 +160,6 @@ CUDABufferPtr decode_image_nvjpeg(
     const std::string& pix_fmt) {
   auto fmt = get_nvjpeg_output_format(pix_fmt);
 
-  ensure_cuda_initialized();
   set_cuda_primary_context(cuda_config.device_index);
 
   auto [buffer, src_meta, decoded] = decode(data, fmt, cuda_config);
@@ -211,7 +210,6 @@ CUDABufferPtr decode_image_nvjpeg(
 
   auto fmt = get_nvjpeg_output_format(pix_fmt);
 
-  ensure_cuda_initialized();
   set_cuda_primary_context(cuda_config.device_index);
 
   auto [out_buffer, out_meta] =

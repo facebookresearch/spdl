@@ -471,7 +471,6 @@ void NvDecDecoderInternal::init(
     int target_width,
     int target_height,
     const std::optional<std::string>& pix_fmt) {
-  ensure_cuda_initialized();
   core.init(
       device_index,
       convert_codec_id(codec_id),
