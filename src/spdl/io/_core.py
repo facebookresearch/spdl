@@ -702,9 +702,7 @@ def _get_decoder():
     return _THREAD_LOCAL._decoder
 
 
-def nvdec_decoder(
-    use_cache: bool,
-) -> NvDecDecoder:
+def nvdec_decoder(use_cache: bool = True) -> NvDecDecoder:
     """Instantiate an :py:class:`NvDecDecoder` object.
 
 
