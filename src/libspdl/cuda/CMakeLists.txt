@@ -24,7 +24,6 @@ set(deps
   CUDA::cuda_driver
 )
 set(srcs
-  utils.cpp
   buffer.cpp
   storage.cpp
   transfer.cpp
@@ -34,6 +33,7 @@ if (SPDL_USE_CUDA)
   list(APPEND srcs
     color_conversion.cpp
     detail/color_conversion.cu
+    detail/utils.cpp
   )
 endif()
 
