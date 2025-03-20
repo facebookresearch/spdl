@@ -64,4 +64,7 @@ CUcontext get_cucontext(CUdevice device);
 // Set the current context to the primary context of the given device
 void set_cuda_primary_context(int device_index);
 
+// Initialize CUDA context
+void init_cuda();
+
 } // namespace spdl::cuda::detail

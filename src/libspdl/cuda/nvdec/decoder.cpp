@@ -81,6 +81,13 @@ void NvDecDecoder::init(
     int height) {
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
   detail::ensure_cuda_initialized();
+
+  CUcontext pctx = 0;
+  CHECK_CU(cuCtxGetCurrent(&pctx), "Failed to fetch the current CUDA context.");
+  if (!pctx) {
+    CHECK_CU(cuDevicePrimaryCtxRetain(&pctx, cuda_config.device_index), "Failed to retain the current CUDA context.");
+    CHECK_CU(cuCtxSetCurrent(pctx), "Failed to set the current CUDA context.");
+  }
   core->init(cuda_config, codec, crop, width, height);
 }
 

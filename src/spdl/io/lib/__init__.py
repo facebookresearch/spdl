@@ -112,6 +112,11 @@ def _import_libspdl_cuda() -> ModuleType:
             err_msgs[lib] = str(err)
             continue
 
+        try:
+            ext.init()
+        except Exception:
+            _LG.debug("Failed to initialize.", exc_info=True)
+
         return ext
 
     msg = ", ".join(f'"{k}: {v}"' for k, v in err_msgs.items())

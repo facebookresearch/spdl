@@ -14,6 +14,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
+#include <iostream>
 
 namespace spdl::cuda::detail {
 
@@ -83,7 +84,7 @@ void set_cuda_primary_context(int device_index) {
 }
 
 void ensure_cuda_initialized() {
-  static std::once_flag flag;
+  static thread_local std::once_flag flag;
   std::call_once(flag, []() {
     TRACE_EVENT("nvdec", "cudaGetDeviceCount");
     int count;
@@ -93,5 +94,22 @@ void ensure_cuda_initialized() {
     }
   });
 }
+
+void init_cuda() {
+  int c;
+  if (cuDeviceGetCount(&c) == CUDA_SUCCESS) {
+    VLOG(5) << "CUDA context has been already initialized.";
+  } else {
+    VLOG(5) << "Initializing CUDA context.";
+    if (CUresult res = cuInit(0); res != CUDA_SUCCESS) {
+      CHECK_CU(res, "`cuInit(0)` failed.");
+    } else {
+      VLOG(5) << "Successfully initialized CUDA context.";
+      CHECK_CU(cuDeviceGetCount(&c), "Failed to fetch the number of GPUs.");
+    }
+  }
+}
+
+void init_device() {}
 
 } // namespace spdl::cuda::detail

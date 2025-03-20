@@ -42,7 +42,7 @@ function(add_spdl_cuda_extension ffmpeg_version)
   endif()
 
   nanobind_add_module(${name} ${ft} ${src})
-  target_compile_definitions(${name} PRIVATE "${defs}")
+  target_compile_definitions(${name} PRIVATE "${defs}" CUDA_API_PER_THREAD_DEFAULT_STREAM)
   target_link_libraries(${name} PRIVATE "${deps}")
   target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
 
