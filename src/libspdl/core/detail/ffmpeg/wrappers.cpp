@@ -125,7 +125,7 @@ void debug_log_avframe_refcount(AVFrame* p) {
       break;
     }
     auto buf = p->buf[i]->buffer;
-    VLOG(0) << fmt::format(
+    VLOG(5) << fmt::format(
         "Refcount {}: {} ({} -> {})",
         i,
         buf->refcount,

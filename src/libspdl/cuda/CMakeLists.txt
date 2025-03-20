@@ -32,6 +32,7 @@ set(srcs
 if (SPDL_USE_CUDA)
   list(APPEND srcs
     color_conversion.cpp
+    utils.cpp
     detail/color_conversion.cu
     detail/utils.cpp
   )

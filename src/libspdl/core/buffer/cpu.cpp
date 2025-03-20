@@ -54,7 +54,7 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
     size_t depth,
     std::shared_ptr<CPUStorage> storage) {
   size_t size = depth * prod(shape);
-  VLOG(0) << fmt::format(
+  VLOG(5) << fmt::format(
       "Allocating {} bytes. (shape: {}, elem: {})",
       size,
       fmt::join(shape, ", "),

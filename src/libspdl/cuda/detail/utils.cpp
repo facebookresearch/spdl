@@ -53,19 +53,19 @@ CUcontext get_cucontext(CUdevice device) {
     TRACE_EVENT("nvdec", "cuCtxGetCurrent");
     CHECK_CU(cuCtxGetCurrent(&ctx), "Failed to get the current CUDA context.");
     if (ctx) {
-      VLOG(0) << "Context found.";
+      VLOG(5) << "Context found.";
       CUdevice dev;
       TRACE_EVENT("nvdec", "cuCtxGetDevice");
       CHECK_CU(
           cuCtxGetDevice(&dev),
           "Failed to get the device of the current CUDA context.");
       if (device == dev) {
-        VLOG(0) << "The current context is the same device.";
+        VLOG(5) << "The current context is the same device.";
         CUCONTEXT_CACHE.emplace(device, ctx);
         return ctx;
       }
     }
-    VLOG(0) << "Context not found.";
+    VLOG(5) << "Context not found.";
     // Context is not set or different device, create floating one.
     TRACE_EVENT("nvdec", "cuDevicePrimaryCtxRetain");
     CHECK_CU(
@@ -80,18 +80,6 @@ CUcontext get_cucontext(CUdevice device) {
 void set_cuda_primary_context(int device_index) {
   CUcontext ctx = get_cucontext(device_index);
   CHECK_CU(cuCtxPushCurrent(ctx), "Failed to push the CUDA context.");
-}
-
-void ensure_cuda_initialized() {
-  static std::once_flag flag;
-  std::call_once(flag, []() {
-    TRACE_EVENT("nvdec", "cudaGetDeviceCount");
-    int count;
-    CHECK_CUDA(cudaGetDeviceCount(&count), "Failed to fetch the device count.");
-    if (count == 0) {
-      SPDL_FAIL("No CUDA device was found.");
-    }
-  });
 }
 
 } // namespace spdl::cuda::detail
