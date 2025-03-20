@@ -24,6 +24,7 @@ set(src
   transfer.cpp
   types.cpp
   utils.cpp
+  color_conversion.cpp
 )
 
 if (NOT SPDL_IS_GIL_ENABLED)
