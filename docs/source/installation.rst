@@ -1,6 +1,14 @@
 Installation
 ============
 
+From PyPI
+---------
+
+.. code-block::
+
+   pip install spdl
+
+
 From source
 -----------
 
@@ -33,8 +41,6 @@ Build can be customized through the environment variables;
 - ``SPDL_USE_FFMPEG_VERSION``: Specify the version of FFmpeg you want to use
   to reduce the build time. By default, SPDL compiles against FFmpeg 4, 5, 6 and 7,
   and pick available one at run time.
-- ``SPDL_RELASE_GIL=0``: I/O module does not release GIL. This is intended to be used for
-  experimenting with free-threaded Python (3.13+).
 
 See `setup.py <https://github.com/facebookresearch/spdl/blob/main/packaging/spdl_io/setup.py>`_
 for the up-to-date available options.
