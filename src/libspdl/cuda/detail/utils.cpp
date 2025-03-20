@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/cuda/utils.h"
+#include "libspdl/cuda/detail/utils.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <glog/logging.h>

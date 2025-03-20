@@ -8,7 +8,7 @@
 
 #include <libspdl/cuda/buffer.h>
 #include <libspdl/cuda/types.h>
-#include <libspdl/cuda/utils.h>
+#include "libspdl/cuda/detail/utils.h"
 
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
