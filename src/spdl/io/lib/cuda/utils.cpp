@@ -19,11 +19,13 @@ namespace spdl::cuda {
 void register_utils(nb::module_& m) {
   m.def(
       "init",
-      []() {
 #ifdef SPDL_USE_CUDA
-        init_cuda();
-#endif
+      init_cuda,
+#else
+      []() {
+        throw std::runtime_error("SPDL is not built with CUDA support.");
       },
+#endif
       nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
@@ -61,6 +63,17 @@ void register_utils(nb::module_& m) {
 #endif
             ;
       },
+      nb::call_guard<nb::gil_scoped_release>());
+
+  m.def(
+      "synchronize_stream",
+#ifdef SPDL_USE_CUDA
+      synchronize_stream,
+#else
+      [](nb::object) {
+        throw std::runtime_error("SPDL is not built with CUDA support.");
+      },
+#endif
       nb::call_guard<nb::gil_scoped_release>());
 }
 

@@ -8,9 +8,13 @@
 
 #pragma once
 
+#include <libspdl/cuda/types.h>
+
 namespace spdl::cuda {
 
 // Initialize CUDA context
 void init_cuda();
+
+void synchronize_stream(const CUDAConfig& handle);
 
 } // namespace spdl::cuda
