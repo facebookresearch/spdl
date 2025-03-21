@@ -94,6 +94,8 @@ T = TypeVar("T")
 _FILTER_DESC_DEFAULT = "__PLACEHOLDER__"
 
 
+SourceType = str | Path | bytes | UintArray | Tensor
+
 ################################################################################
 # Demuxing
 ################################################################################
@@ -115,7 +117,7 @@ class Demuxer:
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: str | Path | bytes | UintArray | Tensor, **kwargs):
+    def __init__(self, src: SourceType, **kwargs):
         if isinstance(src, Path):
             src = str(src)
         self._demuxer = _libspdl._demuxer(src, **kwargs)
@@ -836,6 +838,7 @@ def nv12_to_rgb(
     *,
     device_config: CUDAConfig,
     coeff: int = 1,
+    sync: bool = False,
 ) -> CUDABuffer:
     """Given CUDA buffers of NV12 images, batch and convert them to (interleaved) RGB.
 
@@ -868,12 +871,19 @@ def nv12_to_rgb(
 
             If other values are provided, they are silently mapped to ``1``.
 
+        sync: If True, the function waits for the completion after launching the kernel.
+
     Returns:
         A CUDA buffer object with the shape ``(batch, height, width, color=3)``.
     """
-    return _libspdl_cuda.nv12_to_planar_rgb(
-        buffers, device_config=device_config, matrix_coeff=coeff
+    ret = _libspdl_cuda.nv12_to_planar_rgb(
+        buffers,
+        device_config=device_config,
+        matrix_coeff=coeff,
     )
+    if sync:
+        _libspdl_cuda.synchronize_stream(device_config)
+    return ret
 
 
 def nv12_to_bgr(
@@ -881,11 +891,18 @@ def nv12_to_bgr(
     *,
     device_config: CUDAConfig,
     coeff: int = 1,
+    sync: bool = False,
 ) -> CUDABuffer:
     """Same as :py:func:`nv12_to_rgb`, but the order of the color channel is BGR."""
-    return _libspdl_cuda.nv12_to_planar_bgr(
-        buffers, device_config=device_config, matrix_coeff=coeff
+    ret = _libspdl_cuda.nv12_to_planar_bgr(
+        buffers,
+        device_config=device_config,
+        matrix_coeff=coeff,
     )
+    if sync:
+        _libspdl_cuda.synchronize_stream(device_config)
+
+    return ret
 
 
 ################################################################################
