@@ -186,57 +186,57 @@ def test_decode_video_clips(get_sample):
     _test()
 
 
-def test_decode_video_clips_num_frames(get_sample):
-    """Can decode video clips with padding/dropping."""
-    if "tpad" not in spdl.io.utils.get_ffmpeg_filters():
-        raise pytest.skip("tpad filter is not available. Install FFmepg >= 4.2.")
+# This test requires "tpad filter (FFmepg >= 4.2.")
+if "tpad" in spdl.io.utils.get_ffmpeg_filters():
 
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"
-    sample = get_sample(cmd)
+    def test_decode_video_clips_num_frames(get_sample):
+        """Can decode video clips with padding/dropping."""
+        cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"
+        sample = get_sample(cmd)
 
-    def _decode(src, pix_fmt="rgb24", **kwargs):
-        with spdl.io.Demuxer(src) as demuxer:
-            packets = demuxer.demux_video(window=(0, 2))
-            filter_desc = get_video_filter_desc(
-                timestamp=(0, 2), pix_fmt=pix_fmt, **kwargs
-            )
-            frames = spdl.io.decode_packets(packets, filter_desc=filter_desc)
-            buffer = spdl.io.convert_frames(frames)
-            return spdl.io.to_numpy(buffer)
+        def _decode(src, pix_fmt="rgb24", **kwargs):
+            with spdl.io.Demuxer(src) as demuxer:
+                packets = demuxer.demux_video(window=(0, 2))
+                filter_desc = get_video_filter_desc(
+                    timestamp=(0, 2), pix_fmt=pix_fmt, **kwargs
+                )
+                frames = spdl.io.decode_packets(packets, filter_desc=filter_desc)
+                buffer = spdl.io.convert_frames(frames)
+                return spdl.io.to_numpy(buffer)
 
-    def _test(src):
-        arr0 = _decode(src)
-        assert arr0.dtype == np.uint8
-        assert arr0.shape == (50, 240, 320, 3)
+        def _test(src):
+            arr0 = _decode(src)
+            assert arr0.dtype == np.uint8
+            assert arr0.shape == (50, 240, 320, 3)
 
-        num_frames = 25
-        arr1 = _decode(src, num_frames=num_frames)
-        assert arr1.dtype == np.uint8
-        assert arr1.shape == (num_frames, 240, 320, 3)
-        assert np.all(arr1 == arr0[:num_frames])
+            num_frames = 25
+            arr1 = _decode(src, num_frames=num_frames)
+            assert arr1.dtype == np.uint8
+            assert arr1.shape == (num_frames, 240, 320, 3)
+            assert np.all(arr1 == arr0[:num_frames])
 
-        num_frames = 100
-        arr2 = _decode(src, num_frames=num_frames)
-        assert arr2.dtype == np.uint8
-        assert arr2.shape == (num_frames, 240, 320, 3)
-        assert np.all(arr2[:50] == arr0)
-        assert np.all(arr2[50:] == arr2[50])
+            num_frames = 100
+            arr2 = _decode(src, num_frames=num_frames)
+            assert arr2.dtype == np.uint8
+            assert arr2.shape == (num_frames, 240, 320, 3)
+            assert np.all(arr2[:50] == arr0)
+            assert np.all(arr2[50:] == arr2[50])
 
-        num_frames = 100
-        arr2 = _decode(src, num_frames=num_frames, pad_mode="black")
-        assert arr2.dtype == np.uint8
-        assert arr2.shape == (num_frames, 240, 320, 3)
-        assert np.all(arr2[:50] == arr0)
-        assert np.all(arr2[50:] == 0)
+            num_frames = 100
+            arr2 = _decode(src, num_frames=num_frames, pad_mode="black")
+            assert arr2.dtype == np.uint8
+            assert arr2.shape == (num_frames, 240, 320, 3)
+            assert np.all(arr2[:50] == arr0)
+            assert np.all(arr2[50:] == 0)
 
-        num_frames = 100
-        arr2 = _decode(src, num_frames=num_frames, pad_mode="white")
-        assert arr2.dtype == np.uint8
-        assert arr2.shape == (num_frames, 240, 320, 3)
-        assert np.all(arr2[:50] == arr0)
-        assert np.all(arr2[50:] == 255)
+            num_frames = 100
+            arr2 = _decode(src, num_frames=num_frames, pad_mode="white")
+            assert arr2.dtype == np.uint8
+            assert arr2.shape == (num_frames, 240, 320, 3)
+            assert np.all(arr2[:50] == arr0)
+            assert np.all(arr2[50:] == 255)
 
-    _test(sample.path)
+        _test(sample.path)
 
 
 def test_decode_video_frame_rate_pts(get_sample):
