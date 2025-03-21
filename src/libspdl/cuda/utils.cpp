@@ -36,4 +36,10 @@ void init_cuda() {
   }
 }
 
+void synchronize_stream(const CUDAConfig& cfg) {
+  CHECK_CU(
+      cuStreamSynchronize((CUstream_st*)(cfg.stream)),
+      "Failed to synchronize the stream.");
+}
+
 } // namespace spdl::cuda
