@@ -25,6 +25,32 @@ namespace nb = nanobind;
 
 namespace spdl::cuda {
 
+#define NOT_SUPPORTED \
+  throw std::runtime_error("SPDL is not built with NVCODEC support.")
+
+#ifndef SPDL_USE_NVCODEC
+NvDecDecoder::NvDecDecoder(){};
+NvDecDecoder::~NvDecDecoder(){};
+void NvDecDecoder::reset() {
+  NOT_SUPPORTED;
+}
+void NvDecDecoder::init(
+    const CUDAConfig& cuda_config,
+    const spdl::core::VideoCodec& codec,
+    CropArea crop,
+    int width,
+    int height) {
+  NOT_SUPPORTED;
+}
+std::vector<CUDABuffer> NvDecDecoder::decode(
+    spdl::core::VideoPacketsPtr packets) {
+  NOT_SUPPORTED;
+}
+std::vector<CUDABuffer> NvDecDecoder::flush() {
+  NOT_SUPPORTED;
+}
+#endif
+
 using namespace spdl::core;
 
 void register_decoding(nb::module_& m) {
@@ -32,7 +58,6 @@ void register_decoding(nb::module_& m) {
   // Asynchronous decoding - NVDEC
   ////////////////////////////////////////////////////////////////////////////////
   nb::class_<NvDecDecoder>(m, "NvDecDecoder")
-#ifdef SPDL_USE_NVCODEC
       .def(
           "reset",
           &NvDecDecoder::reset,
@@ -78,8 +103,6 @@ void register_decoding(nb::module_& m) {
           "flush",
           &NvDecDecoder::flush,
           nb::call_guard<nb::gil_scoped_release>());
-#endif
-  ;
 
   m.def(
       "_nvdec_decoder",
@@ -87,7 +110,7 @@ void register_decoding(nb::module_& m) {
 #ifdef SPDL_USE_NVCODEC
         return std::make_unique<NvDecDecoder>();
 #else
-        throw std::runtime_error("SPDL is not built with NVDEC support.");
+        NOT_SUPPORTED;
 #endif
       },
       nb::call_guard<nb::gil_scoped_release>());

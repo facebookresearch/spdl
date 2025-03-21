@@ -8,11 +8,9 @@
 
 #include <libspdl/cuda/transfer.h>
 
-#ifdef SPDL_USE_CUDA
-#include "libspdl/cuda/detail/utils.h"
-#endif
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
+#include "libspdl/cuda/detail/utils.h"
 
 #include <glog/logging.h>
 
@@ -43,11 +41,7 @@ CUDABufferPtr transfer_buffer_impl(
     void* ptr,
     const CUDAConfig& cfg,
     bool pinned_memory = false) {
-#ifndef SPDL_USE_CUDA
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#else
   TRACE_EVENT("decoding", "core::transfer_buffer");
-
   auto ret = cuda_buffer(shape, cfg, elem_class, depth);
   size_t size = depth * prod(shape);
 
@@ -68,7 +62,6 @@ CUDABufferPtr transfer_buffer_impl(
   }
 
   return ret;
-#endif
 }
 
 } // namespace
@@ -99,9 +92,6 @@ spdl::core::CPUBufferPtr transfer_buffer(
     spdl::core::ElemClass elem_class,
     size_t depth,
     const void* ptr) {
-#ifndef SPDL_USE_CUDA
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#else
   TRACE_EVENT("decoding", "core::transfer_buffer");
 
   auto ret = cpu_buffer(shape, elem_class, depth);
@@ -111,16 +101,11 @@ spdl::core::CPUBufferPtr transfer_buffer(
       "Failed to copy data from device to host.");
 
   return ret;
-#endif
 }
 
 spdl::core::CPUStorage cp_to_cpu(
     const void* src,
     const std::vector<size_t>& shape) {
-#ifndef SPDL_USE_CUDA
-  SPDL_FAIL("SPDL is not compiled with CUDA support.");
-#else
-
   size_t size = prod(shape);
   spdl::core::CPUStorage storage{size};
 
@@ -129,7 +114,6 @@ spdl::core::CPUStorage cp_to_cpu(
       "Failed to copy data from device to host.");
 
   return storage;
-#endif
 }
 
 } // namespace spdl::cuda

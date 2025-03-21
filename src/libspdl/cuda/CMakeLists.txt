@@ -27,16 +27,11 @@ set(srcs
   buffer.cpp
   storage.cpp
   transfer.cpp
+  color_conversion.cpp
+  utils.cpp
+  detail/color_conversion.cu
+  detail/utils.cpp
 )
-
-if (SPDL_USE_CUDA)
-  list(APPEND srcs
-    color_conversion.cpp
-    utils.cpp
-    detail/color_conversion.cu
-    detail/utils.cpp
-  )
-endif()
 
 if (SPDL_USE_NVCODEC)
   list(APPEND srcs

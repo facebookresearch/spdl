@@ -46,10 +46,10 @@ void register_transfer(nb::module_& m) {
   m.def(
       "transfer_buffer",
       [](CPUBufferPtr buffer, const CUDAConfig& cfg) {
-#ifndef SPDL_USE_CUDA
-        throw std::runtime_error("SPDL is not built with CUDA support");
-#else
+#ifdef SPDL_USE_CUDA
         return transfer_buffer(std::move(buffer), cfg);
+#else
+        throw std::runtime_error("SPDL is not built with CUDA support");
 #endif
       },
       nb::call_guard<nb::gil_scoped_release>(),

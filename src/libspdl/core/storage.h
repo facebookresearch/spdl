@@ -12,8 +12,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <optional>
 
 namespace spdl::core {
 struct Storage {
