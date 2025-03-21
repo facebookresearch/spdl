@@ -30,11 +30,11 @@ set(srcs
   detail/ffmpeg/filter_graph.cpp
   detail/ffmpeg/wrappers.cpp
   detail/logging.cpp
-  buffer/cpu.cpp
-  frames/ffmpeg.cpp
   adaptor/adaptor.cpp
   adaptor/bytes.cpp
-  storage/cpu.cpp
+  frames.cpp
+  buffer.cpp
+  storage.cpp
   decoder.cpp
   decoding.cpp
   demuxing.cpp
