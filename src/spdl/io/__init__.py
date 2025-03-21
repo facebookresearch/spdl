@@ -43,6 +43,7 @@ from ._composite import (
     load_image_batch_nvjpeg,
     load_video,
     sample_decode_video,
+    streaming_load_video_nvdec,
 )
 from ._config import (
     cpu_storage,
@@ -114,6 +115,7 @@ __all__ = [
     "NvDecDecoder",
     "decode_packets_nvdec",
     "streaming_decode_packets",
+    "streaming_load_video_nvdec",
     "decode_image_nvjpeg",
     "NvDecDecoder",
     "nvdec_decoder",
