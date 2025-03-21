@@ -16,20 +16,8 @@
 namespace spdl::core {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Buffer
-////////////////////////////////////////////////////////////////////////////////
-Buffer::Buffer(std::vector<size_t> shape_, ElemClass elem_class_, size_t depth_)
-    : shape(std::move(shape_)), elem_class(elem_class_), depth(depth_) {}
-
-////////////////////////////////////////////////////////////////////////////////
 // CPUBuffer
 ////////////////////////////////////////////////////////////////////////////////
-CPUBuffer::CPUBuffer(
-    const std::vector<size_t>& shape_,
-    ElemClass elem_class_,
-    size_t depth_,
-    std::shared_ptr<CPUStorage> storage_)
-    : Buffer(shape_, elem_class_, depth_), storage(std::move(storage_)) {}
 
 void* CPUBuffer::data() {
   return storage->data();
@@ -69,11 +57,14 @@ std::unique_ptr<CPUBuffer> cpu_buffer(
     }
   }
 
-  return std::make_unique<CPUBuffer>(
-      shape,
-      elem_class,
-      depth,
-      storage ? std::move(storage) : std::make_shared<CPUStorage>(size));
+  // The following does not compile on Apple clang 15
+  // return std::make_unique<CPUBuffer>(storage, shape, elem_class, depth);
+  auto ret = std::make_unique<CPUBuffer>();
+  ret->storage = storage ? storage : std::make_shared<CPUStorage>(size);
+  ret->shape = shape;
+  ret->elem_class = elem_class;
+  ret->depth = depth;
+  return ret;
 }
 
 } // namespace spdl::core

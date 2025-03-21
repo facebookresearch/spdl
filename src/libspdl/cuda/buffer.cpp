@@ -13,16 +13,6 @@ namespace spdl::cuda {
 ////////////////////////////////////////////////////////////////////////////////
 // CUDABuffer
 ////////////////////////////////////////////////////////////////////////////////
-CUDABuffer::CUDABuffer(
-    std::vector<size_t> shape_,
-    core::ElemClass elem_class_,
-    size_t depth_,
-    CUDAStoragePtr storage_,
-    int device_index_)
-    : Buffer(std::move(shape_), elem_class_, depth_),
-      storage(std::move(storage_)),
-      device_index(device_index_) {}
-
 void* CUDABuffer::data() {
   return storage->data();
 }
@@ -54,11 +44,11 @@ CUDABufferPtr cuda_buffer(
     core::ElemClass elem_class,
     size_t depth) {
   return std::make_unique<CUDABuffer>(
+      cfg.device_index,
+      std::make_shared<CUDAStorage>(depth * prod(shape), cfg),
       shape,
       elem_class,
-      depth,
-      std::make_shared<CUDAStorage>(depth * prod(shape), cfg),
-      cfg.device_index);
+      depth);
 }
 
 } // namespace spdl::cuda

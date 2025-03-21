@@ -405,11 +405,11 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
 
   frame_buffer->emplace_back(CUDABuffer{
+      device_config.device_index,
+      frame,
       {h2, width},
       core::ElemClass::UInt,
-      sizeof(uint8_t),
-      frame,
-      device_config.device_index});
+      sizeof(uint8_t)});
 
   return 1;
 }

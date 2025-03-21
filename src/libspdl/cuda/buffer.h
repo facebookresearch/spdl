@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include <libspdl/core/buffer.h>
 #include <libspdl/core/types.h>
 #include <libspdl/cuda/storage.h>
 
@@ -23,19 +22,22 @@ namespace spdl::cuda {
 
 ///
 /// Contiguous array data on a CUDA device.
-struct CUDABuffer : core::Buffer {
+struct CUDABuffer {
 #ifdef SPDL_USE_CUDA
-  CUDAStoragePtr storage;
   int device_index;
+  CUDAStoragePtr storage;
 
-  CUDABuffer(
-      std::vector<size_t> shape,
-      core::ElemClass elem_class,
-      size_t depth,
-      CUDAStoragePtr storage,
-      int device_index);
+  ///
+  /// Shape of buffer
+  std::vector<size_t> shape;
+  ///
+  /// Type of unit element
+  core::ElemClass elem_class = core::ElemClass::UInt;
+  ///
+  /// Size of unit element
+  size_t depth = sizeof(uint8_t);
 
-  void* data() override;
+  void* data();
   void* data() const;
 
   uintptr_t get_cuda_stream() const;
