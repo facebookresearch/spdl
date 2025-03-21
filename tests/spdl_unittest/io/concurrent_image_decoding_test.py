@@ -7,7 +7,6 @@
 # pyre-unsafe
 
 import numpy as np
-import pytest
 import spdl.io
 import spdl.io.utils
 from spdl.io import get_filter_desc, get_video_filter_desc
@@ -209,24 +208,24 @@ def test_batch_decode_image_rgb24(get_samples):
         assert np.all(array[:, 2 * w :, 2] >= 253)
 
 
-def test_batch_video_conversion(get_sample):
-    """Can decode video clips."""
-    if "tpad" not in spdl.io.utils.get_ffmpeg_filters():
-        raise pytest.skip("tpad filter is not available. Install FFmepg >= 4.2.")
+# This test requires "tpad filter (FFmepg >= 4.2.")
+if "tpad" in spdl.io.utils.get_ffmpeg_filters():
 
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
-    sample = get_sample(cmd, width=320, height=240)
+    def test_batch_video_conversion(get_sample):
+        """Can decode video clips."""
+        cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+        sample = get_sample(cmd, width=320, height=240)
 
-    timestamps = [(0, 1), (1, 1.5), (2, 2.7), (3, 3.6)]
+        timestamps = [(0, 1), (1, 1.5), (2, 2.7), (3, 3.6)]
 
-    demuxer = spdl.io.Demuxer(sample.path)
-    frames = []
-    for ts in timestamps:
-        packets = demuxer.demux_video(timestamp=ts)
-        filter_desc = get_filter_desc(packets, num_frames=15)
-        frames_ = spdl.io.decode_packets(packets, filter_desc=filter_desc)
-        frames.append(frames_)
+        demuxer = spdl.io.Demuxer(sample.path)
+        frames = []
+        for ts in timestamps:
+            packets = demuxer.demux_video(timestamp=ts)
+            filter_desc = get_filter_desc(packets, num_frames=15)
+            frames_ = spdl.io.decode_packets(packets, filter_desc=filter_desc)
+            frames.append(frames_)
 
-    buffer = spdl.io.convert_frames(frames)
-    array = spdl.io.to_numpy(buffer)
-    assert array.shape == (4, 15, 3, 240, 320)
+        buffer = spdl.io.convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
+        assert array.shape == (4, 15, 3, 240, 320)
