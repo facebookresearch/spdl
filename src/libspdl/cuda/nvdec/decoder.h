@@ -35,7 +35,6 @@ class NvDecDecoderCore;
 // decoder.reset();
 // decoder.init();
 class NvDecDecoder {
-#ifdef SPDL_USE_NVCODEC
   detail::NvDecDecoderCore* core;
 
  public:
@@ -67,7 +66,6 @@ class NvDecDecoder {
 
   // Call this method at the end of video stream.
   std::vector<CUDABuffer> flush();
-#endif
 };
 
 } // namespace spdl::cuda

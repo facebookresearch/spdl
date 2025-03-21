@@ -11,15 +11,12 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#ifdef SPDL_USE_NVCODEC
 #include "libspdl/cuda/nvdec/detail/decoder.h"
-#endif
 
 #include <fmt/core.h>
 
 namespace spdl::cuda {
 
-#ifdef SPDL_USE_NVCODEC
 namespace {
 void validate_nvdec_params(
     int cuda_device_index,
@@ -94,6 +91,4 @@ std::vector<CUDABuffer> NvDecDecoder::flush() {
   core->flush(&ret);
   return ret;
 }
-
-#endif
 } // namespace spdl::cuda

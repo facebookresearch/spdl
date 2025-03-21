@@ -41,7 +41,7 @@ inline size_t prod(const std::vector<size_t>& shape) {
 CUDABufferPtr cuda_buffer(
     const std::vector<size_t>& shape,
     const CUDAConfig& cfg,
-    core::ElemClass elem_class,
+    spdl::core::ElemClass elem_class,
     size_t depth) {
   return std::make_unique<CUDABuffer>(
       cfg.device_index,

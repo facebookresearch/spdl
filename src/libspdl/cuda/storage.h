@@ -15,27 +15,21 @@
 #include <cstdint>
 #include <memory>
 
-#ifdef SPDL_USE_CUDA
-#include <cuda.h>
-#endif
-
 namespace spdl::cuda {
 void* alloc_pinned(size_t s);
 void dealloc_pinned(void* p);
 
 class CUDAStorage : public core::Storage {
-#ifdef SPDL_USE_CUDA
   void* data_ = nullptr;
 
  public:
-  CUstream stream = nullptr;
+  uintptr_t stream = 0;
 
   cuda_deleter_fn deleter;
 
   void* data() const override;
 
   CUDAStorage() = default;
-  CUDAStorage(size_t size, int device, CUstream stream);
   CUDAStorage(size_t size, const CUDAConfig& cfg);
 
   CUDAStorage(const CUDAStorage&) = delete;
@@ -45,7 +39,6 @@ class CUDAStorage : public core::Storage {
   CUDAStorage& operator=(CUDAStorage&&) noexcept;
 
   ~CUDAStorage() override;
-#endif
 };
 
 using CUDAStoragePtr = std::shared_ptr<CUDAStorage>;

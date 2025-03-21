@@ -11,6 +11,8 @@
 #include "libspdl/core/detail/tracing.h"
 #include "libspdl/cuda/detail/utils.h"
 
+#include <cuda.h>
+
 #include <fmt/core.h>
 #include <glog/logging.h>
 
@@ -20,21 +22,14 @@ namespace spdl::cuda {
 ////////////////////////////////////////////////////////////////////////////////
 
 void* alloc_pinned(size_t s) {
-#ifndef SPDL_USE_CUDA
-  throw std::runtime_error("SPDL is not built with CUDA support.");
-#else
   void* p;
   CHECK_CUDA(
       cudaHostAlloc(&p, s, cudaHostAllocDefault),
       "Failed to allocate pinned memory.");
   return p;
-#endif
 }
 
 void dealloc_pinned(void* p) {
-#ifndef SPDL_USE_CUDA
-  throw std::runtime_error("SPDL is not built with CUDA support.");
-#else
   auto status = cudaFreeHost(p);
   if (status != cudaSuccess) {
     LOG(ERROR) << fmt::format(
@@ -42,7 +37,6 @@ void dealloc_pinned(void* p) {
         cudaGetErrorName(status),
         cudaGetErrorString(status));
   }
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -77,7 +71,7 @@ cuda_allocator default_alloc = {default_allocator, default_deleter};
 } // namespace
 
 CUDAStorage::CUDAStorage(size_t size, const CUDAConfig& cfg)
-    : stream(static_cast<CUstream>((void*)cfg.stream)) {
+    : stream(cfg.stream) {
   if (size == 0) {
     SPDL_FAIL("`size` must be greater than 0.");
   }
