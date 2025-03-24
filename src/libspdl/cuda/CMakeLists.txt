@@ -47,7 +47,6 @@ if (SPDL_USE_NVJPEG)
   list(APPEND srcs
     nvjpeg/decoding.cpp
     nvjpeg/detail/utils.cpp
-    nvjpeg/detail/decoding.cpp
   )
   if (SPDL_USE_NPPI)
     list(APPEND srcs
