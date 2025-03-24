@@ -27,7 +27,7 @@ from spdl.pipeline import (
     TaskStatsHook,
 )
 from spdl.pipeline._components._common import _EOF
-from spdl.pipeline._components._pipe import _FailCounter, _pipe, _PipeArgs, _SKIP
+from spdl.pipeline._components._pipe import _FailCounter, _pipe, _PipeArgs
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
 from spdl.pipeline._hook import _periodic_dispatch
@@ -190,21 +190,28 @@ def test_async_pipe():
 
 
 def test_async_pipe_skip():
-    """_pipe skips the data if it is SKIP."""
+    """_pipe skips the result if it's None."""
     input_queue = AsyncQueue(name="input")
     output_queue = AsyncQueue(name="output")
 
+    async def skip_even(v):
+        if v % 2:
+            return v
+
     async def test():
-        data = [0, _SKIP, 1, _SKIP, 2, _SKIP]
-        _put_aqueue(input_queue, data, eof=True)
+        _put_aqueue(input_queue, range(10), eof=True)
 
         await _pipe(
-            "adouble", input_queue, output_queue, _PipeArgs(op=adouble), _FailCounter()
+            "skip_even",
+            input_queue,
+            output_queue,
+            _PipeArgs(op=skip_even),
+            _FailCounter(),
         )
 
         result = _flush_aqueue(output_queue)
 
-        assert result == [v * 2 for v in [0, 1, 2]] + [_EOF]
+        assert result == [*list(range(1, 10, 2)), _EOF]
 
     asyncio.run(test())
 
@@ -932,13 +939,14 @@ def test_pipeline_passthrough():
         apl.get_item(timeout=1)
 
 
-def test_pipeline_skip_odd():
-    """AsyncPipeline2 does not output _SKIP items."""
+def test_pipeline_skip():
+    """AsyncPipeline2 does not output None items."""
 
     src = list(range(10))
 
     async def odd(i):
-        return i if i % 2 else _SKIP
+        if i % 2:
+            return i
 
     pipeline = (
         PipelineBuilder().add_source(src).pipe(odd).add_sink(1000).build(num_threads=1)
