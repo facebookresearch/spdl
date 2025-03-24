@@ -184,6 +184,10 @@ class PipelineBuilder(Generic[T, U]):
                 them as a tuple or use :py:class:`~dataclasses.dataclass` and
                 define a custom protocol.
 
+                If the result of applying ``op`` to an inpu item is ``None``,
+                the pipeline skips absorb the result and it won't be propagated to
+                the downstream stages.
+
                 Optionally, the op can be a generator function, async function or
                 async generator function.
 

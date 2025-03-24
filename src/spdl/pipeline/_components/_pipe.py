@@ -25,7 +25,7 @@ from .._convert import Callables, convert_to_async
 from .._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
 from .._queue import AsyncQueue
 from .._utils import create_task
-from ._common import _EOF, _queue_stage_hook, _Sentinel
+from ._common import _EOF, _queue_stage_hook
 
 # pyre-strict
 
@@ -34,7 +34,7 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-_SKIP = _Sentinel("SKIP")  # Indicate that there is no data to process.
+_SKIP: None = None
 
 
 @dataclass
