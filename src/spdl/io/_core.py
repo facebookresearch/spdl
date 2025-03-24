@@ -555,12 +555,14 @@ class NvDecDecoder:
        applying bit stream filter while demuxing or after demuxing.
        See the examples bellow.
 
+    .. seealso::
+
+       - :py:func:`decode_packets_nvdec`: Decode video packets using
+         NVDEC.
+       - :py:func:`streaming_load_video_nvdec`: Decode video frames
+         from source in streaming fashion.
+
     .. admonition:: Example - decoding the whole video
-
-       .. seealso::
-
-          :py:func:`decode_packets_nvdec`: Decode video packets using
-          NVDEC.
 
        .. code-block::
 
