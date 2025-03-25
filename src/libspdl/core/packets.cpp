@@ -168,7 +168,7 @@ int DemuxedPackets<media_type>::get_sample_rate() const
 
 template <MediaType media_type>
 Codec<media_type> DemuxedPackets<media_type>::get_codec() const {
-  return Codec<media_type>(codecpar);
+  return Codec<media_type>(codecpar, time_base, frame_rate);
 }
 
 namespace {

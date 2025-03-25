@@ -89,8 +89,12 @@ DemuxerImpl::~DemuxerImpl() {
 
 template <MediaType media_type>
 Codec<media_type> DemuxerImpl::get_default_codec() const {
+  auto* stream = get_stream(media_type, fmt_ctx, di.get());
+  auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   return Codec<media_type>{
-      copy(get_stream(media_type, fmt_ctx, di.get())->codecpar)};
+      copy(stream->codecpar),
+      {stream->time_base.num, stream->time_base.den},
+      {frame_rate.num, frame_rate.den}};
 }
 
 template Codec<MediaType::Audio>
