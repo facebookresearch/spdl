@@ -25,7 +25,6 @@ set(srcs
   detail/ffmpeg/bsf.cpp
   detail/ffmpeg/decoder.cpp
   detail/ffmpeg/demuxer.cpp
-  detail/ffmpeg/demuxing.cpp
   detail/ffmpeg/encoding.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/ffmpeg/wrappers.cpp

@@ -18,18 +18,21 @@
 #include <string_view>
 #include <tuple>
 
-struct AVFormatContext;
-struct AVStream;
-
 namespace spdl::core {
+namespace detail {
+class DemuxerImpl;
+} // namespace detail
 
+////////////////////////////////////////////////////////////////////////////////
+// StreamingDemuxer
+////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 class StreamingDemuxer {
   Generator<PacketsPtr<media_type>> gen;
 
  public:
   StreamingDemuxer(
-      DataInterface* di,
+      detail::DemuxerImpl* p,
       int num_packets,
       const std::optional<std::string>& bsf);
   bool done();
@@ -39,16 +42,20 @@ class StreamingDemuxer {
 template <MediaType media_type>
 using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
 
+////////////////////////////////////////////////////////////////////////////////
+// Demuxer
+////////////////////////////////////////////////////////////////////////////////
+
 class Demuxer {
-  std::unique_ptr<DataInterface> di;
-  AVFormatContext* fmt_ctx;
+  detail::DemuxerImpl* pImpl;
 
  public:
   explicit Demuxer(std::unique_ptr<DataInterface> di);
 
   ~Demuxer();
 
-  bool has_audio();
+  bool has_audio() const;
+
   // Get the codec of the default stream of the given media type
   template <MediaType media_type>
   Codec<media_type> get_default_codec() const;
