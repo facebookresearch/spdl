@@ -22,28 +22,16 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 namespace spdl::core {
-namespace {
-inline AVCodecParameters* copy(const AVCodecParameters* src) {
-  auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
-  CHECK_AVERROR(
-      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
-  return dst;
-}
-} // namespace
 
 template <MediaType media_type>
 DemuxedPackets<media_type>::DemuxedPackets(
     std::string src_,
-    AVCodecParameters* codecpar_,
-    Rational time_base_,
-    std::optional<std::tuple<double, double>> timestamp_,
-    Rational frame_rate_)
+    Codec<media_type>&& codec_,
+    std::optional<std::tuple<double, double>> timestamp_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(std::move(src_)),
       timestamp(std::move(timestamp_)),
-      codecpar(copy(codecpar_)),
-      time_base(time_base_),
-      frame_rate(std::move(frame_rate_)) {
+      codec(std::move(codec_)) {
   TRACE_EVENT(
       "decoding",
       "DemuxedPackets::DemuxedPackets",
@@ -62,7 +50,6 @@ DemuxedPackets<media_type>::~DemuxedPackets() {
       av_packet_free(&p);
     }
   });
-  avcodec_parameters_free(&codecpar);
 };
 
 template <MediaType media_type>
@@ -92,8 +79,8 @@ size_t DemuxedPackets<media_type>::num_packets() const
       size_t ret = 0;
       auto [start, end] = *timestamp;
       for (const AVPacket* pkt : packets) {
-        auto pts =
-            static_cast<double>(pkt->pts) * time_base.num / time_base.den;
+        auto pts = static_cast<double>(pkt->pts) * codec.time_base.num /
+            codec.time_base.den;
         if (start <= pts && pts < end) {
           ++ret;
         }
@@ -118,7 +105,7 @@ template <MediaType media_type>
 int DemuxedPackets<media_type>::get_num_channels() const
   requires(media_type == MediaType::Audio)
 {
-  assert(codecpar);
+  const auto* codecpar = codec.get_parameters();
   return
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
       codecpar->ch_layout.nb_channels;
@@ -132,13 +119,14 @@ template <MediaType media_type>
 int DemuxedPackets<media_type>::get_sample_rate() const
   requires(media_type == MediaType::Audio)
 {
-  assert(codecpar);
+  const auto* codecpar = codec.get_parameters();
   return codecpar->sample_rate;
 }
 
 template <MediaType media_type>
 Codec<media_type> DemuxedPackets<media_type>::get_codec() const {
-  return Codec<media_type>(codecpar, time_base, frame_rate);
+  return Codec<media_type>(
+      codec.get_parameters(), codec.time_base, codec.frame_rate);
 }
 
 namespace {
@@ -189,7 +177,7 @@ std::string AudioPackets::get_summary() const {
       src,
       get_ts(timestamp),
       get_media_format_name(),
-      get_codec_info<MediaType::Audio>(codecpar));
+      get_codec_info<MediaType::Audio>(codec.get_parameters()));
 }
 
 template <>
@@ -198,11 +186,11 @@ std::string VideoPackets::get_summary() const {
       "VideoPackets<src=\"{}\", timestamp={}, frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
       src,
       get_ts(timestamp),
-      frame_rate.num,
-      frame_rate.den,
+      codec.frame_rate.num,
+      codec.frame_rate.den,
       num_packets(),
       get_media_format_name(),
-      get_codec_info<MediaType::Video>(codecpar));
+      get_codec_info<MediaType::Video>(codec.get_parameters()));
 }
 
 template <>
@@ -211,7 +199,7 @@ std::string ImagePackets::get_summary() const {
       "ImagePackets<src=\"{}\", pixel_format=\"{}\", {}>",
       src,
       get_media_format_name(),
-      get_codec_info<MediaType::Image>(codecpar));
+      get_codec_info<MediaType::Image>(codec.get_parameters()));
 }
 
 template <MediaType media_type>
@@ -221,24 +209,23 @@ const std::vector<AVPacket*>& DemuxedPackets<media_type>::get_packets() const {
 
 template <MediaType media_type>
 const char* DemuxedPackets<media_type>::get_media_format_name() const {
-  return detail::get_media_format_name<media_type>(codecpar->format);
+  return detail::get_media_format_name<media_type>(
+      codec.get_parameters()->format);
 }
 
 template <MediaType media_type>
 int DemuxedPackets<media_type>::get_width() const {
-  assert(codecpar);
-  return codecpar->width;
+  return codec.get_parameters()->width;
 }
 
 template <MediaType media_type>
 int DemuxedPackets<media_type>::get_height() const {
-  assert(codecpar);
-  return codecpar->height;
+  return codec.get_parameters()->height;
 }
 
 template <MediaType media_type>
 Rational DemuxedPackets<media_type>::get_frame_rate() const {
-  return frame_rate;
+  return codec.frame_rate;
 }
 template <MediaType media_type>
 Generator<RawPacketData> DemuxedPackets<media_type>::iter_packets() const {
@@ -254,11 +241,7 @@ template class DemuxedPackets<MediaType::Image>;
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
   auto other = std::make_unique<DemuxedPackets<media_type>>(
-      src.src,
-      copy(src.codecpar),
-      src.time_base,
-      src.timestamp,
-      src.frame_rate);
+      src.src, Codec<media_type>{src.codec}, src.timestamp);
   for (const AVPacket* pkt : src.get_packets()) {
     other->push(CHECK_AVALLOCATE(av_packet_clone(pkt)));
   }
@@ -361,11 +344,7 @@ VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   auto& src_packets = src->get_packets();
   auto ret = std::make_unique<VideoPackets>(
-      src->src,
-      copy(src->codecpar),
-      src->time_base,
-      src->timestamp,
-      src->frame_rate);
+      src->src, VideoCodec{src->codec}, src->timestamp);
   for (size_t t = start; t < end; ++t) {
     ret->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
   }
@@ -387,8 +366,8 @@ extract_packets_at_indices(
     auto [start, end] = *(src->timestamp);
     size_t offset = 0;
     for (auto& packet : src_packets) {
-      auto pts = static_cast<double>(packet->pts) * src->time_base.num /
-          src->time_base.den;
+      auto pts = static_cast<double>(packet->pts) * src->codec.time_base.num /
+          src->codec.time_base.den;
       if (pts < start) {
         offset += 1;
       }

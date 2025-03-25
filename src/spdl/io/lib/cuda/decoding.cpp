@@ -66,7 +66,7 @@ void register_decoding(nb::module_& m) {
           "init",
           [](NvDecDecoder& self,
              const CUDAConfig& cuda_config,
-             spdl::core::VideoCodec codec,
+             const spdl::core::VideoCodec& codec,
              int crop_left,
              int crop_top,
              int crop_right,

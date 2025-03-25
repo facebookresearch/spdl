@@ -32,15 +32,18 @@ class Codec {
  public:
   Codec(const AVCodecParameters*, Rational, Rational = {1, 1}) noexcept;
   ~Codec();
-  Codec(const Codec&);
-  Codec(Codec&&);
-  Codec& operator=(const Codec&);
-  Codec& operator=(Codec&&);
+  Codec(const Codec<media_type>&);
+  Codec(Codec<media_type>&&) noexcept;
+  Codec<media_type>& operator=(const Codec<media_type>&);
+  Codec<media_type>& operator=(Codec<media_type>&&) noexcept;
 
   std::string get_name() const;
   int get_width() const;
   int get_height() const;
   CodecID get_codec_id() const;
+
+  // Note: the returned pointer must not outlive the Codec object
+  const AVCodecParameters* get_parameters() const;
 };
 
 using AudioCodec = Codec<MediaType::Audio>;

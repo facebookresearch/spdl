@@ -51,7 +51,7 @@ void register_packets(nb::module_& m) {
           "_get_pts",
           [](const VideoPackets& self) -> std::vector<double> {
             std::vector<double> ret;
-            auto base = self.time_base;
+            auto base = self.codec.time_base;
             auto pkts = self.iter_packets();
             while (pkts) {
               ret.push_back(double(pkts().pts) * base.num / base.den);
@@ -106,7 +106,7 @@ void register_packets(nb::module_& m) {
       .def(
           "_get_pts",
           [](const ImagePackets& self) {
-            auto base = self.time_base;
+            auto base = self.codec.time_base;
             return double(self.get_pts()) * base.num / base.den;
           },
           nb::call_guard<nb::gil_scoped_release>())

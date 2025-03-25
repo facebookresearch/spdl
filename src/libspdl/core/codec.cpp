@@ -52,13 +52,14 @@ Codec<media_type>& Codec<media_type>::operator=(
 }
 
 template <MediaType media_type>
-Codec<media_type>::Codec(Codec<media_type>&& other)
+Codec<media_type>::Codec(Codec<media_type>&& other) noexcept
     : codecpar(nullptr), time_base({1, 1}), frame_rate({1, 1}) {
   *this = std::move(other);
 }
 
 template <MediaType media_type>
-Codec<media_type>& Codec<media_type>::operator=(Codec<media_type>&& other) {
+Codec<media_type>& Codec<media_type>::operator=(
+    Codec<media_type>&& other) noexcept {
   using std::swap;
   swap(codecpar, other.codecpar);
   swap(time_base, other.time_base);
@@ -117,6 +118,11 @@ CodecID Codec<media_type>::get_codec_id() const {
       SPDL_FAIL(fmt::format(
           "Unsupported codec ID: {}", avcodec_get_name(codecpar->codec_id)));
   }
+}
+
+template <MediaType media_type>
+const AVCodecParameters* Codec<media_type>::get_parameters() const {
+  return codecpar;
 }
 
 template class Codec<MediaType::Audio>;
