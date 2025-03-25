@@ -34,46 +34,16 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
 template <MediaType media_type>
 DemuxedPackets<media_type>::DemuxedPackets(
     std::string src_,
-    std::tuple<double, double> timestamp_,
     AVCodecParameters* codecpar_,
-    Rational time_base_)
+    Rational time_base_,
+    std::optional<std::tuple<double, double>> timestamp_,
+    Rational frame_rate_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(std::move(src_)),
       timestamp(std::move(timestamp_)),
       codecpar(copy(codecpar_)),
-      time_base(time_base_) {
-  TRACE_EVENT(
-      "decoding",
-      "DemuxedPackets::DemuxedPackets",
-      perfetto::Flow::ProcessScoped(id));
-};
-
-template <MediaType media_type>
-DemuxedPackets<media_type>::DemuxedPackets(
-    std::string src_,
-    AVCodecParameters* codecpar_,
-    Rational time_base_)
-    : id(reinterpret_cast<uintptr_t>(this)),
-      src(std::move(src_)),
-      codecpar(copy(codecpar_)),
-      time_base(time_base_) {
-  TRACE_EVENT(
-      "decoding",
-      "DemuxedPackets::DemuxedPackets",
-      perfetto::Flow::ProcessScoped(id));
-};
-
-template <MediaType media_type>
-DemuxedPackets<media_type>::DemuxedPackets(
-    std::string src_,
-    AVCodecParameters* codecpar_,
-    Rational time_base_,
-    std::vector<AVPacket*>&& packets_)
-    : id(reinterpret_cast<uintptr_t>(this)),
-      src(std::move(src_)),
-      codecpar(copy(codecpar_)),
       time_base(time_base_),
-      packets(std::move(packets_)) {
+      frame_rate(std::move(frame_rate_)) {
   TRACE_EVENT(
       "decoding",
       "DemuxedPackets::DemuxedPackets",
@@ -284,11 +254,11 @@ template class DemuxedPackets<MediaType::Image>;
 template <MediaType media_type>
 PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
   auto other = std::make_unique<DemuxedPackets<media_type>>(
-      src.src, copy(src.codecpar), src.time_base);
-  other->timestamp = src.timestamp;
-  if constexpr (media_type == MediaType::Video) {
-    other->frame_rate = src.frame_rate;
-  }
+      src.src,
+      copy(src.codecpar),
+      src.time_base,
+      src.timestamp,
+      src.frame_rate);
   for (const AVPacket* pkt : src.get_packets()) {
     other->push(CHECK_AVALLOCATE(av_packet_clone(pkt)));
   }
@@ -391,9 +361,11 @@ VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   auto& src_packets = src->get_packets();
   auto ret = std::make_unique<VideoPackets>(
-      src->src, copy(src->codecpar), src->time_base);
-  ret->timestamp = src->timestamp;
-  ret->frame_rate = src->frame_rate;
+      src->src,
+      copy(src->codecpar),
+      src->time_base,
+      src->timestamp,
+      src->frame_rate);
   for (size_t t = start; t < end; ++t) {
     ret->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
   }

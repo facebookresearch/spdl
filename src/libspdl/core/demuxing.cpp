@@ -142,9 +142,11 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
   auto bsf = detail::BitStreamFilter{name, packets->codecpar};
 
   auto ret = std::make_unique<DemuxedPackets<MediaType::Video>>(
-      packets->src, bsf.get_output_codec_par(), packets->time_base);
-  ret->timestamp = packets->timestamp;
-  ret->frame_rate = packets->frame_rate;
+      packets->src,
+      bsf.get_output_codec_par(),
+      packets->time_base,
+      packets->timestamp,
+      packets->frame_rate);
   for (auto& packet : packets->get_packets()) {
     auto filtering = bsf.filter(packet);
     while (filtering) {
