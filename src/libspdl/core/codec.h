@@ -31,6 +31,8 @@ class Codec {
   CodecID get_codec_id() const;
 };
 
+using AudioCodec = Codec<MediaType::Audio>;
 using VideoCodec = Codec<MediaType::Video>;
+using ImageCodec = Codec<MediaType::Image>;
 
 } // namespace spdl::core

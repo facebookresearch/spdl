@@ -35,9 +35,6 @@ class StreamingDemuxer {
   bool done();
   PacketsPtr<media_type> next();
 };
-using AudioCodec = Codec<MediaType::Audio>;
-using VideoCodec = Codec<MediaType::Video>;
-using ImageCodec = Codec<MediaType::Image>;
 
 template <MediaType media_type>
 using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
