@@ -9,36 +9,14 @@
 #include <libspdl/core/demuxing.h>
 
 #include "libspdl/core/detail/ffmpeg/bsf.h"
+#include "libspdl/core/detail/ffmpeg/demuxer.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
 
-extern "C" {
-#include <libavformat/avformat.h>
-}
-
 namespace spdl::core {
-
 namespace detail {
-// ----------------------------------------------------------------------------
-// Implemented in core/detail/ffmpeg/demuxing.cpp
-void init_fmt_ctx(DataInterface*);
-template <MediaType media_type>
-Generator<PacketsPtr<media_type>> streaming_demux(
-    DataInterface* di,
-    int num_packets,
-    const std::optional<std::string> bsf);
-
-template <MediaType media_type>
-PacketsPtr<media_type> demux_window(
-    DataInterface*,
-    const std::optional<std::tuple<double, double>>& window = std::nullopt,
-    const std::optional<std::string>& bsf = std::nullopt);
-
-AVStream* get_stream(DataInterface* di, enum MediaType type_);
-// ----------------------------------------------------------------------------
-
 std::unique_ptr<DataInterface> get_interface(
     const std::string_view src,
     const SourceAdaptorPtr& adaptor,
@@ -63,10 +41,10 @@ std::unique_ptr<DataInterface> get_in_memory_interface(
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 StreamingDemuxer<media_type>::StreamingDemuxer(
-    DataInterface* di,
+    detail::DemuxerImpl* p,
     int num_packets,
     const std::optional<std::string>& bsf)
-    : gen(detail::streaming_demux<media_type>(di, num_packets, bsf)) {}
+    : gen(p->streaming_demux<media_type>(num_packets, bsf)) {}
 
 template <MediaType media_type>
 bool StreamingDemuxer<media_type>::done() {
@@ -84,41 +62,22 @@ template class StreamingDemuxer<MediaType::Video>;
 // Demuxer
 ////////////////////////////////////////////////////////////////////////////////
 
-Demuxer::Demuxer(std::unique_ptr<DataInterface> di_)
-    : di(std::move(di_)), fmt_ctx(di->get_fmt_ctx()) {
-  detail::init_fmt_ctx(di.get());
-};
+Demuxer::Demuxer(std::unique_ptr<DataInterface> di)
+    : pImpl(new detail::DemuxerImpl(std::move(di))){};
 
 Demuxer::~Demuxer() {
-  TRACE_EVENT("demuxing", "Demuxer::~Demuxer");
-  di.reset();
-  // Technically, this is not necessary, but doing it here puts
-  // the destruction of AVFormatContext under ~StreamingDemuxe, which
-  // makes the trace easier to interpret.
-}
-
-bool Demuxer::has_audio() {
-  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
-    if (AVMEDIA_TYPE_AUDIO == fmt_ctx->streams[i]->codecpar->codec_type) {
-      return true;
-    }
+  if (pImpl) {
+    delete pImpl;
   }
-  return false;
 }
 
-namespace {
-inline AVCodecParameters* copy(const AVCodecParameters* src) {
-  auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
-  CHECK_AVERROR(
-      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
-  return dst;
+bool Demuxer::has_audio() const {
+  return pImpl->has_audio();
 }
-} // namespace
 
 template <MediaType media_type>
 Codec<media_type> Demuxer::get_default_codec() const {
-  auto* stream = detail::get_stream(di.get(), media_type);
-  return Codec<media_type>{copy(stream->codecpar)};
+  return pImpl->get_default_codec<media_type>();
 }
 template Codec<MediaType::Audio> Demuxer::get_default_codec<MediaType::Audio>()
     const;
@@ -131,7 +90,7 @@ template <MediaType media_type>
 PacketsPtr<media_type> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
-  return detail::demux_window<media_type>(di.get(), window, bsf);
+  return pImpl->demux_window<media_type>(window, bsf);
 }
 
 template PacketsPtr<MediaType::Audio> Demuxer::demux_window(
@@ -151,7 +110,7 @@ StreamingDemuxerPtr<media_type> Demuxer::stream_demux(
     int num_packets,
     const std::optional<std::string>& bsf) {
   return std::make_unique<StreamingDemuxer<media_type>>(
-      di.get(), num_packets, bsf);
+      pImpl, num_packets, bsf);
 }
 
 template StreamingDemuxerPtr<MediaType::Video> Demuxer::stream_demux(
