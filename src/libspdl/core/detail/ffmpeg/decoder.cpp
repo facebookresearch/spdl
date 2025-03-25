@@ -52,16 +52,6 @@ Generator<AVFramePtr> decode_packets(
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-DecoderCore::DecoderCore(
-    const AVCodecParameters* codecpar,
-    Rational time_base,
-    const std::optional<DecodeConfig>& cfg)
-    : codec_ctx(detail::get_decode_codec_ctx_ptr(
-          codecpar,
-          time_base,
-          cfg ? cfg->decoder : std::nullopt,
-          cfg ? cfg->decoder_options : std::nullopt)) {}
-
 Generator<AVFramePtr> DecoderCore::decode(AVPacket* packet, bool flush_null) {
   VLOG(9)
       << ((!packet) ? fmt::format(" -- flush decoder")
@@ -75,7 +65,7 @@ Generator<AVFramePtr> DecoderCore::decode(AVPacket* packet, bool flush_null) {
 
   {
     TRACE_EVENT("decoding", "avcodec_send_packet");
-    errnum = avcodec_send_packet(codec_ctx.get(), packet);
+    errnum = avcodec_send_packet(codec_ctx, packet);
   }
   if (errnum < 0) {
     LOG(WARNING) << av_error(errnum, "Failed to pass a frame to decoder.");
@@ -87,7 +77,7 @@ Generator<AVFramePtr> DecoderCore::decode(AVPacket* packet, bool flush_null) {
 
     {
       TRACE_EVENT("decoding", "avcodec_receive_frame");
-      errnum = avcodec_receive_frame(codec_ctx.get(), frame.get());
+      errnum = avcodec_receive_frame(codec_ctx, frame.get());
     }
 
     switch (errnum) {

@@ -18,12 +18,7 @@ namespace spdl::core::detail {
 
 // Wraps AVCodecContextPtr and provide convenient methods
 struct DecoderCore {
-  AVCodecContextPtr codec_ctx;
-
-  DecoderCore(
-      const AVCodecParameters*,
-      Rational time_base,
-      const std::optional<DecodeConfig>& cfg = std::nullopt);
+  AVCodecContext* codec_ctx;
 
   Generator<AVFramePtr> decode(AVPacket*, bool flush_null = false);
 };

@@ -9,6 +9,7 @@
 #include <libspdl/core/decoding.h>
 #include <libspdl/core/demuxing.h>
 
+#include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/decoder.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
@@ -27,10 +28,15 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
       "decode_packets_ffmpeg",
       perfetto::Flow::ProcessScoped(packets->id));
 
-  detail::DecoderCore decoder{
-      packets->codec.get_parameters(), packets->codec.time_base, cfg};
+  auto codec_ctx = detail::get_decode_codec_ctx_ptr(
+      packets->codec.get_parameters(),
+      packets->codec.time_base,
+      cfg ? cfg->decoder : std::nullopt,
+      cfg ? cfg->decoder_options : std::nullopt);
+
+  detail::DecoderCore decoder{codec_ctx.get()};
   auto filter = detail::get_filter<media_type>(
-      decoder.codec_ctx.get(), filter_desc, packets->codec.frame_rate);
+      codec_ctx.get(), filter_desc, packets->codec.frame_rate);
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
       packets->id, packets->codec.time_base);
 
