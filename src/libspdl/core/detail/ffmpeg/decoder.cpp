@@ -53,7 +53,7 @@ Generator<AVFramePtr> decode_packets(
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
 Decoder::Decoder(
-    AVCodecParameters* codecpar,
+    const AVCodecParameters* codecpar,
     Rational time_base,
     const std::optional<DecodeConfig>& cfg)
     : codec_ctx(detail::get_decode_codec_ctx_ptr(

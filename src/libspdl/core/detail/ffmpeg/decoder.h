@@ -21,7 +21,7 @@ struct Decoder {
   AVCodecContextPtr codec_ctx;
 
   Decoder(
-      AVCodecParameters*,
+      const AVCodecParameters*,
       Rational time_base,
       const std::optional<DecodeConfig>& cfg = std::nullopt);
 

@@ -18,7 +18,7 @@ class BitStreamFilter {
   AVBSFContextPtr bsf_ctx;
 
  public:
-  BitStreamFilter(const std::string& name, AVCodecParameters* codec_par);
+  BitStreamFilter(const std::string& name, const AVCodecParameters* codec_par);
 
   Generator<AVPacketPtr> filter(AVPacket* packet);
   AVCodecParameters* get_output_codec_par();
