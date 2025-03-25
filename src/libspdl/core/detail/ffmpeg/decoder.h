@@ -17,10 +17,10 @@
 namespace spdl::core::detail {
 
 // Wraps AVCodecContextPtr and provide convenient methods
-struct Decoder {
+struct DecoderCore {
   AVCodecContextPtr codec_ctx;
 
-  Decoder(
+  DecoderCore(
       const AVCodecParameters*,
       Rational time_base,
       const std::optional<DecodeConfig>& cfg = std::nullopt);
@@ -30,7 +30,7 @@ struct Decoder {
 
 Generator<AVFramePtr> decode_packets(
     const std::vector<AVPacket*>& packets,
-    Decoder& decoder,
+    DecoderCore& decoder,
     std::optional<FilterGraph>& filter);
 
 } // namespace spdl::core::detail

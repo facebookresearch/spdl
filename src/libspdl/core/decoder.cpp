@@ -21,7 +21,7 @@ template <MediaType media_type>
   requires(media_type != MediaType::Image)
 struct StreamingDecoder<media_type>::Impl {
   PacketsPtr<media_type> packets;
-  detail::Decoder decoder;
+  detail::DecoderCore decoder;
   std::optional<detail::FilterGraph> filter_graph;
 
   Generator<detail::AVFramePtr> gen;
@@ -85,7 +85,7 @@ StreamingDecoder<media_type>::~StreamingDecoder() {
 }
 
 template <MediaType media_type>
-DecoderPtr<media_type> make_decoder(
+StreamingDecoderPtr<media_type> make_decoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::optional<std::string>& filter_desc) {
@@ -94,7 +94,7 @@ DecoderPtr<media_type> make_decoder(
       std::move(packets), decode_cfg, filter_desc);
 }
 
-template DecoderPtr<MediaType::Video> make_decoder(
+template StreamingDecoderPtr<MediaType::Video> make_decoder(
     PacketsPtr<MediaType::Video> packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::optional<std::string>& filter_desc);

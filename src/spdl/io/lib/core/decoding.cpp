@@ -34,7 +34,7 @@ FFmpegFramesPtr<media_type> decode(
 }
 
 template <MediaType media_type>
-DecoderPtr<media_type> _make_decoder(
+StreamingDecoderPtr<media_type> _make_decoder(
     PacketsPtr<media_type>&& packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::optional<std::string>& filter_desc) {
@@ -43,7 +43,7 @@ DecoderPtr<media_type> _make_decoder(
 }
 
 template <MediaType media_type>
-void _drop(DecoderPtr<media_type> decoder) {
+void _drop(StreamingDecoderPtr<media_type> decoder) {
   nb::gil_scoped_release __g;
   decoder.reset();
 }

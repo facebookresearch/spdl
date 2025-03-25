@@ -25,7 +25,7 @@ Generator<AVPacket*> _stream_packet(const std::vector<AVPacket*>& packets) {
 
 Generator<AVFramePtr> decode_packets(
     const std::vector<AVPacket*>& packets,
-    Decoder& decoder,
+    DecoderCore& decoder,
     std::optional<FilterGraph>& filter) {
   auto packet_stream = _stream_packet(packets);
   if (!filter) {
@@ -52,7 +52,7 @@ Generator<AVFramePtr> decode_packets(
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-Decoder::Decoder(
+DecoderCore::DecoderCore(
     const AVCodecParameters* codecpar,
     Rational time_base,
     const std::optional<DecodeConfig>& cfg)
@@ -62,7 +62,7 @@ Decoder::Decoder(
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)) {}
 
-Generator<AVFramePtr> Decoder::decode(AVPacket* packet, bool flush_null) {
+Generator<AVFramePtr> DecoderCore::decode(AVPacket* packet, bool flush_null) {
   VLOG(9)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(

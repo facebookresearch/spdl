@@ -22,7 +22,7 @@ template <MediaType media_type>
 struct StreamingDecoder;
 
 template <MediaType media_type>
-using DecoderPtr = std::unique_ptr<StreamingDecoder<media_type>>;
+using StreamingDecoderPtr = std::unique_ptr<StreamingDecoder<media_type>>;
 
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
@@ -41,7 +41,7 @@ struct StreamingDecoder {
 };
 
 template <MediaType media_type>
-DecoderPtr<media_type> make_decoder(
+StreamingDecoderPtr<media_type> make_decoder(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& decode_cfg,
     const std::optional<std::string>& filter_desc);
