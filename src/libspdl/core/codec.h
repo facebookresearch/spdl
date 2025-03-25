@@ -16,18 +16,26 @@ struct AVCodecParameters;
 
 namespace spdl::core {
 // Struct to pass around codec info.
-// For now, we storeonly the necessary ones.
-// TOD: Generalize it by storing AVCodecParameter
+//
+// Note: Currently Demuxer and Packets individually creates Codec class
+// as requested by client code.
+// Packets manages its own AVCodecParameters lifecycle.
+// Perhaps it might be good to unify and let Packets hold Codec class?
 template <MediaType media_type>
 class Codec {
   AVCodecParameters* codecpar;
 
  public:
-  Rational time_base{1, 1};
-  Rational frame_rate{1, 1};
+  Rational time_base;
+  Rational frame_rate;
 
  public:
-  Codec(AVCodecParameters*, Rational, Rational) noexcept;
+  Codec(const AVCodecParameters*, Rational, Rational = {1, 1}) noexcept;
+  ~Codec();
+  Codec(const Codec&);
+  Codec(Codec&&);
+  Codec& operator=(const Codec&);
+  Codec& operator=(Codec&&);
 
   std::string get_name() const;
   int get_width() const;
