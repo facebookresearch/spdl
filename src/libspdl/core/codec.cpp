@@ -8,6 +8,7 @@
 
 #include <libspdl/core/codec.h>
 
+#include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/logging.h"
 
 #include "fmt/core.h"
@@ -17,15 +18,58 @@ extern "C" {
 }
 
 namespace spdl::core {
+namespace {
+inline AVCodecParameters* copy(const AVCodecParameters* src) {
+  auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
+  CHECK_AVERROR(
+      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
+  return dst;
+}
+} // namespace
 
 template <MediaType media_type>
 Codec<media_type>::Codec(
-    AVCodecParameters* p,
+    const AVCodecParameters* p,
     Rational time_base,
     Rational frame_rate) noexcept
-    : codecpar(p),
+    : codecpar(copy(p)),
       time_base(std::move(time_base)),
       frame_rate(std::move(frame_rate)) {}
+
+template <MediaType media_type>
+Codec<media_type>::Codec(const Codec<media_type>& other)
+    : codecpar(copy(other.codecpar)),
+      time_base(other.time_base),
+      frame_rate(other.frame_rate) {}
+
+template <MediaType media_type>
+Codec<media_type>& Codec<media_type>::operator=(
+    const Codec<media_type>& other) {
+  codecpar = copy(other.codecpar);
+  time_base = other.time_base;
+  frame_rate = other.frame_rate;
+  return *this;
+}
+
+template <MediaType media_type>
+Codec<media_type>::Codec(Codec<media_type>&& other)
+    : codecpar(nullptr), time_base({1, 1}), frame_rate({1, 1}) {
+  *this = std::move(other);
+}
+
+template <MediaType media_type>
+Codec<media_type>& Codec<media_type>::operator=(Codec<media_type>&& other) {
+  using std::swap;
+  swap(codecpar, other.codecpar);
+  swap(time_base, other.time_base);
+  swap(frame_rate, other.frame_rate);
+  return *this;
+}
+
+template <MediaType media_type>
+Codec<media_type>::~Codec() {
+  avcodec_parameters_free(&codecpar);
+}
 
 template <MediaType media_type>
 std::string Codec<media_type>::get_name() const {

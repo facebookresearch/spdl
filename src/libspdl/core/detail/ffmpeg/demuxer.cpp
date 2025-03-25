@@ -63,14 +63,6 @@ get_stream(MediaType media_type, AVFormatContext* fmt_ctx, DataInterface* di) {
   }
   return fmt_ctx->streams[idx];
 }
-
-inline AVCodecParameters* copy(const AVCodecParameters* src) {
-  auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
-  CHECK_AVERROR(
-      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
-  return dst;
-}
-
 } // namespace
 
 DemuxerImpl::DemuxerImpl(std::unique_ptr<DataInterface> di_)
@@ -92,7 +84,7 @@ Codec<media_type> DemuxerImpl::get_default_codec() const {
   auto* stream = get_stream(media_type, fmt_ctx, di.get());
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   return Codec<media_type>{
-      copy(stream->codecpar),
+      stream->codecpar,
       {stream->time_base.num, stream->time_base.den},
       {frame_rate.num, frame_rate.den}};
 }
