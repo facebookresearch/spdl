@@ -23,7 +23,11 @@ class Codec {
   AVCodecParameters* codecpar;
 
  public:
-  explicit Codec(AVCodecParameters*) noexcept;
+  Rational time_base{1, 1};
+  Rational frame_rate{1, 1};
+
+ public:
+  Codec(AVCodecParameters*, Rational, Rational) noexcept;
 
   std::string get_name() const;
   int get_width() const;

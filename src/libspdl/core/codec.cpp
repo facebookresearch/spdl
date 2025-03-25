@@ -19,7 +19,13 @@ extern "C" {
 namespace spdl::core {
 
 template <MediaType media_type>
-Codec<media_type>::Codec(AVCodecParameters* p) noexcept : codecpar(p) {}
+Codec<media_type>::Codec(
+    AVCodecParameters* p,
+    Rational time_base,
+    Rational frame_rate) noexcept
+    : codecpar(p),
+      time_base(std::move(time_base)),
+      frame_rate(std::move(frame_rate)) {}
 
 template <MediaType media_type>
 std::string Codec<media_type>::get_name() const {
