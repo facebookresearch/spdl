@@ -107,4 +107,41 @@ Generator<AVFramePtr> DecoderCore::decode(AVPacket* packet, bool flush_null) {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// DecoderImpl
+////////////////////////////////////////////////////////////////////////////////
+
+template <MediaType media_type>
+DecoderImpl<media_type>::DecoderImpl(
+    const Codec<media_type>& codec,
+    const std::optional<DecodeConfig>& cfg,
+    const std::optional<std::string>& filter_desc)
+    : codec_ctx(get_decode_codec_ctx_ptr(
+          codec.get_parameters(),
+          codec.time_base,
+          cfg ? cfg->decoder : std::nullopt,
+          cfg ? cfg->decoder_options : std::nullopt)),
+      core({codec_ctx.get()}),
+      filter_graph(get_filter<media_type>(
+          codec_ctx.get(),
+          filter_desc,
+          codec.frame_rate)) {}
+
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode(
+    PacketsPtr<media_type> packets) {
+  auto ret = std::make_unique<FFmpegFrames<media_type>>(
+      packets->id,
+      filter_graph ? filter_graph->get_sink_time_base()
+                   : packets->codec.time_base);
+  auto gen = decode_packets(packets->get_packets(), core, filter_graph);
+  while (gen) {
+    ret->push_back(gen().release());
+  }
+  return ret;
+}
+
+template class DecoderImpl<MediaType::Audio>;
+template class DecoderImpl<MediaType::Video>;
+template class DecoderImpl<MediaType::Image>;
 } // namespace spdl::core::detail

@@ -46,10 +46,4 @@ StreamingDecoderPtr<media_type> make_decoder(
     const std::optional<DecodeConfig>& decode_cfg,
     const std::optional<std::string>& filter_desc);
 
-template <MediaType media_type>
-FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
-    PacketsPtr<media_type> packets,
-    const std::optional<DecodeConfig>& cfg = std::nullopt,
-    const std::optional<std::string>& filter_desc = std::nullopt);
-
 } // namespace spdl::core
