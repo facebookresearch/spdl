@@ -15,7 +15,7 @@
 #include <glog/logging.h>
 
 namespace spdl::core::detail {
-
+namespace {
 Generator<AVPacket*> _stream_packet(const std::vector<AVPacket*>& packets) {
   for (auto& packet : packets) {
     co_yield packet;
@@ -23,36 +23,10 @@ Generator<AVPacket*> _stream_packet(const std::vector<AVPacket*>& packets) {
   co_yield nullptr;
 }
 
-Generator<AVFramePtr> decode_packets(
-    const std::vector<AVPacket*>& packets,
-    DecoderCore& decoder,
-    std::optional<FilterGraph>& filter) {
-  auto packet_stream = _stream_packet(packets);
-  if (!filter) {
-    while (packet_stream) {
-      auto decoding = decoder.decode(packet_stream(), false);
-      while (decoding) {
-        co_yield decoding();
-      }
-    }
-  } else {
-    while (packet_stream) {
-      auto packet = packet_stream();
-      auto decoding = decoder.decode(packet, !packet);
-      while (decoding) {
-        auto frame = decoding();
-        auto filtering = filter->filter(frame.get());
-        while (filtering) {
-          co_yield filtering();
-        }
-      }
-    }
-  }
-}
-
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-Generator<AVFramePtr> DecoderCore::decode(AVPacket* packet, bool flush_null) {
+Generator<AVFramePtr>
+decode(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
   VLOG(9)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(
@@ -106,6 +80,34 @@ Generator<AVFramePtr> DecoderCore::decode(AVPacket* packet, bool flush_null) {
     }
   }
 }
+} // namespace
+
+Generator<AVFramePtr> decode_and_filter(
+    AVCodecContext* codec_ctx,
+    const std::vector<AVPacket*>& packets,
+    std::optional<FilterGraph>& filter) {
+  auto packet_stream = _stream_packet(packets);
+  if (!filter) {
+    while (packet_stream) {
+      auto decoding = decode(codec_ctx, packet_stream(), false);
+      while (decoding) {
+        co_yield decoding();
+      }
+    }
+  } else {
+    while (packet_stream) {
+      auto packet = packet_stream();
+      auto decoding = decode(codec_ctx, packet, !packet);
+      while (decoding) {
+        auto frame = decoding();
+        auto filtering = filter->filter(frame.get());
+        while (filtering) {
+          co_yield filtering();
+        }
+      }
+    }
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // DecoderImpl
@@ -121,24 +123,37 @@ DecoderImpl<media_type>::DecoderImpl(
           codec.time_base,
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)),
-      core({codec_ctx.get()}),
       filter_graph(get_filter<media_type>(
           codec_ctx.get(),
           filter_desc,
           codec.frame_rate)) {}
 
 template <MediaType media_type>
+Rational DecoderImpl<media_type>::get_output_time_base() const {
+  if (filter_graph) {
+    return filter_graph->get_sink_time_base();
+  }
+  return {codec_ctx->time_base.num, codec_ctx->time_base.den};
+}
+
+template <MediaType media_type>
 FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode(
     PacketsPtr<media_type> packets) {
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
-      packets->id,
-      filter_graph ? filter_graph->get_sink_time_base()
-                   : packets->codec.time_base);
-  auto gen = decode_packets(packets->get_packets(), core, filter_graph);
+      packets->id, get_output_time_base());
+
+  auto gen = streaming_decode(std::move(packets));
   while (gen) {
     ret->push_back(gen().release());
   }
   return ret;
+}
+
+template <MediaType media_type>
+Generator<AVFramePtr> DecoderImpl<media_type>::streaming_decode(
+    PacketsPtr<media_type> packets) {
+  return decode_and_filter(
+      codec_ctx.get(), packets->get_packets(), filter_graph);
 }
 
 template class DecoderImpl<MediaType::Audio>;

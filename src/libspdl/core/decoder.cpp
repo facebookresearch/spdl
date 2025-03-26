@@ -9,9 +9,7 @@
 #include <libspdl/core/decoder.h>
 #include <libspdl/core/decoding.h>
 
-#include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/decoder.h"
-#include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -22,31 +20,16 @@ namespace spdl::core {
 template <MediaType media_type>
   requires(media_type != MediaType::Image)
 struct StreamingDecoder<media_type>::Impl {
-  PacketsPtr<media_type> packets;
-  detail::AVCodecContextPtr codec_ctx;
-  detail::DecoderCore decoder;
-  std::optional<detail::FilterGraph> filter_graph;
-
+  uintptr_t id;
+  detail::DecoderImpl<media_type> decoder;
   Generator<detail::AVFramePtr> gen;
   Impl(
-      PacketsPtr<media_type> packets_,
+      PacketsPtr<media_type> packets,
       const std::optional<DecodeConfig>& cfg,
       const std::optional<std::string>& filter_desc_)
-      : packets(std::move(packets_)),
-        codec_ctx(detail::get_decode_codec_ctx_ptr(
-            packets->codec.get_parameters(),
-            packets->codec.time_base,
-            cfg ? cfg->decoder : std::nullopt,
-            cfg ? cfg->decoder_options : std::nullopt)),
-        decoder({codec_ctx.get()}),
-        filter_graph(detail::get_filter<media_type>(
-            codec_ctx.get(),
-            filter_desc_,
-            packets->codec.frame_rate)),
-        gen(detail::decode_packets(
-            packets->get_packets(),
-            decoder,
-            filter_graph)) {}
+      : id(packets->id),
+        decoder(packets->get_codec(), cfg, filter_desc_),
+        gen(decoder.streaming_decode(std::move(packets))) {}
 
   std::optional<FFmpegFramesPtr<media_type>> decode(int num_frames) {
     if (num_frames <= 0) {
@@ -59,7 +42,7 @@ struct StreamingDecoder<media_type>::Impl {
 
     TRACE_EVENT("decoding", "StreamingDecoder::decode");
     auto ret = std::make_unique<FFmpegFrames<media_type>>(
-        packets->id, packets->codec.time_base);
+        id, decoder.get_output_time_base());
     for (int i = 0; gen && (i < num_frames); ++i) {
       ret->push_back(gen().release());
     }

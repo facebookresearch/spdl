@@ -20,27 +20,11 @@
 namespace spdl::core::detail {
 
 ////////////////////////////////////////////////////////////////////////////////
-// DecoderCore
-////////////////////////////////////////////////////////////////////////////////
-// Wraps AVCodecContextPtr and provide convenient methods
-struct DecoderCore {
-  AVCodecContext* codec_ctx;
-
-  Generator<AVFramePtr> decode(AVPacket*, bool flush_null = false);
-};
-
-Generator<AVFramePtr> decode_packets(
-    const std::vector<AVPacket*>& packets,
-    DecoderCore& decoder,
-    std::optional<FilterGraph>& filter);
-
-////////////////////////////////////////////////////////////////////////////////
 // DecoderImpl
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 class DecoderImpl {
   AVCodecContextPtr codec_ctx;
-  DecoderCore core;
   std::optional<FilterGraph> filter_graph;
 
  public:
@@ -55,7 +39,10 @@ class DecoderImpl {
   DecoderImpl(DecoderImpl&&) = delete;
   DecoderImpl& operator=(DecoderImpl&&) = delete;
 
+  Rational get_output_time_base() const;
+
   FFmpegFramesPtr<media_type> decode(PacketsPtr<media_type> packets);
+  Generator<AVFramePtr> streaming_decode(PacketsPtr<media_type> packets);
 };
 
 } // namespace spdl::core::detail
