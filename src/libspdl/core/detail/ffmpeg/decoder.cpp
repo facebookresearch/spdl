@@ -131,13 +131,19 @@ DecoderImpl<media_type>::DecoderImpl(
           codec.frame_rate)) {}
 
 template <MediaType media_type>
+Rational DecoderImpl<media_type>::get_output_time_base() const {
+  if (filter_graph) {
+    return filter_graph->get_sink_time_base();
+  }
+  return {codec_ctx->time_base.num, codec_ctx->time_base.den};
+}
+
+template <MediaType media_type>
 FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode(
     PacketsPtr<media_type> packets,
     int num_frames) {
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
-      packets->id,
-      filter_graph ? filter_graph->get_sink_time_base()
-                   : packets->codec.time_base);
+      packets->id, get_output_time_base());
   auto gen =
       decode_packets(codec_ctx.get(), packets->get_packets(), filter_graph);
   int num_yielded = 0;
