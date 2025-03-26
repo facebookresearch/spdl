@@ -191,8 +191,8 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
   auto ret = std::make_unique<DemuxedPackets<media_type>>(
       di->get_src(),
       bsf ? filter->get_output_codec_par() : stream->codecpar,
-      Rational{stream->time_base.num, stream->time_base.den});
-  ret->timestamp = window;
+      Rational{stream->time_base.num, stream->time_base.den},
+      window);
 
   auto demuxing = this->demux_window(stream, end, filter);
   while (demuxing) {
@@ -239,25 +239,29 @@ Generator<PacketsPtr<media_type>> DemuxerImpl::streaming_demux(
     auto fr = av_guess_frame_rate(fmt_ctx, stream, nullptr);
     frame_rate = Rational{fr.num, fr.den};
   }
-  auto make_packets = [&](std::vector<AVPacket*>&& pkts) {
+  auto make_packets =
+      [&](std::vector<AVPacketPtr>&& pkts) -> PacketsPtr<media_type> {
     auto ret = std::make_unique<DemuxedPackets<media_type>>(
         di->get_src(),
         bsf ? filter->get_output_codec_par() : stream->codecpar,
         Rational{stream->time_base.num, stream->time_base.den},
-        std::move(pkts));
-    ret->frame_rate = frame_rate;
-    return std::move(ret);
+        std::nullopt,
+        frame_rate);
+    for (auto& p : pkts) {
+      ret->push(p.release());
+    }
+    return ret;
   };
 
   auto demuxing = this->demux_window(stream, POS_INF, filter);
-  std::vector<AVPacket*> packets;
+  std::vector<AVPacketPtr> packets;
   packets.reserve(num_packets);
   while (demuxing) {
-    packets.push_back(demuxing().release());
+    packets.push_back(demuxing());
     if (packets.size() >= num_packets) {
       co_yield make_packets(std::move(packets));
 
-      packets = std::vector<AVPacket*>();
+      packets = std::vector<AVPacketPtr>();
       packets.reserve(num_packets);
     }
   }

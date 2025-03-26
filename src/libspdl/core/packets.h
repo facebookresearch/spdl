@@ -57,10 +57,10 @@ class DemuxedPackets {
 
   //
   AVCodecParameters* codecpar = nullptr;
-  Rational time_base = {0, 1};
+  Rational time_base;
 
   // frame rate for video
-  Rational frame_rate = {0, 1};
+  Rational frame_rate;
 
  private:
   // Sliced raw packets
@@ -69,20 +69,10 @@ class DemuxedPackets {
  public:
   DemuxedPackets(
       std::string src,
-      std::tuple<double, double> timestamp,
-      AVCodecParameters* codecpar,
-      Rational time_base);
-
-  DemuxedPackets(
-      std::string src,
-      AVCodecParameters* codecpar,
-      Rational time_base);
-
-  DemuxedPackets(
-      std::string src,
       AVCodecParameters* codecpar,
       Rational time_base,
-      std::vector<AVPacket*>&& packets);
+      std::optional<std::tuple<double, double>> timestamp = std::nullopt,
+      Rational frame_rate = {0, 1});
 
   // Destructor releases AVPacket* resources
   ~DemuxedPackets();
