@@ -39,7 +39,9 @@ class Decoder {
 
   ~Decoder();
 
-  FFmpegFramesPtr<media_type> decode(PacketsPtr<media_type> packets);
+  FFmpegFramesPtr<media_type> decode(
+      PacketsPtr<media_type> packets,
+      int num_frames = -1);
 };
 
 template <MediaType media_type>

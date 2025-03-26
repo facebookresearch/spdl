@@ -64,9 +64,10 @@ template <MediaType media_type>
 FFmpegFramesPtr<media_type> decode_packets(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& cfg,
-    const std::optional<std::string>& filter_desc) {
+    const std::optional<std::string>& filter_desc,
+    int num_frames) {
   Decoder<media_type> decoder{packets->codec, cfg, filter_desc};
-  return decoder.decode(std::move(packets));
+  return decoder.decode(std::move(packets), num_frames);
 }
 
 } // namespace
@@ -144,7 +145,8 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
-      nb::arg("filter_desc") = nb::none());
+      nb::arg("filter_desc") = nb::none(),
+      nb::arg("num_frames") = -1);
 
   m.def(
       "decode_packets",
@@ -155,7 +157,8 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
-      nb::arg("filter_desc") = nb::none());
+      nb::arg("filter_desc") = nb::none(),
+      nb::arg("num_frames") = -1);
 
   m.def(
       "decode_packets",
@@ -166,6 +169,7 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
 #endif
       nb::arg("decode_config") = nb::none(),
-      nb::arg("filter_desc") = nb::none());
+      nb::arg("filter_desc") = nb::none(),
+      nb::arg("num_frames") = -1);
 }
 } // namespace spdl::core

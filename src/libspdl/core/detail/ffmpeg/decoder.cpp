@@ -129,14 +129,20 @@ DecoderImpl<media_type>::DecoderImpl(
 
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode(
-    PacketsPtr<media_type> packets) {
+    PacketsPtr<media_type> packets,
+    int num_frames) {
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
       packets->id,
       filter_graph ? filter_graph->get_sink_time_base()
                    : packets->codec.time_base);
   auto gen = decode_packets(packets->get_packets(), core, filter_graph);
+  int num_yielded = 0;
   while (gen) {
     ret->push_back(gen().release());
+    num_yielded += 1;
+    if (num_frames > 0 && num_yielded >= num_frames) {
+      break;
+    }
   }
   return ret;
 }
