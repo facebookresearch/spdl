@@ -15,7 +15,7 @@
 #include <glog/logging.h>
 
 namespace spdl::core::detail {
-
+namespace {
 Generator<AVPacket*> _stream_packet(const std::vector<AVPacket*>& packets) {
   for (auto& packet : packets) {
     co_yield packet;
@@ -49,6 +49,7 @@ Generator<AVFramePtr> decode_packets(
     }
   }
 }
+} // namespace
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 

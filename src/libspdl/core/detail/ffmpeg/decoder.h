@@ -29,11 +29,6 @@ struct DecoderCore {
   Generator<AVFramePtr> decode(AVPacket*, bool flush_null = false);
 };
 
-Generator<AVFramePtr> decode_packets(
-    const std::vector<AVPacket*>& packets,
-    DecoderCore& decoder,
-    std::optional<FilterGraph>& filter);
-
 ////////////////////////////////////////////////////////////////////////////////
 // DecoderImpl
 ////////////////////////////////////////////////////////////////////////////////
