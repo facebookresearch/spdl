@@ -18,24 +18,12 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 
 namespace spdl::core::detail {
-
-////////////////////////////////////////////////////////////////////////////////
-// DecoderCore
-////////////////////////////////////////////////////////////////////////////////
-// Wraps AVCodecContextPtr and provide convenient methods
-struct DecoderCore {
-  AVCodecContext* codec_ctx;
-
-  Generator<AVFramePtr> decode(AVPacket*, bool flush_null = false);
-};
-
 ////////////////////////////////////////////////////////////////////////////////
 // DecoderImpl
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
 class DecoderImpl {
   AVCodecContextPtr codec_ctx;
-  DecoderCore core;
   std::optional<FilterGraph> filter_graph;
 
  public:
