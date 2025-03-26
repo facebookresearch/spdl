@@ -25,8 +25,10 @@ Generator<AVPacket*> _stream_packet(const std::vector<AVPacket*>& packets) {
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
 
-Generator<AVFramePtr>
-_decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
+Generator<AVFramePtr> _decode_packet(
+    AVCodecContextPtr& codec_ctx,
+    AVPacket* packet,
+    bool flush_null) {
   VLOG(9)
       << ((!packet) ? fmt::format(" -- flush decoder")
                     : fmt::format(
@@ -39,7 +41,7 @@ _decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
 
   {
     TRACE_EVENT("decoding", "avcodec_send_packet");
-    errnum = avcodec_send_packet(codec_ctx, packet);
+    errnum = avcodec_send_packet(codec_ctx.get(), packet);
   }
   if (errnum < 0) {
     LOG(WARNING) << av_error(errnum, "Failed to pass a frame to decoder.");
@@ -51,7 +53,7 @@ _decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
 
     {
       TRACE_EVENT("decoding", "avcodec_receive_frame");
-      errnum = avcodec_receive_frame(codec_ctx, frame.get());
+      errnum = avcodec_receive_frame(codec_ctx.get(), frame.get());
     }
 
     switch (errnum) {
@@ -84,7 +86,7 @@ _decode_packet(AVCodecContext* codec_ctx, AVPacket* packet, bool flush_null) {
 #undef TS
 
 Generator<AVFramePtr> decode_packets(
-    AVCodecContext* codec_ctx,
+    AVCodecContextPtr& codec_ctx,
     const std::vector<AVPacket*>& packets,
     std::optional<FilterGraph>& filter) {
   auto packet_stream = _stream_packet(packets);
@@ -139,13 +141,12 @@ Rational DecoderImpl<media_type>::get_output_time_base() const {
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode(
+FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode_and_flush(
     PacketsPtr<media_type> packets,
     int num_frames) {
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
       packets->id, get_output_time_base());
-  auto gen =
-      decode_packets(codec_ctx.get(), packets->get_packets(), filter_graph);
+  auto gen = decode_packets(codec_ctx, packets->get_packets(), filter_graph);
   int num_yielded = 0;
   while (gen) {
     ret->push_back(gen().release());

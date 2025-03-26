@@ -40,7 +40,7 @@ class DecoderImpl {
 
   Rational get_output_time_base() const;
 
-  FFmpegFramesPtr<media_type> decode(
+  FFmpegFramesPtr<media_type> decode_and_flush(
       PacketsPtr<media_type> packets,
       int num_frames = -1);
 };

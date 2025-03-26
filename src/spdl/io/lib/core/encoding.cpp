@@ -56,9 +56,7 @@ void register_encoding(nb::module_& m) {
       &encode,
       nb::arg("path"),
       nb::arg("data"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("pix_fmt") = "rgb24",
       nb::arg("encode_config") = nb::none());
 }
