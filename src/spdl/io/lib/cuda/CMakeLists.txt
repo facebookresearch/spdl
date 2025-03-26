@@ -52,6 +52,22 @@ function(add_spdl_cuda_extension ffmpeg_version)
     RUNTIME DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
   )
 
+  if (SPDL_BUILD_STUB)
+    if (NOT TARGET "_libspdl_cuda_stub")
+      nanobind_add_stub(
+        _libspdl_cuda_stub
+        MODULE ${name}
+        OUTPUT _libspdl_cuda.pyi
+        PYTHON_PATH $<TARGET_FILE_DIR:${name}>
+        DEPENDS ${name}
+        )
+
+      install(
+        FILES "${CMAKE_CURRENT_BINARY_DIR}/_libspdl_cuda.pyi"
+        DESTINATION "${SPDL_PYTHON_BINDING_INSTALL_PREFIX}/lib"
+        )
+    endif()
+  endif()
 endfunction()
 
 set(ffmpeg_versions 4 5 6 7)
