@@ -8,6 +8,7 @@
 
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -281,14 +282,8 @@ FilterGraph get_audio_filter(
       codec_ctx->pkt_timebase,
       codec_ctx->sample_rate,
       av_get_sample_fmt_name(codec_ctx->sample_fmt),
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
-      codec_ctx->ch_layout.u.mask,
-      codec_ctx->ch_layout.nb_channels
-#else
-      codec_ctx->channel_layout,
-      codec_ctx->channels
-#endif
-  );
+      GET_LAYOUT(codec_ctx),
+      GET_NUM_CHANNELS(codec_ctx));
   return get_filter(
       filter_desc.c_str(),
       avfilter_get_by_name("abuffer"),

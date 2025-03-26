@@ -8,6 +8,7 @@
 
 #include <libspdl/core/conversion.h>
 
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/conversion.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/logging.h"
@@ -27,19 +28,13 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Audio
 ////////////////////////////////////////////////////////////////////////////////
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
-#define GET_CHANNEL(x) x->ch_layout.nb_channels
-#else
-#define GET_CHANNEL(x) x->channels
-#endif
-
 namespace {
 template <size_t depth, ElemClass type, bool is_planar>
 CPUBufferPtr convert_frames(
     const std::vector<const FFmpegAudioFrames*>& batch,
     std::shared_ptr<CPUStorage> storage) {
   size_t num_frames = batch.at(0)->get_num_frames();
-  size_t num_channels = GET_CHANNEL(batch.at(0)->get_frames().at(0));
+  size_t num_channels = GET_NUM_CHANNELS(batch.at(0)->get_frames().at(0));
 
   if constexpr (is_planar) {
     auto buf = cpu_buffer(
@@ -92,7 +87,7 @@ CPUBufferPtr convert_frames(
     SPDL_FAIL("No frame to convert to buffer.");
   }
   auto frames0 = frames_ptr0->get_frames();
-  auto num_channels0 = GET_CHANNEL(frames0.at(0));
+  auto num_channels0 = GET_NUM_CHANNELS(frames0.at(0));
   auto sample_fmt0 = static_cast<AVSampleFormat>(frames0.at(0)->format);
   for (auto& frames_ptr : batch) {
     auto num_frames = frames_ptr->get_num_frames();
@@ -101,7 +96,7 @@ CPUBufferPtr convert_frames(
     }
     auto frames = frames_ptr->get_frames();
     auto sample_fmt = static_cast<AVSampleFormat>(frames.at(0)->format);
-    auto num_channels = GET_CHANNEL(frames.at(0));
+    auto num_channels = GET_NUM_CHANNELS(frames.at(0));
     if (num_frames == 0) {
       SPDL_FAIL("No frame to convert to buffer.");
     }
