@@ -26,11 +26,12 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
       "decoding",
       "decode_packets_ffmpeg",
       perfetto::Flow::ProcessScoped(packets->id));
-  detail::Decoder decoder{packets->codecpar, packets->time_base, cfg};
+  detail::Decoder decoder{
+      packets->codec.get_parameters(), packets->codec.time_base, cfg};
   auto filter = detail::get_filter<media_type>(
-      decoder.codec_ctx.get(), filter_desc, packets->frame_rate);
+      decoder.codec_ctx.get(), filter_desc, packets->codec.frame_rate);
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
-      packets->id, packets->time_base);
+      packets->id, packets->codec.time_base);
 
   auto gen = detail::decode_packets(packets->get_packets(), decoder, filter);
   while (gen) {

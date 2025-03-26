@@ -17,7 +17,6 @@
 #include <tuple>
 #include <vector>
 
-struct AVCodecParameters;
 struct AVPacket;
 
 namespace spdl::core {
@@ -55,12 +54,8 @@ class DemuxedPackets {
   std::string src;
   std::optional<std::tuple<double, double>> timestamp;
 
-  //
-  AVCodecParameters* codecpar = nullptr;
-  Rational time_base;
-
-  // frame rate for video
-  Rational frame_rate;
+  // Codec info necessary for decoding
+  Codec<media_type> codec;
 
  private:
   // Sliced raw packets
@@ -69,10 +64,8 @@ class DemuxedPackets {
  public:
   DemuxedPackets(
       std::string src,
-      AVCodecParameters* codecpar,
-      Rational time_base,
-      std::optional<std::tuple<double, double>> timestamp = std::nullopt,
-      Rational frame_rate = {0, 1});
+      Codec<media_type>&& codec,
+      std::optional<std::tuple<double, double>> timestamp = std::nullopt);
 
   // Destructor releases AVPacket* resources
   ~DemuxedPackets();

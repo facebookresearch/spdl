@@ -190,8 +190,9 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
 
   auto ret = std::make_unique<DemuxedPackets<media_type>>(
       di->get_src(),
-      bsf ? filter->get_output_codec_par() : stream->codecpar,
-      Rational{stream->time_base.num, stream->time_base.den},
+      Codec<media_type>{
+          bsf ? filter->get_output_codec_par() : stream->codecpar,
+          Rational{stream->time_base.num, stream->time_base.den}},
       window);
 
   auto demuxing = this->demux_window(stream, end, filter);
@@ -203,7 +204,7 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
   }
   if constexpr (media_type == MediaType::Video) {
     auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-    ret->frame_rate = Rational{frame_rate.num, frame_rate.den};
+    ret->codec.frame_rate = Rational{frame_rate.num, frame_rate.den};
   }
   return ret;
 }
@@ -243,10 +244,10 @@ Generator<PacketsPtr<media_type>> DemuxerImpl::streaming_demux(
       [&](std::vector<AVPacketPtr>&& pkts) -> PacketsPtr<media_type> {
     auto ret = std::make_unique<DemuxedPackets<media_type>>(
         di->get_src(),
-        bsf ? filter->get_output_codec_par() : stream->codecpar,
-        Rational{stream->time_base.num, stream->time_base.den},
-        std::nullopt,
-        frame_rate);
+        Codec<media_type>{
+            bsf ? filter->get_output_codec_par() : stream->codecpar,
+            Rational{stream->time_base.num, stream->time_base.den},
+            frame_rate});
     for (auto& p : pkts) {
       ret->push(p.release());
     }

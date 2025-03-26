@@ -473,11 +473,11 @@ void NvDecDecoderCore::decode_packets(
 
   // Init the temporary state used by the decoder callback during the decoding
   this->frame_buffer = buffer;
-  if (auto& tb = packets->time_base; tb.num <= 0 || tb.den <= 0) {
+  if (auto& tb = packets->codec.time_base; tb.num <= 0 || tb.den <= 0) {
     SPDL_FAIL_INTERNAL(
         fmt::format("Invalid time base was found: {}/{}", tb.num, tb.den));
   }
-  this->timebase = packets->time_base;
+  this->timebase = packets->codec.time_base;
   if (packets->timestamp) {
     std::tie(start_time, end_time) = *(packets->timestamp);
   } else {

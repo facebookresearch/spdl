@@ -30,11 +30,14 @@ struct StreamingDecoder<media_type>::Impl {
       const std::optional<DecodeConfig>& cfg_,
       const std::optional<std::string>& filter_desc_)
       : packets(std::move(packets_)),
-        decoder(packets->codecpar, packets->time_base, cfg_),
+        decoder(
+            packets->codec.get_parameters(),
+            packets->codec.time_base,
+            cfg_),
         filter_graph(detail::get_filter<media_type>(
             decoder.codec_ctx.get(),
             filter_desc_,
-            packets->frame_rate)),
+            packets->codec.frame_rate)),
         gen(detail::decode_packets(
             packets->get_packets(),
             decoder,
@@ -51,7 +54,7 @@ struct StreamingDecoder<media_type>::Impl {
 
     TRACE_EVENT("decoding", "StreamingDecoder::decode");
     auto ret = std::make_unique<FFmpegFrames<media_type>>(
-        packets->id, packets->time_base);
+        packets->id, packets->codec.time_base);
     for (int i = 0; gen && (i < num_frames); ++i) {
       ret->push_back(gen().release());
     }
