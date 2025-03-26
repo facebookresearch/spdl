@@ -37,6 +37,17 @@ FFmpegFramesPtr<media_type> Decoder<media_type>::decode_and_flush(
   return pImpl->decode_and_flush(std::move(packets), num_frames);
 }
 
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> Decoder<media_type>::decode(
+    PacketsPtr<media_type> packets) {
+  return pImpl->decode(std::move(packets));
+}
+
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> Decoder<media_type>::flush() {
+  return pImpl->flush();
+}
+
 template class Decoder<MediaType::Audio>;
 template class Decoder<MediaType::Video>;
 template class Decoder<MediaType::Image>;

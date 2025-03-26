@@ -43,6 +43,8 @@ class DecoderImpl {
   FFmpegFramesPtr<media_type> decode_and_flush(
       PacketsPtr<media_type> packets,
       int num_frames = -1);
+  FFmpegFramesPtr<media_type> decode(PacketsPtr<media_type> packets);
+  FFmpegFramesPtr<media_type> flush();
 };
 
 } // namespace spdl::core::detail
