@@ -36,8 +36,8 @@ if (APPLE)
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/ffmpeg_7.1.1_macos_aarch64.tar.gz
-      URL_HASH SHA256=90499be8992dbcddf541c62caa06e759a8e5a9ce670a1497495768a095af1199
+      URL ${base_url}/ffmpeg_7.0.2_macos_aarch64.tar.gz
+      URL_HASH SHA256=29bcf0c4b8c7dc9c28c6dc18b59c43be302ad5af9c4ee77e8c0c76072531485f
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -72,8 +72,8 @@ elseif (UNIX)
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/ffmpeg_7.1.1_manylinux_2_28_aarch64.tar.gz
-      URL_HASH SHA256=220e80ec9594a1980c709f73784aeb4f66f22560194d0594fe07674f88aafa76
+      URL ${base_url}/ffmpeg_7.0.2_manylinux_2_28_aarch64.tar.gz
+      URL_HASH SHA256=1cc22ec6607c06ff9578affe4a502eb60e86c49309606e192b297b6c49c35b48
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
@@ -97,8 +97,8 @@ elseif (UNIX)
       )
     FetchContent_Declare(
       f7
-      URL ${base_url}/ffmpeg_7.1.1_manylinux_2_28_x86_64.tar.gz
-      URL_HASH SHA256=55529e1fd0de8f81c4d3c1a22e0ac6373a9523628a1fdbcbfcf912ca3c539a3d
+      URL ${base_url}/ffmpeg_7.0.2_manylinux_2_28_x86_64.tar.gz
+      URL_HASH SHA256=a30e9a3846cc322e95c483788bec35591c3e4398390db9bc833a4bc15662ebad
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
