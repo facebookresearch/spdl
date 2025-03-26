@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <libspdl/core/decoder.h>
 #include <libspdl/core/decoding.h>
 
 #include <nanobind/nanobind.h>
@@ -24,15 +25,6 @@ namespace nb = nanobind;
 
 namespace spdl::core {
 namespace {
-template <MediaType media_type>
-FFmpegFramesPtr<media_type> decode(
-    PacketsPtr<media_type>&& packets,
-    const std::optional<DecodeConfig>& cfg,
-    const std::optional<std::string>& filter_desc) {
-  nb::gil_scoped_release __g;
-  return decode_packets_ffmpeg(std::move(packets), cfg, filter_desc);
-}
-
 template <MediaType media_type>
 StreamingDecoderPtr<media_type> _make_decoder(
     PacketsPtr<media_type>&& packets,
@@ -60,6 +52,23 @@ void zero_clear(nb::bytes data) {
   std::memset((void*)data.c_str(), 0, data.size());
 }
 
+template <MediaType media_type>
+DecoderPtr<media_type> make_decoder_(
+    const Codec<media_type>& codec,
+    const std::optional<DecodeConfig>& cfg,
+    const std::optional<std::string>& filter_desc) {
+  return std::make_unique<Decoder<media_type>>(codec, cfg, filter_desc);
+}
+
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> decode_packets(
+    PacketsPtr<media_type> packets,
+    const std::optional<DecodeConfig>& cfg,
+    const std::optional<std::string>& filter_desc) {
+  Decoder<media_type> decoder{packets->codec, cfg, filter_desc};
+  return decoder.decode(std::move(packets));
+}
+
 } // namespace
 
 void register_decoding(nb::module_& m) {
@@ -79,11 +88,57 @@ void register_decoding(nb::module_& m) {
   m.def("_drop", &_drop<MediaType::Video>);
 
   ////////////////////////////////////////////////////////////////////////////////
-  // Async decoding - FFMPEG
+  // Decoder
   ////////////////////////////////////////////////////////////////////////////////
+  nb::class_<Decoder<MediaType::Audio>>(m, "Decoder")
+      .def(
+          "decode",
+          &Decoder<MediaType::Audio>::decode,
+          nb::call_guard<nb::gil_scoped_release>());
+  nb::class_<Decoder<MediaType::Video>>(m, "Decoder")
+      .def(
+          "decode",
+          &Decoder<MediaType::Video>::decode,
+          nb::call_guard<nb::gil_scoped_release>());
+  nb::class_<Decoder<MediaType::Image>>(m, "Decoder")
+      .def(
+          "decode",
+          &Decoder<MediaType::Image>::decode,
+          nb::call_guard<nb::gil_scoped_release>());
+
+  m.def(
+      "_make_decoder",
+      &make_decoder_<MediaType::Audio>,
+      nb::call_guard<nb::gil_scoped_release>(),
+      nb::arg("codec"),
+      nb::kw_only(),
+      nb::arg("decode_config") = nb::none(),
+      nb::arg("filter_desc") = nb::none());
+  m.def(
+      "_make_decoder",
+      &make_decoder_<MediaType::Video>,
+      nb::call_guard<nb::gil_scoped_release>(),
+      nb::arg("codec"),
+      nb::kw_only(),
+      nb::arg("decode_config") = nb::none(),
+      nb::arg("filter_desc") = nb::none());
+  m.def(
+      "_make_decoder",
+      &make_decoder_<MediaType::Image>,
+      nb::call_guard<nb::gil_scoped_release>(),
+      nb::arg("codec"),
+      nb::kw_only(),
+      nb::arg("decode_config") = nb::none(),
+      nb::arg("filter_desc") = nb::none());
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Decoding
+  ////////////////////////////////////////////////////////////////////////////////
+
   m.def(
       "decode_packets",
-      &decode<MediaType::Audio>,
+      &decode_packets<MediaType::Audio>,
+      nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("packets"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -93,7 +148,8 @@ void register_decoding(nb::module_& m) {
 
   m.def(
       "decode_packets",
-      &decode<MediaType::Video>,
+      &decode_packets<MediaType::Video>,
+      nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("packets"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
@@ -103,7 +159,8 @@ void register_decoding(nb::module_& m) {
 
   m.def(
       "decode_packets",
-      &decode<MediaType::Image>,
+      &decode_packets<MediaType::Image>,
+      nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("packets"),
 #if NB_VERSION_MAJOR >= 2
       nb::kw_only(),

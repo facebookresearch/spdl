@@ -35,7 +35,6 @@ set(srcs
   buffer.cpp
   storage.cpp
   decoder.cpp
-  decoding.cpp
   demuxing.cpp
   codec.cpp
   encoding.cpp
