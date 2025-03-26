@@ -26,7 +26,8 @@ FFmpegFramesPtr<media_type> decode_packets_ffmpeg(
       "decoding",
       "decode_packets_ffmpeg",
       perfetto::Flow::ProcessScoped(packets->id));
-  detail::Decoder decoder{
+
+  detail::DecoderCore decoder{
       packets->codec.get_parameters(), packets->codec.time_base, cfg};
   auto filter = detail::get_filter<media_type>(
       decoder.codec_ctx.get(), filter_desc, packets->codec.frame_rate);
