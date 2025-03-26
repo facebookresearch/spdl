@@ -55,7 +55,9 @@ class DecoderImpl {
   DecoderImpl(DecoderImpl&&) = delete;
   DecoderImpl& operator=(DecoderImpl&&) = delete;
 
-  FFmpegFramesPtr<media_type> decode(PacketsPtr<media_type> packets);
+  FFmpegFramesPtr<media_type> decode(
+      PacketsPtr<media_type> packets,
+      int num_frames = -1);
 };
 
 } // namespace spdl::core::detail

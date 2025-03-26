@@ -538,10 +538,13 @@ def streaming_load_video_nvdec(
 def _decode_partial(packets, indices, decode_config, filter_desc):
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
-    decoder = _core.streaming_decode_packets(
-        packets, num_frames, decode_config, filter_desc
+    frames = _core.decode_packets(
+        packets,
+        decode_config=decode_config,
+        filter_desc=filter_desc,
+        num_frames=num_frames,
     )
-    return next(decoder)[indices]
+    return frames[indices]
 
 
 def sample_decode_video(

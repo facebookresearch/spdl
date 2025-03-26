@@ -130,8 +130,9 @@ Decoder<media_type>::~Decoder() {
 
 template <MediaType media_type>
 FFmpegFramesPtr<media_type> Decoder<media_type>::decode(
-    PacketsPtr<media_type> packets) {
-  return pImpl->decode(std::move(packets));
+    PacketsPtr<media_type> packets,
+    int num_frames) {
+  return pImpl->decode(std::move(packets), num_frames);
 }
 
 template class Decoder<MediaType::Audio>;
