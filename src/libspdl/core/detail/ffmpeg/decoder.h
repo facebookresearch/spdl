@@ -38,6 +38,8 @@ class DecoderImpl {
   DecoderImpl(DecoderImpl&&) = delete;
   DecoderImpl& operator=(DecoderImpl&&) = delete;
 
+  Rational get_output_time_base() const;
+
   FFmpegFramesPtr<media_type> decode(
       PacketsPtr<media_type> packets,
       int num_frames = -1);
