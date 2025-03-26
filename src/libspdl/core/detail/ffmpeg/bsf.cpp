@@ -16,7 +16,7 @@ namespace spdl::core::detail {
 namespace {
 AVBSFContextPtr init_bsf(
     const std::string& name,
-    AVCodecParameters* codec_par) {
+    const AVCodecParameters* codec_par) {
   TRACE_EVENT("demuxing", "init_bsf");
   AVBSFContext* p = nullptr;
   CHECK_AVERROR(
@@ -49,7 +49,7 @@ int redeivce_paccket(AVBSFContext* bsf_ctx, AVPacket* packet) {
 
 BitStreamFilter::BitStreamFilter(
     const std::string& name,
-    AVCodecParameters* codec_par)
+    const AVCodecParameters* codec_par)
     : bsf_ctx(init_bsf(name, codec_par)){};
 
 AVCodecParameters* BitStreamFilter::get_output_codec_par() {

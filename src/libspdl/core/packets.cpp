@@ -143,7 +143,7 @@ Codec<media_type> DemuxedPackets<media_type>::get_codec() const {
 
 namespace {
 template <MediaType media_type>
-std::string get_codec_info(AVCodecParameters* codecpar) {
+std::string get_codec_info(const AVCodecParameters* codecpar) {
   if (!codecpar) {
     return "<No codec information>";
   }
