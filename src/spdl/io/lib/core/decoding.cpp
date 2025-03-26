@@ -25,7 +25,7 @@ namespace nb = nanobind;
 namespace spdl::core {
 namespace {
 template <MediaType media_type>
-DecoderPtr<media_type> make_decoder_(
+DecoderPtr<media_type> _make_decoder(
     const Codec<media_type>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc) {
@@ -39,7 +39,7 @@ FFmpegFramesPtr<media_type> decode_packets(
     const std::optional<std::string>& filter_desc,
     int num_frames) {
   Decoder<media_type> decoder{packets->codec, cfg, filter_desc};
-  return decoder.decode(std::move(packets), num_frames);
+  return decoder.decode_and_flush(std::move(packets), num_frames);
 }
 
 } // namespace
@@ -51,22 +51,22 @@ void register_decoding(nb::module_& m) {
   nb::class_<Decoder<MediaType::Audio>>(m, "Decoder")
       .def(
           "decode",
-          &Decoder<MediaType::Audio>::decode,
+          &Decoder<MediaType::Audio>::decode_and_flush,
           nb::call_guard<nb::gil_scoped_release>());
   nb::class_<Decoder<MediaType::Video>>(m, "Decoder")
       .def(
           "decode",
-          &Decoder<MediaType::Video>::decode,
+          &Decoder<MediaType::Video>::decode_and_flush,
           nb::call_guard<nb::gil_scoped_release>());
   nb::class_<Decoder<MediaType::Image>>(m, "Decoder")
       .def(
           "decode",
-          &Decoder<MediaType::Image>::decode,
+          &Decoder<MediaType::Image>::decode_and_flush,
           nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
       "_make_decoder",
-      &make_decoder_<MediaType::Audio>,
+      &_make_decoder<MediaType::Audio>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("codec"),
       nb::kw_only(),
@@ -74,7 +74,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("filter_desc") = nb::none());
   m.def(
       "_make_decoder",
-      &make_decoder_<MediaType::Video>,
+      &_make_decoder<MediaType::Video>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("codec"),
       nb::kw_only(),
@@ -82,7 +82,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("filter_desc") = nb::none());
   m.def(
       "_make_decoder",
-      &make_decoder_<MediaType::Image>,
+      &_make_decoder<MediaType::Image>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("codec"),
       nb::kw_only(),
@@ -98,9 +98,7 @@ void register_decoding(nb::module_& m) {
       &decode_packets<MediaType::Audio>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("packets"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none(),
       nb::arg("num_frames") = -1);
@@ -110,9 +108,7 @@ void register_decoding(nb::module_& m) {
       &decode_packets<MediaType::Video>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("packets"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none(),
       nb::arg("num_frames") = -1);
@@ -122,9 +118,7 @@ void register_decoding(nb::module_& m) {
       &decode_packets<MediaType::Image>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("packets"),
-#if NB_VERSION_MAJOR >= 2
       nb::kw_only(),
-#endif
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none(),
       nb::arg("num_frames") = -1);

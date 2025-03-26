@@ -31,10 +31,10 @@ Decoder<media_type>::~Decoder() {
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> Decoder<media_type>::decode(
+FFmpegFramesPtr<media_type> Decoder<media_type>::decode_and_flush(
     PacketsPtr<media_type> packets,
     int num_frames) {
-  return pImpl->decode(std::move(packets), num_frames);
+  return pImpl->decode_and_flush(std::move(packets), num_frames);
 }
 
 template class Decoder<MediaType::Audio>;
