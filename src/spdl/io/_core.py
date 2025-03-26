@@ -69,7 +69,6 @@ __all__ = [
     # DECODING
     "decode_packets",
     "decode_packets_nvdec",
-    "streaming_decode_packets",
     "decode_image_nvjpeg",
     "NvDecDecoder",
     "nvdec_decoder",
@@ -323,19 +322,33 @@ def apply_bsf(packets, bsf):
 
 @overload
 def decode_packets(
-    packets: AudioPackets, filter_desc: str | None = _FILTER_DESC_DEFAULT, **kwargs
+    packets: AudioPackets,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: DecodeConfig | None = None,
+    **kwargs,
 ) -> AudioFrames: ...
 @overload
 def decode_packets(
-    packets: VideoPackets, filter_desc: str | None = _FILTER_DESC_DEFAULT, **kwargs
+    packets: VideoPackets,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: DecodeConfig | None = None,
+    **kwargs,
 ) -> VideoFrames: ...
 @overload
 def decode_packets(
-    packets: ImagePackets, filter_desc: str | None = _FILTER_DESC_DEFAULT, **kwargs
+    packets: ImagePackets,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: DecodeConfig | None = None,
+    **kwargs,
 ) -> ImageFrames: ...
 
 
-def decode_packets(packets, filter_desc=_FILTER_DESC_DEFAULT, **kwargs):
+def decode_packets(
+    packets,
+    filter_desc=_FILTER_DESC_DEFAULT,
+    decode_config=None,
+    **kwargs,
+):
     """Decode packets.
 
     Args:
@@ -367,7 +380,9 @@ def decode_packets(packets, filter_desc=_FILTER_DESC_DEFAULT, **kwargs):
     """
     if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_filter_desc(packets)
-    return _libspdl.decode_packets(packets, filter_desc=filter_desc, **kwargs)
+    return _libspdl.decode_packets(
+        packets, filter_desc=filter_desc, decode_config=decode_config, **kwargs
+    )
 
 
 def decode_packets_nvdec(
@@ -505,35 +520,6 @@ def decode_image_nvjpeg(
     return _libspdl_cuda.decode_image_nvjpeg(
         data, device_config=device_config, **kwargs
     )
-
-
-def streaming_decode_packets(
-    packets: VideoPackets,
-    num_frames: int,
-    decode_config: DecodeConfig | None = None,
-    filter_desc: str | None = _FILTER_DESC_DEFAULT,
-) -> Iterator[VideoFrames]:
-    """Decode the video packets chunk by chunk.
-
-    Args:
-        packets: Input packets.
-        num_frames: Number of frames to decode at a time.
-        decode_config: *Optional:* Custom decoding config.
-            *Optional:* Custom decode config.
-            See :py:func:`~spdl.io.decode_config`,
-        filter_desc: *Optional:* Custom filter description.
-            See :py:func:`~spdl.io.decode_packets` for the detail.
-
-    Yields:
-        VideoFrames object containing at most ``num_frames`` frames.
-    """
-    if filter_desc == _FILTER_DESC_DEFAULT:
-        filter_desc = _preprocessing.get_filter_desc(packets)
-    decoder = _libspdl._streaming_decoder(
-        packets, decode_config=decode_config, filter_desc=filter_desc
-    )
-    while (frames := decoder.decode(num_frames)) is not None:
-        yield frames
 
 
 class NvDecDecoder:

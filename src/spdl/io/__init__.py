@@ -74,7 +74,6 @@ from ._core import (
     nv12_to_rgb,
     nvdec_decoder,
     NvDecDecoder,
-    streaming_decode_packets,
     transfer_buffer,
     transfer_buffer_cpu,
 )
@@ -114,7 +113,6 @@ __all__ = [
     "decode_packets",
     "NvDecDecoder",
     "decode_packets_nvdec",
-    "streaming_decode_packets",
     "streaming_load_video_nvdec",
     "decode_image_nvjpeg",
     "NvDecDecoder",
