@@ -8,6 +8,7 @@
 
 #include <libspdl/core/decoding.h>
 
+#include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/decoder.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 #include "libspdl/core/detail/logging.h"
@@ -21,21 +22,24 @@ template <MediaType media_type>
   requires(media_type != MediaType::Image)
 struct StreamingDecoder<media_type>::Impl {
   PacketsPtr<media_type> packets;
+  detail::AVCodecContextPtr codec_ctx;
   detail::DecoderCore decoder;
   std::optional<detail::FilterGraph> filter_graph;
 
   Generator<detail::AVFramePtr> gen;
   Impl(
       PacketsPtr<media_type> packets_,
-      const std::optional<DecodeConfig>& cfg_,
+      const std::optional<DecodeConfig>& cfg,
       const std::optional<std::string>& filter_desc_)
       : packets(std::move(packets_)),
-        decoder(
+        codec_ctx(detail::get_decode_codec_ctx_ptr(
             packets->codec.get_parameters(),
             packets->codec.time_base,
-            cfg_),
+            cfg ? cfg->decoder : std::nullopt,
+            cfg ? cfg->decoder_options : std::nullopt)),
+        decoder({codec_ctx.get()}),
         filter_graph(detail::get_filter<media_type>(
-            decoder.codec_ctx.get(),
+            codec_ctx.get(),
             filter_desc_,
             packets->codec.frame_rate)),
         gen(detail::decode_packets(
