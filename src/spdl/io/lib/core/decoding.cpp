@@ -42,6 +42,12 @@ FFmpegFramesPtr<media_type> decode_packets(
   return decoder.decode_and_flush(std::move(packets), num_frames);
 }
 
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> decode(
+    Decoder<media_type>& self,
+    PacketsPtr<media_type> packets) {
+  return self.decode(std::move(packets), false, -1);
+}
 } // namespace
 
 void register_decoding(nb::module_& m) {
@@ -51,18 +57,24 @@ void register_decoding(nb::module_& m) {
   nb::class_<Decoder<MediaType::Audio>>(m, "Decoder")
       .def(
           "decode",
-          &Decoder<MediaType::Audio>::decode_and_flush,
-          nb::call_guard<nb::gil_scoped_release>());
+          &Decoder<MediaType::Audio>::decode,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("packets"))
+      .def("flush", &Decoder<MediaType::Audio>::flush);
   nb::class_<Decoder<MediaType::Video>>(m, "Decoder")
       .def(
           "decode",
-          &Decoder<MediaType::Video>::decode_and_flush,
-          nb::call_guard<nb::gil_scoped_release>());
+          &Decoder<MediaType::Video>::decode,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("packets"))
+      .def("flush", &Decoder<MediaType::Video>::flush);
   nb::class_<Decoder<MediaType::Image>>(m, "Decoder")
       .def(
           "decode",
-          &Decoder<MediaType::Image>::decode_and_flush,
-          nb::call_guard<nb::gil_scoped_release>());
+          &Decoder<MediaType::Image>::decode,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("packets"))
+      .def("flush", &Decoder<MediaType::Image>::flush);
 
   m.def(
       "_make_decoder",

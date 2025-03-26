@@ -16,11 +16,15 @@
 
 namespace spdl::core::detail {
 namespace {
-Generator<AVPacket*> _stream_packet(const std::vector<AVPacket*>& packets) {
+Generator<AVPacket*> _stream_packet(
+    const std::vector<AVPacket*>& packets,
+    bool flush) {
   for (auto& packet : packets) {
     co_yield packet;
   }
-  co_yield nullptr;
+  if (flush) {
+    co_yield nullptr;
+  }
 }
 
 #define TS(OBJ, BASE) (static_cast<double>(OBJ->pts) * BASE.num / BASE.den)
@@ -88,8 +92,9 @@ Generator<AVFramePtr> _decode_packet(
 Generator<AVFramePtr> decode_packets(
     AVCodecContextPtr& codec_ctx,
     const std::vector<AVPacket*>& packets,
-    std::optional<FilterGraph>& filter) {
-  auto packet_stream = _stream_packet(packets);
+    std::optional<FilterGraph>& filter,
+    bool flush) {
+  auto packet_stream = _stream_packet(packets, flush);
   if (!filter) {
     while (packet_stream) {
       auto decoding = _decode_packet(codec_ctx, packet_stream(), false);
@@ -146,7 +151,8 @@ FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode_and_flush(
     int num_frames) {
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
       packets->id, get_output_time_base());
-  auto gen = decode_packets(codec_ctx, packets->get_packets(), filter_graph);
+  auto gen =
+      decode_packets(codec_ctx, packets->get_packets(), filter_graph, true);
   int num_yielded = 0;
   while (gen) {
     ret->push_back(gen().release());
@@ -154,6 +160,30 @@ FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode_and_flush(
     if (num_frames > 0 && num_yielded >= num_frames) {
       break;
     }
+  }
+  return ret;
+}
+
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> DecoderImpl<media_type>::decode(
+    PacketsPtr<media_type> packets) {
+  auto ret = std::make_unique<FFmpegFrames<media_type>>(
+      packets->id, get_output_time_base());
+  auto gen =
+      decode_packets(codec_ctx, packets->get_packets(), filter_graph, false);
+  while (gen) {
+    ret->push_back(gen().release());
+  }
+  return ret;
+}
+
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> DecoderImpl<media_type>::flush() {
+  auto ret = std::make_unique<FFmpegFrames<media_type>>(
+      reinterpret_cast<uintptr_t>(this), get_output_time_base());
+  auto gen = decode_packets(codec_ctx, {}, filter_graph, true);
+  while (gen) {
+    ret->push_back(gen().release());
   }
   return ret;
 }
