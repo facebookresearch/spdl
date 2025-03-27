@@ -618,6 +618,8 @@ class NvDecDecoder:
          NVDEC.
        - :py:func:`streaming_load_video_nvdec`: Decode video frames
          from source in streaming fashion.
+       - :py:mod:`streaming_nvdec_decoding`: Demonstrates how to
+         decode a long video using NVDEC.
 
     .. admonition:: Example - decoding the whole video
 

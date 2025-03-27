@@ -486,6 +486,11 @@ def streaming_load_video_nvdec(
 ) -> Iterator[list[CUDABuffer]]:
     """Load video from source chunk by chunk using NVDEC.
 
+    .. seealso::
+
+       - :py:mod:`streaming_nvdec_decoding`: Demonstrates how to
+         decode a long video using NVDEC.
+
     Args:
         src: The source URI. Passed to :py:class:`Demuxer`.
 
@@ -498,7 +503,14 @@ def streaming_load_video_nvdec(
             passed to :py:class:`NvDecDecoder.init`.
 
     Yields:
-        CUDA buffer of shape ``(num_frames, color, height, width)``.
+        List of at most ``num_frames`` CUDA buffers.
+        Each CUDA buffer contain a frame in NV12 format.
+        The shape is ``(height + height // 2, width)``.
+        The bottom one-third contains interleaved UV plane,
+        and the top part contains the Y plane.
+
+        Use :py:func:`nv12_to_rgb` or :py:func:`nv12_to_bgr`
+        to convert to RGB frames.
     """
     demuxer = _core.Demuxer(src)
     codec = demuxer.video_codec
