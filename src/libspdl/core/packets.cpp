@@ -8,6 +8,7 @@
 
 #include <libspdl/core/packets.h>
 
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
@@ -106,13 +107,7 @@ int DemuxedPackets<media_type>::get_num_channels() const
   requires(media_type == MediaType::Audio)
 {
   const auto* codecpar = codec.get_parameters();
-  return
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
-      codecpar->ch_layout.nb_channels;
-#else
-      codecpar->channels;
-#endif
-  ;
+  return GET_NUM_CHANNELS(codecpar);
 }
 
 template <MediaType media_type>
@@ -147,14 +142,8 @@ std::string get_codec_info(const AVCodecParameters* codecpar) {
 
   if constexpr (media_type == MediaType::Audio) {
     parts.emplace_back(fmt::format("sample_rate={}", codecpar->sample_rate));
-    parts.emplace_back(fmt::format(
-        "num_channels={}",
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
-        codecpar->ch_layout.nb_channels
-#else
-        codecpar->channels
-#endif
-        ));
+    parts.emplace_back(
+        fmt::format("num_channels={}", GET_NUM_CHANNELS(codecpar)));
   }
   if constexpr (
       media_type == MediaType::Video || media_type == MediaType::Image) {

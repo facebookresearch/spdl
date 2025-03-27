@@ -10,6 +10,7 @@
 
 #include <libspdl/core/types.h>
 
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
@@ -157,13 +158,7 @@ template <MediaType media_type>
 int FFmpegFrames<media_type>::get_num_channels() const
   requires _IS_AUDIO
 {
-  return frames.size() ?
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
-                       frames[0]->ch_layout.nb_channels
-#else
-                       frames[0]->channels
-#endif
-                       : -1;
+  return frames.size() ? GET_NUM_CHANNELS(frames[0]) : -1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
