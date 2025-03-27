@@ -38,8 +38,10 @@ class DemuxerImpl {
   Codec<media_type> get_default_codec() const;
   bool has_audio() const;
 
+ private:
   Generator<AVPacketPtr> demux();
 
+ public:
   template <MediaType media_type>
   PacketsPtr<media_type> demux_window(
       const std::optional<std::tuple<double, double>>& window,

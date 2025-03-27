@@ -22,8 +22,19 @@ namespace {
 void init_fmt_ctx(AVFormatContext* fmt_ctx, DataInterface* di) {
   TRACE_EVENT("demuxing", "avformat_find_stream_info");
   CHECK_AVERROR(
-      avformat_find_stream_info(di->get_fmt_ctx(), nullptr),
+      avformat_find_stream_info(fmt_ctx, nullptr),
       fmt::format("Failed to find stream information: {}.", di->get_src()));
+
+  // Disable all the non-media streams
+  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
+    switch (fmt_ctx->streams[i]->codecpar->codec_type) {
+      case AVMEDIA_TYPE_AUDIO:
+      case AVMEDIA_TYPE_VIDEO:
+        break;
+      default:
+        fmt_ctx->streams[i]->discard = AVDISCARD_ALL;
+    }
+  }
 }
 
 void enable_for_stream(AVFormatContext* fmt_ctx, int idx) {
