@@ -511,6 +511,30 @@ class ImageFrames(Frames):
         ...
 
 
+class AudioDecoder:
+    """Decode stream of audio packets. See :py:class:`Decoder` for the detail."""
+
+    def decode(self, packets: AudioPackets) -> AudioFrames:
+        """Decode the given packets"""
+        ...
+
+
+class VideoDecoder:
+    """Decode stream of video packets. See :py:class:`Decoder` for the detail."""
+
+    def decode(self, packets: VideoPackets) -> VideoFrames:
+        """Decode the given packets"""
+        ...
+
+
+class ImageDecoder:
+    """Decode an image packet. See :py:class:`Decoder` for the detail."""
+
+    def decode(self, packets: ImagePackets) -> ImageFrames:
+        """Decode the given packets"""
+        ...
+
+
 class CPUBuffer:
     """CPUBuffer()
     Buffer implements array interface.

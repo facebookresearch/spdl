@@ -119,3 +119,30 @@ def test_demuxer_get_codec(get_sample):
     assert video_codec.name == "h264"
     assert video_codec.width == 320
     assert video_codec.height == 240
+
+
+def test_decoder_simple(get_sample):
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 30 sample.mp4"
+
+    sample = get_sample(cmd)
+
+    buffer = spdl.io.load_video(sample.path)
+    ref = spdl.io.to_numpy(buffer)
+
+    demuxer = spdl.io.Demuxer(sample.path)
+    decoder = spdl.io.Decoder(demuxer.video_codec)
+
+    buffers = []
+    for i, packets in enumerate(demuxer.streaming_demux_video(10)):
+        frames = decoder.decode(packets)
+        print(f"{i}: {frames=}", flush=True)
+        buffer = spdl.io.convert_frames(frames)
+        buffers.append(spdl.io.to_numpy(buffer))
+
+    frames = decoder.flush()
+    print(f"^: {frames=}", flush=True)
+    buffer = spdl.io.convert_frames(frames)
+    buffers.append(spdl.io.to_numpy(buffer))
+    hyp = np.concatenate(buffers)
+
+    np.testing.assert_array_equal(hyp, ref)
