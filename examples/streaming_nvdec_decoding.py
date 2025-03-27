@@ -14,6 +14,7 @@ __all__ = [
     "torch_cuda_warmup",
 ]
 
+import argparse
 import contextlib
 import logging
 import pathlib
@@ -23,12 +24,12 @@ import spdl.io
 import torch
 from PIL import Image
 from spdl.io import CUDAConfig
-from torch.profiler import profile, ProfilerActivity
+from torch.profiler import profile
 
-# pyre-unsafe
+# pyre-strict
 
 
-def parse_args(args: list[str] | None = None):
+def parse_args(args: list[str] | None = None) -> tuple[argparse.Namespace, list[str]]:
     """Parse command line arguments.
 
     Args:
@@ -38,7 +39,6 @@ def parse_args(args: list[str] | None = None):
         Tuple of parsed arguments and unused arguments, as returned by
         :py:meth:`argparse.ArgumentParser.parse_known_args`.
     """
-    import argparse
 
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -81,7 +81,7 @@ def decode(
     post_processing_params: dict[str, int],
     profiler: torch.profiler.profile | None,
     plot_dir: pathlib.Path | None,
-):
+) -> None:
     """Decode video in streaming fashion with optional resizing, profiling and exporting.
 
     Args:
@@ -145,7 +145,7 @@ def run(
     post_processing_params: dict[str, int],
     profiler: torch.profiler.profile,
     plot_dir: pathlib.Path,
-):
+) -> None:
     """Run the benchmark."""
     cuda_index, stream = torch_cuda_warmup(device_index)
 
@@ -163,28 +163,27 @@ def run(
             decode(src, device_config, post_processing_params, profiler, plot_dir)
 
 
-def main(args: list[str] | None = None):
+def main(args: list[str] | None = None) -> None:
     """The main entrypoint for the CLI."""
-    args, _ = parse_args(args)
+    ns, _ = parse_args(args)
 
     logging.basicConfig(level=logging.INFO)
 
     prof = None
     post_process = {
-        "scale_width": args.width if args.width > 0 else None,
-        "scale_height": args.height if args.height > 0 else None,
+        "scale_width": ns.width if ns.width > 0 else None,
+        "scale_height": ns.height if ns.height > 0 else None,
     }
     with contextlib.ExitStack() as stack:
-        if args.trace_path:
+        if ns.trace_path:
             prof = stack.enter_context(
                 profile(
-                    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
                     with_stack=True,
-                    on_trace_ready=lambda p: p.export_chrome_trace(args.trace_path),
+                    on_trace_ready=lambda p: p.export_chrome_trace(ns.trace_path),
                 )
             )
 
-        run(args.input_file, args.device_index, post_process, prof, args.plot_dir)
+        run(ns.input_file, ns.device_index, post_process, prof, ns.plot_dir)
 
 
 if __name__ == "__main__":
