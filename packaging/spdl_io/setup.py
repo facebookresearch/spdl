@@ -216,7 +216,6 @@ def main():
         version=version,
         packages=packages,
         package_dir={"": "src"},
-        license_files=('LICENSE', ),
         ext_modules=_get_ext_modules(),
         cmdclass={"build_ext": CMakeBuild},
     )

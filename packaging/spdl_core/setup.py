@@ -26,7 +26,6 @@ def main():
         version=version,
         packages=packages,
         package_dir={"": "src"},
-        license_files=('LICENSE', ),
     )
 
 

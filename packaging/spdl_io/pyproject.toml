@@ -5,7 +5,8 @@ authors = [
 ]
 readme = "README.md"
 description = "SPDL plugin for loading media data into array format."
-license = { text = "BSD-2-Clause" }
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
@@ -17,7 +18,7 @@ Documentation = "https://facebookresearch.github.io/spdl/main/index.html"
 
 [build-system]
 requires = [
-    "setuptools>=64",
+    "setuptools>=77.0.0",
     "wheel",
     "ninja",
     "cmake>=3.24",
