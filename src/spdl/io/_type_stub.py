@@ -42,6 +42,16 @@ class VideoCodec:
         """The name of the codec"""
         ...
 
+    @property
+    def width(self) -> int:
+        """The width of the video."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """The height of the video."""
+        ...
+
 
 class AudioCodec:
     """AudioCodec()
@@ -53,6 +63,16 @@ class AudioCodec:
         """The name of the codec"""
         ...
 
+    @property
+    def sample_rate(self) -> int:
+        """The sample rate of the audio stream"""
+        ...
+
+    @property
+    def num_channels(self) -> int:
+        """The number of channels in the audio stream"""
+        ...
+
 
 class ImageCodec:
     """ImageCodec()
@@ -62,6 +82,16 @@ class ImageCodec:
     @property
     def name(self) -> str:
         """The name of the codec"""
+        ...
+
+    @property
+    def width(self) -> int:
+        """The width of the image."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """The height of the image."""
         ...
 
 

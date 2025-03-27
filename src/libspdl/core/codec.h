@@ -38,8 +38,14 @@ class Codec {
   Codec<media_type>& operator=(Codec<media_type>&&) noexcept;
 
   std::string get_name() const;
-  int get_width() const;
-  int get_height() const;
+  int get_sample_rate() const
+    requires(media_type == MediaType::Audio);
+  int get_num_channels() const
+    requires(media_type == MediaType::Audio);
+  int get_width() const
+    requires(media_type == MediaType::Video || media_type == MediaType::Image);
+  int get_height() const
+    requires(media_type == MediaType::Video || media_type == MediaType::Image);
   CodecID get_codec_id() const;
 
   // Note: the returned pointer must not outlive the Codec object
