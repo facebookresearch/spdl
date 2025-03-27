@@ -5,7 +5,8 @@ authors = [
 ]
 readme = "README.md"
 description = "Scalable and Performant Data Loading"
-license = { text = "BSD-2-Clause" }
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
@@ -17,7 +18,7 @@ dependencies = [
 Documentation = "https://facebookresearch.github.io/spdl/main/index.html"
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=77.0.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]

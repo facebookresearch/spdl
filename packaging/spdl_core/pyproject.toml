@@ -5,7 +5,8 @@ authors = [
 ]
 readme = "README.md"
 description = "SPDL: Scalable and Performant Data Loading."
-license = { text = "BSD-2-Clause" }
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
 dynamic = ["version"]
 requires-python = ">= 3.10"
 
@@ -13,5 +14,5 @@ requires-python = ">= 3.10"
 Documentation = "https://facebookresearch.github.io/spdl/main/index.html"
 
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
