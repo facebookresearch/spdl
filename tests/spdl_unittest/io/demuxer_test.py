@@ -105,10 +105,17 @@ def test_streaming_video_demuxing_parity(get_sample):
 
 
 def test_demuxer_get_codec(get_sample):
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af pan='stereo| c0=FR | c1=FR' -frames:v 30 sample.mp4"
 
     sample = get_sample(cmd)
     demuxer = spdl.io.Demuxer(sample.path)
 
-    assert demuxer.audio_codec.name == "aac"
-    assert demuxer.video_codec.name == "h264"
+    audio_codec = demuxer.audio_codec
+    video_codec = demuxer.video_codec
+
+    assert audio_codec.name == "aac"
+    assert audio_codec.sample_rate == 48000
+    assert audio_codec.num_channels == 2
+    assert video_codec.name == "h264"
+    assert video_codec.width == 320
+    assert video_codec.height == 240

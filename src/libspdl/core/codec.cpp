@@ -8,6 +8,7 @@
 
 #include <libspdl/core/codec.h>
 
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/logging.h"
 
@@ -76,13 +77,31 @@ std::string Codec<media_type>::get_name() const {
 }
 
 template <MediaType media_type>
-int Codec<media_type>::get_width() const {
+int Codec<media_type>::get_width() const
+  requires(media_type == MediaType::Video || media_type == MediaType::Image)
+{
   return codecpar->width;
 }
 
 template <MediaType media_type>
-int Codec<media_type>::get_height() const {
+int Codec<media_type>::get_height() const
+  requires(media_type == MediaType::Video || media_type == MediaType::Image)
+{
   return codecpar->height;
+}
+
+template <MediaType media_type>
+int Codec<media_type>::get_sample_rate() const
+  requires(media_type == MediaType::Audio)
+{
+  return codecpar->sample_rate;
+}
+
+template <MediaType media_type>
+int Codec<media_type>::get_num_channels() const
+  requires(media_type == MediaType::Audio)
+{
+  return GET_NUM_CHANNELS(codecpar);
 }
 
 template <MediaType media_type>
