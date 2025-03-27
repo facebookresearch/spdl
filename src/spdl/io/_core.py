@@ -40,6 +40,7 @@ else:
 
 from spdl.io import (
     AudioCodec,
+    AudioDecoder,
     AudioFrames,
     AudioPackets,
     CPUBuffer,
@@ -48,9 +49,11 @@ from spdl.io import (
     CUDAConfig,
     DecodeConfig,
     ImageCodec,
+    ImageDecoder,
     ImageFrames,
     ImagePackets,
     VideoCodec,
+    VideoDecoder,
     VideoFrames,
     VideoPackets,
 )
@@ -67,6 +70,7 @@ __all__ = [
     "demux_image",
     "apply_bsf",
     # DECODING
+    "Decoder",
     "decode_packets",
     "decode_packets_nvdec",
     "decode_image_nvjpeg",
@@ -321,6 +325,73 @@ def apply_bsf(packets, bsf):
 
 
 @overload
+def Decoder(
+    codec: AudioCodec,
+    *,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: DecodeConfig | None = None,
+) -> AudioDecoder: ...
+
+
+@overload
+def Decoder(
+    codec: VideoCodec,
+    *,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: DecodeConfig | None = None,
+) -> VideoDecoder: ...
+
+
+@overload
+def Decoder(
+    codec: ImageCodec,
+    *,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: DecodeConfig | None = None,
+) -> ImageDecoder: ...
+
+
+def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
+    """Initialize a decoder object that can incrementally decode packets of the same stream.
+
+    .. admonition:: Example
+
+       src = "foo.mp4"
+
+       demuxer = spdl.io.Demuxer(src)
+       decoder = spdl.io.Decoder(demuxer.video_codec)
+       for packets in demuxer.streaming_demux_video(num_frames):
+           frames: VideoFrames = decoder.decode(packets)
+           ...
+
+        frames: VideoFrames = decoder.flush()
+
+    Args:
+        codec (AudioCodec, VideoCodec or ImageCodec):
+            The codec of the incoming packets.
+        filter_desc (str): *Optional:* See :py:func:`decode_packets`.
+        decode_config (DecodeConfig): *Optional:* See :py:func:`decode_packets`.
+
+    Returns:
+        Decoder instance.
+
+    """
+    if filter_desc == _FILTER_DESC_DEFAULT:
+        match codec:
+            case _libspdl.AudioCodec():
+                filter_desc = _preprocessing.get_audio_filter_desc()
+            case _libspdl.VideoCodec():
+                filter_desc = _preprocessing.get_video_filter_desc()
+            case _libspdl.ImageCodec():
+                filter_desc = _preprocessing.get_image_filter_desc()
+            case _:
+                raise ValueError(f"Unexpected codec type: {type(codec)}")
+    return _libspdl._make_decoder(
+        codec, filter_desc=filter_desc, decode_config=decode_config
+    )
+
+
+@overload
 def decode_packets(
     packets: AudioPackets,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
@@ -354,7 +425,7 @@ def decode_packets(
     Args:
         packets (AudioPackets, VideoPackets or ImagePackets): Packets object.
 
-        filter_desc:
+        filter_desc (str):
             *Optional:* Custom filter applied after decoding.
             To generate a description for common media processing operations,
             use :py:func:`~spdl.io.get_filter_desc` (if you have a packets object

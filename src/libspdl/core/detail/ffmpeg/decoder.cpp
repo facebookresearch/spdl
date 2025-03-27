@@ -181,7 +181,8 @@ template <MediaType media_type>
 FFmpegFramesPtr<media_type> DecoderImpl<media_type>::flush() {
   auto ret = std::make_unique<FFmpegFrames<media_type>>(
       reinterpret_cast<uintptr_t>(this), get_output_time_base());
-  auto gen = decode_packets(codec_ctx, {}, filter_graph, true);
+  std::vector<AVPacket*> dummy{};
+  auto gen = decode_packets(codec_ctx, dummy, filter_graph, true);
   while (gen) {
     ret->push_back(gen().release());
   }
