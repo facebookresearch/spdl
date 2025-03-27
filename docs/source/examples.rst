@@ -11,3 +11,4 @@ Examples
    video_dataloading
    imagenet_classification
    multi_thread_preprocessing
+   streaming_nvdec_decoding
