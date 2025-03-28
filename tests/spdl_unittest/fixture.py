@@ -65,6 +65,30 @@ def load_ref_data(
     return np.frombuffer(buffer, dtype).reshape(*shape)
 
 
+def load_ref_audio(
+    path: str,
+    shape: tuple[int, ...],
+    *,
+    filter_desc: str | None = "aformat=sample_fmts=fltp",
+    format: str = "f32le",
+    dtype: DTypeLike = np.float32,
+) -> NDArray[np.uint8]:
+    # fmt: off
+    cmd = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel", "debug",
+        "-y",
+        "-i", path,
+        "-v", "verbose",
+    ]
+    if filter_desc:
+        cmd.extend(["-af", filter_desc])
+    # fmt: on
+    cmd.extend(["-f", format, "pipe:"])
+    return load_ref_data(cmd, shape, dtype=dtype)
+
+
 def _get_video_ref_cmd(path: str, filter_graph: str | None) -> list[str]:
     # fmt: off
     command = [
