@@ -53,7 +53,7 @@ def test_decode_rubbish():
     subsequent valid decodings should succeed"""
 
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample_%10d.jpg"
-    src = get_samples(cmd)
+    srcs = get_samples(cmd)
 
     for _ in range(10):
         rubbish = randbytes(2096)
@@ -63,9 +63,9 @@ def test_decode_rubbish():
                 device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             )
 
-    for path in src.path:
+    for src in srcs:
         buffer = spdl.io.decode_image_nvjpeg(
-            path,
+            src.path,
             device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
         )
 
@@ -127,11 +127,11 @@ def test_decode_zero_clear():
 
 def test_batch_decode_zero_clear():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample_%03d.jpg"
-    src = get_samples(cmd)
+    srcs = get_samples(cmd)
 
     dataset = []
-    for path in src.path:
-        with open(path, "rb") as f:
+    for src in srcs:
+        with open(src.path, "rb") as f:
             dataset.append(f.read())
 
     assert all(not _is_all_zero(data) for data in dataset)

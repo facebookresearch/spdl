@@ -148,17 +148,17 @@ def test_decode_image_16be():
 def test_batch_decode_image_slice():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.png"
     n, h, w = 32, 240, 320
-    src = get_samples(cmd)
+    srcs = get_samples(cmd)
 
     buffer = spdl.io.load_image_batch(
-        src.path, width=None, height=None, pix_fmt="rgb24"
+        [src.path for src in srcs], width=None, height=None, pix_fmt="rgb24"
     )
     array = spdl.io.to_numpy(buffer)
     print(array.shape)
     assert array.shape == (n, h, w, 3)
 
     for i in range(n):
-        arr = _decode_image(src.path[i], pix_fmt="rgb24")
+        arr = _decode_image(srcs[i].path, pix_fmt="rgb24")
         print(arr.shape)
         assert np.all(arr == array[i])
 
@@ -175,10 +175,10 @@ def test_batch_decode_image_rgb24():
     """
     h, w = 64, 32
     # fmt: on
-    src = get_samples(cmd)
+    srcs = get_samples(cmd)
 
     buffer = spdl.io.load_image_batch(
-        src.path, width=None, height=None, pix_fmt="rgb24"
+        [src.path for src in srcs], width=None, height=None, pix_fmt="rgb24"
     )
     arrays = spdl.io.to_numpy(buffer)
     assert arrays.shape == (32, h, 3 * w, 3)

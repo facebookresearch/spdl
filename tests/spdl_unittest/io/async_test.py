@@ -293,9 +293,9 @@ def test_decode_image():
 def test_batch_decode_image():
     """Can decode a batch of images."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
-    src = get_samples(cmd)
+    srcs = get_samples(cmd)
 
-    flist = ["NON_EXISTING_FILE.JPG", *src.path]
+    flist = ["NON_EXISTING_FILE.JPG", *[src.path for src in srcs]]
 
     def _test():
         buffer = spdl.io.load_image_batch(
@@ -357,9 +357,9 @@ def test_convert_image():
 def test_convert_batch_image():
     """convert_frames can convert list[FFmpegImageFrames] to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
-    src = get_samples(cmd)
+    srcs = get_samples(cmd)
 
-    frames = _batch_decode_image(src.path)
+    frames = _batch_decode_image([src.path for src in srcs])
     buffer = spdl.io.convert_frames(frames)
     print(buffer)
     arr = spdl.io.to_numpy(buffer)

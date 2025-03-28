@@ -4,39 +4,40 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+__all__ = [
+    "get_sample",
+    "get_samples",
+    "SrcInfo",
+]
 
-def run_in_tmpdir(cmd, tmp_dir):
+
+def _run_in_tmpdir(cmd: str, tmp_dir: Path) -> None:
     print(f"Executing `{cmd}`")
     subprocess.run(cmd, cwd=tmp_dir, shell=True, check=True, capture_output=False)
 
 
 @dataclass
 class SrcInfo:
-    path: str | list[str]
-    _tmp_dir: TemporaryDirectory
+    path: str
+    _tmp_dir: TemporaryDirectory[str]
 
 
-def get_sample(cmd):
+def get_sample(cmd: str) -> SrcInfo:
+    samples = get_samples(cmd)
+    assert len(samples) == 1
+    return samples[0]
+
+
+def get_samples(cmd: str) -> list[SrcInfo]:
     tmp_dir = TemporaryDirectory()
     tmp_path = Path(tmp_dir.name)
 
-    run_in_tmpdir(cmd, tmp_path)
-    path = [f for f in tmp_path.glob("*") if f.is_file()]
-    assert len(path) == 1
-    return SrcInfo(path[0], tmp_dir)
-
-
-def get_samples(cmd):
-    tmp_dir = TemporaryDirectory()
-    tmp_path = Path(tmp_dir.name)
-
-    run_in_tmpdir(cmd, tmp_path)
-    flist = [str(f) for f in tmp_path.glob("**/*") if f.is_file()]
-    return SrcInfo(flist, tmp_dir)
+    _run_in_tmpdir(cmd, tmp_path)
+    return [SrcInfo(str(f), tmp_dir) for f in tmp_path.glob("**/*") if f.is_file()]
