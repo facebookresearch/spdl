@@ -11,6 +11,8 @@ import spdl.io
 import spdl.io.utils
 import torch
 
+from ..fixture import get_sample, get_samples
+
 DEFAULT_CUDA = 0
 
 
@@ -18,10 +20,10 @@ if not spdl.io.utils.built_with_nvjpeg():
     pytest.skip("SPDL is not compiled with NVJPEG support", allow_module_level=True)
 
 
-def test_decode_pix_fmt(get_sample):
+def test_decode_pix_fmt():
     """"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     def _test(data, pix_fmt):
         buffer = spdl.io.decode_image_nvjpeg(
@@ -46,12 +48,12 @@ def test_decode_pix_fmt(get_sample):
     assert torch.equal(rgb_tensor[2], bgr_tensor[0])
 
 
-def test_decode_rubbish(get_samples):
+def test_decode_rubbish():
     """When decoding fails, it should raise an error instead of segfault then,
     subsequent valid decodings should succeed"""
 
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample_%10d.jpg"
-    flist = get_samples(cmd)
+    src = get_samples(cmd)
 
     for _ in range(10):
         rubbish = randbytes(2096)
@@ -61,7 +63,7 @@ def test_decode_rubbish(get_samples):
                 device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
             )
 
-    for path in flist:
+    for path in src.path:
         buffer = spdl.io.decode_image_nvjpeg(
             path,
             device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
@@ -76,9 +78,9 @@ def test_decode_rubbish(get_samples):
         assert not torch.equal(tensor[2], tensor[0])
 
 
-def test_decode_resize(get_sample):
+def test_decode_resize():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     buffer = spdl.io.decode_image_nvjpeg(
         sample.path,
@@ -99,9 +101,9 @@ def _is_all_zero(arr):
     return all(int(v) == 0 for v in arr)
 
 
-def test_decode_zero_clear(get_sample):
+def test_decode_zero_clear():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     with open(sample.path, "rb") as f:
         data = f.read()
@@ -123,12 +125,12 @@ def test_decode_zero_clear(get_sample):
     assert _is_all_zero(data)
 
 
-def test_batch_decode_zero_clear(get_samples):
+def test_batch_decode_zero_clear():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample_%03d.jpg"
-    flist = get_samples(cmd)
+    src = get_samples(cmd)
 
     dataset = []
-    for path in flist:
+    for path in src.path:
         with open(path, "rb") as f:
             dataset.append(f.read())
 

@@ -13,12 +13,14 @@ import spdl.io
 import spdl.io.utils
 from spdl.io import get_audio_filter_desc, get_filter_desc
 
+from ..fixture import get_sample
+
 
 @pytest.mark.parametrize(
     "sample_fmts",
     [("s16p", "int16"), ("s16", "int16"), ("fltp", "float32"), ("flt", "float32")],
 )
-def test_audio_buffer_conversion_s16p(sample_fmts, get_sample):
+def test_audio_buffer_conversion_s16p(sample_fmts):
     # fmt: off
     cmd = """
     ffmpeg -hide_banner -y \
@@ -40,7 +42,7 @@ def test_audio_buffer_conversion_s16p(sample_fmts, get_sample):
     assert array.shape == shape
 
 
-def test_batch_audio_conversion(get_sample):
+def test_batch_audio_conversion():
     # fmt: off
     cmd = """
     ffmpeg -hide_banner -y \

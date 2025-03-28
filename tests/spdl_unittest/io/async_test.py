@@ -15,6 +15,8 @@ import spdl.io.utils
 from spdl.io import get_audio_filter_desc, get_video_filter_desc
 from spdl.io.lib import _libspdl
 
+from ..fixture import get_sample, get_samples
+
 
 def test_failure():
     """Demuxer fails without segfault if the input does not exist"""
@@ -49,7 +51,7 @@ def _test_decode(demux_fn, timestamps):
     return frames
 
 
-def test_decode_audio_clips(get_sample):
+def test_decode_audio_clips():
     """Can decode audio clips."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
@@ -68,7 +70,7 @@ def test_decode_audio_clips(get_sample):
     _test()
 
 
-def test_decode_audio_clips_num_frames(get_sample):
+def test_decode_audio_clips_num_frames():
     """Can decode audio clips with padding/dropping."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=1' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
@@ -104,7 +106,7 @@ def test_decode_audio_clips_num_frames(get_sample):
     _test(sample.path)
 
 
-def test_decode_audio_many_channels_6(get_sample):
+def test_decode_audio_many_channels_6():
     """Can decode audio with more than 6 channels.
 
     See https://github.com/facebookresearch/spdl/issues/449
@@ -135,7 +137,7 @@ def test_decode_audio_many_channels_6(get_sample):
     assert array.shape[1] == 2
 
 
-def test_decode_audio_many_channels_7(get_sample):
+def test_decode_audio_many_channels_7():
     """Can decode audio with more than 6 channels.
 
     See https://github.com/facebookresearch/spdl/issues/449
@@ -167,10 +169,10 @@ def test_decode_audio_many_channels_7(get_sample):
     assert array.shape[1] == 2
 
 
-def test_decode_video_clips(get_sample):
+def test_decode_video_clips():
     """Can decode video clips."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
     N = 10
 
     def _test():
@@ -189,7 +191,7 @@ def test_decode_video_clips(get_sample):
 # This test requires "tpad filter (FFmepg >= 4.2.")
 if "tpad" in spdl.io.utils.get_ffmpeg_filters():
 
-    def test_decode_video_clips_num_frames(get_sample):
+    def test_decode_video_clips_num_frames():
         """Can decode video clips with padding/dropping."""
         cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"
         sample = get_sample(cmd)
@@ -239,7 +241,7 @@ if "tpad" in spdl.io.utils.get_ffmpeg_filters():
         _test(sample.path)
 
 
-def test_decode_video_frame_rate_pts(get_sample):
+def test_decode_video_frame_rate_pts():
     """Applying frame rate outputs correct PTS."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -r 10 -frames:v 20 sample.mp4"
     sample = get_sample(cmd)
@@ -273,10 +275,10 @@ def _batch_decode_image(paths):
     return [_decode_image(path) for path in paths]
 
 
-def test_decode_image(get_sample):
+def test_decode_image():
     """Can decode an image."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     def _test(src):
         buffer = spdl.io.load_image(src)
@@ -288,12 +290,12 @@ def test_decode_image(get_sample):
     _test(sample.path)
 
 
-def test_batch_decode_image(get_samples):
+def test_batch_decode_image():
     """Can decode a batch of images."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 250 sample_%03d.jpg"
-    samples = get_samples(cmd)
+    src = get_samples(cmd)
 
-    flist = ["NON_EXISTING_FILE.JPG", *samples]
+    flist = ["NON_EXISTING_FILE.JPG", *src.path]
 
     def _test():
         buffer = spdl.io.load_image_batch(
@@ -304,7 +306,7 @@ def test_batch_decode_image(get_samples):
     _test()
 
 
-def test_convert_audio(get_sample):
+def test_convert_audio():
     """convert_frames can convert FFmpegAudioFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
@@ -320,10 +322,10 @@ def test_convert_audio(get_sample):
     _test(sample.path)
 
 
-def test_convert_video(get_sample):
+def test_convert_video():
     """convert_frames can convert FFmpegVideoFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     def _test(src):
         packets = spdl.io.demux_video(src)
@@ -336,10 +338,10 @@ def test_convert_video(get_sample):
     _test(sample.path)
 
 
-def test_convert_image(get_sample):
+def test_convert_image():
     """convert_frames can convert FFmpegImageFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     def _test(src):
         frames = _decode_image(src)
@@ -352,17 +354,14 @@ def test_convert_image(get_sample):
     _test(sample.path)
 
 
-def test_convert_batch_image(get_samples):
+def test_convert_batch_image():
     """convert_frames can convert list[FFmpegImageFrames] to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
-    flist = get_samples(cmd)
+    src = get_samples(cmd)
 
-    def _test(flist):
-        frames = _batch_decode_image(flist)
-        buffer = spdl.io.convert_frames(frames)
-        print(buffer)
-        arr = spdl.io.to_numpy(buffer)
-        print(arr.dtype, arr.shape)
-        assert arr.shape == (4, 240, 320, 3)
-
-    _test(flist)
+    frames = _batch_decode_image(src.path)
+    buffer = spdl.io.convert_frames(frames)
+    print(buffer)
+    arr = spdl.io.to_numpy(buffer)
+    print(arr.dtype, arr.shape)
+    assert arr.shape == (4, 240, 320, 3)

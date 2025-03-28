@@ -10,6 +10,8 @@ import numpy as np
 import pytest
 import spdl.io
 
+from ..fixture import get_sample
+
 CMDS = {
     "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
     "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4",
@@ -22,7 +24,7 @@ def _is_all_zero(arr):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_demux_bytes_without_copy(media_type, get_sample):
+def test_demux_bytes_without_copy(media_type):
     """Data passed as bytes must be passed without copy."""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -57,7 +59,7 @@ def _decode(media_type, src):
     return spdl.io.to_numpy(buffer)
 
 
-def test_decode_audio_bytes(get_sample):
+def test_decode_audio_bytes():
     """audio can be decoded from bytes."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
@@ -70,10 +72,10 @@ def test_decode_audio_bytes(get_sample):
     assert np.all(ref == hyp)
 
 
-def test_decode_video_bytes(get_sample):
+def test_decode_video_bytes():
     """video can be decoded from bytes."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     ref = _decode("video", sample.path)
     with open(sample.path, "rb") as f:
@@ -83,10 +85,10 @@ def test_decode_video_bytes(get_sample):
     assert np.all(ref == hyp)
 
 
-def test_demux_image_bytes(get_sample):
+def test_demux_image_bytes():
     """Image (gray) can be decoded from bytes."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     ref = _decode("image", sample.path)
     with open(sample.path, "rb") as f:

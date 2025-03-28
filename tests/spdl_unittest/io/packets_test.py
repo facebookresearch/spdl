@@ -12,6 +12,8 @@ import numpy as np
 import pytest
 import spdl.io
 
+from ..fixture import get_sample
+
 CMDS = {
     "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
     "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 25 sample.mp4",
@@ -25,7 +27,7 @@ def _load_from_packets(packets):
     return spdl.io.to_numpy(buffer)
 
 
-def test_audio_packets_attribtues(get_sample):
+def test_audio_packets_attribtues():
     """AudioPackets have sample_rate and num_channels attributes"""
     # fmt: off
     cmd = """
@@ -51,7 +53,7 @@ def test_audio_packets_attribtues(get_sample):
         (30000, 1001),
     ],
 )
-def test_video_packets_attribtues(get_sample, rate):
+def test_video_packets_attribtues(rate):
     """VideoPackets have width, height, pixe_format attributes"""
     cmd = f"ffmpeg -hide_banner -y -f lavfi -r {rate[0]}/{rate[1]} -i testsrc -frames:v 25 sample.mp4"
     sample = get_sample(cmd)
@@ -63,7 +65,7 @@ def test_video_packets_attribtues(get_sample, rate):
     assert packets.frame_rate == rate
 
 
-def test_image_packets_attribtues(get_sample):
+def test_image_packets_attribtues():
     """ImagePackets have width, height, pixe_format attributes"""
     cmd = CMDS["image"]
     sample = get_sample(cmd)
@@ -75,7 +77,7 @@ def test_image_packets_attribtues(get_sample):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_packets(media_type, get_sample):
+def test_clone_packets(media_type):
     """Cloning packets allows to decode twice"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -96,7 +98,7 @@ def test_clone_packets(media_type, get_sample):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_invalid_packets(media_type, get_sample):
+def test_clone_invalid_packets(media_type):
     """Attempt to clone already released packet raises RuntimeError instead of segfault"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -114,7 +116,7 @@ def test_clone_invalid_packets(media_type, get_sample):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_packets_multi(media_type, get_sample):
+def test_clone_packets_multi(media_type):
     """Can clone multiple times"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -136,7 +138,7 @@ def test_clone_packets_multi(media_type, get_sample):
         assert np.all(array == arrays[i])
 
 
-def test_sample_decoding_time(get_sample):
+def test_sample_decoding_time():
     """Sample decoding works"""
     # https://stackoverflow.com/questions/63725248/how-can-i-set-gop-size-to-be-a-multiple-of-the-input-framerate
     cmd = (
@@ -173,7 +175,7 @@ def test_sample_decoding_time(get_sample):
     assert elapsed_ref / 2 > elapsed
 
 
-def test_sample_decoding_time_sync(get_sample):
+def test_sample_decoding_time_sync():
     """Sample decoding works"""
     # https://stackoverflow.com/questions/63725248/how-can-i-set-gop-size-to-be-a-multiple-of-the-input-framerate
     cmd = (
@@ -210,7 +212,7 @@ def test_sample_decoding_time_sync(get_sample):
     assert elapsed_ref / 2 > elapsed
 
 
-def test_packet_len(get_sample):
+def test_packet_len():
     """VideoPackets length should exclude the preceeding packets when timestamp is not None"""
     # 3 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
@@ -232,7 +234,7 @@ def test_packet_len(get_sample):
     assert np.all(array == ref_array[25:50])
 
 
-def test_sample_decoding_window(get_sample):
+def test_sample_decoding_window():
     """sample_decode_video returns the correct frame when timestamps is specified."""
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
@@ -263,7 +265,7 @@ def test_sample_decoding_window(get_sample):
     assert np.all(array == ref_array[25:50:2])
 
 
-def test_sample_decoding_window_sync(get_sample):
+def test_sample_decoding_window_sync():
     """sample_decode_video returns the correct frame when timestamps is specified."""
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
@@ -294,7 +296,7 @@ def test_sample_decoding_window_sync(get_sample):
     assert np.all(array == ref_array[25:50:2])
 
 
-def test_sample_decode_video_default_color_space(get_sample):
+def test_sample_decode_video_default_color_space():
     """sample_decode_video should return rgb24 frames by default."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
@@ -307,7 +309,7 @@ def test_sample_decode_video_default_color_space(get_sample):
         assert f.pix_fmt == "rgb24"
 
 
-def test_sample_decode_video_default_color_space_sync(get_sample):
+def test_sample_decode_video_default_color_space_sync():
     """sample_decode_video should return rgb24 frames by default."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
@@ -320,7 +322,7 @@ def test_sample_decode_video_default_color_space_sync(get_sample):
         assert f.pix_fmt == "rgb24"
 
 
-def test_sample_decode_video_with_windowed_packets_and_filter(get_sample):
+def test_sample_decode_video_with_windowed_packets_and_filter():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 30 sample.mp4"
     sample = get_sample(cmd)
 

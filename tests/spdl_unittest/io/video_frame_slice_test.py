@@ -12,6 +12,8 @@ import spdl.io
 import spdl.io.utils
 from spdl.io import get_video_filter_desc
 
+from ..fixture import get_sample
+
 
 def _to_numpy(frames):
     buffer = spdl.io.convert_frames(frames)
@@ -25,10 +27,10 @@ def _decode_video(src, pix_fmt=None):
     )
 
 
-def test_video_frames_getitem_slice(get_sample):
+def test_video_frames_getitem_slice():
     """FFmpegVideoFrames.__getitem__ works for slice input"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     frames = _decode_video(sample.path, pix_fmt="rgb24")
 
@@ -45,11 +47,11 @@ def test_video_frames_getitem_slice(get_sample):
     assert np.array_equal(arr[::3], _to_numpy(f3))
 
 
-def test_video_frames_getitem_int(get_sample):
+def test_video_frames_getitem_int():
     """FFmpegVideoFrames.__getitem__ works for index input"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     frames = _decode_video(sample.path, pix_fmt="rgb24")
 
@@ -62,11 +64,11 @@ def test_video_frames_getitem_int(get_sample):
         assert np.array_equal(arr0, arr[i])
 
 
-def test_video_frames_getitem_negative_int(get_sample):
+def test_video_frames_getitem_negative_int():
     """FFmpegVideoFrames.__getitem__ works for negative index input"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     frames = _decode_video(sample.path, pix_fmt="rgb24")
 
@@ -79,11 +81,11 @@ def test_video_frames_getitem_negative_int(get_sample):
         assert np.array_equal(arr0, arr[-i - 1])
 
 
-def test_video_frames_iterate(get_sample):
+def test_video_frames_iterate():
     """FFmpegVideoFrames can be iterated"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     frames = _decode_video(sample.path, pix_fmt="rgb24")
 
@@ -96,11 +98,11 @@ def test_video_frames_iterate(get_sample):
         assert np.array_equal(array[i], arrs[i])
 
 
-def test_video_frames_list_slice(get_sample):
+def test_video_frames_list_slice():
     """FFmpegVideoFrames can be sliced with list of integers"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     frames = _decode_video(sample.path, pix_fmt="rgb24")
 
@@ -118,11 +120,11 @@ def test_video_frames_list_slice(get_sample):
         assert np.array_equal(array[i], refs[idx[i]])
 
 
-def test_video_frames_list_slice_empty(get_sample):
+def test_video_frames_list_slice_empty():
     """FFmpegVideoFrames can be sliced with an empty list"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     frames = _decode_video(sample.path, pix_fmt="rgb24")
 
@@ -134,11 +136,11 @@ def test_video_frames_list_slice_empty(get_sample):
     assert len(sampled_frames) == 0
 
 
-def test_video_frames_list_slice_out_of_range(get_sample):
+def test_video_frames_list_slice_out_of_range():
     """Slicing FFmpegVideoFrames with an out-of-range value fails"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     frames = _decode_video(sample.path, pix_fmt="rgb24")
 

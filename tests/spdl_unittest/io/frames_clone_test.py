@@ -10,6 +10,8 @@ import numpy as np
 import pytest
 import spdl.io
 
+from ..fixture import get_sample
+
 CMDS = {
     "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
     "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 25 sample.mp4",
@@ -23,7 +25,7 @@ def _load_from_frames(frames):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_frames(media_type, get_sample):
+def test_clone_frames(media_type):
     """Cloning frames allows to decode twice"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -44,7 +46,7 @@ def test_clone_frames(media_type, get_sample):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_invalid_frames(media_type, get_sample):
+def test_clone_invalid_frames(media_type):
     """Attempt to clone already released frames raises RuntimeError instead of segfault"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -62,7 +64,7 @@ def test_clone_invalid_frames(media_type, get_sample):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_frames_multi(media_type, get_sample):
+def test_clone_frames_multi(media_type):
     """Can clone multiple times"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)

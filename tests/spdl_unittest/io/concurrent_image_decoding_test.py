@@ -11,6 +11,8 @@ import spdl.io
 import spdl.io.utils
 from spdl.io import get_filter_desc, get_video_filter_desc
 
+from ..fixture import get_sample, get_samples
+
 
 def _decode_image(src, pix_fmt=None):
     buffer = spdl.io.load_image(
@@ -20,72 +22,63 @@ def _decode_image(src, pix_fmt=None):
     return spdl.io.to_numpy(buffer)
 
 
-def _batch_load_image(srcs, pix_fmt="rgb24"):
-    buffer = spdl.io.load_image_batch(srcs, width=None, height=None, pix_fmt=pix_fmt)
-    return spdl.io.to_numpy(buffer)
-
-
-def test_decode_image_gray16_black(get_sample):
+def test_decode_image_gray16_black():
     """16-bit PNG image (gray16be) can be decoded."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray16be -frames:v 1 sample.png"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     gray = _decode_image(sample.path, pix_fmt="gray16")
     assert gray.dtype == np.uint16
-    assert gray.shape == (1, sample.height, sample.width)
+    assert gray.shape == (1, 240, 320)
     assert np.all(gray == 1)
 
     gray = _decode_image(sample.path, pix_fmt="rgb24")
     assert gray.dtype == np.uint8
-    assert gray.shape == (sample.height, sample.width, 3)
+    assert gray.shape == (240, 320, 3)
     assert np.all(gray == 0)
 
 
-def test_decode_image_gray16_white(get_sample):
+def test_decode_image_gray16_white():
     """16-bit PNG image (gray16be) can be decoded."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0xFFFFFF,format=gray16be -frames:v 1 sample.png"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     gray = _decode_image(sample.path, pix_fmt="gray16")
     assert gray.dtype == np.uint16
-    assert gray.shape == (1, sample.height, sample.width)
+    assert gray.shape == (1, 240, 320)
     assert np.all(gray == 65277)
 
     gray = _decode_image(sample.path, pix_fmt="rgb24")
     assert gray.dtype == np.uint8
-    assert gray.shape == (sample.height, sample.width, 3)
+    assert gray.shape == (240, 320, 3)
     assert np.all(gray == 255)
 
 
-def test_decode_image_yuv422(get_sample):
+def test_decode_image_yuv422():
     """JPEG image (yuvj422p) can be decoded."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj422p -frames:v 1 sample.jpeg"
-    sample = get_sample(cmd, width=320, height=240)
+    sample = get_sample(cmd)
 
     yuv = _decode_image(sample.path, pix_fmt=None)
 
-    h, w = sample.height, sample.width
-
     assert yuv.dtype == np.uint8
-    assert yuv.shape == (1, h + h, w)
+    assert yuv.shape == (1, 2 * 240, 320)
 
 
-def test_decode_image_yuv420p(get_sample):
+def test_decode_image_yuv420p():
     """JPEG image can be converted to yuv420"""
     # This is yuvj420p format
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpeg"
     w, h = 320, 240
-    h2 = h // 2
-
-    sample = get_sample(cmd, width=w, height=h)
+    sample = get_sample(cmd)
 
     yuv = _decode_image(sample.path, pix_fmt="yuv420p")
 
     assert yuv.dtype == np.uint8
-    assert yuv.shape == (1, h + h2, w)
+    assert yuv.shape == (1, h + h // 2, w)
 
 
-def test_decode_image_rgb24(get_sample):
+def test_decode_image_rgb24():
     """JPEG image (yuvj420p) can be decoded and converted to RGB"""
     # fmt: off
     cmd = """
@@ -97,12 +90,12 @@ def test_decode_image_rgb24(get_sample):
         -frames:v 1 sample_%03d.jpeg
     """
     height, width = 64, 32
-    rgb = get_sample(cmd, width=3*width, height=height)
+    rgb = get_sample(cmd)
 
     array = _decode_image(rgb.path, pix_fmt="rgb24")
 
     assert array.dtype == np.uint8
-    assert array.shape == (rgb.height, rgb.width, 3)
+    assert array.shape == (height, 3*width, 3)
 
     red = array[:, :width]
 
@@ -125,7 +118,7 @@ def test_decode_image_rgb24(get_sample):
     assert np.all(blue[..., 2] >= 254)
 
 
-def test_decode_image_16be(get_sample):
+def test_decode_image_16be():
     """PNG image (16be) can be decoded and converted to RGB"""
     # fmt: off
     cmd = """
@@ -137,7 +130,7 @@ def test_decode_image_16be(get_sample):
     """
     # fmt: on
     height, width = 32, 64
-    sample = get_sample(cmd, width=width, height=height)
+    sample = get_sample(cmd)
 
     array = _decode_image(sample.path, pix_fmt="gray16")
     assert array.dtype == np.uint16
@@ -152,23 +145,25 @@ def test_decode_image_16be(get_sample):
     assert np.all(array[:, 32:, :] == 0)
 
 
-def test_batch_decode_image_slice(get_samples):
+def test_batch_decode_image_slice():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.png"
     n, h, w = 32, 240, 320
-    flist = get_samples(cmd)
+    src = get_samples(cmd)
 
-    buffer = spdl.io.load_image_batch(flist, width=None, height=None, pix_fmt="rgb24")
+    buffer = spdl.io.load_image_batch(
+        src.path, width=None, height=None, pix_fmt="rgb24"
+    )
     array = spdl.io.to_numpy(buffer)
     print(array.shape)
     assert array.shape == (n, h, w, 3)
 
     for i in range(n):
-        arr = _decode_image(flist[i], pix_fmt="rgb24")
+        arr = _decode_image(src.path[i], pix_fmt="rgb24")
         print(arr.shape)
         assert np.all(arr == array[i])
 
 
-def test_batch_decode_image_rgb24(get_samples):
+def test_batch_decode_image_rgb24():
     # fmt: off
     cmd = """
     ffmpeg -hide_banner -y                          \
@@ -180,9 +175,11 @@ def test_batch_decode_image_rgb24(get_samples):
     """
     h, w = 64, 32
     # fmt: on
-    flist = get_samples(cmd)
+    src = get_samples(cmd)
 
-    buffer = spdl.io.load_image_batch(flist, width=None, height=None, pix_fmt="rgb24")
+    buffer = spdl.io.load_image_batch(
+        src.path, width=None, height=None, pix_fmt="rgb24"
+    )
     arrays = spdl.io.to_numpy(buffer)
     assert arrays.shape == (32, h, 3 * w, 3)
 
@@ -211,10 +208,10 @@ def test_batch_decode_image_rgb24(get_samples):
 # This test requires "tpad filter (FFmepg >= 4.2.")
 if "tpad" in spdl.io.utils.get_ffmpeg_filters():
 
-    def test_batch_video_conversion(get_sample):
+    def test_batch_video_conversion():
         """Can decode video clips."""
         cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
-        sample = get_sample(cmd, width=320, height=240)
+        sample = get_sample(cmd)
 
         timestamps = [(0, 1), (1, 1.5), (2, 2.7), (3, 3.6)]
 
