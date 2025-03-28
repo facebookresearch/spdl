@@ -11,6 +11,8 @@ import pytest
 import spdl.io
 import torch
 
+from ..fixture import get_sample
+
 
 @pytest.mark.parametrize(
     "cmd,expected",
@@ -27,7 +29,7 @@ import torch
         ("ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg", False),
     ],
 )
-def test_demuxer_has_audio(get_sample, cmd, expected):
+def test_demuxer_has_audio(cmd, expected):
     """has_audio returns true for audio stream"""
     sample = get_sample(cmd)
 
@@ -35,7 +37,7 @@ def test_demuxer_has_audio(get_sample, cmd, expected):
         assert demuxer.has_audio() == expected
 
 
-def test_demuxer_accept_numpy_array(get_sample):
+def test_demuxer_accept_numpy_array():
     """Can instantiate Demuxer with numpy array as source without copying data."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
@@ -51,7 +53,7 @@ def test_demuxer_accept_numpy_array(get_sample):
     assert not np.any(src)
 
 
-def test_demuxer_accept_torch_tensor(get_sample):
+def test_demuxer_accept_torch_tensor():
     """Can instantiate Demuxer with torch tensor as source without copying data."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
@@ -67,7 +69,7 @@ def test_demuxer_accept_torch_tensor(get_sample):
     assert not torch.any(src)
 
 
-def test_streaming_video_demuxing_smoke_test(get_sample):
+def test_streaming_video_demuxing_smoke_test():
     """`streaming_demux_video` can decode packets in streaming fashion."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
@@ -83,7 +85,7 @@ def test_streaming_video_demuxing_smoke_test(get_sample):
     assert num_packets == len(packets)
 
 
-def test_streaming_video_demuxing_parity(get_sample):
+def test_streaming_video_demuxing_parity():
     """`streaming_demux_video` can decode packets in streaming fashion."""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
     sample = get_sample(cmd)
@@ -104,7 +106,7 @@ def test_streaming_video_demuxing_parity(get_sample):
     assert np.array_equal(hyp, ref)
 
 
-def test_demuxer_get_codec(get_sample):
+def test_demuxer_get_codec():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af pan='stereo| c0=FR | c1=FR' -frames:v 30 sample.mp4"
 
     sample = get_sample(cmd)
@@ -121,7 +123,7 @@ def test_demuxer_get_codec(get_sample):
     assert video_codec.height == 240
 
 
-def test_decoder_simple(get_sample):
+def test_decoder_simple():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 30 sample.mp4"
 
     sample = get_sample(cmd)

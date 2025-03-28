@@ -9,8 +9,10 @@
 import pytest
 import spdl.io
 
+from ..fixture import get_sample
 
-def test_demux_config_smoketest(get_sample):
+
+def test_demux_config_smoketest():
     """"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
@@ -28,7 +30,7 @@ def test_demux_config_smoketest(get_sample):
     _ = spdl.io.demux_audio(sample.path, demux_config=demux_config)
 
 
-def test_demux_config_headless(get_sample):
+def test_demux_config_headless():
     """Providing demux_config allows to load headeless audio"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -f s16le -c:a pcm_s16le sample.raw"
     sample = get_sample(cmd)
@@ -40,7 +42,7 @@ def test_demux_config_headless(get_sample):
     _ = spdl.io.demux_audio(sample.path, demux_config=demux_config)
 
 
-def test_decode_config_smoketest(get_sample):
+def test_decode_config_smoketest():
     """"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd)

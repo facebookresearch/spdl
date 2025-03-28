@@ -8,8 +8,10 @@
 
 import spdl.io
 
+from ..fixture import get_sample
 
-def test_image_frame_metadata(get_sample):
+
+def test_image_frame_metadata():
     """Smoke test for image frame metadata.
     Ideally, we should use images with EXIF data, but ffmpeg
     does not seem to support exif, and I don't want to check-in

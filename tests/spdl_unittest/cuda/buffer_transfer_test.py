@@ -12,6 +12,8 @@ import spdl.io
 import spdl.io.utils
 import torch
 
+from ..fixture import get_sample
+
 if not spdl.io.utils.built_with_cuda():
     pytest.skip("SPDL is not compiled with CUDA support", allow_module_level=True)
 
@@ -26,7 +28,7 @@ CMDS = {
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_transfer_buffer_to_cuda(media_type, get_sample):
+def test_transfer_buffer_to_cuda(media_type):
     """smoke test for transfer_buffer_to_cuda function"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
@@ -60,7 +62,7 @@ def test_transfer_buffer_to_cuda(media_type, get_sample):
 
 
 @pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_transfer_buffer_to_cuda_with_pytorch_allocator(media_type, get_sample):
+def test_transfer_buffer_to_cuda_with_pytorch_allocator(media_type):
     """smoke test for transfer_buffer_to_cuda function"""
     cmd = CMDS[media_type]
     sample = get_sample(cmd)
