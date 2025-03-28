@@ -258,10 +258,10 @@ void copy_yuv420p(
   for (const auto& f : frames) {
     // Y
     copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // UV
-    uint8_t* dst2 = dst + w2;
-    copy_2d(f->data[1], h2, w2, f->linesize[1], &dst, w);
-    copy_2d(f->data[2], h2, w2, f->linesize[2], &dst2, w);
+    // U
+    copy_2d(f->data[1], h2, w2, f->linesize[1], &dst, w2);
+    // V
+    copy_2d(f->data[2], h2, w2, f->linesize[2], &dst, w2);
   }
 }
 
@@ -300,10 +300,10 @@ void copy_yuv422p(
   for (const auto& f : frames) {
     // Y
     copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // UV
-    uint8_t* dst2 = dst + w2;
-    copy_2d(f->data[1], h, w2, f->linesize[1], &dst, w);
-    copy_2d(f->data[2], h, w2, f->linesize[2], &dst2, w);
+    // U
+    copy_2d(f->data[1], h, w2, f->linesize[1], &dst, w2);
+    // V
+    copy_2d(f->data[2], h, w2, f->linesize[2], &dst, w2);
   }
 }
 
