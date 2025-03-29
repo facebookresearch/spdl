@@ -21,6 +21,7 @@
 
 extern "C" {
 #include <libavutil/frame.h>
+#include <libavutil/imgutils.h>
 #include <libavutil/pixdesc.h>
 }
 
@@ -161,114 +162,83 @@ CPUBufferPtr convert_frames(
 // Image / Video
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-void copy_2d(
-    uint8_t* src,
-    int height,
-    int width,
-    int src_linesize,
-    uint8_t** dst,
-    int dst_linesize,
-    int depth = 1) {
-  TRACE_EVENT("decoding", "conversion::copy_2d");
-  for (int h = 0; h < height; ++h) {
-    memcpy(*dst, src, (size_t)width * depth);
-    src += src_linesize;
-    *dst += dst_linesize;
-  }
-}
-
-void copy_interleaved(
-    const std::vector<AVFrame*>& frames,
-    uint8_t* dst,
-    unsigned int num_channels,
-    size_t w,
-    size_t h,
-    int depth = 1) {
-  size_t wc = num_channels * w * depth;
-  for (const auto& f : frames) {
-    copy_2d(f->data[0], f->height, wc, f->linesize[0], &dst, wc, depth);
-  }
-}
-
 template <MediaType media_type>
-CPUBufferPtr convert_interleaved(
+void copy(
+    AVPixelFormat pix_fmt,
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    size_t num_channels,
-    std::shared_ptr<CPUStorage> storage) {
-  auto& ref_frames = batch.at(0)->get_frames();
-  size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
-  auto num_frames = ref_frames.size();
-
-  auto buf = cpu_buffer(
-      {batch.size(), num_frames, h, w, num_channels},
-      ElemClass::UInt,
-      sizeof(uint8_t),
-      std::move(storage));
+    CPUBuffer* buf) {
   auto dst = (uint8_t*)buf->data();
+  auto dst_size = buf->shape[2] * buf->shape[3] * buf->shape[4] * buf->depth;
   for (auto& frames : batch) {
-    copy_interleaved(frames->get_frames(), dst, num_channels, w, h);
-    dst += num_frames * h * w * num_channels;
-  }
-  return buf;
-}
-
-void copy_planer(
-    const std::vector<AVFrame*>& frames,
-    uint8_t* dst,
-    size_t num_planes,
-    size_t w,
-    size_t h,
-    int depth) {
-  for (const auto& f : frames) {
-    for (size_t c = 0; c < num_planes; ++c) {
-      copy_2d(f->data[c], h, w, f->linesize[c], &dst, w * depth, depth);
+    for (const auto& f : frames->get_frames()) {
+      CHECK_AVERROR(
+          av_image_copy_to_buffer(
+              dst,
+              dst_size,
+              f->data,
+              f->linesize,
+              pix_fmt,
+              f->width,
+              f->height,
+              buf->depth),
+          "Failed to copy image data.");
+      dst += dst_size;
     }
   }
 }
 
 template <MediaType media_type>
-CPUBufferPtr convert_planer(
+CPUBufferPtr convert_interleaved(
+    enum AVPixelFormat pix_fmt,
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    size_t num_planes,
-    int depth,
-    std::shared_ptr<CPUStorage> storage) {
+    std::shared_ptr<CPUStorage> storage,
+    int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
   size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
   auto num_frames = ref_frames.size();
 
+  int num_channels = av_pix_fmt_desc_get(pix_fmt)->nb_components;
+  assert(num_channels > 0);
+
   auto buf = cpu_buffer(
-      {batch.size(), num_frames, num_planes, h, w},
+      {batch.size(), num_frames, h, w, (unsigned int)num_channels},
       ElemClass::UInt,
       depth,
       std::move(storage));
-  auto dst = (uint8_t*)buf->data();
-  for (auto& frames : batch) {
-    copy_planer(frames->get_frames(), dst, num_planes, w, h, depth);
-    dst += num_frames * num_planes * h * w * depth;
-  }
+  copy(pix_fmt, batch, buf.get());
   return buf;
 }
 
-void copy_yuv420p(
-    const std::vector<AVFrame*>& frames,
-    uint8_t* dst,
-    size_t w,
-    size_t h) {
-  size_t h2 = h / 2, w2 = w / 2;
-  for (const auto& f : frames) {
-    // Y
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // U
-    copy_2d(f->data[1], h2, w2, f->linesize[1], &dst, w2);
-    // V
-    copy_2d(f->data[2], h2, w2, f->linesize[2], &dst, w2);
+template <MediaType media_type>
+CPUBufferPtr convert_planer(
+    enum AVPixelFormat pix_fmt,
+    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    std::shared_ptr<CPUStorage> storage,
+    int depth = 1) {
+  auto& ref_frames = batch.at(0)->get_frames();
+  size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
+  auto num_frames = ref_frames.size();
+
+  int num_planes = av_pix_fmt_count_planes(pix_fmt);
+  if (num_planes <= 0) {
+    SPDL_FAIL("Failed to fetch the number of planes.");
   }
+
+  auto buf = cpu_buffer(
+      {batch.size(), num_frames, (unsigned int)num_planes, h, w},
+      ElemClass::UInt,
+      depth,
+      std::move(storage));
+  copy(pix_fmt, batch, buf.get());
+  return buf;
 }
 
 template <MediaType media_type>
 CPUBufferPtr convert_yuv420p(
+    enum AVPixelFormat pix_fmt,
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    std::shared_ptr<CPUStorage> storage) {
+    std::shared_ptr<CPUStorage> storage,
+    int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
   size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
   auto num_frames = ref_frames.size();
@@ -279,76 +249,37 @@ CPUBufferPtr convert_yuv420p(
   auto buf = cpu_buffer(
       {batch.size(), num_frames, 1, h + h2, w},
       ElemClass::UInt,
-      sizeof(uint8_t),
+      depth,
       std::move(storage));
-  auto dst = (uint8_t*)buf->data();
-  for (auto& frames : batch) {
-    copy_yuv420p(frames->get_frames(), dst, w, h);
-    dst += num_frames * (h + h2) * w;
-  }
+  copy(pix_fmt, batch, buf.get());
   return buf;
-}
-
-void copy_yuv422p(
-    const std::vector<AVFrame*>& frames,
-    uint8_t* dst,
-    size_t w,
-    size_t h) {
-  assert(w % 2 == 0);
-  size_t w2 = w / 2;
-
-  for (const auto& f : frames) {
-    // Y
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // U
-    copy_2d(f->data[1], h, w2, f->linesize[1], &dst, w2);
-    // V
-    copy_2d(f->data[2], h, w2, f->linesize[2], &dst, w2);
-  }
 }
 
 template <MediaType media_type>
 CPUBufferPtr convert_yuv422p(
+    enum AVPixelFormat pix_fmt,
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    std::shared_ptr<CPUStorage> storage) {
+    std::shared_ptr<CPUStorage> storage,
+    int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
   size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
   auto num_frames = ref_frames.size();
 
-  assert(w % 2 == 0);
-
   auto buf = cpu_buffer(
       {batch.size(), num_frames, 1, h + h, w},
       ElemClass::UInt,
-      sizeof(uint8_t),
+      depth,
       std::move(storage));
-
-  auto dst = (uint8_t*)buf->data();
-  for (auto& frames : batch) {
-    copy_yuv422p(frames->get_frames(), dst, w, h);
-    dst += num_frames * (h + h) * w;
-  }
+  copy(pix_fmt, batch, buf.get());
   return buf;
-}
-
-void copy_nv12(
-    const std::vector<AVFrame*>& frames,
-    uint8_t* dst,
-    size_t w,
-    size_t h) {
-  size_t h2 = h / 2;
-  for (const auto& f : frames) {
-    // Y
-    copy_2d(f->data[0], h, w, f->linesize[0], &dst, w);
-    // UV
-    copy_2d(f->data[1], h2, w, f->linesize[1], &dst, w);
-  }
 }
 
 template <MediaType media_type>
 CPUBufferPtr convert_nv12(
+    enum AVPixelFormat pix_fmt,
     const std::vector<const FFmpegFrames<media_type>*>& batch,
-    std::shared_ptr<CPUStorage> storage) {
+    std::shared_ptr<CPUStorage> storage,
+    int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
   size_t w = ref_frames.at(0)->width, h = ref_frames.at(0)->height;
   auto num_frames = ref_frames.size();
@@ -359,13 +290,9 @@ CPUBufferPtr convert_nv12(
   auto buf = cpu_buffer(
       {batch.size(), num_frames, 1, h + h2, w},
       ElemClass::UInt,
-      sizeof(uint8_t),
+      depth,
       std::move(storage));
-  auto dst = (uint8_t*)buf->data();
-  for (auto& frames : batch) {
-    copy_nv12(frames->get_frames(), dst, w, h);
-    dst += num_frames * (h + h2) * w;
-  }
+  copy(pix_fmt, batch, buf.get());
   return buf;
 }
 } // namespace
@@ -480,26 +407,23 @@ CPUBufferPtr convert_frames(
     auto pix_fmt = static_cast<AVPixelFormat>(ref_frames.at(0)->format);
     switch (pix_fmt) {
       case AV_PIX_FMT_GRAY8:
-        // Technically, not a planer format, but it's the same.
-        return convert_planer(batch, 1, sizeof(uint8_t), std::move(storage));
+      case AV_PIX_FMT_RGBA:
+      case AV_PIX_FMT_RGB24:
+        return convert_interleaved(pix_fmt, batch, std::move(storage));
       case AV_PIX_FMT_GRAY16BE:
       case AV_PIX_FMT_GRAY16LE:
-        return convert_planer(batch, 1, sizeof(uint16_t), std::move(storage));
-      case AV_PIX_FMT_RGBA:
-        return convert_interleaved(batch, 4, std::move(storage));
-      case AV_PIX_FMT_RGB24:
-        return convert_interleaved(batch, 3, std::move(storage));
+        return convert_planer(pix_fmt, batch, std::move(storage), 2);
       case AV_PIX_FMT_YUVJ444P:
       case AV_PIX_FMT_YUV444P:
-        return convert_planer(batch, 3, sizeof(uint8_t), std::move(storage));
+        return convert_planer(pix_fmt, batch, std::move(storage));
       case AV_PIX_FMT_YUVJ420P:
       case AV_PIX_FMT_YUV420P:
-        return convert_yuv420p(batch, std::move(storage));
+        return convert_yuv420p(pix_fmt, batch, std::move(storage));
       case AV_PIX_FMT_YUVJ422P:
       case AV_PIX_FMT_YUV422P:
-        return convert_yuv422p(batch, std::move(storage));
+        return convert_yuv422p(pix_fmt, batch, std::move(storage));
       case AV_PIX_FMT_NV12: {
-        return convert_nv12(batch, std::move(storage));
+        return convert_nv12(pix_fmt, batch, std::move(storage));
       }
       default:
         SPDL_FAIL(fmt::format(
