@@ -453,8 +453,8 @@ namespace detail {
 // Buffer to frame
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-AVFrameViewPtr get_video_frame(AVPixelFormat fmt, size_t width, size_t height) {
-  AVFrameViewPtr ret{CHECK_AVALLOCATE(av_frame_alloc())};
+AVFramePtr get_video_frame(AVPixelFormat fmt, size_t width, size_t height) {
+  AVFramePtr ret{CHECK_AVALLOCATE(av_frame_alloc())};
   ret->format = fmt;
   ret->width = width;
   ret->height = height;
@@ -462,26 +462,42 @@ AVFrameViewPtr get_video_frame(AVPixelFormat fmt, size_t width, size_t height) {
   return ret;
 }
 
+void no_free(void* opaque, uint8_t* data) {
+  VLOG(9) << fmt::format("Not free-ing data @ {}", (void*)data);
+}
+
+// Create an AVBufferRef object that points to an existing buffer,
+// but not owning it.
+AVBufferRef* create_reference_buffer(uint8_t* data, int size) {
+  return av_buffer_create(
+      data, size, no_free, nullptr, AV_BUFFER_FLAG_READONLY);
+}
+
 void ref_interweaved(
     AVFrame* frame,
     void* data,
     int num_channels,
     int bit_depth = 1) {
-  frame->data[0] = reinterpret_cast<uint8_t*>(data);
-  frame->linesize[0] = frame->width * num_channels * bit_depth;
+  auto* src = static_cast<uint8_t*>(data);
+  int linesize = frame->width * num_channels * bit_depth;
+  frame->data[0] = src;
+  frame->linesize[0] = linesize;
+  frame->buf[0] = create_reference_buffer(src, linesize * frame->height);
 }
 
 void ref_planar(AVFrame* frame, void* data, int num_channels) {
-  auto src = reinterpret_cast<uint8_t*>(data);
+  auto src = static_cast<uint8_t*>(data);
+  auto size = frame->width * frame->height;
   for (int c = 0; c < num_channels; ++c) {
     frame->data[c] = src;
     frame->linesize[c] = frame->width;
-    src += frame->height * frame->width;
+    frame->buf[c] = create_reference_buffer(src, size);
+    src += size;
   }
 }
 } // namespace
 
-AVFrameViewPtr reference_image_buffer(
+AVFramePtr reference_image_buffer(
     AVPixelFormat fmt,
     void* data,
     size_t width,
