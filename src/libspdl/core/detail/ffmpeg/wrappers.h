@@ -83,15 +83,6 @@ struct AVFrameDeleter {
 
 using AVFramePtr = std::unique_ptr<AVFrame, AVFrameDeleter>;
 
-// AVFrameView
-// Like AVFrame, but the data are reference to non-owning memory region
-// Used for creating temporary AVFrame when encoding tensor.
-struct AVFrameViewDeleter {
-  void operator()(AVFrame* p);
-};
-
-using AVFrameViewPtr = std::unique_ptr<AVFrame, AVFrameViewDeleter>;
-
 // AutoBufferRef
 struct AVBufferRefDeleter {
   void operator()(AVBufferRef* p);
