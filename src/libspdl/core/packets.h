@@ -105,10 +105,9 @@ class DemuxedPackets {
   Generator<RawPacketData> iter_packets() const;
 
   std::string get_summary() const;
-};
 
-template <MediaType media_type>
-PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src);
+  PacketsPtr<media_type> clone() const;
+};
 
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
 extract_packets_at_indices(

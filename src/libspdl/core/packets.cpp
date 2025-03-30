@@ -223,23 +223,19 @@ Generator<RawPacketData> DemuxedPackets<media_type>::iter_packets() const {
   }
 }
 
-template class DemuxedPackets<MediaType::Audio>;
-template class DemuxedPackets<MediaType::Video>;
-template class DemuxedPackets<MediaType::Image>;
-
 template <MediaType media_type>
-PacketsPtr<media_type> clone(const DemuxedPackets<media_type>& src) {
+PacketsPtr<media_type> DemuxedPackets<media_type>::clone() const {
   auto other = std::make_unique<DemuxedPackets<media_type>>(
-      src.src, Codec<media_type>{src.codec}, src.timestamp);
-  for (const AVPacket* pkt : src.get_packets()) {
+      src, Codec<media_type>{codec}, timestamp);
+  for (const AVPacket* pkt : packets) {
     other->push(CHECK_AVALLOCATE(av_packet_clone(pkt)));
   }
   return other;
 }
 
-template PacketsPtr<MediaType::Audio> clone(const AudioPackets& src);
-template PacketsPtr<MediaType::Video> clone(const VideoPackets& src);
-template PacketsPtr<MediaType::Image> clone(const ImagePackets& src);
+template class DemuxedPackets<MediaType::Audio>;
+template class DemuxedPackets<MediaType::Video>;
+template class DemuxedPackets<MediaType::Image>;
 
 namespace {
 std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
