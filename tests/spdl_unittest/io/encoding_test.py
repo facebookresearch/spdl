@@ -13,10 +13,49 @@ import numpy as np
 import pytest
 import spdl.io
 import torch
-from spdl.io import encode_config
+from spdl.io import encode_config, get_video_filter_desc
 
-# Mostly smoke test
-# TODO: Inspect the output
+from ..fixture import load_ref_image
+
+
+@pytest.mark.parametrize(
+    "pix_fmt,torch_tensor", product(["rgb24", "gray"], [False, True])
+)
+def test_encode_parity_simple(pix_fmt, torch_tensor):
+    shape = (16, 16, 3) if pix_fmt == "rgb24" else (16, 16)
+    ref = np.random.randint(256, size=shape, dtype=np.uint8)
+
+    with NamedTemporaryFile(suffix=".png") as f:
+        spdl.io.encode_image(
+            f.name,
+            torch.from_numpy(ref) if torch_tensor else ref,
+            pix_fmt=pix_fmt,
+            encode_config=spdl.io.encode_config(format=pix_fmt),
+        )
+
+        hyp = load_ref_image(f.name, shape, filter_graph=None)
+    np.testing.assert_array_equal(hyp, ref, strict=True)
+
+
+def test_encode_parity_png_gray16be():
+    shape = (32, 64)
+    ref = np.random.randint(256, size=shape, dtype=np.uint16)
+
+    with NamedTemporaryFile(suffix=".png") as f:
+        spdl.io.encode_image(
+            f.name,
+            ref,
+            pix_fmt="gray16",
+            encode_config=spdl.io.encode_config(format="gray16be"),
+        )
+
+        hyp = load_ref_image(
+            f.name,
+            shape,
+            dtype=np.uint16,
+            filter_graph=get_video_filter_desc(pix_fmt="gray16le"),
+        )
+    np.testing.assert_array_equal(hyp, ref, strict=True)
 
 
 @pytest.mark.parametrize(
@@ -28,7 +67,7 @@ from spdl.io import encode_config
 )
 def test_encode_smoketest(fmt, enc_cfg):
     shape, pix_fmt = fmt
-    data = np.random.randint(255, size=shape, dtype=np.uint8)
+    data = np.random.randint(256, size=shape, dtype=np.uint8)
 
     def _test(arr):
         with NamedTemporaryFile(suffix=".png") as f:
