@@ -453,12 +453,13 @@ namespace detail {
 // Buffer to frame
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-AVFramePtr get_video_frame(AVPixelFormat fmt, size_t width, size_t height) {
+AVFramePtr
+get_video_frame(AVPixelFormat fmt, size_t width, size_t height, int64_t pts) {
   AVFramePtr ret{CHECK_AVALLOCATE(av_frame_alloc())};
   ret->format = fmt;
   ret->width = width;
   ret->height = height;
-  ret->pts = 0;
+  ret->pts = pts;
   return ret;
 }
 
@@ -502,7 +503,7 @@ AVFramePtr reference_image_buffer(
     void* data,
     size_t width,
     size_t height) {
-  auto frame = get_video_frame(fmt, width, height);
+  auto frame = get_video_frame(fmt, width, height, 0);
   switch (fmt) {
     case AV_PIX_FMT_RGB24:
     case AV_PIX_FMT_BGR24:
