@@ -25,7 +25,6 @@ template <MediaType media_type>
 class Codec {
   AVCodecParameters* codecpar;
 
- public:
   Rational time_base;
   Rational frame_rate;
 
@@ -40,6 +39,7 @@ class Codec {
   std::string get_name() const;
   int get_sample_rate() const
     requires(media_type == MediaType::Audio);
+
   int get_num_channels() const
     requires(media_type == MediaType::Audio);
   int get_width() const
@@ -47,6 +47,9 @@ class Codec {
   int get_height() const
     requires(media_type == MediaType::Video || media_type == MediaType::Image);
   CodecID get_codec_id() const;
+
+  Rational get_time_base() const;
+  Rational get_frame_rate() const;
 
   // Note: the returned pointer must not outlive the Codec object
   const AVCodecParameters* get_parameters() const;

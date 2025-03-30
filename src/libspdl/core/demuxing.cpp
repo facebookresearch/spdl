@@ -145,8 +145,8 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
       packets->src,
       VideoCodec{
           bsf.get_output_codec_par(),
-          packets->codec.time_base,
-          packets->codec.frame_rate},
+          packets->codec.get_time_base(),
+          packets->codec.get_frame_rate()},
       packets->timestamp);
 
   for (auto& packet : packets->get_packets()) {

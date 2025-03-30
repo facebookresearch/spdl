@@ -142,6 +142,16 @@ const AVCodecParameters* Codec<media_type>::get_parameters() const {
   return codecpar;
 }
 
+template <MediaType media_type>
+Rational Codec<media_type>::get_time_base() const {
+  return time_base;
+}
+
+template <MediaType media_type>
+Rational Codec<media_type>::get_frame_rate() const {
+  return frame_rate;
+}
+
 template class Codec<MediaType::Audio>;
 template class Codec<MediaType::Video>;
 template class Codec<MediaType::Image>;

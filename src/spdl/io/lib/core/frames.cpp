@@ -56,8 +56,8 @@ void register_frames(nb::module_& m) {
               if (num_frames == 0) {
                 return std::numeric_limits<double>::quiet_NaN();
               }
-              return double(self.get_pts()) * self.time_base.num /
-                  self.time_base.den;
+              auto tb = self.get_time_base();
+              return double(self.get_pts()) * tb.num / tb.den;
             }();
             return fmt::format(
                 "FFmpegAudioFrames<num_frames={}, sample_format=\"{}\", sample_rate={}, num_channels={}, timestamp={:.3f}>",
@@ -131,9 +131,9 @@ void register_frames(nb::module_& m) {
           [](const FFmpegVideoFrames& self) -> std::vector<double> {
             nb::gil_scoped_release __g;
             std::vector<double> ret;
-            auto base = self.time_base;
+            auto tb = self.get_time_base();
             for (size_t i = 0; i < self.get_num_frames(); ++i) {
-              ret.push_back(double(self.get_pts(i)) * base.num / base.den);
+              ret.push_back(double(self.get_pts(i)) * tb.num / tb.den);
             }
             return ret;
           })
@@ -145,8 +145,8 @@ void register_frames(nb::module_& m) {
               if (num_frames == 0) {
                 return std::numeric_limits<double>::quiet_NaN();
               }
-              return double(self.get_pts()) * self.time_base.num /
-                  self.time_base.den;
+              auto tb = self.get_time_base();
+              return double(self.get_pts()) * tb.num / tb.den;
             }();
             return fmt::format(
                 "FFmpegVideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, timestamp={:.3f}>",
@@ -196,14 +196,15 @@ void register_frames(nb::module_& m) {
       .def(
           "__repr__",
           [](const FFmpegImageFrames& self) {
-            if (auto pts = self.get_pts(); pts) {
+            auto tb = self.get_time_base();
+            if (tb.num) {
               return fmt::format(
                   "FFmpegImageFrames<pixel_format=\"{}\", num_planes={}, width={}, height={}, timestamp={:.3f}>",
                   self.get_media_format_name(),
                   self.get_num_planes(),
                   self.get_width(),
                   self.get_height(),
-                  double(pts) * self.time_base.num / self.time_base.den);
+                  double(self.get_pts()) * tb.num / tb.den);
             }
             return fmt::format(
                 "FFmpegImageFrames<pixel_format=\"{}\", num_planes={}, width={}, height={}>",
@@ -218,8 +219,8 @@ void register_frames(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("pts", [](const FFmpegImageFrames& self) -> double {
         nb::gil_scoped_release __g;
-        auto base = self.time_base;
-        return double(self.get_pts()) * base.num / base.den;
+        auto tb = self.get_time_base();
+        return double(self.get_pts()) * tb.num / tb.den;
       });
 }
 } // namespace spdl::core

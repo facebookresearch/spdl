@@ -49,7 +49,6 @@ class FFmpegFrames {
   /// Used for tracking the lifetime in tracing.
   uint64_t id{0};
 
- public:
   /// Time base of the frames
   Rational time_base;
 
@@ -111,6 +110,10 @@ class FFmpegFrames {
   // the behavior is different for audio
 
   ///
+  /// Get the time_base, which is the unit of time that this Frame uses.
+  Rational get_time_base() const;
+
+  ///
   /// Push a new frame into the container.
   void push_back(AVFrame* frame);
   // the behavior is different for image
@@ -134,12 +137,6 @@ class FFmpegFrames {
   /// Get the number of audio channels.
   int get_num_channels() const
     requires _IS_AUDIO;
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Common to Audio/Video
-  //////////////////////////////////////////////////////////////////////////////
-  Rational get_time_base() const
-    requires(_IS_AUDIO || _IS_VIDEO);
 
   //////////////////////////////////////////////////////////////////////////////
   // Common to Image/Video

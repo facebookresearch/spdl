@@ -79,9 +79,9 @@ size_t DemuxedPackets<media_type>::num_packets() const
     if (timestamp) {
       size_t ret = 0;
       auto [start, end] = *timestamp;
+      auto tb = codec.get_time_base();
       for (const AVPacket* pkt : packets) {
-        auto pts = static_cast<double>(pkt->pts) * codec.time_base.num /
-            codec.time_base.den;
+        auto pts = static_cast<double>(pkt->pts) * tb.num / tb.den;
         if (start <= pts && pts < end) {
           ++ret;
         }
@@ -120,8 +120,7 @@ int DemuxedPackets<media_type>::get_sample_rate() const
 
 template <MediaType media_type>
 Codec<media_type> DemuxedPackets<media_type>::get_codec() const {
-  return Codec<media_type>(
-      codec.get_parameters(), codec.time_base, codec.frame_rate);
+  return Codec<media_type>{codec};
 }
 
 namespace {
@@ -171,12 +170,13 @@ std::string AudioPackets::get_summary() const {
 
 template <>
 std::string VideoPackets::get_summary() const {
+  const auto& frame_rate = codec.get_frame_rate();
   return fmt::format(
       "VideoPackets<src=\"{}\", timestamp={}, frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
       src,
       get_ts(timestamp),
-      codec.frame_rate.num,
-      codec.frame_rate.den,
+      frame_rate.num,
+      frame_rate.den,
       num_packets(),
       get_media_format_name(),
       get_codec_info<MediaType::Video>(codec.get_parameters()));
@@ -214,7 +214,7 @@ int DemuxedPackets<media_type>::get_height() const {
 
 template <MediaType media_type>
 Rational DemuxedPackets<media_type>::get_frame_rate() const {
-  return codec.frame_rate;
+  return codec.get_frame_rate();
 }
 template <MediaType media_type>
 Generator<RawPacketData> DemuxedPackets<media_type>::iter_packets() const {
@@ -350,9 +350,9 @@ extract_packets_at_indices(
   if (src->timestamp) {
     auto [start, end] = *(src->timestamp);
     size_t offset = 0;
+    auto tb = src->codec.get_time_base();
     for (auto& packet : src_packets) {
-      auto pts = static_cast<double>(packet->pts) * src->codec.time_base.num /
-          src->codec.time_base.den;
+      auto pts = static_cast<double>(packet->pts) * tb.num / tb.den;
       if (pts < start) {
         offset += 1;
       }

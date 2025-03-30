@@ -199,11 +199,17 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
     return BitStreamFilter{*bsf, stream->codecpar};
   }();
 
+  Rational frame_rate{1, 1};
+  if constexpr (media_type == MediaType::Video) {
+    auto frame_rate_ = av_guess_frame_rate(fmt_ctx, stream, nullptr);
+    frame_rate = Rational{frame_rate_.num, frame_rate_.den};
+  }
   auto ret = std::make_unique<DemuxedPackets<media_type>>(
       di->get_src(),
       Codec<media_type>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
-          Rational{stream->time_base.num, stream->time_base.den}},
+          Rational{stream->time_base.num, stream->time_base.den},
+          frame_rate},
       window);
 
   auto demuxing = this->demux_window(stream, end, filter);
@@ -212,10 +218,6 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
     if constexpr (media_type == MediaType::Image) {
       break;
     }
-  }
-  if constexpr (media_type == MediaType::Video) {
-    auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-    ret->codec.frame_rate = Rational{frame_rate.num, frame_rate.den};
   }
   return ret;
 }
