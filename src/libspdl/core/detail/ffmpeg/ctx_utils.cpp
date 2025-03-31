@@ -8,6 +8,7 @@
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -18,15 +19,6 @@
 #include <filesystem>
 #include <mutex>
 #include <set>
-
-// https://github.com/FFmpeg/FFmpeg/blob/4e6debe1df7d53f3f59b37449b82265d5c08a172/doc/APIchanges#L252-L260
-// Starting from libavformat 59 (ffmpeg 5),
-// AVInputFormat is const and related functions expect constant.
-#if LIBAVFORMAT_VERSION_MAJOR >= 59
-#define AVFORMAT_CONST const
-#else
-#define AVFORMAT_CONST
-#endif
 
 namespace spdl::core::detail {
 namespace {
