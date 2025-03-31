@@ -210,7 +210,7 @@ AVCodecContextPtr get_decode_codec_ctx_ptr(
   }
   VLOG(9) << "Codec: " << codec_ctx->codec->name;
 
-  codec_ctx->pkt_timebase = AVRational{pkt_timebase.num, pkt_timebase.den};
+  codec_ctx->pkt_timebase = pkt_timebase;
   open_codec(codec_ctx.get(), decoder_options);
   return codec_ctx;
 }

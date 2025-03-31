@@ -94,10 +94,7 @@ template <MediaType media_type>
 Codec<media_type> DemuxerImpl::get_default_codec() const {
   auto* stream = get_stream(media_type, fmt_ctx, di.get());
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-  return Codec<media_type>{
-      stream->codecpar,
-      {stream->time_base.num, stream->time_base.den},
-      {frame_rate.num, frame_rate.den}};
+  return Codec<media_type>{stream->codecpar, stream->time_base, frame_rate};
 }
 
 template Codec<MediaType::Audio>
@@ -201,14 +198,13 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
 
   Rational frame_rate{1, 1};
   if constexpr (media_type == MediaType::Video) {
-    auto frame_rate_ = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-    frame_rate = Rational{frame_rate_.num, frame_rate_.den};
+    frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   }
   auto ret = std::make_unique<DemuxedPackets<media_type>>(
       di->get_src(),
       Codec<media_type>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
-          Rational{stream->time_base.num, stream->time_base.den},
+          stream->time_base,
           frame_rate},
       window);
 
@@ -250,8 +246,7 @@ Generator<PacketsPtr<media_type>> DemuxerImpl::streaming_demux(
 
   Rational frame_rate;
   if constexpr (media_type == MediaType::Video) {
-    auto fr = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-    frame_rate = Rational{fr.num, fr.den};
+    frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   }
   auto make_packets =
       [&](std::vector<AVPacketPtr>&& pkts) -> PacketsPtr<media_type> {
@@ -259,7 +254,7 @@ Generator<PacketsPtr<media_type>> DemuxerImpl::streaming_demux(
         di->get_src(),
         Codec<media_type>{
             bsf ? filter->get_output_codec_par() : stream->codecpar,
-            Rational{stream->time_base.num, stream->time_base.den},
+            stream->time_base,
             frame_rate});
     for (auto& p : pkts) {
       ret->push(p.release());

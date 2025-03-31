@@ -259,13 +259,11 @@ Generator<AVFramePtr> FilterGraph::filter(AVFrame* frame) {
 }
 
 Rational FilterGraph::get_src_time_base() const {
-  auto ctx = graph->filters[0]->outputs[0];
-  return Rational{ctx->time_base.num, ctx->time_base.den};
+  return graph->filters[0]->outputs[0]->time_base;
 }
 
 Rational FilterGraph::get_sink_time_base() const {
-  auto ctx = graph->filters[1]->inputs[0];
-  return Rational{ctx->time_base.num, ctx->time_base.den};
+  return graph->filters[1]->inputs[0]->time_base;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
