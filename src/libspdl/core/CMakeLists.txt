@@ -23,6 +23,7 @@ set(srcs
   detail/ffmpeg/conversion.cpp
   detail/ffmpeg/ctx_utils.cpp
   detail/ffmpeg/bsf.cpp
+  detail/ffmpeg/encoder.cpp
   detail/ffmpeg/decoder.cpp
   detail/ffmpeg/demuxer.cpp
   detail/ffmpeg/encoding.cpp
@@ -31,6 +32,7 @@ set(srcs
   detail/logging.cpp
   adaptor/adaptor.cpp
   adaptor/bytes.cpp
+  encoder.cpp
   frames.cpp
   buffer.cpp
   storage.cpp

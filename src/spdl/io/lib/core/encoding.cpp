@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <libspdl/core/encoder.h>
 #include <libspdl/core/encoding.h>
 
 #include <nanobind/nanobind.h>
@@ -16,6 +17,7 @@
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
+#include <nanobind/stl/unique_ptr.h>
 
 namespace nb = nanobind;
 
@@ -51,6 +53,59 @@ void encode(
 } // namespace
 
 void register_encoding(nb::module_& m) {
+  nb::class_<VideoEncodeConfig>(m, "VideoEncodeConfig");
+
+  m.def(
+      "video_encode_config",
+      [](int height,
+         int width,
+         const std::optional<std::tuple<int, int>> frame_rate,
+         const std::optional<std::string>& pix_fmt,
+         int bit_rate,
+         int compression_level,
+         int qscale,
+         int gop_size,
+         int max_b_frames) {
+        auto fr = [&]() -> std::optional<Rational> {
+          if (frame_rate) {
+            auto rate = *frame_rate;
+            return Rational{std::get<0>(rate), std::get<1>(rate)};
+          }
+          return std::nullopt;
+        }();
+        return VideoEncodeConfig{
+            height,
+            width,
+            pix_fmt,
+            fr,
+            bit_rate,
+            compression_level,
+            qscale,
+            gop_size,
+            max_b_frames};
+      },
+      nb::call_guard<nb::gil_scoped_release>(),
+      nb::kw_only(),
+      nb::arg("height"),
+      nb::arg("width"),
+      nb::arg("frame_rate") = std::nullopt,
+      nb::arg("pix_fmt") = std::nullopt,
+      nb::arg("bit_rate") = -1,
+      nb::arg("compression_level") = -1,
+      nb::arg("qscale") = -1,
+      nb::arg("gop_size") = -1,
+      nb::arg("max_b_frames") = -1);
+
+  nb::class_<VideoEncoder>(m, "VideoEncoder")
+      .def(
+          "encode",
+          &VideoEncoder::encode,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "flush",
+          &VideoEncoder::flush,
+          nb::call_guard<nb::gil_scoped_release>());
+
   m.def(
       "encode_image",
       &encode,
