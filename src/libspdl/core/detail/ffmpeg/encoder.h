@@ -16,7 +16,6 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 
 #include <memory>
-#include <string>
 
 namespace spdl::core::detail {
 
@@ -36,9 +35,10 @@ class EncoderImpl {
 
 using VideoEncoderImpl = EncoderImpl<MediaType::Video>;
 
-std::unique_ptr<VideoEncoderImpl> make_encoder(
+template <MediaType media_type>
+std::unique_ptr<EncoderImpl<media_type>> make_encoder(
     const AVCodec* codec,
-    const VideoEncodeConfig& encode_config,
+    const EncodeConfigBase<media_type>& encode_config,
     const std::optional<OptionDict>& encoder_config,
     bool global_header = false);
 

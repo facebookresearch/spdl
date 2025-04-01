@@ -25,17 +25,25 @@ class MuxerImpl {
  public:
   MuxerImpl(const std::string& uri, const std::optional<std::string>& format);
 
-  std::unique_ptr<VideoEncoderImpl> add_encode_stream(
-      const VideoEncodeConfig& codec_config,
+ private:
+  template <MediaType media_type>
+  void assert_media_type_is_supported() const;
+
+ public:
+  template <MediaType media_type>
+  std::unique_ptr<EncoderImpl<media_type>> add_encode_stream(
+      const EncodeConfigBase<media_type>& codec_config,
       const std::optional<std::string>& encoder,
       const std::optional<OptionDict>& encoder_config);
 
-  void add_remux_stream(const VideoCodec& codec);
+  template <MediaType media_type>
+  void add_remux_stream(const Codec<media_type>& codec);
 
   void open(const std::optional<OptionDict>& muxer_config);
 
   void
   write(int i, const std::vector<AVPacket*>& packets, AVRational time_base);
+
   void flush();
   void close();
 };
