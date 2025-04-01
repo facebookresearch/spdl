@@ -51,6 +51,9 @@ class Codec {
     requires(media_type == MediaType::Video || media_type == MediaType::Image);
   CodecID get_codec_id() const;
 
+  std::string get_pix_fmt() const
+    requires(media_type == MediaType::Video || media_type == MediaType::Image);
+
   Rational get_time_base() const;
   Rational get_frame_rate() const;
 

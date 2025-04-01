@@ -52,6 +52,16 @@ class VideoCodec:
         """The height of the video."""
         ...
 
+    @property
+    def pix_fmt(self) -> str:
+        """The pixel format of the video."""
+        ...
+
+    @property
+    def frame_rate(self) -> tuple[int, int]:
+        """The frame rate of the video."""
+        ...
+
 
 class AudioCodec:
     """AudioCodec()
@@ -92,6 +102,11 @@ class ImageCodec:
     @property
     def height(self) -> int:
         """The height of the image."""
+        ...
+
+    @property
+    def pix_fmt(self) -> str:
+        """The pixel format of the image."""
         ...
 
 
