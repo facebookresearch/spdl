@@ -8,6 +8,7 @@
 
 #include <libspdl/core/encoder.h>
 #include <libspdl/core/encoding.h>
+#include <libspdl/core/muxer.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -53,6 +54,41 @@ void encode(
 } // namespace
 
 void register_encoding(nb::module_& m) {
+  nb::class_<Muxer>(m, "Muxer")
+      .def(
+          "open",
+          &Muxer::open,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("muxer_config") = std::nullopt)
+      .def(
+          "add_video_encode_stream",
+          &Muxer::add_video_encode_stream,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("codec_config"),
+          nb::arg("encoder") = std::nullopt,
+          nb::arg("encoder_config") = std::nullopt)
+      .def(
+          "add_video_remux_stream",
+          &Muxer::add_video_remux_stream,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("codec"))
+      .def(
+          "write_video",
+          &Muxer::write<MediaType::Video>,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def("flush", &Muxer::flush, nb::call_guard<nb::gil_scoped_release>())
+      .def("close", &Muxer::close, nb::call_guard<nb::gil_scoped_release>());
+
+  m.def(
+      "muxer",
+      [](const std::string& uri, const std::optional<std::string>& format) {
+        return std::make_unique<Muxer>(uri, format);
+      },
+      nb::call_guard<nb::gil_scoped_release>(),
+      nb::arg(), // Positional-only
+      nb::kw_only(),
+      nb::arg("format") = std::nullopt);
+
   nb::class_<VideoEncodeConfig>(m, "VideoEncodeConfig");
 
   m.def(

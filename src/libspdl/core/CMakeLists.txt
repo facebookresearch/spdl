@@ -27,6 +27,7 @@ set(srcs
   detail/ffmpeg/decoder.cpp
   detail/ffmpeg/demuxer.cpp
   detail/ffmpeg/encoding.cpp
+  detail/ffmpeg/muxer.cpp
   detail/ffmpeg/filter_graph.cpp
   detail/ffmpeg/wrappers.cpp
   detail/logging.cpp
@@ -40,6 +41,7 @@ set(srcs
   demuxing.cpp
   codec.cpp
   encoding.cpp
+  muxer.cpp
   packets.cpp
   utils.cpp
   )
