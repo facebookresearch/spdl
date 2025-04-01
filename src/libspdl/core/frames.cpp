@@ -134,6 +134,15 @@ const std::vector<AVFrame*>& FFmpegFrames<media_type>::get_frames() const {
   return frames;
 }
 
+template <MediaType media_type>
+FFmpegFramesPtr<media_type> FFmpegFrames<media_type>::clone() const {
+  auto other = std::make_unique<FFmpegFrames<media_type>>(id, time_base);
+  for (const AVFrame* f : frames) {
+    other->push_back(CHECK_AVALLOCATE(av_frame_clone(f)));
+  }
+  return other;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Common to Audio/Video
 ////////////////////////////////////////////////////////////////////////////////
@@ -293,19 +302,5 @@ FFmpegImageFramesPtr FFmpegFrames<media_type>::slice(int64_t i) const
 template class FFmpegFrames<MediaType::Audio>;
 template class FFmpegFrames<MediaType::Video>;
 template class FFmpegFrames<MediaType::Image>;
-
-template <MediaType media_type>
-FFmpegFramesPtr<media_type> clone(const FFmpegFrames<media_type>& src) {
-  auto other =
-      std::make_unique<FFmpegFrames<media_type>>(src.get_id(), src.time_base);
-  for (const AVFrame* f : src.get_frames()) {
-    other->push_back(CHECK_AVALLOCATE(av_frame_clone(f)));
-  }
-  return other;
-}
-
-template FFmpegAudioFramesPtr clone(const FFmpegAudioFrames&);
-template FFmpegVideoFramesPtr clone(const FFmpegVideoFrames&);
-template FFmpegImageFramesPtr clone(const FFmpegImageFrames&);
 
 } // namespace spdl::core

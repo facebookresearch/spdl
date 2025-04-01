@@ -67,10 +67,10 @@ void register_frames(nb::module_& m) {
                 self.get_num_channels(),
                 pts);
           })
-      .def("clone", [](const FFmpegAudioFrames& self) {
-        nb::gil_scoped_release __g;
-        return clone(self);
-      });
+      .def(
+          "clone",
+          &FFmpegAudioFrames::clone,
+          nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<FFmpegVideoFrames>(m, "FFmpegVideoFrames")
       .def_prop_ro(
@@ -157,10 +157,10 @@ void register_frames(nb::module_& m) {
                 self.get_height(),
                 pts);
           })
-      .def("clone", [](const FFmpegVideoFrames& self) {
-        nb::gil_scoped_release __g;
-        return clone(self);
-      });
+      .def(
+          "clone",
+          &FFmpegVideoFrames::clone,
+          nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<FFmpegImageFrames>(m, "FFmpegImageFrames")
       .def_prop_ro(
@@ -214,10 +214,8 @@ void register_frames(nb::module_& m) {
           })
       .def(
           "clone",
-          [](const FFmpegImageFrames& self) {
-            nb::gil_scoped_release __g;
-            return clone(self);
-          })
+          &FFmpegImageFrames::clone,
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("pts", [](const FFmpegImageFrames& self) -> double {
         nb::gil_scoped_release __g;
         auto base = self.time_base;

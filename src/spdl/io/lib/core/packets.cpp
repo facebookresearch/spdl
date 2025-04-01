@@ -41,10 +41,10 @@ void register_packets(nb::module_& m) {
           "codec",
           &AudioPackets::get_codec,
           nb::call_guard<nb::gil_scoped_release>())
-      .def("clone", [](const AudioPackets& self) {
-        nb::gil_scoped_release __g;
-        return clone(self);
-      });
+      .def(
+          "clone",
+          &AudioPackets::clone,
+          nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<VideoPackets>(m, "VideoPackets")
       .def(
@@ -90,10 +90,10 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def("__len__", &VideoPackets::num_packets)
       .def("__repr__", &VideoPackets::get_summary)
-      .def("clone", [](const VideoPackets& self) {
-        nb::gil_scoped_release __g;
-        return clone(self);
-      });
+      .def(
+          "clone",
+          &VideoPackets::clone,
+          nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
       "_extract_packets_at_indices",
@@ -127,9 +127,9 @@ void register_packets(nb::module_& m) {
           &ImagePackets::get_codec,
           nb::call_guard<nb::gil_scoped_release>())
       .def("__repr__", &ImagePackets::get_summary)
-      .def("clone", [](const ImagePackets& self) {
-        nb::gil_scoped_release __g;
-        return clone(self);
-      });
+      .def(
+          "clone",
+          &ImagePackets::clone,
+          nb::call_guard<nb::gil_scoped_release>());
 }
 } // namespace spdl::core
