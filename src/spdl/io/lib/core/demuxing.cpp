@@ -158,11 +158,17 @@ void register_demuxing(nb::module_& m) {
   nb::class_<VideoCodec>(m, "VideoCodec")
       .def_prop_ro("name", &VideoCodec::get_name)
       .def_prop_ro("width", &VideoCodec::get_width)
-      .def_prop_ro("height", &VideoCodec::get_height);
+      .def_prop_ro("height", &VideoCodec::get_height)
+      .def_prop_ro("pix_fmt", &VideoCodec::get_pix_fmt)
+      .def_prop_ro("frame_rate", [](VideoCodec& self) -> std::tuple<int, int> {
+        auto rate = self.get_frame_rate();
+        return {rate.num, rate.den};
+      });
   nb::class_<ImageCodec>(m, "ImageCodec")
       .def_prop_ro("name", &ImageCodec::get_name)
       .def_prop_ro("width", &ImageCodec::get_width)
-      .def_prop_ro("height", &ImageCodec::get_height);
+      .def_prop_ro("height", &ImageCodec::get_height)
+      .def_prop_ro("pix_fmt", &ImageCodec::get_pix_fmt);
 
   nb::class_<PyDemuxer>(m, "Demuxer")
       .def(

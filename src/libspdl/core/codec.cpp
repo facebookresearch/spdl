@@ -16,6 +16,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavutil/pixdesc.h>
 }
 
 namespace spdl::core {
@@ -135,6 +136,13 @@ CodecID Codec<media_type>::get_codec_id() const {
       SPDL_FAIL(fmt::format(
           "Unsupported codec ID: {}", avcodec_get_name(codecpar->codec_id)));
   }
+}
+
+template <MediaType media_type>
+std::string Codec<media_type>::get_pix_fmt() const
+  requires(media_type == MediaType::Video || media_type == MediaType::Image)
+{
+  return av_get_pix_fmt_name((AVPixelFormat)(codecpar->format));
 }
 
 template <MediaType media_type>
