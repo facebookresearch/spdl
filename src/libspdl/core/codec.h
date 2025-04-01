@@ -29,7 +29,10 @@ class Codec {
   Rational frame_rate;
 
  public:
-  Codec(const AVCodecParameters*, Rational, Rational = {1, 1}) noexcept;
+  Codec(
+      const AVCodecParameters*,
+      Rational time_base,
+      Rational frame_rate) noexcept;
   ~Codec();
   Codec(const Codec<media_type>&);
   Codec(Codec<media_type>&&) noexcept;

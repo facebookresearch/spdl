@@ -225,7 +225,11 @@ AVFormatOutputContextPtr get_output_format_ctx(
   CHECK_AVERROR(
       avformat_alloc_output_context2(
           &p, nullptr, format ? format->c_str() : nullptr, url.c_str()),
-      fmt::format("Failed to allocate output format context for {}.", url));
+      fmt::format(
+          "Failed to allocate output format context for `{}`. "
+          "FFmpeg might not be able to deduce the format from the file name. "
+          "Specifying the `format` might resolve this.",
+          url));
   return AVFormatOutputContextPtr{p};
 }
 
@@ -430,6 +434,9 @@ void open_codec(
 }
 
 template void open_codec<MediaType::Image>(
+    AVCodecContext* codec_ctx,
+    const std::optional<OptionDict>& encode_options);
+template void open_codec<MediaType::Video>(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& encode_options);
 

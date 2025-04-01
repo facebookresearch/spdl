@@ -464,7 +464,7 @@ get_video_frame(AVPixelFormat fmt, size_t width, size_t height, int64_t pts) {
 }
 
 void no_free(void* opaque, uint8_t* data) {
-  VLOG(9) << fmt::format("Not free-ing data @ {}", (void*)data);
+  VLOG(15) << fmt::format("Not free-ing data @ {}", (void*)data);
 }
 
 // Create an AVBufferRef object that points to an existing buffer,
