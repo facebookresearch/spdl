@@ -74,8 +74,7 @@ void configure_image_codec_ctx(
     int height,
     const EncodeConfig& cfg);
 
-template <MediaType media_type>
-void open_codec(
+void open_codec_for_encode(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& option);
 

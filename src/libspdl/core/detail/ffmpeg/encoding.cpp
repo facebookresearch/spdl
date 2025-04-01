@@ -81,7 +81,7 @@ std::pair<Encoder, FilterGraph> get_encode_process(
       get_codec_ctx(codec, format_ctx->oformat->flags);
 
   configure_image_codec_ctx(codec_ctx, enc_fmt, enc_width, enc_height, enc_cfg);
-  open_codec<MediaType::Image>(codec_ctx.get(), enc_cfg.encoder_options);
+  open_codec_for_encode(codec_ctx.get(), enc_cfg.encoder_options);
 
   AVStream* stream = create_stream(format_ctx.get(), codec_ctx.get());
   open_format(format_ctx.get(), enc_cfg.muxer_options);

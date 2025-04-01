@@ -110,7 +110,7 @@ AVRational get_frame_rate(
     }
     if (!is_frame_rate_supported(rate, codec->supported_framerates)) {
       SPDL_FAIL(fmt::format(
-          "`{}` does not support the frame rate `{}/{}`. "
+          "Codec `{}` does not support the frame rate `{}/{}`. "
           "Supported values are {}",
           codec->name,
           rate.num,
@@ -123,19 +123,18 @@ AVRational get_frame_rate(
     return codec->supported_framerates[0];
   }
   SPDL_FAIL(fmt::format(
-      "`{}` does not have a default frame rate. Please specify one.",
+      "Codec `{}` does not have a default frame rate. Please specify one.",
       codec->name));
 }
 
 AVCodecContextPtr get_codec_context(
     const AVCodec* codec,
     const VideoEncodeConfig& encode_config) {
-  // Check before allocating a bare pointer
+  // Check before allocating AVCodecContext
   auto pix_fmt = get_pix_fmt(codec, encode_config.pix_fmt);
   auto frame_rate = get_frame_rate(codec, encode_config.frame_rate);
 
   auto ctx = AVCodecContextPtr{CHECK_AVALLOCATE(avcodec_alloc_context3(codec))};
-  AVRational av_stream_get_r_frame_rate(const AVStream* s);
 
   ctx->pix_fmt = pix_fmt;
   ctx->width = encode_config.width;
@@ -185,14 +184,6 @@ AVCodecParameters* EncoderImpl<media_type>::get_codec_par(
 }
 
 std::unique_ptr<VideoEncoderImpl> make_encoder(
-    const std::string& encoder_name,
-    const VideoEncodeConfig& encode_config,
-    const std::optional<OptionDict>& encoder_config) {
-  const AVCodec* codec = get_codec(encoder_name);
-  return make_encoder(codec, encode_config, encoder_config, false);
-}
-
-std::unique_ptr<VideoEncoderImpl> make_encoder(
     const AVCodec* codec,
     const VideoEncodeConfig& encode_config,
     const std::optional<OptionDict>& encoder_config,
@@ -201,7 +192,7 @@ std::unique_ptr<VideoEncoderImpl> make_encoder(
   if (global_header) {
     codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
   }
-  open_codec<MediaType::Video>(codec_ctx.get(), encoder_config);
+  open_codec_for_encode(codec_ctx.get(), encoder_config);
   return std::make_unique<VideoEncoderImpl>(std::move(codec_ctx));
 }
 
@@ -258,9 +249,10 @@ Generator<AVPacketPtr> _encode(
 template <MediaType media_type>
 PacketsPtr<media_type> EncoderImpl<media_type>::encode(
     const FFmpegFramesPtr<media_type>&& frames) {
-  auto ret = std::make_unique<DemuxedPackets<MediaType::Video>>(
+  auto ret = std::make_unique<DemuxedPackets<media_type>>(
       fmt::format("{}", frames->get_id()),
-      VideoCodec{get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});
+      Codec<media_type>{
+          get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});
   auto encoding = _encode(codec_ctx.get(), frames->get_frames(), false);
   while (encoding) {
     auto pkt = encoding();
@@ -271,9 +263,10 @@ PacketsPtr<media_type> EncoderImpl<media_type>::encode(
 
 template <MediaType media_type>
 PacketsPtr<media_type> EncoderImpl<media_type>::flush() {
-  auto ret = std::make_unique<DemuxedPackets<MediaType::Video>>(
+  auto ret = std::make_unique<DemuxedPackets<media_type>>(
       "flush",
-      VideoCodec{get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});
+      Codec<media_type>{
+          get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});
   std::vector<AVFrame*> dummy{};
   auto encoding = _encode(codec_ctx.get(), dummy, true);
   while (encoding) {

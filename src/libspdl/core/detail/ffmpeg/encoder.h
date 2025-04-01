@@ -36,12 +36,6 @@ class EncoderImpl {
 
 using VideoEncoderImpl = EncoderImpl<MediaType::Video>;
 
-// temp; to be removed.
-std::unique_ptr<VideoEncoderImpl> make_encoder(
-    const std::string& encoder_name,
-    const VideoEncodeConfig& encode_config,
-    const std::optional<OptionDict>& encoder_config);
-
 std::unique_ptr<VideoEncoderImpl> make_encoder(
     const AVCodec* codec,
     const VideoEncodeConfig& encode_config,
