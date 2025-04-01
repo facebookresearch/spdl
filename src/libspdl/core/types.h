@@ -16,15 +16,28 @@
 
 #define SPDL_DEFAULT_BUFFER_SIZE 8096
 
+#if __has_include(<libavutil/rational.h>)
+#include <libavutil/rational.h>
+#else
+extern "C" {
+// Copying the definition of AVRAtional.
+// It's unlikely they change, but if it should ever happen, it could cause SEGV.
+// https://www.ffmpeg.org/doxygen/4.4/rational_8h_source.html#l00058
+// https://www.ffmpeg.org/doxygen/5.1/rational_8h_source.html#l00058
+// https://www.ffmpeg.org/doxygen/6.1/rational_8h_source.html#l00058
+// https://www.ffmpeg.org/doxygen/7.0/rational_8h_source.html#l00058
+typedef struct AVRational {
+  int num; ///< Numerator
+  int den; ///< Denominator
+} AVRational;
+}
+#endif
+
 namespace spdl::core {
 
 using OptionDict = std::map<std::string, std::string>;
 
-// alternative for AVRational so that we can avoid exposing FFmpeg headers
-struct Rational {
-  int num = 0;
-  int den = 1;
-};
+using Rational = AVRational;
 
 // simplified version of AVMediaType so that public headers do not
 // include ffmpeg headers
