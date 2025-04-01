@@ -129,13 +129,13 @@ DecoderImpl<media_type>::DecoderImpl(
     const std::optional<std::string>& filter_desc)
     : codec_ctx(get_decode_codec_ctx_ptr(
           codec.get_parameters(),
-          codec.time_base,
+          codec.get_time_base(),
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)),
       filter_graph(get_filter<media_type>(
           codec_ctx.get(),
           filter_desc,
-          codec.frame_rate)) {}
+          codec.get_frame_rate())) {}
 
 template <MediaType media_type>
 Rational DecoderImpl<media_type>::get_output_time_base() const {

@@ -41,6 +41,10 @@ FFmpegFrames<media_type>::FFmpegFrames(uint64_t id_, Rational time_base_)
       "decoding",
       "FFmpegFrames::FFmpegFrames",
       perfetto::Flow::ProcessScoped(id));
+  if (time_base.den == 0) {
+    SPDL_FAIL(fmt::format(
+        "Invalid time base was provided. {}/{}", time_base.num, time_base.den));
+  }
 }
 
 template <MediaType media_type>
@@ -143,13 +147,8 @@ FFmpegFramesPtr<media_type> FFmpegFrames<media_type>::clone() const {
   return other;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Common to Audio/Video
-////////////////////////////////////////////////////////////////////////////////
 template <MediaType media_type>
-Rational FFmpegFrames<media_type>::get_time_base() const
-  requires(_IS_AUDIO || _IS_VIDEO)
-{
+Rational FFmpegFrames<media_type>::get_time_base() const {
   return time_base;
 }
 
