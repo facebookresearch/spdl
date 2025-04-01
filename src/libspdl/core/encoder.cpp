@@ -31,6 +31,7 @@ PacketsPtr<media_type> Encoder<media_type>::flush() {
   return pImpl->flush();
 }
 
+template class Encoder<MediaType::Audio>;
 template class Encoder<MediaType::Video>;
 
 } // namespace spdl::core
