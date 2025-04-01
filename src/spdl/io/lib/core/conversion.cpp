@@ -19,6 +19,8 @@
 namespace nb = nanobind;
 
 using int_array = nb::ndarray<nb::device::cpu, nb::c_contig, int64_t>;
+using rgb_frames = nb::
+    ndarray<uint8_t, nb::shape<-1, -1, -1, 3>, nb::device::cpu, nb::c_contig>;
 
 namespace spdl::core {
 namespace {
@@ -71,6 +73,28 @@ CPUBufferPtr convert_array(
   return buf;
 }
 
+FFmpegVideoFramesPtr _convert_rgb_array(
+    const rgb_frames& array,
+    std::tuple<int, int> frame_rate,
+    int pts) {
+  // Obtain shape
+  std::vector<size_t> shape;
+  for (size_t i = 0; i < array.ndim(); ++i) {
+    shape.push_back(array.shape(i));
+  }
+  Rational time_base{std::get<1>(frame_rate), std::get<0>(frame_rate)};
+  auto src = array.data();
+
+  nb::gil_scoped_release __g; // do not access vals from here.
+  return convert_rgb_array(
+      src,
+      array.shape(0), // N
+      array.shape(1), // H
+      array.shape(2), // W
+      time_base,
+      pts);
+}
+
 } // namespace
 
 void register_conversion(nb::module_& m) {
@@ -117,5 +141,15 @@ void register_conversion(nb::module_& m) {
       &convert_array,
       nb::arg("vals"),
       nb::arg("storage") = nullptr);
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Conversion from tensor to AVFrames
+  ////////////////////////////////////////////////////////////////////////////////
+  m.def(
+      "convert_rgb_array",
+      &_convert_rgb_array,
+      nb::arg("array"),
+      nb::arg("frame_rate"),
+      nb::arg("pts"));
 }
 } // namespace spdl::core

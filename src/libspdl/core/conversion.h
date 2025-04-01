@@ -32,4 +32,12 @@ CPUBufferPtr convert_frames(
   ret->shape.erase(ret->shape.begin()); // Trim the batch dim
   return ret;
 }
+
+FFmpegVideoFramesPtr convert_rgb_array(
+    const void* data,
+    size_t num_frames,
+    size_t height,
+    size_t width,
+    Rational time_base,
+    int pts);
 } // namespace spdl::core
