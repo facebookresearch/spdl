@@ -60,7 +60,7 @@ void register_frames(nb::module_& m) {
                   self.time_base.den;
             }();
             return fmt::format(
-                "FFmpegAudioFrames<num_frames={}, sample_format=\"{}\", sample_rate={}, num_channels={}, pts={}>",
+                "FFmpegAudioFrames<num_frames={}, sample_format=\"{}\", sample_rate={}, num_channels={}, timestamp={:.3f}>",
                 num_frames,
                 self.get_media_format_name(),
                 self.get_sample_rate(),
@@ -149,7 +149,7 @@ void register_frames(nb::module_& m) {
                   self.time_base.den;
             }();
             return fmt::format(
-                "FFmpegVideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, pts={}>",
+                "FFmpegVideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, timestamp={:.3f}>",
                 num_frames,
                 self.get_media_format_name(),
                 self.get_num_planes(),
@@ -196,6 +196,15 @@ void register_frames(nb::module_& m) {
       .def(
           "__repr__",
           [](const FFmpegImageFrames& self) {
+            if (auto pts = self.get_pts(); pts) {
+              return fmt::format(
+                  "FFmpegImageFrames<pixel_format=\"{}\", num_planes={}, width={}, height={}, timestamp={:.3f}>",
+                  self.get_media_format_name(),
+                  self.get_num_planes(),
+                  self.get_width(),
+                  self.get_height(),
+                  double(pts) * self.time_base.num / self.time_base.den);
+            }
             return fmt::format(
                 "FFmpegImageFrames<pixel_format=\"{}\", num_planes={}, width={}, height={}>",
                 self.get_media_format_name(),
