@@ -158,6 +158,26 @@ AVCodecContextPtr get_codec_context(
     ctx->flags |= AV_CODEC_FLAG_QSCALE;
     ctx->global_quality = FF_QP2LAMBDA * encode_config.qscale;
   }
+  if (encode_config.colorspace) {
+    auto& name = encode_config.colorspace.value();
+    int val = av_color_space_from_name(name.c_str());
+    CHECK_AVERROR_NUM(val, fmt::format("Unexpected color space: {}", name));
+    ctx->colorspace = (AVColorSpace)val;
+  }
+  if (encode_config.color_primaries) {
+    auto& name = encode_config.color_primaries.value();
+    int val = av_color_primaries_from_name(name.c_str());
+    CHECK_AVERROR_NUM(val, fmt::format("Unexpected color primaries: {}", name));
+    ctx->color_primaries = (AVColorPrimaries)val;
+  }
+  if (encode_config.color_trc) {
+    auto& name = encode_config.color_trc.value();
+    int val = av_color_transfer_from_name(name.c_str());
+    CHECK_AVERROR_NUM(
+        val, fmt::format("Unexpected color transfer characteristic: {}", name));
+    ctx->color_trc = (AVColorTransferCharacteristic)val;
+  }
+
   return ctx;
 }
 
