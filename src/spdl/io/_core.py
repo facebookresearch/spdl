@@ -38,6 +38,7 @@ else:
     Tensor = object
 
 
+from spdl._internal import log_api_usage_once
 from spdl.io import (
     AudioCodec,
     AudioDecoder,
@@ -137,14 +138,7 @@ class Demuxer:
         Returns:
             Demuxed audio packets.
         """
-        # NOTE:
-        # DO NOT REFACTOR (EXTRACT) FUNCTION CALL. IT WILL BREAK
-        # THE META INTERNAL API LOGGING.
-        # It's no-op for OSS.
-        try:
-            torch._C._log_api_usage_once("spdl.io.demux_audio")
-        except Exception:
-            pass
+        log_api_usage_once("spdl.io.demux_audio")
 
         return self._demuxer.demux_audio(window=window, **kwargs)
 
@@ -160,14 +154,7 @@ class Demuxer:
         Returns:
             Demuxed video packets.
         """
-        # NOTE:
-        # DO NOT REFACTOR (EXTRACT) FUNCTION CALL. IT WILL BREAK
-        # THE META INTERNAL API LOGGING.
-        # It's no-op for OSS.
-        try:
-            torch._C._log_api_usage_once("spdl.io.demux_video")
-        except Exception:
-            pass
+        log_api_usage_once("spdl.io.demux_video")
 
         return self._demuxer.demux_video(window=window, **kwargs)
 
@@ -177,14 +164,7 @@ class Demuxer:
         Returns:
             Demuxed image packets.
         """
-        # NOTE:
-        # DO NOT REFACTOR (EXTRACT) FUNCTION CALL. IT WILL BREAK
-        # THE META INTERNAL API LOGGING.
-        # It's no-op for OSS.
-        try:
-            torch._C._log_api_usage_once("spdl.io.demux_image")
-        except Exception:
-            pass
+        log_api_usage_once("spdl.io.demux_image")
 
         return self._demuxer.demux_image(**kwargs)
 

@@ -17,10 +17,10 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from enum import IntEnum
 from threading import Event as SyncEvent, Thread
-from types import ModuleType
 from typing import Any, Generic, TypeVar
 
-from .._internal.import_utils import lazy_import
+from spdl._internal import log_api_usage_once
+
 from ._queue import AsyncQueue
 from ._utils import create_task
 
@@ -29,8 +29,6 @@ __all__ = ["Pipeline"]
 _LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
-
-torch: ModuleType = lazy_import("torch")
 
 
 ##############################################################################
@@ -277,14 +275,7 @@ class Pipeline(Generic[T]):
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
 
-        # NOTE:
-        # DO NOT REFACTOR (EXTRACT) FUNCTION CALL. IT WILL BREAK
-        # THE META INTERNAL API LOGGING.
-        # It's no-op for OSS.
-        try:
-            torch._C._log_api_usage_once("spdl.pipeline.Pipeline")
-        except Exception:
-            pass
+        log_api_usage_once("spdl.pipeline.Pipeline")
 
     def __str__(self) -> str:
         return self._str
