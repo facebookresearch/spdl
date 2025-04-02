@@ -281,7 +281,7 @@ def test_decode_video_frame_rate_pts():
 
 
 def test_convert_audio():
-    """convert_frames can convert FFmpegAudioFrames to Buffer"""
+    """convert_frames can convert AudioFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
@@ -297,7 +297,7 @@ def test_convert_audio():
 
 
 def test_convert_video():
-    """convert_frames can convert FFmpegVideoFrames to Buffer"""
+    """convert_frames can convert VideoFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd)
 
@@ -313,7 +313,7 @@ def test_convert_video():
 
 
 def test_convert_image():
-    """convert_frames can convert FFmpegImageFrames to Buffer"""
+    """convert_frames can convert ImageFrames to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd)
 
@@ -326,7 +326,7 @@ def test_convert_image():
 
 
 def test_convert_batch_image():
-    """convert_frames can convert list[FFmpegImageFrames] to Buffer"""
+    """convert_frames can convert list[ImageFrames] to Buffer"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
     srcs = get_samples(cmd)
 

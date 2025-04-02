@@ -19,21 +19,21 @@ namespace spdl::core {
 // detail/ffmpeg/conversion.cpp
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     std::shared_ptr<CPUStorage> storage = nullptr);
 
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
-    const FFmpegFrames<media_type>* frames,
+    const Frames<media_type>* frames,
     std::shared_ptr<CPUStorage> storage = nullptr) {
-  const std::vector<const FFmpegFrames<media_type>*> batch{frames};
+  const std::vector<const Frames<media_type>*> batch{frames};
   // Use the same impl as batch conversion
   auto ret = convert_frames<media_type>(batch, std::move(storage));
   ret->shape.erase(ret->shape.begin()); // Trim the batch dim
   return ret;
 }
 
-FFmpegVideoFramesPtr convert_rgb_array(
+VideoFramesPtr convert_rgb_array(
     const void* data,
     size_t num_frames,
     size_t height,

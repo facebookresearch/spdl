@@ -45,7 +45,7 @@ class Muxer {
   void open(const std::optional<OptionDict>& muxer_config);
 
   template <MediaType media_type>
-  void write(int i, DemuxedPackets<media_type>& packets);
+  void write(int i, Packets<media_type>& packets);
 
   void flush();
   void close();

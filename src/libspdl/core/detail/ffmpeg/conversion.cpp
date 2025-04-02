@@ -32,7 +32,7 @@ namespace spdl::core {
 namespace {
 template <size_t depth, ElemClass type, bool is_planar>
 CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegAudioFrames*>& batch,
+    const std::vector<const AudioFrames*>& batch,
     std::shared_ptr<CPUStorage> storage) {
   size_t num_frames = batch.at(0)->get_num_frames();
   size_t num_channels = GET_NUM_CHANNELS(batch.at(0)->get_frames().at(0));
@@ -77,7 +77,7 @@ CPUBufferPtr convert_frames(
 
 template <>
 CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegAudioFrames*>& batch,
+    const std::vector<const AudioFrames*>& batch,
     std::shared_ptr<CPUStorage> storage) {
   if (batch.empty()) {
     SPDL_FAIL("No frame to convert to buffer.");
@@ -165,7 +165,7 @@ namespace {
 template <MediaType media_type>
 void copy(
     AVPixelFormat pix_fmt,
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     CPUBuffer* buf) {
   auto dst = (uint8_t*)buf->data();
   auto dst_size = buf->shape[2] * buf->shape[3] * buf->shape[4] * buf->depth;
@@ -190,7 +190,7 @@ void copy(
 template <MediaType media_type>
 CPUBufferPtr convert_interleaved(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -212,7 +212,7 @@ CPUBufferPtr convert_interleaved(
 template <MediaType media_type>
 CPUBufferPtr convert_planer(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -236,7 +236,7 @@ CPUBufferPtr convert_planer(
 template <MediaType media_type>
 CPUBufferPtr convert_yuv420p(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -258,7 +258,7 @@ CPUBufferPtr convert_yuv420p(
 template <MediaType media_type>
 CPUBufferPtr convert_yuv422p(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -277,7 +277,7 @@ CPUBufferPtr convert_yuv422p(
 template <MediaType media_type>
 CPUBufferPtr convert_nv12(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -299,7 +299,7 @@ CPUBufferPtr convert_nv12(
 
 namespace {
 template <MediaType media_type>
-void check_frame_consistency(const FFmpegFrames<media_type>* frames_ptr)
+void check_frame_consistency(const Frames<media_type>* frames_ptr)
   requires(media_type != MediaType::Audio)
 {
   auto numel = frames_ptr->get_num_frames();
@@ -339,7 +339,7 @@ void check_frame_consistency(const FFmpegFrames<media_type>* frames_ptr)
 
 template <MediaType media_type>
 void check_batch_frame_consistency(
-    const std::vector<const FFmpegFrames<media_type>*>& batch) {
+    const std::vector<const Frames<media_type>*>& batch) {
   if (batch.empty()) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
@@ -397,7 +397,7 @@ void check_batch_frame_consistency(
 // for YUV, but for now, it copies data as-is for both YUV and YUVJ.
 template <MediaType media_type>
 CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegFrames<media_type>*>& batch,
+    const std::vector<const Frames<media_type>*>& batch,
     std::shared_ptr<CPUStorage> storage) {
   TRACE_EVENT("decoding", "core::convert_frames");
   check_batch_frame_consistency(batch);
@@ -441,11 +441,11 @@ CPUBufferPtr convert_frames(
 }
 
 template CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegImageFrames*>& batch,
+    const std::vector<const ImageFrames*>& batch,
     std::shared_ptr<CPUStorage> storage);
 
 template CPUBufferPtr convert_frames(
-    const std::vector<const FFmpegVideoFrames*>& batch,
+    const std::vector<const VideoFrames*>& batch,
     std::shared_ptr<CPUStorage> storage);
 
 namespace detail {
@@ -527,14 +527,14 @@ AVFramePtr reference_image_buffer(
 
 } // namespace detail
 
-FFmpegVideoFramesPtr convert_rgb_array(
+VideoFramesPtr convert_rgb_array(
     const void* data,
     size_t num_frames,
     size_t height,
     size_t width,
     Rational time_base,
     int pts) {
-  auto ret = std::make_unique<FFmpegVideoFrames>((uintptr_t)data, time_base);
+  auto ret = std::make_unique<VideoFrames>((uintptr_t)data, time_base);
   uint8_t* dst = (uint8_t*)data;
   for (size_t i = 0; i < num_frames; ++i) {
     auto frame =

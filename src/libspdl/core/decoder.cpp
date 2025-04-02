@@ -31,20 +31,20 @@ Decoder<media_type>::~Decoder() {
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> Decoder<media_type>::decode_and_flush(
+FramesPtr<media_type> Decoder<media_type>::decode_and_flush(
     PacketsPtr<media_type> packets,
     int num_frames) {
   return pImpl->decode_and_flush(std::move(packets), num_frames);
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> Decoder<media_type>::decode(
+FramesPtr<media_type> Decoder<media_type>::decode(
     PacketsPtr<media_type> packets) {
   return pImpl->decode(std::move(packets));
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> Decoder<media_type>::flush() {
+FramesPtr<media_type> Decoder<media_type>::flush() {
   return pImpl->flush();
 }
 

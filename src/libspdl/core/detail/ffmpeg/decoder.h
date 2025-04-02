@@ -40,11 +40,11 @@ class DecoderImpl {
 
   Rational get_output_time_base() const;
 
-  FFmpegFramesPtr<media_type> decode_and_flush(
+  FramesPtr<media_type> decode_and_flush(
       PacketsPtr<media_type> packets,
       int num_frames = -1);
-  FFmpegFramesPtr<media_type> decode(PacketsPtr<media_type> packets);
-  FFmpegFramesPtr<media_type> flush();
+  FramesPtr<media_type> decode(PacketsPtr<media_type> packets);
+  FramesPtr<media_type> flush();
 };
 
 } // namespace spdl::core::detail

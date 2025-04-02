@@ -28,7 +28,7 @@ def _decode_video(src, pix_fmt=None):
 
 
 def test_video_frames_getitem_slice():
-    """FFmpegVideoFrames.__getitem__ works for slice input"""
+    """VideoFrames.__getitem__ works for slice input"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     sample = get_sample(cmd)
 
@@ -48,7 +48,7 @@ def test_video_frames_getitem_slice():
 
 
 def test_video_frames_getitem_int():
-    """FFmpegVideoFrames.__getitem__ works for index input"""
+    """VideoFrames.__getitem__ works for index input"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
     sample = get_sample(cmd)
@@ -65,7 +65,7 @@ def test_video_frames_getitem_int():
 
 
 def test_video_frames_getitem_negative_int():
-    """FFmpegVideoFrames.__getitem__ works for negative index input"""
+    """VideoFrames.__getitem__ works for negative index input"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
     sample = get_sample(cmd)
@@ -82,7 +82,7 @@ def test_video_frames_getitem_negative_int():
 
 
 def test_video_frames_iterate():
-    """FFmpegVideoFrames can be iterated"""
+    """VideoFrames can be iterated"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
     sample = get_sample(cmd)
@@ -99,7 +99,7 @@ def test_video_frames_iterate():
 
 
 def test_video_frames_list_slice():
-    """FFmpegVideoFrames can be sliced with list of integers"""
+    """VideoFrames can be sliced with list of integers"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
     sample = get_sample(cmd)
@@ -121,7 +121,7 @@ def test_video_frames_list_slice():
 
 
 def test_video_frames_list_slice_empty():
-    """FFmpegVideoFrames can be sliced with an empty list"""
+    """VideoFrames can be sliced with an empty list"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
     sample = get_sample(cmd)
@@ -137,7 +137,7 @@ def test_video_frames_list_slice_empty():
 
 
 def test_video_frames_list_slice_out_of_range():
-    """Slicing FFmpegVideoFrames with an out-of-range value fails"""
+    """Slicing VideoFrames with an out-of-range value fails"""
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     n = 100
     sample = get_sample(cmd)

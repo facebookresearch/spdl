@@ -22,14 +22,14 @@ struct AVPacket;
 namespace spdl::core {
 
 template <MediaType media_type>
-class DemuxedPackets;
+class Packets;
 
-using AudioPackets = DemuxedPackets<MediaType::Audio>;
-using VideoPackets = DemuxedPackets<MediaType::Video>;
-using ImagePackets = DemuxedPackets<MediaType::Image>;
+using AudioPackets = Packets<MediaType::Audio>;
+using VideoPackets = Packets<MediaType::Video>;
+using ImagePackets = Packets<MediaType::Image>;
 
 template <MediaType media_type>
-using PacketsPtr = std::unique_ptr<DemuxedPackets<media_type>>;
+using PacketsPtr = std::unique_ptr<Packets<media_type>>;
 
 using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
 using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
@@ -44,10 +44,10 @@ struct RawPacketData {
 };
 
 // Struct passed from IO thread pool to decoder thread pool.
-// Similar to FFmpegFrames, AVFrame pointers are bulk released.
+// Similar to Frames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
 template <MediaType media_type>
-class DemuxedPackets {
+class Packets {
  public:
   uint64_t id;
   // Source information
@@ -62,18 +62,18 @@ class DemuxedPackets {
   std::vector<AVPacket*> packets = {};
 
  public:
-  DemuxedPackets(
+  Packets(
       std::string src,
       Codec<media_type>&& codec,
       std::optional<std::tuple<double, double>> timestamp = std::nullopt);
 
   // Destructor releases AVPacket* resources
-  ~DemuxedPackets();
+  ~Packets();
   // No copy/move constructors
-  DemuxedPackets(const DemuxedPackets&) = delete;
-  DemuxedPackets& operator=(const DemuxedPackets&) = delete;
-  DemuxedPackets(DemuxedPackets&& other) noexcept = delete;
-  DemuxedPackets& operator=(DemuxedPackets&& other) noexcept = delete;
+  Packets(const Packets&) = delete;
+  Packets& operator=(const Packets&) = delete;
+  Packets(Packets&& other) noexcept = delete;
+  Packets& operator=(Packets&& other) noexcept = delete;
 
   void push(AVPacket*);
   const std::vector<AVPacket*>& get_packets() const;

@@ -23,18 +23,18 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <MediaType media_type>
-class FFmpegFrames;
+class Frames;
 
-using FFmpegAudioFrames = FFmpegFrames<MediaType::Audio>;
-using FFmpegVideoFrames = FFmpegFrames<MediaType::Video>;
-using FFmpegImageFrames = FFmpegFrames<MediaType::Image>;
+using AudioFrames = Frames<MediaType::Audio>;
+using VideoFrames = Frames<MediaType::Video>;
+using ImageFrames = Frames<MediaType::Image>;
 
 template <MediaType media_type>
-using FFmpegFramesPtr = std::unique_ptr<FFmpegFrames<media_type>>;
+using FramesPtr = std::unique_ptr<Frames<media_type>>;
 
-using FFmpegAudioFramesPtr = FFmpegFramesPtr<MediaType::Audio>;
-using FFmpegVideoFramesPtr = FFmpegFramesPtr<MediaType::Video>;
-using FFmpegImageFramesPtr = FFmpegFramesPtr<MediaType::Image>;
+using AudioFramesPtr = FramesPtr<MediaType::Audio>;
+using VideoFramesPtr = FramesPtr<MediaType::Video>;
+using ImageFramesPtr = FramesPtr<MediaType::Image>;
 
 #define _IS_AUDIO (media_type == MediaType::Audio)
 #define _IS_VIDEO (media_type == MediaType::Video)
@@ -43,7 +43,7 @@ using FFmpegImageFramesPtr = FFmpegFramesPtr<MediaType::Image>;
 ///
 /// Base class that holds media frames decoded with FFmpeg.
 template <MediaType media_type>
-class FFmpegFrames {
+class Frames {
  private:
   ///
   /// Used for tracking the lifetime in tracing.
@@ -66,23 +66,23 @@ class FFmpegFrames {
   std::vector<AVFrame*> frames{};
 
  public:
-  FFmpegFrames(uint64_t id, Rational time_base);
+  Frames(uint64_t id, Rational time_base);
 
   ///
   /// No copy constructor
-  FFmpegFrames(const FFmpegFrames&) = delete;
+  Frames(const Frames&) = delete;
   ///
   /// No copy assignment operator
-  FFmpegFrames& operator=(const FFmpegFrames&) = delete;
+  Frames& operator=(const Frames&) = delete;
   ///
   /// Move constructor
-  FFmpegFrames(FFmpegFrames&&) noexcept;
+  Frames(Frames&&) noexcept;
   ///
   /// Move assignment operator
-  FFmpegFrames& operator=(FFmpegFrames&&) noexcept;
+  Frames& operator=(Frames&&) noexcept;
   ///
   /// Destructor releases ``AVFrame`` resources
-  ~FFmpegFrames();
+  ~Frames();
 
   ///
   /// Get the ID used for tracing.
@@ -122,7 +122,7 @@ class FFmpegFrames {
   // throws if the index is not within the range
   int64_t get_pts(size_t index = 0) const;
 
-  FFmpegFramesPtr<media_type> clone() const;
+  FramesPtr<media_type> clone() const;
 
   //////////////////////////////////////////////////////////////////////////////
   // Audio specific
@@ -166,22 +166,22 @@ class FFmpegFrames {
 
   ///
   /// Range slice operation, using Python's slice notation.
-  FFmpegVideoFramesPtr slice(int start, int stop, int step) const
+  VideoFramesPtr slice(int start, int stop, int step) const
     requires _IS_VIDEO;
 
   ///
   /// Slice (`__getitem__`) operation.
-  FFmpegVideoFramesPtr slice(const std::vector<int64_t>& index) const
+  VideoFramesPtr slice(const std::vector<int64_t>& index) const
     requires _IS_VIDEO;
 
   ///
   /// Slice (`__getitem__`) operation.
-  FFmpegImageFramesPtr slice(int64_t index) const
+  ImageFramesPtr slice(int64_t index) const
     requires _IS_VIDEO;
 };
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> clone(const FFmpegFrames<media_type>& src);
+FramesPtr<media_type> clone(const Frames<media_type>& src);
 
 #undef _IS_AUDIO
 #undef _IS_VIDEO

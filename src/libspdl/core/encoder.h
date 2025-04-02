@@ -35,7 +35,7 @@ class Encoder {
 
   ~Encoder();
 
-  PacketsPtr<media_type> encode(const FFmpegFramesPtr<media_type>&&);
+  PacketsPtr<media_type> encode(const FramesPtr<media_type>&&);
 
   PacketsPtr<media_type> flush();
 };

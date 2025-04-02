@@ -70,7 +70,7 @@ This time, we download images from the remote source, decode, batch and send the
    ...         scale_width=width, scale_height=height, pix_fmt=pix_fmt
    ...     )
    ...
-   ...     async def decode(data: bytes) -> FFmpegFrames:
+   ...     async def decode(data: bytes) -> Frames:
    ...         packets = await spdl.io.async_demux_image(data)
    ...         frames = await spdl.io.async_decode_packets(packets, filter_desc=filter_desc)
    ...         return frames
@@ -79,7 +79,7 @@ This time, we download images from the remote source, decode, batch and send the
 
 .. code-block::
 
-   >>> async def batchify(frames: list[FFmpegFrames]) -> torch.Tensor:
+   >>> async def batchify(frames: list[Frames]) -> torch.Tensor:
    ...     """Create a batch from image frames, send them to GPU and create Torch tensor"""
    ...     cfg = spdl.io.cuda_config(device_index=0)
    ...     cpu_buffer = await spdl.io.async_convert_frames(frames)

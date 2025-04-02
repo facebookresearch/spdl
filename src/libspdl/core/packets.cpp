@@ -25,7 +25,7 @@ extern "C" {
 namespace spdl::core {
 
 template <MediaType media_type>
-DemuxedPackets<media_type>::DemuxedPackets(
+Packets<media_type>::Packets(
     std::string src_,
     Codec<media_type>&& codec_,
     std::optional<std::tuple<double, double>> timestamp_)
@@ -34,17 +34,13 @@ DemuxedPackets<media_type>::DemuxedPackets(
       timestamp(std::move(timestamp_)),
       codec(std::move(codec_)) {
   TRACE_EVENT(
-      "decoding",
-      "DemuxedPackets::DemuxedPackets",
-      perfetto::Flow::ProcessScoped(id));
+      "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
 };
 
 template <MediaType media_type>
-DemuxedPackets<media_type>::~DemuxedPackets() {
+Packets<media_type>::~Packets() {
   TRACE_EVENT(
-      "decoding",
-      "DemuxedPackets::~DemuxedPackets",
-      perfetto::Flow::ProcessScoped(id));
+      "decoding", "Packets::~Packets", perfetto::Flow::ProcessScoped(id));
   std::for_each(packets.begin(), packets.end(), [](AVPacket* p) {
     if (p) {
       av_packet_unref(p);
@@ -54,7 +50,7 @@ DemuxedPackets<media_type>::~DemuxedPackets() {
 };
 
 template <MediaType media_type>
-void DemuxedPackets<media_type>::push(AVPacket* p) {
+void Packets<media_type>::push(AVPacket* p) {
   if constexpr (media_type == MediaType::Image) {
     if (packets.size() > 0) {
       SPDL_FAIL_INTERNAL(
@@ -68,7 +64,7 @@ void DemuxedPackets<media_type>::push(AVPacket* p) {
 }
 
 template <MediaType media_type>
-size_t DemuxedPackets<media_type>::num_packets() const
+size_t Packets<media_type>::num_packets() const
   requires(media_type == MediaType::Video || media_type == MediaType::Image)
 {
   if constexpr (media_type == MediaType::Image) {
@@ -93,7 +89,7 @@ size_t DemuxedPackets<media_type>::num_packets() const
 }
 
 template <MediaType media_type>
-int64_t DemuxedPackets<media_type>::get_pts(size_t index) const {
+int64_t Packets<media_type>::get_pts(size_t index) const {
   auto num_packets = packets.size();
   if (index >= num_packets) {
     throw std::out_of_range(
@@ -103,7 +99,7 @@ int64_t DemuxedPackets<media_type>::get_pts(size_t index) const {
 }
 
 template <MediaType media_type>
-int DemuxedPackets<media_type>::get_num_channels() const
+int Packets<media_type>::get_num_channels() const
   requires(media_type == MediaType::Audio)
 {
   const auto* codecpar = codec.get_parameters();
@@ -111,7 +107,7 @@ int DemuxedPackets<media_type>::get_num_channels() const
 }
 
 template <MediaType media_type>
-int DemuxedPackets<media_type>::get_sample_rate() const
+int Packets<media_type>::get_sample_rate() const
   requires(media_type == MediaType::Audio)
 {
   const auto* codecpar = codec.get_parameters();
@@ -119,7 +115,7 @@ int DemuxedPackets<media_type>::get_sample_rate() const
 }
 
 template <MediaType media_type>
-Codec<media_type> DemuxedPackets<media_type>::get_codec() const {
+Codec<media_type> Packets<media_type>::get_codec() const {
   return Codec<media_type>{codec};
 }
 
@@ -192,40 +188,40 @@ std::string ImagePackets::get_summary() const {
 }
 
 template <MediaType media_type>
-const std::vector<AVPacket*>& DemuxedPackets<media_type>::get_packets() const {
+const std::vector<AVPacket*>& Packets<media_type>::get_packets() const {
   return packets;
 }
 
 template <MediaType media_type>
-const char* DemuxedPackets<media_type>::get_media_format_name() const {
+const char* Packets<media_type>::get_media_format_name() const {
   return detail::get_media_format_name<media_type>(
       codec.get_parameters()->format);
 }
 
 template <MediaType media_type>
-int DemuxedPackets<media_type>::get_width() const {
+int Packets<media_type>::get_width() const {
   return codec.get_parameters()->width;
 }
 
 template <MediaType media_type>
-int DemuxedPackets<media_type>::get_height() const {
+int Packets<media_type>::get_height() const {
   return codec.get_parameters()->height;
 }
 
 template <MediaType media_type>
-Rational DemuxedPackets<media_type>::get_frame_rate() const {
+Rational Packets<media_type>::get_frame_rate() const {
   return codec.get_frame_rate();
 }
 template <MediaType media_type>
-Generator<RawPacketData> DemuxedPackets<media_type>::iter_packets() const {
+Generator<RawPacketData> Packets<media_type>::iter_packets() const {
   for (auto& pkt : packets) {
     co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
   }
 }
 
 template <MediaType media_type>
-PacketsPtr<media_type> DemuxedPackets<media_type>::clone() const {
-  auto other = std::make_unique<DemuxedPackets<media_type>>(
+PacketsPtr<media_type> Packets<media_type>::clone() const {
+  auto other = std::make_unique<Packets<media_type>>(
       src, Codec<media_type>{codec}, timestamp);
   for (const AVPacket* pkt : packets) {
     other->push(CHECK_AVALLOCATE(av_packet_clone(pkt)));
@@ -233,9 +229,9 @@ PacketsPtr<media_type> DemuxedPackets<media_type>::clone() const {
   return other;
 }
 
-template class DemuxedPackets<MediaType::Audio>;
-template class DemuxedPackets<MediaType::Video>;
-template class DemuxedPackets<MediaType::Image>;
+template class Packets<MediaType::Audio>;
+template class Packets<MediaType::Video>;
+template class Packets<MediaType::Image>;
 
 namespace {
 std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(

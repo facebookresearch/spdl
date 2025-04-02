@@ -33,7 +33,7 @@ DecoderPtr<media_type> _make_decoder(
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> decode_packets(
+FramesPtr<media_type> decode_packets(
     PacketsPtr<media_type> packets,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc,
@@ -43,7 +43,7 @@ FFmpegFramesPtr<media_type> decode_packets(
 }
 
 template <MediaType media_type>
-FFmpegFramesPtr<media_type> decode(
+FramesPtr<media_type> decode(
     Decoder<media_type>& self,
     PacketsPtr<media_type> packets) {
   return self.decode(std::move(packets), false, -1);
