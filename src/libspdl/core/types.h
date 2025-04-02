@@ -110,7 +110,7 @@ struct EncodeConfig {
   int max_b_frames = -1;
 };
 
-template <MediaType media_type>
+template <MediaType media>
 struct EncodeConfigBase;
 
 template <>

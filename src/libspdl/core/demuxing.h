@@ -26,9 +26,9 @@ class DemuxerImpl;
 ////////////////////////////////////////////////////////////////////////////////
 // StreamingDemuxer
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
+template <MediaType media>
 class StreamingDemuxer {
-  Generator<PacketsPtr<media_type>> gen;
+  Generator<PacketsPtr<media>> gen;
 
  public:
   StreamingDemuxer(
@@ -36,11 +36,11 @@ class StreamingDemuxer {
       int num_packets,
       const std::optional<std::string>& bsf);
   bool done();
-  PacketsPtr<media_type> next();
+  PacketsPtr<media> next();
 };
 
-template <MediaType media_type>
-using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer<media_type>>;
+template <MediaType media>
+using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer<media>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
@@ -57,16 +57,16 @@ class Demuxer {
   bool has_audio() const;
 
   // Get the codec of the default stream of the given media type
-  template <MediaType media_type>
-  Codec<media_type> get_default_codec() const;
+  template <MediaType media>
+  Codec<media> get_default_codec() const;
 
-  template <MediaType media_type>
-  PacketsPtr<media_type> demux_window(
+  template <MediaType media>
+  PacketsPtr<media> demux_window(
       const std::optional<std::tuple<double, double>>& window = std::nullopt,
       const std::optional<std::string>& bsf = std::nullopt);
 
-  template <MediaType media_type>
-  StreamingDemuxerPtr<media_type> stream_demux(
+  template <MediaType media>
+  StreamingDemuxerPtr<media> stream_demux(
       int num_packets,
       const std::optional<std::string>& bsf = std::nullopt);
 };

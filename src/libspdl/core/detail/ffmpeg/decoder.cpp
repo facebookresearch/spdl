@@ -122,9 +122,9 @@ Generator<AVFramePtr> decode_packets(
 // DecoderImpl
 ////////////////////////////////////////////////////////////////////////////////
 
-template <MediaType media_type>
-DecoderImpl<media_type>::DecoderImpl(
-    const Codec<media_type>& codec,
+template <MediaType media>
+DecoderImpl<media>::DecoderImpl(
+    const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc)
     : codec_ctx(get_decode_codec_ctx_ptr(
@@ -132,25 +132,25 @@ DecoderImpl<media_type>::DecoderImpl(
           codec.get_time_base(),
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)),
-      filter_graph(get_filter<media_type>(
+      filter_graph(get_filter<media>(
           codec_ctx.get(),
           filter_desc,
           codec.get_frame_rate())) {}
 
-template <MediaType media_type>
-Rational DecoderImpl<media_type>::get_output_time_base() const {
+template <MediaType media>
+Rational DecoderImpl<media>::get_output_time_base() const {
   if (filter_graph) {
     return filter_graph->get_sink_time_base();
   }
   return {codec_ctx->time_base.num, codec_ctx->time_base.den};
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> DecoderImpl<media_type>::decode_and_flush(
-    PacketsPtr<media_type> packets,
+template <MediaType media>
+FramesPtr<media> DecoderImpl<media>::decode_and_flush(
+    PacketsPtr<media> packets,
     int num_frames) {
   auto ret =
-      std::make_unique<Frames<media_type>>(packets->id, get_output_time_base());
+      std::make_unique<Frames<media>>(packets->id, get_output_time_base());
   auto gen =
       decode_packets(codec_ctx, packets->get_packets(), filter_graph, true);
   int num_yielded = 0;
@@ -164,11 +164,10 @@ FramesPtr<media_type> DecoderImpl<media_type>::decode_and_flush(
   return ret;
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> DecoderImpl<media_type>::decode(
-    PacketsPtr<media_type> packets) {
+template <MediaType media>
+FramesPtr<media> DecoderImpl<media>::decode(PacketsPtr<media> packets) {
   auto ret =
-      std::make_unique<Frames<media_type>>(packets->id, get_output_time_base());
+      std::make_unique<Frames<media>>(packets->id, get_output_time_base());
   auto gen =
       decode_packets(codec_ctx, packets->get_packets(), filter_graph, false);
   while (gen) {
@@ -177,9 +176,9 @@ FramesPtr<media_type> DecoderImpl<media_type>::decode(
   return ret;
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> DecoderImpl<media_type>::flush() {
-  auto ret = std::make_unique<Frames<media_type>>(
+template <MediaType media>
+FramesPtr<media> DecoderImpl<media>::flush() {
+  auto ret = std::make_unique<Frames<media>>(
       reinterpret_cast<uintptr_t>(this), get_output_time_base());
   std::vector<AVPacket*> dummy{};
   auto gen = decode_packets(codec_ctx, dummy, filter_graph, true);

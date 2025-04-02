@@ -25,17 +25,17 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 
-#define _IS_AUDIO (media_type == MediaType::Audio)
-#define _IS_VIDEO (media_type == MediaType::Video)
-#define _IS_IMAGE (media_type == MediaType::Image)
+#define _IS_AUDIO (media == MediaType::Audio)
+#define _IS_VIDEO (media == MediaType::Video)
+#define _IS_IMAGE (media == MediaType::Image)
 
 namespace spdl::core {
 
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg Common
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-Frames<media_type>::Frames(uintptr_t id_, Rational time_base_)
+template <MediaType media>
+Frames<media>::Frames(uintptr_t id_, Rational time_base_)
     : id(id_), time_base(time_base_) {
   TRACE_EVENT("decoding", "Frames::Frames", perfetto::Flow::ProcessScoped(id));
   if (time_base.den == 0) {
@@ -44,22 +44,21 @@ Frames<media_type>::Frames(uintptr_t id_, Rational time_base_)
   }
 }
 
-template <MediaType media_type>
-Frames<media_type>::Frames(Frames&& other) noexcept {
+template <MediaType media>
+Frames<media>::Frames(Frames&& other) noexcept {
   *this = std::move(other);
 }
 
-template <MediaType media_type>
-Frames<media_type>& Frames<media_type>::operator=(
-    Frames<media_type>&& other) noexcept {
+template <MediaType media>
+Frames<media>& Frames<media>::operator=(Frames<media>&& other) noexcept {
   using std::swap;
   swap(id, other.id);
   swap(frames, other.frames);
   return *this;
 }
 
-template <MediaType media_type>
-Frames<media_type>::~Frames() {
+template <MediaType media>
+Frames<media>::~Frames() {
   TRACE_EVENT("decoding", "Frames::~Frames", perfetto::Flow::ProcessScoped(id));
   std::for_each(frames.begin(), frames.end(), [](AVFrame* p) {
     DEBUG_PRINT_AVFRAME_REFCOUNT(p);
@@ -68,14 +67,14 @@ Frames<media_type>::~Frames() {
   });
 }
 
-template <MediaType media_type>
-uint64_t Frames<media_type>::get_id() const {
+template <MediaType media>
+uint64_t Frames<media>::get_id() const {
   return id;
 }
 
-template <MediaType media_type>
-void Frames<media_type>::push_back(AVFrame* frame) {
-  if constexpr (media_type == MediaType::Image) {
+template <MediaType media>
+void Frames<media>::push_back(AVFrame* frame) {
+  if constexpr (media == MediaType::Image) {
     if (frames.size() > 0) {
       SPDL_FAIL_INTERNAL("Attempted to store multiple frames to ImageFrames");
     }
@@ -83,8 +82,8 @@ void Frames<media_type>::push_back(AVFrame* frame) {
   frames.push_back(frame);
 }
 
-template <MediaType media_type>
-int64_t Frames<media_type>::get_pts(size_t index) const {
+template <MediaType media>
+int64_t Frames<media>::get_pts(size_t index) const {
   auto num_frames = frames.size();
   if (index >= num_frames) {
     throw std::out_of_range(
@@ -97,24 +96,24 @@ int64_t Frames<media_type>::get_pts(size_t index) const {
 // Common
 ////////////////////////////////////////////////////////////////////////////////
 
-template <MediaType media_type>
-const char* Frames<media_type>::get_media_format_name() const {
+template <MediaType media>
+const char* Frames<media>::get_media_format_name() const {
   if (frames.size() == 0) {
     return "n/a";
   }
-  return detail::get_media_format_name<media_type>(frames[0]->format);
+  return detail::get_media_format_name<media>(frames[0]->format);
 }
 
-template <MediaType media_type>
-OptionDict Frames<media_type>::get_metadata() const {
+template <MediaType media>
+OptionDict Frames<media>::get_metadata() const {
   if (frames.size() == 0) {
     return {};
   }
   return detail::parse_dict(frames[0]->metadata);
 }
 
-template <MediaType media_type>
-int Frames<media_type>::get_num_frames() const {
+template <MediaType media>
+int Frames<media>::get_num_frames() const {
   if constexpr (_IS_AUDIO) {
     int ret = 0;
     for (auto& f : frames) {
@@ -126,37 +125,37 @@ int Frames<media_type>::get_num_frames() const {
   }
 }
 
-template <MediaType media_type>
-const std::vector<AVFrame*>& Frames<media_type>::get_frames() const {
+template <MediaType media>
+const std::vector<AVFrame*>& Frames<media>::get_frames() const {
   return frames;
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> Frames<media_type>::clone() const {
-  auto other = std::make_unique<Frames<media_type>>(id, time_base);
+template <MediaType media>
+FramesPtr<media> Frames<media>::clone() const {
+  auto other = std::make_unique<Frames<media>>(id, time_base);
   for (const AVFrame* f : frames) {
     other->push_back(CHECK_AVALLOCATE(av_frame_clone(f)));
   }
   return other;
 }
 
-template <MediaType media_type>
-Rational Frames<media_type>::get_time_base() const {
+template <MediaType media>
+Rational Frames<media>::get_time_base() const {
   return time_base;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Audio
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-int Frames<media_type>::get_sample_rate() const
+template <MediaType media>
+int Frames<media>::get_sample_rate() const
   requires _IS_AUDIO
 {
   return frames.size() ? frames[0]->sample_rate : -1;
 }
 
-template <MediaType media_type>
-int Frames<media_type>::get_num_channels() const
+template <MediaType media>
+int Frames<media>::get_num_channels() const
   requires _IS_AUDIO
 {
   return frames.size() ? GET_NUM_CHANNELS(frames[0]) : -1;
@@ -165,8 +164,8 @@ int Frames<media_type>::get_num_channels() const
 ////////////////////////////////////////////////////////////////////////////////
 // FFmpeg - Video
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-int Frames<media_type>::get_num_planes() const
+template <MediaType media>
+int Frames<media>::get_num_planes() const
   requires(_IS_IMAGE || _IS_VIDEO)
 {
   return frames.size()
@@ -174,15 +173,15 @@ int Frames<media_type>::get_num_planes() const
       : -1;
 }
 
-template <MediaType media_type>
-int Frames<media_type>::get_width() const
+template <MediaType media>
+int Frames<media>::get_width() const
   requires(_IS_IMAGE || _IS_VIDEO)
 {
   return frames.size() ? frames[0]->width : -1;
 }
 
-template <MediaType media_type>
-int Frames<media_type>::get_height() const
+template <MediaType media>
+int Frames<media>::get_height() const
   requires(_IS_IMAGE || _IS_VIDEO)
 {
   return frames.size() ? frames[0]->height : -1;
@@ -228,8 +227,8 @@ int adjust_indices(const int length, int* start, int* stop, int step) {
 }
 } // namespace
 
-template <MediaType media_type>
-VideoFramesPtr Frames<media_type>::slice(int start, int stop, int step) const
+template <MediaType media>
+VideoFramesPtr Frames<media>::slice(int start, int stop, int step) const
   requires _IS_VIDEO
 {
   const int numel = frames.size();
@@ -247,9 +246,8 @@ VideoFramesPtr Frames<media_type>::slice(int start, int stop, int step) const
   return out;
 }
 
-template <MediaType media_type>
-VideoFramesPtr Frames<media_type>::slice(
-    const std::vector<int64_t>& index) const
+template <MediaType media>
+VideoFramesPtr Frames<media>::slice(const std::vector<int64_t>& index) const
   requires _IS_VIDEO
 {
   const int numel = frames.size();
@@ -272,8 +270,8 @@ VideoFramesPtr Frames<media_type>::slice(
   return out;
 }
 
-template <MediaType media_type>
-ImageFramesPtr Frames<media_type>::slice(int64_t i) const
+template <MediaType media>
+ImageFramesPtr Frames<media>::slice(int64_t i) const
   requires _IS_VIDEO
 {
   const int numel = static_cast<int64_t>(frames.size());

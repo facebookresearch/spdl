@@ -29,37 +29,35 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
 }
 } // namespace
 
-template <MediaType media_type>
-Codec<media_type>::Codec(
+template <MediaType media>
+Codec<media>::Codec(
     const AVCodecParameters* p,
     Rational time_base,
     Rational frame_rate) noexcept
     : codecpar(copy(p)), time_base(time_base), frame_rate(frame_rate) {}
 
-template <MediaType media_type>
-Codec<media_type>::Codec(const Codec<media_type>& other)
+template <MediaType media>
+Codec<media>::Codec(const Codec<media>& other)
     : codecpar(copy(other.codecpar)),
       time_base(other.time_base),
       frame_rate(other.frame_rate) {}
 
-template <MediaType media_type>
-Codec<media_type>& Codec<media_type>::operator=(
-    const Codec<media_type>& other) {
+template <MediaType media>
+Codec<media>& Codec<media>::operator=(const Codec<media>& other) {
   codecpar = copy(other.codecpar);
   time_base = other.time_base;
   frame_rate = other.frame_rate;
   return *this;
 }
 
-template <MediaType media_type>
-Codec<media_type>::Codec(Codec<media_type>&& other) noexcept
+template <MediaType media>
+Codec<media>::Codec(Codec<media>&& other) noexcept
     : codecpar(nullptr), time_base({1, 1}), frame_rate({1, 1}) {
   *this = std::move(other);
 }
 
-template <MediaType media_type>
-Codec<media_type>& Codec<media_type>::operator=(
-    Codec<media_type>&& other) noexcept {
+template <MediaType media>
+Codec<media>& Codec<media>::operator=(Codec<media>&& other) noexcept {
   using std::swap;
   swap(codecpar, other.codecpar);
   swap(time_base, other.time_base);
@@ -67,46 +65,46 @@ Codec<media_type>& Codec<media_type>::operator=(
   return *this;
 }
 
-template <MediaType media_type>
-Codec<media_type>::~Codec() {
+template <MediaType media>
+Codec<media>::~Codec() {
   avcodec_parameters_free(&codecpar);
 }
 
-template <MediaType media_type>
-std::string Codec<media_type>::get_name() const {
+template <MediaType media>
+std::string Codec<media>::get_name() const {
   return std::string(avcodec_get_name(codecpar->codec_id));
 }
 
-template <MediaType media_type>
-int Codec<media_type>::get_width() const
-  requires(media_type == MediaType::Video || media_type == MediaType::Image)
+template <MediaType media>
+int Codec<media>::get_width() const
+  requires(media == MediaType::Video || media == MediaType::Image)
 {
   return codecpar->width;
 }
 
-template <MediaType media_type>
-int Codec<media_type>::get_height() const
-  requires(media_type == MediaType::Video || media_type == MediaType::Image)
+template <MediaType media>
+int Codec<media>::get_height() const
+  requires(media == MediaType::Video || media == MediaType::Image)
 {
   return codecpar->height;
 }
 
-template <MediaType media_type>
-int Codec<media_type>::get_sample_rate() const
-  requires(media_type == MediaType::Audio)
+template <MediaType media>
+int Codec<media>::get_sample_rate() const
+  requires(media == MediaType::Audio)
 {
   return codecpar->sample_rate;
 }
 
-template <MediaType media_type>
-int Codec<media_type>::get_num_channels() const
-  requires(media_type == MediaType::Audio)
+template <MediaType media>
+int Codec<media>::get_num_channels() const
+  requires(media == MediaType::Audio)
 {
   return GET_NUM_CHANNELS(codecpar);
 }
 
-template <MediaType media_type>
-CodecID Codec<media_type>::get_codec_id() const {
+template <MediaType media>
+CodecID Codec<media>::get_codec_id() const {
   // NOTE: Currently only those used by NVDEC are handled.
   switch (codecpar->codec_id) {
     case AV_CODEC_ID_MPEG1VIDEO:
@@ -138,25 +136,25 @@ CodecID Codec<media_type>::get_codec_id() const {
   }
 }
 
-template <MediaType media_type>
-std::string Codec<media_type>::get_pix_fmt() const
-  requires(media_type == MediaType::Video || media_type == MediaType::Image)
+template <MediaType media>
+std::string Codec<media>::get_pix_fmt() const
+  requires(media == MediaType::Video || media == MediaType::Image)
 {
   return av_get_pix_fmt_name((AVPixelFormat)(codecpar->format));
 }
 
-template <MediaType media_type>
-const AVCodecParameters* Codec<media_type>::get_parameters() const {
+template <MediaType media>
+const AVCodecParameters* Codec<media>::get_parameters() const {
   return codecpar;
 }
 
-template <MediaType media_type>
-Rational Codec<media_type>::get_time_base() const {
+template <MediaType media>
+Rational Codec<media>::get_time_base() const {
   return time_base;
 }
 
-template <MediaType media_type>
-Rational Codec<media_type>::get_frame_rate() const {
+template <MediaType media>
+Rational Codec<media>::get_frame_rate() const {
   return frame_rate;
 }
 

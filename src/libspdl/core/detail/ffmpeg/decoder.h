@@ -21,14 +21,14 @@ namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 // DecoderImpl
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
+template <MediaType media>
 class DecoderImpl {
   AVCodecContextPtr codec_ctx;
   std::optional<FilterGraph> filter_graph;
 
  public:
   DecoderImpl(
-      const Codec<media_type>& codec,
+      const Codec<media>& codec,
       const std::optional<DecodeConfig>& cfg,
       const std::optional<std::string>& filter_desc);
   ~DecoderImpl() = default;
@@ -40,11 +40,11 @@ class DecoderImpl {
 
   Rational get_output_time_base() const;
 
-  FramesPtr<media_type> decode_and_flush(
-      PacketsPtr<media_type> packets,
+  FramesPtr<media> decode_and_flush(
+      PacketsPtr<media> packets,
       int num_frames = -1);
-  FramesPtr<media_type> decode(PacketsPtr<media_type> packets);
-  FramesPtr<media_type> flush();
+  FramesPtr<media> decode(PacketsPtr<media> packets);
+  FramesPtr<media> flush();
 };
 
 } // namespace spdl::core::detail

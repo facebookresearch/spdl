@@ -34,11 +34,11 @@ namespace {
 //    deallocated in a thread other than the main thread.
 // 3. Add `zero_clear`, method for testing purpose.
 
-template <MediaType media_type>
+template <MediaType media>
 struct PyStreamingDemuxer {
-  StreamingDemuxerPtr<media_type> demuxer;
+  StreamingDemuxerPtr<media> demuxer;
 
-  explicit PyStreamingDemuxer(StreamingDemuxerPtr<media_type>&& d)
+  explicit PyStreamingDemuxer(StreamingDemuxerPtr<media>&& d)
       : demuxer(std::move(d)) {}
 
   bool done() {
@@ -46,14 +46,14 @@ struct PyStreamingDemuxer {
     return demuxer->done();
   }
 
-  PacketsPtr<media_type> next() {
+  PacketsPtr<media> next() {
     nb::gil_scoped_release __g;
     return demuxer->next();
   }
 };
 
-template <MediaType media_type>
-using PyStreamingDemuxerPtr = std::unique_ptr<PyStreamingDemuxer<media_type>>;
+template <MediaType media>
+using PyStreamingDemuxerPtr = std::unique_ptr<PyStreamingDemuxer<media>>;
 
 struct PyDemuxer {
   DemuxerPtr demuxer;
@@ -70,17 +70,17 @@ struct PyDemuxer {
     return demuxer->has_audio();
   }
 
-  template <MediaType media_type>
-  Codec<media_type> get_default_codec() const {
-    return demuxer->get_default_codec<media_type>();
+  template <MediaType media>
+  Codec<media> get_default_codec() const {
+    return demuxer->get_default_codec<media>();
   }
 
-  template <MediaType media_type>
-  PacketsPtr<media_type> demux(
+  template <MediaType media>
+  PacketsPtr<media> demux(
       const std::optional<std::tuple<double, double>>& window,
       const std::optional<std::string>& bsf) {
     nb::gil_scoped_release __g;
-    return demuxer->demux_window<media_type>(window, bsf);
+    return demuxer->demux_window<media>(window, bsf);
   }
 
   PacketsPtr<MediaType::Image> demux_image(
@@ -89,13 +89,13 @@ struct PyDemuxer {
     return demuxer->demux_window<MediaType::Image>(std::nullopt, bsf);
   }
 
-  template <MediaType media_type>
-  PyStreamingDemuxerPtr<media_type> streaming_demux(
+  template <MediaType media>
+  PyStreamingDemuxerPtr<media> streaming_demux(
       int num_packets,
       const std::optional<std::string>& bsf) {
     nb::gil_scoped_release __g;
-    return std::make_unique<PyStreamingDemuxer<media_type>>(
-        demuxer->stream_demux<media_type>(num_packets, bsf));
+    return std::make_unique<PyStreamingDemuxer<media>>(
+        demuxer->stream_demux<media>(num_packets, bsf));
   }
 
   void _drop() {

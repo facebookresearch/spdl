@@ -24,28 +24,26 @@ namespace nb = nanobind;
 
 namespace spdl::core {
 namespace {
-template <MediaType media_type>
-DecoderPtr<media_type> _make_decoder(
-    const Codec<media_type>& codec,
+template <MediaType media>
+DecoderPtr<media> _make_decoder(
+    const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc) {
-  return std::make_unique<Decoder<media_type>>(codec, cfg, filter_desc);
+  return std::make_unique<Decoder<media>>(codec, cfg, filter_desc);
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> decode_packets(
-    PacketsPtr<media_type> packets,
+template <MediaType media>
+FramesPtr<media> decode_packets(
+    PacketsPtr<media> packets,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc,
     int num_frames) {
-  Decoder<media_type> decoder{packets->codec, cfg, filter_desc};
+  Decoder<media> decoder{packets->codec, cfg, filter_desc};
   return decoder.decode_and_flush(std::move(packets), num_frames);
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> decode(
-    Decoder<media_type>& self,
-    PacketsPtr<media_type> packets) {
+template <MediaType media>
+FramesPtr<media> decode(Decoder<media>& self, PacketsPtr<media> packets) {
   return self.decode(std::move(packets), false, -1);
 }
 } // namespace

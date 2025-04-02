@@ -162,10 +162,10 @@ CPUBufferPtr convert_frames(
 // Image / Video
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-template <MediaType media_type>
+template <MediaType media>
 void copy(
     AVPixelFormat pix_fmt,
-    const std::vector<const Frames<media_type>*>& batch,
+    const std::vector<const Frames<media>*>& batch,
     CPUBuffer* buf) {
   auto dst = (uint8_t*)buf->data();
   auto dst_size = buf->shape[2] * buf->shape[3] * buf->shape[4] * buf->depth;
@@ -187,10 +187,10 @@ void copy(
   }
 }
 
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr convert_interleaved(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const Frames<media_type>*>& batch,
+    const std::vector<const Frames<media>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -209,10 +209,10 @@ CPUBufferPtr convert_interleaved(
   return buf;
 }
 
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr convert_planer(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const Frames<media_type>*>& batch,
+    const std::vector<const Frames<media>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -233,10 +233,10 @@ CPUBufferPtr convert_planer(
   return buf;
 }
 
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr convert_yuv420p(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const Frames<media_type>*>& batch,
+    const std::vector<const Frames<media>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -255,10 +255,10 @@ CPUBufferPtr convert_yuv420p(
   return buf;
 }
 
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr convert_yuv422p(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const Frames<media_type>*>& batch,
+    const std::vector<const Frames<media>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -274,10 +274,10 @@ CPUBufferPtr convert_yuv422p(
   return buf;
 }
 
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr convert_nv12(
     enum AVPixelFormat pix_fmt,
-    const std::vector<const Frames<media_type>*>& batch,
+    const std::vector<const Frames<media>*>& batch,
     std::shared_ptr<CPUStorage> storage,
     int depth = 1) {
   auto& ref_frames = batch.at(0)->get_frames();
@@ -298,15 +298,15 @@ CPUBufferPtr convert_nv12(
 } // namespace
 
 namespace {
-template <MediaType media_type>
-void check_frame_consistency(const Frames<media_type>* frames_ptr)
-  requires(media_type != MediaType::Audio)
+template <MediaType media>
+void check_frame_consistency(const Frames<media>* frames_ptr)
+  requires(media != MediaType::Audio)
 {
   auto numel = frames_ptr->get_num_frames();
   if (numel == 0) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
-  if constexpr (media_type == MediaType::Image) {
+  if constexpr (media == MediaType::Image) {
     if (numel != 1) {
       SPDL_FAIL_INTERNAL(fmt::format(
           "There must be exactly one frame to convert to buffer. Found: {}",
@@ -337,9 +337,9 @@ void check_frame_consistency(const Frames<media_type>* frames_ptr)
   }
 }
 
-template <MediaType media_type>
+template <MediaType media>
 void check_batch_frame_consistency(
-    const std::vector<const Frames<media_type>*>& batch) {
+    const std::vector<const Frames<media>*>& batch) {
   if (batch.empty()) {
     SPDL_FAIL("No frame to convert to buffer.");
   }
@@ -395,9 +395,9 @@ void check_batch_frame_consistency(
 //
 // It might be more appropriate to convert the limited range to the full range
 // for YUV, but for now, it copies data as-is for both YUV and YUVJ.
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr convert_frames(
-    const std::vector<const Frames<media_type>*>& batch,
+    const std::vector<const Frames<media>*>& batch,
     std::shared_ptr<CPUStorage> storage) {
   TRACE_EVENT("decoding", "core::convert_frames");
   check_batch_frame_consistency(batch);
@@ -431,7 +431,7 @@ CPUBufferPtr convert_frames(
     }
   }();
 
-  if constexpr (media_type == MediaType::Image) {
+  if constexpr (media == MediaType::Image) {
     // Remove the 2nd num_frame dimension (which is 1).
     // BNCHW -> BCHW.
     ret->shape.erase(std::next(ret->shape.begin()));

@@ -19,13 +19,13 @@ Muxer::~Muxer() {
   delete pImpl;
 }
 
-template <MediaType media_type>
-EncoderPtr<media_type> Muxer::add_encode_stream(
-    const EncodeConfigBase<media_type>& codec_config,
+template <MediaType media>
+EncoderPtr<media> Muxer::add_encode_stream(
+    const EncodeConfigBase<media>& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config) {
   auto p = pImpl->add_encode_stream(codec_config, encoder, encoder_config);
-  return std::make_unique<Encoder<media_type>>(p.release());
+  return std::make_unique<Encoder<media>>(p.release());
 }
 
 template AudioEncoderPtr Muxer::add_encode_stream(
@@ -37,8 +37,8 @@ template VideoEncoderPtr Muxer::add_encode_stream(
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config);
 
-template <MediaType media_type>
-void Muxer::add_remux_stream(const Codec<media_type>& codec) {
+template <MediaType media>
+void Muxer::add_remux_stream(const Codec<media>& codec) {
   pImpl->add_remux_stream(codec);
 }
 
@@ -49,8 +49,8 @@ void Muxer::open(const std::optional<OptionDict>& muxer_config) {
   pImpl->open(muxer_config);
 }
 
-template <MediaType media_type>
-void Muxer::write(int i, Packets<media_type>& packets) {
+template <MediaType media>
+void Muxer::write(int i, Packets<media>& packets) {
   pImpl->write(i, packets.get_packets(), packets.codec.get_time_base());
 }
 

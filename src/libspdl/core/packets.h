@@ -21,15 +21,15 @@ struct AVPacket;
 
 namespace spdl::core {
 
-template <MediaType media_type>
+template <MediaType media>
 class Packets;
 
 using AudioPackets = Packets<MediaType::Audio>;
 using VideoPackets = Packets<MediaType::Video>;
 using ImagePackets = Packets<MediaType::Image>;
 
-template <MediaType media_type>
-using PacketsPtr = std::unique_ptr<Packets<media_type>>;
+template <MediaType media>
+using PacketsPtr = std::unique_ptr<Packets<media>>;
 
 using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
 using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
@@ -46,7 +46,7 @@ struct RawPacketData {
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to Frames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
-template <MediaType media_type>
+template <MediaType media>
 class Packets {
  public:
   uintptr_t id;
@@ -55,7 +55,7 @@ class Packets {
   std::optional<std::tuple<double, double>> timestamp;
 
   // Codec info necessary for decoding
-  Codec<media_type> codec;
+  Codec<media> codec;
 
  private:
   // Sliced raw packets
@@ -64,7 +64,7 @@ class Packets {
  public:
   Packets(
       std::string src,
-      Codec<media_type>&& codec,
+      Codec<media>&& codec,
       std::optional<std::tuple<double, double>> timestamp = std::nullopt);
 
   // Destructor releases AVPacket* resources
@@ -88,25 +88,25 @@ class Packets {
   // This is different from `packets.size()` when timestamp is set.
   // This is the number of packets visible to users.
   size_t num_packets() const
-    requires(media_type == MediaType::Video || media_type == MediaType::Image);
+    requires(media == MediaType::Video || media == MediaType::Image);
 
   // Get the PTS of the specified frame.
   // throws if the index is not within the range
   int64_t get_pts(size_t index = 0) const;
 
   int get_num_channels() const
-    requires(media_type == MediaType::Audio);
+    requires(media == MediaType::Audio);
 
   int get_sample_rate() const
-    requires(media_type == MediaType::Audio);
+    requires(media == MediaType::Audio);
 
-  Codec<media_type> get_codec() const;
+  Codec<media> get_codec() const;
 
   Generator<RawPacketData> iter_packets() const;
 
   std::string get_summary() const;
 
-  PacketsPtr<media_type> clone() const;
+  PacketsPtr<media> clone() const;
 };
 
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>

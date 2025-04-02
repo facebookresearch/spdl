@@ -18,33 +18,32 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 // Decoder
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-Decoder<media_type>::Decoder(
-    const Codec<media_type>& codec,
+template <MediaType media>
+Decoder<media>::Decoder(
+    const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc)
-    : pImpl(new detail::DecoderImpl<media_type>(codec, cfg, filter_desc)) {}
+    : pImpl(new detail::DecoderImpl<media>(codec, cfg, filter_desc)) {}
 
-template <MediaType media_type>
-Decoder<media_type>::~Decoder() {
+template <MediaType media>
+Decoder<media>::~Decoder() {
   delete pImpl;
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> Decoder<media_type>::decode_and_flush(
-    PacketsPtr<media_type> packets,
+template <MediaType media>
+FramesPtr<media> Decoder<media>::decode_and_flush(
+    PacketsPtr<media> packets,
     int num_frames) {
   return pImpl->decode_and_flush(std::move(packets), num_frames);
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> Decoder<media_type>::decode(
-    PacketsPtr<media_type> packets) {
+template <MediaType media>
+FramesPtr<media> Decoder<media>::decode(PacketsPtr<media> packets) {
   return pImpl->decode(std::move(packets));
 }
 
-template <MediaType media_type>
-FramesPtr<media_type> Decoder<media_type>::flush() {
+template <MediaType media>
+FramesPtr<media> Decoder<media>::flush() {
   return pImpl->flush();
 }
 
