@@ -43,4 +43,7 @@ class Encoder {
 using VideoEncoder = Encoder<MediaType::Video>;
 using VideoEncoderPtr = std::unique_ptr<VideoEncoder>;
 
+using AudioEncoder = Encoder<MediaType::Audio>;
+using AudioEncoderPtr = std::unique_ptr<AudioEncoder>;
+
 } // namespace spdl::core

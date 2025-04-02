@@ -28,6 +28,10 @@ std::unique_ptr<Encoder<media_type>> Muxer::add_encode_stream(
   return std::make_unique<Encoder<media_type>>(p.release());
 }
 
+template std::unique_ptr<AudioEncoder> Muxer::add_encode_stream(
+    const AudioEncodeConfig& codec_config,
+    const std::optional<std::string>& encoder,
+    const std::optional<OptionDict>& encoder_config);
 template std::unique_ptr<VideoEncoder> Muxer::add_encode_stream(
     const VideoEncodeConfig& codec_config,
     const std::optional<std::string>& encoder,
@@ -38,6 +42,7 @@ void Muxer::add_remux_stream(const Codec<media_type>& codec) {
   pImpl->add_remux_stream(codec);
 }
 
+template void Muxer::add_remux_stream(const AudioCodec& codec);
 template void Muxer::add_remux_stream(const VideoCodec& codec);
 
 void Muxer::open(const std::optional<OptionDict>& muxer_config) {
@@ -49,6 +54,9 @@ void Muxer::write(int i, DemuxedPackets<media_type>& packets) {
   pImpl->write(i, packets.get_packets(), packets.codec.get_time_base());
 }
 
+template void Muxer::write<MediaType::Audio>(
+    int,
+    DemuxedPackets<MediaType::Audio>&);
 template void Muxer::write<MediaType::Video>(
     int,
     DemuxedPackets<MediaType::Video>&);

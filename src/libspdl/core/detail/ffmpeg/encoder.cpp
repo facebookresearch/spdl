@@ -160,6 +160,207 @@ AVCodecContextPtr get_codec_context(
   }
   return ctx;
 }
+
+bool is_sample_fmt_supported(AVSampleFormat fmt, const AVSampleFormat* fmts) {
+  if (!fmts) {
+    return true;
+  }
+  while (*fmts != AV_SAMPLE_FMT_NONE) {
+    if (fmt == *fmts) {
+      return true;
+    }
+    ++fmts;
+  }
+  return false;
+}
+
+std::vector<std::string> to_str(const AVSampleFormat* fmts) {
+  std::vector<std::string> ret;
+  for (; *fmts != AV_SAMPLE_FMT_NONE; ++fmts) {
+    ret.push_back(av_get_sample_fmt_name(*fmts));
+  }
+  return ret;
+}
+
+AVSampleFormat get_sample_fmt(
+    const AVCodec* codec,
+    const std::optional<std::string>& override) {
+  if (override) {
+    auto fmt = av_get_sample_fmt(override.value().c_str());
+    if (fmt == AV_SAMPLE_FMT_NONE) {
+      SPDL_FAIL(fmt::format("Unexpected sample format: ", override.value()));
+    }
+    if (!is_sample_fmt_supported(fmt, codec->sample_fmts)) {
+      SPDL_FAIL(fmt::format(
+          "Codec `{}` does not support the sample format `{}`. Supported values are {}",
+          codec->name,
+          override.value(),
+          fmt::join(to_str(codec->sample_fmts), ", ")));
+    }
+    return fmt;
+  }
+  if (codec->sample_fmts) {
+    return codec->sample_fmts[0];
+  }
+  SPDL_FAIL(fmt::format(
+      "Codec `{}` does not have a default sample format. Please specify one.",
+      codec->name));
+}
+
+bool is_sample_rate_supported(int rate, const int* rates) {
+  if (!rates) {
+    return true;
+  }
+  for (; *rates; ++rates) {
+    if (rate == *rates) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::vector<int> to_str(const int* rates) {
+  std::vector<int> ret;
+  for (; *rates != AV_SAMPLE_FMT_NONE; ++rates) {
+    ret.push_back(*rates);
+  }
+  return ret;
+}
+
+int get_sample_rate(const AVCodec* codec, const std::optional<int>& override) {
+  // G.722 only supports 16000 Hz, but it does not list the sample rate in
+  // supported_samplerates so we hard code it here.
+  if (codec->id == AV_CODEC_ID_ADPCM_G722) {
+    if (override && *override != 16'000) {
+      SPDL_FAIL(fmt::format(
+          "Codec `{}` does not support the sample rate `{}`. "
+          "Supported values are 16000.",
+          codec->name,
+          *override));
+    }
+    return 16'000;
+  }
+
+  if (override) {
+    auto rate = override.value();
+    if (rate <= 0) {
+      SPDL_FAIL(
+          fmt::format("Sample rate must be greater than 0. Found: {}", rate));
+    }
+    if (!is_sample_rate_supported(rate, codec->supported_samplerates)) {
+      SPDL_FAIL(fmt::format(
+          "Codec `{}` does not support the sample rate `{}`. Supported values are {}",
+          codec->name,
+          rate,
+          fmt::join(to_str(codec->supported_samplerates), ", ")));
+    }
+    return rate;
+  }
+  if (codec->supported_samplerates) {
+    return codec->supported_samplerates[0];
+  }
+  SPDL_FAIL(fmt::format(
+      "Codec `{}` does not have a default sample rate. Please specify one.",
+      codec->name));
+}
+
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 17, 100)
+std::vector<std::string> to_str(const AVChannelLayout* p) {
+  std::vector<std::string> ret;
+#define BUF_SIZE 64
+  char buf[BUF_SIZE];
+  while (p->nb_channels) {
+    auto size = av_channel_layout_describe(p, buf, BUF_SIZE);
+    CHECK_AVERROR_NUM(size, "Failed to fetch a channel layout name.");
+    if (size > BUF_SIZE) {
+      size = BUF_SIZE;
+    }
+    ret.emplace_back(std::string{buf, static_cast<size_t>(size)});
+    p++;
+  }
+#undef BUF_SIZE
+  return ret;
+}
+void set_channels(AVCodecContext* ctx, int num_channels) {
+  const auto* codec = ctx->codec;
+  if (!codec->ch_layouts) {
+    av_channel_layout_default(&ctx->ch_layout, num_channels);
+    return;
+  }
+  const auto* p = codec->ch_layouts;
+  while (p->nb_channels) {
+    if (p->nb_channels == num_channels) {
+      CHECK_AVERROR(
+          av_channel_layout_copy(&ctx->ch_layout, p),
+          "Failed to copy channel layout.");
+      return;
+    }
+    p++;
+  }
+  SPDL_FAIL(fmt::format(
+      "Codec `{}` does not support {} channels. Supported values are {}.",
+      codec->name,
+      num_channels,
+      fmt::join(to_str(codec->ch_layouts), ", ")));
+}
+#else
+std::vector<std::string> to_str(const uint64_t* layouts) {
+  std::vector<std::string> ret;
+  for (; *layouts; ++layouts) {
+    ret.push_back(av_get_channel_name(*layouts));
+  }
+  return ret;
+}
+
+int64_t get_channel_layout(const AVCodec* codec, int num_channels) {
+  if (!codec->channel_layouts) {
+    return av_get_default_channel_layout(num_channels);
+  }
+  for (const uint64_t* it = codec->channel_layouts; *it; ++it) {
+    if (av_get_channel_layout_nb_channels(*it) == num_channels) {
+      return *it;
+    }
+  }
+  SPDL_FAIL(fmt::format(
+      "Codec `{}` does not support {} channels. Supported values are {}",
+      codec->name,
+      num_channels,
+      fmt::join(to_str(codec->channel_layouts), ", ")));
+}
+
+void set_channels(AVCodecContext* ctx, int num_channels) {
+  ctx->channel_layout = get_channel_layout(ctx->codec, num_channels);
+  ctx->channels = num_channels;
+}
+#endif
+
+AVCodecContextPtr get_codec_context(
+    const AVCodec* codec,
+    const AudioEncodeConfig& encode_config) {
+  // Check before allocating AVCodecContext
+  auto sample_fmt = get_sample_fmt(codec, encode_config.sample_fmt);
+  auto sample_rate = get_sample_rate(codec, encode_config.sample_rate);
+
+  auto ctx = AVCodecContextPtr{CHECK_AVALLOCATE(avcodec_alloc_context3(codec))};
+
+  ctx->sample_fmt = sample_fmt;
+  ctx->sample_rate = sample_rate;
+  ctx->time_base = AVRational{1, sample_rate};
+  set_channels(ctx.get(), encode_config.num_channels);
+
+  // Set optional stuff
+  if (encode_config.bit_rate > 0) {
+    ctx->bit_rate = encode_config.bit_rate;
+  }
+  if (encode_config.compression_level != -1) {
+    ctx->compression_level = encode_config.compression_level;
+  }
+  if (encode_config.qscale >= 0) {
+    ctx->flags |= AV_CODEC_FLAG_QSCALE;
+    ctx->global_quality = FF_QP2LAMBDA * encode_config.qscale;
+  }
+  return ctx;
+}
 } // namespace
 template <MediaType media_type>
 EncoderImpl<media_type>::EncoderImpl(AVCodecContextPtr codec_ctx_)
@@ -196,6 +397,12 @@ std::unique_ptr<EncoderImpl<media_type>> make_encoder(
   open_codec_for_encode(codec_ctx.get(), encoder_config);
   return std::make_unique<EncoderImpl<media_type>>(std::move(codec_ctx));
 }
+
+template std::unique_ptr<AudioEncoderImpl> make_encoder(
+    const AVCodec* codec,
+    const AudioEncodeConfig& encode_config,
+    const std::optional<OptionDict>& encoder_config,
+    bool global_header);
 
 template std::unique_ptr<VideoEncoderImpl> make_encoder(
     const AVCodec* codec,
@@ -283,5 +490,6 @@ PacketsPtr<media_type> EncoderImpl<media_type>::flush() {
   return ret;
 }
 
+template class EncoderImpl<MediaType::Audio>;
 template class EncoderImpl<MediaType::Video>;
 }; // namespace spdl::core::detail

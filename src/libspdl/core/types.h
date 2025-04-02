@@ -139,7 +139,30 @@ struct EncodeConfigBase<MediaType::Video> {
   int max_b_frames = -1;
 };
 
+template <>
+struct EncodeConfigBase<MediaType::Audio> {
+  int num_channels;
+  bool planar;
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Overrides
+  ////////////////////////////////////////////////////////////////////////////////
+  const std::optional<std::string> sample_fmt = std::nullopt;
+  const std::optional<int> sample_rate = std::nullopt;
+
+  int bit_rate = -1;
+  int compression_level = -1;
+
+  // qscale corresponds to ffmpeg CLI's qscale.
+  // Example: MP3
+  // https://trac.ffmpeg.org/wiki/Encode/MP3
+  // This should be set like
+  // https://github.com/FFmpeg/FFmpeg/blob/n4.3.2/fftools/ffmpeg_opt.c#L1550
+  int qscale = -1;
+};
+
 using VideoEncodeConfig = EncodeConfigBase<MediaType::Video>;
+using AudioEncodeConfig = EncodeConfigBase<MediaType::Audio>;
 
 // Thrown when unexpected internal error occurs.
 class InternalError : public std::logic_error {

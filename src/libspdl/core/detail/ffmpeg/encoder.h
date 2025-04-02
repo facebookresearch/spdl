@@ -33,6 +33,7 @@ class EncoderImpl {
   AVCodecParameters* get_codec_par(AVCodecParameters* out = nullptr) const;
 };
 
+using AudioEncoderImpl = EncoderImpl<MediaType::Audio>;
 using VideoEncoderImpl = EncoderImpl<MediaType::Video>;
 
 template <MediaType media_type>
