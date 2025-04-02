@@ -34,7 +34,7 @@ class Muxer {
   ~Muxer();
 
   template <MediaType media_type>
-  std::unique_ptr<Encoder<media_type>> add_encode_stream(
+  EncoderPtr<media_type> add_encode_stream(
       const EncodeConfigBase<media_type>& codec_config,
       const std::optional<std::string>& encoder,
       const std::optional<OptionDict>& encoder_config);

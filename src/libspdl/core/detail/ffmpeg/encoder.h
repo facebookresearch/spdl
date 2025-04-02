@@ -33,11 +33,17 @@ class EncoderImpl {
   AVCodecParameters* get_codec_par(AVCodecParameters* out = nullptr) const;
 };
 
+template <MediaType media_type>
+using EncoderImplPtr = std::unique_ptr<EncoderImpl<media_type>>;
+
 using AudioEncoderImpl = EncoderImpl<MediaType::Audio>;
+using AudioEncoderImplPtr = std::unique_ptr<AudioEncoderImpl>;
+
 using VideoEncoderImpl = EncoderImpl<MediaType::Video>;
+using VideoEncoderImplPtr = std::unique_ptr<VideoEncoderImpl>;
 
 template <MediaType media_type>
-std::unique_ptr<EncoderImpl<media_type>> make_encoder(
+EncoderImplPtr<media_type> make_encoder(
     const AVCodec* codec,
     const EncodeConfigBase<media_type>& encode_config,
     const std::optional<OptionDict>& encoder_config,

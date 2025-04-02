@@ -75,7 +75,7 @@ void MuxerImpl::assert_media_type_is_supported() const {
 }
 
 template <MediaType media_type>
-std::unique_ptr<EncoderImpl<media_type>> MuxerImpl::add_encode_stream(
+EncoderImplPtr<media_type> MuxerImpl::add_encode_stream(
     const EncodeConfigBase<media_type>& codec_config,
     const std::optional<std::string>& encoder_name,
     const std::optional<OptionDict>& encoder_config) {
@@ -100,12 +100,12 @@ std::unique_ptr<EncoderImpl<media_type>> MuxerImpl::add_encode_stream(
   return ret;
 }
 
-template std::unique_ptr<AudioEncoderImpl> MuxerImpl::add_encode_stream(
+template AudioEncoderImplPtr MuxerImpl::add_encode_stream(
     const AudioEncodeConfig& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config);
 
-template std::unique_ptr<VideoEncoderImpl> MuxerImpl::add_encode_stream(
+template VideoEncoderImplPtr MuxerImpl::add_encode_stream(
     const VideoEncodeConfig& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config);

@@ -36,7 +36,7 @@ inline size_t prod(const std::vector<size_t>& shape) {
 }
 } // namespace
 
-std::unique_ptr<CPUBuffer> cpu_buffer(
+CPUBufferPtr cpu_buffer(
     const std::vector<size_t>& shape,
     ElemClass elem_class,
     size_t depth,

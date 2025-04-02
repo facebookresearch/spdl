@@ -50,7 +50,7 @@ class Demuxer {
   detail::DemuxerImpl* pImpl;
 
  public:
-  explicit Demuxer(std::unique_ptr<DataInterface> di);
+  explicit Demuxer(DataInterfacePtr di);
 
   ~Demuxer();
 

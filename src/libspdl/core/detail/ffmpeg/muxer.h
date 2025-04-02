@@ -31,7 +31,7 @@ class MuxerImpl {
 
  public:
   template <MediaType media_type>
-  std::unique_ptr<EncoderImpl<media_type>> add_encode_stream(
+  EncoderImplPtr<media_type> add_encode_stream(
       const EncodeConfigBase<media_type>& codec_config,
       const std::optional<std::string>& encoder,
       const std::optional<OptionDict>& encoder_config);

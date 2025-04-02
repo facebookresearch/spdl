@@ -17,7 +17,7 @@
 
 namespace spdl::core {
 namespace detail {
-std::unique_ptr<DataInterface> get_interface(
+DataInterfacePtr get_interface(
     const std::string_view src,
     const SourceAdaptorPtr& adaptor,
     const std::optional<DemuxConfig>& dmx_cfg) {
@@ -28,7 +28,7 @@ std::unique_ptr<DataInterface> get_interface(
   return adaptor->get_interface(src, dmx_cfg.value_or(DemuxConfig{}));
 }
 
-std::unique_ptr<DataInterface> get_in_memory_interface(
+DataInterfacePtr get_in_memory_interface(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg) {
   thread_local SourceAdaptorPtr adaptor = std::make_shared<BytesAdaptor>();
@@ -62,7 +62,7 @@ template class StreamingDemuxer<MediaType::Video>;
 // Demuxer
 ////////////////////////////////////////////////////////////////////////////////
 
-Demuxer::Demuxer(std::unique_ptr<DataInterface> di)
+Demuxer::Demuxer(DataInterfacePtr di)
     : pImpl(new detail::DemuxerImpl(std::move(di))){};
 
 Demuxer::~Demuxer() {

@@ -20,7 +20,7 @@ Muxer::~Muxer() {
 }
 
 template <MediaType media_type>
-std::unique_ptr<Encoder<media_type>> Muxer::add_encode_stream(
+EncoderPtr<media_type> Muxer::add_encode_stream(
     const EncodeConfigBase<media_type>& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config) {
@@ -28,11 +28,11 @@ std::unique_ptr<Encoder<media_type>> Muxer::add_encode_stream(
   return std::make_unique<Encoder<media_type>>(p.release());
 }
 
-template std::unique_ptr<AudioEncoder> Muxer::add_encode_stream(
+template AudioEncoderPtr Muxer::add_encode_stream(
     const AudioEncodeConfig& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config);
-template std::unique_ptr<VideoEncoder> Muxer::add_encode_stream(
+template VideoEncoderPtr Muxer::add_encode_stream(
     const VideoEncodeConfig& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config);

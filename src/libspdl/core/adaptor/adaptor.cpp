@@ -36,10 +36,9 @@ class BasicInterface : public DataInterface {
   }
 };
 } // namespace
-std::unique_ptr<DataInterface> SourceAdaptor::get_interface(
+DataInterfacePtr SourceAdaptor::get_interface(
     std::string_view url,
     const DemuxConfig& dmx_cfg) const {
-  return std::unique_ptr<DataInterface>(
-      new BasicInterface(std::string{url}, dmx_cfg));
+  return DataInterfacePtr(new BasicInterface(std::string{url}, dmx_cfg));
 }
 } // namespace spdl::core

@@ -18,7 +18,7 @@
 namespace spdl::core::detail {
 
 class DemuxerImpl {
-  std::unique_ptr<DataInterface> di;
+  DataInterfacePtr di;
   AVFormatContext* fmt_ctx = nullptr;
 
   Generator<AVPacketPtr> demux_window(
@@ -27,7 +27,7 @@ class DemuxerImpl {
       std::optional<BitStreamFilter>& bsf);
 
  public:
-  explicit DemuxerImpl(std::unique_ptr<DataInterface> di);
+  explicit DemuxerImpl(DataInterfacePtr di);
   DemuxerImpl(const DemuxerImpl&) = delete;
   DemuxerImpl& operator=(const DemuxerImpl&) = delete;
   DemuxerImpl(DemuxerImpl&&) = delete;
