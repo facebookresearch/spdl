@@ -19,17 +19,26 @@ Muxer::~Muxer() {
   delete pImpl;
 }
 
-VideoEncoderPtr Muxer::add_video_encode_stream(
-    const VideoEncodeConfig& codec_config,
+template <MediaType media_type>
+std::unique_ptr<Encoder<media_type>> Muxer::add_encode_stream(
+    const EncodeConfigBase<media_type>& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config) {
   auto p = pImpl->add_encode_stream(codec_config, encoder, encoder_config);
-  return std::make_unique<VideoEncoder>(p.release());
+  return std::make_unique<Encoder<media_type>>(p.release());
 }
 
-void Muxer::add_video_remux_stream(const VideoCodec& codec) {
+template std::unique_ptr<VideoEncoder> Muxer::add_encode_stream(
+    const VideoEncodeConfig& codec_config,
+    const std::optional<std::string>& encoder,
+    const std::optional<OptionDict>& encoder_config);
+
+template <MediaType media_type>
+void Muxer::add_remux_stream(const Codec<media_type>& codec) {
   pImpl->add_remux_stream(codec);
 }
+
+template void Muxer::add_remux_stream(const VideoCodec& codec);
 
 void Muxer::open(const std::optional<OptionDict>& muxer_config) {
   pImpl->open(muxer_config);

@@ -33,12 +33,14 @@ class Muxer {
 
   ~Muxer();
 
-  VideoEncoderPtr add_video_encode_stream(
-      const VideoEncodeConfig& codec_config,
+  template <MediaType media_type>
+  std::unique_ptr<Encoder<media_type>> add_encode_stream(
+      const EncodeConfigBase<media_type>& codec_config,
       const std::optional<std::string>& encoder,
       const std::optional<OptionDict>& encoder_config);
 
-  void add_video_remux_stream(const VideoCodec& codec);
+  template <MediaType media_type>
+  void add_remux_stream(const Codec<media_type>& codec);
 
   void open(const std::optional<OptionDict>& muxer_config);
 

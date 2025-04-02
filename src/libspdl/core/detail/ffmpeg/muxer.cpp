@@ -26,20 +26,20 @@ MuxerImpl::MuxerImpl(
     : fmt_ctx(get_output_format_ctx(uri, format)) {}
 
 namespace {
+template <MediaType media_type>
 const AVCodec* get_codec(
     AVCodecID id,
-    const std::optional<std::string>& override,
-    AVMediaType type) {
+    const std::optional<std::string>& override) {
   if (override) {
-    const AVCodec* c = avcodec_find_encoder_by_name(override.value().c_str());
+    auto name = override.value();
+    const AVCodec* c = avcodec_find_encoder_by_name(name.c_str());
     if (!c) [[unlikely]] {
       SPDL_FAIL(fmt::format("Unknown codec: {}", override.value()));
     }
-    if (c->type != type) [[unlikely]] {
-      SPDL_FAIL(fmt::format(
-          "Codec `{}` is not {} type",
-          override.value(),
-          av_get_media_type_string(type)));
+    if constexpr (media_type == MediaType::Video) {
+      if (c->type != AVMEDIA_TYPE_VIDEO) [[unlikely]] {
+        SPDL_FAIL(fmt::format("Codec `{}` is not video type", name));
+      }
     }
     return c;
   }
@@ -53,17 +53,25 @@ const AVCodec* get_codec(
 }
 } // namespace
 
-std::unique_ptr<VideoEncoderImpl> MuxerImpl::add_encode_stream(
-    const VideoEncodeConfig& codec_config,
+template <MediaType media_type>
+void MuxerImpl::assert_media_type_is_supported() const {
+  if constexpr (media_type == MediaType::Video) {
+    if (fmt_ctx->oformat->video_codec == AV_CODEC_ID_NONE) [[unlikely]] {
+      SPDL_FAIL(
+          fmt::format("`{}` does not support video.", fmt_ctx->oformat->name));
+    }
+  }
+}
+
+template <MediaType media_type>
+std::unique_ptr<EncoderImpl<media_type>> MuxerImpl::add_encode_stream(
+    const EncodeConfigBase<media_type>& codec_config,
     const std::optional<std::string>& encoder_name,
     const std::optional<OptionDict>& encoder_config) {
-  if (fmt_ctx->oformat->video_codec == AV_CODEC_ID_NONE) [[unlikely]] {
-    SPDL_FAIL(
-        fmt::format("`{}` does not support video.", fmt_ctx->oformat->name));
-  }
+  assert_media_type_is_supported<media_type>();
 
-  const AVCodec* codec = get_codec(
-      fmt_ctx->oformat->video_codec, encoder_name, AVMEDIA_TYPE_VIDEO);
+  const AVCodec* codec =
+      get_codec<media_type>(fmt_ctx->oformat->video_codec, encoder_name);
   auto ret = make_encoder(
       codec,
       codec_config,
@@ -81,17 +89,23 @@ std::unique_ptr<VideoEncoderImpl> MuxerImpl::add_encode_stream(
   return ret;
 }
 
-void MuxerImpl::add_remux_stream(const VideoCodec& codec) {
-  if (fmt_ctx->oformat->video_codec == AV_CODEC_ID_NONE) [[unlikely]] {
-    SPDL_FAIL(
-        fmt::format("`{}` does not support video.", fmt_ctx->oformat->name));
-  }
+template std::unique_ptr<VideoEncoderImpl> MuxerImpl::add_encode_stream(
+    const VideoEncodeConfig& codec_config,
+    const std::optional<std::string>& encoder,
+    const std::optional<OptionDict>& encoder_config);
+
+template <MediaType media_type>
+void MuxerImpl::add_remux_stream(const Codec<media_type>& codec) {
+  assert_media_type_is_supported<media_type>();
+
   AVStream* s = CHECK_AVALLOCATE(avformat_new_stream(fmt_ctx.get(), nullptr));
   s->time_base = codec.get_time_base();
   CHECK_AVERROR(
       avcodec_parameters_copy(s->codecpar, codec.get_parameters()),
       "Failed to copy codec context.");
 }
+
+template void MuxerImpl::add_remux_stream(const VideoCodec& codec);
 
 void MuxerImpl::open(const std::optional<OptionDict>& muxer_config) {
   open_format(fmt_ctx.get(), muxer_config);

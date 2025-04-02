@@ -12,24 +12,25 @@
 
 namespace spdl::core {
 
-////////////////////////////////////////////////////////////////////////////////
-// Video
-////////////////////////////////////////////////////////////////////////////////
+template <MediaType media_type>
+Encoder<media_type>::Encoder(detail::EncoderImpl<media_type>* p) : pImpl(p) {}
 
-VideoEncoder::VideoEncoder(detail::EncoderImpl<MediaType::Video>* p)
-    : pImpl(p) {}
-
-VideoEncoder::~VideoEncoder() {
+template <MediaType media_type>
+Encoder<media_type>::~Encoder() {
   delete pImpl;
 }
 
-VideoPacketsPtr VideoEncoder::encode(
-    const FFmpegFramesPtr<MediaType::Video>&& frames) {
+template <MediaType media_type>
+PacketsPtr<media_type> Encoder<media_type>::encode(
+    const FFmpegFramesPtr<media_type>&& frames) {
   return pImpl->encode(std::move(frames));
 }
 
-VideoPacketsPtr VideoEncoder::flush() {
+template <MediaType media_type>
+PacketsPtr<media_type> Encoder<media_type>::flush() {
   return pImpl->flush();
 }
+
+template class Encoder<MediaType::Video>;
 
 } // namespace spdl::core

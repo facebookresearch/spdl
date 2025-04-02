@@ -61,19 +61,19 @@ void register_encoding(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("muxer_config") = std::nullopt)
       .def(
-          "add_video_encode_stream",
-          &Muxer::add_video_encode_stream,
+          "add_encode_stream",
+          &Muxer::add_encode_stream<MediaType::Video>,
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("codec_config"),
           nb::arg("encoder") = std::nullopt,
           nb::arg("encoder_config") = std::nullopt)
       .def(
-          "add_video_remux_stream",
-          &Muxer::add_video_remux_stream,
+          "add_remux_stream",
+          &Muxer::add_remux_stream<MediaType::Video>,
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("codec"))
       .def(
-          "write_video",
+          "write",
           &Muxer::write<MediaType::Video>,
           nb::call_guard<nb::gil_scoped_release>())
       .def("flush", &Muxer::flush, nb::call_guard<nb::gil_scoped_release>())
@@ -110,15 +110,15 @@ void register_encoding(nb::module_& m) {
           return std::nullopt;
         }();
         return VideoEncodeConfig{
-            height,
-            width,
-            pix_fmt,
-            fr,
-            bit_rate,
-            compression_level,
-            qscale,
-            gop_size,
-            max_b_frames};
+            .height = height,
+            .width = width,
+            .pix_fmt = pix_fmt,
+            .frame_rate = fr,
+            .bit_rate = bit_rate,
+            .compression_level = compression_level,
+            .qscale = qscale,
+            .gop_size = gop_size,
+            .max_b_frames = max_b_frames};
       },
       nb::call_guard<nb::gil_scoped_release>(),
       nb::kw_only(),

@@ -17,57 +17,30 @@
 
 namespace spdl::core {
 
-////////////////////////////////////////////////////////////////////////////////
-// Video
-////////////////////////////////////////////////////////////////////////////////
-
-struct VideoEncodeConfig {
-  int height;
-  int width;
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // Overrides
-  ////////////////////////////////////////////////////////////////////////////////
-  const std::optional<std::string> pix_fmt = std::nullopt;
-  const std::optional<Rational> frame_rate = std::nullopt;
-
-  int bit_rate = -1;
-  int compression_level = -1;
-
-  // qscale corresponds to ffmpeg CLI's qscale.
-  // Example: MP3
-  // https://trac.ffmpeg.org/wiki/Encode/MP3
-  // This should be set like
-  // https://github.com/FFmpeg/FFmpeg/blob/n4.3.2/fftools/ffmpeg_opt.c#L1550
-  int qscale = -1;
-
-  // video
-  int gop_size = -1;
-  int max_b_frames = -1;
-};
-
 namespace detail {
 template <MediaType media_type>
 class EncoderImpl;
 }
 
-class VideoEncoder {
-  detail::EncoderImpl<MediaType::Video>* pImpl;
+template <MediaType media_type>
+class Encoder {
+  detail::EncoderImpl<media_type>* pImpl;
 
  public:
-  VideoEncoder(detail::EncoderImpl<MediaType::Video>*);
-  VideoEncoder(const VideoEncoder&) = delete;
-  VideoEncoder& operator=(const VideoEncoder&) = delete;
-  VideoEncoder(VideoEncoder&&) = delete;
-  VideoEncoder& operator=(VideoEncoder&&) = delete;
+  explicit Encoder(detail::EncoderImpl<media_type>*);
+  Encoder(const Encoder<media_type>&) = delete;
+  Encoder& operator=(const Encoder<media_type>&) = delete;
+  Encoder(Encoder<media_type>&&) = delete;
+  Encoder& operator=(Encoder<media_type>&&) = delete;
 
-  ~VideoEncoder();
+  ~Encoder();
 
-  VideoPacketsPtr encode(const FFmpegVideoFramesPtr&&);
+  PacketsPtr<media_type> encode(const FFmpegFramesPtr<media_type>&&);
 
-  VideoPacketsPtr flush();
+  PacketsPtr<media_type> flush();
 };
 
+using VideoEncoder = Encoder<MediaType::Video>;
 using VideoEncoderPtr = std::unique_ptr<VideoEncoder>;
 
 } // namespace spdl::core

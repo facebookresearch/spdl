@@ -183,9 +183,10 @@ AVCodecParameters* EncoderImpl<media_type>::get_codec_par(
   return out;
 }
 
-std::unique_ptr<VideoEncoderImpl> make_encoder(
+template <MediaType media_type>
+std::unique_ptr<EncoderImpl<media_type>> make_encoder(
     const AVCodec* codec,
-    const VideoEncodeConfig& encode_config,
+    const EncodeConfigBase<media_type>& encode_config,
     const std::optional<OptionDict>& encoder_config,
     bool global_header) {
   auto codec_ctx = get_codec_context(codec, encode_config);
@@ -193,8 +194,14 @@ std::unique_ptr<VideoEncoderImpl> make_encoder(
     codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
   }
   open_codec_for_encode(codec_ctx.get(), encoder_config);
-  return std::make_unique<VideoEncoderImpl>(std::move(codec_ctx));
+  return std::make_unique<EncoderImpl<media_type>>(std::move(codec_ctx));
 }
+
+template std::unique_ptr<VideoEncoderImpl> make_encoder(
+    const AVCodec* codec,
+    const VideoEncodeConfig& encode_config,
+    const std::optional<OptionDict>& encoder_config,
+    bool global_header);
 
 namespace {
 
