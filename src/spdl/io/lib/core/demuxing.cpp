@@ -154,15 +154,25 @@ void register_demuxing(nb::module_& m) {
   nb::class_<AudioCodec>(m, "AudioCodec")
       .def_prop_ro("name", &AudioCodec::get_name)
       .def_prop_ro("sample_rate", &AudioCodec::get_sample_rate)
-      .def_prop_ro("num_channels", &AudioCodec::get_num_channels);
+      .def_prop_ro("num_channels", &AudioCodec::get_num_channels)
+      .def_prop_ro("time_base", [](VideoCodec& self) -> std::tuple<int, int> {
+        auto base = self.get_time_base();
+        return {base.num, base.den};
+      });
   nb::class_<VideoCodec>(m, "VideoCodec")
       .def_prop_ro("name", &VideoCodec::get_name)
       .def_prop_ro("width", &VideoCodec::get_width)
       .def_prop_ro("height", &VideoCodec::get_height)
       .def_prop_ro("pix_fmt", &VideoCodec::get_pix_fmt)
-      .def_prop_ro("frame_rate", [](VideoCodec& self) -> std::tuple<int, int> {
-        auto rate = self.get_frame_rate();
-        return {rate.num, rate.den};
+      .def_prop_ro(
+          "frame_rate",
+          [](VideoCodec& self) -> std::tuple<int, int> {
+            auto rate = self.get_frame_rate();
+            return {rate.num, rate.den};
+          })
+      .def_prop_ro("time_base", [](VideoCodec& self) -> std::tuple<int, int> {
+        auto base = self.get_time_base();
+        return {base.num, base.den};
       });
   nb::class_<ImageCodec>(m, "ImageCodec")
       .def_prop_ro("name", &ImageCodec::get_name)
