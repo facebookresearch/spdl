@@ -23,6 +23,7 @@ set(src
   demuxing.cpp
   encoding.cpp
   frames.cpp
+  filtering.cpp
   packets.cpp
   storage.cpp
   tracing.cpp

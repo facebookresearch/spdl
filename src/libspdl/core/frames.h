@@ -12,6 +12,7 @@
 #include <libspdl/core/types.h>
 
 #include <memory>
+#include <variant>
 #include <vector>
 
 struct AVFrame;
@@ -35,6 +36,8 @@ using FramesPtr = std::unique_ptr<Frames<media>>;
 using AudioFramesPtr = FramesPtr<MediaType::Audio>;
 using VideoFramesPtr = FramesPtr<MediaType::Video>;
 using ImageFramesPtr = FramesPtr<MediaType::Image>;
+
+using AnyFrames = std::variant<AudioFramesPtr, VideoFramesPtr, ImageFramesPtr>;
 
 #define _IS_AUDIO (media == MediaType::Audio)
 #define _IS_VIDEO (media == MediaType::Video)

@@ -35,6 +35,7 @@ set(srcs
   adaptor/bytes.cpp
   encoder.cpp
   frames.cpp
+  filter_graph.cpp
   buffer.cpp
   storage.cpp
   decoder.cpp

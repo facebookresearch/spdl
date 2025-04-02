@@ -372,4 +372,119 @@ FilterGraph get_image_enc_filter(
       avfilter_get_by_name("buffersink"));
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// FilterGraphImpl
+////////////////////////////////////////////////////////////////////////////////
+
+AVFilterGraphPtr make_graph(
+    const std::string& filter_desc,
+    const std::vector<std::string>& inputs,
+    const std::vector<std::string>& outputs) {
+  if (inputs.size() == 0 || outputs.size() == 0) {
+    SPDL_FAIL("There must be at least one input and output.");
+  }
+
+  AVFilterGraphPtr graph{CHECK_AVALLOCATE(avfilter_graph_alloc())};
+
+  AVFilterInOut* ins = nullptr;
+  AVFilterInOut* outs = nullptr;
+
+  CHECK_AVERROR(
+      avfilter_graph_parse2(graph.get(), filter_desc.c_str(), &ins, &outs),
+      fmt::format("Failed to parse the filter description: {}", filter_desc));
+  CHECK_AVERROR(
+      avfilter_graph_config(graph.get(), nullptr),
+      fmt::format("Failed to configure the filter graph: `{}`", filter_desc));
+
+  avfilter_inout_free(&ins);
+  avfilter_inout_free(&outs);
+
+  return graph;
+}
+
+FilterGraphImpl::FilterGraphImpl(
+    const std::string& filter_desc,
+    const std::vector<std::string>& input_names,
+    const std::vector<std::string>& output_names)
+    : filter_graph(make_graph(filter_desc, input_names, output_names)) {
+  auto* g = filter_graph.get();
+
+  for (auto& name : input_names) {
+    auto* ctx = CHECK_AV_NON_NULL(avfilter_graph_get_filter(g, name.c_str()));
+    VLOG(5) << fmt::format(
+        "Input: {}::{}", ctx->av_class->class_name, ctx->name);
+    inputs.insert({name, ctx});
+  }
+  for (auto& name : output_names) {
+    auto* ctx = CHECK_AV_NON_NULL(avfilter_graph_get_filter(g, name.c_str()));
+    VLOG(5) << fmt::format(
+        "Output: {}::{}", ctx->av_class->class_name, ctx->name);
+    outputs.insert({name, ctx});
+  }
+}
+
+void FilterGraphImpl::add_frames(
+    const std::string& name,
+    const std::vector<AVFrame*>& frames) {
+  auto* filter_ctx = inputs.at(name);
+  // We use AV_BUFFERSRC_FLAG_PUSH becase the frame we use might be a
+  // reference frame to a tensor object, in which case, the data might be
+  // garbage-collected after this method returns.
+  int flags = AV_BUFFERSRC_FLAG_KEEP_REF | AV_BUFFERSRC_FLAG_PUSH;
+  // Note: Not sure if it's okay to push many frames without pulling. Test.
+  for (auto* frame : frames) {
+    CHECK_AVERROR(
+        av_buffersrc_add_frame_flags(filter_ctx, frame, flags),
+        "Failed to pass a frame to filter.");
+  }
+}
+
+void FilterGraphImpl::flush() {
+  for (auto const& pair : inputs) {
+    AVFilterContext* filter_ctx = pair.second;
+    CHECK_AVERROR(
+        av_buffersrc_add_frame_flags(
+            filter_ctx, nullptr, AV_BUFFERSRC_FLAG_KEEP_REF),
+        fmt::format("Failed to flush the pad: {}.", pair.first));
+  }
+}
+
+std::string FilterGraphImpl::dump() const {
+  char* d = avfilter_graph_dump(filter_graph.get(), nullptr);
+  std::string repr{d};
+  av_free(d);
+  return repr;
+}
+
+template <MediaType media_type>
+FramesPtr<media_type> FilterGraphImpl::get_frames(AVFilterContext* filter_ctx) {
+  auto ret =
+      std::make_unique<Frames<media_type>>(0, filter_ctx->inputs[0]->time_base);
+  while (true) {
+    auto frame = AVFramePtr{CHECK_AVALLOCATE(av_frame_alloc())};
+    int err = av_buffersink_get_frame(filter_ctx, frame.get());
+    if (err < 0) {
+      if (err == AVERROR_EOF || err == AVERROR(EAGAIN)) {
+        break;
+      }
+      CHECK_AVERROR_NUM(err, "Failed to filter a frame.");
+    }
+    ret->push_back(frame.release());
+  }
+  return ret;
+}
+
+AnyFrames FilterGraphImpl::get_frames(const std::string& name) {
+  auto* filter_ctx = outputs.at(name);
+  switch (filter_ctx->inputs[0]->type) {
+    case AVMEDIA_TYPE_AUDIO:
+      return get_frames<MediaType::Audio>(filter_ctx);
+    case AVMEDIA_TYPE_VIDEO:
+      return get_frames<MediaType::Video>(filter_ctx);
+    default:;
+  }
+  SPDL_FAIL(fmt::format(
+      "Unsupported output type: {}",
+      av_get_media_type_string(filter_ctx->inputs[0]->type)));
+}
 } // namespace spdl::core::detail

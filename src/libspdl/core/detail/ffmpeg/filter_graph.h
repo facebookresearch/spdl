@@ -7,6 +7,7 @@
  */
 
 #pragma once
+#include <libspdl/core/frames.h>
 #include <libspdl/core/generator.h>
 #include <libspdl/core/types.h>
 
@@ -83,5 +84,34 @@ std::optional<FilterGraph> get_filter(
     return std::nullopt;
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// FilterGraphImpl
+////////////////////////////////////////////////////////////////////////////////
+
+class FilterGraphImpl {
+  AVFilterGraphPtr filter_graph;
+  std::map<std::string, AVFilterContext*> inputs;
+  std::map<std::string, AVFilterContext*> outputs;
+
+ public:
+  FilterGraphImpl(
+      const std::string& filter_desc,
+      const std::vector<std::string>& input_names,
+      const std::vector<std::string>& output_names);
+
+  void add_frames(const std::string& name, const std::vector<AVFrame*>& frames);
+
+  void flush();
+
+  std::string dump() const;
+
+ private:
+  template <MediaType media_type>
+  FramesPtr<media_type> get_frames(AVFilterContext* filter_ctx);
+
+ public:
+  AnyFrames get_frames(const std::string& name);
+};
 
 } // namespace spdl::core::detail
