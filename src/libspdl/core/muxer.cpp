@@ -23,13 +23,12 @@ VideoEncoderPtr Muxer::add_video_encode_stream(
     const VideoEncodeConfig& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config) {
-  auto p =
-      pImpl->add_video_encode_stream(codec_config, encoder, encoder_config);
+  auto p = pImpl->add_encode_stream(codec_config, encoder, encoder_config);
   return std::make_unique<VideoEncoder>(p.release());
 }
 
 void Muxer::add_video_remux_stream(const VideoCodec& codec) {
-  pImpl->add_video_remux_stream(codec);
+  pImpl->add_remux_stream(codec);
 }
 
 void Muxer::open(const std::optional<OptionDict>& muxer_config) {

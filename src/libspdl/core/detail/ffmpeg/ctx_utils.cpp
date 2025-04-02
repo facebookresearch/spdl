@@ -174,7 +174,7 @@ AVCodecContextPtr alloc_codec_context(
   return AVCodecContextPtr{codec_ctx};
 }
 
-void open_codec(
+void open_codec_for_decode(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& decoder_options) {
   AVDictionaryDPtr option = get_option_dict(decoder_options);
@@ -211,7 +211,7 @@ AVCodecContextPtr get_decode_codec_ctx_ptr(
   VLOG(9) << "Codec: " << codec_ctx->codec->name;
 
   codec_ctx->pkt_timebase = pkt_timebase;
-  open_codec(codec_ctx.get(), decoder_options);
+  open_codec_for_decode(codec_ctx.get(), decoder_options);
   return codec_ctx;
 }
 
@@ -384,13 +384,12 @@ void configure_image_codec_ctx(
   configure_video_codec_ctx(ctx, format, {1, 1}, width, height, cfg);
 }
 
-template <MediaType media_type>
-void open_codec(
+void open_codec_for_encode(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& encode_options) {
   AVDictionaryDPtr option = get_option_dict(encode_options);
 
-  if constexpr (media_type == MediaType::Audio) {
+  if (codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
     // Enable experimental feature if required
     // Note:
     // "vorbis" refers to FFmpeg's native encoder,
@@ -432,13 +431,6 @@ void open_codec(
       "Failed to open codec context.");
   check_empty(option);
 }
-
-template void open_codec<MediaType::Image>(
-    AVCodecContext* codec_ctx,
-    const std::optional<OptionDict>& encode_options);
-template void open_codec<MediaType::Video>(
-    AVCodecContext* codec_ctx,
-    const std::optional<OptionDict>& encode_options);
 
 AVStream* create_stream(
     AVFormatContext* format_ctx,

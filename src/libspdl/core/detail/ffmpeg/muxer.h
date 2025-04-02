@@ -25,12 +25,12 @@ class MuxerImpl {
  public:
   MuxerImpl(const std::string& uri, const std::optional<std::string>& format);
 
-  std::unique_ptr<VideoEncoderImpl> add_video_encode_stream(
+  std::unique_ptr<VideoEncoderImpl> add_encode_stream(
       const VideoEncodeConfig& codec_config,
       const std::optional<std::string>& encoder,
       const std::optional<OptionDict>& encoder_config);
 
-  void add_video_remux_stream(const VideoCodec& codec);
+  void add_remux_stream(const VideoCodec& codec);
 
   void open(const std::optional<OptionDict>& muxer_config);
 

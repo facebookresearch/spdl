@@ -44,6 +44,7 @@ class Muxer {
 
   template <MediaType media_type>
   void write(int i, DemuxedPackets<media_type>& packets);
+
   void flush();
   void close();
 };
