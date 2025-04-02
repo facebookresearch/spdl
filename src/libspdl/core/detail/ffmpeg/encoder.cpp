@@ -177,7 +177,7 @@ bool is_sample_fmt_supported(AVSampleFormat fmt, const AVSampleFormat* fmts) {
 std::vector<std::string> to_str(const AVSampleFormat* fmts) {
   std::vector<std::string> ret;
   for (; *fmts != AV_SAMPLE_FMT_NONE; ++fmts) {
-    ret.push_back(av_get_sample_fmt_name(*fmts));
+    ret.emplace_back(av_get_sample_fmt_name(*fmts));
   }
   return ret;
 }
@@ -307,7 +307,7 @@ void set_channels(AVCodecContext* ctx, int num_channels) {
 std::vector<std::string> to_str(const uint64_t* layouts) {
   std::vector<std::string> ret;
   for (; *layouts; ++layouts) {
-    ret.push_back(av_get_channel_name(*layouts));
+    ret.emplace_back(av_get_channel_name(*layouts));
   }
   return ret;
 }
