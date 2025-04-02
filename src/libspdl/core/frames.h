@@ -47,7 +47,7 @@ class Frames {
  private:
   ///
   /// Used for tracking the lifetime in tracing.
-  uint64_t id{0};
+  uintptr_t id{0};
 
   /// Time base of the frames
   Rational time_base;
@@ -66,7 +66,7 @@ class Frames {
   std::vector<AVFrame*> frames{};
 
  public:
-  Frames(uint64_t id, Rational time_base);
+  Frames(uintptr_t id, Rational time_base);
 
   ///
   /// No copy constructor
