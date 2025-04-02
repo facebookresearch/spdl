@@ -55,3 +55,12 @@ inline std::string av_error(int errnum, std::string_view tmp, Args&&... args) {
     }                                                   \
     return p;                                           \
   }()
+
+#define CHECK_AV_NON_NULL(expression)                              \
+  [&]() {                                                          \
+    auto* p = expression;                                          \
+    if (!p) [[unlikely]] {                                         \
+      SPDL_FAIL("Failed to retrieve a pointer (" #expression ")"); \
+    }                                                              \
+    return p;                                                      \
+  }()

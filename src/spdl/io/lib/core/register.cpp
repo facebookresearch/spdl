@@ -26,6 +26,7 @@ void register_demuxing(nb::module_&);
 void register_decoding(nb::module_&);
 void register_conversion(nb::module_&);
 void register_encoding(nb::module_&);
+void register_filtering(nb::module_&);
 } // namespace spdl::core
 
 namespace {
@@ -41,5 +42,6 @@ NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_decoding(m);
   spdl::core::register_conversion(m);
   spdl::core::register_encoding(m);
+  spdl::core::register_filtering(m);
 }
 } // namespace
