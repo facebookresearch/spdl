@@ -200,7 +200,7 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
   if constexpr (media_type == MediaType::Video) {
     frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   }
-  auto ret = std::make_unique<DemuxedPackets<media_type>>(
+  auto ret = std::make_unique<Packets<media_type>>(
       di->get_src(),
       Codec<media_type>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
@@ -250,7 +250,7 @@ Generator<PacketsPtr<media_type>> DemuxerImpl::streaming_demux(
   }
   auto make_packets =
       [&](std::vector<AVPacketPtr>&& pkts) -> PacketsPtr<media_type> {
-    auto ret = std::make_unique<DemuxedPackets<media_type>>(
+    auto ret = std::make_unique<Packets<media_type>>(
         di->get_src(),
         Codec<media_type>{
             bsf ? filter->get_output_codec_par() : stream->codecpar,

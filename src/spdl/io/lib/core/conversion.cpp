@@ -26,16 +26,16 @@ namespace spdl::core {
 namespace {
 template <MediaType media_type>
 CPUBufferPtr convert(
-    const FFmpegFramesPtr<media_type>&& frames,
+    const FramesPtr<media_type>&& frames,
     std::shared_ptr<CPUStorage> storage) {
   nb::gil_scoped_release __g;
   return convert_frames(frames.get(), storage);
 }
 
 template <MediaType media_type>
-std::vector<const spdl::core::FFmpegFrames<media_type>*> _ref(
-    std::vector<FFmpegFramesPtr<media_type>>& frames) {
-  std::vector<const spdl::core::FFmpegFrames<media_type>*> ret;
+std::vector<const spdl::core::Frames<media_type>*> _ref(
+    std::vector<FramesPtr<media_type>>& frames) {
+  std::vector<const spdl::core::Frames<media_type>*> ret;
   for (auto& frame : frames) {
     ret.push_back(frame.get());
   }
@@ -44,7 +44,7 @@ std::vector<const spdl::core::FFmpegFrames<media_type>*> _ref(
 
 template <MediaType media_type>
 CPUBufferPtr batch_convert(
-    std::vector<FFmpegFramesPtr<media_type>>&& frames,
+    std::vector<FramesPtr<media_type>>&& frames,
     std::shared_ptr<CPUStorage> storage) {
   nb::gil_scoped_release __g;
   return convert_frames(_ref(frames), storage);
@@ -73,7 +73,7 @@ CPUBufferPtr convert_array(
   return buf;
 }
 
-FFmpegVideoFramesPtr _convert_rgb_array(
+VideoFramesPtr _convert_rgb_array(
     const rgb_frames& array,
     std::tuple<int, int> frame_rate,
     int pts) {

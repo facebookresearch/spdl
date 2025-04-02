@@ -22,7 +22,7 @@ Encoder<media_type>::~Encoder() {
 
 template <MediaType media_type>
 PacketsPtr<media_type> Encoder<media_type>::encode(
-    const FFmpegFramesPtr<media_type>&& frames) {
+    const FramesPtr<media_type>&& frames) {
   return pImpl->encode(std::move(frames));
 }
 

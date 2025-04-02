@@ -462,8 +462,8 @@ Generator<AVPacketPtr> _encode(
 
 template <MediaType media_type>
 PacketsPtr<media_type> EncoderImpl<media_type>::encode(
-    const FFmpegFramesPtr<media_type>&& frames) {
-  auto ret = std::make_unique<DemuxedPackets<media_type>>(
+    const FramesPtr<media_type>&& frames) {
+  auto ret = std::make_unique<Packets<media_type>>(
       fmt::format("{}", frames->get_id()),
       Codec<media_type>{
           get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});
@@ -477,7 +477,7 @@ PacketsPtr<media_type> EncoderImpl<media_type>::encode(
 
 template <MediaType media_type>
 PacketsPtr<media_type> EncoderImpl<media_type>::flush() {
-  auto ret = std::make_unique<DemuxedPackets<media_type>>(
+  auto ret = std::make_unique<Packets<media_type>>(
       "flush",
       Codec<media_type>{
           get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});

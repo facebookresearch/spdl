@@ -26,7 +26,7 @@ class EncoderImpl {
  public:
   EncoderImpl(AVCodecContextPtr codec_ctx);
 
-  PacketsPtr<media_type> encode(const FFmpegFramesPtr<media_type>&&);
+  PacketsPtr<media_type> encode(const FramesPtr<media_type>&&);
   PacketsPtr<media_type> flush();
 
   AVRational get_time_base() const;

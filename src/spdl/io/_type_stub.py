@@ -154,7 +154,7 @@ class Packets:
           >>> # Decode the packets
           >>> frames = spdl.io.decode_packets(packets)
           >>> frames
-          FFmpegImageFrames<pixel_format="rgb24", num_planes=1, width=320, height=240>
+          ImageFrames<pixel_format="rgb24", num_planes=1, width=320, height=240>
           >>>
           >>> # The packets object is no longer valid.
           >>> packets
