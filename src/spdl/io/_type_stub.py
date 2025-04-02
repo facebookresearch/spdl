@@ -62,6 +62,13 @@ class VideoCodec:
         """The frame rate of the video."""
         ...
 
+    @property
+    def time_base(self) -> tuple[int, int]:
+        """The internal unit of time used for timestamp.
+
+        The value is expressed as a fraction. ``(numerator, denominator)``."""
+        ...
+
 
 class AudioCodec:
     """AudioCodec()
@@ -81,6 +88,13 @@ class AudioCodec:
     @property
     def num_channels(self) -> int:
         """The number of channels in the audio stream"""
+        ...
+
+    @property
+    def time_base(self) -> tuple[int, int]:
+        """The internal unit of time used for timestamp.
+
+        The value is expressed as a fraction. ``(numerator, denominator)``."""
         ...
 
 
