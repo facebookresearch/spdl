@@ -117,7 +117,7 @@ void register_frames(nb::module_& m) {
           [](const VideoFrames& self, int64_t i) { return self.slice(i); })
       .def(
           "__getitem__",
-          [](const VideoFrames& self, std::vector<int64_t> idx) {
+          [](const VideoFrames& self, const std::vector<int64_t>& idx) {
             return self.slice(idx);
           })
       .def(
