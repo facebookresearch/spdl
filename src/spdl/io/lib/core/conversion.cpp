@@ -24,27 +24,27 @@ using rgb_frames = nb::
 
 namespace spdl::core {
 namespace {
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr convert(
-    const FramesPtr<media_type>&& frames,
+    const FramesPtr<media>&& frames,
     std::shared_ptr<CPUStorage> storage) {
   nb::gil_scoped_release __g;
   return convert_frames(frames.get(), storage);
 }
 
-template <MediaType media_type>
-std::vector<const spdl::core::Frames<media_type>*> _ref(
-    std::vector<FramesPtr<media_type>>& frames) {
-  std::vector<const spdl::core::Frames<media_type>*> ret;
+template <MediaType media>
+std::vector<const spdl::core::Frames<media>*> _ref(
+    std::vector<FramesPtr<media>>& frames) {
+  std::vector<const spdl::core::Frames<media>*> ret;
   for (auto& frame : frames) {
     ret.push_back(frame.get());
   }
   return ret;
 }
 
-template <MediaType media_type>
+template <MediaType media>
 CPUBufferPtr batch_convert(
-    std::vector<FramesPtr<media_type>>&& frames,
+    std::vector<FramesPtr<media>>&& frames,
     std::shared_ptr<CPUStorage> storage) {
   nb::gil_scoped_release __g;
   return convert_frames(_ref(frames), storage);

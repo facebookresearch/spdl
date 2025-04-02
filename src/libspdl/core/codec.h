@@ -21,7 +21,7 @@ namespace spdl::core {
 // as requested by client code.
 // Packets manages its own AVCodecParameters lifecycle.
 // Perhaps it might be good to unify and let Packets hold Codec class?
-template <MediaType media_type>
+template <MediaType media>
 class Codec {
   AVCodecParameters* codecpar;
 
@@ -34,25 +34,25 @@ class Codec {
       Rational time_base,
       Rational frame_rate) noexcept;
   ~Codec();
-  Codec(const Codec<media_type>&);
-  Codec(Codec<media_type>&&) noexcept;
-  Codec<media_type>& operator=(const Codec<media_type>&);
-  Codec<media_type>& operator=(Codec<media_type>&&) noexcept;
+  Codec(const Codec<media>&);
+  Codec(Codec<media>&&) noexcept;
+  Codec<media>& operator=(const Codec<media>&);
+  Codec<media>& operator=(Codec<media>&&) noexcept;
 
   std::string get_name() const;
   int get_sample_rate() const
-    requires(media_type == MediaType::Audio);
+    requires(media == MediaType::Audio);
 
   int get_num_channels() const
-    requires(media_type == MediaType::Audio);
+    requires(media == MediaType::Audio);
   int get_width() const
-    requires(media_type == MediaType::Video || media_type == MediaType::Image);
+    requires(media == MediaType::Video || media == MediaType::Image);
   int get_height() const
-    requires(media_type == MediaType::Video || media_type == MediaType::Image);
+    requires(media == MediaType::Video || media == MediaType::Image);
   CodecID get_codec_id() const;
 
   std::string get_pix_fmt() const
-    requires(media_type == MediaType::Video || media_type == MediaType::Image);
+    requires(media == MediaType::Video || media == MediaType::Image);
 
   Rational get_time_base() const;
   Rational get_frame_rate() const;

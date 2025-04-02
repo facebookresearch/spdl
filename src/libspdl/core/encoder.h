@@ -18,30 +18,30 @@
 namespace spdl::core {
 
 namespace detail {
-template <MediaType media_type>
+template <MediaType media>
 class EncoderImpl;
 }
 
-template <MediaType media_type>
+template <MediaType media>
 class Encoder {
-  detail::EncoderImpl<media_type>* pImpl;
+  detail::EncoderImpl<media>* pImpl;
 
  public:
-  explicit Encoder(detail::EncoderImpl<media_type>*);
-  Encoder(const Encoder<media_type>&) = delete;
-  Encoder& operator=(const Encoder<media_type>&) = delete;
-  Encoder(Encoder<media_type>&&) = delete;
-  Encoder& operator=(Encoder<media_type>&&) = delete;
+  explicit Encoder(detail::EncoderImpl<media>*);
+  Encoder(const Encoder<media>&) = delete;
+  Encoder& operator=(const Encoder<media>&) = delete;
+  Encoder(Encoder<media>&&) = delete;
+  Encoder& operator=(Encoder<media>&&) = delete;
 
   ~Encoder();
 
-  PacketsPtr<media_type> encode(const FramesPtr<media_type>&&);
+  PacketsPtr<media> encode(const FramesPtr<media>&&);
 
-  PacketsPtr<media_type> flush();
+  PacketsPtr<media> flush();
 };
 
-template <MediaType media_type>
-using EncoderPtr = std::unique_ptr<Encoder<media_type>>;
+template <MediaType media>
+using EncoderPtr = std::unique_ptr<Encoder<media>>;
 
 using VideoEncoder = Encoder<MediaType::Video>;
 using VideoEncoderPtr = EncoderPtr<MediaType::Video>;

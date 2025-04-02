@@ -34,21 +34,21 @@ class DemuxerImpl {
   DemuxerImpl& operator=(DemuxerImpl&&) = delete;
   ~DemuxerImpl();
 
-  template <MediaType media_type>
-  Codec<media_type> get_default_codec() const;
+  template <MediaType media>
+  Codec<media> get_default_codec() const;
   bool has_audio() const;
 
  private:
   Generator<AVPacketPtr> demux();
 
  public:
-  template <MediaType media_type>
-  PacketsPtr<media_type> demux_window(
+  template <MediaType media>
+  PacketsPtr<media> demux_window(
       const std::optional<std::tuple<double, double>>& window,
       const std::optional<std::string>& bsf);
 
-  template <MediaType media_type>
-  Generator<PacketsPtr<media_type>> streaming_demux(
+  template <MediaType media>
+  Generator<PacketsPtr<media>> streaming_demux(
       int num_packets,
       // NOTE: This will be used for generator, so pass-by-value.
       const std::optional<std::string> bsf);

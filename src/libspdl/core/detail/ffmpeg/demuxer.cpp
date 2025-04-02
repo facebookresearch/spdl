@@ -48,9 +48,9 @@ void enable_for_stream(AVFormatContext* fmt_ctx, int idx) {
 }
 
 AVStream*
-get_stream(MediaType media_type, AVFormatContext* fmt_ctx, DataInterface* di) {
+get_stream(MediaType media, AVFormatContext* fmt_ctx, DataInterface* di) {
   AVMediaType type = [&]() {
-    switch (media_type) {
+    switch (media) {
       case MediaType::Audio:
         return AVMEDIA_TYPE_AUDIO;
       case MediaType::Image:
@@ -89,11 +89,11 @@ DemuxerImpl::~DemuxerImpl() {
   // makes the trace easier to interpret.
 }
 
-template <MediaType media_type>
-Codec<media_type> DemuxerImpl::get_default_codec() const {
-  auto* stream = get_stream(media_type, fmt_ctx, di.get());
+template <MediaType media>
+Codec<media> DemuxerImpl::get_default_codec() const {
+  auto* stream = get_stream(media, fmt_ctx, di.get());
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-  return Codec<media_type>{stream->codecpar, stream->time_base, frame_rate};
+  return Codec<media>{stream->codecpar, stream->time_base, frame_rate};
 }
 
 template Codec<MediaType::Audio>
@@ -159,15 +159,15 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
   }
 }
 
-template <MediaType media_type>
-PacketsPtr<media_type> DemuxerImpl::demux_window(
+template <MediaType media>
+PacketsPtr<media> DemuxerImpl::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
   TRACE_EVENT("demuxing", "detail::demux_window");
 
   auto [start, end] =
       window ? *window : std::tuple<double, double>{NEG_INF, POS_INF};
-  if constexpr (media_type == MediaType::Video) {
+  if constexpr (media == MediaType::Video) {
     // Note:
     // Since the video frames can be non-chronological order, so we add small
     // margin to end
@@ -185,7 +185,7 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
     }
   }
 
-  auto stream = get_stream(media_type, fmt_ctx, di.get());
+  auto stream = get_stream(media, fmt_ctx, di.get());
   enable_for_stream(fmt_ctx, stream->index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
@@ -196,12 +196,12 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
   }();
 
   Rational frame_rate{1, 1};
-  if constexpr (media_type == MediaType::Video) {
+  if constexpr (media == MediaType::Video) {
     frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   }
-  auto ret = std::make_unique<Packets<media_type>>(
+  auto ret = std::make_unique<Packets<media>>(
       di->get_src(),
-      Codec<media_type>{
+      Codec<media>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
           stream->time_base,
           frame_rate},
@@ -210,7 +210,7 @@ PacketsPtr<media_type> DemuxerImpl::demux_window(
   auto demuxing = this->demux_window(stream, end, filter);
   while (demuxing) {
     ret->push(demuxing().release());
-    if constexpr (media_type == MediaType::Image) {
+    if constexpr (media == MediaType::Image) {
       break;
     }
   }
@@ -229,11 +229,11 @@ template PacketsPtr<MediaType::Image> DemuxerImpl::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
-template <MediaType media_type>
-Generator<PacketsPtr<media_type>> DemuxerImpl::streaming_demux(
+template <MediaType media>
+Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
     int num_packets,
     const std::optional<std::string> bsf) {
-  auto stream = get_stream(media_type, fmt_ctx, di.get());
+  auto stream = get_stream(media, fmt_ctx, di.get());
   enable_for_stream(fmt_ctx, stream->index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
@@ -244,14 +244,14 @@ Generator<PacketsPtr<media_type>> DemuxerImpl::streaming_demux(
   }();
 
   Rational frame_rate;
-  if constexpr (media_type == MediaType::Video) {
+  if constexpr (media == MediaType::Video) {
     frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   }
   auto make_packets =
-      [&](std::vector<AVPacketPtr>&& pkts) -> PacketsPtr<media_type> {
-    auto ret = std::make_unique<Packets<media_type>>(
+      [&](std::vector<AVPacketPtr>&& pkts) -> PacketsPtr<media> {
+    auto ret = std::make_unique<Packets<media>>(
         di->get_src(),
-        Codec<media_type>{
+        Codec<media>{
             bsf ? filter->get_output_codec_par() : stream->codecpar,
             stream->time_base,
             frame_rate});

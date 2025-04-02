@@ -26,18 +26,18 @@ class MuxerImpl {
   MuxerImpl(const std::string& uri, const std::optional<std::string>& format);
 
  private:
-  template <MediaType media_type>
-  void assert_media_type_is_supported() const;
+  template <MediaType media>
+  void assert_media_is_supported() const;
 
  public:
-  template <MediaType media_type>
-  EncoderImplPtr<media_type> add_encode_stream(
-      const EncodeConfigBase<media_type>& codec_config,
+  template <MediaType media>
+  EncoderImplPtr<media> add_encode_stream(
+      const EncodeConfigBase<media>& codec_config,
       const std::optional<std::string>& encoder,
       const std::optional<OptionDict>& encoder_config);
 
-  template <MediaType media_type>
-  void add_remux_stream(const Codec<media_type>& codec);
+  template <MediaType media>
+  void add_remux_stream(const Codec<media>& codec);
 
   void open(const std::optional<OptionDict>& muxer_config);
 

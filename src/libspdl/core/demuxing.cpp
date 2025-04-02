@@ -39,20 +39,20 @@ DataInterfacePtr get_in_memory_interface(
 ////////////////////////////////////////////////////////////////////////////////
 // StreamingDemuxer
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media_type>
-StreamingDemuxer<media_type>::StreamingDemuxer(
+template <MediaType media>
+StreamingDemuxer<media>::StreamingDemuxer(
     detail::DemuxerImpl* p,
     int num_packets,
     const std::optional<std::string>& bsf)
-    : gen(p->streaming_demux<media_type>(num_packets, bsf)) {}
+    : gen(p->streaming_demux<media>(num_packets, bsf)) {}
 
-template <MediaType media_type>
-bool StreamingDemuxer<media_type>::done() {
+template <MediaType media>
+bool StreamingDemuxer<media>::done() {
   return !bool(gen);
 }
 
-template <MediaType media_type>
-PacketsPtr<media_type> StreamingDemuxer<media_type>::next() {
+template <MediaType media>
+PacketsPtr<media> StreamingDemuxer<media>::next() {
   return gen();
 }
 
@@ -75,9 +75,9 @@ bool Demuxer::has_audio() const {
   return pImpl->has_audio();
 }
 
-template <MediaType media_type>
-Codec<media_type> Demuxer::get_default_codec() const {
-  return pImpl->get_default_codec<media_type>();
+template <MediaType media>
+Codec<media> Demuxer::get_default_codec() const {
+  return pImpl->get_default_codec<media>();
 }
 template Codec<MediaType::Audio> Demuxer::get_default_codec<MediaType::Audio>()
     const;
@@ -86,11 +86,11 @@ template Codec<MediaType::Video> Demuxer::get_default_codec<MediaType::Video>()
 template Codec<MediaType::Image> Demuxer::get_default_codec<MediaType::Image>()
     const;
 
-template <MediaType media_type>
-PacketsPtr<media_type> Demuxer::demux_window(
+template <MediaType media>
+PacketsPtr<media> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
-  return pImpl->demux_window<media_type>(window, bsf);
+  return pImpl->demux_window<media>(window, bsf);
 }
 
 template PacketsPtr<MediaType::Audio> Demuxer::demux_window(
@@ -105,12 +105,11 @@ template PacketsPtr<MediaType::Image> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
-template <MediaType media_type>
-StreamingDemuxerPtr<media_type> Demuxer::stream_demux(
+template <MediaType media>
+StreamingDemuxerPtr<media> Demuxer::stream_demux(
     int num_packets,
     const std::optional<std::string>& bsf) {
-  return std::make_unique<StreamingDemuxer<media_type>>(
-      pImpl, num_packets, bsf);
+  return std::make_unique<StreamingDemuxer<media>>(pImpl, num_packets, bsf);
 }
 
 template StreamingDemuxerPtr<MediaType::Video> Demuxer::stream_demux(

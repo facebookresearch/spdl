@@ -22,27 +22,27 @@ namespace spdl::core {
 // FFmpeg Frames
 ////////////////////////////////////////////////////////////////////////////////
 
-template <MediaType media_type>
+template <MediaType media>
 class Frames;
 
 using AudioFrames = Frames<MediaType::Audio>;
 using VideoFrames = Frames<MediaType::Video>;
 using ImageFrames = Frames<MediaType::Image>;
 
-template <MediaType media_type>
-using FramesPtr = std::unique_ptr<Frames<media_type>>;
+template <MediaType media>
+using FramesPtr = std::unique_ptr<Frames<media>>;
 
 using AudioFramesPtr = FramesPtr<MediaType::Audio>;
 using VideoFramesPtr = FramesPtr<MediaType::Video>;
 using ImageFramesPtr = FramesPtr<MediaType::Image>;
 
-#define _IS_AUDIO (media_type == MediaType::Audio)
-#define _IS_VIDEO (media_type == MediaType::Video)
-#define _IS_IMAGE (media_type == MediaType::Image)
+#define _IS_AUDIO (media == MediaType::Audio)
+#define _IS_VIDEO (media == MediaType::Video)
+#define _IS_IMAGE (media == MediaType::Image)
 
 ///
 /// Base class that holds media frames decoded with FFmpeg.
-template <MediaType media_type>
+template <MediaType media>
 class Frames {
  private:
   ///
@@ -122,7 +122,7 @@ class Frames {
   // throws if the index is not within the range
   int64_t get_pts(size_t index = 0) const;
 
-  FramesPtr<media_type> clone() const;
+  FramesPtr<media> clone() const;
 
   //////////////////////////////////////////////////////////////////////////////
   // Audio specific
@@ -180,8 +180,8 @@ class Frames {
     requires _IS_VIDEO;
 };
 
-template <MediaType media_type>
-FramesPtr<media_type> clone(const Frames<media_type>& src);
+template <MediaType media>
+FramesPtr<media> clone(const Frames<media>& src);
 
 #undef _IS_AUDIO
 #undef _IS_VIDEO

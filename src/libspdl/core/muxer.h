@@ -33,19 +33,19 @@ class Muxer {
 
   ~Muxer();
 
-  template <MediaType media_type>
-  EncoderPtr<media_type> add_encode_stream(
-      const EncodeConfigBase<media_type>& codec_config,
+  template <MediaType media>
+  EncoderPtr<media> add_encode_stream(
+      const EncodeConfigBase<media>& codec_config,
       const std::optional<std::string>& encoder,
       const std::optional<OptionDict>& encoder_config);
 
-  template <MediaType media_type>
-  void add_remux_stream(const Codec<media_type>& codec);
+  template <MediaType media>
+  void add_remux_stream(const Codec<media>& codec);
 
   void open(const std::optional<OptionDict>& muxer_config);
 
-  template <MediaType media_type>
-  void write(int i, Packets<media_type>& packets);
+  template <MediaType media>
+  void write(int i, Packets<media>& packets);
 
   void flush();
   void close();

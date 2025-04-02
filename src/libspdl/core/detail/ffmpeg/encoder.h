@@ -19,22 +19,22 @@
 
 namespace spdl::core::detail {
 
-template <MediaType media_type>
+template <MediaType media>
 class EncoderImpl {
   AVCodecContextPtr codec_ctx;
 
  public:
   EncoderImpl(AVCodecContextPtr codec_ctx);
 
-  PacketsPtr<media_type> encode(const FramesPtr<media_type>&&);
-  PacketsPtr<media_type> flush();
+  PacketsPtr<media> encode(const FramesPtr<media>&&);
+  PacketsPtr<media> flush();
 
   AVRational get_time_base() const;
   AVCodecParameters* get_codec_par(AVCodecParameters* out = nullptr) const;
 };
 
-template <MediaType media_type>
-using EncoderImplPtr = std::unique_ptr<EncoderImpl<media_type>>;
+template <MediaType media>
+using EncoderImplPtr = std::unique_ptr<EncoderImpl<media>>;
 
 using AudioEncoderImpl = EncoderImpl<MediaType::Audio>;
 using AudioEncoderImplPtr = std::unique_ptr<AudioEncoderImpl>;
@@ -42,10 +42,10 @@ using AudioEncoderImplPtr = std::unique_ptr<AudioEncoderImpl>;
 using VideoEncoderImpl = EncoderImpl<MediaType::Video>;
 using VideoEncoderImplPtr = std::unique_ptr<VideoEncoderImpl>;
 
-template <MediaType media_type>
-EncoderImplPtr<media_type> make_encoder(
+template <MediaType media>
+EncoderImplPtr<media> make_encoder(
     const AVCodec* codec,
-    const EncodeConfigBase<media_type>& encode_config,
+    const EncodeConfigBase<media>& encode_config,
     const std::optional<OptionDict>& encoder_config,
     bool global_header = false);
 

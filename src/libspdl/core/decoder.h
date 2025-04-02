@@ -19,17 +19,17 @@ namespace spdl::core {
 // Decoder
 ////////////////////////////////////////////////////////////////////////////////
 namespace detail {
-template <MediaType media_type>
+template <MediaType media>
 class DecoderImpl;
 }
 
-template <MediaType media_type>
+template <MediaType media>
 class Decoder {
-  detail::DecoderImpl<media_type>* pImpl;
+  detail::DecoderImpl<media>* pImpl;
 
  public:
   Decoder(
-      const Codec<media_type>& codec,
+      const Codec<media>& codec,
       const std::optional<DecodeConfig>& cfg,
       const std::optional<std::string>& filter_desc);
   Decoder(const Decoder&) = delete;
@@ -39,15 +39,15 @@ class Decoder {
 
   ~Decoder();
 
-  FramesPtr<media_type> decode_and_flush(
-      PacketsPtr<media_type> packets,
+  FramesPtr<media> decode_and_flush(
+      PacketsPtr<media> packets,
       int num_frames = -1);
 
-  FramesPtr<media_type> decode(PacketsPtr<media_type> packets);
-  FramesPtr<media_type> flush();
+  FramesPtr<media> decode(PacketsPtr<media> packets);
+  FramesPtr<media> flush();
 };
 
-template <MediaType media_type>
-using DecoderPtr = std::unique_ptr<Decoder<media_type>>;
+template <MediaType media>
+using DecoderPtr = std::unique_ptr<Decoder<media>>;
 
 } // namespace spdl::core
