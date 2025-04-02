@@ -49,7 +49,7 @@ struct RawPacketData {
 template <MediaType media_type>
 class Packets {
  public:
-  uint64_t id;
+  uintptr_t id;
   // Source information
   std::string src;
   std::optional<std::tuple<double, double>> timestamp;
