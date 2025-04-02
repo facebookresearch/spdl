@@ -147,7 +147,10 @@ void register_encoding(nb::module_& m) {
          int compression_level,
          int qscale,
          int gop_size,
-         int max_b_frames) {
+         int max_b_frames,
+         const std::optional<std::string>& colorspace,
+         const std::optional<std::string>& color_primaries,
+         const std::optional<std::string>& color_trc) {
         auto fr = [&]() -> std::optional<Rational> {
           if (frame_rate) {
             auto rate = *frame_rate;
@@ -164,7 +167,10 @@ void register_encoding(nb::module_& m) {
             .compression_level = compression_level,
             .qscale = qscale,
             .gop_size = gop_size,
-            .max_b_frames = max_b_frames};
+            .max_b_frames = max_b_frames,
+            .colorspace = colorspace,
+            .color_primaries = color_primaries,
+            .color_trc = color_trc};
       },
       nb::call_guard<nb::gil_scoped_release>(),
       nb::kw_only(),
@@ -176,7 +182,10 @@ void register_encoding(nb::module_& m) {
       nb::arg("compression_level") = -1,
       nb::arg("qscale") = -1,
       nb::arg("gop_size") = -1,
-      nb::arg("max_b_frames") = -1);
+      nb::arg("max_b_frames") = -1,
+      nb::arg("colorspace") = std::nullopt,
+      nb::arg("color_primaries") = std::nullopt,
+      nb::arg("color_trc") = std::nullopt);
 
   nb::class_<VideoEncoder>(m, "VideoEncoder")
       .def(

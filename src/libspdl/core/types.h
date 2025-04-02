@@ -134,9 +134,12 @@ struct EncodeConfigBase<MediaType::Video> {
   // https://github.com/FFmpeg/FFmpeg/blob/n4.3.2/fftools/ffmpeg_opt.c#L1550
   int qscale = -1;
 
-  // video
   int gop_size = -1;
   int max_b_frames = -1;
+
+  std::optional<std::string> colorspace;
+  std::optional<std::string> color_primaries;
+  std::optional<std::string> color_trc;
 };
 
 template <>
