@@ -19,6 +19,22 @@
 namespace nb = nanobind;
 
 namespace spdl::core {
+namespace {
+
+template <MediaType media>
+std::string get_ts(const Frames<media>& self) {
+  auto num_frames = self.get_frames().size();
+  if (num_frames == 0) {
+    return "nan";
+  }
+  auto tb = self.get_time_base();
+  return fmt::format(
+      "[{:.3f}, {:.3f}]",
+      double(self.get_pts(0)) * tb.num / tb.den,
+      double(self.get_pts(num_frames - 1)) * tb.num / tb.den);
+}
+
+} // namespace
 void register_frames(nb::module_& m) {
   nb::class_<AudioFrames>(m, "AudioFrames")
       .def_prop_ro(
@@ -49,21 +65,13 @@ void register_frames(nb::module_& m) {
       .def(
           "__repr__",
           [](const AudioFrames& self) -> std::string {
-            auto num_frames = self.get_num_frames();
-            auto pts = [&]() {
-              if (num_frames == 0) {
-                return std::numeric_limits<double>::quiet_NaN();
-              }
-              auto tb = self.get_time_base();
-              return double(self.get_pts()) * tb.num / tb.den;
-            }();
             return fmt::format(
-                "AudioFrames<num_frames={}, sample_format=\"{}\", sample_rate={}, num_channels={}, timestamp={:.3f}>",
-                num_frames,
+                "AudioFrames<num_frames={}, sample_format=\"{}\", sample_rate={}, num_channels={}, timestamp={}>",
+                self.get_num_frames(),
                 self.get_media_format_name(),
                 self.get_sample_rate(),
                 self.get_num_channels(),
-                pts);
+                get_ts(self));
           })
       .def(
           "clone",
@@ -134,22 +142,14 @@ void register_frames(nb::module_& m) {
       .def(
           "__repr__",
           [](const VideoFrames& self) -> std::string {
-            auto num_frames = self.get_num_frames();
-            auto pts = [&]() {
-              if (num_frames == 0) {
-                return std::numeric_limits<double>::quiet_NaN();
-              }
-              auto tb = self.get_time_base();
-              return double(self.get_pts()) * tb.num / tb.den;
-            }();
             return fmt::format(
-                "VideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, timestamp={:.3f}>",
-                num_frames,
+                "VideoFrames<num_frames={}, pixel_format=\"{}\", num_planes={}, width={}, height={}, timestamp={}>",
+                self.get_num_frames(),
                 self.get_media_format_name(),
                 self.get_num_planes(),
                 self.get_width(),
                 self.get_height(),
-                pts);
+                get_ts(self));
           })
       .def(
           "clone",
