@@ -40,6 +40,8 @@ struct DataInterface {
   virtual std::string get_src() const = 0;
 };
 
+using DataInterfacePtr = std::unique_ptr<DataInterface>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Adaptor
 ////////////////////////////////////////////////////////////////////////////////
@@ -48,7 +50,7 @@ struct DataInterface {
 struct SourceAdaptor {
   virtual ~SourceAdaptor() = default;
 
-  virtual std::unique_ptr<DataInterface> get_interface(
+  virtual DataInterfacePtr get_interface(
       std::string_view url,
       const DemuxConfig& dmx_cfg) const;
 };
@@ -57,7 +59,7 @@ struct SourceAdaptor {
 // Bytes
 ////////////////////////////////////////////////////////////////////////////////
 struct BytesAdaptor : public SourceAdaptor {
-  std::unique_ptr<DataInterface> get_interface(
+  DataInterfacePtr get_interface(
       std::string_view data,
       const DemuxConfig& dmx_cfg) const override;
 };

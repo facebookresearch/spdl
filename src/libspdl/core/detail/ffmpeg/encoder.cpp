@@ -385,7 +385,7 @@ AVCodecParameters* EncoderImpl<media_type>::get_codec_par(
 }
 
 template <MediaType media_type>
-std::unique_ptr<EncoderImpl<media_type>> make_encoder(
+EncoderImplPtr<media_type> make_encoder(
     const AVCodec* codec,
     const EncodeConfigBase<media_type>& encode_config,
     const std::optional<OptionDict>& encoder_config,
@@ -398,13 +398,13 @@ std::unique_ptr<EncoderImpl<media_type>> make_encoder(
   return std::make_unique<EncoderImpl<media_type>>(std::move(codec_ctx));
 }
 
-template std::unique_ptr<AudioEncoderImpl> make_encoder(
+template AudioEncoderImplPtr make_encoder(
     const AVCodec* codec,
     const AudioEncodeConfig& encode_config,
     const std::optional<OptionDict>& encoder_config,
     bool global_header);
 
-template std::unique_ptr<VideoEncoderImpl> make_encoder(
+template VideoEncoderImplPtr make_encoder(
     const AVCodec* codec,
     const VideoEncodeConfig& encode_config,
     const std::optional<OptionDict>& encoder_config,

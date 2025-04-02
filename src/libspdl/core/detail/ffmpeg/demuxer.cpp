@@ -76,8 +76,7 @@ get_stream(MediaType media_type, AVFormatContext* fmt_ctx, DataInterface* di) {
 }
 } // namespace
 
-DemuxerImpl::DemuxerImpl(std::unique_ptr<DataInterface> di_)
-    : di(std::move(di_)) {
+DemuxerImpl::DemuxerImpl(DataInterfacePtr di_) : di(std::move(di_)) {
   fmt_ctx = di->get_fmt_ctx();
   init_fmt_ctx(fmt_ctx, di.get());
 }

@@ -40,10 +40,13 @@ class Encoder {
   PacketsPtr<media_type> flush();
 };
 
+template <MediaType media_type>
+using EncoderPtr = std::unique_ptr<Encoder<media_type>>;
+
 using VideoEncoder = Encoder<MediaType::Video>;
-using VideoEncoderPtr = std::unique_ptr<VideoEncoder>;
+using VideoEncoderPtr = EncoderPtr<MediaType::Video>;
 
 using AudioEncoder = Encoder<MediaType::Audio>;
-using AudioEncoderPtr = std::unique_ptr<AudioEncoder>;
+using AudioEncoderPtr = EncoderPtr<MediaType::Audio>;
 
 } // namespace spdl::core
