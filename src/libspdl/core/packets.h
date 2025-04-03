@@ -77,11 +77,6 @@ class Packets {
 
   void push(AVPacket*);
   const std::vector<AVPacket*>& get_packets() const;
-  const char* get_media_format_name() const;
-
-  int get_width() const;
-  int get_height() const;
-  Rational get_frame_rate() const;
 
   // Get the number of valid packets, that is, the number of frames returned
   // by decoding function when decoded.
@@ -93,14 +88,6 @@ class Packets {
   // Get the PTS of the specified frame.
   // throws if the index is not within the range
   int64_t get_pts(size_t index = 0) const;
-
-  int get_num_channels() const
-    requires(media == MediaType::Audio);
-
-  int get_sample_rate() const
-    requires(media == MediaType::Audio);
-
-  Codec<media> get_codec() const;
 
   Generator<RawPacketData> iter_packets() const;
 
