@@ -101,17 +101,6 @@ struct Packets {
   void push(AVPacket*);
 
   Generator<RawPacketData> iter_data() const;
-
-  // Get the PTS of the specified frame.
-  // throws if the index is not within the range
-  int64_t get_pts(size_t index = 0) const;
-
-  // Get the number of valid packets, that is, the number of frames returned
-  // by decoding function when decoded.
-  // This is different from `packets.size()` when timestamp is set.
-  // This is the number of packets visible to users.
-  size_t num_packets() const
-    requires(media == MediaType::Video || media == MediaType::Image);
 };
 
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>

@@ -72,41 +72,6 @@ void Packets<media>::push(AVPacket* p) {
 }
 
 template <MediaType media>
-size_t Packets<media>::num_packets() const
-  requires(media == MediaType::Video || media == MediaType::Image)
-{
-  if constexpr (media == MediaType::Image) {
-    assert(pkts.container.size() == 1);
-    return 1;
-  }
-  if constexpr (media == MediaType::Video) {
-    if (timestamp) {
-      size_t ret = 0;
-      auto [start, end] = *timestamp;
-      auto tb = time_base;
-      for (const AVPacket* pkt : pkts.container) {
-        auto pts = static_cast<double>(pkt->pts) * tb.num / tb.den;
-        if (start <= pts && pts < end) {
-          ++ret;
-        }
-      }
-      return ret;
-    }
-    return pkts.container.size();
-  }
-}
-
-template <MediaType media>
-int64_t Packets<media>::get_pts(size_t index) const {
-  auto num_packets = pkts.container.size();
-  if (index >= num_packets) {
-    throw std::out_of_range(
-        fmt::format("{} is out of range [0, {})", index, num_packets));
-  }
-  return pkts.container.at(index)->pts;
-}
-
-template <MediaType media>
 Packets<media>::Packets(
     const std::string& src_,
     Codec<media>&& codec_,

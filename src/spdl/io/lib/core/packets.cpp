@@ -47,6 +47,35 @@ std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
   return ts ? fmt::format("({}, {})", std::get<0>(*ts), std::get<1>(*ts))
             : "n/a";
 }
+
+size_t num_packets(const VideoPackets& packets) {
+  if (!packets.timestamp) {
+    return packets.get_packets().size();
+  }
+  size_t ret = 0;
+  auto [start, end] = *packets.timestamp;
+  auto tb = packets.time_base;
+  auto pkts = packets.iter_data();
+  while (pkts) {
+    auto pts = static_cast<double>(pkts().pts) * tb.num / tb.den;
+    if (start <= pts && pts < end) {
+      ++ret;
+    }
+  }
+  return ret;
+}
+
+template <MediaType media>
+std::vector<double> get_pts(const Packets<media>& packets) {
+  std::vector<double> ret;
+  auto base = packets.codec.get_time_base();
+  auto pkts = packets.iter_data();
+  while (pkts) {
+    ret.push_back(double(pkts().pts) * base.num / base.den);
+  }
+  return ret;
+}
+
 } // namespace
 
 void register_packets(nb::module_& m) {
@@ -91,13 +120,7 @@ void register_packets(nb::module_& m) {
       .def(
           "_get_pts",
           [](const VideoPackets& self) -> std::vector<double> {
-            std::vector<double> ret;
-            auto base = self.codec.get_time_base();
-            auto pkts = self.iter_data();
-            while (pkts) {
-              ret.push_back(double(pkts().pts) * base.num / base.den);
-            }
-            return ret;
+            return get_pts(self);
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
@@ -130,8 +153,7 @@ void register_packets(nb::module_& m) {
           [](const VideoPackets& self) { return VideoCodec{self.codec}; },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
-          "__len__",
-          [](const VideoPackets& self) { return self.num_packets(); })
+          "__len__", [](const VideoPackets& self) { return num_packets(self); })
       .def(
           "__repr__",
           [](const VideoPackets& self) {
@@ -142,7 +164,7 @@ void register_packets(nb::module_& m) {
                 get_ts(self.timestamp),
                 frame_rate.num,
                 frame_rate.den,
-                self.num_packets(),
+                num_packets(self),
                 get_summary(self.codec));
           })
       .def(
@@ -162,10 +184,7 @@ void register_packets(nb::module_& m) {
   nb::class_<ImagePackets>(m, "ImagePackets")
       .def(
           "_get_pts",
-          [](const ImagePackets& self) {
-            auto base = self.codec.get_time_base();
-            return double(self.get_pts()) * base.num / base.den;
-          },
+          [](const ImagePackets& self) { return get_pts(self).at(0); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "pix_fmt",
