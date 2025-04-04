@@ -31,15 +31,17 @@ void register_packets(nb::module_& m) {
           })
       .def_prop_ro(
           "sample_rate",
-          &AudioPackets::get_sample_rate,
+          [](const AudioPackets& self) { return self.codec.get_sample_rate(); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "num_channels",
-          &AudioPackets::get_num_channels,
+          [](const AudioPackets& self) {
+            return self.codec.get_num_channels();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          &AudioPackets::get_codec,
+          [](const AudioPackets& self) { return self.codec; },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "clone",
@@ -67,26 +69,26 @@ void register_packets(nb::module_& m) {
           })
       .def_prop_ro(
           "pix_fmt",
-          &VideoPackets::get_media_format_name,
+          [](const VideoPackets& self) { return self.codec.get_pix_fmt(); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "width",
-          &VideoPackets::get_width,
+          [](const VideoPackets& self) { return self.codec.get_width(); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "height",
-          &VideoPackets::get_height,
+          [](const VideoPackets& self) { return self.codec.get_height(); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "frame_rate",
           [](const VideoPackets& self) {
-            auto rate = self.get_frame_rate();
+            auto rate = self.codec.get_frame_rate();
             return std::tuple<int, int>(rate.num, rate.den);
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          &VideoPackets::get_codec,
+          [](const VideoPackets& self) { return self.codec; },
           nb::call_guard<nb::gil_scoped_release>())
       .def("__len__", &VideoPackets::num_packets)
       .def("__repr__", &VideoPackets::get_summary)
@@ -112,19 +114,19 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "pix_fmt",
-          &ImagePackets::get_media_format_name,
+          [](const ImagePackets& self) { return self.codec.get_pix_fmt(); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "width",
-          &ImagePackets::get_width,
+          [](const ImagePackets& self) { return self.codec.get_width(); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "height",
-          &ImagePackets::get_height,
+          [](const ImagePackets& self) { return self.codec.get_height(); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          &ImagePackets::get_codec,
+          [](const ImagePackets& self) { return self.codec; },
           nb::call_guard<nb::gil_scoped_release>())
       .def("__repr__", &ImagePackets::get_summary)
       .def(

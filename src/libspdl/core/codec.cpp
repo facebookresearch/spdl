@@ -104,6 +104,13 @@ int Codec<media>::get_num_channels() const
 }
 
 template <MediaType media>
+std::string Codec<media>::get_sample_fmt() const
+  requires(media == MediaType::Audio)
+{
+  return av_get_sample_fmt_name((AVSampleFormat)(codecpar->format));
+}
+
+template <MediaType media>
 CodecID Codec<media>::get_codec_id() const {
   // NOTE: Currently only those used by NVDEC are handled.
   switch (codecpar->codec_id) {

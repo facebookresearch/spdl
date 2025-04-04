@@ -487,7 +487,7 @@ void NvDecDecoderCore::decode_packets(
 
   auto ite = packets->iter_packets();
   unsigned long flags = CUVID_PKT_TIMESTAMP;
-  switch (packets->get_codec().get_codec_id()) {
+  switch (packets->codec.get_codec_id()) {
     case spdl::core::CodecID::MPEG4: {
       // TODO: Add special handling par
       // Video_Codec_SDK_12.1.14/blob/main/Samples/Utils/FFmpegDemuxer.h#L326-L345

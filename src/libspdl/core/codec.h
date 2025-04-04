@@ -40,17 +40,19 @@ class Codec {
   Codec<media>& operator=(Codec<media>&&) noexcept;
 
   std::string get_name() const;
+  CodecID get_codec_id() const;
+
   int get_sample_rate() const
     requires(media == MediaType::Audio);
-
   int get_num_channels() const
     requires(media == MediaType::Audio);
+  std::string get_sample_fmt() const
+    requires(media == MediaType::Audio);
+
   int get_width() const
     requires(media == MediaType::Video || media == MediaType::Image);
   int get_height() const
     requires(media == MediaType::Video || media == MediaType::Image);
-  CodecID get_codec_id() const;
-
   std::string get_pix_fmt() const
     requires(media == MediaType::Video || media == MediaType::Image);
 

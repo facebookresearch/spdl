@@ -98,27 +98,6 @@ int64_t Packets<media>::get_pts(size_t index) const {
   return packets.at(index)->pts;
 }
 
-template <MediaType media>
-int Packets<media>::get_num_channels() const
-  requires(media == MediaType::Audio)
-{
-  const auto* codecpar = codec.get_parameters();
-  return GET_NUM_CHANNELS(codecpar);
-}
-
-template <MediaType media>
-int Packets<media>::get_sample_rate() const
-  requires(media == MediaType::Audio)
-{
-  const auto* codecpar = codec.get_parameters();
-  return codecpar->sample_rate;
-}
-
-template <MediaType media>
-Codec<media> Packets<media>::get_codec() const {
-  return Codec<media>{codec};
-}
-
 namespace {
 template <MediaType media>
 std::string get_codec_info(const AVCodecParameters* codecpar) {
@@ -159,7 +138,7 @@ std::string AudioPackets::get_summary() const {
       "AudioPackets<src=\"{}\", timestamp={}, sample_format=\"{}\", {}>",
       src,
       get_ts(timestamp),
-      get_media_format_name(),
+      codec.get_sample_fmt(),
       get_codec_info<MediaType::Audio>(codec.get_parameters()));
 }
 
@@ -173,7 +152,7 @@ std::string VideoPackets::get_summary() const {
       frame_rate.num,
       frame_rate.den,
       num_packets(),
-      get_media_format_name(),
+      codec.get_pix_fmt(),
       get_codec_info<MediaType::Video>(codec.get_parameters()));
 }
 
@@ -182,7 +161,7 @@ std::string ImagePackets::get_summary() const {
   return fmt::format(
       "ImagePackets<src=\"{}\", pixel_format=\"{}\", {}>",
       src,
-      get_media_format_name(),
+      codec.get_pix_fmt(),
       get_codec_info<MediaType::Image>(codec.get_parameters()));
 }
 
@@ -191,25 +170,6 @@ const std::vector<AVPacket*>& Packets<media>::get_packets() const {
   return packets;
 }
 
-template <MediaType media>
-const char* Packets<media>::get_media_format_name() const {
-  return detail::get_media_format_name<media>(codec.get_parameters()->format);
-}
-
-template <MediaType media>
-int Packets<media>::get_width() const {
-  return codec.get_parameters()->width;
-}
-
-template <MediaType media>
-int Packets<media>::get_height() const {
-  return codec.get_parameters()->height;
-}
-
-template <MediaType media>
-Rational Packets<media>::get_frame_rate() const {
-  return codec.get_frame_rate();
-}
 template <MediaType media>
 Generator<RawPacketData> Packets<media>::iter_packets() const {
   for (auto& pkt : packets) {
