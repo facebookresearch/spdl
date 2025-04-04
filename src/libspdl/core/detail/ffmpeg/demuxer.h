@@ -41,6 +41,8 @@ class DemuxerImpl {
  private:
   Generator<AVPacketPtr> demux();
 
+  AVStream* get_default_stream(MediaType media) const;
+
  public:
   template <MediaType media>
   PacketsPtr<media> demux_window(
