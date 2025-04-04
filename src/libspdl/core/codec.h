@@ -29,12 +29,14 @@ class Codec {
   Rational frame_rate;
 
  public:
+  Codec() = default;
+  // From decoding/demuxing context
   Codec(
       const AVCodecParameters*,
       Rational time_base,
       Rational frame_rate) noexcept;
   ~Codec();
-  Codec(const Codec<media>&);
+  explicit Codec(const Codec<media>&);
   Codec(Codec<media>&&) noexcept;
   Codec<media>& operator=(const Codec<media>&);
   Codec<media>& operator=(Codec<media>&&) noexcept;
