@@ -77,6 +77,17 @@ Packets<media>::Packets(
 };
 
 template <MediaType media>
+Packets<media>::Packets(uintptr_t id_, Rational time_base_)
+    : id(id_),
+      src(fmt::format("{}", id_)),
+      time_base(time_base_),
+      timestamp(std::nullopt),
+      codec(std::nullopt) {
+  TRACE_EVENT(
+      "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
+};
+
+template <MediaType media>
 Packets<media>::Packets(const Packets<media>& other)
     : id(other.id),
       src(other.src),

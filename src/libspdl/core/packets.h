@@ -96,6 +96,9 @@ struct Packets {
       Codec<media>&& codec,
       const std::optional<std::tuple<double, double>>& timestamp = {});
 
+  // Constructing Packets from encoder for muxing
+  Packets(uintptr_t id, Rational time_base);
+
   explicit Packets(const Packets<media>&);
   Packets<media>& operator=(const Packets<media>&);
   Packets(Packets<media>&&) noexcept;
