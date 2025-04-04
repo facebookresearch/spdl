@@ -127,7 +127,9 @@ void register_packets(nb::module_& m) {
           "codec",
           [](const VideoPackets& self) { return VideoCodec{self.codec}; },
           nb::call_guard<nb::gil_scoped_release>())
-      .def("__len__", &VideoPackets::num_packets)
+      .def(
+          "__len__",
+          [](const VideoPackets& self) { return self.num_packets(); })
       .def(
           "__repr__",
           [](const VideoPackets& self) {
