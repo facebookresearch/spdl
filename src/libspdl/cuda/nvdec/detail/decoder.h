@@ -71,8 +71,11 @@ class NvDecDecoderCore {
   CUvideodecoderPtr decoder{nullptr};
 
  private:
+  // Source packet information. Initialized in init
   int src_width = 0;
   int src_height = 0;
+  spdl::core::CodecID codec_id;
+  spdl::core::Rational timebase{}; // Time base of the PTS
 
   //---------------------------------------------------------------------------
   // Post processing params
@@ -97,8 +100,6 @@ class NvDecDecoderCore {
   std::vector<CUDABuffer>* frame_buffer;
   // The user-specified timestamp. Frames outside of this will be discarded.
   double start_time, end_time;
-  // Time base of the PTS
-  spdl::core::Rational timebase;
   //---------------------------------------------------------------------------
 
  public:
