@@ -89,9 +89,7 @@ class Packets {
   // throws if the index is not within the range
   int64_t get_pts(size_t index = 0) const;
 
-  Generator<RawPacketData> iter_packets() const;
-
-  std::string get_summary() const;
+  Generator<RawPacketData> iter_data() const;
 
   PacketsPtr<media> clone() const;
 };
