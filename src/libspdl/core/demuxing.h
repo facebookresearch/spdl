@@ -26,21 +26,20 @@ class DemuxerImpl;
 ////////////////////////////////////////////////////////////////////////////////
 // StreamingDemuxer
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media>
 class StreamingDemuxer {
-  Generator<PacketsPtr<media>> gen;
+  Generator<AnyPackets> gen;
 
  public:
   StreamingDemuxer(
       detail::DemuxerImpl* p,
+      int stream_index,
       int num_packets,
       const std::optional<std::string>& bsf);
   bool done();
-  PacketsPtr<media> next();
+  AnyPackets next();
 };
 
-template <MediaType media>
-using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer<media>>;
+using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
@@ -65,8 +64,7 @@ class Demuxer {
       const std::optional<std::tuple<double, double>>& window = std::nullopt,
       const std::optional<std::string>& bsf = std::nullopt);
 
-  template <MediaType media>
-  StreamingDemuxerPtr<media> stream_demux(
+  StreamingDemuxerPtr stream_demux(
       int num_packets,
       const std::optional<std::string>& bsf = std::nullopt);
 };

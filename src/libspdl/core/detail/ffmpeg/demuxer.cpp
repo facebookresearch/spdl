@@ -64,7 +64,8 @@ DemuxerImpl::~DemuxerImpl() {
 
 template <MediaType media>
 Codec<media> DemuxerImpl::get_default_codec() const {
-  auto* stream = get_default_stream(media);
+  int i = get_default_stream_index(media);
+  AVStream* stream = fmt_ctx->streams[i];
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   return Codec<media>{stream->codecpar, stream->time_base, frame_rate};
 }
@@ -85,7 +86,7 @@ bool DemuxerImpl::has_audio() const {
   return false;
 }
 
-AVStream* DemuxerImpl::get_default_stream(MediaType media) const {
+int DemuxerImpl::get_default_stream_index(MediaType media) const {
   AVMediaType type = [&]() {
     switch (media) {
       case MediaType::Audio:
@@ -109,7 +110,7 @@ AVStream* DemuxerImpl::get_default_stream(MediaType media) const {
         av_get_media_type_string(type),
         di->get_src()));
   }
-  return fmt_ctx->streams[idx];
+  return idx;
 }
 Generator<AVPacketPtr> DemuxerImpl::demux() {
   int errnum = 0;
@@ -184,7 +185,8 @@ PacketsPtr<media> DemuxerImpl::demux_window(
     }
   }
 
-  auto stream = get_default_stream(media);
+  auto index = get_default_stream_index(media);
+  auto* stream = fmt_ctx->streams[index];
   enable_for_stream(fmt_ctx, stream->index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
@@ -225,12 +227,44 @@ template PacketsPtr<MediaType::Image> DemuxerImpl::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
-template <MediaType media>
-Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
+AnyPackets mk_packets(
+    AVMediaType media,
+    const std::string& src,
+    std::vector<AVPacketPtr>&& pkts) {
+  switch (media) {
+    case AVMEDIA_TYPE_AUDIO: {
+      auto ret = std::make_unique<AudioPackets>(src);
+      for (auto& p : pkts) {
+        ret->pkts.push(p.release());
+      }
+      return ret;
+    }
+    case AVMEDIA_TYPE_VIDEO: {
+      auto ret = std::make_unique<VideoPackets>(src);
+      for (auto& p : pkts) {
+        ret->pkts.push(p.release());
+      }
+      return ret;
+    }
+    default:;
+  }
+  SPDL_FAIL(fmt::format(
+      "Unexpected media type was provided: {}",
+      av_get_media_type_string(media)));
+}
+
+Generator<AnyPackets> DemuxerImpl::streaming_demux(
+    int stream_index,
     int num_packets,
     const std::optional<std::string> bsf) {
-  auto stream = get_default_stream(media);
-  enable_for_stream(fmt_ctx, stream->index);
+  if (stream_index < 0 || fmt_ctx->nb_streams <= stream_index) {
+    SPDL_FAIL(fmt::format(
+        "Stream index must be in range of [0, {}). Found: {}",
+        fmt_ctx->nb_streams,
+        stream_index));
+  }
+  auto* stream = fmt_ctx->streams[stream_index];
+  enable_for_stream(fmt_ctx, stream_index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
     if (!bsf) {
@@ -239,12 +273,9 @@ Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
     return BitStreamFilter{*bsf, stream->codecpar};
   }();
 
-  auto make_packets = [&](std::vector<AVPacketPtr>&& pkts) {
-    auto ret = std::make_unique<Packets<media>>(di->get_src());
-    for (auto& p : pkts) {
-      ret->pkts.push(p.release());
-    }
-    return ret;
+  auto mkpkts = [&](std::vector<AVPacketPtr>&& pkts) {
+    return mk_packets(
+        stream->codecpar->codec_type, di->get_src(), std::move(pkts));
   };
 
   auto demuxing = this->demux_window(stream, POS_INF, filter);
@@ -253,7 +284,7 @@ Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
   while (demuxing) {
     packets.push_back(demuxing());
     if (packets.size() >= num_packets) {
-      co_yield make_packets(std::move(packets));
+      co_yield mkpkts(std::move(packets));
 
       packets = std::vector<AVPacketPtr>();
       packets.reserve(num_packets);
@@ -261,15 +292,8 @@ Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
   }
 
   if (packets.size() > 0) {
-    co_yield make_packets(std::move(packets));
+    co_yield mkpkts(std::move(packets));
   }
 }
-
-template Generator<PacketsPtr<MediaType::Audio>> DemuxerImpl::streaming_demux(
-    int num_packets,
-    const std::optional<std::string> bsf);
-template Generator<PacketsPtr<MediaType::Video>> DemuxerImpl::streaming_demux(
-    int num_packets,
-    const std::optional<std::string> bsf);
 
 } // namespace spdl::core::detail

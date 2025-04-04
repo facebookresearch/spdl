@@ -41,16 +41,15 @@ class DemuxerImpl {
  private:
   Generator<AVPacketPtr> demux();
 
-  AVStream* get_default_stream(MediaType media) const;
-
  public:
   template <MediaType media>
   PacketsPtr<media> demux_window(
       const std::optional<std::tuple<double, double>>& window,
       const std::optional<std::string>& bsf);
 
-  template <MediaType media>
-  Generator<PacketsPtr<media>> streaming_demux(
+  int get_default_stream_index(MediaType media) const;
+  Generator<AnyPackets> streaming_demux(
+      int stream_index,
       int num_packets,
       // NOTE: This will be used for generator, so pass-by-value.
       const std::optional<std::string> bsf);
