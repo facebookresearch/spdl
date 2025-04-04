@@ -90,18 +90,35 @@ def test_streaming_video_demuxing_parity():
     cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
     sample = get_sample(cmd)
 
-    def _decode_packets(packets):
-        frames = spdl.io.decode_packets(packets)
-        buffer = spdl.io.convert_frames(frames)
-        return spdl.io.to_numpy(buffer)
-
     demuxer = spdl.io.Demuxer(sample.path)
-    ite = iter(demuxer.streaming_demux_video(30))
-    pkts = next(ite)
-    hyp = _decode_packets(pkts)
+    decoder = spdl.io.Decoder(demuxer.video_codec)
+    buffers = []
+    for packets in demuxer.streaming_demux_video(30):
+        print(packets)
+        frames = decoder.decode(packets)
+        print(frames)
+        buffer = spdl.io.convert_frames(frames)
+        buffers.append(spdl.io.to_numpy(buffer))
+    frames = decoder.flush()
+    if len(frames):
+        buffer = spdl.io.convert_frames(frames)
+        buffers.append(spdl.io.to_numpy(buffer))
 
-    pkts = spdl.io.demux_video(sample.path)
-    ref = _decode_packets(pkts)
+    hyp = np.concatenate(buffers)
+    print(hyp.shape, hyp.dtype)
+
+    packets = spdl.io.demux_video(sample.path)
+    frames = spdl.io.decode_packets(packets)
+    buffer = spdl.io.convert_frames(frames)
+    ref = spdl.io.to_numpy(buffer)
+    print(ref.shape, ref.dtype)
+
+    # from PIL import Image
+
+    # for i in [0, -1]:
+    #     Image.fromarray(hyp[i]).save(f"hyp_{i}.png")
+    #     Image.fromarray(ref[i]).save(f"ref_{i}.png")
+    #     Image.fromarray(hyp[i] - ref[i]).save(f"diff_{i}.png")
 
     assert np.array_equal(hyp, ref)
 
