@@ -27,3 +27,9 @@ __all__ = [
     "iterate_in_subprocess",
     "run_pipeline_in_subprocess",
 ]
+
+
+try:
+    from . import fb  # noqa: F401
+except ImportError:
+    pass

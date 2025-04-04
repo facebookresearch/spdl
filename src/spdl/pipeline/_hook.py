@@ -322,7 +322,7 @@ class TaskStatsHook(PipelineHook):
         finally:
             if self._int_task is not None:
                 self._int_task.cancel()
-            self._log_stats(self.num_tasks, self.num_success, self.ave_time)
+            await self._log_stats(self.num_tasks, self.num_success, self.ave_time)
 
     @asynccontextmanager
     async def task_hook(self) -> AsyncIterator[None]:
@@ -355,7 +355,7 @@ class TaskStatsHook(PipelineHook):
         else:
             int_ave = 0.0
 
-        self._log_stats(
+        await self._log_stats(
             num_tasks - self._int_num_tasks,
             num_success - self._int_num_success,
             int_ave,
@@ -365,7 +365,8 @@ class TaskStatsHook(PipelineHook):
         self._int_num_success = num_success
         self._int_ave_time = ave_time
 
-    def _log_stats(
+    # Async for the sake of subclass extension.
+    async def _log_stats(
         self,
         num_tasks: int,
         num_success: int,
