@@ -90,11 +90,18 @@ struct Packets {
 
   Packets() = default;
 
-  // Constructing Packets from demuxer for decoding
+  // Constructing Packets from demuxer for one-time decoding
+  // Need codec to initialize the decoder.
+  // Optionally remember the timestamp user asked.
   Packets(
       const std::string& src,
       Codec<media>&& codec,
       const std::optional<std::tuple<double, double>>& timestamp = {});
+
+  // Constructing Packets from demuxer for streaming
+  // No need for codec and time base, as decoder is initialized
+  // seprately.
+  Packets(const std::string& src);
 
   // Constructing Packets from encoder for muxing
   Packets(uintptr_t id, Rational time_base);

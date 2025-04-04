@@ -239,18 +239,8 @@ Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
     return BitStreamFilter{*bsf, stream->codecpar};
   }();
 
-  Rational frame_rate;
-  if constexpr (media == MediaType::Video) {
-    frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-  }
-  auto make_packets =
-      [&](std::vector<AVPacketPtr>&& pkts) -> PacketsPtr<media> {
-    auto ret = std::make_unique<Packets<media>>(
-        di->get_src(),
-        Codec<media>{
-            bsf ? filter->get_output_codec_par() : stream->codecpar,
-            stream->time_base,
-            frame_rate});
+  auto make_packets = [&](std::vector<AVPacketPtr>&& pkts) {
+    auto ret = std::make_unique<Packets<media>>(di->get_src());
     for (auto& p : pkts) {
       ret->pkts.push(p.release());
     }
