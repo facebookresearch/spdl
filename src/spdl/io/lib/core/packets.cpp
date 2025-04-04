@@ -23,22 +23,29 @@ namespace spdl::core {
 
 namespace {
 template <MediaType media>
-std::string get_summary(const Codec<media>& c) {
+std::string get_summary(const std::optional<Codec<media>>& c) {
+  if (!c) {
+    return "Codec=n/a";
+  }
   std::vector<std::string> p;
 
-  p.emplace_back(fmt::format("bit_rate={}", c.get_bit_rate()));
-  p.emplace_back(fmt::format("bits_per_sample={}", c.get_bits_per_sample()));
-  p.emplace_back(fmt::format("codec=\"{}\"", c.get_name()));
+  p.emplace_back(fmt::format("bit_rate={}", c->get_bit_rate()));
+  p.emplace_back(fmt::format("bits_per_sample={}", c->get_bits_per_sample()));
+  p.emplace_back(fmt::format("codec=\"{}\"", c->get_name()));
 
   if constexpr (media == MediaType::Audio) {
-    p.emplace_back(fmt::format("sample_format=\"{}\"", c.get_sample_fmt()));
-    p.emplace_back(fmt::format("sample_rate={}", c.get_sample_rate()));
-    p.emplace_back(fmt::format("num_channels={}", c.get_num_channels()));
+    p.emplace_back(fmt::format("sample_format=\"{}\"", c->get_sample_fmt()));
+    p.emplace_back(fmt::format("sample_rate={}", c->get_sample_rate()));
+    p.emplace_back(fmt::format("num_channels={}", c->get_num_channels()));
   }
   if constexpr (media == MediaType::Video || media == MediaType::Image) {
-    p.emplace_back(fmt::format("pixel_format=\"{}\"", c.get_pix_fmt()));
-    p.emplace_back(fmt::format("width={}", c.get_width()));
-    p.emplace_back(fmt::format("height={}", c.get_height()));
+    p.emplace_back(fmt::format("pixel_format=\"{}\"", c->get_pix_fmt()));
+    if constexpr (media == MediaType::Video) {
+      const auto& r = c->get_frame_rate();
+      p.emplace_back(fmt::format("frame_rate={}/{}", r.num, r.den));
+    }
+    p.emplace_back(fmt::format("width={}", c->get_width()));
+    p.emplace_back(fmt::format("height={}", c->get_height()));
   }
   return fmt::format("Codec=<{}>", fmt::join(p, ", "));
 }
@@ -48,6 +55,13 @@ std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
             : "n/a";
 }
 
+template <MediaType media>
+const Codec<media>& get_ref(const std::optional<Codec<media>>& c) {
+  if (!c) {
+    throw std::runtime_error("Packet does not have codec info.");
+  }
+  return *c;
+}
 size_t num_packets(const VideoPackets& packets) {
   if (!packets.timestamp) {
     return packets.pkts.get_packets().size();
@@ -68,7 +82,7 @@ size_t num_packets(const VideoPackets& packets) {
 template <MediaType media>
 std::vector<double> get_pts(const Packets<media>& packets) {
   std::vector<double> ret;
-  auto base = packets.codec.get_time_base();
+  auto base = get_ref(packets.codec).get_time_base();
   auto pkts = packets.pkts.iter_data();
   while (pkts) {
     ret.push_back(double(pkts().pts) * base.num / base.den);
@@ -97,17 +111,21 @@ void register_packets(nb::module_& m) {
           })
       .def_prop_ro(
           "sample_rate",
-          [](const AudioPackets& self) { return self.codec.get_sample_rate(); },
+          [](const AudioPackets& self) {
+            return get_ref(self.codec).get_sample_rate();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "num_channels",
           [](const AudioPackets& self) {
-            return self.codec.get_num_channels();
+            return get_ref(self.codec).get_num_channels();
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const AudioPackets& self) { return AudioCodec{self.codec}; },
+          [](const AudioPackets& self) {
+            return AudioCodec{get_ref(self.codec)};
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "clone",
@@ -131,41 +149,46 @@ void register_packets(nb::module_& m) {
           })
       .def_prop_ro(
           "pix_fmt",
-          [](const VideoPackets& self) { return self.codec.get_pix_fmt(); },
+          [](const VideoPackets& self) {
+            return get_ref(self.codec).get_pix_fmt();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "width",
-          [](const VideoPackets& self) { return self.codec.get_width(); },
+          [](const VideoPackets& self) {
+            return get_ref(self.codec).get_width();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "height",
-          [](const VideoPackets& self) { return self.codec.get_height(); },
+          [](const VideoPackets& self) {
+            return get_ref(self.codec).get_height();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "frame_rate",
           [](const VideoPackets& self) {
-            auto rate = self.codec.get_frame_rate();
+            auto rate = get_ref(self.codec).get_frame_rate();
             return std::tuple<int, int>(rate.num, rate.den);
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const VideoPackets& self) { return VideoCodec{self.codec}; },
+          [](const VideoPackets& self) {
+            return VideoCodec{get_ref(self.codec)};
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "__len__", [](const VideoPackets& self) { return num_packets(self); })
       .def(
           "__repr__",
           [](const VideoPackets& self) {
-            const auto& frame_rate = self.codec.get_frame_rate();
-            return fmt::format(
-                "VideoPackets<src=\"{}\", timestamp={}, frame_rate={}/{}, num_packets={}, {}>",
-                self.src,
-                get_ts(self.timestamp),
-                frame_rate.num,
-                frame_rate.den,
-                num_packets(self),
-                get_summary(self.codec));
+            std::vector<std::string> parts{
+                fmt::format("src=\"{}\"", self.src),
+                fmt::format("num_packets=\"{}\"", num_packets(self)),
+                fmt::format("timestamp={}", get_ts(self.timestamp)),
+                get_summary(self.codec)};
+            return fmt::format("VideoPackets<{}>", fmt::join(parts, ", "));
           })
       .def(
           "clone",
@@ -188,19 +211,27 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "pix_fmt",
-          [](const ImagePackets& self) { return self.codec.get_pix_fmt(); },
+          [](const ImagePackets& self) {
+            return get_ref(self.codec).get_pix_fmt();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "width",
-          [](const ImagePackets& self) { return self.codec.get_width(); },
+          [](const ImagePackets& self) {
+            return get_ref(self.codec).get_width();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "height",
-          [](const ImagePackets& self) { return self.codec.get_height(); },
+          [](const ImagePackets& self) {
+            return get_ref(self.codec).get_height();
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const ImagePackets& self) { return ImageCodec{self.codec}; },
+          [](const ImagePackets& self) {
+            return ImageCodec{get_ref(self.codec)};
+          },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "__repr__",

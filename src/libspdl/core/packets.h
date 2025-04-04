@@ -73,7 +73,7 @@ class PacketSeries {
 
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to Frames, AVFrame pointers are bulk released.
-// It contains suffiient information to build decoder via AVStream*.
+// Optionally, it carries codec information for decoding and bitstream filtering
 template <MediaType media>
 struct Packets {
   uintptr_t id{};
@@ -83,7 +83,10 @@ struct Packets {
   Rational time_base{};
   std::optional<std::tuple<double, double>> timestamp;
 
-  Codec<media> codec;
+  // Code should be available only when it's demuxed by `demux_window`
+  // method. When streaming demuxing, codec object must be fetched from
+  // demuxer directly.
+  std::optional<Codec<media>> codec;
 
   Packets() = default;
 
