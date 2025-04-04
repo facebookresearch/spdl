@@ -228,19 +228,19 @@ template PacketsPtr<MediaType::Image> DemuxerImpl::demux_window(
     const std::optional<std::string>& bsf);
 
 AnyPackets mk_packets(
-    AVMediaType media,
+    AVStream* stream,
     const std::string& src,
     std::vector<AVPacketPtr>&& pkts) {
-  switch (media) {
+  switch (stream->codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO: {
-      auto ret = std::make_unique<AudioPackets>(src);
+      auto ret = std::make_unique<AudioPackets>(src, stream->time_base);
       for (auto& p : pkts) {
         ret->pkts.push(p.release());
       }
       return ret;
     }
     case AVMEDIA_TYPE_VIDEO: {
-      auto ret = std::make_unique<VideoPackets>(src);
+      auto ret = std::make_unique<VideoPackets>(src, stream->time_base);
       for (auto& p : pkts) {
         ret->pkts.push(p.release());
       }
@@ -250,7 +250,7 @@ AnyPackets mk_packets(
   }
   SPDL_FAIL(fmt::format(
       "Unexpected media type was provided: {}",
-      av_get_media_type_string(media)));
+      av_get_media_type_string(stream->codecpar->codec_type)));
 }
 
 Generator<AnyPackets> DemuxerImpl::streaming_demux(
@@ -274,8 +274,7 @@ Generator<AnyPackets> DemuxerImpl::streaming_demux(
   }();
 
   auto mkpkts = [&](std::vector<AVPacketPtr>&& pkts) {
-    return mk_packets(
-        stream->codecpar->codec_type, di->get_src(), std::move(pkts));
+    return mk_packets(stream, di->get_src(), std::move(pkts));
   };
 
   auto demuxing = this->demux_window(stream, POS_INF, filter);

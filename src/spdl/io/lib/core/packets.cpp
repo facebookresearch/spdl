@@ -23,36 +23,32 @@ namespace spdl::core {
 
 namespace {
 template <MediaType media>
-std::string get_summary(const std::optional<Codec<media>>& c) {
-  if (!c) {
-    return "Codec=n/a";
-  }
+std::string get_summary(const Codec<media>& c) {
   std::vector<std::string> p;
 
-  p.emplace_back(fmt::format("bit_rate={}", c->get_bit_rate()));
-  p.emplace_back(fmt::format("bits_per_sample={}", c->get_bits_per_sample()));
-  p.emplace_back(fmt::format("codec=\"{}\"", c->get_name()));
+  p.emplace_back(fmt::format("bit_rate={}", c.get_bit_rate()));
+  p.emplace_back(fmt::format("bits_per_sample={}", c.get_bits_per_sample()));
+  p.emplace_back(fmt::format("codec=\"{}\"", c.get_name()));
 
   if constexpr (media == MediaType::Audio) {
-    p.emplace_back(fmt::format("sample_format=\"{}\"", c->get_sample_fmt()));
-    p.emplace_back(fmt::format("sample_rate={}", c->get_sample_rate()));
-    p.emplace_back(fmt::format("num_channels={}", c->get_num_channels()));
+    p.emplace_back(fmt::format("sample_format=\"{}\"", c.get_sample_fmt()));
+    p.emplace_back(fmt::format("sample_rate={}", c.get_sample_rate()));
+    p.emplace_back(fmt::format("num_channels={}", c.get_num_channels()));
   }
   if constexpr (media == MediaType::Video || media == MediaType::Image) {
-    p.emplace_back(fmt::format("pixel_format=\"{}\"", c->get_pix_fmt()));
+    p.emplace_back(fmt::format("pixel_format=\"{}\"", c.get_pix_fmt()));
     if constexpr (media == MediaType::Video) {
-      const auto& r = c->get_frame_rate();
+      const auto& r = c.get_frame_rate();
       p.emplace_back(fmt::format("frame_rate={}/{}", r.num, r.den));
     }
-    p.emplace_back(fmt::format("width={}", c->get_width()));
-    p.emplace_back(fmt::format("height={}", c->get_height()));
+    p.emplace_back(fmt::format("width={}", c.get_width()));
+    p.emplace_back(fmt::format("height={}", c.get_height()));
   }
   return fmt::format("Codec=<{}>", fmt::join(p, ", "));
 }
 
-std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
-  return ts ? fmt::format("({}, {})", std::get<0>(*ts), std::get<1>(*ts))
-            : "n/a";
+std::string get_ts(const std::tuple<double, double>& ts) {
+  return fmt::format("timestamp=({}, {})", std::get<0>(ts), std::get<1>(ts));
 }
 
 template <MediaType media>
@@ -62,6 +58,10 @@ const Codec<media>& get_ref(const std::optional<Codec<media>>& c) {
   }
   return *c;
 }
+size_t num_packets(const AudioPackets& packets) {
+  return packets.pkts.get_packets().size();
+}
+
 size_t num_packets(const VideoPackets& packets) {
   if (!packets.timestamp) {
     return packets.pkts.get_packets().size();
@@ -80,7 +80,7 @@ size_t num_packets(const VideoPackets& packets) {
 }
 
 template <MediaType media>
-std::vector<double> get_pts(const Packets<media>& packets) {
+std::vector<double> _get_pts(const Packets<media>& packets) {
   std::vector<double> ret;
   auto base = get_ref(packets.codec).get_time_base();
   auto pkts = packets.pkts.iter_data();
@@ -97,11 +97,24 @@ void register_packets(nb::module_& m) {
       .def(
           "__repr__",
           [](const AudioPackets& self) {
-            return fmt::format(
-                "AudioPackets<src=\"{}\", timestamp={}, {}>",
-                self.src,
-                get_ts(self.timestamp),
-                get_summary(self.codec));
+            std::vector<std::string> parts{fmt::format("src=\"{}\"", self.src)};
+            if (auto pts = spdl::core::get_pts(self); pts) {
+              parts.push_back(fmt::format("num_packets={}", num_packets(self)));
+              parts.push_back(fmt::format(
+                  "pts=[{:.3f}, {:.3f}~]",
+                  // Note: Audio end time is not precise due to the fact that
+                  // one packet contains multiple samples.
+                  // So we add tilde
+                  std::get<0>(*pts),
+                  std::get<1>(*pts)));
+            }
+            if (self.timestamp) {
+              parts.push_back(get_ts(*self.timestamp));
+            }
+            if (self.codec) {
+              parts.push_back(get_summary(*self.codec));
+            }
+            return fmt::format("AudioPackets<{}>", fmt::join(parts, ", "));
           })
       .def_prop_ro(
           "timestamp",
@@ -138,7 +151,7 @@ void register_packets(nb::module_& m) {
       .def(
           "_get_pts",
           [](const VideoPackets& self) -> std::vector<double> {
-            return get_pts(self);
+            return _get_pts(self);
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
@@ -183,11 +196,20 @@ void register_packets(nb::module_& m) {
       .def(
           "__repr__",
           [](const VideoPackets& self) {
-            std::vector<std::string> parts{
-                fmt::format("src=\"{}\"", self.src),
-                fmt::format("num_packets=\"{}\"", num_packets(self)),
-                fmt::format("timestamp={}", get_ts(self.timestamp)),
-                get_summary(self.codec)};
+            std::vector<std::string> parts{fmt::format("src=\"{}\"", self.src)};
+            if (auto pts = spdl::core::get_pts(self); pts) {
+              parts.push_back(fmt::format("num_packets={}", num_packets(self)));
+              parts.push_back(fmt::format(
+                  "pts=[{:.3f}, {:.3f}]",
+                  std::get<0>(*pts),
+                  std::get<1>(*pts)));
+            }
+            if (self.timestamp) {
+              parts.push_back(get_ts(*self.timestamp));
+            }
+            if (self.codec) {
+              parts.push_back(get_summary(*self.codec));
+            }
             return fmt::format("VideoPackets<{}>", fmt::join(parts, ", "));
           })
       .def(
@@ -207,7 +229,7 @@ void register_packets(nb::module_& m) {
   nb::class_<ImagePackets>(m, "ImagePackets")
       .def(
           "_get_pts",
-          [](const ImagePackets& self) { return get_pts(self).at(0); },
+          [](const ImagePackets& self) { return _get_pts(self).at(0); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "pix_fmt",
@@ -239,7 +261,7 @@ void register_packets(nb::module_& m) {
             return fmt::format(
                 "ImagePackets<src=\"{}\", {}>",
                 self.src,
-                get_summary(self.codec));
+                get_summary(*self.codec));
           })
       .def(
           "clone",
