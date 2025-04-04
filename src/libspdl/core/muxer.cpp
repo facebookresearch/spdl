@@ -51,7 +51,7 @@ void Muxer::open(const std::optional<OptionDict>& muxer_config) {
 
 template <MediaType media>
 void Muxer::write(int i, Packets<media>& packets) {
-  pImpl->write(i, packets.get_packets(), packets.codec.get_time_base());
+  pImpl->write(i, packets.get_packets(), packets.time_base);
 }
 
 template void Muxer::write<MediaType::Audio>(int, Packets<MediaType::Audio>&);

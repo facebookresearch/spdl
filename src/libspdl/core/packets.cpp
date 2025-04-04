@@ -24,24 +24,20 @@ extern "C" {
 }
 namespace spdl::core {
 
-template <MediaType media>
-Packets<media>::Packets(
-    std::string src_,
-    Codec<media>&& codec_,
-    std::optional<std::tuple<double, double>> timestamp_)
-    : id(reinterpret_cast<uintptr_t>(this)),
-      src(std::move(src_)),
-      timestamp(std::move(timestamp_)),
-      codec(std::move(codec_)) {
-  TRACE_EVENT(
-      "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
+PacketSeries::PacketSeries(){};
+
+PacketSeries::PacketSeries(PacketSeries&& other) noexcept {
+  *this = std::move(other);
 };
 
-template <MediaType media>
-Packets<media>::~Packets() {
-  TRACE_EVENT(
-      "decoding", "Packets::~Packets", perfetto::Flow::ProcessScoped(id));
-  std::for_each(packets.begin(), packets.end(), [](AVPacket* p) {
+PacketSeries& PacketSeries::operator=(PacketSeries&& other) noexcept {
+  using std::swap;
+  swap(container, other.container);
+  return *this;
+};
+
+PacketSeries::~PacketSeries() {
+  std::for_each(container.begin(), container.end(), [](AVPacket* p) {
     if (p) {
       av_packet_unref(p);
       av_packet_free(&p);
@@ -52,7 +48,7 @@ Packets<media>::~Packets() {
 template <MediaType media>
 void Packets<media>::push(AVPacket* p) {
   if constexpr (media == MediaType::Image) {
-    if (packets.size() > 0) {
+    if (pkts.container.size() > 0) {
       SPDL_FAIL_INTERNAL(
           "Multiple AVPacket is being pushed, but the expected number of AVPacket when decoding an image is one.");
     }
@@ -60,7 +56,7 @@ void Packets<media>::push(AVPacket* p) {
   if (!p) {
     SPDL_FAIL_INTERNAL("Packet is NULL.");
   }
-  packets.push_back(p);
+  pkts.container.push_back(p);
 }
 
 template <MediaType media>
@@ -68,15 +64,15 @@ size_t Packets<media>::num_packets() const
   requires(media == MediaType::Video || media == MediaType::Image)
 {
   if constexpr (media == MediaType::Image) {
-    assert(packets.size() == 1);
+    assert(pkts.container.size() == 1);
     return 1;
   }
   if constexpr (media == MediaType::Video) {
     if (timestamp) {
       size_t ret = 0;
       auto [start, end] = *timestamp;
-      auto tb = codec.get_time_base();
-      for (const AVPacket* pkt : packets) {
+      auto tb = time_base;
+      for (const AVPacket* pkt : pkts.container) {
         auto pts = static_cast<double>(pkt->pts) * tb.num / tb.den;
         if (start <= pts && pts < end) {
           ++ret;
@@ -84,28 +80,42 @@ size_t Packets<media>::num_packets() const
       }
       return ret;
     }
-    return packets.size();
+    return pkts.container.size();
   }
 }
 
 template <MediaType media>
 int64_t Packets<media>::get_pts(size_t index) const {
-  auto num_packets = packets.size();
+  auto num_packets = pkts.container.size();
   if (index >= num_packets) {
     throw std::out_of_range(
         fmt::format("{} is out of range [0, {})", index, num_packets));
   }
-  return packets.at(index)->pts;
+  return pkts.container.at(index)->pts;
 }
 
 template <MediaType media>
+Packets<media>::Packets(
+    const std::string& src_,
+    Codec<media>&& codec_,
+    const std::optional<std::tuple<double, double>>& timestamp_)
+    : id(reinterpret_cast<uintptr_t>(this)),
+      src(src_),
+      time_base(codec_.get_time_base()),
+      timestamp(timestamp_),
+      codec(std::move(codec_)) {
+  TRACE_EVENT(
+      "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
+};
+
+template <MediaType media>
 const std::vector<AVPacket*>& Packets<media>::get_packets() const {
-  return packets;
+  return pkts.container;
 }
 
 template <MediaType media>
 Generator<RawPacketData> Packets<media>::iter_data() const {
-  for (auto& pkt : packets) {
+  for (auto& pkt : pkts.container) {
     co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
   }
 }
@@ -114,15 +124,15 @@ template <MediaType media>
 PacketsPtr<media> Packets<media>::clone() const {
   auto other =
       std::make_unique<Packets<media>>(src, Codec<media>{codec}, timestamp);
-  for (const AVPacket* pkt : packets) {
-    other->push(CHECK_AVALLOCATE(av_packet_clone(pkt)));
+  for (const AVPacket* pkt : pkts.container) {
+    other->pkts.container.push_back(CHECK_AVALLOCATE(av_packet_clone(pkt)));
   }
   return other;
 }
 
-template class Packets<MediaType::Audio>;
-template class Packets<MediaType::Video>;
-template class Packets<MediaType::Image>;
+template struct Packets<MediaType::Audio>;
+template struct Packets<MediaType::Video>;
+template struct Packets<MediaType::Image>;
 
 namespace {
 std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
@@ -237,7 +247,7 @@ extract_packets_at_indices(
   if (src->timestamp) {
     auto [start, end] = *(src->timestamp);
     size_t offset = 0;
-    auto tb = src->codec.get_time_base();
+    auto tb = src->time_base;
     for (auto& packet : src_packets) {
       auto pts = static_cast<double>(packet->pts) * tb.num / tb.den;
       if (pts < start) {

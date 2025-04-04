@@ -22,7 +22,7 @@ struct AVPacket;
 namespace spdl::core {
 
 template <MediaType media>
-class Packets;
+struct Packets;
 
 using AudioPackets = Packets<MediaType::Audio>;
 using VideoPackets = Packets<MediaType::Video>;
@@ -35,6 +35,9 @@ using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
 using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
 using ImagePacketsPtr = PacketsPtr<MediaType::Image>;
 
+class PacketSeries;
+using PacketSeriesPtr = std::unique_ptr<PacketSeries>;
+
 // Used to expose the row data without exposing AVPacket* struct
 // This allows NVDEC decoder to not include the libavutil header.
 struct RawPacketData {
@@ -43,40 +46,57 @@ struct RawPacketData {
   int64_t pts;
 };
 
+// Helper struct which manages a series of AVPacket* pointers.
+class PacketSeries {
+  friend struct Packets<MediaType::Audio>;
+  friend struct Packets<MediaType::Video>;
+  friend struct Packets<MediaType::Image>;
+
+  std::vector<AVPacket*> container = {};
+
+ public:
+  PacketSeries();
+
+  // Destructor releases AVPacket* resources
+  ~PacketSeries();
+  PacketSeries(const PacketSeries&) = delete;
+  PacketSeries& operator=(const PacketSeries&) = delete;
+  PacketSeries(PacketSeries&& other) noexcept;
+  PacketSeries& operator=(PacketSeries&& other) noexcept;
+};
+
 // Struct passed from IO thread pool to decoder thread pool.
 // Similar to Frames, AVFrame pointers are bulk released.
 // It contains suffiient information to build decoder via AVStream*.
 template <MediaType media>
-class Packets {
+struct Packets {
  public:
   uintptr_t id;
-  // Source information
   std::string src;
-  std::optional<std::tuple<double, double>> timestamp;
-
-  // Codec info necessary for decoding
-  Codec<media> codec;
 
  private:
-  // Sliced raw packets
-  std::vector<AVPacket*> packets = {};
+  PacketSeries pkts;
+
+ public:
+  Rational time_base;
+  std::optional<std::tuple<double, double>> timestamp;
+  Codec<media> codec;
 
  public:
   Packets(
-      std::string src,
+      const std::string& src,
       Codec<media>&& codec,
-      std::optional<std::tuple<double, double>> timestamp = std::nullopt);
+      const std::optional<std::tuple<double, double>>& timestamp =
+          std::nullopt);
 
-  // Destructor releases AVPacket* resources
-  ~Packets();
-  // No copy/move constructors
-  Packets(const Packets&) = delete;
-  Packets& operator=(const Packets&) = delete;
-  Packets(Packets&& other) noexcept = delete;
-  Packets& operator=(Packets&& other) noexcept = delete;
-
-  void push(AVPacket*);
   const std::vector<AVPacket*>& get_packets() const;
+  void push(AVPacket*);
+
+  Generator<RawPacketData> iter_data() const;
+
+  // Get the PTS of the specified frame.
+  // throws if the index is not within the range
+  int64_t get_pts(size_t index = 0) const;
 
   // Get the number of valid packets, that is, the number of frames returned
   // by decoding function when decoded.
@@ -84,12 +104,6 @@ class Packets {
   // This is the number of packets visible to users.
   size_t num_packets() const
     requires(media == MediaType::Video || media == MediaType::Image);
-
-  // Get the PTS of the specified frame.
-  // throws if the index is not within the range
-  int64_t get_pts(size_t index = 0) const;
-
-  Generator<RawPacketData> iter_data() const;
 
   PacketsPtr<media> clone() const;
 };
