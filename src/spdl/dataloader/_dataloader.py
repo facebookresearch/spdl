@@ -14,6 +14,7 @@ from collections.abc import (
 )
 from typing import Generic, TypeAlias, TypeVar
 
+from spdl._internal import log_api_usage_once
 from spdl.pipeline import Pipeline, PipelineBuilder
 
 # pyre-strict
@@ -215,6 +216,8 @@ class DataLoader(Generic[Source, Output]):
         timeout: float | None = None,
         output_order: str = "completion",
     ) -> None:
+        log_api_usage_once("spdl.dataloader.DataLoader")
+
         self._src = src
         self._preprocessor = preprocessor
         self._aggregator = aggregator

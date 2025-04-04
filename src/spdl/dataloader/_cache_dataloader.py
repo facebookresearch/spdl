@@ -7,6 +7,7 @@
 from collections.abc import Iterable, Iterator
 from typing import Any, Generic, TypeVar
 
+from spdl._internal import log_api_usage_once
 from spdl.pipeline import cache_iterator
 
 T = TypeVar("T")
@@ -44,6 +45,8 @@ class CacheDataLoader(Generic[T]):
     def __init__(
         self, dl: Iterable[T], num_caches: int, return_caches_after: int
     ) -> None:
+        log_api_usage_once("spdl.dataloader.CacheDataLoader")
+
         self.dl = dl
 
         self.num_caches = num_caches

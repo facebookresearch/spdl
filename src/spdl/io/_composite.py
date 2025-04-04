@@ -117,6 +117,8 @@ def load_audio(
     Returns:
         Buffer object.
     """
+    _core.log_api_usage_once("spdl.io.load_audio")
+
     packets = _core.demux_audio(src, timestamp=timestamp, demux_config=demux_config)
     return _load_packets(
         packets,
@@ -177,6 +179,8 @@ def load_video(
     Returns:
         Buffer object.
     """
+    _core.log_api_usage_once("spdl.io.load_video")
+
     packets = _core.demux_video(src, timestamp=timestamp, demux_config=demux_config)
     return _load_packets(
         packets,
@@ -234,6 +238,8 @@ def load_image(
     Returns:
         Buffer object.
     """
+    _core.log_api_usage_once("spdl.io.load_image")
+
     packets = _core.demux_image(src, demux_config=demux_config)
     return _load_packets(
         packets,
@@ -374,6 +380,8 @@ def load_image_batch(
         >>> # An array with shape HWC==[2, 96, 124, 3]
         >>>
     """
+    _core.log_api_usage_once("spdl.io.load_image_batch")
+
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
 
@@ -466,6 +474,8 @@ def load_image_batch_nvjpeg(
     Returns:
         A buffer object.
     """
+    _core.log_api_usage_once("spdl.io.load_image_batch_nvjpeg")
+
     srcs_ = _get_bytes(srcs)
     return _core.decode_image_nvjpeg(
         srcs_,
@@ -512,6 +522,8 @@ def streaming_load_video_nvdec(
         Use :py:func:`nv12_to_rgb` or :py:func:`nv12_to_bgr`
         to convert to RGB frames.
     """
+    _core.log_api_usage_once("spdl.io.streaming_load_video_nvdec")
+
     demuxer = _core.Demuxer(src)
     codec = demuxer.video_codec
     match codec.name:
@@ -657,6 +669,8 @@ def sample_decode_video(
     Returns:
         Decoded frames.
     """
+    _core.log_api_usage_once("spdl.io.sample_decode_video")
+
     if not indices:
         raise ValueError("Frame indices must be non-empty.")
 

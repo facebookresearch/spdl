@@ -20,7 +20,7 @@ from multiprocessing.shared_memory import SharedMemory
 from types import ModuleType
 from typing import cast, Sized, TYPE_CHECKING, TypeVar
 
-from spdl._internal import import_utils
+from spdl._internal import import_utils, log_api_usage_once
 from spdl.pipeline import Pipeline, PipelineBuilder
 
 if TYPE_CHECKING:
@@ -136,6 +136,8 @@ class PyTorchDataLoader(Iterable[V]):
         buffer_size: int,
         output_order: str = "completion",
     ) -> None:
+        log_api_usage_once("spdl.dataloader.PyTorchDataLoader")
+
         self.dataset = dataset  # For external access.
         self._shmem: SharedMemory = shmem
         self._sampler = sampler
