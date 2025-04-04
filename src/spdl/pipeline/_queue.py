@@ -113,7 +113,7 @@ class StatsQueue(AsyncQueue[T]):
             self._getc_acc += self._getc
             self._putc_acc += self._putc
 
-            self._log_stats(
+            await self._log_stats(
                 self._getc_acc.num_items,
                 elapsed,
                 self._putc_acc.ave_time,
@@ -129,14 +129,15 @@ class StatsQueue(AsyncQueue[T]):
         self._getc_acc += getc
         self._putc_acc += putc
 
-        self._log_stats(
+        await self._log_stats(
             getc.num_items,
             elapsed,
             putc.ave_time,
             getc.ave_time,
         )
 
-    def _log_stats(
+    # Async for the sake of subclass extendability
+    async def _log_stats(
         self, num_items: int, elapsed: float, put_time: float, get_time: float
     ) -> None:
         _LG.info(
