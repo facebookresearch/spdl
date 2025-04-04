@@ -159,6 +159,10 @@ void NvDecDecoderCore::init(
     const CropArea& crop_,
     int tgt_w,
     int tgt_h) {
+  if (auto tb = codec_.get_time_base(); tb.num <= 0 || tb.den <= 0) {
+    SPDL_FAIL_INTERNAL(
+        fmt::format("Invalid time base was found: {}/{}", tb.num, tb.den));
+  }
   if (crop_.left < 0) {
     SPDL_FAIL(
         fmt::format("crop_left must be non-negative. Found: {}", crop_.left));
@@ -203,6 +207,8 @@ void NvDecDecoderCore::init(
 
   src_width = codec_.get_width();
   src_height = codec_.get_height();
+  codec_id = codec_.get_codec_id();
+  timebase = codec_.get_time_base();
   crop = crop_;
   target_width = tgt_w;
   target_height = tgt_h;
@@ -473,11 +479,6 @@ void NvDecDecoderCore::decode_packets(
 
   // Init the temporary state used by the decoder callback during the decoding
   this->frame_buffer = buffer;
-  if (auto tb = packets->time_base; tb.num <= 0 || tb.den <= 0) {
-    SPDL_FAIL_INTERNAL(
-        fmt::format("Invalid time base was found: {}/{}", tb.num, tb.den));
-  }
-  this->timebase = packets->time_base;
   if (packets->timestamp) {
     std::tie(start_time, end_time) = *(packets->timestamp);
   } else {
@@ -487,7 +488,7 @@ void NvDecDecoderCore::decode_packets(
 
   auto ite = packets->iter_data();
   unsigned long flags = CUVID_PKT_TIMESTAMP;
-  switch (packets->codec.get_codec_id()) {
+  switch (codec_id) {
     case spdl::core::CodecID::MPEG4: {
       // TODO: Add special handling par
       // Video_Codec_SDK_12.1.14/blob/main/Samples/Utils/FFmpegDemuxer.h#L326-L345
