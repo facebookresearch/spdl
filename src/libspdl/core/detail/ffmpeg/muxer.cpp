@@ -87,6 +87,7 @@ EncoderImplPtr<media> MuxerImpl::add_encode_stream(
       codec,
       codec_config,
       encoder_config,
+      fmt_ctx->nb_streams,
       fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER);
 
   // Register the stream

@@ -82,6 +82,7 @@ template <MediaType media>
 struct Packets {
   uintptr_t id{};
   std::string src;
+  int stream_index;
 
   PacketSeries pkts;
   Rational time_base{};
@@ -99,6 +100,7 @@ struct Packets {
   // Optionally remember the timestamp user asked.
   Packets(
       const std::string& src,
+      int index,
       Codec<media>&& codec,
       const std::optional<std::tuple<double, double>>& timestamp = {});
 
@@ -107,10 +109,10 @@ struct Packets {
   // seprately.
   // Note: index/time_base is not required for decoding, but it's handy when
   // debugging.
-  Packets(const std::string& src, const Rational& time_base);
+  Packets(const std::string& src, int index, const Rational& time_base);
 
   // Constructing Packets from encoder for muxing
-  Packets(uintptr_t id, Rational time_base);
+  Packets(uintptr_t id, int stream_index, Rational time_base);
 
   explicit Packets(const Packets<media>&);
   Packets<media>& operator=(const Packets<media>&);

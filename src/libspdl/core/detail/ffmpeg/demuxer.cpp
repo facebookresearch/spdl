@@ -202,6 +202,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   }
   auto ret = std::make_unique<Packets<media>>(
       di->get_src(),
+      stream->index,
       Codec<media>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
           stream->time_base,
@@ -233,14 +234,16 @@ AnyPackets mk_packets(
     std::vector<AVPacketPtr>&& pkts) {
   switch (stream->codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO: {
-      auto ret = std::make_unique<AudioPackets>(src, stream->time_base);
+      auto ret =
+          std::make_unique<AudioPackets>(src, stream->index, stream->time_base);
       for (auto& p : pkts) {
         ret->pkts.push(p.release());
       }
       return ret;
     }
     case AVMEDIA_TYPE_VIDEO: {
-      auto ret = std::make_unique<VideoPackets>(src, stream->time_base);
+      auto ret =
+          std::make_unique<VideoPackets>(src, stream->index, stream->time_base);
       for (auto& p : pkts) {
         ret->pkts.push(p.release());
       }

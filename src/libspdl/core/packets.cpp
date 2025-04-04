@@ -65,10 +65,12 @@ void PacketSeries::push(AVPacket* p) {
 template <MediaType media>
 Packets<media>::Packets(
     const std::string& src_,
+    int index,
     Codec<media>&& codec_,
     const std::optional<std::tuple<double, double>>& timestamp_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
+      stream_index(index),
       time_base(codec_.get_time_base()),
       timestamp(timestamp_),
       codec(std::move(codec_)) {
@@ -77,9 +79,13 @@ Packets<media>::Packets(
 };
 
 template <MediaType media>
-Packets<media>::Packets(const std::string& src_, const Rational& time_base_)
+Packets<media>::Packets(
+    const std::string& src_,
+    int index,
+    const Rational& time_base_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
+      stream_index(index),
       time_base(time_base_),
       timestamp(std::nullopt),
       codec(std::nullopt) {
@@ -87,9 +93,10 @@ Packets<media>::Packets(const std::string& src_, const Rational& time_base_)
       "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
 };
 template <MediaType media>
-Packets<media>::Packets(uintptr_t id_, Rational time_base_)
+Packets<media>::Packets(uintptr_t id_, int index, Rational time_base_)
     : id(id_),
       src(fmt::format("{}", id_)),
+      stream_index(index),
       time_base(time_base_),
       timestamp(std::nullopt),
       codec(std::nullopt) {
