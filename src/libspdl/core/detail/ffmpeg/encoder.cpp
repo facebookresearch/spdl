@@ -482,29 +482,22 @@ Generator<AVPacketPtr> _encode(
 
 template <MediaType media>
 PacketsPtr<media> EncoderImpl<media>::encode(const FramesPtr<media>&& frames) {
-  auto ret = std::make_unique<Packets<media>>(
-      fmt::format("{}", frames->get_id()),
-      Codec<media>{
-          get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});
+  auto ret =
+      std::make_unique<Packets<media>>(frames->get_id(), codec_ctx->time_base);
   auto encoding = _encode(codec_ctx.get(), frames->get_frames(), false);
   while (encoding) {
-    auto pkt = encoding();
-    ret->pkts.push(pkt.release());
+    ret->pkts.push(encoding().release());
   }
   return ret;
 }
 
 template <MediaType media>
 PacketsPtr<media> EncoderImpl<media>::flush() {
-  auto ret = std::make_unique<Packets<media>>(
-      "flush",
-      Codec<media>{
-          get_codec_par(), codec_ctx->time_base, codec_ctx->framerate});
+  auto ret = std::make_unique<Packets<media>>(0, codec_ctx->time_base);
   std::vector<AVFrame*> dummy{};
   auto encoding = _encode(codec_ctx.get(), dummy, true);
   while (encoding) {
-    auto pkt = encoding();
-    ret->pkts.push(pkt.release());
+    ret->pkts.push(encoding().release());
   }
   return ret;
 }
