@@ -485,7 +485,7 @@ void NvDecDecoderCore::decode_packets(
     end_time = std::numeric_limits<double>::infinity();
   }
 
-  auto ite = packets->iter_packets();
+  auto ite = packets->iter_data();
   unsigned long flags = CUVID_PKT_TIMESTAMP;
   switch (packets->codec.get_codec_id()) {
     case spdl::core::CodecID::MPEG4: {

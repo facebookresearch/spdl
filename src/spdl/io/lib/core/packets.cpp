@@ -20,9 +20,46 @@
 namespace nb = nanobind;
 
 namespace spdl::core {
+
+namespace {
+template <MediaType media>
+std::string get_summary(const Codec<media>& c) {
+  std::vector<std::string> p;
+
+  p.emplace_back(fmt::format("bit_rate={}", c.get_bit_rate()));
+  p.emplace_back(fmt::format("bits_per_sample={}", c.get_bits_per_sample()));
+  p.emplace_back(fmt::format("codec=\"{}\"", c.get_name()));
+
+  if constexpr (media == MediaType::Audio) {
+    p.emplace_back(fmt::format("sample_format=\"{}\"", c.get_sample_fmt()));
+    p.emplace_back(fmt::format("sample_rate={}", c.get_sample_rate()));
+    p.emplace_back(fmt::format("num_channels={}", c.get_num_channels()));
+  }
+  if constexpr (media == MediaType::Video || media == MediaType::Image) {
+    p.emplace_back(fmt::format("pixel_format=\"{}\"", c.get_pix_fmt()));
+    p.emplace_back(fmt::format("width={}", c.get_width()));
+    p.emplace_back(fmt::format("height={}", c.get_height()));
+  }
+  return fmt::format("Codec=<{}>", fmt::join(p, ", "));
+}
+
+std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
+  return ts ? fmt::format("({}, {})", std::get<0>(*ts), std::get<1>(*ts))
+            : "n/a";
+}
+} // namespace
+
 void register_packets(nb::module_& m) {
   nb::class_<AudioPackets>(m, "AudioPackets")
-      .def("__repr__", &AudioPackets::get_summary)
+      .def(
+          "__repr__",
+          [](const AudioPackets& self) {
+            return fmt::format(
+                "AudioPackets<src=\"{}\", timestamp={}, {}>",
+                self.src,
+                get_ts(self.timestamp),
+                get_summary(self.codec));
+          })
       .def_prop_ro(
           "timestamp",
           [](const AudioPackets& self) {
@@ -54,7 +91,7 @@ void register_packets(nb::module_& m) {
           [](const VideoPackets& self) -> std::vector<double> {
             std::vector<double> ret;
             auto base = self.codec.get_time_base();
-            auto pkts = self.iter_packets();
+            auto pkts = self.iter_data();
             while (pkts) {
               ret.push_back(double(pkts().pts) * base.num / base.den);
             }
@@ -91,7 +128,19 @@ void register_packets(nb::module_& m) {
           [](const VideoPackets& self) { return self.codec; },
           nb::call_guard<nb::gil_scoped_release>())
       .def("__len__", &VideoPackets::num_packets)
-      .def("__repr__", &VideoPackets::get_summary)
+      .def(
+          "__repr__",
+          [](const VideoPackets& self) {
+            const auto& frame_rate = self.codec.get_frame_rate();
+            return fmt::format(
+                "VideoPackets<src=\"{}\", timestamp={}, frame_rate={}/{}, num_packets={}, {}>",
+                self.src,
+                get_ts(self.timestamp),
+                frame_rate.num,
+                frame_rate.den,
+                self.num_packets(),
+                get_summary(self.codec));
+          })
       .def(
           "clone",
           &VideoPackets::clone,
@@ -128,7 +177,14 @@ void register_packets(nb::module_& m) {
           "codec",
           [](const ImagePackets& self) { return self.codec; },
           nb::call_guard<nb::gil_scoped_release>())
-      .def("__repr__", &ImagePackets::get_summary)
+      .def(
+          "__repr__",
+          [](const ImagePackets& self) {
+            return fmt::format(
+                "ImagePackets<src=\"{}\", {}>",
+                self.src,
+                get_summary(self.codec));
+          })
       .def(
           "clone",
           &ImagePackets::clone,

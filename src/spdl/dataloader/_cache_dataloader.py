@@ -24,7 +24,7 @@ class CacheDataLoader(Generic[T]):
     bottlenecked with data loading.
 
     Args:
-        dl: Source iterator. Expected to be a data loader object.
+        src: Source iterator. Expected to be a data loader object.
         num_caches: The number of items (batches) to cache.
         return_caches_after: The number of iterations to use the original
             iterator. By default, it uses the same value as ``num_caches``.

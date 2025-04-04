@@ -13,7 +13,7 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <glog/logging.h>
 
 #include <algorithm>
@@ -98,80 +98,13 @@ int64_t Packets<media>::get_pts(size_t index) const {
   return packets.at(index)->pts;
 }
 
-namespace {
-template <MediaType media>
-std::string get_codec_info(const AVCodecParameters* codecpar) {
-  if (!codecpar) {
-    return "<No codec information>";
-  }
-
-  std::vector<std::string> parts;
-
-  parts.emplace_back(fmt::format("bit_rate={}", codecpar->bit_rate));
-  parts.emplace_back(
-      fmt::format("bits_per_sample={}", codecpar->bits_per_raw_sample));
-  const AVCodecDescriptor* desc = avcodec_descriptor_get(codecpar->codec_id);
-  parts.emplace_back(
-      fmt::format("codec=\"{}\"", desc ? desc->name : "unknown"));
-
-  if constexpr (media == MediaType::Audio) {
-    parts.emplace_back(fmt::format("sample_rate={}", codecpar->sample_rate));
-    parts.emplace_back(
-        fmt::format("num_channels={}", GET_NUM_CHANNELS(codecpar)));
-  }
-  if constexpr (media == MediaType::Video || media == MediaType::Image) {
-    parts.emplace_back(
-        fmt::format("width={}, height={}", codecpar->width, codecpar->height));
-  }
-  return fmt::format("{}", fmt::join(parts, ", "));
-}
-
-std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
-  return ts ? fmt::format("({}, {})", std::get<0>(*ts), std::get<1>(*ts))
-            : "n/a";
-}
-} // namespace
-
-template <>
-std::string AudioPackets::get_summary() const {
-  return fmt::format(
-      "AudioPackets<src=\"{}\", timestamp={}, sample_format=\"{}\", {}>",
-      src,
-      get_ts(timestamp),
-      codec.get_sample_fmt(),
-      get_codec_info<MediaType::Audio>(codec.get_parameters()));
-}
-
-template <>
-std::string VideoPackets::get_summary() const {
-  const auto& frame_rate = codec.get_frame_rate();
-  return fmt::format(
-      "VideoPackets<src=\"{}\", timestamp={}, frame_rate={}/{}, num_packets={}, pixel_format=\"{}\", {}>",
-      src,
-      get_ts(timestamp),
-      frame_rate.num,
-      frame_rate.den,
-      num_packets(),
-      codec.get_pix_fmt(),
-      get_codec_info<MediaType::Video>(codec.get_parameters()));
-}
-
-template <>
-std::string ImagePackets::get_summary() const {
-  return fmt::format(
-      "ImagePackets<src=\"{}\", pixel_format=\"{}\", {}>",
-      src,
-      codec.get_pix_fmt(),
-      get_codec_info<MediaType::Image>(codec.get_parameters()));
-}
-
 template <MediaType media>
 const std::vector<AVPacket*>& Packets<media>::get_packets() const {
   return packets;
 }
 
 template <MediaType media>
-Generator<RawPacketData> Packets<media>::iter_packets() const {
+Generator<RawPacketData> Packets<media>::iter_data() const {
   for (auto& pkt : packets) {
     co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
   }

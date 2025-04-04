@@ -12,7 +12,8 @@
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/logging.h"
 
-#include "fmt/core.h"
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -73,6 +74,16 @@ Codec<media>::~Codec() {
 template <MediaType media>
 std::string Codec<media>::get_name() const {
   return std::string(avcodec_get_name(codecpar->codec_id));
+}
+
+template <MediaType media>
+int64_t Codec<media>::get_bit_rate() const {
+  return codecpar->bit_rate;
+}
+
+template <MediaType media>
+int Codec<media>::get_bits_per_sample() const {
+  return codecpar->bits_per_raw_sample;
 }
 
 template <MediaType media>
