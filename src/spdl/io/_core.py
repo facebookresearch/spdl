@@ -38,7 +38,14 @@ else:
     Tensor = object
 
 
-from spdl._internal import log_api_usage_once
+try:
+    from spdl._internal import log_api_usage_once
+except ImportError:
+
+    def log_api_usage_once(_: str) -> None:
+        pass
+
+
 from spdl.io import (
     AudioCodec,
     AudioDecoder,
@@ -138,7 +145,7 @@ class Demuxer:
         Returns:
             Demuxed audio packets.
         """
-        log_api_usage_once("spdl.io.demux_audio")
+        log_api_usage_once("spdl.io.Demuxer.demux_audio")
 
         return self._demuxer.demux_audio(window=window, **kwargs)
 
@@ -154,7 +161,7 @@ class Demuxer:
         Returns:
             Demuxed video packets.
         """
-        log_api_usage_once("spdl.io.demux_video")
+        log_api_usage_once("spdl.io.Demuxer.demux_video")
 
         return self._demuxer.demux_video(window=window, **kwargs)
 
@@ -164,7 +171,7 @@ class Demuxer:
         Returns:
             Demuxed image packets.
         """
-        log_api_usage_once("spdl.io.demux_image")
+        log_api_usage_once("spdl.io.Demuxer.demux_image")
 
         return self._demuxer.demux_image(**kwargs)
 
@@ -178,6 +185,8 @@ class Demuxer:
         Args:
             num_packets: The number of packets to return at a time.
         """
+        log_api_usage_once("spdl.io.Demuxer.streaming_demux_video")
+
         ite = self._demuxer.streaming_demux_video(num_packets, bsf)
         return _StreamingVideoDemuxer(ite, self)
 
@@ -356,6 +365,8 @@ def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
         Decoder instance.
 
     """
+    log_api_usage_once("spdl.io.Decoder")
+
     if filter_desc == _FILTER_DESC_DEFAULT:
         match codec:
             case _libspdl.AudioCodec():
@@ -484,6 +495,8 @@ def decode_packets_nvdec(
     Returns:
         A CUDABuffer object.
     """
+    log_api_usage_once("spdl.io.decode_packets_nvdec")
+
     for k in ("width", "height"):
         if k in kwargs:
             warnings.warn(
@@ -553,6 +566,8 @@ def decode_image_nvjpeg(
     Returns:
         A CUDABuffer object. Shape is ``[C==3, H, W]``.
     """
+    log_api_usage_once("spdl.io.decode_image_nvjpeg")
+
     if device_config is None:
         if "cuda_config" not in kwargs:
             raise ValueError("device_config must be provided.")
@@ -653,6 +668,8 @@ class NvDecDecoder:
     """
 
     def __init__(self, decoder) -> None:
+        log_api_usage_once("spdl.io.NvDecDecoder")
+
         self._decoder = decoder
 
     def init(
@@ -747,8 +764,6 @@ def _get_decoder():
 
 def nvdec_decoder(use_cache: bool = True) -> NvDecDecoder:
     """Instantiate an :py:class:`NvDecDecoder` object.
-
-
 
     Args:
         use_cache: If ``True`` (default), the decoder isntance cached in thread

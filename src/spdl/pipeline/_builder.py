@@ -12,6 +12,8 @@ from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
 from typing import Any, Generic, TypeVar
 
+from spdl._internal import log_api_usage_once
+
 from ._components._build import (
     _build_pipeline_coro,
     _ProcessConfig,
@@ -117,6 +119,8 @@ class PipelineBuilder(Generic[T, U]):
     """
 
     def __init__(self) -> None:
+        log_api_usage_once("spdl.pipeline.PipelineBuilder")
+
         self._src: _SourceConfig[T] | None = None
         self._process_args: list[_ProcessConfig] = []  # pyre-ignore: [24]
         self._sink: _SinkConfig[U] | None = None
