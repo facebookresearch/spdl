@@ -47,33 +47,6 @@ void enable_for_stream(AVFormatContext* fmt_ctx, int idx) {
   }
 }
 
-AVStream*
-get_stream(MediaType media, AVFormatContext* fmt_ctx, DataInterface* di) {
-  AVMediaType type = [&]() {
-    switch (media) {
-      case MediaType::Audio:
-        return AVMEDIA_TYPE_AUDIO;
-      case MediaType::Image:
-        [[fallthrough]];
-      case MediaType::Video:
-        return AVMEDIA_TYPE_VIDEO;
-      default:
-        SPDL_FAIL("Unexpected media type.");
-    }
-  }();
-  int idx;
-  {
-    TRACE_EVENT("demuxing", "av_find_best_stream");
-    idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
-  }
-  if (idx < 0) {
-    SPDL_FAIL(fmt::format(
-        "No {} stream was found in {}.",
-        av_get_media_type_string(type),
-        di->get_src()));
-  }
-  return fmt_ctx->streams[idx];
-}
 } // namespace
 
 DemuxerImpl::DemuxerImpl(DataInterfacePtr di_) : di(std::move(di_)) {
@@ -91,7 +64,7 @@ DemuxerImpl::~DemuxerImpl() {
 
 template <MediaType media>
 Codec<media> DemuxerImpl::get_default_codec() const {
-  auto* stream = get_stream(media, fmt_ctx, di.get());
+  auto* stream = get_default_stream(media);
   auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   return Codec<media>{stream->codecpar, stream->time_base, frame_rate};
 }
@@ -112,6 +85,32 @@ bool DemuxerImpl::has_audio() const {
   return false;
 }
 
+AVStream* DemuxerImpl::get_default_stream(MediaType media) const {
+  AVMediaType type = [&]() {
+    switch (media) {
+      case MediaType::Audio:
+        return AVMEDIA_TYPE_AUDIO;
+      case MediaType::Image:
+        [[fallthrough]];
+      case MediaType::Video:
+        return AVMEDIA_TYPE_VIDEO;
+      default:;
+    }
+    SPDL_FAIL("Unexpected media type.");
+  }();
+  int idx;
+  {
+    TRACE_EVENT("demuxing", "av_find_best_stream");
+    idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
+  }
+  if (idx < 0) {
+    SPDL_FAIL(fmt::format(
+        "No {} stream was found in {}.",
+        av_get_media_type_string(type),
+        di->get_src()));
+  }
+  return fmt_ctx->streams[idx];
+}
 Generator<AVPacketPtr> DemuxerImpl::demux() {
   int errnum = 0;
   while (errnum >= 0) {
@@ -185,7 +184,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
     }
   }
 
-  auto stream = get_stream(media, fmt_ctx, di.get());
+  auto stream = get_default_stream(media);
   enable_for_stream(fmt_ctx, stream->index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
@@ -230,7 +229,7 @@ template <MediaType media>
 Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
     int num_packets,
     const std::optional<std::string> bsf) {
-  auto stream = get_stream(media, fmt_ctx, di.get());
+  auto stream = get_default_stream(media);
   enable_for_stream(fmt_ctx, stream->index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
