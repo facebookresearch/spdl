@@ -78,7 +78,7 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const AudioPackets& self) { return self.codec; },
+          [](const AudioPackets& self) { return AudioCodec{self.codec}; },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "clone",
@@ -125,7 +125,7 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const VideoPackets& self) { return self.codec; },
+          [](const VideoPackets& self) { return VideoCodec{self.codec}; },
           nb::call_guard<nb::gil_scoped_release>())
       .def("__len__", &VideoPackets::num_packets)
       .def(
@@ -175,7 +175,7 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const ImagePackets& self) { return self.codec; },
+          [](const ImagePackets& self) { return ImageCodec{self.codec}; },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "__repr__",
