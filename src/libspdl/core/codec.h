@@ -16,11 +16,11 @@ struct AVCodecParameters;
 
 namespace spdl::core {
 // Struct to pass around codec info.
-//
-// Note: Currently Demuxer and Packets individually creates Codec class
-// as requested by client code.
-// Packets manages its own AVCodecParameters lifecycle.
-// Perhaps it might be good to unify and let Packets hold Codec class?
+// 1. Abstract away AVCodecParameters so that SPDL public header won't require
+//    FFmpeg headers
+// 2. AVCodecParameters is required when creating decoders, but that's
+//    not the case for encoders. Therefore, this class is intended to carry
+//    information about codec that should be used for decoding.
 template <MediaType media>
 class Codec {
   AVCodecParameters* codecpar;

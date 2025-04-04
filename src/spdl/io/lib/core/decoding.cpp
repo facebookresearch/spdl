@@ -38,7 +38,10 @@ FramesPtr<media> decode_packets(
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc,
     int num_frames) {
-  Decoder<media> decoder{packets->codec, cfg, filter_desc};
+  if (!packets->codec) {
+    throw std::runtime_error("Packets does not have codec info.");
+  }
+  Decoder<media> decoder{*packets->codec, cfg, filter_desc};
   return decoder.decode_and_flush(std::move(packets), num_frames);
 }
 
