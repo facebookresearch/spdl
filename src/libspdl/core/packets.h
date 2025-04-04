@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <variant>
 #include <vector>
 
 struct AVPacket;
@@ -34,6 +35,9 @@ using PacketsPtr = std::unique_ptr<Packets<media>>;
 using AudioPacketsPtr = PacketsPtr<MediaType::Audio>;
 using VideoPacketsPtr = PacketsPtr<MediaType::Video>;
 using ImagePacketsPtr = PacketsPtr<MediaType::Image>;
+
+using AnyPackets =
+    std::variant<AudioPacketsPtr, VideoPacketsPtr, ImagePacketsPtr>;
 
 class PacketSeries;
 using PacketSeriesPtr = std::unique_ptr<PacketSeries>;
@@ -101,7 +105,7 @@ struct Packets {
   // Constructing Packets from demuxer for streaming
   // No need for codec and time base, as decoder is initialized
   // seprately.
-  Packets(const std::string& src);
+  explicit Packets(const std::string& src);
 
   // Constructing Packets from encoder for muxing
   Packets(uintptr_t id, Rational time_base);

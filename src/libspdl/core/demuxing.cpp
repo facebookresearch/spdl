@@ -39,24 +39,20 @@ DataInterfacePtr get_in_memory_interface(
 ////////////////////////////////////////////////////////////////////////////////
 // StreamingDemuxer
 ////////////////////////////////////////////////////////////////////////////////
-template <MediaType media>
-StreamingDemuxer<media>::StreamingDemuxer(
+StreamingDemuxer::StreamingDemuxer(
     detail::DemuxerImpl* p,
+    int stream_index,
     int num_packets,
     const std::optional<std::string>& bsf)
-    : gen(p->streaming_demux<media>(num_packets, bsf)) {}
+    : gen(p->streaming_demux(stream_index, num_packets, bsf)) {}
 
-template <MediaType media>
-bool StreamingDemuxer<media>::done() {
+bool StreamingDemuxer::done() {
   return !bool(gen);
 }
 
-template <MediaType media>
-PacketsPtr<media> StreamingDemuxer<media>::next() {
+AnyPackets StreamingDemuxer::next() {
   return gen();
 }
-
-template class StreamingDemuxer<MediaType::Video>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
@@ -105,16 +101,12 @@ template PacketsPtr<MediaType::Image> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
-template <MediaType media>
-StreamingDemuxerPtr<media> Demuxer::stream_demux(
+StreamingDemuxerPtr Demuxer::stream_demux(
     int num_packets,
     const std::optional<std::string>& bsf) {
-  return std::make_unique<StreamingDemuxer<media>>(pImpl, num_packets, bsf);
+  int i = pImpl->get_default_stream_index(MediaType::Video);
+  return std::make_unique<StreamingDemuxer>(pImpl, i, num_packets, bsf);
 }
-
-template StreamingDemuxerPtr<MediaType::Video> Demuxer::stream_demux(
-    int num_packets,
-    const std::optional<std::string>& bsf);
 
 DemuxerPtr make_demuxer(
     const std::string& src,

@@ -19,6 +19,7 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
+#include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
@@ -36,9 +37,9 @@ namespace {
 
 template <MediaType media>
 struct PyStreamingDemuxer {
-  StreamingDemuxerPtr<media> demuxer;
+  StreamingDemuxerPtr demuxer;
 
-  explicit PyStreamingDemuxer(StreamingDemuxerPtr<media>&& d)
+  explicit PyStreamingDemuxer(StreamingDemuxerPtr&& d)
       : demuxer(std::move(d)) {}
 
   bool done() {
@@ -46,7 +47,7 @@ struct PyStreamingDemuxer {
     return demuxer->done();
   }
 
-  PacketsPtr<media> next() {
+  AnyPackets next() {
     nb::gil_scoped_release __g;
     return demuxer->next();
   }
@@ -95,7 +96,7 @@ struct PyDemuxer {
       const std::optional<std::string>& bsf) {
     nb::gil_scoped_release __g;
     return std::make_unique<PyStreamingDemuxer<media>>(
-        demuxer->stream_demux<media>(num_packets, bsf));
+        demuxer->stream_demux(num_packets, bsf));
   }
 
   void _drop() {
