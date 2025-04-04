@@ -50,12 +50,12 @@ std::string get_ts(const std::optional<std::tuple<double, double>>& ts) {
 
 size_t num_packets(const VideoPackets& packets) {
   if (!packets.timestamp) {
-    return packets.get_packets().size();
+    return packets.pkts.get_packets().size();
   }
   size_t ret = 0;
   auto [start, end] = *packets.timestamp;
   auto tb = packets.time_base;
-  auto pkts = packets.iter_data();
+  auto pkts = packets.pkts.iter_data();
   while (pkts) {
     auto pts = static_cast<double>(pkts().pts) * tb.num / tb.den;
     if (start <= pts && pts < end) {
@@ -69,7 +69,7 @@ template <MediaType media>
 std::vector<double> get_pts(const Packets<media>& packets) {
   std::vector<double> ret;
   auto base = packets.codec.get_time_base();
-  auto pkts = packets.iter_data();
+  auto pkts = packets.pkts.iter_data();
   while (pkts) {
     ret.push_back(double(pkts().pts) * base.num / base.den);
   }

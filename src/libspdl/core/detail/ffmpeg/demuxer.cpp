@@ -209,10 +209,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
 
   auto demuxing = this->demux_window(stream, end, filter);
   while (demuxing) {
-    ret->push(demuxing().release());
-    if constexpr (media == MediaType::Image) {
-      break;
-    }
+    ret->pkts.push(demuxing().release());
   }
   return ret;
 }
@@ -256,7 +253,7 @@ Generator<PacketsPtr<media>> DemuxerImpl::streaming_demux(
             stream->time_base,
             frame_rate});
     for (auto& p : pkts) {
-      ret->push(p.release());
+      ret->pkts.push(p.release());
     }
     return ret;
   };

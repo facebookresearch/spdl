@@ -63,6 +63,12 @@ class PacketSeries {
   PacketSeries& operator=(const PacketSeries&);
   PacketSeries(PacketSeries&& other) noexcept;
   PacketSeries& operator=(PacketSeries&& other) noexcept;
+
+  // Add a new AVPacket
+  void push(AVPacket*);
+  // Iterate through the packets
+  const std::vector<AVPacket*>& get_packets() const;
+  Generator<RawPacketData> iter_data() const;
 };
 
 // Struct passed from IO thread pool to decoder thread pool.
@@ -70,19 +76,15 @@ class PacketSeries {
 // It contains suffiient information to build decoder via AVStream*.
 template <MediaType media>
 struct Packets {
- public:
   uintptr_t id{};
   std::string src;
 
- private:
   PacketSeries pkts;
-
- public:
   Rational time_base{};
   std::optional<std::tuple<double, double>> timestamp;
+
   Codec<media> codec;
 
- public:
   Packets() = default;
 
   // Constructing Packets from demuxer for decoding
@@ -96,11 +98,6 @@ struct Packets {
   Packets(Packets<media>&&) noexcept;
   Packets<media>& operator=(Packets<media>&&) noexcept;
   ~Packets() = default;
-
-  const std::vector<AVPacket*>& get_packets() const;
-  void push(AVPacket*);
-
-  Generator<RawPacketData> iter_data() const;
 };
 
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>

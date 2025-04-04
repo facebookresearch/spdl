@@ -151,8 +151,8 @@ FramesPtr<media> DecoderImpl<media>::decode_and_flush(
     int num_frames) {
   auto ret =
       std::make_unique<Frames<media>>(packets->id, get_output_time_base());
-  auto gen =
-      decode_packets(codec_ctx, packets->get_packets(), filter_graph, true);
+  auto gen = decode_packets(
+      codec_ctx, packets->pkts.get_packets(), filter_graph, true);
   int num_yielded = 0;
   while (gen) {
     ret->push_back(gen().release());
@@ -168,8 +168,8 @@ template <MediaType media>
 FramesPtr<media> DecoderImpl<media>::decode(PacketsPtr<media> packets) {
   auto ret =
       std::make_unique<Frames<media>>(packets->id, get_output_time_base());
-  auto gen =
-      decode_packets(codec_ctx, packets->get_packets(), filter_graph, false);
+  auto gen = decode_packets(
+      codec_ctx, packets->pkts.get_packets(), filter_graph, false);
   while (gen) {
     ret->push_back(gen().release());
   }

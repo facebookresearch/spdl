@@ -57,18 +57,11 @@ PacketSeries::~PacketSeries() {
   });
 };
 
-template <MediaType media>
-void Packets<media>::push(AVPacket* p) {
-  if constexpr (media == MediaType::Image) {
-    if (pkts.container.size() > 0) {
-      SPDL_FAIL_INTERNAL(
-          "Multiple AVPacket is being pushed, but the expected number of AVPacket when decoding an image is one.");
-    }
-  }
+void PacketSeries::push(AVPacket* p) {
   if (!p) {
     SPDL_FAIL_INTERNAL("Packet is NULL.");
   }
-  pkts.container.push_back(p);
+  container.push_back(p);
 }
 
 template <MediaType media>
@@ -118,14 +111,12 @@ Packets<media>& Packets<media>::operator=(Packets<media>&& other) noexcept {
   return *this;
 }
 
-template <MediaType media>
-const std::vector<AVPacket*>& Packets<media>::get_packets() const {
-  return pkts.container;
+const std::vector<AVPacket*>& PacketSeries::get_packets() const {
+  return container;
 }
 
-template <MediaType media>
-Generator<RawPacketData> Packets<media>::iter_data() const {
-  for (auto& pkt : pkts.container) {
+Generator<RawPacketData> PacketSeries::iter_data() const {
+  for (auto& pkt : container) {
     co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
   }
 }
@@ -224,13 +215,13 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
 
 VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
-  auto& src_packets = src->get_packets();
+  auto& src_packets = src->pkts.get_packets();
   auto ret = std::make_unique<VideoPackets>();
   ret->src = src->src;
   ret->codec = src->codec;
   ret->timestamp = src->timestamp;
   for (size_t t = start; t < end; ++t) {
-    ret->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
+    ret->pkts.push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
   }
   return ret;
 }
@@ -241,7 +232,7 @@ std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
 extract_packets_at_indices(
     const VideoPacketsPtr& src,
     std::vector<size_t> indices) {
-  auto& src_packets = src->get_packets();
+  auto& src_packets = src->pkts.get_packets();
   // If timestamp is set, then there are frames before the window.
   // `indices` are supposed to be within the window.
   // So we adjust the `indices` by shifitng the number of frames before the
