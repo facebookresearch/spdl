@@ -26,8 +26,20 @@ namespace spdl::core {
 
 PacketSeries::PacketSeries(){};
 
+PacketSeries::PacketSeries(const PacketSeries& other) {
+  for (const AVPacket* pkt : other.container) {
+    container.push_back(CHECK_AVALLOCATE(av_packet_clone(pkt)));
+  }
+};
+
 PacketSeries::PacketSeries(PacketSeries&& other) noexcept {
   *this = std::move(other);
+};
+
+PacketSeries& PacketSeries::operator=(const PacketSeries& other) {
+  PacketSeries tmp(other);
+  *this = std::move(tmp);
+  return *this;
 };
 
 PacketSeries& PacketSeries::operator=(PacketSeries&& other) noexcept {
@@ -109,6 +121,39 @@ Packets<media>::Packets(
 };
 
 template <MediaType media>
+Packets<media>::Packets(const Packets<media>& other)
+    : id(other.id),
+      src(other.src),
+      pkts(other.pkts),
+      time_base(other.time_base),
+      timestamp(other.timestamp),
+      codec(other.codec) {}
+
+template <MediaType media>
+Packets<media>& Packets<media>::operator=(const Packets<media>& other) {
+  Packets<media> tmp{other};
+  *this = std::move(tmp);
+  return *this;
+}
+
+template <MediaType media>
+Packets<media>::Packets(Packets<media>&& other) noexcept {
+  *this = std::move(other);
+}
+
+template <MediaType media>
+Packets<media>& Packets<media>::operator=(Packets<media>&& other) noexcept {
+  using std::swap;
+  swap(id, other.id);
+  swap(src, other.src);
+  swap(pkts, other.pkts);
+  swap(time_base, other.time_base);
+  swap(timestamp, other.timestamp);
+  swap(codec, other.codec);
+  return *this;
+}
+
+template <MediaType media>
 const std::vector<AVPacket*>& Packets<media>::get_packets() const {
   return pkts.container;
 }
@@ -118,16 +163,6 @@ Generator<RawPacketData> Packets<media>::iter_data() const {
   for (auto& pkt : pkts.container) {
     co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
   }
-}
-
-template <MediaType media>
-PacketsPtr<media> Packets<media>::clone() const {
-  auto other =
-      std::make_unique<Packets<media>>(src, Codec<media>{codec}, timestamp);
-  for (const AVPacket* pkt : pkts.container) {
-    other->pkts.container.push_back(CHECK_AVALLOCATE(av_packet_clone(pkt)));
-  }
-  return other;
 }
 
 template struct Packets<MediaType::Audio>;
@@ -225,8 +260,10 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
 VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   auto& src_packets = src->get_packets();
-  auto ret = std::make_unique<VideoPackets>(
-      src->src, VideoCodec{src->codec}, src->timestamp);
+  auto ret = std::make_unique<VideoPackets>();
+  ret->src = src->src;
+  ret->codec = src->codec;
+  ret->timestamp = src->timestamp;
   for (size_t t = start; t < end; ++t) {
     ret->push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
   }

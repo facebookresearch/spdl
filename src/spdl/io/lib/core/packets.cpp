@@ -82,7 +82,9 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "clone",
-          &AudioPackets::clone,
+          [](const AudioPackets& self) -> AudioPacketsPtr {
+            return std::make_unique<AudioPackets>(self);
+          },
           nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<VideoPackets>(m, "VideoPackets")
@@ -145,7 +147,9 @@ void register_packets(nb::module_& m) {
           })
       .def(
           "clone",
-          &VideoPackets::clone,
+          [](const VideoPackets& self) -> VideoPacketsPtr {
+            return std::make_unique<VideoPackets>(self);
+          },
           nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
@@ -189,7 +193,9 @@ void register_packets(nb::module_& m) {
           })
       .def(
           "clone",
-          &ImagePackets::clone,
+          [](const ImagePackets& self) -> ImagePacketsPtr {
+            return std::make_unique<ImagePackets>(self);
+          },
           nb::call_guard<nb::gil_scoped_release>());
 }
 } // namespace spdl::core

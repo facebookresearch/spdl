@@ -59,8 +59,8 @@ class PacketSeries {
 
   // Destructor releases AVPacket* resources
   ~PacketSeries();
-  PacketSeries(const PacketSeries&) = delete;
-  PacketSeries& operator=(const PacketSeries&) = delete;
+  explicit PacketSeries(const PacketSeries&);
+  PacketSeries& operator=(const PacketSeries&);
   PacketSeries(PacketSeries&& other) noexcept;
   PacketSeries& operator=(PacketSeries&& other) noexcept;
 };
@@ -71,23 +71,31 @@ class PacketSeries {
 template <MediaType media>
 struct Packets {
  public:
-  uintptr_t id;
+  uintptr_t id{};
   std::string src;
 
  private:
   PacketSeries pkts;
 
  public:
-  Rational time_base;
+  Rational time_base{};
   std::optional<std::tuple<double, double>> timestamp;
   Codec<media> codec;
 
  public:
+  Packets() = default;
+
+  // Constructing Packets from demuxer for decoding
   Packets(
       const std::string& src,
       Codec<media>&& codec,
-      const std::optional<std::tuple<double, double>>& timestamp =
-          std::nullopt);
+      const std::optional<std::tuple<double, double>>& timestamp = {});
+
+  explicit Packets(const Packets<media>&);
+  Packets<media>& operator=(const Packets<media>&);
+  Packets(Packets<media>&&) noexcept;
+  Packets<media>& operator=(Packets<media>&&) noexcept;
+  ~Packets() = default;
 
   const std::vector<AVPacket*>& get_packets() const;
   void push(AVPacket*);
@@ -104,8 +112,6 @@ struct Packets {
   // This is the number of packets visible to users.
   size_t num_packets() const
     requires(media == MediaType::Video || media == MediaType::Image);
-
-  PacketsPtr<media> clone() const;
 };
 
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
