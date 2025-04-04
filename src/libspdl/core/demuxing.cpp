@@ -148,10 +148,10 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
           packets->codec.get_frame_rate()},
       packets->timestamp);
 
-  for (auto& packet : packets->get_packets()) {
+  for (auto& packet : packets->pkts.get_packets()) {
     auto filtering = bsf.filter(packet);
     while (filtering) {
-      ret->push(filtering().release());
+      ret->pkts.push(filtering().release());
     }
   }
   return ret;

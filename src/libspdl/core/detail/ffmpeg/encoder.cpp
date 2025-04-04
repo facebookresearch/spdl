@@ -489,7 +489,7 @@ PacketsPtr<media> EncoderImpl<media>::encode(const FramesPtr<media>&& frames) {
   auto encoding = _encode(codec_ctx.get(), frames->get_frames(), false);
   while (encoding) {
     auto pkt = encoding();
-    ret->push(pkt.release());
+    ret->pkts.push(pkt.release());
   }
   return ret;
 }
@@ -504,7 +504,7 @@ PacketsPtr<media> EncoderImpl<media>::flush() {
   auto encoding = _encode(codec_ctx.get(), dummy, true);
   while (encoding) {
     auto pkt = encoding();
-    ret->push(pkt.release());
+    ret->pkts.push(pkt.release());
   }
   return ret;
 }
