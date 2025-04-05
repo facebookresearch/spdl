@@ -97,7 +97,8 @@ void register_packets(nb::module_& m) {
       .def(
           "__repr__",
           [](const AudioPackets& self) {
-            std::vector<std::string> parts{fmt::format("src=\"{}\"", self.src)};
+            std::vector<std::string> parts{
+                fmt::format("src=\"{}:{}\"", self.src, self.stream_index)};
             if (auto pts = spdl::core::get_pts(self); pts) {
               parts.push_back(fmt::format("num_packets={}", num_packets(self)));
               parts.push_back(fmt::format(
@@ -196,7 +197,8 @@ void register_packets(nb::module_& m) {
       .def(
           "__repr__",
           [](const VideoPackets& self) {
-            std::vector<std::string> parts{fmt::format("src=\"{}\"", self.src)};
+            std::vector<std::string> parts{
+                fmt::format("src=\"{}:{}\"", self.src, self.stream_index)};
             if (auto pts = spdl::core::get_pts(self); pts) {
               parts.push_back(fmt::format("num_packets={}", num_packets(self)));
               parts.push_back(fmt::format(
