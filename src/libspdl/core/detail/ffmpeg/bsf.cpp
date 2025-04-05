@@ -45,6 +45,18 @@ int redeivce_paccket(AVBSFContext* bsf_ctx, AVPacket* packet) {
   }
   return ret;
 }
+
+Generator<AVPacket*> stream_packets(
+    const std::vector<AVPacket*>& packets,
+    bool flush) {
+  for (auto& p : packets) {
+    co_yield p;
+  }
+  if (flush) {
+    co_yield nullptr;
+  }
+}
+
 } // namespace
 
 BitStreamFilter::BitStreamFilter(
@@ -71,6 +83,19 @@ Generator<AVPacketPtr> BitStreamFilter::filter(AVPacket* packet) {
       }
     }
   } while (errnum >= 0);
+}
+
+void BitStreamFilter::filter(
+    const std::vector<AVPacket*>& packets,
+    PacketSeries& out,
+    bool flush) {
+  auto packet_stream = stream_packets(packets, flush);
+  while (packet_stream) {
+    auto filtering = this->filter(packet_stream());
+    while (filtering) {
+      out.push(filtering().release());
+    }
+  }
 }
 
 } // namespace spdl::core::detail

@@ -134,8 +134,7 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
   }
   TRACE_EVENT("demuxing", "apply_bsf");
   auto bsf = detail::BitStreamFilter{name, packets->codec->get_parameters()};
-
-  auto ret = std::make_unique<Packets<MediaType::Video>>(
+  auto ret = std::make_unique<VideoPackets>(
       packets->src,
       packets->stream_index,
       VideoCodec{
@@ -143,13 +142,7 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
           packets->codec->get_time_base(),
           packets->codec->get_frame_rate()},
       packets->timestamp);
-
-  for (auto& packet : packets->pkts.get_packets()) {
-    auto filtering = bsf.filter(packet);
-    while (filtering) {
-      ret->pkts.push(filtering().release());
-    }
-  }
+  bsf.filter(packets->pkts.get_packets(), ret->pkts, true);
   return ret;
 }
 
