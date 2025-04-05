@@ -13,6 +13,8 @@
 
 #include <fmt/format.h>
 
+#include <set>
+
 #define POS_INF std::numeric_limits<double>::infinity()
 #define NEG_INF -std::numeric_limits<double>::infinity()
 
@@ -37,11 +39,27 @@ void init_fmt_ctx(AVFormatContext* fmt_ctx, DataInterface* di) {
   }
 }
 
-void enable_for_stream(AVFormatContext* fmt_ctx, int idx) {
+void enable_for_stream(AVFormatContext* fmt_ctx, const std::set<int>& indices) {
+  for (auto i : indices) {
+    if (i < 0 || fmt_ctx->nb_streams <= i) {
+      SPDL_FAIL(fmt::format(
+          "Stream index must be in range of [0, {}). Found: {}",
+          fmt_ctx->nb_streams,
+          i));
+    }
+    auto t = fmt_ctx->streams[i]->codecpar->codec_type;
+    if (!(t == AVMEDIA_TYPE_AUDIO || t == AVMEDIA_TYPE_VIDEO)) {
+      SPDL_FAIL(fmt::format(
+          "Only audio/video streams are supported. Stream index {} is {}.",
+          i,
+          av_get_media_type_string(t)));
+    }
+  }
   // Disable other streams
-  fmt_ctx->streams[idx]->discard = AVDISCARD_DEFAULT;
   for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
-    if (i != idx) {
+    if (indices.contains(i)) {
+      fmt_ctx->streams[i]->discard = AVDISCARD_DEFAULT;
+    } else {
       fmt_ctx->streams[i]->discard = AVDISCARD_ALL;
     }
   }
@@ -186,8 +204,8 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   }
 
   auto index = get_default_stream_index(media);
+  enable_for_stream(fmt_ctx, {index});
   auto* stream = fmt_ctx->streams[index];
-  enable_for_stream(fmt_ctx, stream->index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
     if (!bsf) {
@@ -202,6 +220,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   }
   auto ret = std::make_unique<Packets<media>>(
       di->get_src(),
+      stream->index,
       Codec<media>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
           stream->time_base,
@@ -233,14 +252,16 @@ AnyPackets mk_packets(
     std::vector<AVPacketPtr>&& pkts) {
   switch (stream->codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO: {
-      auto ret = std::make_unique<AudioPackets>(src, stream->time_base);
+      auto ret =
+          std::make_unique<AudioPackets>(src, stream->index, stream->time_base);
       for (auto& p : pkts) {
         ret->pkts.push(p.release());
       }
       return ret;
     }
     case AVMEDIA_TYPE_VIDEO: {
-      auto ret = std::make_unique<VideoPackets>(src, stream->time_base);
+      auto ret =
+          std::make_unique<VideoPackets>(src, stream->index, stream->time_base);
       for (auto& p : pkts) {
         ret->pkts.push(p.release());
       }
@@ -257,14 +278,8 @@ Generator<AnyPackets> DemuxerImpl::streaming_demux(
     int stream_index,
     int num_packets,
     const std::optional<std::string> bsf) {
-  if (stream_index < 0 || fmt_ctx->nb_streams <= stream_index) {
-    SPDL_FAIL(fmt::format(
-        "Stream index must be in range of [0, {}). Found: {}",
-        fmt_ctx->nb_streams,
-        stream_index));
-  }
+  enable_for_stream(fmt_ctx, {stream_index});
   auto* stream = fmt_ctx->streams[stream_index];
-  enable_for_stream(fmt_ctx, stream_index);
 
   auto filter = [&]() -> std::optional<BitStreamFilter> {
     if (!bsf) {
