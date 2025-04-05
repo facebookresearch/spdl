@@ -77,10 +77,10 @@ Packets<media>::Packets(
 };
 
 template <MediaType media>
-Packets<media>::Packets(const std::string& src_)
+Packets<media>::Packets(const std::string& src_, const Rational& time_base_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
-      time_base({}),
+      time_base(time_base_),
       timestamp(std::nullopt),
       codec(std::nullopt) {
   TRACE_EVENT(
@@ -289,4 +289,22 @@ extract_packets_at_indices(
   }
   return ret;
 }
+
+template <MediaType media>
+std::optional<std::tuple<double, double>> get_pts(
+    const Packets<media>& packets) {
+  const auto& pkts = packets.pkts.get_packets();
+  if (!pkts.size()) {
+    return std::nullopt;
+  }
+  double t0 = pkts[0]->pts, tN = pkts[pkts.size() - 1]->pts;
+  auto tb = packets.time_base;
+  return std::tuple<double, double>{t0 * tb.num / tb.den, tN * tb.num / tb.den};
+};
+
+template std::optional<std::tuple<double, double>> get_pts(
+    const Packets<MediaType::Audio>& packets);
+template std::optional<std::tuple<double, double>> get_pts(
+    const Packets<MediaType::Video>& packets);
+
 } // namespace spdl::core

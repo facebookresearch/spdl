@@ -105,7 +105,9 @@ struct Packets {
   // Constructing Packets from demuxer for streaming
   // No need for codec and time base, as decoder is initialized
   // seprately.
-  explicit Packets(const std::string& src);
+  // Note: index/time_base is not required for decoding, but it's handy when
+  // debugging.
+  Packets(const std::string& src, const Rational& time_base);
 
   // Constructing Packets from encoder for muxing
   Packets(uintptr_t id, Rational time_base);
@@ -121,5 +123,8 @@ std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
 extract_packets_at_indices(
     const VideoPacketsPtr& src,
     std::vector<size_t> indices);
+
+template <MediaType media>
+std::optional<std::tuple<double, double>> get_pts(const Packets<media>&);
 
 } // namespace spdl::core
