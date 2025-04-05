@@ -383,8 +383,8 @@ AVCodecContextPtr get_codec_context(
 }
 } // namespace
 template <MediaType media>
-EncoderImpl<media>::EncoderImpl(AVCodecContextPtr codec_ctx_)
-    : codec_ctx(std::move(codec_ctx_)) {}
+EncoderImpl<media>::EncoderImpl(AVCodecContextPtr codec_ctx_, int index)
+    : codec_ctx(std::move(codec_ctx_)), stream_index(index) {}
 
 template <MediaType media>
 AVRational EncoderImpl<media>::get_time_base() const {
@@ -409,25 +409,29 @@ EncoderImplPtr<media> make_encoder(
     const AVCodec* codec,
     const EncodeConfigBase<media>& encode_config,
     const std::optional<OptionDict>& encoder_config,
+    int stream_index,
     bool global_header) {
   auto codec_ctx = get_codec_context(codec, encode_config);
   if (global_header) {
     codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
   }
   open_codec_for_encode(codec_ctx.get(), encoder_config);
-  return std::make_unique<EncoderImpl<media>>(std::move(codec_ctx));
+  return std::make_unique<EncoderImpl<media>>(
+      std::move(codec_ctx), stream_index);
 }
 
 template AudioEncoderImplPtr make_encoder(
     const AVCodec* codec,
     const AudioEncodeConfig& encode_config,
     const std::optional<OptionDict>& encoder_config,
+    int stream_index,
     bool global_header);
 
 template VideoEncoderImplPtr make_encoder(
     const AVCodec* codec,
     const VideoEncodeConfig& encode_config,
     const std::optional<OptionDict>& encoder_config,
+    int stream_index,
     bool global_header);
 
 namespace {
@@ -482,8 +486,8 @@ Generator<AVPacketPtr> _encode(
 
 template <MediaType media>
 PacketsPtr<media> EncoderImpl<media>::encode(const FramesPtr<media>&& frames) {
-  auto ret =
-      std::make_unique<Packets<media>>(frames->get_id(), codec_ctx->time_base);
+  auto ret = std::make_unique<Packets<media>>(
+      frames->get_id(), stream_index, codec_ctx->time_base);
   auto encoding = _encode(codec_ctx.get(), frames->get_frames(), false);
   while (encoding) {
     ret->pkts.push(encoding().release());
@@ -493,7 +497,8 @@ PacketsPtr<media> EncoderImpl<media>::encode(const FramesPtr<media>&& frames) {
 
 template <MediaType media>
 PacketsPtr<media> EncoderImpl<media>::flush() {
-  auto ret = std::make_unique<Packets<media>>(0, codec_ctx->time_base);
+  auto ret =
+      std::make_unique<Packets<media>>(0, stream_index, codec_ctx->time_base);
   std::vector<AVFrame*> dummy{};
   auto encoding = _encode(codec_ctx.get(), dummy, true);
   while (encoding) {
