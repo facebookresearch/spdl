@@ -22,9 +22,10 @@ namespace spdl::core::detail {
 template <MediaType media>
 class EncoderImpl {
   AVCodecContextPtr codec_ctx;
+  int stream_index;
 
  public:
-  EncoderImpl(AVCodecContextPtr codec_ctx);
+  EncoderImpl(AVCodecContextPtr codec_ctx, int stream_index);
 
   PacketsPtr<media> encode(const FramesPtr<media>&&);
   PacketsPtr<media> flush();
@@ -47,6 +48,7 @@ EncoderImplPtr<media> make_encoder(
     const AVCodec* codec,
     const EncodeConfigBase<media>& encode_config,
     const std::optional<OptionDict>& encoder_config,
+    int stream_index,
     bool global_header = false);
 
 } // namespace spdl::core::detail

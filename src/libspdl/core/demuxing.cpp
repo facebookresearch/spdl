@@ -137,6 +137,7 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
 
   auto ret = std::make_unique<Packets<MediaType::Video>>(
       packets->src,
+      packets->stream_index,
       VideoCodec{
           bsf.get_output_codec_par(),
           packets->codec->get_time_base(),
