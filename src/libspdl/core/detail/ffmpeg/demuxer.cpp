@@ -95,6 +95,27 @@ DemuxerImpl::get_default_codec<MediaType::Video>() const;
 template Codec<MediaType::Image>
 DemuxerImpl::get_default_codec<MediaType::Image>() const;
 
+template <MediaType media>
+int DemuxerImpl::get_default_stream_index() const {
+  enum AVMediaType t = []() {
+    if constexpr (media == MediaType::Audio) {
+      return AVMEDIA_TYPE_AUDIO;
+    }
+    if constexpr (media == MediaType::Video || media == MediaType::Image) {
+      return AVMEDIA_TYPE_VIDEO;
+    }
+    SPDL_FAIL_INTERNAL("Unexpected media type.");
+  }();
+  int i = av_find_best_stream(fmt_ctx, t, -1, -1, nullptr, 0);
+  CHECK_AVERROR_NUM(
+      i, fmt::format("Failed to find an audio stream in {}", di->get_src()));
+  return i;
+}
+
+template int DemuxerImpl::get_default_stream_index<MediaType::Audio>() const;
+template int DemuxerImpl::get_default_stream_index<MediaType::Video>() const;
+template int DemuxerImpl::get_default_stream_index<MediaType::Image>() const;
+
 bool DemuxerImpl::has_audio() const {
   for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
     if (AVMEDIA_TYPE_AUDIO == fmt_ctx->streams[i]->codecpar->codec_type) {

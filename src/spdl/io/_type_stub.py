@@ -91,6 +91,11 @@ class AudioCodec:
         ...
 
     @property
+    def sample_fmt(self) -> str:
+        """The sample format of the audio."""
+        ...
+
+    @property
     def time_base(self) -> tuple[int, int]:
         """The internal unit of time used for timestamp.
 

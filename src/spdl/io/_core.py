@@ -197,6 +197,16 @@ class Demuxer:
         return self._demuxer.has_audio()
 
     @property
+    def video_stream_index(self) -> int:
+        """The index of default video stream."""
+        return self._demuxer.video_stream_index
+
+    @property
+    def audio_stream_index(self) -> int:
+        """The index of default audio stream."""
+        return self._demuxer.audio_stream_index
+
+    @property
     def audio_codec(self) -> AudioCodec:
         """The codec metadata of the default audio stream."""
         return self._demuxer.audio_codec

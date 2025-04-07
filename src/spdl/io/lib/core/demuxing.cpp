@@ -8,6 +8,8 @@
 
 #include <libspdl/core/demuxing.h>
 
+#include <fmt/core.h>
+
 #include <cstring>
 
 #include <nanobind/nanobind.h>
@@ -74,6 +76,11 @@ struct PyDemuxer {
   template <MediaType media>
   Codec<media> get_default_codec() const {
     return demuxer->get_default_codec<media>();
+  }
+
+  template <MediaType media>
+  int get_default_stream_index() const {
+    return demuxer->get_default_stream_index<media>();
   }
 
   template <MediaType media>
@@ -153,33 +160,85 @@ void register_demuxing(nb::module_& m) {
       .def("next", &PyStreamingDemuxer<MediaType::Video>::next);
 
   nb::class_<AudioCodec>(m, "AudioCodec")
-      .def_prop_ro("name", &AudioCodec::get_name)
-      .def_prop_ro("sample_rate", &AudioCodec::get_sample_rate)
-      .def_prop_ro("num_channels", &AudioCodec::get_num_channels)
-      .def_prop_ro("time_base", [](VideoCodec& self) -> std::tuple<int, int> {
-        auto base = self.get_time_base();
-        return {base.num, base.den};
+      .def_prop_ro(
+          "name",
+          &AudioCodec::get_name,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "sample_rate",
+          &AudioCodec::get_sample_rate,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "num_channels",
+          &AudioCodec::get_num_channels,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "sample_fmt",
+          &AudioCodec::get_sample_fmt,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "time_base",
+          [](VideoCodec& self) -> std::tuple<int, int> {
+            auto base = self.get_time_base();
+            return {base.num, base.den};
+          },
+          nb::call_guard<nb::gil_scoped_release>())
+      .def("__repr__", [](const AudioCodec& self) {
+        return fmt::format(
+            "AudioCodec<name={}, sample_rate={}, num_channels={}, sample_fmt={}>",
+            self.get_name(),
+            self.get_sample_rate(),
+            self.get_num_channels(),
+            self.get_sample_fmt());
       });
   nb::class_<VideoCodec>(m, "VideoCodec")
-      .def_prop_ro("name", &VideoCodec::get_name)
-      .def_prop_ro("width", &VideoCodec::get_width)
-      .def_prop_ro("height", &VideoCodec::get_height)
-      .def_prop_ro("pix_fmt", &VideoCodec::get_pix_fmt)
+      .def_prop_ro(
+          "name",
+          &VideoCodec::get_name,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "width",
+          &VideoCodec::get_width,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "height",
+          &VideoCodec::get_height,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "pix_fmt",
+          &VideoCodec::get_pix_fmt,
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "frame_rate",
           [](VideoCodec& self) -> std::tuple<int, int> {
             auto rate = self.get_frame_rate();
             return {rate.num, rate.den};
-          })
-      .def_prop_ro("time_base", [](VideoCodec& self) -> std::tuple<int, int> {
-        auto base = self.get_time_base();
-        return {base.num, base.den};
-      });
+          },
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "time_base",
+          [](VideoCodec& self) -> std::tuple<int, int> {
+            auto base = self.get_time_base();
+            return {base.num, base.den};
+          },
+          nb::call_guard<nb::gil_scoped_release>());
   nb::class_<ImageCodec>(m, "ImageCodec")
-      .def_prop_ro("name", &ImageCodec::get_name)
-      .def_prop_ro("width", &ImageCodec::get_width)
-      .def_prop_ro("height", &ImageCodec::get_height)
-      .def_prop_ro("pix_fmt", &ImageCodec::get_pix_fmt);
+      .def_prop_ro(
+          "name",
+          &ImageCodec::get_name,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "width",
+          &ImageCodec::get_width,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "height",
+          &ImageCodec::get_height,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "pix_fmt",
+          &ImageCodec::get_pix_fmt,
+          nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<PyDemuxer>(m, "Demuxer")
       .def(
@@ -194,6 +253,12 @@ void register_demuxing(nb::module_& m) {
           nb::arg("bsf") = nb::none())
       .def("demux_image", &PyDemuxer::demux_image, nb::arg("bsf") = nb::none())
       .def("has_audio", &PyDemuxer::has_audio)
+      .def_prop_ro(
+          "audio_stream_index",
+          &PyDemuxer::get_default_stream_index<MediaType::Audio>)
+      .def_prop_ro(
+          "video_stream_index",
+          &PyDemuxer::get_default_stream_index<MediaType::Video>)
       .def_prop_ro(
           "audio_codec", &PyDemuxer::get_default_codec<MediaType::Audio>)
       .def_prop_ro(
