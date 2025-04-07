@@ -204,8 +204,8 @@ def decode_video_nvdec(
                 torch.cuda.caching_allocator_delete,
             ),
         ),
-        width=width,
-        height=height,
+        scale_width=width,
+        scale_height=height,
         pix_fmt="rgb",
     )
     return spdl.io.to_torch(buffer)[..., :3].permute(0, 2, 3, 1)
