@@ -526,23 +526,32 @@ def streaming_load_video_nvdec(
 
     demuxer = _core.Demuxer(src)
     codec = demuxer.video_codec
+    bsf = None
     match codec.name:
         case "h264":
-            bsf = "h264_mp4toannexb"
+            bsf = _core.BSF(codec, "h264_mp4toannexb")
         case "hevc":
-            bsf = "hevc_mp4toannexb"
+            bsf = _core.BSF(codec, "hevc_mp4toannexb")
         case _:
             bsf = None
 
     decoder = _core.nvdec_decoder()
     decoder.init(device_config, codec, **(post_processing_params or {}))
     buffers = []
-    for packets in demuxer.streaming_demux_video(num_frames, bsf=bsf):
+    for packets in demuxer.streaming_demux_video(num_frames):
+        if bsf is not None:
+            packets = bsf.filter(packets)
+
         buffers += decoder.decode(packets)
 
         if len(buffers) >= num_frames:
             tmp, buffers = buffers[:num_frames], buffers[num_frames:]
             yield tmp
+
+    if bsf is not None:
+        packets = bsf.flush()
+        if len(packets):
+            buffers += decoder.decode(packets)
 
     buffers += decoder.flush()
 
