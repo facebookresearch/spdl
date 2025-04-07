@@ -15,11 +15,11 @@
 
 namespace spdl::core::detail {
 
-class BitStreamFilter {
+class BSFImpl {
   AVBSFContextPtr bsf_ctx;
 
  public:
-  BitStreamFilter(const std::string& name, const AVCodecParameters* codec_par);
+  BSFImpl(const std::string& name, const AVCodecParameters* codec_par);
 
   Generator<AVPacketPtr> filter(AVPacket* packet);
   void filter(

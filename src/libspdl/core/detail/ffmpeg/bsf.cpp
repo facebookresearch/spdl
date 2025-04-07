@@ -59,16 +59,14 @@ Generator<AVPacket*> stream_packets(
 
 } // namespace
 
-BitStreamFilter::BitStreamFilter(
-    const std::string& name,
-    const AVCodecParameters* codec_par)
+BSFImpl::BSFImpl(const std::string& name, const AVCodecParameters* codec_par)
     : bsf_ctx(init_bsf(name, codec_par)){};
 
-AVCodecParameters* BitStreamFilter::get_output_codec_par() {
+AVCodecParameters* BSFImpl::get_output_codec_par() {
   return bsf_ctx->par_out;
 }
 
-Generator<AVPacketPtr> BitStreamFilter::filter(AVPacket* packet) {
+Generator<AVPacketPtr> BSFImpl::filter(AVPacket* packet) {
   send_packet(bsf_ctx.get(), packet);
   int errnum;
   do {
@@ -85,7 +83,7 @@ Generator<AVPacketPtr> BitStreamFilter::filter(AVPacket* packet) {
   } while (errnum >= 0);
 }
 
-void BitStreamFilter::filter(
+void BSFImpl::filter(
     const std::vector<AVPacket*>& packets,
     PacketSeries& out,
     bool flush) {
