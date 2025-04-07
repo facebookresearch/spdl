@@ -9,7 +9,7 @@
 import logging
 import threading
 import warnings
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Generic, overload, TYPE_CHECKING, TypeVar
 
@@ -186,11 +186,38 @@ class Demuxer:
 
         Args:
             num_packets: The number of packets to return at a time.
+            bsf: An optional bitstream filter.
         """
-        log_api_usage_once("spdl.io.Demuxer.streaming_demux_video")
+        warnings.warn(
+            "`streaming_demux_video` method has been deprecated. "
+            "Please use `streaming_demux` method.",
+            stacklevel=2,
+        )
+        bsf_ = None if bsf is None else BSF(self.video_codec, bsf)
 
-        ite = self._demuxer.streaming_demux_video(num_packets, bsf)
-        return _StreamingVideoDemuxer(ite, self)
+        idx = self.video_stream_index
+        ite = self.streaming_demux(idx, num_packets=num_packets)
+        for item in ite:
+            packets = item[idx]
+            if bsf_ is not None:
+                packets = bsf_.filter(packets)
+            yield packets
+
+        if bsf_ is not None and len(packets := bsf_.flush()):
+            yield packets
+
+    def streaming_demux(
+        self,
+        indices: int | Sequence[int] | set[int],
+        *,
+        num_packets: int,
+    ) -> Iterator[dict[int, VideoPackets | AudioPackets]]:
+        log_api_usage_once("spdl.io.Demuxer.streaming_demux")
+
+        idxs = set([indices] if isinstance(indices, int) else indices)
+
+        ite = self._demuxer.streaming_demux(idxs, num_packets=num_packets)
+        return _StreamingDemuxer(ite, self)
 
     def has_audio(self) -> bool:
         """Returns true if the source has audio stream."""
@@ -228,7 +255,7 @@ class Demuxer:
         self._demuxer._drop()
 
 
-class _StreamingVideoDemuxer:
+class _StreamingDemuxer:
     def __init__(self, ite, demuxer: Demuxer) -> None:
         self._demuxer = demuxer  # For keeping the reference.
         self._ite = ite
@@ -330,7 +357,7 @@ class BSF(Generic[TCodec, TPackets]):
        # To initialize BSF, the codec must be retrieved from Demuxer class.
        bsf = spdl.io.BSF(demuxer.video_codec)
 
-       for packets in demuxer.stream_demux_video(...):
+       for packets in demuxer.streaming_demux_video(...):
            packets = bsf.filter(packets)
 
            ...

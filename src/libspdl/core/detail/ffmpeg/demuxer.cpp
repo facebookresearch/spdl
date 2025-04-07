@@ -295,39 +295,33 @@ AnyPackets mk_packets(
       av_get_media_type_string(stream->codecpar->codec_type)));
 }
 
-Generator<AnyPackets> DemuxerImpl::streaming_demux(
-    int stream_index,
-    int num_packets,
-    const std::optional<std::string> bsf) {
-  enable_for_stream(fmt_ctx, {stream_index});
-  auto* stream = fmt_ctx->streams[stream_index];
-
-  auto filter = [&]() -> std::optional<BSFImpl> {
-    if (!bsf) {
-      return std::nullopt;
-    }
-    return BSFImpl{*bsf, stream->codecpar};
-  }();
-
-  auto mkpkts = [&](std::vector<AVPacketPtr>&& pkts) {
-    return mk_packets(stream, di->get_src(), std::move(pkts));
-  };
-
-  auto demuxing = this->demux_window(stream, POS_INF, filter);
-  std::vector<AVPacketPtr> packets;
-  packets.reserve(num_packets);
+Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
+    const std::set<int> stream_indices,
+    int num_packets) {
+  enable_for_stream(fmt_ctx, stream_indices);
+  std::map<int, AnyPackets> ret;
+  auto demuxing = this->demux();
+  int num_pkts = 0;
   while (demuxing) {
-    packets.push_back(demuxing());
-    if (packets.size() >= num_packets) {
-      co_yield mkpkts(std::move(packets));
+    auto packet = demuxing();
+    auto i = packet->stream_index;
+    auto* stream = fmt_ctx->streams[i];
 
-      packets = std::vector<AVPacketPtr>();
-      packets.reserve(num_packets);
+    if (stream_indices.contains(i)) {
+      if (!ret.contains(i)) {
+        ret.emplace(i, mk_packets(stream, di->get_src(), {}));
+      }
+      std::visit([&](auto& v) { v->pkts.push(packet.release()); }, ret[i]);
+      num_pkts += 1;
+    }
+    if (num_pkts >= num_packets) {
+      co_yield std::move(ret);
+      ret = std::map<int, AnyPackets>{};
+      num_pkts = 0;
     }
   }
-
-  if (packets.size() > 0) {
-    co_yield mkpkts(std::move(packets));
+  if (ret.size()) {
+    co_yield std::move(ret);
   }
 }
 

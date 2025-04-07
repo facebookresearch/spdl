@@ -17,6 +17,7 @@
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/set.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
@@ -36,27 +37,6 @@ namespace {
 // 2. Allow explicit deallocation with `drop` method, so that it can be
 //    deallocated in a thread other than the main thread.
 // 3. Add `zero_clear`, method for testing purpose.
-
-template <MediaType media>
-struct PyStreamingDemuxer {
-  StreamingDemuxerPtr demuxer;
-
-  explicit PyStreamingDemuxer(StreamingDemuxerPtr&& d)
-      : demuxer(std::move(d)) {}
-
-  bool done() {
-    nb::gil_scoped_release __g;
-    return demuxer->done();
-  }
-
-  AnyPackets next() {
-    nb::gil_scoped_release __g;
-    return demuxer->next();
-  }
-};
-
-template <MediaType media>
-using PyStreamingDemuxerPtr = std::unique_ptr<PyStreamingDemuxer<media>>;
 
 struct PyDemuxer {
   DemuxerPtr demuxer;
@@ -97,13 +77,11 @@ struct PyDemuxer {
     return demuxer->demux_window<MediaType::Image>(std::nullopt, bsf);
   }
 
-  template <MediaType media>
-  PyStreamingDemuxerPtr<media> streaming_demux(
-      int num_packets,
-      const std::optional<std::string>& bsf) {
+  StreamingDemuxerPtr streaming_demux(
+      const std::set<int>& indices,
+      int num_packets) {
     nb::gil_scoped_release __g;
-    return std::make_unique<PyStreamingDemuxer<media>>(
-        demuxer->stream_demux(num_packets, bsf));
+    return demuxer->streaming_demux(indices, num_packets);
   }
 
   void _drop() {
@@ -155,9 +133,15 @@ void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
   // Demuxer
   ///////////////////////////////////////////////////////////////////////////////
-  nb::class_<PyStreamingDemuxer<MediaType::Video>>(m, "StreamingVideoDemuxer")
-      .def("done", &PyStreamingDemuxer<MediaType::Video>::done)
-      .def("next", &PyStreamingDemuxer<MediaType::Video>::next);
+  nb::class_<StreamingDemuxer>(m, "MultiStreamingVideoDemuxer")
+      .def(
+          "done",
+          &StreamingDemuxer::done,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "next",
+          &StreamingDemuxer::next,
+          nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<AudioCodec>(m, "AudioCodec")
       .def_prop_ro(
@@ -266,10 +250,11 @@ void register_demuxing(nb::module_& m) {
       .def_prop_ro(
           "image_codec", &PyDemuxer::get_default_codec<MediaType::Image>)
       .def(
-          "streaming_demux_video",
-          &PyDemuxer::streaming_demux<MediaType::Video>,
-          nb::arg("num_packets"),
-          nb::arg("bsf") = nb::none())
+          "streaming_demux",
+          &PyDemuxer::streaming_demux,
+          nb::arg("indices"),
+          nb::kw_only(),
+          nb::arg("num_packets"))
       .def("_drop", &PyDemuxer::_drop);
 
   m.def(

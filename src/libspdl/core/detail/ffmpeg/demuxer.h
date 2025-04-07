@@ -15,6 +15,8 @@
 #include "libspdl/core/detail/ffmpeg/bsf.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 
+#include <set>
+
 namespace spdl::core::detail {
 
 class DemuxerImpl {
@@ -50,11 +52,10 @@ class DemuxerImpl {
       const std::optional<std::string>& bsf);
 
   int get_default_stream_index(MediaType media) const;
-  Generator<AnyPackets> streaming_demux(
-      int stream_index,
-      int num_packets,
-      // NOTE: This will be used for generator, so pass-by-value.
-      const std::optional<std::string> bsf);
+
+  Generator<std::map<int, AnyPackets>> streaming_demux(
+      const std::set<int> stream_indices,
+      int num_packets);
 };
 
 } // namespace spdl::core::detail

@@ -15,6 +15,7 @@
 #include <libspdl/core/types.h>
 
 #include <optional>
+#include <set>
 #include <string_view>
 #include <tuple>
 
@@ -27,16 +28,15 @@ class DemuxerImpl;
 // StreamingDemuxer
 ////////////////////////////////////////////////////////////////////////////////
 class StreamingDemuxer {
-  Generator<AnyPackets> gen;
+  Generator<std::map<int, AnyPackets>> gen;
 
  public:
   StreamingDemuxer(
       detail::DemuxerImpl* p,
-      int stream_index,
-      int num_packets,
-      const std::optional<std::string>& bsf);
+      const std::set<int>& stream_index,
+      int num_packets);
   bool done();
-  AnyPackets next();
+  std::map<int, AnyPackets> next();
 };
 
 using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer>;
@@ -67,9 +67,7 @@ class Demuxer {
       const std::optional<std::tuple<double, double>>& window = std::nullopt,
       const std::optional<std::string>& bsf = std::nullopt);
 
-  StreamingDemuxerPtr stream_demux(
-      int num_packets,
-      const std::optional<std::string>& bsf = std::nullopt);
+  StreamingDemuxerPtr streaming_demux(std::set<int> indices, int num_packets);
 };
 
 using DemuxerPtr = std::unique_ptr<Demuxer>;
