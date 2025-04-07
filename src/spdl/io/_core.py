@@ -11,7 +11,7 @@ import threading
 import warnings
 from collections.abc import Iterator
 from pathlib import Path
-from typing import overload, TYPE_CHECKING, TypeVar
+from typing import Generic, overload, TYPE_CHECKING, TypeVar
 
 # We import NumPy only when type-checkng.
 # The functions of this module do not need NumPy itself to run.
@@ -76,6 +76,8 @@ __all__ = [
     "demux_audio",
     "demux_video",
     "demux_image",
+    # BIT STREAM FILTERING
+    "BSF",
     "apply_bsf",
     # DECODING
     "Decoder",
@@ -285,6 +287,68 @@ def demux_image(src: str | bytes | UintArray | Tensor, **kwargs) -> ImagePackets
         return demuxer.demux_image()
 
 
+################################################################################
+# Bit stream filtering
+################################################################################
+
+TCodec = TypeVar("TCodec")
+TPackets = TypeVar("TPackets")
+
+
+class BSF(Generic[TCodec, TPackets]):
+    """Apply bitstream filtering on packets object.
+
+    The primal usecase of BFS in SPDL is to convert the H264 video packets to
+    Annex B for video decoding.
+
+    .. seealso::
+
+       - https://ffmpeg.org/ffmpeg-bitstream-filters.html: The list of available
+         bitstream filters and their usage.
+
+       - :py:class:`NvDecDecoder`: NVDEC decoding requires the input video packets
+         to be Annex B.
+
+       - :py:func:`apply_bsf`: Applies bitstream filtering to the packet as one-off
+         operation.
+
+    .. admonition:: Example
+
+       src = "foo.mp4"
+       demuxer = spdl.io.Demuxer(src)
+       # Note: When demuxing in streaming fashion, the packets does not have codec information.
+       # To initialize BSF, the codec must be retrieved from Demuxer class.
+       bsf = spdl.io.BSF(demuxer.video_codec)
+
+       for packets in demuxer.stream_demux_video(...):
+           packets = bsf.filter(packets)
+
+           ...
+
+        packets = bsf.flush()
+        ...
+
+    Args:
+        codec: The input codec.
+    """
+
+    def __init__(self, codec: TCodec, bsf: str) -> None:
+        self._bsf = _libspdl._make_bsf(codec, bsf)
+
+    def filter(self, packets: TPackets, flush: bool = False) -> TPackets:
+        """Apply the filter to the input packets
+
+        Args:
+            packets: The input packets.
+            flush: If ``True``, then notify the filter that this is the end
+                of the stream and let it flush the internally buffered packets.
+        """
+        return self._bsf.filter(packets, flush=flush)
+
+    def flush(self) -> TPackets:
+        return self._bsf.flush()
+
+
 @overload
 def apply_bsf(packets: AudioPackets, bsf: str) -> AudioPackets: ...
 @overload
@@ -296,16 +360,32 @@ def apply_bsf(packets: ImagePackets, bsf: str) -> ImagePackets: ...
 def apply_bsf(packets, bsf):
     """Apply bit stream filter to packets.
 
+    The primal usecase of BFS in SPDL is to convert the H264 video packets to
+    Annex B for video decoding.
+
+    .. admonition:: Example - One-off demuxing
+
+       src = "foo.mp4"
+       packets = spdl.io.demux_video(src)
+       packets = spdl.io.apply_bsf(packets)
+
     Args:
         packets: Packets (audio/video/image) object
         bsf: A bitstream filter description.
 
     .. seealso::
 
-       - https://ffmpeg.org/ffmpeg-bitstream-filters.html The list of available
-         bit stream filters.
+       - https://ffmpeg.org/ffmpeg-bitstream-filters.html: The list of available
+         bitstream filters and their usage.
+
+       - :py:class:`NvDecDecoder`: NVDEC decoding requires the input video packets
+         to be Annex B.
+
+       - :py:class:`BSF`: Same operation but for streaming processing.
     """
-    return _libspdl.apply_bsf(packets, bsf)
+    if packets.codec is None:
+        raise ValueError("The packets object does not have codec.")
+    return BSF(packets.codec, bsf).filter(packets, flush=True)
 
 
 ################################################################################

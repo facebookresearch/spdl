@@ -82,12 +82,13 @@ template <MediaType media>
 Packets<media>::Packets(
     const std::string& src_,
     int index,
-    const Rational& time_base_)
+    const Rational& time_base_,
+    const std::optional<std::tuple<double, double>>& timestamp_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
       stream_index(index),
       time_base(time_base_),
-      timestamp(std::nullopt),
+      timestamp(timestamp_),
       codec(std::nullopt) {
   TRACE_EVENT(
       "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));

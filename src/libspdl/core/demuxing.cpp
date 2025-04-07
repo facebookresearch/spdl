@@ -125,25 +125,4 @@ DemuxerPtr make_demuxer(
       detail::get_in_memory_interface(data, dmx_cfg));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Bit Stream Filtering for NVDEC
-////////////////////////////////////////////////////////////////////////////////
-VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
-  if (!packets->codec) {
-    throw std::runtime_error("The packets do not have codec.");
-  }
-  TRACE_EVENT("demuxing", "apply_bsf");
-  auto bsf = detail::BSFImpl{name, packets->codec->get_parameters()};
-  auto ret = std::make_unique<VideoPackets>(
-      packets->src,
-      packets->stream_index,
-      VideoCodec{
-          bsf.get_output_codec_par(),
-          packets->codec->get_time_base(),
-          packets->codec->get_frame_rate()},
-      packets->timestamp);
-  bsf.filter(packets->pkts.get_packets(), ret->pkts, true);
-  return ret;
-}
-
 } // namespace spdl::core

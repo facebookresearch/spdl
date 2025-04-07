@@ -22,10 +22,13 @@ class BSFImpl {
   BSFImpl(const std::string& name, const AVCodecParameters* codec_par);
 
   Generator<AVPacketPtr> filter(AVPacket* packet);
+
   void filter(
       const std::vector<AVPacket*>& packets,
       PacketSeries& out,
       bool flush = false);
+
+  void flush(PacketSeries& out);
 
   AVCodecParameters* get_output_codec_par();
 };
