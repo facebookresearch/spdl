@@ -33,7 +33,7 @@ def test_encode_parity_simple(pix_fmt, torch_tensor):
             encode_config=spdl.io.encode_config(format=pix_fmt),
         )
 
-        hyp = load_ref_image(f.name, shape, filter_graph=None)
+        hyp = load_ref_image(f.name, shape, filter_desc=None)
     np.testing.assert_array_equal(hyp, ref, strict=True)
 
 
@@ -53,7 +53,7 @@ def test_encode_parity_png_gray16be():
             f.name,
             shape,
             dtype=np.uint16,
-            filter_graph=get_video_filter_desc(pix_fmt="gray16le"),
+            filter_desc=get_video_filter_desc(pix_fmt="gray16le"),
         )
     np.testing.assert_array_equal(hyp, ref, strict=True)
 
