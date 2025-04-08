@@ -21,6 +21,38 @@ CMDS = {
 }
 
 
+@pytest.mark.parametrize("media_type", ["audio", "video", "image"])
+def test_demux_with_codec(media_type):
+    """When using demux_audio/video/image, the resulting packets contain codec"""
+
+    cmd = CMDS[media_type]
+
+    sample = get_sample(cmd)
+
+    demux_method = getattr(spdl.io, f"demux_{media_type}")
+    packets = demux_method(sample.path)
+    codec = packets.codec
+    assert codec is not None
+    assert codec.name is not None
+
+
+@pytest.mark.parametrize("media_type", ["video"])
+def test_demux_without_codec(media_type):
+    """When using streaming_demux_audio/video, the resulting packets does not contain codec"""
+
+    cmd = CMDS[media_type]
+
+    sample = get_sample(cmd)
+
+    demuxer = spdl.io.Demuxer(sample.path)
+    demux_method = getattr(demuxer, f"streaming_demux_{media_type}")
+    it = demux_method(num_packets=5)
+    for _ in range(3):
+        packets = next(it)
+        codec = packets.codec
+        assert codec is None
+
+
 def _load_from_packets(packets):
     frames = spdl.io.decode_packets(packets)
     buffer = spdl.io.convert_frames(frames)

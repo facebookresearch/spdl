@@ -137,8 +137,11 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const AudioPackets& self) {
-            return AudioCodec{get_ref(self.codec)};
+          [](const AudioPackets& self) -> std::optional<AudioCodec> {
+            if (self.codec) {
+              return AudioCodec{*self.codec};
+            }
+            return std::nullopt;
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
@@ -188,8 +191,11 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const VideoPackets& self) {
-            return VideoCodec{get_ref(self.codec)};
+          [](const VideoPackets& self) -> std::optional<VideoCodec> {
+            if (self.codec) {
+              return VideoCodec{*self.codec};
+            }
+            return std::nullopt;
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
@@ -253,8 +259,11 @@ void register_packets(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
-          [](const ImagePackets& self) {
-            return ImageCodec{get_ref(self.codec)};
+          [](const ImagePackets& self) -> std::optional<ImageCodec> {
+            if (self.codec) {
+              return ImageCodec{*self.codec};
+            }
+            return std::nullopt;
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
