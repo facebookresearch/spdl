@@ -35,6 +35,13 @@ def test_demux_with_codec(media_type):
     assert codec is not None
     assert codec.name is not None
 
+    if media_type == "video":
+        packets = spdl.io.apply_bsf(packets, "null")
+
+        codec = packets.codec
+        assert codec is not None
+        assert codec.name is not None
+
 
 @pytest.mark.parametrize("media_type", ["video"])
 def test_demux_without_codec(media_type):
@@ -45,10 +52,16 @@ def test_demux_without_codec(media_type):
     sample = get_sample(cmd)
 
     demuxer = spdl.io.Demuxer(sample.path)
+    bsf = spdl.io.BSF(demuxer.video_codec, "null")
     demux_method = getattr(demuxer, f"streaming_demux_{media_type}")
     it = demux_method(num_packets=5)
     for _ in range(3):
         packets = next(it)
+        codec = packets.codec
+        assert codec is None
+
+        packets = bsf.filter(packets)
+
         codec = packets.codec
         assert codec is None
 

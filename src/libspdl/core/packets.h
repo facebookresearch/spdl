@@ -107,9 +107,14 @@ struct Packets {
   // Constructing Packets from demuxer for streaming
   // No need for codec and time base, as decoder is initialized
   // seprately.
-  // Note: index/time_base is not required for decoding, but it's handy when
+  // Note: index/time_base is not required for decoding as decoder is
+  // initialized separately using Codec class, but it's handy when
   // debugging.
-  Packets(const std::string& src, int index, const Rational& time_base);
+  Packets(
+      const std::string& src,
+      int index,
+      const Rational& time_base,
+      const std::optional<std::tuple<double, double>>& timestamp = {});
 
   // Constructing Packets from encoder for muxing
   Packets(uintptr_t id, int stream_index, Rational time_base);

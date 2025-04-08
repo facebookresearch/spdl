@@ -96,4 +96,11 @@ void BSFImpl::filter(
   }
 }
 
+void BSFImpl::flush(PacketSeries& out) {
+  auto filtering = this->filter(nullptr);
+  while (filtering) {
+    out.push(filtering().release());
+  }
+}
+
 } // namespace spdl::core::detail

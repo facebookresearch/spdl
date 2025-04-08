@@ -17,6 +17,7 @@ message(STATUS "########################################")
 
 set(src
   register.cpp
+  bsf.cpp
   buffer.cpp
   conversion.cpp
   decoding.cpp

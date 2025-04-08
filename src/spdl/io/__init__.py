@@ -63,6 +63,7 @@ from ._convert import (
 )
 from ._core import (
     apply_bsf,
+    BSF,
     convert_array,
     convert_frames,
     decode_image_nvjpeg,
@@ -112,7 +113,9 @@ __all__ = [
     "AudioPackets",
     "VideoPackets",
     "ImagePackets",
+    # BIT STREAM FILTERING
     "apply_bsf",
+    "BSF",
     # DECODING
     "Decoder",
     "AudioDecoder",
