@@ -152,7 +152,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux() {
 Generator<AVPacketPtr> DemuxerImpl::demux_window(
     AVStream* stream,
     const double end,
-    std::optional<BitStreamFilter>& filter) {
+    std::optional<BSFImpl>& filter) {
   auto demuxing = this->demux();
   while (demuxing) {
     auto packet = demuxing();
@@ -207,11 +207,11 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   enable_for_stream(fmt_ctx, {index});
   auto* stream = fmt_ctx->streams[index];
 
-  auto filter = [&]() -> std::optional<BitStreamFilter> {
+  auto filter = [&]() -> std::optional<BSFImpl> {
     if (!bsf) {
       return std::nullopt;
     }
-    return BitStreamFilter{*bsf, stream->codecpar};
+    return BSFImpl{*bsf, stream->codecpar};
   }();
 
   Rational frame_rate{1, 1};
@@ -281,11 +281,11 @@ Generator<AnyPackets> DemuxerImpl::streaming_demux(
   enable_for_stream(fmt_ctx, {stream_index});
   auto* stream = fmt_ctx->streams[stream_index];
 
-  auto filter = [&]() -> std::optional<BitStreamFilter> {
+  auto filter = [&]() -> std::optional<BSFImpl> {
     if (!bsf) {
       return std::nullopt;
     }
-    return BitStreamFilter{*bsf, stream->codecpar};
+    return BSFImpl{*bsf, stream->codecpar};
   }();
 
   auto mkpkts = [&](std::vector<AVPacketPtr>&& pkts) {

@@ -133,7 +133,7 @@ VideoPacketsPtr apply_bsf(VideoPacketsPtr packets, const std::string& name) {
     throw std::runtime_error("The packets do not have codec.");
   }
   TRACE_EVENT("demuxing", "apply_bsf");
-  auto bsf = detail::BitStreamFilter{name, packets->codec->get_parameters()};
+  auto bsf = detail::BSFImpl{name, packets->codec->get_parameters()};
   auto ret = std::make_unique<VideoPackets>(
       packets->src,
       packets->stream_index,
