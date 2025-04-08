@@ -61,6 +61,8 @@ class Codec {
     requires(media == MediaType::Audio);
   std::string get_sample_fmt() const
     requires(media == MediaType::Audio);
+  std::string get_channel_layout() const
+    requires(media == MediaType::Audio);
 
   // Getters - Video specific
   int get_width() const
@@ -68,6 +70,8 @@ class Codec {
   int get_height() const
     requires(media == MediaType::Video || media == MediaType::Image);
   std::string get_pix_fmt() const
+    requires(media == MediaType::Video || media == MediaType::Image);
+  Rational get_sample_aspect_ratio() const
     requires(media == MediaType::Video || media == MediaType::Image);
 };
 

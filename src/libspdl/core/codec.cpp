@@ -115,6 +115,13 @@ int Codec<media>::get_num_channels() const
 }
 
 template <MediaType media>
+std::string Codec<media>::get_channel_layout() const
+  requires(media == MediaType::Audio)
+{
+  return GET_CHANNEL_LAYOUT_STRING(codecpar);
+}
+
+template <MediaType media>
 std::string Codec<media>::get_sample_fmt() const
   requires(media == MediaType::Audio)
 {
@@ -163,6 +170,13 @@ std::string Codec<media>::get_pix_fmt() const
   requires(media == MediaType::Video || media == MediaType::Image)
 {
   return av_get_pix_fmt_name((AVPixelFormat)(codecpar->format));
+}
+
+template <MediaType media>
+Rational Codec<media>::get_sample_aspect_ratio() const
+  requires(media == MediaType::Video || media == MediaType::Image)
+{
+  return codecpar->sample_aspect_ratio;
 }
 
 template <MediaType media>
