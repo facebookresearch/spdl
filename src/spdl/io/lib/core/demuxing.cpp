@@ -79,9 +79,10 @@ struct PyDemuxer {
 
   StreamingDemuxerPtr streaming_demux(
       const std::set<int>& indices,
-      int num_packets) {
+      int num_packets,
+      double duration) {
     nb::gil_scoped_release __g;
-    return demuxer->streaming_demux(indices, num_packets);
+    return demuxer->streaming_demux(indices, num_packets, duration);
   }
 
   void _drop() {
@@ -254,7 +255,8 @@ void register_demuxing(nb::module_& m) {
           &PyDemuxer::streaming_demux,
           nb::arg("indices"),
           nb::kw_only(),
-          nb::arg("num_packets"))
+          nb::arg("num_packets"),
+          nb::arg("duration"))
       .def("_drop", &PyDemuxer::_drop);
 
   m.def(

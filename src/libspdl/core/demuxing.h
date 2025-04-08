@@ -34,7 +34,8 @@ class StreamingDemuxer {
   StreamingDemuxer(
       detail::DemuxerImpl* p,
       const std::set<int>& stream_index,
-      int num_packets);
+      int num_packets,
+      double duration);
   bool done();
   std::map<int, AnyPackets> next();
 };
@@ -67,7 +68,10 @@ class Demuxer {
       const std::optional<std::tuple<double, double>>& window = std::nullopt,
       const std::optional<std::string>& bsf = std::nullopt);
 
-  StreamingDemuxerPtr streaming_demux(std::set<int> indices, int num_packets);
+  StreamingDemuxerPtr streaming_demux(
+      const std::set<int>& indices,
+      int num_packets,
+      double duration);
 };
 
 using DemuxerPtr = std::unique_ptr<Demuxer>;
