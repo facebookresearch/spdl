@@ -95,12 +95,10 @@ class FilterGraphImpl {
   std::map<std::string, AVFilterContext*> outputs;
 
  public:
-  FilterGraphImpl(
-      const std::string& filter_desc,
-      const std::vector<std::string>& input_names,
-      const std::vector<std::string>& output_names);
+  explicit FilterGraphImpl(const std::string& filter_desc);
 
   void add_frames(const std::string& name, const std::vector<AVFrame*>& frames);
+  void add_frames(const std::vector<AVFrame*>& frames);
 
   void flush();
 
@@ -112,6 +110,7 @@ class FilterGraphImpl {
 
  public:
   AnyFrames get_frames(const std::string& name);
+  AnyFrames get_frames();
 };
 
 } // namespace spdl::core::detail

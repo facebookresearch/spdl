@@ -11,27 +11,29 @@
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
 
 namespace spdl::core {
-FilterGraph::FilterGraph(
-    const std::string& filter_desc,
-    const std::vector<std::string>& inputs,
-    const std::vector<std::string>& outputs)
-    : pImpl(new detail::FilterGraphImpl(filter_desc, inputs, outputs)) {}
+FilterGraph::FilterGraph(const std::string& filter_desc)
+    : pImpl(new detail::FilterGraphImpl(filter_desc)) {}
 
-template <MediaType media>
-void FilterGraph::add_frames(const std::string& name, FramesPtr<media> frames) {
-  pImpl->add_frames(name, frames->get_frames());
+void FilterGraph::add_frames(
+    const AnyFrames& frames,
+    const std::optional<std::string>& name) {
+  const auto f = std::visit([&](auto& v) { return v->get_frames(); }, frames);
+  if (name) {
+    pImpl->add_frames(*name, f);
+  } else {
+    pImpl->add_frames(f);
+  }
 }
-
-template void FilterGraph::add_frames(const std::string&, AudioFramesPtr);
-template void FilterGraph::add_frames(const std::string&, VideoFramesPtr);
-template void FilterGraph::add_frames(const std::string&, ImageFramesPtr);
 
 void FilterGraph::flush() {
   return pImpl->flush();
 }
 
-AnyFrames FilterGraph::get_frames(const std::string& name) {
-  return pImpl->get_frames(name);
+AnyFrames FilterGraph::get_frames(const std::optional<std::string>& name) {
+  if (name) {
+    return pImpl->get_frames(*name);
+  }
+  return pImpl->get_frames();
 }
 
 std::string FilterGraph::dump() const {
@@ -42,11 +44,8 @@ FilterGraph::~FilterGraph() {
   delete pImpl;
 }
 
-FilterGraphPtr make_filter_graph(
-    const std::string& filter_desc,
-    const std::vector<std::string>& inputs,
-    const std::vector<std::string>& outputs) {
-  return std::make_unique<FilterGraph>(filter_desc, inputs, outputs);
+FilterGraphPtr make_filter_graph(const std::string& filter_desc) {
+  return std::make_unique<FilterGraph>(filter_desc);
 }
 
 } // namespace spdl::core

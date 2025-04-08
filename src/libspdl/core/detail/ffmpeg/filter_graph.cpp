@@ -16,6 +16,8 @@
 #include <glog/logging.h>
 
 #include <cmath>
+#include <cstring>
+#include <ranges>
 #include <stdexcept>
 
 extern "C" {
@@ -376,15 +378,9 @@ FilterGraph get_image_enc_filter(
 // FilterGraphImpl
 ////////////////////////////////////////////////////////////////////////////////
 
-AVFilterGraphPtr make_graph(
-    const std::string& filter_desc,
-    const std::vector<std::string>& inputs,
-    const std::vector<std::string>& outputs) {
-  if (inputs.size() == 0 || outputs.size() == 0) {
-    SPDL_FAIL("There must be at least one input and output.");
-  }
-
+AVFilterGraphPtr make_graph(const std::string& filter_desc) {
   AVFilterGraphPtr graph{CHECK_AVALLOCATE(avfilter_graph_alloc())};
+  graph->nb_threads = 1;
 
   AVFilterInOut* ins = nullptr;
   AVFilterInOut* outs = nullptr;
@@ -402,26 +398,77 @@ AVFilterGraphPtr make_graph(
   return graph;
 }
 
-FilterGraphImpl::FilterGraphImpl(
-    const std::string& filter_desc,
-    const std::vector<std::string>& input_names,
-    const std::vector<std::string>& output_names)
-    : filter_graph(make_graph(filter_desc, input_names, output_names)) {
+FilterGraphImpl::FilterGraphImpl(const std::string& filter_desc)
+    : filter_graph(make_graph(filter_desc)) {
   auto* g = filter_graph.get();
 
-  for (auto& name : input_names) {
-    auto* ctx = CHECK_AV_NON_NULL(avfilter_graph_get_filter(g, name.c_str()));
-    VLOG(5) << fmt::format(
-        "Input: {}::{}", ctx->av_class->class_name, ctx->name);
-    inputs.insert({name, ctx});
-  }
-  for (auto& name : output_names) {
-    auto* ctx = CHECK_AV_NON_NULL(avfilter_graph_get_filter(g, name.c_str()));
-    VLOG(5) << fmt::format(
-        "Output: {}::{}", ctx->av_class->class_name, ctx->name);
-    outputs.insert({name, ctx});
+  for (int i = 0; i < g->nb_filters; ++i) {
+    auto* ctx = g->filters[i];
+    if (std::strcmp(ctx->filter->name, "buffer") == 0 ||
+        std::strcmp(ctx->filter->name, "abuffer") == 0) {
+      inputs.insert({ctx->name, ctx});
+    } else if (
+        std::strcmp(ctx->filter->name, "buffersink") == 0 ||
+        std::strcmp(ctx->filter->name, "abuffersink") == 0) {
+      outputs.insert({ctx->name, ctx});
+    }
   }
 }
+
+namespace {
+
+// Note:
+// Without `const`, it does not compile on clang 17.0.6 && fmt 10.1.1
+//
+// fmt/core.h:1824:16: note: candidate function [with Context =
+// fmt::basic_format_context<fmt::appender, char>, T = <std::string>] not
+// viable: expects an lvalue for 1st argument
+const std::string parse_unmatched(const AVFilterLink* l, const AVFrame* f) {
+  std::vector<std::string> parts;
+  switch (l->type) {
+    case AVMEDIA_TYPE_VIDEO: {
+      if (l->format != f->format) {
+        parts.emplace_back(fmt::format(
+            "pix_fmt ({} != {})",
+            av_get_pix_fmt_name((AVPixelFormat)l->format),
+            av_get_pix_fmt_name((AVPixelFormat)f->format)));
+      }
+      if (l->w != f->width || l->h != f->height) {
+        parts.emplace_back(fmt::format(
+            "video_size ({}x{} != {}x{})", l->w, l->h, f->width, f->height));
+      }
+      return fmt::format(
+          "The following arguments do not match: {}", fmt::join(parts, ", "));
+    }
+    case AVMEDIA_TYPE_AUDIO: {
+      if (l->format != f->format) {
+        parts.emplace_back(fmt::format(
+            "sample_fmt ({} != {})",
+            av_get_sample_fmt_name((AVSampleFormat)l->format),
+            av_get_sample_fmt_name((AVSampleFormat)f->format)));
+      }
+      if (GET_NUM_CHANNELS(l) != GET_NUM_CHANNELS(f)) {
+        parts.emplace_back(fmt::format(
+            "num_channels ({} != {})",
+            GET_NUM_CHANNELS(l),
+            GET_NUM_CHANNELS(f)));
+      }
+      if (GET_LAYOUT(l) != GET_LAYOUT(f)) {
+        parts.emplace_back(fmt::format(
+            "channel_layout ({} != {})",
+            GET_CHANNEL_LAYOUT_STRING(l),
+            GET_CHANNEL_LAYOUT_STRING(f)));
+      }
+      return fmt::format(
+          "The following arguments do not match: {}", fmt::join(parts, ", "));
+    }
+    default:;
+  }
+  return fmt::format(
+      "Unsupported media type ({}).", av_get_media_type_string(l->type));
+}
+
+} // namespace
 
 void FilterGraphImpl::add_frames(
     const std::string& name,
@@ -435,8 +482,19 @@ void FilterGraphImpl::add_frames(
   for (auto* frame : frames) {
     CHECK_AVERROR(
         av_buffersrc_add_frame_flags(filter_ctx, frame, flags),
-        "Failed to pass a frame to filter.");
+        "Failed to pass a frame to filter. {}",
+        parse_unmatched(filter_ctx->outputs[0], frame));
   }
+}
+
+void FilterGraphImpl::add_frames(const std::vector<AVFrame*>& frames) {
+  if (inputs.size() != 1) {
+    SPDL_FAIL(fmt::format(
+        "Key must be provided when there are multiple inputs. "
+        "Available values are {}",
+        fmt::join(std::views::keys(inputs), ", ")));
+  }
+  return this->add_frames(inputs.cbegin()->first, frames);
 }
 
 void FilterGraphImpl::flush() {
@@ -487,4 +545,15 @@ AnyFrames FilterGraphImpl::get_frames(const std::string& name) {
       "Unsupported output type: {}",
       av_get_media_type_string(filter_ctx->inputs[0]->type)));
 }
+
+AnyFrames FilterGraphImpl::get_frames() {
+  if (outputs.size() != 1) {
+    SPDL_FAIL(fmt::format(
+        "Key must be provided when there are multiple inputs. "
+        "Available values are {}",
+        fmt::join(std::views::keys(outputs), ", ")));
+  }
+  return this->get_frames(outputs.cbegin()->first);
+}
+
 } // namespace spdl::core::detail
