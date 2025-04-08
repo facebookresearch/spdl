@@ -424,18 +424,30 @@ class BSF(Generic[TCodec, TPackets]):
     def __init__(self, codec: TCodec, bsf: str) -> None:
         self._bsf = _libspdl._make_bsf(codec, bsf)
 
-    def filter(self, packets: TPackets, flush: bool = False) -> TPackets:
+    def filter(self, packets: TPackets, flush: bool = False) -> TPackets | None:
         """Apply the filter to the input packets
 
         Args:
             packets: The input packets.
             flush: If ``True``, then notify the filter that this is the end
                 of the stream and let it flush the internally buffered packets.
-        """
-        return self._bsf.filter(packets, flush=flush)
 
-    def flush(self) -> TPackets:
-        return self._bsf.flush()
+        Returns:
+            Filtered packet object or ``None`` if the internal filtering mechanism
+            holds the packets and does not return any packet.
+        """
+        packets = self._bsf.filter(packets, flush=flush)
+        # TODO: push down the optional to C++ core signature.
+        if len(packets):
+            return packets
+        return None
+
+    def flush(self) -> TPackets | None:
+        # TODO: push down the optional to C++ core signature.
+        packets = self._bsf.flush()
+        if len(packets):
+            return packets
+        return None
 
 
 @overload
@@ -509,6 +521,25 @@ def Decoder(
 ) -> ImageDecoder: ...
 
 
+class _Decoder:
+    def __init__(self, decoder) -> None:
+        self._decoder = decoder
+
+    def decode(self, packets):
+        # TODO: push down the optional to C++
+        frames = self._decoder.decode(packets)
+        if len(frames):
+            return frames
+        return None
+
+    def flush(self):
+        # TODO: push down the optional to C++
+        frames = self._decoder.flush()
+        if len(frames):
+            return frames
+        return None
+
+
 def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
     """Initialize a decoder object that can incrementally decode packets of the same stream.
 
@@ -519,10 +550,10 @@ def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
        demuxer = spdl.io.Demuxer(src)
        decoder = spdl.io.Decoder(demuxer.video_codec)
        for packets in demuxer.streaming_demux_video(num_frames):
-           frames: VideoFrames = decoder.decode(packets)
+           frames: VideoFrames | None = decoder.decode(packets)
            ...
 
-        frames: VideoFrames = decoder.flush()
+        frames: VideoFrames | None = decoder.flush()
 
     Args:
         codec (AudioCodec, VideoCodec or ImageCodec):
@@ -546,9 +577,10 @@ def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
                 filter_desc = _preprocessing.get_image_filter_desc()
             case _:
                 raise ValueError(f"Unexpected codec type: {type(codec)}")
-    return _libspdl._make_decoder(
+    decoder = _libspdl._make_decoder(
         codec, filter_desc=filter_desc, decode_config=decode_config
     )
+    return _Decoder(decoder)
 
 
 @overload

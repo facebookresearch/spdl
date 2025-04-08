@@ -562,23 +562,31 @@ class ImageFrames(Frames):
 class AudioDecoder:
     """Decode stream of audio packets. See :py:class:`Decoder` for the detail."""
 
-    def decode(self, packets: AudioPackets) -> AudioFrames:
+    def decode(self, packets: AudioPackets) -> AudioFrames | None:
         """Decode the given packets"""
+        ...
+
+    def flush(self) -> VideoFrames | None:
+        """Flush the internally buffered frames. Use only at the end of stream"""
         ...
 
 
 class VideoDecoder:
     """Decode stream of video packets. See :py:class:`Decoder` for the detail."""
 
-    def decode(self, packets: VideoPackets) -> VideoFrames:
+    def decode(self, packets: VideoPackets) -> VideoFrames | None:
         """Decode the given packets"""
+        ...
+
+    def flush(self) -> VideoFrames | None:
+        """Flush the internally buffered frames. Use only at the end of stream"""
         ...
 
 
 class ImageDecoder:
     """Decode an image packet. See :py:class:`Decoder` for the detail."""
 
-    def decode(self, packets: ImagePackets) -> ImageFrames:
+    def decode(self, packets: ImagePackets) -> ImageFrames | None:
         """Decode the given packets"""
         ...
 
