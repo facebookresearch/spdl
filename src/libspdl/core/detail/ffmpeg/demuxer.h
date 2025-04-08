@@ -34,6 +34,10 @@ class DemuxerImpl {
 
   template <MediaType media>
   Codec<media> get_default_codec() const;
+
+  template <MediaType media>
+  int get_default_stream_index() const;
+
   bool has_audio() const;
 
  private:

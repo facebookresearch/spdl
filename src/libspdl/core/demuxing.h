@@ -60,6 +60,9 @@ class Demuxer {
   Codec<media> get_default_codec() const;
 
   template <MediaType media>
+  int get_default_stream_index() const;
+
+  template <MediaType media>
   PacketsPtr<media> demux_window(
       const std::optional<std::tuple<double, double>>& window = std::nullopt,
       const std::optional<std::string>& bsf = std::nullopt);

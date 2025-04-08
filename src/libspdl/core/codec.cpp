@@ -118,7 +118,11 @@ template <MediaType media>
 std::string Codec<media>::get_sample_fmt() const
   requires(media == MediaType::Audio)
 {
-  return av_get_sample_fmt_name((AVSampleFormat)(codecpar->format));
+  const char* p = av_get_sample_fmt_name((AVSampleFormat)(codecpar->format));
+  if (p) {
+    return std::string(p);
+  }
+  return "none";
 }
 
 template <MediaType media>

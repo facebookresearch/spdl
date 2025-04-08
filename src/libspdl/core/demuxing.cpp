@@ -83,6 +83,15 @@ template Codec<MediaType::Image> Demuxer::get_default_codec<MediaType::Image>()
     const;
 
 template <MediaType media>
+int Demuxer::get_default_stream_index() const {
+  return pImpl->get_default_stream_index<media>();
+}
+
+template int Demuxer::get_default_stream_index<MediaType::Audio>() const;
+template int Demuxer::get_default_stream_index<MediaType::Video>() const;
+template int Demuxer::get_default_stream_index<MediaType::Image>() const;
+
+template <MediaType media>
 PacketsPtr<media> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
