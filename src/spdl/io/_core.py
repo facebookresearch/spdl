@@ -210,13 +210,33 @@ class Demuxer:
         self,
         indices: int | Sequence[int] | set[int],
         *,
-        num_packets: int,
+        duration: float = -1,
+        num_packets: int = -1,
     ) -> Iterator[dict[int, VideoPackets | AudioPackets]]:
+        """Stream demux packets from the source.
+
+        .. abmonition:: Example
+
+           src = "foo.mp4"
+           demuxer = spdl.io.Demuxer(src)
+           audio_decoder = spdl.io.Decoder(demuxer.audio_codec)
+
+        """
         log_api_usage_once("spdl.io.Demuxer.streaming_demux")
+
+        if duration <= 0 and num_packets <= 0:
+            raise ValueError("Either `duration` or `num_packets` must be specified.")
+        if duration > 0 and num_packets > 0:
+            raise ValueError(
+                "Only one of `duration` or `num_packets` can be specified. ",
+                f"Found: {duration=}, {num_packets=}.",
+            )
 
         idxs = set([indices] if isinstance(indices, int) else indices)
 
-        ite = self._demuxer.streaming_demux(idxs, num_packets=num_packets)
+        ite = self._demuxer.streaming_demux(
+            idxs, duration=duration, num_packets=num_packets
+        )
         return _StreamingDemuxer(ite, self)
 
     def has_audio(self) -> bool:

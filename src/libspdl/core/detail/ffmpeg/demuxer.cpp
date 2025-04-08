@@ -297,27 +297,52 @@ AnyPackets mk_packets(
 
 Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
     const std::set<int> stream_indices,
-    int num_packets) {
+    int num_packets,
+    double duration) {
+  if (num_packets <= 0 && duration <= 0) {
+    SPDL_FAIL("Either `duration` or `num_packets` must be specified.");
+  }
+  if (num_packets > 0 && duration > 0) {
+    SPDL_FAIL("Only one of `duration` or `num_packets` can be specified.");
+  }
+
   enable_for_stream(fmt_ctx, stream_indices);
   std::map<int, AnyPackets> ret;
   auto demuxing = this->demux();
-  int num_pkts = 0;
+
+  // Some samples can start from negative PTS, like -0.023, so we use much
+  // bigger number.
+  double t0 = -100;
+
+#define YIELD                        \
+  co_yield std::move(ret);           \
+  ret = std::map<int, AnyPackets>{}; \
+  t0 = pts;
+
   while (demuxing) {
     auto packet = demuxing();
     auto i = packet->stream_index;
     auto* stream = fmt_ctx->streams[i];
+    double pts =
+        double(packet->pts) * stream->time_base.num / stream->time_base.den;
+    if (t0 < -99) {
+      t0 = pts;
+    }
+
+    if (duration > 0 && (pts - t0 > duration)) {
+      YIELD;
+    }
 
     if (stream_indices.contains(i)) {
       if (!ret.contains(i)) {
         ret.emplace(i, mk_packets(stream, di->get_src(), {}));
       }
       std::visit([&](auto& v) { v->pkts.push(packet.release()); }, ret[i]);
-      num_pkts += 1;
-    }
-    if (num_pkts >= num_packets) {
-      co_yield std::move(ret);
-      ret = std::map<int, AnyPackets>{};
-      num_pkts = 0;
+      int num_pkts = std::visit(
+          [&](auto& v) -> int { return v->pkts.get_packets().size(); }, ret[i]);
+      if (num_packets > 0 && num_pkts >= num_packets) {
+        YIELD;
+      }
     }
   }
   if (ret.size()) {

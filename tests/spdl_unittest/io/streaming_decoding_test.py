@@ -140,9 +140,10 @@ def test_demuxer_get_codec():
     assert video_codec.height == 240
 
 
-def test_decoder_simple():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 30 sample.mp4"
+def test_streaming_decoding_simple():
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 60 sample.mp4"
 
+    N = 10
     sample = get_sample(cmd)
 
     buffer = spdl.io.load_video(sample.path)
@@ -150,9 +151,13 @@ def test_decoder_simple():
 
     demuxer = spdl.io.Demuxer(sample.path)
     decoder = spdl.io.Decoder(demuxer.video_codec)
+    ite = demuxer.streaming_demux_video(N)
 
     buffers = []
-    for i, packets in enumerate(demuxer.streaming_demux_video(10)):
+    for i in range(6):
+        packets = next(ite)
+        print(f"{i}: {packets=}", flush=True)
+        assert len(packets) == N
         frames = decoder.decode(packets)
         print(f"{i}: {frames=}", flush=True)
         buffer = spdl.io.convert_frames(frames)
@@ -165,3 +170,56 @@ def test_decoder_simple():
     hyp = np.concatenate(buffers)
 
     np.testing.assert_array_equal(hyp, ref)
+
+
+def test_streaming_decoding_multi():
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 15 sample.mp4"
+
+    sample = get_sample(cmd)
+
+    demuxer = spdl.io.Demuxer(sample.path)
+
+    video_index = demuxer.video_stream_index
+    audio_index = demuxer.audio_stream_index
+
+    audio_decoder = spdl.io.Decoder(demuxer.audio_codec)
+    video_decoder = spdl.io.Decoder(demuxer.video_codec)
+
+    packet_stream = demuxer.streaming_demux(
+        indices=[video_index, audio_index], duration=5.0
+    )
+
+    audio_buffer = []
+    video_buffer = []
+    for packets in packet_stream:
+        if audio_index in packets:
+            print(packets[audio_index])
+            frames = audio_decoder.decode(packets[audio_index])
+            print(frames)
+            assert len(frames) > 44100 * 3
+            buffer = spdl.io.convert_frames(frames)
+            audio_buffer.append(spdl.io.to_numpy(buffer).T)
+        if video_index in packets:
+            print(packets[video_index])
+            frames = video_decoder.decode(packets[video_index])
+            print(frames)
+            assert len(frames) > 25 * 3
+            buffer = spdl.io.convert_frames(frames)
+            video_buffer.append(spdl.io.to_numpy(buffer))
+
+    if len(frames := audio_decoder.flush()):
+        buffer = spdl.io.convert_frames(frames)
+        audio_buffer.append(spdl.io.to_numpy(buffer).T)
+
+    if len(frames := video_decoder.flush()):
+        buffer = spdl.io.convert_frames(frames)
+        video_buffer.append(spdl.io.to_numpy(buffer))
+
+    hyp_audio = np.concatenate(audio_buffer).T
+    hyp_video = np.concatenate(video_buffer)
+
+    ref_audio = spdl.io.to_numpy(spdl.io.load_audio(sample.path))
+    ref_video = spdl.io.to_numpy(spdl.io.load_video(sample.path))
+
+    np.testing.assert_array_equal(hyp_audio, ref_audio)
+    np.testing.assert_array_equal(hyp_video, ref_video)

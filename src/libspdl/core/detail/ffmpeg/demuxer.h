@@ -55,7 +55,8 @@ class DemuxerImpl {
 
   Generator<std::map<int, AnyPackets>> streaming_demux(
       const std::set<int> stream_indices,
-      int num_packets);
+      int num_packets,
+      double duration);
 };
 
 } // namespace spdl::core::detail
