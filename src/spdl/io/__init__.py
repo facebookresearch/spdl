@@ -83,7 +83,10 @@ from ._core import (
     transfer_buffer_cpu,
 )
 from ._preprocessing import (
+    FilterGraph,
+    get_abuffer_desc,
     get_audio_filter_desc,
+    get_buffer_desc,
     get_filter_desc,
     get_video_filter_desc,
 )
@@ -132,7 +135,10 @@ __all__ = [
     "AudioFrames",
     "VideoFrames",
     "ImageFrames",
-    # PREPROCESSING
+    # FILTER GRAPH
+    "FilterGraph",
+    "get_abuffer_desc",
+    "get_buffer_desc",
     "get_audio_filter_desc",
     "get_video_filter_desc",
     "get_filter_desc",

@@ -88,7 +88,11 @@ def load_ref_audio(
     return load_ref_data(cmd, shape, dtype=dtype)
 
 
-def _get_video_ref_cmd(path: str, filter_desc: str | None) -> list[str]:
+def _get_video_ref_cmd(
+    path: str,
+    filter_desc: str | None,
+    filter_complex: str | None = None,
+) -> list[str]:
     # fmt: off
     command = [
         "ffmpeg",
@@ -100,10 +104,9 @@ def _get_video_ref_cmd(path: str, filter_desc: str | None) -> list[str]:
     ]
     # fmt: on
     if filter_desc is not None:
-        if filter_desc == "showwaves":
-            command.extend(["-filter_complex", filter_desc])
-        else:
-            command.extend(["-vf", filter_desc])
+        command.extend(["-vf", filter_desc])
+    if filter_complex is not None:
+        command.extend(["-filter_complex", filter_complex])
     command.extend(["-f", "rawvideo", "pipe:"])
     return command
 
@@ -113,9 +116,10 @@ def load_ref_video(
     shape: tuple[int, ...],
     *,
     filter_desc: str | None = "format=pix_fmts=rgb24",
+    filter_complex: str | None = None,
     dtype: DTypeLike = np.uint8,
 ) -> NDArray[np.uint8]:
-    cmd = _get_video_ref_cmd(path, filter_desc)
+    cmd = _get_video_ref_cmd(path, filter_desc, filter_complex)
     return load_ref_data(cmd, shape, dtype=dtype)
 
 
