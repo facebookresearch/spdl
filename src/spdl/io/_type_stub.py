@@ -59,7 +59,9 @@ class VideoCodec:
 
     @property
     def frame_rate(self) -> tuple[int, int]:
-        """The frame rate of the video."""
+        """The frame rate of the video.
+
+        The value is expressed as a fraction. ``(numerator, denominator)``."""
         ...
 
     @property
@@ -67,6 +69,13 @@ class VideoCodec:
         """The internal unit of time used for timestamp.
 
         The value is expressed as a fraction. ``(numerator, denominator)``."""
+        ...
+
+    @property
+    def sample_aspect_ratio(self) -> tuple[int, int]:
+        """The aspect ratio of a single pixel.
+
+        The value is expressed as a fraction. ``(width, height)``."""
         ...
 
 
@@ -100,6 +109,11 @@ class AudioCodec:
         """The internal unit of time used for timestamp.
 
         The value is expressed as a fraction. ``(numerator, denominator)``."""
+        ...
+
+    @property
+    def channel_layout(self) -> str:
+        """The channel layout of the audio"""
         ...
 
 

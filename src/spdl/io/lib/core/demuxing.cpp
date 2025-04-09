@@ -163,10 +163,14 @@ void register_demuxing(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "time_base",
-          [](VideoCodec& self) -> std::tuple<int, int> {
+          [](AudioCodec& self) -> std::tuple<int, int> {
             auto base = self.get_time_base();
             return {base.num, base.den};
           },
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "channel_layout",
+          &AudioCodec::get_channel_layout,
           nb::call_guard<nb::gil_scoped_release>())
       .def("__repr__", [](const AudioCodec& self) {
         return fmt::format(
@@ -206,7 +210,17 @@ void register_demuxing(nb::module_& m) {
             auto base = self.get_time_base();
             return {base.num, base.den};
           },
-          nb::call_guard<nb::gil_scoped_release>());
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "sample_aspect_ratio",
+          [](VideoCodec& self) -> std::tuple<int, int> {
+            auto r = self.get_sample_aspect_ratio();
+            return {r.num, r.den};
+          },
+          nb::call_guard<nb::gil_scoped_release>()
+
+      );
+
   nb::class_<ImageCodec>(m, "ImageCodec")
       .def_prop_ro(
           "name",
