@@ -9,13 +9,6 @@ on:
       - "*.md"
     branches:
       - main
-  push:
-    paths-ignore:
-      - "docs/**"
-      - "examples/**"
-      - "*.md"
-    branches:
-      - main
 
 jobs:
   #############################################################################
