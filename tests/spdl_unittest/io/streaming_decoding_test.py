@@ -99,8 +99,7 @@ def test_streaming_video_demuxing_parity():
         print(frames)
         buffer = spdl.io.convert_frames(frames)
         buffers.append(spdl.io.to_numpy(buffer))
-    frames = decoder.flush()
-    if len(frames):
+    if (frames := decoder.flush()) is not None:
         buffer = spdl.io.convert_frames(frames)
         buffers.append(spdl.io.to_numpy(buffer))
 
@@ -207,11 +206,11 @@ def test_streaming_decoding_multi():
             buffer = spdl.io.convert_frames(frames)
             video_buffer.append(spdl.io.to_numpy(buffer))
 
-    if len(frames := audio_decoder.flush()):
+    if (frames := audio_decoder.flush()) is not None:
         buffer = spdl.io.convert_frames(frames)
         audio_buffer.append(spdl.io.to_numpy(buffer).T)
 
-    if len(frames := video_decoder.flush()):
+    if (frames := video_decoder.flush()) is not None:
         buffer = spdl.io.convert_frames(frames)
         video_buffer.append(spdl.io.to_numpy(buffer))
 
