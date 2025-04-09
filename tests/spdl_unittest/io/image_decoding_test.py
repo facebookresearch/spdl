@@ -16,8 +16,8 @@ from spdl.io.utils import get_ffmpeg_versions
 from ..fixture import get_sample, get_samples, load_ref_data, load_ref_image
 
 
-def _load_image(src, filter_graph="format=pix_fmts=rgb24"):
-    return spdl.io.to_numpy(spdl.io.load_image(src, filter_desc=filter_graph))
+def _load_image(src, filter_desc="format=pix_fmts=rgb24"):
+    return spdl.io.to_numpy(spdl.io.load_image(src, filter_desc=filter_desc))
 
 
 def test_decode_image_gray16_native():
@@ -36,8 +36,8 @@ def test_decode_image_gray16_native():
     height, width = 32, 64
     shape = (1, height, width)
 
-    hyp = _load_image(sample.path, filter_graph=None)
-    ref = load_ref_image(sample.path, shape, dtype=np.uint16, filter_graph=None)
+    hyp = _load_image(sample.path, filter_desc=None)
+    ref = load_ref_image(sample.path, shape, dtype=np.uint16, filter_desc=None)
     np.testing.assert_array_equal(hyp, ref, strict=True)
 
     assert np.all(hyp[..., :32] == 65022)
@@ -74,8 +74,8 @@ def test_decode_image_yuvj422_native():
     sample = get_sample(cmd)
 
     shape = (1, 2 * 240, 320)
-    hyp = _load_image(sample.path, filter_graph=None)
-    ref = load_ref_image(sample.path, shape, filter_graph=None)
+    hyp = _load_image(sample.path, filter_desc=None)
+    ref = load_ref_image(sample.path, shape, filter_desc=None)
 
     # from PIL import Image
     # Image.fromarray(hyp[0]).save("hyp.png")
@@ -108,8 +108,8 @@ def test_decode_image_yuvj420p_native():
     w, h = 320, 240
     shape = (1, h + h // 2, w)
 
-    hyp = _load_image(sample.path, filter_graph=None)
-    ref = load_ref_image(sample.path, shape, filter_graph=None)
+    hyp = _load_image(sample.path, filter_desc=None)
+    ref = load_ref_image(sample.path, shape, filter_desc=None)
 
     # from PIL import Image
     # Image.fromarray(hyp[0]).save("hyp.png")
@@ -174,8 +174,8 @@ def test_decode_image_yuvj444p_native():
     sample = get_sample(cmd)
 
     shape = (3, 240, 320)
-    hyp = _load_image(sample.path, filter_graph=None)
-    ref = load_ref_image(sample.path, shape, filter_graph=None)
+    hyp = _load_image(sample.path, filter_desc=None)
+    ref = load_ref_image(sample.path, shape, filter_desc=None)
 
     # from PIL import Image
     # Image.fromarray(hyp[0]).save("hyp.png")
@@ -303,9 +303,9 @@ def test_load_image_batch_native():
     print(array.shape)
     assert array.shape == (n, h, w, 3)
 
-    filter_graph = get_video_filter_desc(pix_fmt=None)
+    filter_desc = get_video_filter_desc(pix_fmt=None)
     for i in range(n):
-        ref = load_ref_image(srcs[i].path, (h, w, 3), filter_graph=filter_graph)
+        ref = load_ref_image(srcs[i].path, (h, w, 3), filter_desc=filter_desc)
         hyp = array[i]
         np.testing.assert_array_equal(hyp, ref, strict=True)
 
@@ -331,9 +331,9 @@ def test_load_image_batch_native_edge_values():
     arr = spdl.io.to_numpy(buffer)
     assert arr.shape == (n, h, 3 * w, 3)
 
-    filter_graph = get_video_filter_desc(pix_fmt=None)
+    filter_desc = get_video_filter_desc(pix_fmt=None)
     for i in range(n):
-        ref = load_ref_image(srcs[i].path, (h, w * 3, 3), filter_graph=filter_graph)
+        ref = load_ref_image(srcs[i].path, (h, w * 3, 3), filter_desc=filter_desc)
         hyp = arr[i]
         np.testing.assert_array_equal(hyp, ref, strict=True)
 

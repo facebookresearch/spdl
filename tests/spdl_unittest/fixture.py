@@ -60,9 +60,8 @@ def load_ref_data(
     print(f"\n{'-' * 40}", flush=True, file=sys.stderr)
     print(f"- Executing `{' '.join(cmd)}`", flush=True, file=sys.stderr)
     print(f"{'-' * 40}\n", flush=True, file=sys.stderr)
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=10**8)
-    buffer = process.stdout.read()  # pyre-ignore
-    return np.frombuffer(buffer, dtype).reshape(*shape)
+    process = subprocess.run(cmd, stdout=subprocess.PIPE, bufsize=10**8, check=True)
+    return np.frombuffer(process.stdout, dtype).reshape(*shape)
 
 
 def load_ref_audio(
@@ -89,7 +88,7 @@ def load_ref_audio(
     return load_ref_data(cmd, shape, dtype=dtype)
 
 
-def _get_video_ref_cmd(path: str, filter_graph: str | None) -> list[str]:
+def _get_video_ref_cmd(path: str, filter_desc: str | None) -> list[str]:
     # fmt: off
     command = [
         "ffmpeg",
@@ -100,8 +99,11 @@ def _get_video_ref_cmd(path: str, filter_graph: str | None) -> list[str]:
         "-v", "verbose"
     ]
     # fmt: on
-    if filter_graph is not None:
-        command.extend(["-vf", filter_graph])
+    if filter_desc is not None:
+        if filter_desc == "showwaves":
+            command.extend(["-filter_complex", filter_desc])
+        else:
+            command.extend(["-vf", filter_desc])
     command.extend(["-f", "rawvideo", "pipe:"])
     return command
 
@@ -110,10 +112,10 @@ def load_ref_video(
     path: str,
     shape: tuple[int, ...],
     *,
-    filter_graph: str | None = "format=pix_fmts=rgb24",
+    filter_desc: str | None = "format=pix_fmts=rgb24",
     dtype: DTypeLike = np.uint8,
 ) -> NDArray[np.uint8]:
-    cmd = _get_video_ref_cmd(path, filter_graph)
+    cmd = _get_video_ref_cmd(path, filter_desc)
     return load_ref_data(cmd, shape, dtype=dtype)
 
 
@@ -121,7 +123,7 @@ def load_ref_image(
     path: str,
     shape: tuple[int, ...],
     *,
-    filter_graph: str | None = "format=pix_fmts=rgb24",
+    filter_desc: str | None = "format=pix_fmts=rgb24",
     dtype: DTypeLike = np.uint8,
 ) -> NDArray[np.uint8]:
-    return load_ref_video(path, shape, dtype=dtype, filter_graph=filter_graph)
+    return load_ref_video(path, shape, dtype=dtype, filter_desc=filter_desc)
