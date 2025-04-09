@@ -206,20 +206,44 @@ class Demuxer:
         if bsf_ is not None and len(packets := bsf_.flush()):
             yield packets
 
+    @overload
+    def streaming_demux(
+        self,
+        indices: None = None,
+        *,
+        duration: float = -1,
+        num_packets: int = -1,
+    ) -> Iterator[VideoPackets | AudioPackets]: ...
+
+    @overload
     def streaming_demux(
         self,
         indices: int | Sequence[int] | set[int],
         *,
         duration: float = -1,
         num_packets: int = -1,
-    ) -> Iterator[dict[int, VideoPackets | AudioPackets]]:
+    ) -> Iterator[dict[int, VideoPackets | AudioPackets]]: ...
+
+    def streaming_demux(
+        self,
+        indices=None,
+        *,
+        duration=-1,
+        num_packets=-1,
+    ):
         """Stream demux packets from the source.
 
-        .. abmonition:: Example
+        .. abmonition:: Example - Streaming decoding audio
 
            src = "foo.mp4"
-           demuxer = spdl.io.Demuxer(src)
-           audio_decoder = spdl.io.Decoder(demuxer.audio_codec)
+           with spdl.io.Demuxer(src) as demuxer:
+               index = demuxer.audio_stream_index
+               audio_decoder = spdl.io.Decoder(demuxer.audio_codec)
+               packet_stream = demuxer.streaming_demux([index], duration=3)
+               for packets in packet_stream:
+                   if index in packets:
+                       frames = decoder.decode(packets[index])
+                       buffer = spd.io.convert_frames(frames)
 
         """
         log_api_usage_once("spdl.io.Demuxer.streaming_demux")
@@ -232,12 +256,15 @@ class Demuxer:
                 f"Found: {duration=}, {num_packets=}.",
             )
 
-        idxs = set([indices] if isinstance(indices, int) else indices)
+        if indices is None:
+            idxs = {0}
+        else:
+            idxs = set([indices] if isinstance(indices, int) else indices)
 
         ite = self._demuxer.streaming_demux(
             idxs, duration=duration, num_packets=num_packets
         )
-        return _StreamingDemuxer(ite, self)
+        return _StreamingDemuxer(ite, self, unwrap=indices is None)
 
     def has_audio(self) -> bool:
         """Returns true if the source has audio stream."""
@@ -276,9 +303,10 @@ class Demuxer:
 
 
 class _StreamingDemuxer:
-    def __init__(self, ite, demuxer: Demuxer) -> None:
+    def __init__(self, ite, demuxer: Demuxer, unwrap: bool) -> None:
         self._demuxer = demuxer  # For keeping the reference.
         self._ite = ite
+        self._unwrap = unwrap
 
     def __iter__(self):
         return self
@@ -286,7 +314,11 @@ class _StreamingDemuxer:
     def __next__(self):
         if self._ite.done():
             raise StopIteration
-        return self._ite.next()
+        item = self._ite.next()
+        if self._unwrap:
+            assert len(item) == 1
+            return next(iter(item.values()))
+        return item
 
 
 def demux_audio(
