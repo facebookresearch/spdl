@@ -32,6 +32,7 @@ from ._type_stub import (  # isort: skip
     DemuxConfig,
     DecodeConfig,
     EncodeConfig,
+    VideoEncodeConfig,
     AudioEncodeConfig,
     CUDAConfig,
     CPUStorage,
@@ -56,6 +57,7 @@ from ._config import (
     decode_config,
     demux_config,
     encode_config,
+    video_encode_config,
 )
 from ._convert import (
     to_jax,
@@ -169,6 +171,8 @@ __all__ = [
     "DecodeConfig",
     "encode_config",
     "EncodeConfig",
+    "VideoEncodeConfig",
+    "video_encode_config",
     "AudioEncodeConfig",
     "audio_encode_config",
     "cuda_config",

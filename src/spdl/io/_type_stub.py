@@ -27,6 +27,7 @@ __all__ = [
     "DemuxConfig",
     "DecodeConfig",
     "EncodeConfig",
+    "VideoEncodeConfig",
     "CUDAConfig",
     "CPUStorage",
 ]
@@ -650,6 +651,13 @@ class AudioEncodeConfig:
     Configuration for encoding audio.
 
     See the factory function :py:func:`~spdl.io.audio_encode_config`."""
+
+
+class VideoEncodeConfig:
+    """VideoEncodeConfig()
+    Configuration for encoding video.
+
+    See the factory function :py:func:`~spdl.io.video_encode_config`."""
 
 
 class CUDAConfig:
