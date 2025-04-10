@@ -110,7 +110,6 @@ void register_encoding(nb::module_& m) {
   m.def(
       "audio_encode_config",
       [](int num_channels,
-         bool planar,
          const std::optional<std::string>& sample_fmt,
          const std::optional<int> sample_rate,
          int bit_rate,
@@ -118,7 +117,6 @@ void register_encoding(nb::module_& m) {
          int qscale) {
         return AudioEncodeConfig{
             .num_channels = num_channels,
-            .planar = planar,
             .sample_fmt = sample_fmt,
             .sample_rate = sample_rate,
             .bit_rate = bit_rate,
@@ -128,7 +126,6 @@ void register_encoding(nb::module_& m) {
       nb::call_guard<nb::gil_scoped_release>(),
       nb::kw_only(),
       nb::arg("num_channels"),
-      nb::arg("planar") = false,
       nb::arg("sample_fmt") = std::nullopt,
       nb::arg("sample_rate") = std::nullopt,
       nb::arg("bit_rate") = -1,

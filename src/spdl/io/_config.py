@@ -6,7 +6,14 @@
 
 # pyre-unsafe
 
-from spdl.io import CPUStorage, CUDAConfig, DecodeConfig, DemuxConfig, EncodeConfig
+from spdl.io import (
+    AudioEncodeConfig,
+    CPUStorage,
+    CUDAConfig,
+    DecodeConfig,
+    DemuxConfig,
+    EncodeConfig,
+)
 
 from .lib import _libspdl, _libspdl_cuda
 
@@ -14,6 +21,7 @@ __all__ = [
     "demux_config",
     "decode_config",
     "encode_config",
+    "audio_encode_config",
     "cuda_config",
     "cpu_storage",
 ]
@@ -179,6 +187,57 @@ def encode_config(**kwargs) -> EncodeConfig:
         max_bframes (int): *Optional* Override maximum number of B-Frames.
     """
     return _libspdl.EncodeConfig(**kwargs)
+
+
+def audio_encode_config(
+    *,
+    num_channels: int,
+    sample_rate: int,
+    sample_fmt: str = "fltp",
+    bit_rate: int = -1,
+    compression_level: int = -1,
+    qscale: int = -1,
+) -> AudioEncodeConfig:
+    """Customize encoding behavior.
+
+    Args:
+
+        num_channels: The number of channels.
+
+        sample_rate: The sample rate.
+
+        sample_fmt: The sample format. This corresponds to channel order
+            and data type.
+
+            The following list shows the values for each data type.
+
+            - ``"u8"``; Unsigned 8-bit integer.
+            - ``"s16"``: Signed 16-bit integer.
+            - ``"s32"``: Signed 32-bit integer.
+            - ``"flt"``: 32-bit floating point.
+            - ``"dbl"``: 63-bit floating point.
+
+            For planar format (a.k.a channel-first), suffix with ``"p"``.
+
+            e.g.
+
+            - ``"fltp"``: 32bit float, channel-first.
+            - ``"s16"``: Signed 16-bit integer, channel-last.
+
+        bit_rate (int): *Optional* Override bit rate.
+
+        compression_level (int): *Optional* Override compression level.
+
+        sqcale (int): *Optional* Override scale.
+    """
+    return _libspdl.audio_encode_config(
+        num_channels=num_channels,
+        sample_fmt=sample_fmt,
+        sample_rate=sample_rate,
+        bit_rate=bit_rate,
+        compression_level=compression_level,
+        qscale=qscale,
+    )
 
 
 def cpu_storage(size: int, pin_memory=True) -> CPUStorage:
