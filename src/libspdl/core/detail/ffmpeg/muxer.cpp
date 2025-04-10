@@ -28,7 +28,7 @@ MuxerImpl::MuxerImpl(
 namespace {
 template <MediaType media>
 const AVCodec* get_codec(
-    AVCodecID id,
+    const AVOutputFormat* oformat,
     const std::optional<std::string>& override) {
   if (override) {
     auto name = override.value();
@@ -48,8 +48,15 @@ const AVCodec* get_codec(
     }
     return c;
   }
+  AVCodecID id;
+  if constexpr (media == MediaType::Video || media == MediaType::Image) {
+    id = oformat->video_codec;
+  }
+  if constexpr (media == MediaType::Audio) {
+    id = oformat->audio_codec;
+  }
   const AVCodec* c = avcodec_find_encoder(id);
-  if (c) [[unlikely]] {
+  if (!c) [[unlikely]] {
     SPDL_FAIL(fmt::format(
         "The `{}` codec does not have a default encoder. Please specify one.",
         avcodec_get_name(id)));
@@ -81,8 +88,7 @@ EncoderImplPtr<media> MuxerImpl::add_encode_stream(
     const std::optional<OptionDict>& encoder_config) {
   assert_media_is_supported<media>();
 
-  const AVCodec* codec =
-      get_codec<media>(fmt_ctx->oformat->video_codec, encoder_name);
+  const AVCodec* codec = get_codec<media>(fmt_ctx->oformat, encoder_name);
   auto ret = make_encoder(
       codec,
       codec_config,

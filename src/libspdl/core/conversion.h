@@ -39,5 +39,5 @@ VideoFramesPtr convert_rgb_array(
     size_t height,
     size_t width,
     Rational time_base,
-    int pts);
+    int64_t pts);
 } // namespace spdl::core

@@ -45,9 +45,8 @@ CPUBufferPtr convert_frames(
         std::move(storage));
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frames_ptr : batch) {
-      auto fs = frames_ptr->get_frames();
       for (int i = 0; i < num_channels; ++i) {
-        for (auto frame : fs) {
+        for (const auto frame : frames_ptr->get_frames()) {
           int plane_size = depth * frame->nb_samples;
           memcpy(dst, frame->extended_data[i], plane_size);
           dst += plane_size;
@@ -63,8 +62,7 @@ CPUBufferPtr convert_frames(
         std::move(storage));
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frames_ptr : batch) {
-      auto fs = frames_ptr->get_frames();
-      for (auto frame : fs) {
+      for (const auto frame : frames_ptr->get_frames()) {
         int plane_size = depth * frame->nb_samples * num_channels;
         memcpy(dst, frame->extended_data[0], plane_size);
         dst += plane_size;
@@ -533,7 +531,7 @@ VideoFramesPtr convert_rgb_array(
     size_t height,
     size_t width,
     Rational time_base,
-    int pts) {
+    int64_t pts) {
   auto ret = std::make_unique<VideoFrames>((uintptr_t)data, time_base);
   uint8_t* dst = (uint8_t*)data;
   for (size_t i = 0; i < num_frames; ++i) {
