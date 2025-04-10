@@ -525,25 +525,6 @@ AVFramePtr reference_image_buffer(
 
 } // namespace detail
 
-VideoFramesPtr convert_rgb_array(
-    const void* data,
-    size_t num_frames,
-    size_t height,
-    size_t width,
-    Rational time_base,
-    int64_t pts) {
-  auto ret = std::make_unique<VideoFrames>((uintptr_t)data, time_base);
-  uint8_t* dst = (uint8_t*)data;
-  for (size_t i = 0; i < num_frames; ++i) {
-    auto frame =
-        detail::get_video_frame(AV_PIX_FMT_RGB24, width, height, pts++);
-    detail::ref_interweaved(frame.get(), dst, 3);
-    ret->push_back(frame.release());
-    dst += height * width * 3;
-  }
-  return ret;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Buffer to frame - Audio
 ////////////////////////////////////////////////////////////////////////////////
