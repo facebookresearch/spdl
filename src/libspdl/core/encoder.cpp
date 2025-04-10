@@ -30,6 +30,13 @@ PacketsPtr<media> Encoder<media>::flush() {
   return pImpl->flush();
 }
 
+template <MediaType media>
+int Encoder<media>::get_frame_size() const
+  requires(media == MediaType::Audio)
+{
+  return pImpl->get_frame_size();
+}
+
 template class Encoder<MediaType::Audio>;
 template class Encoder<MediaType::Video>;
 

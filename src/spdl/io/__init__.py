@@ -72,6 +72,7 @@ from ._core import (
     BSF,
     convert_array,
     convert_frames,
+    create_reference_audio_frame,
     decode_image_nvjpeg,
     decode_packets,
     decode_packets_nvdec,
@@ -169,6 +170,7 @@ __all__ = [
     "Muxer",
     "AudioEncoder",
     "VideoEncoder",
+    "create_reference_audio_frame",
     "encode_image",
     # CONFIG
     "demux_config",

@@ -38,6 +38,9 @@ class Encoder {
   PacketsPtr<media> encode(const FramesPtr<media>&&);
 
   PacketsPtr<media> flush();
+
+  int get_frame_size() const
+    requires(media == MediaType::Audio);
 };
 
 template <MediaType media>

@@ -209,11 +209,11 @@ AVSampleFormat get_sample_fmt(
   if (override) {
     auto fmt = av_get_sample_fmt(override.value().c_str());
     if (fmt == AV_SAMPLE_FMT_NONE) {
-      SPDL_FAIL(fmt::format("Unexpected sample format: ", override.value()));
+      SPDL_FAIL(fmt::format("Unexpected sample format: {}", override.value()));
     }
     if (!is_sample_fmt_supported(fmt, codec->sample_fmts)) {
       SPDL_FAIL(fmt::format(
-          "Codec `{}` does not support the sample format `{}`. Supported values are {}",
+          "Codec `{}` does not support the sample format `{}`. Supported values are `{}`",
           codec->name,
           override.value(),
           fmt::join(to_str(codec->sample_fmts), ", ")));
@@ -570,6 +570,13 @@ PacketsPtr<media> EncoderImpl<media>::flush() {
     ret->pkts.push(encoding().release());
   }
   return ret;
+}
+
+template <MediaType media>
+int EncoderImpl<media>::get_frame_size() const
+  requires(media == MediaType::Audio)
+{
+  return codec_ctx->frame_size;
 }
 
 template class EncoderImpl<MediaType::Audio>;

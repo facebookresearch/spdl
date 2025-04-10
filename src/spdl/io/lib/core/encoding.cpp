@@ -194,6 +194,20 @@ void register_encoding(nb::module_& m) {
           &VideoEncoder::flush,
           nb::call_guard<nb::gil_scoped_release>());
 
+  nb::class_<AudioEncoder>(m, "AudioEncoder")
+      .def(
+          "encode",
+          &AudioEncoder::encode,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "flush",
+          &AudioEncoder::flush,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "frame_size",
+          &AudioEncoder::get_frame_size,
+          nb::call_guard<nb::gil_scoped_release>());
+
   m.def(
       "encode_image",
       &encode,

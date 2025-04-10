@@ -11,6 +11,7 @@
 #include <libspdl/core/frames.h>
 #include <libspdl/core/types.h>
 
+#include <array>
 #include <vector>
 
 namespace spdl::core {
@@ -40,4 +41,14 @@ VideoFramesPtr convert_rgb_array(
     size_t width,
     Rational time_base,
     int64_t pts);
+
+AudioFramesPtr create_reference_audio_frame(
+    const std::string& sample_fmt,
+    const void* data,
+    int bits,
+    const std::array<size_t, 2>& shape,
+    const std::array<int64_t, 2>& stride,
+    int sample_rate,
+    int64_t pts);
+
 } // namespace spdl::core

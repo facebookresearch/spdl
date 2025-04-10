@@ -102,6 +102,7 @@ __all__ = [
     # ENCODING
     "Muxer",
     "encode_image",
+    "create_reference_audio_frame",
 ]
 
 torch = lazy_import("torch")  # pyre-ignore: [31]
@@ -1050,6 +1051,56 @@ def convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
         A Buffer object.
     """
     return _libspdl.convert_array(vals, storage=storage)
+
+
+def create_reference_audio_frame(
+    array, sample_fmt: str, sample_rate: int, pts: int
+) -> AudioFrames:
+    """Create an AudioFrame object which refers to the given array/tensor.
+
+    This function should be used when the media data processed in Python should
+    be further processed by filter graph, and/or encoded.
+
+    .. attention::
+
+       The resulting frame object references the memory region owned by the input
+       array, but it does not own the reference to the original array.
+
+       Make sure that the array object is alive until the frame object is consumed.
+
+    Args:
+        array: 2D array or tensor.
+            The dtype and channel layout must match what is provided to
+            ``sample_fmt``.
+
+        sample_fmt: The format of sample. The valid values and corresponging data type is as follow.
+
+            - ``"u8"``, ``"u8p"`` : 8-bit unsigned integer.
+            - ``"s16"``, ``"s16p"`` : 16-bit signed integer.
+            - ``"s32"``, ``"s32p"`` : 32-bit signed integer.
+            - ``"s64"``, ``"s64p"`` : 64-bit signed integer.
+            - ``"flt"``, ``"fltp"`` : 32-bit floating-point.
+            - ``"dbl"``, ``"dblp"`` : 64-bit floating-point.
+
+            The suffix ``"p"`` means planar format (channel-first), the input array is
+            interpreted as ``(num_channels, num_frames)``.
+            Otherwise it is interpreted as packed format (channel-last), i.e.
+            ``(num_frames, num_channels)``.
+
+        sample_rate: The sample rate of the audio
+
+        pts: The time of the first sample, in the descrete time unit of sample rate.
+            Usually it is the number of samples previously processed.
+
+    Returns:
+       Frames object that references the memory region of the input data.
+    """
+    return _libspdl.create_reference_audio_frame(
+        array=array,
+        sample_fmt=sample_fmt,
+        sample_rate=sample_rate,
+        pts=pts,
+    )
 
 
 ################################################################################
