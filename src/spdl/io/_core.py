@@ -210,10 +210,8 @@ class Demuxer:
         """
         bsf_ = None if bsf is None else BSF(self.video_codec, bsf)
 
-        idx = self.video_stream_index
-        ite = self.streaming_demux(idx, num_packets=num_packets)
-        for item in ite:
-            packets = item[idx]
+        ite = self.streaming_demux(self.video_stream_index, num_packets=num_packets)
+        for packets in ite:
             if bsf_ is not None:
                 packets = bsf_.filter(packets)
             yield packets
@@ -233,7 +231,16 @@ class Demuxer:
     @overload
     def streaming_demux(
         self,
-        indices: int | Sequence[int] | set[int],
+        indices: int,
+        *,
+        duration: float = -1,
+        num_packets: int = -1,
+    ) -> Iterator[VideoPackets | AudioPackets]: ...
+
+    @overload
+    def streaming_demux(
+        self,
+        indices: Sequence[int] | set[int],
         *,
         duration: float = -1,
         num_packets: int = -1,
@@ -279,7 +286,9 @@ class Demuxer:
         ite = self._demuxer.streaming_demux(
             idxs, duration=duration, num_packets=num_packets
         )
-        return _StreamingDemuxer(ite, self, unwrap=indices is None)
+        return _StreamingDemuxer(
+            ite, self, unwrap=(indices is None or isinstance(indices, int))
+        )
 
     def has_audio(self) -> bool:
         """Returns true if the source has audio stream."""
