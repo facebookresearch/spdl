@@ -447,6 +447,10 @@ const std::string parse_unmatched(const AVFilterLink* l, const AVFrame* f) {
             av_get_sample_fmt_name((AVSampleFormat)l->format),
             av_get_sample_fmt_name((AVSampleFormat)f->format)));
       }
+      if (l->sample_rate != f->sample_rate) {
+        parts.emplace_back(fmt::format(
+            "sample_rate ({} != {})", l->sample_rate, f->sample_rate));
+      }
       if (GET_NUM_CHANNELS(l) != GET_NUM_CHANNELS(f)) {
         parts.emplace_back(fmt::format(
             "num_channels ({} != {})",
