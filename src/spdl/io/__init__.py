@@ -73,6 +73,7 @@ from ._core import (
     convert_array,
     convert_frames,
     create_reference_audio_frame,
+    create_reference_video_frame,
     decode_image_nvjpeg,
     decode_packets,
     decode_packets_nvdec,
@@ -171,6 +172,7 @@ __all__ = [
     "AudioEncoder",
     "VideoEncoder",
     "create_reference_audio_frame",
+    "create_reference_video_frame",
     "encode_image",
     # CONFIG
     "demux_config",

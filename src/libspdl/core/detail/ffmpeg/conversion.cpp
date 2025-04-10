@@ -642,4 +642,173 @@ AudioFramesPtr create_reference_audio_frame(
   return ret;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Buffer to frame - Video (v2)
+////////////////////////////////////////////////////////////////////////////////
+namespace {
+
+void validate_nhwc(
+    int c,
+    const std::vector<size_t>& shape,
+    const std::vector<int64_t>& stride) {
+  if (!(shape.size() == 4 && stride.size() == 4)) {
+    SPDL_FAIL("The input array must be 4D.");
+  }
+  // Note: nanobind's stride is element count, not byte.
+  if (shape[3] != c) {
+    SPDL_FAIL(fmt::format(
+        "The shape must be (N, H, W, C=={}). Found: ({})",
+        c,
+        fmt::join(shape, ", ")));
+  }
+  if (!(stride[3] == 1 && stride[2] == c)) {
+    SPDL_FAIL(fmt::format(
+        "Each row must be contiguous. (stride == [..., {}, 1]) "
+        "Found: Stride ({})",
+        c,
+        fmt::join(stride, ", ")));
+  }
+}
+
+void validate_nchw(
+    int c,
+    const std::vector<size_t>& shape,
+    const std::vector<int64_t>& stride) {
+  if (!(shape.size() == 4 && stride.size() == 4)) {
+    SPDL_FAIL("The input array must be 4D.");
+  }
+  // Note: nanobind's stride is element count, not byte.
+  if (shape[1] != c) {
+    SPDL_FAIL(fmt::format(
+        "The shape must be (N, C=={}, H, W). Found: ({})",
+        c,
+        fmt::join(shape, ", ")));
+  }
+  if (!(stride[3] == 1)) {
+    SPDL_FAIL(fmt::format(
+        "Each row must be contiguous. (stride == [..., 1]) "
+        "Found: Stride ({})",
+        fmt::join(stride, ", ")));
+  }
+}
+
+void validate_nhw(
+    const std::vector<size_t>& shape,
+    const std::vector<int64_t>& stride) {
+  if (!(shape.size() == 3 && stride.size() == 3)) {
+    SPDL_FAIL("The input array must be 3D.");
+  }
+  // Note: nanobind's stride is element count, not byte.
+  if (!(stride[2] == 1)) {
+    SPDL_FAIL(fmt::format(
+        "Each row must be contiguous. (stride == [..., 1]) "
+        "Found: Stride ({})",
+        fmt::join(stride, ", ")));
+  }
+}
+
+VideoFramesPtr create_reference_video_frame(
+    enum AVPixelFormat fmt,
+    const void* data,
+    const std::vector<size_t>& shape,
+    const std::vector<int64_t>& stride,
+    Rational time_base,
+    int64_t pts,
+    int bps = 1) {
+  auto ret = std::make_unique<VideoFrames>((uintptr_t)data, time_base);
+  auto n = shape[0], h = shape[1], w = shape[2];
+  auto* src = (uint8_t*)data;
+  // Note: nanobind's stride is element count, not byte.
+  auto plane_size = stride[0] * bps;
+  auto linesize = stride[1] * bps;
+  for (size_t i = 0; i < n; ++i) {
+    auto f = detail::get_video_frame(fmt, w, h, pts + i);
+    f->data[0] = src;
+    f->linesize[0] = linesize;
+    f->buf[0] = detail::create_reference_buffer(src, plane_size);
+    src += plane_size;
+
+    ret->push_back(f.release());
+  }
+  return ret;
+}
+
+VideoFramesPtr convert_planar_video_array(
+    enum AVPixelFormat fmt,
+    const void* data,
+    const std::vector<size_t>& shape,
+    const std::vector<int64_t>& stride,
+    Rational time_base,
+    int64_t pts,
+    int num_color = 3,
+    int bps = 1) {
+  auto ret = std::make_unique<VideoFrames>((uintptr_t)data, time_base);
+
+  auto n = shape[0], h = shape[2], w = shape[3];
+  auto frame_size = stride[0] * bps;
+  auto plane_size = stride[1] * bps;
+  auto linesize = stride[2] * bps;
+  for (size_t i = 0; i < n; ++i) {
+    auto f = detail::get_video_frame(fmt, w, h, pts + i);
+    auto* src = ((uint8_t*)data) + i * frame_size;
+    for (int c = 0; c < num_color; ++c) {
+      f->data[c] = src;
+      f->linesize[c] = linesize;
+      f->buf[c] = detail::create_reference_buffer(src, plane_size);
+      src += plane_size;
+    }
+    ret->push_back(f.release());
+  }
+  return ret;
+}
+
+} // namespace
+
+VideoFramesPtr create_reference_video_frame(
+    const std::string& pix_fmt,
+    const void* data,
+    int bits,
+    const std::vector<size_t>& shape,
+    const std::vector<int64_t>& stride,
+    Rational time_base,
+    int64_t pts) {
+  auto fmt = av_get_pix_fmt(pix_fmt.c_str());
+  if (fmt == AV_PIX_FMT_NONE) {
+    SPDL_FAIL(fmt::format("Unexpected pix_fmt: {}", pix_fmt));
+  }
+
+#define CHECK_BITS(x, y)                                                \
+  if (x != y) {                                                         \
+    SPDL_FAIL(fmt::format(                                              \
+        "The input dtype must be {} bit par element. Found {}", y, x)); \
+  }
+
+  switch (fmt) {
+    case AV_PIX_FMT_RGB24:
+    case AV_PIX_FMT_BGR24:
+      CHECK_BITS(bits, 8);
+      validate_nhwc(3, shape, stride);
+      return create_reference_video_frame(
+          fmt, data, shape, stride, time_base, pts);
+    case AV_PIX_FMT_GRAY8:
+      CHECK_BITS(bits, 8);
+      validate_nhw(shape, stride);
+      return create_reference_video_frame(
+          fmt, data, shape, stride, time_base, pts, 1);
+    case AV_PIX_FMT_GRAY16:
+      validate_nhw(shape, stride);
+      CHECK_BITS(bits, 16);
+      return create_reference_video_frame(
+          fmt, data, shape, stride, time_base, pts, 2);
+    case AV_PIX_FMT_YUV444P:
+      CHECK_BITS(bits, 8);
+      validate_nchw(3, shape, stride);
+      return convert_planar_video_array(
+          fmt, data, shape, stride, time_base, pts);
+    default:;
+  }
+#undef CHECK_BITS
+  SPDL_FAIL(fmt::format("Unsupported pix_fmt: {}", pix_fmt));
+}
+
 } // namespace spdl::core
