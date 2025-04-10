@@ -34,6 +34,9 @@ env:
   SPDL_USE_TRACING: 1
   SPDL_BUILD_STUB: 0
   SPDL_USE_CUDA: 1
+  SPDL_USE_NVJPEG: 1
+  SPDL_USE_NPPI: 1
+  SPDL_LINK_STATIC_NVJPEG: 1
   SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
 
 jobs:
