@@ -13,6 +13,7 @@ from spdl.io import (
     DecodeConfig,
     DemuxConfig,
     EncodeConfig,
+    VideoEncodeConfig,
 )
 
 from .lib import _libspdl, _libspdl_cuda
@@ -21,6 +22,7 @@ __all__ = [
     "demux_config",
     "decode_config",
     "encode_config",
+    "video_encode_config",
     "audio_encode_config",
     "cuda_config",
     "cpu_storage",
@@ -187,6 +189,70 @@ def encode_config(**kwargs) -> EncodeConfig:
         max_bframes (int): *Optional* Override maximum number of B-Frames.
     """
     return _libspdl.EncodeConfig(**kwargs)
+
+
+def video_encode_config(
+    *,
+    height: int,
+    width: int,
+    frame_rate: tuple[int, int] | None = None,
+    pix_fmt: str = "rgb24",
+    bit_rate: int = -1,
+    compression_level: int = -1,
+    qscale: int = -1,
+    gop_size: int = -1,
+    max_b_frames: int = -1,
+    colorspace: str | None = None,
+    color_primaries: str | None = None,
+    color_trc: str | None = None,
+) -> VideoEncodeConfig:
+    """Customize encoding behavior.
+
+    Args:
+        height,width (int): The size of the image to encode.
+
+        frame_rate: *Optional* The frame rate.
+            If not provided, the default value of encoder is used.
+
+        pix_fmt (str): *Optional* The pixel format of the input frames.
+            The default ``"rgb24"`` is for RGB array in NHWC format.
+            If using format that is more suitable for video production like
+            ``"yuv420p"``, the frame data must be converted to the target
+            format before it is fed to encoder.
+
+        bit_rate (int): *Optional* Override bit rate.
+
+        compression_level (int): *Optional* Override compression level.
+
+        sqcale (int): *Optional* Override scale.
+
+        gop_size (int): *Optional* Override GOP size.
+
+        max_bframes (int): *Optional* Override maximum number of B-Frames.
+
+        colorspace,color_primmaries,color_trc (str): *Optional* Override the
+            color space, color primaries, and color transftransformation
+            characteristics (color linearization function). An example value is
+            ``"bt709"``.
+
+            .. seealso::
+
+               - https://trac.ffmpeg.org/wiki/colorspace
+    """
+    return _libspdl.video_encode_config(
+        height=height,
+        width=width,
+        frame_rate=frame_rate,
+        pix_fmt=pix_fmt,
+        bit_rate=bit_rate,
+        compression_level=compression_level,
+        qscale=qscale,
+        gop_size=gop_size,
+        max_b_frames=max_b_frames,
+        colorspace=colorspace,
+        color_primaries=color_primaries,
+        color_trc=color_trc,
+    )
 
 
 def audio_encode_config(
