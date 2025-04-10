@@ -117,6 +117,8 @@ void register_packets(nb::module_& m) {
             }
             return fmt::format("AudioPackets<{}>", fmt::join(parts, ", "));
           })
+      .def(
+          "__len__", [](const AudioPackets& self) { return num_packets(self); })
       .def_prop_ro(
           "timestamp",
           [](const AudioPackets& self) {

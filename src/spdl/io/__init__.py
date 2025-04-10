@@ -26,6 +26,8 @@ from ._type_stub import (  # isort: skip
     AudioFrames,
     VideoFrames,
     ImageFrames,
+    AudioEncoder,
+    VideoEncoder,
     AudioDecoder,
     VideoDecoder,
     ImageDecoder,
@@ -79,6 +81,7 @@ from ._core import (
     demux_video,
     Demuxer,
     encode_image,
+    Muxer,
     nv12_to_bgr,
     nv12_to_rgb,
     nvdec_decoder,
@@ -163,6 +166,9 @@ __all__ = [
     "to_torch",
     "to_jax",
     # ENCODING
+    "Muxer",
+    "AudioEncoder",
+    "VideoEncoder",
     "encode_image",
     # CONFIG
     "demux_config",

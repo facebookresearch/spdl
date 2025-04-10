@@ -660,6 +660,60 @@ class VideoEncodeConfig:
     See the factory function :py:func:`~spdl.io.video_encode_config`."""
 
 
+class AudioEncoder:
+    """Audio encoder.
+
+    Returned by :py:meth:`Muxer.add_encode_stream`."""
+
+    def encode(self, frames: AudioFrames) -> AudioPackets | None:
+        """Encode audio frames.
+
+        Args:
+            frames: Audio frames. Use :py:func:`convert_audio_array` to convert
+                tensor/array objects into frames.
+
+        Returns:
+            Packets objects if encoder generates one.
+        """
+        ...
+
+    def flush(self) -> AudioPackets | None:
+        """Notify the encoder of the end of the stream and fetch the buffered packets."""
+        ...
+
+    @property
+    def frame_size(self) -> int:
+        """The number of frames that the internal encoder can handle at a time.
+
+        Some audio encoders are strict on the number of frames it can handle at a time.
+        In such case, retrieve the number of expected frames (par channel) here,
+        slice data accordingly, then encode slice by slice.
+        """
+        ...
+
+
+class VideoEncoder:
+    """Video encoder.
+
+    Returned by :py:meth:`Muxer.add_encode_stream`."""
+
+    def encode(self, frames: VideoFrames) -> VideoPackets | None:
+        """Encode video frames.
+
+        Args:
+            frames: Audio frames. Use :py:func:`convert_video_array` to convert
+                tensor/array objects into frames.
+
+        Returns:
+            Packets objects if encoder generates one.
+        """
+        ...
+
+    def flush(self) -> VideoPackets | None:
+        """Notify the encoder of the end of the stream and fetch the buffered packets."""
+        ...
+
+
 class CUDAConfig:
     """CUDAConfig()
     Specify the CUDA devie and memory management.
