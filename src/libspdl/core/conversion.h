@@ -51,4 +51,13 @@ AudioFramesPtr create_reference_audio_frame(
     int sample_rate,
     int64_t pts);
 
+VideoFramesPtr create_reference_video_frame(
+    const std::string& sample_fmt,
+    const void* data,
+    int bits,
+    const std::vector<size_t>& shape,
+    const std::vector<int64_t>& stride,
+    Rational frame_rate,
+    int64_t pts);
+
 } // namespace spdl::core

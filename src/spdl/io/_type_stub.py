@@ -701,7 +701,7 @@ class VideoEncoder:
         """Encode video frames.
 
         Args:
-            frames: Audio frames. Use :py:func:`convert_video_array` to convert
+            frames: Audio frames. Use :py:func:`create_reference_video_frame` to convert
                 tensor/array objects into frames.
 
         Returns:

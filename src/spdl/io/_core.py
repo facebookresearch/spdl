@@ -103,6 +103,7 @@ __all__ = [
     "Muxer",
     "encode_image",
     "create_reference_audio_frame",
+    "create_reference_video_frame",
 ]
 
 torch = lazy_import("torch")  # pyre-ignore: [31]
@@ -1099,6 +1100,50 @@ def create_reference_audio_frame(
         array=array,
         sample_fmt=sample_fmt,
         sample_rate=sample_rate,
+        pts=pts,
+    )
+
+
+def create_reference_video_frame(
+    array, pix_fmt: str, frame_rate: tuple[int, int], pts: int
+) -> VideoFrames:
+    """Create an VideoFrame object which refers to the given array/tensor.
+
+    This function should be used when the media data processed in Python should
+    be further processed by filter graph, and/or encoded.
+
+    .. attention::
+
+       The resulting frame object references the memory region owned by the input
+       array, but it does not own the reference to the original array.
+
+       Make sure that the array object is alive until the frame object is consumed.
+
+    Args:
+        array: 3D or 4D array or tensor.
+            The dtype and channel layout must match what is provided to
+            ``sample_fmt``.
+
+        pix_fmt: The image format. The valid values and corresponging shape is as follow.
+
+            - ``"rgb24"``, ``"bgr24"``: Interleaved RGB/BGR in shape of ``(N, H, W, C==3)``.
+            - ``"gray8"``, ``"gray16"``: Grayscale image of 8bit unsigned integer or
+              16 bit signed interger in shape of ``(N, H, W)``.
+            - ``"yuv444p"``: Planar YUV format in shape of ``(N, C==3, H, W)``.
+
+        frame_rate: The frame rate of the video expressed asfraction.
+            ``(numerator, denominator)``.
+
+        pts: The time of the first video frame, in the descrete time unit of frame rate.
+            Usually it is the number of frames previously processed.
+
+    Returns:
+       Frames object that references the memory region of the input data.
+    """
+    return _libspdl.create_reference_video_frame(
+        array=array,
+        pix_fmt=pix_fmt,
+        frame_rate=frame_rate,
         pts=pts,
     )
 

@@ -36,6 +36,7 @@ using rgb_frames = nb::
 // So instead of using `nb::c_contig`, we pass around stride and check
 // the contiguousness by ourselves.
 using audio_array = nb::ndarray<nb::shape<-1, -1>, nb::device::cpu>;
+using video_array = nb::ndarray<nb::device::cpu>;
 
 namespace spdl::core {
 namespace {
@@ -189,6 +190,43 @@ void register_conversion(nb::module_& m) {
       nb::kw_only(),
       nb::arg("sample_fmt"),
       nb::arg("sample_rate"),
+      nb::arg("pts"));
+
+  m.def(
+      "create_reference_video_frame",
+      [](const video_array& array,
+         const std::string& pix_fmt,
+         const std::tuple<int, int>& frame_rate,
+         int64_t pts) -> VideoFramesPtr {
+        auto ndim = array.ndim();
+        if (!(ndim == 3 || ndim == 4)) {
+          throw std::runtime_error("The input array must be 3D or 4D.");
+        }
+        auto src = array.data();
+        // Obtain shape
+        std::vector<size_t> shape;
+        std::vector<int64_t> stride;
+        for (size_t i = 0; i < array.ndim(); ++i) {
+          shape.push_back(array.shape(i));
+          stride.push_back(array.stride(i));
+        }
+        auto bits = array.dtype().bits;
+
+        nb::gil_scoped_release __g; // do not access array from here.
+        return create_reference_video_frame(
+            pix_fmt,
+            src,
+            bits,
+            shape,
+            stride,
+            // Flipping frame rate to time base
+            Rational{std::get<1>(frame_rate), std::get<0>(frame_rate)},
+            pts);
+      },
+      nb::arg("array"),
+      nb::kw_only(),
+      nb::arg("pix_fmt"),
+      nb::arg("frame_rate"),
       nb::arg("pts"));
 }
 } // namespace spdl::core

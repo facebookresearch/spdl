@@ -60,6 +60,9 @@ AVPixelFormat get_pix_fmt(
     const std::optional<std::string>& override) {
   if (override) {
     auto fmt = av_get_pix_fmt(override.value().c_str());
+    if (fmt == AV_PIX_FMT_NONE) {
+      SPDL_FAIL(fmt::format("Unexpected pixel format: {}.", override.value()));
+    }
     if (!is_pix_fmt_supported(fmt, codec->pix_fmts)) {
       SPDL_FAIL(fmt::format(
           "`{}` does not support the pixel format `{}`. "

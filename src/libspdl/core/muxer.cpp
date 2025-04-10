@@ -9,6 +9,9 @@
 #include <libspdl/core/muxer.h>
 
 #include "libspdl/core/detail/ffmpeg/muxer.h"
+#include "libspdl/core/detail/logging.h"
+
+#include <fmt/core.h>
 
 namespace spdl::core {
 
@@ -25,6 +28,7 @@ EncoderPtr<media> Muxer::add_encode_stream(
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config) {
   auto p = pImpl->add_encode_stream(codec_config, encoder, encoder_config);
+  types.push_back(media);
   return std::make_unique<Encoder<media>>(p.release());
 }
 
@@ -40,6 +44,7 @@ template VideoEncoderPtr Muxer::add_encode_stream(
 template <MediaType media>
 void Muxer::add_remux_stream(const Codec<media>& codec) {
   pImpl->add_remux_stream(codec);
+  types.push_back(media);
 }
 
 template void Muxer::add_remux_stream(const AudioCodec& codec);
@@ -49,8 +54,31 @@ void Muxer::open(const std::optional<OptionDict>& muxer_config) {
   pImpl->open(muxer_config);
 }
 
+namespace {
+std::string to_str(MediaType media) {
+  switch (media) {
+    case MediaType::Audio:
+      return "audio";
+    case MediaType::Video:
+      return "video";
+    case MediaType::Image:
+      return "image";
+  }
+}
+} // namespace
+
 template <MediaType media>
 void Muxer::write(int i, Packets<media>& packets) {
+  if (i < 0 || i >= types.size()) {
+    SPDL_FAIL(fmt::format("Index {} is out of range (0, {}]", i, types.size()));
+  }
+  if (types.at(i) != media) {
+    SPDL_FAIL(fmt::format(
+        "Stream {} expects {} type, but {} type was provided.",
+        i,
+        to_str(types.at(i)),
+        to_str(media)));
+  }
   pImpl->write(i, packets.pkts.get_packets(), packets.time_base);
 }
 

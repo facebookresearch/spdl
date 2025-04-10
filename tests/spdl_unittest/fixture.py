@@ -92,17 +92,31 @@ def _get_video_ref_cmd(
     path: str,
     filter_desc: str | None,
     filter_complex: str | None = None,
+    raw: dict[str, str] | None = None,
 ) -> list[str]:
     # fmt: off
     command = [
         "ffmpeg",
         "-hide_banner",
         "-loglevel", "debug",
+        "-v", "verbose",
         "-y",
-        "-i", path,
-        "-v", "verbose"
     ]
     # fmt: on
+    if raw is not None:
+        command.extend(
+            [
+                "-f",
+                "rawvideo",
+                "-pixel_format",
+                raw["pix_fmt"],
+                "-video_size",
+                f"{raw['width']}x{raw['height']}",
+            ]
+        )
+
+    command.extend(["-i", path])
+
     if filter_desc is not None:
         command.extend(["-vf", filter_desc])
     if filter_complex is not None:
@@ -118,8 +132,9 @@ def load_ref_video(
     filter_desc: str | None = "format=pix_fmts=rgb24",
     filter_complex: str | None = None,
     dtype: DTypeLike = np.uint8,
+    raw: dict[str, str] | None = None,
 ) -> NDArray[np.uint8]:
-    cmd = _get_video_ref_cmd(path, filter_desc, filter_complex)
+    cmd = _get_video_ref_cmd(path, filter_desc, filter_complex, raw)
     return load_ref_data(cmd, shape, dtype=dtype)
 
 
