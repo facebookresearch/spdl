@@ -669,7 +669,7 @@ class AudioEncoder:
         """Encode audio frames.
 
         Args:
-            frames: Audio frames. Use :py:func:`convert_audio_array` to convert
+            frames: Audio frames. Use :py:func:`create_reference_audio_frame` to convert
                 tensor/array objects into frames.
 
         Returns:

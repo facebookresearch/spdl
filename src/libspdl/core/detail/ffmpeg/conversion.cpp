@@ -14,7 +14,7 @@
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <glog/logging.h>
 
 #include <cassert>
@@ -27,7 +27,7 @@ extern "C" {
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
-// Audio
+// Frame to buffer - Audio
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 template <size_t depth, ElemClass type, bool is_planar>
@@ -157,7 +157,7 @@ CPUBufferPtr convert_frames(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Image / Video
+// Frame to buffer - Image / Video
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 template <MediaType media>
@@ -541,6 +541,104 @@ VideoFramesPtr convert_rgb_array(
     ret->push_back(frame.release());
     dst += height * width * 3;
   }
+  return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Buffer to frame - Audio
+////////////////////////////////////////////////////////////////////////////////
+AudioFramesPtr create_reference_audio_frame(
+    const std::string& sample_fmt,
+    const void* data,
+    int bits,
+    const std::array<size_t, 2>& shape,
+    const std::array<int64_t, 2>& stride,
+    int sample_rate,
+    int64_t pts) {
+  auto fmt = av_get_sample_fmt(sample_fmt.c_str());
+
+  if (fmt == AV_SAMPLE_FMT_NONE) {
+    SPDL_FAIL(fmt::format("Unexpected sample_fmt: {}", sample_fmt));
+  }
+
+  if (auto bps = av_get_bytes_per_sample(fmt); bps != 0 && bps != bits / 8) {
+    SPDL_FAIL(fmt::format(
+        "The input dtype must be {} bytes par element. Found {}",
+        bps,
+        bits / 8));
+  }
+
+  detail::AVFramePtr f{CHECK_AVALLOCATE(av_frame_alloc())};
+  f->format = fmt;
+  f->sample_rate = sample_rate;
+  f->pts = pts;
+
+  if (av_sample_fmt_is_planar(fmt)) {
+    // Planar == channel_first
+    // NOTE: nanobind's stride is element count. Not bytes
+    if (stride[1] != 1) {
+      SPDL_FAIL(fmt::format(
+          "The planar audio frame is requested, but the input data is "
+          "not contiguous along channel planes. (stride[1] must be 1) "
+          "Found: Stride: ({})",
+          fmt::join(stride, ", ")));
+    }
+    auto c = shape[0];
+    f->nb_samples = shape[1];
+    SET_CHANNELS(f, c);
+
+    if (c <= AV_NUM_DATA_POINTERS) {
+      // This is handled in AVFrame initialization, but just in case.
+      f->extended_data = f->data;
+    } else {
+      f->extended_data = (uint8_t**)av_malloc(c * sizeof(uint8_t*));
+      f->extended_buf = (AVBufferRef**)av_malloc(
+          (c - AV_NUM_DATA_POINTERS) * sizeof(AVBufferRef*));
+      f->nb_extended_buf = (c - AV_NUM_DATA_POINTERS);
+    }
+
+    int bps = av_get_bytes_per_sample(fmt);
+    auto pitch = stride[0] * bps;
+    auto buffer_size = f->nb_samples * bps;
+    auto* src = (uint8_t*)data;
+    for (int i = 0; i < c; ++i) {
+      if (i < AV_NUM_DATA_POINTERS) {
+        f->data[i] = src;
+        f->buf[i] = detail::create_reference_buffer(src, buffer_size);
+        f->linesize[i] = buffer_size;
+      } else {
+        int j = i - AV_NUM_DATA_POINTERS;
+        f->extended_buf[j] = detail::create_reference_buffer(src, buffer_size);
+      }
+      f->extended_data[i] = src;
+      src += pitch;
+    }
+  } else {
+    // interleaved == channel_last
+    // NOTE: nanobind's stride is element count. Not bytes
+    if (stride[0] != shape[1]) {
+      SPDL_FAIL(fmt::format(
+          "The interleaved audio frame is requested, but the input data is "
+          "not contiguous. (stride[0] must match shape[1]) "
+          "Found: Shape: ({}), Stride: ({})",
+          fmt::join(shape, ", "),
+          fmt::join(stride, ", ")));
+    }
+    auto c = shape[1];
+
+    f->nb_samples = shape[0];
+    SET_CHANNELS(f, c);
+
+    auto* src = (uint8_t*)data;
+    auto size =
+        av_samples_get_buffer_size(f->linesize, c, f->nb_samples, fmt, 0);
+    f->data[0] = src;
+    f->buf[0] = detail::create_reference_buffer(src, size);
+  }
+
+  auto ret = std::make_unique<AudioFrames>(
+      reinterpret_cast<uintptr_t>(data), Rational{1, sample_rate});
+  ret->push_back(f.release());
   return ret;
 }
 

@@ -22,6 +22,21 @@ using int_array = nb::ndarray<nb::device::cpu, nb::c_contig, int64_t>;
 using rgb_frames = nb::
     ndarray<uint8_t, nb::shape<-1, -1, -1, 3>, nb::device::cpu, nb::c_contig>;
 
+// NOTE: Do not use `nb::c_contig`
+//
+// `nb::c_contig` makes nanobind ensures the memory contiguousness by making
+// an intermediate copy, which is released soon after.
+//
+// This is problematic for our usecase.
+// - We do not want to have redundant data copy for performance reason.
+// - The Frames object we create refers to the original memory region, so
+//   we need a way to keep the reference to the object that hold the data.
+//   An intermediate copy makes this impossible.
+//
+// So instead of using `nb::c_contig`, we pass around stride and check
+// the contiguousness by ourselves.
+using audio_array = nb::ndarray<nb::shape<-1, -1>, nb::device::cpu>;
+
 namespace spdl::core {
 namespace {
 template <MediaType media>
@@ -85,7 +100,7 @@ VideoFramesPtr _convert_rgb_array(
   Rational time_base{std::get<1>(frame_rate), std::get<0>(frame_rate)};
   auto src = array.data();
 
-  nb::gil_scoped_release __g; // do not access vals from here.
+  nb::gil_scoped_release __g; // do not access array from here.
   return convert_rgb_array(
       src,
       array.shape(0), // N
@@ -149,7 +164,31 @@ void register_conversion(nb::module_& m) {
       "convert_rgb_array",
       &_convert_rgb_array,
       nb::arg("array"),
+      nb::kw_only(),
       nb::arg("frame_rate"),
+      nb::arg("pts"));
+
+  m.def(
+      "create_reference_audio_frame",
+      [](const audio_array& array,
+         const std::string& sample_fmt,
+         int sample_rate,
+         int64_t pts) -> AudioFramesPtr {
+        assert(array.ndim() == 2); // Guaranteed by nanobind
+        // NOTE: nanobind's stride is element count. Not bytes
+        std::array<int64_t, 2> stride{array.stride(0), array.stride(1)};
+        std::array<size_t, 2> shape{array.shape(0), array.shape(1)};
+        auto src = array.data();
+        auto bits = array.dtype().bits;
+
+        nb::gil_scoped_release __g; // do not access array from here.
+        return create_reference_audio_frame(
+            sample_fmt, src, bits, shape, stride, sample_rate, pts);
+      },
+      nb::arg("array"),
+      nb::kw_only(),
+      nb::arg("sample_fmt"),
+      nb::arg("sample_rate"),
       nb::arg("pts"));
 }
 } // namespace spdl::core

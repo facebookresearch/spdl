@@ -32,6 +32,8 @@ class EncoderImpl {
 
   AVRational get_time_base() const;
   AVCodecParameters* get_codec_par(AVCodecParameters* out = nullptr) const;
+  int get_frame_size() const
+    requires(media == MediaType::Audio);
 };
 
 template <MediaType media>

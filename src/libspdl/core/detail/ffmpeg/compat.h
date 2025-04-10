@@ -20,10 +20,18 @@ extern "C" {
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 17, 100)
 #define GET_NUM_CHANNELS(x) x->ch_layout.nb_channels
 #define GET_LAYOUT(x) x->ch_layout.u.mask
+
+#define SET_CHANNELS(x, c)      \
+  x->ch_layout.nb_channels = c; \
+  av_channel_layout_default(&x->ch_layout, c)
 #else
 // ~6
 #define GET_NUM_CHANNELS(x) x->channels
 #define GET_LAYOUT(x) x->channel_layout
+
+#define SET_CHANNELS(x, c) \
+  x->channels = c;         \
+  x->channel_layout = av_get_default_channel_layout(c)
 
 #endif
 
