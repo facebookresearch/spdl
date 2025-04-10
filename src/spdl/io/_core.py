@@ -49,6 +49,8 @@ except ImportError:
 from spdl.io import (
     AudioCodec,
     AudioDecoder,
+    AudioEncodeConfig,
+    AudioEncoder,
     AudioFrames,
     AudioPackets,
     CPUBuffer,
@@ -62,6 +64,8 @@ from spdl.io import (
     ImagePackets,
     VideoCodec,
     VideoDecoder,
+    VideoEncodeConfig,
+    VideoEncoder,
     VideoFrames,
     VideoPackets,
 )
@@ -96,6 +100,7 @@ __all__ = [
     "nv12_to_rgb",
     "nv12_to_bgr",
     # ENCODING
+    "Muxer",
     "encode_image",
 ]
 
@@ -1165,6 +1170,207 @@ def nv12_to_bgr(
 ################################################################################
 # Encoding
 ################################################################################
+class _Encoder:
+    def __init__(self, encoder) -> None:
+        self._encoder = encoder
+
+    def encode(self, frames):
+        # TODO: push down this logic to C++
+        packets = self._encoder.encode(frames)
+        if len(packets) == 0:
+            return None
+        return packets
+
+    def flush(self):
+        # TODO: push down this logic to C++
+        packets = self._encoder.flush()
+        if len(packets) == 0:
+            return None
+        return packets
+
+    def __getattr__(self, name: str):
+        return getattr(self._encoder, name)
+
+
+class Muxer:
+    """Multiplexer that convines multiple packet streams. e.g. create a video
+
+    Args:
+        dst: The destination such as file path, pipe, URL (such as RTMP, UDP).
+        format: *Optional* Override the output format, or specify the output media device.
+            This argument serves two different use cases.
+
+            1) Override the output format.
+               This is useful when writing raw data or in a format different from the extension.
+
+            2) Specify the output device.
+               This allows to output media streams to hardware devices,
+               such as speaker and video screen.
+
+            .. note::
+
+               This option roughly corresponds to ``-f`` option of ``ffmpeg`` command.
+               Please refer to the ffmpeg documentations for possible values.
+
+               https://ffmpeg.org/ffmpeg-formats.html#Muxers
+
+               For device access, the available values vary based on hardware (AV device) and
+               software configuration (ffmpeg build).
+               Please refer to the ffmpeg documentations for possible values.
+
+               https://ffmpeg.org/ffmpeg-devices.html#Output-Devices
+    """
+
+    def __init__(self, dst: str | Path, /, *, format: str | None = None) -> None:
+        self._muxer = _libspdl.muxer(dst, format=format)
+        self._open = False
+
+    @overload
+    def add_encode_stream(
+        self,
+        config: AudioEncodeConfig,
+        *,
+        encoder: str | None = None,
+        encoder_config: dict[str, str] | None = None,
+    ) -> AudioEncoder: ...
+
+    @overload
+    def add_encode_stream(
+        self,
+        config: VideoEncodeConfig,
+        *,
+        encoder: str | None = None,
+        encoder_config: dict[str, str] | None = None,
+    ) -> VideoEncoder: ...
+
+    def add_encode_stream(self, config, *, encoder=None, encoder_config=None):
+        """Add an output stream with encoding.
+
+        Use this method when you want to create a media from tensor/array.
+
+        Args:
+            config: Encoding (codec) configuration.
+                See the corresponding factory functions for the detail.
+                (:py:func:`audio_encode_config` and :py:func:`video_encode_config`)
+            encoder: Specify or override the encoder to use.
+                Use `ffmpeg -encoders` to list the available encoders.
+            encoder_config: Encoder-specific options.
+                Use `ffmpeg -h encoder=<ENCODER>` to list the available options.
+
+        Returns:
+            Encoder object which can be used to encode frames object into packets
+                object.
+        """
+        encoder = self._muxer.add_encode_stream(
+            config=config, encoder=encoder, encoder_config=encoder_config
+        )
+        return _Encoder(encoder)
+
+    @overload
+    def add_remux_stream(self, codec: AudioCodec) -> None: ...
+
+    @overload
+    def add_remux_stream(self, codec: VideoCodec) -> None: ...
+
+    def add_remux_stream(self, codec) -> None:
+        """Add an output stream without encoding.
+
+        Use this method when you want to pass demuxed packets to output stream
+        without decoding.
+
+        Args:
+            codec: Codec parameters from the source.
+
+        .. admonition:: Example
+
+           demuxer = spdl.io.Demuxer("source_video.mp4")
+
+           muxer = spdl.io.Muxer("stripped_audio.aac")
+           muxer.add_remux_stream(demuxer.audio_codec)
+
+           with muxer.open():
+            for packets in demuxer.streaming_demux(num_packets=5):
+                muxer.write(0, packets)
+        """
+        self._muxer.add_remux_stream(codec)
+
+    def open(self, muxer_config: dict[str, str] | None = None) -> "Muxer":
+        """Open the muxer (output file) for writing.
+
+        Args:
+            Options spefici to devices and muxers.
+
+
+        .. admonition:: Example - Protocol option
+
+           muxer = spdl.io.Muxer("rtmp://localhost:1234/live/app", format="flv")
+           muxer.add_encode_stream(...)
+           # Passing protocol option `listen=1` makes Muxer act as RTMP server.
+           with muxer.open(muxer_config={"listen": "1"}):
+               muxer.write(0, video_packet)
+
+        .. admonition:: Example - Device option
+
+           muxer = spdl.io.Muxer("-", format="sdl")
+           muxer.add_encode_stream(...)
+           # Open SDL video player with fullscreen
+           with muxer.open(muxer_config={"window_fullscreen": "1"}):
+               muxer.write(0, video_packet)
+
+        """
+        self._muxer.open(muxer_config)
+        self._open = True
+        return self
+
+    def write(self, stream_index: int, packets: AudioPackets | VideoPackets) -> None:
+        """Write packets to muxer.
+
+        Args:
+            stream_index: The stream to write to.
+            packets: Audio/video data.
+        """
+        self._muxer.write(stream_index, packets)
+
+    def flush(self) -> None:
+        """Notify the muxer that all the streams are written.
+
+        This is automatically called when using `Muxer` as context manager.
+        """
+        self._muxer.flush()
+
+    def close(self) -> None:
+        """Close the resource.
+
+        This is automatically called when using `Muxer` as context manager.
+        """
+        self._muxer.close()
+
+    def __enter__(self) -> "Muxer":
+        """Context manager to automatically clean up the resources.
+
+        .. admobition::
+
+           muxer = spdl.io.Muxer("foo.mp4")
+
+           # ... configure the output stream
+
+           with muxer.open():
+
+                # ... write data
+        """
+        return self
+
+    def __exit__(self, *_) -> None:
+        """Flush the internally buffered packets and close the open resource.
+
+        .. seealso::
+
+           - :py:meth:`~Muxer.__enter__`
+
+        """
+        self.flush()
+        self.close()
+
 
 Array = TypeVar("Array")
 

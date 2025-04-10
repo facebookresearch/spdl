@@ -64,14 +64,14 @@ void register_encoding(nb::module_& m) {
           "add_encode_stream",
           &Muxer::add_encode_stream<MediaType::Audio>,
           nb::call_guard<nb::gil_scoped_release>(),
-          nb::arg("codec_config"),
+          nb::arg("config"),
           nb::arg("encoder") = std::nullopt,
           nb::arg("encoder_config") = std::nullopt)
       .def(
           "add_encode_stream",
           &Muxer::add_encode_stream<MediaType::Video>,
           nb::call_guard<nb::gil_scoped_release>(),
-          nb::arg("codec_config"),
+          nb::arg("config"),
           nb::arg("encoder") = std::nullopt,
           nb::arg("encoder_config") = std::nullopt)
       .def(
