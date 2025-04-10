@@ -32,6 +32,7 @@ from ._type_stub import (  # isort: skip
     DemuxConfig,
     DecodeConfig,
     EncodeConfig,
+    AudioEncodeConfig,
     CUDAConfig,
     CPUStorage,
 )
@@ -49,6 +50,7 @@ from ._composite import (
     streaming_load_video_nvdec,
 )
 from ._config import (
+    audio_encode_config,
     cpu_storage,
     cuda_config,
     decode_config,
@@ -167,6 +169,8 @@ __all__ = [
     "DecodeConfig",
     "encode_config",
     "EncodeConfig",
+    "AudioEncodeConfig",
+    "audio_encode_config",
     "cuda_config",
     "CUDAConfig",
     "cpu_storage",

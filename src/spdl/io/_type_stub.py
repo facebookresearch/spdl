@@ -645,6 +645,13 @@ class EncodeConfig:
     See the factory function :py:func:`~spdl.io.encode_config`."""
 
 
+class AudioEncodeConfig:
+    """AudioEncodeConfig()
+    Configuration for encoding audio.
+
+    See the factory function :py:func:`~spdl.io.audio_encode_config`."""
+
+
 class CUDAConfig:
     """CUDAConfig()
     Specify the CUDA devie and memory management.
