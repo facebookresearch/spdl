@@ -142,6 +142,19 @@ class Demuxer:
             src = str(src)
         self._demuxer = _libspdl._demuxer(src, **kwargs)
 
+    def __getattr__(self, name: str):
+        if name == "streaming_demux_video":
+            warnings.warn(
+                "`streaming_demux_video` method has been deprecated. "
+                "Please use `streaming_demux` method.",
+                stacklevel=2,
+            )
+            return self._streaming_demux_video
+
+        raise AttributeError(
+            f"{self.__class__.__name__} object has no attribute {name!r}"
+        )
+
     def demux_audio(
         self, window: tuple[float, float] | None = None, **kwargs
     ) -> AudioPackets:
@@ -184,7 +197,7 @@ class Demuxer:
 
         return self._demuxer.demux_image(**kwargs)
 
-    def streaming_demux_video(
+    def _streaming_demux_video(
         self,
         num_packets: int,
         bsf: str | None = None,
@@ -195,11 +208,6 @@ class Demuxer:
             num_packets: The number of packets to return at a time.
             bsf: An optional bitstream filter.
         """
-        warnings.warn(
-            "`streaming_demux_video` method has been deprecated. "
-            "Please use `streaming_demux` method.",
-            stacklevel=2,
-        )
         bsf_ = None if bsf is None else BSF(self.video_codec, bsf)
 
         idx = self.video_stream_index
