@@ -9,6 +9,7 @@
 #include "libspdl/core/detail/ffmpeg/encoder.h"
 
 #include <libspdl/core/generator.h>
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/logging.h"
@@ -447,6 +448,65 @@ Generator<AVFrame*> stream_frame(
   }
 }
 
+const std::string parse_unmatch(AVCodecContext* c, AVFrame* f) {
+  std::vector<std::string> parts;
+  switch (c->codec_type) {
+    case AVMEDIA_TYPE_VIDEO: {
+      if (c->pix_fmt != f->format) {
+        parts.emplace_back(fmt::format(
+            "pix_fmt ({} != {})",
+            av_get_pix_fmt_name(c->pix_fmt),
+            av_get_pix_fmt_name((AVPixelFormat)f->format)));
+      }
+      if (c->width != f->width || c->height != f->height) {
+        parts.emplace_back(fmt::format(
+            "video_size ({}x{} != {}x{})",
+            c->width,
+            c->height,
+            f->width,
+            f->height));
+      }
+      break;
+    }
+    case AVMEDIA_TYPE_AUDIO: {
+      if (c->sample_fmt != f->format) {
+        parts.emplace_back(fmt::format(
+            "sample_fmt ({} != {})",
+            av_get_sample_fmt_name(c->sample_fmt),
+            av_get_sample_fmt_name((AVSampleFormat)f->format)));
+      }
+      if (c->sample_rate != f->sample_rate) {
+        parts.emplace_back(fmt::format(
+            "sample_rate ({} != {})", c->sample_rate, f->sample_rate));
+      }
+      if (c->frame_size != f->nb_samples) {
+        parts.emplace_back(
+            fmt::format("frame_size ({} != {})", c->frame_size, f->nb_samples));
+      }
+      if (GET_NUM_CHANNELS(c) != GET_NUM_CHANNELS(f)) {
+        parts.emplace_back(fmt::format(
+            "num_channels ({} != {})",
+            GET_NUM_CHANNELS(c),
+            GET_NUM_CHANNELS(f)));
+      }
+      if (GET_LAYOUT(c) != GET_LAYOUT(f)) {
+        parts.emplace_back(fmt::format(
+            "channel_layout ({} != {})",
+            GET_CHANNEL_LAYOUT_STRING(c),
+            GET_CHANNEL_LAYOUT_STRING(f)));
+      }
+      break;
+    }
+    default:;
+  }
+
+  if (parts.size()) {
+    return fmt::format(
+        "The following arguments do not match: {}", fmt::join(parts, ", "));
+  }
+  return {};
+}
+
 Generator<AVPacketPtr> _encode(
     AVCodecContext* codec_ctx,
     const std::vector<AVFrame*>& frames,
@@ -454,8 +514,13 @@ Generator<AVPacketPtr> _encode(
   int ret = 0;
   auto frame_stream = stream_frame(frames, flush);
   while (frame_stream) {
-    ret = avcodec_send_frame(codec_ctx, frame_stream());
-    CHECK_AVERROR_NUM(ret, "Failed to send frame to encode context.");
+    auto* f = frame_stream();
+    ret = avcodec_send_frame(codec_ctx, f);
+    CHECK_AVERROR_NUM(
+        ret,
+        fmt::format(
+            "Failed to send frame to encode context. {}",
+            parse_unmatch(codec_ctx, f)));
     while (ret >= 0) {
       auto pkt = AVPacketPtr{CHECK_AVALLOCATE(av_packet_alloc())};
       ret = avcodec_receive_packet(codec_ctx, pkt.get());
