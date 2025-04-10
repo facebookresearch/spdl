@@ -34,14 +34,6 @@ CPUBufferPtr convert_frames(
   return ret;
 }
 
-VideoFramesPtr convert_rgb_array(
-    const void* data,
-    size_t num_frames,
-    size_t height,
-    size_t width,
-    Rational time_base,
-    int64_t pts);
-
 AudioFramesPtr create_reference_audio_frame(
     const std::string& sample_fmt,
     const void* data,
