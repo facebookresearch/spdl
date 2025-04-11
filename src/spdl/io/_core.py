@@ -518,6 +518,31 @@ def apply_bsf(packets, bsf):
 ################################################################################
 
 
+def _resolve_filter_graph(
+    filter_desc: str, codec, timestamp: tuple[float, float] | None = None
+) -> str:
+    match codec:
+        case _libspdl.AudioCodec():
+            if filter_desc == _FILTER_DESC_DEFAULT:
+                filter_desc = _preprocessing.get_audio_filter_desc(timestamp=timestamp)
+            src = _preprocessing.get_abuffer_desc(codec)
+            sink = "abuffersink"
+        case _libspdl.VideoCodec():
+            if filter_desc == _FILTER_DESC_DEFAULT:
+                filter_desc = _preprocessing.get_video_filter_desc(timestamp=timestamp)
+            src = _preprocessing.get_buffer_desc(codec)
+            sink = "buffersink"
+        case _libspdl.ImageCodec():
+            if filter_desc == _FILTER_DESC_DEFAULT:
+                filter_desc = _preprocessing.get_video_filter_desc()
+            src = _preprocessing.get_buffer_desc(codec)
+            sink = "buffersink"
+        case _:
+            raise ValueError(f"Unexpected codec type: {type(codec)}")
+
+    return f"{src},{filter_desc},{sink}"
+
+
 @overload
 def Decoder(
     codec: AudioCodec,
@@ -591,16 +616,9 @@ def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
     """
     log_api_usage_once("spdl.io.Decoder")
 
-    if filter_desc == _FILTER_DESC_DEFAULT:
-        match codec:
-            case _libspdl.AudioCodec():
-                filter_desc = _preprocessing.get_audio_filter_desc()
-            case _libspdl.VideoCodec():
-                filter_desc = _preprocessing.get_video_filter_desc()
-            case _libspdl.ImageCodec():
-                filter_desc = _preprocessing.get_image_filter_desc()
-            case _:
-                raise ValueError(f"Unexpected codec type: {type(codec)}")
+    if filter_desc is not None:
+        filter_desc = _resolve_filter_graph(filter_desc, codec)
+
     decoder = _libspdl._make_decoder(
         codec, filter_desc=filter_desc, decode_config=decode_config
     )
@@ -665,8 +683,12 @@ def decode_packets(
     Returns:
         Frames object.
     """
-    if filter_desc == _FILTER_DESC_DEFAULT:
-        filter_desc = _preprocessing.get_filter_desc(packets)
+
+    if filter_desc is not None:
+        filter_desc = _resolve_filter_graph(
+            filter_desc, packets.codec, getattr(packets, "timestamp", None)
+        )
+
     return _libspdl.decode_packets(
         packets, filter_desc=filter_desc, decode_config=decode_config, **kwargs
     )
