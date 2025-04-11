@@ -50,6 +50,7 @@ from ._composite import (
     load_image_batch_nvjpeg,
     load_video,
     sample_decode_video,
+    save_image,
     streaming_load_video_nvdec,
 )
 from ._config import (
@@ -112,6 +113,7 @@ __all__ = [
     "load_image_batch",
     "load_image_batch_nvjpeg",
     "sample_decode_video",
+    "save_image",
     # Metadata
     "AudioCodec",
     "VideoCodec",

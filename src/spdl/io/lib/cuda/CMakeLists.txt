@@ -19,7 +19,6 @@ set(src
   register.cpp
   buffer.cpp
   decoding.cpp
-  encoding.cpp
   storage.cpp
   transfer.cpp
   types.cpp
