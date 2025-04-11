@@ -9,8 +9,8 @@
 #include <libspdl/core/conversion.h>
 
 #include "libspdl/core/detail/ffmpeg/compat.h"
-#include "libspdl/core/detail/ffmpeg/conversion.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -471,57 +471,7 @@ AVBufferRef* create_reference_buffer(uint8_t* data, int size) {
   return av_buffer_create(
       data, size, no_free, nullptr, AV_BUFFER_FLAG_READONLY);
 }
-
-void ref_interweaved(
-    AVFrame* frame,
-    void* data,
-    int num_channels,
-    int bit_depth = 1) {
-  auto* src = static_cast<uint8_t*>(data);
-  int linesize = frame->width * num_channels * bit_depth;
-  frame->data[0] = src;
-  frame->linesize[0] = linesize;
-  frame->buf[0] = create_reference_buffer(src, linesize * frame->height);
-}
-
-void ref_planar(AVFrame* frame, void* data, int num_channels) {
-  auto src = static_cast<uint8_t*>(data);
-  auto size = frame->width * frame->height;
-  for (int c = 0; c < num_channels; ++c) {
-    frame->data[c] = src;
-    frame->linesize[c] = frame->width;
-    frame->buf[c] = create_reference_buffer(src, size);
-    src += size;
-  }
-}
 } // namespace
-
-AVFramePtr reference_image_buffer(
-    AVPixelFormat fmt,
-    void* data,
-    size_t width,
-    size_t height) {
-  auto frame = get_video_frame(fmt, width, height, 0);
-  switch (fmt) {
-    case AV_PIX_FMT_RGB24:
-    case AV_PIX_FMT_BGR24:
-      ref_interweaved(frame.get(), data, 3);
-      break;
-    case AV_PIX_FMT_GRAY8:
-      ref_interweaved(frame.get(), data, 1);
-      break;
-    case AV_PIX_FMT_GRAY16:
-      ref_interweaved(frame.get(), data, 1, 2);
-      break;
-    case AV_PIX_FMT_YUV444P:
-      ref_planar(frame.get(), data, 3);
-      break;
-    default:
-      SPDL_FAIL(fmt::format(
-          "Unsupported source pixel format: {}", av_get_pix_fmt_name(fmt)));
-  }
-  return frame;
-}
 
 } // namespace detail
 
@@ -776,7 +726,8 @@ VideoFramesPtr create_reference_video_frame(
       validate_nhw(shape, stride);
       return create_reference_video_frame(
           fmt, data, shape, stride, time_base, pts, 1);
-    case AV_PIX_FMT_GRAY16:
+    case AV_PIX_FMT_GRAY16BE:
+    case AV_PIX_FMT_GRAY16LE:
       validate_nhw(shape, stride);
       CHECK_BITS(bits, 16);
       return create_reference_video_frame(

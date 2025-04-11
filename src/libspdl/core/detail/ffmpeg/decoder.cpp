@@ -92,7 +92,7 @@ Generator<AVFramePtr> _decode_packet(
 Generator<AVFramePtr> decode_packets(
     AVCodecContextPtr& codec_ctx,
     const std::vector<AVPacket*>& packets,
-    std::optional<FilterGraph>& filter,
+    std::optional<FilterGraphImpl>& filter,
     bool flush) {
   auto packet_stream = _stream_packet(packets, flush);
   if (!filter) {
@@ -132,10 +132,7 @@ DecoderImpl<media>::DecoderImpl(
           codec.get_time_base(),
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)),
-      filter_graph(get_filter<media>(
-          codec_ctx.get(),
-          filter_desc,
-          codec.get_frame_rate())) {}
+      filter_graph(filter_desc) {}
 
 template <MediaType media>
 Rational DecoderImpl<media>::get_output_time_base() const {

@@ -237,6 +237,20 @@ void register_demuxing(nb::module_& m) {
       .def_prop_ro(
           "pix_fmt",
           &ImageCodec::get_pix_fmt,
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "time_base",
+          [](ImageCodec& self) -> std::tuple<int, int> {
+            auto base = self.get_time_base();
+            return {base.num, base.den};
+          },
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "sample_aspect_ratio",
+          [](ImageCodec& self) -> std::tuple<int, int> {
+            auto r = self.get_sample_aspect_ratio();
+            return {r.num, r.den};
+          },
           nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<PyDemuxer>(m, "Demuxer")
