@@ -47,38 +47,9 @@ AVFormatOutputContextPtr get_output_format_ctx(
     const std::string& url,
     const std::optional<std::string>& format = std::nullopt);
 
-const AVCodec* get_image_codec(
-    const std::optional<std::string>& encoder,
-    const AVOutputFormat* oformat,
-    const std::string& url);
-
-AVPixelFormat get_enc_fmt(
-    AVPixelFormat src_fmt,
-    const std::optional<std::string>& encoder_format,
-    const AVCodec* codec);
-
-AVCodecContextPtr get_codec_ctx(const AVCodec* codec, int flags);
-
-void configure_video_codec_ctx(
-    AVCodecContextPtr& ctx,
-    AVPixelFormat format,
-    AVRational frame_rate,
-    int width,
-    int height,
-    const EncodeConfig& cfg);
-
-void configure_image_codec_ctx(
-    AVCodecContextPtr& ctx,
-    AVPixelFormat format,
-    int width,
-    int height,
-    const EncodeConfig& cfg);
-
 void open_codec_for_encode(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& option);
-
-AVStream* create_stream(AVFormatContext* format_ctx, AVCodecContext* codec_ctx);
 
 void open_format(
     AVFormatContext* format_ctx,

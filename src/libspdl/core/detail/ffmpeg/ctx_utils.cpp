@@ -282,108 +282,6 @@ const AVCodec* get_image_codec(
   return c;
 }
 
-namespace {
-bool is_pix_fmt_supported(
-    const AVPixelFormat fmt,
-    const AVPixelFormat* pix_fmts) {
-  if (!pix_fmts) {
-    return true;
-  }
-  while (*pix_fmts != AV_PIX_FMT_NONE) {
-    if (fmt == *pix_fmts) {
-      return true;
-    }
-    ++pix_fmts;
-  }
-  return false;
-}
-
-std::string to_str(const AVPixelFormat* pix_fmts) {
-  std::vector<std::string> ret;
-  while (*pix_fmts != AV_PIX_FMT_NONE) {
-    ret.emplace_back(av_get_pix_fmt_name(*pix_fmts));
-    ++pix_fmts;
-  }
-  return fmt::to_string(fmt::join(ret, ", "));
-}
-} // namespace
-
-AVPixelFormat get_enc_fmt(
-    AVPixelFormat src_fmt,
-    const std::optional<std::string>& encoder_format,
-    const AVCodec* codec) {
-  if (encoder_format) {
-    const auto& val = encoder_format.value();
-    auto fmt = av_get_pix_fmt(val.c_str());
-    if (!is_pix_fmt_supported(fmt, codec->pix_fmts)) {
-      SPDL_FAIL(fmt::format(
-          "Codec {} does not support {} format. Supported values are; {}",
-          codec->name,
-          val,
-          to_str(codec->pix_fmts)));
-    }
-    return fmt;
-  }
-  if (codec->pix_fmts) {
-    return codec->pix_fmts[0];
-  }
-  return src_fmt;
-}
-
-AVCodecContextPtr get_codec_ctx(const AVCodec* codec, int flags) {
-  auto ctx = AVCodecContextPtr{CHECK_AVALLOCATE(avcodec_alloc_context3(codec))};
-
-  if (flags & AVFMT_GLOBALHEADER) {
-    ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-  }
-  return ctx;
-}
-
-void configure_video_codec_ctx(
-    AVCodecContextPtr& ctx,
-    AVPixelFormat format,
-    AVRational frame_rate,
-    int width,
-    int height,
-    const EncodeConfig& cfg) {
-  // TODO: Review other options and make them configurable?
-  // https://ffmpeg.org/doxygen/4.1/muxing_8c_source.html#l00147
-  //  - bit_rate_tolerance
-  //  - mb_decisions
-
-  ctx->pix_fmt = format;
-  ctx->width = width;
-  ctx->height = height;
-  ctx->time_base = av_inv_q(frame_rate);
-
-  // Set optional stuff
-  if (cfg.bit_rate > 0) {
-    ctx->bit_rate = cfg.bit_rate;
-  }
-  if (cfg.compression_level != -1) {
-    ctx->compression_level = cfg.compression_level;
-  }
-  if (cfg.gop_size != -1) {
-    ctx->gop_size = cfg.gop_size;
-  }
-  if (cfg.max_b_frames != -1) {
-    ctx->max_b_frames = cfg.max_b_frames;
-  }
-  if (cfg.qscale >= 0) {
-    ctx->flags |= AV_CODEC_FLAG_QSCALE;
-    ctx->global_quality = FF_QP2LAMBDA * cfg.qscale;
-  }
-}
-
-void configure_image_codec_ctx(
-    AVCodecContextPtr& ctx,
-    AVPixelFormat format,
-    int width,
-    int height,
-    const EncodeConfig& cfg) {
-  configure_video_codec_ctx(ctx, format, {1, 1}, width, height, cfg);
-}
-
 void open_codec_for_encode(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& encode_options) {
@@ -430,19 +328,6 @@ void open_codec_for_encode(
       avcodec_open2(codec_ctx, codec_ctx->codec, option),
       "Failed to open codec context.");
   check_empty(option);
-}
-
-AVStream* create_stream(
-    AVFormatContext* format_ctx,
-    AVCodecContext* codec_ctx) {
-  AVStream* stream = CHECK_AVALLOCATE(avformat_new_stream(format_ctx, nullptr));
-  // Note: time base may be adjusted when `calling avformat_write_header()`
-  // https://ffmpeg.org/doxygen/5.1/structAVStream.html#a9db755451f14e2bf590d4b85d82b32e6
-  stream->time_base = codec_ctx->time_base;
-  CHECK_AVERROR(
-      avcodec_parameters_from_context(stream->codecpar, codec_ctx),
-      "Failed to create a new stream.");
-  return stream;
 }
 
 void open_format(
