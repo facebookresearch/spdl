@@ -26,7 +26,6 @@ __all__ = [
     "ImageFrames",
     "DemuxConfig",
     "DecodeConfig",
-    "EncodeConfig",
     "VideoEncodeConfig",
     "CUDAConfig",
     "CPUStorage",
@@ -637,13 +636,6 @@ class DecodeConfig:
     Decode configuration.
 
     See the factory function :py:func:`~spdl.io.decode_config`."""
-
-
-class EncodeConfig:
-    """EncodeConfig()
-    Encode configuration.
-
-    See the factory function :py:func:`~spdl.io.encode_config`."""
 
 
 class AudioEncodeConfig:

@@ -10,7 +10,8 @@ import builtins
 import logging
 import warnings
 from collections.abc import Iterator
-from typing import overload
+from pathlib import Path
+from typing import overload, TYPE_CHECKING
 
 from spdl.io import (
     CPUBuffer,
@@ -23,7 +24,7 @@ from spdl.io import (
     VideoPackets,
 )
 
-from . import _core, _preprocessing
+from . import _config, _core, _preprocessing
 from ._core import _FILTER_DESC_DEFAULT, SourceType
 from .lib import _libspdl
 
@@ -31,6 +32,7 @@ __all__ = [
     "load_audio",
     "load_video",
     "load_image",
+    "save_image",
     "load_image_batch",
     "load_image_batch_nvjpeg",
     "streaming_load_video_nvdec",
@@ -40,6 +42,18 @@ __all__ = [
 _LG = logging.getLogger(__name__)
 
 Window = tuple[float, float]
+
+
+if TYPE_CHECKING:
+    import numpy as np
+
+    try:
+        from numpy.typing import NDArray as Array
+
+    except ImportError:
+        Array = np.ndarray
+else:
+    Array = object
 
 
 ################################################################################
@@ -698,3 +712,94 @@ def sample_decode_video(
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
         ret.extend(_decode_partial(split, idxes, decode_config, filter_desc))
     return ret
+
+
+def save_image(path: str | Path, data: Array, pix_fmt: str = "rgb24", **kwargs):
+    """Save the given image tensor.
+
+    .. note::
+
+       The current implementation only supports writing data without changing
+       the pixel format. If you need to apply preprocessing including pixel
+       format conversion or rescaling, then construct such pipeline using
+       :py:class:`FitlerGraph` and :py:class:`Muxer`.
+
+    Args:
+        path: The output path
+        data: The data to write.
+            The shape must be one of the following and must match the
+            value of ``pix_fmt``.
+
+            - ``"rgb24"``, ``"bgr24"``: ``(height, width, channel==3)``
+            - ``"gray"``, ``"gray16be"``: ``(height, width)``
+            - ``"yuv444p"``: ``(channel==3, height, width)``
+
+            If writing ``"gray16be"``, the dtype must be 16-bit signed integer.
+            Otherwise it must be 8-bit unsigned integer.
+
+        pix_fmt: The pixel format used to write data.
+            Supported values are, ``"rgb24"``, ``"bgr24"``, ``"gray"``,
+            ``"gray16be"``, ``"gray16le"``, ``"gray"``, ``"yuv444p"``.
+
+        **kwargs: Extra arguments passed to :py:func:`video_encode_config`.
+    """
+    match pix_fmt:
+        case "rgb24" | "bgr24":
+            if data.ndim != 3 or data.shape[2] != 3:
+                raise ValueError(
+                    f"The input shape must be [H, W, C==3]. Found: {data.shape}"
+                )
+            if data.dtype.itemsize != 1:
+                raise ValueError(f"The input dtype must be 8bit. Found: {data.dtype}")
+
+            height, width = data.shape[:2]
+
+        case "gray":
+            if data.ndim != 2:
+                raise ValueError(f"The input shape must be [H, W]. Found: {data.shape}")
+            if data.dtype.itemsize != 1:
+                raise ValueError(f"The input dtype must be 8bit. Found: {data.dtype}")
+
+            height, width = data.shape[:2]
+
+        case "gray16" | "gray16be" | "gray16le":
+            if data.ndim != 2:
+                raise ValueError(f"The input shape must be [H, W]. Found: {data.shape}")
+            if data.dtype.itemsize != 2:
+                raise ValueError(f"The input dtype must be 16-bit. Found: {data.dtype}")
+
+            height, width = data.shape[:2]
+
+        case "yuv444p":
+            if data.ndim != 3 or data.shape[0] != 3:
+                raise ValueError(
+                    f"The input shape must be [C==3, H, W]. Found: {data.shape}"
+                )
+            if data.dtype.itemsize != 1:
+                raise ValueError(f"The input dtype must be 8bit. Found: {data.dtype}")
+
+            height, width = data.shape[1:]
+
+        case _:
+            raise ValueError(f"Unsupported pix_fmt: {pix_fmt}")
+
+    muxer = _core.Muxer(path)
+    encoder = muxer.add_encode_stream(
+        config=_config.video_encode_config(
+            height=height,
+            width=width,
+            frame_rate=(1, 1),
+            pix_fmt=pix_fmt,
+            **kwargs,
+        )
+    )
+
+    with muxer.open() as muxer:
+        frames = _core.create_reference_video_frame(
+            data[None, ...], pix_fmt=pix_fmt, frame_rate=(1, 1), pts=0
+        )
+
+        if (packets := encoder.encode(frames)) is not None:
+            muxer.write(0, packets)
+        if (packets := encoder.flush()) is not None:
+            muxer.write(0, packets)

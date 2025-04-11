@@ -33,7 +33,6 @@ from ._type_stub import (  # isort: skip
     ImageDecoder,
     DemuxConfig,
     DecodeConfig,
-    EncodeConfig,
     VideoEncodeConfig,
     AudioEncodeConfig,
     CUDAConfig,
@@ -50,6 +49,7 @@ from ._composite import (
     load_image_batch_nvjpeg,
     load_video,
     sample_decode_video,
+    save_image,
     streaming_load_video_nvdec,
 )
 from ._config import (
@@ -58,7 +58,6 @@ from ._config import (
     cuda_config,
     decode_config,
     demux_config,
-    encode_config,
     video_encode_config,
 )
 from ._convert import (
@@ -112,6 +111,7 @@ __all__ = [
     "load_image_batch",
     "load_image_batch_nvjpeg",
     "sample_decode_video",
+    "save_image",
     # Metadata
     "AudioCodec",
     "VideoCodec",
@@ -179,8 +179,6 @@ __all__ = [
     "DemuxConfig",
     "decode_config",
     "DecodeConfig",
-    "encode_config",
-    "EncodeConfig",
     "VideoEncodeConfig",
     "video_encode_config",
     "AudioEncodeConfig",

@@ -36,38 +36,6 @@ void register_types(nb::module_& m) {
           nb::arg("decoder") = nb::none(),
           nb::arg("decoder_options") = nb::none());
 
-  nb::class_<EncodeConfig>(m, "EncodeConfig")
-      .def(
-          nb::init<
-              std::optional<std::string>,
-              std::optional<OptionDict>,
-              std::optional<std::string>,
-              std::optional<OptionDict>,
-              std::optional<std::string>,
-              int,
-              int,
-              std::optional<std::string>,
-              std::optional<std::string>,
-              int,
-              int,
-              int,
-              int,
-              int>(),
-          nb::arg("muxer") = nb::none(),
-          nb::arg("muxer_options") = nb::none(),
-          nb::arg("encoder") = nb::none(),
-          nb::arg("encoder_options") = nb::none(),
-          nb::arg("format") = nb::none(),
-          nb::arg("width") = -1,
-          nb::arg("height") = -1,
-          nb::arg("scale_algo") = nb::none(),
-          nb::arg("filter_desc") = nb::none(),
-          nb::arg("bit_rate") = -1,
-          nb::arg("compression_level") = -1,
-          nb::arg("qscale") = -1,
-          nb::arg("gop_size") = -1,
-          nb::arg("max_bframes") = -1);
-
   nb::exception<spdl::core::InternalError>(
       m, "InternalError", PyExc_AssertionError);
 }

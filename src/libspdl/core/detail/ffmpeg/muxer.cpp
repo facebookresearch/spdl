@@ -17,6 +17,9 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <filesystem>
+#include <set>
+
 namespace spdl::core::detail {
 namespace {} // namespace
 
@@ -28,7 +31,7 @@ MuxerImpl::MuxerImpl(
 namespace {
 template <MediaType media>
 const AVCodec* get_codec(
-    const AVOutputFormat* oformat,
+    const AVFormatContext* fmt_ctx,
     const std::optional<std::string>& override) {
   if (override) {
     auto name = override.value();
@@ -48,18 +51,44 @@ const AVCodec* get_codec(
     }
     return c;
   }
-  AVCodecID id;
+
+  // Special handling for Image
+  // FFmpeg defaults to 'image2' muxer, of which default encoder is MJPEG.
+  // This also applies to formats like PNG and TIFF
+  if (std::strcmp(fmt_ctx->oformat->name, "image2") == 0) {
+    // The following list was obtained by running
+    // ffmpeg -h muxer=image2 | grep 'Common extensions'
+    // then for each extension, checking the encoder by
+    // fmpeg -hide_banner -h encoder=$ext | grep 'Encoder '
+    static const std::set<std::string> exts{
+        "bmp", "dpx",    "exr", "pam",   "pbm", "pcx", "pfm",
+        "pgm", "pgmyuv", "phm", "png",   "ppm", "sgi", "tiff",
+        "xwd", "vbn",    "xbm", "xface", "qoi", "hdr", "wbmp"};
+
+    auto ext = std::filesystem::path(fmt_ctx->url).extension().string();
+    if (!ext.empty()) {
+      ext = ext.substr(1);
+      if (exts.contains(ext)) {
+        const AVCodec* c = avcodec_find_encoder_by_name(ext.c_str());
+        if (c) {
+          return c;
+        }
+      }
+    }
+  }
+
+  AVCodecID default_codec;
   if constexpr (media == MediaType::Video || media == MediaType::Image) {
-    id = oformat->video_codec;
+    default_codec = fmt_ctx->oformat->video_codec;
   }
   if constexpr (media == MediaType::Audio) {
-    id = oformat->audio_codec;
+    default_codec = fmt_ctx->oformat->audio_codec;
   }
-  const AVCodec* c = avcodec_find_encoder(id);
+  const AVCodec* c = avcodec_find_encoder(default_codec);
   if (!c) [[unlikely]] {
     SPDL_FAIL(fmt::format(
         "The `{}` codec does not have a default encoder. Please specify one.",
-        avcodec_get_name(id)));
+        avcodec_get_name(default_codec)));
   }
   return c;
 }
@@ -88,7 +117,7 @@ EncoderImplPtr<media> MuxerImpl::add_encode_stream(
     const std::optional<OptionDict>& encoder_config) {
   assert_media_is_supported<media>();
 
-  const AVCodec* codec = get_codec<media>(fmt_ctx->oformat, encoder_name);
+  const AVCodec* codec = get_codec<media>(fmt_ctx.get(), encoder_name);
   auto ret = make_encoder(
       codec,
       codec_config,
