@@ -5,13 +5,6 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    paths-ignore:
-      - "docs/**"
-      - "packaging/**"
-      - "*.md"
-    branches:
-      - main
 
 jobs:
   pre-commit:
