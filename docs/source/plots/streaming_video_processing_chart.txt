@@ -1,0 +1,13 @@
+.. mermaid::
+
+   flowchart TD
+       In[Input Video] -->|1. Demux| AP(Audio Packets)
+       AP --> |2. Remux| Out[Output Video]
+       In[Input Video] -->|1. Demux| VP(Video Packets)
+       VP --> |3. Decode| VF("Video Frames (YUV)")
+       VF --> |4. Filter| VF2("Video Frames (RGB)")
+       VF2 --> |5. Convert| ARR(Array)
+       ARR --> |6. Wrap| VF3("Video Frames (RGB)")
+       VF3 --> |7. Filter| VF4("Video Frames (YUV)")
+       VF4 --> |8. Encode| VP2(Video Packets)
+       VP2 --> |9. Mux| Out
