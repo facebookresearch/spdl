@@ -12,6 +12,7 @@ from spdl.io import (
     AudioCodec,
     AudioFrames,
     AudioPackets,
+    ImageCodec,
     ImageFrames,
     ImagePackets,
     VideoCodec,
@@ -530,7 +531,7 @@ def get_abuffer_desc(
 
 
 def get_buffer_desc(
-    codec: VideoCodec,
+    codec: VideoCodec | ImageCodec,
     label: str | None = None,
     pix_fmt: str | None = None,
 ) -> str:
@@ -558,7 +559,7 @@ def get_buffer_desc(
               frames = filter_graph.get_frames()
 
     Args:
-        codec: The source video codec
+        codec: The source video/image codec
         label: *Optional* Attatch a label to the ``abuffer`` node, so that it can
             be referenced later. This makes it easy to refer to the input node when building
             filter graph with multiple input nodes.
@@ -567,7 +568,7 @@ def get_buffer_desc(
         pix_fmt: If provided, override the pixel format.
 
     Returns
-        The resulting ``abuffer`` filter expression.
+        The resulting ``buffer`` filter expression.
     """
     name = "buffer" if label is None else f"buffer@{label}"
     args = ":".join(
