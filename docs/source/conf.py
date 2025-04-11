@@ -65,7 +65,7 @@ exclude_patterns = []
 
 breathe_projects = {"libspdl": "generated/doxygen/xml/"}
 breathe_default_project = "libspdl"
-mermaid_version = "10.9.1"
+mermaid_version = "11.4.1"
 
 
 def _get_source():
