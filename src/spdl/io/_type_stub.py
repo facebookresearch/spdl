@@ -142,6 +142,23 @@ class ImageCodec:
         """The pixel format of the image."""
         ...
 
+    @property
+    def time_base(self) -> tuple[int, int]:
+        """The internal unit of time used for timestamp.
+
+        For image, the actual value should be irrelevant.
+        This API is just for compatibility.
+
+        The value is expressed as a fraction. ``(numerator, denominator)``."""
+        ...
+
+    @property
+    def sample_aspect_ratio(self) -> tuple[int, int]:
+        """The aspect ratio of a single pixel.
+
+        The value is expressed as a fraction. ``(width, height)``."""
+        ...
+
 
 class Packets:
     """Packets()
