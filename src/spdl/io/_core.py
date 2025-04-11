@@ -1335,7 +1335,7 @@ class Muxer:
     """
 
     def __init__(self, dst: str | Path, /, *, format: str | None = None) -> None:
-        self._muxer = _libspdl.muxer(dst, format=format)
+        self._muxer = _libspdl.muxer(str(dst), format=format)
         self._open = False
 
     @overload

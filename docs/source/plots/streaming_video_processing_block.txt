@@ -1,0 +1,13 @@
+.. mermaid::
+
+   block-beta
+       columns 7
+       block:e:7
+          p1["Audio t1"]
+          p2("Video t1")
+          p3("Video t2")
+          p4["Audio t2"]
+          p5("Video t3")
+          p6["Audio t3"]
+          p7["..."]
+       end

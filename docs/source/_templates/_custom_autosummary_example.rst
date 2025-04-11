@@ -18,7 +18,7 @@
 
    <div class="custom_autosummary">
 
-{{ name | escape | underline }}
+{{ name.capitalize().replace('_', ' ') | escape | underline }}
 
 .. automodule:: {{ fullname }}
 
