@@ -383,3 +383,16 @@ def test_sample_decode_video_with_windowed_packets_and_filter():
     idx = [0, 2, 4, 6, 8, 10, 12, 14]
     frames = spdl.io.sample_decode_video(packets, idx, filter_desc=filter_desc)
     assert [f.pts for f in frames] == [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
+
+
+def test_url():
+    """Demuxing from bytes reports the address."""
+    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 1 sample.mp4"
+    sample = get_sample(cmd)
+
+    with open(sample.path, "rb") as f:
+        data = f.read()
+
+    addr = np.frombuffer(data, dtype=np.uint8).ctypes.data
+    packets = spdl.io.demux_video(data)
+    assert f"Bytes: {addr:#x}" in str(packets)

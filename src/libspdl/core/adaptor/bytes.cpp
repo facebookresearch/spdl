@@ -100,13 +100,13 @@ class BytesInterface : public DataInterface {
         fmt_ctx(get_input_format_ctx(
             io_ctx.get(),
             dmx_cfg.format,
-            dmx_cfg.format_options)) {}
+            dmx_cfg.format_options)) {
+    auto src = fmt::format("<Bytes: {}>", (void*)obj.get_src());
+    fmt_ctx->url = av_strdup(src.c_str());
+  }
 
   AVFormatContext* get_fmt_ctx() override {
     return fmt_ctx.get();
-  }
-  std::string get_src() const override {
-    return fmt::format("<Bytes: {}>", (void*)obj.get_src());
   }
 };
 } // namespace

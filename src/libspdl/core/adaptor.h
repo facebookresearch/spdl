@@ -34,10 +34,13 @@ using SourceAdaptorPtr = std::shared_ptr<SourceAdaptor>;
 //    interface can require additional/specific implementation to
 //    talk to the actual data source. Such things are distilled to
 //    merely AVFormatContext*.
+
+// Note:
+// The demuxer impl uses `AVFormatContext::url` in error reporting,
+// so make sure that it is populated.
 struct DataInterface {
   virtual ~DataInterface() = default;
   virtual AVFormatContext* get_fmt_ctx() = 0;
-  virtual std::string get_src() const = 0;
 };
 
 using DataInterfacePtr = std::unique_ptr<DataInterface>;
