@@ -40,7 +40,7 @@ jobs:
           py_ver="$(echo '${{ inputs.python-version }}' | sed 's|[^0-9]*||g')"
           python_exe="/opt/python/cp${py_ver}-cp${py_ver}/bin/python"
           uv venv --python "${python_exe}"
-          uv build --all-packages --wheel
+          uv build --no-python-downloads --all-packages --wheel
 
           ./packaging/repair_wheels.sh manylinux_2_28_${{ inputs.arch }} ./dist ~/package
 
