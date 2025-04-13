@@ -42,7 +42,7 @@ jobs:
           uv python pin "${py_ver}"
           uv python list --only-installed
           uv venv
-          uv build --all-packages --wheel
+          uv build --no-python-downloads --all-packages --wheel
           mv ./dist ~/package
 
       - uses: actions/upload-artifact@v4
