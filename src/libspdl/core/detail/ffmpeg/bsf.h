@@ -31,6 +31,7 @@ class BSFImpl {
   void flush(PacketSeries& out);
 
   AVCodecParameters* get_output_codec_par();
+  AVRational get_output_time_base();
 };
 
 } // namespace spdl::core::detail
