@@ -21,11 +21,11 @@
 namespace spdl::core::detail {
 namespace {
 
-void init_fmt_ctx(AVFormatContext* fmt_ctx, DataInterface* di) {
+void init_fmt_ctx(AVFormatContext* fmt_ctx) {
   TRACE_EVENT("demuxing", "avformat_find_stream_info");
   CHECK_AVERROR(
       avformat_find_stream_info(fmt_ctx, nullptr),
-      fmt::format("Failed to find stream information: {}.", di->get_src()));
+      fmt::format("Failed to find stream information: {}.", fmt_ctx->url));
 
   // Disable all the non-media streams
   for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
@@ -69,7 +69,7 @@ void enable_for_stream(AVFormatContext* fmt_ctx, const std::set<int>& indices) {
 
 DemuxerImpl::DemuxerImpl(DataInterfacePtr di_) : di(std::move(di_)) {
   fmt_ctx = di->get_fmt_ctx();
-  init_fmt_ctx(fmt_ctx, di.get());
+  init_fmt_ctx(fmt_ctx);
 }
 
 DemuxerImpl::~DemuxerImpl() {
@@ -108,7 +108,7 @@ int DemuxerImpl::get_default_stream_index() const {
   }();
   int i = av_find_best_stream(fmt_ctx, t, -1, -1, nullptr, 0);
   CHECK_AVERROR_NUM(
-      i, fmt::format("Failed to find an audio stream in {}", di->get_src()));
+      i, fmt::format("Failed to find an audio stream in {}", fmt_ctx->url));
   return i;
 }
 
@@ -147,7 +147,7 @@ int DemuxerImpl::get_default_stream_index(MediaType media) const {
     SPDL_FAIL(fmt::format(
         "No {} stream was found in {}.",
         av_get_media_type_string(type),
-        di->get_src()));
+        fmt_ctx->url));
   }
   return idx;
 }
@@ -240,7 +240,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
     frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
   }
   auto ret = std::make_unique<Packets<media>>(
-      di->get_src(),
+      fmt_ctx->url,
       stream->index,
       Codec<media>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
@@ -267,10 +267,8 @@ template PacketsPtr<MediaType::Image> DemuxerImpl::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
-AnyPackets mk_packets(
-    AVStream* stream,
-    const std::string& src,
-    std::vector<AVPacketPtr>&& pkts) {
+AnyPackets
+mk_packets(AVStream* stream, const char* src, std::vector<AVPacketPtr>&& pkts) {
   switch (stream->codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO: {
       auto ret =
@@ -335,7 +333,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
 
     if (stream_indices.contains(i)) {
       if (!ret.contains(i)) {
-        ret.emplace(i, mk_packets(stream, di->get_src(), {}));
+        ret.emplace(i, mk_packets(stream, fmt_ctx->url, {}));
       }
       std::visit([&](auto& v) { v->pkts.push(packet.release()); }, ret[i]);
       int num_pkts = std::visit(

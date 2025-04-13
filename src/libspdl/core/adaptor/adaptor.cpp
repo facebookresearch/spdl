@@ -17,22 +17,17 @@ using namespace spdl::core::detail;
 namespace spdl::core {
 namespace {
 class BasicInterface : public DataInterface {
-  std::string url;
   detail::AVFormatInputContextPtr fmt_ctx;
 
  public:
-  BasicInterface(std::string url_, const DemuxConfig& dmx_cfg)
-      : url(std::move(url_)),
-        fmt_ctx(get_input_format_ctx(
+  BasicInterface(const std::string& url, const DemuxConfig& dmx_cfg)
+      : fmt_ctx(get_input_format_ctx(
             url.c_str(),
             dmx_cfg.format,
             dmx_cfg.format_options)) {}
   ~BasicInterface() override = default;
   AVFormatContext* get_fmt_ctx() override {
     return fmt_ctx.get();
-  }
-  std::string get_src() const override {
-    return url;
   }
 };
 } // namespace
