@@ -228,12 +228,8 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   enable_for_stream(fmt_ctx, {index});
   auto* stream = fmt_ctx->streams[index];
 
-  auto filter = [&]() -> std::optional<BSFImpl> {
-    if (!bsf) {
-      return std::nullopt;
-    }
-    return BSFImpl{*bsf, stream->codecpar};
-  }();
+  auto filter = bsf ? std::optional<BSFImpl>{BSFImpl{*bsf, stream->codecpar}}
+                    : std::nullopt;
 
   Rational frame_rate{1, 1};
   if constexpr (media == MediaType::Video) {
@@ -244,7 +240,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
       stream->index,
       Codec<media>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
-          stream->time_base,
+          bsf ? filter->get_output_time_base() : stream->time_base,
           frame_rate},
       window);
 

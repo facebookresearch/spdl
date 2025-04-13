@@ -66,6 +66,10 @@ AVCodecParameters* BSFImpl::get_output_codec_par() {
   return bsf_ctx->par_out;
 }
 
+AVRational BSFImpl::get_output_time_base() {
+  return bsf_ctx->time_base_out;
+}
+
 Generator<AVPacketPtr> BSFImpl::filter(AVPacket* packet) {
   send_packet(bsf_ctx.get(), packet);
   int errnum;
