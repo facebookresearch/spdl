@@ -8,6 +8,8 @@
 
 import asyncio
 import inspect
+import sys
+import traceback
 from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterator
 from concurrent.futures import Executor, ProcessPoolExecutor
 from typing import TypeAlias, TypeVar
@@ -27,13 +29,37 @@ AsyncCallables: TypeAlias = (
 )
 
 
+def _func_in_subprocess(func: Callable[[T], U], item: T) -> U:
+    try:
+        return func(item)
+    except Exception as err:
+        # When running a function in subprocess, the exception context is lost.
+        # This makes it difficult to debug, so we add extra layer to pass
+        # the source code location back to the main process
+        _, _, exc_tb = sys.exc_info()
+        f = traceback.extract_tb(exc_tb, limit=-1)[-1]
+
+        raise RuntimeError(
+            "Function failed in subprocess: "
+            f"{type(err).__name__}: {err} ({f.filename}:{f.lineno}:{f.name})"
+        ) from None
+
+
 def _to_async(
     func: Callable[[T], U],
     executor: type[Executor] | None,
 ) -> Callable[[T], Awaitable[U]]:
-    async def afunc(item: T) -> U:
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(executor, func, item)
+    if isinstance(executor, ProcessPoolExecutor):
+
+        async def afunc(item: T) -> U:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(executor, _func_in_subprocess, func, item)
+
+    else:
+
+        async def afunc(item: T) -> U:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(executor, func, item)
 
     return afunc
 
