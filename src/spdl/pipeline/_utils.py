@@ -55,7 +55,7 @@ def _log_exception(task: Task, stacklevel: int, log_cancelled: bool) -> None:
         f = traceback.extract_tb(exc_tb, limit=-1)[-1]
 
         _LG.error(
-            "Task [%s] failed: %s %s (%s:%d:%s)",
+            "Task [%s]: %s: %s (%s:%d:%s)",
             task.get_name(),
             type(err).__name__,
             err,
