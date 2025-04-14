@@ -231,17 +231,13 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   auto filter = bsf ? std::optional<BSFImpl>{BSFImpl{*bsf, stream->codecpar}}
                     : std::nullopt;
 
-  Rational frame_rate{1, 1};
-  if constexpr (media == MediaType::Video) {
-    frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
-  }
   auto ret = std::make_unique<Packets<media>>(
       fmt_ctx->url,
       stream->index,
       Codec<media>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
           bsf ? filter->get_output_time_base() : stream->time_base,
-          frame_rate},
+          av_guess_frame_rate(fmt_ctx, stream, nullptr)},
       window);
 
   auto demuxing = this->demux_window(stream, end, filter);
