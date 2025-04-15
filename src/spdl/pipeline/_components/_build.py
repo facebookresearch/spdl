@@ -133,6 +133,10 @@ def _get_fail_counter() -> type[_FailCounter]:
     return _FC
 
 
+# Used to append stage name with pipeline
+_PIPELINE_ID: int = -1
+
+
 def _build_pipeline_coro(
     src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
@@ -146,18 +150,20 @@ def _build_pipeline_coro(
     coros = []
     queues = []
 
+    global _PIPELINE_ID
+    _PIPELINE_ID += 1
     _DefaultQueue = partial(DefaultQueue, interval=report_stats_interval)
 
     # source
     queue_class = src.queue_class or _DefaultQueue
-    queues.append(queue_class("0:src_queue"))
+    queues.append(queue_class(f"{_PIPELINE_ID}:0:src_queue"))
     coros.append(("Pipeline::0:src", _source(src.source, queues[0])))
 
     _FailCounter = _get_fail_counter()
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
-        name = f"{i}:{cfg.name}"
+        name = f"{_PIPELINE_ID}:{i}:{cfg.name}"
         queue_class = cfg.queue_class or _DefaultQueue
         queue_name = f"{name}_queue"
         queues.append(queue_class(queue_name))
@@ -192,7 +198,9 @@ def _build_pipeline_coro(
     # sink
     n = len(process_args) + 1
     queue_class = sink.queue_class or _DefaultQueue
-    output_queue = queue_class(f"{n}:sink_queue", buffer_size=sink.buffer_size)
+    output_queue = queue_class(
+        f"{_PIPELINE_ID}:{n}:sink_queue", buffer_size=sink.buffer_size
+    )
     coros.append(
         (
             f"Pipeline::{n}:sink",
