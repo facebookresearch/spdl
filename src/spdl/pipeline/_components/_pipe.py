@@ -260,7 +260,7 @@ def _ordered_pipe(
     )
 
     inter_queue: AsyncQueue[asyncio.Task[U]] = AsyncQueue(
-        f"{name}_interqueue", args.concurrency
+        f"{name}_interqueue", buffer_size=args.concurrency
     )
 
     def _too_many_failures() -> bool:
