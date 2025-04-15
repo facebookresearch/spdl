@@ -44,8 +44,7 @@ class AsyncQueue(asyncio.Queue[T]):
         buffer_size: The buffer size. Assigned by :py:class:`PipelineBuilder`.
     """
 
-    # The default value is for simplifying unit testing.
-    def __init__(self, name: str, buffer_size: int = 0) -> None:
+    def __init__(self, name: str, *, buffer_size: int = 1) -> None:
         super().__init__(buffer_size)
         self.name = name
 
@@ -62,15 +61,18 @@ class StatsQueue(AsyncQueue[T]):
     Args:
         name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.
         buffer_size: The buffer size. Assigned by :py:class:`PipelineBuilder`.
+        interval: The interval (in second) between repoting performance numbers
+            to console.
     """
 
     def __init__(
         self,
         name: str,
-        buffer_size: int = 0,
+        *,
+        buffer_size: int = 1,
         interval: float = -1,
     ) -> None:
-        super().__init__(name, buffer_size)
+        super().__init__(name, buffer_size=buffer_size)
 
         self.interval = interval
 
