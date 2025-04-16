@@ -87,19 +87,32 @@ class StatsQueue(AsyncQueue[T]):
         self._int_task: asyncio.Task | None = None
         self._int_t0 = 0.0
 
+        # For measuring starvation rate
+        self._empty_start = 0.0
+        self._dur_empty_int = 0.0
+        self._dur_empty_acc = 0.0
+
     async def get(self) -> T:
         """Remove and return an item from the queue, track the time."""
         with self._getc.count():
-            return await super().get()
+            item = await super().get()
+
+        if self.qsize() == 0:
+            self._empty_start = time.monotonic()
+
+        return item
 
     async def put(self, item: T) -> None:
         """Remove and return an item from the queue, track the time."""
+        if self.qsize() == 0:
+            self._dur_empty_int += time.monotonic() - self._empty_start
+
         with self._putc.count():
             return await super().put(item)
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
-        t0 = time.monotonic()
+        t0 = self._empty_start = time.monotonic()
         if self.interval > 0:
             coro = _periodic_dispatch(self._log_interval_stats, self.interval)
             self._int_t0 = t0
@@ -110,16 +123,22 @@ class StatsQueue(AsyncQueue[T]):
         try:
             yield
         finally:
+            if self.interval > 0:
+                assert self._int_task is not None
+                self._int_task.cancel()
+
             elapsed = time.monotonic() - t0
 
             self._getc_acc += self._getc
             self._putc_acc += self._putc
+            self._dur_empty_acc += self._dur_empty_int
 
             await self._log_stats(
                 self._getc_acc.num_items,
                 elapsed,
                 self._putc_acc.ave_time,
                 self._getc_acc.ave_time,
+                self._dur_empty_acc,
             )
 
     async def _log_interval_stats(self) -> None:
@@ -127,6 +146,9 @@ class StatsQueue(AsyncQueue[T]):
         elapsed, self._int_t0 = now - self._int_t0, now
         getc, self._getc = self._getc, _StatsCounter()
         putc, self._putc = self._putc, _StatsCounter()
+
+        dur_empty, self._dur_empty_int = self._dur_empty_int, 0.0
+        self._dur_empty_acc += dur_empty
 
         self._getc_acc += getc
         self._putc_acc += putc
@@ -136,19 +158,27 @@ class StatsQueue(AsyncQueue[T]):
             elapsed,
             putc.ave_time,
             getc.ave_time,
+            dur_empty,
         )
 
     # Async for the sake of subclass extendability
     async def _log_stats(
-        self, num_items: int, elapsed: float, put_time: float, get_time: float
+        self,
+        num_items: int,
+        elapsed: float,
+        put_time: float,
+        get_time: float,
+        dur_empty: float,
     ) -> None:
         _LG.info(
             "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
-            "Ave wait time: put: %s, get (by next stage): %s.",
+            "Ave wait time: put: %s, get (by next stage): %s. "
+            "Occupation rate: %d%%",
             self.name,
             num_items,
             _time_str(elapsed),
             num_items / elapsed,
             _time_str(put_time),
             _time_str(get_time),
+            100 * (1 - dur_empty / elapsed),
         )
