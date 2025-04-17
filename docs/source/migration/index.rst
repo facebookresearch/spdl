@@ -1,5 +1,5 @@
-Usage Guide
-===========
+Migration Guide
+===============
 
 .. toctree::
 

@@ -1,8 +1,8 @@
-Practical Example
-=================
+Migrating from PyTorch DataLoader
+=================================
 
 If you are using :py:class:`torch.utils.data.DataLoader` and decided to
-use to SPDL, there are couple of conceptual differences
+migrate to SPDL, there are couple of conceptual differences
 you want to be aware of.
 
 There are three distinguished components in PyTorch's DataLoader.
@@ -44,7 +44,7 @@ and :py:class:`~torchvision.transforms.PILToTensor` transforms.
 Decoding images in threads
 --------------------------
 
-When using SPDL before free-threaded (a.k.a no-GIL) Python becomes available
+When adopting SPDL before free-threaded (a.k.a no-GIL) Python becomes available
 and stable, we need to check whether the dataset instance can be used
 in threaded environment in a performant manner.
 
@@ -338,7 +338,7 @@ and the size of the batch tensor.
 Summary
 -------
 
-We looked at how one can replace PyTorch DataLoader with SPDL Pipeline while
+We looked at how one can migrate from PyTorch DataLoader to SPDL Pipeline while
 improving the performance of data loading.
 
 The initial step can be mechanically applied, but to ensure that the resulting
