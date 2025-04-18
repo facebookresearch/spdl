@@ -137,6 +137,16 @@ def _get_fail_counter() -> type[_FailCounter]:
 _PIPELINE_ID: int = -1
 
 
+def _get_queue(
+    queue_class: type[AsyncQueue[T]] | None,
+    interval: float,
+) -> type[AsyncQueue[T]]:
+    if queue_class is not None:
+        return queue_class
+
+    return partial(DefaultQueue, interval=interval)  # pyre-ignore: [7]
+
+
 def _build_pipeline_coro(
     src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
@@ -155,7 +165,7 @@ def _build_pipeline_coro(
     _DefaultQueue = partial(DefaultQueue, interval=report_stats_interval)
 
     # source
-    queue_class = src.queue_class or _DefaultQueue
+    queue_class = _get_queue(src.queue_class, report_stats_interval)
     queues.append(queue_class(f"{_PIPELINE_ID}:0:src_queue"))
     coros.append(("Pipeline::0:src", _source(src.source, queues[0])))
 
@@ -164,9 +174,9 @@ def _build_pipeline_coro(
     # pipes
     for i, cfg in enumerate(process_args, start=1):
         name = f"{_PIPELINE_ID}:{i}:{cfg.name}"
-        queue_class = cfg.queue_class or _DefaultQueue
+        queue_class = _get_queue(cfg.queue_class, report_stats_interval)
         queue_name = f"{name}_queue"
-        queues.append(queue_class(queue_name))
+        queues.append(queue_class(queue_name, buffer_size=1))
         in_queue, out_queue = queues[i - 1 : i + 1]
 
         match cfg.type_:
@@ -197,7 +207,7 @@ def _build_pipeline_coro(
 
     # sink
     n = len(process_args) + 1
-    queue_class = sink.queue_class or _DefaultQueue
+    queue_class = _get_queue(sink.queue_class, report_stats_interval)
     output_queue = queue_class(
         f"{_PIPELINE_ID}:{n}:sink_queue", buffer_size=sink.buffer_size
     )
