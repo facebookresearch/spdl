@@ -22,8 +22,9 @@ on:
         required: true
         type: string
       use-nvdec:
-        default: ""
+        default: "nvdec"
         type: string
+        description: 'Whether build NVDEC extension. Valid value is "nvdec" or not.'
       run-test:
         required: false
         default: 'false'
