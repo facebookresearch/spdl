@@ -84,7 +84,6 @@ class StatsQueue(AsyncQueue[T]):
         self._putc_acc = _StatsCounter()
 
         # For interval
-        self._int_task: asyncio.Task | None = None
         self._int_t0 = 0.0
 
         # For measuring starvation rate
@@ -112,20 +111,19 @@ class StatsQueue(AsyncQueue[T]):
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
-        t0 = self._empty_start = time.monotonic()
+        self._int_t0 = t0 = self._empty_start = time.monotonic()
         if self.interval > 0:
-            coro = _periodic_dispatch(self._log_interval_stats, self.interval)
-            self._int_t0 = t0
-            self._int_task = create_task(
-                coro, name=f"{self.name}_periodic_report", log_cancelled=False
+            report = create_task(
+                _periodic_dispatch(self._log_interval_stats, self.interval),
+                name=f"{self.name}_periodic_report",
+                log_cancelled=False,
             )
 
         try:
             yield
         finally:
             if self.interval > 0:
-                assert self._int_task is not None
-                self._int_task.cancel()
+                report.cancel()
 
             elapsed = time.monotonic() - t0
 

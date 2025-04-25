@@ -297,7 +297,6 @@ class TaskStatsHook(PipelineHook):
         self.ave_time = 0.0
 
         # For interval
-        self._int_task: Task | None = None
         self._int_t0 = 0.0
         self._int_num_tasks = 0
         self._int_num_success = 0
@@ -311,17 +310,18 @@ class TaskStatsHook(PipelineHook):
     async def stage_hook(self) -> AsyncIterator[None]:
         """Track the stage runtime and log the task stats."""
         if self.interval > 0:
-            coro = _periodic_dispatch(self._log_interval_stats, self.interval)
             self._int_t0 = time.monotonic()
-            self._int_task = create_task(
-                coro, name="f{self.name}_periodic_report", log_cancelled=False
+            report = create_task(
+                _periodic_dispatch(self._log_interval_stats, self.interval),
+                name="f{self.name}_periodic_report",
+                log_cancelled=False,
             )
 
         try:
             yield
         finally:
-            if self._int_task is not None:
-                self._int_task.cancel()
+            if self.interval > 0:
+                report.cancel()
             await self._log_stats(self.num_tasks, self.num_success, self.ave_time)
 
     @asynccontextmanager
