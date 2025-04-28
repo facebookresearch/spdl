@@ -297,10 +297,10 @@ class TaskStatsHook(PipelineHook):
         self.ave_time = 0.0
 
         # For interval
-        self._int_t0 = 0.0
-        self._int_num_tasks = 0
-        self._int_num_success = 0
-        self._int_ave_time = 0.0
+        self._lap_t0 = 0.0
+        self._lap_num_tasks = 0
+        self._lap_num_success = 0
+        self._lap_ave_time = 0.0
 
     @property
     def num_failures(self) -> int:
@@ -310,7 +310,7 @@ class TaskStatsHook(PipelineHook):
     async def stage_hook(self) -> AsyncIterator[None]:
         """Track the stage runtime and log the task stats."""
         if self.interval > 0:
-            self._int_t0 = time.monotonic()
+            self._lap_t0 = time.monotonic()
             report = create_task(
                 _periodic_dispatch(self._log_interval_stats, self.interval),
                 name="f{self.name}_periodic_report",
@@ -342,28 +342,29 @@ class TaskStatsHook(PipelineHook):
             self.num_success += 1
             self.ave_time += (elapsed - self.ave_time) / self.num_success
 
-    async def _log_interval_stats(self) -> None:
+    def _get_lap_stats(self) -> tuple[int, int, float]:
         num_success = self.num_success
         num_tasks = self.num_tasks
         ave_time = self.ave_time
 
-        if (num_success - self._int_num_success) > 0:
-            int_ave = (
-                ave_time * num_success - self._int_ave_time * self._int_num_success
-            )
-            int_ave /= num_success - self._int_num_success
+        delta_num_tasks = max(0, num_tasks - self._lap_num_tasks)
+        delta_num_success = max(0, num_success - self._lap_num_success)
+        if delta_num_success <= 0:
+            delta_ave_time = 0.0
         else:
-            int_ave = 0.0
+            total_time = ave_time * num_success
+            lap_total_time = self._lap_ave_time * self._lap_num_success
+            delta_ave_time = max(0.0, (total_time - lap_total_time) / delta_num_success)
 
-        await self._log_stats(
-            num_tasks - self._int_num_tasks,
-            num_success - self._int_num_success,
-            int_ave,
-        )
+        self._lap_num_tasks = num_tasks
+        self._lap_num_success = num_success
+        self._lap_ave_time = ave_time
 
-        self._int_num_tasks = num_tasks
-        self._int_num_success = num_success
-        self._int_ave_time = ave_time
+        return delta_num_tasks, delta_num_success, delta_ave_time
+
+    async def _log_interval_stats(self) -> None:
+        num_tasks, num_success, ave_time = self._get_lap_stats()
+        await self._log_stats(num_tasks, num_success, ave_time)
 
     # Async for the sake of subclass extension.
     async def _log_stats(

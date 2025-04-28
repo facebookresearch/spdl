@@ -76,20 +76,21 @@ class StatsQueue(AsyncQueue[T]):
 
         self.interval = interval
 
+        # For measuring the pressure
         self._getc = _StatsCounter()
         self._putc = _StatsCounter()
 
-        # Accumurate
-        self._getc_acc = _StatsCounter()
-        self._putc_acc = _StatsCounter()
+        # For measuring starvation rate
+        self._empty_t0 = 0.0
+        self._dur_empty = 0.0
 
         # For interval
-        self._int_t0 = 0.0
-
-        # For measuring starvation rate
-        self._empty_start = 0.0
-        self._dur_empty_int = 0.0
-        self._dur_empty_acc = 0.0
+        self._lap_t0 = 0.0
+        self._lap_num_get = 0
+        self._lap_num_put = 0
+        self._lap_ave_get_time = 0.0
+        self._lap_ave_put_time = 0.0
+        self._lap_dur_empty = 0.0
 
     async def get(self) -> T:
         """Remove and return an item from the queue, track the time."""
@@ -97,21 +98,21 @@ class StatsQueue(AsyncQueue[T]):
             item = await super().get()
 
         if self.qsize() == 0:
-            self._empty_start = time.monotonic()
+            self._empty_t0 = time.monotonic()
 
         return item
 
     async def put(self, item: T) -> None:
         """Remove and return an item from the queue, track the time."""
         if self.qsize() == 0:
-            self._dur_empty_int += time.monotonic() - self._empty_start
+            self._dur_empty += time.monotonic() - self._empty_t0
 
         with self._putc.count():
             return await super().put(item)
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
-        self._int_t0 = t0 = self._empty_start = time.monotonic()
+        t0 = self._lap_t0 = self._empty_t0 = time.monotonic()
         if self.interval > 0:
             report = create_task(
                 _periodic_dispatch(self._log_interval_stats, self.interval),
@@ -125,39 +126,63 @@ class StatsQueue(AsyncQueue[T]):
             if self.interval > 0:
                 report.cancel()
 
-            elapsed = time.monotonic() - t0
-
-            self._getc_acc += self._getc
-            self._putc_acc += self._putc
-            self._dur_empty_acc += self._dur_empty_int
-
             await self._log_stats(
-                self._getc_acc.num_items,
-                elapsed,
-                self._putc_acc.ave_time,
-                self._getc_acc.ave_time,
-                self._dur_empty_acc,
+                self._getc.num_items,
+                time.monotonic() - t0,
+                self._putc.ave_time,
+                self._getc.ave_time,
+                self._dur_empty,
             )
 
-    async def _log_interval_stats(self) -> None:
+    def _get_lap_stats(
+        self,
+    ) -> tuple[int, float, float, float, float]:
+        # Get the current values
         now = time.monotonic()
-        elapsed, self._int_t0 = now - self._int_t0, now
-        getc, self._getc = self._getc, _StatsCounter()
-        putc, self._putc = self._putc, _StatsCounter()
+        num_put, ave_put_time = self._putc.num_items, self._putc.ave_time
+        num_get, ave_get_time = self._getc.num_items, self._getc.ave_time
+        dur_empty = self._dur_empty
 
-        dur_empty, self._dur_empty_int = self._dur_empty_int, 0.0
-        self._dur_empty_acc += dur_empty
+        # Compute delta
+        elapsed = max(0.0, now - self._lap_t0)
+        delta_num_put = max(0, num_put - self._lap_num_put)
+        delta_num_get = max(0, num_get - self._lap_num_get)
 
-        self._getc_acc += getc
-        self._putc_acc += putc
+        if delta_num_put <= 0:
+            delta_ave_put_time = 0.0
+        else:
+            put_total_time = ave_put_time * num_put
+            lap_put_total_time = self._lap_ave_put_time * self._lap_num_put
+            delta_ave_put_time = (put_total_time - lap_put_total_time) / delta_num_put
 
-        await self._log_stats(
-            getc.num_items,
+        if delta_num_get <= 0:
+            delta_ave_get_time = 0.0
+        else:
+            get_total_time = ave_get_time * num_get
+            lap_get_total_time = self._lap_ave_get_time * self._lap_num_get
+            delta_ave_get_time = (get_total_time - lap_get_total_time) / delta_num_get
+
+        delta_dur_empty = dur_empty - self._lap_dur_empty
+
+        # Update the lap
+        self._lap_t0 = now
+        self._lap_num_put = num_put
+        self._lap_num_get = num_get
+        self._lap_ave_put_time = ave_put_time
+        self._lap_ave_get_time = ave_get_time
+        self._lap_dur_empty = dur_empty
+
+        return (
+            delta_num_get,
             elapsed,
-            putc.ave_time,
-            getc.ave_time,
-            dur_empty,
+            delta_ave_put_time,
+            delta_ave_get_time,
+            delta_dur_empty,
         )
+
+    async def _log_interval_stats(self) -> None:
+        num_items, elapsed, put_time, get_time, dur_empty = self._get_lap_stats()
+        await self._log_stats(num_items, elapsed, put_time, get_time, dur_empty)
 
     # Async for the sake of subclass extendability
     async def _log_stats(
@@ -171,7 +196,7 @@ class StatsQueue(AsyncQueue[T]):
         _LG.info(
             "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
             "Ave wait time: put: %s, get (by next stage): %s. "
-            "Occupation rate: %d%%",
+            "Occupancy rate: %d%%",
             self.name,
             num_items,
             _time_str(elapsed),
@@ -179,4 +204,5 @@ class StatsQueue(AsyncQueue[T]):
             _time_str(put_time),
             _time_str(get_time),
             100 * (1 - dur_empty / elapsed),
+            stacklevel=2,
         )
