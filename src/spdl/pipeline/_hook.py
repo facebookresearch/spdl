@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from asyncio import Task
 from collections.abc import AsyncIterator, Callable, Coroutine, Iterator, Sequence
 from contextlib import asynccontextmanager, AsyncExitStack, contextmanager
+from dataclasses import dataclass
 from typing import AsyncContextManager, TypeVar
 
 from ._utils import create_task
@@ -273,6 +274,13 @@ async def _periodic_dispatch(
         task.add_done_callback(tasks.discard)
 
 
+@dataclass
+class _TaskPerfStats:
+    num_tasks: int
+    num_failures: int
+    ave_time: float
+
+
 class TaskStatsHook(PipelineHook):
     """Track the task runtimes and success rate.
 
@@ -322,7 +330,13 @@ class TaskStatsHook(PipelineHook):
         finally:
             if self.interval > 0:
                 report.cancel()
-            await self._log_stats(self.num_tasks, self.num_success, self.ave_time)
+            self._log_stats(
+                _TaskPerfStats(
+                    num_tasks=self.num_tasks,
+                    num_failures=self.num_tasks - self.num_success,
+                    ave_time=self.ave_time,
+                ),
+            )
 
     @asynccontextmanager
     async def task_hook(self) -> AsyncIterator[None]:
@@ -342,7 +356,7 @@ class TaskStatsHook(PipelineHook):
             self.num_success += 1
             self.ave_time += (elapsed - self.ave_time) / self.num_success
 
-    def _get_lap_stats(self) -> tuple[int, int, float]:
+    def _get_lap_stats(self) -> _TaskPerfStats:
         num_success = self.num_success
         num_tasks = self.num_tasks
         ave_time = self.ave_time
@@ -360,26 +374,24 @@ class TaskStatsHook(PipelineHook):
         self._lap_num_success = num_success
         self._lap_ave_time = ave_time
 
-        return delta_num_tasks, delta_num_success, delta_ave_time
+        return _TaskPerfStats(
+            num_tasks=delta_num_tasks,
+            num_failures=delta_num_tasks - delta_num_success,
+            ave_time=delta_ave_time,
+        )
 
     async def _log_interval_stats(self) -> None:
-        num_tasks, num_success, ave_time = self._get_lap_stats()
-        await self._log_stats(num_tasks, num_success, ave_time)
+        stats = self._get_lap_stats()
+        self._log_stats(stats)
 
-    # Async for the sake of subclass extension.
-    async def _log_stats(
-        self,
-        num_tasks: int,
-        num_success: int,
-        ave_time: float,
-    ) -> None:
+    def _log_stats(self, stats: _TaskPerfStats) -> None:
         _LG.info(
             "[%s]\tCompleted %5d tasks (%3d failed). "
             "(Concurrency: %3d). Ave task time: %s.",
             self.name,
-            num_tasks,
-            num_tasks - num_success,
+            stats.num_tasks,
+            stats.num_failures,
             self.concurrency,
-            _time_str(ave_time),
+            _time_str(stats.ave_time),
             stacklevel=2,
         )
