@@ -286,18 +286,17 @@ class TaskStatsHook(PipelineHook):
 
     Args:
         name: Nmae of the stage. Only used for logging.
-        concurrency: Concurrency of the stage. Only used for logging.
+        interval: The interval (in second) to report the performance stats periodically.
+            The default behavior is no periodic reporting.
     """
 
     def __init__(
         self,
         name: str,
-        concurrency: int,
         interval: float = -1,
     ) -> None:
         assert interval is not None
         self.name = name
-        self.concurrency = concurrency
         self.interval = interval
 
         self.num_tasks = 0
@@ -309,10 +308,6 @@ class TaskStatsHook(PipelineHook):
         self._lap_num_tasks = 0
         self._lap_num_success = 0
         self._lap_ave_time = 0.0
-
-    @property
-    def num_failures(self) -> int:
-        return self.num_tasks - self.num_success
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
@@ -386,12 +381,10 @@ class TaskStatsHook(PipelineHook):
 
     def _log_stats(self, stats: _TaskPerfStats) -> None:
         _LG.info(
-            "[%s]\tCompleted %5d tasks (%3d failed). "
-            "(Concurrency: %3d). Ave task time: %s.",
+            "[%s]\tCompleted %5d tasks (%3d failed). Ave task time: %s.",
             self.name,
             stats.num_tasks,
             stats.num_failures,
-            self.concurrency,
             _time_str(stats.ave_time),
             stacklevel=2,
         )

@@ -78,7 +78,7 @@ class _FailCounter(PipelineHook):
 def _get_hooks(name: str, args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
     if args.hooks is not None:
         return list(args.hooks)
-    return [TaskStatsHook(name, args.concurrency, interval)]
+    return [TaskStatsHook(name, interval)]
 
 
 async def _wrap_afunc(
