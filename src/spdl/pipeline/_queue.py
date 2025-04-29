@@ -11,6 +11,7 @@ import logging
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import TypeVar
 
 from ._hook import _periodic_dispatch, _StatsCounter, _time_str
@@ -52,6 +53,21 @@ class AsyncQueue(asyncio.Queue[T]):
     async def stage_hook(self) -> AsyncIterator[None]:
         """Context manager, which handles init/final logic for the stage."""
         yield
+
+
+@dataclass
+class _QueuePerfStats:
+    elapsed: float
+    num_items: int
+    ave_put_time: float
+    ave_get_time: float
+    occupancy_rate: float
+
+    @property
+    def qps(self) -> float:
+        if self.elapsed <= 0:
+            return 0
+        return self.num_items / self.elapsed
 
 
 class StatsQueue(AsyncQueue[T]):
@@ -126,17 +142,19 @@ class StatsQueue(AsyncQueue[T]):
             if self.interval > 0:
                 report.cancel()
 
-            await self._log_stats(
-                self._getc.num_items,
-                time.monotonic() - t0,
-                self._putc.ave_time,
-                self._getc.ave_time,
-                self._dur_empty,
+            elapsed = time.monotonic() - t0
+            occupancy_rate = 0.0 if elapsed <= 0 else 1 - self._dur_empty / elapsed
+            self._log_stats(
+                _QueuePerfStats(
+                    elapsed=elapsed,
+                    num_items=self._getc.num_items,
+                    ave_put_time=self._putc.ave_time,
+                    ave_get_time=self._getc.ave_time,
+                    occupancy_rate=max(0.0, occupancy_rate),
+                )
             )
 
-    def _get_lap_stats(
-        self,
-    ) -> tuple[int, float, float, float, float]:
+    def _get_lap_stats(self) -> _QueuePerfStats:
         # Get the current values
         now = time.monotonic()
         num_put, ave_put_time = self._putc.num_items, self._putc.ave_time
@@ -163,6 +181,7 @@ class StatsQueue(AsyncQueue[T]):
             delta_ave_get_time = (get_total_time - lap_get_total_time) / delta_num_get
 
         delta_dur_empty = dur_empty - self._lap_dur_empty
+        occupancy_rate = 0 if elapsed <= 0 else 1 - delta_dur_empty / elapsed
 
         # Update the lap
         self._lap_t0 = now
@@ -172,37 +191,29 @@ class StatsQueue(AsyncQueue[T]):
         self._lap_ave_get_time = ave_get_time
         self._lap_dur_empty = dur_empty
 
-        return (
-            delta_num_get,
-            elapsed,
-            delta_ave_put_time,
-            delta_ave_get_time,
-            delta_dur_empty,
+        return _QueuePerfStats(
+            num_items=delta_num_get,
+            elapsed=elapsed,
+            ave_put_time=delta_ave_put_time,
+            ave_get_time=delta_ave_get_time,
+            occupancy_rate=max(0.0, occupancy_rate),
         )
 
     async def _log_interval_stats(self) -> None:
-        num_items, elapsed, put_time, get_time, dur_empty = self._get_lap_stats()
-        await self._log_stats(num_items, elapsed, put_time, get_time, dur_empty)
+        stats = self._get_lap_stats()
+        self._log_stats(stats)
 
-    # Async for the sake of subclass extendability
-    async def _log_stats(
-        self,
-        num_items: int,
-        elapsed: float,
-        put_time: float,
-        get_time: float,
-        dur_empty: float,
-    ) -> None:
+    def _log_stats(self, stats: _QueuePerfStats) -> None:
         _LG.info(
             "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
             "Ave wait time: put: %s, get (by next stage): %s. "
             "Occupancy rate: %d%%",
             self.name,
-            num_items,
-            _time_str(elapsed),
-            num_items / elapsed,
-            _time_str(put_time),
-            _time_str(get_time),
-            100 * (1 - dur_empty / elapsed),
+            stats.num_items,
+            _time_str(stats.elapsed),
+            stats.qps,
+            _time_str(stats.ave_put_time),
+            _time_str(stats.ave_get_time),
+            100 * stats.occupancy_rate,
             stacklevel=2,
         )
