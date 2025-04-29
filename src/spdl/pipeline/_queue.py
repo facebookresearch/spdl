@@ -20,6 +20,7 @@ from ._utils import create_task
 __all__ = [
     "AsyncQueue",
     "StatsQueue",
+    "QueuePerfStats",
 ]
 
 T = TypeVar("T")
@@ -56,15 +57,53 @@ class AsyncQueue(asyncio.Queue[T]):
 
 
 @dataclass
-class _QueuePerfStats:
+class QueuePerfStats:
+    """Performance statistics collected by :py:class:`StatsQueue`."""
+
     elapsed: float
+    """The duration of measurement in second."""
+
     num_items: int
+    """The number of items went through the queue."""
+
     ave_put_time: float
+    """The average time (in second) ``put`` operation was blocked.
+
+    It is the average time that the upstream task had to wait before
+    the queue has a space to put the result.
+
+    Note that when there are multiple tasks attempting to put a
+    result (i.e. the upstream task has concurrency larger than 1),
+    then the average time becomes longer.
+    """
+
     ave_get_time: float
+    """The average time (in second) ``get`` operation was blocked.
+
+    It is the average time that the downstream task had to wait before
+    the queue has the next item to fetch.
+
+    Note that when there are multiple tasks attempting to get the
+    next item (i.e. the downstream task has concurrency larger than 1),
+    then the average time becomes longer.
+    """
+
     occupancy_rate: float
+    """The relative time where the queue was not empty.
+
+    The value close to 1 means that the queue has always the
+    next data available. The upstream stage is producing data faster
+    than the speed of the downstream stage consuming them.
+
+    The value close to 0 means that the queue is always empty.
+    The downstream stage is waiting for the next data and fetches one
+    as soon as the upstream stage puts it. This suggests that the pipeline
+    is suffering from data starvation.
+    """
 
     @property
     def qps(self) -> float:
+        """Query per second. i.e. ``num_items / elapsed``."""
         if self.elapsed <= 0:
             return 0
         return self.num_items / self.elapsed
@@ -145,7 +184,7 @@ class StatsQueue(AsyncQueue[T]):
             elapsed = time.monotonic() - t0
             occupancy_rate = 0.0 if elapsed <= 0 else 1 - self._dur_empty / elapsed
             self._log_stats(
-                _QueuePerfStats(
+                QueuePerfStats(
                     elapsed=elapsed,
                     num_items=self._getc.num_items,
                     ave_put_time=self._putc.ave_time,
@@ -154,7 +193,7 @@ class StatsQueue(AsyncQueue[T]):
                 )
             )
 
-    def _get_lap_stats(self) -> _QueuePerfStats:
+    def _get_lap_stats(self) -> QueuePerfStats:
         # Get the current values
         now = time.monotonic()
         num_put, ave_put_time = self._putc.num_items, self._putc.ave_time
@@ -191,7 +230,7 @@ class StatsQueue(AsyncQueue[T]):
         self._lap_ave_get_time = ave_get_time
         self._lap_dur_empty = dur_empty
 
-        return _QueuePerfStats(
+        return QueuePerfStats(
             num_items=delta_num_get,
             elapsed=elapsed,
             ave_put_time=delta_ave_put_time,
@@ -200,10 +239,21 @@ class StatsQueue(AsyncQueue[T]):
         )
 
     async def _log_interval_stats(self) -> None:
-        stats = self._get_lap_stats()
+        await self.interval_stats_callback(self._get_lap_stats())
+
+    async def interval_stats_callback(self, stats: QueuePerfStats) -> None:
+        """Callback for processing interval performance statistics.
+
+        When interval reporting is enabled, this method is periodically called
+        with the delta metrics.
+
+        The default behavior is to log the metrics to console.
+
+        You can override this method and modify the destination of the log.
+        """
         self._log_stats(stats)
 
-    def _log_stats(self, stats: _QueuePerfStats) -> None:
+    def _log_stats(self, stats: QueuePerfStats) -> None:
         _LG.info(
             "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
             "Ave wait time: put: %s, get (by next stage): %s. "

@@ -25,6 +25,7 @@ __all__ = [
     "_StatsCounter",
     "PipelineHook",
     "TaskStatsHook",
+    "TaskPerfStats",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -275,10 +276,17 @@ async def _periodic_dispatch(
 
 
 @dataclass
-class _TaskPerfStats:
+class TaskPerfStats:
+    """Performance statistics of a task measured by :py:class:`TaskStatsHook`."""
+
     num_tasks: int
+    """The number of tasks invoked."""
+
     num_failures: int
+    """The number of tasks failed."""
+
     ave_time: float
+    """The average execution time (in second) of successful tasks."""
 
 
 class TaskStatsHook(PipelineHook):
@@ -326,7 +334,7 @@ class TaskStatsHook(PipelineHook):
             if self.interval > 0:
                 report.cancel()
             self._log_stats(
-                _TaskPerfStats(
+                TaskPerfStats(
                     num_tasks=self.num_tasks,
                     num_failures=self.num_tasks - self.num_success,
                     ave_time=self.ave_time,
@@ -351,7 +359,7 @@ class TaskStatsHook(PipelineHook):
             self.num_success += 1
             self.ave_time += (elapsed - self.ave_time) / self.num_success
 
-    def _get_lap_stats(self) -> _TaskPerfStats:
+    def _get_lap_stats(self) -> TaskPerfStats:
         num_success = self.num_success
         num_tasks = self.num_tasks
         ave_time = self.ave_time
@@ -369,17 +377,28 @@ class TaskStatsHook(PipelineHook):
         self._lap_num_success = num_success
         self._lap_ave_time = ave_time
 
-        return _TaskPerfStats(
+        return TaskPerfStats(
             num_tasks=delta_num_tasks,
             num_failures=delta_num_tasks - delta_num_success,
             ave_time=delta_ave_time,
         )
 
     async def _log_interval_stats(self) -> None:
-        stats = self._get_lap_stats()
+        await self.interval_stats_callback(self._get_lap_stats())
+
+    async def interval_stats_callback(self, stats: TaskPerfStats) -> None:
+        """Callback for processing interval performance statistics.
+
+        When interval reporting is enabled, this method is periodically called
+        with the delta metrics.
+
+        The default behavior is to log the metrics to console.
+
+        You can override this method and modify the destination of the log.
+        """
         self._log_stats(stats)
 
-    def _log_stats(self, stats: _TaskPerfStats) -> None:
+    def _log_stats(self, stats: TaskPerfStats) -> None:
         _LG.info(
             "[%s]\tCompleted %5d tasks (%3d failed). Ave task time: %s.",
             self.name,
