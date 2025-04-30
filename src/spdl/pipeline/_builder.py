@@ -24,7 +24,7 @@ from ._components._build import (
 )
 from ._components._pipe import _Aggregate, _disaggregate, _PipeArgs
 from ._convert import Callables
-from ._hook import PipelineHook, TaskStatsHook as DefaultHook
+from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from ._utils import iterate_in_subprocess
@@ -89,7 +89,7 @@ def _build_pipeline(
     num_threads: int,
     max_failures: int,
     queue_class: type[AsyncQueue[...]],
-    task_hook_factory: Callable[[str], list[PipelineHook]],
+    task_hook_factory: Callable[[str], list[TaskHook]],
 ) -> Pipeline[U]:
     coro, queues = _build_pipeline_coro(
         src,
@@ -334,7 +334,7 @@ class PipelineBuilder(Generic[T, U]):
         max_failures: int = -1,
         report_stats_interval: float = -1,
         queue_class: type[AsyncQueue[...]] | None = None,
-        task_hook_factory: Callable[[str], list[PipelineHook]] | None = None,
+        task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -373,7 +373,7 @@ class PipelineBuilder(Generic[T, U]):
         if (sink := self._sink) is None:
             raise RuntimeError("Sink is not set.")
 
-        def _hook_factory(name: str) -> list[PipelineHook]:
+        def _hook_factory(name: str) -> list[TaskHook]:
             return [DefaultHook(name=name, interval=report_stats_interval)]
 
         return _build_pipeline(
@@ -404,7 +404,7 @@ def _run_pipeline(
     max_failures: int,
     report_stats_interval: float,
     queue_class: type[AsyncQueue[T]] | None,
-    task_hook_factory: Callable[[str], list[PipelineHook]] | None = None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
 ) -> Iterator[U]:
     pipeline = builder.build(
         num_threads=num_threads,
@@ -424,7 +424,7 @@ def run_pipeline_in_subprocess(
     max_failures: int = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue[T]] | None = None,
-    task_hook_factory: Callable[[str], list[PipelineHook]] | None = None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     **kwargs: dict[str, Any],
 ) -> Iterator[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.

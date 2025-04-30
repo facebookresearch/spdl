@@ -19,7 +19,7 @@ from collections.abc import AsyncIterable, Callable, Coroutine, Iterable
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
-from .._hook import PipelineHook
+from .._hook import TaskHook
 from .._queue import AsyncQueue
 from .._utils import create_task
 from ._pipe import _FailCounter, _ordered_pipe, _pipe, _PipeArgs
@@ -147,7 +147,7 @@ def _build_pipeline_coro(
     sink: _SinkConfig[U],
     max_failures: int,
     queue_class: type[AsyncQueue[...]],
-    task_hook_factory: Callable[[str], list[PipelineHook]],
+    task_hook_factory: Callable[[str], list[TaskHook]],
 ) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
     # Note:
     # Make sure that coroutines are ordered from source to sink.

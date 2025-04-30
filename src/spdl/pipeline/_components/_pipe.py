@@ -22,7 +22,7 @@ from functools import partial
 from typing import Generic, TypeVar
 
 from .._convert import Callables, convert_to_async
-from .._hook import _stage_hooks, _task_hooks, PipelineHook
+from .._hook import _stage_hooks, _task_hooks, TaskHook
 from .._queue import AsyncQueue
 from .._utils import create_task
 from ._common import _EOF, _queue_stage_hook
@@ -58,7 +58,7 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-class _FailCounter(PipelineHook):
+class _FailCounter(TaskHook):
     num_failures: int = 0
 
     @classmethod
@@ -75,7 +75,7 @@ class _FailCounter(PipelineHook):
 
 
 async def _wrap_afunc(
-    coro: Awaitable[U], hooks: list[PipelineHook], queue: AsyncQueue[U]
+    coro: Awaitable[U], hooks: list[TaskHook], queue: AsyncQueue[U]
 ) -> None:
     async with _task_hooks(hooks):
         result = await coro
@@ -87,7 +87,7 @@ async def _wrap_afunc(
 
 
 async def _wrap_agen(
-    coro: AsyncIterator[U], hooks: list[PipelineHook], queue: AsyncQueue[U]
+    coro: AsyncIterator[U], hooks: list[TaskHook], queue: AsyncQueue[U]
 ) -> None:
     exhausted = False
     while not exhausted:
@@ -136,7 +136,7 @@ def _pipe(
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
-    task_hooks: list[PipelineHook],
+    task_hooks: list[TaskHook],
     max_failures: int = -1,
 ) -> Coroutine:
     if input_queue is output_queue:
@@ -146,7 +146,7 @@ def _pipe(
         convert_to_async(args.op, args.executor)
     )
 
-    hooks: list[PipelineHook] = [*task_hooks, fail_counter]
+    hooks: list[TaskHook] = [*task_hooks, fail_counter]
 
     if inspect.iscoroutinefunction(afunc):
         _wrap: Callable[[Awaitable[U]], Coroutine] = partial(
@@ -205,7 +205,7 @@ def _ordered_pipe(
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
-    task_hooks: list[PipelineHook],
+    task_hooks: list[TaskHook],
     max_failures: int = -1,
 ) -> Coroutine:
     """
@@ -241,7 +241,7 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks: list[PipelineHook] = [*task_hooks, fail_counter]
+    hooks: list[TaskHook] = [*task_hooks, fail_counter]
 
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
