@@ -137,6 +137,13 @@ def _get_fail_counter() -> type[_FailCounter]:
 _PIPELINE_ID: int = -1
 
 
+def _get_task_name(i: int, cfg: _ProcessConfig[..., ...]) -> str:
+    name = f"{_PIPELINE_ID}:{i}:{cfg.name}"
+    if cfg.type_ == _PType.Pipe and cfg.args.concurrency > 1:
+        name = f"{name}[{cfg.args.concurrency}]"
+    return name
+
+
 def _build_pipeline_coro(
     src: _SourceConfig[T],
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
@@ -163,7 +170,7 @@ def _build_pipeline_coro(
 
     # pipes
     for i, cfg in enumerate(process_args, start=1):
-        name = f"{_PIPELINE_ID}:{i}:{cfg.name}"
+        name = _get_task_name(i, cfg)
         queue_class = cfg.queue_class or _DefaultQueue
         queue_name = f"{name}_queue"
         queues.append(queue_class(queue_name))
