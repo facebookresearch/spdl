@@ -179,7 +179,12 @@ def test_async_pipe():
         _put_aqueue(input_queue, ref, eof=True)
 
         await _pipe(
-            "adouble", input_queue, output_queue, _PipeArgs(op=adouble), _FailCounter()
+            "adouble",
+            input_queue,
+            output_queue,
+            _PipeArgs(op=adouble),
+            _FailCounter(),
+            [],
         )
 
         result = _flush_aqueue(output_queue)
@@ -207,6 +212,7 @@ def test_async_pipe_skip():
             output_queue,
             _PipeArgs(op=skip_even),
             _FailCounter(),
+            [],
         )
 
         result = _flush_aqueue(output_queue)
@@ -235,6 +241,7 @@ def test_async_pipe_wrong_task_signature():
                 output_queue,
                 _PipeArgs(op=_2args, concurrency=3),
                 _FailCounter(),
+                [],
             )
 
         remaining = _flush_aqueue(input_queue)
@@ -270,7 +277,12 @@ def test_async_pipe_cancel(full):
 
     async def test():
         coro = _pipe(
-            "astuck", input_queue, output_queue, _PipeArgs(op=astuck), _FailCounter()
+            "astuck",
+            input_queue,
+            output_queue,
+            _PipeArgs(op=astuck),
+            _FailCounter(),
+            [],
         )
         task = asyncio.create_task(coro)
 
@@ -309,6 +321,7 @@ def test_async_pipe_concurrency():
                 concurrency=concurrency,
             ),
             _FailCounter(),
+            [],
         )
 
         task = asyncio.create_task(coro)
@@ -354,6 +367,7 @@ def test_async_pipe_concurrency_throughput():
                 concurrency=concurrency,
             ),
             _FailCounter(),
+            [],
         )
         elapsed = time.monotonic() - t0
 
@@ -391,9 +405,9 @@ def test_pipeline_stage_hook_wrong_def1():
         (
             PipelineBuilder()
             .add_source(range(10))
-            .pipe(passthrough, hooks=[_hook()])
+            .pipe(passthrough)
             .add_sink()
-            .build(num_threads=1)
+            .build(num_threads=1, task_hook_factory=lambda _: [_hook()])
         )
 
 
@@ -413,9 +427,9 @@ def test_pipeline_stage_hook_wrong_def2():
         (
             PipelineBuilder()
             .add_source(range(10))
-            .pipe(passthrough, hooks=[_hook()])
+            .pipe(passthrough)
             .add_sink()
-            .build(num_threads=1)
+            .build(num_threads=1, task_hook_factory=lambda _: [_hook()])
         )
 
 
@@ -447,17 +461,26 @@ def test_pipeline_hook_drop_last(drop_last: bool):
 
     h1, h2, h3 = CountHook(), CountHook(), CountHook()
 
+    def hook_factory(name: str) -> list[PipelineHook]:
+        if "adouble" in name:
+            return [h1]
+        if "aggregate" in name:
+            return [h2]
+        if "_fail" in name:
+            return [h3]
+        raise RuntimeError("Unexpected")
+
     async def _fail(_):
         raise RuntimeError("Failing")
 
     pipeline = (
         PipelineBuilder()
         .add_source(range(10))
-        .pipe(adouble, hooks=[h1])
-        .aggregate(5, hooks=[h2], drop_last=drop_last)
-        .pipe(_fail, hooks=[h3])
+        .pipe(adouble)
+        .aggregate(5, drop_last=drop_last)
+        .pipe(_fail)
         .add_sink(1000)
-        .build(num_threads=1)
+        .build(num_threads=1, task_hook_factory=hook_factory)
     )
 
     with pipeline.auto_stop():
@@ -510,9 +533,9 @@ def test_pipeline_hook_multiple():
     pipeline = (
         PipelineBuilder()
         .add_source(range(10))
-        .pipe(passthrough, hooks=hooks)
+        .pipe(passthrough)
         .add_sink(1000)
-        .build(num_threads=1)
+        .build(num_threads=1, task_hook_factory=lambda _: hooks)
     )
 
     with pipeline.auto_stop():
@@ -540,9 +563,9 @@ def test_pipeline_hook_failure_enter_stage():
     pipeline = (
         PipelineBuilder()
         .add_source(range(10))
-        .pipe(passthrough, hooks=[_enter_stage_fail()])
+        .pipe(passthrough)
         .add_sink(1000)
-        .build(num_threads=1)
+        .build(num_threads=1, task_hook_factory=lambda _: [_enter_stage_fail()])
     )
 
     with pipeline.auto_stop():
@@ -565,9 +588,9 @@ def test_pipeline_hook_failure_exit_stage():
     pipeline = (
         PipelineBuilder()
         .add_source(range(10))
-        .pipe(passthrough, hooks=[_exit_stage_fail()])
+        .pipe(passthrough)
         .add_sink(1000)
-        .build(num_threads=1)
+        .build(num_threads=1, task_hook_factory=lambda _: [_exit_stage_fail()])
     )
     with pipeline.auto_stop():
         assert list(range(10)) == list(pipeline.get_iterator(timeout=3))
@@ -588,9 +611,9 @@ def test_pipeline_hook_failure_enter_task():
     pipeline = (
         PipelineBuilder()
         .add_source(range(10))
-        .pipe(passthrough, hooks=[_hook()])
+        .pipe(passthrough)
         .add_sink(1000)
-        .build(num_threads=1)
+        .build(num_threads=1, task_hook_factory=lambda _: [_hook()])
     )
 
     with pipeline.auto_stop():
@@ -612,9 +635,9 @@ def test_pipeline_hook_failure_exit_task():
     pipeline = (
         PipelineBuilder()
         .add_source(range(10))
-        .pipe(passthrough, hooks=[_exit_stage_fail()])
+        .pipe(passthrough)
         .add_sink(1000)
-        .build(num_threads=1)
+        .build(num_threads=1, task_hook_factory=lambda _: [_exit_stage_fail()])
     )
 
     with pipeline.auto_stop():
@@ -643,9 +666,12 @@ def test_pipeline_hook_exit_task_capture_error():
     pipeline = (
         PipelineBuilder()
         .add_source([None])
-        .pipe(_fail, hooks=[_capture()])
+        .pipe(_fail)
         .add_sink(100)
-        .build(num_threads=1)
+        .build(
+            num_threads=1,
+            task_hook_factory=lambda _: [_capture()],
+        )
     )
 
     with pipeline.auto_stop():
@@ -1387,9 +1413,9 @@ def test_pipeline_pipe_agen_wrong_hook():
     apl = (
         PipelineBuilder()
         .add_source(range(3))
-        .pipe(dup_increment, hooks=[_Hook()])
+        .pipe(dup_increment)
         .add_sink(1)
-        .build(num_threads=1)
+        .build(num_threads=1, task_hook_factory=lambda _: [_Hook()])
     )
 
     expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
@@ -1588,6 +1614,10 @@ def plusN(x: int, N: int) -> int:
     return x + N
 
 
+def hook_factory(_: str) -> list[PipelineHook]:
+    return [CountHook()]
+
+
 def test_pipelinebuilder_picklable():
     """PipelineBuilder can be passed to subprocess (==picklable)"""
 
@@ -1602,14 +1632,21 @@ def test_pipelinebuilder_picklable():
             aplus1,
             concurrency=3,
         )
-        .pipe(partial(plusN, N=3), hooks=[CountHook()])
+        .pipe(partial(plusN, N=3))
         .pipe(passthrough)
         .aggregate(3)
         .disaggregate()
         .add_sink(10)
     )
 
-    results = list(run_pipeline_in_subprocess(builder, num_threads=5, buffer_size=-1))
+    results = list(
+        run_pipeline_in_subprocess(
+            builder,
+            num_threads=5,
+            buffer_size=-1,
+            task_hook_factory=hook_factory,
+        )
+    )
 
     def _ref(x: int) -> int:
         return 2 * x + 1 + 3

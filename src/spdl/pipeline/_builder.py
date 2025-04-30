@@ -24,9 +24,9 @@ from ._components._build import (
 )
 from ._components._pipe import _Aggregate, _disaggregate, _PipeArgs
 from ._convert import Callables
-from ._hook import PipelineHook
+from ._hook import PipelineHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
-from ._queue import AsyncQueue
+from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from ._utils import iterate_in_subprocess
 
 __all__ = [
@@ -88,10 +88,16 @@ def _build_pipeline(
     *,
     num_threads: int,
     max_failures: int,
-    report_stats_interval: float,
+    queue_class: type[AsyncQueue[...]],
+    task_hook_factory: Callable[[str], list[PipelineHook]],
 ) -> Pipeline[U]:
     coro, queues = _build_pipeline_coro(
-        src, process_args, sink, max_failures, report_stats_interval
+        src,
+        process_args,
+        sink,
+        max_failures,
+        queue_class,
+        task_hook_factory,
     )
 
     executor = ThreadPoolExecutor(
@@ -126,10 +132,7 @@ class PipelineBuilder(Generic[T, U]):
         self._sink: _SinkConfig[U] | None = None
 
     def add_source(
-        self,
-        source: Iterable[T] | AsyncIterable[T],
-        *,
-        queue_class: type[AsyncQueue[T]] | None = None,
+        self, source: Iterable[T] | AsyncIterable[T]
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
 
@@ -148,15 +151,11 @@ class PipelineBuilder(Generic[T, U]):
                    The source iterator must be lightweight as it is executed in async
                    event loop. If the iterator performs a blocking operation,
                    the entire pipeline will be blocked.
-
-            queue_class: A queue class, used to connect this stage and the next stage.
-                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
-                Default: :py:class:`StatsQueue`.
         """
         if self._src is not None:
             raise ValueError("Source already set.")
 
-        self._src = _SourceConfig(source, queue_class)
+        self._src = _SourceConfig(source)
         return self
 
     def pipe(
@@ -167,9 +166,7 @@ class PipelineBuilder(Generic[T, U]):
         concurrency: int = 1,
         executor: Executor | None = None,
         name: str | None = None,
-        hooks: list[PipelineHook] | None = None,
         output_order: str = "completion",
-        queue_class: type[AsyncQueue[U_]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
 
@@ -221,17 +218,10 @@ class PipelineBuilder(Generic[T, U]):
 
                 It is invalid to provide this argument when the given op is already async.
             name: The name (prefix) to give to the task.
-            hooks: Hook objects to be attached to the stage. Hooks are intended for
-                collecting stats of the stage.
-                If ``None``, a default hook,
-                :py:class:`~spdl.pipeline.TaskStatsHook` is used.
             output_order: If ``"completion"`` (default), the items are put to output queue
                 in the order their process is completed.
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
-            queue_class: A queue class, used to connect this stage and the next stage.
-                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
-                Default: :py:class:`StatsQueue`.
         """
         if output_order not in ["completion", "input"]:
             raise ValueError(
@@ -249,9 +239,7 @@ class PipelineBuilder(Generic[T, U]):
                     op=op,
                     executor=executor,
                     concurrency=concurrency,
-                    hooks=hooks,
                 ),
-                queue_class=queue_class,
             )
         )
         return self
@@ -262,8 +250,6 @@ class PipelineBuilder(Generic[T, U]):
         /,
         *,
         drop_last: bool = False,
-        hooks: list[PipelineHook] | None = None,
-        queue_class: type[AsyncQueue[T]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Buffer the items in the pipeline.
 
@@ -271,9 +257,6 @@ class PipelineBuilder(Generic[T, U]):
             num_items: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
             hooks: See :py:meth:`pipe`.
-            queue_class: A queue class, used to connect this stage and the next stage.
-                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
-                Default: :py:class:`StatsQueue`.
         """
         name = (
             f"aggregate({num_items}, {drop_last=})"
@@ -286,21 +269,13 @@ class PipelineBuilder(Generic[T, U]):
                 name=name,
                 args=_PipeArgs(
                     op=_Aggregate(num_items, drop_last),
-                    hooks=hooks,
                     op_requires_eof=True,
                 ),
-                queue_class=queue_class,
             )
         )
         return self
 
-    def disaggregate(
-        self,
-        /,
-        *,
-        hooks: list[PipelineHook] | None = None,
-        queue_class: type[AsyncQueue[T_]] | None = None,
-    ) -> "PipelineBuilder[T, U]":
+    def disaggregate(self) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline.
 
         Args:
@@ -316,9 +291,7 @@ class PipelineBuilder(Generic[T, U]):
                 name="disaggregate",
                 args=_PipeArgs(
                     op=_disaggregate,  # pyre-ignore: [6]
-                    hooks=hooks,
                 ),
-                queue_class=queue_class,
             ),
         )
         return self
@@ -326,7 +299,6 @@ class PipelineBuilder(Generic[T, U]):
     def add_sink(
         self,
         buffer_size: int = 3,
-        queue_class: type[AsyncQueue[U]] | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Attach a buffer to the end of the pipeline.
 
@@ -347,7 +319,7 @@ class PipelineBuilder(Generic[T, U]):
         if self._sink is not None:
             raise ValueError("Sink is already set.")
 
-        self._sink = _SinkConfig(buffer_size, queue_class)
+        self._sink = _SinkConfig(buffer_size)
         return self
 
     def __str__(self) -> str:
@@ -361,14 +333,18 @@ class PipelineBuilder(Generic[T, U]):
         num_threads: int,
         max_failures: int = -1,
         report_stats_interval: float = -1,
+        queue_class: type[AsyncQueue[...]] | None = None,
+        task_hook_factory: Callable[[str], list[PipelineHook]] | None = None,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
         Args:
             num_threads: The number of threads in the thread pool attached to
                 async event loop.
+
             max_failures: The maximum number of failures each pipe stage can have before
                 the pipeline is halted. Setting ``-1`` (default) disables it.
+
             report_stats_interval: When provided, report the pipline performance stats
                 every given interval. Unit: [sec]
 
@@ -382,6 +358,14 @@ class PipelineBuilder(Generic[T, U]):
 
                 Similarly if you are providing a custom :py:class:`~AsyncQueue` class,
                 you need to implement the same logic by your self.
+
+            queue_class: If provided, override the queue class used to connect stages.
+                Must be a class (not an instance) inherits :py:class:`AsyncQueue`.
+
+            task_hook_factory: If provided, used to create task hook objects, given a
+                name of the stage. If ``None``, a default hook,
+                :py:class:`~spdl.pipeline.TaskStatsHook` is used.
+                To disable hooks, provide a function that returns an empty list.
         """
         if (src := self._src) is None:
             raise RuntimeError("Source is not set.")
@@ -389,13 +373,23 @@ class PipelineBuilder(Generic[T, U]):
         if (sink := self._sink) is None:
             raise RuntimeError("Sink is not set.")
 
+        def _hook_factory(name: str) -> list[PipelineHook]:
+            return [DefaultHook(name=name, interval=report_stats_interval)]
+
         return _build_pipeline(
             src,
             self._process_args,
             sink,
             num_threads=num_threads,
             max_failures=max_failures,
-            report_stats_interval=report_stats_interval,
+            queue_class=(
+                partial(DefaultQueue, interval=report_stats_interval)
+                if queue_class is None
+                else queue_class
+            ),
+            task_hook_factory=(
+                _hook_factory if task_hook_factory is None else task_hook_factory
+            ),
         )
 
 
@@ -404,8 +398,21 @@ class PipelineBuilder(Generic[T, U]):
 ################################################################################
 
 
-def _run_pipeline(builder: PipelineBuilder[T, U], num_threads: int) -> Iterator[U]:
-    pipeline = builder.build(num_threads=num_threads)
+def _run_pipeline(
+    builder: PipelineBuilder[T, U],
+    num_threads: int,
+    max_failures: int,
+    report_stats_interval: float,
+    queue_class: type[AsyncQueue[T]] | None,
+    task_hook_factory: Callable[[str], list[PipelineHook]] | None = None,
+) -> Iterator[U]:
+    pipeline = builder.build(
+        num_threads=num_threads,
+        max_failures=max_failures,
+        report_stats_interval=report_stats_interval,
+        queue_class=queue_class,
+        task_hook_factory=task_hook_factory,
+    )
     with pipeline.auto_stop():
         yield from pipeline
 
@@ -414,19 +421,32 @@ def run_pipeline_in_subprocess(
     builder: PipelineBuilder[T, U],
     *,
     num_threads: int,
+    max_failures: int = -1,
+    report_stats_interval: float = -1,
+    queue_class: type[AsyncQueue[T]] | None = None,
+    task_hook_factory: Callable[[str], list[PipelineHook]] | None = None,
     **kwargs: dict[str, Any],
 ) -> Iterator[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
 
     Args:
         builder: The definition of :py:class:`Pipeline`.
-        num_threads: Passed to :py:meth:`PipelineBuilder.build`.
+        num_threads,max_afilures,report_stats_interval,queue_class,task_hook_factory:
+            Passed to :py:meth:`PipelineBuilder.build`.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
 
     Yields:
         The results yielded from the pipeline.
     """
     yield from iterate_in_subprocess(
-        fn=partial(_run_pipeline, builder=builder, num_threads=num_threads),
+        fn=partial(
+            _run_pipeline,
+            builder=builder,
+            num_threads=num_threads,
+            max_failures=max_failures,
+            report_stats_interval=report_stats_interval,
+            queue_class=queue_class,
+            task_hook_factory=task_hook_factory,
+        ),
         **kwargs,  # pyre-ignore: [6]
     )

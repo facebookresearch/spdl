@@ -22,7 +22,7 @@ from functools import partial
 from typing import Generic, TypeVar
 
 from .._convert import Callables, convert_to_async
-from .._hook import _stage_hooks, _task_hooks, PipelineHook, TaskStatsHook
+from .._hook import _stage_hooks, _task_hooks, PipelineHook
 from .._queue import AsyncQueue
 from .._utils import create_task
 from ._common import _EOF, _queue_stage_hook
@@ -42,7 +42,6 @@ class _PipeArgs(Generic[T, U]):
     op: Callables[T, U]
     executor: Executor | None = None
     concurrency: int = 1
-    hooks: list[PipelineHook] | None = None
     op_requires_eof: bool = False
     # Used to pass EOF to op.
     # Usually pipe does not pas EOF to op. This is because op is expected to be
@@ -73,12 +72,6 @@ class _FailCounter(PipelineHook):
         except Exception:
             self._increment()
             raise
-
-
-def _get_hooks(name: str, args: _PipeArgs[T, U], interval: float) -> list[PipelineHook]:
-    if args.hooks is not None:
-        return list(args.hooks)
-    return [TaskStatsHook(name, interval)]
 
 
 async def _wrap_afunc(
@@ -143,8 +136,8 @@ def _pipe(
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
+    task_hooks: list[PipelineHook],
     max_failures: int = -1,
-    report_stats_interval: float = -1,
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
@@ -153,8 +146,7 @@ def _pipe(
         convert_to_async(args.op, args.executor)
     )
 
-    hooks: list[PipelineHook] = _get_hooks(name, args, report_stats_interval)
-    hooks.append(fail_counter)
+    hooks: list[PipelineHook] = [*task_hooks, fail_counter]
 
     if inspect.iscoroutinefunction(afunc):
         _wrap: Callable[[Awaitable[U]], Coroutine] = partial(
@@ -213,8 +205,8 @@ def _ordered_pipe(
     output_queue: AsyncQueue[U],
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
+    task_hooks: list[PipelineHook],
     max_failures: int = -1,
-    report_stats_interval: float = -1,
 ) -> Coroutine:
     """
 
@@ -249,8 +241,7 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks: list[PipelineHook] = _get_hooks(name, args, report_stats_interval)
-    hooks.append(fail_counter)
+    hooks: list[PipelineHook] = [*task_hooks, fail_counter]
 
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
