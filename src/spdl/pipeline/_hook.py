@@ -23,7 +23,7 @@ __all__ = [
     "_task_hooks",
     "_time_str",
     "_StatsCounter",
-    "PipelineHook",
+    "TaskHook",
     "TaskStatsHook",
     "TaskPerfStats",
 ]
@@ -73,10 +73,10 @@ class _StatsCounter:
         self.update(elapsed)
 
 
-class PipelineHook(ABC):
+class TaskHook(ABC):
     """Base class for hooks to be used in the pipeline.
 
-    ``PipelineHook`` can add custom actions when executing pipeline.
+    ``TaskHook`` can add custom actions when executing pipeline.
     It is useful for logging and profiling the pipeline execution.
 
     A hook consists of two async context managers. ``stage_hook`` and ``task_hook``.
@@ -221,7 +221,7 @@ class PipelineHook(ABC):
         yield
 
 
-def _stage_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
+def _stage_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
     hs: list[AsyncContextManager[None]] = [hook.stage_hook() for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") and hasattr(h, "__aexit__") for h in hs):
@@ -241,7 +241,7 @@ def _stage_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
     return stage_hooks()
 
 
-def _task_hooks(hooks: Sequence[PipelineHook]) -> AsyncContextManager[None]:
+def _task_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
     hs: list[AsyncContextManager[None]] = [hook.task_hook() for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") or hasattr(h, "__aexit__") for h in hs):
@@ -288,7 +288,7 @@ class TaskPerfStats:
     """The average execution time (in second) of successful tasks."""
 
 
-class TaskStatsHook(PipelineHook):
+class TaskStatsHook(TaskHook):
     """Track the task runtimes and success rate.
 
     Args:

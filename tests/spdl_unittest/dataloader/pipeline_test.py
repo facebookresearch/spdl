@@ -22,8 +22,8 @@ from typing import TypeVar
 import pytest
 from spdl.pipeline import (
     PipelineBuilder,
-    PipelineHook,
     run_pipeline_in_subprocess,
+    TaskHook,
     TaskStatsHook,
 )
 from spdl.pipeline._components._common import _EOF
@@ -392,7 +392,7 @@ def test_async_pipe_concurrency_throughput():
 def test_pipeline_stage_hook_wrong_def1():
     """Pipeline fails if stage_hook is not properly overrode."""
 
-    class _hook(PipelineHook):
+    class _hook(TaskHook):
         # missing asynccontextmanager
         async def stage_hook(self):
             yield
@@ -414,7 +414,7 @@ def test_pipeline_stage_hook_wrong_def1():
 def test_pipeline_stage_hook_wrong_def2():
     """Pipeline fails if task_hook is not properly overrode."""
 
-    class _hook(PipelineHook):
+    class _hook(TaskHook):
         # missing asynccontextmanager and async keyword
         def stage_hook(self):
             yield
@@ -433,7 +433,7 @@ def test_pipeline_stage_hook_wrong_def2():
         )
 
 
-class CountHook(PipelineHook):
+class CountHook(TaskHook):
     def __init__(self):
         self._enter_task_called = 0
         self._enter_stage_called = 0
@@ -461,7 +461,7 @@ def test_pipeline_hook_drop_last(drop_last: bool):
 
     h1, h2, h3 = CountHook(), CountHook(), CountHook()
 
-    def hook_factory(name: str) -> list[PipelineHook]:
+    def hook_factory(name: str) -> list[TaskHook]:
         if "adouble" in name:
             return [h1]
         if "aggregate" in name:
@@ -507,7 +507,7 @@ def test_pipeline_hook_drop_last(drop_last: bool):
 def test_pipeline_hook_multiple():
     """Multiple hooks are executed properly"""
 
-    class _hook(PipelineHook):
+    class _hook(TaskHook):
         def __init__(self):
             self._enter_task_called = 0
             self._enter_stage_called = 0
@@ -551,7 +551,7 @@ def test_pipeline_hook_multiple():
 def test_pipeline_hook_failure_enter_stage():
     """If enter_stage fails, the pipeline is aborted."""
 
-    class _enter_stage_fail(PipelineHook):
+    class _enter_stage_fail(TaskHook):
         @asynccontextmanager
         async def stage_hook(self):
             raise RuntimeError("failing")
@@ -575,7 +575,7 @@ def test_pipeline_hook_failure_enter_stage():
 def test_pipeline_hook_failure_exit_stage():
     """If exit_stage fails, the pipeline does not fail."""
 
-    class _exit_stage_fail(PipelineHook):
+    class _exit_stage_fail(TaskHook):
         @asynccontextmanager
         async def stage_hook(self):
             yield
@@ -599,7 +599,7 @@ def test_pipeline_hook_failure_exit_stage():
 def test_pipeline_hook_failure_enter_task():
     """If enter_task fails, the pipeline does not fail."""
 
-    class _hook(PipelineHook):
+    class _hook(TaskHook):
         @asynccontextmanager
         async def task_hook(self):
             raise RuntimeError("failing enter_task")
@@ -626,7 +626,7 @@ def test_pipeline_hook_failure_exit_task():
     IMPORTANT: The result is dropped.
     """
 
-    class _exit_stage_fail(PipelineHook):
+    class _exit_stage_fail(TaskHook):
         @asynccontextmanager
         async def task_hook(self):
             yield
@@ -649,7 +649,7 @@ def test_pipeline_hook_exit_task_capture_error():
 
     exc_info = None
 
-    class _capture(PipelineHook):
+    class _capture(TaskHook):
         @asynccontextmanager
         async def task_hook(self):
             try:
@@ -1398,7 +1398,7 @@ def test_pipeline_pipe_gen_incremental():
 def test_pipeline_pipe_agen_wrong_hook():
     """pipe works with async generator function, even when hook abosrb the StopAsyncIteration"""
 
-    class _Hook(PipelineHook):
+    class _Hook(TaskHook):
         @asynccontextmanager
         async def task_hook(self):
             try:
@@ -1614,7 +1614,7 @@ def plusN(x: int, N: int) -> int:
     return x + N
 
 
-def hook_factory(_: str) -> list[PipelineHook]:
+def hook_factory(_: str) -> list[TaskHook]:
     return [CountHook()]
 
 

@@ -9,7 +9,7 @@
 # pyre-strict
 
 from ._builder import PipelineBuilder, PipelineFailure, run_pipeline_in_subprocess
-from ._hook import PipelineHook, TaskPerfStats, TaskStatsHook
+from ._hook import TaskHook, TaskPerfStats, TaskStatsHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, QueuePerfStats, StatsQueue
 from ._utils import cache_iterator, create_task, iterate_in_subprocess
@@ -20,7 +20,7 @@ __all__ = [
     "PipelineFailure",
     "cache_iterator",
     "create_task",
-    "PipelineHook",
+    "TaskHook",
     "TaskStatsHook",
     "TaskPerfStats",
     "AsyncQueue",
@@ -35,3 +35,17 @@ try:
     from . import fb  # noqa: F401
 except ImportError:
     pass
+
+
+def __getitem__(name: str) -> type[TaskHook]:
+    if name == "PipelineHook":
+        import warnings
+
+        warnings.warn(
+            "spdl.pipeline.PipelineHook has been renamed to spdl.pipeline.TaskHook. "
+            "Please change the import path.",
+            stacklevel=2,
+        )
+
+        return TaskHook
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
