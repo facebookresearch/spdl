@@ -15,12 +15,12 @@ __all__ = [
 import asyncio
 import enum
 import inspect
-from collections.abc import AsyncIterable, Coroutine, Iterable
+from collections.abc import AsyncIterable, Callable, Coroutine, Iterable
 from dataclasses import dataclass
-from functools import partial
 from typing import Any, Generic, TypeVar
 
-from .._queue import AsyncQueue, StatsQueue as DefaultQueue
+from .._hook import PipelineHook
+from .._queue import AsyncQueue
 from .._utils import create_task
 from ._pipe import _FailCounter, _ordered_pipe, _pipe, _PipeArgs
 from ._sink import _sink
@@ -35,7 +35,6 @@ U = TypeVar("U")
 @dataclass
 class _SourceConfig(Generic[T]):
     source: Iterable | AsyncIterable
-    queue_class: type[AsyncQueue[T]] | None
 
     def __post_init__(self) -> None:
         if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
@@ -54,7 +53,6 @@ class _ProcessConfig(Generic[T, U]):
     type_: _PType
     name: str
     args: _PipeArgs[T, U]
-    queue_class: type[AsyncQueue[U]] | None
 
     def __post_init__(self) -> None:
         op = self.args.op
@@ -72,7 +70,6 @@ class _ProcessConfig(Generic[T, U]):
 @dataclass
 class _SinkConfig(Generic[T]):
     buffer_size: int
-    queue_class: type[AsyncQueue[T]] | None
 
     def __post_init__(self) -> None:
         if not isinstance(self.buffer_size, int):
@@ -149,7 +146,8 @@ def _build_pipeline_coro(
     process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
     sink: _SinkConfig[U],
     max_failures: int,
-    report_stats_interval: float,
+    queue_class: type[AsyncQueue[...]],
+    task_hook_factory: Callable[[str], list[PipelineHook]],
 ) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
     # Note:
     # Make sure that coroutines are ordered from source to sink.
@@ -159,10 +157,8 @@ def _build_pipeline_coro(
 
     global _PIPELINE_ID
     _PIPELINE_ID += 1
-    _DefaultQueue = partial(DefaultQueue, interval=report_stats_interval)
 
     # source
-    queue_class = src.queue_class or _DefaultQueue
     queues.append(queue_class(f"{_PIPELINE_ID}:0:src_queue"))
     coros.append(("Pipeline::0:src", _source(src.source, queues[0])))
 
@@ -171,7 +167,6 @@ def _build_pipeline_coro(
     # pipes
     for i, cfg in enumerate(process_args, start=1):
         name = _get_task_name(i, cfg)
-        queue_class = cfg.queue_class or _DefaultQueue
         queue_name = f"{name}_queue"
         queues.append(queue_class(queue_name))
         in_queue, out_queue = queues[i - 1 : i + 1]
@@ -184,8 +179,8 @@ def _build_pipeline_coro(
                     out_queue,
                     cfg.args,
                     _FailCounter(),
+                    task_hook_factory(name),
                     max_failures,
-                    report_stats_interval,
                 )
             case _PType.OrderedPipe:
                 coro = _ordered_pipe(
@@ -194,8 +189,8 @@ def _build_pipeline_coro(
                     out_queue,
                     cfg.args,
                     _FailCounter(),
+                    task_hook_factory(name),
                     max_failures,
-                    report_stats_interval,
                 )
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg.type_}")
@@ -204,7 +199,6 @@ def _build_pipeline_coro(
 
     # sink
     n = len(process_args) + 1
-    queue_class = sink.queue_class or _DefaultQueue
     output_queue = queue_class(
         f"{_PIPELINE_ID}:{n}:sink_queue", buffer_size=sink.buffer_size
     )
@@ -215,7 +209,7 @@ def _build_pipeline_coro(
         )
     )
 
-    return _run_pipeline_coroutines(coros), output_queue
+    return _run_pipeline_coroutines(coros), output_queue  # pyre-ignore
 
 
 ################################################################################

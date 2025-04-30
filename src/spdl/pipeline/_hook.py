@@ -170,6 +170,9 @@ class PipelineHook(ABC):
                   # Add logic that should be executed even if stage fails
                   ...
 
+    Args:
+        name: The name of the stage. Assigned by :py:class:`~spdl.pipeline.PipelineBuilder`.
+
     """
 
     @asynccontextmanager
