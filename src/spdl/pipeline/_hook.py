@@ -65,10 +65,6 @@ class _StatsCounter:
             self._n += n
             self._t += (t - self._t) * n / self._n
 
-    def __iadd__(self, other: "_StatsCounter") -> "_StatsCounter":
-        self.update(other._t, other._n)
-        return self
-
     @contextmanager
     def count(self) -> Iterator[None]:
         t0 = time.monotonic()
