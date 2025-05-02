@@ -22,6 +22,7 @@ from typing import TypeVar
 import pytest
 from spdl.pipeline import (
     PipelineBuilder,
+    PipelineFailure,
     run_pipeline_in_subprocess,
     TaskHook,
     TaskStatsHook,
@@ -568,12 +569,15 @@ def test_pipeline_hook_failure_enter_stage():
         .build(num_threads=1, task_hook_factory=lambda _: [_enter_stage_fail()])
     )
 
-    with pipeline.auto_stop():
-        assert [] == list(pipeline.get_iterator(timeout=3))
+    with pytest.raises(PipelineFailure):
+        with pipeline.auto_stop():
+            vals = list(pipeline.get_iterator(timeout=3))
+
+    assert vals == []
 
 
 def test_pipeline_hook_failure_exit_stage():
-    """If exit_stage fails, the pipeline does not fail."""
+    """If exit_stage fails, the error is propagated to the front end."""
 
     class _exit_stage_fail(TaskHook):
         @asynccontextmanager
@@ -592,8 +596,10 @@ def test_pipeline_hook_failure_exit_stage():
         .add_sink(1000)
         .build(num_threads=1, task_hook_factory=lambda _: [_exit_stage_fail()])
     )
-    with pipeline.auto_stop():
-        assert list(range(10)) == list(pipeline.get_iterator(timeout=3))
+    with pytest.raises(PipelineFailure):
+        with pipeline.auto_stop():
+            vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == list(range(10))
 
 
 def test_pipeline_hook_failure_enter_task():
@@ -1082,7 +1088,11 @@ def test_pipeline_disaggregate():
 
 
 def test_pipeline_source_failure():
-    """AsyncPipeline continues when source fails."""
+    """AsyncPipeline continues when source fails.
+
+    note: the front end will propagate the error at the end of the `stop`.
+    before that, the pipeline should continue functioning.
+    """
 
     def failing_range(i):
         yield from range(i)
@@ -1097,9 +1107,11 @@ def test_pipeline_source_failure():
         .build(num_threads=1)
     )
 
-    with pipeline.auto_stop():
-        results = list(pipeline.get_iterator(timeout=3))
-        assert results == [1 + 2 * i for i in range(10)]
+    with pytest.raises(PipelineFailure):
+        with pipeline.auto_stop():
+            results = list(pipeline.get_iterator(timeout=3))
+
+    assert results == [1 + 2 * i for i in range(10)]
 
 
 def test_pipeline_type_error():
@@ -1116,8 +1128,11 @@ def test_pipeline_type_error():
         .build(num_threads=1)
     )
 
-    with pipeline.auto_stop():
-        assert [] == list(pipeline.get_iterator(timeout=3))
+    with pytest.raises(PipelineFailure):
+        with pipeline.auto_stop():
+            vals = list(pipeline.get_iterator(timeout=3))
+
+    assert vals == []
 
 
 def test_pipeline_task_failure():
@@ -1206,9 +1221,10 @@ def test_pipeline_fail_middle():
     with pytest.raises(RuntimeError):
         apl.get_item(timeout=1)
 
-    with apl.auto_stop():
-        with pytest.raises(EOFError):
-            apl.get_item(timeout=1)
+    with pytest.raises(PipelineFailure):
+        with apl.auto_stop():
+            with pytest.raises(EOFError):
+                apl.get_item(timeout=1)
 
     assert pwc.cache == []
 
@@ -1663,24 +1679,25 @@ def test_pipeline_failures(output_order: str):
             raise ValueError(f"Only evan numbers are allowed. {x}")
         return x
 
-    src = range(10)
-
     builder = (
         PipelineBuilder()
-        .add_source(src)
+        .add_source(range(10))
         .pipe(fail_odd, output_order=output_order, concurrency=10)
         .add_sink(1)
     )
 
     pipeline = builder.build(num_threads=1)
     with pipeline.auto_stop():
-        ite = pipeline.get_iterator(timeout=3)
-        assert list(ite) == [i for i in src if not (i % 2)]
+        vals = list(pipeline.get_iterator(timeout=3))
+
+    assert vals == [0, 2, 4, 6, 8]
 
     pipeline = builder.build(num_threads=1, max_failures=2)
-    with pipeline.auto_stop():
-        ite = pipeline.get_iterator(timeout=3)
-        assert list(ite) == [i for i in range(6) if not (i % 2)]
+    with pytest.raises(PipelineFailure):
+        with pipeline.auto_stop():
+            vals = list(pipeline.get_iterator(timeout=3))
+
+    assert vals == [0, 2, 4]
 
 
 @pytest.mark.parametrize("output_order", ["completion", "input"])
@@ -1710,10 +1727,29 @@ def test_pipeline_failures_multiple_pipeline(output_order: str):
     pipeline1 = builder.build(num_threads=1, max_failures=1)
     pipeline2 = builder.build(num_threads=1, max_failures=2)
 
-    with pipeline2.auto_stop():
-        ite = pipeline2.get_iterator(timeout=3)
-        assert list(ite) == [i for i in range(6) if not (i % 2)]
+    with pytest.raises(PipelineFailure):
+        with pipeline2.auto_stop():
+            vals = list(pipeline2.get_iterator(timeout=3))
 
-    with pipeline1.auto_stop():
-        ite = pipeline1.get_iterator(timeout=3)
-        assert list(ite) == [i for i in range(4) if not (i % 2)]
+    assert vals == [0, 2, 4]
+
+    with pytest.raises(PipelineFailure):
+        with pipeline1.auto_stop():
+            vals = list(pipeline1.get_iterator(timeout=3))
+
+    assert vals == [0, 2]
+
+
+def test_pipeline_propagate_source_failure():
+    """When source itrator fails, the exception is propagated to the front end"""
+
+    def failure_source():
+        raise RuntimeError("Foo")
+        yield None
+
+    pipeline = (
+        PipelineBuilder().add_source(failure_source()).add_sink().build(num_threads=1)
+    )
+    with pytest.raises(RuntimeError):
+        with pipeline.auto_stop():
+            pass

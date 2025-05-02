@@ -52,6 +52,7 @@ class _EventLoop:
 
         self._task_started = SyncEvent()
         self._task_completed = SyncEvent()
+        self._task_exception: BaseException | None = None
         self._stop_requested = SyncEvent()
 
         self._thread: Thread | None = None
@@ -99,6 +100,11 @@ class _EventLoop:
                 await asyncio.sleep(0.1)
         _LG.debug("The background task is completed.")
         _LG.debug("The event loop is now shutdown.")
+
+        try:
+            self._task_exception = task.exception()
+        except asyncio.CancelledError:
+            pass
 
     def start(self, *, timeout: float | None = None, daemon: bool = False) -> None:
         """Start the thread and block until the loop is initialized."""
@@ -328,6 +334,9 @@ class Pipeline(Generic[T]):
             self._event_loop.stop()
             self._event_loop.join(timeout=timeout)
             self._event_loop_state = _EventLoopState.STOPPED
+
+        if self._event_loop._task_exception is not None:
+            raise self._event_loop._task_exception
 
     @contextmanager
     def auto_stop(self, *, timeout: float | None = None) -> Iterator[None]:
