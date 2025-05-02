@@ -13,3 +13,4 @@ Examples
    multi_thread_preprocessing
    streaming_nvdec_decoding
    streaming_video_processing
+   performance_analysis
