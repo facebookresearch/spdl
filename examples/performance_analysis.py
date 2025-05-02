@@ -15,26 +15,34 @@
    To learn how to interpret the performance statistics please refer to
    `Performance Analysis <../performance_analysis/index.html>`_.
 
-.. :py:current_module: spdl.pipeline
+.. py:currentmodule:: spdl.pipeline
 
-The :py:class:`Pipeline` class can collect runtime statistics and periodically publish
-it. This example shows how to write a callback function for publishing the stats,
-and how to attach the callback to the Pipeline object.
+The :py:class:`Pipeline` class can collect runtime statistics
+and periodically publish it.
+This example shows how to write a callback function for publishing the stats, and
+how to attach the callback to the Pipeline object.
 
 The performance stats are exposed as :py:class:`TaskPerfStats` and
-:py:class:`QueuePerfStats` classes. You can add custom callbacks by following steps.
+:py:class:`QueuePerfStats` classes.
 
-For :py:class:`QueuePerfStats`
+You can add custom callbacks by following steps.
 
-#. Subclass :py:class:`StatsQueue` and override :py:meth:`StatsQueue.interval_stats_callback`.
-#. In the ``interval_stats_callback`` method, save the fields of ``QueuePerfStats`` to somewhere you can access later.
+For :py:class:`QueuePerfStats`:
+
+#. Subclass :py:class:`StatsQueue` and
+   override :py:meth:`StatsQueue.interval_stats_callback`.
+#. In the ``interval_stats_callback`` method,
+   save the fields of ``QueuePerfStats`` to somewhere you can access later.
 #. Provide the new class to :py:meth:`PipelineBuilder.build` method.
 
 Similarly for :py:class:`TaskPerfStats`
 
-#. Subclass :py:class:`TaskStatsHook` and override :py:meth:`TaskStatsHook.interval_stats_callback`.
-#. In the ``interval_stats_callback`` method, save the fields of ``TaskPerfStats`` to somewhere you can access later.
-#. Create a factory function that takes a name of the stage functoin and return a list of :py:class:`TaskHook`-s applied to the stage.
+#. Subclass :py:class:`TaskStatsHook` and
+   override :py:meth:`TaskStatsHook.interval_stats_callback`.
+#. In the ``interval_stats_callback`` method,
+   save the fields of ``TaskPerfStats`` to somewhere you can access later.
+#. Create a factory function that takes a name of the stage functoin and
+   return a list of :py:class:`TaskHook`-s applied to the stage.
 #. Provide the factory function to :py:meth:`PipelineBuilder.build` method.
 """
 
