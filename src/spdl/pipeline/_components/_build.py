@@ -168,7 +168,11 @@ def _build_pipeline_coro(
     for i, cfg in enumerate(process_args, start=1):
         name = _get_task_name(i, cfg)
         queue_name = f"{name}_queue"
-        queues.append(queue_class(queue_name))
+        # Use buffer_size=2 so that it is possible that queue always
+        # has an item as long as upstream is fast enough.
+        # This make it possible for data readiness (occupancy rate)
+        # to reach 100%, instead of 99.999999%
+        queues.append(queue_class(queue_name, buffer_size=2))
         in_queue, out_queue = queues[i - 1 : i + 1]
 
         match cfg.type_:
