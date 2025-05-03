@@ -37,7 +37,7 @@ except ImportError:
     pass
 
 
-def __getitem__(name: str) -> type[TaskHook]:
+def __getattr__(name: str) -> type[TaskHook]:
     if name == "PipelineHook":
         import warnings
 
