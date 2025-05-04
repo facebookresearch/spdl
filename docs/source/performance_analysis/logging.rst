@@ -10,9 +10,9 @@ Measuring the performance
 When :py:class:`Pipeline` orchestrates the execution of functions,
 it also keeps track of various timing information.
 
-Such information are exposed as :py:class:`TaskPerfStats` and :py:class:`QueuePerfStats`.
+Such information is exposed as :py:class:`TaskPerfStats` and :py:class:`QueuePerfStats`.
 
-You can log such information by following steps.
+You can log such information by following these steps.
 
 .. seealso::
 
@@ -21,14 +21,17 @@ You can log such information by following steps.
 For :py:class:`QueuePerfStats`
 
 #. Subclass :py:class:`StatsQueue` and override :py:meth:`StatsQueue.interval_stats_callback`.†
-#. In the ``interval_stats_callback`` method, save the fields of ``QueuePerfStats`` to somewhere you can access later. ††
+#. In the ``interval_stats_callback`` method, save the fields of ``QueuePerfStats`` to
+   a location you can access later. ††
 #. Provide the new class to :py:meth:`PipelineBuilder.build` method.
 
 Similarly for :py:class:`TaskPerfStats`
 
 #. Subclass :py:class:`TaskStatsHook` and override :py:meth:`TaskStatsHook.interval_stats_callback`.†
-#. In the ``interval_stats_callback`` method, save the fields of ``TaskPerfStats`` to somewhere you can access later. ††
-#. Create a factory function that takes a name of the stage functoin and return a list of :py:class:`TaskHook`-s applied to the stage.
+#. In the ``interval_stats_callback`` method, save the fields of ``TaskPerfStats`` to
+   a location you can access later. ††
+#. Create a factory function that takes a name of the stage functoin and
+   returns a list of :py:class:`TaskHook`s applied to the stage.
 #. Provide the factory function to :py:meth:`PipelineBuilder.build` method.
 
 .. note::
@@ -36,8 +39,8 @@ Similarly for :py:class:`TaskPerfStats`
    .. raw:: html
 
       <ul style="list-style-type: '† ';">
-      <li>When overriding the method, make sure that the method does not hold the GIL, otherwise the logging can degrade the pipeline performance.</li>
+      <li>When overriding the method, ensure that it does not hold the GIL, as this can degrade pipeline performance.</li>
       </ul>
       <ul style="list-style-type: '†† ';">
-      <li>The destination can be anywhere such as remote database, or local file.</li>
+      <li>The destination can be anywhere such as a remote database, or a local file.</li>
       </ul>

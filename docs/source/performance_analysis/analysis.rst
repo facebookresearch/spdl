@@ -3,10 +3,10 @@ Analyzing the performance
 
 .. currentmodule:: spdl.pipeline
 
-In this section, we look at the performance statistics we gathered from
-in a production training system.
+In this section, we examine the performance statistics gathered from
+a production training system.
 
-The pipeline is composed 4 stages, that is, download, preprocess, batch
+The pipeline is composed of four stages: download, preprocess, batch,
 and transfer. The following code snippet and diagram illustrate this.
 
 .. code-block:: python
@@ -75,12 +75,12 @@ within the measurement window.
 Average Time
 ~~~~~~~~~~~~
 
-The :py:attr:`TaskPerfStats.ave_time` is the average time of successful function invocations.
-Typicall, download time is the largest, decoding/preprocessing are second, followed by
-collation and transfer.
+The :py:attr:`TaskPerfStats.ave_time` is the average time of successful function
+invocations. Typically, download time is the largest, followed by decoding/preprocessing,
+collation, and transfer.
 
-When decoding is lightweight but the size of the data is large, (such as processing long
-audio of WAV format.) then collation and transfer takes longer than preprocessing.
+When decoding is lightweight but the data size is large (such as processing long audio
+in WAV format), collation and transfer can take longer than preprocessing.
 
 In the following, we can see that the duration for downloading data changes over the course
 of training. We also see occasional spikes.
@@ -95,8 +95,8 @@ Other stages show the consistent performance throughout the training.
 
    <div id='perf_analysis_ave_time'></div>
 
-The number of task executed
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The number of tasks executed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The :py:attr:`TaskPerfStats.num_tasks` is the number of function invocation completed,
 including both successful and failure completion.
@@ -161,8 +161,8 @@ it allows to orchestrate stage functions independently.
 
 .. note::
 
-   - In the following plots, a legned ``<STAGE>`` indicates that it is refering to
-     the performance of the queue attached at the exit of the ``<STAGE>``.
+   - In the following plots, a legned ``<STAGE>`` indicates that it is referring
+     to the performance of the queue attached at the exit of the ``<STAGE>``.
    - The ``sink`` queue is the last queue of the pipeline and it is consumed by
      the foreground (the training loop).
 
@@ -173,8 +173,8 @@ Throughput
 Each queue has a fixed-size buffer. So the buffer also serves as
 a regulator of back pressure.
 For this reason, the throughput is roughly same across stages.
-The :py:attr:`QueuePerfStats.qps` represents the number of items
-went through the queue (fetched by the downstream stage) par second.
+The :py:attr:`QueuePerfStats.qps` represents the number of items that
+went through the queue (fetched by the downstream stage) per second.
 
 Note that due to the operations ``aggregate`` and ``disaggregate``,
 the QPS values from different stages may live in different value
@@ -208,10 +208,10 @@ where ``d_measure`` is the duration of the measurement (or elapsed time),
 
    <div id='perf_analysis_data_readiness'></div>
 
-The data readiness close to 100% intuitively means that whenever
+The data readiness close to 100% means that the data is available whenever
 the downstream stage (including the foreground training loop) tries to
-fetch the next data, the data is available, meaning that data processing
-pipeline is faster than the demand.
+fetch the next data, indicating that the data processing pipeline is
+faster than the demand.
 
 On the other hand, the data readiness close to 0% suggests that downstream
 stages are starving. They fetch the next data as soon as it is available,
@@ -219,7 +219,7 @@ but the upstream is not able to fill it quick enough, indicating that the
 data processing pipeline is not fast enough, and the system is
 experiencing data starvation.
 
-The following plot shows the dat readiness of the same training run we saw.
+The following plot shows the data readiness of the same training run we observed.
 From the source to up to the collate, the data readiness are close or above 99%.
 But at GPU transfer, it drops to 85% and the sink readiness follows.
 
@@ -238,38 +238,39 @@ The recovery of the data readiness in collate means that the rate at which
 the downstream stage (gpu_transfer) is consuming the result is not as fast
 as the rate of production.
 
-The data readiness of sink slightly recovers.
+The data readiness of the sink slightly recovers.
 This suggests that the rate at which the foreground training loop consume the
 data are slightly slower than the rate of transfer.
 
 Queue Get/Put Time
 ~~~~~~~~~~~~~~~~~~
 
-Other stats related to data readiness is the time stage functions wait for the
-completion of queue get and put.
+Other stats related to data readiness are the time stage functions wait for the
+completion of queue get and put operations.
 
 If data is always available (i.e. data readiness is close to 100%), then stages
-won't get blocked on fetching the next data to process.
-So the time to wait for getting the next data is small.
+won't be blocked when fetching the next data to process.
+Therefore, the wait time for getting the next data is minimal.
 
-On the other hand, if the upstream is not producing data fast enough, then the
-downstream stages are blocked on fetching the next data.
+Conversely, if the upstream is not producing data fast enough, the
+downstream stages will be blocked while fetching the next data.
 
 .. raw:: html
 
     <div id='perf_analysis_queue_get'></div>
 
-The time to put shows somewhat opposite trend.
+The time for put operation exhibits opposite trend.
 
-If the data readiness is close to 100%, then queues are full, and stage functions
-are not able to put the next result, so they have to wait until there is
-an available spot. So the wait time gets longer. The wait time becomes longer
-when higher concurrency is applied, as multiple function invocations try to
-put results into the queue.
+If the data readiness is close to 100%, queues are full, and stage functions
+cannot put the next result, so they must wait until a spot becomes available.
+As a result, the wait time increases.
+The wait time increases with higher concurrency, as multiple function invocations
+attempt to put results into the queue.
 
-If the rate of production is slow, the downstream stages are waiting for the next
-items. Then, the items put in the queue is fetched immediately, so the queue is
-more empty. This leads to the situation where the put time becomes close to zero.
+If the production rate is slow, downstream stages wait for the next items.
+Consequently, items placed in the queue are fetched immediately,
+resulting in a less occupied queue.
+This leads to the situation where the put time becomes close to zero.
 
 The following plot shows that download and collate stages wait longer because
 it is faster than the rate of the consumption of their downstreams
