@@ -14,7 +14,7 @@ __all__ = [
 
 import asyncio
 import inspect
-from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
 from concurrent.futures import Executor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -332,6 +332,6 @@ class _Aggregate(Generic[T]):
         )
 
 
-def _disaggregate(items: list[T]) -> Iterator[T]:
+async def _disaggregate(items: list[T]) -> AsyncIterator[T]:
     for item in items:
         yield item
