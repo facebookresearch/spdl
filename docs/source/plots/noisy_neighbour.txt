@@ -1,0 +1,88 @@
+.. raw:: html
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+   <script>
+    function plot(div_id, data) {
+        console.log(data);
+        const plot_data = [
+            {
+                x: data['qps_progress'].map(v => 100*v),
+                y: data['qps_mean'],
+                name: 'Training Speed [Batch/sec]',
+                line: {
+                    size: 0.1,
+                },
+            },
+            {
+                x: data['cpu_progress'].map(v => 100*v),
+                y: data['cpu_util'],
+                name: 'CPU Utilization',
+                line: {
+                    size: 0.1,
+                },
+                yaxis: 'y2',
+                type: 'scatter',
+            },
+        ];
+        Plotly.newPlot(
+            div_id, {
+                data: plot_data,
+                layout: {
+                    title: 'CPU Utilization and Training Speed',
+                    showlegend: true,
+                    legend: {
+                        x: 0.5,
+                        y: 1.1,
+                        orientation: 'h',
+                        xanchor: 'center',
+                        yanchor: 'top'
+                    },
+                    xaxis: {
+                        title: {
+                            text: 'Training Progress',
+                        },
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Training Speed [Batch/sec]',
+                        },
+                        range: [0, null],
+                    },
+                    yaxis2: {
+                        title: {
+                            text: 'CPU Utilizatoin [%]',
+                        },
+                        showgrid: false,
+                        overlaying: 'y',
+                        side: 'right',
+                        range: [0, null],
+                    },
+                },
+            },
+       );
+    };
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function() {
+            const data_url = '../_static/data/noisy_neighbour.json';
+            const div_id = 'nn_exp'
+            fetch(data_url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch the data.');
+                    }
+                    return response.json();
+                })
+                .then(data=> {
+                    try {
+                        plot(div_id, data);
+                    } catch(error) {
+                        const div = document.getElementById(div_id);
+                        div.textContent = "Failed to plot: " + error.toString();
+                    }
+                })
+                .catch(error => {console.error(error);});
+        },
+        false);
+   </script>
