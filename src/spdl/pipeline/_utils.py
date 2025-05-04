@@ -285,7 +285,7 @@ def cache_iterator(
     # Note - Design choice
     # When these optional values are provided, we could choose to not validate.
     # But the purpose of this function is to make sure you are using cache,
-    # so we raise an error if these parameters do not make ogical sense.
+    # so we raise an error if these parameters do not make logical sense.
     if return_caches_after is not None:
         if return_caches_after < num_caches:
             raise ValueError(

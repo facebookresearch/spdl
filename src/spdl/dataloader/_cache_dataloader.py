@@ -26,12 +26,7 @@ class CacheDataLoader(Generic[T]):
 
     Args:
         dl: Source iterator. Expected to be a data loader object.
-        num_caches: The number of items (batches) to cache.
-        return_caches_after: The number of iterations to use the original
-            iterator. By default, it uses the same value as ``num_caches``.
-        delete_src: When this iterator starts returning the cached value,
-            call ``del`` on the original data loader so that resources are
-            released.
+        num_caches,return_caches_after,stop_after: See :py:func:`spdl.pipeline.cache_iterator`.
 
     Returns:
         The new iterator.
@@ -43,7 +38,11 @@ class CacheDataLoader(Generic[T]):
     """
 
     def __init__(
-        self, dl: Iterable[T], num_caches: int, return_caches_after: int
+        self,
+        dl: Iterable[T],
+        num_caches: int,
+        return_caches_after: int,
+        stop_after: int | None = None,
     ) -> None:
         log_api_usage_once("spdl.dataloader.CacheDataLoader")
 
@@ -51,19 +50,15 @@ class CacheDataLoader(Generic[T]):
 
         self.num_caches = num_caches
         self.return_caches_after = return_caches_after
+        self.stop_after = stop_after
 
     def __iter__(self) -> Iterator[T]:
         """See :py:func:`spdl.pipeline.cache_iterator` for the detail."""
-        try:
-            stop_after = len(self)
-        except Exception:
-            stop_after = None
-
         return cache_iterator(
             self.dl,
             num_caches=self.num_caches,
             return_caches_after=self.return_caches_after,
-            stop_after=stop_after,
+            stop_after=self.stop_after,
         )
 
     def __len__(self) -> int:
