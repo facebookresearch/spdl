@@ -2,7 +2,7 @@ Overview of pipeline
 ====================
 
 When training models in the cloud, the process to make data
-available on GPUs takes typically 4 ~ 5 steps.
+available on GPUs typically involves 4 to 5 steps.
 
 #. Download raw data
 #. Load and preprocess data
@@ -10,7 +10,7 @@ available on GPUs takes typically 4 ~ 5 steps.
 #. Preprocess the batch (optional)
 #. Transfer the batch to GPUs
 
-When using SPDL's pipeline abstraction, such process can be
+When using SPDL's pipeline abstraction, this process can be
 written as follow.
 
 .. code-block:: python
@@ -69,10 +69,11 @@ Decoding the raw data and applying preprocessing can be time-consuming and
 compute-intensive. In AI model training, it is recommended to keep the total
 CPU utilization at most around 40% for the sake of keeping training QPS high.
 (When CPU utilization is high, CPU cannot schedule GPU kernel launch in
-timely manner. Every CPU utilization comes with drop in training QPS.)
+timely manner. Every increase in CPU utilization comes with a drop in
+training QPS.)
 However, we want to prevent the training from suffering from data starvation.
 For this purpose, we want to apply some concurrency to preprocessing stage.
 
-The data are then batched and transfered to GPU. These stages usually
-do not require concurrency. It is not feasible to make the GPU data transfer
-concurrent due to the hardware constraints.
+The data are then batched and transferred to GPU. These stages usually
+do not require concurrency. Concurrent GPU data transfer is not feasible
+due to hardware constraints.
