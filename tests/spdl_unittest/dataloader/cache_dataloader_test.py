@@ -85,7 +85,7 @@ def test_CacheDataLoader():
             return self.n
 
     N = 8
-    dl = CacheDataLoader(DL(N), num_caches=2, return_caches_after=3)
+    dl = CacheDataLoader(DL(N), num_caches=2, return_caches_after=3, stop_after=N)
 
     assert dl.n == len(dl) == N
 
