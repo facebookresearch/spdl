@@ -3,6 +3,7 @@
 /docs/source/generated/
 /docs/_build/
 fb
+TARGETS
 *.zip
 *.tar.gz
 *.tar.xz
