@@ -1,5 +1,5 @@
-Bulding a Pipeline
-==================
+Building a Pipeline
+===================
 
 .. py:currentmodule:: spdl.pipeline
 
@@ -69,13 +69,11 @@ Since downloading takes some time but does not consume much CPU resources,
 we make multiple download calls concurrently.
 
 Decoding the raw data and applying preprocessing can be time-consuming and
-compute-intensive. In AI model training, it is recommended to keep the total
-CPU utilization at most around 40% for the sake of keeping training QPS high.
-(When CPU utilization is high, CPU cannot schedule GPU kernel launch in
-timely manner. Every increase in CPU utilization comes with a drop in
-training QPS.)
+compute-intensive.
+As `previously described <./noisy_neighbour.html>`_, it is recommended to keep
+the total CPU utilization at most around 40% to avoid QPS drop.
 However, we want to prevent the training from suffering from data starvation.
-For this purpose, we want to apply some concurrency to preprocessing stage.
+For this purpose, we apply some concurrency to preprocessing stage.
 
 The data are then batched and transferred to GPU. These stages usually
 do not require concurrency. Concurrent GPU data transfer is not feasible

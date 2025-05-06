@@ -1,4 +1,4 @@
-Analyzing the performance
+Analyzing the Performance
 =========================
 
 .. currentmodule:: spdl.pipeline

@@ -3,15 +3,28 @@
    <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
    <script>
     function plot(div_id, data) {
-        console.log(data);
+        const x = data['qps_progress'].map(v => 100*v);
+        const upper = data['qps_mean'].map((v, i) => v + data['qps_stddev'][i]);
+        const lower = data['qps_mean'].map((v, i) => v - data['qps_stddev'][i]);
+        const env_x = x.concat(x.slice().reverse());
+        const env_y = upper.concat(lower.reverse());
         const plot_data = [
             {
-                x: data['qps_progress'].map(v => 100*v),
+                x,
                 y: data['qps_mean'],
                 name: 'Training Speed [Batch/sec]',
                 line: {
                     size: 0.1,
                 },
+            },
+            {
+                x: env_x,
+                y: env_y,
+                fill: "tozerox",
+                fillcolor: "rgba(0, 100, 80, 0.2)",
+                line: {color: "transparent"},
+                showlegend: false,
+                type: "scatter",
             },
             {
                 x: data['cpu_progress'].map(v => 100*v),
@@ -38,15 +51,10 @@
                         yanchor: 'top'
                     },
                     xaxis: {
-                        title: {
-                            text: 'Training Progress',
-                        },
+                        title: 'Progress [%]',
                     },
                     yaxis: {
-                        title: {
-                            text: 'Training Speed [Batch/sec]',
-                        },
-                        range: [0, null],
+                        title: 'Training Speed [Batch/sec]',
                     },
                     yaxis2: {
                         title: {
@@ -56,6 +64,7 @@
                         overlaying: 'y',
                         side: 'right',
                         range: [0, null],
+                        zeroline: false,
                     },
                 },
             },

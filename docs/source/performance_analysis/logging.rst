@@ -1,9 +1,9 @@
-Measuring the performance
-=========================
+Collecting the Runtime Statistics
+=================================
 
 .. note::
 
-   Meta employees, please refer to `this <https://fburl.com/workplace/goxtxyng>`_.
+   If you are Meta employee, please refer to `this <https://fburl.com/workplace/goxtxyng>`_.
 
 .. py:currentmodule:: spdl.pipeline
 
@@ -31,7 +31,7 @@ Similarly for :py:class:`TaskPerfStats`
 #. In the ``interval_stats_callback`` method, save the fields of ``TaskPerfStats`` to
    a location you can access later. ††
 #. Create a factory function that takes a name of the stage functoin and
-   returns a list of :py:class:`TaskHook`s applied to the stage.
+   returns a list of :py:class:`TaskHook` s applied to the stage.
 #. Provide the factory function to :py:meth:`PipelineBuilder.build` method.
 
 .. note::

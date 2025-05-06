@@ -22,9 +22,10 @@ for the CPU to launch GPU kernels in timely manner.
 We call this phenomenon "noisy neighbour".
 
 To show the effect of the noisy neighbour, we conducted an experiment.
-We ran a training pipeline, and at the end of each epoch, we added a subprocess
-that serves no functionality but consumes significant CPU resource.
-We kept adding subprocesses until (in fact even after) the CPU utilization hit 100%.
+We ran a pipeline that trains an image classification model.
+After some steps, we spawned a subprocess that serves no functionality but consumes
+CPU resource.
+We repeat this until the CPU utilization hit 100%.
 
 The following plot shows the how the training speed (batch per second) drops as
 we add more and more CPU loads.
@@ -36,7 +37,9 @@ we add more and more CPU loads.
 
 .. include:: ../plots/noisy_neighbour.txt
 
-What this means is that data loading needs to be not only fast but also efficient.
+This suggests that data loading needs to be not only fast but also efficient.
 At some point, we thought that since we are using GPUs for model computation, we
 can use CPU resources for data loading, and we should be utilizing CPU as much as
 possible. This turned out to be an anti-pattern.
+
+We now recommend to keep the CPU utilization at most 40% for efficient training.
