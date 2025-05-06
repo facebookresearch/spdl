@@ -1,6 +1,9 @@
-Overview of pipeline
-====================
+Bulding a Pipeline
+==================
 
+.. py:currentmodule:: spdl.pipeline
+
+Now we use :py:class:`Pipeline` to construct the data loader.
 When training models in the cloud, the process to make data
 available on GPUs typically involves 4 to 5 steps.
 

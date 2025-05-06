@@ -43,8 +43,8 @@ The ``step_time`` is the time the training loop takes to complete one iteration 
 that is, model forward, loss computation, model backward, and parameter update.
 
 The pipeline takes about 200 ms for one step. The analysis suggests that if we manage to
-optimize the data loader to its extreme, it can give 30ms improvement, which is 15%
-reduction in training time.
+optimize the data loader to its extreme, it can give 30ms (or 1.7 hour) improvement, which
+is 13% reduction in training time.
 
 Deciding what to work on
 ------------------------

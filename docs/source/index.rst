@@ -38,7 +38,6 @@ Please use the following BibTex for citing our project if you find it useful.
    installation
    getting_started/index
    performance_analysis/index
-   optimization/index
    migration/index
    best_practice
    examples
