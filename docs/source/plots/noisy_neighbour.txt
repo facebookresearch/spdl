@@ -1,0 +1,97 @@
+.. raw:: html
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+   <script>
+    function plot(div_id, data) {
+        const x = data['qps_progress'].map(v => 100*v);
+        const upper = data['qps_mean'].map((v, i) => v + data['qps_stddev'][i]);
+        const lower = data['qps_mean'].map((v, i) => v - data['qps_stddev'][i]);
+        const env_x = x.concat(x.slice().reverse());
+        const env_y = upper.concat(lower.reverse());
+        const plot_data = [
+            {
+                x,
+                y: data['qps_mean'],
+                name: 'Training Speed [Batch/sec]',
+                line: {
+                    size: 0.1,
+                },
+            },
+            {
+                x: env_x,
+                y: env_y,
+                fill: "tozerox",
+                fillcolor: "rgba(0, 100, 80, 0.2)",
+                line: {color: "transparent"},
+                showlegend: false,
+                type: "scatter",
+            },
+            {
+                x: data['cpu_progress'].map(v => 100*v),
+                y: data['cpu_util'],
+                name: 'CPU Utilization',
+                line: {
+                    size: 0.1,
+                },
+                yaxis: 'y2',
+                type: 'scatter',
+            },
+        ];
+        Plotly.newPlot(
+            div_id, {
+                data: plot_data,
+                layout: {
+                    title: 'CPU Utilization and Training Speed',
+                    showlegend: true,
+                    legend: {
+                        x: 0.5,
+                        y: 1.1,
+                        orientation: 'h',
+                        xanchor: 'center',
+                        yanchor: 'top'
+                    },
+                    xaxis: {
+                        title: 'Progress [%]',
+                    },
+                    yaxis: {
+                        title: 'Training Speed [Batch/sec]',
+                    },
+                    yaxis2: {
+                        title: {
+                            text: 'CPU Utilizatoin [%]',
+                        },
+                        showgrid: false,
+                        overlaying: 'y',
+                        side: 'right',
+                        range: [0, null],
+                        zeroline: false,
+                    },
+                },
+            },
+       );
+    };
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function() {
+            const data_url = '../_static/data/noisy_neighbour.json';
+            const div_id = 'nn_exp'
+            fetch(data_url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch the data.');
+                    }
+                    return response.json();
+                })
+                .then(data=> {
+                    try {
+                        plot(div_id, data);
+                    } catch(error) {
+                        const div = document.getElementById(div_id);
+                        div.textContent = "Failed to plot: " + error.toString();
+                    }
+                })
+                .catch(error => {console.error(error);});
+        },
+        false);
+   </script>
