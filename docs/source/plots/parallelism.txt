@@ -1,0 +1,91 @@
+.. raw:: html
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+   <script>
+    function plot(div_id, data, title, ylabel, ymax, inverse) {
+        let plot_data = [];
+        console.log(data)
+        Object.keys(data).sort().map(key => {
+            const value = data[key];
+            let y = value['value'];
+            plot_data.push({
+                x: value['step'],
+                y: (inverse ? y.map(v => 1/v) : y),
+                name: key,
+            });
+        });
+        Plotly.newPlot(
+            div_id, {
+                data: plot_data,
+                layout: {
+                    title: title,
+                    showlegend: true,
+                    legend: {
+                        x: 0.5,
+                        y: 1.1,
+                        orientation: 'h',
+                        xanchor: 'center',
+                        yanchor: 'top'
+                    },
+                    xaxis: {
+                        title: 'Step',
+                    },
+                    yaxis: {
+                        title: ylabel,
+                        range: [inverse ? 0 : null, ymax],
+                    }
+                },
+            },
+       );
+    };
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function() {
+            const cfgs = [
+                {
+                    data_url: '../_static/data/parallelism_step_time.json',
+                    div_id: 'parallelism_step_time',
+                    title: 'Training Speed',
+                    ylabel: 'QPS [batch/sec]',
+                    ymax: null,
+                    inverse: true,
+                },
+                {
+                    data_url: '../_static/data/parallelism_backward.json',
+                    div_id: 'parallelism_backward',
+                    title: 'Average time of the backward path',
+                    ylabel: 'Time [sec]',
+                    ymax: 0.2,
+                    inverse: false,
+                },
+                {
+                    data_url: '../_static/data/parallelism_optimizer.json',
+                    div_id: 'parallelism_optimizer',
+                    title: 'Average time of the optimizer step',
+                    ylabel: 'Time [sec]',
+                    ymax: 0.03,
+                    inverse: false,
+                },
+            ]
+            cfgs.map(c => {
+                fetch(c.data_url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch the data.');
+                        }
+                        return response.json();
+                    })
+                    .then(data=> {
+                        try {
+                            plot(c.div_id, data, c.title, c.ylabel, c.ymax, c.inverse);
+                        } catch(error) {
+                        const div = document.getElementById(c.div_id);
+                            div.textContent = "Failed to plot: " + error.toString();
+                        }
+                    })
+                    .catch(error => {console.error(error);});
+            })
+        },
+        false);
+   </script>

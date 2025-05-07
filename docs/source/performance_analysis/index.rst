@@ -27,3 +27,4 @@ and look at some cases and discuss how we approach the performance issue.
    logging
    analysis
    fleet_metrics
+   parallelism
