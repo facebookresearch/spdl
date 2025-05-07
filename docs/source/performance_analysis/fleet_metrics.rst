@@ -67,9 +67,10 @@ sink queue.
 
 These observations suggest that the bottleneck is in the preprocess stage.
 So the next action we should take is to figure out why preprocessing can be slower.
+
 (For this particular case, the data is time series with different signal length, so
 we suspect that the time complexity of preprocessing is not constant but grows as
-the signal length become larger..)
+the signal length become larger.)
 
 Average Download Time
 ---------------------

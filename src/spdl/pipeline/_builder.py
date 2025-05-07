@@ -431,7 +431,7 @@ def run_pipeline_in_subprocess(
 
     Args:
         builder: The definition of :py:class:`Pipeline`.
-        num_threads,max_afilures,report_stats_interval,queue_class,task_hook_factory:
+        num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory:
             Passed to :py:meth:`PipelineBuilder.build`.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
 
