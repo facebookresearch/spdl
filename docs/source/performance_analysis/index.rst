@@ -26,3 +26,4 @@ and look at some cases and discuss how we approach the performance issue.
    setup
    logging
    analysis
+   fleet_metrics
