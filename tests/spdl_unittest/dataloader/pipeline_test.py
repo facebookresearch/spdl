@@ -833,7 +833,7 @@ def test_pipeline_resume():
 
 
 def test_pipeline_infinite_loop():
-    """AsyncPipeline can execute infinite iterable"""
+    """AsyncPipeline can execute inifinite iterable"""
 
     def src(i=-1):
         while True:

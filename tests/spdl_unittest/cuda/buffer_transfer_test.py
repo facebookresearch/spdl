@@ -208,7 +208,7 @@ def test_array_transfer_non_contiguous_numpy():
 
 
 def test_array_transfer_smoke_test():
-    """smoke test for transferring multiple arrays concurrently"""
+    """smoke test for transfering multiple arrays concurrently"""
 
     array = np.random.randint(0, 256, size=(1, 64_000), dtype=np.uint8)
     device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
