@@ -6,6 +6,13 @@ Analyzing the Performance
 In this section, we examine the performance statistics gathered from
 a production training system.
 
+.. note::
+
+   To setup the pipeline to collect the runtime performance statistics,
+   plase refer to the
+   `Collecting the Runtime Statistics <../getting_started/logging.html>`_
+   section and :py:mod:`performance_analysis` example.
+
 The pipeline is composed of four stages: download, preprocess, batch,
 and transfer. The following code snippet and diagram illustrate this.
 

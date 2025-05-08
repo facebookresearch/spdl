@@ -24,7 +24,6 @@ and look at some cases and discuss how we approach the performance issue.
    headspace_analysis
    noisy_neighbour
    setup
-   logging
    analysis
    fleet_metrics
    parallelism
