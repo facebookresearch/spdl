@@ -13,7 +13,7 @@
 .. note::
 
    To learn how to interpret the performance statistics please refer to
-   `Performance Analysis <../performance_analysis/index.html>`_.
+   `Optimization Guide <../performance_analysis/index.html>`_.
 
 .. py:currentmodule:: spdl.pipeline
 

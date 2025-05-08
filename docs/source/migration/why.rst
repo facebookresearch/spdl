@@ -28,7 +28,7 @@ Pros
     The :py:class:`spdl.dataloader.Pipeline` executes the functions you provide. SPDL
     does not put any restriction on what data can go through the pipeline. Stages can
     aggregate/disaggregate data along the way.
-5. *Debuggability*
+5. *Observability*
     As we have seen in :ref:`Performance Analysis<Performance Analysis>` section, SPDL's
     pipeline abstraction gives insights of stage-wise runtime performance, which makes it
     easier to understand how the data loading is performing and how to optimize the pipeline.

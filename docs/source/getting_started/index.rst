@@ -6,3 +6,4 @@ Getting Started
    intro
    stages
    concurrency
+   logging
