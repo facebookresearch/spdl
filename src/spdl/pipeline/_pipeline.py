@@ -192,6 +192,12 @@ class _EventLoopState(IntEnum):
 class Pipeline(Generic[T]):
     """Pipeline()
 
+    .. seealso::
+
+       The `Getting Started/Parallelism <../getting_started/parallelism.html>`_
+       section covers how to switch (or combine) multi-threading and
+       multi-processing in detail.
+
     Data processing pipeline. Use :py:class:`PipelineBuilder` to instantiate.
 
     ``Pipeline`` and ``PipelineBuilder`` facilitate building data processing pipeline
