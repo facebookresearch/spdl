@@ -83,7 +83,7 @@ The following figure illustrates this.
 
 It turned out that this multi-threading in subprocess (``mtp``) is
 highly effective. It consumed a little bit more CPU resource (~26%)
-than simple ``mt`` (~20%), but it wass faster, and no spiky behaviour
+than simple ``mt`` (~20%), but it was faster, and no spiky behaviour
 was observed.
 
 .. include:: ../plots/parallelism.txt

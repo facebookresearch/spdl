@@ -26,4 +26,5 @@ and look at some cases and discuss how we approach the performance issue.
    setup
    analysis
    fleet_metrics
+   resolution
    parallelism

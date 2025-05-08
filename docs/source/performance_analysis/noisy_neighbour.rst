@@ -16,7 +16,7 @@ When a training pipeline is efficiently using GPUs, the following happens.
 1. Whenever a unit of computate operation (GPU kernel) is completed, CPU is able to launch the next one as soon as possible.
 2. The data required to launch the next GPU kernel is available before the current GPU kernel is finished.
 
-The goal of data loading optimization is to achive the second part.
+The goal of data loading optimization is to achieve the second part.
 It turns out, however, when the CPU utilization is high, it becomes difficult
 for the CPU to launch GPU kernels in timely manner.
 We call this phenomenon "noisy neighbour".

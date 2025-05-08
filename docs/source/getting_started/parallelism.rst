@@ -82,7 +82,7 @@ There are cases where you want to use a dedicated thread for certain task.
 #. You want to specify a different number of concurrency.
 
 One notable example that comports with these conditions is data to the GPU.
-Due to the hardware constraits, only one data transfer can be performed
+Due to the hardware constraints, only one data transfer can be performed
 at a time.
 To transfer data, you need a stream object, and you want to keep using
 the same stream object across the function invocations.
@@ -152,7 +152,7 @@ Multi-processing (stage)
 ------------------------
 
 Similar to the custom multi-threading, by providing an instance of
-:py:class:`~concurrent.futures.ProcesPoolExecutor`, that stage is executed in a
+:py:class:`~concurrent.futures.ProcessPoolExecutor`, that stage is executed in a
 subprocess.
 
 .. code-block::
@@ -215,12 +215,12 @@ The other approach does not suffer from this.
 Multi-threading in subprocess
 -----------------------------
 
-The mutli-threading in subprocess is a paradigm we found effective when
+The multi-threading in subprocess is a paradigm we found effective when
 `multi-threading degrades the performance <../performance_analysis/parallelism.html>`_.
 
 The :py:func:`spdl.pipeline.run_pipeline_in_subprocess` function moves the given
 instance of :py:class:`PipelineBuilder` to a subprocess, build and execute the
-:py:class:`Pipeline` and put the results to inter-porcess queue.
+:py:class:`Pipeline` and put the results to inter-process queue.
 (There is also :py:func:`spdl.pipeline.iterate_in_subprocess` function for
 running a generic :py:class:`Iterable` object in subprocess.)
 
@@ -244,7 +244,7 @@ The following example shows how to use the function.
    for item in iterator:
        ...
 
-The MTP mode helps the OS to schedule GPU kernel launchs from the main thread
+The MTP mode helps the OS to schedule GPU kernel launches from the main thread
 (where the training loop is running) in timely manner, and reduces the
 number of Python objects that the Python interpreter in the main process
 has to handle.

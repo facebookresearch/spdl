@@ -116,7 +116,7 @@ and send the decoded frames to GPU in asynchronously.
    ...     return spdl.io.to_torch(buffer)
    >>>
    >>> pipeline = (
-   ...     PipelineBuiler()
+   ...     PipelineBuilder()
    ...     .add_source(source())
    ...     .pipe(download)
    ...     .aggregate(32)

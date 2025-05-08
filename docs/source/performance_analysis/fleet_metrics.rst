@@ -1,4 +1,4 @@
-Metrics Across Ranks
+Metrics across Ranks
 ====================
 
 "A chain is only as strong as its weakest link."
@@ -51,7 +51,7 @@ download, decompress and (batch) preprocessing as illustrated follow.
    flowchart LR
        Download -- Disaggregate --> Decompress -- Aggregate --> Preprocess -- transfer --> Sink
 
-The following plots show the data readiness for the stage preceeding the sink.
+The following plots show the data readiness for the stage preceding the sink.
 
 .. raw:: html
 
@@ -101,7 +101,7 @@ variance.
 
 By checking the log on the storage system, we verified that this was caused
 by throttling.
-Past 8:30 AM, we can see that the node 2 (rank 16 to 23) is recieving a different
+Past 8:30 AM, we can see that the node 2 (rank 16 to 23) is receiving a different
 level of throttling than node 0 (rank 0 to 7) and 1 (rank 8 to 15).
 The speed of the pipeline is governed by the throttling applied to the node 2.
 
