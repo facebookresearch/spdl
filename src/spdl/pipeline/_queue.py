@@ -58,7 +58,15 @@ class AsyncQueue(asyncio.Queue[T]):
 
 @dataclass
 class QueuePerfStats:
-    """Performance statistics collected by :py:class:`StatsQueue`."""
+    """Performance statistics collected by :py:class:`StatsQueue`.
+
+    .. seealso::
+
+       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
+         How to export the runtime performance statistics.
+       - `Analyzing the Performance <../performance_analysis/analysis.html>`_ :
+         How to use the exported stats.
+    """
 
     elapsed: float
     """The duration of measurement in second."""
@@ -112,6 +120,13 @@ class QueuePerfStats:
 class StatsQueue(AsyncQueue[T]):
     """Measures the time stages are blocked on upstream/downstream stage.
     Extends :py:class:`AsyncQueue`.
+
+    .. seealso::
+
+       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
+         How to export the runtime performance statistics.
+       - `Analyzing the Performance <../performance_analysis/analysis.html>`_ :
+         How to use the exported stats.
 
     Args:
         name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.

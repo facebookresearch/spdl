@@ -276,7 +276,15 @@ async def _periodic_dispatch(
 
 @dataclass
 class TaskPerfStats:
-    """Performance statistics of a task measured by :py:class:`TaskStatsHook`."""
+    """Performance statistics of a task measured by :py:class:`TaskStatsHook`.
+
+    .. seealso::
+
+       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
+         How to export the runtime performance statistics.
+       - `Analyzing the Performance <../performance_analysis/analysis.html>`_ :
+         How to use the exported stats.
+    """
 
     num_tasks: int
     """The number of tasks invoked."""
@@ -290,6 +298,13 @@ class TaskPerfStats:
 
 class TaskStatsHook(TaskHook):
     """Track the task runtimes and success rate.
+
+    .. seealso::
+
+       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
+         How to export the runtime performance statistics.
+       - `Analyzing the Performance <../performance_analysis/analysis.html>`_ :
+         How to use the exported stats.
 
     Args:
         name: Nmae of the stage. Only used for logging.
