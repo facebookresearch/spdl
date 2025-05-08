@@ -111,7 +111,7 @@ if [[ "$(uname)" == Darwin ]]; then
 
     otool="/usr/bin/otool"
     # NOTE: miniconda has a version of otool and install_name_tool installed and we want
-    #       to use the default sytem version instead of the miniconda version since the miniconda
+    #       to use the default system version instead of the miniconda version since the miniconda
     #       version can produce inconsistent results
 
     # Attempt to use /usr/bin/otool as our default otool
