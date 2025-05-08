@@ -4,12 +4,12 @@ Overview
 What is SPDL?
 -------------
 
-SPDL (Scalable and Performant Data Loading) is a research project to explore
-the design of fast data loading for ML training with free-threaded (a.k.a no-GIL) Python,
-but brings its benefits to the current ML systems.
+SPDL (Scalable and Performant Data Loading) is a research project and high-quality
+production-ready code for exploring the design of fast data loading for ML training.
+It works with free-threaded Python (a.k.a no-GIL Python) and the regular Pythohn.
 
 SPDL implements an abstraction that facilitates building performant data processing
-pipelines that utilizes multi-threading.
+pipelines. It can utilize multi-threading, multi-processing and mixture of them.
 
 Oftentimes, the bottleneck of data loading is in media decoding and pre-processing.
 So, in addition to the pipeline abstraction, SPDL also provides an I/O module for
@@ -67,6 +67,3 @@ SPDL is highly flexible. You can use it in variety of ways.
    itself is single-threaded. Only the functions passed to the executors are
    executed concurrently. This makes SPDL an ideal test bed for experimenting with
    free-threaded Python and high-performance computing.
-   SPDL provides option to enable GIL in its I/O module when building from source.
-   The ability to enable/disable GIL helps performing controlled experiments.
-   Please check out the `Installation <./installation.html>`_ for how to customize the build.
