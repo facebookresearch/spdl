@@ -9,7 +9,7 @@ a production training system.
 .. note::
 
    To setup the pipeline to collect the runtime performance statistics,
-   plase refer to the
+   please refer to the
    `Collecting the Runtime Statistics <../getting_started/logging.html>`_
    section and :py:mod:`performance_analysis` example.
 
