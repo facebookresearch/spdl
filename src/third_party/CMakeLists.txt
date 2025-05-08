@@ -14,7 +14,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 # glog has some private header file, which name conflicts with clang's tooling,
 # so we need to install glog somewhere once.
 
-# glog exports package to user registery (~/.glog) with build path and this
+# glog exports package to user registry (~/.glog) with build path and this
 # causes issue when compiling SPDL.
 # https://github.com/google/glog/issues/705
 # the following disables the export.
