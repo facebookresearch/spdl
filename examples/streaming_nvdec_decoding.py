@@ -49,7 +49,7 @@ def parse_args(args: list[str] | None = None) -> tuple[argparse.Namespace, list[
     parser.add_argument(
         "--plot-dir",
         type=pathlib.Path,
-        help="If provided, plot the result to the given directory.",
+        help="If provided, plot the result to the given dirctory.",
     )
     parser.add_argument(
         "--trace-path",

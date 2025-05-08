@@ -32,7 +32,7 @@ sample_fmt2dtype = {
 
 @pytest.mark.parametrize("sample_fmt", ["s16", "s32", "s64"])
 def test_encode_audio_integer(sample_fmt):
-    """Can save audio from integer data"""
+    """Can save audio from interger data"""
     sample_rate = 44100
     duration = 3
     num_channels = 2

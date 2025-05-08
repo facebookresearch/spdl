@@ -24,7 +24,7 @@ def test_filter_graph_abuffer_basic():
     codec = demuxer.audio_codec
     decoder = spdl.io.Decoder(codec, filter_desc=None)
 
-    filter_desc = f"{get_abuffer_desc(codec)},annul,abuffersink"
+    filter_desc = f"{get_abuffer_desc(codec)},anull,abuffersink"
     print(filter_desc)
 
     filter_graph = spdl.io.FilterGraph(filter_desc)
