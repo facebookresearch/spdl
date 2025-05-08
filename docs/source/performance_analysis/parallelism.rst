@@ -10,6 +10,11 @@ multi-threading (while properly releasing the GIL) degradated the performance.
 We would like to share our experience and thoughts for parallelism and
 performance.
 
+.. note::
+
+   To learn about the use of different parallelism with SPDL, please
+   refer to the `Parallelism <../getting_started/parallelism.html>`_.
+
 Pipeline Speed
 --------------
 
@@ -82,33 +87,3 @@ than simple ``mt`` (~20%), but it wass faster, and no spiky behaviour
 was observed.
 
 .. include:: ../plots/parallelism.txt
-
-How to run move the Pipeline in subprocess
-------------------------------------------
-
-Through this work, we added
-:py:func:`spdl.pipeline.iterate_in_subprocess` and its wrapper
-:py:func:`spdl.pipeline.run_pipeline_in_subprocess`.
-
-Using these functions you can execute iterables and
-:py:class:`~spdl.pipeline.Pipeline` s in subprocess.
-
-.. admonition:: Example
-
-   .. code-block:: python
-
-      # Construct a builder
-      builder = (
-          spdl.pipeline.PipelineBuilder()
-          .add_source(...)
-          .pipe(...)
-          ...
-          .add_sink(...)
-      )
-
-      # Move it to the subprocess, build the Pipeline
-      iterator = run_pipeline_in_subprocess(builder)
-
-      # Iterate
-      for item in iterator:
-          ...
