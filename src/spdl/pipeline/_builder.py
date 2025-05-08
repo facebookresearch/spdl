@@ -121,7 +121,13 @@ def _get_op_name(op: Callable) -> str:
 class PipelineBuilder(Generic[T, U]):
     """Build :py:class:`~spdl.pipeline.Pipeline` object.
 
-    See :py:class:`~spdl.pipeline.Pipeline` for details.
+    .. seealso::
+
+       - :py:class:`~spdl.pipeline.Pipeline`: The resulting pipeline object.
+
+       - The `Getting Started/Parallelism <../getting_started/parallelism.html>`_
+         section covers how to switch (or combine) multi-threading and
+         multi-processing in detail.
     """
 
     def __init__(self) -> None:
