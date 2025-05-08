@@ -93,7 +93,7 @@ def load_npy(data: bytes | bytearray, *, copy: bool = False) -> NDArray:
        There is a branch in
        `_read_array <https://github.com/numpy/numpy/blob/v2.2.0/numpy/lib/format.py#L827-L854>`_
        function where the execution can call some faster implementation.
-       Howver, :py:class:`~io.BytesIO` does not meet the condition.
+       However, :py:class:`~io.BytesIO` does not meet the condition.
        (:py:func:`~numpy.lib.format.isfileobj` function returns ``False`` for :py:class:`io.BytesIO`.
        [`source <https://github.com/numpy/numpy/blob/v2.2.0/numpy/lib/format.py#L999>`_])
        Even if the execution takes the faster :py:func:`numpy.fromfile` path, it

@@ -127,7 +127,7 @@ const char* get_desc(cuvidDecodeStatus status) {
     case cuvidDecodeStatus_Error_Concealed:
       return "Decode is completed with a concealed error.";
     default:
-      return "Unkonwn decode status.";
+      return "Unknown decode status.";
   }
 }
 
@@ -306,7 +306,7 @@ int NvDecDecoderCore::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   //
   // Return values
   // * 0: fail
-  // * >=1: succeess
+  // * >=1: success
 
   if (cb_disabled) {
     return 1;
@@ -339,7 +339,7 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   //
   // Return values
   // * 0: fail
-  // * >=1: succeess
+  // * >=1: success
 
   if (cb_disabled) {
     return 1;
@@ -423,7 +423,7 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
 int NvDecDecoderCore::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
   // Return values:
   // * <0: fail
-  // * >=0: succeess
+  // * >=0: success
   //    - bit 0-9: OperatingPoint
   //    - bit 10-10: outputAllLayers
   //    - bit 11-30: reserved

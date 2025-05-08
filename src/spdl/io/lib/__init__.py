@@ -72,7 +72,7 @@ def _import_libspdl() -> ModuleType:
         try:
             ext.init_glog(sys.argv[0])
         except Exception:
-            _LG.debug("Faile to initialize Google logging.", exc_info=True)
+            _LG.debug("Failed to initialize Google logging.", exc_info=True)
 
         try:
             ext.set_ffmpeg_log_level(8)

@@ -13,7 +13,7 @@ from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Generic, overload, TYPE_CHECKING, TypeVar
 
-# We import NumPy only when type-checkng.
+# We import NumPy only when type-checking.
 # The functions of this module do not need NumPy itself to run.
 # This is for experimenting with FT (no-GIL) Python.
 # Once NumPy supports FT Python, we can import normally.
@@ -122,7 +122,7 @@ SourceType = str | Path | bytes | UintArray | Tensor
 
 
 class Demuxer:
-    """Demuxer can demux audio, video and image from the soure.
+    """Demuxer can demux audio, video and image from the source.
 
     Args:
         src: Source identifier.
@@ -131,7 +131,7 @@ class Demuxer:
             then they are interpreted as in-memory data.
             If array type (objects implement buffer protocol,
             such as NumPy NDArray and PyTorch Tensor), then they must be
-            1 dimentional uint8 array, which contains the raw bytes of the
+            1 dimensional uint8 array, which contains the raw bytes of the
             source.
 
         demux_config (DemuxConfig): Custom I/O config.
@@ -933,14 +933,14 @@ class NvDecDecoder:
     ) -> None:
         """Initialize the decoder.
 
-        This funciton must be called before decoding can happen.
+        This function must be called before decoding can happen.
 
         .. note::
 
            Creation of underlying decoder object is expensive.
            Typically, it takes about 300ms or more.
 
-           To mitigate this the implementaion tries to reuse the decoder.
+           To mitigate this the implementation tries to reuse the decoder.
            This works if the new video uses the same codecs as
            the previous one, and the difference is limited to the
            resolution of the video.
@@ -1013,7 +1013,7 @@ def nvdec_decoder(use_cache: bool = True) -> NvDecDecoder:
     """Instantiate an :py:class:`NvDecDecoder` object.
 
     Args:
-        use_cache: If ``True`` (default), the decoder isntance cached in thread
+        use_cache: If ``True`` (default), the decoder instance cached in thread
             local storage is used. Otherwise a new decoder instance is created.
     """
     if use_cache:
@@ -1050,7 +1050,7 @@ def convert_frames(
 
     Returns:
         A Buffer object.
-            The shape of the buffer obejct is
+            The shape of the buffer object is
 
             - ``AudioFrames`` -> ``[C, H]`` or ``[N, C]``.
             - ``VideoFrames`` -> ``[N, C, H, W]`` or ``[N, H, W, C]``.
@@ -1081,7 +1081,7 @@ def convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
 
     This function is intended to be used when sending class labels (which is
     generated from list of integer) to GPU while overlapping the transfer with
-    kenrel execution. See :py:func:`spdl.io.cpu_storage` for the detail.
+    kernel execution. See :py:func:`spdl.io.cpu_storage` for the detail.
 
     Args:
         vals: NumPy array with int64 dtype..
@@ -1113,7 +1113,7 @@ def create_reference_audio_frame(
             The dtype and channel layout must match what is provided to
             ``sample_fmt``.
 
-        sample_fmt: The format of sample. The valid values and corresponging data type is as follow.
+        sample_fmt: The format of sample. The valid values and corresponding data type is as follow.
 
             - ``"u8"``, ``"u8p"`` : 8-bit unsigned integer.
             - ``"s16"``, ``"s16p"`` : 16-bit signed integer.
@@ -1129,7 +1129,7 @@ def create_reference_audio_frame(
 
         sample_rate: The sample rate of the audio
 
-        pts: The time of the first sample, in the descrete time unit of sample rate.
+        pts: The time of the first sample, in the discrete time unit of sample rate.
             Usually it is the number of samples previously processed.
 
     Returns:
@@ -1163,17 +1163,17 @@ def create_reference_video_frame(
             The dtype and channel layout must match what is provided to
             ``sample_fmt``.
 
-        pix_fmt: The image format. The valid values and corresponging shape is as follow.
+        pix_fmt: The image format. The valid values and corresponding shape is as follow.
 
             - ``"rgb24"``, ``"bgr24"``: Interleaved RGB/BGR in shape of ``(N, H, W, C==3)``.
             - ``"gray8"``, ``"gray16"``: Grayscale image of 8bit unsigned integer or
-              16 bit signed interger in shape of ``(N, H, W)``.
+              16 bit signed integer in shape of ``(N, H, W)``.
             - ``"yuv444p"``: Planar YUV format in shape of ``(N, C==3, H, W)``.
 
         frame_rate: The frame rate of the video expressed asfraction.
             ``(numerator, denominator)``.
 
-        pts: The time of the first video frame, in the descrete time unit of frame rate.
+        pts: The time of the first video frame, in the discrete time unit of frame rate.
             Usually it is the number of frames previously processed.
 
     Returns:

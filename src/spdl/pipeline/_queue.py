@@ -131,7 +131,7 @@ class StatsQueue(AsyncQueue[T]):
     Args:
         name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.
         buffer_size: The buffer size. Assigned by :py:class:`PipelineBuilder`.
-        interval: The interval (in second) between repoting performance numbers
+        interval: The interval (in second) between reporting performance numbers
             to console.
     """
 

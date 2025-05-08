@@ -127,7 +127,7 @@ def cuda_config(device_index: int, **kwargs) -> CUDAConfig:
                    undesired synchronization.
 
         allocator (tuple[Callable[[int, int, int], int], Callable[[int], None]]):
-            *Optional:* A pair of custom CUDA memory allcoator and deleter functions.
+            *Optional:* A pair of custom CUDA memory allocator and deleter functions.
 
             .. rubric:: Allocator
 

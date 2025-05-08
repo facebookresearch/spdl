@@ -106,7 +106,7 @@ async def _wrap_agen(
         # When that happens, the control flow cannot exit the while loop.
         #
         # So when `StopAsyncIteration` is raised, we catch it once to set
-        # the exhausted flag to True, then re-raise the execption so as
+        # the exhausted flag to True, then re-raise the exception so as
         # to give hooks chance to react to it.
         # If the hooks do not absorb the StopAsyncIteration, and
         # it propagates them, then we catch it and exit.

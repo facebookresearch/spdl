@@ -246,7 +246,7 @@ async def _run_pipeline_coroutines(
     """Run the pipeline coroutines and handle errors.
 
     Args:
-        coros: The croutines each corresponds to a stage in pipelin.
+        coros: The coroutines each corresponds to a stage in pipeline.
             IMPORTANT: The coroutinues must be in the order of src to sink.
     """
     tasks = [create_task(coro, name=name) for name, coro in coros]
@@ -275,7 +275,7 @@ async def _run_pipeline_coroutines(
             break
 
         # Check if any of the task caused an error.
-        # If an error occured, we cancel the stages upstream to the failed one,
+        # If an error occurred, we cancel the stages upstream to the failed one,
         # then continue waiting the downstream ones.
         for i in range(len(tasks) - 1, -1, -1):
             task = tasks[i]

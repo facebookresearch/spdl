@@ -104,7 +104,7 @@ AVFormatInputContextPtr get_input_format_ctx(
 
   // Note:
   // If `avformat_open_input` fails, it frees fmt_ctx.
-  // So we use raw pointer untill we know `avformat_open_input` succeeded.
+  // So we use raw pointer until we know `avformat_open_input` succeeded.
   // https://ffmpeg.org/doxygen/5.0/group__lavf__decoding.html#gac05d61a2b492ae3985c658f34622c19d
   AVFormatContext* fmt_ctx = CHECK_AVALLOCATE(avformat_alloc_context());
   if (io_ctx) {

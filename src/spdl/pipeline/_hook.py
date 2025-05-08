@@ -307,7 +307,7 @@ class TaskStatsHook(TaskHook):
          How to use the exported stats.
 
     Args:
-        name: Nmae of the stage. Only used for logging.
+        name: Name of the stage. Only used for logging.
         interval: The interval (in second) to report the performance stats periodically.
             The default behavior is no periodic reporting.
     """
