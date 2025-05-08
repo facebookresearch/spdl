@@ -52,7 +52,7 @@ The following observations can be made.
   as additional processing is added.
 - The degree of improvement from batching in SPDL is significantly
   higher than in PyTorch. (more than 2x at 16 workers.)
-- The peak througput is almost 2.7x in SPDL than in PyTorch.
+- The peak throughput is almost 2.7x in SPDL than in PyTorch.
 """
 
 import logging

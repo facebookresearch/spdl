@@ -40,8 +40,8 @@ Using GPU video decoder
 When SPDL is built with NVDEC integration enabled, and the GPUs support NVDEC,
 providing ``--nvdec`` option switches the video decoder to NVDEC, using
 :py:func:`spdl.io.decode_packets_nvdec`. When using this option, adjust the
-number of threads (the number of concurrent decoding) to accomodate
-the number of hardware video decoder availabe on GPUs.
+number of threads (the number of concurrent decoding) to accommodate
+the number of hardware video decoder available on GPUs.
 For the details, please refer to https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new
 
 .. note::
