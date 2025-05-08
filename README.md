@@ -1,8 +1,10 @@
 # SPDL
 
 SPDL (Scalable and Performant Data Loading) is a library and project to
-explore the design and performance of data loading with thread-based
-parallelism.
+explore the design of performant data loading.
+
+It provides flexible pipeline abstraction and a set of operations used
+for processing array data.
 
 ## Documentation
 
