@@ -186,7 +186,7 @@ def test_mergeiterator_stochastic_stop_after_first_exhaustion():
 
 
 def test_repeat_source_iterable_with_shuffle():
-    """repeat_source repeats souce while calling shuffle"""
+    """repeat_source repeats source while calling shuffle"""
 
     class _IteWithShuffle:
         def __init__(self) -> None:
