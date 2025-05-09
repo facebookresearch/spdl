@@ -42,15 +42,32 @@ Tracer
 
 A tracer like
 `PyTorch Profiler <https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html>`_
-can trace the program execution and allows to see how much time is being
-spent on what operation.
+can trace the program execution.
+It allows to see how much time is being spent on what operation.
 
-It captures the entire process, so it allows to see what other things
-are going on.
-Sometimes you can find a background work that should not be happening.
+The following figure shows a function making multiple network calls.
 
-It also annotates GPU and Tensor metadata, so it is useful to verify
-that the memory-pinning is working as expected.
+.. image:: ../../_static/data/resolution_tracer.png
+
+The underlying API is defined with ``async`` keyword.
+It is a common practice (although it's an anti-pattern) to wrap async
+functions with :py:func:`asyncio.run` to provide pseudo synchronous API
+for the sake of ease of use.
+As a result, users are not aware that an event loop is created and
+destroyed for each invocation of API call, which is redundant and
+inefficient especially when the series of calls are made in event loop.
+This is what is happening in the above figure.
+
+The function is being executerd in asynchronous event loop, but it is calling
+pseudo synchronous API, so an event loop is created and destroyed for each
+call. As a result it is spending x100 more time.
+
+
+The PyTorch Profiler also annotates GPU and Tensor metadata, so it is
+useful to verify GPU-related activities.
+For example, to ensure that the data transfer is not interrupting the
+the main training, we can check that the data transfer is happening in
+a separate stream.
 
 .. image:: ../../_static/data/parallelism_transfer.png
 
