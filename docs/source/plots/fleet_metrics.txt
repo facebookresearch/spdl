@@ -70,6 +70,13 @@
                     title: 'Average download time across ranks',
                     ylabel: 'Time [sec]',
                 },
+                {
+                    data_url: '../_static/data/across_ranks_compose_ave_time.json',
+                    div_id: 'across_ranks_preprocess_ave_time',
+                    title: 'Average preprocess time across ranks',
+                    ylabel: 'Time [sec]',
+                    emphasis: ['00', '19'],
+                },
             ]
             cfgs.map(cfg => {
                 fetch(cfg.data_url)
