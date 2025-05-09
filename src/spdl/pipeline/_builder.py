@@ -119,11 +119,11 @@ def _get_op_name(op: Callable) -> str:
 
 
 class PipelineBuilder(Generic[T, U]):
-    """Build :py:class:`~spdl.pipeline.Pipeline` object.
+    """Build :py:class:`Pipeline` object.
 
     .. seealso::
 
-       - :py:class:`~spdl.pipeline.Pipeline`: The resulting pipeline object.
+       - :py:class:`Pipeline`: The resulting pipeline object.
 
        - The `Getting Started/Parallelism <../getting_started/parallelism.html>`_
          section covers how to switch (or combine) multi-threading and
@@ -356,13 +356,13 @@ class PipelineBuilder(Generic[T, U]):
 
                 This is only effective if there is no custom hook or custom AsyncQueue
                 provided for stages. The argument is passed to
-                :py:class:`~TaskStatsHook` and :py:class:`~StatusQueue`.
+                :py:class:`TaskStatsHook` and :py:class:`StatsQueue`.
 
                 If a custom stage hook is provided and stats report is needed,
-                you can instantiate :py:class:`~spdl.pipeline.TaskStatsHook` and include
+                you can instantiate :py:class:`TaskStatsHook` and include
                 it in the hooks provided to :py:meth:`PipelineBuilder.pipe`.
 
-                Similarly if you are providing a custom :py:class:`~AsyncQueue` class,
+                Similarly if you are providing a custom :py:class:`AsyncQueue` class,
                 you need to implement the same logic by your self.
 
             queue_class: If provided, override the queue class used to connect stages.
@@ -370,7 +370,7 @@ class PipelineBuilder(Generic[T, U]):
 
             task_hook_factory: If provided, used to create task hook objects, given a
                 name of the stage. If ``None``, a default hook,
-                :py:class:`~spdl.pipeline.TaskStatsHook` is used.
+                :py:class:`TaskStatsHook` is used.
                 To disable hooks, provide a function that returns an empty list.
         """
         if (src := self._src) is None:
