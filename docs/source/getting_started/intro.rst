@@ -46,8 +46,10 @@ It is important to call :py:meth:`Pipeline.stop`.
 Forgetting to do so will leave the background thread running,
 leading to the situation where Python interpreter gets stuck at exit.
 
-In practice, there is always a chance that data processing raises an error,
-so there is a context manager :py:meth:`Pipeline.auto_stop` to make sure that
+In practice, there is always a possibility that the application is interrupted
+and shutdown.
+To handle such case and stop the background threads properly,
+there is a context manager :py:meth:`Pipeline.auto_stop` which makes sure that
 pipeline is stopped.
 
 .. code-block::
@@ -56,8 +58,49 @@ pipeline is stopped.
    ...    for item in pipeline:
    ...        print(item)
 
+.. warning::
+
+   Do not call :py:func:`iter` on the pipeline because :py:meth:`Pipeline.stop`
+   might not be called at the right time.
+
+   Say you wrap a ``Pipeline`` to create an class that resembles conventional
+   ``DataLoader``.
+
+   .. code-block:: python
+
+      class DataLoader:
+          ...
+
+          def __iter__(self):
+              with self.pipeline.auto_stop():
+                  for item in pipeline:
+                      yield item
+
+      dataloader = DataLoader(...)
+
+   Make sure to use this class like the following.
+   This way, the context manager properly calls ``Pipeline.stop`` when
+   the execution flow goes out of the loop, even
+   when the application is exiting with unexpected errors.
+
+   .. code-block:: python
+
+      for item in dataloader:
+          ...
+
+   Do not use it like the following. This way, the ``Pipeline.stop``
+   does not get called until the garbage collector deletes the object,
+   which might cause deadlock.
+
+   .. code-block:: python
+
+      iterator = iter(dataloader)
+      item = next(iterator)
+
+
 .. note::
 
    Once :py:meth:`Pipeline.stop` method is called, the ``Pipeline`` object is unusable.
-   To pause and resume the execution, simply keep the reference around until the
-   next use.
+   To pause the execution, simply stop consuming the output.
+   The ``Pipeline`` will get blocked when the internal buffers are full.
+   To resume the execution, resume consuming the data.
