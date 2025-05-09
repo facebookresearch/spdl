@@ -192,13 +192,13 @@ class _EventLoopState(IntEnum):
 class Pipeline(Generic[T]):
     """Pipeline()
 
+    Data processing pipeline. Use :py:class:`PipelineBuilder` to instantiate.
+
     .. seealso::
 
        The `Getting Started/Parallelism <../getting_started/parallelism.html>`_
        section covers how to switch (or combine) multi-threading and
        multi-processing in detail.
-
-    Data processing pipeline. Use :py:class:`PipelineBuilder` to instantiate.
 
     ``Pipeline`` and ``PipelineBuilder`` facilitate building data processing pipeline
     consists of multiple stages of async operations.
@@ -252,8 +252,8 @@ class Pipeline(Generic[T]):
                    for path in f:
                        yield path
 
-           async def decode(path):
-               return await spdl.io.async_decode_image(path)
+           def load(path):
+               return await spdl.io.load_image(path)
 
 
            pipeline: Pipeline = (
@@ -264,13 +264,10 @@ class Pipeline(Generic[T]):
                .build(num_threads=10)
            )
 
-           pipeline.start()
-           try:
-               for item in pipeline.get_iterator():
+           with pipeline.auto_stop():
+               for item in pipeline.get_iterator(timeout=30):
                    # do something with the decoded image
                    ...
-           finally:
-               pipeline.stop()
     """
 
     def __init__(
