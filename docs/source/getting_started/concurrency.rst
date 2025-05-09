@@ -1,7 +1,7 @@
 Concurrency
 ===========
 
-.. py:currentmodule:: spdl.dataloader
+.. py:currentmodule:: spdl.pipeline
 
 The pipelines we looked at so far process data sequentially.
 Now let's introduce concurrency to the pipeline so that it finishes jobs faster.

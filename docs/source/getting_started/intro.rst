@@ -1,7 +1,7 @@
 Building and Running Pipeline
 =============================
 
-.. py:currentmodule:: spdl.dataloader
+.. py:currentmodule:: spdl.pipeline
 
 First, let's look at how easy it is to build the pipeline in SPDL.
 
@@ -10,7 +10,7 @@ The following snippet demonstrates how one can construct a
 
 .. code-block::
 
-   >>> from spdl.dataloader import PipelineBuilder
+   >>> from spdl.pipeline import PipelineBuilder
    >>>
    >>> pipeline = (
    ...     PipelineBuilder()
