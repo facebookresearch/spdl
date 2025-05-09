@@ -4,30 +4,65 @@ Overview
 What is SPDL?
 -------------
 
-SPDL (Scalable and Performant Data Loading) is a research project and high-quality
-production-ready code for exploring the design of fast data loading for ML training.
-It works with free-threaded Python (a.k.a no-GIL Python) and the regular Pythohn.
+SPDL (Scalable and Performant Data Loading) is a library for building
+efficient data loader for ML/AI trainings.
+It was created by a group of engineers/researchers who works on
+improving the efficiency of GPU workloads at Meta.
 
-SPDL implements an abstraction that facilitates building performant data processing
-pipelines. It can utilize multi-threading, multi-processing and mixture of them.
+Core Concept
+~~~~~~~~~~~~
+
+Its design incorporates the authors' experience on optimizing pipelines
+and the UX/DevX feedbacks from pipeline owners.
+The key features include
+
+- The pipeline execution is fast and efficient.
+- The pipeline abstraction is flexible so that users can choose structures
+  fit their environment/data/requirements.
+- The pipeline can export the runtime statistics of subcomponents, which
+  helps identify the bottleneck.
+
+These features allow to create a feedback loop, with which users can
+iteratively improve the performance.
+
+.. image:: ./_static/data/spdl_overview_feedback_loop.png
+   :width: 480px
+
+Performance & Efficiency
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Data loading is an important component in AI training, but
+`high CPU utilization can degrade the training performance <./performance_analysis/noisy_neighbour.html>`_, 
+so the data loading pipeline must be efficient.
+
+The following plot shows the throughput of SPDL and other data loading
+solutions, and their CPU utilization†.
+
+SPDL is fast and efficient in orchestrating tasks.
+
+.. image:: ./_static/data/spdl_overview_performance.png
+
+The core pipeline is pure-Python package, so you can install it anywhere.
+By default, it uses multi-threading as the core parallelism.
+It turned out that the performance is improved with the recent Python
+version upgrade, and enabling free-threading makes it even faster.
+
+.. image:: ./_static/data/spdl_overview_speed_vs_version.png
+   :width: 360px
+
+.. raw:: html
+
+   <ul style="list-style-type: '† ';">
+   <li><a href="https://arxiv.org/abs/2504.20067">https://arxiv.org/abs/2504.20067</a></li>
+   </ul>
+
+Media I/O
+~~~~~~~~~
 
 Oftentimes, the bottleneck of data loading is in media decoding and pre-processing.
 So, in addition to the pipeline abstraction, SPDL also provides an I/O module for
 multimedia (audio, video and image) processing.
 This I/O module was designed from scratch to achieve high performance and high throughput.
-
-There are three main components in SPDL.
-
-1. Task execution engine. (The pipeline abstraction)
-2. Utilities to build the data processing pipelines with the task execution engine.
-3. Efficient media processing operations that are thread-safe.
-
-SPDL provides many ways to tune the performance. Some of them are explicit,
-such as stage-wise concurrency and the size of thread pool.
-Others are implicit and subtle, such as the choice of sync and async functions
-and structuring and ordering of the pre-processing.
-The pipelines built with SPDL provide various insights about its performance.
-This makes it easy to diagnose the performance and optimize the performance, 
 
 What SPDL is NOT
 ----------------
@@ -35,15 +70,15 @@ What SPDL is NOT
 * SPDL is not a drop-in replacement of existing data loading solutions.
 * SPDL does not guarantee automagical performance improvement.
 
-SPDL is an attempt and an experimental evidence that thread-based parallelism can
-achieve higher throughput than common process-based parallelism,
-even under the constraint of GIL.
+SPDL was started as an experiment to achieve high throughput with
+thread-based parallelism even under the constraint of GIL.
 
-SPDL does not claim to be the fastest solution out there, nor it aims to be the
-fastest. The goal of SPDL is to pave the way for to take advantage of free-threaded
-Python in Machine Learning, by first solving the bottleneck (media decoding)
-in data loading, then later performing other parts of pre-processing within
-multi-threading paradigm.
+SPDL is not expected to be the fastest solution out-of-box.
+Rather, it paves the way for practitioners to properly optimize the data
+loading pipeline.
+
+Aoption of SPDL also paves the way for adoption of free-threaded
+Python in ML/AI application.
 
 How to use SPDL?
 ----------------

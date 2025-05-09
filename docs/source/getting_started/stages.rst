@@ -1,7 +1,7 @@
 Pipeline Stages
 ===============
 
-.. py:currentmodule:: spdl.dataloader
+.. py:currentmodule:: spdl.pipeline
 
 :py:class:`Pipeline` is composed of multiple stages.
 There are mainly three kind of stages.
@@ -75,7 +75,7 @@ stage.
 .. note::
 
    † If you need to pass multiple objects between stages, use tuple or define a
-   protocol using :py:class:`~dataclasses.dataclass`.
+   protocol using :py:func:`~dataclasses.dataclass`.
 
 The following diagram illustrates a pipeline that fetch images from remote
 locations, batch decode and send data to GPU.
@@ -89,7 +89,7 @@ locations, batch decode and send data to GPU.
        D --> E[Sink]
 
 An implementation could look like this.
-It uses :py:func:`spdl.io.async_load_image_batch`, which can decode and resize images
+It uses :py:func:`spdl.io.load_image_batch`, which can decode and resize images
 and send the decoded frames to GPU in asynchronously.
 
 .. code-block::
@@ -105,9 +105,9 @@ and send the decoded frames to GPU in asynchronously.
    ...     """Download data from the given URL"""
    ...     ...
    >>>
-   >>> async def process(data: list[bytes]) -> Tensor:
+   >>> def process(data: list[bytes]) -> Tensor:
    ...     """Given raw image data, decode, resize, batch and transfer data to GPU"""
-   ...     buffer = spdl.io.async_load_image_batch(
+   ...     buffer = spdl.io.load_image_batch(
    ...         data,
    ...         width=224,
    ...         height=224,
