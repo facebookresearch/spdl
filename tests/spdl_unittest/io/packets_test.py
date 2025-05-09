@@ -72,7 +72,7 @@ def _load_from_packets(packets):
     return spdl.io.to_numpy(buffer)
 
 
-def test_audio_packets_attribtues():
+def test_audio_packets_attributes():
     """AudioPackets have sample_rate and num_channels attributes"""
     # fmt: off
     cmd = """
@@ -98,7 +98,7 @@ def test_audio_packets_attribtues():
         (30000, 1001),
     ],
 )
-def test_video_packets_attribtues(rate):
+def test_video_packets_attributes(rate):
     """VideoPackets have width, height, pixe_format attributes"""
     cmd = f"ffmpeg -hide_banner -y -f lavfi -r {rate[0]}/{rate[1]} -i testsrc -frames:v 25 sample.mp4"
     sample = get_sample(cmd)
@@ -110,7 +110,7 @@ def test_video_packets_attribtues(rate):
     assert packets.frame_rate == rate
 
 
-def test_image_packets_attribtues():
+def test_image_packets_attributes():
     """ImagePackets have width, height, pixe_format attributes"""
     cmd = CMDS["image"]
     sample = get_sample(cmd)

@@ -41,7 +41,7 @@ Similarly for :py:class:`TaskPerfStats`
    override :py:meth:`TaskStatsHook.interval_stats_callback`.
 #. In the ``interval_stats_callback`` method,
    save the fields of ``TaskPerfStats`` to somewhere you can access later.
-#. Create a factory function that takes a name of the stage functoin and
+#. Create a factory function that takes a name of the stage function and
    return a list of :py:class:`TaskHook`-s applied to the stage.
 #. Provide the factory function to :py:meth:`PipelineBuilder.build` method.
 """
