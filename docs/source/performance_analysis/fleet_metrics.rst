@@ -66,11 +66,16 @@ while the data readiness of the preprocess stage somewhat resembles that of the
 sink queue.
 
 These observations suggest that the bottleneck is in the preprocess stage.
-So the next action we should take is to figure out why preprocessing can be slower.
+If we look at the average preprocessing time, for some reason, the rank 19 is
+always slower.
 
-(For this particular case, the data is time series with different signal length, so
-we suspect that the time complexity of preprocessing is not constant but grows as
-the signal length become larger.)
+.. raw:: html
+
+   <div id="across_ranks_preprocess_ave_time"></div>
+
+So the next action we take is to figure out what makes prepcoessing particular
+samples slower.
+
 
 Average Download Time
 ---------------------
