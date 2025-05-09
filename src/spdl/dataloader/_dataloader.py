@@ -78,7 +78,7 @@ class DataLoader(Generic[Source, Output]):
        └────────┘
 
     Args:
-        src: Data source. An object impelements :py:class:`~collections.abc.Iterable` interface
+        src: Data source. An object implements :py:class:`~collections.abc.Iterable` interface
             or :py:class:`~collections.abc.AsyncIterable` interface.
             Typically, a generator that yields file paths or URLs.
             To iterate over an object that implements :py:class:`~collections.abc.Mapping`
@@ -111,7 +111,7 @@ class DataLoader(Generic[Source, Output]):
             passed to the aggregator in order of completion. If 'input', then they are passed
             to the aggregator in the order of the source input.
 
-    Exapmles:
+    Examples:
         >>> import spdl.io
         >>> from spdl.io import CPUBuffer, CUDABuffer, ImageFrames
         >>>
@@ -193,7 +193,7 @@ class DataLoader(Generic[Source, Output]):
          without creating intermediate arrays.
        - :py:func:`spdl.io.transfer_buffer`: Sending the data to GPU.
        - :py:func:`spdl.io.to_torch`, :py:func:`spdl.io.to_numba`, :py:func:`spdl.io.to_jax`: Casting
-         the memroy buffer to array type.
+         the memory buffer to array type.
 
     """
 

@@ -222,15 +222,15 @@ class Packets:
 
        1. Decoding is performed in background thread, potentially long after
           since the job was created due to other decoding jobs. To ensure the
-          existance of the packets, the decoding function should take the
+          existence of the packets, the decoding function should take the
           ownership of the packets, instead of a reference.
 
-       2. An alternative approch to 1 is to share the ownership, however, in this
+       2. An alternative approach to 1 is to share the ownership, however, in this
           approach, it is not certain when the Python variable holding the shared
           ownership of the Packets object is deleted. Python might keep the
           reference for a long time, or the garbage collection might kick-in when
           the execution is in critical code path. By passing the ownership to
-          decoding function, the ``Packets`` object resouce is also released in
+          decoding function, the ``Packets`` object resource is also released in
           background.
 
        To decode packets multiple times, use the ``clone`` method.
@@ -266,7 +266,7 @@ class AudioPackets(Packets):
 
     @property
     def sample_rate(self) -> int:
-        """The sampel rate of the audio."""
+        """The sample rate of the audio."""
         ...
 
     @property
@@ -725,7 +725,7 @@ class VideoEncoder:
 
 class CUDAConfig:
     """CUDAConfig()
-    Specify the CUDA devie and memory management.
+    Specify the CUDA device and memory management.
 
     See the factory function :py:func:`~spdl.io.cuda_config`."""
 

@@ -33,7 +33,7 @@ def set_ffmpeg_log_level(val: int, /) -> None:
         val: Log level. The larger, the more verbose.
 
             The following values are common values, the corresponding ``ffmpeg``'s
-            ``-loglevel`` option value and desription.
+            ``-loglevel`` option value and description.
 
             - ``-8`` (``quiet``):
               Print no output.

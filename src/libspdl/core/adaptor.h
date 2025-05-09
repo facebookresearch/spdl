@@ -48,7 +48,7 @@ using DataInterfacePtr = std::unique_ptr<DataInterface>;
 ////////////////////////////////////////////////////////////////////////////////
 // Adaptor
 ////////////////////////////////////////////////////////////////////////////////
-// Adaptor optionally modifies the intput resource indicator, and create
+// Adaptor optionally modifies the input resource indicator, and create
 // DataInterface from the result.
 struct SourceAdaptor {
   virtual ~SourceAdaptor() = default;

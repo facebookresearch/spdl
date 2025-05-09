@@ -508,7 +508,7 @@ def get_abuffer_desc(
 
     Args:
         codec: The source audio codec
-        label: *Optional* Attatch a label to the ``abuffer`` node, so that it can
+        label: *Optional* Attach a label to the ``abuffer`` node, so that it can
             be referenced later. This makes it easy to refer to the input node when building
             filter graph with multiple input nodes.
             Without this argument, FFmpeg will construct a name like
@@ -550,7 +550,7 @@ def get_buffer_desc(
           demuxer = spdl.io.Demuxer(sample.path)
           codec = demuxer.video_codec
           decoder = spdl.io.Decoder(codec, filter_desc=None)
-          # use `anull` filter which does nothing for the illustration purpose
+          # use `null` filter which does nothing for the illustration purpose
           filter_graph = spdl.io.FilterGraph(f"{get_buffer_desc(codec)},null,buffersink")
 
           for packets in demuxer.streaming_demux(duration=1):
@@ -560,7 +560,7 @@ def get_buffer_desc(
 
     Args:
         codec: The source video/image codec
-        label: *Optional* Attatch a label to the ``abuffer`` node, so that it can
+        label: *Optional* Attach a label to the ``abuffer`` node, so that it can
             be referenced later. This makes it easy to refer to the input node when building
             filter graph with multiple input nodes.
             Without this argument, FFmpeg will construct a name like

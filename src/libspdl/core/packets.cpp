@@ -176,7 +176,7 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
   //
   // The PTS of the key frame of the second split is 5, but the packet with
   // PTS=2 comes after that. If we simply split at key frames, then PTS=2 will
-  // be dicarded.
+  // be discarded.
   //
   // 1, 3, 4,                -> 1, 3, 4
   // I
@@ -262,7 +262,7 @@ extract_packets_at_indices(
   auto& src_packets = src->pkts.get_packets();
   // If timestamp is set, then there are frames before the window.
   // `indices` are supposed to be within the window.
-  // So we adjust the `indices` by shifitng the number of frames before the
+  // So we adjust the `indices` by shifting the number of frames before the
   // window.
   if (src->timestamp) {
     auto [start, end] = *(src->timestamp);

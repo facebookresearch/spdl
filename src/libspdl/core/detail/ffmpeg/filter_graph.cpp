@@ -141,7 +141,7 @@ const std::string parse_unmatched(const AVFilterLink* l, const AVFrame* f) {
 }
 
 void add_frame(AVFilterContext* filter_ctx, AVFrame* frame) {
-  // We use AV_BUFFERSRC_FLAG_PUSH becase the frame we use might be a
+  // We use AV_BUFFERSRC_FLAG_PUSH because the frame we use might be a
   // reference frame to a tensor object, in which case, the data might be
   // garbage-collected after this method returns.
   int flags = AV_BUFFERSRC_FLAG_KEEP_REF | AV_BUFFERSRC_FLAG_PUSH;
@@ -252,7 +252,7 @@ AnyFrames FilterGraphImpl::get_frames() {
 Rational FilterGraphImpl::get_src_time_base() const {
   if (inputs.size() != 1) {
     SPDL_FAIL(
-        "get_src_time_base cannot use used when there are mulitple outputs.");
+        "get_src_time_base cannot be used when there are multiple outputs.");
   }
   return inputs.cbegin()->second->outputs[0]->time_base;
 }
@@ -260,7 +260,7 @@ Rational FilterGraphImpl::get_src_time_base() const {
 Rational FilterGraphImpl::get_sink_time_base() const {
   if (outputs.size() != 1) {
     SPDL_FAIL(
-        "get_sink_time_base cannot use used when there are mulitple outputs.");
+        "get_sink_time_base cannot be used when there are multiple outputs.");
   }
   return outputs.cbegin()->second->inputs[0]->time_base;
 }

@@ -124,7 +124,7 @@ void TracingSession::config(const std::string& process_name) {
 void TracingSession::start(int fd, int buffer_size_in_kb) {
 #ifdef SPDL_USE_TRACING
   if (sess) {
-    SPDL_FAIL("Tracing session is avtive.");
+    SPDL_FAIL("Tracing session is active.");
   }
   sess =
       (void*)(detail::start_tracing_session(fd, buffer_size_in_kb).release());
@@ -134,7 +134,7 @@ void TracingSession::start(int fd, int buffer_size_in_kb) {
 void TracingSession::stop() {
 #ifdef SPDL_USE_TRACING
   if (!sess) {
-    SPDL_FAIL("Tracing session is not avtive.");
+    SPDL_FAIL("Tracing session is not active.");
   }
   std::unique_ptr<perfetto::TracingSession> p;
   p.reset((perfetto::TracingSession*)sess);

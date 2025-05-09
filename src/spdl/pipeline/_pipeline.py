@@ -37,7 +37,7 @@ T = TypeVar("T")
 
 
 # Note:
-# This class has a bit exessive debug logs, because it is tricky to debug
+# This class has a bit excessive debug logs, because it is tricky to debug
 # it from the outside.
 class _EventLoop:
     def __init__(
@@ -299,7 +299,7 @@ class Pipeline(Generic[T]):
                 f"Pipeline ({self!r}) is running in the background, but "
                 "there is no valid reference pointing the foreground object. "
                 "Stopping the background thread. "
-                "It is strongly advised to stop the pipeline explicity, "
+                "It is strongly advised to stop the pipeline explicitly, "
                 "using the `auto_stop` context manager. "
                 "If you are using a framework and you cannot use the "
                 "context manager, try calling `stop` in done callback and "

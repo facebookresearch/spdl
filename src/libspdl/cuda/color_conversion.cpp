@@ -20,7 +20,7 @@
 
 namespace spdl::cuda {
 namespace {
-void validate_shape_consistentcy(const std::vector<CUDABuffer>& frames) {
+void validate_shape_consistency(const std::vector<CUDABuffer>& frames) {
   if (!frames.size()) {
     SPDL_FAIL("The input must have at least one frame.");
   }
@@ -62,7 +62,7 @@ CUDABufferPtr nv12_to_rgb(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
     int matrix_coefficients) {
-  validate_shape_consistentcy(frames);
+  validate_shape_consistency(frames);
   const auto& f0 = frames[0];
   auto height = f0.shape[0], width = f0.shape[1];
   if (height % 3) {

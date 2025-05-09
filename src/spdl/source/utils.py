@@ -65,7 +65,7 @@ def _ordered_iter(iterators: list[Iterator[T]], stop_after: float) -> Iterable[T
             except StopIteration:
                 if stop_after == _FIRST_EXHAUSTION:
                     return
-                # Insert in reversed order beacause we use this for popping from list
+                # Insert in reversed order because we use this for popping from list
                 remove.insert(0, i)
                 continue
 
@@ -78,7 +78,7 @@ def _ordered_iter(iterators: list[Iterator[T]], stop_after: float) -> Iterable[T
                 iterators.pop(i)
 
 
-def _stocastic_iter(
+def _stochastic_iter(
     iterators: list[Iterator[T]],
     weights: Sequence[float],
     stop_after: float,
@@ -203,7 +203,7 @@ class MergeIterator(Iterable[T]):
         if self.weights is None:
             yield from _ordered_iter(iterators, self.stop_after)
         else:
-            yield from _stocastic_iter(
+            yield from _stochastic_iter(
                 iterators, self.weights, self.stop_after, self.seed
             )
 

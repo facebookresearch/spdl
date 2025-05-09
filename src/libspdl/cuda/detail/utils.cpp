@@ -31,7 +31,7 @@ const char* get_error_desc(CUresult error) {
   if (cuGetErrorString(error, &p) == CUDA_SUCCESS) {
     return p;
   } else {
-    return "Unknown error has occured.";
+    return "Unknown error has occurred.";
   }
 }
 

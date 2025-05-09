@@ -191,7 +191,7 @@ class PipelineBuilder(Generic[T, U]):
                 them as a tuple or use :py:class:`~dataclasses.dataclass` and
                 define a custom protocol.
 
-                If the result of applying ``op`` to an inpu item is ``None``,
+                If the result of applying ``op`` to an input item is ``None``,
                 the pipeline skips absorb the result and it won't be propagated to
                 the downstream stages.
 
@@ -351,7 +351,7 @@ class PipelineBuilder(Generic[T, U]):
             max_failures: The maximum number of failures each pipe stage can have before
                 the pipeline is halted. Setting ``-1`` (default) disables it.
 
-            report_stats_interval: When provided, report the pipline performance stats
+            report_stats_interval: When provided, report the pipeline performance stats
                 every given interval. Unit: [sec]
 
                 This is only effective if there is no custom hook or custom AsyncQueue

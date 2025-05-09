@@ -453,7 +453,7 @@ def _get_bytes(srcs: list[str | bytes]) -> list[bytes]:
                 ret.append(f.read())
         else:
             raise TypeError(
-                f"Source must be either `str` (path) or `byets` (data). Found: {type(src)}"
+                f"Source must be either `str` (path) or `bytes` (data). Found: {type(src)}"
             )
     return ret
 
@@ -722,7 +722,7 @@ def save_image(path: str | Path, data: Array, pix_fmt: str = "rgb24", **kwargs):
        The current implementation only supports writing data without changing
        the pixel format. If you need to apply preprocessing including pixel
        format conversion or rescaling, then construct such pipeline using
-       :py:class:`FitlerGraph` and :py:class:`Muxer`.
+       :py:class:`FilterGraph` and :py:class:`Muxer`.
 
     Args:
         path: The output path
