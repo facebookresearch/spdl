@@ -55,7 +55,8 @@ Multi-threading (default)
 If you build a pipeline without any customization, it defaults to
 multi-threading.
 
-The event loop dispatches the tasks to the default ``ThreadPoolExecutor``
+The event loop dispatches the tasks to the default
+:py:class:`~concurrent.futures.ThreadPoolExecutor`
 created with the maximum concurrency specified in :py:meth:`PipelineBuilder.build`
 method.
 
@@ -81,11 +82,13 @@ There are cases where you want to use a dedicated thread for certain task.
    (caching for faster execution or storing the application context)
 #. You want to specify a different number of concurrency.
 
-One notable example that comports with these conditions is data to the GPU.
+One notable example that comports with these conditions is transferring a
+data to the GPU.
 Due to the hardware constraints, only one data transfer can be performed
 at a time.
-To transfer data, you need a stream object, and you want to keep using
-the same stream object across the function invocations.
+To transfer data without interrupting the model training,
+you need to use a stream object dedicated for the transfer, and you want
+to keep using the same stream object across multiple function invocations.
 
 To maintain a state, you can either encapsulate it in a callable class
 instance, or put it in a
@@ -175,7 +178,7 @@ value must be
 `picklable <https://docs.python.org/3/library/pickle.html#pickle-picklable>`_.
 
 If you want to bind extra arguments to a function, you can use
-:py:class:`functools.partial`.
+:py:func:`functools.partial`.
 If you want to pass around an object that's not picklable by default,
 you can define the serialization protocol by providing
 :py:meth:`object.__getstate__` and :py:meth:`object.__setstate__`.

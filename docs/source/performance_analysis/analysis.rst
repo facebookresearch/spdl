@@ -8,12 +8,12 @@ a production training system.
 
 .. note::
 
-   To setup the pipeline to collect the runtime performance statistics,
+   To setup the pipeline to collect runtime performance statistics,
    please refer to the
    `Collecting the Runtime Statistics <../getting_started/logging.html>`_
-   section and :py:mod:`performance_analysis` example.
+   section and the :py:mod:`performance_analysis` example.
 
-The pipeline is composed of four stages: download, preprocess, batch,
+The pipeline consists of four stages: download, preprocess, batch,
 and transfer. The following code snippet and diagram illustrate this.
 
 .. code-block:: python
@@ -76,13 +76,13 @@ TaskPerfStats
 
 The :py:class:`TaskPerfStats` class contains information about the stage functions.
 
-The stats are aggregated (averaged or summed) over the (possibly concurrent) invocations
-within the measurement window.
+The statistics are aggregated (averaged or summed) over the (possibly concurrent)
+invocations within the measurement window.
 
 Average Time
 ~~~~~~~~~~~~
 
-The :py:attr:`TaskPerfStats.ave_time` is the average time of successful function
+The :py:attr:`TaskPerfStats.ave_time` represents the average time of successful function
 invocations. Typically, download time is the largest, followed by decoding/preprocessing,
 collation, and transfer.
 
@@ -105,8 +105,8 @@ Other stages show the consistent performance throughout the training.
 The number of tasks executed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :py:attr:`TaskPerfStats.num_tasks` is the number of function invocation completed,
-including both successful and failure completion.
+The :py:attr:`TaskPerfStats.num_tasks` represents the number of function invocation
+completed, including both successful and failure completion.
 You can obtain the number of successful task counts, by subtracting 
 :py:attr:`TaskPerfStats.num_failures` from ``TaskPerfStats.num_tasks``.
 In this case, there was no failure during the training, so we omit the plot for that.
@@ -118,13 +118,13 @@ In this case, there was no failure during the training, so we omit the plot for 
 QueuePerfStats
 --------------
 
-When a pipeline is built, queues are inserted between each stage of the pipeline.
+When a pipeline is built, queues are inserted between each stage.
 The outputs from stage functions are put in their corresponding queues.
 The inputs to the stage functions are retrieved from queues upstream to them.
 
 The following figure illustrates this.
-Using queues makes it easy to generalize the architecture of pipeline, as
-it allows to orchestrate stage functions independently.
+Using queues makes it easy to generalize the architecture of the pipeline,
+as it allows for the independent orchestration of stage functions.
 
 .. raw:: html
 
@@ -195,9 +195,10 @@ range, but they should match if normalized.
 Data Readiness
 ~~~~~~~~~~~~~~
 
-The goal of performance analysis is to make it easy to find the
-performance bottleneck. Due to the concurrency and elastic nature of
-the pipeline, this task is not as straightforward as we want it to be.
+The goal of performance analysis is to simplify the identification
+of performance bottlenecks.
+Due to the concurrency and elastic nature of the pipeline,
+this task is not as straightforward as we want it to be.
 
 The "Data Readiness" is our latest attempt in finding the bottleneck.
 It measures the relative time that a queue has the next data available.
@@ -215,11 +216,11 @@ where ``d_measure`` is the duration of the measurement (or elapsed time),
 
    <div id='perf_analysis_data_readiness'></div>
 
-The data readiness close to 100% means that the data is available whenever
+Data readiness close to 100% means that data is available whenever
 the downstream stage (including the foreground training loop) tries to
 fetch the next data, indicating that the data processing pipeline is
 faster than the demand.
-
+   
 On the other hand, the data readiness close to 0% suggests that downstream
 stages are starving. They fetch the next data as soon as it is available,
 but the upstream is not able to fill it quick enough, indicating that the
