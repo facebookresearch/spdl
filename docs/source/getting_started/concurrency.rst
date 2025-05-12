@@ -36,7 +36,7 @@ For example, let's say we have a pipeline that downloads data and pre-process th
        .pipe(download, concurrency=4)
        .pipe(preprocess, concurrency=2)
        .add_sink(3)
-       .build()
+       .build(num_threads=4)
    )
 
 The ``download`` stage will schedule 4 tasks, and wait for any of the tasks to complete. When a task is completed, the stage will schedule another task with new input data.

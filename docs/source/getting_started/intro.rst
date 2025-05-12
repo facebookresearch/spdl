@@ -19,12 +19,12 @@ The following snippet demonstrates how one can construct a
    ...     .pipe(lambda x: x + 1)
    ...     .aggregate(3)
    ...     .add_sink(3)
-   ...     .build()
+   ...     .build(num_threads=1)
    ... )
 
 
 The resulting :py:class:`Pipeline` object contains all the logic to
-perform the operations in an async event loop in the background thread.
+perform the operations in an async event loop in a background thread.
 
 To run the pipeline, call :py:meth:`Pipeline.start`.
 Once the pipeline starts executing, you can iterate on the pipeline.
@@ -46,11 +46,11 @@ It is important to call :py:meth:`Pipeline.stop`.
 Forgetting to do so will leave the background thread running,
 leading to the situation where Python interpreter gets stuck at exit.
 
-In practice, there is always a possibility that the application is interrupted
-and shutdown.
-To handle such case and stop the background threads properly,
-there is a context manager :py:meth:`Pipeline.auto_stop` which makes sure that
-pipeline is stopped.
+In practice, there is always a possibility that the application is
+interrupted for unexpected reasons.
+To make sure that the pipeline is stopped, it is recommended to use
+:py:meth:`Pipeline.auto_stop` context manager, which calls
+``Pipeline.start`` and ``Pipeline.stop`` automatically.
 
 .. code-block::
 

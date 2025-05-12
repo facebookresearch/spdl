@@ -13,9 +13,9 @@ There are mainly three kind of stages.
 Source
 ------
 
-Source specifies where the data are located. This is typically file paths or URLs.
-The source can be set with :py:meth:`PipelineBuilder.add_source`
-method. The only requirement for the source object is that it must implement
+The source specifies the origin of data, which is typically file paths or URLs.
+The source can be set with :py:meth:`PipelineBuilder.add_source` method.
+The only requirement for the source object is that it must implement
 :py:class:`~collections.abc.Iterable` or :py:class:`~collections.abc.AsyncIterable`
 interface.
 
@@ -42,7 +42,7 @@ For example
 
 .. code-block::
 
-   # Using some imaginary client
+   # Using some imaginary async network client
    async def list_bucket(bucket: str) -> AsyncIterator[str]:
        client = client.connect()
        async for route in client.list_bucket(bucket):
@@ -66,16 +66,21 @@ from the previous stages.
 
 You can define processing stage by passing an operator function (callable) to
 :py:meth:`~PipelineBuilder.pipe`. (Also there is :py:meth:`~PipelineBuilder.aggregate`
-method, which can be used to stack multiple items.)
+and :py:meth:`~PipelineBuilder.disaggregate`, which can be used to stack/unstack
+multiple items.)
 
-The operator can be either async function or synchronous function. Either way,
-the operator must take exactly one argument†, which is an output from the earlier
+The operator can be either async function or synchronous function.
+It must take exactly one argument†, which is an output from the earlier
 stage.
 
-.. note::
+.. admonition:: Note†
+   :class: note
 
-   † If you need to pass multiple objects between stages, use tuple or define a
-   protocol using :py:func:`~dataclasses.dataclass`.
+   - If you need to pass multiple objects between stages, use tuple or define a
+     protocol using :py:func:`~dataclasses.dataclass`.
+   - If you want to use an existing function which takes additional arguments,
+     you need to convert the function to a univariate function by manually
+     writing a wrapper function or using :py:func:`functools.partial`.
 
 The following diagram illustrates a pipeline that fetch images from remote
 locations, batch decode and send data to GPU.

@@ -5,17 +5,18 @@ What is SPDL?
 -------------
 
 SPDL (Scalable and Performant Data Loading) is a library for building
-efficient data loader for ML/AI trainings.
+efficient data preprocessing pipeline, primarily aimed at ML/AI applications.
 It was created by a group of engineers/researchers who works on
 improving the efficiency of GPU workloads at Meta.
 
 Core Concept
 ~~~~~~~~~~~~
 
-Its design incorporates the authors' experience on optimizing pipelines
-and the UX/DevX feedbacks from pipeline owners.
+Its design incorporates the authors' experience on optimizing AI training
+pipelines and the UX/DevX feedbacks from pipeline owners.
 The key features include
 
+- The pipeline construction is intuitive.
 - The pipeline execution is fast and efficient.
 - The pipeline abstraction is flexible so that users can choose structures
   fit their environment/data/requirements.
@@ -23,7 +24,7 @@ The key features include
   helps identify the bottleneck.
 
 These features allow to create a feedback loop, with which users can
-iteratively improve the performance.
+iteratively improve the performance of the pipeline.
 
 .. image:: ./_static/data/spdl_overview_feedback_loop.png
    :width: 480px
@@ -31,21 +32,24 @@ iteratively improve the performance.
 Performance & Efficiency
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Data loading is an important component in AI training, but
-`high CPU utilization can degrade the training performance <./performance_analysis/noisy_neighbour.html>`_, 
-so the data loading pipeline must be efficient.
+Data loading is an important component in AI training. It must be fast
+but also efficient because
+`high CPU utilization can degrade the training performance <./performance_analysis/noisy_neighbour.html>`_.
 
-The following plot shows the throughput of SPDL and other data loading
-solutions, and their CPU utilization†.
-
-SPDL is fast and efficient in orchestrating tasks.
+The following plots are from benchmarks we conducted as part of our
+study†.
 
 .. image:: ./_static/data/spdl_overview_performance.png
 
-The core pipeline is pure-Python package, so you can install it anywhere.
-By default, it uses multi-threading as the core parallelism.
-It turned out that the performance is improved with the recent Python
+The figure 5 and 6 show that SPDL if faster than other data loading
+solutions, while utilizing CPU more efficiently.
+
+The pipeline abstraction by default uses multi-threading as the core
+parallelism.
+The performance of the pipeline is improved with the recent Python
 version upgrade, and enabling free-threading makes it even faster.
+Aoption of SPDL also paves the way for adoption of free-threaded
+Python in ML/AI application.
 
 .. image:: ./_static/data/spdl_overview_speed_vs_version.png
    :width: 360px
@@ -74,11 +78,8 @@ SPDL was started as an experiment to achieve high throughput with
 thread-based parallelism even under the constraint of GIL.
 
 SPDL is not expected to be the fastest solution out-of-box.
-Rather, it paves the way for practitioners to properly optimize the data
-loading pipeline.
-
-Aoption of SPDL also paves the way for adoption of free-threaded
-Python in ML/AI application.
+It gives flexibility and observability which allow users to iteratively
+optimize the data loading pipeline.
 
 How to use SPDL?
 ----------------

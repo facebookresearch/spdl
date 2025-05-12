@@ -111,9 +111,12 @@ Optional Dependencies
   which are distributed under MIT license, is used when compiling SPDL with
   hardware video decoder enabled.
 
-.. note::
+.. raw:: html
 
-   **††** This software contains source code provided by NVIDIA Corporation.
+   <ul style="list-style-type: '†† ';">
+   <li>This software contains source code provided by NVIDIA Corporation.</li>
+   </ul>
+
 
 Building with Free-Threaded Python
 ----------------------------------
