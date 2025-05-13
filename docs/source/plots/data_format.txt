@@ -1,0 +1,146 @@
+.. raw:: html
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+   <script>
+   const data = {
+       Torch: {
+           MP: [139.3, 233.0, 256.0, 249.4, 209.6, 184.4],
+           MT: [836.9, 972.5, 932.3, 897.8, 787.3, 747.3],
+       },
+       NPY: {
+           MP: [135.3, 182.8, 249.3, 220.6, 201.6, 181.2],
+           MT: [1190.2, 1060.3, 964.2, 909.3, 850.9, 827.7],
+       },
+       "NPY (with spdl.io)": {
+           MP: [129.1, 183.0, 245.1, 219.3, 212.2, 185.4],
+           MT: [1782.9, 1791.9, 1735.1, 1650.6, 1620.1, 1511.9],
+       },
+       NPZ: {
+           MP: [129.1, 180.2, 245.6, 221.4, 217.2, 189.3],
+           MT: [867.4, 664.2, 627.7, 605.7, 554.4, 505.8],
+       },
+   };
+   const colors = {
+       Torch: 'rgb(234, 153, 153)',
+       NPY: 'rgb(164, 194, 244)',
+       NPZ: '#D79D00',
+       "NPY (with spdl.io)": 'rgb(142, 124, 195)',
+   };
+   const symbols = {
+       Torch: 'diamond',
+       NPY: 'x',
+       NPZ: null,
+       "NPY (with spdl.io)": 'star-triangle-up',
+   };
+   function plot(div_id, keys) {
+       let plot_data = [];
+       const x = [1, 2, 4, 8, 16, 32];
+       keys.map(k => {
+           ['MP', 'MT'].map(t => {
+               plot_data.push({
+                   x,
+                   y: data[k][t],
+                   name: `${k} - ${t}`,
+                   line: {
+                       color: colors[k],
+                       dash: (t === 'MT') ? 'dot' : null,
+                   },
+                   marker: {
+                       color: colors[k],
+                       symbol: symbols[k],
+                       size: 7,
+                   }
+               });
+           });
+       });
+       const layout = {
+           xaxis: {
+               tickmode: "array",
+               tickvals: x,
+           },
+           yaxis: {
+               range: [0, null],
+           }
+       };
+       Plotly.newPlot(div_id, plot_data, layout);
+   };
+   document.addEventListener(
+       'DOMContentLoaded',
+       function() {
+           const cfgs = [
+               {
+                   div_id: 'npz_basic',
+                   keys: ['NPZ'],
+               },
+               {
+                   div_id: 'npz_2',
+                   keys: ['NPZ', 'NPY', 'Torch'],
+               },
+               {
+                   div_id: 'npz_all',
+                   keys: ['NPZ', 'NPY', 'Torch', 'NPY (with spdl.io)'],
+               },
+           ]
+           cfgs.map(c => {
+               try {
+                   plot(c.div_id, c.keys);
+               } catch(error) {
+                   console.error("Failed to plot.", error);
+                   const div = document.getElementById(c.div_id);
+                   div.textContent = "Failed to plot: " + error.toString();
+               }
+           });
+       },
+       false);
+   function plot_exp(div_id, series) {
+       var plot_data = [];
+       for (const key of Object.keys(series)) {
+           if (key !== 'step') {
+               plot_data.push({
+                   x: series.step,
+                   y: series[key],
+                   name: key,
+               });
+           }
+       }
+       const layout  = {
+           title: "Data format, parallelism and pipeline performance",
+           yaxis: {
+               title: {
+                   text: "Throughput (batch/sec)",
+               },
+               range: [0, null],
+           },
+           xaxis: {
+               title: "Step",
+           },
+           showlegend: true,
+       };
+       Plotly.newPlot(div_id, plot_data, layout);
+   };
+   document.addEventListener(
+       'DOMContentLoaded',
+       function() {
+           const data_url = '../_static/data/data_format.json';
+           const div_id = 'npz_exp';
+           fetch(data_url)
+               .then(response => {
+                   if (!response.ok) {
+                       throw new Error('Failed to fetch the data.');
+                   }
+                   return response.json();
+               })
+               .then(data => {
+                   try {
+                       plot_exp(div_id, data);
+                   } catch(error) {
+                       const div = document.getElementById(div_id);
+                       div.textContent = "Failed to plot: " + error.toString();
+                       throw error;
+                   }
+               })
+               .catch(error => {console.error(error);});
+           
+       },
+       false);
+   </script>

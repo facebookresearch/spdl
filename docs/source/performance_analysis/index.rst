@@ -28,3 +28,4 @@ and examine some cases, and discuss how we approach performance issues.
    fleet_metrics
    resolution
    parallelism
+   ../case_studies/data_format
