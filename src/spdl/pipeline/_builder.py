@@ -102,7 +102,7 @@ def _build_pipeline(
 
     executor = ThreadPoolExecutor(
         max_workers=num_threads,
-        thread_name_prefix="spdl_",
+        thread_name_prefix="spdl_worker_thread_",
     )
     return Pipeline(coro, queues, executor, desc=_get_desc(src, process_args, sink))
 
