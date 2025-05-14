@@ -131,6 +131,7 @@ class _EventLoop:
         self._thread = Thread(
             # Using lambda to delay the creation of coroutine object.
             target=lambda: asyncio.run(self._execute_task()),
+            name="spdl_event_loop_thread",
             daemon=daemon,
         )
         self._thread.start()
