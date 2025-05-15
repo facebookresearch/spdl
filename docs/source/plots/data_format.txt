@@ -54,11 +54,14 @@
            });
        });
        const layout = {
+           title: "The speed of loading array data",
            xaxis: {
+               title: "The number of workers",
                tickmode: "array",
                tickvals: x,
            },
            yaxis: {
+               title: "Throughput [arrays/sec]",
                range: [0, null],
            }
        };
@@ -104,7 +107,7 @@
            }
        }
        const layout  = {
-           title: "Data format, parallelism and pipeline performance",
+           title: "Data format, parallelism and training speed",
            yaxis: {
                title: {
                    text: "Throughput (batch/sec)",

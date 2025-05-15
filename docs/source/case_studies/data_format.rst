@@ -41,13 +41,13 @@ In this section we look at issues loading NPZ files and discuss alternative solu
    The benchmark script used in this section is found at :py:mod:`data_formats`
    example.
 
-The Performnce of ``numpy.load`` on NPZ data
---------------------------------------------
+The Performance of ``numpy.load`` on NPZ data
+---------------------------------------------
 
 The :py:func:`numpy.load` function holds the GIL.†
 So concurrently calling it with multi-threading degrades the performance.
 The following figure shows how the performance of ``numpy.load`` function scale
-with multi-processing and multi-threading when loading NPZ files.
+with multi-processing (``MP``) and multi-threading (``MT``) when loading NPZ files.
 
 .. raw:: html
 
