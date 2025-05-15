@@ -14,3 +14,4 @@ Examples
    streaming_nvdec_decoding
    streaming_video_processing
    performance_analysis
+   data_formats
