@@ -23,14 +23,6 @@ extern "C" {
 
 namespace spdl::core::detail {
 namespace {
-const AVCodec* get_codec(const std::string& codec_name) {
-  auto* p = avcodec_find_encoder_by_name(codec_name.c_str());
-  if (!p) {
-    SPDL_FAIL(fmt::format("No codec found: `{}`", codec_name));
-  }
-  return p;
-}
-
 bool is_pix_fmt_supported(
     const AVPixelFormat fmt,
     const AVPixelFormat* pix_fmts) {
