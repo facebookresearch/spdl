@@ -25,7 +25,7 @@ so that one can analyze and determine the bottleneck.
 
 In this section, we explain how you can export the statistics.
 (We will go over the detail of how to analyze the statistics in
-`Optimization Guide <../performance_analysis/index.html>`_.)
+`Optimization Guide <../optimization_guide/index.html>`_.)
 
 There are two kinds of statistics that :py:class:`Pipeline` collects,
 :py:class:`TaskPerfStats` and :py:class:`QueuePerfStats`.
