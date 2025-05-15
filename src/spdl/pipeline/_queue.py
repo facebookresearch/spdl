@@ -64,7 +64,7 @@ class QueuePerfStats:
 
        - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
          How to export the runtime performance statistics.
-       - `Analyzing the Performance <../performance_analysis/analysis.html>`_ :
+       - `Analyzing the Performance <../optimization_guide/analysis.html>`_ :
          How to use the exported stats.
     """
 
@@ -125,7 +125,7 @@ class StatsQueue(AsyncQueue[T]):
 
        - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
          How to export the runtime performance statistics.
-       - `Analyzing the Performance <../performance_analysis/analysis.html>`_ :
+       - `Analyzing the Performance <../optimization_guide/analysis.html>`_ :
          How to use the exported stats.
 
     Args:
