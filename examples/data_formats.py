@@ -143,7 +143,7 @@ def run_pipeline(pipeline: Pipeline[...]) -> tuple[int, float]:
 def _dump_np(arr: NDArray | dict[str, NDArray]) -> bytes:
     with BytesIO() as buf:
         if isinstance(arr, dict):
-            np.savez(buf, **arr, allow_pickle=False)
+            np.savez(buf, allow_pickle=False, **arr)
         else:
             np.save(buf, arr, allow_pickle=False)
         buf.seek(0)

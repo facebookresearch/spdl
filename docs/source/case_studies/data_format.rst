@@ -63,10 +63,7 @@ With multi-threading, the througput is highest when there is only one worker.
 The performance decreases as more workers are used.
 This is because the ``numpy.load`` holds the GIL.
 
-Even though the performance does not scale with multi-threading,
-it appears faster than multi-processing.
-This makes us want to conclude that mult-threading is the answer.
-However, when we used ``numpy.load`` with multi-threading,
+When we used ``numpy.load`` with multi-threading,
 it degraded the training speed.
 (See the Practical Example section bellow.)
 
