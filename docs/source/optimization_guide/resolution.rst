@@ -15,7 +15,7 @@ With SPDL, typically 4 or 8 is enough.
 It should not go beyond the number of CPU cores devided by 8.
 When preprocessing is CPU-intensive (like decoding videos),
 increasing the concurrency can cause
-`the noisy neighbour effect<./noisy_neighbour.html>`_,
+`the noisy neighbour effect <../optimization_guide/noisy_neighbour.html>`_,
 so care must be taken.
 
 Restructure the stages

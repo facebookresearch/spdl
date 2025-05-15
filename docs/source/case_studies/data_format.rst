@@ -70,7 +70,7 @@ However, when we used ``numpy.load`` with multi-threading,
 it degraded the training speed.
 (See the Practical Example section bellow.)
 
-As described in the `Noisy Neighbour <../performance_analysis/noisy_neighbout.html>`_
+As described in the `Noisy Neighbour <../optimization_guide/noisy_neighbout.html>`_
 section, the training speed is governed by whether the CPU can
 schedule the GPU kernel launch at timely manner.
 When the GIL is held in the background thread of the main process,
@@ -200,7 +200,7 @@ performance of a training pipeline.
 - The ``Upperbound`` is the estimated maximum througput obtained by using
   :py:class:`~spdl.dataloader.CacheDataLoader`.
   (See the
-  `Optimization Guide / Headspace Analysis <../performance_analysis/headspace_analysis.html>`_
+  `Headspace Analysis <../optimization_guide/headspace_analysis.html>`_
   for the detail.)
 - The ``NPZ, multi-threading`` uses SPDL and calls ``numpy.load`` in
   a background thread of the main process.

@@ -34,7 +34,7 @@ Performance & Efficiency
 
 Data loading is an important component in AI training. It must be fast
 but also efficient because
-`high CPU utilization can degrade the training performance <./performance_analysis/noisy_neighbour.html>`_.
+`high CPU utilization can degrade the training performance <./optimization_guide/noisy_neighbour.html>`_.
 
 The following plots are from benchmarks we conducted as part of our
 study†.
