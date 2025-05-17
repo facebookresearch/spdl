@@ -11,7 +11,7 @@ message(STATUS "########################################")
 set(name _zip)
 message(STATUS "Building ${name}")
 
-set(srcs register.cpp)
+set(srcs register.cpp impl.cpp)
 set(deps libzip::zip fmt::fmt glog::glog)
 nanobind_add_module("${name}" "${srcs}")
 target_link_libraries("${name}" PRIVATE "${deps}")
