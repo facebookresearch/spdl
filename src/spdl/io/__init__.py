@@ -41,6 +41,8 @@ from ._type_stub import (  # isort: skip
 
 from ._array import (
     load_npy,
+    load_npz,
+    NpzFile,
 )
 from ._composite import (
     load_audio,
@@ -97,10 +99,6 @@ from ._preprocessing import (
     get_buffer_desc,
     get_filter_desc,
     get_video_filter_desc,
-)
-from ._zip import (
-    load_npz,
-    NpzFile,
 )
 
 __all__ = [

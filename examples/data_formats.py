@@ -91,6 +91,12 @@ def load_npz(item: bytes) -> list[NDArray]:
     return list(data.values())
 
 
+def load_npz_spdl(item: bytes) -> list[NDArray]:
+    """Load arrays from serialized NPZ binary strings using :py:func:`spdl.io.load_npz`."""
+    data = spdl.io.load_npz(item)
+    return list(data.values())
+
+
 def load_torch(item: bytes) -> list[NDArray]:
     """Load arrays from a serialized PyTorch state dict."""
     return list(torch.load(BytesIO(item)).values())
@@ -107,6 +113,8 @@ def _get_load_fn(
                 return load_npy_spdl
             return load_npy
         case "npz":
+            if provider == "spdl":
+                return load_npz_spdl
             return load_npz
         case _:
             raise ValueError(f"Unexpected data format: {data_format}")
@@ -190,6 +198,7 @@ def main() -> None:
         ("npy", "npy"),
         ("npy", "spdl"),
         ("npz", "npz"),
+        ("npz", "spdl"),
     ]
     for data_format, io_func in configs:
         src = DataSource(get_mock_data(data_format), repeat=1000)
