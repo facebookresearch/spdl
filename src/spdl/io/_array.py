@@ -50,7 +50,11 @@ def _get_header_size_info(version: tuple[int, int]) -> tuple[str, str]:
             raise ValueError(f"Unexpected version {version}.")
 
 
-def load_npy(data: bytes | bytearray, *, copy: bool = False) -> NDArray:
+def load_npy(
+    data: bytes | bytearray | memoryview,  # pyre-ignore
+    *,
+    copy: bool = False,
+) -> NDArray:
     """Load NumPy NDArray from bytes.
 
     This function loads NumPy NDArray from memory. It is equivalent to
@@ -103,7 +107,8 @@ def load_npy(data: bytes | bytearray, *, copy: bool = False) -> NDArray:
     if len(data) < MAGIC_LEN:
         raise ValueError("The input data is too short.")
 
-    magic_str = data[:MAGIC_LEN]
+    view = memoryview(data)
+    magic_str = view[:MAGIC_LEN].tobytes()
     if not magic_str.startswith(MAGIC_PREFIX):
         raise ValueError(rf"Expected the data to start with {MAGIC_PREFIX}.")
 
@@ -123,7 +128,7 @@ def load_npy(data: bytes | bytearray, *, copy: bool = False) -> NDArray:
         raise ValueError(
             "Failed to parse data. The recorded data size exceeds the provided data size."
         )
-    info_str = data[info_start:data_start]
+    info_str = view[info_start:data_start].tobytes()
 
     info = ast.literal_eval(info_str.decode(encoding))
 
@@ -137,7 +142,7 @@ def load_npy(data: bytes | bytearray, *, copy: bool = False) -> NDArray:
     aif = _ArrayInterface(
         shape=info["shape"],
         typestr=info["descr"],
-        data=memoryview(data),
+        data=view,
         offset=data_start,
         version=2,
     )
