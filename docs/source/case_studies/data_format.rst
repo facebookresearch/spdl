@@ -1,6 +1,19 @@
 Data Format and Performance
 ===========================
 
+.. admonition:: tl;dr
+   :class: tip
+
+   If you are using NPZ format as data storage, we recommend to take the following
+   changes
+
+   - Do not use compression.
+     (Do not use :py:func:`numpy.savez_compressed`,
+     instead use :py:func:`numpy.save` or :py:func:`numpy.savez`)
+   - Only store numerical arrays. Do not store objects, such as metadata dictionary.
+     (Pass ``allow_pickle=False`` when saving.)
+   - Use :py:func:`spdl.io.load_npz` or :py:func:`spdl.io.load_npy`.
+
 We often see teams work on data collection bundle multiple arrays with and metadata in
 `NPZ <https://numpy.org/doc/2.2/reference/generated/numpy.savez.html>`_ format.
 
@@ -94,22 +107,30 @@ Changing the data format
 So what can we do to improve the data loading performance?
 There are couple of possibilities.
 
-#. Rewrite the :py:func:`numpy.load` as an extension module (with C/C++/Rust) and make sure that the GIL is released.
+#. Write a faster version of the :py:func:`numpy.load` function.
 #. Change the data format to something else that is more performant for loading.
 
-The first approach comes with non-trivial (actually pretty high) engineering/maintanance
-cost, yet it still comes with some limitations.
-If the data needs to be deserialized with ``pickle``, there is no way to release the GIL. 
-Prohibiting ``pickle`` can help this, but if an existing data collection pipeline relies
-on this, that part has to be changed.
-If one takes this approach, the benefit must be clear and huge.
+Rewriting the ``numpy.load`` function with 100% feature compatibility requires
+high engineering efforts/maintanance cost.
+As mentioned previously, the ``numpy.load`` function is implemented with
+the combination of ``zipfile`` and ``pickle``.
+There are many libraries we can leverage to rewrite the ``zipfile``
+as an extension module (so that we can release the GIL), but ``pickle``
+by nature, cannot be implemented without interacting the Python Interpreter.
+If we can limit the data type to be those types that can be loaded with
+``allow_pickle=False``, (such as integers and floats, but not Python's ``object`` type)
+then it becomes more feasible.
+We explore this option in the next section.
 
-The second approach of changing the data format is generally applicable,
-but takes some task-specific considerations.
-Practically, switching to a data format that is optimized for loading
-always work and it is much easier than optimizing the data loader architecture.
-So if you are at the initial stage of optimization, we highly recommend
-considering this approach.
+Generally speaking, changing the data format is one of the most versatile
+way to improve the data loading performance.
+There are many data formats, and they are optimized for different properties,
+such as serialization performance, deserialization performance,
+storage (transfer).
+If you switch to one that is performant for loading,
+it improves the training pipeline performance.
+You need to analyze the trade off (such as cost of additional conversion job,
+cost of extra data storage and network transfer).
 
 When changing the data format, what data format is most suitable?
 The answer depends on the requirements of the pipeline, but generally,
@@ -158,12 +179,17 @@ To achieve high throughput with multi-threading, it is important to reduce
 the number of data copies.
 Reducing the memory copy also helps reducing the time the function holds the GIL.
 
-For this purpose, we implemented the :py:func:`spdl.io.load_npy` function
-which takes a byte string of serialized Numpy NDArray,
-and interpret it as an array object without creating a copy.
+For this purpose, we implemented the :py:func:`spdl.io.load_npy` and
+:py:func:`spdl.io.load_npy` functions.
+They take a byte string and re-itnerptet it as an array or set of arrays
+without creating a copy.
+These functions are not a replacement of ``numpy.load`` function.
+They work only when the data type is not Python's object type, and when
+the data is not compressed.
+(i.e. data was not saved with :py:func:`numpy.savez_compressed`).
 
-This function is much faster than loading NPY files with the
-``numpy.load`` function, even though it still holds the GIL.
+These function are faster than the ``numpy.load`` function,
+even though it does not release the GIL entirely.
 The following plot shows this.
 
 .. raw:: html
