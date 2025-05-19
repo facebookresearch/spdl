@@ -59,7 +59,7 @@ As we see later, even when we use a function that is significantly
 faster, the throughput of multi-processing is similar.
 So the bottleneck likely is at the inter-process communication.
 
-With multi-threading, the througput is highest when there is only one worker.
+With multi-threading, the throughput is highest when there is only one worker.
 The performance decreases as more workers are used.
 This is because the ``numpy.load`` holds the GIL.
 
@@ -67,7 +67,7 @@ When we used ``numpy.load`` with multi-threading,
 it degraded the training speed.
 (See the Practical Example section bellow.)
 
-As described in the `Noisy Neighbour <../optimization_guide/noisy_neighbout.html>`_
+As described in the `Noisy Neighbour <../optimization_guide/noisy_neighbour.html>`_
 section, the training speed is governed by whether the CPU can
 schedule the GPU kernel launch at timely manner.
 When the GIL is held in the background thread of the main process,
@@ -94,7 +94,7 @@ Changing the data format
 So what can we do to improve the data loading performance?
 There are couple of possibilities.
 
-#. Rewrite the :py:func:`numpy.load` as an extention module (with C/C++/Rust) and make sure that the GIL is released.
+#. Rewrite the :py:func:`numpy.load` as an extension module (with C/C++/Rust) and make sure that the GIL is released.
 #. Change the data format to something else that is more performant for loading.
 
 The first approach comes with non-trivial (actually pretty high) engineering/maintanance
@@ -148,7 +148,7 @@ Loading data from memory
 
 The :py:func:`numpy.load` function expects the input to implement
 the file-like object interface.
-It does not support directly interpretating a byte string as array.
+It does not support directly interpreting a byte string as array.
 When a serialized data is in byte string, it must be wrapped by
 the :py:class:`io.BytesIO` class.
 However, this makes ``numpy.load`` to branch to a slower path††, in which 
@@ -194,7 +194,7 @@ performance of a training pipeline.
   which is based on TorchData's ``StatefulDataLaoder``.
   It loads NPZ files in subprocesses.
   (The performance of ``StatefulDataLoader`` is known to decay as the training progress.)
-- The ``Upperbound`` is the estimated maximum througput obtained by using
+- The ``Upperbound`` is the estimated maximum throughput obtained by using
   :py:class:`~spdl.dataloader.CacheDataLoader`.
   (See the
   `Headspace Analysis <../optimization_guide/headspace_analysis.html>`_
@@ -203,7 +203,7 @@ performance of a training pipeline.
   a background thread of the main process.
 - The ``NPY, multi-threading`` uses SPDL and uses ``spdl.io.load_npy`` function
   in the background.
-  The data has been reformated from NPZ to NPY.
+  The data has been reformatted from NPZ to NPY.
 
 As you can see, loading NPZ files with ``numpy.load`` function in multi-threading
 slows down the training speed,
