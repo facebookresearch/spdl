@@ -22,7 +22,8 @@ written as follows.
 
    # List of URLs
    class Dataset(Iterable[str]):
-       ...
+       def __iter__(self) -> Iterator[str]:
+           ...
 
    # Download the data
    def download(urls: list[str]) -> list[bytes]:

@@ -12,7 +12,7 @@ Adjust the concurrency
 Adjusting the concurrency is effective for preprocessing with
 a light to medium load.
 With SPDL, typically 4 or 8 is enough.
-It should not go beyond the number of CPU cores devided by 8.
+It should not go beyond the number of CPU cores divided by 8.
 When preprocessing is CPU-intensive (like decoding videos),
 increasing the concurrency can cause
 `the noisy neighbour effect <../optimization_guide/noisy_neighbour.html>`_,
