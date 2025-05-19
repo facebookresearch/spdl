@@ -6,15 +6,22 @@
 
 __all__ = [
     "load_npy",
+    "load_npz",
+    "NpzFile",
 ]
 import ast
 import struct
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 from numpy.lib.format import MAGIC_LEN, MAGIC_PREFIX
 from numpy.typing import NDArray
+
+# Importing `spdl.io.lib` instead of `spdl.io.lilb._zip`
+# so as to delay the import of C++ extension module
+from . import lib as _libspdl
 
 # pyre-strict
 
@@ -148,3 +155,78 @@ def load_npy(
     )
 
     return np.array(aif, copy=copy)
+
+
+class NpzFile(Mapping):
+    """NpzFile()
+    A class mimics the behavior of :py:class:`numpy.lib.npyio.NpzFile`.
+
+    It is a thin wrapper around a zip archive, and implements
+    :py:class:`collections.abc.Mapping` interface.
+
+    See :py:func:`load_npz` for the usage.
+    """
+
+    def __init__(self, data: bytes, index: dict[str, tuple[int, int]]) -> None:
+        self._data = memoryview(data)  # pyre-ignore
+        self._index = index
+        self.files: list[str] = [f.removesuffix(".npy") for f in index]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.files)
+
+    def __len__(self) -> int:
+        return len(self.files)
+
+    def __getitem__(self, key: str) -> NDArray:
+        """Provide dictionary-like access to array data.
+
+        One difference from the regular dictionary access is that
+        it also supports accessing the item without ``.npy`` suffix
+        in the key. This matches the behavior of :py:class:`numpy.lib.npyio.NpzFile`.
+        """
+        if key in self._index:
+            pass
+        elif key in self.files:
+            key = f"{key}.npy"
+        else:
+            raise KeyError(f"{key} is not a file in the archive")
+
+        start, end = self._index[key]
+        return load_npy(self._data[start:end])
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._index or key in self.files
+
+    def __repr__(self) -> str:
+        return f"NpzFile object with {len(self)} entries."
+
+
+def load_npz(data: bytes) -> NpzFile:
+    """**[Experimental]** Load a numpy archive file (``npz``).
+
+    It is almost a drop-in replacement for :py:func:`numpy.load` function,
+    but it only supports the basic use cases.
+
+    This function uses the C++ implementation of the zip archive reader, which
+    releases the GIL. So it is more efficient than the official NumPy implementation
+    for supported cases.
+
+    Args:
+        data: The data to load.
+
+    Example
+
+       >>> x = np.arange(10)
+       >>> y = np.sin(x)
+       >>>
+       >>> with tempfile.TemporaryFile() as f:
+       ...     np.savez(f, x=x, y=y)
+       ...     f.seek(0)
+       ...     data = spdl.io.load_npz(f.read())
+       ...
+       >>> assert np.array_equal(data["x"], x)
+       >>> assert np.array_equal(data["y"], y)
+
+    """
+    return NpzFile(data, _libspdl._zip.parse_zip(data))
