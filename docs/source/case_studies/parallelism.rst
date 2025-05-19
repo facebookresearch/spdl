@@ -1,6 +1,16 @@
 Parallelism and Performance
 ===========================
 
+.. admonition:: tl;dr
+   :class: tip
+
+   If using multi-threading degrades the performance of a training pipeline
+   even though the performance of individual functions are good,
+   run the data loader in a subprocess.
+
+   You can use :py:func:`spdl.pipeline.run_pipeline_in_subprocess` to run
+   the pipeline in a subprocess.
+
 With the introduction of free-threaded Python, the use of multi-threading
 will become undoubtedly common.
 
