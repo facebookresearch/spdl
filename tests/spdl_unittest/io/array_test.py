@@ -110,6 +110,16 @@ def test_parse_zip_no_eocdr_sig():
         parse_zip(b"foooooooooooooooooooooooooo")
 
 
+def _get_test_float_arr(dtype):
+    finfo = np.finfo(dtype)
+    return np.array([finfo.min, finfo.max, 0], dtype=dtype)
+
+
+def _get_test_int_arr(dtype):
+    iinfo = np.iinfo(dtype)
+    return np.array([iinfo.min, iinfo.max, 0], dtype=dtype)
+
+
 def _dump_npz(*arrays, **kwarrays):
     with io.BytesIO() as buf:
         np.savez(buf, *arrays, allow_pickle=False, **kwarrays)
@@ -121,14 +131,6 @@ def test_load_npz():
     """spdl.io.load_npz() should load a .npz file."""
     x = np.arange(10)
     y = np.sin(x)
-
-    def _get_test_float_arr(dtype):
-        finfo = np.finfo(dtype)
-        return np.array([finfo.min, finfo.max, 0], dtype=dtype)
-
-    def _get_test_int_arr(dtype):
-        iinfo = np.iinfo(dtype)
-        return np.array([iinfo.min, iinfo.max, 0], dtype=dtype)
 
     zeros = np.zeros((0, 0))
     ones = np.ones((3, 4, 5))
