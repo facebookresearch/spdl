@@ -197,8 +197,10 @@ class NpzFile(Mapping):
             case 0:
                 return load_npy(self._data[start : start + compressed_size])
             case 8:
-                raise NotImplementedError(
-                    "Compression method (DEFLATE) is not supported."
+                return load_npy(
+                    _libspdl._zip.inflate(
+                        self._data.obj, start, compressed_size, uncompressed_size
+                    )
                 )
             case _:
                 raise ValueError(

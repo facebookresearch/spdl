@@ -180,3 +180,65 @@ def test_load_npz():
     np.testing.assert_array_equal(data["uint32_array"], uint32_array)
     np.testing.assert_array_equal(data["int64_array"], int64_array)
     np.testing.assert_array_equal(data["uint64_array"], uint64_array)
+
+
+def _dump_npz_compressed(*arrays, **kwarrays):
+    with io.BytesIO() as buf:
+        np.savez_compressed(buf, *arrays, allow_pickle=False, **kwarrays)
+        buf.seek(0)
+        return buf.read()
+
+
+def test_load_npz_compressed():
+    """Can load files compressed with DEFLATED method"""
+    x = np.arange(10)
+    y = np.sin(x)
+
+    zeros = np.zeros((0, 0))
+    ones = np.ones((3, 4, 5))
+    bool_array = np.array([False, True], dtype=bool)
+    float16_array = _get_test_float_arr(np.float16)
+    float32_array = _get_test_float_arr(np.float32)
+    float64_array = _get_test_float_arr(np.float64)
+    uint8_array = _get_test_int_arr(np.uint8)
+    int16_array = _get_test_int_arr(np.int16)
+    uint16_array = _get_test_int_arr(np.uint16)
+    int32_array = _get_test_int_arr(np.int32)
+    uint32_array = _get_test_int_arr(np.uint32)
+    int64_array = _get_test_int_arr(np.int64)
+    uint64_array = _get_test_int_arr(np.uint64)
+
+    dumped = _dump_npz_compressed(
+        x,
+        y,
+        zeros=zeros,
+        ones=ones,
+        bool_array=bool_array,
+        float16_array=float16_array,
+        float32_array=float32_array,
+        float64_array=float64_array,
+        uint8_array=uint8_array,
+        int16_array=int16_array,
+        uint16_array=uint16_array,
+        int32_array=int32_array,
+        uint32_array=uint32_array,
+        int64_array=int64_array,
+        uint64_array=uint64_array,
+    )
+    data = spdl.io.load_npz(dumped)
+
+    np.testing.assert_array_equal(data["arr_0"], x)
+    np.testing.assert_array_equal(data["arr_1"], y)
+    np.testing.assert_array_equal(data["zeros"], zeros)
+    np.testing.assert_array_equal(data["ones"], ones)
+    np.testing.assert_array_equal(data["bool_array"], bool_array)
+    np.testing.assert_array_equal(data["float16_array"], float16_array)
+    np.testing.assert_array_equal(data["float32_array"], float32_array)
+    np.testing.assert_array_equal(data["float64_array"], float64_array)
+    np.testing.assert_array_equal(data["uint8_array"], uint8_array)
+    np.testing.assert_array_equal(data["int16_array"], int16_array)
+    np.testing.assert_array_equal(data["uint16_array"], uint16_array)
+    np.testing.assert_array_equal(data["int32_array"], int32_array)
+    np.testing.assert_array_equal(data["uint32_array"], uint32_array)
+    np.testing.assert_array_equal(data["int64_array"], int64_array)
+    np.testing.assert_array_equal(data["uint64_array"], uint64_array)
