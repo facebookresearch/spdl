@@ -103,17 +103,17 @@ def load_torch(item: bytes) -> list[NDArray]:
 
 
 def _get_load_fn(
-    data_format: str, provider: str
+    data_format: str, impl: str
 ) -> Callable[[list[bytes]], list[NDArray]] | Callable[[bytes], list[NDArray]]:
     match data_format:
         case "torch":
             return load_torch
         case "npy":
-            if provider == "spdl":
+            if impl == "spdl":
                 return load_npy_spdl
             return load_npy
         case "npz":
-            if provider == "spdl":
+            if impl == "spdl":
                 return load_npz_spdl
             return load_npz
         case _:
@@ -148,10 +148,13 @@ def run_pipeline(pipeline: Pipeline[...]) -> tuple[int, float]:
     return num_items, elapsed
 
 
-def _dump_np(arr: NDArray | dict[str, NDArray]) -> bytes:
+def _dump_np(arr: NDArray | dict[str, NDArray], compressed: bool = False) -> bytes:
     with BytesIO() as buf:
         if isinstance(arr, dict):
-            np.savez(buf, allow_pickle=False, **arr)
+            if compressed:
+                np.savez_compressed(buf, allow_pickle=False, **arr)
+            else:
+                np.savez(buf, allow_pickle=False, **arr)
         else:
             np.save(buf, arr, allow_pickle=False)
         buf.seek(0)
@@ -165,13 +168,15 @@ def _dump_torch(arr: dict[str, NDArray]) -> bytes:
         return buf.read()
 
 
-def get_mock_data(format: str) -> tuple[bytes, bytes] | bytes:
+def get_mock_data(format: str, compressed: bool = False) -> tuple[bytes, bytes] | bytes:
     """Generate a single sample in the given format.
 
     The mock data resemboles an RGB image and its segmentation labels.
 
     Args:
         format: One of ``"npz"``, ``"npy"`` or ``"torch"``.
+        compressed: If ``True``, NPZ file is compressed.
+            (i.e. :py:func:`numpy.savez_compressed` is used.)
 
     Returns:
         Serialized mock arrays. If ``"npy"`` then arrays are serialized
@@ -182,7 +187,7 @@ def get_mock_data(format: str) -> tuple[bytes, bytes] | bytes:
 
     match format:
         case "npz":
-            return _dump_np({"img": img, "lbl": lbl})
+            return _dump_np({"img": img, "lbl": lbl}, compressed=compressed)
         case "npy":
             return _dump_np(img), _dump_np(lbl)
         case "torch":
@@ -194,15 +199,17 @@ def get_mock_data(format: str) -> tuple[bytes, bytes] | bytes:
 def main() -> None:
     """The entrypoint from CLI."""
     configs = [
-        ("torch", "torch"),
-        ("npy", "npy"),
-        ("npy", "spdl"),
-        ("npz", "npz"),
-        ("npz", "spdl"),
+        ("torch", False, "torch"),
+        ("npy", False, "np"),
+        ("npy", False, "spdl"),
+        ("npz", False, "np"),
+        ("npz", True, "np"),
+        ("npz", False, "spdl"),
+        ("npz", True, "spdl"),
     ]
-    for data_format, io_func in configs:
-        src = DataSource(get_mock_data(data_format), repeat=1000)
-        load_fn = _get_load_fn(data_format, io_func)
+    for data_format, compressed, impl in configs:
+        src = DataSource(get_mock_data(data_format, compressed), repeat=1000)
+        load_fn = _get_load_fn(data_format, impl)
         for mode in ["mp", "mt"]:
             for num_workers in [1, 2, 4, 8, 16, 32]:
                 pipeline = get_pipeline(
@@ -213,7 +220,7 @@ def main() -> None:
                 )
                 num_items, elapsed = run_pipeline(pipeline)
                 qps = num_items / elapsed
-                print(f"{data_format},{io_func},{mode},{num_workers},{qps}")
+                print(f"{data_format},{compressed},{impl},{mode},{num_workers},{qps}")
 
 
 if __name__ == "__main__":

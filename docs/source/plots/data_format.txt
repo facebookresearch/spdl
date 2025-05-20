@@ -2,71 +2,74 @@
 
    <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
    <script>
-   const data = {
-       Torch: {
-           MP: {
-               mean: [245, 429, 595, 549, 467, 361],
-               ci: [11, 20, 28, 25, 21, 15],
-           },
-           MT: {
-               mean: [979, 967, 879, 871, 843, 815],
-               ci: [47, 45, 41, 41, 38, 36],
-           }
-       },
-       NPY: {
-           MP: {
-               mean: [302, 451, 578, 518, 447, 353],
-               ci: [14, 21, 27, 24, 20, 15],
-           },
-           MT: {
-               mean: [1031, 967, 923, 870, 855, 838],
-               ci: [49, 45, 43, 40, 39, 37],
-           },
-       },
-       "NPY (with spdl.io)": {
-           MP: {
-               mean: [367, 492, 587, 526, 447, 355],
-               ci: [18, 23, 27, 24, 20, 15],
-           },
-           MT: {
-               mean: [1737, 1736, 1687, 1631, 1655, 1634],
-               ci: [81, 83, 81, 78, 80, 76],
-           },
-       },
-       NPZ: {
-           MP: {
-               mean: [266, 413, 579, 523, 446, 352],
-               ci: [12, 19, 27, 24, 20, 15],
-           },
-           MT: {
-               mean: [709, 627, 594, 556, 542, 537],
-               ci: [33, 30, 28, 25, 24, 23],
-           },
-       },
-       "NPZ (with spdl.io)": {
-           MP: {
-               mean: [353, 480, 585, 527, 447, 355],
-               ci: [18, 22, 27, 24, 20, 15],
-           },
-           MT: {
-               mean: [1624, 1603, 1549, 1512, 1491, 1484],
-               ci: [76, 76, 74, 72, 72, 70],
-           },
-       },
-   };
+    const data =  {
+        "NPY - SPDL": {
+            "MT": {
+                "mean": [1755, 1710, 1672, 1656, 1661, 1656],
+                "ci": [31, 24, 18, 21, 25, 28]},
+            "MP": {
+                "mean": [374, 499, 589, 529, 460, 369],
+                "ci": [6, 6, 7, 5, 3, 3]}},
+        "NPZ - SPDL": {
+            "MT": {
+                "mean": [1644, 1642, 1572, 1531, 1483, 1504],
+                "ci": [26, 25, 19, 27, 22, 25]},
+            "MP": {
+                "mean": [358, 488, 584, 527, 460, 368],
+                "ci": [6, 4, 8, 5, 4, 2]}},
+        "NPZ (compressed) - SPDL": {
+            "MT": {
+                "mean": [1317, 1396, 1320, 1265, 1262, 1245],
+                "ci": [14, 26, 21, 16, 33, 17]},
+            "MP": {
+                "mean": [333, 467, 579, 521, 461, 371],
+                "ci": [5, 7, 8, 4, 3, 3]}},
+        "NPY": {
+            "MT": {
+                "mean": [1053, 979, 926, 882, 866, 853],
+                "ci": [20, 11, 8, 8, 7, 11]},
+            "MP": {
+                "mean": [313, 455, 585, 530, 459, 367],
+                "ci": [4, 8, 9, 4, 4, 2]}},
+        "NPZ": {
+            "MT": {
+                "mean": [709, 626, 592, 563, 548, 541],
+                "ci": [7, 8, 4, 4, 3, 3]},
+            "MP": {
+                "mean": [270, 421, 575, 525, 460, 368],
+                "ci": [3, 5, 8, 4, 2, 2]}},
+        "NPZ (compressed)": {
+            "MT": {
+                "mean": [522, 460, 405, 387, 362, 349],
+                "ci": [8, 8, 6, 5, 3, 5]},
+            "MP": {
+                "mean": [230, 377, 582, 529, 460, 368],
+                "ci": [2, 5, 7, 5, 3, 2]}},
+        "Torch": {
+            "MT": {
+                "mean": [996, 981, 881, 868, 846, 828],
+                "ci": [12, 11, 7, 7, 7, 8]},
+            "MP": {
+                "mean": [252, 445, 602, 550, 473, 364],
+                "ci": [2, 6, 7, 6, 5, 3]}},
+    };
    const colors = {
-       Torch: 'rgb(234, 153, 153)',
-       NPY: 'rgb(164, 194, 244)',
-       NPZ: '#D79D00',
-       "NPY (with spdl.io)": 'rgb(142, 124, 195)',
-       "NPZ (with spdl.io)": '#78C753',
+       "Torch": "F05627",
+       "NPY": "F8D5B8",
+       "NPZ": "C65D52",
+       "NPZ (compressed)": "F1C700",
+       "NPY - SPDL": "9CCF65",
+       "NPZ - SPDL": "81E4BD",
+       "NPZ (compressed) - SPDL": "6E81BE",
    };
    const symbols = {
-       Torch: 'diamond',
-       NPY: 'x',
-       NPZ: null,
-       "NPY (with spdl.io)": 'triangle-up',
-       "NPZ (with spdl.io)": 'square',
+       "Torch": "circle",
+       "NPY": "diamond",
+       "NPZ": "x",
+       "NPZ (compressed)": "triangle-up",
+       "NPY - SPDL": "triangle-left",
+       "NPZ - SPDL": "triangle-right",
+       "NPZ (compressed) - SPDL": "square",
    };
    function plot(div_id, keys) {
        let plot_data = [];
@@ -80,6 +83,8 @@
                        type: 'data',
                        array: data[k][t].ci,
                        visible: true,
+                       thickness: 1.5,
+                       width: 3,
                    },
                    name: `${k} - ${t}`,
                    line: {
@@ -90,7 +95,7 @@
                        color: colors[k],
                        symbol: symbols[k],
                        size: 7,
-                   }
+                   },
                });
            });
        });
@@ -114,15 +119,15 @@
            const cfgs = [
                {
                    div_id: 'npz_basic',
-                   keys: ['NPZ'],
+                   keys: ['NPZ', 'NPZ (compressed)'],
                },
                {
                    div_id: 'npz_2',
-                   keys: ['NPZ', 'NPY', 'Torch'],
+                   keys: ['Torch', 'NPY', 'NPZ', 'NPZ (compressed)'],
                },
                {
                    div_id: 'npz_all',
-                   keys: ['NPZ', 'NPY', 'Torch', 'NPY (with spdl.io)',  'NPZ (with spdl.io)'],
+                   keys: Object.keys(data),
                },
            ]
            cfgs.map(c => {
