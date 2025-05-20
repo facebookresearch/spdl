@@ -29,6 +29,12 @@ std::map<std::string, ZipMetaData> parse_zip(
     const char* root,
     const size_t len);
 
+void inflate(
+    const char* root,
+    uint32_t compressed_size,
+    void* dst,
+    uint32_t uncompressed_size);
+
 namespace {
 
 NB_MODULE(_zip, m) {
@@ -39,6 +45,24 @@ NB_MODULE(_zip, m) {
     nb::gil_scoped_release __g;
     return parse_zip(data, size);
   });
+
+  m.def(
+      "inflate",
+      [](const nb::bytes& bytes,
+         uint64_t offset,
+         uint32_t compressed_size,
+         uint32_t uncompressed_size) {
+        auto* data = bytes.c_str();
+        nb::bytearray ret{};
+        ret.resize(uncompressed_size);
+
+        {
+          nb::gil_scoped_release __g;
+          inflate(
+              data + offset, compressed_size, ret.data(), uncompressed_size);
+        }
+        return ret;
+      });
 }
 
 } // namespace

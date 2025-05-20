@@ -11,6 +11,10 @@
 #include <stdexcept>
 #include <tuple>
 
+extern "C" {
+#include <zlib.h>
+}
+
 #define CD_SIGNATURE 0x02014b50 // PK\x01\x02
 #define LFH_SIGNATURE 0x04034b50 // PK\x03\x04
 #define EOCD_SIGNATURE 0x06054b50 // PK\x05\x06
@@ -249,4 +253,57 @@ std::map<std::string, ZipMetaData> parse_zip(
   }
   return ret;
 }
+
+namespace {
+int inflate(
+    const void* src,
+    uint32_t compressed_size,
+    void* dst,
+    uint32_t uncompressed_size,
+    int windowBits) {
+  z_stream strm;
+  strm.total_in = strm.avail_in = compressed_size;
+  strm.total_out = strm.avail_out = uncompressed_size;
+  strm.next_in = (Bytef*)src;
+  strm.next_out = (Bytef*)dst;
+
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+
+  if (int err = inflateInit2(&strm, windowBits); err != Z_OK) {
+    inflateEnd(&strm);
+    return err;
+  }
+
+  if (int err = inflate(&strm, Z_FINISH); err == Z_STREAM_END) {
+    inflateEnd(&strm);
+    return Z_OK;
+  } else {
+    inflateEnd(&strm);
+    return err;
+  }
+}
+
+} // namespace
+
+void inflate(
+    const char* src,
+    uint32_t compressed_size,
+    void* dst,
+    uint32_t uncompressed_size) {
+  auto ret = inflate(src, compressed_size, dst, uncompressed_size, -15);
+  switch (ret) {
+    case Z_MEM_ERROR:
+      throw std::runtime_error(
+          "Failed to inflate the data due to out of memory.");
+    case Z_BUF_ERROR:
+      throw std::runtime_error(
+          "Failed to inflate the data. There is not enough room in the output buffer.");
+    case Z_DATA_ERROR:
+      throw std::domain_error(
+          "Failed to inflate the data. the input data is corrupted or incomplete.");
+  }
+}
+
 } // namespace spdl::zip
