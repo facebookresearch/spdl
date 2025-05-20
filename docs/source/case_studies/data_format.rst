@@ -7,11 +7,11 @@ Data Format and Performance
    If you are using NPZ format as data storage, we recommend to take the following
    changes
 
-   - Do not use compression.
-     (Do not use :py:func:`numpy.savez_compressed`,
+   - Avoid using compression if possible.
+     (Avoid using :py:func:`numpy.savez_compressed`,
      instead use :py:func:`numpy.save` or :py:func:`numpy.savez`)
    - Only store numerical arrays. Do not store objects, such as metadata dictionary.
-     (Pass ``allow_pickle=False`` when saving.)
+     (Pass ``allow_pickle=False`` when saving to ensure this.)
    - Use :py:func:`spdl.io.load_npz` or :py:func:`spdl.io.load_npy`.
 
 We often see teams work on data collection bundle multiple arrays with and metadata in
@@ -184,9 +184,7 @@ For this purpose, we implemented the :py:func:`spdl.io.load_npy` and
 They take a byte string and re-itnerptet it as an array or set of arrays
 without creating a copy.
 These functions are not a replacement of ``numpy.load`` function.
-They work only when the data type is not Python's object type, and when
-the data is not compressed.
-(i.e. data was not saved with :py:func:`numpy.savez_compressed`).
+They work only when the data type is not Python's object type.
 
 These function are faster than the ``numpy.load`` function,
 even though it does not release the GIL entirely.
