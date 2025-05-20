@@ -167,10 +167,10 @@ class NpzFile(Mapping):
     See :py:func:`load_npz` for the usage.
     """
 
-    def __init__(self, data: bytes, index: dict[str, tuple[int, int]]) -> None:
+    def __init__(self, data: bytes, meta: dict[str, tuple[int, int, int, int]]) -> None:
         self._data = memoryview(data)  # pyre-ignore
-        self._index = index
-        self.files: list[str] = [f.removesuffix(".npy") for f in index]
+        self._meta = meta
+        self.files: list[str] = [f.removesuffix(".npy") for f in meta]
 
     def __iter__(self) -> Iterator[str]:
         return iter(self.files)
@@ -185,18 +185,28 @@ class NpzFile(Mapping):
         it also supports accessing the item without ``.npy`` suffix
         in the key. This matches the behavior of :py:class:`numpy.lib.npyio.NpzFile`.
         """
-        if key in self._index:
+        if key in self._meta:
             pass
         elif key in self.files:
             key = f"{key}.npy"
         else:
             raise KeyError(f"{key} is not a file in the archive")
 
-        start, end = self._index[key]
-        return load_npy(self._data[start:end])
+        start, compressed_size, uncompressed_size, compression_method = self._meta[key]
+        match compression_method:
+            case 0:
+                return load_npy(self._data[start : start + compressed_size])
+            case 8:
+                raise NotImplementedError(
+                    "Compression method (DEFLATE) is not supported."
+                )
+            case _:
+                raise ValueError(
+                    "Compression method other than DEFLATE is not supported."
+                )
 
     def __contains__(self, key: str) -> bool:
-        return key in self._index or key in self.files
+        return key in self._meta or key in self.files
 
     def __repr__(self) -> str:
         return f"NpzFile object with {len(self)} entries."

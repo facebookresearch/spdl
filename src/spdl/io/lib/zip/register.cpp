@@ -14,17 +14,20 @@
 
 #include <glog/logging.h>
 
-extern "C" {
-#include <zip.h>
-}
-
 namespace nb = nanobind;
 
 namespace spdl::zip {
 
-std::map<std::string, std::tuple<uint64_t, uint64_t>> parse_zip(
+using ZipMetaData = std::tuple<
+    uint64_t, // offset
+    uint64_t, // compressed_size
+    uint64_t, // uncompressed_size
+    uint16_t // compression_method
+    >;
+
+std::map<std::string, ZipMetaData> parse_zip(
     const char* root,
-    size_t len);
+    const size_t len);
 
 namespace {
 

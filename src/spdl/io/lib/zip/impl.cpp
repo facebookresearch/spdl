@@ -94,6 +94,7 @@ struct CDFH {
   uint32_t local_header_offset;
   uint32_t compressed_size;
   uint32_t uncompressed_size;
+  uint16_t compression_method;
   uint16_t filename_length;
   uint16_t size;
 };
@@ -111,6 +112,7 @@ CDFH parse_cdh(const char* cd) {
       .local_header_offset = *((uint32_t*)(cd + 42)),
       .compressed_size = *((uint32_t*)(cd + 20)),
       .uncompressed_size = *((uint32_t*)(cd + 24)),
+      .compression_method = *((uint16_t*)(cd + 10)),
       .filename_length = filename_length,
       .size = size};
 }
@@ -146,7 +148,9 @@ LOC parse_loc(const char* p) {
     throw std::domain_error(
         "Failed to locate the local file header. (Signature does not match).");
   }
-  uint16_t size = 30 + *((uint16_t*)(p + 26)) + *((uint16_t*)(p + 28));
+  uint16_t filename_length = *((uint16_t*)(p + 26));
+  uint16_t extra_field_length = *((uint16_t*)(p + 28));
+  uint16_t size = 30 + filename_length + extra_field_length;
   return LOC{
       .size = size
       // .compressed_size = *((uint32_t*)(p + 18)),
@@ -165,6 +169,7 @@ LOC parse_loc(const char* p) {
 //     20      8  Offset of local header record
 //     28      4  Number of the disk on which this file starts
 struct Zip64Meta {
+  uint64_t uncompressed_size;
   uint64_t compressed_size;
 };
 
@@ -177,10 +182,19 @@ Zip64Meta parse_zip64_extended_info(const char* p) {
     throw std::domain_error(
         "Invalid data found. Failed to fetch uncompressed data size.");
   }
-  return Zip64Meta{.compressed_size = *((uint64_t*)(p + 12))};
+  return Zip64Meta{
+      .uncompressed_size = *((uint64_t*)(p + 4)),
+      .compressed_size = *((uint64_t*)(p + 12))};
 }
 
-std::map<std::string, std::tuple<uint64_t, uint64_t>> parse_zip(
+using ZipMetaData = std::tuple<
+    uint64_t, // offset
+    uint64_t, // compressed_size
+    uint64_t, // uncompressed_size
+    uint16_t // compression_method
+    >;
+
+std::map<std::string, ZipMetaData> parse_zip(
     const char* root,
     const size_t len) {
   auto eocd = parse_eocd(root, len);
@@ -192,7 +206,7 @@ std::map<std::string, std::tuple<uint64_t, uint64_t>> parse_zip(
         "The central directory extends to the outside of the given data.");
   }
 
-  std::map<std::string, std::tuple<uint64_t, uint64_t>> ret;
+  std::map<std::string, ZipMetaData> ret;
   for (uint16_t i = 0; i < eocd.num_entries; ++i) {
     if (cd_offset + 46 > cd_limit) {
       throw std::out_of_range(
@@ -212,26 +226,25 @@ std::map<std::string, std::tuple<uint64_t, uint64_t>> parse_zip(
     }
     std::string_view filename{root + cd_offset + 46, cdfh.filename_length};
 
-    if (cdfh.compressed_size != cdfh.uncompressed_size) {
-      throw std::runtime_error("Zip with compression is not supported.");
-    }
-    uint64_t file_size = [&]() -> uint64_t {
+    auto [compressed_size, uncompressed_size] =
+        [&]() -> std::tuple<uint64_t, uint64_t> {
       if (cdfh.compressed_size == 0xFFFFFFFF) {
         auto info = parse_zip64_extended_info(root + cd_offset + cdfh.size);
-        return info.compressed_size;
+        return {info.compressed_size, info.uncompressed_size};
       }
-      return cdfh.compressed_size;
+      return {cdfh.compressed_size, cdfh.uncompressed_size};
     }();
 
     auto loc = parse_loc(root + cdfh.local_header_offset);
 
     auto file_start = cdfh.local_header_offset + loc.size;
-    auto file_end = file_start + file_size;
-    if (file_start >= len || file_end > len) {
-      throw std::domain_error(
-          "The file offset is outside of the given data region.");
-    }
-    ret.emplace(filename, std::make_tuple<>(file_start, file_end));
+    ret.emplace(
+        filename,
+        ZipMetaData{
+            file_start,
+            compressed_size,
+            uncompressed_size,
+            cdfh.compression_method});
     cd_offset += cdfh.size;
   }
   return ret;
