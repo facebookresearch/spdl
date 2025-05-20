@@ -12,7 +12,9 @@ Data Format and Performance
      instead use :py:func:`numpy.save` or :py:func:`numpy.savez`)
    - Only store numerical arrays. Do not store objects, such as metadata dictionary.
      (Pass ``allow_pickle=False`` when saving to ensure this.)
-   - Use :py:func:`spdl.io.load_npz` or :py:func:`spdl.io.load_npy`.
+   - Switch to multi-threading and use :py:func:`spdl.io.load_npz` or
+     :py:func:`spdl.io.load_npy`.
+
 
 We often see teams work on data collection bundle multiple arrays with and metadata in
 `NPZ <https://numpy.org/doc/2.2/reference/generated/numpy.savez.html>`_ format.
