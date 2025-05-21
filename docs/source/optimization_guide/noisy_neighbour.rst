@@ -1,3 +1,5 @@
+.. _noisy-neighbour:
+
 Noisy Neighbour
 ===============
 

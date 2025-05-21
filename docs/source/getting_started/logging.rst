@@ -1,3 +1,5 @@
+.. _logging:
+
 Collecting Runtime Statistics
 =============================
 
@@ -24,8 +26,7 @@ The SPDL is designed in a way that allows to collect runtime statistics and expo
 so that one can analyze and determine the bottleneck.
 
 In this section, we explain how you can export the statistics.
-(We will go over the detail of how to analyze the statistics in
-`Optimization Guide <../optimization_guide/index.html>`_.)
+(We will go over the detail of how to analyze the statistics in :ref:`optimization-guide`.)
 
 There are two kinds of statistics that :py:class:`Pipeline` collects,
 :py:class:`TaskPerfStats` and :py:class:`QueuePerfStats`.

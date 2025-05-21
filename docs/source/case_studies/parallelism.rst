@@ -1,3 +1,5 @@
+.. _parallelism-performance:
+
 Parallelism and Performance
 ===========================
 
@@ -23,7 +25,7 @@ We would like to share our experiences and thoughts on parallelism and performan
 .. note::
 
    To learn about the use of different parallelism with SPDL, please
-   refer to the `Getting Started / Parallelism <../getting_started/parallelism.html>`_.
+   refer to the :ref:`pipeline-parallelism`.
 
 Pipeline Speed
 --------------
@@ -34,7 +36,7 @@ The following plot shows the training QPS (the inverse of step time) of the pipe
   ``StatefulDataLaoder``.
 - The ``headspace`` is the upper limit obtained by using
   :py:class:`~spdl.dataloader.CacheDataLoader`.
-  (See `Headspace Analysis <../optimization_guide/headspace_analysis.html>`_.)
+  (See :ref:`headspace-analysis` for details.)
 - The ``mt`` is the solution based on simple multi-threading.
 - The ``mtp`` is the optimized solution, where the pipeline (multi-threaded) is
   executed in a subprocess.
@@ -78,7 +80,7 @@ Noisy Neighbour and multiprocessing
 -----------------------------------
 
 After many failed attempts to resolve this, we suspected it could be
-due to `the Noisy Neighbour <../optimization_guide/noisy_neighbour.html>`_,
+due to :ref:`noisy-neighbour`
 even though the CPU utilization of the ``mt`` run is a little above 20%,
 whereas the baseline run uses more than 60%.
 (PyTorch DataLoader uses multiprocessing in very inefficient manner.)

@@ -1,5 +1,7 @@
-Parallelism
-===========
+.. _pipeline-parallelism:
+
+Pipeline Parallelism
+====================
 
 .. currentmodule:: spdl.pipeline
 
@@ -218,8 +220,8 @@ The other approach does not suffer from this.
 Multi-threading in subprocess
 -----------------------------
 
-The multi-threading in subprocess is a paradigm we found effective when
-`multi-threading degrades the performance <../case_studies/parallelism.html>`_.
+The multi-threading in subprocess is a paradigm we found effective in
+the case study :ref:`parallelism-performance`.
 
 The :py:func:`spdl.pipeline.run_pipeline_in_subprocess` function moves the given
 instance of :py:class:`PipelineBuilder` to a subprocess, build and execute the

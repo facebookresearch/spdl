@@ -1,3 +1,5 @@
+.. _analysis:
+
 Analyzing the Performance
 =========================
 
@@ -9,8 +11,7 @@ a production training system.
 .. note::
 
    To setup the pipeline to collect runtime performance statistics,
-   please refer to the
-   `Collecting the Runtime Statistics <../getting_started/logging.html>`_
+   please refer to the :ref:`logging`
    section and the :py:mod:`performance_analysis` example.
 
 The pipeline consists of four stages: download, preprocess, batch,

@@ -1,3 +1,5 @@
+.. _optimization-guide:
+
 Optimization Guide
 ==================
 
