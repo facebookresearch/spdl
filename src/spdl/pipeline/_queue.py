@@ -62,10 +62,8 @@ class QueuePerfStats:
 
     .. seealso::
 
-       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
-         How to export the runtime performance statistics.
-       - `Analyzing the Performance <../optimization_guide/analysis.html>`_ :
-         How to use the exported stats.
+       - :ref:`logging` explains how to export the runtime performance statistics.
+       - :ref:`analysis` explains how to use the exported stats.
     """
 
     elapsed: float
@@ -123,10 +121,8 @@ class StatsQueue(AsyncQueue[T]):
 
     .. seealso::
 
-       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
-         How to export the runtime performance statistics.
-       - `Analyzing the Performance <../optimization_guide/analysis.html>`_ :
-         How to use the exported stats.
+       - :ref:`logging` explains how to export the runtime performance statistics.
+       - :ref:`analysis` explains how to use the exported stats.
 
     Args:
         name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.
