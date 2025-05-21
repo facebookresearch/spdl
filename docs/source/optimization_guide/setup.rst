@@ -1,5 +1,5 @@
-Building a Pipeline
-===================
+Composition of Pipeline
+=======================
 
 .. py:currentmodule:: spdl.pipeline
 
@@ -70,7 +70,7 @@ we make multiple download calls concurrently.
 
 Decoding the raw data and applying preprocessing can be time-consuming and
 computationally intensive.
-As `previously described <../optimization_guide/noisy_neighbour.html>`_,
+As described in :ref:`noisy-neighbour`,
 it is recommended to keep total CPU utilization at around 40% to avoid a QPS drop.
 However, we want to prevent the training process from suffering from
 data starvation.

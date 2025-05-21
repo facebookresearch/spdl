@@ -15,9 +15,13 @@ Data Format and Performance
    - Switch to multi-threading and use :py:func:`spdl.io.load_npz` or
      :py:func:`spdl.io.load_npy`.
 
+.. note::
+
+   The benchmark script used in this section is found at :py:mod:`data_formats`
+   example.
 
 We often see teams work on data collection bundle multiple arrays with and metadata in
-`NPZ <https://numpy.org/doc/2.2/reference/generated/numpy.savez.html>`_ format.
+``NPZ`` format.
 
 .. code-block::
 
@@ -33,8 +37,8 @@ We often see teams work on data collection bundle multiple arrays with and metad
    handle = get_handle_for_remote("my_bucket://my_data.npz")
    np.savez(handle, **data)
 
-Arrays passed to the :py:func:`np.savez` function is serialized into byte strings as
-`NPY format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html>`_.
+Arrays passed to the :py:func:`numpy.savez` function is serialized into byte strings as
+``NPY`` † format.
 Other objects are serialized using Python's :py:mod:`pickle` module.
 Then NPZ format uses `ZIP <https://en.wikipedia.org/wiki/ZIP_(file_format)>`_
 to bundle the serialized objects.
@@ -51,10 +55,9 @@ However, the NPZ format is not a performant solution when bulk-processing them.
 
 In this section we look at issues loading NPZ files and discuss alternative solutions.
 
-.. note::
+.. seealso::
 
-   The benchmark script used in this section is found at :py:mod:`data_formats`
-   example.
+   † :py:mod:`numpy.lib.format` for the detail of the NPY format.
 
 The Performance of ``numpy.load`` on NPZ data
 ---------------------------------------------
@@ -82,8 +85,8 @@ When we used ``numpy.load`` with multi-threading,
 it degraded the training speed.
 (See the Practical Example section bellow.)
 
-As described in the `Noisy Neighbour <../optimization_guide/noisy_neighbour.html>`_
-section, the training speed is governed by whether the CPU can
+As described in the :ref:`noisy-neighbour` section,
+the training speed is governed by whether the CPU can
 schedule the GPU kernel launch at timely manner.
 When the GIL is held in the background thread of the main process,
 the training loop has to wait for the GIL to be released
@@ -222,9 +225,7 @@ performance of a training pipeline.
   (The performance of ``StatefulDataLoader`` is known to decay as the training progress.)
 - The ``Upperbound`` is the estimated maximum throughput obtained by using
   :py:class:`~spdl.dataloader.CacheDataLoader`.
-  (See the
-  `Headspace Analysis <../optimization_guide/headspace_analysis.html>`_
-  for the detail.)
+  (See :ref:`headspace-analysis` for details.)
 - The ``NPZ, multi-threading`` uses SPDL and calls ``numpy.load`` in
   a background thread of the main process.
 - The ``NPY, multi-threading`` uses SPDL and uses ``spdl.io.load_npy`` function

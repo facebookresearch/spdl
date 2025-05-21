@@ -1,3 +1,5 @@
+.. _headspace-analysis:
+
 Headspace Analysis
 ==================
 
