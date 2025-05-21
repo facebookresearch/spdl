@@ -197,9 +197,14 @@ class Pipeline(Generic[T]):
 
     .. seealso::
 
-       The `Getting Started/Parallelism <../getting_started/parallelism.html>`_
-       section covers how to switch (or combine) multi-threading and
-       multi-processing in detail.
+       - The `Getting Started/Building and Running Pipeline <../getting_started/intro.html>`_
+         section explains the basic usage of ``PipelineBuilder``, ``Pipeline``.
+
+       - The `Getting Started/Parallelism <../getting_started/parallelism.html>`_
+         section covers how to switch (or combine) multi-threading and
+         multi-processing in detail.
+
+       - :ref:`pipeline-caveats` : Anti-patterns that can cause deadlock.
 
     ``Pipeline`` and ``PipelineBuilder`` facilitate building data processing pipeline
     consists of multiple stages of async operations.

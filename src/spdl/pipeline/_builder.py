@@ -123,11 +123,15 @@ class PipelineBuilder(Generic[T, U]):
 
     .. seealso::
 
-       - :py:class:`Pipeline`: The resulting pipeline object.
+       - The `Getting Started/Building and Running Pipeline <../getting_started/intro.html>`_
+         section explains the basic usage of ``PipelineBuilder``, ``Pipeline``.
 
        - The `Getting Started/Parallelism <../getting_started/parallelism.html>`_
          section covers how to switch (or combine) multi-threading and
          multi-processing in detail.
+
+       - :ref:`pipeline-caveats` : Anti-patterns that can cause deadlock.
+
     """
 
     def __init__(self) -> None:
