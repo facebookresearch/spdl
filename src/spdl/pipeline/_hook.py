@@ -280,10 +280,8 @@ class TaskPerfStats:
 
     .. seealso::
 
-       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
-         How to export the runtime performance statistics.
-       - `Analyzing the Performance <../optimization_guide/analysis.html>`_ :
-         How to use the exported stats.
+       - :ref:`logging` explains how to export the runtime performance statistics.
+       - :ref:`analysis` explains how to use the exported stats.
     """
 
     num_tasks: int
@@ -301,10 +299,8 @@ class TaskStatsHook(TaskHook):
 
     .. seealso::
 
-       - `Collecting Runtime Statistics <../getting_started/logging.html>`_ :
-         How to export the runtime performance statistics.
-       - `Analyzing the Performance <../optimization_guide/analysis.html>`_ :
-         How to use the exported stats.
+       - :ref:`logging` explains how to export the runtime performance statistics.
+       - :ref:`analysis` explains how to use the exported stats.
 
     Args:
         name: Name of the stage. Only used for logging.
