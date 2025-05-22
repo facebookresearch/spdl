@@ -445,6 +445,12 @@ def run_pipeline_in_subprocess(
 
     Yields:
         The results yielded from the pipeline.
+
+    .. seealso::
+
+       - :py:func:`iterate_in_subprocess` implements the logic for running an iterator
+         in a subprocess.
+       - :ref:`parallelism-performance` for the context in which this function was created.
     """
     yield from iterate_in_subprocess(
         fn=partial(

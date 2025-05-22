@@ -166,6 +166,13 @@ def iterate_in_subprocess(
     .. note::
 
        The function and the values yielded by the iterator of generator must be picklable.
+
+    .. seealso::
+
+       - :py:func:`run_pipeline_in_subprocess` for runinng a :py:class:`Pipeline` in
+         a subprocess
+       - :ref:`parallelism-performance` for the context in which this function was created.
+
     """
     ctx = mp.get_context(mp_context)
     msg_q = ctx.Queue()
