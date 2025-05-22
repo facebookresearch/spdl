@@ -11,3 +11,4 @@ we encountered while optimizing production pipelines.
    parallelism
    data_format
    inference
+   fast_pipeline
