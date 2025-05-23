@@ -1,3 +1,5 @@
+.. _data-formats-case-study:
+
 Data Format and Performance
 ===========================
 
