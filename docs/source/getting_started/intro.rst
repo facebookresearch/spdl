@@ -123,7 +123,7 @@ at the end of the Python interpreter, preventing Python from exiting.
               # which might cause dead-lock when Python tries to exit.
 
               with self.pipeline.auto_stop():
-                  yield from seelf.pipeline.get_iterator(...)
+                  yield from self.pipeline.get_iterator(...)
 
               # The `pipeline` object won't get garbage collected here.
 
