@@ -241,4 +241,5 @@ def load_npz(data: bytes) -> NpzFile:
        >>> assert np.array_equal(data["y"], y)
 
     """
-    return NpzFile(data, _libspdl._zip.parse_zip(data))
+    meta = {val[0]: val[1:] for val in _libspdl._zip.parse_zip(data)}
+    return NpzFile(data, meta)
