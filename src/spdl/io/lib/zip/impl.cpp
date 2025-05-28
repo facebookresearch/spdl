@@ -7,9 +7,9 @@
  */
 
 #include <cstdint>
-#include <map>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 extern "C" {
 #include <zlib.h>
@@ -192,15 +192,14 @@ Zip64Meta parse_zip64_extended_info(const char* p) {
 }
 
 using ZipMetaData = std::tuple<
+    std::string, // filename
     uint64_t, // offset
     uint64_t, // compressed_size
     uint64_t, // uncompressed_size
     uint16_t // compression_method
     >;
 
-std::map<std::string, ZipMetaData> parse_zip(
-    const char* root,
-    const size_t len) {
+std::vector<ZipMetaData> parse_zip(const char* root, const size_t len) {
   auto eocd = parse_eocd(root, len);
   auto cd_offset = eocd.cd_offset;
   auto cd_limit = eocd.cd_offset + eocd.cd_size;
@@ -210,7 +209,7 @@ std::map<std::string, ZipMetaData> parse_zip(
         "The central directory extends to the outside of the given data.");
   }
 
-  std::map<std::string, ZipMetaData> ret;
+  std::vector<ZipMetaData> ret;
   for (uint16_t i = 0; i < eocd.num_entries; ++i) {
     if (cd_offset + 46 > cd_limit) {
       throw std::out_of_range(
@@ -242,13 +241,12 @@ std::map<std::string, ZipMetaData> parse_zip(
     auto loc = parse_loc(root + cdfh.local_header_offset);
 
     auto file_start = cdfh.local_header_offset + loc.size;
-    ret.emplace(
+    ret.emplace_back(ZipMetaData{
         filename,
-        ZipMetaData{
-            file_start,
-            compressed_size,
-            uncompressed_size,
-            cdfh.compression_method});
+        file_start,
+        compressed_size,
+        uncompressed_size,
+        cdfh.compression_method});
     cd_offset += cdfh.size;
   }
   return ret;
