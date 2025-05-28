@@ -19,7 +19,7 @@ import numpy as np
 from numpy.lib.format import MAGIC_LEN, MAGIC_PREFIX
 from numpy.typing import NDArray
 
-# Importing `spdl.io.lib` instead of `spdl.io.lilb._zip`
+# Importing `spdl.io.lib` instead of `spdl.io.lilb._archive`
 # so as to delay the import of C++ extension module
 from . import lib as _libspdl
 
@@ -198,7 +198,7 @@ class NpzFile(Mapping):
                 return load_npy(self._data[start : start + compressed_size])
             case 8:
                 return load_npy(
-                    _libspdl._zip.inflate(
+                    _libspdl._archive.inflate(
                         self._data.obj, start, compressed_size, uncompressed_size
                     )
                 )
@@ -241,5 +241,5 @@ def load_npz(data: bytes) -> NpzFile:
        >>> assert np.array_equal(data["y"], y)
 
     """
-    meta = {val[0]: val[1:] for val in _libspdl._zip.parse_zip(data)}
+    meta = {val[0]: val[1:] for val in _libspdl._archive.parse_zip(data)}
     return NpzFile(data, meta)

@@ -6,4 +6,4 @@
 
 add_subdirectory(core)
 add_subdirectory(cuda)
-add_subdirectory(zip)
+add_subdirectory(archive)

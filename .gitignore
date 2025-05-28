@@ -4,6 +4,7 @@
 /docs/_build/
 fb
 TARGETS
+BUCK
 *.zip
 *.tar.gz
 *.tar.xz
@@ -198,7 +199,7 @@ cython_debug/
 !/src/spdl/io/lib/cuda/*.h
 !/src/spdl/io/lib/cuda/*.py
 !/src/spdl/io/lib/cuda/*.cpp
-!/src/spdl/io/lib/zip/
-!/src/spdl/io/lib/zip/*.h
-!/src/spdl/io/lib/zip/*.cpp
+!/src/spdl/io/lib/archive/
+!/src/spdl/io/lib/archive/*.h
+!/src/spdl/io/lib/archive/*.cpp
 !/src/spdl/io/lib/CMakeLists.txt

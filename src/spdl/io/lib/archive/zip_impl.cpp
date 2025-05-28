@@ -6,10 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <cstdint>
+#include "zip_impl.h"
+
 #include <stdexcept>
-#include <tuple>
-#include <vector>
 
 extern "C" {
 #include <zlib.h>
@@ -19,7 +18,7 @@ extern "C" {
 #define LFH_SIGNATURE 0x04034b50 // PK\x03\x04
 #define EOCD_SIGNATURE 0x06054b50 // PK\x05\x06
 
-namespace spdl::zip {
+namespace spdl::archive::zip {
 
 // Note: The structure of End of Central Directory
 // Offset Bytes Description
@@ -191,14 +190,6 @@ Zip64Meta parse_zip64_extended_info(const char* p) {
       .compressed_size = *((uint64_t*)(p + 12))};
 }
 
-using ZipMetaData = std::tuple<
-    std::string, // filename
-    uint64_t, // offset
-    uint64_t, // compressed_size
-    uint64_t, // uncompressed_size
-    uint16_t // compression_method
-    >;
-
 std::vector<ZipMetaData> parse_zip(const char* root, const size_t len) {
   auto eocd = parse_eocd(root, len);
   auto cd_offset = eocd.cd_offset;
@@ -304,4 +295,4 @@ void inflate(
   }
 }
 
-} // namespace spdl::zip
+} // namespace spdl::archive::zip

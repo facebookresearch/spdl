@@ -43,10 +43,10 @@ def __getattr__(name: str) -> ModuleType:
 
         return _LazilyImportedModule(name, _import_libspdl_cuda)
 
-    if name == "_zip":
-        import spdl.io.lib._zip  # pyre-ignore: [21]
+    if name == "_archive":
+        import spdl.io.lib._archive  # pyre-ignore: [21]
 
-        return spdl.io.lib._zip
+        return spdl.io.lib._archive
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

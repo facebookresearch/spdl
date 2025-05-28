@@ -12,7 +12,7 @@ from io import BytesIO
 import numpy as np
 import pytest
 import spdl.io
-from spdl.io.lib._zip import parse_zip  # pyre-ignore
+from spdl.io.lib._archive import parse_zip  # pyre-ignore
 
 
 def _dump_npy(arr):
