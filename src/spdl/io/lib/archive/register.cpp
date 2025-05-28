@@ -11,35 +11,21 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
+#include "zip_impl.h"
+
 namespace nb = nanobind;
 
-namespace spdl::zip {
-
-using ZipMetaData = std::tuple<
-    std::string, // filename
-    uint64_t, // offset
-    uint64_t, // compressed_size
-    uint64_t, // uncompressed_size
-    uint16_t // compression_method
-    >;
-
-std::vector<ZipMetaData> parse_zip(const char* root, const size_t len);
-
-void inflate(
-    const char* root,
-    uint32_t compressed_size,
-    void* dst,
-    uint32_t uncompressed_size);
+namespace spdl::archive {
 
 namespace {
 
-NB_MODULE(_zip, m) {
+NB_MODULE(_archive, m) {
   m.def("parse_zip", [](const nb::bytes& bytes) {
     auto* data = bytes.c_str();
     auto size = bytes.size();
 
     nb::gil_scoped_release __g;
-    return parse_zip(data, size);
+    return zip::parse_zip(data, size);
   });
 
   m.def(
@@ -54,7 +40,7 @@ NB_MODULE(_zip, m) {
 
         {
           nb::gil_scoped_release __g;
-          inflate(
+          zip::inflate(
               data + offset, compressed_size, ret.data(), uncompressed_size);
         }
         return ret;
@@ -62,4 +48,4 @@ NB_MODULE(_zip, m) {
 }
 
 } // namespace
-} // namespace spdl::zip
+} // namespace spdl::archive

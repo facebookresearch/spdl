@@ -5,13 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 message(STATUS "########################################")
-message(STATUS "# Configuring SPDL Python binding (zip)")
+message(STATUS "# Configuring SPDL Python binding (archive)")
 message(STATUS "########################################")
 
-set(name _zip)
+set(name _archive)
 message(STATUS "Building ${name}")
 
-set(srcs register.cpp impl.cpp)
+set(srcs register.cpp zip_impl.cpp)
 set(deps ZLIB::ZLIB fmt::fmt glog::glog)
 nanobind_add_module("${name}" "${srcs}")
 target_link_libraries("${name}" PRIVATE "${deps}")
