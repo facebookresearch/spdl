@@ -276,7 +276,7 @@ def get_pytorch_dataloader(
     drop_last: bool = False,
     timeout: float | None = None,
     worker_init_fn: None = None,
-    multiprocessing_context: str | mp.context.BaseContext | None = "forkserver",
+    multiprocessing_context: str | mp.context.BaseContext | None = None,
     generator: "torch.Generator | None" = None,
     *,
     prefetch_factor: int = 2,
