@@ -232,12 +232,12 @@ std::vector<ZipMetaData> parse_zip(const char* root, const size_t len) {
     auto loc = parse_loc(root + cdfh.local_header_offset);
 
     auto file_start = cdfh.local_header_offset + loc.size;
-    ret.emplace_back(ZipMetaData{
+    ret.emplace_back(
         filename,
         file_start,
         compressed_size,
         uncompressed_size,
-        cdfh.compression_method});
+        cdfh.compression_method);
     cd_offset += cdfh.size;
   }
   return ret;
