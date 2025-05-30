@@ -6,30 +6,56 @@
        var plot_data = [];
        for (const key of Object.keys(series).sort()) {
            plot_data.push({
-               x: t,
-               y: series[key],
+               x: t.slice(0, 120),
+               y: series[key].slice(0, 120),
                name: key,
                line: {
-                   size: 0.1,
+                   width: 2,
                },
                visible: key.includes('aggregate') ? 'legendonly': null, 
            });
        }
+       plot_data.push({
+           x: t.slice(0, 60),
+           y: new Array(60).fill(0),
+           line: {color: 'black', width: 0.1},
+       });
        Plotly.newPlot(
            div_id, {
                data: plot_data,
                layout: {
-                   title: title,
-                   yaxis: {
-                       title: {
-                           text: ylabel,
-                       },
-                       range: [0, null],
+                   xaxis: {
+                       tickformat: '%H:%M',
+                       showticklabels: false,
+                       gridwidth: 3,
                    },
-                   showlegend: true,
+                   yaxis: {
+                       range: [0, null],
+                       showticklabels: false,
+                       gridwidth: 3,
+                   },
+                   showlegend: false,
+                   paper_bgcolor: 'rgba(0,0,0,0)',
+                   plot_bgcolor: 'rgba(0,0,0,0)',  // '#EAEAF1',
                },
            },
-       );
+       ).then(
+           gd => Plotly.toImage(gd, {
+               format: 'svg',
+               height: 410,
+               width: 680,
+           })
+       ).then(url => {
+           if (div_id === 'perf_analysis_occupancy_rate') {
+               console.log(url);
+               var a = document.createElement('a');
+               a.href = url;
+               a.download = 'my_plot.svg';
+               document.body.appendChild(a);
+               a.click();
+               document.body.removeChild(a);
+           }
+       });
     };
 
     document.addEventListener(
@@ -89,9 +115,6 @@
                             for (const key in data) {
                                 if (key.endsWith(c.suffix)) {
                                     let value = data[key];
-                                    if (key.endsWith("_rate")) {
-                                    value = value.map(v => { return v*100; });
-                                    }
                                     const k = key.slice(0, key.length - c.suffix.length);
                                     series[k] = value;
                                 }

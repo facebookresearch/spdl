@@ -12,11 +12,11 @@
                    ? (emphasis.includes(key) ? null : 'rgba(108, 122, 137, 0.2)')
                    : (palette[Math.floor(parseInt(key) / 8)]);
                plot_data.push({
-                   x: t,
-                   y: data[key],
+                   x: t.slice(1),
+                   y: data[key].slice(1),
                    name: key,
                    line: {
-                       size: 0.1,
+                       width: (emphasis.includes(key) ? 3 : 2),
                        color: color,
                    },
                });
@@ -26,17 +26,38 @@
            div_id, {
                data: plot_data,
                layout: {
-                   title: title,
                    yaxis: {
-                       title: {
-                           text: ylabel,
-                       },
                        range: [0, null],
+                       showticklabels: false,
+                       gridwidth: 3,
                    },
-                   showlegend: true,
+                   xaxis: {
+                       tickformat: '%H:%M',
+                       showticklabels: false,
+                       gridwidth: 3,
+                   },
+                   showlegend: false,
+                   paper_bgcolor: 'rgba(0,0,0,0)',
+                   plot_bgcolor: 'rgba(0,0,0,0)',
                },
            },
-       );
+       ).then(
+           gd => Plotly.toImage(gd, {
+               format: 'svg',
+               height: 410,
+               width: 680,
+           })
+       ).then(url => {
+           if (div_id === 'across_ranks_preprocess') {
+               console.log(url);
+               var a = document.createElement('a');
+               a.href = url;
+               a.download = 'my_plot.svg';
+               document.body.appendChild(a);
+               a.click();
+               document.body.removeChild(a);
+           }
+       });
     };
 
     document.addEventListener(
@@ -60,8 +81,8 @@
                 {
                     data_url: '../_static/data/across_ranks_compose.json',
                     div_id: 'across_ranks_preprocess',
-                    title: 'Data readiness across ranks (Preprocess)',
-                    ylabel: 'Data Readiness',
+                    title: 'Queue occupancy of preprocess stage across ranks',
+                    ylabel: 'Queue Occupancy',
                     emphasis: ['00', '19'],
                 },
                 {
