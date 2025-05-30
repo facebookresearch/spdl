@@ -54,19 +54,19 @@
                 "ci": [3, 3, 3, 2, 1, 1]}}};
    const colors = {
        "Torch": "F05627",
-       "NPY": "F8D5B8",
+       "NPY": "F1C700",
        "NPZ": "C65D52",
        "NPZ (compressed)": "F1C700",
-       "NPY - SPDL": "9CCF65",
+       "NPY - SPDL": "C65D52",
        "NPZ - SPDL": "81E4BD",
        "NPZ (compressed) - SPDL": "6E81BE",
    };
    const symbols = {
        "Torch": "circle",
-       "NPY": "diamond",
+       "NPY": "circle",
        "NPZ": "x",
        "NPZ (compressed)": "triangle-up",
-       "NPY - SPDL": "triangle-left",
+       "NPY - SPDL": "x",
        "NPZ - SPDL": "triangle-right",
        "NPZ (compressed) - SPDL": "square",
    };
@@ -75,6 +75,12 @@
        const x = [1, 2, 4, 8, 16, 32];
        keys.map(k => {
            ['MP', 'MT'].map(t => {
+               if (t === 'MT' && k === 'NPY') {
+                   return;
+               }
+               if (t === 'MP' && k === 'NPY - SPDL') {
+                   return;
+               }
                plot_data.push({
                    x,
                    y: data[k][t].mean,
@@ -99,18 +105,49 @@
            });
        });
        const layout = {
-           title: "The speed of loading array data",
            xaxis: {
                title: "The number of workers",
                tickmode: "array",
                tickvals: x,
+               ticktext: x,
+               gridcolor: 'white',
+               gridwidth: 2,
+               zeroline: false,
            },
            yaxis: {
                title: "Throughput [arrays/sec]",
                range: [0, null],
-           }
+               gridcolor: 'white',
+               gridwidth: 2,
+               zeroline: false,
+           },
+           showlegend: true,
+           legend: {
+               x: 1,
+               xanchor: 'right',
+               y: 0.8
+           },
+           paper_bgcolor: 'rgba(0,0,0,0)',
+           plot_bgcolor: '#EAEAF1',
        };
-       Plotly.newPlot(div_id, plot_data, layout);
+       Plotly.newPlot(div_id, plot_data, layout)
+           .then(
+               gd => Plotly.toImage(gd, {
+                   format: 'svg',
+                   height: 450,
+                   width: 600,
+               })
+           ).then(url => {
+               if (div_id === "npz_all") {
+                   console.log(url);
+                   var a = document.createElement('a');
+                   a.href = url;
+                   a.download = 'my_plot.svg';
+                   document.body.appendChild(a);
+                   a.click();
+                   document.body.removeChild(a);
+               }
+           });
    };
    document.addEventListener(
        'DOMContentLoaded',
@@ -126,7 +163,7 @@
                },
                {
                    div_id: 'npz_all',
-                   keys: Object.keys(data),
+                   keys: ['NPY', 'NPY - SPDL'],
                },
            ]
            cfgs.map(c => {
