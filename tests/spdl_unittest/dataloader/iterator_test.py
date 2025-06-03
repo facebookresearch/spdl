@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import multiprocessing as mp
 import os.path
 import pickle
 import random
@@ -13,10 +14,19 @@ import tempfile
 import time
 from collections.abc import Iterable, Iterator
 from functools import partial
+from queue import Empty
 from unittest.mock import patch
 
 import pytest
-from spdl.source.utils import iterate_in_subprocess, MergeIterator, repeat_source
+from spdl.pipeline._utils import (
+    _execute_iterator,
+    _MSG_GENERATOR_FAILED,
+    _MSG_INITIALIZER_FAILED,
+    _MSG_ITERATION_FINISHED,
+    _MSG_PARENT_REQUEST_STOP,
+    iterate_in_subprocess,
+)
+from spdl.source.utils import MergeIterator, repeat_source
 
 
 def test_mergeiterator_ordered():
@@ -257,6 +267,11 @@ def test_repeat_source_picklable():
             assert next(src) == next(src2) == i
 
 
+#######################################################################################
+# iterate_in_pipeline
+#######################################################################################
+
+
 def iter_range(n: int) -> Iterable[int]:
     yield from range(n)
 
@@ -363,3 +378,196 @@ def test_iterate_in_subprocess_buffer_size_64():
 
         with pytest.raises(StopIteration):
             next(src)
+
+
+class SourceIterable:
+    def __init__(self, n: int) -> None:
+        self.n = n
+
+    def __iter__(self) -> Iterator[int]:
+        yield from range(self.n)
+
+
+def noop() -> None:
+    pass
+
+
+def test_execute_iterator_initializer_failure():
+    msg_queue, data_queue = mp.Queue(), mp.Queue()
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterable(10)
+
+    def fail() -> None:
+        raise ValueError("Failed!")
+
+    with pytest.raises(ValueError):
+        _execute_iterator(msg_queue, data_queue, src_fn, fail)
+
+    assert msg_queue.get(timeout=1) == _MSG_INITIALIZER_FAILED
+    assert msg_queue.empty()
+    assert data_queue.empty()
+
+
+def test_execute_iterator_iterator_initialize_failure():
+    msg_queue, data_queue = mp.Queue(), mp.Queue()
+
+    def src_fn() -> Iterator[int]:
+        raise ValueError("Failed!")
+        return SourceIterable(10)
+
+    with pytest.raises(ValueError):
+        _execute_iterator(msg_queue, data_queue, src_fn, noop)
+
+    assert msg_queue.get(timeout=1) == _MSG_GENERATOR_FAILED
+    assert msg_queue.empty()
+    assert data_queue.empty()
+
+
+def test_execute_iterator_quite_immediately():
+    msg_queue, data_queue = mp.Queue(), mp.Queue()
+
+    msg_queue.put(_MSG_PARENT_REQUEST_STOP)
+    time.sleep(1)
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterable(10)
+
+    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+
+    assert msg_queue.empty()
+    assert data_queue.empty()
+
+
+def test_execute_iterator_generator_fail():
+    msg_queue, data_queue = mp.Queue(), mp.Queue()
+
+    class SourceIterableFails(SourceIterable):
+        def __iter__(self) -> Iterator[int]:
+            raise ValueError("Failed!")
+            yield from range(self.n)
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterableFails(10)
+
+    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+
+    assert msg_queue.get(timeout=1) == _MSG_GENERATOR_FAILED
+    assert msg_queue.empty()
+    assert data_queue.empty()
+
+
+def test_execute_iterator_generator_fail_after_n():
+    msg_queue, data_queue = mp.Queue(), mp.Queue()
+
+    class SourceIterableFails(SourceIterable):
+        def __iter__(self) -> Iterator[int]:
+            for v in range(self.n):
+                yield v
+                if v == 2:
+                    raise ValueError("Failed!")
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterableFails(10)
+
+    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+
+    assert data_queue.get(timeout=1) == 0
+    assert data_queue.get(timeout=1) == 1
+    assert data_queue.get(timeout=1) == 2
+
+    with pytest.raises(Empty):
+        data_queue.get(timeout=1)
+
+    assert msg_queue.get(timeout=1) == _MSG_GENERATOR_FAILED
+    assert msg_queue.empty()
+
+
+def test_execute_iterator_generator_success():
+    msg_queue, data_queue = mp.Queue(), mp.Queue()
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterable(3)
+
+    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+
+    assert data_queue.get(timeout=1) == 0
+    assert data_queue.get(timeout=1) == 1
+    assert data_queue.get(timeout=1) == 2
+
+    with pytest.raises(Empty):
+        data_queue.get(timeout=1)
+
+    assert msg_queue.get(timeout=1) == _MSG_ITERATION_FINISHED
+    assert msg_queue.empty()
+
+
+def test_terate_in_subprocess_initializer_failure():
+    def src_fn() -> Iterable[int]:
+        return SourceIterable(10)
+
+    def fail() -> None:
+        raise ValueError("Failed!")
+
+    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3, initializer=fail)
+
+    with pytest.raises(RuntimeError, match=r"the initializer failed"):
+        next(ite)
+
+
+def test_iterate_in_subprocess_iterator_initialize_failure():
+    def src_fn() -> Iterator[int]:
+        raise ValueError("Failed!")
+        return SourceIterable(10)
+
+    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
+
+    with pytest.raises(RuntimeError, match=r"the generator failed"):
+        next(ite)
+
+
+def test_iterate_in_subprocess_generator_fail():
+    class SourceIterableFails(SourceIterable):
+        def __iter__(self) -> Iterator[int]:
+            raise ValueError("Failed!")
+            yield from range(self.n)
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterableFails(10)
+
+    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
+
+    with pytest.raises(RuntimeError, match=r"the generator failed"):
+        next(ite)
+
+
+def test_iterate_in_subprocess_fail_after_n():
+    N = 10
+
+    class SourceIterableFails(SourceIterable):
+        def __iter__(self) -> Iterator[int]:
+            for v in range(self.n):
+                yield v
+                if v == 2:
+                    raise ValueError("Failed!")
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterableFails(N)
+
+    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
+    assert next(ite) == 0
+    assert next(ite) == 1
+    assert next(ite) == 2
+
+    with pytest.raises(RuntimeError, match=r"the generator failed"):
+        next(ite)
+
+
+def test_iterate_in_subprocess_success():
+    N = 3
+
+    def src_fn() -> Iterable[int]:
+        return SourceIterable(N)
+
+    hyp = list(iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3))
+    assert hyp == list(range(N))
