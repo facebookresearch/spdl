@@ -75,7 +75,7 @@ def test_execute_iterator_quite_immediately():
     msg_queue.put(_MSG_PARENT_REQUEST_STOP)
     time.sleep(1)
 
-    def src_fn() -> Iterator[int]:
+    def src_fn() -> Iterable[int]:
         return SourceIterable(10)
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
@@ -92,7 +92,7 @@ def test_execute_iterator_generator_fail():
             raise ValueError("Failed!")
             yield from range(self.n)
 
-    def src_fn() -> Iterator[int]:
+    def src_fn() -> Iterable[int]:
         return SourceIterableFails(10)
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
@@ -112,7 +112,7 @@ def test_execute_iterator_generator_fail_after_n():
                 if v == 2:
                     raise ValueError("Failed!")
 
-    def src_fn() -> Iterator[int]:
+    def src_fn() -> Iterable[int]:
         return SourceIterableFails(10)
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
@@ -131,7 +131,7 @@ def test_execute_iterator_generator_fail_after_n():
 def test_execute_iterator_generator_success():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
-    def src_fn() -> Iterator[int]:
+    def src_fn() -> Iterable[int]:
         return SourceIterable(3)
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
