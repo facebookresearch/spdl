@@ -262,25 +262,16 @@ def _task_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
 
 
 async def _periodic_dispatch(
-    afun: Callable[[], Coroutine[None, None, None]],
-    done: asyncio.Event,
-    interval: float,
+    afun: Callable[[], Coroutine[None, None, None]], interval: float
 ) -> None:
     assert interval > 0, "[InternalError] `interval` must be greater than 0."
-    pending: set[Task] = set()
-    target = time.monotonic() + interval
-    while not done.is_set():
-        if (dt := target - time.monotonic()) > 0:
-            await asyncio.sleep(dt)
+    tasks: set[Task] = set()
+    while True:
+        await asyncio.sleep(interval)
 
-        target = time.monotonic() + interval
-        pending.add(create_task(afun()))
-
-        # Assumption interval >> task duration.
-        _, pending = await asyncio.wait(pending, return_when="FIRST_COMPLETED")
-
-    if pending:
-        await asyncio.wait(pending)
+        task = create_task(afun())
+        tasks.add(task)
+        task.add_done_callback(tasks.discard)
 
 
 @dataclass
@@ -341,9 +332,8 @@ class TaskStatsHook(TaskHook):
         """Track the stage runtime and log the task stats."""
         if self.interval > 0:
             self._lap_t0 = time.monotonic()
-            done = asyncio.Event()
             report = create_task(
-                _periodic_dispatch(self._log_interval_stats, done, self.interval),
+                _periodic_dispatch(self._log_interval_stats, self.interval),
                 name="f{self.name}_periodic_report",
                 log_cancelled=False,
             )
@@ -352,8 +342,7 @@ class TaskStatsHook(TaskHook):
             yield
         finally:
             if self.interval > 0:
-                done.set()
-                await report  # pyre-ignore: [61]
+                report.cancel()
             self._log_stats(
                 TaskPerfStats(
                     num_tasks=self.num_tasks,
