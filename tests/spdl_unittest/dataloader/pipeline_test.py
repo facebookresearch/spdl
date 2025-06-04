@@ -726,19 +726,15 @@ def test_periodic_dispatch_smoke_test():
 
     async def afun():
         nonlocal calls
-        print("afun: ", time.time())
         calls.append(time.monotonic())
 
     async def _test():
-        done = asyncio.Event()
-        task = asyncio.create_task(_periodic_dispatch(afun, done, 1))
+        task = asyncio.create_task(_periodic_dispatch(afun, 1))
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(3.2)
 
-        done.set()
-        await task
+        task.cancel()
 
-    print("start: ", time.time())
     asyncio.run(_test())
 
     assert len(calls) == 3
