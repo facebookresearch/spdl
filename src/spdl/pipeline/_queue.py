@@ -180,8 +180,9 @@ class StatsQueue(AsyncQueue[T]):
     async def stage_hook(self) -> AsyncIterator[None]:
         t0 = self._lap_t0 = self._empty_t0 = time.monotonic()
         if self.interval > 0:
+            done = asyncio.Event()
             report = create_task(
-                _periodic_dispatch(self._log_interval_stats, self.interval),
+                _periodic_dispatch(self._log_interval_stats, done, self.interval),
                 name=f"{self.name}_periodic_report",
                 log_cancelled=False,
             )
@@ -190,7 +191,8 @@ class StatsQueue(AsyncQueue[T]):
             yield
         finally:
             if self.interval > 0:
-                report.cancel()
+                done.set()
+                await report  # pyre-ignore: [61]
 
             elapsed = time.monotonic() - t0
             occupancy_rate = 0.0 if elapsed <= 0 else 1 - self._dur_empty / elapsed
