@@ -31,22 +31,6 @@ _LG: logging.Logger = logging.getLogger(__name__)
 # pyre-strict
 
 
-def __getattr__(name: str) -> Any:  # pyre-ignore
-    if name == "iterate_in_subprocess":
-        import warnings
-
-        from spdl.pipeline import iterate_in_subprocess
-
-        warnings.warn(
-            "`spdl.source.utils.iterate_in_subprocess` has been moved to "
-            "`spdl.pipeline.iterate_in_subprocess`. Please update the import statement.",
-            stacklevel=2,
-        )
-
-        return iterate_in_subprocess
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 ################################################################################
 # MergeIterator
 ################################################################################
