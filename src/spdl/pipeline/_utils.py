@@ -15,6 +15,7 @@ import time
 import traceback
 from asyncio import Task
 from collections.abc import Callable, Coroutine, Generator, Iterable, Iterator
+from enum import Enum
 from typing import Any, TypeVar
 
 __all__ = [
@@ -83,14 +84,16 @@ def create_task(
 # iterate_in_subprocess
 ################################################################################
 
-# Message from parent to worker
-_MSG_PARENT_REQUEST_STOP = "PARENT_REQUEST_STOP"
 
-# Message from worker to the parent
-_MSG_INITIALIZER_FAILED = "INITIALIZER_FAILED"
-_MSG_GENERATOR_FAILED = "GENERATOR_FAILED_TO_INITIALIZE"
-_MSG_ITERATION_FINISHED = "ITERATION_FINISHED"
-_MSG_DATA_QUEUE_FAILED = "DATA_QUEUE_FAILED"
+class _MSG(Enum):
+    # Message from parent to worker
+    PARENT_REQUEST_STOP = 0b0000_0000
+
+    # Message from worker to the parent
+    INITIALIZER_FAILED = 0b0001_0000
+    GENERATOR_FAILED = 0b0001_0001
+    ITERATION_FINISHED = 0b0001_0010
+    DATA_QUEUE_FAILED = 0b0001_0011
 
 
 def _execute_iterator(
@@ -103,13 +106,13 @@ def _execute_iterator(
         try:
             initializer()
         except Exception:
-            msg_queue.put(_MSG_INITIALIZER_FAILED)
+            msg_queue.put(_MSG.INITIALIZER_FAILED)
             raise
 
     try:
         gen = iter(fn())
     except Exception:
-        msg_queue.put(_MSG_GENERATOR_FAILED)
+        msg_queue.put(_MSG.GENERATOR_FAILED)
         raise
 
     while True:
@@ -118,23 +121,23 @@ def _execute_iterator(
         except queue.Empty:
             pass
         else:
-            if msg == _MSG_PARENT_REQUEST_STOP:
+            if msg == _MSG.PARENT_REQUEST_STOP:
                 return
             raise ValueError(f"[INTERNAL ERROR] Unexpected message received: {msg}")
 
         try:
             item = next(gen)
         except StopIteration:
-            msg_queue.put(_MSG_ITERATION_FINISHED)
+            msg_queue.put(_MSG.ITERATION_FINISHED)
             return
         except Exception:
-            msg_queue.put(_MSG_GENERATOR_FAILED)
+            msg_queue.put(_MSG.GENERATOR_FAILED)
             return
 
         try:
             data_queue.put(item)
         except Exception:
-            msg_queue.put(_MSG_DATA_QUEUE_FAILED)
+            msg_queue.put(_MSG.DATA_QUEUE_FAILED)
             return
 
 
@@ -199,22 +202,25 @@ def iterate_in_subprocess(
                 # When a message is found, the child process stopped putting data.
                 yield from _drain()
 
-                if msg == _MSG_ITERATION_FINISHED:
-                    return
-                if msg == _MSG_INITIALIZER_FAILED:
-                    raise RuntimeError(
-                        "The worker process quit because the initializer failed."
-                    )
-                if msg == _MSG_GENERATOR_FAILED:
-                    raise RuntimeError(
-                        "The worker process quit because the generator failed."
-                    )
-                if msg == _MSG_DATA_QUEUE_FAILED:
-                    raise RuntimeError(
-                        "The worker process quit because it failed at passing the data."
-                    )
-
-                raise ValueError(f"[INTERNAL ERROR] Unexpected message received: {msg}")
+                match msg:
+                    case _MSG.ITERATION_FINISHED:
+                        return
+                    case _MSG.INITIALIZER_FAILED:
+                        raise RuntimeError(
+                            "The worker process quit because the initializer failed."
+                        )
+                    case _MSG.GENERATOR_FAILED:
+                        raise RuntimeError(
+                            "The worker process quit because the generator failed."
+                        )
+                    case _MSG.DATA_QUEUE_FAILED:
+                        raise RuntimeError(
+                            "The worker process quit because it failed at passing the data."
+                        )
+                    case _:
+                        raise ValueError(
+                            f"[INTERNAL ERROR] Unexpected message received: {msg}"
+                        )
 
             try:
                 yield data_q.get(timeout=1)
@@ -231,7 +237,7 @@ def iterate_in_subprocess(
                     )
 
     except (Exception, KeyboardInterrupt):
-        msg_q.put(_MSG_PARENT_REQUEST_STOP)
+        msg_q.put(_MSG.PARENT_REQUEST_STOP)
         raise
     finally:
         yield from _drain()
