@@ -15,8 +15,9 @@ import time
 import traceback
 from asyncio import Task
 from collections.abc import Callable, Coroutine, Generator, Iterable, Iterator
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 __all__ = [
     "create_task",
@@ -85,19 +86,34 @@ def create_task(
 ################################################################################
 
 
-class _MSG(Enum):
-    # Message from parent to worker
-    PARENT_REQUEST_STOP = 0b0000_0000
+# Command from parent to worker
+class _Cmd(Enum):
+    INTERRUPT = 0
 
-    # Message from worker to the parent
-    INITIALIZER_FAILED = 0b0001_0000
-    GENERATOR_FAILED = 0b0001_0001
-    ITERATION_FINISHED = 0b0001_0010
-    DATA_QUEUE_FAILED = 0b0001_0011
+
+# Final status of the iterator
+class _Status(Enum):
+    UNEXPECTED_CMD_RECIEVED = 0
+    INITIALIZER_FAILED = 1
+    GENERATOR_FAILED = 2
+
+    # Iteration finished normally or
+    # terminating early par the request from the parent
+    GENERATOR_SUCCESS = 3
+    ITERATION_FINISHED = 4
+
+
+# Message from worker to the parent
+@dataclass
+class _Msg(Generic[T]):
+    status: _Status
+    # additional data
+    # String in case of failure
+    message: T | str = ""
 
 
 def _execute_iterator(
-    msg_queue: mp.Queue,
+    cmd_queue: mp.Queue,
     data_queue: mp.Queue,
     fn: Callable[[], Iterator[T]],
     initializer: Callable[[], None],
@@ -105,40 +121,60 @@ def _execute_iterator(
     if initializer is not None:
         try:
             initializer()
-        except Exception:
-            msg_queue.put(_MSG.INITIALIZER_FAILED)
-            raise
+        except Exception as e:
+            data_queue.put(_Msg(_Status.INITIALIZER_FAILED, message=str(e)))
+            return
 
     try:
         gen = iter(fn())
-    except Exception:
-        msg_queue.put(_MSG.GENERATOR_FAILED)
-        raise
+    except Exception as e:
+        data_queue.put(_Msg(_Status.GENERATOR_FAILED, message=str(e)))
+        return
 
     while True:
         try:
-            msg = msg_queue.get_nowait()
+            cmd = cmd_queue.get_nowait()
         except queue.Empty:
             pass
         else:
-            if msg == _MSG.PARENT_REQUEST_STOP:
-                return
-            raise ValueError(f"[INTERNAL ERROR] Unexpected message received: {msg}")
+            match cmd:
+                case _Cmd.INTERRUPT:
+                    data_queue.put(_Msg(_Status.ITERATION_FINISHED))
+                case _:
+                    data_queue.put(_Msg(_Status.UNEXPECTED_CMD_RECIEVED, str(cmd)))
+            return
 
         try:
             item = next(gen)
+            data_queue.put(_Msg(_Status.GENERATOR_SUCCESS, message=item))
         except StopIteration:
-            msg_queue.put(_MSG.ITERATION_FINISHED)
+            data_queue.put(_Msg(_Status.ITERATION_FINISHED))
             return
-        except Exception:
-            msg_queue.put(_MSG.GENERATOR_FAILED)
+        except Exception as e:
+            data_queue.put(_Msg(_Status.GENERATOR_FAILED, message=str(e)))
             return
 
-        try:
-            data_queue.put(item)
-        except Exception:
-            msg_queue.put(_MSG.DATA_QUEUE_FAILED)
-            return
+
+def _drain(queue: mp.Queue) -> None:
+    while not queue.empty():
+        queue.get_nowait()
+
+
+def _shutdown(process: mp.Process) -> None:
+    process.join(3)
+
+    if process.exitcode is None:
+        _LG.warning("Terminaging the worker process.")
+        process.terminate()
+        process.join(10)
+
+    if process.exitcode is None:
+        _LG.warning("Killing the worker process.")
+        process.kill()
+        process.join(10)
+
+    if process.exitcode is None:
+        _LG.warning("Failed to kill the worker process.")
 
 
 def iterate_in_subprocess(
@@ -178,16 +214,12 @@ def iterate_in_subprocess(
 
     """
     ctx = mp.get_context(mp_context)
-    msg_q = ctx.Queue()
-    data_q: mp.Queue = ctx.Queue(maxsize=buffer_size)
-
-    def _drain() -> Iterator[T]:
-        while not data_q.empty():
-            yield data_q.get_nowait()
+    cmd_queue = ctx.Queue()
+    data_queue: mp.Queue = ctx.Queue(maxsize=buffer_size)
 
     process = ctx.Process(
         target=_execute_iterator,
-        args=(msg_q, data_q, fn, initializer),
+        args=(cmd_queue, data_queue, fn, initializer),
         daemon=daemon,
     )
     process.start()
@@ -195,66 +227,45 @@ def iterate_in_subprocess(
     try:
         while True:
             try:
-                msg = msg_q.get_nowait()
+                item: _Msg[T] = data_queue.get(timeout=0.1)
+                t0 = time.monotonic()
             except queue.Empty:
-                pass
+                if timeout is not None:
+                    if (elapsed := time.monotonic() - t0) > timeout:
+                        raise RuntimeError(
+                            "The worker process did not produce any data for "
+                            f"{elapsed:.2f} seconds."
+                        ) from None
+                continue
             else:
-                # When a message is found, the child process stopped putting data.
-                yield from _drain()
-
-                match msg:
-                    case _MSG.ITERATION_FINISHED:
+                match item.status:
+                    case _Status.GENERATOR_SUCCESS:
+                        yield item.message  # pyre-ignore: [7]
+                    case _Status.ITERATION_FINISHED:
                         return
-                    case _MSG.INITIALIZER_FAILED:
+                    case _Status.INITIALIZER_FAILED:
                         raise RuntimeError(
-                            "The worker process quit because the initializer failed."
+                            f"The worker process quit because the initializer failed. {item.message}"
                         )
-                    case _MSG.GENERATOR_FAILED:
+                    case _Status.GENERATOR_FAILED:
                         raise RuntimeError(
-                            "The worker process quit because the generator failed."
+                            f"The worker process quit because the generator failed. {item.message}"
                         )
-                    case _MSG.DATA_QUEUE_FAILED:
+                    case _Status.UNEXPECTED_CMD_RECIEVED:
                         raise RuntimeError(
-                            "The worker process quit because it failed at passing the data."
+                            f"[INTERNAL ERROR] The worker received unexpected command: {item.message}"
                         )
                     case _:
-                        raise ValueError(
-                            f"[INTERNAL ERROR] Unexpected message received: {msg}"
+                        raise RuntimeError(
+                            f"[INTERNAL ERROR] Unexpected return value: {item}"
                         )
 
-            try:
-                yield data_q.get(timeout=1)
-            except queue.Empty:
-                pass
-            else:
-                t0 = time.monotonic()
-
-            if timeout is not None:
-                if (elapsed := time.monotonic() - t0) > timeout:
-                    raise RuntimeError(
-                        "The worker process did not produce any data for "
-                        f"{elapsed:.2f} seconds."
-                    )
-
     except (Exception, KeyboardInterrupt):
-        msg_q.put(_MSG.PARENT_REQUEST_STOP)
+        cmd_queue.put(_Cmd.INTERRUPT)
+        _drain(data_queue)
         raise
     finally:
-        yield from _drain()
-        process.join(3)
-
-        if process.exitcode is None:
-            _LG.warning("Terminaging the worker process.")
-            process.terminate()
-            process.join(10)
-
-        if process.exitcode is None:
-            _LG.warning("Killing the worker process.")
-            process.kill()
-            process.join(10)
-
-        if process.exitcode is None:
-            _LG.warning("Failed to kill the worker process.")
+        _shutdown(process)
 
 
 def cache_iterator(
