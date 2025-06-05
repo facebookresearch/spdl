@@ -18,14 +18,8 @@ from queue import Empty
 from unittest.mock import patch
 
 import pytest
-from spdl.pipeline._utils import (
-    _execute_iterator,
-    _MSG_GENERATOR_FAILED,
-    _MSG_INITIALIZER_FAILED,
-    _MSG_ITERATION_FINISHED,
-    _MSG_PARENT_REQUEST_STOP,
-    iterate_in_subprocess,
-)
+from spdl.pipeline import iterate_in_subprocess
+from spdl.pipeline._utils import _execute_iterator, _MSG
 from spdl.source.utils import MergeIterator, repeat_source
 
 
@@ -404,7 +398,7 @@ def test_execute_iterator_initializer_failure():
     with pytest.raises(ValueError):
         _execute_iterator(msg_queue, data_queue, src_fn, fail)
 
-    assert msg_queue.get(timeout=1) == _MSG_INITIALIZER_FAILED
+    assert msg_queue.get(timeout=1) == _MSG.INITIALIZER_FAILED
     assert msg_queue.empty()
     assert data_queue.empty()
 
@@ -419,7 +413,7 @@ def test_execute_iterator_iterator_initialize_failure():
     with pytest.raises(ValueError):
         _execute_iterator(msg_queue, data_queue, src_fn, noop)
 
-    assert msg_queue.get(timeout=1) == _MSG_GENERATOR_FAILED
+    assert msg_queue.get(timeout=1) == _MSG.GENERATOR_FAILED
     assert msg_queue.empty()
     assert data_queue.empty()
 
@@ -427,7 +421,7 @@ def test_execute_iterator_iterator_initialize_failure():
 def test_execute_iterator_quite_immediately():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
-    msg_queue.put(_MSG_PARENT_REQUEST_STOP)
+    msg_queue.put(_MSG.PARENT_REQUEST_STOP)
     time.sleep(1)
 
     def src_fn() -> Iterable[int]:
@@ -452,7 +446,7 @@ def test_execute_iterator_generator_fail():
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
 
-    assert msg_queue.get(timeout=1) == _MSG_GENERATOR_FAILED
+    assert msg_queue.get(timeout=1) == _MSG.GENERATOR_FAILED
     assert msg_queue.empty()
     assert data_queue.empty()
 
@@ -479,7 +473,7 @@ def test_execute_iterator_generator_fail_after_n():
     with pytest.raises(Empty):
         data_queue.get(timeout=1)
 
-    assert msg_queue.get(timeout=1) == _MSG_GENERATOR_FAILED
+    assert msg_queue.get(timeout=1) == _MSG.GENERATOR_FAILED
     assert msg_queue.empty()
 
 
@@ -498,7 +492,7 @@ def test_execute_iterator_generator_success():
     with pytest.raises(Empty):
         data_queue.get(timeout=1)
 
-    assert msg_queue.get(timeout=1) == _MSG_ITERATION_FINISHED
+    assert msg_queue.get(timeout=1) == _MSG.ITERATION_FINISHED
     assert msg_queue.empty()
 
 
