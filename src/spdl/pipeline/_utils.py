@@ -97,10 +97,10 @@ class _Status(Enum):
     INITIALIZER_FAILED = 1
     GENERATOR_FAILED = 2
 
-    # Iteration finished normally or
-    # terminating early par the request from the parent
     GENERATOR_SUCCESS = 3
     ITERATION_FINISHED = 4
+    # Iteration finished normally or
+    # terminating early par the request from the parent
 
 
 # Message from worker to the parent
@@ -177,6 +177,48 @@ def _shutdown(process: mp.Process) -> None:
         _LG.warning("Failed to kill the worker process.")
 
 
+def _iterate(data_queue: mp.Queue, timeout: float) -> Iterator[object]:
+    wait = min(0.1, timeout)
+
+    t0 = time.monotonic()
+    while True:
+        try:
+            item: _Msg[object] = data_queue.get(timeout=wait)
+            t0 = time.monotonic()
+        except queue.Empty:
+            if (elapsed := time.monotonic() - t0) > timeout:
+                raise RuntimeError(
+                    "The worker process did not produce any data for "
+                    f"{elapsed:.2f} seconds."
+                ) from None
+            continue
+        else:
+            match item.status:
+                case _Status.GENERATOR_SUCCESS:
+                    yield item.message
+                case _Status.ITERATION_FINISHED:
+                    return
+                case _Status.INITIALIZER_FAILED:
+                    raise RuntimeError(
+                        "The worker process quit because the initializer failed: "
+                        f"{item.message}"
+                    )
+                case _Status.GENERATOR_FAILED:
+                    raise RuntimeError(
+                        "The worker process quit because the generator failed: "
+                        f"{item.message}"
+                    )
+                case _Status.UNEXPECTED_CMD_RECIEVED:
+                    raise RuntimeError(
+                        "[INTERNAL ERROR] The worker received unexpected command: "
+                        f"{item.message}"
+                    )
+                case _:
+                    raise RuntimeError(
+                        f"[INTERNAL ERROR] Unexpected return value: {item}"
+                    )
+
+
 def iterate_in_subprocess(
     fn: Callable[[], Iterable[T]],
     *,
@@ -223,43 +265,9 @@ def iterate_in_subprocess(
         daemon=daemon,
     )
     process.start()
-    t0 = time.monotonic()
+    timeout_ = float("inf") if timeout is None else timeout
     try:
-        while True:
-            try:
-                item: _Msg[T] = data_queue.get(timeout=0.1)
-                t0 = time.monotonic()
-            except queue.Empty:
-                if timeout is not None:
-                    if (elapsed := time.monotonic() - t0) > timeout:
-                        raise RuntimeError(
-                            "The worker process did not produce any data for "
-                            f"{elapsed:.2f} seconds."
-                        ) from None
-                continue
-            else:
-                match item.status:
-                    case _Status.GENERATOR_SUCCESS:
-                        yield item.message  # pyre-ignore: [7]
-                    case _Status.ITERATION_FINISHED:
-                        return
-                    case _Status.INITIALIZER_FAILED:
-                        raise RuntimeError(
-                            f"The worker process quit because the initializer failed. {item.message}"
-                        )
-                    case _Status.GENERATOR_FAILED:
-                        raise RuntimeError(
-                            f"The worker process quit because the generator failed. {item.message}"
-                        )
-                    case _Status.UNEXPECTED_CMD_RECIEVED:
-                        raise RuntimeError(
-                            f"[INTERNAL ERROR] The worker received unexpected command: {item.message}"
-                        )
-                    case _:
-                        raise RuntimeError(
-                            f"[INTERNAL ERROR] Unexpected return value: {item}"
-                        )
-
+        yield from _iterate(data_queue, timeout_)  # pyre-ignore
     except (Exception, KeyboardInterrupt):
         cmd_queue.put(_Cmd.INTERRUPT)
         _drain(data_queue)
