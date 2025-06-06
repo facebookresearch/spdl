@@ -14,12 +14,11 @@ import tempfile
 import time
 from collections.abc import Iterable, Iterator
 from functools import partial
-from queue import Empty
 from unittest.mock import patch
 
 import pytest
 from spdl.pipeline import iterate_in_subprocess
-from spdl.pipeline._utils import _execute_iterator, _MSG
+from spdl.pipeline._utils import _Cmd, _execute_iterator, _Status
 from spdl.source.utils import MergeIterator, repeat_source
 
 
@@ -395,11 +394,13 @@ def test_execute_iterator_initializer_failure():
     def fail() -> None:
         raise ValueError("Failed!")
 
-    with pytest.raises(ValueError):
-        _execute_iterator(msg_queue, data_queue, src_fn, fail)
+    _execute_iterator(msg_queue, data_queue, src_fn, fail)
 
-    assert msg_queue.get(timeout=1) == _MSG.INITIALIZER_FAILED
     assert msg_queue.empty()
+
+    result = data_queue.get(timeout=1)
+    assert result.status == _Status.INITIALIZER_FAILED
+    assert "Failed!" in result.message
     assert data_queue.empty()
 
 
@@ -410,18 +411,19 @@ def test_execute_iterator_iterator_initialize_failure():
         raise ValueError("Failed!")
         return SourceIterable(10)
 
-    with pytest.raises(ValueError):
-        _execute_iterator(msg_queue, data_queue, src_fn, noop)
+    _execute_iterator(msg_queue, data_queue, src_fn, noop)
 
-    assert msg_queue.get(timeout=1) == _MSG.GENERATOR_FAILED
     assert msg_queue.empty()
+    result = data_queue.get(timeout=1)
+    assert result.status == _Status.GENERATOR_FAILED
+    assert "Failed!" in result.message
     assert data_queue.empty()
 
 
 def test_execute_iterator_quite_immediately():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
-    msg_queue.put(_MSG.PARENT_REQUEST_STOP)
+    msg_queue.put(_Cmd.INTERRUPT)
     time.sleep(1)
 
     def src_fn() -> Iterable[int]:
@@ -446,8 +448,10 @@ def test_execute_iterator_generator_fail():
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
 
-    assert msg_queue.get(timeout=1) == _MSG.GENERATOR_FAILED
     assert msg_queue.empty()
+    result = data_queue.get(timeout=1)
+    assert result.status == _Status.GENERATOR_FAILED
+    assert "Failed!" in result.message
     assert data_queue.empty()
 
 
@@ -466,15 +470,16 @@ def test_execute_iterator_generator_fail_after_n():
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
 
-    assert data_queue.get(timeout=1) == 0
-    assert data_queue.get(timeout=1) == 1
-    assert data_queue.get(timeout=1) == 2
-
-    with pytest.raises(Empty):
-        data_queue.get(timeout=1)
-
-    assert msg_queue.get(timeout=1) == _MSG.GENERATOR_FAILED
     assert msg_queue.empty()
+    for i in range(3):
+        result = data_queue.get(timeout=1)
+        assert result.status == _Status.GENERATOR_SUCCESS
+        assert result.message == i
+
+    result = data_queue.get(timeout=1)
+    assert result.status == _Status.GENERATOR_FAILED
+    assert "Failed!" in result.message
+    assert data_queue.empty()
 
 
 def test_execute_iterator_generator_success():
@@ -485,15 +490,15 @@ def test_execute_iterator_generator_success():
 
     _execute_iterator(msg_queue, data_queue, src_fn, noop)
 
-    assert data_queue.get(timeout=1) == 0
-    assert data_queue.get(timeout=1) == 1
-    assert data_queue.get(timeout=1) == 2
-
-    with pytest.raises(Empty):
-        data_queue.get(timeout=1)
-
-    assert msg_queue.get(timeout=1) == _MSG.ITERATION_FINISHED
     assert msg_queue.empty()
+
+    for i in range(3):
+        result = data_queue.get(timeout=1)
+        assert result.status == _Status.GENERATOR_SUCCESS
+        assert result.message == i
+
+    result = data_queue.get(timeout=1)
+    assert result.status == _Status.ITERATION_FINISHED
 
 
 def test_terate_in_subprocess_initializer_failure():
@@ -565,3 +570,21 @@ def test_iterate_in_subprocess_success():
 
     hyp = list(iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3))
     assert hyp == list(range(N))
+
+
+class SleepSourceIterable(SourceIterable):
+    def __iter__(self):
+        time.sleep(10)
+        yield 0
+
+
+def test_iterate_in_subprocess_timeout():
+    N = 3
+
+    def src_fn() -> Iterable[int]:
+        return SleepSourceIterable(N)
+
+    with pytest.raises(
+        RuntimeError, match=r"The worker process did not produce any data for"
+    ):
+        next(iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3))
