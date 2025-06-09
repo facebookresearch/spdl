@@ -9,11 +9,12 @@
 __all__ = ["IterableWithShuffle"]
 
 from collections.abc import Iterator
-from typing import Protocol, TypeVar
+from typing import Protocol, runtime_checkable, TypeVar
 
 T = TypeVar("T")
 
 
+@runtime_checkable
 class IterableWithShuffle(Protocol[T]):
     """IterableWithShuffle()
     A protocol that is often used to represent data source."""
