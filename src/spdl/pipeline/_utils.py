@@ -88,16 +88,16 @@ def create_task(
 
 # Command from parent to worker
 class _Cmd(Enum):
-    INTERRUPT = 0
+    ABORT = 0
 
 
 # Final status of the iterator
 class _Status(Enum):
     UNEXPECTED_CMD_RECIEVED = 0
-    INITIALIZER_FAILED = 1
-    GENERATOR_FAILED = 2
+    INITIALIZATION_FAILED = 1
+    ITERATOR_FAILED = 2
 
-    GENERATOR_SUCCESS = 3
+    ITERATOR_SUCCESS = 3
     ITERATION_FINISHED = 4
     # Iteration finished normally or
     # terminating early par the request from the parent
@@ -122,13 +122,34 @@ def _execute_iterator(
         try:
             initializer()
         except Exception as e:
-            data_queue.put(_Msg(_Status.INITIALIZER_FAILED, message=str(e)))
+            data_queue.put(
+                _Msg(
+                    _Status.INITIALIZATION_FAILED,
+                    message=f"Initializer failed: {e}",
+                )
+            )
             return
 
     try:
-        gen = iter(fn())
+        iterable = fn()
     except Exception as e:
-        data_queue.put(_Msg(_Status.GENERATOR_FAILED, message=str(e)))
+        data_queue.put(
+            _Msg(
+                _Status.INITIALIZATION_FAILED,
+                message=f"Failed to create the iterable: {e}",
+            )
+        )
+        return
+
+    try:
+        gen = iter(iterable)
+    except Exception as e:
+        data_queue.put(
+            _Msg(
+                _Status.ITERATOR_FAILED,
+                message=f"Failed to create the iterator: {e}",
+            )
+        )
         return
 
     while True:
@@ -138,20 +159,25 @@ def _execute_iterator(
             pass
         else:
             match cmd:
-                case _Cmd.INTERRUPT:
-                    data_queue.put(_Msg(_Status.ITERATION_FINISHED))
+                case _Cmd.ABORT:
+                    pass
                 case _:
                     data_queue.put(_Msg(_Status.UNEXPECTED_CMD_RECIEVED, str(cmd)))
             return
 
         try:
             item = next(gen)
-            data_queue.put(_Msg(_Status.GENERATOR_SUCCESS, message=item))
+            data_queue.put(_Msg(_Status.ITERATOR_SUCCESS, message=item))
         except StopIteration:
             data_queue.put(_Msg(_Status.ITERATION_FINISHED))
             return
         except Exception as e:
-            data_queue.put(_Msg(_Status.GENERATOR_FAILED, message=str(e)))
+            data_queue.put(
+                _Msg(
+                    _Status.ITERATOR_FAILED,
+                    message=f"Failed to fetch the next item: {e}",
+                )
+            )
             return
 
 
@@ -194,20 +220,14 @@ def _iterate(data_queue: mp.Queue, timeout: float) -> Iterator[object]:
             continue
         else:
             match item.status:
-                case _Status.GENERATOR_SUCCESS:
+                case _Status.ITERATOR_SUCCESS:
                     yield item.message
                 case _Status.ITERATION_FINISHED:
                     return
-                case _Status.INITIALIZER_FAILED:
-                    raise RuntimeError(
-                        "The worker process quit because the initializer failed: "
-                        f"{item.message}"
-                    )
-                case _Status.GENERATOR_FAILED:
-                    raise RuntimeError(
-                        "The worker process quit because the generator failed: "
-                        f"{item.message}"
-                    )
+                case _Status.INITIALIZATION_FAILED:
+                    raise RuntimeError(f"The worker process quit. {item.message}")
+                case _Status.ITERATOR_FAILED:
+                    raise RuntimeError(f"The worker process quit. {item.message}")
                 case _Status.UNEXPECTED_CMD_RECIEVED:
                     raise RuntimeError(
                         "[INTERNAL ERROR] The worker received unexpected command: "
@@ -269,7 +289,7 @@ def iterate_in_subprocess(
     try:
         yield from _iterate(data_queue, timeout_)  # pyre-ignore
     except (Exception, KeyboardInterrupt):
-        cmd_queue.put(_Cmd.INTERRUPT)
+        cmd_queue.put(_Cmd.ABORT)
         _drain(data_queue)
         raise
     finally:
