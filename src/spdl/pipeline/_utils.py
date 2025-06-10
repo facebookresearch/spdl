@@ -16,6 +16,7 @@ import sys
 import time
 import traceback
 from asyncio import Task
+from collections import defaultdict
 from collections.abc import Callable, Coroutine, Generator, Iterable, Iterator
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
@@ -27,6 +28,9 @@ __all__ = [
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+# Dictionary to track exception counts by file and line number
+_exception_counts: dict[tuple[str, int], int] = defaultdict(int)
 
 T = TypeVar("T")
 
@@ -42,7 +46,14 @@ T = TypeVar("T")
 # task was created.
 # Otherwise the log will point to the location somewhere deep in `asyncio` module
 # which is not very helpful.
-def _log_exception(task: Task, stacklevel: int, log_cancelled: bool) -> None:
+def _log_exception(
+    task: Task,
+    stacklevel: int,
+    log_cancelled: bool,
+    suppress_repeated_logs: bool = True,
+    suppression_threshold: int = 2,
+    suppression_warning_interval: int = 100,
+) -> None:
     try:
         task.result()
     except asyncio.exceptions.CancelledError:
@@ -56,6 +67,31 @@ def _log_exception(task: Task, stacklevel: int, log_cancelled: bool) -> None:
     except Exception as err:
         _, _, exc_tb = sys.exc_info()
         f = traceback.extract_tb(exc_tb, limit=-1)[-1]
+
+        if suppress_repeated_logs and f.filename is not None and f.lineno is not None:
+            exception_key = (f.filename, f.lineno)
+            _exception_counts[exception_key] += 1
+            count = _exception_counts[exception_key]
+            if count == suppression_threshold:
+                _LG.warning(
+                    "Errors are repeated at %s:%d:%s, holding on logging.",
+                    f.filename,
+                    f.lineno,
+                    f.name,
+                )
+                return
+            elif count > suppression_threshold:
+                if count % suppression_warning_interval == 0:
+                    _LG.warning(
+                        "%d errors were logged at %s:%d:%s.",
+                        count,
+                        f.filename,
+                        f.lineno,
+                        f.name,
+                    )
+                    return
+                else:
+                    return
 
         _LG.error(
             "Task [%s]: %s: %s (%s:%d:%s)",
@@ -73,11 +109,21 @@ def create_task(
     coro: Coroutine[Any, Any, T] | Generator[Any, None, T],  # pyre-ignore: [2]
     name: str | None = None,
     log_cancelled: bool = False,
+    suppress_repeated_logs: bool = True,
+    suppression_threshold: int = 2,
+    suppression_warning_interval: int = 100,
 ) -> Task[T]:
     """Wrapper around :py:func:`asyncio.create_task`. Add logging callback."""
     task = asyncio.create_task(coro, name=name)
     task.add_done_callback(
-        lambda t: _log_exception(t, stacklevel=3, log_cancelled=log_cancelled)
+        lambda t: _log_exception(
+            t,
+            stacklevel=3,
+            log_cancelled=log_cancelled,
+            suppress_repeated_logs=suppress_repeated_logs,
+            suppression_threshold=suppression_threshold,
+            suppression_warning_interval=suppression_warning_interval,
+        )
     )
     return task
 
