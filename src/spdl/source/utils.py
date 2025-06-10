@@ -204,7 +204,6 @@ class _ShuffleAndIterate(Iterable[T]):
     def _shuffle(self) -> None:
         t0 = time.monotonic()
         self.src.shuffle(seed=self._epoch)
-        self._epoch += 1
         if (elapsed := time.monotonic() - t0) > 3:
             _LG.warning("Shuffling took %.2f sec.", elapsed)
 
@@ -213,22 +212,41 @@ class _ShuffleAndIterate(Iterable[T]):
             self._shuffle()
 
         yield from self.src
+        self._epoch += 1
 
         if self._shuffle_last:
             self._shuffle()
 
 
 def embed_shuffle(
-    src: IterableWithShuffle[T], /, *, epoch: int = 0, shuffle_last: bool = True
+    src: IterableWithShuffle[T], /, *, shuffle_last: bool = True, epoch: int = 0
 ) -> Iterable[T]:
-    """**[Experimental]** Convert :py:class:`IterableWithShuffle` to :py:class:`Iterator`
-    by embedding the :py:meth:`~IterableWithShuffle.shuffle` call into :py:meth:`~Iterable.__iter__`.
+    """**[Experimental]** Convert :py:class:`~spdl.source.IterableWithShuffle` to
+    :py:class:`Iterable` by embedding the :py:meth:`~spdl.source.IterableWithShuffle.shuffle`
+    call into :py:meth:`~Iterable.__iter__`.
+
+
+    Roughly equivalent to the following code snippet.
+
+    .. code-block::
+
+       while True:
+            if not shuffle_last:
+                src.shuffle(seed=epoch)
+
+            yield from src
+            epoch += 1
+
+            if shuffle_last:
+                src.shuffle(seed=epoch)
 
     Args:
         src: The original iterable with ``shuffle`` method.
         shuffle_last: If ``True`` (default), then ``shuffle`` is called
             at the end of the iteration. Other wise ``shuffle`` is called
             before each iteration.
+        epoch: The initial seed value passed to
+            :py:meth:`~spdl.source.IterableWithShuffle.shuffle`.
 
     .. admonition:: Why default to shuffle after iteration?
        :class: note

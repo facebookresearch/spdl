@@ -211,22 +211,22 @@ def test_repeat_source_iterable_with_shuffle():
         assert next(gen) == 2
 
         assert next(gen) == 1
-        mock_method.assert_called_with(seed=0)
-        assert next(gen) == 2
-        assert next(gen) == 0
-
-        assert next(gen) == 2
         mock_method.assert_called_with(seed=1)
+        assert next(gen) == 2
+        assert next(gen) == 0
+
+        assert next(gen) == 2
+        mock_method.assert_called_with(seed=2)
         assert next(gen) == 0
         assert next(gen) == 1
 
         assert next(gen) == 0
-        mock_method.assert_called_with(seed=2)
+        mock_method.assert_called_with(seed=3)
         assert next(gen) == 1
         assert next(gen) == 2
 
         assert next(gen) == 1
-        mock_method.assert_called_with(seed=3)
+        mock_method.assert_called_with(seed=4)
         assert next(gen) == 2
         assert next(gen) == 0
 
@@ -626,5 +626,5 @@ def test_shuffle_and_iterate():
         hyp = list(src)
         assert hyp == ref
 
-        random.seed(i)
+        random.seed(i + 1)
         random.shuffle(ref)
