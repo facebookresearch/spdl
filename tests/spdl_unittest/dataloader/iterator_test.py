@@ -18,8 +18,22 @@ from unittest.mock import patch
 
 import pytest
 from spdl.pipeline import iterate_in_subprocess
-from spdl.pipeline._utils import _Cmd, _execute_iterator, _Status
-from spdl.source.utils import embed_shuffle, MergeIterator, repeat_source
+from spdl.pipeline._utils import (
+    _Cmd,
+    _execute_iterator,
+    _move_iterable_to_subprocess,
+    _Status,
+)
+from spdl.source.utils import (
+    embed_shuffle,
+    IterableWithShuffle,
+    MergeIterator,
+    repeat_source,
+)
+
+
+def move_iterable_to_subprocess(fn, *, timeout: float = 3, **kwargs):
+    return _move_iterable_to_subprocess(fn, timeout=timeout, **kwargs)
 
 
 def test_mergeiterator_ordered():
@@ -628,3 +642,76 @@ def test_shuffle_and_iterate():
 
         random.seed(i + 1)
         random.shuffle(ref)
+
+
+def _fail_initializer():
+    raise RuntimeError("Failed!")
+
+
+def test_move_iterable_to_subprocess_initializer_fail():
+    """The initialization failure is propagated to the main process"""
+
+    with pytest.raises(RuntimeError, match=r"Initializer failed"):
+        move_iterable_to_subprocess(SourceIterable, initializer=_fail_initializer)
+
+
+def test_move_iterable_to_subprocess_iterable_creation_fail():
+    """The initialization failure is propagated to the main process"""
+
+    with pytest.raises(RuntimeError, match=r"Failed to create the iterable"):
+        move_iterable_to_subprocess(SourceIterable)
+
+
+def test_move_iterable_to_subprocess_success_simple_iterable():
+    iterator = move_iterable_to_subprocess(partial(SourceIterable, 3))
+
+    assert list(iterator) == [0, 1, 2]
+    assert list(iterator) == [0, 1, 2]
+    assert list(iterator) == [0, 1, 2]
+
+
+global _VERY_BAD_REFERENCE
+
+
+def test_move_iterable_to_subprocess_fail_not_stuck():
+    """An exception does not make Python stack.
+
+    If a (non-daemon) subprocess is launched without a context manager
+    that ensures its clean exit, raising an exception while the reference
+    to the process object is held causes the Python interpreter to get
+    stuck at the exit.
+
+    To avoid this, we register atexit function, which push the ABORT
+    command to the command queue, which will be received by the subprocess
+    if the subprocess is not shut down. This test ensures that behavior.
+    """
+
+    global _VERY_BAD_REFERENCE
+    _VERY_BAD_REFERENCE = move_iterable_to_subprocess(partial(SourceIterable, 3))
+    # Now the Python won't exit unless there is a mechanism to
+    # terminate the process.
+    # See the use of `atexit` of `move_iterable_to_subprocess` func.
+
+
+class SourceIterableWithShuffle(IterableWithShuffle[int]):
+    def __init__(self, n: int) -> None:
+        self.i = 0
+        self.vals = list(range(n))
+
+    def shuffle(self, seed: int) -> None:
+        assert isinstance(seed, int)
+        self.vals = self.vals[1:] + self.vals[:1]
+
+    def __iter__(self) -> Iterator[int]:
+        yield from self.vals
+
+
+def test_move_iterable_to_subprocess_success_iterable_with_shuffle():
+    """IterableWithShuffle can be executed in the subprocess."""
+    iterator = move_iterable_to_subprocess(
+        partial(embed_shuffle, SourceIterableWithShuffle(3))
+    )
+
+    assert list(iterator) == [0, 1, 2]
+    assert list(iterator) == [1, 2, 0]
+    assert list(iterator) == [2, 0, 1]
