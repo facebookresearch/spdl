@@ -6,19 +6,15 @@
 
 """Implements meta-transformations on iterables/iterators."""
 
-__all__ = ["MergeIterator", "repeat_source"]
+__all__ = ["MergeIterator", "repeat_source", "embed_shuffle"]
 
 
 import logging
 import random
 import sys
 import time
-from collections.abc import (
-    Iterable,
-    Iterator,
-    Sequence,
-)
-from typing import Any, TypeVar
+from collections.abc import Iterable, Iterator, Sequence
+from typing import TypeVar
 
 from ._type import IterableWithShuffle
 
@@ -193,6 +189,59 @@ class MergeIterator(Iterable[T]):
 
 
 ################################################################################
+# embed_shuffle
+################################################################################
+
+
+class _ShuffleAndIterate(Iterable[T]):
+    def __init__(
+        self, src: IterableWithShuffle[T], *, epoch: int, shuffle_last: bool
+    ) -> None:
+        self.src = src
+        self._epoch = epoch
+        self._shuffle_last = shuffle_last
+
+    def _shuffle(self) -> None:
+        t0 = time.monotonic()
+        self.src.shuffle(seed=self._epoch)
+        self._epoch += 1
+        if (elapsed := time.monotonic() - t0) > 3:
+            _LG.warning("Shuffling took %.2f sec.", elapsed)
+
+    def __iter__(self) -> Iterator[T]:
+        if not self._shuffle_last:
+            self._shuffle()
+
+        yield from self.src
+
+        if self._shuffle_last:
+            self._shuffle()
+
+
+def embed_shuffle(
+    src: IterableWithShuffle[T], /, *, epoch: int = 0, shuffle_last: bool = True
+) -> Iterable[T]:
+    """**[Experimental]** Convert :py:class:`IterableWithShuffle` to :py:class:`Iterator`
+    by embedding the :py:meth:`~IterableWithShuffle.shuffle` call into :py:meth:`~Iterable.__iter__`.
+
+    Args:
+        src: The original iterable with ``shuffle`` method.
+        shuffle_last: If ``True`` (default), then ``shuffle`` is called
+            at the end of the iteration. Other wise ``shuffle`` is called
+            before each iteration.
+
+    .. admonition:: Why default to shuffle after iteration?
+       :class: note
+
+       Shuffling at the beginning of an iteration blocks the pipeline
+       entirely.
+       Shuffling after the iteration gives an opportunity to hide the
+       overhead of shuffling behind the pipeline execution.
+    """
+    return _ShuffleAndIterate(src, epoch=epoch, shuffle_last=shuffle_last)
+
+
+################################################################################
 # repeat_source
 ################################################################################
 
@@ -201,10 +250,6 @@ def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T
     while True:
         _LG.info("Starting source epoch %d.", epoch)
         t0 = time.monotonic()
-        if hasattr(src, "shuffle"):
-            src.shuffle(seed=epoch)  # pyre-ignore: [16]
-            if (elapsed := time.monotonic() - t0) > 3:
-                _LG.warning("Shuffling took %.2f sec.", elapsed)
         num_rows = 0
         for batch in src:
             num_rows += 1
@@ -222,11 +267,7 @@ def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T
 
 
 class _RepeatIterator(Iterator[T]):
-    def __init__(
-        self,
-        src: Iterable[T] | IterableWithShuffle[T],
-        epoch: int = 0,
-    ) -> None:
+    def __init__(self, src: Iterable[T], epoch: int) -> None:
         self.src = src
         self.epoch = epoch
         self._iter: Iterator[T] | None = None
@@ -234,7 +275,7 @@ class _RepeatIterator(Iterator[T]):
     def __iter__(self) -> Iterator[T]:
         return self
 
-    def __getstate__(self) -> dict[str, Any]:  # pyre-ignore: [11]
+    def __getstate__(self) -> dict[str, object]:
         if self._iter is not None:
             raise ValueError("Cannot pickle after iteration is started.")
         return self.__dict__
@@ -247,6 +288,7 @@ class _RepeatIterator(Iterator[T]):
 
 def repeat_source(
     src: Iterable[T] | IterableWithShuffle[T],
+    /,
     epoch: int = 0,
 ) -> Iterator[T]:
     """Convert an iterable into an infinite iterator with optional shuffling.
@@ -256,14 +298,16 @@ def repeat_source(
     .. code-block::
 
        while True:
+           yield from src
+
+           epoch += 1
            if hasattr(src, "shuffle"):
                src.shuffle(seed=epoch)
-           yield from src
-           epoch += 1
 
     Args:
         src: The source to repeat.
         epoch: The epoch number to start with.
     """
+    src_ = embed_shuffle(src) if isinstance(src, IterableWithShuffle) else src
     # Returning object so that it can be passed to a subprocess.
-    return _RepeatIterator(src, epoch)
+    return _RepeatIterator(src_, epoch)

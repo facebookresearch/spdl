@@ -19,7 +19,7 @@ from unittest.mock import patch
 import pytest
 from spdl.pipeline import iterate_in_subprocess
 from spdl.pipeline._utils import _Cmd, _execute_iterator, _Status
-from spdl.source.utils import MergeIterator, repeat_source
+from spdl.source.utils import embed_shuffle, MergeIterator, repeat_source
 
 
 def test_mergeiterator_ordered():
@@ -206,23 +206,27 @@ def test_repeat_source_iterable_with_shuffle():
     gen = iter(repeat_source(src, epoch=2))
 
     with patch.object(src, "shuffle", side_effect=src.shuffle) as mock_method:
+        assert next(gen) == 0
         assert next(gen) == 1
+        assert next(gen) == 2
+
+        assert next(gen) == 1
+        mock_method.assert_called_with(seed=0)
+        assert next(gen) == 2
+        assert next(gen) == 0
+
+        assert next(gen) == 2
+        mock_method.assert_called_with(seed=1)
+        assert next(gen) == 0
+        assert next(gen) == 1
+
+        assert next(gen) == 0
         mock_method.assert_called_with(seed=2)
+        assert next(gen) == 1
         assert next(gen) == 2
-        assert next(gen) == 0
 
-        assert next(gen) == 2
+        assert next(gen) == 1
         mock_method.assert_called_with(seed=3)
-        assert next(gen) == 0
-        assert next(gen) == 1
-
-        assert next(gen) == 0
-        mock_method.assert_called_with(seed=4)
-        assert next(gen) == 1
-        assert next(gen) == 2
-
-        assert next(gen) == 1
-        mock_method.assert_called_with(seed=5)
         assert next(gen) == 2
         assert next(gen) == 0
 
@@ -588,3 +592,39 @@ def test_iterate_in_subprocess_timeout():
         RuntimeError, match=r"The worker process did not produce any data for"
     ):
         next(iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3))
+
+
+class IterableWithShuffleSource:
+    def __init__(self, n: int) -> None:
+        self.vals = list(range(n))
+
+    def __iter__(self) -> Iterator[int]:
+        yield from self.vals
+
+    def shuffle(self, seed: int) -> None:
+        random.seed(seed)
+        random.shuffle(self.vals)
+
+
+def test_shuffle_and_iterate_picklable():
+    """The result of embed_shuffle must be pickable (for multiprocessing)"""
+
+    src = embed_shuffle(IterableWithShuffleSource(10))
+    state = pickle.dumps(src)
+    src2 = pickle.loads(state)
+
+    assert src.src.vals == src2.src.vals
+
+
+def test_shuffle_and_iterate():
+    N = 10
+
+    src = embed_shuffle(IterableWithShuffleSource(N))
+
+    ref = list(range(N))
+    for i in range(3):
+        hyp = list(src)
+        assert hyp == ref
+
+        random.seed(i)
+        random.shuffle(ref)
