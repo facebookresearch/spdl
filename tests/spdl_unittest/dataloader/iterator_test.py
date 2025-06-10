@@ -403,7 +403,7 @@ def test_execute_iterator_initializer_failure():
     assert msg_queue.empty()
 
     result = data_queue.get(timeout=1)
-    assert result.status == _Status.INITIALIZER_FAILED
+    assert result.status == _Status.INITIALIZATION_FAILED
     assert "Failed!" in result.message
     assert data_queue.empty()
 
@@ -419,7 +419,7 @@ def test_execute_iterator_iterator_initialize_failure():
 
     assert msg_queue.empty()
     result = data_queue.get(timeout=1)
-    assert result.status == _Status.GENERATOR_FAILED
+    assert result.status == _Status.INITIALIZATION_FAILED
     assert "Failed!" in result.message
     assert data_queue.empty()
 
@@ -427,7 +427,7 @@ def test_execute_iterator_iterator_initialize_failure():
 def test_execute_iterator_quite_immediately():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
-    msg_queue.put(_Cmd.INTERRUPT)
+    msg_queue.put(_Cmd.ABORT)
     time.sleep(1)
 
     def src_fn() -> Iterable[int]:
@@ -454,7 +454,7 @@ def test_execute_iterator_generator_fail():
 
     assert msg_queue.empty()
     result = data_queue.get(timeout=1)
-    assert result.status == _Status.GENERATOR_FAILED
+    assert result.status == _Status.ITERATOR_FAILED
     assert "Failed!" in result.message
     assert data_queue.empty()
 
@@ -477,11 +477,11 @@ def test_execute_iterator_generator_fail_after_n():
     assert msg_queue.empty()
     for i in range(3):
         result = data_queue.get(timeout=1)
-        assert result.status == _Status.GENERATOR_SUCCESS
+        assert result.status == _Status.ITERATOR_SUCCESS
         assert result.message == i
 
     result = data_queue.get(timeout=1)
-    assert result.status == _Status.GENERATOR_FAILED
+    assert result.status == _Status.ITERATOR_FAILED
     assert "Failed!" in result.message
     assert data_queue.empty()
 
@@ -498,7 +498,7 @@ def test_execute_iterator_generator_success():
 
     for i in range(3):
         result = data_queue.get(timeout=1)
-        assert result.status == _Status.GENERATOR_SUCCESS
+        assert result.status == _Status.ITERATOR_SUCCESS
         assert result.message == i
 
     result = data_queue.get(timeout=1)
@@ -514,7 +514,7 @@ def test_terate_in_subprocess_initializer_failure():
 
     ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3, initializer=fail)
 
-    with pytest.raises(RuntimeError, match=r"the initializer failed"):
+    with pytest.raises(RuntimeError, match=r"Initializer failed"):
         next(ite)
 
 
@@ -525,7 +525,7 @@ def test_iterate_in_subprocess_iterator_initialize_failure():
 
     ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
 
-    with pytest.raises(RuntimeError, match=r"the generator failed"):
+    with pytest.raises(RuntimeError, match=r"Failed to create the iterable"):
         next(ite)
 
 
@@ -540,7 +540,7 @@ def test_iterate_in_subprocess_generator_fail():
 
     ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
 
-    with pytest.raises(RuntimeError, match=r"the generator failed"):
+    with pytest.raises(RuntimeError, match=r"Failed to fetch the next item"):
         next(ite)
 
 
@@ -562,7 +562,7 @@ def test_iterate_in_subprocess_fail_after_n():
     assert next(ite) == 1
     assert next(ite) == 2
 
-    with pytest.raises(RuntimeError, match=r"the generator failed"):
+    with pytest.raises(RuntimeError, match=r"Failed to fetch the next item"):
         next(ite)
 
 
