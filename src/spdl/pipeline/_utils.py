@@ -180,75 +180,6 @@ class _Msg(Generic[T]):
     message: T | str = ""
 
 
-def _execute_iterator(
-    cmd_queue: mp.Queue,
-    data_queue: mp.Queue,
-    fn: Callable[[], Iterator[T]],
-    initializer: Callable[[], None],
-) -> None:
-    if initializer is not None:
-        try:
-            initializer()
-        except Exception as e:
-            data_queue.put(
-                _Msg(
-                    _Status.INITIALIZATION_FAILED,
-                    message=f"Initializer failed: {e}",
-                )
-            )
-            return
-
-    try:
-        iterable = fn()
-    except Exception as e:
-        data_queue.put(
-            _Msg(
-                _Status.INITIALIZATION_FAILED,
-                message=f"Failed to create the iterable: {e}",
-            )
-        )
-        return
-
-    try:
-        gen = iter(iterable)
-    except Exception as e:
-        data_queue.put(
-            _Msg(
-                _Status.ITERATOR_FAILED,
-                message=f"Failed to create the iterator: {e}",
-            )
-        )
-        return
-
-    while True:
-        try:
-            cmd = cmd_queue.get_nowait()
-        except queue.Empty:
-            pass
-        else:
-            match cmd:
-                case _Cmd.ABORT:
-                    pass
-                case _:
-                    data_queue.put(_Msg(_Status.UNEXPECTED_CMD_RECIEVED, str(cmd)))
-            return
-
-        try:
-            item = next(gen)
-            data_queue.put(_Msg(_Status.ITERATOR_SUCCESS, message=item))
-        except StopIteration:
-            data_queue.put(_Msg(_Status.ITERATION_FINISHED))
-            return
-        except Exception as e:
-            data_queue.put(
-                _Msg(
-                    _Status.ITERATOR_FAILED,
-                    message=f"Failed to fetch the next item: {e}",
-                )
-            )
-            return
-
-
 def _drain(q: queue.Queue[T]) -> None:
     while not q.empty():
         q.get_nowait()
@@ -269,99 +200,6 @@ def _join(process: mp.Process) -> None:
 
     if process.exitcode is None:
         _LG.warning("Failed to kill the worker process.")
-
-
-def _iterate(data_queue: mp.Queue, timeout: float) -> Iterator[object]:
-    wait = min(0.1, timeout)
-
-    t0 = time.monotonic()
-    while True:
-        try:
-            item: _Msg[object] = data_queue.get(timeout=wait)
-            t0 = time.monotonic()
-        except queue.Empty:
-            if (elapsed := time.monotonic() - t0) > timeout:
-                raise RuntimeError(
-                    "The worker process did not produce any data for "
-                    f"{elapsed:.2f} seconds."
-                ) from None
-            continue
-        else:
-            match item.status:
-                case _Status.ITERATOR_SUCCESS:
-                    yield item.message
-                case _Status.ITERATION_FINISHED:
-                    return
-                case _Status.INITIALIZATION_FAILED:
-                    raise RuntimeError(f"The worker process quit. {item.message}")
-                case _Status.ITERATOR_FAILED:
-                    raise RuntimeError(f"The worker process quit. {item.message}")
-                case _Status.UNEXPECTED_CMD_RECIEVED:
-                    raise RuntimeError(
-                        "[INTERNAL ERROR] The worker received unexpected command: "
-                        f"{item.message}"
-                    )
-                case _:
-                    raise RuntimeError(
-                        f"[INTERNAL ERROR] Unexpected return value: {item}"
-                    )
-
-
-def iterate_in_subprocess(
-    fn: Callable[[], Iterable[T]],
-    *,
-    buffer_size: int = 3,
-    initializer: Callable[[], None] | None = None,
-    mp_context: str | None = None,
-    timeout: float | None = None,
-    daemon: bool = False,
-) -> Iterator[T]:
-    """Run an iterator in a separate process, and yield the results one by one.
-
-    Args:
-        fn: Function that returns an iterator. Use :py:func:`functools.partial` to
-            pass arguments to the function.
-        buffer_size: Maximum number of items to buffer in the queue.
-        initializer: A function executed in the subprocess before iteration starts.
-        mp_context: Context to use for multiprocessing.
-            If not specified, a default method is used.
-        timeout: Timeout for inactivity. If the generator function does not yield
-            any item for this amount of time, the process is terminated.
-        daemon: Whether to run the process as a daemon. Use it only for debugging.
-
-    Returns:
-        Iterator over the results of the generator function.
-
-    .. note::
-
-       The function and the values yielded by the iterator of generator must be picklable.
-
-    .. seealso::
-
-       - :py:func:`run_pipeline_in_subprocess` for runinng a :py:class:`Pipeline` in
-         a subprocess
-       - :ref:`parallelism-performance` for the context in which this function was created.
-
-    """
-    ctx = mp.get_context(mp_context)
-    cmd_queue = ctx.Queue()
-    data_queue: queue.Queue[T] = ctx.Queue(maxsize=buffer_size)
-
-    process = ctx.Process(
-        target=_execute_iterator,
-        args=(cmd_queue, data_queue, fn, initializer),
-        daemon=daemon,
-    )
-    process.start()
-    timeout_ = float("inf") if timeout is None else timeout
-    try:
-        yield from _iterate(data_queue, timeout_)  # pyre-ignore
-    except (Exception, KeyboardInterrupt):
-        cmd_queue.put(_Cmd.ABORT)
-        _drain(data_queue)
-        raise
-    finally:
-        _join(process)
 
 
 @dataclass
@@ -665,7 +503,7 @@ class _SubprocessIterable(Iterable[T]):
         self._shutdown()
 
 
-def _move_iterable_to_subprocess(
+def iterate_in_subprocess(
     fn: Callable[[], Iterable[T]],
     *,
     buffer_size: int = 3,
