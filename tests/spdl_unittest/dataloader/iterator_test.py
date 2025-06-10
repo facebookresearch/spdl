@@ -11,19 +11,15 @@ import os.path
 import pickle
 import random
 import tempfile
+import threading
 import time
 from collections.abc import Iterable, Iterator
 from functools import partial
 from unittest.mock import patch
 
 import pytest
-from spdl.pipeline import iterate_in_subprocess
-from spdl.pipeline._utils import (
-    _Cmd,
-    _execute_iterator,
-    _move_iterable_to_subprocess,
-    _Status,
-)
+from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
+from spdl.pipeline._utils import _Cmd, _execute_iterable, _Status
 from spdl.source.utils import (
     embed_shuffle,
     IterableWithShuffle,
@@ -32,8 +28,8 @@ from spdl.source.utils import (
 )
 
 
-def move_iterable_to_subprocess(fn, *, timeout: float = 3, **kwargs):
-    return _move_iterable_to_subprocess(fn, timeout=timeout, **kwargs)
+def iterate_in_subprocess(fn, *, timeout=5, **kwargs):
+    return _iterate_in_subprocess(fn, timeout=timeout, **kwargs)
 
 
 def test_mergeiterator_ordered():
@@ -314,20 +310,19 @@ def test_iterate_in_subprocess_initializer():
             initializer=partial(initializer, path=path, val=val),
             buffer_size=1,
         )
-        assert not os.path.exists(path)
-
-        assert next(src) == 0
-
         assert os.path.exists(path)
+
+        ite = iter(src)
+        assert next(ite) == 0
 
         with open(path, "r") as f:
             assert f.read() == val
 
     for i in range(1, N):
-        assert next(src) == i
+        assert next(ite) == i
 
     with pytest.raises(StopIteration):
-        next(src)
+        next(ite)
 
 
 def iter_range_and_store(n: int, path: str) -> Iterable[int]:
@@ -351,7 +346,8 @@ def test_iterate_in_subprocess_buffer_size_1():
             daemon=True,
             buffer_size=1,
         )
-        assert src.send(None) == 0
+        ite = iter(src)
+        assert next(ite) == 0
 
         for i in range(N):
             time.sleep(0.1)
@@ -359,10 +355,10 @@ def test_iterate_in_subprocess_buffer_size_1():
             with open(path, "r") as f:
                 assert int(f.read()) == i
 
-            assert next(src) == i
+            assert next(ite) == i
 
         with pytest.raises(StopIteration):
-            next(src)
+            next(ite)
 
 
 def test_iterate_in_subprocess_buffer_size_64():
@@ -378,17 +374,18 @@ def test_iterate_in_subprocess_buffer_size_64():
             daemon=True,
             buffer_size=64,
         )
-        assert src.send(None) == 0
+        ite = iter(src)
+        assert next(ite) == 0
 
         time.sleep(0.1)
         for i in range(N):
             with open(path, "r") as f:
                 assert int(f.read()) == 9
 
-            assert next(src) == i
+            assert next(ite) == i
 
         with pytest.raises(StopIteration):
-            next(src)
+            next(ite)
 
 
 class SourceIterable:
@@ -403,7 +400,7 @@ def noop() -> None:
     pass
 
 
-def test_execute_iterator_initializer_failure():
+def test_execute_iterable_initializer_failure():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
     def src_fn() -> Iterable[int]:
@@ -412,7 +409,7 @@ def test_execute_iterator_initializer_failure():
     def fail() -> None:
         raise ValueError("Failed!")
 
-    _execute_iterator(msg_queue, data_queue, src_fn, fail)
+    _execute_iterable(msg_queue, data_queue, src_fn, fail)
 
     assert msg_queue.empty()
 
@@ -422,14 +419,14 @@ def test_execute_iterator_initializer_failure():
     assert data_queue.empty()
 
 
-def test_execute_iterator_iterator_initialize_failure():
+def test_execute_iterable_iterator_initialize_failure():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
     def src_fn() -> Iterator[int]:
         raise ValueError("Failed!")
         return SourceIterable(10)
 
-    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+    _execute_iterable(msg_queue, data_queue, src_fn, noop)
 
     assert msg_queue.empty()
     result = data_queue.get(timeout=1)
@@ -438,7 +435,7 @@ def test_execute_iterator_iterator_initialize_failure():
     assert data_queue.empty()
 
 
-def test_execute_iterator_quite_immediately():
+def test_execute_iterable_quite_immediately():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
     msg_queue.put(_Cmd.ABORT)
@@ -447,13 +444,16 @@ def test_execute_iterator_quite_immediately():
     def src_fn() -> Iterable[int]:
         return SourceIterable(10)
 
-    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+    _execute_iterable(msg_queue, data_queue, src_fn, noop)
+    time.sleep(1)
 
     assert msg_queue.empty()
+    ack = data_queue.get(timeout=1)
+    assert ack.status == _Status.INITIALIZATION_SUCCEEDED
     assert data_queue.empty()
 
 
-def test_execute_iterator_generator_fail():
+def test_execute_iterable_generator_fail():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
     class SourceIterableFails(SourceIterable):
@@ -464,16 +464,23 @@ def test_execute_iterator_generator_fail():
     def src_fn() -> Iterable[int]:
         return SourceIterableFails(10)
 
-    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+    msg_queue.put(_Cmd.START_ITERATION)
+    _execute_iterable(msg_queue, data_queue, src_fn, noop)
 
     assert msg_queue.empty()
+
+    ack = data_queue.get(timeout=1)
+    assert ack.status == _Status.INITIALIZATION_SUCCEEDED
+    ack = data_queue.get(timeout=1)
+    assert ack.status == _Status.ITERATION_STARTED
+
     result = data_queue.get(timeout=1)
     assert result.status == _Status.ITERATOR_FAILED
     assert "Failed!" in result.message
     assert data_queue.empty()
 
 
-def test_execute_iterator_generator_fail_after_n():
+def test_execute_iterable_generator_fail_after_n():
     msg_queue, data_queue = mp.Queue(), mp.Queue()
 
     class SourceIterableFails(SourceIterable):
@@ -486,9 +493,15 @@ def test_execute_iterator_generator_fail_after_n():
     def src_fn() -> Iterable[int]:
         return SourceIterableFails(10)
 
-    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+    msg_queue.put(_Cmd.START_ITERATION)
+    _execute_iterable(msg_queue, data_queue, src_fn, noop)
 
     assert msg_queue.empty()
+
+    ack = data_queue.get(timeout=1)
+    assert ack.status == _Status.INITIALIZATION_SUCCEEDED
+    ack = data_queue.get(timeout=1)
+    assert ack.status == _Status.ITERATION_STARTED
     for i in range(3):
         result = data_queue.get(timeout=1)
         assert result.status == _Status.ITERATOR_SUCCESS
@@ -506,10 +519,25 @@ def test_execute_iterator_generator_success():
     def src_fn() -> Iterable[int]:
         return SourceIterable(3)
 
-    _execute_iterator(msg_queue, data_queue, src_fn, noop)
+    msg_queue.put(_Cmd.START_ITERATION)
+
+    # Add abort with delay, so that _execute_iterable can exit after
+    # the iteration
+    def done():
+        time.sleep(3)
+        msg_queue.put(_Cmd.ABORT)
+
+    t = threading.Thread(target=done)
+    t.start()
+    _execute_iterable(msg_queue, data_queue, src_fn, noop)
+    t.join()
 
     assert msg_queue.empty()
 
+    ack = data_queue.get(timeout=1)
+    assert ack.status == _Status.INITIALIZATION_SUCCEEDED
+    ack = data_queue.get(timeout=1)
+    assert ack.status == _Status.ITERATION_STARTED
     for i in range(3):
         result = data_queue.get(timeout=1)
         assert result.status == _Status.ITERATOR_SUCCESS
@@ -526,10 +554,8 @@ def test_terate_in_subprocess_initializer_failure():
     def fail() -> None:
         raise ValueError("Failed!")
 
-    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3, initializer=fail)
-
     with pytest.raises(RuntimeError, match=r"Initializer failed"):
-        next(ite)
+        iterate_in_subprocess(src_fn, buffer_size=1, timeout=3, initializer=fail)
 
 
 def test_iterate_in_subprocess_iterator_initialize_failure():
@@ -537,10 +563,8 @@ def test_iterate_in_subprocess_iterator_initialize_failure():
         raise ValueError("Failed!")
         return SourceIterable(10)
 
-    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
-
     with pytest.raises(RuntimeError, match=r"Failed to create the iterable"):
-        next(ite)
+        iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
 
 
 def test_iterate_in_subprocess_generator_fail():
@@ -552,7 +576,7 @@ def test_iterate_in_subprocess_generator_fail():
     def src_fn() -> Iterable[int]:
         return SourceIterableFails(10)
 
-    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
+    ite = iter(iterate_in_subprocess(src_fn, buffer_size=1, timeout=3))
 
     with pytest.raises(RuntimeError, match=r"Failed to fetch the next item"):
         next(ite)
@@ -571,7 +595,7 @@ def test_iterate_in_subprocess_fail_after_n():
     def src_fn() -> Iterable[int]:
         return SourceIterableFails(N)
 
-    ite = iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
+    ite = iter(iterate_in_subprocess(src_fn, buffer_size=1, timeout=3))
     assert next(ite) == 0
     assert next(ite) == 1
     assert next(ite) == 2
@@ -602,10 +626,12 @@ def test_iterate_in_subprocess_timeout():
     def src_fn() -> Iterable[int]:
         return SleepSourceIterable(N)
 
+    iterable = iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3)
+    iterator = iter(iterable)
     with pytest.raises(
         RuntimeError, match=r"The worker process did not produce any data for"
     ):
-        next(iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3))
+        next(iterator)
 
 
 class IterableWithShuffleSource:
@@ -648,22 +674,22 @@ def _fail_initializer():
     raise RuntimeError("Failed!")
 
 
-def test_move_iterable_to_subprocess_initializer_fail():
+def test_iterate_in_subprocess_initializer_fail():
     """The initialization failure is propagated to the main process"""
 
     with pytest.raises(RuntimeError, match=r"Initializer failed"):
-        move_iterable_to_subprocess(SourceIterable, initializer=_fail_initializer)
+        iterate_in_subprocess(SourceIterable, initializer=_fail_initializer)
 
 
-def test_move_iterable_to_subprocess_iterable_creation_fail():
+def test_iterate_in_subprocess_iterable_creation_fail():
     """The initialization failure is propagated to the main process"""
 
     with pytest.raises(RuntimeError, match=r"Failed to create the iterable"):
-        move_iterable_to_subprocess(SourceIterable)
+        iterate_in_subprocess(SourceIterable)
 
 
-def test_move_iterable_to_subprocess_success_simple_iterable():
-    iterator = move_iterable_to_subprocess(partial(SourceIterable, 3))
+def test_iterate_in_subprocess_success_simple_iterable():
+    iterator = iterate_in_subprocess(partial(SourceIterable, 3))
 
     assert list(iterator) == [0, 1, 2]
     assert list(iterator) == [0, 1, 2]
@@ -673,7 +699,7 @@ def test_move_iterable_to_subprocess_success_simple_iterable():
 global _VERY_BAD_REFERENCE
 
 
-def test_move_iterable_to_subprocess_fail_not_stuck():
+def test_iterate_in_subprocess_fail_not_stuck():
     """An exception does not make Python stack.
 
     If a (non-daemon) subprocess is launched without a context manager
@@ -687,10 +713,10 @@ def test_move_iterable_to_subprocess_fail_not_stuck():
     """
 
     global _VERY_BAD_REFERENCE
-    _VERY_BAD_REFERENCE = move_iterable_to_subprocess(partial(SourceIterable, 3))
+    _VERY_BAD_REFERENCE = iterate_in_subprocess(partial(SourceIterable, 3))
     # Now the Python won't exit unless there is a mechanism to
     # terminate the process.
-    # See the use of `atexit` of `move_iterable_to_subprocess` func.
+    # See the use of `atexit` of `iterate_in_subprocess` func.
 
 
 class SourceIterableWithShuffle(IterableWithShuffle[int]):
@@ -708,7 +734,7 @@ class SourceIterableWithShuffle(IterableWithShuffle[int]):
 
 def test_move_iterable_to_subprocess_success_iterable_with_shuffle():
     """IterableWithShuffle can be executed in the subprocess."""
-    iterator = move_iterable_to_subprocess(
+    iterator = iterate_in_subprocess(
         partial(embed_shuffle, SourceIterableWithShuffle(3))
     )
 
