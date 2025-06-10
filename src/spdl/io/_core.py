@@ -255,7 +255,7 @@ class Demuxer:
     ):
         """Stream demux packets from the source.
 
-        .. abmonition:: Example - Streaming decoding audio
+        .. admonition:: Example - Streaming decoding audio
 
            src = "foo.mp4"
            with spdl.io.Demuxer(src) as demuxer:
