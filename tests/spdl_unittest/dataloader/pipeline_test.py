@@ -21,6 +21,7 @@ from typing import TypeVar
 
 import pytest
 from spdl.pipeline import (
+    AsyncQueue,
     PipelineBuilder,
     PipelineFailure,
     run_pipeline_in_subprocess,
@@ -32,7 +33,7 @@ from spdl.pipeline._components._pipe import _FailCounter, _pipe, _PipeArgs
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
 from spdl.pipeline._hook import _periodic_dispatch
-from spdl.pipeline._queue import AsyncQueue
+from spdl.source.utils import embed_shuffle
 
 T = TypeVar("T")
 
@@ -1757,3 +1758,39 @@ def test_pipeline_propagate_source_failure():
     with pytest.raises(RuntimeError):
         with pipeline.auto_stop():
             pass
+
+
+class TestIterableWithShuffle:
+    def __init__(self, n: int) -> None:
+        self.vals = list(range(n))
+        self.seed = 0
+
+    def shuffle(self, *, seed: int) -> None:
+        self.vals = self.vals[1:] + self.vals[:1]
+        self.seed = seed
+
+    def __iter__(self) -> Iterator[int]:
+        yield from self.vals
+
+
+def test_run_pipeline_in_subprocess_state():
+    """The status of the source is maintained and propagated properly in subprocess"""
+    n = 5
+
+    src = embed_shuffle(TestIterableWithShuffle(n))
+    builder = PipelineBuilder().add_source(src).add_sink()
+    iterable = run_pipeline_in_subprocess(builder, num_threads=1)
+
+    assert list(iterable) == [0, 1, 2, 3, 4]
+    assert list(iterable) == [1, 2, 3, 4, 0]
+    assert list(iterable) == [2, 3, 4, 0, 1]
+
+    # since the src is copied to the subprocess iterating it yields the original state
+
+    assert src.src.seed == 0
+    assert list(src) == [0, 1, 2, 3, 4]
+    assert src.src.seed == 1
+    assert list(src) == [1, 2, 3, 4, 0]
+    assert src.src.seed == 2
+    assert list(src) == [2, 3, 4, 0, 1]
+    assert src.src.seed == 3
