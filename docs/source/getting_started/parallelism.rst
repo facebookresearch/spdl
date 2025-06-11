@@ -10,6 +10,8 @@ You can also use a ``Pipeline`` objects as source iterator of another ``Pipeline
 When experimenting, this flexibility makes it easy to switch multi-threading,
 multi-processing and mixtures of them.
 
+.. image:: ../_static/data/parallelism_architecture.png
+
 Specifying an executor
 ----------------------
 
