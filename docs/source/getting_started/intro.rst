@@ -31,6 +31,8 @@ The following snippet demonstrates how one can construct a
 The resulting :py:class:`Pipeline` object contains all the logic to
 perform the operations in an async event loop in a background thread.
 
+.. image:: ../_static/data/pipeline_definition.png
+
 Running a Pipeline
 ------------------
                       
