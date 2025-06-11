@@ -229,7 +229,7 @@ The :py:func:`spdl.pipeline.run_pipeline_in_subprocess` function moves the given
 instance of :py:class:`PipelineBuilder` to a subprocess, build and execute the
 :py:class:`Pipeline` and put the results to inter-process queue.
 (There is also :py:func:`spdl.pipeline.iterate_in_subprocess` function for
-running a generic :py:class:`Iterable` object in subprocess.)
+running a generic :py:class:`~collections.abc.Iterable` object in subprocess.)
 
 The following example shows how to use the function.
 
@@ -245,11 +245,52 @@ The following example shows how to use the function.
    )
 
    # Move it to the subprocess, build the Pipeline
-   iterator = run_pipeline_in_subprocess(builder)
+   iterable = run_pipeline_in_subprocess(builder, ...)
+
+   # Iterate - epoch 0
+   for item in iterable:
+       ...
+
+   # Iterate - epoch 1
+   for item in iterable:
+       ...
+
+Since the result of the ``run_pipeline_in_subprocess`` is an ``iterable``,
+you can build a pipeline on top of it.
+
+This allows to build a pipeline that creates a batch object in a subprocess,
+then transfer the batch to the GPU in a background thread in the main process.
+We refer this pattern as MTP ("multi-threading in subprocess").
+
+.. code-block:: python
+
+   # Pipeline that fetch data, load then colate.
+   builder = (
+       PipelineBuilder()
+       .add_source(Dataset(...))
+       .pipe(download, concurrency=...)
+       .pipe(load, concurrency=...)
+       .aggregate(batch_size)
+       .pipe(collate)
+       .add_sink(...)
+   )
+
+   src = run_pipeline_in_subprocess(builder, ...)
+
+   # Build another pipeline on top of it, which transfers the data to a
+   # GPU
+   pipeline = (
+       PipelineBuilder()
+       .add_source(src)
+       .pipe(gpu_transfer)
+       .add_sink(...)
+       .build(...)
+   )
 
    # Iterate
-   for item in iterator:
+   for batch in pipeline:
        ...
+
 
 The MTP mode helps the OS to schedule GPU kernel launches from the main thread
 (where the training loop is running) in timely manner, and reduces the

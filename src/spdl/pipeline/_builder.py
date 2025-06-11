@@ -406,23 +406,33 @@ class PipelineBuilder(Generic[T, U]):
 ################################################################################
 
 
-def _run_pipeline(
-    builder: PipelineBuilder[T, U],
-    num_threads: int,
-    max_failures: int,
-    report_stats_interval: float,
-    queue_class: type[AsyncQueue[T]] | None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
-) -> Iterator[U]:
-    pipeline = builder.build(
-        num_threads=num_threads,
-        max_failures=max_failures,
-        report_stats_interval=report_stats_interval,
-        queue_class=queue_class,
-        task_hook_factory=task_hook_factory,
-    )
-    with pipeline.auto_stop():
-        yield from pipeline
+class _Wrapper(Generic[U]):
+    def __init__(
+        self,
+        builder: PipelineBuilder[T, U],
+        num_threads: int,
+        max_failures: int,
+        report_stats_interval: float,
+        queue_class: type[AsyncQueue[T]] | None,
+        task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    ) -> None:
+        self.builder = builder
+        self.num_threads = num_threads
+        self.max_failures = max_failures
+        self.report_stats_interval = report_stats_interval
+        self.queue_class = queue_class
+        self.task_hook_factory = task_hook_factory
+
+    def __iter__(self) -> Iterator[U]:
+        pipeline = self.builder.build(
+            num_threads=self.num_threads,
+            max_failures=self.max_failures,
+            report_stats_interval=self.report_stats_interval,
+            queue_class=self.queue_class,
+            task_hook_factory=self.task_hook_factory,
+        )
+        with pipeline.auto_stop():
+            yield from pipeline
 
 
 def run_pipeline_in_subprocess(
@@ -434,7 +444,7 @@ def run_pipeline_in_subprocess(
     queue_class: type[AsyncQueue[T]] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     **kwargs: dict[str, Any],
-) -> Iterator[T]:
+) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
 
     Args:
@@ -448,13 +458,13 @@ def run_pipeline_in_subprocess(
 
     .. seealso::
 
-       - :py:func:`iterate_in_subprocess` implements the logic for running an iterator
+       - :py:func:`iterate_in_subprocess` implements the logic for manipulating an iterable
          in a subprocess.
        - :ref:`parallelism-performance` for the context in which this function was created.
     """
-    yield from iterate_in_subprocess(
+    return iterate_in_subprocess(
         fn=partial(
-            _run_pipeline,
+            _Wrapper,
             builder=builder,
             num_threads=num_threads,
             max_failures=max_failures,
