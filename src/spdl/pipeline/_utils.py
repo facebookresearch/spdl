@@ -17,7 +17,7 @@ import time
 import traceback
 from asyncio import Task
 from collections import defaultdict
-from collections.abc import Callable, Coroutine, Generator, Iterable, Iterator
+from collections.abc import Callable, Coroutine, Generator, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
@@ -265,7 +265,7 @@ def _execute_iterable(
     cmd_q: mp.Queue,
     data_q: mp.Queue,
     fn: Callable[[], Iterable[T]],
-    initializer: Callable[[], None] | None,
+    initializers: Sequence[Callable[[], None]] | None,
 ) -> None:
     """Worker implementation for :py:func:`iterate_in_subprocess`.
 
@@ -332,9 +332,10 @@ def _execute_iterable(
            j6 --> Done
            i5 --> i2: Iteration completed without an error
     """
-    if initializer is not None:
+    if initializers is not None:
         try:
-            initializer()
+            for initializer in initializers:
+                initializer()
         except Exception as e:
             data_q.put(
                 _Msg(
@@ -553,7 +554,7 @@ def iterate_in_subprocess(
     fn: Callable[[], Iterable[T]],
     *,
     buffer_size: int = 3,
-    initializer: Callable[[], None] | None = None,
+    initializer: Callable[[], None] | Sequence[Callable[[], None]] | None = None,
     mp_context: str | None = None,
     timeout: float | None = None,
     daemon: bool = False,
@@ -564,7 +565,7 @@ def iterate_in_subprocess(
         fn: Function that returns an iterator. Use :py:func:`functools.partial` to
             pass arguments to the function.
         buffer_size: Maximum number of items to buffer in the queue.
-        initializer: A function executed in the subprocess before iteration starts.
+        initializer: Functions executed in the subprocess before iteration starts.
         mp_context: Context to use for multiprocessing.
             If not specified, a default method is used.
         timeout: Timeout for inactivity. If the generator function does not yield
@@ -674,12 +675,18 @@ def iterate_in_subprocess(
        :noindex:
        :members: __iter__
     """
+    initializers = (
+        None
+        if initializer is None
+        else ([initializer] if not isinstance(initializer, Sequence) else initializer)
+    )
+
     ctx = mp.get_context(mp_context)
     cmd_q: queue.Queue[_Cmd] = ctx.Queue()
     data_q: queue.Queue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
     process = ctx.Process(
         target=_execute_iterable,
-        args=(cmd_q, data_q, fn, initializer),
+        args=(cmd_q, data_q, fn, initializers),
         daemon=daemon,
     )
 
