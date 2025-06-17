@@ -325,6 +325,44 @@ def test_iterate_in_subprocess_initializer():
         next(ite)
 
 
+def test_iterate_in_subprocess_multiple_initializer():
+    """iterate_in_subprocess accepts multiple iterators"""
+    N = 10
+    val1 = str(random.random())
+    val2 = str(random.random())
+    with tempfile.TemporaryDirectory() as dir:
+        path1 = os.path.join(dir, "foo.txt")
+        path2 = os.path.join(dir, "bar.txt")
+
+        assert not os.path.exists(path1)
+        assert not os.path.exists(path2)
+        src = iterate_in_subprocess(
+            fn=partial(iter_range, n=N),
+            initializer=[
+                partial(initializer, path=path1, val=val1),
+                partial(initializer, path=path2, val=val2),
+            ],
+            buffer_size=1,
+        )
+        assert os.path.exists(path1)
+        assert os.path.exists(path2)
+
+        ite = iter(src)
+        assert next(ite) == 0
+
+        with open(path1, "r") as f:
+            assert f.read() == val1
+
+        with open(path2, "r") as f:
+            assert f.read() == val2
+
+    for i in range(1, N):
+        assert next(ite) == i
+
+    with pytest.raises(StopIteration):
+        next(ite)
+
+
 def iter_range_and_store(n: int, path: str) -> Iterable[int]:
     yield 0
     for i in range(n):
@@ -409,7 +447,7 @@ def test_execute_iterable_initializer_failure():
     def fail() -> None:
         raise ValueError("Failed!")
 
-    _execute_iterable(msg_queue, data_queue, src_fn, fail)
+    _execute_iterable(msg_queue, data_queue, src_fn, [fail])
 
     assert msg_queue.empty()
 
@@ -426,7 +464,7 @@ def test_execute_iterable_iterator_initialize_failure():
         raise ValueError("Failed!")
         return SourceIterable(10)
 
-    _execute_iterable(msg_queue, data_queue, src_fn, noop)
+    _execute_iterable(msg_queue, data_queue, src_fn, [noop])
 
     assert msg_queue.empty()
     result = data_queue.get(timeout=1)
@@ -444,7 +482,7 @@ def test_execute_iterable_quite_immediately():
     def src_fn() -> Iterable[int]:
         return SourceIterable(10)
 
-    _execute_iterable(msg_queue, data_queue, src_fn, noop)
+    _execute_iterable(msg_queue, data_queue, src_fn, [noop])
     time.sleep(1)
 
     assert msg_queue.empty()
@@ -465,7 +503,7 @@ def test_execute_iterable_generator_fail():
         return SourceIterableFails(10)
 
     msg_queue.put(_Cmd.START_ITERATION)
-    _execute_iterable(msg_queue, data_queue, src_fn, noop)
+    _execute_iterable(msg_queue, data_queue, src_fn, [noop])
 
     assert msg_queue.empty()
 
@@ -494,7 +532,7 @@ def test_execute_iterable_generator_fail_after_n():
         return SourceIterableFails(10)
 
     msg_queue.put(_Cmd.START_ITERATION)
-    _execute_iterable(msg_queue, data_queue, src_fn, noop)
+    _execute_iterable(msg_queue, data_queue, src_fn, [noop])
 
     assert msg_queue.empty()
 
@@ -529,7 +567,7 @@ def test_execute_iterator_generator_success():
 
     t = threading.Thread(target=done)
     t.start()
-    _execute_iterable(msg_queue, data_queue, src_fn, noop)
+    _execute_iterable(msg_queue, data_queue, src_fn, [noop])
     t.join()
 
     assert msg_queue.empty()
