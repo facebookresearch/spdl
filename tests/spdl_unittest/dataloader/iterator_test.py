@@ -172,6 +172,31 @@ def test_mergeiterator_stochastic_rejects_zero():
         MergeIterator([[1]], weights=weights)
 
 
+def test_mergeiterator_skip_zero_weight():
+    """Iterables with zero weight are skipped."""
+    iterables = [
+        [0, 1, 2],
+        [10, 11, 12],
+        [20, 21, 22],
+        [30, 31, 32],
+    ]
+
+    weights = [1, 0, 2, 0]
+
+    merge_iter = MergeIterator(iterables, weights=weights)
+
+    assert len(merge_iter.iterables) == 2
+    assert merge_iter.iterables[0] == [0, 1, 2]
+    assert merge_iter.iterables[1] == [20, 21, 22]
+
+    assert len(merge_iter.weights) == 2
+    assert merge_iter.weights[0] == 1
+    assert merge_iter.weights[1] == 2
+
+    result = list(merge_iter)
+    assert set(result) == {0, 1, 2, 20, 21, 22}
+
+
 def test_mergeiterator_stochastic_stop_after_N():
     """Values are taken from iterables with higher weights"""
     weights = [1000000, 1]

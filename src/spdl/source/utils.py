@@ -154,26 +154,29 @@ class MergeIterator(Iterable[T]):
         if not iterables:
             raise ValueError("iterables cannot be empty.")
 
-        if weights is not None:
-            if len(weights) != len(iterables):
-                raise ValueError(
-                    f"The number of probabilities ({len(weights)}) and "
-                    f"iterables ({len(iterables)}) must match."
-                )
-
-            # If any of them is 0 or negative, then there is something wrong with
-            # user logic, so we raise an exception.
-            if any(w < sys.float_info.epsilon for w in weights):
-                raise ValueError("Weights must be non-zero and positive.")
-
         if not stop_after >= -1:
             msg = (
                 f"`stop_after` must be greater than or equal to -1. Found: {stop_after}"
             )
             raise ValueError(msg)
 
+        # Skip iterables with zero weight
         self.iterables = iterables
         self.weights = weights
+
+        if self.weights is not None:
+            if len(self.weights) != len(iterables):
+                raise ValueError(
+                    f"The number of probabilities ({len(self.weights)}) and "
+                    f"iterables ({len(iterables)}) must match."
+                )
+            if any(w < 0 for w in self.weights):
+                raise ValueError("Weights cannot be negative.")
+
+            nnz_indices = [i for i, w in enumerate(self.weights) if w != 0]
+            self.iterables = [self.iterables[i] for i in nnz_indices]
+            self.weights = [self.weights[i] for i in nnz_indices]
+
         self.stop_after = stop_after
         self.seed = seed
 
