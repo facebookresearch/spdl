@@ -1781,16 +1781,15 @@ def test_run_pipeline_in_subprocess_state():
     builder = PipelineBuilder().add_source(src).add_sink()
     iterable = run_pipeline_in_subprocess(builder, num_threads=1)
 
-    assert list(iterable) == [0, 1, 2, 3, 4]
     assert list(iterable) == [1, 2, 3, 4, 0]
     assert list(iterable) == [2, 3, 4, 0, 1]
+    assert list(iterable) == [3, 4, 0, 1, 2]
 
     # since the src is copied to the subprocess iterating it yields the original state
 
-    assert src.src.seed == 0
-    assert list(src) == [0, 1, 2, 3, 4]
-    assert src.src.seed == 1
     assert list(src) == [1, 2, 3, 4, 0]
-    assert src.src.seed == 2
+    assert src.src.seed == 0
     assert list(src) == [2, 3, 4, 0, 1]
-    assert src.src.seed == 3
+    assert src.src.seed == 1
+    assert list(src) == [3, 4, 0, 1, 2]
+    assert src.src.seed == 2

@@ -241,29 +241,30 @@ def test_repeat_source_iterable_with_shuffle():
     gen = iter(repeat_source(src, epoch=2))
 
     with patch.object(src, "shuffle", side_effect=src.shuffle) as mock_method:
-        assert next(gen) == 0
         assert next(gen) == 1
+        mock_method.assert_called_with(seed=0)
         assert next(gen) == 2
+        assert next(gen) == 0
 
-        assert next(gen) == 1
+        assert next(gen) == 2
         mock_method.assert_called_with(seed=1)
-        assert next(gen) == 2
         assert next(gen) == 0
+        assert next(gen) == 1
 
-        assert next(gen) == 2
+        assert next(gen) == 0
         mock_method.assert_called_with(seed=2)
-        assert next(gen) == 0
         assert next(gen) == 1
+        assert next(gen) == 2
 
-        assert next(gen) == 0
+        assert next(gen) == 1
         mock_method.assert_called_with(seed=3)
-        assert next(gen) == 1
-        assert next(gen) == 2
-
-        assert next(gen) == 1
-        mock_method.assert_called_with(seed=4)
         assert next(gen) == 2
         assert next(gen) == 0
+
+        assert next(gen) == 2
+        mock_method.assert_called_with(seed=4)
+        assert next(gen) == 0
+        assert next(gen) == 1
 
 
 def test_repeat_source_iterable():
@@ -726,11 +727,11 @@ def test_shuffle_and_iterate():
 
     ref = list(range(N))
     for i in range(3):
+        random.seed(i)
+        random.shuffle(ref)
+
         hyp = list(src)
         assert hyp == ref
-
-        random.seed(i + 1)
-        random.shuffle(ref)
 
 
 def _fail_initializer():
@@ -801,6 +802,6 @@ def test_move_iterable_to_subprocess_success_iterable_with_shuffle():
         partial(embed_shuffle, SourceIterableWithShuffle(3))
     )
 
-    assert list(iterator) == [0, 1, 2]
     assert list(iterator) == [1, 2, 0]
     assert list(iterator) == [2, 0, 1]
+    assert list(iterator) == [0, 1, 2]

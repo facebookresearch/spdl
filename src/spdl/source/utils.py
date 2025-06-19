@@ -222,7 +222,7 @@ class _ShuffleAndIterate(Iterable[T]):
 
 
 def embed_shuffle(
-    src: IterableWithShuffle[T], /, *, shuffle_last: bool = True, epoch: int = 0
+    src: IterableWithShuffle[T], /, *, shuffle_last: bool = False, epoch: int = 0
 ) -> Iterable[T]:
     """**[Experimental]** Convert :py:class:`~spdl.source.IterableWithShuffle` to
     :py:class:`Iterable` by embedding the :py:meth:`~spdl.source.IterableWithShuffle.shuffle`
@@ -245,19 +245,12 @@ def embed_shuffle(
 
     Args:
         src: The original iterable with ``shuffle`` method.
-        shuffle_last: If ``True`` (default), then ``shuffle`` is called
-            at the end of the iteration. Other wise ``shuffle`` is called
-            before each iteration.
+        shuffle_last: If ``False`` (default), then ``shuffle`` is called
+            before the iteration. Other wise ``shuffle`` is called
+            at the end of iteration.
         epoch: The initial seed value passed to
             :py:meth:`~spdl.source.IterableWithShuffle.shuffle`.
 
-    .. admonition:: Why default to shuffle after iteration?
-       :class: note
-
-       Shuffling at the beginning of an iteration blocks the pipeline
-       entirely.
-       Shuffling after the iteration gives an opportunity to hide the
-       overhead of shuffling behind the pipeline execution.
     """
     return _ShuffleAndIterate(src, epoch=epoch, shuffle_last=shuffle_last)
 
