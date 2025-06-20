@@ -50,16 +50,19 @@ def __getattr__(name: str) -> object:
         return TaskHook
 
     # Following imports are documentation purpose
-    if name in [
-        "_execute_iterable",
-        "_Cmd",
-        "_Status",
-        "_enter_iteration_mode",
-        "_iterate_results",
-        "_SubprocessIterable",
-    ]:
-        from . import _utils
+    import os
 
-        return getattr(_utils, name)
+    if os.environ.get("SPDL_DOC_SPHINX") == "1":
+        if name in [
+            "_execute_iterable",
+            "_Cmd",
+            "_Status",
+            "_enter_iteration_mode",
+            "_iterate_results",
+            "_SubprocessIterable",
+        ]:
+            from . import _utils
+
+            return getattr(_utils, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
