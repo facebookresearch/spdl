@@ -16,6 +16,8 @@ from datetime import datetime
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath("../../examples"))
 
+os.environ["SPDL_DOC_SPHINX"] = "1"
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
