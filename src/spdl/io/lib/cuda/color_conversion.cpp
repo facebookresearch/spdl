@@ -7,7 +7,6 @@
  */
 
 #include <libspdl/cuda/buffer.h>
-#include <libspdl/cuda/types.h>
 
 #ifdef SPDL_USE_CUDA
 #include <libspdl/cuda/color_conversion.h>
