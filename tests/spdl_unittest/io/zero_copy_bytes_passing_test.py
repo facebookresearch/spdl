@@ -10,12 +10,12 @@ import numpy as np
 import pytest
 import spdl.io
 
-from ..fixture import get_sample
+from ..fixture import FFMPEG_CLI, get_sample
 
 CMDS = {
-    "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
-    "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4",
-    "image": "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
+    "audio": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
+    "video": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4",
+    "image": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
 }
 
 
@@ -61,7 +61,7 @@ def _decode(media_type, src):
 
 def test_decode_audio_bytes():
     """audio can be decoded from bytes."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=3' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     ref = _decode("audio", sample.path)
@@ -74,7 +74,7 @@ def test_decode_audio_bytes():
 
 def test_decode_video_bytes():
     """video can be decoded from bytes."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd)
 
     ref = _decode("video", sample.path)
@@ -87,7 +87,7 @@ def test_decode_video_bytes():
 
 def test_demux_image_bytes():
     """Image (gray) can be decoded from bytes."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png"
     sample = get_sample(cmd)
 
     ref = _decode("image", sample.path)

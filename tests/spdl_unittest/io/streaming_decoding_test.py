@@ -11,22 +11,28 @@ import pytest
 import spdl.io
 import torch
 
-from ..fixture import get_sample
+from ..fixture import FFMPEG_CLI, get_sample
 
 
 @pytest.mark.parametrize(
     "cmd,expected",
     [
         (
-            "ffmpeg -hide_banner -y -f lavfi -i 'sine=duration=3' -c:a pcm_s16le sample.wav",
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=duration=3' -c:a pcm_s16le sample.wav",
             True,
         ),
         (
-            "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4",
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4",
             True,
         ),
-        ("ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4", False),
-        ("ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg", False),
+        (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4",
+            False,
+        ),
+        (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg",
+            False,
+        ),
     ],
 )
 def test_demuxer_has_audio(cmd, expected):
@@ -39,7 +45,7 @@ def test_demuxer_has_audio(cmd, expected):
 
 def test_demuxer_accept_numpy_array():
     """Can instantiate Demuxer with numpy array as source without copying data."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
 
     with open(sample.path, "rb") as f:
@@ -55,7 +61,7 @@ def test_demuxer_accept_numpy_array():
 
 def test_demuxer_accept_torch_tensor():
     """Can instantiate Demuxer with torch tensor as source without copying data."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
 
     with open(sample.path, "rb") as f:
@@ -71,7 +77,7 @@ def test_demuxer_accept_torch_tensor():
 
 def test_streaming_video_demuxing_smoke_test():
     """`streaming_demux_video` can decode packets in streaming fashion."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
 
     demuxer = spdl.io.Demuxer(sample.path)
@@ -87,7 +93,7 @@ def test_streaming_video_demuxing_smoke_test():
 
 def test_streaming_video_demuxing_parity():
     """`streaming_demux_video` can decode packets in streaming fashion."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
     sample = get_sample(cmd)
 
     demuxer = spdl.io.Demuxer(sample.path)
@@ -123,7 +129,7 @@ def test_streaming_video_demuxing_parity():
 
 
 def test_demuxer_get_codec():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af pan='stereo| c0=FR | c1=FR' -frames:v 30 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af pan='stereo| c0=FR | c1=FR' -frames:v 30 sample.mp4"
 
     sample = get_sample(cmd)
     demuxer = spdl.io.Demuxer(sample.path)
@@ -140,7 +146,7 @@ def test_demuxer_get_codec():
 
 
 def test_streaming_decoding_simple():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 60 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 60 sample.mp4"
 
     N = 10
     sample = get_sample(cmd)
@@ -172,7 +178,7 @@ def test_streaming_decoding_simple():
 
 
 def test_streaming_decoding_multi():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 15 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 15 sample.mp4"
 
     sample = get_sample(cmd)
 

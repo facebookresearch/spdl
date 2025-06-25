@@ -9,7 +9,7 @@ import pytest
 import spdl.io
 import torch
 
-from ..fixture import get_sample
+from ..fixture import FFMPEG_CLI, get_sample
 
 
 @pytest.mark.parametrize(
@@ -21,7 +21,7 @@ from ..fixture import get_sample
 )
 def test_pin_memory_smoke_test(pin_memory):
     """can obtain pinned memory storage"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv422p -frames:v 1 sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv422p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd)
 
     packets = spdl.io.demux_image(sample.path)
@@ -41,7 +41,7 @@ def test_pin_memory_smoke_test(pin_memory):
 
 def test_pin_memory_small():
     """convert_frames fails if the size of memory region is too small"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv422p -frames:v 1 sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv422p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd)
 
     packets = spdl.io.demux_image(sample.path)

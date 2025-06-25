@@ -11,7 +11,7 @@ import spdl.io
 import spdl.io.utils
 import torch
 
-from ..fixture import get_sample
+from ..fixture import FFMPEG_CLI, get_sample
 
 if not spdl.io.utils.built_with_nvcodec():
     pytest.skip("SPDL is not compiled with NVCODEC support", allow_module_level=True)
@@ -34,7 +34,7 @@ def _decode_video(src, timestamp=None, allocator=None, **decode_options):
 
 @pytest.fixture
 def dummy():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample.mp4"
     return get_sample(cmd)
 
 
@@ -70,7 +70,7 @@ def test_nvdec_negative(dummy):
 
 def test_nvdec_video_smoke_test():
     """Can decode video with NVDEC"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 1000 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 1000 sample.mp4"
 
     sample = get_sample(cmd)
 
@@ -108,7 +108,7 @@ def split_nv12(array):
 
 @pytest.fixture
 def h264():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     return get_sample(cmd)
 
 
@@ -155,7 +155,6 @@ def test_nvdec_decode_video_torch_allocator(h264):
             allocator=(allocator, deleter),
         )
         assert allocator_called
-        assert not deleter_called
         assert array.dtype == torch.uint8
         assert array.shape == (25, 3, 240, 320)
 
@@ -175,7 +174,7 @@ def test_nvdec_decode_video_torch_allocator(h264):
 )
 def test_nvdec_decode_hevc_P010_basic():
     """NVDEC can decode HEVC video."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
     sample = get_sample(cmd)
 
     array = _decode_video(

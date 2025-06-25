@@ -14,7 +14,7 @@ import spdl.io
 import spdl.io.utils
 from spdl.io import get_audio_filter_desc, get_video_filter_desc
 
-from ..fixture import get_sample, get_samples
+from ..fixture import FFMPEG_CLI, get_sample, get_samples
 
 
 def test_failure():
@@ -52,7 +52,7 @@ def _test_decode(demux_fn, timestamps):
 
 def test_decode_audio_clips():
     """Can decode audio clips."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     def _test():
@@ -71,7 +71,7 @@ def test_decode_audio_clips():
 
 def test_decode_audio_clips_num_frames():
     """Can decode audio clips with padding/dropping."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=1' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=1' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     def _decode(src, num_frames=None):
@@ -170,7 +170,7 @@ def test_decode_audio_many_channels_7():
 
 def test_decode_video_clips():
     """Can decode video clips."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd)
     N = 10
 
@@ -192,7 +192,7 @@ if "tpad" in spdl.io.utils.get_ffmpeg_filters():
 
     def test_batch_video_conversion():
         """Can decode video clips."""
-        cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
         sample = get_sample(cmd)
 
         timestamps = [(0, 1), (1, 1.5), (2, 2.7), (3, 3.6)]
@@ -211,7 +211,9 @@ if "tpad" in spdl.io.utils.get_ffmpeg_filters():
 
     def test_decode_video_clips_num_frames():
         """Can decode video clips with padding/dropping."""
-        cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 50 sample.mp4"
+        )
         sample = get_sample(cmd)
 
         def _decode(src, pix_fmt="rgb24", **kwargs):
@@ -261,7 +263,7 @@ if "tpad" in spdl.io.utils.get_ffmpeg_filters():
 
 def test_decode_video_frame_rate_pts():
     """Applying frame rate outputs correct PTS."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -r 10 -frames:v 20 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -r 10 -frames:v 20 sample.mp4"
     sample = get_sample(cmd)
 
     def _test(src):
@@ -282,7 +284,7 @@ def test_decode_video_frame_rate_pts():
 
 def test_convert_audio():
     """convert_frames can convert AudioFrames to Buffer"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     def _test(src):
@@ -298,7 +300,7 @@ def test_convert_audio():
 
 def test_convert_video():
     """convert_frames can convert VideoFrames to Buffer"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
     sample = get_sample(cmd)
 
     def _test(src):
@@ -314,7 +316,7 @@ def test_convert_video():
 
 def test_convert_image():
     """convert_frames can convert ImageFrames to Buffer"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd)
 
     frames = spdl.io.decode_packets(spdl.io.demux_image(sample.path))
@@ -327,7 +329,9 @@ def test_convert_image():
 
 def test_convert_batch_image():
     """convert_frames can convert list[ImageFrames] to Buffer"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
+    cmd = (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 4 sample_%03d.jpg"
+    )
     srcs = get_samples(cmd)
 
     frames = [spdl.io.decode_packets(spdl.io.demux_image(s.path)) for s in srcs]

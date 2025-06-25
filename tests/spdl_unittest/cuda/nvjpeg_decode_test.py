@@ -11,7 +11,7 @@ import spdl.io
 import spdl.io.utils
 import torch
 
-from ..fixture import get_sample, get_samples
+from ..fixture import FFMPEG_CLI, get_sample, get_samples
 
 DEFAULT_CUDA = 0
 
@@ -22,7 +22,7 @@ if not spdl.io.utils.built_with_nvjpeg():
 
 def test_decode_pix_fmt():
     """"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd)
 
     def _test(data, pix_fmt):
@@ -52,7 +52,9 @@ def test_decode_rubbish():
     """When decoding fails, it should raise an error instead of segfault then,
     subsequent valid decodings should succeed"""
 
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample_%10d.jpg"
+    cmd = (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample_%10d.jpg"
+    )
     srcs = get_samples(cmd)
 
     for _ in range(10):
@@ -79,7 +81,7 @@ def test_decode_rubbish():
 
 
 def test_decode_resize():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd)
 
     buffer = spdl.io.decode_image_nvjpeg(
@@ -102,7 +104,7 @@ def _is_all_zero(arr):
 
 
 def test_decode_zero_clear():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd)
 
     with open(sample.path, "rb") as f:
@@ -126,7 +128,7 @@ def test_decode_zero_clear():
 
 
 def test_batch_decode_zero_clear():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample_%03d.jpg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 100 sample_%03d.jpg"
     srcs = get_samples(cmd)
 
     dataset = []

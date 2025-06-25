@@ -14,14 +14,14 @@ import spdl.io
 import spdl.io.utils
 from spdl.io import get_video_filter_desc
 
-from ..fixture import get_sample
+from ..fixture import FFMPEG_CLI, get_sample
 
 
 def test_buffer_conversion_refcount():
     """NumPy array created from Buffer should increment a reference to the buffer
     so that array keeps working after the original Buffer variable is deleted.
     """
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     sample = get_sample(cmd)
 
     buf = spdl.io.load_video(
