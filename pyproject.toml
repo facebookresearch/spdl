@@ -27,6 +27,9 @@ packages = []
 [tool.setuptools.dynamic]
 version = { file = "VERSION" }
 
+[tool.setuptools.package-data]
+spdl = ["py.typed"]
+
 [tool.uv.sources]
 spdl_core = { workspace = true }
 spdl_io = { workspace = true }
