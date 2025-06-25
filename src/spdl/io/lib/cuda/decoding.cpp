@@ -23,14 +23,17 @@ namespace nb = nanobind;
 
 namespace spdl::cuda {
 
-#define NOT_SUPPORTED \
+#define NOT_SUPPORTED_NVCODEC \
   throw std::runtime_error("SPDL is not built with NVCODEC support.")
+
+#define NOT_SUPPORTED_NVJPEG \
+  throw std::runtime_error("SPDL is not built with NVJPEG support.")
 
 #ifndef SPDL_USE_NVCODEC
 NvDecDecoder::NvDecDecoder(){};
 NvDecDecoder::~NvDecDecoder(){};
 void NvDecDecoder::reset() {
-  NOT_SUPPORTED;
+  NOT_SUPPORTED_NVCODEC;
 }
 void NvDecDecoder::init(
     const CUDAConfig& cuda_config,
@@ -38,14 +41,14 @@ void NvDecDecoder::init(
     CropArea crop,
     int width,
     int height) {
-  NOT_SUPPORTED;
+  NOT_SUPPORTED_NVCODEC;
 }
 std::vector<CUDABuffer> NvDecDecoder::decode(
     spdl::core::VideoPacketsPtr packets) {
-  NOT_SUPPORTED;
+  NOT_SUPPORTED_NVCODEC;
 }
 std::vector<CUDABuffer> NvDecDecoder::flush() {
-  NOT_SUPPORTED;
+  NOT_SUPPORTED_NVCODEC;
 }
 #endif
 
@@ -108,7 +111,7 @@ void register_decoding(nb::module_& m) {
 #ifdef SPDL_USE_NVCODEC
         return std::make_unique<NvDecDecoder>();
 #else
-        NOT_SUPPORTED;
+        NOT_SUPPORTED_NVCODEC;
 #endif
       },
       nb::call_guard<nb::gil_scoped_release>());
@@ -124,7 +127,7 @@ void register_decoding(nb::module_& m) {
          int scale_height,
          const std::string& pix_fmt) {
 #ifndef SPDL_USE_NVJPEG
-        throw std::runtime_error("SPDL is not built with NVJPEG support.");
+        NOT_SUPPORTED_NVJPEG;
 #else
         auto ret = decode_image_nvjpeg(
             std::string_view{data.c_str(), data.size()},
@@ -151,7 +154,7 @@ void register_decoding(nb::module_& m) {
          int scale_height,
          const std::string& pix_fmt) {
 #ifndef SPDL_USE_NVJPEG
-        throw std::runtime_error("SPDL is not built with NVJPEG support.");
+        NOT_SUPPORTED_NVJPEG;
 #else
         std::vector<std::string_view> dataset;
         for (const auto& d : data) {
