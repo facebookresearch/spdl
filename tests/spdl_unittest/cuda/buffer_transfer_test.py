@@ -15,7 +15,9 @@ import torch
 from ..fixture import FFMPEG_CLI, get_sample
 
 if not spdl.io.utils.built_with_cuda():
-    pytest.skip("SPDL is not compiled with CUDA support", allow_module_level=True)
+    pytest.skip(  # pyre-ignore: [29]
+        "SPDL is not compiled with CUDA support", allow_module_level=True
+    )
 
 
 DEFAULT_CUDA = 0

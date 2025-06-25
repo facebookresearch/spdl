@@ -17,7 +17,9 @@ DEFAULT_CUDA = 0
 
 
 if not spdl.io.utils.built_with_nvjpeg():
-    pytest.skip("SPDL is not compiled with NVJPEG support", allow_module_level=True)
+    pytest.skip(  # pyre-ignore: [29]
+        "SPDL is not compiled with NVJPEG support", allow_module_level=True
+    )
 
 
 def test_decode_pix_fmt():
