@@ -17,6 +17,7 @@ import importlib
 import importlib.resources
 import logging
 import sys
+from functools import cache
 from types import ModuleType
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ def __getattr__(name: str) -> ModuleType:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+@cache
 def _import_libspdl() -> ModuleType:
     libs = [
         f"{__package__}.{t.name.split('.')[0]}"
@@ -94,7 +96,11 @@ def _import_libspdl() -> ModuleType:
     raise RuntimeError(msg)
 
 
+@cache
 def _import_libspdl_cuda() -> ModuleType:
+    # Needed for things like CPUBuffer/CPUStorage, which is registered in the core libspdl
+    _import_libspdl()
+
     libs = [
         f"{__package__}.{t.name.split('.')[0]}"
         for t in importlib.resources.files(__package__).iterdir()
