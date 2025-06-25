@@ -85,7 +85,7 @@ def load_ref_audio(
 ) -> NDArray[np.uint8]:
     # fmt: off
     cmd = [
-        "ffmpeg",
+        FFMPEG_CLI,
         "-hide_banner",
         "-loglevel", "debug",
         "-y",
@@ -107,7 +107,7 @@ def _get_video_ref_cmd(
 ) -> list[str]:
     # fmt: off
     command = [
-        "ffmpeg",
+        FFMPEG_CLI,
         "-hide_banner",
         "-loglevel", "debug",
         "-v", "verbose",
