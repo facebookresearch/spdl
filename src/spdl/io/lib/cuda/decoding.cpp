@@ -54,6 +54,12 @@ std::vector<CUDABuffer> NvDecDecoder::flush() {
 
 using namespace spdl::core;
 
+namespace {
+void zero_clear(nb::bytes data) {
+  std::memset((void*)data.c_str(), 0, data.size());
+}
+} // namespace
+
 void register_decoding(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Asynchronous decoding - NVDEC
@@ -125,7 +131,8 @@ void register_decoding(nb::module_& m) {
          const CUDAConfig& cuda_config,
          int scale_width,
          int scale_height,
-         const std::string& pix_fmt) {
+         const std::string& pix_fmt,
+         bool _zero_clear) {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else
@@ -135,6 +142,9 @@ void register_decoding(nb::module_& m) {
             scale_width,
             scale_height,
             pix_fmt);
+        if (_zero_clear) {
+          zero_clear(data);
+        }
         return ret;
 #endif
       },
@@ -144,7 +154,8 @@ void register_decoding(nb::module_& m) {
       nb::arg("device_config"),
       nb::arg("scale_width") = -1,
       nb::arg("scale_height") = -1,
-      nb::arg("pix_fmt") = "rgb");
+      nb::arg("pix_fmt") = "rgb",
+      nb::arg("_zero_clear") = false);
 
   m.def(
       "decode_image_nvjpeg",
@@ -152,7 +163,8 @@ void register_decoding(nb::module_& m) {
          const CUDAConfig& cuda_config,
          int scale_width,
          int scale_height,
-         const std::string& pix_fmt) {
+         const std::string& pix_fmt,
+         bool _zero_clear) {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else
@@ -160,8 +172,14 @@ void register_decoding(nb::module_& m) {
         for (const auto& d : data) {
           dataset.push_back(std::string_view{d.c_str(), d.size()});
         }
-        return decode_image_nvjpeg(
+        auto ret = decode_image_nvjpeg(
             dataset, cuda_config, scale_width, scale_height, pix_fmt);
+        if (_zero_clear) {
+          for (const auto& d : data) {
+            zero_clear(d);
+          }
+        }
+        return ret;
 #endif
       },
       nb::call_guard<nb::gil_scoped_release>(),
@@ -170,6 +188,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("device_config"),
       nb::arg("scale_width"),
       nb::arg("scale_height"),
-      nb::arg("pix_fmt") = "rgb");
+      nb::arg("pix_fmt") = "rgb",
+      nb::arg("_zero_clear") = false);
 }
 } // namespace spdl::cuda
