@@ -17,6 +17,13 @@ from numpy.typing import DTypeLike, NDArray
 
 FFMPEG_CLI: str = "ffmpeg"
 
+try:
+    from . import fb
+except ImportError:
+    pass
+else:
+    FFMPEG_CLI = fb.FFMPEG_CLI
+
 
 __all__ = [
     "get_sample",
