@@ -8,7 +8,7 @@
 
 import spdl.io
 
-from ..fixture import get_sample
+from ..fixture import FFMPEG_CLI, get_sample
 
 
 def test_image_frame_metadata():
@@ -17,7 +17,7 @@ def test_image_frame_metadata():
     does not seem to support exif, and I don't want to check-in
     assets data, so just smoke test.
     """
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
     sample = get_sample(cmd)
 
     packets = spdl.io.demux_image(sample.path)

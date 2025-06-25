@@ -13,7 +13,7 @@ import spdl.io.utils
 from spdl.io import get_video_filter_desc
 from spdl.io.utils import get_ffmpeg_versions
 
-from ..fixture import get_sample, get_samples, load_ref_data, load_ref_image
+from ..fixture import FFMPEG_CLI, get_sample, get_samples, load_ref_data, load_ref_image
 
 
 def _load_image(src, filter_desc="format=pix_fmts=rgb24"):
@@ -70,7 +70,7 @@ def test_decode_image_16be_rgb24():
 
 def test_decode_image_yuvj422_native():
     """Can decode yuvj422p JPEG image as-is."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj422p -frames:v 1 sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuvj422p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd)
 
     shape = (1, 2 * 240, 320)
@@ -86,7 +86,7 @@ def test_decode_image_yuvj422_native():
 
 def test_decode_image_yuvj422_as_rgb24():
     """Can decode yuvj422p JPEG image as rgb24."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj422p -frames:v 1 sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuvj422p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd)
 
     shape = (240, 320, 3)
@@ -102,7 +102,7 @@ def test_decode_image_yuvj422_as_rgb24():
 
 def test_decode_image_yuvj420p_native():
     """Can decode yuvj420p JPEG image as yuv420p"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt yuvj420p sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt yuvj420p sample.jpeg"
     sample = get_sample(cmd)
 
     w, h = 320, 240
@@ -120,7 +120,7 @@ def test_decode_image_yuvj420p_native():
 
 def test_decode_image_yuvj420p_as_rgb24():
     """Can decode yuvj420p JPEG image as rgb24"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt yuvj420p sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt yuvj420p sample.jpeg"
     sample = get_sample(cmd)
 
     shape = (240, 320, 3)
@@ -170,7 +170,7 @@ def test_decode_image_yuvj420p_as_rgb24_edge_values():
 
 def test_decode_image_yuvj444p_native():
     """Can decode yuvj444p JPEG image as-is."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj444p -frames:v 1 sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuvj444p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd)
 
     shape = (3, 240, 320)
@@ -186,7 +186,7 @@ def test_decode_image_yuvj444p_native():
 
 def test_decode_image_yuvj444p_as_rgb24():
     """Can decode yuvj444p JPEG image as rgb24."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc,format=yuvj444p -frames:v 1 sample.jpeg"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuvj444p -frames:v 1 sample.jpeg"
     sample = get_sample(cmd)
 
     shape = (240, 320, 3)
@@ -202,7 +202,7 @@ def test_decode_image_yuvj444p_as_rgb24():
 
 def test_decode_image_nv12_native():
     """Can decode nv12 image as-is"""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt nv12 -f rawvideo sample.nv12"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt nv12 -f rawvideo sample.nv12"
     w, h = 320, 240
     sample = get_sample(cmd)
 
@@ -223,7 +223,7 @@ def test_decode_image_nv12_native():
     shape = (1, h + h // 2, w)
     # fmt: off
     cmd = [
-        "ffmpeg", "-hide_banner",
+        f"{FFMPEG_CLI}", "-hide_banner",
         "-f", "rawvideo",
         "-pixel_format", "nv12",
         "-video_size", "320x240",
@@ -245,7 +245,7 @@ if get_ffmpeg_versions()["libavutil"][0] >= 57:
 
     def test_decode_image_nv12_as_rgb24():
         """Can decode nv12 image as rgb24"""
-        cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt nv12 -f rawvideo sample.nv12"
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 -pix_fmt nv12 -f rawvideo sample.nv12"
         w, h = 320, 240
         sample = get_sample(cmd)
 
@@ -266,7 +266,7 @@ if get_ffmpeg_versions()["libavutil"][0] >= 57:
         shape = (h, w, 3)
         # fmt: off
         cmd = [
-            "ffmpeg", "-hide_banner",
+            f"{FFMPEG_CLI}", "-hide_banner",
             "-f", "rawvideo",
             "-pixel_format", "nv12",
             "-video_size", "320x240",
@@ -292,7 +292,9 @@ if get_ffmpeg_versions()["libavutil"][0] >= 57:
 
 def test_load_image_batch_native():
     """`load_image_batch` can decode series of images."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.png"
+    cmd = (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.png"
+    )
     srcs = get_samples(cmd)
 
     n, h, w = 32, 240, 320
@@ -356,7 +358,9 @@ def test_load_image_batch_native_edge_values():
 
 def test_batch_decode_image_handle_failure():
     """load_image_batch dismisses failures when strict=False."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.jpg"
+    cmd = (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 32 sample_%03d.jpg"
+    )
     srcs = get_samples(cmd)
 
     flist = ["NON_EXISTING_FILE.JPG", *[src.path for src in srcs]]

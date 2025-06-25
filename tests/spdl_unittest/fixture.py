@@ -15,12 +15,16 @@ from tempfile import TemporaryDirectory
 import numpy as np
 from numpy.typing import DTypeLike, NDArray
 
+FFMPEG_CLI: str = "ffmpeg"
+
+
 __all__ = [
     "get_sample",
     "get_samples",
     "SrcInfo",
     "load_ref_video",
     "load_ref_image",
+    "FFMPEG_CLI",
 ]
 
 

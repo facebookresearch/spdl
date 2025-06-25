@@ -12,12 +12,12 @@ import numpy as np
 import pytest
 import spdl.io
 
-from ..fixture import get_sample
+from ..fixture import FFMPEG_CLI, get_sample
 
 CMDS = {
-    "audio": "ffmpeg -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
-    "video": "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 25 sample.mp4",
-    "image": "ffmpeg -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
+    "audio": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
+    "video": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 25 sample.mp4",
+    "image": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
 }
 
 
@@ -100,7 +100,7 @@ def test_audio_packets_attributes():
 )
 def test_video_packets_attributes(rate):
     """VideoPackets have width, height, pixe_format attributes"""
-    cmd = f"ffmpeg -hide_banner -y -f lavfi -r {rate[0]}/{rate[1]} -i testsrc -frames:v 25 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -r {rate[0]}/{rate[1]} -i testsrc -frames:v 25 sample.mp4"
     sample = get_sample(cmd)
 
     packets = spdl.io.demux_video(sample.path)
@@ -187,7 +187,7 @@ def test_sample_decoding_time():
     """Sample decoding works"""
     # https://stackoverflow.com/questions/63725248/how-can-i-set-gop-size-to-be-a-multiple-of-the-input-framerate
     cmd = (
-        "ffmpeg -hide_banner -y -f lavfi -i testsrc "
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc "
         "-force_key_frames 'expr:eq(mod(n, 25), 0)' "
         "-frames:v 5000 sample.mp4"
     )
@@ -224,7 +224,7 @@ def test_sample_decoding_time_sync():
     """Sample decoding works"""
     # https://stackoverflow.com/questions/63725248/how-can-i-set-gop-size-to-be-a-multiple-of-the-input-framerate
     cmd = (
-        "ffmpeg -hide_banner -y -f lavfi -i testsrc "
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc "
         "-force_key_frames 'expr:eq(mod(n, 25), 0)' "
         "-frames:v 5000 sample.mp4"
     )
@@ -262,7 +262,7 @@ def test_packet_len():
     # 3 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 75 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 75 sample.mp4"
     sample = get_sample(cmd)
 
     ref_array = spdl.io.to_numpy(spdl.io.load_video(sample.path))
@@ -284,7 +284,7 @@ def test_sample_decoding_window():
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
     sample = get_sample(cmd)
 
     # 250 frames
@@ -315,7 +315,7 @@ def test_sample_decoding_window_sync():
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
     sample = get_sample(cmd)
 
     # 250 frames
@@ -343,7 +343,7 @@ def test_sample_decoding_window_sync():
 
 def test_sample_decode_video_default_color_space():
     """sample_decode_video should return rgb24 frames by default."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
 
     packets = spdl.io.demux_video(sample.path)
@@ -356,7 +356,7 @@ def test_sample_decode_video_default_color_space():
 
 def test_sample_decode_video_default_color_space_sync():
     """sample_decode_video should return rgb24 frames by default."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
     sample = get_sample(cmd)
 
     packets = spdl.io.demux_video(sample.path)
@@ -368,7 +368,7 @@ def test_sample_decode_video_default_color_space_sync():
 
 
 def test_sample_decode_video_with_windowed_packets_and_filter():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 30 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 30 sample.mp4"
     sample = get_sample(cmd)
 
     timestamp = (0.55, 2.05)
@@ -387,7 +387,7 @@ def test_sample_decode_video_with_windowed_packets_and_filter():
 
 def test_url():
     """Demuxing from bytes reports the address."""
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 1 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 1 sample.mp4"
     sample = get_sample(cmd)
 
     with open(sample.path, "rb") as f:

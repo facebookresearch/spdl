@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 import spdl.io
 
-from ..fixture import get_sample, load_ref_video
+from ..fixture import FFMPEG_CLI, get_sample, load_ref_video
 
 
 @pytest.mark.parametrize("pix_fmt", ["rgb24", "bgr24", "yuv444p"])
@@ -129,7 +129,7 @@ def test_encode_video_gray(pix_fmt):
 
 
 def test_remux_video():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc2 -frames:v 300 -pix_fmt yuvj420p sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -frames:v 300 -pix_fmt yuvj420p sample.mp4"
 
     sample = get_sample(cmd)
 

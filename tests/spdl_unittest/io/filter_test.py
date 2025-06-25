@@ -12,11 +12,13 @@ import numpy as np
 import spdl.io
 from spdl.io import get_abuffer_desc, get_buffer_desc
 
-from ..fixture import get_sample, load_ref_audio, load_ref_video
+from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio, load_ref_video
 
 
 def test_filter_graph_abuffer_basic():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
+    cmd = (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
+    )
 
     sample = get_sample(cmd)
 
@@ -55,7 +57,7 @@ def test_filter_graph_abuffer_basic():
 
 
 def test_filter_graph_buffer_basic():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
     sample = get_sample(cmd)
 
@@ -97,7 +99,7 @@ def test_filter_graph_buffer_basic():
 
 
 def test_filter_graph_multiple_inputs():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
     sample = get_sample(cmd)
 
@@ -148,7 +150,7 @@ def test_filter_graph_multiple_inputs():
 
 
 def test_filter_graph_multiple_outputs():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
     sample = get_sample(cmd)
 
@@ -207,7 +209,9 @@ def test_filter_graph_multiple_outputs():
 
 
 def test_filter_graph_audio_in_video_out():
-    cmd = "ffmpeg -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
+    cmd = (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
+    )
 
     sample = get_sample(cmd)
 

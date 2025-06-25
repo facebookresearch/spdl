@@ -13,7 +13,7 @@ import spdl.io
 import spdl.io.utils
 from spdl.io import get_audio_filter_desc, get_filter_desc
 
-from ..fixture import get_sample, load_ref_audio
+from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio
 
 
 def _get_format(sample_fmt: str):
@@ -30,8 +30,8 @@ def _get_format(sample_fmt: str):
 )
 def test_load_audio(sample_fmt):
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y \
     -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
     -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
     -filter_complex amerge  -c:a pcm_s16le sample.wav
@@ -56,8 +56,8 @@ def test_load_audio(sample_fmt):
 
 def test_batch_audio_conversion():
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y \
     -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
     -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
     -filter_complex amerge  -c:a pcm_s16le sample.wav
