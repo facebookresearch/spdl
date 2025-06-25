@@ -55,7 +55,7 @@ std::vector<CUDABuffer> NvDecDecoder::flush() {
 using namespace spdl::core;
 
 namespace {
-void zero_clear(nb::bytes data) {
+void zero_clear(const nb::bytes& data) {
   std::memset((void*)data.c_str(), 0, data.size());
 }
 } // namespace
