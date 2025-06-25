@@ -789,7 +789,10 @@ def decode_packets_nvdec(
 
 
 def decode_image_nvjpeg(
-    src: str | bytes, *, device_config: CUDAConfig | None = None, **kwargs
+    src: str | bytes | Sequence[bytes],
+    *,
+    device_config: CUDAConfig | None = None,
+    **kwargs,
 ) -> CUDABuffer:
     """**[Experimental]** Decode image with nvJPEG.
 
@@ -825,11 +828,11 @@ def decode_image_nvjpeg(
             )
             device_config = kwargs["cuda_config"]
 
-    if isinstance(src, bytes):
-        data = src
-    else:
+    if isinstance(src, str):
         with open(src, "rb") as f:
             data = f.read()
+    else:
+        data = src
     return _libspdl_cuda.decode_image_nvjpeg(
         data, device_config=device_config, **kwargs
     )
