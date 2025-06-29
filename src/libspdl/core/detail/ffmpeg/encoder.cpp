@@ -287,7 +287,7 @@ std::vector<std::string> to_str(const AVChannelLayout* p) {
   char buf[BUF_SIZE];
   while (p->nb_channels) {
     auto size = av_channel_layout_describe(p, buf, BUF_SIZE);
-    CHECK_AVERROR_NUM(size, "Failed to fetch a channel layout name.");
+    CHECK_AVERROR_NUM(size, "Failed to fetch a channel layout name.")
     if (size > BUF_SIZE) {
       size = BUF_SIZE;
     }
@@ -308,7 +308,7 @@ void set_channels(AVCodecContext* ctx, int num_channels) {
     if (p->nb_channels == num_channels) {
       CHECK_AVERROR(
           av_channel_layout_copy(&ctx->ch_layout, p),
-          "Failed to copy channel layout.");
+          "Failed to copy channel layout.")
       return;
     }
     p++;
