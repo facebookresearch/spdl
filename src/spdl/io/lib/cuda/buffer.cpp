@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "register_spdl_cuda_extensions.h"
+
 #include <libspdl/core/buffer.h>
 #include <libspdl/cuda/buffer.h>
 

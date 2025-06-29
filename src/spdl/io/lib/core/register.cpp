@@ -6,29 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <nanobind/nanobind.h>
-
 #ifndef SPDL_FFMPEG_EXT_NAME
 #error SPDL_FFMPEG_EXT_NAME must be defined.
 #endif
 
-namespace nb = nanobind;
+#include "register_spdl_core_extensions.h"
 
-namespace spdl::core {
-void register_types(nb::module_&);
-void register_packets(nb::module_&);
-void register_frames(nb::module_&);
-void register_storage(nb::module_&);
-void register_buffers(nb::module_&);
-void register_tracing(nb::module_&);
-void register_utils(nb::module_&);
-void register_demuxing(nb::module_&);
-void register_decoding(nb::module_&);
-void register_conversion(nb::module_&);
-void register_encoding(nb::module_&);
-void register_filtering(nb::module_&);
-void register_bsf(nb::module_&);
-} // namespace spdl::core
+#include <nanobind/nanobind.h>
 
 namespace {
 NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {

@@ -19,6 +19,8 @@
 namespace nb = nanobind;
 
 namespace spdl::cuda {
+void register_color_conversion(nb::module_& m);
+
 void register_color_conversion(nb::module_& m) {
   m.def(
       "nv12_to_planar_rgb",
