@@ -18,7 +18,7 @@ namespace spdl::cuda {
 
 namespace detail {
 class NvDecDecoderCore;
-};
+}
 
 // Usage:
 // NvDecDecoder decoder{};

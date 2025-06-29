@@ -22,29 +22,29 @@ extern "C" {
 }
 namespace spdl::core {
 
-PacketSeries::PacketSeries(){};
+PacketSeries::PacketSeries() {}
 
 PacketSeries::PacketSeries(const PacketSeries& other) {
   for (const AVPacket* pkt : other.container) {
     container.push_back(CHECK_AVALLOCATE(av_packet_clone(pkt)));
   }
-};
+}
 
 PacketSeries::PacketSeries(PacketSeries&& other) noexcept {
   *this = std::move(other);
-};
+}
 
 PacketSeries& PacketSeries::operator=(const PacketSeries& other) {
   PacketSeries tmp(other);
   *this = std::move(tmp);
   return *this;
-};
+}
 
 PacketSeries& PacketSeries::operator=(PacketSeries&& other) noexcept {
   using std::swap;
   swap(container, other.container);
   return *this;
-};
+}
 
 PacketSeries::~PacketSeries() {
   std::for_each(container.begin(), container.end(), [](AVPacket* p) {
@@ -53,7 +53,7 @@ PacketSeries::~PacketSeries() {
       av_packet_free(&p);
     }
   });
-};
+}
 
 void PacketSeries::push(AVPacket* p) {
   if (!p) {
@@ -76,7 +76,7 @@ Packets<media>::Packets(
       codec(std::move(codec_)) {
   TRACE_EVENT(
       "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
-};
+}
 
 template <MediaType media>
 Packets<media>::Packets(
@@ -92,7 +92,7 @@ Packets<media>::Packets(
       codec(std::nullopt) {
   TRACE_EVENT(
       "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
-};
+}
 template <MediaType media>
 Packets<media>::Packets(uintptr_t id_, int index, Rational time_base_)
     : id(id_),
@@ -103,7 +103,7 @@ Packets<media>::Packets(uintptr_t id_, int index, Rational time_base_)
       codec(std::nullopt) {
   TRACE_EVENT(
       "decoding", "Packets::Packets", perfetto::Flow::ProcessScoped(id));
-};
+}
 
 template <MediaType media>
 Packets<media>::Packets(const Packets<media>& other)
@@ -308,7 +308,7 @@ std::optional<std::tuple<double, double>> get_pts(
   double t0 = pkts[0]->pts, tN = pkts[pkts.size() - 1]->pts;
   auto tb = packets.time_base;
   return std::tuple<double, double>{t0 * tb.num / tb.den, tN * tb.num / tb.den};
-};
+}
 
 template std::optional<std::tuple<double, double>> get_pts(
     const Packets<MediaType::Audio>& packets);

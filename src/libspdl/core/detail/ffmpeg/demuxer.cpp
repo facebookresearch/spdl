@@ -25,7 +25,7 @@ void init_fmt_ctx(AVFormatContext* fmt_ctx) {
   TRACE_EVENT("demuxing", "avformat_find_stream_info");
   CHECK_AVERROR(
       avformat_find_stream_info(fmt_ctx, nullptr),
-      fmt::format("Failed to find stream information: {}.", fmt_ctx->url));
+      fmt::format("Failed to find stream information: {}.", fmt_ctx->url))
 
   // Disable all the non-media streams
   for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
@@ -108,7 +108,7 @@ int DemuxerImpl::get_default_stream_index() const {
   }();
   int i = av_find_best_stream(fmt_ctx, t, -1, -1, nullptr, 0);
   CHECK_AVERROR_NUM(
-      i, fmt::format("Failed to find an audio stream in {}", fmt_ctx->url));
+      i, fmt::format("Failed to find an audio stream in {}", fmt_ctx->url))
   return i;
 }
 
@@ -161,7 +161,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux() {
     }
     if (errnum < 0 && errnum != AVERROR_EOF) {
       CHECK_AVERROR_NUM(
-          errnum, fmt::format("Failed to read a packet. ({})", fmt_ctx->url));
+          errnum, fmt::format("Failed to read a packet. ({})", fmt_ctx->url))
     }
     if (errnum == AVERROR_EOF) {
       break;
@@ -220,7 +220,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
       CHECK_AVERROR(
           av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
           "Failed to seek to the timestamp {} [sec]",
-          start);
+          start)
     }
   }
 
@@ -307,7 +307,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
 #define YIELD                        \
   co_yield std::move(ret);           \
   ret = std::map<int, AnyPackets>{}; \
-  t0 = pts;
+  t0 = pts
 
   while (demuxing) {
     auto packet = demuxing();

@@ -105,4 +105,4 @@ CUDABufferPtr nv12_to_planar_bgr(
   return nv12_to_rgb<detail::nv12_to_planar_bgr>(
       frames, cfg, matrix_coefficients);
 }
-}; // namespace spdl::cuda
+} // namespace spdl::cuda

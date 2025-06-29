@@ -25,4 +25,4 @@ CUDABufferPtr nv12_to_planar_bgr(
     const CUDAConfig& cfg,
     int matrix_coefficients = 1);
 
-}; // namespace spdl::cuda
+} // namespace spdl::cuda

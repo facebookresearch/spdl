@@ -36,7 +36,7 @@ AVDictionaryDPtr get_option_dict(const std::optional<OptionDict>& options) {
           av_dict_set(opt, key.c_str(), value.c_str(), 0),
           "Failed to convert option dictionary. ({}={})",
           key,
-          value);
+          value)
     }
   }
   return opt;
@@ -187,7 +187,7 @@ void open_codec_for_decode(
     TRACE_EVENT("decoding", "avcodec_open2");
     CHECK_AVERROR(
         avcodec_open2(codec_ctx, codec_ctx->codec, option),
-        "Failed to initialize CodecContext.");
+        "Failed to initialize CodecContext.")
   }
   check_empty(option);
 }
@@ -206,7 +206,7 @@ AVCodecContextPtr get_decode_codec_ctx_ptr(
     TRACE_EVENT("decoding", "avcodec_parameters_to_context");
     CHECK_AVERROR(
         avcodec_parameters_to_context(codec_ctx.get(), params),
-        "Failed to set CodecContext parameter.");
+        "Failed to set CodecContext parameter.")
   }
   VLOG(9) << "Codec: " << codec_ctx->codec->name;
 
@@ -229,7 +229,7 @@ AVFormatOutputContextPtr get_output_format_ctx(
           "Failed to allocate output format context for `{}`. "
           "FFmpeg might not be able to deduce the format from the file name. "
           "Specifying the `format` might resolve this.",
-          url));
+          url))
   return AVFormatOutputContextPtr{p};
 }
 
@@ -280,7 +280,7 @@ void open_codec_for_encode(
 
   CHECK_AVERROR(
       avcodec_open2(codec_ctx, codec_ctx->codec, option),
-      "Failed to open codec context.");
+      "Failed to open codec context.")
   check_empty(option);
 }
 
@@ -306,12 +306,12 @@ void open_format(
     CHECK_AVERROR(
         avio_open2(
             &format_ctx->pb, format_ctx->url, AVIO_FLAG_WRITE, nullptr, option),
-        fmt::format("Failed to open output: {}", format_ctx->url));
+        fmt::format("Failed to open output: {}", format_ctx->url))
   }
 
   CHECK_AVERROR(
       avformat_write_header(format_ctx, option),
-      fmt::format("Failed to write header: {}", format_ctx->url));
+      fmt::format("Failed to write header: {}", format_ctx->url))
   check_empty(option);
 }
 

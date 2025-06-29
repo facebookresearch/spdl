@@ -25,7 +25,7 @@ namespace {
 inline AVCodecParameters* copy(const AVCodecParameters* src) {
   auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
   CHECK_AVERROR(
-      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.");
+      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.")
   return dst;
 }
 } // namespace

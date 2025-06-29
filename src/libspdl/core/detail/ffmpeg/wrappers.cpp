@@ -20,16 +20,16 @@ void AVIOContextDeleter::operator()(AVIOContext* p) {
     av_freep(&p->buffer);
   }
   av_freep(&p);
-};
+}
 
 void AVFormatInputContextDeleter::operator()(AVFormatContext* p) {
   TRACE_EVENT("decoding", "avformat_close_input");
   avformat_close_input(&p);
-};
+}
 
 void AVFormatOutputContextDeleter::operator()(AVFormatContext* p) {
   avformat_free_context(p);
-};
+}
 
 void AVCodecContextDeleter::operator()(AVCodecContext* p) {
   // Tracing because it takes as long as 300ms in case of cuvid decoder.
@@ -64,7 +64,7 @@ void AVFilterGraphDeleter::operator()(AVFilterGraph* p) {
   avfilter_graph_free(&p);
 }
 
-AVFrameAutoUnref::AVFrameAutoUnref(AVFrame* p_) : p(p_){};
+AVFrameAutoUnref::AVFrameAutoUnref(AVFrame* p_) : p(p_) {}
 AVFrameAutoUnref::~AVFrameAutoUnref() {
   av_frame_unref(p);
 }
@@ -75,7 +75,7 @@ AVFrame* make_reference(AVFrame* src) {
   if (err < 0) {
     av_frame_free(&dst);
   }
-  CHECK_AVERROR(err, "Failed to create a new reference to an AVFrame.");
+  CHECK_AVERROR(err, "Failed to create a new reference to an AVFrame.")
   return dst;
 }
 
