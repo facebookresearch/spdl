@@ -236,52 +236,6 @@ AVFormatOutputContextPtr get_output_format_ctx(
 ////////////////////////////////////////////////////////////////////////////////
 // Encoding
 ////////////////////////////////////////////////////////////////////////////////
-const AVCodec* get_image_codec(
-    const std::optional<std::string>& encoder,
-    const AVOutputFormat* oformat,
-    const std::string& url) {
-  if (encoder) {
-    const AVCodec* c = avcodec_find_encoder_by_name(encoder->c_str());
-    if (!c) {
-      SPDL_FAIL(fmt::format("Unexpected encoder name: {}", encoder.value()));
-    }
-    return c;
-  }
-
-  // FFmpeg defaults to 'image2' muxer, of which default encoder is MJPEG.
-  // This also applies to formats like PNG and TIFF
-  if (std::strcmp(oformat->name, "image2") == 0) {
-    // The following list was obtained by running
-    // ffmpeg -h muxer=image2 | grep 'Common extensions'
-    // then for each extension, checking the encoder by
-    // fmpeg -hide_banner -h encoder=$ext | grep 'Encoder '
-    static const std::set<std::string> exts{
-        "bmp", "dpx",    "exr", "pam",   "pbm", "pcx", "pfm",
-        "pgm", "pgmyuv", "phm", "png",   "ppm", "sgi", "tiff",
-        "xwd", "vbn",    "xbm", "xface", "qoi", "hdr", "wbmp"};
-
-    auto ext = std::filesystem::path(url).extension().string();
-    if (!ext.empty()) {
-      ext = ext.substr(1);
-      if (exts.contains(ext)) {
-        const AVCodec* c = avcodec_find_encoder_by_name(ext.c_str());
-        if (c) {
-          return c;
-        }
-      }
-    }
-  }
-
-  auto default_codec = oformat->video_codec;
-
-  const AVCodec* c = avcodec_find_encoder(default_codec);
-  if (!c) {
-    SPDL_FAIL(fmt::format(
-        "Encoder not found for codec: {}", avcodec_get_name(default_codec)));
-  }
-  return c;
-}
-
 void open_codec_for_encode(
     AVCodecContext* codec_ctx,
     const std::optional<OptionDict>& encode_options) {
