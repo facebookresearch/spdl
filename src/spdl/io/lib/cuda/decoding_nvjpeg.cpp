@@ -23,8 +23,16 @@ namespace nb = nanobind;
 
 namespace spdl::cuda {
 
-#define NOT_SUPPORTED_NVJPEG \
+#ifdef SPDL_USE_NVJPEG
+#define _(var_name) var_name
+#define __(impl) impl
+#else
+#define _NOT_SUPPORTED \
   throw std::runtime_error("SPDL is not built with NVJPEG support.")
+#define _(var_name)
+#define __(impl) \
+  { _NOT_SUPPORTED; }
+#endif
 
 using namespace spdl::core;
 
@@ -37,15 +45,12 @@ void zero_clear(const nb::bytes& data) {
 void register_decoding_nvjpeg(nb::module_& m) {
   m.def(
       "decode_image_nvjpeg",
-      [](nb::bytes data,
-         const CUDAConfig& cuda_config,
-         int scale_width,
-         int scale_height,
-         const std::string& pix_fmt,
-         bool _zero_clear) {
-#ifndef SPDL_USE_NVJPEG
-        NOT_SUPPORTED_NVJPEG;
-#else
+      [](nb::bytes _(data),
+         const CUDAConfig& _(cuda_config),
+         int _(scale_width),
+         int _(scale_height),
+         const std::string& _(pix_fmt),
+         bool _(_zero_clear)) __({
         auto ret = decode_image_nvjpeg(
             std::string_view{data.c_str(), data.size()},
             cuda_config,
@@ -56,8 +61,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
           zero_clear(data);
         }
         return ret;
-#endif
-      },
+      }),
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("data"),
       nb::kw_only(),
@@ -69,15 +73,12 @@ void register_decoding_nvjpeg(nb::module_& m) {
 
   m.def(
       "decode_image_nvjpeg",
-      [](const std::vector<nb::bytes>& data,
-         const CUDAConfig& cuda_config,
-         int scale_width,
-         int scale_height,
-         const std::string& pix_fmt,
-         bool _zero_clear) {
-#ifndef SPDL_USE_NVJPEG
-        NOT_SUPPORTED_NVJPEG;
-#else
+      [](const std::vector<nb::bytes>& _(data),
+         const CUDAConfig& _(cuda_config),
+         int _(scale_width),
+         int _(scale_height),
+         const std::string& _(pix_fmt),
+         bool _(_zero_clear)) __({
         std::vector<std::string_view> dataset;
         dataset.reserve(data.size());
         for (const auto& d : data) {
@@ -91,8 +92,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
           }
         }
         return ret;
-#endif
-      },
+      }),
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("data"),
       nb::kw_only(),

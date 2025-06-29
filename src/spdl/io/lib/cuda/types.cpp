@@ -17,21 +17,26 @@
 
 namespace nb = nanobind;
 
+#ifdef SPDL_USE_CUDA
+#define _V(var_name) var_name
+#define _I(impl) impl
+#else
+#define _V(var_name)
+#define _I(impl) \
+  { throw std::runtime_error("SPDL is not built with CUDA support."); }
+#endif
+
 namespace spdl::cuda {
 void register_types(nb::module_& m) {
   nb::class_<CUDAConfig>(m, "CUDAConfig");
 
   m.def(
       "cuda_config",
-      [](int index,
-         uintptr_t stream,
-         std::optional<cuda_allocator> allocator) -> CUDAConfig {
-#ifdef SPDL_USE_CUDA
-        return CUDAConfig{index, stream, std::move(allocator)};
-#else
-        throw std::runtime_error("SPDL is not built with CUDA support.");
-#endif
-      },
+      [](int _V(index),
+         uintptr_t _V(stream),
+         std::optional<cuda_allocator> _V(allocator)) -> CUDAConfig _I({
+        return CUDAConfig(index, stream, std::move(allocator));
+      }),
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("device_index"),
       nb::arg("stream") = 0,

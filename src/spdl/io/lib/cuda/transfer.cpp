@@ -27,6 +27,7 @@ using cuda_array = nb::ndarray<nb::device::cuda, nb::c_contig>;
 namespace spdl::cuda {
 using namespace spdl::core;
 namespace {
+#ifdef SPDL_USE_CUDA
 ElemClass _get_elemclass(uint8_t code) {
   switch ((nb::dlpack::dtype_code)code) {
     case nb::dlpack::dtype_code::Int:
@@ -40,20 +41,22 @@ ElemClass _get_elemclass(uint8_t code) {
           fmt::format("Unsupported DLPack type: {}", code));
   }
 }
-
+#endif
 } // namespace
 
 void register_transfer(nb::module_& m) {
   // CPU -> CUDA
   m.def(
       "transfer_buffer",
-      [](CPUBufferPtr buffer, const CUDAConfig& cfg) {
 #ifdef SPDL_USE_CUDA
+      [](CPUBufferPtr buffer, const CUDAConfig& cfg) {
         return transfer_buffer(std::move(buffer), cfg);
-#else
-        throw std::runtime_error("SPDL is not built with CUDA support");
-#endif
       },
+#else
+      [](CPUBufferPtr, const CUDAConfig&) {
+        throw std::runtime_error("SPDL is not built with CUDA support");
+      },
+#endif
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("buffer"),
       nb::kw_only(),
@@ -61,10 +64,12 @@ void register_transfer(nb::module_& m) {
 
   m.def(
       "transfer_buffer",
-      [](cpu_array array, const CUDAConfig& cfg) {
 #ifndef SPDL_USE_CUDA
+      [](cpu_array, const CUDAConfig&) {
         throw std::runtime_error("SPDL is not built with CUDA support");
+      },
 #else
+      [](cpu_array array, const CUDAConfig& cfg) {
         std::vector<size_t> shape;
         auto src_ptr = array.shape_ptr();
         for (size_t i = 0; i < array.ndim(); ++i) {
@@ -76,8 +81,8 @@ void register_transfer(nb::module_& m) {
             array.itemsize(),
             array.data(),
             cfg);
-#endif
       },
+#endif
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("buffer"),
       nb::kw_only(),
@@ -86,10 +91,12 @@ void register_transfer(nb::module_& m) {
   // CUDA -> CPU
   m.def(
       "transfer_buffer_cpu",
-      [](cuda_array array) {
 #ifndef SPDL_USE_CUDA
+      [](cuda_array) {
         throw std::runtime_error("SPDL is not built with CUDA support");
+      },
 #else
+      [](cuda_array array) {
         std::vector<size_t> shape;
         auto src_ptr = array.shape_ptr();
         for (size_t i = 0; i < array.ndim(); ++i) {
@@ -100,8 +107,8 @@ void register_transfer(nb::module_& m) {
             _get_elemclass(array.dtype().code),
             array.itemsize(),
             array.data());
-#endif
       },
+#endif
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("buffer"));
 }

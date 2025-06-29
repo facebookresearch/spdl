@@ -22,11 +22,11 @@ namespace nb = nanobind;
 
 namespace spdl::cuda {
 using namespace spdl::core;
-#ifdef SPDL_USE_CUDA
-namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // Array interface supplements
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef SPDL_USE_CUDA
+namespace {
 std::string get_typestr(const ElemClass elem_class, size_t depth) {
   const auto key = [&]() {
     switch (elem_class) {
@@ -58,26 +58,24 @@ nb::dict get_cuda_array_interface(CUDABuffer& b) {
 } // namespace
 #endif
 
+// To support -Wunused-parameter
+#ifdef SPDL_USE_CUDA
+#define _V(var_name) var_name
+#define _I(impl) impl
+#else
+#define _V(var_name)
+#define _I(impl) \
+  { throw std::runtime_error("SPDL is not compiled with CUDA support."); }
+#endif
+
 void register_buffers(nb::module_& m) {
   nb::class_<CUDABuffer>(m, "CUDABuffer")
-      .def_prop_ro(
-          "__cuda_array_interface__",
-          [](CUDABuffer& self) {
-#ifndef SPDL_USE_CUDA
-            throw std::runtime_error("SPDL is not compiled with CUDA support.");
-#else
-            return get_cuda_array_interface(self);
-#endif
-          })
+      .def_prop_ro("__cuda_array_interface__", [](CUDABuffer & _V(self)) _I({
+                     return get_cuda_array_interface(self);
+                   }))
       .def_prop_ro(
           "device_index",
-          [](CUDABuffer& self) {
-#ifndef SPDL_USE_CUDA
-            throw std::runtime_error("SPDL is not compiled with CUDA support.");
-#else
-            return self.device_index;
-#endif
-          },
+          [](CUDABuffer & _V(self)) _I({ return self.device_index; }),
           nb::call_guard<nb::gil_scoped_release>());
 }
 } // namespace spdl::cuda

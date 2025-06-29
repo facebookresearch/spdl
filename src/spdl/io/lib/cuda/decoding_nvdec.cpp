@@ -21,14 +21,22 @@ namespace nb = nanobind;
 
 namespace spdl::cuda {
 
-#define NOT_SUPPORTED_NVCODEC \
+#ifdef SPDL_USE_NVCODEC
+#define _(var_name) var_name
+#define __(impl) impl
+#else
+#define _NOT_SUPPORTED \
   throw std::runtime_error("SPDL is not built with NVCODEC support.")
+#define _(var_name) var_name
+#define __(impl) \
+  { _NOT_SUPPORTED; }
 
-#ifndef SPDL_USE_NVCODEC
-NvDecDecoder::NvDecDecoder(){};
+NvDecDecoder::NvDecDecoder() {
+  _NOT_SUPPORTED;
+};
 NvDecDecoder::~NvDecDecoder(){};
 void NvDecDecoder::reset() {
-  NOT_SUPPORTED_NVCODEC;
+  _NOT_SUPPORTED;
 }
 void NvDecDecoder::init(
     const CUDAConfig& cuda_config,
@@ -36,14 +44,14 @@ void NvDecDecoder::init(
     CropArea crop,
     int width,
     int height) {
-  NOT_SUPPORTED_NVCODEC;
+  _NOT_SUPPORTED;
 }
 std::vector<CUDABuffer> NvDecDecoder::decode(
     spdl::core::VideoPacketsPtr packets) {
-  NOT_SUPPORTED_NVCODEC;
+  _NOT_SUPPORTED;
 }
 std::vector<CUDABuffer> NvDecDecoder::flush() {
-  NOT_SUPPORTED_NVCODEC;
+  _NOT_SUPPORTED;
 }
 #endif
 
@@ -57,15 +65,15 @@ void register_decoding_nvdec(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "init",
-          [](NvDecDecoder& self,
-             const CUDAConfig& cuda_config,
-             const spdl::core::VideoCodec& codec,
-             int crop_left,
-             int crop_top,
-             int crop_right,
-             int crop_bottom,
-             int width,
-             int height) {
+          [](NvDecDecoder & _(self),
+             const CUDAConfig& _(cuda_config),
+             const spdl::core::VideoCodec& _(codec),
+             int _(crop_left),
+             int _(crop_top),
+             int _(crop_right),
+             int _(crop_bottom),
+             int _(width),
+             int _(height)) __({
             self.init(
                 cuda_config,
                 codec,
@@ -76,7 +84,7 @@ void register_decoding_nvdec(nb::module_& m) {
                     static_cast<short>(crop_bottom)},
                 width,
                 height);
-          },
+          }),
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("device_config"),
           nb::arg("codec"),
@@ -99,13 +107,8 @@ void register_decoding_nvdec(nb::module_& m) {
 
   m.def(
       "_nvdec_decoder",
-      []() -> std::unique_ptr<NvDecDecoder> {
-#ifdef SPDL_USE_NVCODEC
-        return std::make_unique<NvDecDecoder>();
-#else
-        NOT_SUPPORTED_NVCODEC;
-#endif
-      },
+      []() -> std::unique_ptr<NvDecDecoder> __(
+               { return std::make_unique<NvDecDecoder>(); }),
       nb::call_guard<nb::gil_scoped_release>());
 }
 } // namespace spdl::cuda

@@ -16,18 +16,23 @@
 
 namespace nb = nanobind;
 
+#ifdef SPDL_USE_CUDA
+#define _V(var_name) var_name
+#define _I(impl) impl
+#else
+#define _V(var_name)
+#define _I(impl) \
+  { throw std::runtime_error("SPDL is not built with CUDA support."); }
+#endif
+
 namespace spdl::cuda {
 void register_storage(nb::module_& m) {
   m.def(
       "cpu_storage",
-      [](size_t size) -> std::shared_ptr<core::CPUStorage> {
-#ifndef SPDL_USE_CUDA
-        throw std::runtime_error("SPDL is not built with CUDA support.");
-#else
+      [](size_t _V(size)) -> std::shared_ptr<core::CPUStorage> _I({
         return std::make_shared<spdl::core::CPUStorage>(
             size, &alloc_pinned, &dealloc_pinned, true);
-#endif
-      },
+      }),
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("size"));
 }
