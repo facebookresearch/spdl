@@ -70,7 +70,7 @@ FilterGraphImpl::FilterGraphImpl(const std::string& filter_desc)
     : filter_graph(make_graph(filter_desc)) {
   auto* g = filter_graph.get();
 
-  for (int i = 0; i < g->nb_filters; ++i) {
+  for (int i = 0; i < (int)g->nb_filters; ++i) {
     auto* ctx = g->filters[i];
     if (std::strcmp(ctx->filter->name, "buffer") == 0 ||
         std::strcmp(ctx->filter->name, "abuffer") == 0) {

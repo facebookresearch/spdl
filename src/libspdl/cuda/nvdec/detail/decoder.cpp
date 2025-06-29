@@ -266,8 +266,8 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
       lock,
       video_fmt,
       output_fmt,
-      max_width,
-      max_height,
+      (uint)max_width,
+      (uint)max_height,
       crop,
       target_width,
       target_height);
@@ -278,7 +278,7 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   uint ret = [&]() -> uint {
     if (!decoder) {
       decoder.reset(get_decoder(&new_decoder_param));
-      return new_decoder_param.ulNumDecodeSurfaces;
+      return (uint)new_decoder_param.ulNumDecodeSurfaces;
     }
     switch (update_type(decoder_param, new_decoder_param)) {
       case RETAIN:
@@ -293,7 +293,7 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
     auto prev_num_surfs = decoder_param.ulNumDecodeSurfaces;
     return prev_num_surfs == new_decoder_param.ulNumDecodeSurfaces
         ? 1
-        : new_decoder_param.ulNumDecodeSurfaces;
+        : (uint)new_decoder_param.ulNumDecodeSurfaces;
   }();
   decoder_param = new_decoder_param;
 
@@ -420,7 +420,7 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   return 1;
 }
 
-int NvDecDecoderCore::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
+int NvDecDecoderCore::handle_operating_point(CUVIDOPERATINGPOINTINFO*) {
   // Return values:
   // * <0: fail
   // * >=0: success
@@ -439,7 +439,7 @@ int NvDecDecoderCore::handle_operating_point(CUVIDOPERATINGPOINTINFO* data) {
   return 0;
 }
 
-int NvDecDecoderCore::handle_sei_msg(CUVIDSEIMESSAGEINFO* msg_info) {
+int NvDecDecoderCore::handle_sei_msg(CUVIDSEIMESSAGEINFO*) {
   // Return values:
   // * 0: fail
   // * >=1: succeeded

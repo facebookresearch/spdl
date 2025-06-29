@@ -168,7 +168,7 @@ void MuxerImpl::write(
     int i,
     const std::vector<AVPacket*>& packets,
     AVRational time_base) {
-  if (i < 0 || fmt_ctx->nb_streams <= i) {
+  if (i < 0 || (int)fmt_ctx->nb_streams <= i) {
     SPDL_FAIL(fmt::format(
         "The stream index ({}) is out of bound. (0, {}]",
         i,

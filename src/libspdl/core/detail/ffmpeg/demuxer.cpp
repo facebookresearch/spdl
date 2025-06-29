@@ -28,7 +28,7 @@ void init_fmt_ctx(AVFormatContext* fmt_ctx) {
       fmt::format("Failed to find stream information: {}.", fmt_ctx->url))
 
   // Disable all the non-media streams
-  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
+  for (int i = 0; i < (int)fmt_ctx->nb_streams; ++i) {
     switch (fmt_ctx->streams[i]->codecpar->codec_type) {
       case AVMEDIA_TYPE_AUDIO:
       case AVMEDIA_TYPE_VIDEO:
@@ -41,7 +41,7 @@ void init_fmt_ctx(AVFormatContext* fmt_ctx) {
 
 void enable_for_stream(AVFormatContext* fmt_ctx, const std::set<int>& indices) {
   for (auto i : indices) {
-    if (i < 0 || fmt_ctx->nb_streams <= i) {
+    if (i < 0 || (int)fmt_ctx->nb_streams <= i) {
       SPDL_FAIL(fmt::format(
           "Stream index must be in range of [0, {}). Found: {}",
           fmt_ctx->nb_streams,
@@ -56,7 +56,7 @@ void enable_for_stream(AVFormatContext* fmt_ctx, const std::set<int>& indices) {
     }
   }
   // Disable other streams
-  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
+  for (int i = 0; i < (int)fmt_ctx->nb_streams; ++i) {
     if (indices.contains(i)) {
       fmt_ctx->streams[i]->discard = AVDISCARD_DEFAULT;
     } else {
@@ -117,7 +117,7 @@ template int DemuxerImpl::get_default_stream_index<MediaType::Video>() const;
 template int DemuxerImpl::get_default_stream_index<MediaType::Image>() const;
 
 bool DemuxerImpl::has_audio() const {
-  for (int i = 0; i < fmt_ctx->nb_streams; ++i) {
+  for (int i = 0; i < (int)fmt_ctx->nb_streams; ++i) {
     if (AVMEDIA_TYPE_AUDIO == fmt_ctx->streams[i]->codecpar->codec_type) {
       return true;
     }
@@ -329,7 +329,8 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
       }
       std::visit([&](auto& v) { v->pkts.push(packet.release()); }, ret[i]);
       int num_pkts = std::visit(
-          [&](auto& v) -> int { return v->pkts.get_packets().size(); }, ret[i]);
+          [&](auto& v) -> int { return (int)v->pkts.get_packets().size(); },
+          ret[i]);
       if (num_packets > 0 && num_pkts >= num_packets) {
         YIELD;
       }

@@ -69,7 +69,7 @@ std::string to_str(MediaType media) {
 
 template <MediaType media>
 void Muxer::write(int i, Packets<media>& packets) {
-  if (i < 0 || i >= types.size()) {
+  if (i < 0 || i >= (int)types.size()) {
     SPDL_FAIL(fmt::format("Index {} is out of range (0, {}]", i, types.size()));
   }
   if (types.at(i) != media) {
