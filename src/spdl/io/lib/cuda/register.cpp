@@ -17,7 +17,8 @@ namespace nb = nanobind;
 namespace spdl::cuda {
 void register_types(nb::module_&);
 void register_buffers(nb::module_&);
-void register_decoding(nb::module_&);
+void register_decoding_nvdec(nb::module_&);
+void register_decoding_nvjpeg(nb::module_&);
 void register_storage(nb::module_&);
 void register_transfer(nb::module_&);
 void register_utils(nb::module_&);
@@ -28,7 +29,8 @@ namespace {
 NB_MODULE(SPDL_CUDA_EXT_NAME, m) {
   spdl::cuda::register_types(m);
   spdl::cuda::register_buffers(m);
-  spdl::cuda::register_decoding(m);
+  spdl::cuda::register_decoding_nvdec(m);
+  spdl::cuda::register_decoding_nvjpeg(m);
   spdl::cuda::register_storage(m);
   spdl::cuda::register_transfer(m);
   spdl::cuda::register_utils(m);
