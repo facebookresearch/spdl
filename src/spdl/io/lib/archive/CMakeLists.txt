@@ -13,11 +13,21 @@ message(STATUS "Building ${name}")
 
 set(srcs register.cpp zip_impl.cpp)
 set(deps ZLIB::ZLIB fmt::fmt glog::glog)
-nanobind_add_module("${name}" "${srcs}")
-target_link_libraries("${name}" PRIVATE "${deps}")
-target_include_directories("${name}" PRIVATE "${Python_INCLUDE_DIR}")
-target_include_directories(nanobind-static PRIVATE "${Python_INCLUDE_DIR}")
-target_compile_options("${name}" PRIVATE "${SPDL_CXX_CPU_COMPILE_FLAGS}")
+set(nb_options
+  STABLE_ABI
+  NB_STATIC
+  LTO
+  NB_SUPPRESS_WARNINGS
+  )
+
+if (NOT SPDL_IS_GIL_ENABLED)
+  list(APPEND nb_options FREE_THREADED)
+endif()
+
+nanobind_add_module(${name} ${nb_options} ${srcs})
+target_link_libraries(${name} PRIVATE "${deps}")
+target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
+target_compile_options(${name} PRIVATE "${SPDL_CXX_CPU_COMPILE_FLAGS}")
 
 install(
   TARGETS ${name}
