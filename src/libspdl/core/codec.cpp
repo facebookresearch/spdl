@@ -33,9 +33,9 @@ inline AVCodecParameters* copy(const AVCodecParameters* src) {
 template <MediaType media>
 Codec<media>::Codec(
     const AVCodecParameters* p,
-    Rational time_base,
-    Rational frame_rate) noexcept
-    : codecpar(copy(p)), time_base(time_base), frame_rate(frame_rate) {}
+    Rational tb,
+    Rational fr) noexcept
+    : codecpar(copy(p)), time_base(tb), frame_rate(fr) {}
 
 template <MediaType media>
 Codec<media>::Codec(const Codec<media>& other)
