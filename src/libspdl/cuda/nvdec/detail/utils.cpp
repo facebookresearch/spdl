@@ -385,6 +385,7 @@ const char* get_chroma_name(cudaVideoChromaFormat chroma) {
   }
 }
 
+namespace {
 const char* get_video_signal_format_name(unsigned char video_format) {
   std::vector<const char*> names{
       "Component", "PAL", "NTSC", "SECAM", "MAC", "Unspecified"};
@@ -393,6 +394,7 @@ const char* get_video_signal_format_name(unsigned char video_format) {
   }
   return names[video_format];
 }
+} // namespace
 
 std::string print(const CUVIDEOFORMAT* video_fmt) {
   return fmt::format(

@@ -45,7 +45,7 @@ std::vector<std::string> get_filters() {
 ////////////////////////////////////////////////////////////////////////////////
 // FilterGraphImpl
 ////////////////////////////////////////////////////////////////////////////////
-
+namespace {
 AVFilterGraphPtr make_graph(const std::string& filter_desc) {
   AVFilterGraphPtr graph{CHECK_AVALLOCATE(avfilter_graph_alloc())};
   graph->nb_threads = 1;
@@ -65,6 +65,7 @@ AVFilterGraphPtr make_graph(const std::string& filter_desc) {
 
   return graph;
 }
+} // namespace
 
 FilterGraphImpl::FilterGraphImpl(const std::string& filter_desc)
     : filter_graph(make_graph(filter_desc)) {
