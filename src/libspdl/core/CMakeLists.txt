@@ -74,6 +74,7 @@ function(add_libspdl ffmpeg_version)
     PUBLIC
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>"
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+  target_compile_options("${name}" PRIVATE "${SPDL_CXX_CPU_COMPILE_FLAGS}")
 
   install(
     TARGETS "${name}"
