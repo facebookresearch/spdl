@@ -17,6 +17,7 @@
 
 namespace spdl::core {
 namespace detail {
+namespace {
 DataInterfacePtr get_interface(
     const std::string_view src,
     const SourceAdaptorPtr& adaptor,
@@ -34,6 +35,7 @@ DataInterfacePtr get_in_memory_interface(
   thread_local SourceAdaptorPtr adaptor = std::make_shared<BytesAdaptor>();
   return get_interface(data, adaptor, dmx_cfg);
 }
+} // namespace
 } // namespace detail
 
 ////////////////////////////////////////////////////////////////////////////////

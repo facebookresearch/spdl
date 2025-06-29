@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <libspdl/cuda/nvjpeg/decoding.h>
+
 #include <libspdl/cuda/buffer.h>
 #include <libspdl/cuda/types.h>
 #include "libspdl/cuda/detail/utils.h"

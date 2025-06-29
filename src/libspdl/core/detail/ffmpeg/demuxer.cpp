@@ -259,6 +259,7 @@ template PacketsPtr<MediaType::Image> DemuxerImpl::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf);
 
+namespace {
 AnyPackets
 mk_packets(AVStream* stream, const char* src, std::vector<AVPacketPtr>&& pkts) {
   switch (stream->codecpar->codec_type) {
@@ -284,6 +285,7 @@ mk_packets(AVStream* stream, const char* src, std::vector<AVPacketPtr>&& pkts) {
       "Unexpected media type was provided: {}",
       av_get_media_type_string(stream->codecpar->codec_type)));
 }
+} // namespace
 
 Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
     const std::set<int> stream_indices,
