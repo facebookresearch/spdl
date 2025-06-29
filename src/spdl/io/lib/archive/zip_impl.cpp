@@ -19,6 +19,7 @@ extern "C" {
 #define EOCD_SIGNATURE 0x06054b50 // PK\x05\x06
 
 namespace spdl::archive::zip {
+namespace {
 
 // Note: The structure of End of Central Directory
 // Offset Bytes Description
@@ -189,6 +190,7 @@ Zip64Meta parse_zip64_extended_info(const char* p) {
       .uncompressed_size = *((uint64_t*)(p + 4)),
       .compressed_size = *((uint64_t*)(p + 12))};
 }
+} // namespace
 
 std::vector<ZipMetaData> parse_zip(const char* root, const size_t len) {
   auto eocd = parse_eocd(root, len);
@@ -256,9 +258,9 @@ int inflate(
   strm.next_in = (Bytef*)src;
   strm.next_out = (Bytef*)dst;
 
-  strm.zalloc = Z_NULL;
-  strm.zfree = Z_NULL;
-  strm.opaque = Z_NULL;
+  strm.zalloc = nullptr;
+  strm.zfree = nullptr;
+  strm.opaque = nullptr;
 
   if (int err = inflateInit2(&strm, windowBits); err != Z_OK) {
     inflateEnd(&strm);
