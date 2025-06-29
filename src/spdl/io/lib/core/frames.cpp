@@ -131,14 +131,16 @@ void register_frames(nb::module_& m) {
       .def(
           "_get_pts",
           [](const VideoFrames& self) -> std::vector<double> {
-            nb::gil_scoped_release __g;
             std::vector<double> ret;
+            auto n = self.get_num_frames();
+            ret.reserve(n);
             auto tb = self.get_time_base();
-            for (int i = 0; i < self.get_num_frames(); ++i) {
+            for (int i = 0; i < n; ++i) {
               ret.push_back(double(self.get_pts(i)) * tb.num / tb.den);
             }
             return ret;
-          })
+          },
+          nb::call_guard<nb::gil_scoped_release>())
       .def(
           "__repr__",
           [](const VideoFrames& self) -> std::string {
