@@ -72,39 +72,39 @@ function(print_target_properties target)
     endforeach()
 endfunction()
 
-function(set_cxx_flags)
-    add_compile_options(
-      -Wdeprecated
-      -Wexceptions
-      -Wextra
-      -Wextra-semi
-      -Wmissing-field-initializers
-      -Wmissing-noreturn
-      # -Wmissing-prototypes
-      -Wmismatched-tags
-      -Wshadow
-      -Wunused-function
-      -Wunused-value
-      -Wunused-variable
-      -Wzero-as-null-pointer-constant
-      )
-  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(
-      -Wambiguous-reversed-operator
-      -Wdeprecated-this-capture
-      -Wdeprecated-copy-with-dtor
-      -Wdeprecated-copy-with-user-provided-copy
-      -Wdeprecated-copy-with-user-provided-dtor
-      -Wdeprecated-dynamic-exception-spec
-      -Wduplicate-enum
-      -Wextra-semi-stmt
-      -Wimplicit-const-int-float-conversion
-      -Wshorten-64-to-32
-      -Wreorder-init-list
-      # -Wunsafe-buffer-usage
-      -Wunused-exception-parameter
-      -Wunused-lambda-capture
-      -Wunused-private-field
-      )
-  endif()
-endfunction()
+set(
+  SPDL_CXX_CPU_COMPILE_FLAGS
+  "-Werror=deprecated"
+  "-Werror=exceptions"
+  "-Wextra"
+  "-Wextra-semi"
+  "-Werror=missing-field-initializers"
+  "-Wmissing-noreturn"
+  "-Werror=mismatched-tags"
+  "-Wshadow"
+  "-Wunused-function"
+  "-Werror=unused-value"
+  "-Werror=unused-variable"
+  "-Wzero-as-null-pointer-constant"
+  )
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  list(APPEND
+    SPDL_CXX_CPU_COMPILE_FLAGS
+    "-Werror=ambiguous-reversed-operator"
+    "-Werror=deprecated-this-capture"
+    "-Werror=deprecated-copy-with-dtor"
+    "-Werror=deprecated-copy-with-user-provided-copy"
+    "-Werror=deprecated-copy-with-user-provided-dtor"
+    "-Werror=deprecated-dynamic-exception-spec"
+    "-Werror=duplicate-enum"
+    "-Wextra-semi-stmt"
+    "-Werror=implicit-const-int-float-conversion"
+    "-Wmissing-prototypes"
+    "-Werror=shorten-64-to-32"
+    "-Werror=reorder-init-list"
+    # -Wunsafe-buffer-usage
+    "-Werror=unused-exception-parameter"
+    "-Werror=unused-lambda-capture"
+    "-Wunused-private-field"
+    )
+endif()
