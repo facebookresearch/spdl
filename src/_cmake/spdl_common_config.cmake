@@ -76,16 +76,16 @@ set(
   SPDL_CXX_CPU_COMPILE_FLAGS
   "-Werror=deprecated"
   "-Werror=exceptions"
-  "-Wextra"
-  "-Wextra-semi"
+  "-Werror=extra"
+  "-Werror=extra-semi"
   "-Werror=missing-field-initializers"
-  "-Wmissing-noreturn"
+  "-Werror=missing-noreturn"
   "-Werror=mismatched-tags"
-  "-Wshadow"
-  "-Wunused-function"
+  "-Werror=shadow"
+  "-Werror=unused-function"
   "-Werror=unused-value"
   "-Werror=unused-variable"
-  "-Wzero-as-null-pointer-constant"
+  "-Werror=zero-as-null-pointer-constant"
   )
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   list(APPEND
@@ -97,14 +97,14 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     "-Werror=deprecated-copy-with-user-provided-dtor"
     "-Werror=deprecated-dynamic-exception-spec"
     "-Werror=duplicate-enum"
-    "-Wextra-semi-stmt"
+    "-Werror=extra-semi-stmt"
     "-Werror=implicit-const-int-float-conversion"
-    "-Wmissing-prototypes"
+    "-Werror=missing-prototypes"
     "-Werror=shorten-64-to-32"
     "-Werror=reorder-init-list"
     # -Wunsafe-buffer-usage
     "-Werror=unused-exception-parameter"
     "-Werror=unused-lambda-capture"
-    "-Wunused-private-field"
+    "-Werror=unused-private-field"
     )
 endif()
