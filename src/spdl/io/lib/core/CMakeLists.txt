@@ -54,6 +54,7 @@ function(add_spdl_extension ffmpeg_version)
   target_compile_definitions(${name} PRIVATE "${defs}")
   target_link_libraries(${name} PRIVATE "${deps}")
   target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
+  target_compile_options(${name} PRIVATE "${SPDL_CXX_CPU_COMPILE_FLAGS}")
 
   install(
     TARGETS ${name}
