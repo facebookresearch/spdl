@@ -32,8 +32,15 @@ set(src
   utils.cpp
 )
 
+set(nb_options
+  STABLE_ABI
+  NB_STATIC
+  LTO
+  NB_SUPPRESS_WARNINGS
+  )
+
 if (NOT SPDL_IS_GIL_ENABLED)
-  set(ft FREE_THREADED)
+  list(APPEND nb_options FREE_THREADED)
 endif()
 
 function(add_spdl_extension ffmpeg_version)
@@ -43,7 +50,7 @@ function(add_spdl_extension ffmpeg_version)
   set(defs "-DSPDL_FFMPEG_EXT_NAME=${name}")
   set(deps fmt::fmt glog::glog "spdl_ffmpeg${ffmpeg_version}")
 
-  nanobind_add_module(${name} ${ft} ${src})
+  nanobind_add_module(${name} ${nb_options} ${src})
   target_compile_definitions(${name} PRIVATE "${defs}")
   target_link_libraries(${name} PRIVATE "${deps}")
   target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
