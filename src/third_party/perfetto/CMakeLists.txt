@@ -12,4 +12,4 @@ FetchContent_MakeAvailable(perfetto_src)
 
 set(base_dir "${perfetto_src_SOURCE_DIR}")
 add_library(perfetto STATIC "${base_dir}/sdk/perfetto.cc")
-target_include_directories(perfetto PUBLIC "${base_dir}/sdk")
+target_include_directories(perfetto SYSTEM PUBLIC "${base_dir}/sdk")
