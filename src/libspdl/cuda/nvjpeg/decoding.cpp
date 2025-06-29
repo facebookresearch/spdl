@@ -85,7 +85,7 @@ void wrap_buffer(
   auto ptr = static_cast<uint8_t*>(buffer->data());
   ptr += batch * meta.height * meta.width * meta.num_channels;
   auto pitch = meta.interleaved ? meta.width * meta.num_channels : meta.width;
-  for (int c = 0; c < meta.num_channels; c++) {
+  for (int c = 0; c < (int)meta.num_channels; c++) {
     image.channel[c] = ptr;
     image.pitch[c] = pitch;
     ptr += pitch * meta.height;
@@ -177,8 +177,8 @@ CUDABufferPtr decode_image_nvjpeg(
     detail::resize_npp(
         fmt,
         decoded,
-        src_meta.width,
-        src_meta.height,
+        (int)src_meta.width,
+        (int)src_meta.height,
         resized,
         scale_width,
         scale_height);
@@ -223,8 +223,8 @@ CUDABufferPtr decode_image_nvjpeg(
     detail::resize_npp(
         fmt,
         decoded,
-        src_meta.width,
-        src_meta.height,
+        (int)src_meta.width,
+        (int)src_meta.height,
         out_wrapper,
         scale_width,
         scale_height);

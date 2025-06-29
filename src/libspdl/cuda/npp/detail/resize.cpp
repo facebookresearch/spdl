@@ -39,18 +39,18 @@ void resize(
     const NppiRect& src_roi,
     nvjpegImage_t& dst,
     const NppiSize& dst_size,
-    const NppiRect& dst_roi,
+    const NppiRect&, // TODO: Support ROI
     NppStreamContext& stream,
     int index = 0) {
   TRACE_EVENT("decoding", "nppiResize");
   CHECK_NPP(
       resize_func(
           src.channel[index],
-          src.pitch[index],
+          (int)src.pitch[index],
           src_size,
           src_roi,
           dst.channel[index],
-          dst.pitch[index],
+          (int)dst.pitch[index],
           dst_size,
           src_roi,
           NPPI_INTER_LANCZOS,

@@ -77,11 +77,11 @@ CUDABufferPtr nv12_to_rgb(
   for (auto& frame : frames) {
     Fn((CUstream)cfg.stream,
        (uint8_t*)frame.data(),
-       width,
+       (int)width,
        dst,
-       width, // pitch
-       width,
-       h0,
+       (int)width, // pitch
+       (int)width,
+       (int)h0,
        matrix_coefficients);
     dst += 3 * h0 * width;
   }

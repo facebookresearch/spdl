@@ -45,7 +45,7 @@ CPUBufferPtr convert_frames(
         std::move(storage));
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frames_ptr : batch) {
-      for (int i = 0; i < num_channels; ++i) {
+      for (int i = 0; i < (int)num_channels; ++i) {
         for (const auto frame : frames_ptr->get_frames()) {
           int plane_size = depth * frame->nb_samples;
           memcpy(dst, frame->extended_data[i], plane_size);
@@ -63,7 +63,7 @@ CPUBufferPtr convert_frames(
     uint8_t* dst = static_cast<uint8_t*>(buf->data());
     for (auto frames_ptr : batch) {
       for (const auto frame : frames_ptr->get_frames()) {
-        int plane_size = depth * frame->nb_samples * num_channels;
+        int plane_size = (int)(depth * frame->nb_samples * num_channels);
         memcpy(dst, frame->extended_data[0], plane_size);
         dst += plane_size;
       }
@@ -172,13 +172,13 @@ void copy(
       CHECK_AVERROR(
           av_image_copy_to_buffer(
               dst,
-              dst_size,
+              (int)dst_size,
               f->data,
               f->linesize,
               pix_fmt,
               f->width,
               f->height,
-              buf->depth),
+              (int)buf->depth),
           "Failed to copy image data.")
       dst += dst_size;
     }
@@ -455,13 +455,13 @@ AVFramePtr
 get_video_frame(AVPixelFormat fmt, size_t width, size_t height, int64_t pts) {
   AVFramePtr ret{CHECK_AVALLOCATE(av_frame_alloc())};
   ret->format = fmt;
-  ret->width = width;
-  ret->height = height;
+  ret->width = (int)width;
+  ret->height = (int)height;
   ret->pts = pts;
   return ret;
 }
 
-void no_free(void* opaque, uint8_t* data) {
+void no_free(void*, uint8_t* data) {
   VLOG(15) << fmt::format("Not free-ing data @ {}", (void*)data);
 }
 
@@ -514,8 +514,8 @@ AudioFramesPtr create_reference_audio_frame(
           "Found: Stride: ({})",
           fmt::join(stride, ", ")));
     }
-    auto c = shape[0];
-    f->nb_samples = shape[1];
+    auto c = (int)shape[0];
+    f->nb_samples = (int)shape[1];
     SET_CHANNELS(f, c);
 
     if (c <= AV_NUM_DATA_POINTERS) {
@@ -547,7 +547,7 @@ AudioFramesPtr create_reference_audio_frame(
   } else {
     // interleaved == channel_last
     // NOTE: nanobind's stride is element count. Not bytes
-    if (stride[0] != shape[1]) {
+    if (stride[0] != (int)shape[1]) {
       SPDL_FAIL(fmt::format(
           "The interleaved audio frame is requested, but the input data is "
           "not contiguous. (stride[0] must match shape[1]) "
@@ -555,9 +555,9 @@ AudioFramesPtr create_reference_audio_frame(
           fmt::join(shape, ", "),
           fmt::join(stride, ", ")));
     }
-    auto c = shape[1];
+    auto c = (int)shape[1];
 
-    f->nb_samples = shape[0];
+    f->nb_samples = (int)shape[0];
     SET_CHANNELS(f, c);
 
     auto* src = (uint8_t*)data;
@@ -586,7 +586,7 @@ void validate_nhwc(
     SPDL_FAIL("The input array must be 4D.");
   }
   // Note: nanobind's stride is element count, not byte.
-  if (shape[3] != c) {
+  if ((int)shape[3] != c) {
     SPDL_FAIL(fmt::format(
         "The shape must be (N, H, W, C=={}). Found: ({})",
         c,
@@ -609,7 +609,7 @@ void validate_nchw(
     SPDL_FAIL("The input array must be 4D.");
   }
   // Note: nanobind's stride is element count, not byte.
-  if (shape[1] != c) {
+  if ((int)shape[1] != c) {
     SPDL_FAIL(fmt::format(
         "The shape must be (N, C=={}, H, W). Found: ({})",
         c,
@@ -655,8 +655,8 @@ VideoFramesPtr create_reference_video_frame(
   for (size_t i = 0; i < n; ++i) {
     auto f = detail::get_video_frame(fmt, w, h, pts + i);
     f->data[0] = src;
-    f->linesize[0] = linesize;
-    f->buf[0] = detail::create_reference_buffer(src, plane_size);
+    f->linesize[0] = (int)linesize;
+    f->buf[0] = detail::create_reference_buffer(src, (int)plane_size);
     src += plane_size;
 
     ret->push_back(f.release());
@@ -684,8 +684,8 @@ VideoFramesPtr convert_planar_video_array(
     auto* src = ((uint8_t*)data) + i * frame_size;
     for (int c = 0; c < num_color; ++c) {
       f->data[c] = src;
-      f->linesize[c] = linesize;
-      f->buf[c] = detail::create_reference_buffer(src, plane_size);
+      f->linesize[c] = (int)linesize;
+      f->buf[c] = detail::create_reference_buffer(src, (int)plane_size);
       src += plane_size;
     }
     ret->push_back(f.release());

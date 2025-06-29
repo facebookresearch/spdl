@@ -24,7 +24,7 @@ namespace detail {
 namespace {
 class Bytes {
   std::string_view buffer;
-  int64_t pos = 0;
+  uint64_t pos = 0;
 
  public:
   explicit Bytes(std::string_view data) : buffer(std::move(data)) {}
@@ -36,8 +36,8 @@ class Bytes {
 
  private:
   int read_packet(uint8_t* buf, int buf_size) {
-    if (int remaining = buffer.size() - pos; remaining < buf_size) {
-      buf_size = remaining;
+    if (int64_t remaining = buffer.size() - pos; remaining < buf_size) {
+      buf_size = static_cast<int>(remaining);
     }
     if (buf_size <= 0) {
       return AVERROR_EOF;

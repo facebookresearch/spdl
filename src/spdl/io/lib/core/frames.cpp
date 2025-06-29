@@ -134,7 +134,7 @@ void register_frames(nb::module_& m) {
             nb::gil_scoped_release __g;
             std::vector<double> ret;
             auto tb = self.get_time_base();
-            for (size_t i = 0; i < self.get_num_frames(); ++i) {
+            for (int i = 0; i < self.get_num_frames(); ++i) {
               ret.push_back(double(self.get_pts(i)) * tb.num / tb.den);
             }
             return ret;

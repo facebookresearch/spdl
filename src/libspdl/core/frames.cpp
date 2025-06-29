@@ -121,7 +121,7 @@ int Frames<media>::get_num_frames() const {
     }
     return ret;
   } else {
-    return frames.size();
+    return (int)frames.size();
   }
 }
 
@@ -231,7 +231,7 @@ template <MediaType media>
 VideoFramesPtr Frames<media>::slice(int start, int stop, int step) const
   requires _IS_VIDEO
 {
-  const int numel = frames.size();
+  const auto numel = (int)frames.size();
   int len = adjust_indices(numel, &start, &stop, step);
 
   auto out = std::make_unique<VideoFrames>(id, time_base);
@@ -250,7 +250,7 @@ template <MediaType media>
 VideoFramesPtr Frames<media>::slice(const std::vector<int64_t>& index) const
   requires _IS_VIDEO
 {
-  const int numel = frames.size();
+  const auto numel = (int)frames.size();
   for (const auto& i : index) {
     if (i >= numel || i < -numel) {
       throw std::out_of_range(
@@ -274,7 +274,7 @@ template <MediaType media>
 ImageFramesPtr Frames<media>::slice(int64_t i) const
   requires _IS_VIDEO
 {
-  const int numel = static_cast<int64_t>(frames.size());
+  const auto numel = (int)frames.size();
   if (i >= numel || i < -numel) {
     throw std::out_of_range(
         fmt::format("Index {} is outside of [0, {})", i, numel));
