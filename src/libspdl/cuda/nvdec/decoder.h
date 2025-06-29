@@ -14,6 +14,13 @@
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
+#ifdef SPDL_USE_NVCODEC
+#define _RET_ATTR
+#else
+// To workaround -Wmissing-noreturn when NVDEC is disabled
+#define _RET_ATTR [[noreturn]]
+#endif
+
 namespace spdl::cuda {
 
 namespace detail {
@@ -35,10 +42,12 @@ class NvDecDecoderCore;
 // decoder.reset();
 // decoder.init();
 class NvDecDecoder {
+#ifdef SPDL_USE_NVCODEC
   detail::NvDecDecoderCore* core;
+#endif
 
  public:
-  NvDecDecoder();
+  _RET_ATTR NvDecDecoder();
   NvDecDecoder(const NvDecDecoder&) = delete;
   NvDecDecoder& operator=(const NvDecDecoder&) = delete;
   // Deleting the move constructor for now.
@@ -47,11 +56,11 @@ class NvDecDecoder {
 
   ~NvDecDecoder();
 
-  void reset();
+  _RET_ATTR void reset();
 
   // Initialize the decoder object for a new stream of
   // video packets
-  void init(
+  _RET_ATTR void init(
       // device config
       const CUDAConfig& cuda_config,
       // Source codec information
@@ -62,10 +71,12 @@ class NvDecDecoder {
       int height = -1);
 
   // decode one stream of video packets
-  std::vector<CUDABuffer> decode(spdl::core::VideoPacketsPtr packets);
+  _RET_ATTR std::vector<CUDABuffer> decode(spdl::core::VideoPacketsPtr packets);
 
   // Call this method at the end of video stream.
-  std::vector<CUDABuffer> flush();
+  _RET_ATTR std::vector<CUDABuffer> flush();
 };
 
 } // namespace spdl::cuda
+
+#undef _RET_ATTR
