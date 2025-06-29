@@ -18,7 +18,8 @@ message(STATUS "########################################")
 set(src
   register.cpp
   buffer.cpp
-  decoding.cpp
+  decoding_nvdec.cpp
+  decoding_nvjpeg.cpp
   storage.cpp
   transfer.cpp
   types.cpp
