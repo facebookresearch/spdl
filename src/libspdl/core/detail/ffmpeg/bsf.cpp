@@ -20,13 +20,12 @@ AVBSFContextPtr init_bsf(
   TRACE_EVENT("demuxing", "init_bsf");
   AVBSFContext* p = nullptr;
   CHECK_AVERROR(
-      av_bsf_list_parse_str(name.c_str(), &p),
-      "Failed to create AVBSFContext.");
+      av_bsf_list_parse_str(name.c_str(), &p), "Failed to create AVBSFContext.")
   AVBSFContextPtr bsf_ctx{p};
   CHECK_AVERROR(
       avcodec_parameters_copy(p->par_in, codec_par),
-      "Failed to copy codec parameter.");
-  CHECK_AVERROR(av_bsf_init(p), "Failed to initialize AVBSFContext..");
+      "Failed to copy codec parameter.")
+  CHECK_AVERROR(av_bsf_init(p), "Failed to initialize AVBSFContext..")
   return bsf_ctx;
 }
 
@@ -34,14 +33,14 @@ void send_packet(AVBSFContext* bsf_ctx, AVPacket* packet) {
   TRACE_EVENT("decoding", "av_bsf_send_packet");
   CHECK_AVERROR(
       av_bsf_send_packet(bsf_ctx, packet),
-      "Failed to send packet to bit stream filter.");
+      "Failed to send packet to bit stream filter.")
 }
 
 int redeivce_paccket(AVBSFContext* bsf_ctx, AVPacket* packet) {
   int ret = av_bsf_receive_packet(bsf_ctx, packet);
   TRACE_EVENT("decoding", "av_bsf_receive_packet");
   if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
-    CHECK_AVERROR_NUM(ret, "Failed to fetch packet from bit stream filter.");
+    CHECK_AVERROR_NUM(ret, "Failed to fetch packet from bit stream filter.")
   }
   return ret;
 }
@@ -60,7 +59,7 @@ Generator<AVPacket*> stream_packets(
 } // namespace
 
 BSFImpl::BSFImpl(const std::string& name, const AVCodecParameters* codec_par)
-    : bsf_ctx(init_bsf(name, codec_par)){};
+    : bsf_ctx(init_bsf(name, codec_par)) {}
 
 AVCodecParameters* BSFImpl::get_output_codec_par() {
   return bsf_ctx->par_out;

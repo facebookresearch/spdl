@@ -157,20 +157,20 @@ AVCodecContextPtr get_codec_context(
   if (encode_config.colorspace) {
     auto& name = encode_config.colorspace.value();
     int val = av_color_space_from_name(name.c_str());
-    CHECK_AVERROR_NUM(val, fmt::format("Unexpected color space: {}", name));
+    CHECK_AVERROR_NUM(val, fmt::format("Unexpected color space: {}", name))
     ctx->colorspace = (AVColorSpace)val;
   }
   if (encode_config.color_primaries) {
     auto& name = encode_config.color_primaries.value();
     int val = av_color_primaries_from_name(name.c_str());
-    CHECK_AVERROR_NUM(val, fmt::format("Unexpected color primaries: {}", name));
+    CHECK_AVERROR_NUM(val, fmt::format("Unexpected color primaries: {}", name))
     ctx->color_primaries = (AVColorPrimaries)val;
   }
   if (encode_config.color_trc) {
     auto& name = encode_config.color_trc.value();
     int val = av_color_transfer_from_name(name.c_str());
     CHECK_AVERROR_NUM(
-        val, fmt::format("Unexpected color transfer characteristic: {}", name));
+        val, fmt::format("Unexpected color transfer characteristic: {}", name))
     ctx->color_trc = (AVColorTransferCharacteristic)val;
   }
 
@@ -396,7 +396,7 @@ AVCodecParameters* EncoderImpl<media>::get_codec_par(
 
   CHECK_AVERROR(
       avcodec_parameters_from_context(out, codec_ctx.get()),
-      "Failed to copy codec context.");
+      "Failed to copy codec context.")
   return out;
 }
 
@@ -515,7 +515,7 @@ Generator<AVPacketPtr> _encode(
         ret,
         fmt::format(
             "Failed to send frame to encode context. {}",
-            parse_unmatch(codec_ctx, f)));
+            parse_unmatch(codec_ctx, f)))
     while (ret >= 0) {
       auto pkt = AVPacketPtr{CHECK_AVALLOCATE(av_packet_alloc())};
       ret = avcodec_receive_packet(codec_ctx, pkt.get());
@@ -525,7 +525,7 @@ Generator<AVPacketPtr> _encode(
         case AVERROR(EAGAIN):
           break;
         default: {
-          CHECK_AVERROR_NUM(ret, "Failed to fetch encooded packet.");
+          CHECK_AVERROR_NUM(ret, "Failed to fetch encooded packet.")
           // https://github.com/pytorch/audio/issues/2790
           // If this is not set, the last frame is not properly saved, as
           // the encoder cannot figure out when the packet should finish.
@@ -576,4 +576,4 @@ int EncoderImpl<media>::get_frame_size() const
 
 template class EncoderImpl<MediaType::Audio>;
 template class EncoderImpl<MediaType::Video>;
-}; // namespace spdl::core::detail
+} // namespace spdl::core::detail

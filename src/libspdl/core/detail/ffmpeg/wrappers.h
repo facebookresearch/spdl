@@ -142,16 +142,16 @@ OptionDict parse_dict(const AVDictionary* metadata);
     Type##DPtr& operator=(Type##DPtr&&) noexcept = default; \
     ~Type##DPtr() {                                         \
       delete_func(&p);                                      \
-    };                                                      \
+    }                                                       \
     operator Type*() const {                                \
       return p;                                             \
-    };                                                      \
+    }                                                       \
     operator Type**() {                                     \
       return &p;                                            \
-    };                                                      \
+    }                                                       \
     Type* operator->() const {                              \
       return p;                                             \
-    };                                                      \
+    }                                                       \
   }
 
 #ifdef SPDL_DEBUG_REFCOUNT

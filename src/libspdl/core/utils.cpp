@@ -55,17 +55,14 @@ std::map<std::string, std::tuple<int64_t, int64_t, int64_t>>
 get_ffmpeg_versions() {
   std::map<std::string, std::tuple<int64_t, int64_t, int64_t>> ret;
 
-#define add_version(NAME)            \
-  {                                  \
-    int ver = NAME##_version();      \
-    ret.emplace(                     \
-        "lib" #NAME,                 \
-        std::make_tuple<>(           \
-            AV_VERSION_MAJOR(ver),   \
-            AV_VERSION_MINOR(ver),   \
-            AV_VERSION_MICRO(ver))); \
-  }
-
+#define add_version(NAME)               \
+  int NAME##_ver = NAME##_version();    \
+  ret.emplace(                          \
+      "lib" #NAME,                      \
+      std::make_tuple<>(                \
+          AV_VERSION_MAJOR(NAME##_ver), \
+          AV_VERSION_MINOR(NAME##_ver), \
+          AV_VERSION_MICRO(NAME##_ver)))
   add_version(avutil);
   add_version(avcodec);
   add_version(avformat);
@@ -158,14 +155,14 @@ void trace_counter(int i, Number val) {
   }
 
   switch (i) {
-    _CASE(0);
-    _CASE(1);
-    _CASE(2);
-    _CASE(3);
-    _CASE(4);
-    _CASE(5);
-    _CASE(6);
-    _CASE(7);
+    _CASE(0)
+    _CASE(1)
+    _CASE(2)
+    _CASE(3)
+    _CASE(4)
+    _CASE(5)
+    _CASE(6)
+    _CASE(7)
     default:
       SPDL_FAIL(fmt::format(
           "Counter {} is not supported. The valid value range is [0, 7].", i));

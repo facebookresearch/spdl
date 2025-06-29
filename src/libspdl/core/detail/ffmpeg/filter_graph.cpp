@@ -55,10 +55,10 @@ AVFilterGraphPtr make_graph(const std::string& filter_desc) {
 
   CHECK_AVERROR(
       avfilter_graph_parse2(graph.get(), filter_desc.c_str(), &ins, &outs),
-      fmt::format("Failed to parse the filter description: {}", filter_desc));
+      fmt::format("Failed to parse the filter description: {}", filter_desc))
   CHECK_AVERROR(
       avfilter_graph_config(graph.get(), nullptr),
-      fmt::format("Failed to configure the filter graph: `{}`", filter_desc));
+      fmt::format("Failed to configure the filter graph: `{}`", filter_desc))
 
   avfilter_inout_free(&ins);
   avfilter_inout_free(&outs);
@@ -152,7 +152,7 @@ void add_frame(AVFilterContext* filter_ctx, AVFrame* frame) {
     CHECK_AVERROR(
         ret,
         "Failed to pass a frame to filter. {}",
-        parse_unmatched(filter_ctx->outputs[0], frame));
+        parse_unmatched(filter_ctx->outputs[0], frame))
   }
 }
 
@@ -163,7 +163,7 @@ int get_frame(AVFilterContext* filter_ctx, AVFrame* frame) {
     ret = av_buffersink_get_frame(filter_ctx, frame);
   }
   if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
-    CHECK_AVERROR_NUM(ret, "Failed to filter a frame.");
+    CHECK_AVERROR_NUM(ret, "Failed to filter a frame.")
   }
   return ret;
 }
@@ -199,7 +199,7 @@ void FilterGraphImpl::flush() {
     CHECK_AVERROR(
         av_buffersrc_add_frame_flags(
             filter_ctx, nullptr, AV_BUFFERSRC_FLAG_KEEP_REF),
-        fmt::format("Failed to flush the pad: {}.", pair.first));
+        fmt::format("Failed to flush the pad: {}.", pair.first))
   }
 }
 

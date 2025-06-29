@@ -59,7 +59,7 @@ std::map<int, AnyPackets> StreamingDemuxer::next() {
 ////////////////////////////////////////////////////////////////////////////////
 
 Demuxer::Demuxer(DataInterfacePtr di)
-    : pImpl(new detail::DemuxerImpl(std::move(di))){};
+    : pImpl(new detail::DemuxerImpl(std::move(di))) {}
 
 Demuxer::~Demuxer() {
   if (pImpl) {

@@ -154,7 +154,7 @@ void MuxerImpl::add_remux_stream(const Codec<media>& codec) {
   s->time_base = codec.get_time_base();
   CHECK_AVERROR(
       avcodec_parameters_copy(s->codecpar, codec.get_parameters()),
-      "Failed to copy codec context.");
+      "Failed to copy codec context.")
 }
 
 template void MuxerImpl::add_remux_stream(const AudioCodec& codec);
@@ -180,17 +180,17 @@ void MuxerImpl::write(
     p->stream_index = s->index;
     CHECK_AVERROR(
         av_interleaved_write_frame(fmt_ctx.get(), p),
-        "Failed to write a packet.");
+        "Failed to write a packet.")
   }
 }
 
 void MuxerImpl::flush() {
   CHECK_AVERROR(
-      av_interleaved_write_frame(fmt_ctx.get(), nullptr), "Failed to flush.");
+      av_interleaved_write_frame(fmt_ctx.get(), nullptr), "Failed to flush.")
 }
 
 void MuxerImpl::close() {
-  CHECK_AVERROR(av_write_trailer(fmt_ctx.get()), "Failed to write trailer.");
+  CHECK_AVERROR(av_write_trailer(fmt_ctx.get()), "Failed to write trailer.")
   // Close the file if it was not provided by client code (i.e. when not
   // file-like object)
   AVFORMAT_CONST AVOutputFormat* fmt = fmt_ctx->oformat;

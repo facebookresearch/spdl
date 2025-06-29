@@ -39,7 +39,7 @@ void CUvideodecoderDeleter::operator()(void* p) {
   WARN_IF_NOT_SUCCESS(
       cuvidDestroyDecoder((CUvideodecoder)p),
       "Failed to destroy CUvideodecoder.");
-};
+}
 
 void CUvideoctxlockDeleter::operator()(void* p) {
   WARN_IF_NOT_SUCCESS(

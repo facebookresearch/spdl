@@ -45,7 +45,7 @@ void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) {
                    << detail::to_string(status);
     }
   }
-};
+}
 
 nvjpegStatePtr get_nvjpeg_jpeg_state(nvjpegHandle_t nvjpeg_handle) {
   nvjpegJpegState_t jpeg_state = nullptr;

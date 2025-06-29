@@ -179,7 +179,7 @@ void copy(
               f->width,
               f->height,
               buf->depth),
-          "Failed to copy image data.");
+          "Failed to copy image data.")
       dst += dst_size;
     }
   }
@@ -717,23 +717,23 @@ VideoFramesPtr create_reference_video_frame(
   switch (fmt) {
     case AV_PIX_FMT_RGB24:
     case AV_PIX_FMT_BGR24:
-      CHECK_BITS(bits, 8);
+      CHECK_BITS(bits, 8)
       validate_nhwc(3, shape, stride);
       return create_reference_video_frame(
           fmt, data, shape, stride, time_base, pts);
     case AV_PIX_FMT_GRAY8:
-      CHECK_BITS(bits, 8);
+      CHECK_BITS(bits, 8)
       validate_nhw(shape, stride);
       return create_reference_video_frame(
           fmt, data, shape, stride, time_base, pts, 1);
     case AV_PIX_FMT_GRAY16BE:
     case AV_PIX_FMT_GRAY16LE:
       validate_nhw(shape, stride);
-      CHECK_BITS(bits, 16);
+      CHECK_BITS(bits, 16)
       return create_reference_video_frame(
           fmt, data, shape, stride, time_base, pts, 2);
     case AV_PIX_FMT_YUV444P:
-      CHECK_BITS(bits, 8);
+      CHECK_BITS(bits, 8)
       validate_nchw(3, shape, stride);
       return convert_planar_video_array(
           fmt, data, shape, stride, time_base, pts);

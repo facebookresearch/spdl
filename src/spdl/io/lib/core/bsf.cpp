@@ -43,7 +43,6 @@ void register_bsf(nb::module_& m) {
           "flush",
           &BSF<MediaType::Audio>::flush,
           nb::call_guard<nb::gil_scoped_release>());
-  ;
   nb::class_<BSF<MediaType::Image>>(m, "ImageBSF")
       .def(
           "filter",
