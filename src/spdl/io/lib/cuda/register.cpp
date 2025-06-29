@@ -6,24 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <nanobind/nanobind.h>
-
 #ifndef SPDL_CUDA_EXT_NAME
 #error SPDL_CUDA_EXT_NAME must be defined.
 #endif
 
-namespace nb = nanobind;
+#include "register_spdl_cuda_extensions.h"
 
-namespace spdl::cuda {
-void register_types(nb::module_&);
-void register_buffers(nb::module_&);
-void register_decoding_nvdec(nb::module_&);
-void register_decoding_nvjpeg(nb::module_&);
-void register_storage(nb::module_&);
-void register_transfer(nb::module_&);
-void register_utils(nb::module_&);
-void register_color_conversion(nb::module_&);
-} // namespace spdl::cuda
+#include <nanobind/nanobind.h>
 
 namespace {
 NB_MODULE(SPDL_CUDA_EXT_NAME, m) {

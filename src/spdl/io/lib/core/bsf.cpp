@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "register_spdl_core_extensions.h"
+
 #include <libspdl/core/bsf.h>
 
 #include <nanobind/nanobind.h>

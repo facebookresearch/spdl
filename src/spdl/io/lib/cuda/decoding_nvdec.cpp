@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "register_spdl_cuda_extensions.h"
+
 #include <libspdl/cuda/nvdec/decoder.h>
 
 #include <nanobind/nanobind.h>

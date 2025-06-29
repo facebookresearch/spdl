@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "register_spdl_core_extensions.h"
+
 #include <libspdl/core/decoder.h>
 
 #include <nanobind/nanobind.h>
@@ -17,8 +19,6 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
-
-#include <cstring>
 
 namespace nb = nanobind;
 
