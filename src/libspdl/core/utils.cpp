@@ -30,6 +30,14 @@ bool IsGoogleLoggingInitialized();
 } // namespace glog_internal_namespace_
 } // namespace google
 
+// Workaround for -Werror,-Wunused-variable in case SPDL_USE_TRACING
+// is not defined. It hides the variable name.
+#ifdef SPDL_USE_TRACING
+#define _(var_name) var_name
+#else
+#define _(var_name)
+#endif
+
 namespace spdl::core {
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -112,13 +120,13 @@ void TracingSession::init() {
   });
 }
 
-void TracingSession::config(const std::string& process_name) {
+void TracingSession::config(const std::string& _(process_name)) {
 #ifdef SPDL_USE_TRACING
   detail::configure_perfetto(process_name);
 #endif
 }
 
-void TracingSession::start(int fd, int buffer_size_in_kb) {
+void TracingSession::start(int _(fd), int _(buffer_size_in_kb)) {
 #ifdef SPDL_USE_TRACING
   if (sess) {
     SPDL_FAIL("Tracing session is active.");
@@ -145,7 +153,7 @@ std::unique_ptr<TracingSession> init_tracing() {
 }
 
 template <typename Number>
-void trace_counter(int i, Number val) {
+void trace_counter(int _(i), Number _(val)) {
 #ifdef SPDL_USE_TRACING
 
 #define _CASE(i)                                \
@@ -175,7 +183,7 @@ void trace_counter(int i, Number val) {
 template void trace_counter<int>(int i, int counter);
 template void trace_counter<double>(int i, double counter);
 
-void trace_event_begin(const std::string& name) {
+void trace_event_begin(const std::string& _(name)) {
 #ifdef SPDL_USE_TRACING
   TRACE_EVENT_BEGIN("other", perfetto::DynamicString{name});
 #endif
