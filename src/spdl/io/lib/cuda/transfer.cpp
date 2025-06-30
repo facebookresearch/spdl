@@ -24,9 +24,18 @@ namespace nb = nanobind;
 using cpu_array = nb::ndarray<nb::device::cpu, nb::c_contig>;
 using cuda_array = nb::ndarray<nb::device::cuda, nb::c_contig>;
 
+// Workaround for -Werror,-Wunused-variable in case SPDL_USE_CUDA
+// is not defined. It hides the variable name.
+#ifdef SPDL_USE_CUDA
+#define _(var_name) var_name
+#else
+#define _(var_name)
+#endif
+
 namespace spdl::cuda {
 using namespace spdl::core;
 namespace {
+#ifdef SPDL_USE_CUDA
 ElemClass _get_elemclass(uint8_t code) {
   switch ((nb::dlpack::dtype_code)code) {
     case nb::dlpack::dtype_code::Int:
@@ -40,14 +49,14 @@ ElemClass _get_elemclass(uint8_t code) {
           fmt::format("Unsupported DLPack type: {}", code));
   }
 }
-
+#endif
 } // namespace
 
 void register_transfer(nb::module_& m) {
   // CPU -> CUDA
   m.def(
       "transfer_buffer",
-      [](CPUBufferPtr buffer, const CUDAConfig& cfg) {
+      [](CPUBufferPtr _(buffer), const CUDAConfig& _(cfg)) {
 #ifdef SPDL_USE_CUDA
         return transfer_buffer(std::move(buffer), cfg);
 #else
@@ -61,7 +70,7 @@ void register_transfer(nb::module_& m) {
 
   m.def(
       "transfer_buffer",
-      [](cpu_array array, const CUDAConfig& cfg) {
+      [](cpu_array _(array), const CUDAConfig& _(cfg)) {
 #ifndef SPDL_USE_CUDA
         throw std::runtime_error("SPDL is not built with CUDA support");
 #else
@@ -86,7 +95,7 @@ void register_transfer(nb::module_& m) {
   // CUDA -> CPU
   m.def(
       "transfer_buffer_cpu",
-      [](cuda_array array) {
+      [](cuda_array _(array)) {
 #ifndef SPDL_USE_CUDA
         throw std::runtime_error("SPDL is not built with CUDA support");
 #else

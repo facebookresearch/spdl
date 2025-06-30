@@ -31,15 +31,14 @@ void NvDecDecoder::reset() {
   NOT_SUPPORTED_NVCODEC;
 }
 void NvDecDecoder::init(
-    const CUDAConfig& cuda_config,
-    const spdl::core::VideoCodec& codec,
-    CropArea crop,
-    int width,
-    int height) {
+    const CUDAConfig&,
+    const spdl::core::VideoCodec&,
+    CropArea,
+    int,
+    int) {
   NOT_SUPPORTED_NVCODEC;
 }
-std::vector<CUDABuffer> NvDecDecoder::decode(
-    spdl::core::VideoPacketsPtr packets) {
+std::vector<CUDABuffer> NvDecDecoder::decode(spdl::core::VideoPacketsPtr) {
   NOT_SUPPORTED_NVCODEC;
 }
 std::vector<CUDABuffer> NvDecDecoder::flush() {
