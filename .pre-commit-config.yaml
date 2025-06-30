@@ -31,21 +31,16 @@ repos:
       - id: ruff-format
         types_or: [ python, pyi ]
 
-  # We define a local mypy checker here rather than using https://github.com/pre-commit/mirrors-mypy
-  # so it can run within the project's uv environment & access the correct installed libraries. See:
-  # https://whynothugo.nl/journal/2023/01/12/notes-on-pre-commit/#using-the-system-plugin-language
-  # Further, this check is set to never fail, but will print all current mypy failures. See:
+  # This check is set to never fail, but will print all current mypy failures. See:
   # https://stackoverflow.com/a/59745587
-  - repo: local
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
     hooks:
       - id: mypy
-        name: mypy
-        language: system
-        require_serial: true
         verbose: true
         entry: bash -c
         args:
           # Call mypy on all files that aren't marked "pyre-unsafe", excluding 'setup.py' files.
-          - 'uvx mypy $((grep -L "# pyre-unsafe" "$@" 2>/dev/null || printf "%s\n" "$@") | grep -v setup.py) || true'
+          - 'mypy $((grep -L "# pyre-unsafe" "$@" 2>/dev/null || printf "%s\n" "$@") | grep -v setup.py) || true'
           - --
         types_or: [python, pyi]
