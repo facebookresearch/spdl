@@ -46,6 +46,6 @@ repos:
         entry: bash -c
         args:
           # Call mypy on all files that aren't marked "pyre-unsafe", excluding 'setup.py' files.
-          - 'uv run --with mypy mypy $((grep -L "# pyre-unsafe" "$@" 2>/dev/null || printf "%s\n" "$@") | grep -v setup.py) || true'
+          - 'uvx mypy $((grep -L "# pyre-unsafe" "$@" 2>/dev/null || printf "%s\n" "$@") | grep -v setup.py) || true'
           - --
         types_or: [python, pyi]
