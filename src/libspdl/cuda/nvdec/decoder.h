@@ -47,7 +47,7 @@ class NvDecDecoder {
 #endif
 
  public:
-  _RET_ATTR NvDecDecoder();
+  NvDecDecoder();
   NvDecDecoder(const NvDecDecoder&) = delete;
   NvDecDecoder& operator=(const NvDecDecoder&) = delete;
   // Deleting the move constructor for now.
