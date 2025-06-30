@@ -25,8 +25,8 @@ namespace spdl::cuda {
   throw std::runtime_error("SPDL is not built with NVCODEC support.")
 
 #ifndef SPDL_USE_NVCODEC
-NvDecDecoder::NvDecDecoder(){};
-NvDecDecoder::~NvDecDecoder(){};
+NvDecDecoder::NvDecDecoder() {}
+NvDecDecoder::~NvDecDecoder() {}
 void NvDecDecoder::reset() {
   NOT_SUPPORTED_NVCODEC;
 }
