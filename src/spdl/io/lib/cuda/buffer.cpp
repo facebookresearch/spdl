@@ -20,6 +20,14 @@
 
 namespace nb = nanobind;
 
+// Workaround for -Werror,-Wunused-variable in case SPDL_USE_CUDA
+// is not defined. It hides the variable name.
+#ifdef SPDL_USE_CUDA
+#define _(var_name) var_name
+#else
+#define _(var_name)
+#endif
+
 namespace spdl::cuda {
 using namespace spdl::core;
 #ifdef SPDL_USE_CUDA
@@ -62,7 +70,7 @@ void register_buffers(nb::module_& m) {
   nb::class_<CUDABuffer>(m, "CUDABuffer")
       .def_prop_ro(
           "__cuda_array_interface__",
-          [](CUDABuffer& self) {
+          [](CUDABuffer& _(self)) {
 #ifndef SPDL_USE_CUDA
             throw std::runtime_error("SPDL is not compiled with CUDA support.");
 #else
@@ -71,7 +79,7 @@ void register_buffers(nb::module_& m) {
           })
       .def_prop_ro(
           "device_index",
-          [](CUDABuffer& self) {
+          [](CUDABuffer& _(self)) {
 #ifndef SPDL_USE_CUDA
             throw std::runtime_error("SPDL is not compiled with CUDA support.");
 #else

@@ -16,11 +16,19 @@
 
 namespace nb = nanobind;
 
+// Workaround for -Werror,-Wunused-variable in case SPDL_USE_CUDA
+// is not defined. It hides the variable name.
+#ifdef SPDL_USE_CUDA
+#define _(var_name) var_name
+#else
+#define _(var_name)
+#endif
+
 namespace spdl::cuda {
 void register_storage(nb::module_& m) {
   m.def(
       "cpu_storage",
-      [](size_t size) -> std::shared_ptr<core::CPUStorage> {
+      [](size_t _(size)) -> std::shared_ptr<core::CPUStorage> {
 #ifndef SPDL_USE_CUDA
         throw std::runtime_error("SPDL is not built with CUDA support.");
 #else

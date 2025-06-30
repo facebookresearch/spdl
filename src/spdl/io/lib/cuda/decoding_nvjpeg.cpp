@@ -26,23 +26,33 @@ namespace spdl::cuda {
 #define NOT_SUPPORTED_NVJPEG \
   throw std::runtime_error("SPDL is not built with NVJPEG support.")
 
+// Workaround for -Werror,-Wunused-variable in case SPDL_USE_NVJPEG
+// is not defined. It hides the variable name.
+#ifdef SPDL_USE_NVJPEG
+#define _(var_name) var_name
+#else
+#define _(var_name)
+#endif
+
 using namespace spdl::core;
 
 namespace {
+#ifdef SPDL_USE_NVJPEG
 void zero_clear(const nb::bytes& data) {
   std::memset((void*)data.c_str(), 0, data.size());
 }
+#endif
 } // namespace
 
 void register_decoding_nvjpeg(nb::module_& m) {
   m.def(
       "decode_image_nvjpeg",
-      [](nb::bytes data,
-         const CUDAConfig& cuda_config,
-         int scale_width,
-         int scale_height,
-         const std::string& pix_fmt,
-         bool _zero_clear) {
+      [](nb::bytes _(data),
+         const CUDAConfig& _(cuda_config),
+         int _(scale_width),
+         int _(scale_height),
+         const std::string& _(pix_fmt),
+         bool _(_zero_clear)) {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else
@@ -69,12 +79,12 @@ void register_decoding_nvjpeg(nb::module_& m) {
 
   m.def(
       "decode_image_nvjpeg",
-      [](const std::vector<nb::bytes>& data,
-         const CUDAConfig& cuda_config,
-         int scale_width,
-         int scale_height,
-         const std::string& pix_fmt,
-         bool _zero_clear) {
+      [](const std::vector<nb::bytes>& _(data),
+         const CUDAConfig& _(cuda_config),
+         int _(scale_width),
+         int _(scale_height),
+         const std::string& _(pix_fmt),
+         bool _(_zero_clear)) {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else

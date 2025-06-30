@@ -17,15 +17,23 @@
 
 namespace nb = nanobind;
 
+// Workaround for -Werror,-Wunused-variable in case SPDL_USE_CUDA
+// is not defined. It hides the variable name.
+#ifdef SPDL_USE_CUDA
+#define _(var_name) var_name
+#else
+#define _(var_name)
+#endif
+
 namespace spdl::cuda {
 void register_types(nb::module_& m) {
   nb::class_<CUDAConfig>(m, "CUDAConfig");
 
   m.def(
       "cuda_config",
-      [](int index,
-         uintptr_t stream,
-         std::optional<cuda_allocator> allocator) -> CUDAConfig {
+      [](int _(index),
+         uintptr_t _(stream),
+         std::optional<cuda_allocator> _(allocator)) -> CUDAConfig {
 #ifdef SPDL_USE_CUDA
         return CUDAConfig{index, stream, std::move(allocator)};
 #else
