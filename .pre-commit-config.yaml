@@ -30,3 +30,17 @@ repos:
         # Run the formatter.
       - id: ruff-format
         types_or: [ python, pyi ]
+
+  # This check is set to never fail, but will print all current mypy failures. See:
+  # https://stackoverflow.com/a/59745587
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
+    hooks:
+      - id: mypy
+        verbose: true
+        entry: bash -c
+        args:
+          # Call mypy on all files that aren't marked "pyre-unsafe", excluding 'setup.py' files.
+          - 'mypy $((grep -L "# pyre-unsafe" "$@" 2>/dev/null || printf "%s\n" "$@") | grep -v setup.py) || true'
+          - --
+        types_or: [python, pyi]
