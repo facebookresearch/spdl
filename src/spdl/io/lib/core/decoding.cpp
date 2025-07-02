@@ -61,21 +61,30 @@ void register_decoding(nb::module_& m) {
           &Decoder<MediaType::Audio>::decode,
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("packets"))
-      .def("flush", &Decoder<MediaType::Audio>::flush);
+      .def(
+          "flush",
+          &Decoder<MediaType::Audio>::flush,
+          nb::call_guard<nb::gil_scoped_release>());
   nb::class_<Decoder<MediaType::Video>>(m, "VideoDecoder")
       .def(
           "decode",
           &Decoder<MediaType::Video>::decode,
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("packets"))
-      .def("flush", &Decoder<MediaType::Video>::flush);
+      .def(
+          "flush",
+          &Decoder<MediaType::Video>::flush,
+          nb::call_guard<nb::gil_scoped_release>());
   nb::class_<Decoder<MediaType::Image>>(m, "ImageDecoder")
       .def(
           "decode",
           &Decoder<MediaType::Image>::decode,
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("packets"))
-      .def("flush", &Decoder<MediaType::Image>::flush);
+      .def(
+          "flush",
+          &Decoder<MediaType::Image>::flush,
+          nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
       "_make_decoder",
