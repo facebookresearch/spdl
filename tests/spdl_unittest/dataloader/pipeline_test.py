@@ -10,6 +10,7 @@ import asyncio
 import os
 import platform
 import random
+import re
 import threading
 import time
 from collections.abc import Iterator
@@ -1813,3 +1814,28 @@ def test_run_pipeline_in_subprocess_pipeline_id():
 
     for _ in iterable:
         pass
+
+
+def test_override_stage_id():
+    """Providing `stage_id` overrides the index of stages."""
+    ref = 12345
+
+    class CheckNameQueue(AsyncQueue):
+        index = ref
+
+        def __init__(self, name: str, *, buffer_size: int = 1) -> None:
+            print(name)
+            id = re.match(r"\d+:(\d+):.*", name).group(1)
+            assert id == str(self.index)
+            CheckNameQueue.index += 1
+            super().__init__(name, buffer_size=buffer_size)
+
+    (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(lambda x: x)
+        .pipe(lambda x: x)
+        .pipe(lambda x: x)
+        .add_sink()
+        .build(num_threads=1, queue_class=CheckNameQueue, stage_id=ref)
+    )
