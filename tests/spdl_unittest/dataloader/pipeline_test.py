@@ -28,6 +28,7 @@ from spdl.pipeline import (
     TaskHook,
     TaskStatsHook,
 )
+from spdl.pipeline._components import _build
 from spdl.pipeline._components._common import _EOF
 from spdl.pipeline._components._pipe import _FailCounter, _pipe, _PipeArgs
 from spdl.pipeline._components._sink import _sink
@@ -1793,3 +1794,22 @@ def test_run_pipeline_in_subprocess_state():
     assert src.src.seed == 1
     assert list(src) == [3, 4, 0, 1, 2]
     assert src.src.seed == 2
+
+
+def _validate_pipeline_id(val: int) -> Iterator[int]:
+    assert _build._PIPELINE_ID == val
+    yield 0
+
+
+def test_run_pipeline_in_subprocess_pipeline_id():
+    """The pipeline construdted in a subprocess inherits the global ID from the main process"""
+    # Set to a number that's not zero and something unlikely to happen during the testing
+    _build._PIPELINE_ID = 123456
+    ref = _build._PIPELINE_ID + 1
+
+    builder = PipelineBuilder().add_source(_validate_pipeline_id(ref)).add_sink()
+
+    iterable = run_pipeline_in_subprocess(builder, num_threads=1)
+
+    for _ in iterable:
+        pass
