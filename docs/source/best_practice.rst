@@ -12,12 +12,10 @@ We recommend decoding individual frames, then using :py:func:`spdl.io.convert_fr
 to create a batch Tensor directly without creating an intermediate Tensors.
 
 If you are decoding a batch of images, and you have pre-determined set of images
-that should go together into a same batch, use
-:py:func:`spdl.io.load_image_batch` (or its async variant
-:py:func:`spdl.io.async_load_image_batch`).
+that should go together into a same batch, use :py:func:`spdl.io.load_image_batch`.
 
 Otherwise, demux, decode and pre-process multiple media, then combine them with
-:py:func:`spdl.io.convert_frames` (or :py:func:`spdl.io.async_convert_frames`).
+:py:func:`spdl.io.convert_frames`.
 For example, the following functions implement decoding and tensor creation
 separately.
 
@@ -27,8 +25,8 @@ separately.
    from spdl.io import ImageFrames
 
    def decode_image(src: str) -> ImageFrames:
-       packets = spdl.io.async_demux_image(src)
-       return spdl.io.async_decode_packets(packets)
+       packets = spdl.io.demux_image(src)
+       return spdl.io.decode_packets(packets)
 
    def batchify(frames: list[ImageFrames]) -> ImageFrames:
        buffer = spdl.io.convert_frames(frames)
