@@ -90,6 +90,7 @@ def _build_pipeline(
     max_failures: int,
     queue_class: type[AsyncQueue[...]],
     task_hook_factory: Callable[[str], list[TaskHook]],
+    stage_id: int,
 ) -> Pipeline[U]:
     coro, queues = _build_pipeline_coro(
         src,
@@ -98,6 +99,7 @@ def _build_pipeline(
         max_failures,
         queue_class,
         task_hook_factory,
+        stage_id,
     )
 
     executor = ThreadPoolExecutor(
@@ -319,10 +321,6 @@ class PipelineBuilder(Generic[T, U]):
 
         Args:
             buffer_size: The size of the buffer. Pass ``0`` for unlimited buffering.
-
-            queue_class: A queue class, used to connect this stage and the next stage.
-                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
-                Default: :py:class:`StatsQueue`.
         """
         if self._sink is not None:
             raise ValueError("Sink is already set.")
@@ -343,6 +341,7 @@ class PipelineBuilder(Generic[T, U]):
         report_stats_interval: float = -1,
         queue_class: type[AsyncQueue[...]] | None = None,
         task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+        stage_id: int = 0,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -374,12 +373,14 @@ class PipelineBuilder(Generic[T, U]):
                 name of the stage. If ``None``, a default hook,
                 :py:class:`TaskStatsHook` is used.
                 To disable hooks, provide a function that returns an empty list.
+
+            stage_id: The index of the initial stage  used for logging.
         """
         if (src := self._src) is None:
-            raise RuntimeError("Source is not set.")
+            raise RuntimeError("Source is not set. Did you call `add_source`?")
 
         if (sink := self._sink) is None:
-            raise RuntimeError("Sink is not set.")
+            raise RuntimeError("Sink is not set. Did you call `add_sink`?")
 
         def _hook_factory(name: str) -> list[TaskHook]:
             return [DefaultHook(name=name, interval=report_stats_interval)]
@@ -398,6 +399,7 @@ class PipelineBuilder(Generic[T, U]):
             task_hook_factory=(
                 _hook_factory if task_hook_factory is None else task_hook_factory
             ),
+            stage_id=stage_id,
         )
 
 

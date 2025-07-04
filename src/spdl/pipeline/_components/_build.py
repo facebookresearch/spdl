@@ -148,6 +148,7 @@ def _build_pipeline_coro(
     max_failures: int,
     queue_class: type[AsyncQueue[...]],
     task_hook_factory: Callable[[str], list[TaskHook]],
+    stage_id: int,
 ) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
     # Note:
     # Make sure that coroutines are ordered from source to sink.
@@ -159,21 +160,24 @@ def _build_pipeline_coro(
     _PIPELINE_ID += 1
 
     # source
-    queues.append(queue_class(f"{_PIPELINE_ID}:0:src_queue"))
-    coros.append(("Pipeline::0:src", _source(src.source, queues[0])))
+    name = f"{stage_id}:src"
+    stage_id += 1
+    queues.append(queue_class(f"{_PIPELINE_ID}:{name}_queue"))
+    coros.append((f"Pipeline::{name}", _source(src.source, queues[0])))
 
     _FailCounter = _get_fail_counter()
 
     # pipes
-    for i, cfg in enumerate(process_args, start=1):
-        name = _get_task_name(i, cfg)
+    for cfg in process_args:
+        name = _get_task_name(stage_id, cfg)
+        stage_id += 1
         queue_name = f"{name}_queue"
         # Use buffer_size=2 so that it is possible that queue always
         # has an item as long as upstream is fast enough.
         # This make it possible for data readiness (occupancy rate)
         # to reach 100%, instead of 99.999999%
         queues.append(queue_class(queue_name, buffer_size=2))
-        in_queue, out_queue = queues[i - 1 : i + 1]
+        in_queue, out_queue = queues[-2:]
 
         match cfg.type_:
             case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
@@ -202,13 +206,11 @@ def _build_pipeline_coro(
         coros.append((f"Pipeline::{name}", coro))
 
     # sink
-    n = len(process_args) + 1
-    output_queue = queue_class(
-        f"{_PIPELINE_ID}:{n}:sink_queue", buffer_size=sink.buffer_size
-    )
+    name = f"{stage_id}:sink_queue"
+    output_queue = queue_class(f"{_PIPELINE_ID}:{name}", buffer_size=sink.buffer_size)
     coros.append(
         (
-            f"Pipeline::{n}:sink",
+            f"Pipeline::{name}",
             _sink(queues[-1], output_queue),
         )
     )
