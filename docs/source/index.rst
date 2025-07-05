@@ -42,6 +42,7 @@ Please use the following BibTex for citing our project if you find it useful.
    overview
    installation
    getting_started/index
+   async/index
    optimization_guide/index
    case_studies/index
    migration/index
