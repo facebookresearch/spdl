@@ -90,6 +90,27 @@ jobs:
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
 
+  check-package-dependency:
+    if: ${{ inputs.run-test == 'true' }}
+    needs: ["build"]
+    runs-on: ${{ inputs.machine }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '${{ inputs.python-version }}'
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: ~/package
+      - uses: actions/checkout@v4
+      - name: Dependency Check
+        run: |
+          # Install NumPy (the only dep) of SPDL manually, so that
+          # if a dependency is introduced accidentally, check_deps will catch
+          pip install numpy
+          pip install --no-dependencies $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          python .github/scripts/check_deps.py
+
   test-gpu:
     if: ${{ inputs.run-test == 'true' }}
     needs: ["build"]
