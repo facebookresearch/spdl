@@ -103,11 +103,8 @@ So it is advised to use them with ``ProcessPoolExecutor`` or avoid using them in
 
 * `np.load <https://github.com/numpy/numpy/blob/maintenance/2.1.x/numpy/lib/_npyio_impl.py#L312-L500>`_: Please refer to :ref:`data-formats-case-study` for possible workaround.
 
-Why Async IO?
--------------
+Why Async I/O?
+--------------
 
-When training a model with large amount of data, the data are retrieved from remote locations. Network utilities often provide APIs based on Async I/O.
-
-The Async I/O allows to easily build complex data pre-processing pipeline and execute them while automatically parallelizing parts of the pipeline, achieving high throughput.
-
-Synchronous operations that release GIL can be converted to async operations easily by running them in a thread pool. So by converting the synchronous pre-processing functions that release GIL into asynchronous operations, the entire data pre-processing pipeline can be executed in async event loop. The event loop handles the scheduling of data processing functions, and execute them concurrently.
+The Async I/O facilitates building complex pipeline.
+Please refer to :ref:`intro-async` for more detail.
