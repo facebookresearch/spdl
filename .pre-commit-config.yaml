@@ -25,10 +25,12 @@ repos:
     hooks:
       # Run the linter.
       - id: ruff
+        exclude: .github/scripts
         types_or: [ python, pyi ]
         args: [ "--fix" ]
         # Run the formatter.
       - id: ruff-format
+        exclude: .github/scripts
         types_or: [ python, pyi ]
 
   # This check is set to never fail, but will print all current mypy failures. See:
@@ -37,6 +39,7 @@ repos:
     rev: v1.16.1
     hooks:
       - id: mypy
+        exclude: .github/scripts
         verbose: true
         entry: bash -c
         args:
