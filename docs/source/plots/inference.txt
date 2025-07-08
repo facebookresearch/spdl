@@ -1,0 +1,70 @@
+.. raw:: html
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+    <script>
+    function plot(div_id, data, title) {
+       const x = data['event_time'].map(v => { return new Date(v*1000); });
+       const y = data['smu'].map(v => { return v*100; });
+       var plot_data = [];
+       plot_data.push({
+           x: x,
+           y: y,
+           name: 'SM Utilization',
+           line: {
+               size: 0.1,
+           },
+       });
+       Plotly.newPlot(
+           div_id, {
+               data: plot_data,
+               layout: {
+                   title: title,
+                   yaxis: {
+                       title: {
+                           text: 'SM Utilization [%]',
+                       },
+                       range: [0, null],
+                   },
+                   showlegend: true,
+               },
+           },
+       );
+    };
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function() {
+            const cfgs = [
+                {
+                    data_url: '../_static/data/inference_baseline_smu.json',
+                    div_id: 'baseline_smu',
+                    title: 'SM Utilization (baseline)',
+                },
+                {
+                    data_url: '../_static/data/inference_spdl_smu.json',
+                    div_id: 'spdl_smu',
+                    title: 'SM Utilization (SPDL)',
+                },
+            ]
+            cfgs.map(cfg => {
+                fetch(cfg.data_url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch the data.');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        try {
+                            plot(cfg.div_id, data, cfg.title);
+                        } catch(error) {
+                            const div = document.getElementById(cfg.div_id);
+                            div.textContent = "Failed to plot: " + error.toString();
+                            throw error;
+                        }
+                    })
+                    .catch(error => {console.error(error);});
+            })
+        },
+        false);
+   </script>
