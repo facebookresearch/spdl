@@ -21,7 +21,6 @@
 #endif
 
 #include <fmt/format.h>
-#include <glog/logging.h>
 
 namespace spdl::cuda {
 namespace {
