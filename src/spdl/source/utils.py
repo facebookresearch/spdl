@@ -13,7 +13,7 @@ import logging
 import random
 import sys
 import time
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator, Sequence, Sized
 from typing import TypeVar
 
 from ._type import IterableWithShuffle
@@ -219,6 +219,14 @@ class _ShuffleAndIterate(Iterable[T]):
 
         if self._shuffle_last:
             self._shuffle()
+
+    def __len__(self) -> int:
+        if isinstance(self.src, Sized):
+            return len(self.src)
+        else:
+            raise TypeError(
+                f"Source iterator of type {type(self.src)} does not support length"
+            )
 
 
 def embed_shuffle(
