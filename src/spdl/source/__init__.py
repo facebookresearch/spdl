@@ -8,9 +8,13 @@
 
 # pyre-strict
 
-from ._type import IterableWithShuffle
+from ._type import IterableWithShuffle, SizedIterable, SizedIterableWithShuffle
 
-__all__ = ["IterableWithShuffle"]
+__all__ = [
+    "IterableWithShuffle",
+    "SizedIterable",
+    "SizedIterableWithShuffle",
+]
 
 
 def __dir__() -> list[str]:

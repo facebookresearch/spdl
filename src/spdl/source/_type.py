@@ -6,23 +6,47 @@
 
 # pyre-unsafe
 
-__all__ = ["IterableWithShuffle"]
+__all__ = [
+    "IterableWithShuffle",
+    "SizedIterable",
+    "SizedIterableWithShuffle",
+]
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Sized
 from typing import Protocol, runtime_checkable, TypeVar
 
 T = TypeVar("T")
 
 
 @runtime_checkable
-class IterableWithShuffle(Protocol[T]):
+class IterableWithShuffle(Iterable[T], Protocol):
     """IterableWithShuffle()
+
     A protocol that is often used to represent data source."""
 
     def shuffle(self, seed: int) -> None:
         """Apply in-place shuffling"""
         ...
 
-    def __iter__(self) -> Iterator[T]:
-        """Iterate over the source and yields the source data."""
+
+@runtime_checkable
+class SizedIterable(Sized, Iterable[T], Protocol):
+    """SizedIterable()
+    A protocol that is often used to represent data source."""
+
+    pass
+
+
+@runtime_checkable
+class SizedIterableWithShuffle(SizedIterable[T], Protocol):
+    """SizedIterableWithShuffle()
+    A protocol that is often used to represent data source."""
+
+    def shuffle(self, seed: int) -> None:
+        """Apply in-place shuffling.
+
+        .. note::
+
+           The result of shuffle may not be observable until the iteration starts.
+        """
         ...
