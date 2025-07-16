@@ -14,9 +14,9 @@ import random
 import sys
 import time
 from collections.abc import Iterable, Iterator, Sequence, Sized
-from typing import TypeVar
+from typing import overload, TypeVar
 
-from ._type import IterableWithShuffle
+from ._type import IterableWithShuffle, SizedIterable, SizedIterableWithShuffle
 
 T = TypeVar("T")
 K = TypeVar("K")
@@ -198,7 +198,11 @@ class MergeIterator(Iterable[T]):
 
 class _ShuffleAndIterate(Iterable[T]):
     def __init__(
-        self, src: IterableWithShuffle[T], *, epoch: int, shuffle_last: bool
+        self,
+        src: IterableWithShuffle[T] | SizedIterableWithShuffle[T],
+        *,
+        epoch: int,
+        shuffle_last: bool,
     ) -> None:
         self.src = src
         self._epoch = epoch
@@ -229,9 +233,25 @@ class _ShuffleAndIterate(Iterable[T]):
             )
 
 
+@overload
+def embed_shuffle(
+    src: SizedIterableWithShuffle[T], /, *, shuffle_last: bool = False, epoch: int = 0
+) -> SizedIterable[T]: ...
+
+
+@overload
 def embed_shuffle(
     src: IterableWithShuffle[T], /, *, shuffle_last: bool = False, epoch: int = 0
-) -> Iterable[T]:
+) -> Iterable[T]: ...
+
+
+def embed_shuffle(
+    src: IterableWithShuffle[T] | SizedIterableWithShuffle[T],
+    /,
+    *,
+    shuffle_last: bool = False,
+    epoch: int = 0,
+) -> Iterable[T] | SizedIterable[T]:
     """**[Experimental]** Convert :py:class:`~spdl.source.IterableWithShuffle` to
     :py:class:`Iterable` by embedding the :py:meth:`~spdl.source.IterableWithShuffle.shuffle`
     call into :py:meth:`~Iterable.__iter__`.
