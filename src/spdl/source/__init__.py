@@ -8,12 +8,18 @@
 
 # pyre-strict
 
+from ._sampler import (
+    DistributedDeterministicSampler,
+    DistributedRandomSampler,
+)
 from ._type import IterableWithShuffle, SizedIterable, SizedIterableWithShuffle
 
 __all__ = [
     "IterableWithShuffle",
     "SizedIterable",
     "SizedIterableWithShuffle",
+    "DistributedRandomSampler",
+    "DistributedDeterministicSampler",
 ]
 
 
