@@ -24,7 +24,7 @@ The :py:class:`concurrent.futures.Future` objects
 (returned when submitting a job to an executor)
 can be converted to awaitable (:py:class:`asyncio.Future`),
 so async I/O can also run synchronous functions using
-multi-threadin/multi-processing.
+multi-threading/multi-processing.
 
 The ``aync def`` and ``await`` expression allows to write coroutine
 in a way very similar to synchronous procedure.
@@ -42,7 +42,7 @@ In other words,
 **such synchronous operaitons must be delegated to an executor.**
 
 Let's look at a toy example of ``async def`` and ``await``, and how
-the event loop process them.
+the event loop processes them.
 
 .. code-block::
 
@@ -64,11 +64,11 @@ The event loop will process coroutine objects with ``await`` keyword.
 When a coroutine is awaited, roughly the following things happen.
 
 1. The event loop schedules the execution of the coroutine.
-2. The event loop register the coroutine for callback.
+2. The event loop registers the coroutine for callback.
 3. The event loop goes back to the state where it waits for a task completion.
 
 So far, this is aligned with what we have seen.
-Now we look at how the event loop process the inner implementation of
+Now we look at how the event loop processes the inner implementation of
 coroutine function.
 
 1. Synchronous blocks are executed by the event loop itself.
@@ -80,7 +80,7 @@ Let's look at the trace of the event loop from the previous section.
 .. image:: ../_static/data/event_loop_3.png
 
 The event loop is at stand-by when it's blocked on :py:meth:`selectors.BaseSelector.select`.
-When a task is completed, then it exits the ``select`` call, and execute a callback.
+When a task is completed, then it exits the ``select`` call, and executes a callback.
 
 The callback in this case is :py:meth:`spdl.pipeline.PipelineBuilder.pipe` method,
 and it's submitting a synchronous function to a thread pool, then converting the resulting
@@ -90,9 +90,9 @@ While the callback is being executed, the event loop is not able to react to ano
 task completion.
 
 If a code is properly written, the callback is very quick, so it does not introduce a delay.
-However, if this callback is time-consuming, it will block the event loop for significant
+However, if this callback is time-consuming, it will block the event loop for a significant
 amount of time, preventing it from reacting to completed tasks.
 It eventually delays the entire orchestration.
-This can happen in number of subtle ways.
-It could be simple oversight, could be that a function was unexpectedly taking longer, or
+This can happen in a number of subtle ways.
+It could be a simple oversight, could be that a function was unexpectedly taking longer, or
 a function is holding the GIL.

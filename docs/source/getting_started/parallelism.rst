@@ -43,7 +43,7 @@ the ``Pipeline``.
 
 Internally, the ``my_func`` function is converted to an asynchronous equivalent,
 meaning it's dispatched to the provided executor (or a default one if the executor
-is ``None``) as follow.
+is ``None``) as follows.
 
 .. code-block::
 
@@ -264,7 +264,7 @@ We refer this pattern as MTP ("multi-threading in subprocess").
 
 .. code-block:: python
 
-   # Pipeline that fetch data, load then colate.
+   # Pipeline that fetches data, loads, then collates.
    builder = (
        PipelineBuilder()
        .add_source(Dataset(...))
