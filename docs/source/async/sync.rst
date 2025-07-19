@@ -64,7 +64,7 @@ The following table summarizes them.
    :widths: 10 45 45
    :header-rows: 1
 
-   * - 
+   * -
      - ``ThreadPoolExecutor``
      - ``ProcessPoolExecutor``
    * - Pros
@@ -72,12 +72,12 @@ The following table summarizes them.
      - - Free from the constraint imposed by the GIL. (Can use any function to achieve concurrency.)
    * - Cons
      - - The functions must not hold the GIL. (or hold the GIL for extremely short amount of time).
-       - Potential data rase (though samples are usually independent each other in AI application).
+       - Potential data rase (though samples are usually independent of each other in AI application).
      - - Data passed between processes must be picklable.
        - Data copy between processes. (Using shared memory can improve the performance.)
        - The start up can be slow if there are libraries that perform static initialization.
 
-To achieve high performance in multi-threading, we need to workaround the GIL.
+To achieve high performance in multi-threading, we need to work around the GIL.
 SPDL provides :py:mod:`spdl.io` module, which offers efficient media processing while releasing the GIL.
 It complements the numerical computation like NumPy and PyTorch, so many AI applications are covered.
 
@@ -88,7 +88,7 @@ The multi-processing does not have the GIL constraint, but it comes with the cos
 Array formats like NumPy's NDArray and PyTorch's Tensor use shared memory to make this performant.
 If you need to pass a large data between processes
 (such as a dataset, though we don't recommend passing around dataset)
-you can write it to a shared memory in the worker process, then let the main process read from there.
+you can write it to a shared memory in the worker process, then let the main process read it from there.
 
 .. code-block::
 

@@ -7,7 +7,7 @@ Building and Running Pipeline
 
 Building a Pipeline
 -------------------
-                      
+
 First, let's look at how easy it is to build the pipeline in SPDL.
 
 The following snippet demonstrates how one can construct a
@@ -35,7 +35,7 @@ perform the operations in an async event loop in a background thread.
 
 Running a Pipeline
 ------------------
-                      
+
 To run the pipeline, call :py:meth:`Pipeline.start`.
 Once the pipeline starts executing, you can iterate on the pipeline.
 Finally call :py:meth:`Pipeline.stop` to stop the background thread.
@@ -76,7 +76,7 @@ To make sure that the pipeline is stopped, it is recommended to use
    To resume the execution, resume consuming the data.
 
 .. _pipeline-caveats:
-   
+
 ⚠ Caveats ⚠
 -----------
 
@@ -91,7 +91,7 @@ at the end of the Python interpreter, preventing Python from exiting.
    :class: danger
 
    It is recommended to keep the resulting ``Pipeline`` object as a
-   local variable of an interator, and NOT TO assign it to an object
+   local variable of an iterator, and NOT TO assign it to an object
    attribute.
 
    .. code-block::
@@ -136,9 +136,9 @@ at the end of the Python interpreter, preventing Python from exiting.
    on a ``Pipeline`` object.
    It can prevent the :py:meth:`Pipeline.stop` method from being called
    at the right time.
-   It in turn might make the Python interpreter hange at exit.
+   It in turn might make the Python interpreter hang at exit.
 
-   Say you wrap a ``Pipeline`` to create an class that resembles conventional
+   Say you wrap a ``Pipeline`` to create a class that resembles conventional
    ``DataLoader``.
 
    .. code-block:: python

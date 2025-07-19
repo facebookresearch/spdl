@@ -161,7 +161,7 @@ from the regular synchronous function.
 The ``Future`` class has :py:meth:`~Future.add_done_callback` method.
 So we could chain the tasks using the callback.
 The following code is one attempt.
-           
+
 .. code-block::
 
    def callback_chain(fns: Sequence[Callable], input, executor):
@@ -301,7 +301,7 @@ We would need to block each operation before putting the result to the buffer qu
 in case the downstream stages are not consuming the data fast enough.
 However, if the upstream is being blocked, that means that the threads used for
 these upstream tasks are blocked as-well.
-This leads to resource stavation and slows down the pipeline at best or can
+This leads to resource starvation and slows down the pipeline at best or can
 cause a deadlock.
 
 Summary

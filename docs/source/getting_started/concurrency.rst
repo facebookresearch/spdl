@@ -26,7 +26,7 @@ This argument determines at most how many operations of the stage the event loop
 
    See the :ref:`Thread Pool Size<Thread Pool Size>` for the detail.
 
-For example, let's say we have a pipeline that downloads data and pre-process them, and we implement it like the following.
+For example, let's say we have a pipeline that downloads data and pre-processes them, and we implement it like the following.
 
 .. code-block::
 
@@ -53,7 +53,7 @@ The following diagram illustrates this.
            b1[download 1]
            b2[download 2]
            b3[download 3]
-           b4[download 4] 
+           b4[download 4]
        end
        subgraph C[preprocess]
            c1[preprocess 1]
@@ -86,7 +86,7 @@ synchronous functions as async functions.
 
 When executing functions that are synchronous, the event loop can offload
 its execution to the thread pool and wait for its completion.
-This is what :py:meth:`~asyncio.loop.run_in_executor` does and it is a primal
+This is what :py:meth:`~asyncio.loop.run_in_executor` does and it is the primary
 way to execute synchronous functions in async event loop.
 
 The majority of operations performed in ML data loading are synchronous, so we need to
@@ -127,4 +127,4 @@ The following code snippet illustrates this.
 
    For example, some libraries implement thread-based parallelism in
    low-level language like C++. When using such libraries the concurrency
-   is constraint by the resource managed by the library.
+   is constrained by the resource managed by the library.

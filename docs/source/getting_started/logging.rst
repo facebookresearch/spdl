@@ -36,7 +36,7 @@ The :py:class:`TaskPerfStats` carries the information about functions passed to
 The :py:class:`QueuePerfStats` carries the information about the flow of data going
 through the pipeline, and it is collected by :py:class:`StatsQueue`.
 
-The following is the steps to export the stats.
+The following are the steps to export the stats.
 
 #. Subclass :py:class:`StatsQueue` and :py:class:`TaskStatsHook` and
    override ``interval_stats_callback`` method.†

@@ -52,7 +52,7 @@ For example
 
    Since the source object is executed in async event loop, if the source is
    ``Iterable`` (synchronous iterator), the source object must be lightweight
-   and refrain from performing blocking operation.
+   and refrain from performing blocking operations.
 
    Running a blocking operation in async event loop can, in turn, prevent the
    loop from scheduling callbacks, prevent tasks from being canceled, and
@@ -82,8 +82,8 @@ stage.
      you need to convert the function to a univariate function by manually
      writing a wrapper function or using :py:func:`functools.partial`.
 
-The following diagram illustrates a pipeline that fetch images from remote
-locations, batch decode and send data to GPU.
+The following diagram illustrates a pipeline that fetches images from remote
+locations, batch decodes and sends data to GPU.
 
 .. mermaid::
 
@@ -95,7 +95,7 @@ locations, batch decode and send data to GPU.
 
 An implementation could look like this.
 It uses :py:func:`spdl.io.load_image_batch`, which can decode and resize images
-and send the decoded frames to GPU in asynchronously.
+and send the decoded frames to GPU asynchronously.
 
 .. code-block::
 
@@ -130,7 +130,7 @@ and send the decoded frames to GPU in asynchronously.
    ...     .build()
    ... )
    >>>
-   >>> 
+   >>>
 
 
 Sink
