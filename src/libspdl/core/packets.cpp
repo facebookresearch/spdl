@@ -12,7 +12,6 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
-#include <glog/logging.h>
 
 #include <algorithm>
 #include <cassert>
