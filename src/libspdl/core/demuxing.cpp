@@ -13,8 +13,6 @@
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
-#include <fmt/core.h>
-
 namespace spdl::core {
 namespace detail {
 namespace {
