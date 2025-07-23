@@ -18,8 +18,6 @@
 #include <algorithm>
 #include <cassert>
 
-#include <glog/logging.h>
-
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/pixdesc.h>
