@@ -11,8 +11,6 @@
 #include "libspdl/core/detail/tracing.h"
 #include "libspdl/cuda/detail/utils.h"
 
-#include <cuda.h>
-
 #include <fmt/core.h>
 #include <glog/logging.h>
 
