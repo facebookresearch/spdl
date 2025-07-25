@@ -87,3 +87,29 @@ enabled for production pipelines.
 
 You can look for a particular function that's taking up significant
 portion of execution time.
+
+One interesting way to use profiler is to check how often the GIL is held.
+The `take_gil() <https://github.com/python/cpython/blob/3.12/Python/ceval_gil.c#L331-L458>`_ function is resposible for acquiring the GIL.
+By organizing the stack around ``take_gil`` function, we can see what functions
+are competing for the GIL, and identify a potential bottleneck.
+
+The following figure is an example of stacks sampled with Strobelight.
+It says that the pipeline spends 13% of the time trying to acquire the GIL.
+
+.. image:: ../../_static/data/strobe_light.png
+
+What stands out is that loading array data from NPZ file holds the GIL longest.
+Functions from I/O and preprocessing take up only 0.5% of the runtime for acquiring the GIL.
+But loading NPZ holds the GIL for more than 2.7% of the runtime.
+
+This pipeline uses :py:func:`spdl.io.load_npz` to load the NPZ file.
+This function is more efficient than the official :py:func:`numpy.load` function,
+however, it only partially releases the GIL.
+
+The `PR#849 <https://github.com/facebookresearch/spdl/pull/849>`_ is one of out attempts
+to make it fast and efficient.
+Another approach to resolve this is to change the file format.
+This NPZ file uses compressed format, and loading compressed NPZ file requires additional
+memory allocation and compute resource for decompression.
+If the storage space permits, re-creating the dataset without compression can help
+reducing the GIL contention.
