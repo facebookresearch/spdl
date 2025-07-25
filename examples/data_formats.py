@@ -211,7 +211,7 @@ def main() -> None:
         src = DataSource(get_mock_data(data_format, compressed), repeat=1000)
         load_fn = _get_load_fn(data_format, impl)
         for mode in ["mp", "mt"]:
-            for num_workers in [1, 2, 4, 8, 16, 32]:
+            for num_workers in [32, 16, 8, 4, 2, 1]:
                 pipeline = get_pipeline(
                     src,  # pyre-ignore: [6]
                     load_fn,
@@ -220,7 +220,9 @@ def main() -> None:
                 )
                 num_items, elapsed = run_pipeline(pipeline)
                 qps = num_items / elapsed
-                print(f"{data_format},{compressed},{impl},{mode},{num_workers},{qps}")
+                print(
+                    f"{data_format},{compressed},{impl},{mode},{num_workers},{qps:.1f}"
+                )
 
 
 if __name__ == "__main__":
