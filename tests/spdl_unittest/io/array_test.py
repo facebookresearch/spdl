@@ -242,3 +242,14 @@ def test_load_npz_compressed():
     np.testing.assert_array_equal(data["uint32_array"], uint32_array)
     np.testing.assert_array_equal(data["int64_array"], int64_array)
     np.testing.assert_array_equal(data["uint64_array"], uint64_array)
+
+
+def test_load_npy_cpp():
+    """load_npy can handle version 1, 2 and 3."""
+    for shape in [(), (3,), (3, 4, 5)]:
+        ref = np.random.randint(255, size=shape)
+        data = _dump_npy(ref)
+
+        buffer = spdl.io.load_npy(data)
+        hyp = np.array(buffer, copy=False)
+        np.testing.assert_array_equal(hyp, ref)

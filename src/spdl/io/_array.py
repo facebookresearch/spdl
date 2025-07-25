@@ -9,14 +9,9 @@ __all__ = [
     "load_npz",
     "NpzFile",
 ]
-import ast
-import struct
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
-from numpy.lib.format import MAGIC_LEN, MAGIC_PREFIX
 from numpy.typing import NDArray
 
 # Importing `spdl.io.lib` instead of `spdl.io.lilb._archive`
@@ -26,35 +21,8 @@ from . import lib as _libspdl
 # pyre-strict
 
 
-@dataclass
-class _ArrayInterface:
-    shape: tuple[int, ...]  # pyre-ignore: [35]
-    typestr: str  # pyre-ignore: [35]
-    data: memoryview  # pyre-ignore: [35]
-    offset: int = 0  # pyre-ignore: [35]
-    version: int = 3  # pyre-ignore: [35]
-
-    @property
-    def __array_interface__(self) -> dict[str, Any]:
-        return {
-            "shape": self.shape,
-            "typestr": self.typestr,
-            "data": self.data,
-            "offset": self.offset,
-            "version": self.version,
-        }
-
-
-def _get_header_size_info(version: tuple[int, int]) -> tuple[str, str]:
-    match version:
-        case (1, 0):
-            return ("<H", "latin1")
-        case (2, 0):
-            return ("<I", "latin1")
-        case (3, 0):
-            return ("<I", "utf8")
-        case _:
-            raise ValueError(f"Unexpected version {version}.")
+def _get_pointer(data: bytes) -> int:
+    return np.frombuffer(data, dtype=np.byte).ctypes.data
 
 
 def load_npy(
@@ -111,50 +79,8 @@ def load_npy(
        `creates a new array <https://github.com/numpy/numpy/blob/v2.2.0/numpy/_core/records.py#L935-L939>`_.
 
     """
-    if len(data) < MAGIC_LEN:
-        raise ValueError("The input data is too short.")
-
-    view = memoryview(data)
-    magic_str = view[:MAGIC_LEN].tobytes()
-    if not magic_str.startswith(MAGIC_PREFIX):
-        raise ValueError(rf"Expected the data to start with {MAGIC_PREFIX}.")
-
-    major, minor = magic_str[-2:]
-    hlength_type, encoding = _get_header_size_info((major, minor))
-
-    info_length_size = struct.calcsize(hlength_type)
-    info_start = MAGIC_LEN + info_length_size
-
-    if len(data) < info_start:
-        raise ValueError("Failed to parse info. The input data is invalid.")
-    info_length_str = data[MAGIC_LEN:info_start]
-    info_length = struct.unpack(hlength_type, info_length_str)[0]
-
-    data_start = info_start + info_length
-    if len(data) < data_start:
-        raise ValueError(
-            "Failed to parse data. The recorded data size exceeds the provided data size."
-        )
-    info_str = view[info_start:data_start].tobytes()
-
-    info = ast.literal_eval(info_str.decode(encoding))
-
-    if info.get("fortran_order"):
-        raise ValueError(
-            "Array saved with `format_order=True is not supported. Please use `numpy.load`."
-        )
-
-    # TODO: Try `numpy.frombuffer``
-    # https://github.com/numpy/numpy/blob/e20317a43d3714f9085ad959f68c1ba6bc998fcd/numpy/_core/src/multiarray/ctors.c#L3711
-    aif = _ArrayInterface(
-        shape=info["shape"],
-        typestr=info["descr"],
-        data=view,
-        offset=data_start,
-        version=2,
-    )
-
-    return np.array(aif, copy=copy)
+    buffer = _libspdl._archive.load_npy(_get_pointer(data), len(data))
+    return np.array(buffer, copy=copy)
 
 
 class NpzFile(Mapping):
@@ -168,7 +94,8 @@ class NpzFile(Mapping):
     """
 
     def __init__(self, data: bytes, meta: dict[str, tuple[int, int, int, int]]) -> None:
-        self._data = memoryview(data)  # pyre-ignore
+        self._data: int = _get_pointer(data)
+        self._len: int = len(data)
         self._meta = meta
         self.files: list[str] = [f.removesuffix(".npy") for f in meta]
 
@@ -192,16 +119,18 @@ class NpzFile(Mapping):
         else:
             raise KeyError(f"{key} is not a file in the archive")
 
-        start, compressed_size, uncompressed_size, compression_method = self._meta[key]
+        offset, compressed_size, uncompressed_size, compression_method = self._meta[key]
         match compression_method:
             case 0:
-                return load_npy(self._data[start : start + compressed_size])
-            case 8:
-                return load_npy(
-                    _libspdl._archive.inflate(
-                        self._data.obj, start, compressed_size, uncompressed_size
-                    )
+                buffer = _libspdl._archive.load_npy(
+                    self._data, size=compressed_size, offset=offset
                 )
+                return np.array(buffer, copy=False)
+            case 8:
+                buffer = _libspdl._archive.load_npy_compressed(
+                    self._data, offset, compressed_size, uncompressed_size
+                )
+                return np.array(buffer, copy=False)
             case _:
                 raise ValueError(
                     "Compression method other than DEFLATE is not supported."
