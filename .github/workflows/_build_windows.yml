@@ -56,3 +56,53 @@ jobs:
           packaging/vc_env_helper.bat            ^
             bash                                 ^
               .github/scripts/check_package.sh
+
+  unit-test:
+    if: "${{ inputs.run-test == 'true' }}"
+    name: "test ffmpeg"
+    needs: ["build"]
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg-version: ["8.0"]
+    runs-on:  "${{ inputs.os }}"
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          conda-remove-defaults: "true"
+
+      - name: Unit test
+        run: |
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            conda install -q -c conda-forge python-freethreading
+          fi
+
+          # Install SPDL
+          pip install $(find package -name '*.whl' -depth -maxdepth 1)
+
+          # Install PyTorch and others
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            pip install torch numpy pytest
+          else
+            pip install torch numpy numba pytest
+          fi
+
+          # Install FFmpeg
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+
+          pytest -v \
+              tests/spdl_unittest/io/ \
+              tests/spdl_unittest/dataloader/
