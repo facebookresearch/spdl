@@ -214,7 +214,8 @@ jobs:
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
-          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
+          # Note: Somehow NumPy got downgraded to 1.24 when using FFmpeg 7.1, so adding constraint here.
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv 'numpy>=2'
           # For some reason, the dynamic libraries are not found.
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
 
