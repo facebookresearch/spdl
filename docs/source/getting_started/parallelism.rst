@@ -100,6 +100,11 @@ instance, or put it in a
 The following example shows how to initialize and store a CUDA stream
 in a thread-local storage.
 
+.. admonition::
+   :class: note
+
+   The following code is now available as :py:func:`spdl.io.transfer_tensor`.
+
 .. code-block:: python
 
    import threading
