@@ -11,6 +11,7 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
+#include "numpy_support.h"
 #include "zip_impl.h"
 
 namespace nb = nanobind;
@@ -19,32 +20,51 @@ namespace spdl::archive {
 
 namespace {
 
-NB_MODULE(_archive, m) {
-  m.def("parse_zip", [](const nb::bytes& bytes) {
-    auto* data = bytes.c_str();
-    auto size = bytes.size();
+nb::dict _cast(const NPYArray& a) {
+  nb::dict ret;
+  ret["version"] = 3;
+  ret["shape"] = nb::tuple(nb::cast(a.shape));
+  ret["typestr"] = a.descr;
+  ret["data"] = std::tuple<size_t, bool>{(uintptr_t)a.data, false};
+  ret["strides"] = nb::none();
+  ret["descr"] =
+      std::vector<std::tuple<std::string, std::string>>{{"", a.descr}};
+  return ret;
+}
 
-    nb::gil_scoped_release __g;
-    return zip::parse_zip(data, size);
-  });
+NB_MODULE(_archive, m) {
+  m.def(
+      "parse_zip",
+      [](const nb::bytes& bytes) {
+        return zip::parse_zip(bytes.c_str(), bytes.size());
+      },
+      nb::call_guard<nb::gil_scoped_release>());
+
+  nb::class_<NPYArray>(m, "NPYArray")
+      .def_prop_ro("__array_interface__", [](NPYArray& self) -> nb::dict {
+        return _cast(self);
+      });
 
   m.def(
-      "inflate",
-      [](const nb::bytes& bytes,
-         uint64_t offset,
-         uint32_t compressed_size,
-         uint32_t uncompressed_size) {
-        auto* data = bytes.c_str();
-        nb::bytearray ret{};
-        ret.resize(uncompressed_size);
+      "load_npy",
+      [](uintptr_t p, size_t s, size_t o) {
+        return load_npy((const char*)p + o, s);
+      },
+      nb::arg("data"),
+      nb::arg("size"),
+      nb::arg("offset") = 0,
+      nb::call_guard<nb::gil_scoped_release>());
 
-        {
-          nb::gil_scoped_release __g;
-          zip::inflate(
-              data + offset, compressed_size, ret.data(), uncompressed_size);
-        }
-        return ret;
-      });
+  m.def(
+      "load_npy_compressed",
+      [](uintptr_t p, size_t o, uint32_t cs, uint32_t ucs) {
+        return load_npy_compressed((const char*)p + o, cs, ucs);
+      },
+      nb::arg("data"),
+      nb::arg("offset"),
+      nb::arg("compressed_size"),
+      nb::arg("uncompressed_size"),
+      nb::call_guard<nb::gil_scoped_release>());
 }
 
 } // namespace
