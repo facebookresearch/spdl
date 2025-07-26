@@ -100,6 +100,7 @@ from ._preprocessing import (
     get_filter_desc,
     get_video_filter_desc,
 )
+from ._transfer import transfer_tensor
 
 __all__ = [
     # HIGH LEVEL API
@@ -157,6 +158,7 @@ __all__ = [
     # DATA TRANSFER
     "transfer_buffer",
     "transfer_buffer_cpu",
+    "transfer_tensor",
     # COLORSPACE CONVERSION
     "nv12_to_rgb",
     "nv12_to_bgr",
