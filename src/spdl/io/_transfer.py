@@ -116,13 +116,21 @@ def _get_trancfer_func() -> _DataTransfer:
 
 
 def transfer_tensor(batch: T, /) -> T:
-    """Transfers PyTorch CPU Tensors to CUDA in a background.
+    """Transfers PyTorch CPU Tensors to CUDA in a dedicated stream.
 
     This function wraps calls to :py:meth:`torch.Tensor.pin_memory` and
-    :py:meth:`torch.Tensor.to`, and execute them in a dedicated CUDA stream,
-    so that when called in a background thread, data transfer is carried out
-    in a way it overlaps with the GPU computation happening in the foreground
-    thread (such as training and inference).
+    :py:meth:`torch.Tensor.to`, and execute them in a dedicated CUDA stream.
+
+    When called in a background thread, the data transfer overlaps with
+    the GPU computation happening in the foreground thread (such as training
+    and inference).
+
+    .. seealso::
+
+       :ref:`pipeline-parallelism-custom-mt` - An intended way to use
+       this function in :py:class:`~spdl.pipeline.Pipeline`.
+
+    .. image:: ../../_static/data/parallelism_transfer.png
 
     Concretely, it performs the following operations.
 
