@@ -76,6 +76,7 @@ method.
    For loading raw byte strings into array format, SPDL offers efficient
    functions through :py:mod:`spdl.io` module.
 
+.. _pipeline-parallelism-custom-mt:
 
 Multi-threading (custom)
 ------------------------
@@ -100,8 +101,7 @@ instance, or put it in a
 The following example shows how to initialize and store a CUDA stream
 in a thread-local storage.
 
-.. admonition::
-   :class: note
+.. note::
 
    The following code is now available as :py:func:`spdl.io.transfer_tensor`.
 
