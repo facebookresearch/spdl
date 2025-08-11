@@ -11,7 +11,7 @@
 #include <cstdint>
 
 struct CUstream_st;
-typedef CUstream_st* CUstream;
+using CUstream = CUstream_st*;
 
 namespace spdl::cuda::detail {
 
