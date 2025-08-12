@@ -1,0 +1,17 @@
+--- /CMakeLists.txt	2025-08-12 13:13:39
++++ /CMakeLists.txt	2025-08-12 13:14:16
+@@ -523,12 +523,12 @@
+   list (APPEND GLOG_SRCS src/signalhandler.cc)
+ endif (HAVE_PTHREAD OR WIN32)
+ 
+-if (WIN32)
++if ((CYGWIN OR WIN32) AND NOT (UNIX OR MINGW))
+   list (APPEND GLOG_SRCS
+     src/windows/port.cc
+     src/windows/port.h
+   )
+-endif (WIN32)
++endif ((CYGWIN OR WIN32) AND NOT (UNIX OR MINGW))
+ 
+ add_compile_options ($<$<AND:$<BOOL:${HAVE_NO_UNNAMED_TYPE_TEMPLATE_ARGS}>,$<NOT:$<CXX_COMPILER_ID:GNU>>>:-Wno-unnamed-type-template-args>)
+ 
