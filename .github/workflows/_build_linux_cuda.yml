@@ -35,6 +35,9 @@ env:
   SPDL_USE_TRACING: 1
   SPDL_BUILD_STUB: 0
   SPDL_USE_CUDA: 1
+  SPDL_USE_NVJPEG: 1
+  SPDL_USE_NPPI: 1
+  SPDL_LINK_STATIC_NVJPEG: 1
   SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
 
 jobs:
@@ -168,6 +171,8 @@ jobs:
           export "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${cudart_dir}"
 
           # Run test
+          nm /home/runner/miniconda3/envs/test/lib/python3.11/site-packages/spdl/io/lib/libspdl_cuda4.so
+
           python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_cuda()'
           if "${{ inputs.use-nvdec == 'nvdec' }}" ; then
               python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_nvcodec()'
