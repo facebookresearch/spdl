@@ -206,23 +206,26 @@ class _ShuffleAndIterate(Iterable[T]):
     ) -> None:
         self.src = src
         self._epoch = epoch
-        self._shuffle_last = shuffle_last
+        self._shuffle_first: bool = not shuffle_last
 
     def _shuffle(self) -> None:
         t0 = time.monotonic()
         self.src.shuffle(seed=self._epoch)
         if (elapsed := time.monotonic() - t0) > 3:
             _LG.warning("Shuffling took %.2f sec.", elapsed)
-
-    def __iter__(self) -> Iterator[T]:
-        if not self._shuffle_last:
-            self._shuffle()
-
-        yield from self.src
         self._epoch += 1
 
-        if self._shuffle_last:
+    def __iter__(self) -> Iterator[T]:
+        if self._shuffle_first:
             self._shuffle()
+            yield from self.src
+        else:
+            try:
+                yield from self.src
+            finally:
+                # in case the iteration is stopped in the middle.
+                # shuffle is called when the iterator is deleted.
+                self._shuffle()
 
     def __len__(self) -> int:
         if isinstance(self.src, Sized):
