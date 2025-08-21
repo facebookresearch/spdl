@@ -427,19 +427,22 @@ class BSF(Generic[TCodec, TPackets]):
 
     .. admonition:: Example
 
-       src = "foo.mp4"
-       demuxer = spdl.io.Demuxer(src)
-       # Note: When demuxing in streaming fashion, the packets does not have codec information.
-       # To initialize BSF, the codec must be retrieved from Demuxer class.
-       bsf = spdl.io.BSF(demuxer.video_codec)
+       .. code-block::
 
-       for packets in demuxer.streaming_demux_video(...):
-           packets = bsf.filter(packets)
+          src = "foo.mp4"
 
-           ...
+          # Note: When demuxing in streaming fashion,
+          # the packets does not have codec information.
+          # To initialize BSF, the codec must be retrieved from Demuxer class.
+          demuxer = spdl.io.Demuxer(src)
+          bsf = spdl.io.BSF(demuxer.video_codec)
 
-        packets = bsf.flush()
-        ...
+          for packets in demuxer.streaming_demux_video(...):
+              packets = bsf.filter(packets)
+              ...
+
+          packets = bsf.flush()
+          ...
 
     Args:
         codec: The input codec.
@@ -490,9 +493,11 @@ def apply_bsf(packets, bsf):
 
     .. admonition:: Example - One-off demuxing
 
-       src = "foo.mp4"
-       packets = spdl.io.demux_video(src)
-       packets = spdl.io.apply_bsf(packets)
+       .. code-block::
+
+          src = "foo.mp4"
+          packets = spdl.io.demux_video(src)
+          packets = spdl.io.apply_bsf(packets)
 
     Args:
         packets: Packets (audio/video/image) object
