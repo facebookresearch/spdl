@@ -23,11 +23,13 @@ To run the benchmark,  pass it to the script like the following.
        --split val
 """
 
-# pyre-ignore-all-errors
+# pyre-strict
 
+import argparse
 import contextlib
 import logging
 import time
+from argparse import Namespace
 from collections.abc import Awaitable, Callable, Iterator
 from pathlib import Path
 
@@ -39,7 +41,7 @@ from spdl.source.imagenet import ImageNet
 from torch import Tensor
 from torch.profiler import profile
 
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
 
 __all__ = [
@@ -54,9 +56,7 @@ __all__ = [
 ]
 
 
-def _parse_args(args):
-    import argparse
-
+def _parse_args(args: list[str] | None) -> Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -72,10 +72,10 @@ def _parse_args(args):
     parser.add_argument("--no-compile", action="store_false", dest="compile")
     parser.add_argument("--no-bf16", action="store_false", dest="use_bf16")
     parser.add_argument("--use-nvjpeg", action="store_true")
-    args = parser.parse_args(args)
-    if args.trace:
-        args.max_batches = 60
-    return args
+    ns = parser.parse_args(args)
+    if ns.trace:
+        ns.max_batches = 60
+    return ns
 
 
 # Handroll the transforms so as to support `torch.compile`
@@ -132,7 +132,13 @@ class ModelBundle(torch.nn.Module):
     Bundle the transform, model backbone, and classification head into a single module
     for a simple handling."""
 
-    def __init__(self, model, preprocessing, classification, use_bf16):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        preprocessing: Preprocessing,
+        classification: Classification,
+        use_bf16: bool,
+    ) -> None:
         super().__init__()
         self.model = model
         self.preprocessing = preprocessing
@@ -160,7 +166,7 @@ class ModelBundle(torch.nn.Module):
         return self.classification(output, labels)
 
 
-def _expand(vals, batch_size, res):
+def _expand(vals: list[float], batch_size: int, res: int) -> Tensor:
     return torch.tensor(vals).view(1, 3, 1, 1).expand(batch_size, 3, res, res).clone()
 
 
@@ -206,7 +212,7 @@ def get_model(
             model = torch.compile(model, mode=mode)
             preprocessing = torch.compile(preprocessing, mode=mode)
 
-    return ModelBundle(model, preprocessing, classification, use_bf16)
+    return ModelBundle(model, preprocessing, classification, use_bf16)  # pyre-ignore[6]
 
 
 def get_decode_func(
@@ -225,9 +231,9 @@ def get_decode_func(
         Async function to decode images in to batch tensor of NCHW format
         and labels of shape ``(batch_size, 1)``.
     """
-    device = torch.device(f"cuda:{device_index}")
+    device: torch.device = torch.device(f"cuda:{device_index}")
 
-    filter_desc = spdl.io.get_video_filter_desc(
+    filter_desc: str | None = spdl.io.get_video_filter_desc(
         scale_width=256,
         scale_height=256,
         crop_width=width,
@@ -235,7 +241,7 @@ def get_decode_func(
         pix_fmt="rgb24",
     )
 
-    async def decode_images(items: list[tuple[str, int]]):
+    async def decode_images(items: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
         labels = [[item] for _, item in items]
         labels = torch.tensor(labels, dtype=torch.int64).to(device)
@@ -265,9 +271,9 @@ def _get_experimental_nvjpeg_decode_function(
     device_index: int,
     width: int = 224,
     height: int = 224,
-):
-    device = torch.device(f"cuda:{device_index}")
-    device_config = spdl.io.cuda_config(
+) -> Callable[[list[tuple[str, int]]], Awaitable[tuple[Tensor, Tensor]]]:
+    device: torch.device = torch.device(f"cuda:{device_index}")
+    device_config: spdl.io.CUDAConfig = spdl.io.cuda_config(
         device_index=device_index,
         allocator=(
             torch.cuda.caching_allocator_alloc,
@@ -275,7 +281,9 @@ def _get_experimental_nvjpeg_decode_function(
         ),
     )
 
-    async def decode_images_nvjpeg(items: list[tuple[str, int]]):
+    async def decode_images_nvjpeg(
+        items: list[tuple[str, int]],
+    ) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
         labels = [[item] for _, item in items]
         labels = torch.tensor(labels, dtype=torch.int64).to(device)
@@ -299,7 +307,7 @@ def get_dataloader(
     decode_func: Callable[[list[tuple[str, int]]], Awaitable[tuple[Tensor, Tensor]]],
     buffer_size: int,
     num_threads: int,
-) -> DataLoader:
+) -> Iterator[tuple[Tensor, Tensor]]:
     """Build the dataloader for the ImageNet classification task.
 
     The dataloader uses the ``decode_func`` for decoding images concurrently and
@@ -313,7 +321,7 @@ def get_dataloader(
         num_threads: The number of worker threads.
 
     """
-    return DataLoader(
+    return DataLoader(  # pyre-ignore[7]
         src,
         batch_size=batch_size,
         drop_last=True,
@@ -327,7 +335,7 @@ def get_dataloader(
 def benchmark(
     dataloader: Iterator[tuple[Tensor, Tensor]],
     model: ModelBundle,
-    max_batches: int = float("nan"),
+    max_batches: float = float("nan"),
 ) -> None:
     """The main loop that measures the performance of dataloading and model inference.
 
@@ -361,7 +369,7 @@ def benchmark(
     finally:
         elapsed = time.monotonic() - t0
         if num_frames != 0:
-            num_correct_top1 = num_correct_top1.item()
+            num_correct_top1 = num_correct_top1.item()  # pyre-ignore[16]
             num_correct_top5 = num_correct_top5.item()
             fps = num_frames / elapsed
             _LG.info(f"FPS={fps:.2f} ({num_frames}/{elapsed:.2f})")
@@ -371,7 +379,9 @@ def benchmark(
             _LG.info(f"Accuracy (top5)={acc5:.2%} ({num_correct_top5}/{num_frames})")
 
 
-def _get_dataloader(args, device_index) -> DataLoader:
+def _get_dataloader(
+    args: Namespace, device_index: int
+) -> Iterator[tuple[Tensor, Tensor]]:
     src = ImageNet(args.root_dir, split=args.split)
 
     if args.use_nvjpeg:
@@ -380,7 +390,7 @@ def _get_dataloader(args, device_index) -> DataLoader:
         decode_func = get_decode_func(device_index)
 
     return get_dataloader(
-        src,
+        src,  # pyre-ignore[6]
         args.batch_size,
         decode_func,
         args.buffer_size,
@@ -388,10 +398,10 @@ def _get_dataloader(args, device_index) -> DataLoader:
     )
 
 
-def entrypoint(args: list[int] | None = None):
+def entrypoint(args_: list[str] | None = None) -> None:
     """CLI entrypoint. Run pipeline, transform and model and measure its performance."""
 
-    args = _parse_args(args)
+    args = _parse_args(args_)
     _init_logging(args.debug)
     _LG.info(args)
 
@@ -414,7 +424,7 @@ def entrypoint(args: list[int] | None = None):
         prof.export_chrome_trace(f"{trace_path}.json")
 
 
-def _init_logging(debug=False):
+def _init_logging(debug: bool = False) -> None:
     fmt = "%(asctime)s [%(filename)s:%(lineno)d] [%(levelname)s] %(message)s"
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(format=fmt, level=level)
