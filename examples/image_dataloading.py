@@ -30,13 +30,16 @@ To run the benchmark,  pass it to the script like the following.
        --num-workers 8 # The number of GPUs
 """
 
-# pyre-ignore-all-errors
+# pyre-strict
 
+import argparse
 import logging
 import signal
 import time
+from argparse import Namespace
 from collections.abc import Iterator
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from threading import Event
 
@@ -47,7 +50,7 @@ from spdl.io import CUDAConfig
 from spdl.pipeline import Pipeline, PipelineBuilder
 from torch import Tensor
 
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
     "entrypoint",
@@ -60,9 +63,7 @@ __all__ = [
 ]
 
 
-def _parse_args(args):
-    import argparse
-
+def _parse_args(args: list[str]) -> Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -70,17 +71,17 @@ def _parse_args(args):
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--input-flist", type=Path, required=True)
     parser.add_argument("--max-samples", type=int)
-    parser.add_argument("--prefix")
+    parser.add_argument("--prefix", required=True)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--buffer-size", type=int, default=16)
     parser.add_argument("--num-threads", type=int, default=16)
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--num-workers", type=int, required=True)
-    args = parser.parse_args(args)
-    if args.trace:
-        args.max_samples = args.batch_size * 40
-    return args
+    ns = parser.parse_args(args)
+    if ns.trace:
+        ns.max_samples = ns.batch_size * 40
+    return ns
 
 
 def source(
@@ -108,11 +109,11 @@ def source(
                     yield prefix + line
 
 
-async def batch_decode(
+def batch_decode(
     srcs: list[str],
+    device_config: spdl.io.CUDAConfig,
     width: int = 224,
     height: int = 224,
-    device_config: spdl.io.CUDAConfig | None = None,
 ) -> Tensor:
     """Given image paths, decode, resize, batch and optionally send them to GPU.
 
@@ -124,7 +125,7 @@ async def batch_decode(
     Returns:
         The batch tensor.
     """
-    buffer = await spdl.io.async_load_image_batch(
+    buffer = spdl.io.load_image_batch(
         srcs,
         width=width,
         height=height,
@@ -158,29 +159,25 @@ def get_pipeline(
     Returns:
         The pipeline that performs batch image decoding and device transfer.
     """
-
-    async def _batch_decode(srcs):
-        return await batch_decode(srcs, device_config=device_config)
+    decode = partial(batch_decode, device_config=device_config)
 
     pipeline = (
         PipelineBuilder()
         .add_source(src)
         .aggregate(batch_size)
-        .pipe(_batch_decode, concurrency=num_threads, report_stats_interval=15)
+        .pipe(decode, concurrency=num_threads)
         .add_sink(buffer_size)
-        .build(num_threads=num_threads)
+        .build(num_threads=num_threads, report_stats_interval=15)
     )
     return pipeline
 
 
-def _get_pipeline(args):
+def _get_pipeline(args: Namespace) -> Pipeline:
     return get_pipeline(
         source(args.input_flist, args.prefix, args.num_workers, args.worker_id),
         args.batch_size,
         device_config=(
-            None
-            if args.worker_id is None
-            else spdl.io.cuda_config(
+            spdl.io.cuda_config(
                 device_index=args.worker_id,
                 allocator=(
                     torch.cuda.caching_allocator_alloc,
@@ -207,13 +204,13 @@ class PerfResult:
     """The number of frames processed."""
 
 
-def worker_entrypoint(args: list[str]) -> PerfResult:
+def worker_entrypoint(args_: list[str]) -> PerfResult:
     """Entrypoint for worker process. Load images to a GPU and measure its performance.
 
     It builds a :py:class:`~spdl.pipeline.Pipeline` object using :py:func:`get_pipeline`
     function and run it with :py:func:`benchmark` function.
     """
-    args = _parse_args(args)
+    args = _parse_args(args_)
     _init(args.debug, args.worker_id)
 
     _LG.info(args)
@@ -223,9 +220,9 @@ def worker_entrypoint(args: list[str]) -> PerfResult:
 
     device = torch.device(f"cuda:{args.worker_id}")
 
-    ev = Event()
+    ev: Event = Event()
 
-    def handler_stop_signals(_signum, _frame):
+    def handler_stop_signals(_signum, _frame) -> None:
         ev.set()
 
     signal.signal(signal.SIGTERM, handler_stop_signals)
@@ -267,7 +264,7 @@ def benchmark(loader: Iterator[Tensor], stop_requested: Event) -> PerfResult:
     return PerfResult(elapsed, num_batches, num_frames)
 
 
-def _init_logging(debug=False, worker_id=None):
+def _init_logging(debug: bool = False, worker_id: int | None = None) -> None:
     fmt = "%(asctime)s [%(filename)s:%(lineno)d] [%(levelname)s] %(message)s"
     if worker_id is not None:
         fmt = f"[{worker_id}:%(thread)d] {fmt}"
@@ -275,13 +272,11 @@ def _init_logging(debug=False, worker_id=None):
     logging.basicConfig(format=fmt, level=level)
 
 
-def _init(debug, worker_id):
+def _init(debug: bool, worker_id: int) -> None:
     _init_logging(debug, worker_id)
 
 
-def _parse_process_args(args):
-    import argparse
-
+def _parse_process_args(args: list[str] | None) -> tuple[Namespace, list[str]]:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -290,7 +285,7 @@ def _parse_process_args(args):
     return parser.parse_known_args(args)
 
 
-def entrypoint(args: list[str] | None = None):
+def entrypoint(args: list[str] | None = None) -> None:
     """CLI entrypoint. Launch the worker processes,
     each of which load images and send them to GPU."""
     ns, args = _parse_process_args(args)
