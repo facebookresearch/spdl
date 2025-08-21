@@ -9,7 +9,7 @@
 import builtins
 import logging
 import warnings
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import overload, TYPE_CHECKING
 
@@ -287,7 +287,7 @@ def _decode(src, demux_config, decode_config, filter_desc):
 
 @overload
 def load_image_batch(
-    srcs: list[str | bytes],
+    srcs: Sequence[str | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -304,7 +304,7 @@ def load_image_batch(
 
 @overload
 def load_image_batch(
-    srcs: list[str | bytes],
+    srcs: Sequence[str | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -320,7 +320,7 @@ def load_image_batch(
 
 
 def load_image_batch(
-    srcs: list[str | bytes],
+    srcs: Sequence[str | bytes],
     *,
     width,
     height,
