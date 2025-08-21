@@ -51,11 +51,13 @@ For the details, please refer to https://developer.nvidia.com/video-encode-and-d
    CPU decoding with higher concurrency often yields higher throughput.
 """
 
-# pyre-ignore-all-errors
+# pyre-strict
 
+import argparse
 import logging
 import signal
 import time
+from argparse import Namespace
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,7 +69,7 @@ import torch
 from spdl.pipeline import Pipeline, PipelineBuilder
 from torch import Tensor
 
-_LG = logging.getLogger(__name__)
+_LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
     "entrypoint",
@@ -81,9 +83,7 @@ __all__ = [
 ]
 
 
-def _parse_args(args):
-    import argparse
-
+def _parse_args(args: list[str]) -> Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
     )
@@ -97,10 +97,10 @@ def _parse_args(args):
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--num-workers", type=int, required=True)
     parser.add_argument("--nvdec", action="store_true")
-    args = parser.parse_args(args)
-    if args.trace:
-        args.max_samples = 320
-    return args
+    ns = parser.parse_args(args)
+    if ns.trace:
+        ns.max_samples = 320
+    return ns
 
 
 def source(
@@ -181,7 +181,7 @@ def decode_video_nvdec(
     device_index: int,
     width: int,
     height: int,
-):
+) -> Tensor:
     """Decode video using NVDEC.
 
     Args:
@@ -211,15 +211,17 @@ def decode_video_nvdec(
     return spdl.io.to_torch(buffer)[..., :3].permute(0, 2, 3, 1)
 
 
-def _get_decode_fn(device_index, use_nvdec, width=222, height=222):
+def _get_decode_fn(
+    device_index: int, use_nvdec: bool, width: int = 222, height: int = 222
+) -> Callable[[str], Tensor]:
     if use_nvdec:
 
-        def _decode_func(src):
+        def _decode_func(src: str) -> Tensor:
             return decode_video_nvdec(src, device_index, width, height)
 
     else:
 
-        def _decode_func(src):
+        def _decode_func(src: str) -> Tensor:
             return decode_video(src, width, height, device_index)
 
     return _decode_func
@@ -250,7 +252,7 @@ def get_pipeline(
     )
 
 
-def _get_pipeline(args):
+def _get_pipeline(args: Namespace) -> Pipeline:
     src = source(
         input_flist=args.input_flist,
         prefix=args.prefix,
@@ -317,13 +319,13 @@ def benchmark(
     return PerfResult(elapsed, num_batches, num_frames)
 
 
-def worker_entrypoint(args: list[str]) -> PerfResult:
+def worker_entrypoint(args_: list[str]) -> PerfResult:
     """Entrypoint for worker process. Load images to a GPU and measure its performance.
 
     It builds a Pipeline object using :py:func:`get_pipeline` function and run it with
     :py:func:`benchmark` function.
     """
-    args = _parse_args(args)
+    args = _parse_args(args_)
     _init(args.debug, args.worker_id)
 
     _LG.info(args)
@@ -332,9 +334,9 @@ def worker_entrypoint(args: list[str]) -> PerfResult:
 
     device = torch.device(f"cuda:{args.worker_id}")
 
-    ev = Event()
+    ev: Event = Event()
 
-    def handler_stop_signals(_signum, _frame):
+    def handler_stop_signals(_signum, _frame) -> None:
         ev.set()
 
     signal.signal(signal.SIGTERM, handler_stop_signals)
@@ -350,7 +352,7 @@ def worker_entrypoint(args: list[str]) -> PerfResult:
         return benchmark(pipeline.get_iterator(), ev)
 
 
-def _init_logging(debug=False, worker_id=None):
+def _init_logging(debug: bool = False, worker_id: int | None = None) -> None:
     fmt = "%(asctime)s [%(levelname)s] %(message)s"
     if worker_id is not None:
         fmt = f"[{worker_id}:%(thread)d] {fmt}"
@@ -358,13 +360,11 @@ def _init_logging(debug=False, worker_id=None):
     logging.basicConfig(format=fmt, level=level)
 
 
-def _init(debug, worker_id):
+def _init(debug: bool, worker_id: int) -> None:
     _init_logging(debug, worker_id)
 
 
-def _parse_process_args(args):
-    import argparse
-
+def _parse_process_args(args: list[str] | None) -> tuple[Namespace, list[str]]:
     parser = argparse.ArgumentParser(
         description=__doc__,
     )
@@ -372,7 +372,7 @@ def _parse_process_args(args):
     return parser.parse_known_args(args)
 
 
-def entrypoint(args: list[str] | None = None):
+def entrypoint(args: list[str] | None = None) -> None:
     """CLI entrypoint. Launch the worker processes, each of which load videos and send them to GPU."""
     ns, args = _parse_process_args(args)
 
