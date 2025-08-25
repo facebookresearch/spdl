@@ -110,9 +110,11 @@ def _to_async_gen(
             """Wrapper around generator.
             This is necessary as we cannot raise StopIteration in async func."""
             try:
-                return next(gen)
+                item = next(gen)
             except StopIteration:
                 return sentinel  # type: ignore[return-value]
+            else:
+                return item
 
         while (val := await loop.run_in_executor(executor, _next)) is not sentinel:
             yield val
