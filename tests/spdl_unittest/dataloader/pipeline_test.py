@@ -1366,6 +1366,27 @@ def test_pipeline_pipe_agen():
     assert expected == output
 
 
+def test_pipeline_pipe_agen_max_failures():
+    """pipe works with async generator function and max_failure"""
+
+    async def dup_increment(v):
+        for i in range(3):
+            yield v + i
+
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment)
+        .add_sink(1)
+        .build(num_threads=1, max_failures=1)
+    )
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output
+
+
 def test_pipeline_pipe_gen():
     """pipe works with sync generator function"""
 
@@ -1379,6 +1400,27 @@ def test_pipeline_pipe_gen():
         .pipe(dup_increment)
         .add_sink(1)
         .build(num_threads=1)
+    )
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output
+
+
+def test_pipeline_pipe_gen_max_failures():
+    """pipe works with sync generator function and max_failure"""
+
+    def dup_increment(v):
+        for i in range(3):
+            yield v + i
+
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment)
+        .add_sink(1)
+        .build(num_threads=1, max_failures=1)
     )
 
     expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]

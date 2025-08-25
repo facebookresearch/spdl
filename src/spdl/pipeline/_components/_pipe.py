@@ -69,6 +69,8 @@ class _FailCounter(TaskHook):
     async def task_hook(self) -> AsyncIterator[None]:
         try:
             yield
+        except StopAsyncIteration:
+            raise
         except Exception:
             self._increment()
             raise
@@ -96,7 +98,7 @@ async def _wrap_agen(
         # The following explains why.
         #
         # We want to give hooks opportunity to react to StopAsyncIteration,
-        # for example, so that StatsHook will note record the task stats
+        # for example, so that StatsHook will not record the task stats
         # for StopAsyncIteration case.
         #
         # When users implement hook, they might mistakenly absorb the
