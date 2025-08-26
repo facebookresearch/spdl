@@ -28,5 +28,5 @@ and examine some cases, and discuss how we approach performance issues.
    setup
    analysis
    fleet_metrics
-   struggler
+   straggler
    resolution
