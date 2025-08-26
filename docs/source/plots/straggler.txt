@@ -44,8 +44,8 @@
         function() {
             const cfgs = [
                 {
-                    data_url: '../_static/data/struggler_data_readiness.json',
-                    div_id: 'struggler_data_readiness',
+                    data_url: '../_static/data/straggler_data_readiness.json',
+                    div_id: 'straggler_data_readiness',
                     title: 'Data readiness across ranks (Sink)',
                     ylabel: 'Data Readiness',
                     emphasis: ['0', '4'],
