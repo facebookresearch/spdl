@@ -193,6 +193,8 @@ range, but they should match if normalized.
     <div id='perf_analysis_qps'></div>
 
 
+.. _data-readiness:
+
 Data Readiness
 ~~~~~~~~~~~~~~
 

@@ -1,0 +1,75 @@
+.. raw:: html
+
+   <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+    <script>
+    function plot(div_id, data, title, ylabel, emphasis) {
+       const t = data['event_time'].map(v => { return new Date(v*1000); });
+       var plot_data = [];
+        const palette = ['#009fb7', '#fed766', '#fe4a49'];
+       for (const key of Object.keys(data).sort()) {
+           if (key !== 'event_time') {
+               let color = emphasis
+                   ? (emphasis.includes(key) ? null : 'rgba(108, 122, 137, 0.2)')
+                   : (palette[Math.floor(parseInt(key) / 8)]);
+               plot_data.push({
+                   x: t,
+                   y: data[key],
+                   name: key,
+                   line: {
+                       size: 0.1,
+                       color: color,
+                   },
+               });
+           }
+       }
+       Plotly.newPlot(
+           div_id, {
+               data: plot_data,
+               layout: {
+                   title: title,
+                   yaxis: {
+                       title: {
+                           text: ylabel,
+                       },
+                       range: [0, null],
+                   },
+                   showlegend: true,
+               },
+           },
+       );
+    };
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function() {
+            const cfgs = [
+                {
+                    data_url: '../_static/data/struggler_data_readiness.json',
+                    div_id: 'struggler_data_readiness',
+                    title: 'Data readiness across ranks (Sink)',
+                    ylabel: 'Data Readiness',
+                    emphasis: ['0', '4'],
+                },
+            ]
+            cfgs.map(cfg => {
+                fetch(cfg.data_url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch the data.');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        try {
+                            plot(cfg.div_id, data, cfg.title, cfg.ylabel, cfg.emphasis);
+                        } catch(error) {
+                            const div = document.getElementById(cfg.div_id);
+                            div.textContent = "Failed to plot: " + error.toString();
+                            throw error;
+                        }
+                    })
+                    .catch(error => {console.error(error);});
+            })
+        },
+        false);
+   </script>
