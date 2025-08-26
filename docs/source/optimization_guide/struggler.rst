@@ -1,5 +1,7 @@
-The Wandering Struggler
-=======================
+The Struggler
+=============
+
+.. image:: ../../_static/data/struggler_illustration.png
 
 In distributed training, there are cases where
 one rank is significantly slower than the rest,
@@ -8,19 +10,26 @@ which degrades the overall training speed.
 
 Such a rank is sometimes called a "struggler."
 When there is a struggler, we often observe that
-``nccl:all_reduce`` takes a significant amount of time on many ranks.
+``nccl:all_reduce`` takes a significant amount of time on other ranks.
 
 The following figure shows an example of
 one rank waiting for ``nccl:all_reduce`` to complete.
 When this happens, the struggler causes other ranks to wait for it to
 catch up on loss computation.
 
-.. image:: ../../_static/data/struggler_nccl.png
+.. image:: ../../_static/data/struggler_trace_others.png
 
 There are many reasons why one rank can be slower than the rest.
 For example, hardware failure is a common issue in large-scale distributed training.
 
 Slow data loading can also cause a struggler.
+
+The following figure shows the trace of the struggler from the same trace
+as the previous one.
+It is blocked on ``next(dataloader)``.
+
+.. image:: ../../_static/data/struggler_trace.png
+
 When slow data loading is the cause,
 we often observe that the rank of the struggler changes from epoch to epoch.
 
