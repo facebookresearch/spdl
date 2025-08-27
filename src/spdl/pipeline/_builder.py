@@ -10,7 +10,7 @@ import logging
 from collections.abc import AsyncIterable, Callable, Iterable, Iterator
 from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, runtime_checkable, TypeVar
 
 from spdl._internal import log_api_usage_once
 
@@ -42,6 +42,11 @@ T = TypeVar("T")
 U = TypeVar("U")
 T_ = TypeVar("T_")
 U_ = TypeVar("U_")
+
+
+@runtime_checkable
+class GetItem(Protocol[T_, U_]):
+    def __getitem__(self, key: T_) -> U_: ...
 
 
 ################################################################################
@@ -170,7 +175,7 @@ class PipelineBuilder(Generic[T, U]):
 
     def pipe(
         self,
-        op: Callables[T_, U_],
+        op: Callables[T_, U_] | GetItem[T_, U_],
         /,
         *,
         concurrency: int = 1,
@@ -189,8 +194,12 @@ class PipelineBuilder(Generic[T, U]):
                  ▼
 
         Args:
-            op: A function applied to items in the queue.
-                The function must take exactly one argument, which is the output
+            op: A function, callable or container with ``__getitem__`` method
+                (such as dict, list and tuple).
+                If it's function or callable, it is inovked with the input from the input queue.
+                If it's container type, the input is passed to ``__getitem__`` method.
+
+                The function or callable must take exactly one argument, which is the output
                 from the upstream. If passing around multiple objects, take
                 them as a tuple or use :py:class:`~dataclasses.dataclass` and
                 define a custom protocol.
@@ -240,6 +249,17 @@ class PipelineBuilder(Generic[T, U]):
             )
 
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
+
+        if isinstance(op, GetItem):
+            # Note, if op is list/dict/tuple with a lot of elements, then
+            # debug print on `_ProcessConfig` might produce extremely long string.
+            # So it is important to extract the __getitem__ before it is passed to
+            # `_ProcessConfig`.
+            op = op.__getitem__
+
+            # We could do the same for callable (__call__)
+            # but usually callable class name contains readable information, so
+            # we don't do that here. (it happens in to_async helper function)
 
         self._process_args.append(
             _ProcessConfig(

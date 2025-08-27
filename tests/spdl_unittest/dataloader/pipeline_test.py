@@ -1667,6 +1667,63 @@ def test_pipeline_custom_pipe_executor_async():
         ).add_sink(1).build(num_threads=1)
 
 
+def test_pipeline_pipe_list():
+    """pipe supports list as op."""
+
+    op = [i + 1 for i in range(10)]
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(op)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+
+    assert vals == op
+
+
+def test_pipeline_pipe_tuple():
+    """pipe supports list as op."""
+
+    op = tuple(i + 1 for i in range(10))
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(op)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+
+    assert vals == [i + 1 for i in range(10)]
+
+
+def test_pipeline_pipe_dict():
+    """pipe supports dict as op."""
+
+    op = {i: i + 1 for i in range(10)}
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(op)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+
+    assert vals == [i + 1 for i in range(10)]
+
+
 class _PicklableSource:
     def __init__(self, n: int) -> None:
         self.n = n
