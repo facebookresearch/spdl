@@ -16,10 +16,10 @@
 
 #define SPDL_DEFAULT_BUFFER_SIZE 8096
 
+extern "C" {
 #if __has_include(<libavutil/rational.h>)
 #include <libavutil/rational.h>
 #else
-extern "C" {
 // Copying the definition of AVRAtional.
 // It's unlikely they change, but if it should ever happen, it could cause SEGV.
 // https://www.ffmpeg.org/doxygen/4.4/rational_8h_source.html#l00058
@@ -30,8 +30,8 @@ typedef struct AVRational {
   int num; ///< Numerator
   int den; ///< Denominator
 } AVRational;
-}
 #endif
+}
 
 namespace spdl::core {
 
