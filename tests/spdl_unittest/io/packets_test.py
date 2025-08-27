@@ -367,6 +367,30 @@ def test_sample_decode_video_default_color_space_sync():
         assert f.pix_fmt == "rgb24"
 
 
+def test_sample_packet_timestamps():
+    """Can obtain the timestamps of packets"""
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+    sample = get_sample(cmd)
+
+    packets = spdl.io.demux_video(sample.path)
+    ts = spdl.io.get_timestamps(packets)
+
+    # Timestamps should match exactly
+    assert np.array_equal(ts, [1, 2, 3, 4, 5])
+
+
+def test_sample_packet_timestamps_windowed():
+    """Can obtain the timestamps of packets"""
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 75 sample.mp4"
+    sample = get_sample(cmd)
+
+    packets = spdl.io.demux_video(sample.path, timestamp=[1.0, 2.0])
+    ts = spdl.io.get_timestamps(packets)
+
+    # Timestamps should match exactly
+    assert np.array_equal(ts, [1, 2, 3, 4, 5])
+
+
 def test_sample_decode_video_with_windowed_packets_and_filter():
     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 30 sample.mp4"
     sample = get_sample(cmd)
