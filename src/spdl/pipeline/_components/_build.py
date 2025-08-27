@@ -15,6 +15,8 @@ __all__ = [
 import asyncio
 import enum
 import inspect
+import logging
+import pprint
 from collections.abc import AsyncIterable, Callable, Coroutine, Iterable
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
@@ -30,6 +32,8 @@ from ._source import _source
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+_LG: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -150,6 +154,20 @@ def _build_pipeline_coro(
     task_hook_factory: Callable[[str], list[TaskHook]],
     stage_id: int,
 ) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
+    if _LG.isEnabledFor(logging.DEBUG):
+        _LG.debug(
+            pprint.pformat(
+                {
+                    "src": src,
+                    "pipe": process_args,
+                    "sink": sink,
+                },
+                indent=2,
+                sort_dicts=False,
+                compact=True,
+            ),
+        )
+
     # Note:
     # Make sure that coroutines are ordered from source to sink.
     # `_run_pipeline_coroutines` expects and rely on this ordering.
