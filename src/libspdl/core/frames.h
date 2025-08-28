@@ -124,7 +124,11 @@ class Frames {
   // Get the PTS of the specified AVFrame.
   // throws if the index is not within the range
   // Note: For Audio, this is the PTS of the first sample in the last AVFrame.
+  // DEPRECATED.
   int64_t get_pts(size_t index = 0) const;
+
+  // Get the PTS in seconds
+  double get_timestamp(size_t index = 0) const;
 
   FramesPtr<media> clone() const;
 

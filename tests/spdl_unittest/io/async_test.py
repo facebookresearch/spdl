@@ -273,8 +273,8 @@ def test_decode_video_frame_rate_pts():
             packets, filter_desc=get_video_filter_desc(frame_rate=(5, 1))
         )
 
-        pts_ref = frames_ref._get_pts()
-        pts = frames._get_pts()
+        pts_ref = frames_ref.get_timestamps()
+        pts = frames.get_timestamps()
         print(pts_ref, pts)
 
         assert np.all(pts_ref[::2] == pts)

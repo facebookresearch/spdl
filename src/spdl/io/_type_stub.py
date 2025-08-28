@@ -512,6 +512,9 @@ class VideoFrames(Frames):
         """The name of the pixel format."""
         ...
 
+    def get_timestamps(self) -> Sequence[float]:
+        """Get the timestamp of frames."""
+
     def __len__(self) -> int:
         """Returns the number of frames. Same as ``num_frames``."""
         ...
