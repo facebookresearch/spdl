@@ -154,7 +154,6 @@ void register_frames(nb::module_& m) {
           [](const VideoFrames& self, const std::vector<int64_t>& idx) {
             return self.slice(idx);
           })
-      .def("_get_pts", get_timestamps, nb::call_guard<nb::gil_scoped_release>())
       .def(
           "get_timestamps",
           get_timestamps,
