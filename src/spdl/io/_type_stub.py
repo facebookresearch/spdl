@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, overload
 
 __all__ = [
@@ -304,6 +305,24 @@ class VideoPackets(Packets):
         """The window this packets covers, denoted by start and end time in second.
 
         This is the value specified by user when demuxing the stream.
+        """
+        ...
+
+    def get_timestamps(self, *, raw: bool = False) -> Sequence[float]:
+        """Get the timestamp of packets.
+
+        By default, the returned timestamps are sorted by display time,
+        and if user specified a time window when demuxing, the timestamps
+        outside of the window is discatded.
+
+        Args:
+            raw: If ``True``, the order of timestamps correspond to the
+                order of packets, which is not necessarily ordered by
+                display time.
+                Also the user-specified window is not applied, so timestamps
+                for all the packets are returned.
+
+                This option is mainly for debugging.
         """
         ...
 
