@@ -81,14 +81,17 @@ void Frames<media>::push_back(AVFrame* frame) {
 }
 
 template <MediaType media>
-double Frames<media>::get_timestamp(size_t index) const {
-  auto num_frames = frames.size();
-  if (index >= num_frames) {
+int64_t Frames<media>::get_pts(size_t index) const {
+  if (auto num_frames = frames.size(); index >= num_frames) {
     throw std::out_of_range(
         fmt::format("{} is out of range [0, {})", index, num_frames));
   }
+  return frames.at(index)->pts;
+}
 
-  auto pts = AVRational{static_cast<int>(frames.at(index)->pts), 1};
+template <MediaType media>
+double Frames<media>::get_timestamp(size_t index) const {
+  auto pts = AVRational{static_cast<int>(get_pts(index)), 1};
   return av_q2d(av_mul_q(pts, time_base));
 }
 

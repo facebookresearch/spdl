@@ -15,6 +15,7 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
@@ -43,6 +44,20 @@ std::vector<double> get_timestamps(const VideoFrames& self) {
     ret.push_back(self.get_timestamp(i));
   }
   return ret;
+}
+std::vector<int64_t> get_pts(const VideoFrames& self) {
+  std::vector<int64_t> ret;
+  auto n = self.get_num_frames();
+  ret.reserve(n);
+  for (int i = 0; i < n; ++i) {
+    ret.push_back(self.get_pts(i));
+  }
+  return ret;
+}
+
+std::tuple<int, int> get_time_base(const VideoFrames& self) {
+  auto tb = self.get_time_base();
+  return {tb.num, tb.den};
 }
 
 } // namespace
@@ -144,6 +159,9 @@ void register_frames(nb::module_& m) {
           "get_timestamps",
           get_timestamps,
           nb::call_guard<nb::gil_scoped_release>())
+      .def("get_pts", get_pts, nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro(
+          "time_base", get_time_base, nb::call_guard<nb::gil_scoped_release>())
       .def(
           "__repr__",
           [](const VideoFrames& self) -> std::string {
