@@ -81,16 +81,6 @@ void Frames<media>::push_back(AVFrame* frame) {
 }
 
 template <MediaType media>
-int64_t Frames<media>::get_pts(size_t index) const {
-  auto num_frames = frames.size();
-  if (index >= num_frames) {
-    throw std::out_of_range(
-        fmt::format("{} is out of range [0, {})", index, num_frames));
-  }
-  return frames.at(index)->pts;
-}
-
-template <MediaType media>
 double Frames<media>::get_timestamp(size_t index) const {
   auto num_frames = frames.size();
   if (index >= num_frames) {
