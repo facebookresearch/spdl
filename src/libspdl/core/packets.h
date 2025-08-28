@@ -132,9 +132,6 @@ extract_packets_at_indices(
     const VideoPacketsPtr& src,
     std::vector<size_t> indices);
 
-template <MediaType media>
-std::optional<std::tuple<double, double>> get_pts(const Packets<media>&);
-
 // Get the timestamps of packets in seconds.
 // It is aware of user-specified window, and the result is sorted for video
 // use case.
