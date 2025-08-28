@@ -132,8 +132,13 @@ extract_packets_at_indices(
     const VideoPacketsPtr& src,
     std::vector<size_t> indices);
 
+// Get the timestamps of packets in seconds.
+// It is aware of user-specified window, and the result is sorted for video
+// use case.
+// Providing `raw=True` disable window filtering and sorting.
+// It returns the timestamp of internal packets as-is.
 template <MediaType media>
-std::optional<std::tuple<double, double>> get_pts(const Packets<media>&);
+std::vector<double> get_timestamps(const Packets<media>&, bool raw = false);
 
 // Get the timestamps of packets in seconds.
 // It is aware of user-specified window, and the result is sorted for video
