@@ -126,6 +126,9 @@ def convert_to_async(
     op: Callables[T, U],
     executor: Executor | None,
 ) -> AsyncCallables[T, U]:
+    if inspect.ismethod(op.__call__):
+        op = op.__call__
+
     if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
         # op is async function. No need to convert.
         assert executor is None  # This has been checked in `PipelineBuilder.pipe()`
