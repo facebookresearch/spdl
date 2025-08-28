@@ -385,6 +385,16 @@ def test_sample_decode_video_with_windowed_packets_and_filter():
     assert [f.pts for f in frames] == [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
 
 
+def test_sample_packet_get_timestamps():
+    """The timestamp of each packet can be obtained with get_timestamps method"""
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+    sample = get_sample(cmd)
+
+    packets = spdl.io.demux_video(sample.path)
+    ts = packets.get_timestamps()
+    assert np.array_equal(ts, [t / 25 for t in range(10)])
+
+
 def test_url():
     """Demuxing from bytes reports the address."""
     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc=rate=10 -frames:v 1 sample.mp4"

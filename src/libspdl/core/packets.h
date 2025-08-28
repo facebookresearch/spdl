@@ -86,6 +86,7 @@ struct Packets {
 
   PacketSeries pkts;
   Rational time_base{};
+  // window timestamp specified by user
   std::optional<std::tuple<double, double>> timestamp;
 
   // Code should be available only when it's demuxed by `demux_window`
@@ -97,7 +98,7 @@ struct Packets {
 
   // Constructing Packets from demuxer for one-time decoding
   // Need codec to initialize the decoder.
-  // Optionally remember the timestamp user asked.
+  // Optionally remember the timestamp (window) user asked.
   Packets(
       const std::string& src,
       int index,
@@ -133,5 +134,13 @@ extract_packets_at_indices(
 
 template <MediaType media>
 std::optional<std::tuple<double, double>> get_pts(const Packets<media>&);
+
+// Get the timestamps of packets in seconds.
+// It is aware of user-specified window, and the result is sorted for video
+// use case.
+// Providing `raw=True` disable window filtering and sorting.
+// It returns the timestamp of internal packets as-is.
+template <MediaType media>
+std::vector<double> get_timestamps(const Packets<media>&, bool raw = false);
 
 } // namespace spdl::core

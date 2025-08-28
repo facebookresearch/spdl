@@ -18,6 +18,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavutil/rational.h>
 }
 namespace spdl::core {
 
@@ -313,5 +314,35 @@ template std::optional<std::tuple<double, double>> get_pts(
     const Packets<MediaType::Audio>& packets);
 template std::optional<std::tuple<double, double>> get_pts(
     const Packets<MediaType::Video>& packets);
+
+namespace {
+#define POS_INF std::numeric_limits<double>::infinity()
+#define NEG_INF -std::numeric_limits<double>::infinity()
+static const auto NO_WINDOW = std::tuple<double, double>{NEG_INF, POS_INF};
+} // namespace
+
+template <MediaType media>
+std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
+  const auto& pkts = packets.pkts.get_packets();
+
+  std::vector<double> ret{};
+  ret.reserve(pkts.size());
+
+  auto [start, end] = packets.timestamp.value_or(NO_WINDOW);
+
+  for (const auto& pkt : pkts) {
+    auto pts = AVRational{static_cast<int>(pkt->pts), 1};
+    auto ts = av_q2d(av_mul_q(pts, packets.time_base));
+    if (raw || (start <= ts && ts < end)) {
+      ret.emplace_back(ts);
+    }
+  }
+  if (!raw) {
+    std::sort(ret.begin(), ret.end());
+  }
+  return ret;
+}
+
+template std::vector<double> get_timestamps(const VideoPackets&, bool);
 
 } // namespace spdl::core

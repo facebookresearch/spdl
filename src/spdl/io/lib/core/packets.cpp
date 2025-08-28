@@ -162,6 +162,15 @@ void register_packets(nb::module_& m) {
             return _get_pts(self);
           },
           nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "get_timestamps",
+          [](const VideoPackets& self, bool raw) -> std::vector<double> {
+            return get_timestamps(self, raw);
+          },
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::kw_only(),
+          nb::arg("raw") = false)
+      // Note: this is a window timestamp specified by user.
       .def_prop_ro(
           "timestamp",
           [](const VideoPackets& self) {
