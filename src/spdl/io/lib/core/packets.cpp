@@ -60,10 +60,36 @@ const Codec<media>& get_ref(const std::optional<Codec<media>>& c) {
   }
   return *c;
 }
+size_t num_packets(const AudioPackets& packets) {
+  return packets.pkts.get_packets().size();
+}
+
+size_t num_packets(const VideoPackets& packets) {
+  if (!packets.timestamp) {
+    return packets.pkts.get_packets().size();
+  }
+  size_t ret = 0;
+  auto [start, end] = *packets.timestamp;
+  auto tb = packets.time_base;
+  auto pkts = packets.pkts.iter_data();
+  while (pkts) {
+    auto pts = static_cast<double>(pkts().pts) * tb.num / tb.den;
+    if (start <= pts && pts < end) {
+      ++ret;
+    }
+  }
+  return ret;
+}
 
 template <MediaType media>
-size_t num_packets(const Packets<media>& packets) {
-  return get_timestamps(packets).size();
+std::vector<double> _get_pts(const Packets<media>& packets) {
+  std::vector<double> ret;
+  auto base = get_ref(packets.codec).get_time_base();
+  auto pkts = packets.pkts.iter_data();
+  while (pkts) {
+    ret.push_back(double(pkts().pts) * base.num / base.den);
+  }
+  return ret;
 }
 
 } // namespace
@@ -75,13 +101,15 @@ void register_packets(nb::module_& m) {
           [](const AudioPackets& self) {
             std::vector<std::string> parts{
                 fmt::format("src=\"{}:{}\"", self.src, self.stream_index)};
-            if (auto ts = get_timestamps(self); !ts.empty()) {
+            if (auto pts = spdl::core::get_pts(self); pts) {
               parts.push_back(fmt::format("num_packets={}", num_packets(self)));
               parts.push_back(fmt::format(
-                  "pts=[{:.3f}, {:.3f}~]", ts[0], ts[ts.size() - 1]));
-              // Note: Audio end time is not precise due to the fact that
-              // one packet contains multiple samples.
-              // So we add tilde
+                  "pts=[{:.3f}, {:.3f}~]",
+                  // Note: Audio end time is not precise due to the fact that
+                  // one packet contains multiple samples.
+                  // So we add tilde
+                  std::get<0>(*pts),
+                  std::get<1>(*pts)));
             }
             if (self.timestamp) {
               parts.push_back(get_ts(*self.timestamp));
@@ -131,7 +159,7 @@ void register_packets(nb::module_& m) {
       .def(
           "_get_pts",
           [](const VideoPackets& self) -> std::vector<double> {
-            return get_timestamps(self);
+            return _get_pts(self);
           },
           nb::call_guard<nb::gil_scoped_release>())
       .def(
@@ -190,10 +218,12 @@ void register_packets(nb::module_& m) {
           [](const VideoPackets& self) {
             std::vector<std::string> parts{
                 fmt::format("src=\"{}:{}\"", self.src, self.stream_index)};
-            if (auto ts = get_timestamps(self); !ts.empty()) {
+            if (auto pts = spdl::core::get_pts(self); pts) {
               parts.push_back(fmt::format("num_packets={}", num_packets(self)));
               parts.push_back(fmt::format(
-                  "pts=[{:.3f}, {:.3f}]", ts[0], ts[ts.size() - 1]));
+                  "pts=[{:.3f}, {:.3f}]",
+                  std::get<0>(*pts),
+                  std::get<1>(*pts)));
             }
             if (self.timestamp) {
               parts.push_back(get_ts(*self.timestamp));
@@ -220,7 +250,7 @@ void register_packets(nb::module_& m) {
   nb::class_<ImagePackets>(m, "ImagePackets")
       .def(
           "_get_pts",
-          [](const ImagePackets& self) { return get_timestamps(self).at(0); },
+          [](const ImagePackets& self) { return _get_pts(self).at(0); },
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "pix_fmt",
