@@ -129,12 +129,6 @@ void register_packets(nb::module_& m) {
 
   nb::class_<VideoPackets>(m, "VideoPackets")
       .def(
-          "_get_pts",
-          [](const VideoPackets& self) -> std::vector<double> {
-            return get_timestamps(self);
-          },
-          nb::call_guard<nb::gil_scoped_release>())
-      .def(
           "get_timestamps",
           [](const VideoPackets& self, bool raw) -> std::vector<double> {
             return get_timestamps(self, raw);
@@ -218,10 +212,6 @@ void register_packets(nb::module_& m) {
       nb::arg("indices"));
 
   nb::class_<ImagePackets>(m, "ImagePackets")
-      .def(
-          "_get_pts",
-          [](const ImagePackets& self) { return get_timestamps(self).at(0); },
-          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {
