@@ -1366,6 +1366,54 @@ def test_pipeline_pipe_agen():
     assert expected == output
 
 
+def test_pipeline_pipe_sync_gen():
+    """pipe works with sync generator function"""
+
+    def dup_increment(v):
+        for i in range(3):
+            yield v + i
+
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output
+
+
+def test_callable_generator():
+    """pipe works with sync callable class returning generator"""
+
+    class DupIncrement:
+        def __init__(self) -> None:
+            pass
+
+        def __call__(self, v: int) -> Iterator[int]:
+            for i in range(3):
+                yield v + i
+
+    dup_increment = DupIncrement()
+
+    apl = (
+        PipelineBuilder()
+        .add_source(range(3))
+        .pipe(dup_increment)
+        .add_sink(1)
+        .build(num_threads=1)
+    )
+
+    expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
+    with apl.auto_stop():
+        output = list(apl.get_iterator(timeout=3))
+    assert expected == output
+
+
 def test_pipeline_pipe_agen_max_failures():
     """pipe works with async generator function and max_failure"""
 
