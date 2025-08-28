@@ -8,7 +8,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any, overload
 
 __all__ = [
@@ -308,7 +307,7 @@ class VideoPackets(Packets):
         """
         ...
 
-    def get_timestamps(self, *, raw: bool = False) -> Sequence[float]:
+    def get_timestamps(self, *, raw: bool = False) -> list[float]:
         """Get the timestamp of packets.
 
         By default, the returned timestamps are sorted by display time,
@@ -512,7 +511,7 @@ class VideoFrames(Frames):
         """The name of the pixel format."""
         ...
 
-    def get_timestamps(self) -> Sequence[float]:
+    def get_timestamps(self) -> list[float]:
         """Get the timestamp of frames."""
         ...
 
@@ -526,7 +525,7 @@ class VideoFrames(Frames):
         """
         ...
 
-    def get_pts(self) -> Sequence[int]:
+    def get_pts(self) -> list[int]:
         """Get the PTS (Presentation Time Stamp) in timebase unit."""
         ...
 
