@@ -29,11 +29,20 @@ std::string get_ts(const Frames<media>& self) {
   if (num_frames == 0) {
     return "nan";
   }
-  auto tb = self.get_time_base();
   return fmt::format(
       "[{:.3f}, {:.3f}]",
-      double(self.get_pts(0)) * tb.num / tb.den,
-      double(self.get_pts(num_frames - 1)) * tb.num / tb.den);
+      self.get_timestamp(0),
+      self.get_timestamp(num_frames - 1));
+}
+
+std::vector<double> get_timestamps(const VideoFrames& self) {
+  std::vector<double> ret;
+  auto n = self.get_num_frames();
+  ret.reserve(n);
+  for (int i = 0; i < n; ++i) {
+    ret.push_back(self.get_timestamp(i));
+  }
+  return ret;
 }
 
 } // namespace
@@ -130,18 +139,10 @@ void register_frames(nb::module_& m) {
           [](const VideoFrames& self, const std::vector<int64_t>& idx) {
             return self.slice(idx);
           })
+      .def("_get_pts", get_timestamps, nb::call_guard<nb::gil_scoped_release>())
       .def(
-          "_get_pts",
-          [](const VideoFrames& self) -> std::vector<double> {
-            std::vector<double> ret;
-            auto n = self.get_num_frames();
-            ret.reserve(n);
-            auto tb = self.get_time_base();
-            for (int i = 0; i < n; ++i) {
-              ret.push_back(double(self.get_pts(i)) * tb.num / tb.den);
-            }
-            return ret;
-          },
+          "get_timestamps",
+          get_timestamps,
           nb::call_guard<nb::gil_scoped_release>())
       .def(
           "__repr__",
@@ -202,7 +203,7 @@ void register_frames(nb::module_& m) {
                   self.get_num_planes(),
                   self.get_width(),
                   self.get_height(),
-                  double(self.get_pts()) * tb.num / tb.den);
+                  self.get_timestamp());
             }
             return fmt::format(
                 "ImageFrames<pixel_format=\"{}\", num_planes={}, width={}, height={}>",
@@ -217,8 +218,7 @@ void register_frames(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("pts", [](const ImageFrames& self) -> double {
         nb::gil_scoped_release __g;
-        auto tb = self.get_time_base();
-        return double(self.get_pts()) * tb.num / tb.den;
+        return self.get_timestamp();
       });
 }
 } // namespace spdl::core
