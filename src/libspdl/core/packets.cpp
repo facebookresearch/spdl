@@ -298,23 +298,6 @@ extract_packets_at_indices(
   return ret;
 }
 
-template <MediaType media>
-std::optional<std::tuple<double, double>> get_pts(
-    const Packets<media>& packets) {
-  const auto& pkts = packets.pkts.get_packets();
-  if (!pkts.size()) {
-    return std::nullopt;
-  }
-  double t0 = pkts[0]->pts, tN = pkts[pkts.size() - 1]->pts;
-  auto tb = packets.time_base;
-  return std::tuple<double, double>{t0 * tb.num / tb.den, tN * tb.num / tb.den};
-}
-
-template std::optional<std::tuple<double, double>> get_pts(
-    const Packets<MediaType::Audio>& packets);
-template std::optional<std::tuple<double, double>> get_pts(
-    const Packets<MediaType::Video>& packets);
-
 namespace {
 #define POS_INF std::numeric_limits<double>::infinity()
 #define NEG_INF -std::numeric_limits<double>::infinity()
@@ -343,6 +326,8 @@ std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
   return ret;
 }
 
+template std::vector<double> get_timestamps(const AudioPackets&, bool);
 template std::vector<double> get_timestamps(const VideoPackets&, bool);
+template std::vector<double> get_timestamps(const ImagePackets&, bool);
 
 } // namespace spdl::core
