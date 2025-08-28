@@ -121,6 +121,11 @@ class Frames {
   void push_back(AVFrame* frame);
   // the behavior is different for image
 
+  // Get to the PTS of the specified AVFrame as-is.
+  // throws if the index is not within the range
+  // Note: For Audio, this is the PTS of the first sample in the last AVFrame.
+  int64_t get_pts(size_t index) const;
+
   // Get the PTS of the specified AVFrame in seconds.
   // throws if the index is not within the range
   // Note: For Audio, this is the PTS of the first sample in the last AVFrame.

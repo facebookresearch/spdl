@@ -514,6 +514,21 @@ class VideoFrames(Frames):
 
     def get_timestamps(self) -> Sequence[float]:
         """Get the timestamp of frames."""
+        ...
+
+    @property
+    def time_base(self) -> tuple[int, int]:
+        """Get the time base of PTS.
+
+        The time base is expressed as ``(Numerator, denominator)``.
+
+        PTS (in seconds) == PTS (in timebase unit) * Numerator / Denominator
+        """
+        ...
+
+    def get_pts(self) -> Sequence[int]:
+        """Get the PTS (Presentation Time Stamp) in timebase unit."""
+        ...
 
     def __len__(self) -> int:
         """Returns the number of frames. Same as ``num_frames``."""

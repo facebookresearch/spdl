@@ -24,3 +24,21 @@ def test_image_frame_metadata():
     frames = spdl.io.decode_packets(packets)
 
     assert frames.metadata == {}
+
+
+def test_sample_frame_timestamps():
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+    sample = get_sample(cmd)
+
+    packets = spdl.io.demux_video(sample.path)
+    frames = spdl.io.decode_packets(packets)
+    print(frames.get_pts())
+    print(frames.get_timestamps())
+    print(frames.time_base)
+
+    expected_pts = [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4096, 4608]
+    num, den = frames.time_base
+
+    assert den / num == 12800
+    assert frames.get_pts() == expected_pts
+    assert frames.get_timestamps() == [t * num / den for t in expected_pts]
