@@ -298,37 +298,22 @@ extract_packets_at_indices(
   return ret;
 }
 
-namespace {
-#define POS_INF std::numeric_limits<double>::infinity()
-#define NEG_INF -std::numeric_limits<double>::infinity()
-static const auto NO_WINDOW = std::tuple<double, double>{NEG_INF, POS_INF};
-} // namespace
-
 template <MediaType media>
-std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
+std::optional<std::tuple<double, double>> get_pts(
+    const Packets<media>& packets) {
   const auto& pkts = packets.pkts.get_packets();
-
-  std::vector<double> ret{};
-  ret.reserve(pkts.size());
-
-  auto [start, end] = packets.timestamp.value_or(NO_WINDOW);
-
-  for (const auto& pkt : pkts) {
-    auto pts = AVRational{static_cast<int>(pkt->pts), 1};
-    auto ts = av_q2d(av_mul_q(pts, packets.time_base));
-    if (raw || (start <= ts && ts < end)) {
-      ret.emplace_back(ts);
-    }
+  if (!pkts.size()) {
+    return std::nullopt;
   }
-  if (!raw) {
-    std::sort(ret.begin(), ret.end());
-  }
-  return ret;
+  double t0 = pkts[0]->pts, tN = pkts[pkts.size() - 1]->pts;
+  auto tb = packets.time_base;
+  return std::tuple<double, double>{t0 * tb.num / tb.den, tN * tb.num / tb.den};
 }
 
-template std::vector<double> get_timestamps(const AudioPackets&, bool);
-template std::vector<double> get_timestamps(const VideoPackets&, bool);
-template std::vector<double> get_timestamps(const ImagePackets&, bool);
+template std::optional<std::tuple<double, double>> get_pts(
+    const Packets<MediaType::Audio>& packets);
+template std::optional<std::tuple<double, double>> get_pts(
+    const Packets<MediaType::Video>& packets);
 
 namespace {
 #define POS_INF std::numeric_limits<double>::infinity()
