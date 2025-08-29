@@ -7,24 +7,19 @@
 __all__ = [
     "_build_pipeline_coro",
     "PipelineFailure",
-    "_SourceConfig",
-    "_ProcessConfig",
-    "_SinkConfig",
 ]
 
 import asyncio
-import enum
-import inspect
 import logging
 import pprint
-from collections.abc import AsyncIterable, Callable, Coroutine, Iterable
-from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from collections.abc import Callable, Coroutine
+from typing import Any, TypeVar
 
+from .._defs import _ProcessConfig, _PType, _SinkConfig, _SourceConfig
 from .._hook import TaskHook
 from .._queue import AsyncQueue
 from .._utils import create_task
-from ._pipe import _FailCounter, _ordered_pipe, _pipe, _PipeArgs
+from ._pipe import _FailCounter, _ordered_pipe, _pipe
 from ._sink import _sink
 from ._source import _source
 
@@ -34,56 +29,6 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 _LG: logging.Logger = logging.getLogger(__name__)
-
-
-@dataclass
-class _SourceConfig(Generic[T]):
-    source: Iterable | AsyncIterable
-
-    def __post_init__(self) -> None:
-        if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
-            raise ValueError("Source must be either generator or async generator.")
-
-
-class _PType(enum.IntEnum):
-    Pipe = 1
-    OrderedPipe = 2
-    Aggregate = 3
-    Disaggregate = 4
-
-
-@dataclass
-class _ProcessConfig(Generic[T, U]):
-    type_: _PType
-    name: str
-    args: _PipeArgs[T, U]
-
-    def __post_init__(self) -> None:
-        op = self.args.op
-        if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
-            if self.args.executor is not None:
-                raise ValueError("`executor` cannot be specified when op is async.")
-        if inspect.isasyncgenfunction(op):
-            if self.type_ == _PType.OrderedPipe:
-                raise ValueError(
-                    "pipe does not support async generator function "
-                    "when `output_order` is 'input'."
-                )
-
-
-@dataclass
-class _SinkConfig(Generic[T]):
-    buffer_size: int
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.buffer_size, int):
-            raise ValueError(
-                f"`buffer_size` must be int. Found: {type(self.buffer_size)}."
-            )
-        if self.buffer_size < 1:
-            raise ValueError(
-                f"`buffer_size` must be greater than 0. Found: {self.buffer_size}"
-            )
 
 
 # The following is how we intend pipeline to behave. If the implementation

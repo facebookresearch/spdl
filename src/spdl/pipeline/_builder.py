@@ -16,14 +16,11 @@ from spdl._internal import log_api_usage_once
 
 from ._components._build import (
     _build_pipeline_coro,
-    _ProcessConfig,
-    _PType,
-    _SinkConfig,
-    _SourceConfig,
     PipelineFailure,
 )
-from ._components._pipe import _Aggregate, _disaggregate, _PipeArgs
+from ._components._pipe import _Aggregate, _disaggregate
 from ._convert import Callables
+from ._defs import _PipeArgs, _ProcessConfig, _PType, _SinkConfig, _SourceConfig
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
