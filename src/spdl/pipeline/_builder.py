@@ -10,7 +10,7 @@ import logging
 from collections.abc import AsyncIterable, Callable, Iterable, Iterator
 from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
-from typing import Any, Generic, Protocol, runtime_checkable, TypeVar
+from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
 from spdl._internal import log_api_usage_once
 
@@ -34,6 +34,7 @@ __all__ = [
     "PipelineBuilder",
     "_get_op_name",
     "run_pipeline_in_subprocess",
+    "_TPipeInputs",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -45,8 +46,11 @@ U_ = TypeVar("U_")
 
 
 @runtime_checkable
-class GetItem(Protocol[T_, U_]):
+class SupportsGetItem(Protocol[T_, U_]):
     def __getitem__(self, key: T_) -> U_: ...
+
+
+_TPipeInputs: TypeAlias = Callables[T_, U_] | SupportsGetItem[T_, U_]
 
 
 ################################################################################
@@ -175,7 +179,7 @@ class PipelineBuilder(Generic[T, U]):
 
     def pipe(
         self,
-        op: Callables[T_, U_] | GetItem[T_, U_],
+        op: _TPipeInputs[T_, U_],
         /,
         *,
         concurrency: int = 1,
@@ -250,7 +254,7 @@ class PipelineBuilder(Generic[T, U]):
 
         type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
 
-        if isinstance(op, GetItem):
+        if isinstance(op, SupportsGetItem):
             # Note, if op is list/dict/tuple with a lot of elements, then
             # debug print on `_ProcessConfig` might produce extremely long string.
             # So it is important to extract the __getitem__ before it is passed to
