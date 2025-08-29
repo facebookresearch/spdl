@@ -7,7 +7,6 @@
 __all__ = [
     "_pipe",
     "_ordered_pipe",
-    "_PipeArgs",
     "_Aggregate",
     "_disaggregate",
 ]
@@ -15,13 +14,12 @@ __all__ = [
 import asyncio
 import inspect
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
-from concurrent.futures import Executor
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from functools import partial
 from typing import Generic, TypeVar
 
-from .._convert import Callables, convert_to_async
+from .._convert import convert_to_async
+from .._defs import _PipeArgs
 from .._hook import _stage_hooks, _task_hooks, TaskHook
 from .._queue import AsyncQueue
 from .._utils import create_task
@@ -35,27 +33,6 @@ U = TypeVar("U")
 
 
 _SKIP: None = None
-
-
-@dataclass
-class _PipeArgs(Generic[T, U]):
-    op: Callables[T, U]
-    executor: Executor | None = None
-    concurrency: int = 1
-    op_requires_eof: bool = False
-    # Used to pass EOF to op.
-    # Usually pipe does not pas EOF to op. This is because op is expected to be
-    #  stateless, and requiring users to handle EOF is cumbersome, and there is
-    # no real benefit.
-    # However, some ops are exception. The aggregation (with drop_last=False)
-    # requires to benotified when the pipeline reached the EOF, so that it can
-    # flush the buffered items.
-
-    def __post_init__(self) -> None:
-        if self.concurrency < 1:
-            raise ValueError(
-                f"`concurrency` value must be >= 1. Found: {self.concurrency}"
-            )
 
 
 class _FailCounter(TaskHook):
