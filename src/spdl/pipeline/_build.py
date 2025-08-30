@@ -20,7 +20,7 @@ from typing import Any, TypeVar
 from ._components._pipe import _FailCounter, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
-from ._defs import _ProcessConfig, _PType, _SinkConfig, _SourceConfig
+from ._defs import _PipeConfig, _PipeType, _SinkConfig, _SourceConfig
 from ._hook import TaskHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue
@@ -86,16 +86,16 @@ def _get_fail_counter() -> type[_FailCounter]:
 _PIPELINE_ID: int = -1
 
 
-def _get_task_name(i: int, cfg: _ProcessConfig[..., ...]) -> str:
+def _get_task_name(i: int, cfg: _PipeConfig[..., ...]) -> str:
     name = f"{_PIPELINE_ID}:{i}:{cfg.name}"
-    if cfg.type_ == _PType.Pipe and cfg.args.concurrency > 1:
+    if cfg.type_ == _PipeType.Pipe and cfg.args.concurrency > 1:
         name = f"{name}[{cfg.args.concurrency}]"
     return name
 
 
 def _build_pipeline_coro(
     src: _SourceConfig[T],
-    process_args: list[_ProcessConfig[Any, Any]],  # pyre-ignore: [2]
+    process_args: list[_PipeConfig[Any, Any]],  # pyre-ignore: [2]
     sink: _SinkConfig[U],
     max_failures: int,
     queue_class: type[AsyncQueue[...]],
@@ -146,7 +146,7 @@ def _build_pipeline_coro(
         in_queue, out_queue = queues[-2:]
 
         match cfg.type_:
-            case _PType.Pipe | _PType.Aggregate | _PType.Disaggregate:
+            case _PipeType.Pipe | _PipeType.Aggregate | _PipeType.Disaggregate:
                 coro = _pipe(
                     name,
                     in_queue,
@@ -156,7 +156,7 @@ def _build_pipeline_coro(
                     task_hook_factory(name),
                     max_failures,
                 )
-            case _PType.OrderedPipe:
+            case _PipeType.OrderedPipe:
                 coro = _ordered_pipe(
                     name,
                     in_queue,
@@ -263,7 +263,7 @@ async def _run_pipeline_coroutines(
 
 def _get_desc(
     src: _SourceConfig[T] | None,
-    process_args: list[_ProcessConfig],  # pyre-ignore: [24]
+    process_args: list[_PipeConfig],  # pyre-ignore: [24]
     sink: _SinkConfig[U] | None,
 ) -> str:
     parts = []
@@ -276,14 +276,14 @@ def _get_desc(
     for cfg in process_args:
         args = cfg.args
         match cfg.type_:
-            case _PType.Pipe:
+            case _PipeType.Pipe:
                 part = f"{cfg.name}(concurrency={args.concurrency})"
-            case _PType.OrderedPipe:
+            case _PipeType.OrderedPipe:
                 part = (
                     f"{cfg.name}(concurrency={args.concurrency}, "
                     'output_order="input")'
                 )
-            case _PType.Aggregate | _PType.Disaggregate:
+            case _PipeType.Aggregate | _PipeType.Disaggregate:
                 part = cfg.name
             case _:
                 part = str(cfg.type_)
@@ -297,7 +297,7 @@ def _get_desc(
 
 def _build_pipeline(
     src: _SourceConfig[T],
-    process_args: list[_ProcessConfig],  # pyre-ignore: [24]
+    process_args: list[_PipeConfig],  # pyre-ignore: [24]
     sink: _SinkConfig[U],
     *,
     num_threads: int,

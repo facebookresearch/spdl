@@ -17,7 +17,7 @@ from spdl._internal import log_api_usage_once
 from ._build import _build_pipeline, _get_desc
 from ._components._pipe import _Aggregate, _disaggregate
 from ._convert import Callables
-from ._defs import _PipeArgs, _ProcessConfig, _PType, _SinkConfig, _SourceConfig
+from ._defs import _PipeArgs, _PipeConfig, _PipeType, _SinkConfig, _SourceConfig
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
@@ -75,7 +75,7 @@ class PipelineBuilder(Generic[T, U]):
         log_api_usage_once("spdl.pipeline.PipelineBuilder")
 
         self._src: _SourceConfig[T] | None = None
-        self._process_args: list[_ProcessConfig] = []  # pyre-ignore: [24]
+        self._process_args: list[_PipeConfig] = []  # pyre-ignore: [24]
         self._sink: _SinkConfig[U] | None = None
 
     def add_source(
@@ -180,7 +180,9 @@ class PipelineBuilder(Generic[T, U]):
                 f"Found: {output_order}"
             )
 
-        type_ = _PType.Pipe if output_order == "completion" else _PType.OrderedPipe
+        type_ = (
+            _PipeType.Pipe if output_order == "completion" else _PipeType.OrderedPipe
+        )
 
         if isinstance(op, SupportsGetItem):
             # Note, if op is list/dict/tuple with a lot of elements, then
@@ -194,7 +196,7 @@ class PipelineBuilder(Generic[T, U]):
             # we don't do that here. (it happens in to_async helper function)
 
         self._process_args.append(
-            _ProcessConfig(
+            _PipeConfig(
                 type_=type_,
                 name=name or _get_op_name(op),
                 args=_PipeArgs(
@@ -226,8 +228,8 @@ class PipelineBuilder(Generic[T, U]):
             else f"aggregate({num_items})"
         )
         self._process_args.append(
-            _ProcessConfig(
-                _PType.Aggregate,
+            _PipeConfig(
+                _PipeType.Aggregate,
                 name=name,
                 args=_PipeArgs(
                     op=_Aggregate(num_items, drop_last),
@@ -248,8 +250,8 @@ class PipelineBuilder(Generic[T, U]):
                 Default: :py:class:`StatsQueue`.
         """
         self._process_args.append(
-            _ProcessConfig(
-                _PType.Disaggregate,
+            _PipeConfig(
+                _PipeType.Disaggregate,
                 name="disaggregate",
                 args=_PipeArgs(
                     op=_disaggregate,  # pyre-ignore: [6]
