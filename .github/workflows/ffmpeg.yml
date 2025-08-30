@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "master"]
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "master"]
         conf:
           - { arch: "x86_64", os: "ubuntu-latest" }
           - { arch: "aarch64", os: "ubuntu-24.04-arm" }
@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "master"]
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "master"]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
