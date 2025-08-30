@@ -21,11 +21,33 @@ U = TypeVar("U")
 
 __all__ = [
     "_SourceConfig",
+    "_PipeType",
     "_PipeArgs",
-    "_ProcessConfig",
+    "_PipeConfig",
     "_SinkConfig",
-    "_PType",
 ]
+
+
+################################################################################
+# Source
+################################################################################
+@dataclass
+class _SourceConfig(Generic[T]):
+    source: Iterable | AsyncIterable
+
+    def __post_init__(self) -> None:
+        if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
+            raise ValueError("Source must be either generator or async generator.")
+
+
+################################################################################
+# Pipe
+################################################################################
+class _PipeType(IntEnum):
+    Pipe = 1
+    OrderedPipe = 2
+    Aggregate = 3
+    Disaggregate = 4
 
 
 @dataclass
@@ -50,24 +72,8 @@ class _PipeArgs(Generic[T, U]):
 
 
 @dataclass
-class _SourceConfig(Generic[T]):
-    source: Iterable | AsyncIterable
-
-    def __post_init__(self) -> None:
-        if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
-            raise ValueError("Source must be either generator or async generator.")
-
-
-class _PType(IntEnum):
-    Pipe = 1
-    OrderedPipe = 2
-    Aggregate = 3
-    Disaggregate = 4
-
-
-@dataclass
-class _ProcessConfig(Generic[T, U]):
-    type_: _PType
+class _PipeConfig(Generic[T, U]):
+    type_: _PipeType
     name: str
     args: _PipeArgs[T, U]
 
@@ -77,13 +83,16 @@ class _ProcessConfig(Generic[T, U]):
             if self.args.executor is not None:
                 raise ValueError("`executor` cannot be specified when op is async.")
         if inspect.isasyncgenfunction(op):
-            if self.type_ == _PType.OrderedPipe:
+            if self.type_ == _PipeType.OrderedPipe:
                 raise ValueError(
                     "pipe does not support async generator function "
                     "when `output_order` is 'input'."
                 )
 
 
+################################################################################
+# Sink
+################################################################################
 @dataclass
 class _SinkConfig(Generic[T]):
     buffer_size: int
