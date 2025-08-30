@@ -98,12 +98,18 @@ if [[ "$(uname)" == Darwin ]]; then
         avformat=libavformat.60
         avdevice=libavdevice.60
         avfilter=libavfilter.9
-    elif [[ ${ffmpeg_version} == master || ${major_ver} == 7 ]]; then
+    elif [[ ${major_ver} == 7 ]]; then
         avutil=libavutil.59
         avcodec=libavcodec.61
         avformat=libavformat.61
         avdevice=libavdevice.61
         avfilter=libavfilter.10
+    elif [[ ${ffmpeg_version} == master || ${major_ver} == 8 ]]; then
+        avutil=libavutil.60
+        avcodec=libavcodec.62
+        avformat=libavformat.62
+        avdevice=libavdevice.62
+        avfilter=libavfilter.11
     else
         printf "Error: unexpected FFmpeg major version: %s\n"  ${major_ver}
         exit 1;
