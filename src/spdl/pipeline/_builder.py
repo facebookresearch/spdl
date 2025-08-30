@@ -8,16 +8,13 @@
 
 import logging
 from collections.abc import AsyncIterable, Callable, Iterable, Iterator
-from concurrent.futures import Executor, ThreadPoolExecutor
+from concurrent.futures import Executor
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
 from spdl._internal import log_api_usage_once
 
-from ._components._build import (
-    _build_pipeline_coro,
-    PipelineFailure,
-)
+from ._build import _build_pipeline, _get_desc
 from ._components._pipe import _Aggregate, _disaggregate
 from ._convert import Callables
 from ._defs import _PipeArgs, _ProcessConfig, _PType, _SinkConfig, _SourceConfig
@@ -27,7 +24,6 @@ from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from ._utils import iterate_in_subprocess
 
 __all__ = [
-    "PipelineFailure",
     "PipelineBuilder",
     "_get_op_name",
     "run_pipeline_in_subprocess",
@@ -51,72 +47,7 @@ _TPipeInputs: TypeAlias = Callables[T_, U_] | SupportsGetItem[T_, U_]
 
 
 ################################################################################
-# Build function
-################################################################################
-def _get_desc(
-    src: _SourceConfig[T] | None,
-    process_args: list[_ProcessConfig],  # pyre-ignore: [24]
-    sink: _SinkConfig[U] | None,
-) -> str:
-    parts = []
-    if (src_ := src) is not None:
-        src_repr = getattr(src_.source, "__name__", type(src_.source).__name__)
-        parts.append(f"  - src: {src_repr}")
-    else:
-        parts.append("  - src: n/a")
-
-    for cfg in process_args:
-        args = cfg.args
-        match cfg.type_:
-            case _PType.Pipe:
-                part = f"{cfg.name}(concurrency={args.concurrency})"
-            case _PType.OrderedPipe:
-                part = (
-                    f"{cfg.name}(concurrency={args.concurrency}, "
-                    'output_order="input")'
-                )
-            case _PType.Aggregate | _PType.Disaggregate:
-                part = cfg.name
-            case _:
-                part = str(cfg.type_)
-        parts.append(f"  - {part}")
-
-    if (sink_ := sink) is not None:
-        parts.append(f"  - sink: buffer_size={sink_.buffer_size}")
-
-    return "\n".join(parts)
-
-
-def _build_pipeline(
-    src: _SourceConfig[T],
-    process_args: list[_ProcessConfig],  # pyre-ignore: [24]
-    sink: _SinkConfig[U],
-    *,
-    num_threads: int,
-    max_failures: int,
-    queue_class: type[AsyncQueue[...]],
-    task_hook_factory: Callable[[str], list[TaskHook]],
-    stage_id: int,
-) -> Pipeline[U]:
-    coro, queues = _build_pipeline_coro(
-        src,
-        process_args,
-        sink,
-        max_failures,
-        queue_class,
-        task_hook_factory,
-        stage_id,
-    )
-
-    executor = ThreadPoolExecutor(
-        max_workers=num_threads,
-        thread_name_prefix="spdl_worker_thread_",
-    )
-    return Pipeline(coro, queues, executor, desc=_get_desc(src, process_args, sink))
-
-
-################################################################################
-# Build
+# Builder
 ################################################################################
 
 

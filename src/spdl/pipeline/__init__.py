@@ -8,7 +8,8 @@
 
 # pyre-strict
 
-from ._builder import PipelineBuilder, PipelineFailure, run_pipeline_in_subprocess
+from ._build import PipelineFailure
+from ._builder import PipelineBuilder, run_pipeline_in_subprocess
 from ._hook import TaskHook, TaskPerfStats, TaskStatsHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, QueuePerfStats, StatsQueue
