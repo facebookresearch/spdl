@@ -22,6 +22,7 @@ from typing import TypeVar
 
 import pytest
 from spdl.pipeline import (
+    _build,
     AsyncQueue,
     PipelineBuilder,
     PipelineFailure,
@@ -29,7 +30,6 @@ from spdl.pipeline import (
     TaskHook,
     TaskStatsHook,
 )
-from spdl.pipeline._components import _build
 from spdl.pipeline._components._common import _EOF
 from spdl.pipeline._components._pipe import _FailCounter, _pipe, _PipeArgs
 from spdl.pipeline._components._sink import _sink
