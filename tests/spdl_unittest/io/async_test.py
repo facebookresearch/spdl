@@ -110,8 +110,8 @@ def test_decode_audio_many_channels_6():
 
     See https://github.com/facebookresearch/spdl/issues/449
     """
-    cmd = """
-    ffmpeg \
+    cmd = f"""
+    {FFMPEG_CLI} \
         -y \
         -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
         -f lavfi -i sine=frequency=1001:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
@@ -141,8 +141,8 @@ def test_decode_audio_many_channels_7():
 
     See https://github.com/facebookresearch/spdl/issues/449
     """
-    cmd = """
-    ffmpeg \
+    cmd = f"""
+    {FFMPEG_CLI} \
         -y \
         -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \
         -f lavfi -i sine=frequency=1001:sample_rate=48000:duration=3,aformat=sample_fmts=s16 \

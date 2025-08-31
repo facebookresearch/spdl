@@ -75,8 +75,8 @@ def _load_from_packets(packets):
 def test_audio_packets_attributes():
     """AudioPackets have sample_rate and num_channels attributes"""
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y \
     -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
     -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
     -filter_complex amerge  -c:a pcm_s16le sample.wav
