@@ -10,14 +10,20 @@ import logging
 from collections.abc import AsyncIterable, Callable, Iterable, Iterator
 from concurrent.futures import Executor
 from functools import partial
-from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
+from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 
 from ._build import _build_pipeline, _get_desc
-from ._components._pipe import _Aggregate, _disaggregate
-from ._convert import Callables
-from ._defs import _PipeArgs, _PipeConfig, _PipeType, _SinkConfig, _SourceConfig
+from ._defs import (
+    _PipeConfig,
+    _SinkConfig,
+    _SourceConfig,
+    _TPipeInputs,
+    Aggregate,
+    Disaggregate,
+    Pipe,
+)
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
@@ -25,9 +31,7 @@ from ._utils import iterate_in_subprocess
 
 __all__ = [
     "PipelineBuilder",
-    "_get_op_name",
     "run_pipeline_in_subprocess",
-    "_TPipeInputs",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -38,23 +42,9 @@ T_ = TypeVar("T_")
 U_ = TypeVar("U_")
 
 
-@runtime_checkable
-class SupportsGetItem(Protocol[T_, U_]):
-    def __getitem__(self, key: T_) -> U_: ...
-
-
-_TPipeInputs: TypeAlias = Callables[T_, U_] | SupportsGetItem[T_, U_]
-
-
 ################################################################################
 # Builder
 ################################################################################
-
-
-def _get_op_name(op: Callable) -> str:
-    if isinstance(op, partial):
-        return _get_op_name(op.func)
-    return getattr(op, "__name__", op.__class__.__name__)
 
 
 class PipelineBuilder(Generic[T, U]):
@@ -174,36 +164,13 @@ class PipelineBuilder(Generic[T, U]):
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
         """
-        if output_order not in ["completion", "input"]:
-            raise ValueError(
-                '`output_order` must be either "completion" or "input". '
-                f"Found: {output_order}"
-            )
-
-        type_ = (
-            _PipeType.Pipe if output_order == "completion" else _PipeType.OrderedPipe
-        )
-
-        if isinstance(op, SupportsGetItem):
-            # Note, if op is list/dict/tuple with a lot of elements, then
-            # debug print on `_ProcessConfig` might produce extremely long string.
-            # So it is important to extract the __getitem__ before it is passed to
-            # `_ProcessConfig`.
-            op = op.__getitem__
-
-            # We could do the same for callable (__call__)
-            # but usually callable class name contains readable information, so
-            # we don't do that here. (it happens in to_async helper function)
-
         self._process_args.append(
-            _PipeConfig(
-                type_=type_,
-                name=name or _get_op_name(op),
-                args=_PipeArgs(
-                    op=op,
-                    executor=executor,
-                    concurrency=concurrency,
-                ),
+            Pipe(
+                op,
+                concurrency=concurrency,
+                executor=executor,
+                name=name,
+                output_order=output_order,
             )
         )
         return self
@@ -222,21 +189,7 @@ class PipelineBuilder(Generic[T, U]):
             drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
             hooks: See :py:meth:`pipe`.
         """
-        name = (
-            f"aggregate({num_items}, {drop_last=})"
-            if drop_last
-            else f"aggregate({num_items})"
-        )
-        self._process_args.append(
-            _PipeConfig(
-                _PipeType.Aggregate,
-                name=name,
-                args=_PipeArgs(
-                    op=_Aggregate(num_items, drop_last),
-                    op_requires_eof=True,
-                ),
-            )
-        )
+        self._process_args.append(Aggregate(num_items, drop_last=drop_last))
         return self
 
     def disaggregate(self) -> "PipelineBuilder[T, U]":
@@ -249,15 +202,7 @@ class PipelineBuilder(Generic[T, U]):
                 Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
                 Default: :py:class:`StatsQueue`.
         """
-        self._process_args.append(
-            _PipeConfig(
-                _PipeType.Disaggregate,
-                name="disaggregate",
-                args=_PipeArgs(
-                    op=_disaggregate,  # pyre-ignore: [6]
-                ),
-            ),
-        )
+        self._process_args.append(Disaggregate())
         return self
 
     def add_sink(
