@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 import spdl.io
 
-from ..fixture import get_sample, load_ref_audio
+from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio
 
 sample_fmt2dtype = {
     "s16": np.int16,
@@ -257,8 +257,8 @@ def test_encode_audio_smoke_test(ext, sample_fmt):
 
 def test_remux_audio():
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y \
     -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
     -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
     -filter_complex amerge  -c:a pcm_s16le sample.wav

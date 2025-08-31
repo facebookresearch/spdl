@@ -23,8 +23,8 @@ def _load_image(src, filter_desc="format=pix_fmts=rgb24"):
 def test_decode_image_gray16_native():
     """Can decode gray16 PNG image (16be) as-is"""
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y                                 \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y                                 \
         -f lavfi -i color=0xFFFFFF:size=32x32,format=gray16be \
         -f lavfi -i color=0x000000:size=32x32,format=gray16be \
         -filter_complex hstack=inputs=2                    \
@@ -47,8 +47,8 @@ def test_decode_image_gray16_native():
 def test_decode_image_16be_rgb24():
     """Can decode gray16 PNG image (16be) as rgb24"""
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y                                 \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y                                 \
         -f lavfi -i color=white:size=32x32,format=gray16be \
         -f lavfi -i color=black:size=32x32,format=gray16be \
         -filter_complex hstack=inputs=2                    \
@@ -132,8 +132,8 @@ def test_decode_image_yuvj420p_as_rgb24():
 def test_decode_image_yuvj420p_as_rgb24_edge_values():
     """Can decode yuvj420p JPEG image as rgb24 at edge values"""
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y                          \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y                          \
         -f lavfi -i color=color=0xff0000:size=32x64 \
         -f lavfi -i color=color=0x00ff00:size=32x64 \
         -f lavfi -i color=color=0x0000ff:size=32x64 \
@@ -315,8 +315,8 @@ def test_load_image_batch_native():
 def test_load_image_batch_native_edge_values():
     """`load_image_batch` can decode series of images."""
     # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y                          \
+    cmd = f"""
+    {FFMPEG_CLI} -hide_banner -y                          \
         -f lavfi -i color=color=0xff0000:size=32x64 \
         -f lavfi -i color=color=0x00ff00:size=32x64 \
         -f lavfi -i color=color=0x0000ff:size=32x64 \
