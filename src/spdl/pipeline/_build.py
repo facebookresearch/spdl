@@ -15,15 +15,16 @@ import logging
 import pprint
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from typing import Any, TypeVar
 
 from ._components._pipe import _FailCounter, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
 from ._defs import _PipeConfig, _PipeType, _SinkConfig, _SourceConfig
-from ._hook import TaskHook
+from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
-from ._queue import AsyncQueue
+from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from ._utils import create_task
 
 # pyre-strict
@@ -302,17 +303,27 @@ def _build_pipeline(
     *,
     num_threads: int,
     max_failures: int,
-    queue_class: type[AsyncQueue[...]],
-    task_hook_factory: Callable[[str], list[TaskHook]],
+    report_stats_interval: float = -1,
+    queue_class: type[AsyncQueue[...]] | None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None,
     stage_id: int,
 ) -> Pipeline[U]:
+    def _hook_factory(name: str) -> list[TaskHook]:
+        return [DefaultHook(name=name, interval=report_stats_interval)]
+
+    _queue_class = (
+        partial(DefaultQueue, interval=report_stats_interval)
+        if queue_class is None
+        else queue_class
+    )
+
     coro, queues = _build_pipeline_coro(
         src,
         process_args,
         sink,
         max_failures,
-        queue_class,
-        task_hook_factory,
+        _queue_class,
+        _hook_factory if task_hook_factory is None else task_hook_factory,
         stage_id,
     )
 
