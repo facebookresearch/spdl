@@ -49,10 +49,10 @@ def test_nvdec_no_file():
 def test_nvdec_odd_size(dummy):
     """Odd width/height must be rejected"""
     with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, width=121)
+        _decode_video(dummy.path, scale_width=121)
 
     with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, height=257)
+        _decode_video(dummy.path, scale_height=257)
 
 
 def test_nvdec_negative(dummy):
