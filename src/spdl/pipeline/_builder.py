@@ -24,9 +24,9 @@ from ._defs import (
     Disaggregate,
     Pipe,
 )
-from ._hook import TaskHook, TaskStatsHook as DefaultHook
+from ._hook import TaskHook
 from ._pipeline import Pipeline
-from ._queue import AsyncQueue, StatsQueue as DefaultQueue
+from ._queue import AsyncQueue
 from ._utils import iterate_in_subprocess
 
 __all__ = [
@@ -281,23 +281,15 @@ class PipelineBuilder(Generic[T, U]):
         if (sink := self._sink) is None:
             raise RuntimeError("Sink is not set. Did you call `add_sink`?")
 
-        def _hook_factory(name: str) -> list[TaskHook]:
-            return [DefaultHook(name=name, interval=report_stats_interval)]
-
         return _build_pipeline(
             src,
             self._process_args,
             sink,
             num_threads=num_threads,
             max_failures=max_failures,
-            queue_class=(
-                partial(DefaultQueue, interval=report_stats_interval)
-                if queue_class is None
-                else queue_class
-            ),
-            task_hook_factory=(
-                _hook_factory if task_hook_factory is None else task_hook_factory
-            ),
+            queue_class=queue_class,
+            report_stats_interval=report_stats_interval,
+            task_hook_factory=task_hook_factory,
             stage_id=stage_id,
         )
 
