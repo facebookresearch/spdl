@@ -43,27 +43,32 @@ def test_demux_with_codec(media_type):
         assert codec.name is not None
 
 
-@pytest.mark.parametrize("media_type", ["video"])
-def test_demux_without_codec(media_type):
-    """When using streaming_demux_audio/video, the resulting packets does not contain codec"""
+def test_demux_without_codec():
+    """When using streaming_demux, the resulting packets does not contain codec"""
 
-    cmd = CMDS[media_type]
+    cmd = f"{FFMPEG_CLI} -lavfi 'testsrc;sine' -t 10 out.mp4"
 
     sample = get_sample(cmd)
 
     demuxer = spdl.io.Demuxer(sample.path)
-    bsf = spdl.io.BSF(demuxer.video_codec, "null")
-    demux_method = getattr(demuxer, f"streaming_demux_{media_type}")
-    it = demux_method(num_packets=5)
-    for _ in range(3):
-        packets = next(it)
+    v_bsf = spdl.io.BSF(demuxer.video_codec, "null")
+    a_bsf = spdl.io.BSF(demuxer.audio_codec, "null")
+    num_packets = 0
+    for packets in demuxer.streaming_demux(num_packets=5):
+        num_packets += 1
         codec = packets.codec
         assert codec is None
 
-        packets = bsf.filter(packets)
+        if packets.__class__.__name__ == "AudioPackets":
+            packets = a_bsf.filter(packets)
+        elif packets.__class__.__name__ == "VideoPackets":
+            packets = v_bsf.filter(packets)
+        else:
+            raise RuntimeError("Unexpected packet type")
 
         codec = packets.codec
         assert codec is None
+    assert num_packets > 10
 
 
 def _load_from_packets(packets):

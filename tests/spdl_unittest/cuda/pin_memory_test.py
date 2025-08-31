@@ -33,7 +33,7 @@ def test_pin_memory_smoke_test(pin_memory):
     buffer = spdl.io.convert_frames(frames, storage=storage)
     stream = torch.cuda.Stream(device=0)
     cuda_config = spdl.io.cuda_config(device_index=0, stream=stream.cuda_stream)
-    buffer = spdl.io.transfer_buffer(buffer, cuda_config=cuda_config)
+    buffer = spdl.io.transfer_buffer(buffer, device_config=cuda_config)
     tensor = spdl.io.to_torch(buffer)
 
     print(tensor.device)
