@@ -108,7 +108,8 @@ html_context = {
     "doc_versions": [
         ("dev", "/spdl/main"),
         ("latest-release", "/spdl/latest"),
-        ("0.1.3", "/spdl/main"),
+        ("0.1.4", "/spdl/main"),
+        ("0.1.3", "/spdl/0.1.3"),
         ("0.1.2", "/spdl/0.1.2"),
         ("0.1.1", "/spdl/0.1.1"),
         ("0.1.0", "/spdl/0.1.0"),
