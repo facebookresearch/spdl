@@ -40,8 +40,10 @@ def test_decode_image_gray16_native():
     ref = load_ref_image(sample.path, shape, dtype=np.uint16, filter_desc=None)
     np.testing.assert_array_equal(hyp, ref, strict=True)
 
-    assert np.all(hyp[..., :32] == 65022)
-    assert np.all(hyp[..., 32:] == 256)
+    ffmpeg8 = get_ffmpeg_versions()["libavutil"][0] >= 60
+
+    assert np.all(hyp[..., :32] == 65535 if ffmpeg8 else 65022)
+    assert np.all(hyp[..., 32:] == 0 if ffmpeg8 else 256)
 
 
 def test_decode_image_16be_rgb24():
