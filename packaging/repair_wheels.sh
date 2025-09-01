@@ -20,22 +20,27 @@ for whl in "${input_dir}"/*.whl; do
                    --exclude libavcodec.so.59   \
                    --exclude libavcodec.so.60   \
                    --exclude libavcodec.so.61   \
+                   --exclude libavcodec.so.62   \
                    --exclude libavfilter.so.7   \
                    --exclude libavfilter.so.8   \
                    --exclude libavfilter.so.9   \
                    --exclude libavfilter.so.10  \
+                   --exclude libavfilter.so.11  \
                    --exclude libavdevice.so.58  \
                    --exclude libavdevice.so.59  \
                    --exclude libavdevice.so.60  \
                    --exclude libavdevice.so.61  \
+                   --exclude libavdevice.so.62  \
                    --exclude libavformat.so.58  \
                    --exclude libavformat.so.59  \
                    --exclude libavformat.so.60  \
                    --exclude libavformat.so.61  \
+                   --exclude libavformat.so.62  \
                    --exclude libavutil.so.56    \
                    --exclude libavutil.so.57    \
                    --exclude libavutil.so.58    \
                    --exclude libavutil.so.59    \
+                   --exclude libavutil.so.60    \
                    --exclude libcuda.so.1       \
                    --exclude libnvcuvid.so      \
                    --exclude libcudart.so.11.0  \

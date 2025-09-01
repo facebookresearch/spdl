@@ -9,6 +9,7 @@ add_library(ffmpeg4 INTERFACE)
 add_library(ffmpeg5 INTERFACE)
 add_library(ffmpeg6 INTERFACE)
 add_library(ffmpeg7 INTERFACE)
+add_library(ffmpeg8 INTERFACE)
 
 ################################################################################
 
@@ -38,6 +39,12 @@ if (APPLE)
       f7
       URL ${base_url}/ffmpeg_7.0.2_macos_aarch64.tar.gz
       URL_HASH SHA256=29bcf0c4b8c7dc9c28c6dc18b59c43be302ad5af9c4ee77e8c0c76072531485f
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
+    FetchContent_Declare(
+      f8
+      URL ${base_url}/ffmpeg_8.0_macos_aarch64.tar.gz
+      URL_HASH SHA256=c33d6df6aa2bce5152a1db3c6accdfc16fefdf4cfe61dcaf671cee6d4256037f
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -76,6 +83,12 @@ elseif (UNIX)
       URL_HASH SHA256=1cc22ec6607c06ff9578affe4a502eb60e86c49309606e192b297b6c49c35b48
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
+    FetchContent_Declare(
+      f8
+      URL ${base_url}/ffmpeg_8.0_manylinux_2_28_aarch64.tar.gz
+      URL_HASH SHA256=45990fa09bfb32fbba28644677efe06ffe48d23d6913acb6911967367bc42e91
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
     FetchContent_Declare(
       f4
@@ -101,6 +114,12 @@ elseif (UNIX)
       URL_HASH SHA256=a30e9a3846cc322e95c483788bec35591c3e4398390db9bc833a4bc15662ebad
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
+    FetchContent_Declare(
+      f8
+      URL ${base_url}/ffmpeg_8.0_manylinux_2_28_x86_64.tar.gz
+      URL_HASH SHA256=7be341ae94e5dcdd17a419f237365db03aaea6aa9550fb745469ffdde15b98b1
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
   else ()
     # Possible case ppc64le (though it's not officially supported.)
     message(
@@ -120,11 +139,12 @@ else()
   message(FATAL_ERROR "Unsupported platform.")
 endif()
 
-FetchContent_MakeAvailable(f4 f5 f6 f7)
+FetchContent_MakeAvailable(f4 f5 f6 f7 f8)
 target_include_directories(ffmpeg4 INTERFACE ${f4_SOURCE_DIR}/include)
 target_include_directories(ffmpeg5 INTERFACE ${f5_SOURCE_DIR}/include)
 target_include_directories(ffmpeg6 INTERFACE ${f6_SOURCE_DIR}/include)
 target_include_directories(ffmpeg7 INTERFACE ${f7_SOURCE_DIR}/include)
+target_include_directories(ffmpeg8 INTERFACE ${f8_SOURCE_DIR}/include)
 
 if(APPLE)
   target_link_libraries(
@@ -163,6 +183,15 @@ if(APPLE)
     ${f7_SOURCE_DIR}/lib/libavdevice.61.dylib
     ${f7_SOURCE_DIR}/lib/libavfilter.10.dylib
     )
+  target_link_libraries(
+    ffmpeg8
+    INTERFACE
+    ${f8_SOURCE_DIR}/lib/libavutil.60.dylib
+    ${f8_SOURCE_DIR}/lib/libavcodec.62.dylib
+    ${f8_SOURCE_DIR}/lib/libavformat.62.dylib
+    ${f8_SOURCE_DIR}/lib/libavdevice.62.dylib
+    ${f8_SOURCE_DIR}/lib/libavfilter.11.dylib
+    )
 elseif (UNIX)
   target_link_libraries(
     ffmpeg4
@@ -200,6 +229,15 @@ elseif (UNIX)
     ${f7_SOURCE_DIR}/lib/libavdevice.so.61
     ${f7_SOURCE_DIR}/lib/libavfilter.so.10
     )
+  target_link_libraries(
+    ffmpeg8
+    INTERFACE
+    ${f8_SOURCE_DIR}/lib/libavutil.so.60
+    ${f8_SOURCE_DIR}/lib/libavcodec.so.62
+    ${f8_SOURCE_DIR}/lib/libavformat.so.62
+    ${f8_SOURCE_DIR}/lib/libavdevice.so.62
+    ${f8_SOURCE_DIR}/lib/libavfilter.so.11
+    )
 elseif(MSVC)
   target_link_libraries(
     ffmpeg4
@@ -236,5 +274,14 @@ elseif(MSVC)
     ${f7_SOURCE_DIR}/bin/avformat.lib
     ${f7_SOURCE_DIR}/bin/avdevice.lib
     ${f7_SOURCE_DIR}/bin/avfilter.lib
+    )
+  target_link_libraries(
+    ffmpeg8
+    INTERFACE
+    ${f8_SOURCE_DIR}/bin/avutil.lib
+    ${f8_SOURCE_DIR}/bin/avcodec.lib
+    ${f8_SOURCE_DIR}/bin/avformat.lib
+    ${f8_SOURCE_DIR}/bin/avdevice.lib
+    ${f8_SOURCE_DIR}/bin/avfilter.lib
     )
 endif()
