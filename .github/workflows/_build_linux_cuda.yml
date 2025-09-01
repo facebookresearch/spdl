@@ -142,6 +142,8 @@ jobs:
         run: |
           set -ex
 
+          nvidia-smi
+
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
