@@ -249,8 +249,10 @@ async def _run_pipeline_coroutines(
         for i in range(len(tasks) - 1, -1, -1):
             task = tasks[i]
             if task.done() and not task.cancelled() and task.exception() is not None:
-                for task in tasks[:i]:
-                    task.cancel()
+                if upstream := tasks[:i]:
+                    for task in upstream:
+                        task.cancel()
+                    await asyncio.wait(upstream)
                 break
 
     errs = {}
