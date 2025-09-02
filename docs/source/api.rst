@@ -8,6 +8,7 @@ API Reference
    :recursive:
 
    spdl.pipeline
+   spdl.pipeline.defs
    spdl.dataloader
    spdl.source
 
