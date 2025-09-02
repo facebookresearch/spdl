@@ -14,7 +14,7 @@ from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 
-from ._build import _build_pipeline, _get_desc
+from ._build import _build_pipeline
 from ._defs import (
     _PipeConfig,
     _SinkConfig,
@@ -23,6 +23,7 @@ from ._defs import (
     Aggregate,
     Disaggregate,
     Pipe,
+    PipelineConfig,
 )
 from ._hook import TaskHook
 from ._pipeline import Pipeline
@@ -227,11 +228,6 @@ class PipelineBuilder(Generic[T, U]):
         self._sink = _SinkConfig(buffer_size)
         return self
 
-    def __str__(self) -> str:
-        return "\n".join(
-            [repr(self), _get_desc(self._src, self._process_args, self._sink)]
-        )
-
     def build(
         self,
         *,
@@ -282,9 +278,11 @@ class PipelineBuilder(Generic[T, U]):
             raise RuntimeError("Sink is not set. Did you call `add_sink`?")
 
         return _build_pipeline(
-            src,
-            self._process_args,
-            sink,
+            PipelineConfig(
+                src,
+                self._process_args,
+                sink,
+            ),
             num_threads=num_threads,
             max_failures=max_failures,
             queue_class=queue_class,

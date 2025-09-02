@@ -6,22 +6,20 @@
 
 __all__ = [
     "_build_pipeline",
-    "_get_desc",
     "PipelineFailure",
 ]
 
 import asyncio
 import logging
-import pprint
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from ._components._pipe import _FailCounter, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
-from ._defs import _PipeConfig, _PipeType, _SinkConfig, _SourceConfig
+from ._defs import _PipeConfig, _PipeType, PipelineConfig
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
@@ -95,28 +93,12 @@ def _get_task_name(i: int, cfg: _PipeConfig[..., ...]) -> str:
 
 
 def _build_pipeline_coro(
-    src: _SourceConfig[T],
-    process_args: list[_PipeConfig[Any, Any]],  # pyre-ignore: [2]
-    sink: _SinkConfig[U],
+    pipeline_cfg: PipelineConfig[T, U],
     max_failures: int,
     queue_class: type[AsyncQueue[...]],
     task_hook_factory: Callable[[str], list[TaskHook]],
     stage_id: int,
 ) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
-    if _LG.isEnabledFor(logging.DEBUG):
-        _LG.debug(
-            pprint.pformat(
-                {
-                    "src": src,
-                    "pipe": process_args,
-                    "sink": sink,
-                },
-                indent=2,
-                sort_dicts=False,
-                compact=True,
-            ),
-        )
-
     # Note:
     # Make sure that coroutines are ordered from source to sink.
     # `_run_pipeline_coroutines` expects and rely on this ordering.
@@ -130,12 +112,12 @@ def _build_pipeline_coro(
     name = f"{stage_id}:src"
     stage_id += 1
     queues.append(queue_class(f"{_PIPELINE_ID}:{name}_queue"))
-    coros.append((f"Pipeline::{name}", _source(src.source, queues[0])))
+    coros.append((f"Pipeline::{name}", _source(pipeline_cfg.src.source, queues[0])))
 
     _FailCounter = _get_fail_counter()
 
     # pipes
-    for cfg in process_args:
+    for cfg in pipeline_cfg.pipes:
         name = _get_task_name(stage_id, cfg)
         stage_id += 1
         queue_name = f"{name}_queue"
@@ -174,7 +156,9 @@ def _build_pipeline_coro(
 
     # sink
     name = f"{stage_id}:sink_queue"
-    output_queue = queue_class(f"{_PIPELINE_ID}:{name}", buffer_size=sink.buffer_size)
+    output_queue = queue_class(
+        f"{_PIPELINE_ID}:{name}", buffer_size=pipeline_cfg.sink.buffer_size
+    )
     coros.append(
         (
             f"Pipeline::{name}",
@@ -262,52 +246,21 @@ async def _run_pipeline_coroutines(
         raise PipelineFailure(errs)
 
 
-def _get_desc(
-    src: _SourceConfig[T] | None,
-    process_args: list[_PipeConfig],  # pyre-ignore: [24]
-    sink: _SinkConfig[U] | None,
-) -> str:
-    parts = []
-    if (src_ := src) is not None:
-        src_repr = getattr(src_.source, "__name__", type(src_.source).__name__)
-        parts.append(f"  - src: {src_repr}")
-    else:
-        parts.append("  - src: n/a")
-
-    for cfg in process_args:
-        args = cfg.args
-        match cfg.type_:
-            case _PipeType.Pipe:
-                part = f"{cfg.name}(concurrency={args.concurrency})"
-            case _PipeType.OrderedPipe:
-                part = (
-                    f"{cfg.name}(concurrency={args.concurrency}, "
-                    'output_order="input")'
-                )
-            case _PipeType.Aggregate | _PipeType.Disaggregate:
-                part = cfg.name
-            case _:
-                part = str(cfg.type_)
-        parts.append(f"  - {part}")
-
-    if (sink_ := sink) is not None:
-        parts.append(f"  - sink: buffer_size={sink_.buffer_size}")
-
-    return "\n".join(parts)
-
-
 def _build_pipeline(
-    src: _SourceConfig[T],
-    process_args: list[_PipeConfig],  # pyre-ignore: [24]
-    sink: _SinkConfig[U],
+    pipeline_cfg: PipelineConfig[T, U],
+    /,
     *,
     num_threads: int,
-    max_failures: int,
+    max_failures: int = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue[...]] | None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None,
-    stage_id: int,
+    queue_class: type[AsyncQueue[...]] | None = None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    stage_id: int = 0,
 ) -> Pipeline[U]:
+    desc = repr(pipeline_cfg)
+
+    _LG.debug("%s", desc)
+
     def _hook_factory(name: str) -> list[TaskHook]:
         return [DefaultHook(name=name, interval=report_stats_interval)]
 
@@ -318,9 +271,7 @@ def _build_pipeline(
     )
 
     coro, queues = _build_pipeline_coro(
-        src,
-        process_args,
-        sink,
+        pipeline_cfg,
         max_failures,
         _queue_class,
         _hook_factory if task_hook_factory is None else task_hook_factory,
@@ -331,4 +282,4 @@ def _build_pipeline(
         max_workers=num_threads,
         thread_name_prefix="spdl_worker_thread_",
     )
-    return Pipeline(coro, queues, executor, desc=_get_desc(src, process_args, sink))
+    return Pipeline(coro, queues, executor, desc=desc)

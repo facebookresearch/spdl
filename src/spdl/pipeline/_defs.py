@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import inspect
-from collections.abc import AsyncIterable, Callable, Iterable
+from collections.abc import AsyncIterable, Callable, Iterable, Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from enum import IntEnum
@@ -24,6 +24,7 @@ __all__ = [
     "_PipeType",
     "_PipeConfig",
     "_SinkConfig",
+    "PipelineConfig",
     "Aggregate",
     "Disaggregate",
     "Pipe",
@@ -40,6 +41,11 @@ class _SourceConfig(Generic[T]):
     def __post_init__(self) -> None:
         if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
             raise ValueError("Source must be either generator or async generator.")
+
+    def __repr__(self) -> str:
+        # Overwrite source repr because it might print a huge string.
+        source = f"<{self.source.__class__.__name__} object at 0x{id(self.source):0x}>"
+        return f"SourceConfig({source=})"
 
 
 ################################################################################
@@ -91,6 +97,22 @@ class _PipeConfig(Generic[T, U]):
                     "when `output_order` is 'input'."
                 )
 
+    def __repr__(self) -> str:
+        match self.type_:
+            case _PipeType.Pipe | _PipeType.OrderedPipe:
+                args = [
+                    f"concurrency={self.args.concurrency}",
+                ]
+                if self.args.executor is not None:
+                    args.append(f"executor={self.args.executor!r}")
+                if self.type_ == _PipeType.OrderedPipe:
+                    args.append("output_order='input'")
+                return f"{self.name}({', '.join(args)})"
+            case _PipeType.Aggregate | _PipeType.Disaggregate:
+                return self.name
+            case _:
+                return str(self.type_)
+
 
 ################################################################################
 # Sink
@@ -108,6 +130,26 @@ class _SinkConfig(Generic[T]):
             raise ValueError(
                 f"`buffer_size` must be greater than 0. Found: {self.buffer_size}"
             )
+
+
+##############################################################################
+# Top-level Config
+##############################################################################
+@dataclass
+class PipelineConfig(Generic[T, U]):
+    src: _SourceConfig[T]
+    pipes: Sequence[_PipeConfig[Any, Any]]
+    sink: _SinkConfig[U]
+
+    def __repr__(self) -> str:
+        args = ["PipelineConfig"]
+        args.append(f" - Source: {self.src!r}")
+        if self.pipes:
+            args.append(" - Pipes:")
+        for p in self.pipes:
+            args.append(f"   - {p!r}")
+        args.append(f" - Sink: {self.sink!r}")
+        return "\n".join(args)
 
 
 ##############################################################################
