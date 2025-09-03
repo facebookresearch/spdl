@@ -1,0 +1,33 @@
+# Note: `_convert_: "all"` is required when using a factory function
+# such as Pipe, Aggregate and Disaggregate.
+
+_convert_: all
+
+pipeline_cfg:
+  _convert_: all
+  _target_: spdl.pipeline.defs.PipelineConfig
+  src:
+    _target_: spdl.pipeline.defs.SourceConfig
+    source:
+      # range(20)
+      _target_: builtins.range
+      _args_: [ 20 ]
+  pipes:
+    # Aggregate(3, drop_last=True)
+    - _target_: spdl.pipeline.defs.Aggregate
+      _args_: [ 3 ]
+      drop_last: true
+    # Pipe(sum)
+    - _target_: spdl.pipeline.defs.Pipe
+      _args_:
+        - _target_: builtins.sum
+          _partial_: true
+  sink:
+    _target_: spdl.pipeline.defs.SinkConfig
+    buffer_size: 3
+
+pipeline:
+  _convert_: all
+  _target_: spdl.pipeline.build_pipeline
+  _args_: [ "${pipeline_cfg}" ]
+  num_threads: 1

@@ -15,3 +15,4 @@ Examples
    streaming_video_processing
    performance_analysis
    data_formats
+   hydra_integration
