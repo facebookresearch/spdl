@@ -14,21 +14,21 @@ from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 
-from ._build import _build_pipeline
-from ._defs import (
-    _PipeConfig,
-    _SinkConfig,
-    _SourceConfig,
-    _TPipeInputs,
-    Aggregate,
-    Disaggregate,
-    Pipe,
-    PipelineConfig,
-)
+from ._build import build_pipeline
 from ._hook import TaskHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue
 from ._utils import iterate_in_subprocess
+from .defs._defs import (
+    _TPipeInputs,
+    Aggregate,
+    Disaggregate,
+    Pipe,
+    PipeConfig,
+    PipelineConfig,
+    SinkConfig,
+    SourceConfig,
+)
 
 __all__ = [
     "PipelineBuilder",
@@ -65,9 +65,9 @@ class PipelineBuilder(Generic[T, U]):
     def __init__(self) -> None:
         log_api_usage_once("spdl.pipeline.PipelineBuilder")
 
-        self._src: _SourceConfig[T] | None = None
-        self._process_args: list[_PipeConfig] = []  # pyre-ignore: [24]
-        self._sink: _SinkConfig[U] | None = None
+        self._src: SourceConfig[T] | None = None
+        self._process_args: list[PipeConfig] = []  # pyre-ignore: [24]
+        self._sink: SinkConfig[U] | None = None
 
     def add_source(
         self, source: Iterable[T] | AsyncIterable[T]
@@ -93,7 +93,7 @@ class PipelineBuilder(Generic[T, U]):
         if self._src is not None:
             raise ValueError("Source already set.")
 
-        self._src = _SourceConfig(source)
+        self._src = SourceConfig(source)
         return self
 
     def pipe(
@@ -188,21 +188,12 @@ class PipelineBuilder(Generic[T, U]):
         Args:
             num_items: The number of items to buffer.
             drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
-            hooks: See :py:meth:`pipe`.
         """
         self._process_args.append(Aggregate(num_items, drop_last=drop_last))
         return self
 
     def disaggregate(self) -> "PipelineBuilder[T, U]":
-        """Disaggregate the items in the pipeline.
-
-        Args:
-            hooks: See :py:meth:`pipe`.
-
-            queue_class: A queue class, used to connect this stage and the next stage.
-                Must be a subclassing type (not an instance) of :py:class:`AsyncQueue`.
-                Default: :py:class:`StatsQueue`.
-        """
+        """Disaggregate the items in the pipeline."""
         self._process_args.append(Disaggregate())
         return self
 
@@ -225,7 +216,7 @@ class PipelineBuilder(Generic[T, U]):
         if self._sink is not None:
             raise ValueError("Sink is already set.")
 
-        self._sink = _SinkConfig(buffer_size)
+        self._sink = SinkConfig(buffer_size)
         return self
 
     def build(
@@ -277,7 +268,7 @@ class PipelineBuilder(Generic[T, U]):
         if (sink := self._sink) is None:
             raise RuntimeError("Sink is not set. Did you call `add_sink`?")
 
-        return _build_pipeline(
+        return build_pipeline(
             PipelineConfig(
                 src,
                 self._process_args,

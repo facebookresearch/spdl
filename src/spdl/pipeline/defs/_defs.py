@@ -12,7 +12,7 @@ from enum import IntEnum
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
-from ._convert import Callables
+from .._convert import Callables
 
 # pyre-strict
 
@@ -20,14 +20,16 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 __all__ = [
-    "_SourceConfig",
+    "_PipeArgs",
     "_PipeType",
-    "_PipeConfig",
-    "_SinkConfig",
-    "PipelineConfig",
+    "_TPipeInputs",
     "Aggregate",
     "Disaggregate",
     "Pipe",
+    "PipeConfig",
+    "PipelineConfig",
+    "SinkConfig",
+    "SourceConfig",
 ]
 
 
@@ -35,8 +37,20 @@ __all__ = [
 # Source
 ################################################################################
 @dataclass
-class _SourceConfig(Generic[T]):
+class SourceConfig(Generic[T]):
+    """A source configuration.
+
+    A source in Pipeline yields a series of input data, that is going to be
+    processed by downstream pipes.
+
+    .. seealso::
+
+       - :py:config:`PipelineConfig`
+       - :py:func:`spdl.pipeline.build_pipeline`
+    """
+
     source: Iterable | AsyncIterable
+    """Generates the series of source data."""
 
     def __post_init__(self) -> None:
         if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
@@ -80,45 +94,73 @@ class _PipeArgs(Generic[T, U]):
 
 
 @dataclass
-class _PipeConfig(Generic[T, U]):
-    type_: _PipeType
+class PipeConfig(Generic[T, U]):
+    """PipeConfig()
+
+    A pipe configuration.
+
+    The pipe is an operation applied to an incoming data.
+
+    Use factory functions :py:func:`Pipe`, :py:func:`Aggregate`
+    or :py:func:`Disaggregate` to create a config.
+
+    .. seealso::
+
+       - :py:config:`PipelineConfig`
+       - :py:func:`spdl.pipeline.build_pipeline`
+    """
+
     name: str
-    args: _PipeArgs[T, U]
+    """Name of the pipe."""
+
+    _type: _PipeType
+
+    _args: _PipeArgs[T, U]
 
     def __post_init__(self) -> None:
-        op = self.args.op
+        op = self._args.op
         if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
-            if self.args.executor is not None:
+            if self._args.executor is not None:
                 raise ValueError("`executor` cannot be specified when op is async.")
         if inspect.isasyncgenfunction(op):
-            if self.type_ == _PipeType.OrderedPipe:
+            if self._type == _PipeType.OrderedPipe:
                 raise ValueError(
                     "pipe does not support async generator function "
                     "when `output_order` is 'input'."
                 )
 
     def __repr__(self) -> str:
-        match self.type_:
+        match self._type:
             case _PipeType.Pipe | _PipeType.OrderedPipe:
                 args = [
-                    f"concurrency={self.args.concurrency}",
+                    f"concurrency={self._args.concurrency}",
                 ]
-                if self.args.executor is not None:
-                    args.append(f"executor={self.args.executor!r}")
-                if self.type_ == _PipeType.OrderedPipe:
+                if self._args.executor is not None:
+                    args.append(f"executor={self._args.executor!r}")
+                if self._type == _PipeType.OrderedPipe:
                     args.append("output_order='input'")
                 return f"{self.name}({', '.join(args)})"
             case _PipeType.Aggregate | _PipeType.Disaggregate:
                 return self.name
             case _:
-                return str(self.type_)
+                return str(self._type)
 
 
 ################################################################################
 # Sink
 ################################################################################
 @dataclass
-class _SinkConfig(Generic[T]):
+class SinkConfig(Generic[T]):
+    """A sink configuration.
+
+    The sink is where the final result of pipeline is buffered.
+
+    .. seealso::
+
+       - :py:config:`PipelineConfig`
+       - :py:func:`spdl.pipeline.build_pipeline`
+    """
+
     buffer_size: int
 
     def __post_init__(self) -> None:
@@ -137,9 +179,22 @@ class _SinkConfig(Generic[T]):
 ##############################################################################
 @dataclass
 class PipelineConfig(Generic[T, U]):
-    src: _SourceConfig[T]
-    pipes: Sequence[_PipeConfig[Any, Any]]
-    sink: _SinkConfig[U]
+    """A pipeline configuration.
+
+    A pipeline consists of source, a series of pipes and sink.
+
+    You can use :py:func:`spdl.pipeline.build_pipeline` to build a
+    :py:class:`spdl.pipeline.Pipeline` object.
+    """
+
+    src: SourceConfig[T]
+    """Source configuration."""
+
+    pipes: Sequence[PipeConfig[Any, Any]]
+    """Pipe configurations."""
+
+    sink: SinkConfig[U]
+    """Sink configuration."""
 
     def __repr__(self) -> str:
         args = ["PipelineConfig"]
@@ -163,6 +218,8 @@ def _get_op_name(op: Callable) -> str:
 
 @runtime_checkable
 class SupportsGetItem(Protocol[T, U]):
+    """Protocol for classes with ``__getitem__`` method, such as ``dict`` and ``list``."""
+
     def __getitem__(self, key: T) -> U: ...
 
 
@@ -177,14 +234,76 @@ def Pipe(
     executor: Executor | None = None,
     name: str | None = None,
     output_order: str = "completion",
-) -> _PipeConfig[T, U]:
+) -> PipeConfig[T, U]:
+    """Create a :py:class:`PipeConfig`.
+
+    A pipe applys a function or mapping to the inocming item.
+
+    Args:
+        op: A function, callable or container with ``__getitem__`` method
+            (such as dict, list and tuple).
+            If it's function or callable, it is inovked with the input from the input queue.
+            If it's container type, the input is passed to ``__getitem__`` method.
+
+            The function or callable must take exactly one argument, which is the output
+            from the upstream. If passing around multiple objects, take
+            them as a tuple or use :py:class:`~dataclasses.dataclass` and
+            define a custom protocol.
+
+            If the result of applying ``op`` to an input item is ``None``,
+            the pipeline skips absorb the result and it won't be propagated to
+            the downstream stages.
+
+            Optionally, the op can be a generator function, async function or
+            async generator function.
+
+            If ``op`` is (async) generator, the items yielded are put in the output
+            queue separately.
+
+            .. warning::
+
+                If ``op`` is synchronous geneartor, and ``executor`` is an instance of
+                :py:class:`concurrent.futures.ProcessPoolExecutor`, the output items
+                are not put in the output queue until the generator is exhausted.
+
+                Async generator, or synchronous generator without ``ProcessPoolExecutor``
+                does not have this issue, and the yielded items are put in the output
+                queue immediately.
+
+            .. tip::
+
+                When passing an async op, make sure that the op does not call sync
+                function inside.
+                If calling a sync function, use :py:meth:`asyncio.loop.run_in_executor`
+                or :py:func:`asyncio.to_thread` to delegate the execution to the thread pool.
+
+        concurrency: The maximum number of async tasks executed concurrently.
+        executor: A custom executor object to be used to convert the synchronous operation
+            into asynchronous one. If ``None``, the default executor is used.
+
+            It is invalid to provide this argument when the given op is already async.
+        name: The name (prefix) to give to the task.
+        output_order: If ``"completion"`` (default), the items are put to output queue
+            in the order their process is completed.
+            If ``"input"``, then the items are put to output queue in the order given
+            in the input queue.
+
+    Returns:
+        The config object.
+
+    .. seealso::
+
+       - :py:config:`PipelineConfig`
+       - :py:func:`spdl.pipeline.build_pipeline`
+    """
+
     if output_order not in ["completion", "input"]:
         raise ValueError(
             '`output_order` must be either "completion" or "input". '
             f"Found: {output_order}"
         )
 
-    type_ = _PipeType.Pipe if output_order == "completion" else _PipeType.OrderedPipe
+    _type = _PipeType.Pipe if output_order == "completion" else _PipeType.OrderedPipe
 
     if isinstance(op, SupportsGetItem):
         # Note, if op is list/dict/tuple with a lot of elements, then
@@ -197,10 +316,10 @@ def Pipe(
         # but usually callable class name contains readable information, so
         # we don't do that here. (it happens in to_async helper function)
 
-    return _PipeConfig(
-        type_=type_,
+    return PipeConfig(
         name=name or _get_op_name(op),
-        args=_PipeArgs(
+        _type=_type,
+        _args=_PipeArgs(
             op=op,
             executor=executor,
             concurrency=concurrency,
@@ -208,33 +327,64 @@ def Pipe(
     )
 
 
-def Aggregate(num_items: int, /, *, drop_last: bool = False) -> _PipeConfig[Any, Any]:
+def Aggregate(num_items: int, /, *, drop_last: bool = False) -> PipeConfig[Any, Any]:
+    """Create a :py:class:`PipeConfig` object for aggregation.
+
+    The aggregation buffers the incoming items and emits once enough items are buffered.
+
+    Args:
+        num_items: The number of items to buffer.
+        drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
+
+    Returns:
+        The config object.
+
+    .. seealso::
+
+       - :py:config:`PipelineConfig`
+       - :py:func:`spdl.pipeline.build_pipeline`
+    """
+
     # To avoid circular deps
-    from ._components._pipe import _Aggregate
+    from .._components._pipe import _Aggregate
 
     name = (
         f"aggregate({num_items}, {drop_last=})"
         if drop_last
         else f"aggregate({num_items})"
     )
-    return _PipeConfig(
-        _PipeType.Aggregate,
+    return PipeConfig(
         name=name,
-        args=_PipeArgs(
+        _type=_PipeType.Aggregate,
+        _args=_PipeArgs(
             op=_Aggregate(num_items, drop_last),
             op_requires_eof=True,
         ),
     )
 
 
-def Disaggregate() -> _PipeConfig[Any, Any]:
-    # To avoid circular deps
-    from ._components._pipe import _disaggregate
+def Disaggregate() -> PipeConfig[Any, Any]:
+    """Create a :py:class:`PipeConfig` object for disaggregation.
 
-    return _PipeConfig(
-        _PipeType.Disaggregate,
+    The disaggregate slices the incoming list of items and yield them
+    one by one.
+
+    Returns:
+        The config object.
+
+    .. seealso::
+
+       - :py:config:`PipelineConfig`
+       - :py:func:`spdl.pipeline.build_pipeline`
+    """
+
+    # To avoid circular deps
+    from .._components._pipe import _disaggregate
+
+    return PipeConfig(
         name="disaggregate",
-        args=_PipeArgs(
+        _type=_PipeType.Disaggregate,
+        _args=_PipeArgs(
             op=_disaggregate,  # pyre-ignore: [6]
         ),
     )

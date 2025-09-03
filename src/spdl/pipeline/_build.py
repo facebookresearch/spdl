@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
-    "_build_pipeline",
+    "build_pipeline",
     "PipelineFailure",
 ]
 
@@ -19,11 +19,11 @@ from typing import TypeVar
 from ._components._pipe import _FailCounter, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
-from ._defs import _PipeConfig, _PipeType, PipelineConfig
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from ._utils import create_task
+from .defs._defs import _PipeType, PipeConfig, PipelineConfig
 
 # pyre-strict
 
@@ -85,10 +85,10 @@ def _get_fail_counter() -> type[_FailCounter]:
 _PIPELINE_ID: int = -1
 
 
-def _get_task_name(i: int, cfg: _PipeConfig[..., ...]) -> str:
+def _get_task_name(i: int, cfg: PipeConfig[..., ...]) -> str:
     name = f"{_PIPELINE_ID}:{i}:{cfg.name}"
-    if cfg.type_ == _PipeType.Pipe and cfg.args.concurrency > 1:
-        name = f"{name}[{cfg.args.concurrency}]"
+    if cfg._type == _PipeType.Pipe and cfg._args.concurrency > 1:
+        name = f"{name}[{cfg._args.concurrency}]"
     return name
 
 
@@ -128,13 +128,13 @@ def _build_pipeline_coro(
         queues.append(queue_class(queue_name, buffer_size=2))
         in_queue, out_queue = queues[-2:]
 
-        match cfg.type_:
+        match cfg._type:
             case _PipeType.Pipe | _PipeType.Aggregate | _PipeType.Disaggregate:
                 coro = _pipe(
                     name,
                     in_queue,
                     out_queue,
-                    cfg.args,
+                    cfg._args,
                     _FailCounter(),
                     task_hook_factory(name),
                     max_failures,
@@ -144,13 +144,13 @@ def _build_pipeline_coro(
                     name,
                     in_queue,
                     out_queue,
-                    cfg.args,
+                    cfg._args,
                     _FailCounter(),
                     task_hook_factory(name),
                     max_failures,
                 )
             case _:  # pragma: no cover
-                raise ValueError(f"Unexpected process type: {cfg.type_}")
+                raise ValueError(f"Unexpected process type: {cfg._type}")
 
         coros.append((f"Pipeline::{name}", coro))
 
@@ -248,7 +248,7 @@ async def _run_pipeline_coroutines(
         raise PipelineFailure(errs)
 
 
-def _build_pipeline(
+def build_pipeline(
     pipeline_cfg: PipelineConfig[T, U],
     /,
     *,
@@ -259,6 +259,46 @@ def _build_pipeline(
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
 ) -> Pipeline[U]:
+    """Build a pipeline from the config.
+
+    Args:
+        pipeline_cfg: The definition of the pipeline to build.
+
+        num_threads: The number of threads in the thread pool commonly used among
+            Pipeline stages.
+
+            .. note::
+
+               If a stage in the pipeline has dedicated executor, that stage will
+               use it.
+
+        max_failures: The maximum number of failures each pipe stage can have before
+            the pipeline is halted. Setting ``-1`` (default) disables it.
+
+        report_stats_interval: When provided, report the pipeline performance stats
+            every given interval. Unit: [sec]
+
+            This is only effective if there is no custom hook or custom AsyncQueue
+            provided for stages. The argument is passed to
+            :py:class:`TaskStatsHook` and :py:class:`StatsQueue`.
+
+            If a custom stage hook is provided and stats report is needed,
+            you can instantiate :py:class:`TaskStatsHook` and include
+            it in the hooks provided to :py:meth:`PipelineBuilder.pipe`.
+
+            Similarly if you are providing a custom :py:class:`AsyncQueue` class,
+            you need to implement the same logic by your self.
+
+        queue_class: If provided, override the queue class used to connect stages.
+            Must be a class (not an instance) inherits :py:class:`AsyncQueue`.
+
+        task_hook_factory: If provided, used to create task hook objects, given a
+            name of the stage. If ``None``, a default hook,
+            :py:class:`TaskStatsHook` is used.
+            To disable hooks, provide a function that returns an empty list.
+
+        stage_id: The index of the initial stage  used for logging.
+    """
     desc = repr(pipeline_cfg)
 
     _LG.debug("%s", desc)
