@@ -21,6 +21,5 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY true)
 
 add_subdirectory(fmt)
-add_subdirectory(gflags)
 add_subdirectory(glog)
 add_subdirectory(libdeflate)
