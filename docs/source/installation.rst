@@ -76,7 +76,6 @@ Dependencies
 The libspdl uses the following third party libraries, which are fetched and built automatically during the build process.
 
 * `{fmt} <https://github.com/fmtlib/fmt>`_ (`MIT <https://github.com/fmtlib/fmt/blob/10.1.1/LICENSE.rst>`_)
-* `gflags <https://github.com/gflags/gflags>`_ (`BSD-3 <https://github.com/gflags/gflags/blob/v2.2.0/COPYING.txt>`_)
 * `glog <https://github.com/google/glog>`_ (`BSD-3 <https://github.com/google/glog/blob/v0.5.0/COPYING>`_)
 * `zlib <https://www.zlib.net/>`_ (`Zlib <https://www.zlib.net/zlib_license.html>`_)
 * `nanobind <https://github.com/wjakob/nanobind>`_ (`BSD-3 <https://github.com/wjakob/nanobind/blob/v2.0.0/LICENSE>`_) and its dependency `robin-map <https://github.com/Tessil/robin-map/>`_ (`MIT <https://github.com/Tessil/robin-map/blob/v1.3.0/LICENSE>`_)
