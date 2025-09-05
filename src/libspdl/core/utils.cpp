@@ -24,11 +24,17 @@ extern "C" {
 #include <libavutil/log.h>
 }
 
+#ifdef GLOG_NEWER_THAN_FIVE
+using google::IsGoogleLoggingInitialized;
+#else
 namespace google {
 namespace glog_internal_namespace_ {
 bool IsGoogleLoggingInitialized();
 } // namespace glog_internal_namespace_
 } // namespace google
+
+using google::glog_internal_namespace_::IsGoogleLoggingInitialized;
+#endif
 
 // Workaround for -Werror,-Wunused-variable in case SPDL_USE_TRACING
 // is not defined. It hides the variable name.
@@ -85,7 +91,7 @@ get_ffmpeg_versions() {
 // Utilities for Glog
 //////////////////////////////////////////////////////////////////////////////////
 void init_glog(const char* name) {
-  if (!::google::glog_internal_namespace_::IsGoogleLoggingInitialized()) {
+  if (!IsGoogleLoggingInitialized()) {
     ::google::InitGoogleLogging(name);
     ::google::InstallFailureSignalHandler();
   }
