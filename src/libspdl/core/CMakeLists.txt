@@ -17,7 +17,7 @@ if (SPDL_BUILD_PYTHON_BINDING)
   endif ()
 endif()
 
-set(defs)
+set(defs GLOG_NEWER_THAN_FIVE)
 set(deps fmt::fmt glog::glog)
 set(srcs
   detail/ffmpeg/conversion.cpp
