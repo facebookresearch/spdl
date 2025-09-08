@@ -127,7 +127,7 @@ def test_gpu_transfer(
         # check 1
         mock_Stream.assert_called_once_with(device)
         # check 2
-        mock_stream_func.called_once_with(mock_stream_obj)
+        mock_stream_func.assert_called_once_with(mock_stream_obj)
         # Check 5
         mock_stream_obj.synchronize.assert_called_once()
 
