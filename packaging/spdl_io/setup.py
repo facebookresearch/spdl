@@ -51,7 +51,7 @@ def _is_gil_enabled():
 
 def _get_ext_modules():
     ext_modules = []
-    for v in ["4", "5", "6", "7"]:
+    for v in ["4", "5", "6", "7", "8"]:
         if _SPDL_USE_FFMPEG_VERSION == "all" or _SPDL_USE_FFMPEG_VERSION == v:
             ext_modules.extend(
                 [
