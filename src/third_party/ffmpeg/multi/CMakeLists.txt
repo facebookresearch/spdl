@@ -132,9 +132,36 @@ elseif (UNIX)
       "If you do not need the FFmpeg integration, setting USE_FFMPEG=0 will bypass the issue.")
   endif()
 elseif(MSVC)
-  message(
-    FATAL_ERROR
-    "Windows is not supported.")
+    FetchContent_Declare(
+      f4
+      URL ${base_url}/ffmpeg_4.4.5_win64.tar.gz
+      URL_HASH SHA256=5cdf5578905ac5e947293f6dfa6da00ba666467a3ade32dc6735b2ad6a2dea99
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
+    FetchContent_Declare(
+      f5
+      URL ${base_url}/ffmpeg_5.1.6_win64.tar.gz
+      URL_HASH SHA256=ea3b640195492db34c1e4d6f0f3784a6f5881bd1779b8007c45388204a522478
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
+    FetchContent_Declare(
+      f6
+      URL ${base_url}/ffmpeg_6.1.2_win64.tar.gz
+      URL_HASH SHA256=e2d8c711bd97a982225e61bf83c6f425b8be4c6a6ec333e8b927c849c3b7f4b8
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
+    FetchContent_Declare(
+      f7
+      URL ${base_url}/ffmpeg_7.1.1_win64.tar.gz
+      URL_HASH SHA256=234da74affb36e19f1645c28f5c1b20915613105705b8d4456441e77b248ccd8
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
+    FetchContent_Declare(
+      f8
+      URL ${base_url}/ffmpeg_8.0_win64.tar.gz
+      URL_HASH SHA256=cb1ec76e886ebb9f92ed4630104e2325f471c5ccd3faa484c9cace067de3bb21
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
 else()
   message(FATAL_ERROR "Unsupported platform.")
 endif()
