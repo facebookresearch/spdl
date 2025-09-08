@@ -65,4 +65,4 @@ jobs:
       build_container: "pytorch/manylinux2_28-builder:cuda${{ matrix.cuda-version }}"
       python-version: "${{ matrix.python-version }}"
       cuda-version: "${{ matrix.cuda-version }}"
-      run-test: "${{ matrix.python-version == '3.11'}}"
+      run-test: "${{ matrix.python-version == '3.12'}}"
