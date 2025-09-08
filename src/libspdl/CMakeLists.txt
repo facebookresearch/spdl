@@ -15,6 +15,11 @@ if (SPDL_USE_NPPI)
   list(APPEND SPDL_COMMON_DEFS SPDL_USE_NPPI)
 endif ()
 
+if (MSVC)
+   # Temporary.
+   # TODO: Set the visibility of public functions.
+   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif(MSVC)
 
 add_subdirectory(core)
 if (SPDL_USE_CUDA)

@@ -6,6 +6,7 @@
 
 import os
 from pathlib import Path
+import platform
 import subprocess
 import sys
 import sysconfig
@@ -180,11 +181,16 @@ class CMakeBuild(build_ext):
         # Fix the library name for libspdl
         # linux: spdl/lib/libspdl_ffmpeg4.cpython-310-x86_64-linux-gnu.so -> spdl/lib/libspdl_ffmpeg4.so
         # macOS: spdl/lib/libspdl_ffmpeg4.cpython-310-x86_64-linux-gnu.so -> spdl/lib/libspdl_ffmpeg4.dylib
+        # windows: spdl\io\lib\libspdl_ffmpeg4.cp312-win_amd64.pyd -> spdl\io\lib\spdl_ffmpeg4.dll
         if "libspdl_ffmpeg" in ext_filename:
             parts = ext_filename.split(".")
             del parts[-2]
-            if sys.platform == "darwin":
-                parts[-1] = "dylib"
+            match platform.system():
+                case "Darwin":
+                    parts[-1] = "dylib"
+                case "Windows":
+                    parts[-1] = "dll"
+                    parts[0] = parts[0].replace("libspdl_ffmpeg", "spdl_ffmpeg")
             ext_filename = ".".join(parts)
         return ext_filename
 
