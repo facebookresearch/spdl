@@ -36,8 +36,8 @@ CUVIDDECODECREATEINFO get_create_info(
     CUvideoctxlock lock,
     CUVIDEOFORMAT* video_fmt,
     cudaVideoSurfaceFormat surface_fmt,
-    unsigned int max_width,
-    unsigned int max_height,
+    unsigned long max_width,
+    unsigned long max_height,
     const CropArea& crop,
     int target_width,
     int target_height);

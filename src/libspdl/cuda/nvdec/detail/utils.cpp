@@ -128,8 +128,8 @@ CUVIDDECODECREATEINFO get_create_info(
     CUvideoctxlock lock,
     CUVIDEOFORMAT* video_fmt,
     cudaVideoSurfaceFormat output_fmt,
-    unsigned int max_width,
-    unsigned int max_height,
+    unsigned long max_width,
+    unsigned long max_height,
     const CropArea& crop,
     int target_width,
     int target_height) {
@@ -159,8 +159,8 @@ CUVIDDECODECREATEINFO get_create_info(
 
   // Note: The frame is first cropped then resized to target_width/height
 
-  uint tgt_w = target_width > 0 ? target_width : width;
-  uint tgt_h = target_height > 0 ? target_height : height;
+  unsigned long tgt_w = target_width > 0 ? target_width : width;
+  unsigned long tgt_h = target_height > 0 ? target_height : height;
   // make evan
   // target_width and target_height are already checked to be even.
   // This is for case when the native size are not even.
