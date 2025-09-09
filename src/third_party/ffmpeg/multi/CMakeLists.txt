@@ -131,7 +131,7 @@ elseif (UNIX)
       " and library files are present) will invoke the FFmpeg single-version integration. "
       "If you do not need the FFmpeg integration, setting USE_FFMPEG=0 will bypass the issue.")
   endif()
-elseif(MSVC)
+elseif(WIN32)
     FetchContent_Declare(
       f4
       URL ${base_url}/ffmpeg_4.4.5_win64.tar.gz
@@ -163,7 +163,7 @@ elseif(MSVC)
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
 else()
-  message(FATAL_ERROR "Unsupported platform.")
+  message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 FetchContent_MakeAvailable(f4 f5 f6 f7 f8)
