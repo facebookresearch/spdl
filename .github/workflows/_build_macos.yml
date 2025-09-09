@@ -32,7 +32,6 @@ jobs:
       - name: Build
         env:
           SPDL_USE_TRACING: 1
-          SPDL_BUILD_STUB: 1
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           set -ex
