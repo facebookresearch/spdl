@@ -126,7 +126,7 @@ class NvDecDecoderCore {
   // callbacks.
   void decode_packet(
       const uint8_t* data,
-      const uint size,
+      const unsigned long size,
       int64_t pts,
       unsigned long flags);
 

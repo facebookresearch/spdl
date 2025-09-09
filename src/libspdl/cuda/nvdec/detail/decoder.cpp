@@ -258,16 +258,18 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
         get_surface_format_name(output_fmt)));
   }
 
-  auto max_width = MAX(video_fmt->coded_width, decoder_param.ulMaxWidth);
-  auto max_height = MAX(video_fmt->coded_height, decoder_param.ulMaxHeight);
+  unsigned long max_width =
+      MAX(video_fmt->coded_width, decoder_param.ulMaxWidth);
+  unsigned long max_height =
+      MAX(video_fmt->coded_height, decoder_param.ulMaxHeight);
 
   // Get parameters for creating decoder.
   auto new_decoder_param = get_create_info(
       lock,
       video_fmt,
       output_fmt,
-      (uint)max_width,
-      (uint)max_height,
+      max_width,
+      max_height,
       crop,
       target_width,
       target_height);
@@ -275,10 +277,10 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   VLOG(5) << print(&new_decoder_param);
 
   // Update decoder
-  uint ret = [&]() -> uint {
+  auto ret = [&]() -> unsigned long {
     if (!decoder) {
       decoder.reset(get_decoder(&new_decoder_param));
-      return (uint)new_decoder_param.ulNumDecodeSurfaces;
+      return new_decoder_param.ulNumDecodeSurfaces;
     }
     switch (update_type(decoder_param, new_decoder_param)) {
       case RETAIN:
@@ -293,11 +295,11 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
     auto prev_num_surfs = decoder_param.ulNumDecodeSurfaces;
     return prev_num_surfs == new_decoder_param.ulNumDecodeSurfaces
         ? 1
-        : (uint)new_decoder_param.ulNumDecodeSurfaces;
+        : new_decoder_param.ulNumDecodeSurfaces;
   }();
   decoder_param = new_decoder_param;
 
-  return ret;
+  return (int)ret;
 }
 
 int NvDecDecoderCore::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
@@ -455,7 +457,7 @@ int NvDecDecoderCore::handle_sei_msg(CUVIDSEIMESSAGEINFO*) {
 
 void NvDecDecoderCore::decode_packet(
     const uint8_t* data,
-    const uint size,
+    const unsigned long size,
     int64_t pts,
     unsigned long flags) {
   if (!parser) {
