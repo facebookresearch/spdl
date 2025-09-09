@@ -39,7 +39,6 @@ _SPDL_USE_FFMPEG_VERSION = os.environ.get("SPDL_USE_FFMPEG_VERSION", "all")
 _SPDL_USE_NVCODEC = _env("SPDL_USE_NVCODEC")
 _SPDL_USE_NVJPEG = _env("SPDL_USE_NVJPEG")
 _SPDL_USE_CUDA = _env("SPDL_USE_CUDA", _SPDL_USE_NVCODEC or _SPDL_USE_NVJPEG)
-_SPDL_BUILD_STUB = _env("SPDL_BUILD_STUB", _SPDL_USE_CUDA)
 
 
 def _is_gil_enabled():
@@ -59,11 +58,6 @@ def _get_ext_modules():
                     Extension(f"spdl.io.lib._spdl_ffmpeg{v}", sources=[]),
                 ]
             )
-    if ext_modules and _SPDL_BUILD_STUB:
-        ext_modules.append(
-            Extension("spdl.io.lib.__STUB__", sources=[]),
-        )
-
     return ext_modules
 
 
@@ -124,7 +118,6 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             f"-DSPDL_LINK_STATIC_NVJPEG={_b(_env('SPDL_LINK_STATIC_NVJPEG'))}",
             f"-DSPDL_USE_FFMPEG_VERSION={_SPDL_USE_FFMPEG_VERSION}",
             f"-DSPDL_DEBUG_REFCOUNT={_b(_env('SPDL_DEBUG_REFCOUNT'))}",
-            f"-DSPDL_BUILD_STUB={_b(_SPDL_BUILD_STUB)}",
             ###################################################################
             f"-DPython_INCLUDE_DIR={sysconfig.get_paths()['include']}",
             "-GNinja",
@@ -193,11 +186,6 @@ class CMakeBuild(build_ext):
             if sys.platform == "darwin":
                 parts[-1] = "dylib"
             ext_filename = ".".join(parts)
-        elif "__STUB__" in ext_filename:
-            parts = ext_filename.split(".")
-            parts = [parts[0].replace("__STUB__", "_libspdl.pyi")]
-            ext_filename = ".".join(parts)
-            print(ext_filename)
         return ext_filename
 
 

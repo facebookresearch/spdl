@@ -10,7 +10,6 @@ option(SPDL_LINK_STATIC_NVJPEG "Link nvJPEG and NPPI statically." OFF)
 
 option(SPDL_DEBUG_REFCOUNT "Enable debug print for reference counting of AVFrame objects." OFF)
 option(SPDL_IS_GIL_ENABLED "Whether the target Python has the GIL enabled" ON)
-option(SPDL_BUILD_STUB "Build Python binding stub file" OFF)
 option(SPDL_BUILD_PYTHON_BINDING "Build Python binding" ON)
 
 if (SPDL_USE_NVCODEC OR SPDL_USE_NVJPEG)
