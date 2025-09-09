@@ -50,7 +50,7 @@ class SrcInfo:
 
 def get_sample(cmd: str) -> SrcInfo:
     samples = get_samples(cmd)
-    assert len(samples) == 1
+    assert len(samples) == 1, f"There must be one sample. Found: {len(samples)}"
     return samples[0]
 
 
@@ -58,7 +58,7 @@ def get_samples(cmd: str) -> list[SrcInfo]:
     tmp_dir = TemporaryDirectory()
     tmp_path = Path(tmp_dir.name)
 
-    _run_in_tmpdir(cmd, tmp_path)
+    _run_in_tmpdir(cmd.strip(), tmp_path)
     return [SrcInfo(str(f), tmp_dir) for f in tmp_path.glob("**/*") if f.is_file()]
 
 

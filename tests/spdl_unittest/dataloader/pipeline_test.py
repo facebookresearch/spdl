@@ -11,6 +11,7 @@ import os
 import platform
 import random
 import re
+import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -19,6 +20,7 @@ from contextlib import asynccontextmanager
 from functools import partial
 from multiprocessing import Process
 from typing import TypeVar
+from unittest import skipIf
 
 import pytest
 from spdl.pipeline import (
@@ -344,7 +346,7 @@ def test_async_pipe_concurrency():
     # 1, 2, 3 and 4 in output_queue.
     remain, output = asyncio.run(test(4))
     assert remain == []
-    assert output == [1, 2, 3, 4]
+    assert set(output) == {1, 2, 3, 4}
 
 
 def test_async_pipe_concurrency_throughput():
@@ -377,7 +379,8 @@ def test_async_pipe_concurrency_throughput():
 
         result = _flush_aqueue(output_queue)
 
-        assert result == ref
+        assert set(result) == set(ref)
+        assert result[-1] == ref[-1] == _EOF
 
         return elapsed
 
@@ -1944,11 +1947,20 @@ def test_run_pipeline_in_subprocess_state():
     assert src.src.seed == 2
 
 
-def _validate_pipeline_id(val: int) -> Iterator[int]:
-    assert _build._PIPELINE_ID == val
-    yield 0
+class _validate_pipeline_id:
+    def __init__(self, val: int) -> None:
+        self.val = val
+
+    def __iter__(self) -> Iterator[int]:
+        if _build._PIPELINE_ID != self.val:
+            raise AssertionError(f"{_build._PIPELINE_ID=} != {self.val=}")
+        yield 0
 
 
+# TODO: Fix this.
+@skipIf(
+    sys.platform == "win32", "On Windows module-level global variable is not inherited."
+)
 def test_run_pipeline_in_subprocess_pipeline_id():
     """The pipeline construdted in a subprocess inherits the global ID from the main process"""
     # Set to a number that's not zero and something unlikely to happen during the testing

@@ -44,6 +44,8 @@ def test_encode_audio_integer(sample_fmt):
     ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
 
     with NamedTemporaryFile(suffix=".wav") as f:
+        f.close()  # for windows
+
         muxer = spdl.io.Muxer(f.name)
         encoder = muxer.add_encode_stream(
             config=spdl.io.audio_encode_config(
@@ -99,6 +101,8 @@ def test_encode_audio_float(sample_fmt):
     ref = np.random.rand(*shape).astype(dtype=dtype)
 
     with NamedTemporaryFile(suffix=".wav") as f:
+        f.close()  # for windows
+
         muxer = spdl.io.Muxer(f.name)
         encoder = muxer.add_encode_stream(
             config=spdl.io.audio_encode_config(
@@ -154,6 +158,8 @@ def test_encode_audio_integer_planar(sample_fmt):
     ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
 
     with NamedTemporaryFile(suffix=".nut") as f:
+        f.close()  # windows
+
         muxer = spdl.io.Muxer(f.name)
         encoder = muxer.add_encode_stream(
             config=spdl.io.audio_encode_config(
@@ -219,6 +225,8 @@ def test_encode_audio_smoke_test(ext, sample_fmt):
         ref = np.random.random(shape).astype(dtype)
 
     with NamedTemporaryFile(suffix=ext) as f:
+        f.close()  # for windows
+
         muxer = spdl.io.Muxer(f.name)
         encoder = muxer.add_encode_stream(
             config=spdl.io.audio_encode_config(
@@ -226,6 +234,10 @@ def test_encode_audio_smoke_test(ext, sample_fmt):
                 sample_fmt=sample_fmt,
                 sample_rate=sample_rate,
             ),
+            # on Windows, the default might be mp3_mf, which
+            # does not support planar format.
+            # So we specify lame
+            encoder="libmp3lame" if ext == ".mp3" else None,
         )
 
         frame_size = encoder.frame_size or 1024
@@ -259,8 +271,8 @@ def test_remux_audio():
     # fmt: off
     cmd = f"""
     {FFMPEG_CLI} -hide_banner -y \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
+    -f lavfi -i sine=sample_rate=8000:frequency=305:duration=5 \
+    -f lavfi -i sine=sample_rate=8000:frequency=300:duration=5 \
     -filter_complex amerge  -c:a pcm_s16le sample.wav
     """
     # fmt: on
@@ -269,6 +281,8 @@ def test_remux_audio():
     demuxer = spdl.io.Demuxer(sample.path)
 
     with NamedTemporaryFile(suffix=".wav") as f:
+        f.close()  # for windows
+
         muxer = spdl.io.Muxer(f.name)
         muxer.add_remux_stream(demuxer.audio_codec)
 

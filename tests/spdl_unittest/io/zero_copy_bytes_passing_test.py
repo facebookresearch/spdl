@@ -13,7 +13,7 @@ import spdl.io
 from ..fixture import FFMPEG_CLI, get_sample
 
 CMDS = {
-    "audio": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
+    "audio": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav",
     "video": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4",
     "image": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
 }
@@ -61,7 +61,7 @@ def _decode(media_type, src):
 
 def test_decode_audio_bytes():
     """audio can be decoded from bytes."""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=3' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=16000:duration=3 -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     ref = _decode("audio", sample.path)

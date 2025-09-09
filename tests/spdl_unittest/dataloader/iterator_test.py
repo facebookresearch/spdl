@@ -611,44 +611,47 @@ def test_execute_iterator_generator_success():
     assert result.status == _Status.ITERATION_FINISHED
 
 
-def test_terate_in_subprocess_initializer_failure():
-    def src_fn() -> Iterable[int]:
-        return SourceIterable(10)
+def _src1() -> Iterable[int]:
+    return SourceIterable(10)
 
-    def fail() -> None:
-        raise ValueError("Failed!")
 
+def _init1() -> None:
+    raise ValueError("Failed!")
+
+
+def test_iterate_in_subprocess_initializer_failure():
     with pytest.raises(RuntimeError, match=r"Initializer failed"):
-        iterate_in_subprocess(src_fn, buffer_size=1, timeout=3, initializer=fail)
+        iterate_in_subprocess(_src1, buffer_size=1, timeout=3, initializer=_init1)
+
+
+def _src2() -> Iterator[int]:
+    if True:
+        raise ValueError("Failed!")
+    return SourceIterable(10)
 
 
 def test_iterate_in_subprocess_iterator_initialize_failure():
-    def src_fn() -> Iterator[int]:
-        raise ValueError("Failed!")
-        return SourceIterable(10)
-
     with pytest.raises(RuntimeError, match=r"Failed to create the iterable"):
-        iterate_in_subprocess(src_fn, buffer_size=1, timeout=3)
+        iterate_in_subprocess(_src2, buffer_size=1, timeout=3)
 
 
-def test_iterate_in_subprocess_generator_fail():
+def _src3() -> Iterable[int]:
     class SourceIterableFails(SourceIterable):
         def __iter__(self) -> Iterator[int]:
             raise ValueError("Failed!")
             yield from range(self.n)
 
-    def src_fn() -> Iterable[int]:
-        return SourceIterableFails(10)
+    return SourceIterableFails(10)
 
-    ite = iter(iterate_in_subprocess(src_fn, buffer_size=1, timeout=3))
+
+def test_iterate_in_subprocess_generator_fail():
+    ite = iter(iterate_in_subprocess(_src3, buffer_size=1, timeout=3))
 
     with pytest.raises(RuntimeError, match=r"Failed to fetch the next item"):
         next(ite)
 
 
-def test_iterate_in_subprocess_fail_after_n():
-    N = 10
-
+def _src4() -> Iterable[int]:
     class SourceIterableFails(SourceIterable):
         def __iter__(self) -> Iterator[int]:
             for v in range(self.n):
@@ -656,10 +659,11 @@ def test_iterate_in_subprocess_fail_after_n():
                 if v == 2:
                     raise ValueError("Failed!")
 
-    def src_fn() -> Iterable[int]:
-        return SourceIterableFails(N)
+    return SourceIterableFails(10)
 
-    ite = iter(iterate_in_subprocess(src_fn, buffer_size=1, timeout=3))
+
+def test_iterate_in_subprocess_fail_after_n():
+    ite = iter(iterate_in_subprocess(_src4, buffer_size=1, timeout=3))
     assert next(ite) == 0
     assert next(ite) == 1
     assert next(ite) == 2
@@ -668,13 +672,14 @@ def test_iterate_in_subprocess_fail_after_n():
         next(ite)
 
 
+def _src5(N) -> Iterable[int]:
+    return SourceIterable(N)
+
+
 def test_iterate_in_subprocess_success():
     N = 3
 
-    def src_fn() -> Iterable[int]:
-        return SourceIterable(N)
-
-    hyp = list(iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3))
+    hyp = list(iterate_in_subprocess(partial(_src5, N), buffer_size=-1, timeout=3))
     assert hyp == list(range(N))
 
 
@@ -684,13 +689,12 @@ class SleepSourceIterable(SourceIterable):
         yield 0
 
 
+def _src6() -> Iterable[int]:
+    return SleepSourceIterable(3)
+
+
 def test_iterate_in_subprocess_timeout():
-    N = 3
-
-    def src_fn() -> Iterable[int]:
-        return SleepSourceIterable(N)
-
-    iterable = iterate_in_subprocess(src_fn, buffer_size=-1, timeout=3)
+    iterable = iterate_in_subprocess(_src6, buffer_size=-1, timeout=3)
     iterator = iter(iterable)
     with pytest.raises(
         RuntimeError, match=r"The worker process did not produce any data for"

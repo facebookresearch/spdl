@@ -31,6 +31,7 @@ def test_encode_video_multi_color(pix_fmt):
     ref = np.random.randint(0, 255, size=shape, dtype=np.uint8)
 
     with NamedTemporaryFile(suffix=".raw") as f:
+        f.close()  # for windows
         muxer = spdl.io.Muxer(f.name, format="rawvideo")
         encoder = muxer.add_encode_stream(
             config=spdl.io.video_encode_config(
@@ -86,6 +87,7 @@ def test_encode_video_gray(pix_fmt):
     ref = np.random.randint(0, 255, size=shape, dtype=dtype)
 
     with NamedTemporaryFile(suffix=".raw") as f:
+        f.close()  # for windows
         muxer = spdl.io.Muxer(f.name, format="rawvideo")
         encoder = muxer.add_encode_stream(
             config=spdl.io.video_encode_config(
@@ -136,6 +138,7 @@ def test_remux_video():
     demuxer = spdl.io.Demuxer(sample.path)
 
     with NamedTemporaryFile(suffix=".mp4") as f:
+        f.close()  # for windows
         muxer = spdl.io.Muxer(f.name)
         muxer.add_remux_stream(demuxer.video_codec)
 

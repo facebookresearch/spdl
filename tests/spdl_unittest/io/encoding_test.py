@@ -26,6 +26,7 @@ def test_encode_image_parity_simple(pix_fmt, torch_tensor):
     ref = np.random.randint(256, size=shape, dtype=np.uint8)
 
     with NamedTemporaryFile(suffix=".png") as f:
+        f.close()  # for windows
         spdl.io.save_image(
             f.name,
             torch.from_numpy(ref) if torch_tensor else ref,
@@ -44,6 +45,7 @@ def test_encode_image_parity_png_gray16be():
         ref = ref.byteswap()
 
     with NamedTemporaryFile(suffix=".png") as f:
+        f.close()  # for windows
         spdl.io.save_image(
             f.name,
             ref,
@@ -62,6 +64,7 @@ def test_encode_image_parity_png_gray16be():
 def _test_rejects(pix_fmt, dtype):
     data = np.ones((32, 64), dtype=dtype)
     with NamedTemporaryFile(suffix=".png") as f:
+        f.close()  # for windows
         with pytest.raises(ValueError):
             spdl.io.save_image(
                 f.name,

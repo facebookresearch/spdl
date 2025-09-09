@@ -32,8 +32,8 @@ def test_load_audio(sample_fmt):
     # fmt: off
     cmd = f"""
     {FFMPEG_CLI} -hide_banner -y \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
+    -f lavfi -i sine=sample_rate=8000:frequency=305:duration=5 \
+    -f lavfi -i sine=sample_rate=8000:frequency=300:duration=5 \
     -filter_complex amerge  -c:a pcm_s16le sample.wav
     """
     # fmt: on
@@ -58,8 +58,8 @@ def test_batch_audio_conversion():
     # fmt: off
     cmd = f"""
     {FFMPEG_CLI} -hide_banner -y \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
+    -f lavfi -i sine=sample_rate=8000:frequency=305:duration=5 \
+    -f lavfi -i sine=sample_rate=8000:frequency=300:duration=5 \
     -filter_complex amerge  -c:a pcm_s16le sample.wav
     """
     # fmt: on
