@@ -22,4 +22,7 @@ set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY true)
 
 add_subdirectory(fmt)
 add_subdirectory(glog)
+if (MSVC)
+add_subdirectory(zlib)
+endif (MSVC)
 add_subdirectory(libdeflate)
