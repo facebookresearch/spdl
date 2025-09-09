@@ -52,6 +52,7 @@ jobs:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
       run-test: "${{ matrix.python-version == '3.11'}}"
+      # Note: CUDA version is hard-coded in installation script
 
   #############################################################################
   # Linux (CPU)
