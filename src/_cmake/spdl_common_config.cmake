@@ -72,6 +72,8 @@ function(print_target_properties target)
     endforeach()
 endfunction()
 
+message(STATUS "CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
+if (NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 set(
   SPDL_CXX_CPU_COMPILE_FLAGS
   "-Werror=deprecated"
@@ -87,6 +89,8 @@ set(
   "-Werror=unused-variable"
   "-Werror=zero-as-null-pointer-constant"
   )
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   list(APPEND
     SPDL_CXX_CPU_COMPILE_FLAGS
