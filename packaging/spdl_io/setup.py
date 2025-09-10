@@ -81,6 +81,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
             f"-DCMAKE_INSTALL_PREFIX={build_dir}",
             "-GNinja",
+            "-Wno-dev",
         ],
         [
             "cmake",
@@ -122,6 +123,7 @@ def _get_cmake_commands(build_dir, install_dir, debug):
             ###################################################################
             f"-DPython_INCLUDE_DIR={sysconfig.get_paths()['include']}",
             "-GNinja",
+            "-Wno-dev",
         ],
         [
             "cmake",
