@@ -3,6 +3,12 @@ name: " - Wheel (Windows)"
 on:
   workflow_call:
     inputs:
+      machine:
+        type: string
+        default: "windows-latest"
+      machine_gpu:
+        type: string
+        default: "4-core-windows-gpu-t4"
       python-version:
         required: true
         type: string
@@ -18,9 +24,6 @@ on:
         required: false
         default: 'false'
         type: string
-      os:
-        default: "windows-latest"
-        type: string
 
 env:
   ARTIFACT: wheel-win-py${{ inputs.python-version }}${{ inputs.free-threaded }}
@@ -30,7 +33,7 @@ env:
 
 jobs:
   build:
-    runs-on: "${{ inputs.os }}"
+    runs-on: "${{ inputs.machine }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,15 +72,72 @@ jobs:
             bash                                       `
               .github/scripts/windows/check_package.sh
 
-  unit-test:
+  test-gpu:
     if: "${{ inputs.run-test == 'true' }}"
-    name: "test ffmpeg"
+    name: "test-gpu ffmpeg"
     needs: ["build"]
     strategy:
       fail-fast: false
       matrix:
         ffmpeg-version: ["8.0"]
-    runs-on:  "${{ inputs.os }}"
+    runs-on:  "${{ inputs.machine_gpu }}"
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          conda-remove-defaults: "true"
+
+      - name: Unit test
+        run: |
+          nvidia-smi
+
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            conda install -q -c conda-forge python-freethreading
+          fi
+
+          # Install SPDL
+          pip install $(find package -name '*.whl' -depth -maxdepth 1)
+
+          # Install PyTorch and others
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            pip install torch numpy pytest
+          else
+            pip install torch numpy numba pytest
+          fi
+
+          # Install FFmpeg
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+
+          # Run test
+          python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_cuda()'
+          if "${{ inputs.use-nvdec == 'nvdec' }}" ; then
+              python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_nvcodec()'
+          fi
+          pytest -v \
+              tests/spdl_unittest/cuda/ \
+              tests/spdl_unittest/io/
+
+  test-cpu:
+    if: "${{ inputs.run-test == 'true' }}"
+    name: "test-cpu ffmpeg"
+    needs: ["build"]
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg-version: ["8.0"]
+    runs-on:  "${{ inputs.machine }}"
     defaults:
       run:
         shell: bash -el {0}
@@ -115,6 +175,7 @@ jobs:
           # Install FFmpeg
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
 
+          # Run test
           pytest -v \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/
