@@ -18,7 +18,7 @@ from ..fixture import FFMPEG_CLI, get_sample
     "cmd,expected",
     [
         (
-            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=duration=3' -c:a pcm_s16le sample.wav",
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=3 -c:a pcm_s16le sample.wav",
             True,
         ),
         (
@@ -129,7 +129,7 @@ def test_streaming_video_demuxing_parity():
 
 
 def test_demuxer_get_codec():
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af pan='stereo| c0=FR | c1=FR' -frames:v 30 sample.mp4"
+    cmd = f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af "pan=stereo|c0=FR|c1=FR" -frames:v 30 sample.mp4'
 
     sample = get_sample(cmd)
     demuxer = spdl.io.Demuxer(sample.path)

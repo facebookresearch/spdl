@@ -15,7 +15,7 @@ import spdl.io
 from ..fixture import FFMPEG_CLI, get_sample
 
 CMDS = {
-    "audio": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav",
+    "audio": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav",
     "video": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 25 sample.mp4",
     "image": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
 }
@@ -46,7 +46,7 @@ def test_demux_with_codec(media_type):
 def test_demux_without_codec():
     """When using streaming_demux, the resulting packets does not contain codec"""
 
-    cmd = f"{FFMPEG_CLI} -lavfi 'testsrc;sine' -t 10 out.mp4"
+    cmd = f'{FFMPEG_CLI} -lavfi "testsrc;sine" -t 10 out.mp4'
 
     sample = get_sample(cmd)
 
@@ -82,8 +82,8 @@ def test_audio_packets_attributes():
     # fmt: off
     cmd = f"""
     {FFMPEG_CLI} -hide_banner -y \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=305:duration=5' \
-    -f lavfi -i 'sine=sample_rate=8000:frequency=300:duration=5' \
+    -f lavfi -i sine=sample_rate=8000:frequency=305:duration=5 \
+    -f lavfi -i sine=sample_rate=8000:frequency=300:duration=5 \
     -filter_complex amerge  -c:a pcm_s16le sample.wav
     """
     # fmt: on
@@ -193,7 +193,7 @@ def test_sample_decoding_time():
     # https://stackoverflow.com/questions/63725248/how-can-i-set-gop-size-to-be-a-multiple-of-the-input-framerate
     cmd = (
         f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc "
-        "-force_key_frames 'expr:eq(mod(n, 25), 0)' "
+        '-force_key_frames "expr:eq(mod(n, 25), 0)" '
         "-frames:v 5000 sample.mp4"
     )
     # Note: You can use the following command to check that the generated video has the keyframes
@@ -230,7 +230,7 @@ def test_sample_decoding_time_sync():
     # https://stackoverflow.com/questions/63725248/how-can-i-set-gop-size-to-be-a-multiple-of-the-input-framerate
     cmd = (
         f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc "
-        "-force_key_frames 'expr:eq(mod(n, 25), 0)' "
+        '-force_key_frames "expr:eq(mod(n, 25), 0)" '
         "-frames:v 5000 sample.mp4"
     )
     # Note: You can use the following command to check that the generated video has the keyframes
@@ -267,7 +267,7 @@ def test_packet_len():
     # 3 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 75 sample.mp4"
+    cmd = f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames "expr:eq(n, 0)" -frames:v 75 sample.mp4'
     sample = get_sample(cmd)
 
     ref_array = spdl.io.to_numpy(spdl.io.load_video(sample.path))
@@ -289,7 +289,7 @@ def test_sample_decoding_window():
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
+    cmd = f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames "expr:eq(n, 0)" -frames:v 250 sample.mp4'
     sample = get_sample(cmd)
 
     # 250 frames
@@ -320,7 +320,7 @@ def test_sample_decoding_window_sync():
     # 10 seconds of video with only one keyframe at the beginning.
     # Use the following command to check
     # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames 'expr:eq(n, 0)' -frames:v 250 sample.mp4"
+    cmd = f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames "expr:eq(n, 0)" -frames:v 250 sample.mp4'
     sample = get_sample(cmd)
 
     # 250 frames

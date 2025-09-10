@@ -13,9 +13,7 @@ from ..fixture import FFMPEG_CLI, get_sample
 
 def test_demuxer_query_codec():
     """Can fetch the codec properly."""
-    cmd = (
-        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 5  sample.mp4",
-    )
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 5  sample.mp4"
 
     sample = get_sample(cmd)
 
@@ -39,9 +37,7 @@ def test_demuxer_query_codec():
 
 def test_demuxer_query_stream_index():
     """Can fetch the stream index properly."""
-    cmd = (
-        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 5  sample.mp4",
-    )
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 5  sample.mp4"
 
     sample = get_sample(cmd)
     demuxer = spdl.io.Demuxer(sample.path)
@@ -49,9 +45,7 @@ def test_demuxer_query_stream_index():
     assert demuxer.video_stream_index == 0
     assert demuxer.audio_stream_index == 1
 
-    cmd = (
-        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -f lavfi -i testsrc -t 5 -map 0:a -map 1:v  sample.mp4",
-    )
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -f lavfi -i testsrc -t 5 -map 0:a -map 1:v  sample.mp4"
 
     sample = get_sample(cmd)
     demuxer = spdl.io.Demuxer(sample.path)

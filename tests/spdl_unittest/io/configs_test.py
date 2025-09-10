@@ -14,7 +14,7 @@ from ..fixture import FFMPEG_CLI, get_sample
 
 def test_demux_config_smoketest():
     """"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     demux_config = spdl.io.demux_config()
@@ -32,7 +32,7 @@ def test_demux_config_smoketest():
 
 def test_demux_config_headless():
     """Providing demux_config allows to load headeless audio"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -f s16le -c:a pcm_s16le sample.raw"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -f s16le -c:a pcm_s16le sample.raw"
     sample = get_sample(cmd)
 
     with pytest.raises(RuntimeError):

@@ -52,7 +52,7 @@ def _test_decode(demux_fn, timestamps):
 
 def test_decode_audio_clips():
     """Can decode audio clips."""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     def _test():
@@ -71,7 +71,7 @@ def test_decode_audio_clips():
 
 def test_decode_audio_clips_num_frames():
     """Can decode audio clips with padding/dropping."""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=16000:duration=1' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=16000:duration=1 -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     def _decode(src, num_frames=None):
@@ -284,7 +284,7 @@ def test_decode_video_frame_rate_pts():
 
 def test_convert_audio():
     """convert_frames can convert AudioFrames to Buffer"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i 'sine=frequency=1000:sample_rate=48000:duration=3' -c:a pcm_s16le sample.wav"
+    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav"
     sample = get_sample(cmd)
 
     def _test(src):
