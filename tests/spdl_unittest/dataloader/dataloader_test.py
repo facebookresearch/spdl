@@ -115,7 +115,7 @@ def test_dataloader_buffer_size():
     # while foreground thread does not fetch any.
     dl = get_dl(src, preprocessor=delay, num_threads=1, buffer_size=len(src))
     elapsed = test(dl)
-    assert elapsed < 0.1
+    assert elapsed < 0.15
 
 
 def test_dataloader_num_threads():

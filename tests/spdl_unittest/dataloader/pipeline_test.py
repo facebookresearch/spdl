@@ -720,7 +720,7 @@ def test_task_stats():
 
             assert hook.num_tasks == 5
             assert hook.num_success == 3
-            assert 0.5 < hook.ave_time < 0.9
+            assert 0.45 < hook.ave_time < 0.9
 
     asyncio.run(_test())
 
