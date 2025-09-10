@@ -26,7 +26,7 @@ env:
   ARTIFACT: wheel-win-py${{ inputs.python-version }}${{ inputs.free-threaded }}
   SPDL_USE_TRACING: 0
   SPDL_USE_CUDA: 1
-  SPDL_USE_NVDEC: "${{ inputs.use-nvdec == 'nvdec' }}"
+  SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
 
 jobs:
   build:
