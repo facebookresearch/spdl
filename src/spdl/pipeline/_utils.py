@@ -50,9 +50,10 @@ def _log_exception(
     task: Task,
     stacklevel: int,
     log_cancelled: bool,
-    suppress_repeated_logs: bool = True,
-    suppression_threshold: int = 2,
-    suppression_warning_interval: int = 100,
+    suppress_repeated_logs: bool,
+    suppression_threshold: int,
+    suppression_warning_interval: int,
+    compact: bool,
 ) -> None:
     try:
         task.result()
@@ -93,24 +94,27 @@ def _log_exception(
                 else:
                     return
 
-        _LG.error(
-            "Task [%s]: %s: %s (%s:%d:%s)",
-            task.get_name(),
-            type(err).__name__,
-            err,
-            f.filename,
-            f.lineno,
-            f.name,
-            stacklevel=stacklevel,
-        )
+        if compact:
+            _LG.error(
+                "Task [%s]: %s: %s (%s:%d:%s)",
+                task.get_name(),
+                type(err).__name__,
+                err,
+                f.filename,
+                f.lineno,
+                f.name,
+                stacklevel=stacklevel,
+            )
+        else:
+            _LG.exception("Task [%s] failed.", task.get_name(), stacklevel=stacklevel)
 
 
 def create_task(
     coro: Coroutine[Any, Any, T] | Generator[Any, None, T],  # pyre-ignore: [2]
     name: str | None = None,
     log_cancelled: bool = False,
-    suppress_repeated_logs: bool = True,
-    suppression_threshold: int = 2,
+    suppress_repeated_logs: bool = False,
+    suppression_threshold: int = 5,
     suppression_warning_interval: int = 100,
 ) -> Task[T]:
     """Wrapper around :py:func:`asyncio.create_task`. Add logging callback."""
@@ -123,6 +127,7 @@ def create_task(
             suppress_repeated_logs=suppress_repeated_logs,
             suppression_threshold=suppression_threshold,
             suppression_warning_interval=suppression_warning_interval,
+            compact=False,
         )
     )
     return task
