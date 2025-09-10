@@ -1,0 +1,58 @@
+name: " - Wheel (Windows)"
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: true
+        type: string
+      free-threaded:
+        description: 'Whether FT Python or not. Valid value is "ft" or not.'
+        default: ''
+        type: string
+      run-test:
+        required: false
+        default: 'false'
+        type: string
+      os:
+        default: "windows-latest"
+        type: string
+
+env:
+  ARTIFACT: wheel-win-py${{ inputs.python-version }}${{ inputs.free-threaded }}
+
+jobs:
+  build:
+    runs-on: "${{ inputs.os }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build
+        env:
+          SPDL_USE_TRACING: 0
+          SPDL_BUILD_STUB: 0
+        shell: cmd
+        run: |
+          packaging/vc_env_helper.bat            ^
+            bash                                 ^
+              .github/scripts/build_windows.sh   ^
+              "${{ inputs.python-version }}"     ^
+              "${{ inputs.free-threaded }}"
+
+      - uses: actions/upload-artifact@v4
+        name: Upload build artifact
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: package
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Check package
+        shell: cmd
+        run: |
+          packaging/vc_env_helper.bat            ^
+            bash                                 ^
+              .github/scripts/check_package.sh

@@ -35,6 +35,25 @@ jobs:
       run-test: "false"
 
   #############################################################################
+  # Windows
+  #############################################################################
+  windows:
+    name: "Windows"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        free-threaded: [""]
+        include:
+          - python-version: "3.13"
+            free-threaded: "ft"
+    uses: ./.github/workflows/_build_windows.yml
+    with:
+      python-version: "${{ matrix.python-version }}"
+      free-threaded: "${{ matrix.free-threaded }}"
+      run-test: "${{ matrix.python-version == '3.11'}}"
+
+  #############################################################################
   # Linux (CPU)
   #############################################################################
   linux-aarch64:
