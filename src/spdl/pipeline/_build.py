@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import TypeVar
 
-from ._components._pipe import _FailCounter, _ordered_pipe, _pipe
+from ._components._pipe import _get_fail_counter, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
@@ -73,14 +73,6 @@ _LG: logging.Logger = logging.getLogger(__name__)
 #
 
 
-# Use different class variables per pipeline
-def _get_fail_counter() -> type[_FailCounter]:
-    class _FC(_FailCounter):
-        num_failures: int = 0
-
-    return _FC
-
-
 # Used to append stage name with pipeline
 _PIPELINE_ID: int = -1
 
@@ -135,9 +127,8 @@ def _build_pipeline_coro(
                     in_queue,
                     out_queue,
                     cfg._args,
-                    _FailCounter(),
+                    _FailCounter(max_failures),
                     task_hook_factory(name),
-                    max_failures,
                 )
             case _PipeType.OrderedPipe:
                 coro = _ordered_pipe(
@@ -145,9 +136,8 @@ def _build_pipeline_coro(
                     in_queue,
                     out_queue,
                     cfg._args,
-                    _FailCounter(),
+                    _FailCounter(max_failures),
                     task_hook_factory(name),
-                    max_failures,
                 )
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg._type}")
