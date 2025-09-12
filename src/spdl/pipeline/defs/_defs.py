@@ -117,6 +117,8 @@ class PipeConfig(Generic[T, U]):
 
     _args: _PipeArgs[T, U]
 
+    _max_failures: int | None = None
+
     def __post_init__(self) -> None:
         op = self._args.op
         if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
@@ -234,6 +236,7 @@ def Pipe(
     executor: Executor | None = None,
     name: str | None = None,
     output_order: str = "completion",
+    max_failures: int | None = None,
 ) -> PipeConfig[T, U]:
     """Create a :py:class:`PipeConfig`.
 
@@ -287,6 +290,10 @@ def Pipe(
             in the order their process is completed.
             If ``"input"``, then the items are put to output queue in the order given
             in the input queue.
+        max_failures: The maximnum number of failures allowed berfore the pipe operation
+            is considered failure and the whole Pipeline is shutdown.
+            This overrides the value provided to the :py:meth:`~PipelineBuilder.build`
+            method.
 
     Returns:
         The config object.
@@ -324,6 +331,7 @@ def Pipe(
             executor=executor,
             concurrency=concurrency,
         ),
+        _max_failures=max_failures,
     )
 
 
