@@ -200,14 +200,14 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
 
   // 1. Extract the PTS of key frames.
   std::vector<std::tuple<size_t, int64_t>> keyframe_pts;
-  keyframe_pts.push_back({0, packets[0]->pts});
+  keyframe_pts.emplace_back(0, packets[0]->pts);
   for (size_t i = 1; i < packets.size(); ++i) {
     auto pkt = packets[i];
     if (pkt->flags & AV_PKT_FLAG_KEY) {
-      keyframe_pts.push_back({i, pkt->pts});
+      keyframe_pts.emplace_back(i, pkt->pts);
     }
   }
-  keyframe_pts.push_back({packets.size(), LLONG_MAX});
+  keyframe_pts.emplace_back(packets.size(), LLONG_MAX);
 
   // 2. Split the packets.
   // For N-th split, we extract the packets from the N-th key frame to the last
@@ -235,7 +235,7 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
         num_invalid += 1;
       }
     }
-    ret.push_back({start, end, num_invalid});
+    ret.emplace_back(start, end, num_invalid);
   }
   return ret;
 }
@@ -289,7 +289,7 @@ extract_packets_at_indices(
       ++i;
     }
     if (indices_in_window.size() > 0) {
-      ret.push_back({extract_packets(src, start, end), indices_in_window});
+      ret.emplace_back(extract_packets(src, start, end), indices_in_window);
     }
     if (i >= indices.size()) {
       break;
