@@ -9,6 +9,7 @@ __all__ = [
     "_ordered_pipe",
     "_Aggregate",
     "_disaggregate",
+    "_get_fail_counter",
 ]
 
 import asyncio
@@ -38,9 +39,24 @@ _SKIP: None = None
 class _FailCounter(TaskHook):
     num_failures: int = 0
 
+    def __init__(self, max_failures: int = -1) -> None:
+        """Task hook used to watch task failures.
+
+        Args:
+            max_failures: The maximum number of failures allowed.
+                A negative value means any number of failure is permitted.
+        """
+        super().__init__()
+        self._max_failures = max_failures
+
     @classmethod
     def _increment(cls) -> None:
         cls.num_failures += 1
+
+    def too_many_failures(self) -> bool:
+        if self._max_failures < 0:
+            return False
+        return self.num_failures >= self._max_failures
 
     @asynccontextmanager
     async def task_hook(self) -> AsyncIterator[None]:
@@ -51,6 +67,15 @@ class _FailCounter(TaskHook):
         except Exception:
             self._increment()
             raise
+
+
+# Create a different Counter class variables for each pipeline,
+# so that we can also track the Pipeline-global failures.
+def _get_fail_counter() -> type[_FailCounter]:
+    class _FC(_FailCounter):
+        num_failures: int = 0
+
+    return _FC
 
 
 async def _wrap_afunc(
@@ -116,7 +141,6 @@ def _pipe(
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
-    max_failures: int = -1,
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
@@ -140,16 +164,11 @@ def _pipe(
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
 
-    def _too_many_failures() -> bool:
-        if max_failures < 0:
-            return False
-        return fail_counter.num_failures >= max_failures
-
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def pipe() -> None:
         i, tasks = 0, set()
-        while not _too_many_failures():
+        while not fail_counter.too_many_failures():
             item = await input_queue.get()
             if item is _EOF and not args.op_requires_eof:
                 break
@@ -169,10 +188,10 @@ def _pipe(
         if tasks:
             await asyncio.wait(tasks)
 
-        if _too_many_failures():
+        if fail_counter.too_many_failures():
             raise RuntimeError(
                 f"The pipeline stage ({name}) failed more than "
-                f"the given threshold. ({max_failures})."
+                f"the given threshold. ({fail_counter._max_failures})."
             )
 
     return pipe()
@@ -185,7 +204,6 @@ def _ordered_pipe(
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
-    max_failures: int = -1,
 ) -> Coroutine:
     """
 
@@ -233,18 +251,13 @@ def _ordered_pipe(
         f"{name}_interqueue", buffer_size=args.concurrency
     )
 
-    def _too_many_failures() -> bool:
-        if max_failures < 0:
-            return False
-        return fail_counter.num_failures >= max_failures
-
     async def _run(item: T) -> U:
         async with _task_hooks(hooks):
             return await afunc(item)
 
     async def get_run_put() -> None:
         i = 0
-        while not _too_many_failures():
+        while not fail_counter.too_many_failures():
             item = await input_queue.get()
 
             if item is _EOF:
@@ -277,10 +290,10 @@ def _ordered_pipe(
     async def ordered_pipe() -> None:
         await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
 
-        if _too_many_failures():
+        if fail_counter.too_many_failures():
             raise RuntimeError(
                 f"The pipeline stage ({name}) failed more than "
-                f"the given threshold. ({max_failures})."
+                f"the given threshold. ({fail_counter._max_failures})."
             )
 
     return ordered_pipe()
