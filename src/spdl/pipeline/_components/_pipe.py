@@ -238,8 +238,6 @@ def _ordered_pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
 
-    hooks: list[TaskHook] = [*task_hooks, fail_counter]
-
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
 
@@ -252,7 +250,7 @@ def _ordered_pipe(
     )
 
     async def _run(item: T) -> U:
-        async with _task_hooks(hooks):
+        async with _task_hooks(task_hooks):
             return await afunc(item)
 
     async def get_run_put() -> None:
@@ -269,7 +267,7 @@ def _ordered_pipe(
         await inter_queue.put(_EOF)  # pyre-ignore: [6]
 
     async def get_check_put() -> None:
-        while True:
+        while not fail_counter.too_many_failures():
             task = await inter_queue.get()
 
             if task is _EOF:
@@ -279,14 +277,19 @@ def _ordered_pipe(
             await asyncio.wait([task])
 
             try:
-                result = task.result()
+                async with fail_counter.task_hook():
+                    result = task.result()
             except Exception:
                 pass
             else:
                 await output_queue.put(result)
 
+        # Drain until EOF
+        while (await inter_queue.get()) is not _EOF:
+            pass
+
     @_queue_stage_hook(output_queue)
-    @_stage_hooks(hooks)
+    @_stage_hooks(task_hooks)
     async def ordered_pipe() -> None:
         await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
 
