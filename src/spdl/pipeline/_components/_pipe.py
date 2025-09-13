@@ -37,26 +37,50 @@ _SKIP: None = None
 
 
 class _FailCounter(TaskHook):
-    num_failures: int = 0
+    _num_global_failures: int = 0
 
-    def __init__(self, max_failures: int = -1) -> None:
+    def __init__(
+        self, max_global_failures: int = -1, max_stage_failures: int | None = None
+    ) -> None:
         """Task hook used to watch task failures.
 
         Args:
-            max_failures: The maximum number of failures allowed.
+            max_global_failures: The maximum number of failures permitted across pipe
+                stages.
                 A negative value means any number of failure is permitted.
+            max_stage_failures: The maximum number of failures permitted for one pipe
+                stage.
         """
         super().__init__()
-        self._max_failures = max_failures
+        self._max_global_failures = max_global_failures
+        self._max_stage_failures = max_stage_failures
 
-    @classmethod
-    def _increment(cls) -> None:
-        cls.num_failures += 1
+        self._num_stage_failures: int = 0
+
+    def _increment(self) -> None:
+        self._num_global_failures += 1
+        self._num_stage_failures += 1
+
+    @property
+    def max_failures(self) -> int:
+        return (
+            self._max_global_failures
+            if self._max_stage_failures is None
+            else self._max_stage_failures
+        )
+
+    @property
+    def num_failures(self) -> int:
+        return (
+            self._num_global_failures
+            if self._max_stage_failures is None
+            else self._num_stage_failures
+        )
 
     def too_many_failures(self) -> bool:
-        if self._max_failures < 0:
-            return False
-        return self.num_failures >= self._max_failures
+        if (threshold := self.max_failures) >= 0:
+            return self.num_failures >= threshold
+        return False
 
     @asynccontextmanager
     async def task_hook(self) -> AsyncIterator[None]:
@@ -73,7 +97,7 @@ class _FailCounter(TaskHook):
 # so that we can also track the Pipeline-global failures.
 def _get_fail_counter() -> type[_FailCounter]:
     class _FC(_FailCounter):
-        num_failures: int = 0
+        num_global_failures: int = 0
 
     return _FC
 
@@ -190,8 +214,8 @@ def _pipe(
 
         if fail_counter.too_many_failures():
             raise RuntimeError(
-                f"The pipeline stage ({name}) failed more than "
-                f"the given threshold. ({fail_counter._max_failures})."
+                f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
+                f"which exceeds the threshold ({fail_counter.max_failures})."
             )
 
     return pipe()
@@ -295,8 +319,8 @@ def _ordered_pipe(
 
         if fail_counter.too_many_failures():
             raise RuntimeError(
-                f"The pipeline stage ({name}) failed more than "
-                f"the given threshold. ({fail_counter._max_failures})."
+                f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
+                f"which exceeds the threshold ({fail_counter.max_failures})."
             )
 
     return ordered_pipe()

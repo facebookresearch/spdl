@@ -105,6 +105,7 @@ class PipelineBuilder(Generic[T, U]):
         executor: Executor | None = None,
         name: str | None = None,
         output_order: str = "completion",
+        max_failures: int | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
 
@@ -164,6 +165,11 @@ class PipelineBuilder(Generic[T, U]):
                 in the order their process is completed.
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
+
+            max_failures: The maximnum number of failures allowed berfore the pipe operation
+                is considered failure and the whole Pipeline is shutdown.
+                This overrides the value provided to the :py:meth:`~PipelineBuilder.build`
+                method.
         """
         self._process_args.append(
             Pipe(
@@ -172,6 +178,7 @@ class PipelineBuilder(Generic[T, U]):
                 executor=executor,
                 name=name,
                 output_order=output_order,
+                max_failures=max_failures,
             )
         )
         return self

@@ -128,7 +128,7 @@ def _build_pipeline_coro(
                     in_queue,
                     out_queue,
                     cfg._args,
-                    _FailCounter(max_failures),
+                    _FailCounter(max_failures, cfg._max_failures),
                     task_hook_factory(name),
                 )
             case _PipeType.OrderedPipe:
@@ -137,7 +137,7 @@ def _build_pipeline_coro(
                     in_queue,
                     out_queue,
                     cfg._args,
-                    _FailCounter(max_failures),
+                    _FailCounter(max_failures, cfg._max_failures),
                     task_hook_factory(name),
                 )
             case _:  # pragma: no cover

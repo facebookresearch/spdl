@@ -1897,6 +1897,86 @@ def test_pipeline_max_failures_multiple_pipeline(output_order: str):
     assert vals == [0, 2]
 
 
+@pytest.mark.parametrize("output_order", ["completion", "input"])
+def test_pipeline_max_failures_pipe_override_strict(output_order: str):
+    """max_failures at pipe overrides the global threshold."""
+
+    def fail_odd(x):
+        if x % 2:
+            raise ValueError(f"Only evan numbers are allowed. {x}")
+        return x
+
+    builder = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(fail_odd, output_order=output_order, max_failures=2)
+        .add_sink(1)
+    )
+
+    pipeline = builder.build(num_threads=1, max_failures=-1)
+    with pytest.raises(PipelineFailure):
+        with pipeline.auto_stop():
+            vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [0, 2]
+
+
+@pytest.mark.parametrize("output_order", ["completion", "input"])
+def test_pipeline_max_failures_pipe_override_loose(output_order: str):
+    """max_failures at pipe overrides the global threshold."""
+
+    def fail_odd(x):
+        if x % 2:
+            raise ValueError(f"Only evan numbers are allowed. {x}")
+        return x
+
+    builder = (
+        PipelineBuilder()
+        .add_source(range(10))
+        .pipe(fail_odd, output_order=output_order, concurrency=3, max_failures=-1)
+        .add_sink(1)
+    )
+
+    pipeline = builder.build(num_threads=1, max_failures=2)
+    with pipeline.auto_stop():
+        vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [0, 2, 4, 6, 8]
+
+
+@pytest.mark.parametrize("output_order", ["completion", "input"])
+def test_pipeline_max_failures_pipe_override_multiple(output_order: str):
+    """max_failures at pipe overrides the global threshold."""
+
+    # Remove odd values
+    def fail_odd(x):
+        if x % 2:
+            raise ValueError(f"Only evan numbers are allowed. {x}")
+        return x
+
+    # Remove multiplier of 6s
+    def fail_six(x):
+        if (x % 6) == 0:
+            raise ValueError(f"Values divisible by 6 are not allowed. {x}")
+        return x
+
+    builder = (
+        PipelineBuilder()
+        .add_source(range(20))
+        .pipe(fail_odd, output_order=output_order, max_failures=-1)
+        .pipe(fail_six, output_order=output_order, max_failures=3)
+        .add_sink(1)
+    )
+
+    # fail_odd fails more often, but it is allowed to fail any number of times.
+    # fail_six fails less often, but at the third failure (12),
+    # it should shutdown the pipeline.
+
+    pipeline = builder.build(num_threads=1, max_failures=2)
+    with pytest.raises(PipelineFailure):
+        with pipeline.auto_stop():
+            vals = list(pipeline.get_iterator(timeout=3))
+    assert vals == [2, 4, 8, 10]
+
+
 def test_pipeline_propagate_source_failure():
     """When source itrator fails, the exception is propagated to the front end"""
 
