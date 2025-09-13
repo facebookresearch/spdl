@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from typing import TypeVar
 
-from ._build import build_pipeline
+from . import _build
 from ._pipeline import Pipeline
 from .defs._defs import (
     _PipeArgs,
@@ -47,7 +47,7 @@ def _run(pipeline: Pipeline[T]) -> tuple[float, list[T]]:
 
 
 def _fetch_inputs(src: SourceConfig[T], num_items: int) -> list[T]:
-    pipeline = build_pipeline(
+    pipeline = _build._build_pipeline(
         PipelineConfig(
             src=src,
             pipes=[],
@@ -65,7 +65,7 @@ def _fetch_inputs(src: SourceConfig[T], num_items: int) -> list[T]:
     return ret
 
 
-def _build_pipeline(
+def _build_pipeline_config(
     src: list[T], pipe: PipeConfig[T, U], concurrency: int
 ) -> PipelineConfig[T, U]:
     return PipelineConfig(
@@ -124,10 +124,10 @@ def profile_pipeline(
             concurrencies = [32, 16, 8, 4, 1]
 
         qps = []
-        cfg_ = _build_pipeline(inputs, pipe, max(concurrencies))
+        cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
         for concurrency in concurrencies:
             _LG.info(" - Concurrency: %d", concurrency)
-            pipeline = build_pipeline(cfg_, num_threads=concurrency)
+            pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
             qps_, outputs = _run(pipeline)
             _LG.info(" - QPS: %.2f", qps_)
             qps.append(qps_)

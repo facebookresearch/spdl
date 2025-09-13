@@ -7,7 +7,11 @@
 from collections.abc import AsyncIterator
 from unittest.mock import patch
 
-from spdl.pipeline._profile import _build_pipeline, _fetch_inputs, profile_pipeline
+from spdl.pipeline._profile import (
+    _build_pipeline_config,
+    _fetch_inputs,
+    profile_pipeline,
+)
 from spdl.pipeline.defs import (
     Aggregate,
     Disaggregate,
@@ -81,13 +85,13 @@ def test_profile_pipes():
 
         def __call__(self, inputs, pipe, concurrency):
             assert inputs == self.inputs[self.i]
-            ret = _build_pipeline(inputs, pipe, concurrency)
+            ret = _build_pipeline_config(inputs, pipe, concurrency)
             assert ret.pipes[0]._args.op is cfg.pipes[self.i]._args.op
             self.i += 1
             return ret
 
     mock = Intercept_()
-    with patch("spdl.pipeline._profile._build_pipeline", mock):
+    with patch("spdl.pipeline._profile._build_pipeline_config", mock):
         profile_pipeline(cfg)
 
     assert mock.i == 5

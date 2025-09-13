@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
+    "_build_pipeline",
     "build_pipeline",
     "PipelineFailure",
 ]
@@ -238,6 +239,45 @@ async def _run_pipeline_coroutines(
         raise PipelineFailure(errs)
 
 
+def _build_pipeline(
+    pipeline_cfg: PipelineConfig[T, U],
+    /,
+    *,
+    num_threads: int,
+    max_failures: int = -1,
+    report_stats_interval: float = -1,
+    queue_class: type[AsyncQueue[...]] | None = None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    stage_id: int = 0,
+) -> Pipeline[U]:
+    desc = repr(pipeline_cfg)
+
+    _LG.debug("%s", desc)
+
+    def _hook_factory(name: str) -> list[TaskHook]:
+        return [DefaultHook(name=name, interval=report_stats_interval)]
+
+    _queue_class = (
+        partial(DefaultQueue, interval=report_stats_interval)
+        if queue_class is None
+        else queue_class
+    )
+
+    coro, queues = _build_pipeline_coro(
+        pipeline_cfg,
+        max_failures,
+        _queue_class,
+        _hook_factory if task_hook_factory is None else task_hook_factory,
+        stage_id,
+    )
+
+    executor = ThreadPoolExecutor(
+        max_workers=num_threads,
+        thread_name_prefix="spdl_worker_thread_",
+    )
+    return Pipeline(coro, queues, executor, desc=desc)
+
+
 def build_pipeline(
     pipeline_cfg: PipelineConfig[T, U],
     /,
@@ -289,29 +329,12 @@ def build_pipeline(
 
         stage_id: The index of the initial stage  used for logging.
     """
-    desc = repr(pipeline_cfg)
-
-    _LG.debug("%s", desc)
-
-    def _hook_factory(name: str) -> list[TaskHook]:
-        return [DefaultHook(name=name, interval=report_stats_interval)]
-
-    _queue_class = (
-        partial(DefaultQueue, interval=report_stats_interval)
-        if queue_class is None
-        else queue_class
-    )
-
-    coro, queues = _build_pipeline_coro(
+    return _build_pipeline(
         pipeline_cfg,
-        max_failures,
-        _queue_class,
-        _hook_factory if task_hook_factory is None else task_hook_factory,
-        stage_id,
+        num_threads=num_threads,
+        max_failures=max_failures,
+        report_stats_interval=report_stats_interval,
+        queue_class=queue_class,
+        task_hook_factory=task_hook_factory,
+        stage_id=stage_id,
     )
-
-    executor = ThreadPoolExecutor(
-        max_workers=num_threads,
-        thread_name_prefix="spdl_worker_thread_",
-    )
-    return Pipeline(coro, queues, executor, desc=desc)
