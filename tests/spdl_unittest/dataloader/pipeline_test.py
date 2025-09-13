@@ -1828,7 +1828,7 @@ def test_pipelinebuilder_picklable():
 
 
 @pytest.mark.parametrize("output_order", ["completion", "input"])
-def test_pipeline_failures(output_order: str):
+def test_pipeline_max_failures(output_order: str):
     """max_failures stop the pipeline."""
 
     def fail_odd(x):
@@ -1839,7 +1839,7 @@ def test_pipeline_failures(output_order: str):
     builder = (
         PipelineBuilder()
         .add_source(range(10))
-        .pipe(fail_odd, output_order=output_order, concurrency=10)
+        .pipe(fail_odd, output_order=output_order)
         .add_sink(1)
     )
 
@@ -1849,7 +1849,7 @@ def test_pipeline_failures(output_order: str):
 
     assert vals == [0, 2, 4, 6, 8]
 
-    pipeline = builder.build(num_threads=1, max_failures=2)
+    pipeline = builder.build(num_threads=1, max_failures=3)
     with pytest.raises(PipelineFailure):
         with pipeline.auto_stop():
             vals = list(pipeline.get_iterator(timeout=3))
@@ -1858,7 +1858,7 @@ def test_pipeline_failures(output_order: str):
 
 
 @pytest.mark.parametrize("output_order", ["completion", "input"])
-def test_pipeline_failures_multiple_pipeline(output_order: str):
+def test_pipeline_max_failures_multiple_pipeline(output_order: str):
     """When using multiple pipelines with different error caps, they work
 
     Note: FailCounter uses class method to combines the errors
@@ -1877,12 +1877,12 @@ def test_pipeline_failures_multiple_pipeline(output_order: str):
     builder = (
         PipelineBuilder()
         .add_source(src)
-        .pipe(fail_odd, output_order=output_order, concurrency=10)
+        .pipe(fail_odd, output_order=output_order)
         .add_sink(1)
     )
 
-    pipeline1 = builder.build(num_threads=1, max_failures=1)
-    pipeline2 = builder.build(num_threads=1, max_failures=2)
+    pipeline1 = builder.build(num_threads=1, max_failures=2)
+    pipeline2 = builder.build(num_threads=1, max_failures=3)
 
     with pytest.raises(PipelineFailure):
         with pipeline2.auto_stop():
