@@ -2,7 +2,9 @@ extend-exclude = [
   "setup.py",
   "docs/source",
   "third_party",
-  "setup.py",
+  "src/spdl/io/lib/_libspdl.pyi",
+  "src/spdl/io/lib/_libspdl_cuda.pyi",
+  "src/spdl/io/lib/_archive.pyi",
 ]
 
 [lint]
