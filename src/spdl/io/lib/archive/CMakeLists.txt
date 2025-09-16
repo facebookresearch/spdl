@@ -12,7 +12,7 @@ set(name _archive)
 message(STATUS "Building ${name}")
 
 set(srcs register.cpp zip_impl.cpp numpy_support.cpp)
-set(deps ZLIB::ZLIB fmt::fmt glog::glog libdeflate::libdeflate_static)
+set(deps ZLIB::ZLIBSTATIC fmt::fmt glog::glog libdeflate::libdeflate_static)
 set(nb_options
   STABLE_ABI
   NB_STATIC

@@ -52,15 +52,6 @@ jobs:
           # Quick sanity check
           nvcc --version
 
-          # We need zlib, which is usually found by default,
-          # but this custom docker does not have one in locations
-          # that are managed by the OS package manager.
-          #
-          # Conda has one so we use it.
-          # $ find / -name zlib.h -type f
-          # /opt/conda/include/zlib.h
-          export PATH="${PATH}:/opt/conda/"
-          
           wget -qO- https://astral.sh/uv/install.sh | sh
           source $HOME/.local/bin/env
           uv python list --only-installed
