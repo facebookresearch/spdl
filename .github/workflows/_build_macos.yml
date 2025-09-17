@@ -17,6 +17,10 @@ on:
       os:
         default: "macos-latest"
         type: string
+      test-concurrency:
+        required: false
+        default: '3'
+        type: string
 
 env:
   ARTIFACT: wheel-macos-py${{ inputs.python-version }}${{ inputs.free-threaded }}
@@ -88,8 +92,10 @@ jobs:
           python-version: ${{ inputs.python-version }}
           conda-remove-defaults: "true"
 
-      - name: Unit test
+      - name: Setup
         run: |
+          set -ex
+
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
             conda install -q -c conda-forge python-freethreading
           fi
@@ -107,6 +113,10 @@ jobs:
           # Install FFmpeg
           conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
 
-          pytest -v \
+      - name: Unit test
+        run: |
+          set -ex
+
+          pytest -v -n ${{ inputs.test-concurrency }} \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/

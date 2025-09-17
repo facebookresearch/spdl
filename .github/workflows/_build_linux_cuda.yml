@@ -29,6 +29,10 @@ on:
         required: false
         default: 'false'
         type: string
+      test-concurrency:
+        required: false
+        default: '3'
+        type: string
 
 env:
   ARTIFACT: wheel-linux-py${{ inputs.python-version }}-cuda${{ inputs.cuda-version }}${{ inputs.use-nvdec }}
@@ -129,17 +133,15 @@ jobs:
           channels: conda-forge
           conda-remove-defaults: "true"
 
-      - name: Unit test
+      - name: Setup
         run: |
           set -ex
-
-          nvidia-smi
 
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
-          pip install pytest
+          pip install pytest pytest-xdist
 
           cu_ver="${{ inputs.cuda-version }}"
           cu_ver="${cu_ver//[.]/}"  # Remove dots
@@ -151,21 +153,25 @@ jobs:
 
           # Sort out library paths
           # 1. For some reason, the FFmpeg dynamic libraries are not found.
-          export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
           # 2. CUDA runtime PyPI package is installed as part of PyTorch installation.
           # However, it is installed in site-packages dir, which is not in PATH by default.
           # (PyTorch has a special way to load it, but we don't do that)
           cudart_dir="$(
             python -c 'import os.path,nvidia.cuda_runtime;print(os.path.join(nvidia.cuda_runtime.__path__[0], "lib"))'
           )"
-          export "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${cudart_dir}"
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cudart_dir}" >> $GITHUB_ENV
 
-          # Run test
+      - name: Unit test
+        run: |
+          set -ex
+
+          nvidia-smi
+
           python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_cuda()'
           if "${{ inputs.use-nvdec == 'nvdec' }}" ; then
               python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_nvcodec()'
           fi
-          pytest -v \
+          pytest -v -n ${{ inputs.test-concurrency }} \
               tests/spdl_unittest/cuda/ \
               tests/spdl_unittest/io/
 
@@ -197,23 +203,26 @@ jobs:
           channels: conda-forge
           conda-remove-defaults: "true"
 
-      - name: Unit test
+      - name: Setup
         run: |
+          set -ex
+
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
           pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest
+          conda install -q numba pytest pytest-xdist
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
           # Note: Somehow NumPy got downgraded to 1.24 when using FFmpeg 7.1, so adding constraint here.
           conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv 'numpy>=2'
           # For some reason, the dynamic libraries are not found.
-          export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
 
-          # Run test
-          pytest -v \
+      - name: Unit test
+        run: |
+          pytest -v -n ${{ inputs.test-concurrency }} \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/

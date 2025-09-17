@@ -16,6 +16,10 @@ on:
         required: false
         default: 'false'
         type: string
+      test-concurrency:
+        required: false
+        default: '3'
+        type: string
 
 env:
   ARTIFACT: wheel-linux-py${{ inputs.python-version }}-${{ inputs.arch }}
@@ -108,23 +112,28 @@ jobs:
           channels: conda-forge
           conda-remove-defaults: "true"
 
-      - name: Unit test
+      - name: Setup
         run: |
+          set -ex
+
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
           pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest
+          conda install -q numba pytest pytest-xdist
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
           conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
           # For some reason, the dynamic libraries are not found.
-          export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
 
-          # Run test
+      - name: Unit test
+        run: |
+          set -ex
+
           python -c 'import spdl.io.utils;assert not spdl.io.utils.built_with_cuda()'
-          pytest -v \
+          pytest -v -n ${{ inputs.test-concurrency }} \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/
