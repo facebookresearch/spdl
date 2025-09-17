@@ -94,6 +94,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: ${{ inputs.python-version }}
+          channels: conda-forge
           conda-remove-defaults: "true"
 
       - name: Unit test
