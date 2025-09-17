@@ -105,6 +105,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: ${{ inputs.python-version }}
+          channels: conda-forge
           conda-remove-defaults: "true"
 
       - name: Unit test
@@ -118,7 +119,7 @@ jobs:
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
-          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
+          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
           # For some reason, the dynamic libraries are not found.
           export "LD_LIBRARY_PATH=${CONDA_PREFIX}/lib"
 
