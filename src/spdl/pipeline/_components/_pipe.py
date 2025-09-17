@@ -58,7 +58,7 @@ class _FailCounter(TaskHook):
         self._num_stage_failures: int = 0
 
     def _increment(self) -> None:
-        self._num_global_failures += 1
+        self.__class__._num_global_failures += 1
         self._num_stage_failures += 1
 
     @property
@@ -97,7 +97,7 @@ class _FailCounter(TaskHook):
 # so that we can also track the Pipeline-global failures.
 def _get_fail_counter() -> type[_FailCounter]:
     class _FC(_FailCounter):
-        num_global_failures: int = 0
+        pass
 
     return _FC
 
