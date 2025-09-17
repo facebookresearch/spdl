@@ -40,6 +40,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: "3.12"
+          channels: conda-forge
           conda-remove-defaults: "true"
 
       - name: Build docs
@@ -47,7 +48,7 @@ jobs:
           set -x
           wget -qO- https://astral.sh/uv/install.sh | sh
           uv pip install . -v
-          conda install -q -c conda-forge 'ffmpeg==6' doxygen
+          conda install -q 'ffmpeg==6' doxygen
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install tensorboard -r docs/requirements.txt 
           ./docs/build.sh

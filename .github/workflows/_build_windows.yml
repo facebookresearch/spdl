@@ -100,7 +100,7 @@ jobs:
       - name: Unit test
         run: |
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            conda install -q -c conda-forge python-freethreading
+            conda install -q python-freethreading
           fi
 
           # Install SPDL
@@ -114,7 +114,7 @@ jobs:
           fi
 
           # Install FFmpeg
-          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}"
 
           pytest -v \
               tests/spdl_unittest/io/ \
