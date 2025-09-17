@@ -33,7 +33,12 @@ from spdl.pipeline import (
     TaskStatsHook,
 )
 from spdl.pipeline._components._common import _EOF
-from spdl.pipeline._components._pipe import _FailCounter, _pipe, _PipeArgs
+from spdl.pipeline._components._pipe import (
+    _FailCounter,
+    _get_fail_counter,
+    _pipe,
+    _PipeArgs,
+)
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
 from spdl.pipeline._hook import _periodic_dispatch
@@ -1825,6 +1830,107 @@ def test_pipelinebuilder_picklable():
         return 2 * x + 1 + 3
 
     assert sorted(results) == [_ref(i) for i in range(10)]
+
+
+def test_failure_counter_global_countes():
+    """_get_fail_counter creates _FailCounter subclass with different class valiable"""
+
+    FC1 = _get_fail_counter()
+    FC2 = _get_fail_counter()
+
+    fc1_1 = FC1(-1, -1)
+    fc1_2 = FC1(-1, -1)
+
+    fc2_1 = FC2(-1, -1)
+    fc2_2 = FC2(-1, -1)
+
+    assert _FailCounter._num_global_failures == 0
+    assert FC1._num_global_failures == 0
+    assert FC2._num_global_failures == 0
+    assert fc1_1._num_global_failures is FC1._num_global_failures
+    assert fc1_2._num_global_failures is FC1._num_global_failures
+    assert fc2_1._num_global_failures is FC2._num_global_failures
+    assert fc2_2._num_global_failures is FC2._num_global_failures
+    assert fc1_1._num_global_failures == 0
+    assert fc1_2._num_global_failures == 0
+    assert fc1_1._num_stage_failures == 0
+    assert fc1_2._num_stage_failures == 0
+    assert fc2_1._num_global_failures == 0
+    assert fc2_2._num_global_failures == 0
+    assert fc2_1._num_stage_failures == 0
+    assert fc2_2._num_stage_failures == 0
+
+    fc1_1._increment()
+
+    assert _FailCounter._num_global_failures == 0
+    assert FC1._num_global_failures == 1
+    assert FC2._num_global_failures == 0
+    assert fc1_1._num_global_failures is FC1._num_global_failures
+    assert fc1_2._num_global_failures is FC1._num_global_failures
+    assert fc2_1._num_global_failures is FC2._num_global_failures
+    assert fc2_2._num_global_failures is FC2._num_global_failures
+    assert fc1_1._num_global_failures == 1
+    assert fc1_2._num_global_failures == 1
+    assert fc1_1._num_stage_failures == 1
+    assert fc1_2._num_stage_failures == 0
+    assert fc2_1._num_global_failures == 0
+    assert fc2_2._num_global_failures == 0
+    assert fc2_1._num_stage_failures == 0
+    assert fc2_2._num_stage_failures == 0
+
+    fc1_1._increment()
+
+    assert _FailCounter._num_global_failures == 0
+    assert FC1._num_global_failures == 2
+    assert FC2._num_global_failures == 0
+    assert fc1_1._num_global_failures is FC1._num_global_failures
+    assert fc1_2._num_global_failures is FC1._num_global_failures
+    assert fc2_1._num_global_failures is FC2._num_global_failures
+    assert fc2_2._num_global_failures is FC2._num_global_failures
+    assert fc1_1._num_global_failures == 2
+    assert fc1_2._num_global_failures == 2
+    assert fc1_1._num_stage_failures == 2
+    assert fc1_2._num_stage_failures == 0
+    assert fc2_1._num_global_failures == 0
+    assert fc2_2._num_global_failures == 0
+    assert fc2_1._num_stage_failures == 0
+    assert fc2_2._num_stage_failures == 0
+
+    fc1_2._increment()
+
+    assert _FailCounter._num_global_failures == 0
+    assert FC1._num_global_failures == 3
+    assert FC2._num_global_failures == 0
+    assert fc1_1._num_global_failures is FC1._num_global_failures
+    assert fc1_2._num_global_failures is FC1._num_global_failures
+    assert fc2_1._num_global_failures is FC2._num_global_failures
+    assert fc2_2._num_global_failures is FC2._num_global_failures
+    assert fc1_1._num_global_failures == 3
+    assert fc1_2._num_global_failures == 3
+    assert fc1_1._num_stage_failures == 2
+    assert fc1_2._num_stage_failures == 1
+    assert fc2_1._num_global_failures == 0
+    assert fc2_2._num_global_failures == 0
+    assert fc2_1._num_stage_failures == 0
+    assert fc2_2._num_stage_failures == 0
+
+    fc2_1._increment()
+
+    assert _FailCounter._num_global_failures == 0
+    assert FC1._num_global_failures == 3
+    assert FC2._num_global_failures == 1
+    assert fc1_1._num_global_failures is FC1._num_global_failures
+    assert fc1_2._num_global_failures is FC1._num_global_failures
+    assert fc2_1._num_global_failures is FC2._num_global_failures
+    assert fc2_2._num_global_failures is FC2._num_global_failures
+    assert fc1_1._num_global_failures == 3
+    assert fc1_2._num_global_failures == 3
+    assert fc1_1._num_stage_failures == 2
+    assert fc1_2._num_stage_failures == 1
+    assert fc2_1._num_global_failures == 1
+    assert fc2_2._num_global_failures == 1
+    assert fc2_1._num_stage_failures == 1
+    assert fc2_2._num_stage_failures == 0
 
 
 @pytest.mark.parametrize("output_order", ["completion", "input"])
