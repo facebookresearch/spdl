@@ -300,7 +300,7 @@ def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T
             num_rows += 1
             yield batch
         elapsed = time.monotonic() - t0
-        qps = num_rows / elapsed if elapsed > 0 else float("inf")
+        qps = num_rows / elapsed if elapsed > 0 else float("nan")
         _LG.info(
             "Finished source epoch %d. (Yielded %d rows in %.2f sec. QPS: %.2f)",
             epoch,
