@@ -22,7 +22,5 @@ set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY true)
 
 add_subdirectory(fmt)
 add_subdirectory(glog)
-if (WIN32)
 add_subdirectory(zlib)
-endif (WIN32)
 add_subdirectory(libdeflate)
