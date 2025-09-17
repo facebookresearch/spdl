@@ -21,6 +21,10 @@ on:
       os:
         default: "windows-latest"
         type: string
+      test-concurrency:
+        required: false
+        default: '3'
+        type: string
 
 env:
   ARTIFACT: wheel-win-py${{ inputs.python-version }}${{ inputs.free-threaded }}
@@ -97,7 +101,7 @@ jobs:
           channels: conda-forge
           conda-remove-defaults: "true"
 
-      - name: Unit test
+      - name: Setup
         run: |
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
             conda install -q python-freethreading
@@ -108,14 +112,16 @@ jobs:
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            pip install torch numpy pytest
+            pip install torch numpy pytest pytest-xdist
           else
-            pip install torch numpy numba pytest
+            pip install torch numpy numba pytest pytest-xdist
           fi
 
           # Install FFmpeg
           conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}"
 
-          pytest -v \
+      - name: Unit test
+        run: |
+          pytest -v -n ${{ inputs.test-concurrency }} \
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/
