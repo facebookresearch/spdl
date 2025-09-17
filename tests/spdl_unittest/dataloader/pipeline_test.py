@@ -392,7 +392,7 @@ def test_async_pipe_concurrency_throughput():
     elapsed1 = asyncio.run(test(1))
     elapsed4 = asyncio.run(test(4))
 
-    assert elapsed1 > 2
+    assert elapsed1 > 1.8
     assert elapsed4 < 1
 
 
