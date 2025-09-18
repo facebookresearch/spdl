@@ -4,10 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-__all__ = [
-    "profile_pipeline",
-]
-
 import logging
 import time
 from dataclasses import dataclass
@@ -25,6 +21,11 @@ from .defs._defs import (
 )
 
 # pyre-strict
+
+__all__ = [
+    "profile_pipeline",
+]
+
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -87,29 +88,43 @@ def _build_pipeline_config(
 
 
 @dataclass
+class _ProfileStats:
+    concurrency: int
+    qps: float
+    occupancy_rate: float
+
+
+@dataclass
 class _ProfileResult:
     name: str
-    concurrency: list[int]
-    qps: list[int]
+    stats: list[_ProfileStats]
 
 
 def profile_pipeline(
     cfg: PipelineConfig[T, U], num_inputs: int = 1000
 ) -> list[_ProfileResult]:
     """**[Experimental]** Profile pipeline by running pipes separately
-    while changing the oncurrency.
+    while changing the concurrency, measuring performance and logging results.
+
+    This function benchmarks each pipeline stage independently across different
+    concurrency levels (32, 16, 8, 4, 1) to identify optimal performance settings.
+    It measures both throughput (QPS) and queue occupancy rates.
 
     Args:
-        cfg: Pipeline configuration.
-        num_inputs: The number of source items to use for profiling.
+        cfg: Pipeline configuration containing source, pipes, and sink definitions.
+        num_inputs: The number of source items to use for profiling each stage.
 
     Returns:
-        list of dataclass: List of result objects.
-            Each result has the following attributes.
+        List of _ProfileResult objects, one per pipeline stage.
+        Each result contains:
 
-            - ``name``: The name of the pipe.
-            - ``concurrency``: The concurrency used to benchmark the performance.
-            - ``qps``: The number of itmes each stage processed each second.
+        - ``name``: The name of the pipe stage.
+        - ``stats``: List of _ProfileStats for each concurrency level tested, where each stat includes:
+
+            - ``concurrency``: The concurrency level used for this benchmark.
+            - ``qps``: The number of items the stage processed per second.
+            - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0).
+
     """
     _LG.info("Fetching %d inputs.", num_inputs)
     inputs = _fetch_inputs(cfg.src, num_inputs)
@@ -123,21 +138,21 @@ def profile_pipeline(
         else:
             concurrencies = [32, 16, 8, 4, 1]
 
-        qps = []
+        stats = []
         cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
         for concurrency in concurrencies:
-            _LG.info(" - Concurrency: %d", concurrency)
             pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
             qps_, outputs = _run(pipeline)
+            occupancy_rate = (
+                pipeline._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
+            )
+            _LG.info(" - Concurrency: %d", concurrency)
             _LG.info(" - QPS: %.2f", qps_)
-            qps.append(qps_)
+            _LG.info(" - Occupancy Rate: %.2f", occupancy_rate)
+
+            stats.append(_ProfileStats(concurrency, qps_, occupancy_rate))
 
         inputs = outputs  # pyre-ignore[61]
-        results.append(_ProfileResult(pipe.name, concurrencies, qps))
-
-    for result in results:
-        _LG.info("Pipe: %s", result.name)
-        _LG.info("Concurrency: %s", ",".join(f"{s:8d}" for s in result.concurrency))
-        _LG.info("QPS:         %s", ",".join(f"{s:8.2f}" for s in result.qps))
+        results.append(_ProfileResult(pipe.name, stats))
 
     return results
