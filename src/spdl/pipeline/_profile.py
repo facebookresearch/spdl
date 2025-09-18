@@ -42,7 +42,7 @@ def _run(pipeline: Pipeline[T]) -> tuple[float, list[T]]:
     finally:
         elapsed = time.monotonic() - t0
 
-    qps = len(outputs) / elapsed
+    qps = len(outputs) / elapsed if elapsed > 0 else float("nan")
     return qps, outputs
 
 
