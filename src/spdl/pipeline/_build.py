@@ -78,15 +78,15 @@ _LG: logging.Logger = logging.getLogger(__name__)
 _PIPELINE_ID: int = -1
 
 
-def _get_task_name(i: int, cfg: PipeConfig[..., ...]) -> str:
-    name = f"{_PIPELINE_ID}:{i}:{cfg.name}"
+def _get_pipe_prefix(cfg: PipeConfig[..., ...]) -> str:
+    name = cfg.name
     if cfg._type == _PipeType.Pipe and cfg._args.concurrency > 1:
         name = f"{name}[{cfg._args.concurrency}]"
     return name
 
 
 def _build_pipeline_coro(
-    pipeline_cfg: PipelineConfig[T, U],
+    plc: PipelineConfig[T, U],
     max_failures: int,
     queue_class: type[AsyncQueue[...]],
     task_hook_factory: Callable[[str], list[TaskHook]],
@@ -96,68 +96,50 @@ def _build_pipeline_coro(
     # Make sure that coroutines are ordered from source to sink.
     # `_run_pipeline_coroutines` expects and rely on this ordering.
     coros = []
-    queues = []
 
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
     # source
-    name = f"{stage_id}:src"
+    coro_name = f"{stage_id}:src"
+    q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
     stage_id += 1
-    queues.append(queue_class(f"{_PIPELINE_ID}:{name}_queue"))
-    coros.append((f"Pipeline::{name}", _source(pipeline_cfg.src.source, queues[0])))
+    out_q = queue_class(q_name)
+    coros.append((coro_name, _source(plc.src.source, out_q)))
 
     _FailCounter = _get_fail_counter()
 
     # pipes
-    for cfg in pipeline_cfg.pipes:
-        name = _get_task_name(stage_id, cfg)
+    for cfg in plc.pipes:
+        pipe_name = _get_pipe_prefix(cfg)
+        coro_name = f"{stage_id}:{pipe_name}"
+        q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
         stage_id += 1
-        queue_name = f"{name}_queue"
         # Use buffer_size=2 so that it is possible that queue always
         # has an item as long as upstream is fast enough.
         # This make it possible for data readiness (occupancy rate)
         # to reach 100%, instead of 99.999999%
-        queues.append(queue_class(queue_name, buffer_size=2))
-        in_queue, out_queue = queues[-2:]
+        in_q, out_q = out_q, queue_class(q_name, buffer_size=2)
+        fc = _FailCounter(max_failures, cfg._max_failures)
+        hook = task_hook_factory(f"{_PIPELINE_ID}:{coro_name}")
 
         match cfg._type:
             case _PipeType.Pipe | _PipeType.Aggregate | _PipeType.Disaggregate:
-                coro = _pipe(
-                    name,
-                    in_queue,
-                    out_queue,
-                    cfg._args,
-                    _FailCounter(max_failures, cfg._max_failures),
-                    task_hook_factory(name),
-                )
+                coro = _pipe(pipe_name, in_q, out_q, cfg._args, fc, hook)
             case _PipeType.OrderedPipe:
-                coro = _ordered_pipe(
-                    name,
-                    in_queue,
-                    out_queue,
-                    cfg._args,
-                    _FailCounter(max_failures, cfg._max_failures),
-                    task_hook_factory(name),
-                )
+                coro = _ordered_pipe(pipe_name, in_q, out_q, cfg._args, fc, hook)
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg._type}")
 
-        coros.append((f"Pipeline::{name}", coro))
+        coros.append((coro_name, coro))
 
     # sink
-    name = f"{stage_id}:sink_queue"
-    output_queue = queue_class(
-        f"{_PIPELINE_ID}:{name}", buffer_size=pipeline_cfg.sink.buffer_size
-    )
-    coros.append(
-        (
-            f"Pipeline::{name}",
-            _sink(queues[-1], output_queue),
-        )
-    )
+    coro_name = f"{stage_id}:sink"
+    q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
+    in_q, out_q = out_q, queue_class(q_name, buffer_size=plc.sink.buffer_size)
+    coros.append((coro_name, _sink(in_q, out_q)))
 
-    return _run_pipeline_coroutines(coros), output_queue  # pyre-ignore
+    return _run_pipeline_coroutines(coros), out_q  # pyre-ignore
 
 
 ################################################################################
