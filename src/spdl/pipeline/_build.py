@@ -21,9 +21,9 @@ from ._components._pipe import _get_fail_counter, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
+from ._node import _cancel_upstreams_of_errors, _gather_error, _Node, _start_tasks
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
-from ._utils import create_task
 from .defs._defs import _PipeType, PipeConfig, PipelineConfig
 
 # pyre-strict
@@ -95,8 +95,6 @@ def _build_pipeline_coro(
     # Note:
     # Make sure that coroutines are ordered from source to sink.
     # `_run_pipeline_coroutines` expects and rely on this ordering.
-    coros = []
-
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
@@ -105,7 +103,8 @@ def _build_pipeline_coro(
     q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
     stage_id += 1
     out_q = queue_class(q_name)
-    coros.append((coro_name, _source(plc.src.source, out_q)))
+    coro = _source(plc.src.source, out_q)
+    node = _Node(name=coro_name, coro=coro, queue=out_q, upstream=[])
 
     _FailCounter = _get_fail_counter()
 
@@ -131,15 +130,14 @@ def _build_pipeline_coro(
             case _:  # pragma: no cover
                 raise ValueError(f"Unexpected process type: {cfg._type}")
 
-        coros.append((coro_name, coro))
+        node = _Node(name=coro_name, coro=coro, queue=out_q, upstream=[node])
 
     # sink
     coro_name = f"{stage_id}:sink"
     q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
     in_q, out_q = out_q, queue_class(q_name, buffer_size=plc.sink.buffer_size)
-    coros.append((coro_name, _sink(in_q, out_q)))
-
-    return _run_pipeline_coroutines(coros), out_q  # pyre-ignore
+    node = _Node(name=coro_name, coro=_sink(in_q, out_q), queue=out_q, upstream=[node])
+    return _run_pipeline_coroutines(node), out_q  # pyre-ignore
 
 
 ################################################################################
@@ -153,9 +151,9 @@ class PipelineFailure(RuntimeError):
     Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
     """
 
-    def __init__(self, errs: dict[str, Exception]) -> None:
+    def __init__(self, errs: list[tuple[str, Exception]]) -> None:
         msg = []
-        for k, v in errs.items():
+        for k, v in errs:
             e = str(v)
             msg.append(f"{k}:{e if e else type(v).__name__}")
         msg.sort()
@@ -166,17 +164,14 @@ class PipelineFailure(RuntimeError):
         self._errs = errs
 
 
-async def _run_pipeline_coroutines(
-    coros: list[tuple[str, Coroutine[None, None, None]]],
-) -> None:
+async def _run_pipeline_coroutines(node: _Node[T]) -> None:
     """Run the pipeline coroutines and handle errors.
 
     Args:
         coros: The coroutines each corresponds to a stage in pipeline.
             IMPORTANT: The coroutinues must be in the order of src to sink.
     """
-    tasks = [create_task(coro, name=name) for name, coro in coros]
-    pending = set(tasks)
+    pending = _start_tasks(node)
 
     while pending:
         # Note:
@@ -203,21 +198,10 @@ async def _run_pipeline_coroutines(
         # Check if any of the task caused an error.
         # If an error occurred, we cancel the stages upstream to the failed one,
         # then continue waiting the downstream ones.
-        for i in range(len(tasks) - 1, -1, -1):
-            task = tasks[i]
-            if task.done() and not task.cancelled() and task.exception() is not None:
-                if upstream := tasks[:i]:
-                    for task in upstream:
-                        task.cancel()
-                    await asyncio.wait(upstream)
-                break
+        if canceled := _cancel_upstreams_of_errors(node):
+            await asyncio.wait(canceled)
 
-    errs = {}
-    for task in tasks:
-        if not task.cancelled() and (err := task.exception()) is not None:
-            errs[task.get_name()] = err
-
-    if errs:
+    if errs := _gather_error(node):
         raise PipelineFailure(errs)
 
 
