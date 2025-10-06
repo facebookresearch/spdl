@@ -26,6 +26,7 @@ __all__ = [
     "Aggregate",
     "Disaggregate",
     "Pipe",
+    "_ConfigBase",
     "PipeConfig",
     "PipelineConfig",
     "SinkConfig",
@@ -33,11 +34,15 @@ __all__ = [
 ]
 
 
+class _ConfigBase:
+    pass
+
+
 ################################################################################
 # Source
 ################################################################################
 @dataclass
-class SourceConfig(Generic[T]):
+class SourceConfig(Generic[T], _ConfigBase):
     """A source configuration.
 
     A source in Pipeline yields a series of input data, that is going to be
@@ -94,7 +99,7 @@ class _PipeArgs(Generic[T, U]):
 
 
 @dataclass
-class PipeConfig(Generic[T, U]):
+class PipeConfig(Generic[T, U], _ConfigBase):
     """PipeConfig()
 
     A pipe configuration.
@@ -152,7 +157,7 @@ class PipeConfig(Generic[T, U]):
 # Sink
 ################################################################################
 @dataclass
-class SinkConfig(Generic[T]):
+class SinkConfig(Generic[T], _ConfigBase):
     """A sink configuration.
 
     The sink is where the final result of pipeline is buffered.
@@ -180,7 +185,7 @@ class SinkConfig(Generic[T]):
 # Top-level Config
 ##############################################################################
 @dataclass
-class PipelineConfig(Generic[T, U]):
+class PipelineConfig(Generic[T, U], _ConfigBase):
     """A pipeline configuration.
 
     A pipeline consists of source, a series of pipes and sink.
