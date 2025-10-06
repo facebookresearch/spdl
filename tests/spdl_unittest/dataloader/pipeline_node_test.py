@@ -9,6 +9,7 @@ import asyncio
 from spdl.pipeline._node import (
     _cancel_recursive,
     _cancel_upstreams_of_errors,
+    _ConfigBase,
     _gather_error,
     _Node,
     _start_tasks,
@@ -31,7 +32,9 @@ def _node(
         else:
             await asyncio.sleep(0)
 
-    return _Node(name, coro(), AsyncQueue(name), deps)
+    n = _Node(name, _ConfigBase(), deps, AsyncQueue(name))
+    n._coro = coro()
+    return n
 
 
 def test_node_chain_start_and_cancel() -> None:

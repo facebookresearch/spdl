@@ -15,14 +15,12 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import TypeVar
 
-from ._components._pipe import _FailCounter, _get_fail_counter, _ordered_pipe, _pipe
-from ._components._sink import _sink
-from ._components._source import _source
+from ._components._pipe import _get_fail_counter
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
-from ._node import _Node, _run_pipeline_coroutines
+from ._node import _build_pipeline_node, _run_pipeline_coroutines
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
-from .defs._defs import _PipeType, PipeConfig, PipelineConfig, SinkConfig, SourceConfig
+from .defs._defs import PipelineConfig
 
 # pyre-strict
 
@@ -77,89 +75,6 @@ _LG: logging.Logger = logging.getLogger(__name__)
 _PIPELINE_ID: int = -1
 
 
-def _get_names(base: str, stage_id: int) -> tuple[str, str]:
-    # Note: Do not change the pattern used for naming.
-    # They are used by dashboard to query runtime data.
-    node_name = f"{_PIPELINE_ID}:{stage_id}:{base}"
-    queue_name = f"{node_name}_queue"
-    return node_name, queue_name
-
-
-def _build_src_node(
-    cfg: SourceConfig[T], stage_id: int, q_class: type[AsyncQueue[T]]
-) -> _Node[T]:
-    node_name, q_name = _get_names("src", stage_id)
-    q = q_class(q_name, buffer_size=2)
-    return _Node(name=node_name, coro=_source(cfg.source, q), queue=q, upstream=[])
-
-
-def _build_sink_node(
-    cfg: SinkConfig[T],
-    stage_id: int,
-    q_class: type[AsyncQueue[T]],
-    prev: _Node[T],
-) -> _Node[T]:
-    node_name, q_name = _get_names("sink", stage_id)
-    in_q: AsyncQueue[T] = prev.queue
-    out_q = q_class(q_name, buffer_size=cfg.buffer_size)
-    return _Node(name=node_name, coro=_sink(in_q, out_q), queue=out_q, upstream=[prev])
-
-
-def _build_pipe_node(
-    cfg: PipeConfig[T, U],
-    stage_id: int,
-    q_class: type[AsyncQueue[U]],
-    prev: _Node[T],
-    task_hook_factory: Callable[[str], list[TaskHook]],
-    fc: _FailCounter,
-) -> _Node[U]:
-    pipe_name = cfg.name
-    if cfg._type == _PipeType.Pipe and cfg._args.concurrency > 1:
-        pipe_name = f"{pipe_name}[{cfg._args.concurrency}]"
-
-    node_name, q_name = _get_names(pipe_name, stage_id)
-    hooks = task_hook_factory(node_name)
-    # Use buffer_size=2 so that it is possible that queue always
-    # has an item as long as upstream is fast enough.
-    # This make it possible for data readiness (occupancy rate)
-    # to reach 100%, instead of 99.999999%
-    in_q, out_q = prev.queue, q_class(q_name, buffer_size=2)
-
-    match cfg._type:
-        case _PipeType.Pipe | _PipeType.Aggregate | _PipeType.Disaggregate:
-            coro = _pipe(pipe_name, in_q, out_q, cfg._args, fc, hooks)
-        case _PipeType.OrderedPipe:
-            coro = _ordered_pipe(pipe_name, in_q, out_q, cfg._args, fc, hooks)
-        case _:  # pragma: no cover
-            raise ValueError(f"Unexpected process type: {cfg._type}")
-
-    return _Node(name=node_name, coro=coro, queue=out_q, upstream=[prev])
-
-
-def _build_pipeline_node(
-    plc: PipelineConfig[T, U],
-    stage_id: int,
-    q_class: type[AsyncQueue[...]],
-    fc_class: type[_FailCounter],
-    task_hook_factory: Callable[[str], list[TaskHook]],
-    max_failures: int,
-) -> _Node[U]:
-    global _PIPELINE_ID
-    _PIPELINE_ID += 1
-
-    node = _build_src_node(plc.src, stage_id, q_class)  # pyre-ignore[6]
-    stage_id += 1
-
-    for cfg in plc.pipes:
-        fc = fc_class(max_failures, cfg._max_failures)
-        prev: _Node[T] = node  # pyre-ignore[9]
-        node = _build_pipe_node(cfg, stage_id, q_class, prev, task_hook_factory, fc)
-        stage_id += 1
-
-    node = _build_sink_node(plc.sink, stage_id, q_class, node)  # pyre-ignore[6]
-    return node
-
-
 ################################################################################
 # Coroutine execution logics
 ################################################################################
@@ -191,8 +106,12 @@ def _build_pipeline(
 
     _fail_counter_class = _get_fail_counter()
 
+    global _PIPELINE_ID
+    _PIPELINE_ID += 1
+
     node = _build_pipeline_node(
         pipeline_cfg,
+        _PIPELINE_ID,
         stage_id,
         _queue_class,
         _fail_counter_class,
