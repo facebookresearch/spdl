@@ -10,7 +10,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Coroutine, Generic, TypeVar
 
-from ._components._pipe import _FailCounter, _ordered_pipe, _pipe
+from ._components._pipe import _FailCounter, _merge, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
 from ._hook import TaskHook
@@ -19,6 +19,7 @@ from ._utils import create_task
 from .defs._defs import (
     _ConfigBase,
     _PipeType,
+    MergeConfig,
     PipeConfig,
     PipelineConfig,
     SinkConfig,
@@ -82,7 +83,21 @@ class _Node(Generic[T]):
 ################################################################################
 
 
-def _get_names(cfg: _ConfigBase, pipeline_id: int, stage_id: int) -> tuple[str, str]:
+class _MutableInt:
+    def __init__(self, v: int) -> None:
+        self.v = v
+
+    def __iadd__(self, v: int) -> "_MutableInt":
+        self.v += v
+        return self
+
+    def __repr__(self) -> str:
+        return str(self.v)
+
+
+def _get_names(
+    cfg: _ConfigBase, pipeline_id: int, stage_id: _MutableInt
+) -> tuple[str, str]:
     # Note: Do not change the pattern used for naming.
     # They are used by dashboard to query runtime data.
     match cfg:
@@ -94,6 +109,8 @@ def _get_names(cfg: _ConfigBase, pipeline_id: int, stage_id: int) -> tuple[str, 
             base = cfg.name
             if cfg._type == _PipeType.Pipe and cfg._args.concurrency > 1:
                 base = f"{base}[{cfg._args.concurrency}]"
+        case MergeConfig():
+            base = "merge"
         case _:
             raise NotImplementedError(f"`{type(cfg)}` is not supported.")
     name = f"{pipeline_id}:{stage_id}:{base}"
@@ -112,18 +129,33 @@ def _convert_config(
     plc: PipelineConfig,
     q_class: type[AsyncQueue[...]],
     pipeline_id: int,
-    stage_id: int,
+    stage_id: _MutableInt,
+    disable_sink: bool = False,
 ) -> _Node:
     name, q_name = _get_names(plc.src, pipeline_id, stage_id)
     stage_id += 1
-    n = _Node(name, plc.src, [], q_class(q_name, buffer_size=_BUFFER_SIZE))
+
+    upstream = (
+        [
+            _convert_config(cfg, q_class, pipeline_id, stage_id, disable_sink=True)
+            for cfg in plc.src.pipeline_configs
+        ]
+        if isinstance(plc.src, MergeConfig)
+        else []
+    )
+    n = _Node(name, plc.src, upstream, q_class(q_name, buffer_size=_BUFFER_SIZE))
+
     for cfg in plc.pipes:
         name, q_name = _get_names(cfg, pipeline_id, stage_id)
         stage_id += 1
         n = _Node(name, cfg, [n], q_class(q_name, buffer_size=_BUFFER_SIZE))
-    name, q_name = _get_names(plc.sink, pipeline_id, stage_id)
-    stage_id += 1
-    n = _Node(name, plc.sink, [n], q_class(q_name, buffer_size=plc.sink.buffer_size))
+
+    if not disable_sink:
+        name, q_name = _get_names(plc.sink, pipeline_id, stage_id)
+        stage_id += 1
+        n = _Node(
+            name, plc.sink, [n], q_class(q_name, buffer_size=plc.sink.buffer_size)
+        )
     return n
 
 
@@ -144,6 +176,13 @@ def _build_node(
             cfg: SourceConfig = node.cfg
             assert len(node.upstream) == 0
             node._coro = _source(cfg.source, node.queue)
+        case MergeConfig():
+            cfg: MergeConfig = node.cfg
+            assert len(node.upstream) > 0
+            input_queues = [n.queue for n in node.upstream]
+            hooks = task_hook_factory(node.name)
+            fc = fc_class(max_failures)
+            node._coro = _merge(node.name, input_queues, node.queue, fc, hooks)
         case SinkConfig():
             cfg: SinkConfig = node.cfg
             assert len(node.upstream) == 1
@@ -175,7 +214,7 @@ def _build_pipeline_node(
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int,
 ):
-    node = _convert_config(plc, q_class, pipeline_id, stage_id)
+    node = _convert_config(plc, q_class, pipeline_id, _MutableInt(stage_id))
     _build_node(node, fc_class, task_hook_factory, max_failures)
     return node
 

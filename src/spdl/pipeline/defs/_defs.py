@@ -25,6 +25,7 @@ __all__ = [
     "_TPipeInputs",
     "Aggregate",
     "Disaggregate",
+    "MergeConfig",
     "Pipe",
     "_ConfigBase",
     "PipeConfig",
@@ -65,6 +66,24 @@ class SourceConfig(Generic[T], _ConfigBase):
         # Overwrite source repr because it might print a huge string.
         source = f"<{self.source.__class__.__name__} object at 0x{id(self.source):0x}>"
         return f"SourceConfig({source=})"
+
+
+##############################################################################
+# Merge mechanism
+##############################################################################
+
+
+@dataclass(frozen=True)
+class MergeConfig(Generic[T], _ConfigBase):
+    """Merge multiple pipelines into one output queue."""
+
+    pipeline_configs: "Sequence[PipelineConfig[Any, Any]]"
+
+    def __post_init__(self) -> None:
+        if len(self.pipeline_configs) < 1:
+            raise ValueError(
+                "MergeConfig must have at least one upstream pipeline configs."
+            )
 
 
 ################################################################################
@@ -194,7 +213,7 @@ class PipelineConfig(Generic[T, U], _ConfigBase):
     :py:class:`spdl.pipeline.Pipeline` object.
     """
 
-    src: SourceConfig[T]
+    src: SourceConfig[T] | MergeConfig[T]
     """Source configuration."""
 
     pipes: Sequence[PipeConfig[Any, Any]]

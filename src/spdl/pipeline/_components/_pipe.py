@@ -9,6 +9,7 @@ __all__ = [
     "_ordered_pipe",
     "_Aggregate",
     "_disaggregate",
+    "_merge",
     "_get_fail_counter",
 ]
 
@@ -167,7 +168,7 @@ def _pipe(
     task_hooks: list[TaskHook],
 ) -> Coroutine:
     if input_queue is output_queue:
-        raise ValueError("input queue and output queue must be different")
+        raise ValueError("input queue and output queue must be different.")
 
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
         convert_to_async(args.op, args.executor)
@@ -354,3 +355,43 @@ class _Aggregate(Generic[T]):
 async def _disaggregate(items: list[T]) -> AsyncIterator[T]:
     for item in items:
         yield item
+
+
+def _merge(
+    name: str,
+    input_queues: list[AsyncQueue[T]],
+    output_queue: AsyncQueue[U],
+    fail_counter: _FailCounter,
+    task_hooks: list[TaskHook],
+) -> Coroutine:
+    if not input_queues:
+        raise ValueError("There must be at least one input queue.")
+
+    if any(q is output_queue for q in input_queues):
+        raise ValueError("The input queue and output queue must be different.")
+
+    hooks: list[TaskHook] = [*task_hooks, fail_counter]
+
+    async def _pass(in_q: AsyncQueue[...]) -> None:
+        while not fail_counter.too_many_failures():
+            item = await in_q.get()
+            if item is _EOF:
+                return
+            await output_queue.put(item)  # pyre-ignore: [6]
+
+    @_queue_stage_hook(output_queue)
+    @_stage_hooks(hooks)
+    async def merge() -> None:
+        tasks = [
+            create_task(_pass(in_q), name=f"{name}:{i}")
+            for i, in_q in enumerate(input_queues)
+        ]
+        await asyncio.wait(tasks)
+
+        if fail_counter.too_many_failures():
+            raise RuntimeError(
+                f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
+                f"which exceeds the threshold ({fail_counter.max_failures})."
+            )
+
+    return merge()

@@ -190,7 +190,10 @@ def profile_pipeline(
             return []
 
         _LG.info("Fetching %d inputs.", num_inputs)
-        inputs = _fetch_inputs(cfg.src, num_inputs)
+        if isinstance(cfg.src, SourceConfig):
+            inputs = _fetch_inputs(cfg.src, num_inputs)
+        else:
+            raise ValueError("Pipeline with MergeConfig is not currently supported.")
 
         results = []
         for i, pipe in enumerate(cfg.pipes):
