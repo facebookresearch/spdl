@@ -7,10 +7,8 @@
 __all__ = [
     "_build_pipeline",
     "build_pipeline",
-    "PipelineFailure",
 ]
 
-import asyncio
 import logging
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -21,7 +19,7 @@ from ._components._pipe import _FailCounter, _get_fail_counter, _ordered_pipe, _
 from ._components._sink import _sink
 from ._components._source import _source
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
-from ._node import _cancel_upstreams_of_errors, _gather_error, _Node, _start_tasks
+from ._node import _Node, _run_pipeline_coroutines
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
 from .defs._defs import _PipeType, PipeConfig, PipelineConfig, SinkConfig, SourceConfig
@@ -165,61 +163,6 @@ def _build_pipeline_node(
 ################################################################################
 # Coroutine execution logics
 ################################################################################
-
-
-# TODO [Python 3.11]: Migrate to ExceptionGroup
-class PipelineFailure(RuntimeError):
-    """PipelineFailure()
-    Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
-    """
-
-    def __init__(self, errs: list[tuple[str, Exception]]) -> None:
-        msg = []
-        for k, v in errs:
-            e = str(v)
-            msg.append(f"{k}:{e if e else type(v).__name__}")
-        msg.sort()
-
-        super().__init__(", ".join(msg))
-
-        # This is for unittesting.
-        self._errs = errs
-
-
-async def _run_pipeline_coroutines(node: _Node[T]) -> None:
-    """Run the pipeline coroutines and handle errors."""
-    pending = _start_tasks(node)
-
-    while pending:
-        # Note:
-        # `asyncio.wait` does not automatically propagate the cancellation to its children.
-        # For graceful shutdown, we manually cancel the child tasks.
-        #
-        # Also, it seems asyncio loop throws Cancellation on most outer task.
-        # I am not sure where this behavior is documented, but here is an example script to
-        # demonstrate the behavior.
-        # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
-        try:
-            _, pending = await asyncio.wait(
-                pending, return_when=asyncio.FIRST_EXCEPTION
-            )
-        except asyncio.CancelledError:
-            for task in pending:
-                task.cancel()
-            await asyncio.wait(pending)
-            raise
-
-        if not pending:
-            break
-
-        # Check if any of the task caused an error.
-        # If an error occurred, we cancel the stages upstream to the failed one,
-        # then continue waiting the downstream ones.
-        if canceled := _cancel_upstreams_of_errors(node):
-            await asyncio.wait(canceled)
-
-    if errs := _gather_error(node):
-        raise PipelineFailure(errs)
 
 
 def _build_pipeline(
