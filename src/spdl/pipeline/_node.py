@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from asyncio import Task
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Coroutine, Generic, TypeVar
 
@@ -23,7 +24,7 @@ class _Node(Generic[T]):
     name: str
     coro: Coroutine[None, None, None]
     queue: AsyncQueue[T]
-    upstream: list["_Node"]
+    upstream: "Sequence[_Node]"
     _task: Task | None = None
 
     @property

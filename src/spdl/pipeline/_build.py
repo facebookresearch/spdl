@@ -12,19 +12,19 @@ __all__ = [
 
 import asyncio
 import logging
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import TypeVar
 
-from ._components._pipe import _get_fail_counter, _ordered_pipe, _pipe
+from ._components._pipe import _FailCounter, _get_fail_counter, _ordered_pipe, _pipe
 from ._components._sink import _sink
 from ._components._source import _source
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._node import _cancel_upstreams_of_errors, _gather_error, _Node, _start_tasks
 from ._pipeline import Pipeline
 from ._queue import AsyncQueue, StatsQueue as DefaultQueue
-from .defs._defs import _PipeType, PipeConfig, PipelineConfig
+from .defs._defs import _PipeType, PipeConfig, PipelineConfig, SinkConfig, SourceConfig
 
 # pyre-strict
 
@@ -45,6 +45,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 #    The source will pass EOF, and each stage receiving EOF will shut down,
 #    then pass EOF.
 #    EOF is not propagated to the output queue.
+#    (It is sink's responsibility to filter out EOF.)
 #
 # 2. Failures at some stage. One or more stages fail.
 #
@@ -55,10 +56,10 @@ _LG: logging.Logger = logging.getLogger(__name__)
 #      can finish the ongoing works.
 #
 #    Actions:
-#      - The stage must pass EOF to the next queue, so that downstream stages
-#        can exit cleanly.
+#      - The failed stage must pass EOF to the next queue, so that
+#        the downstream stages can exit cleanly.
 #      - Passing EOF to the next queue can be blocked if the queue is full.
-#      - For a graceful exit, the assumption must be met.
+#      - For a graceful exit, the assumption of the continued consumption must be met.
 #      - The stages upstream to the failure must be cancelled.
 #
 # 3. Cancelled: The pipeline execution is cancelled.
@@ -78,66 +79,87 @@ _LG: logging.Logger = logging.getLogger(__name__)
 _PIPELINE_ID: int = -1
 
 
-def _get_pipe_prefix(cfg: PipeConfig[..., ...]) -> str:
-    name = cfg.name
-    if cfg._type == _PipeType.Pipe and cfg._args.concurrency > 1:
-        name = f"{name}[{cfg._args.concurrency}]"
-    return name
+def _get_names(base: str, stage_id: int) -> tuple[str, str]:
+    # Note: Do not change the pattern used for naming.
+    # They are used by dashboard to query runtime data.
+    node_name = f"{_PIPELINE_ID}:{stage_id}:{base}"
+    queue_name = f"{node_name}_queue"
+    return node_name, queue_name
 
 
-def _build_pipeline_coro(
-    plc: PipelineConfig[T, U],
-    max_failures: int,
-    queue_class: type[AsyncQueue[...]],
-    task_hook_factory: Callable[[str], list[TaskHook]],
+def _build_src_node(
+    cfg: SourceConfig[T], stage_id: int, q_class: type[AsyncQueue[T]]
+) -> _Node[T]:
+    node_name, q_name = _get_names("src", stage_id)
+    q = q_class(q_name, buffer_size=2)
+    return _Node(name=node_name, coro=_source(cfg.source, q), queue=q, upstream=[])
+
+
+def _build_sink_node(
+    cfg: SinkConfig[T],
     stage_id: int,
-) -> tuple[Coroutine[None, None, None], AsyncQueue[U]]:
-    # Note:
-    # Make sure that coroutines are ordered from source to sink.
-    # `_run_pipeline_coroutines` expects and rely on this ordering.
+    q_class: type[AsyncQueue[T]],
+    prev: _Node[T],
+) -> _Node[T]:
+    node_name, q_name = _get_names("sink", stage_id)
+    in_q: AsyncQueue[T] = prev.queue
+    out_q = q_class(q_name, buffer_size=cfg.buffer_size)
+    return _Node(name=node_name, coro=_sink(in_q, out_q), queue=out_q, upstream=[prev])
+
+
+def _build_pipe_node(
+    cfg: PipeConfig[T, U],
+    stage_id: int,
+    q_class: type[AsyncQueue[U]],
+    prev: _Node[T],
+    task_hook_factory: Callable[[str], list[TaskHook]],
+    fc: _FailCounter,
+) -> _Node[U]:
+    pipe_name = cfg.name
+    if cfg._type == _PipeType.Pipe and cfg._args.concurrency > 1:
+        pipe_name = f"{pipe_name}[{cfg._args.concurrency}]"
+
+    node_name, q_name = _get_names(pipe_name, stage_id)
+    hooks = task_hook_factory(node_name)
+    # Use buffer_size=2 so that it is possible that queue always
+    # has an item as long as upstream is fast enough.
+    # This make it possible for data readiness (occupancy rate)
+    # to reach 100%, instead of 99.999999%
+    in_q, out_q = prev.queue, q_class(q_name, buffer_size=2)
+
+    match cfg._type:
+        case _PipeType.Pipe | _PipeType.Aggregate | _PipeType.Disaggregate:
+            coro = _pipe(pipe_name, in_q, out_q, cfg._args, fc, hooks)
+        case _PipeType.OrderedPipe:
+            coro = _ordered_pipe(pipe_name, in_q, out_q, cfg._args, fc, hooks)
+        case _:  # pragma: no cover
+            raise ValueError(f"Unexpected process type: {cfg._type}")
+
+    return _Node(name=node_name, coro=coro, queue=out_q, upstream=[prev])
+
+
+def _build_pipeline_node(
+    plc: PipelineConfig[T, U],
+    stage_id: int,
+    q_class: type[AsyncQueue[...]],
+    fc_class: type[_FailCounter],
+    task_hook_factory: Callable[[str], list[TaskHook]],
+    max_failures: int,
+) -> _Node[U]:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
-    # source
-    coro_name = f"{stage_id}:src"
-    q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
+    node = _build_src_node(plc.src, stage_id, q_class)  # pyre-ignore[6]
     stage_id += 1
-    out_q = queue_class(q_name)
-    coro = _source(plc.src.source, out_q)
-    node = _Node(name=coro_name, coro=coro, queue=out_q, upstream=[])
 
-    _FailCounter = _get_fail_counter()
-
-    # pipes
     for cfg in plc.pipes:
-        pipe_name = _get_pipe_prefix(cfg)
-        coro_name = f"{stage_id}:{pipe_name}"
-        q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
+        fc = fc_class(max_failures, cfg._max_failures)
+        prev: _Node[T] = node  # pyre-ignore[9]
+        node = _build_pipe_node(cfg, stage_id, q_class, prev, task_hook_factory, fc)
         stage_id += 1
-        # Use buffer_size=2 so that it is possible that queue always
-        # has an item as long as upstream is fast enough.
-        # This make it possible for data readiness (occupancy rate)
-        # to reach 100%, instead of 99.999999%
-        in_q, out_q = out_q, queue_class(q_name, buffer_size=2)
-        fc = _FailCounter(max_failures, cfg._max_failures)
-        hook = task_hook_factory(f"{_PIPELINE_ID}:{coro_name}")
 
-        match cfg._type:
-            case _PipeType.Pipe | _PipeType.Aggregate | _PipeType.Disaggregate:
-                coro = _pipe(pipe_name, in_q, out_q, cfg._args, fc, hook)
-            case _PipeType.OrderedPipe:
-                coro = _ordered_pipe(pipe_name, in_q, out_q, cfg._args, fc, hook)
-            case _:  # pragma: no cover
-                raise ValueError(f"Unexpected process type: {cfg._type}")
-
-        node = _Node(name=coro_name, coro=coro, queue=out_q, upstream=[node])
-
-    # sink
-    coro_name = f"{stage_id}:sink"
-    q_name = f"{_PIPELINE_ID}:{coro_name}_queue"
-    in_q, out_q = out_q, queue_class(q_name, buffer_size=plc.sink.buffer_size)
-    node = _Node(name=coro_name, coro=_sink(in_q, out_q), queue=out_q, upstream=[node])
-    return _run_pipeline_coroutines(node), out_q  # pyre-ignore
+    node = _build_sink_node(plc.sink, stage_id, q_class, node)  # pyre-ignore[6]
+    return node
 
 
 ################################################################################
@@ -165,12 +187,7 @@ class PipelineFailure(RuntimeError):
 
 
 async def _run_pipeline_coroutines(node: _Node[T]) -> None:
-    """Run the pipeline coroutines and handle errors.
-
-    Args:
-        coros: The coroutines each corresponds to a stage in pipeline.
-            IMPORTANT: The coroutinues must be in the order of src to sink.
-    """
+    """Run the pipeline coroutines and handle errors."""
     pending = _start_tasks(node)
 
     while pending:
@@ -229,19 +246,23 @@ def _build_pipeline(
         else queue_class
     )
 
-    coro, queues = _build_pipeline_coro(
+    _fail_counter_class = _get_fail_counter()
+
+    node = _build_pipeline_node(
         pipeline_cfg,
-        max_failures,
-        _queue_class,
-        _hook_factory if task_hook_factory is None else task_hook_factory,
         stage_id,
+        _queue_class,
+        _fail_counter_class,
+        _hook_factory if task_hook_factory is None else task_hook_factory,
+        max_failures,
     )
+    coro = _run_pipeline_coroutines(node)
 
     executor = ThreadPoolExecutor(
         max_workers=num_threads,
         thread_name_prefix="spdl_worker_thread_",
     )
-    return Pipeline(coro, queues, executor, desc=desc)
+    return Pipeline(coro, node.queue, executor, desc=desc)
 
 
 def build_pipeline(
