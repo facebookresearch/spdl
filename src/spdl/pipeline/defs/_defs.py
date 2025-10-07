@@ -41,7 +41,7 @@ class _ConfigBase:
 ################################################################################
 # Source
 ################################################################################
-@dataclass
+@dataclass(frozen=True)
 class SourceConfig(Generic[T], _ConfigBase):
     """A source configuration.
 
@@ -50,7 +50,7 @@ class SourceConfig(Generic[T], _ConfigBase):
 
     .. seealso::
 
-       - :py:config:`PipelineConfig`
+       - :py:class:`PipelineConfig`
        - :py:func:`spdl.pipeline.build_pipeline`
     """
 
@@ -98,7 +98,7 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-@dataclass
+@dataclass(frozen=True)
 class PipeConfig(Generic[T, U], _ConfigBase):
     """PipeConfig()
 
@@ -111,7 +111,7 @@ class PipeConfig(Generic[T, U], _ConfigBase):
 
     .. seealso::
 
-       - :py:config:`PipelineConfig`
+       - :py:class:`PipelineConfig`
        - :py:func:`spdl.pipeline.build_pipeline`
     """
 
@@ -156,7 +156,7 @@ class PipeConfig(Generic[T, U], _ConfigBase):
 ################################################################################
 # Sink
 ################################################################################
-@dataclass
+@dataclass(frozen=True)
 class SinkConfig(Generic[T], _ConfigBase):
     """A sink configuration.
 
@@ -164,7 +164,7 @@ class SinkConfig(Generic[T], _ConfigBase):
 
     .. seealso::
 
-       - :py:config:`PipelineConfig`
+       - :py:class:`PipelineConfig`
        - :py:func:`spdl.pipeline.build_pipeline`
     """
 
@@ -184,7 +184,7 @@ class SinkConfig(Generic[T], _ConfigBase):
 ##############################################################################
 # Top-level Config
 ##############################################################################
-@dataclass
+@dataclass(frozen=True)
 class PipelineConfig(Generic[T, U], _ConfigBase):
     """A pipeline configuration.
 
@@ -305,7 +305,7 @@ def Pipe(
 
     .. seealso::
 
-       - :py:config:`PipelineConfig`
+       - :py:class:`PipelineConfig`
        - :py:func:`spdl.pipeline.build_pipeline`
     """
 
@@ -354,7 +354,7 @@ def Aggregate(num_items: int, /, *, drop_last: bool = False) -> PipeConfig[Any, 
 
     .. seealso::
 
-       - :py:config:`PipelineConfig`
+       - :py:class:`PipelineConfig`
        - :py:func:`spdl.pipeline.build_pipeline`
     """
 
@@ -387,7 +387,7 @@ def Disaggregate() -> PipeConfig[Any, Any]:
 
     .. seealso::
 
-       - :py:config:`PipelineConfig`
+       - :py:class:`PipelineConfig`
        - :py:func:`spdl.pipeline.build_pipeline`
     """
 
