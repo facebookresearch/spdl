@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
+import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -101,6 +102,14 @@ class _ProfileResult:
     stats: list[_ProfileStats]
 
 
+def _get_local_rank() -> int:
+    # https://github.com/pytorch/pytorch/blob/v2.8.0/torch/distributed/distributed_c10d.py#L1445-L1468
+    # LOCAL_RANK env var is how device mappingis communicated between PyTorch and
+    # external system, so it should be a stable way to check the device without
+    # importing PyTorch.
+    return int(os.environ.get("LOCAL_RANK", "0"))
+
+
 def profile_pipeline(
     cfg: PipelineConfig[T, U],
     num_inputs: int = 1000,
@@ -132,6 +141,13 @@ def profile_pipeline(
           - ``qps``: The number of items the stage processed per second.
           - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0).
     """
+    if _get_local_rank() != 0:
+        _LG.info(
+            "Distributed training is enabled. Profiling is only performed on local rank 0. "
+            "Exiting without profiling."
+        )
+        return []
+
     _LG.info("Fetching %d inputs.", num_inputs)
     inputs = _fetch_inputs(cfg.src, num_inputs)
 
