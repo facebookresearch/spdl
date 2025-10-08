@@ -121,7 +121,7 @@ jobs:
 
           # Install PyTorch and others
           pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest pytest-xdist
+          conda install -q numba pytest pytest-xdist parameterized
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here

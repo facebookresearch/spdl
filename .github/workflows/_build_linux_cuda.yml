@@ -141,7 +141,7 @@ jobs:
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
-          pip install pytest pytest-xdist
+          pip install pytest pytest-xdist parameterized
 
           cu_ver="${{ inputs.cuda-version }}"
           cu_ver="${cu_ver//[.]/}"  # Remove dots
