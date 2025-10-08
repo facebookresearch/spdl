@@ -4,7 +4,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from collections.abc import AsyncIterator
+import unittest
+from collections.abc import AsyncIterator, Iterator
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 from spdl.pipeline._profile import (
@@ -12,6 +14,7 @@ from spdl.pipeline._profile import (
     _fetch_inputs,
     _ProfileResult,
     profile_pipeline,
+    ProfileHook,
 )
 from spdl.pipeline.defs import (
     Aggregate,
@@ -146,3 +149,92 @@ def test_profile_pipeline_no_callback():
     assert len(results) == 1
     assert results[0].name == "simple_op"
     assert len(results[0].stats) > 0
+
+
+class TestProfileHookTest(unittest.TestCase):
+    """Test class for ProfileHook functionality."""
+
+    def test_profile_pipeline_custom_hook_methods_called(self):
+        """Test that when a custom ProfileHook is provided, its stage_profile_hook and pipeline_profile_hook methods are called."""
+
+        def simple_op(i: int) -> int:
+            return i + 10
+
+        cfg = PipelineConfig(
+            src=SourceConfig(range(5)),
+            pipes=[
+                Pipe(simple_op),
+            ],
+            sink=SinkConfig(1),
+        )
+
+        # Create a custom ProfileHook mock
+        stage_hook_mock = MagicMock()
+        pipeline_hook_mock = MagicMock()
+
+        class MockProfileHook(ProfileHook):
+            @contextmanager
+            def stage_profile_hook(self) -> Iterator[None]:
+                stage_hook_mock()
+                try:
+                    yield
+                finally:
+                    stage_hook_mock()
+
+            @contextmanager
+            def pipeline_profile_hook(self) -> Iterator[None]:
+                pipeline_hook_mock()
+                try:
+                    yield
+                finally:
+                    pipeline_hook_mock()
+
+        custom_hook = MockProfileHook()
+
+        results = profile_pipeline(cfg, num_inputs=3, hook=custom_hook)
+
+        self.assertTrue(len(results) > 0)
+        self.assertEqual(pipeline_hook_mock.call_count, 2)
+        # stage_profile_hook should be called twice per concurrency level (start and end)
+        # Default concurrency levels are [32, 16, 8, 4, 1] = 5 levels, so 10 calls total
+        self.assertEqual(stage_hook_mock.call_count, 10)
+
+    def test_profile_pipeline_skips_when_local_rank_not_zero(self):
+        """Test that profiling is skipped if LOCAL_RANK is not '0'."""
+
+        def simple_op(i: int) -> int:
+            return i * 3
+
+        cfg = PipelineConfig(
+            src=SourceConfig(range(5)),
+            pipes=[
+                Pipe(simple_op),
+            ],
+            sink=SinkConfig(1),
+        )
+
+        with patch("spdl.pipeline._profile._get_local_rank", return_value=1):
+            results = profile_pipeline(cfg, num_inputs=5)
+
+        self.assertEqual(results, [])
+
+    def test_profile_pipeline_runs_when_local_rank_zero(self):
+        """Test that profiling runs normally when LOCAL_RANK is '0'."""
+
+        def simple_op(i: int) -> int:
+            return i * 2
+
+        cfg = PipelineConfig(
+            src=SourceConfig(range(5)),
+            pipes=[
+                Pipe(simple_op),
+            ],
+            sink=SinkConfig(1),
+        )
+
+        with patch("spdl.pipeline._profile._get_local_rank", return_value=0):
+            results = profile_pipeline(cfg, num_inputs=3)
+
+        self.assertGreater(len(results), 0)
+        self.assertEqual(results[0].name, "simple_op")
+        self.assertGreater(len(results[0].stats), 0)

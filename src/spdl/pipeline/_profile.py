@@ -7,7 +7,9 @@
 import logging
 import os
 import time
-from collections.abc import Callable
+from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -96,6 +98,39 @@ class _ProfileStats:
     occupancy_rate: float
 
 
+class ProfileHook(ABC):
+    """A hook object that can be used to execute custom code before and after each stage and pipeline profiling."""
+
+    @abstractmethod
+    @contextmanager
+    def stage_profile_hook(self) -> Iterator[None]:
+        """A context manager that is executed around each stage profiling."""
+        ...
+
+    @abstractmethod
+    @contextmanager
+    def pipeline_profile_hook(self) -> Iterator[None]:
+        """A context manager that is executed at the beginning and the end of :py:func:`profile_pipeline` function."""
+        ...
+
+
+class _NullHook(ProfileHook):
+    @contextmanager
+    def stage_profile_hook(self) -> Iterator[None]:
+        yield
+
+    @contextmanager
+    def pipeline_profile_hook(self) -> Iterator[None]:
+        yield
+
+    # For documentation rendering
+    def __repr__(self) -> str:
+        return "None"
+
+
+_NULLHOOK = _NullHook()
+
+
 @dataclass
 class _ProfileResult:
     name: str
@@ -115,6 +150,7 @@ def profile_pipeline(
     num_inputs: int = 1000,
     *,
     callback: Callable[[_ProfileResult], None] | None = None,
+    hook: ProfileHook | None = None,
 ) -> list[_ProfileResult]:
     """**[Experimental]** Profile pipeline by running pipes separately
     while changing the concurrency, measuring performance and logging results.
@@ -129,6 +165,8 @@ def profile_pipeline(
         callback: Optional function that, if provided, will be called with the profiling
             result (``_ProfileResult``) for each pipeline stage after it is benchmarked.
             This allows for custom handling or logging of profiling results as they are produced.
+        hook: Optional hook object, which can be used to execute custom code before and after
+            each stage and pipeline profiling.
 
     Returns:
         List of ``_ProfileResult`` objects, one per pipeline stage.
@@ -141,43 +179,47 @@ def profile_pipeline(
           - ``qps``: The number of items the stage processed per second.
           - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0).
     """
-    if _get_local_rank() != 0:
-        _LG.info(
-            "Distributed training is enabled. Profiling is only performed on local rank 0. "
-            "Exiting without profiling."
-        )
-        return []
+    hook_ = hook or _NULLHOOK
 
-    _LG.info("Fetching %d inputs.", num_inputs)
-    inputs = _fetch_inputs(cfg.src, num_inputs)
-
-    results = []
-    for i, pipe in enumerate(cfg.pipes):
-        _LG.info("Profiling Stage %d: %s", i, pipe.name)
-
-        if pipe._type in (_PipeType.Aggregate, _PipeType.Disaggregate):
-            concurrencies = [1]
-        else:
-            concurrencies = [32, 16, 8, 4, 1]
-
-        stats = []
-        cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
-        for concurrency in concurrencies:
-            pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
-            qps_, outputs = _run(pipeline)
-            occupancy_rate = (
-                pipeline._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
+    with hook_.pipeline_profile_hook():
+        if _get_local_rank() != 0:
+            _LG.info(
+                "Distributed training is enabled. Profiling is only performed on local rank 0. "
+                "Exiting without profiling."
             )
-            _LG.info(" - Concurrency: %d", concurrency)
-            _LG.info(" - QPS: %.2f", qps_)
-            _LG.info(" - Occupancy Rate: %.2f", occupancy_rate)
+            return []
 
-            stats.append(_ProfileStats(concurrency, qps_, occupancy_rate))
+        _LG.info("Fetching %d inputs.", num_inputs)
+        inputs = _fetch_inputs(cfg.src, num_inputs)
 
-        inputs = outputs  # pyre-ignore[61]
-        result = _ProfileResult(pipe.name, stats)
-        if callback is not None:
-            callback(result)
-        results.append(result)
+        results = []
+        for i, pipe in enumerate(cfg.pipes):
+            _LG.info("Profiling Stage %d: %s", i, pipe.name)
+
+            if pipe._type in (_PipeType.Aggregate, _PipeType.Disaggregate):
+                concurrencies = [1]
+            else:
+                concurrencies = [32, 16, 8, 4, 1]
+
+            stats = []
+            cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
+            for concurrency in concurrencies:
+                pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
+                with hook_.stage_profile_hook():
+                    qps_, outputs = _run(pipeline)
+                occupancy_rate = (
+                    pipeline._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
+                )
+                _LG.info(" - Concurrency: %d", concurrency)
+                _LG.info(" - QPS: %.2f", qps_)
+                _LG.info(" - Occupancy Rate: %.2f", occupancy_rate)
+
+                stats.append(_ProfileStats(concurrency, qps_, occupancy_rate))
+
+            inputs = outputs  # pyre-ignore[61]
+            result = _ProfileResult(pipe.name, stats)
+            if callback is not None:
+                callback(result)
+            results.append(result)
 
     return results
