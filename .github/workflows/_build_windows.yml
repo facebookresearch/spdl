@@ -112,9 +112,9 @@ jobs:
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            pip install torch numpy pytest pytest-xdist
+            pip install torch numpy pytest pytest-xdist parameterized
           else
-            pip install torch numpy numba pytest pytest-xdist
+            pip install torch numpy numba pytest pytest-xdist parameterized
           fi
 
           # Install FFmpeg
