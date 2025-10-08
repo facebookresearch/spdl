@@ -5,11 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections.abc import AsyncIterator
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from spdl.pipeline._profile import (
     _build_pipeline_config,
     _fetch_inputs,
+    _ProfileResult,
     profile_pipeline,
 )
 from spdl.pipeline.defs import (
@@ -43,9 +44,7 @@ def test_fetch_inputs_async():
     assert inputs == list(range(3))
 
 
-def test_profile_pipes():
-    """"""
-
+def test_profile_pipeline():
     def foo(i: int) -> int:
         return 2 * i
 
@@ -95,3 +94,55 @@ def test_profile_pipes():
         profile_pipeline(cfg)
 
     assert mock.i == 5
+
+
+def test_profile_pipeline_callback():
+    """Test that profile_pipeline calls the callback for each pipe stage."""
+
+    def simple_op(i: int) -> int:
+        return i + 1
+
+    cfg = PipelineConfig(
+        src=SourceConfig(range(10)),
+        pipes=[
+            Pipe(simple_op),
+        ],
+        sink=SinkConfig(1),
+    )
+
+    callback_mock = MagicMock()
+    results = profile_pipeline(cfg, num_inputs=5, callback=callback_mock)
+
+    callback_mock.assert_called_once()
+    called_args = callback_mock.call_args[0]
+    assert len(called_args) == 1
+    called_result = called_args[0]
+
+    assert isinstance(called_result, _ProfileResult)
+    assert called_result.name == "simple_op"
+    assert len(called_result.stats) > 0
+
+    assert len(results) == 1
+    assert results[0].name == called_result.name
+    assert len(results[0].stats) == len(called_result.stats)
+
+
+def test_profile_pipeline_no_callback():
+    """Test that profile_pipeline works correctly when no callback is provided."""
+
+    def simple_op(i: int) -> int:
+        return i * 2
+
+    cfg = PipelineConfig(
+        src=SourceConfig(range(5)),
+        pipes=[
+            Pipe(simple_op),
+        ],
+        sink=SinkConfig(1),
+    )
+
+    results = profile_pipeline(cfg, num_inputs=3, callback=None)
+
+    assert len(results) == 1
+    assert results[0].name == "simple_op"
+    assert len(results[0].stats) > 0
