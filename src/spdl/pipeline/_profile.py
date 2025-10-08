@@ -6,6 +6,7 @@
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -101,7 +102,10 @@ class _ProfileResult:
 
 
 def profile_pipeline(
-    cfg: PipelineConfig[T, U], num_inputs: int = 1000
+    cfg: PipelineConfig[T, U],
+    num_inputs: int = 1000,
+    *,
+    callback: Callable[[_ProfileResult], None] | None = None,
 ) -> list[_ProfileResult]:
     """**[Experimental]** Profile pipeline by running pipes separately
     while changing the concurrency, measuring performance and logging results.
@@ -113,18 +117,20 @@ def profile_pipeline(
     Args:
         cfg: Pipeline configuration containing source, pipes, and sink definitions.
         num_inputs: The number of source items to use for profiling each stage.
+        callback: Optional function that, if provided, will be called with the profiling
+            result (``_ProfileResult``) for each pipeline stage after it is benchmarked.
+            This allows for custom handling or logging of profiling results as they are produced.
 
     Returns:
-        List of _ProfileResult objects, one per pipeline stage.
+        List of ``_ProfileResult`` objects, one per pipeline stage.
         Each result contains:
 
         - ``name``: The name of the pipe stage.
-        - ``stats``: List of _ProfileStats for each concurrency level tested, where each stat includes:
+        - ``stats``: List of ``_ProfileStats`` for each concurrency level tested, where each stat includes:
 
-            - ``concurrency``: The concurrency level used for this benchmark.
-            - ``qps``: The number of items the stage processed per second.
-            - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0).
-
+          - ``concurrency``: The concurrency level used for this benchmark.
+          - ``qps``: The number of items the stage processed per second.
+          - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0).
     """
     _LG.info("Fetching %d inputs.", num_inputs)
     inputs = _fetch_inputs(cfg.src, num_inputs)
@@ -153,6 +159,9 @@ def profile_pipeline(
             stats.append(_ProfileStats(concurrency, qps_, occupancy_rate))
 
         inputs = outputs  # pyre-ignore[61]
-        results.append(_ProfileResult(pipe.name, stats))
+        result = _ProfileResult(pipe.name, stats)
+        if callback is not None:
+            callback(result)
+        results.append(result)
 
     return results
