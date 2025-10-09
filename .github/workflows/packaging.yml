@@ -28,6 +28,8 @@ jobs:
         include:
           - python-version: "3.13"
             free-threaded: "ft"
+          - python-version: "3.14"
+            free-threaded: "ft"
     uses: ./.github/workflows/_build_macos.yml
     with:
       python-version: "${{ matrix.python-version }}"
@@ -47,6 +49,8 @@ jobs:
         free-threaded: [""]
         include:
           - python-version: "3.13"
+            free-threaded: "ft"
+          - python-version: "3.14"
             free-threaded: "ft"
     uses: ./.github/workflows/_build_windows.yml
     with:
