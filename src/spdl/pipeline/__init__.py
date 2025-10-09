@@ -13,13 +13,14 @@ from ._builder import PipelineBuilder, run_pipeline_in_subprocess
 from ._hook import TaskHook, TaskPerfStats, TaskStatsHook
 from ._node import PipelineFailure
 from ._pipeline import Pipeline
-from ._profile import profile_pipeline
+from ._profile import profile_pipeline, ProfileResult
 from ._queue import AsyncQueue, QueuePerfStats, StatsQueue
 from ._utils import cache_iterator, create_task, iterate_in_subprocess
 
 __all__ = [
     "build_pipeline",
     "profile_pipeline",
+    "ProfileResult",
     "Pipeline",
     "PipelineBuilder",
     "PipelineFailure",

@@ -28,6 +28,7 @@ from .defs._defs import (
 
 __all__ = [
     "profile_pipeline",
+    "ProfileResult",
 ]
 
 
@@ -91,13 +92,6 @@ def _build_pipeline_config(
     )
 
 
-@dataclass
-class _ProfileStats:
-    concurrency: int
-    qps: float
-    occupancy_rate: float
-
-
 class ProfileHook(ABC):
     """A hook object that can be used to execute custom code before and after each stage and pipeline profiling."""
 
@@ -132,9 +126,28 @@ _NULLHOOK = _NullHook()
 
 
 @dataclass
-class _ProfileResult:
+class _ProfileStats:
+    concurrency: int
+    qps: float
+    occupancy_rate: float
+
+
+@dataclass
+class ProfileResult:
+    """A data class contains profiling result, returned by :py:func:`profile_pipeline`."""
+
     name: str
-    stats: list[_ProfileStats]
+    """The name of the pipe stage."""
+
+    stats: list["_ProfileStats"]
+    """Dataclass objects for each concurrency level tested, where each stat includes:
+
+      - ``concurrency``: The concurrency level used for this benchmark.
+      - ``qps``: The number of items the stage processed per second.
+      - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0)."""
+
+
+_ProfileResult = ProfileResult  # temp
 
 
 def _get_local_rank() -> int:
@@ -149,9 +162,9 @@ def profile_pipeline(
     cfg: PipelineConfig[T, U],
     num_inputs: int = 1000,
     *,
-    callback: Callable[[_ProfileResult], None] | None = None,
+    callback: Callable[[ProfileResult], None] | None = None,
     hook: ProfileHook | None = None,
-) -> list[_ProfileResult]:
+) -> list[ProfileResult]:
     """**[Experimental]** Profile pipeline by running pipes separately
     while changing the concurrency, measuring performance and logging results.
 
@@ -163,21 +176,60 @@ def profile_pipeline(
         cfg: Pipeline configuration containing source, pipes, and sink definitions.
         num_inputs: The number of source items to use for profiling each stage.
         callback: Optional function that, if provided, will be called with the profiling
-            result (``_ProfileResult``) for each pipeline stage after it is benchmarked.
+            result for each pipeline stage after it is benchmarked.
             This allows for custom handling or logging of profiling results as they are produced.
         hook: Optional hook object, which can be used to execute custom code before and after
             each stage and pipeline profiling.
 
     Returns:
-        List of ``_ProfileResult`` objects, one per pipeline stage.
-        Each result contains:
+        List of ProfileResult objects, one per pipeline stage.
 
-        - ``name``: The name of the pipe stage.
-        - ``stats``: List of ``_ProfileStats`` for each concurrency level tested, where each stat includes:
+    Example:
+        .. code-block:: python
 
-          - ``concurrency``: The concurrency level used for this benchmark.
-          - ``qps``: The number of items the stage processed per second.
-          - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0).
+            from spdl.pipeline import PipelineConfig, SourceConfig, SinkConfig, Pipe, profile_pipeline
+
+            # Define a simple data processing function
+            def double_value(x):
+                return x * 2
+
+            def square_value(x):
+                return x ** 2
+
+            # Create pipeline configuration
+            pipeline_config = PipelineConfig(
+                src=SourceConfig(range(1000)),  # Source with 1000 integers
+                pipes=[
+                    Pipe(double_value, concurrency=4, name="double"),
+                    Pipe(square_value, concurrency=2, name="square")
+                ],
+                sink=SinkConfig(buffer_size=10)
+            )
+
+            # Profile the pipeline
+            results = profile_pipeline(pipeline_config, num_inputs=500)
+
+            # The results list contains ProfileResult objects for each pipe stage
+            for result in results:
+                print(f"Stage: {result.name}")
+                for stat in result.stats:
+                    print(f"  Concurrency {stat.concurrency}: "
+                          f"QPS={stat.qps:.2f}, "
+                          f"Occupancy={stat.occupancy_rate:.2f}")
+
+            # Example output:
+            # Stage: double
+            #   Concurrency 32: QPS=1250.45, Occupancy=0.85
+            #   Concurrency 16: QPS=1180.32, Occupancy=0.78
+            #   Concurrency 8: QPS=1050.21, Occupancy=0.65
+            #   Concurrency 4: QPS=850.12, Occupancy=0.45
+            #   Concurrency 1: QPS=320.88, Occupancy=0.25
+            # Stage: square
+            #   Concurrency 32: QPS=2100.67, Occupancy=0.92
+            #   Concurrency 16: QPS=1980.55, Occupancy=0.88
+            #   Concurrency 8: QPS=1750.33, Occupancy=0.75
+            #   Concurrency 4: QPS=1200.44, Occupancy=0.55
+            #   Concurrency 1: QPS=450.22, Occupancy=0.30
     """
     hook_ = hook or _NULLHOOK
 
@@ -220,7 +272,7 @@ def profile_pipeline(
                 stats.append(_ProfileStats(concurrency, qps_, occupancy_rate))
 
             inputs = outputs  # pyre-ignore[61]
-            result = _ProfileResult(pipe.name, stats)
+            result = ProfileResult(pipe.name, stats)
             if callback is not None:
                 callback(result)
             results.append(result)
