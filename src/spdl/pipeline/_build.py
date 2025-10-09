@@ -148,10 +148,13 @@ def build_pipeline(
        the pipeline will call ``profile_pipeline`` function and benchmark each stage
        with different concurrency. Once the profiling is done, then the program exits.
 
-       .. seealso::
+    .. seealso::
 
-          :py:func:`profile_pipeline`
-             A function to profile a Pipeline stage by stage.
+       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+          Illustrates how to build a complex pipeline.
+
+       :py:func:`profile_pipeline`
+          A function to profile a Pipeline stage by stage.
 
     Args:
         pipeline_cfg: The definition of the pipeline to build.
