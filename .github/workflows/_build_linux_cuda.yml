@@ -108,7 +108,7 @@ jobs:
   test-gpu:
     if: ${{ inputs.run-test == 'true' }}
     needs: ["build"]
-    name: "test-cuda ffmpeg"
+    name: "test-cuda (ffmpeg ${{ matrix.ffmpeg-version }})"
     strategy:
       fail-fast: false
       matrix:
@@ -178,7 +178,7 @@ jobs:
   test-cpu:
     if: "${{ inputs.run-test == 'true' }}"
     needs: ["build"]
-    name: "test-cpu ffmpeg ${{ matrix.ffmpeg-version }}"
+    name: "test-cpu (ffmpeg ${{ matrix.ffmpeg-version }})"
     strategy:
       fail-fast: false
       matrix:
