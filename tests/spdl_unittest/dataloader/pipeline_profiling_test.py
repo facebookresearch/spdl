@@ -12,9 +12,9 @@ from unittest.mock import MagicMock, patch
 from spdl.pipeline._profile import (
     _build_pipeline_config,
     _fetch_inputs,
-    _ProfileResult,
     profile_pipeline,
     ProfileHook,
+    ProfileResult,
 )
 from spdl.pipeline.defs import (
     Aggregate,
@@ -121,7 +121,7 @@ def test_profile_pipeline_callback():
     assert len(called_args) == 1
     called_result = called_args[0]
 
-    assert isinstance(called_result, _ProfileResult)
+    assert isinstance(called_result, ProfileResult)
     assert called_result.name == "simple_op"
     assert len(called_result.stats) > 0
 
