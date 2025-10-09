@@ -6,6 +6,10 @@ on:
       python-version:
         required: true
         type: string
+      free-threaded:
+        description: 'Whether FT Python or not. Valid value is "ft" or not.'
+        default: ''
+        type: string
       arch:
         required: true
         type: string
@@ -22,7 +26,7 @@ on:
         type: string
 
 env:
-  ARTIFACT: wheel-linux-py${{ inputs.python-version }}-${{ inputs.arch }}
+  ARTIFACT: wheel-linux-py${{ inputs.python-version }}${{ inputs.free-threaded }}-${{ inputs.arch }}
 
 jobs:
   build:
@@ -38,11 +42,22 @@ jobs:
           SPDL_USE_TRACING: 1
         run: |
           set -ex
+
+          uv --version
           uv python list --only-installed
 
-          py_ver="$(echo '${{ inputs.python-version }}' | sed 's|[^0-9]*||g')"
-          python_exe="/opt/python/cp${py_ver}-cp${py_ver}/bin/python"
+          # note: 3.14t is in cp314-cp314t directory, others are in cp314-cp314 directory
+          v=${{ inputs.python-version }}
+          dir="cp${v//[.t]/}-cp${v//[.]/}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            dir="${dir}t"
+          fi
+          python_exe="/opt/python/${dir}/bin/python"
+          "${python_exe}" --version
           uv venv --python "${python_exe}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            source .venv/bin/activate
+          fi
           uv build --no-python-downloads --all-packages --wheel
 
           ./packaging/repair_wheels.sh manylinux_2_28_${{ inputs.arch }} ./dist ~/package
@@ -58,8 +73,12 @@ jobs:
 
       - name: Check package
         run: |
-          py_ver="$(echo '${{ inputs.python-version }}' | sed 's|[^0-9]*||g')"
-          python_exe="/opt/python/cp${py_ver}-cp${py_ver}/bin/python"
+          # CFFI is not available yet for 3.14t, which prevents the installation of twine
+          # https://github.com/python-cffi/cffi/releases/tag/v1.17.0
+          # So we use the regular 3.14
+          v=${{ inputs.python-version }}
+          dir="cp${v//[.t]/}-cp${v//[.t]/}"
+          python_exe="/opt/python/${dir}/bin/python"
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
 
@@ -68,9 +87,17 @@ jobs:
     needs: ["build"]
     runs-on: ${{ inputs.os }}
     steps:
+      # Note: the suffix 't' is different
       - uses: actions/setup-python@v5
+        if: ${{ inputs.free-threaded == 'ft' }}
         with:
-          python-version: '${{ inputs.python-version }}'
+          python-version: "${{ inputs.python-version }}t"
+
+      - uses: actions/setup-python@v5
+        if: ${{ inputs.free-threaded != 'ft' }}
+        with:
+          python-version: "${{ inputs.python-version }}"
+
       - uses: actions/download-artifact@v4
         with:
           name: "${{ env.ARTIFACT }}"
@@ -87,7 +114,7 @@ jobs:
   unit-test:
     if: "${{ inputs.run-test == 'true' }}"
     needs: ["build"]
-    name: "test (ffmpeg ${{ matrix.ffmpeg-version }})"
+    name: "test (py ${{ inputs.python-version }}, ffmpeg ${{ matrix.ffmpeg-version }})"
     strategy:
       fail-fast: false
       matrix:
@@ -115,6 +142,10 @@ jobs:
       - name: Setup
         run: |
           set -ex
+
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            conda install -q -c conda-forge python-freethreading
+          fi
 
           # Install SPDL
           pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)

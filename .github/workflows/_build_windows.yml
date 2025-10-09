@@ -75,7 +75,7 @@ jobs:
 
   unit-test:
     if: "${{ inputs.run-test == 'true' }}"
-    name: "test (ffmpeg ${{ matrix.ffmpeg-version }})"
+    name: "test (py ${{ inputs.python-version }}, ffmpeg ${{ matrix.ffmpeg-version }})"
     needs: ["build"]
     strategy:
       fail-fast: false
