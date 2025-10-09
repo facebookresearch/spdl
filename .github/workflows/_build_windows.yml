@@ -124,4 +124,5 @@ jobs:
         run: |
           pytest -v -n ${{ inputs.test-concurrency }} \
               tests/spdl_unittest/io/ \
-              tests/spdl_unittest/dataloader/
+              tests/spdl_unittest/dataloader/ \
+              tests/spdl_unittest/pipeline/
