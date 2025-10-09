@@ -1,0 +1,41 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+import logging
+import os
+
+__all__ = [
+    "_diagnostic_mode_enabled",
+    "_diagnostic_mode_num_sources",
+]
+
+_LG: logging.Logger = logging.getLogger(__name__)
+
+
+def _env(name, default=False):
+    if name not in os.environ:
+        return default
+
+    val = os.environ.get(name, "0")
+    trues = ["1", "true", "TRUE", "on", "ON", "yes", "YES"]
+    falses = ["0", "false", "FALSE", "off", "OFF", "no", "NO"]
+    if val in trues:
+        return True
+    if val not in falses:
+        _LG.warning(
+            f"Unexpected environment variable value `{name}={val}`. "
+            f"Expected one of {trues + falses}",
+            stacklevel=2,
+        )
+    return False
+
+
+def _diagnostic_mode_enabled() -> bool:
+    return _env("SPDL_PIPELINE_DIAGNOSTIC_MODE")
+
+
+def _diagnostic_mode_num_sources() -> int:
+    return int(os.environ.get("SPDL_PIPELINE_DIAGNOSTIC_MODE_NUM_ITEMS", 1000))

@@ -11,9 +11,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Any, TypeVar
 
-from . import _build
+from . import _build, _config
 from ._pipeline import Pipeline
 from .defs._defs import (
     _PipeArgs,
@@ -29,6 +29,7 @@ from .defs._defs import (
 __all__ = [
     "profile_pipeline",
     "ProfileResult",
+    "_build_pipeline_diagnostic_mode",
 ]
 
 
@@ -116,10 +117,6 @@ class _NoOpHook(ProfileHook):
     @contextmanager
     def pipeline_profile_hook(self) -> Iterator[None]:
         yield
-
-    # For documentation rendering
-    def __repr__(self) -> str:
-        return "None"
 
 
 @dataclass
@@ -283,3 +280,33 @@ def profile_pipeline(
             results.append(result)
 
     return results
+
+
+##############################################################################
+# Self-Diagnostic Pipeline
+##############################################################################
+
+
+class _ProfilePipeline(Pipeline[U]):
+    def __init__(self, pipeline_cfg: PipelineConfig[T, U], num_items: int) -> None:
+        self._pipeline_cfg = pipeline_cfg
+        self._num_items = num_items
+
+    def __str__(self) -> str:
+        return str(self._pipeline_cfg)
+
+    def start(self, *, timeout: float | None = None, **kwargs: Any) -> None:
+        pass
+
+    def stop(self, *, timeout: float | None = None, **kwargs: Any) -> None:
+        pass
+
+    def get_item(self, *, timeout: float | None = None) -> U:  # noqa: ARG002
+        profile_pipeline(self._pipeline_cfg, self._num_items)
+        _LG.info("Profiling completed. Exiting.")
+        raise SystemExit(0)
+
+
+def _build_pipeline_diagnostic_mode(cfg: PipelineConfig[T, U]) -> Pipeline[U]:
+    num_items = _config._diagnostic_mode_num_sources()
+    return _ProfilePipeline(cfg, num_items)
