@@ -86,6 +86,7 @@ def test_profile_pipeline():
             self.inputs = [src_, foo_, agg_, bar_, dis_, bazz_]
 
         def __call__(self, inputs, pipe, concurrency):
+            inputs.sort()
             assert inputs == self.inputs[self.i]
             ret = _build_pipeline_config(inputs, pipe, concurrency)
             assert ret.pipes[0]._args.op is cfg.pipes[self.i]._args.op
