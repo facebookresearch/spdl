@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import TypeVar
 
+from . import _config
 from ._components._pipe import _get_fail_counter
 from ._hook import TaskHook, TaskStatsHook as DefaultHook
 from ._node import _build_pipeline_node, _run_pipeline_coroutines
@@ -140,6 +141,18 @@ def build_pipeline(
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
+    .. note::
+
+       If environment variable ``SPDL_PIPELINE_DIAGNOSTIC_MODE=1`` is set, then this
+       function builds a Pipeline in self-diagnostic mode. In self-diagnostic mode,
+       the pipeline will call ``profile_pipeline`` function and benchmark each stage
+       with different concurrency. Once the profiling is done, then the program exits.
+
+       .. seealso::
+
+          :py:func:`profile_pipeline`
+             A function to profile a Pipeline stage by stage.
+
     Args:
         pipeline_cfg: The definition of the pipeline to build.
 
@@ -178,6 +191,11 @@ def build_pipeline(
 
         stage_id: The index of the initial stage  used for logging.
     """
+    if _config._diagnostic_mode_enabled():
+        from ._profile import _build_pipeline_diagnostic_mode
+
+        return _build_pipeline_diagnostic_mode(pipeline_cfg)
+
     return _build_pipeline(
         pipeline_cfg,
         num_threads=num_threads,
