@@ -108,7 +108,7 @@ class ProfileHook(ABC):
         ...
 
 
-class _NullHook(ProfileHook):
+class _NoOpHook(ProfileHook):
     @contextmanager
     def stage_profile_hook(self) -> Iterator[None]:
         yield
@@ -120,9 +120,6 @@ class _NullHook(ProfileHook):
     # For documentation rendering
     def __repr__(self) -> str:
         return "None"
-
-
-_NULLHOOK = _NullHook()
 
 
 @dataclass
@@ -148,6 +145,14 @@ class ProfileResult:
 
 
 _ProfileResult = ProfileResult  # temp
+
+
+def no_op(_: ProfileResult) -> None:
+    pass
+
+
+_DEFAULT_HOOK = _NoOpHook()
+_DEFAULT_CALLBACK = no_op
 
 
 def _get_local_rank() -> int:
@@ -231,7 +236,8 @@ def profile_pipeline(
             #   Concurrency 4: QPS=1200.44, Occupancy=0.55
             #   Concurrency 1: QPS=450.22, Occupancy=0.30
     """
-    hook_ = hook or _NULLHOOK
+    hook_ = hook or _DEFAULT_HOOK
+    callback_ = callback or _DEFAULT_CALLBACK
 
     with hook_.pipeline_profile_hook():
         if _get_local_rank() != 0:
@@ -273,8 +279,7 @@ def profile_pipeline(
 
             inputs = outputs  # pyre-ignore[61]
             result = ProfileResult(pipe.name, stats)
-            if callback is not None:
-                callback(result)
+            callback_(result)
             results.append(result)
 
     return results
