@@ -16,3 +16,4 @@ Examples
    performance_analysis
    data_formats
    hydra_integration
+   pipeline_definitions

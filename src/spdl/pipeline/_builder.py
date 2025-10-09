@@ -51,6 +51,12 @@ U_ = TypeVar("U_")
 class PipelineBuilder(Generic[T, U]):
     """Build :py:class:`Pipeline` object.
 
+    .. note::
+
+       ``PipelineBuilder`` supports only chain of operations.
+       If you need to build a pipeline composed of multiple sub-pipelines,
+       use :py:class:`~spdl.pipeline.defs.PipelineConfig`.
+
     .. seealso::
 
        - :ref:`intro`
@@ -60,6 +66,8 @@ class PipelineBuilder(Generic[T, U]):
        - :ref:`pipeline-parallelism`
          covers how to switch (or combine)
          multi-threading and multi-processing in detail.
+       - :ref:`Example: Pipeline definitions <pipeline-definitions-example>`:
+         Demonstrates constructing a complex pipeline, which ``PipelineBuilder``
     """
 
     def __init__(self) -> None:
@@ -73,13 +81,6 @@ class PipelineBuilder(Generic[T, U]):
         self, source: Iterable[T] | AsyncIterable[T]
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
-
-        .. code-block::
-
-           ┌─────────────────┐
-           │ (Async)Iterator │
-           └───────┬─────────┘
-                   ▼
 
         Args:
             source: A lightweight iterator that generates data.
@@ -108,14 +109,6 @@ class PipelineBuilder(Generic[T, U]):
         max_failures: int | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
-
-        .. code-block::
-
-                 │
-           ┌─────▼─────┐
-           │ Operation │
-           └─────┬─────┘
-                 ▼
 
         Args:
             op: A function, callable or container with ``__getitem__`` method
@@ -209,13 +202,6 @@ class PipelineBuilder(Generic[T, U]):
         buffer_size: int = 3,
     ) -> "PipelineBuilder[T, U]":
         """Attach a buffer to the end of the pipeline.
-
-        .. code-block::
-
-            │
-           ┌▼┐
-           │ │ buffer
-           └─┘
 
         Args:
             buffer_size: The size of the buffer. Pass ``0`` for unlimited buffering.

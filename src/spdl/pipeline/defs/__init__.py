@@ -6,6 +6,11 @@
 
 """This module provides building block definitions for :py:class:`~spdl.pipeline.Pipeline`.
 
+.. seealso::
+
+   :ref:`Example: Pipeline definitions <pipeline-definitions-example>`:
+   Demonstrates constructing a complex pipeline.
+
 You can build a pipeline by creating a :py:class:`PipelineConfig`,
 then passing it to :py:func:`spdl.pipeline.build_pipeline` function.
 
