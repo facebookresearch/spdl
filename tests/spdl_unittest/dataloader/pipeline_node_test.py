@@ -50,7 +50,7 @@ def test_node_chain_start_and_cancel() -> None:
 
         canceled = _cancel_recursive(c)
         assert canceled == tasks
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.wait(tasks)
         assert all(t.cancelled() for t in tasks)
 
     asyncio.run(run())
@@ -74,7 +74,7 @@ def test_node_y_shape_upstream() -> None:
 
         canceled = _cancel_recursive(c1)
         assert canceled == tasks
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.wait(tasks)
         assert all(t.cancelled() for t in tasks)
 
     asyncio.run(run())
@@ -97,7 +97,7 @@ def test_cancel_error_upstreams_and_gather_error() -> None:
         await asyncio.sleep(0)  # Let tasks start
 
         # Let B2 fail
-        await asyncio.gather(b2.task, return_exceptions=True)
+        await asyncio.wait([b2.task])
 
         canceled = _cancel_upstreams_of_errors(c1)
         # Only B1 should be canceled, since B2 errored
@@ -107,12 +107,13 @@ def test_cancel_error_upstreams_and_gather_error() -> None:
         assert b2.task not in canceled
         assert c1.task not in canceled
 
+        await asyncio.wait(tasks)
+
         errs = _gather_error(c1)
         assert len(errs) == 1
         name, err = errs[0]
         assert name == "B2"
         assert isinstance(err, DummyException) and err.args[0] == "fail B2"
-        await asyncio.gather(*tasks, return_exceptions=True)
 
     asyncio.run(run())
 
@@ -134,7 +135,7 @@ def test_cancel_error_upstreams_and_gather_error_multiple() -> None:
         await asyncio.sleep(0)  # Let tasks start
 
         # Let A2, B2 fail
-        await asyncio.gather(a2.task, b2.task, return_exceptions=True)
+        await asyncio.wait([a2.task, b2.task])
 
         canceled = _cancel_upstreams_of_errors(c1)
         assert a1.task in canceled
@@ -142,6 +143,8 @@ def test_cancel_error_upstreams_and_gather_error_multiple() -> None:
         assert b1.task in canceled
         assert b2.task not in canceled
         assert c1.task not in canceled
+
+        await asyncio.wait(tasks)
 
         errs = _gather_error(c1)
         assert len(errs) == 2
@@ -151,8 +154,6 @@ def test_cancel_error_upstreams_and_gather_error_multiple() -> None:
         name, err = errs[1]
         assert name == "B2"
         assert isinstance(err, DummyException) and err.args[0] == "fail B2"
-
-        await asyncio.gather(*tasks, return_exceptions=True)
 
     asyncio.run(run())
 
@@ -185,7 +186,7 @@ def test_cancel_error_upstreams_and_gather_error_complex() -> None:
         await asyncio.sleep(0)  # Let tasks start
 
         # Let A2, B2, C2 fail
-        await asyncio.gather(a2.task, b2.task, c2.task, return_exceptions=True)
+        await asyncio.wait([a2.task, b2.task, c2.task])
 
         canceled = _cancel_upstreams_of_errors(f1)
         assert a1.task in canceled
@@ -200,6 +201,8 @@ def test_cancel_error_upstreams_and_gather_error_complex() -> None:
         assert e2.task not in canceled
         assert f1.task not in canceled
 
+        await asyncio.wait(tasks)
+
         errs = _gather_error(f1)
         assert len(errs) == 3
         name, err = errs[0]
@@ -211,8 +214,6 @@ def test_cancel_error_upstreams_and_gather_error_complex() -> None:
         name, err = errs[2]
         assert name == "C2"
         assert isinstance(err, DummyException) and err.args[0] == "fail C2"
-
-        await asyncio.gather(*tasks, return_exceptions=True)
 
     asyncio.run(run())
 
@@ -235,7 +236,7 @@ def test_gather_error_with_cancelled() -> None:
         await asyncio.sleep(0)  # Let tasks start
 
         # Let C fail
-        await asyncio.gather(c1.task, return_exceptions=True)
+        await asyncio.wait([c1.task])
 
         canceled = _cancel_upstreams_of_errors(c1)
         assert a1.task in canceled
@@ -244,11 +245,12 @@ def test_gather_error_with_cancelled() -> None:
         assert b2.task in canceled
         assert c1.task not in canceled
 
+        await asyncio.wait(tasks)
+
         errs = _gather_error(c1)
         assert len(errs) == 1
         name, err = errs[0]
         assert name == "C1"
         assert isinstance(err, DummyException)
-        await asyncio.gather(*tasks, return_exceptions=True)
 
     asyncio.run(run())
