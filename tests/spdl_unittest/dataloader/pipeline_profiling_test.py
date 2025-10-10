@@ -19,6 +19,7 @@ from spdl.pipeline._profile import (
 from spdl.pipeline.defs import (
     Aggregate,
     Disaggregate,
+    MergeConfig,
     Pipe,
     PipelineConfig,
     SinkConfig,
@@ -238,3 +239,60 @@ class TestProfileHookTest(unittest.TestCase):
         self.assertGreater(len(results), 0)
         self.assertEqual(results[0].name, "simple_op")
         self.assertGreater(len(results[0].stats), 0)
+
+
+def test_profile_pipeline_with_merge_config_and_post_merge_stages():
+    """Test that profile_pipeline profiles all stages including those in MergeConfig and post-merge stages."""
+
+    def double(i: int) -> int:
+        return i * 2
+
+    def triple(i: int) -> int:
+        return i * 3
+
+    def add_ten(i: int) -> int:
+        return i + 10
+
+    def square(i: int) -> int:
+        return i * i
+
+    plc1 = PipelineConfig(
+        src=SourceConfig(range(5)),
+        pipes=[
+            Pipe(double, name="double"),
+        ],
+        sink=SinkConfig(1),
+    )
+
+    plc2 = PipelineConfig(
+        src=SourceConfig(range(10, 15)),
+        pipes=[
+            Pipe(triple, name="triple"),
+        ],
+        sink=SinkConfig(1),
+    )
+
+    main_cfg = PipelineConfig(
+        src=MergeConfig([plc1, plc2]),
+        pipes=[
+            Pipe(add_ten, name="add_ten"),
+            Pipe(square, name="square"),
+        ],
+        sink=SinkConfig(1),
+    )
+
+    results = profile_pipeline(main_cfg, num_inputs=3)
+
+    assert len(results) == 4
+
+    assert results[0].name == "double"
+    assert results[1].name == "triple"
+    assert results[2].name == "add_ten"
+    assert results[3].name == "square"
+
+    for result in results:
+        assert len(result.stats) > 0
+        for stat in result.stats:
+            assert hasattr(stat, "concurrency")
+            assert hasattr(stat, "qps")
+            assert hasattr(stat, "occupancy_rate")
