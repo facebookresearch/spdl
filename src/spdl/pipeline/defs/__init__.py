@@ -8,8 +8,8 @@
 
 .. seealso::
 
-   :ref:`Example: Pipeline definitions <pipeline-definitions-example>`:
-   Demonstrates constructing a complex pipeline.
+   :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+      Illustrates how to build a complex pipeline.
 
 You can build a pipeline by creating a :py:class:`PipelineConfig`,
 then passing it to :py:func:`spdl.pipeline.build_pipeline` function.
