@@ -51,8 +51,8 @@ class SourceConfig(Generic[T], _ConfigBase):
 
     .. seealso::
 
-       - :py:class:`PipelineConfig`
-       - :py:func:`spdl.pipeline.build_pipeline`
+       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+          Illustrates how to build a complex pipeline.
     """
 
     source: Iterable | AsyncIterable
@@ -75,7 +75,13 @@ class SourceConfig(Generic[T], _ConfigBase):
 
 @dataclass(frozen=True)
 class MergeConfig(Generic[T], _ConfigBase):
-    """Merge multiple pipelines into one output queue."""
+    """Merge multiple pipelines into one output queue.
+
+    .. seealso::
+
+       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+          Illustrates how to build a complex pipeline.
+    """
 
     pipeline_configs: "Sequence[PipelineConfig[Any, Any]]"
 
@@ -130,8 +136,8 @@ class PipeConfig(Generic[T, U], _ConfigBase):
 
     .. seealso::
 
-       - :py:class:`PipelineConfig`
-       - :py:func:`spdl.pipeline.build_pipeline`
+       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+          Illustrates how to build a complex pipeline.
     """
 
     name: str
@@ -183,8 +189,8 @@ class SinkConfig(Generic[T], _ConfigBase):
 
     .. seealso::
 
-       - :py:class:`PipelineConfig`
-       - :py:func:`spdl.pipeline.build_pipeline`
+       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+          Illustrates how to build a complex pipeline.
     """
 
     buffer_size: int
@@ -211,6 +217,11 @@ class PipelineConfig(Generic[T, U], _ConfigBase):
 
     You can use :py:func:`spdl.pipeline.build_pipeline` to build a
     :py:class:`spdl.pipeline.Pipeline` object.
+
+    .. seealso::
+
+       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+          Illustrates how to build a complex pipeline.
     """
 
     src: SourceConfig[T] | MergeConfig[T]

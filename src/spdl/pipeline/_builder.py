@@ -59,15 +59,19 @@ class PipelineBuilder(Generic[T, U]):
 
     .. seealso::
 
-       - :ref:`intro`
-         explains the basic usage of ``PipelineBuilder`` and ``Pipeline``.
-       - :ref:`pipeline-caveats`
-         lists known anti-patterns that can cause a deadlock.
-       - :ref:`pipeline-parallelism`
-         covers how to switch (or combine)
-         multi-threading and multi-processing in detail.
-       - :ref:`Example: Pipeline definitions <pipeline-definitions-example>`:
-         Demonstrates constructing a complex pipeline, which ``PipelineBuilder``
+       :ref:`intro`
+          Explains the basic usage of ``PipelineBuilder`` and ``Pipeline``.
+
+       :ref:`pipeline-caveats`
+          Lists known anti-patterns that can cause a deadlock.
+
+       :ref:`pipeline-parallelism`
+          Covers how to switch (or combine) multi-threading and
+          multi-processing in detail.
+
+       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+          Illustrates how to build a complex pipeline that
+          ``PipelineBuilder`` does not support.
     """
 
     def __init__(self) -> None:
