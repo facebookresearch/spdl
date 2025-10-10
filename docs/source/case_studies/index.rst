@@ -10,3 +10,4 @@ we encountered while optimizing production pipelines.
 
    parallelism
    data_format
+   inference
