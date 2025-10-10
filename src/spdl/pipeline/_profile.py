@@ -6,6 +6,7 @@
 
 import logging
 import os
+import random
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
@@ -18,6 +19,7 @@ from ._pipeline import Pipeline
 from .defs._defs import (
     _PipeArgs,
     _PipeType,
+    MergeConfig,
     PipeConfig,
     PipelineConfig,
     SinkConfig,
@@ -160,6 +162,79 @@ def _get_local_rank() -> int:
     return int(os.environ.get("LOCAL_RANK", "0"))
 
 
+def _profile_pipe(
+    inputs: list[T],
+    pipe: PipeConfig[T, U],
+    hook_: ProfileHook,
+    callback_: Callable[[ProfileResult], None],
+) -> tuple[list[U], ProfileResult]:
+    """Internal function that profiles a single pipe stage."""
+    if pipe._type in (_PipeType.Aggregate, _PipeType.Disaggregate):
+        concurrencies = [1]
+    else:
+        concurrencies = [32, 16, 8, 4, 1]
+
+    stats = []
+    cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
+    for concurrency in concurrencies:
+        pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
+        with hook_.stage_profile_hook():
+            qps_, outputs = _run(pipeline)
+        occupancy_rate = (
+            pipeline._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
+        )
+        _LG.info(" - Concurrency: %d", concurrency)
+        _LG.info(" - QPS: %.2f", qps_)
+        _LG.info(" - Occupancy Rate: %.2f", occupancy_rate)
+
+        stats.append(_ProfileStats(concurrency, qps_, occupancy_rate))
+
+    result = ProfileResult(pipe.name, stats)
+    callback_(result)
+    return outputs, result  # pyre-ignore[61]
+
+
+def _profile_merge(
+    merge_cfg: MergeConfig[T],
+    num_inputs: int,
+    hook: ProfileHook,
+    callback: Callable[[ProfileResult], None],
+) -> tuple[list[T], list[ProfileResult]]:
+    """Internal function that profiles a merge configuration."""
+    outputs, results = [], []
+    for plc in merge_cfg.pipeline_configs:
+        outputs_, results_ = _profile_pipeline(plc, num_inputs, hook, callback)
+        # TODO: when MergConfig allows control of merge mechanism, use it.
+        outputs.extend(outputs_)
+        results.extend(results_)
+    return outputs, results
+
+
+def _profile_pipeline(
+    cfg: PipelineConfig[T, U],
+    num_inputs: int,
+    hook: ProfileHook,
+    callback: Callable[[ProfileResult], None],
+) -> tuple[list[U], list[ProfileResult]]:
+    """Internal function that performs the actual profiling of pipeline stages."""
+    _LG.info("Fetching %d inputs.", num_inputs)
+    results = []
+    if isinstance(cfg.src, SourceConfig):
+        inputs = _fetch_inputs(cfg.src, num_inputs)
+    elif isinstance(cfg.src, MergeConfig):
+        inputs, results = _profile_merge(cfg.src, num_inputs, hook, callback)
+        random.shuffle(inputs)
+    else:
+        raise ValueError(f"Unexpected source type {type(cfg.src)}")
+
+    for pipe in cfg.pipes:
+        _LG.info("Profiling Stage: %s", pipe.name)
+        inputs, result = _profile_pipe(inputs, pipe, hook, callback)
+        results.append(result)
+
+    return inputs, results
+
+
 def profile_pipeline(
     cfg: PipelineConfig[T, U],
     num_inputs: int = 1000,
@@ -244,42 +319,8 @@ def profile_pipeline(
             )
             return []
 
-        _LG.info("Fetching %d inputs.", num_inputs)
-        if isinstance(cfg.src, SourceConfig):
-            inputs = _fetch_inputs(cfg.src, num_inputs)
-        else:
-            raise ValueError("Pipeline with MergeConfig is not currently supported.")
-
-        results = []
-        for i, pipe in enumerate(cfg.pipes):
-            _LG.info("Profiling Stage %d: %s", i, pipe.name)
-
-            if pipe._type in (_PipeType.Aggregate, _PipeType.Disaggregate):
-                concurrencies = [1]
-            else:
-                concurrencies = [32, 16, 8, 4, 1]
-
-            stats = []
-            cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
-            for concurrency in concurrencies:
-                pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
-                with hook_.stage_profile_hook():
-                    qps_, outputs = _run(pipeline)
-                occupancy_rate = (
-                    pipeline._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
-                )
-                _LG.info(" - Concurrency: %d", concurrency)
-                _LG.info(" - QPS: %.2f", qps_)
-                _LG.info(" - Occupancy Rate: %.2f", occupancy_rate)
-
-                stats.append(_ProfileStats(concurrency, qps_, occupancy_rate))
-
-            inputs = outputs  # pyre-ignore[61]
-            result = ProfileResult(pipe.name, stats)
-            callback_(result)
-            results.append(result)
-
-    return results
+        _, results = _profile_pipeline(cfg, num_inputs, hook_, callback_)
+        return results
 
 
 ##############################################################################
