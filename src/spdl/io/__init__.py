@@ -101,6 +101,10 @@ from ._preprocessing import (
     get_video_filter_desc,
 )
 from ._transfer import transfer_tensor
+from ._wav import (
+    load_wav,
+    parse_wav_header,
+)
 
 __all__ = [
     # HIGH LEVEL API
@@ -191,6 +195,9 @@ __all__ = [
     "NpzFile",
     "load_npz",
     "load_npy",
+    # WAV AUDIO
+    "parse_wav_header",
+    "load_wav",
 ]
 
 

@@ -17,3 +17,4 @@ Examples
    data_formats
    hydra_integration
    pipeline_definitions
+   benchmark_wav

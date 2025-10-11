@@ -7,3 +7,4 @@
 add_subdirectory(core)
 add_subdirectory(cuda)
 add_subdirectory(archive)
+add_subdirectory(wav)
