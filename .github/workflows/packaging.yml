@@ -56,7 +56,7 @@ jobs:
     with:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "${{ matrix.python-version == '3.11'}} && ${{ matrix.free-threaded != 'ft' }}"
+      run-test: "${{ matrix.python-version == '3.13'}} && ${{ matrix.free-threaded != 'ft' }}"
       # Note: CUDA version is hard-coded in installation script
       test-concurrency: 3
 
@@ -79,7 +79,7 @@ jobs:
       arch: aarch64
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "${{ matrix.python-version == '3.10' }} && ${{ matrix.free-threaded != 'ft' }}"
+      run-test: "${{ matrix.python-version == '3.14' }} && ${{ matrix.free-threaded != 'ft' }}"
       test-concurrency: 3
 
   #############################################################################
@@ -103,5 +103,5 @@ jobs:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
       cuda-version: "${{ matrix.cuda-version }}"
-      run-test: "${{ matrix.python-version == '3.11' }}"
+      run-test: "${{ matrix.python-version == '3.12' }}"
       test-concurrency: 3
