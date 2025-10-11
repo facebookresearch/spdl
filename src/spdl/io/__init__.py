@@ -100,6 +100,7 @@ from ._preprocessing import (
     get_filter_desc,
     get_video_filter_desc,
 )
+from ._tar import iter_tarfile
 from ._transfer import transfer_tensor
 
 __all__ = [
@@ -191,6 +192,8 @@ __all__ = [
     "NpzFile",
     "load_npz",
     "load_npy",
+    # Archive
+    "iter_tarfile",
 ]
 
 
