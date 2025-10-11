@@ -25,7 +25,8 @@ _LG: logging.Logger = logging.getLogger(__name__)
 __all__ = [
     "_libspdl",
     "_libspdl_cuda",
-    "_zip",
+    "_archive",
+    "_wav",
 ]
 
 
@@ -48,6 +49,11 @@ def __getattr__(name: str) -> ModuleType:
         import spdl.io.lib._archive  # pyre-ignore: [21]
 
         return spdl.io.lib._archive
+
+    if name == "_wav":
+        import spdl.io.lib._wav  # pyre-ignore: [21]
+
+        return spdl.io.lib._wav
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
