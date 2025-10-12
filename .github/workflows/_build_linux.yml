@@ -13,6 +13,13 @@ on:
       arch:
         required: true
         type: string
+      cuda-version:
+        required: true
+        type: string
+      use-nvdec:
+        default: "nvdec"
+        type: string
+        description: 'Whether build NVDEC extension. Valid value is "nvdec" or not.'
       os:
         required: true
         type: string
@@ -26,7 +33,9 @@ on:
         type: string
 
 env:
-  ARTIFACT: wheel-linux-py${{ inputs.python-version }}${{ inputs.free-threaded }}-${{ inputs.arch }}
+  ARTIFACT: wheel-linux-py${{ inputs.python-version }}${{ inputs.free-threaded }}-${{ inputs.arch }}-cuda${{ inputs.cuda-version }}${{ inputs.use-nvdec }}
+  SPDL_USE_CUDA: 1
+  SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
 
 jobs:
   build:
@@ -41,26 +50,43 @@ jobs:
         env:
           SPDL_USE_TRACING: 1
         run: |
-          set -ex
+          # Figure out versions
+          py_ver="${{ inputs.python-version }}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            py_ver="${py_ver}t"
+          fi
+          cuda_ver="${{ inputs.cuda-version }}"
 
+          # Setup Python
+          # wget -qO- https://astral.sh/uv/install.sh | sh
           uv --version
+
+          uv python pin "${py_ver}"
           uv python list --only-installed
+          uv venv
+          source .venv/bin/activate
 
-          # note: 3.14t is in cp314-cp314t directory, others are in cp314-cp314 directory
-          v=${{ inputs.python-version }}
-          dir="cp${v//[.t]/}-cp${v//[.]/}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            dir="${dir}t"
+          which python
+          python --version
+
+          # Install CUDA
+          cuda_dir="/opt/cuda"
+          .github/scripts/install_cuda_toolkit.py \
+            --base-dir "${cuda_dir}" \
+            --cuda-version "${cuda_ver}"
+          if [ ! -d "${cuda_dir}/lib64" ]; then
+            ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
           fi
-          python_exe="/opt/python/${dir}/bin/python"
-          "${python_exe}" --version
-          uv venv --python "${python_exe}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            source .venv/bin/activate
-          fi
+
+          export PATH="${PATH}:${cuda_dir}/bin"
+          export CUDA_PATH="${cuda_dir}"
+          # Sanity check
+          set -e
+          nvcc --version
+
+          # Build package
           uv build --no-python-downloads --all-packages --wheel
-
-          ./packaging/repair_wheels.sh manylinux_2_28_${{ inputs.arch }} ./dist ~/package
+          ./packaging/repair_wheels.sh "manylinux_2_27_${{ inputs.arch }}" ./dist ~/package
 
       - uses: actions/upload-artifact@v4
         name: Upload build artifact
