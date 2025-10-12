@@ -9,9 +9,6 @@ on:
       machine_gpu:
         type: string
         default: "4-core-ubuntu-gpu-t4"
-      build_container:
-        required: true
-        type: string
       arch:
         type: string
         default: x86_64
@@ -47,7 +44,7 @@ env:
 jobs:
   build:
     runs-on: "${{ inputs.machine }}"
-    container: "${{ inputs.build_container }}"
+    container: "quay.io/pypa/manylinux_2_28_${{ inputs.arch }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,28 +54,42 @@ jobs:
         run: |
           set -ex
 
-          # Quick sanity check
+          # Figure out versions
+          py_ver="${{ inputs.python-version }}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            py_ver="${py_ver}t"
+          fi
+          cuda_ver="${{ inputs.cuda-version }}"
+
+          # Setup Python
+          # wget -qO- https://astral.sh/uv/install.sh | sh
+          uv --version
+
+          uv python pin "${py_ver}"
+          uv python list --only-installed
+          uv venv
+          source .venv/bin/activate
+
+          which python
+          python --version
+
+          # Install CUDA
+          cuda_dir="/opt/cuda"
+          .github/scripts/install_cuda_toolkit.py \
+            --base-dir "${cuda_dir}" \
+            --cuda-version "${cuda_ver}"
+          if [ ! -d "${cuda_dir}/lib64" ]; then
+            ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
+          fi
+
+          export PATH="${PATH}:${cuda_dir}/bin"
+          export CUDA_PATH="${cuda_dir}"
+          # Sanity check
+          set -e
           nvcc --version
 
-          wget -qO- https://astral.sh/uv/install.sh | sh
-          source $HOME/.local/bin/env
-          uv --version
-          uv python list --only-installed
-
-          # note: 3.13t is in cp313-cp313t directory, others are in cp313-cp313 directory
-          v=${{ inputs.python-version }}
-          dir="cp${v//[.t]/}-cp${v//[.]/}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            dir="${dir}t"
-          fi
-          python_exe="/opt/python/${dir}/bin/python"
-          "${python_exe}" --version
-          uv venv --python "${python_exe}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            source .venv/bin/activate
-          fi
+          # Build package
           uv build --no-python-downloads --all-packages --wheel
-
           ./packaging/repair_wheels.sh "manylinux_2_27_${{ inputs.arch }}" ./dist ~/package
 
       - uses: actions/upload-artifact@v4
@@ -173,7 +184,8 @@ jobs:
           pip install pytest pytest-xdist parameterized
 
           cu_ver="${{ inputs.cuda-version }}"
-          cu_ver="${cu_ver//[.]/}"  # Remove dots
+          cu_ver="${cu_ver//[.]/}"  # Remove dots  12.4.1 -> 1241
+          cu_ver="${cu_ver:0:3}"  # Retain three chars 1241 -> 124
           pip install numpy torch --index-url "https://download.pytorch.org/whl/cu${cu_ver}"
 
           # Install FFmpeg
