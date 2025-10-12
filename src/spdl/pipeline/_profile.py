@@ -143,6 +143,9 @@ class ProfileResult:
       - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0)."""
 
 
+_ProfileResult = ProfileResult  # temp
+
+
 def no_op(_: ProfileResult) -> None:
     pass
 
