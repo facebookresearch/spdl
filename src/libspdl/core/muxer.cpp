@@ -63,6 +63,8 @@ std::string to_str(MediaType media) {
       return "video";
     case MediaType::Image:
       return "image";
+    default:
+      throw std::domain_error("[INTERNAL ERROR] Unexpected media type.");
   }
 }
 } // namespace
