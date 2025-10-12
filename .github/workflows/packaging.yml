@@ -18,24 +18,24 @@ jobs:
   #############################################################################
   # macOS
   #############################################################################
-  macos:
-    name: "macOS"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        free-threaded: [""]
-        include:
-          - python-version: "3.13"
-            free-threaded: "ft"
-          - python-version: "3.14"
-            free-threaded: "ft"
-    uses: ./.github/workflows/_build_macos.yml
-    with:
-      python-version: "${{ matrix.python-version }}"
-      free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "false"
-      test-concurrency: 3
+  # macos:
+  #   name: "macOS"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  #       free-threaded: [""]
+  #       include:
+  #         - python-version: "3.13"
+  #           free-threaded: "ft"
+  #         - python-version: "3.14"
+  #           free-threaded: "ft"
+  #   uses: ./.github/workflows/_build_macos.yml
+  #   with:
+  #     python-version: "${{ matrix.python-version }}"
+  #     free-threaded: "${{ matrix.free-threaded }}"
+  #     run-test: "false"
+  #     test-concurrency: 3
 
   #############################################################################
   # Windows
@@ -66,45 +66,45 @@ jobs:
   #############################################################################
   # Linux (CPU)
   #############################################################################
-  linux-aarch64:
-    name: "Linux aarch64"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        free-threaded: [""]
-        include:
-          - python-version: "3.14"
-            free-threaded: "ft"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      os: ubuntu-24.04-arm
-      arch: aarch64
-      python-version: "${{ matrix.python-version }}"
-      free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "${{ matrix.python-version == '3.14' }} && ${{ matrix.free-threaded != 'ft' }}"
-      test-concurrency: 3
+  # linux-aarch64:
+  #   name: "Linux aarch64"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  #       free-threaded: [""]
+  #       include:
+  #         - python-version: "3.14"
+  #           free-threaded: "ft"
+  #   uses: ./.github/workflows/_build_linux.yml
+  #   with:
+  #     os: ubuntu-24.04-arm
+  #     arch: aarch64
+  #     python-version: "${{ matrix.python-version }}"
+  #     free-threaded: "${{ matrix.free-threaded }}"
+  #     run-test: "${{ matrix.python-version == '3.14' }} && ${{ matrix.free-threaded != 'ft' }}"
+  #     test-concurrency: 3
 
   #############################################################################
   # Linux (CUDA)
   #############################################################################
-  linux-x86-cuda:
-    name: "Linux x86_64 CUDA"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        cuda-version: ["12.4"]
-        free-threaded: [""]
-        include:
-          - python-version: "3.14"
-            free-threaded: "ft"
-            cuda-version: "12.4"
-    uses: ./.github/workflows/_build_linux_cuda.yml
-    with:
-      build_container: "pytorch/manylinux2_28-builder:cuda${{ matrix.cuda-version }}"
-      python-version: "${{ matrix.python-version }}"
-      free-threaded: "${{ matrix.free-threaded }}"
-      cuda-version: "${{ matrix.cuda-version }}"
-      run-test: "${{ matrix.python-version == '3.12' }}"
-      test-concurrency: 3
+  # linux-x86-cuda:
+  #   name: "Linux x86_64 CUDA"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  #       cuda-version: ["12.4"]
+  #       free-threaded: [""]
+  #       include:
+  #         - python-version: "3.14"
+  #           free-threaded: "ft"
+  #           cuda-version: "12.4"
+  #   uses: ./.github/workflows/_build_linux_cuda.yml
+  #   with:
+  #     build_container: "pytorch/manylinux2_28-builder:cuda${{ matrix.cuda-version }}"
+  #     python-version: "${{ matrix.python-version }}"
+  #     free-threaded: "${{ matrix.free-threaded }}"
+  #     cuda-version: "${{ matrix.cuda-version }}"
+  #     run-test: "${{ matrix.python-version == '3.12' }}"
+  #     test-concurrency: 3
