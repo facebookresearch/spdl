@@ -118,7 +118,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1", "8.0"]
+        ffmpeg-version: ["8.0"]
     runs-on: ${{ inputs.os }}
     defaults:
       run:
