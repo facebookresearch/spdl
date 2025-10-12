@@ -24,6 +24,9 @@ cuda_dir="/c/opt/cuda"
 .github/scripts/install_cuda_toolkit.py \
        --base-dir "${cuda_dir}" \
        --cuda-version "${cuda_ver}"
+if [ ! -d "${cuda_dir}/lib64" ]; then
+    ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
+fi
 
 export PATH="${PATH}:${cuda_dir}/bin"
 export CUDA_PATH="${cuda_dir}"
