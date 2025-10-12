@@ -28,7 +28,7 @@ from spdl.source.utils import (
 )
 
 
-def iterate_in_subprocess(fn, *, timeout=5, **kwargs):
+def iterate_in_subprocess(fn, *, timeout=10, **kwargs):
     return _iterate_in_subprocess(fn, timeout=timeout, **kwargs)
 
 
