@@ -82,7 +82,8 @@ jobs:
       arch: aarch64
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "${{ matrix.python-version == '3.14' }} && ${{ matrix.free-threaded != 'ft' }}"
+      # Update to 3.14 once PyTorch is released
+      run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3
 
   #############################################################################
@@ -106,5 +107,5 @@ jobs:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
       cuda-version: "${{ matrix.cuda-version }}"
-      run-test: "${{ matrix.python-version == '3.12' }}"
+      run-test: "${{ (matrix.python-version == '3.12') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3
