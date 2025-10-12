@@ -18,6 +18,7 @@ export PATH="${PATH}:${HOME}/.local/bin/"
 uv python pin "${py_ver}"
 uv python list --only-installed
 uv venv
+source .venv/Scripts/activate
 
 cuda_dir="/c/opt/cuda"
 .github/scripts/install_cuda_toolkit.py \
