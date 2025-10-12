@@ -184,13 +184,7 @@ jobs:
 
           # Sort out library paths
           # 1. For some reason, the FFmpeg dynamic libraries are not found.
-          # 2. CUDA runtime PyPI package is installed as part of PyTorch installation.
-          # However, it is installed in site-packages dir, which is not in PATH by default.
-          # (PyTorch has a special way to load it, but we don't do that)
-          cudart_dir="$(
-            python -c 'import os.path,nvidia.cuda_runtime;print(os.path.join(nvidia.cuda_runtime.__path__[0], "lib"))'
-          )"
-          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cudart_dir}" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
 
       - name: Unit test
         run: |

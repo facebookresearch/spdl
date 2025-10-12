@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL: Final[str] = (
     "https://developer.download.nvidia.com/compute/cuda/redist"
 )
-DEFAULT_CUDA_VERSION: Final[str] = "12.3.2"
-COMPONENTS_TO_DOWNLOAD: Final[list[str]] = ["cuda_cudart", "cuda_nvcc"]
+DEFAULT_CUDA_VERSION: Final[str] = "13.0.2"
+COMPONENTS_TO_DOWNLOAD: Final[list[str]] = ["cuda_cudart", "cuda_nvcc", "cuda_crt", "libnvvm", "cuda_cccl"]
 
 
 def detect_platform() -> str:
@@ -92,7 +92,7 @@ def get_component_path(
 
 def download_file(url: str, destination: Path) -> None:
     """Download a file from a URL to a local path."""
-    logger.info("Downloading %s...", url)
+    logger.info("Downloading %s ...", url)
 
     try:
         with urllib.request.urlopen(url, timeout=300) as response:
@@ -112,7 +112,7 @@ def download_file(url: str, destination: Path) -> None:
 
 def extract_archive(archive_path: Path, extract_to: Path) -> None:
     """Extract an archive (zip or tar.xz) to a directory."""
-    logger.info("Extracting %s to %s...", archive_path, extract_to)
+    logger.info("Extracting %s to %s ...", archive_path, extract_to)
     kwargs = {}
 
     if archive_path.suffix == ".zip":
@@ -127,7 +127,7 @@ def extract_archive(archive_path: Path, extract_to: Path) -> None:
 
 def copy_directory_contents(src: Path, dst: Path) -> None:
     """Copy all contents from src directory to dst directory."""
-    logger.info("Copying contents from %s to %s...", src, dst)
+    logger.info("Copying contents from %s to %s ...", src, dst)
     for item in src.iterdir():
         dst_item = dst / item.name
         if item.is_dir():

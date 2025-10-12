@@ -45,6 +45,7 @@ for whl in "${input_dir}"/*.whl; do
                    --exclude libnvcuvid.so      \
                    --exclude libcudart.so.11.0  \
                    --exclude libcudart.so.12    \
+                   --exclude libcudart.so.13    \
                    --exclude libnvjpeg.so.12    \
                    --exclude libnppc.so.12      \
                    --exclude libnppig.so.12
