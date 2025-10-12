@@ -25,6 +25,10 @@ on:
         required: false
         default: '3'
         type: string
+      cuda-version:
+        required: true
+        type: string
+        # valida values are like 12.4.1, 12.3.1 etc...
 
 env:
   ARTIFACT: wheel-win-py${{ inputs.python-version }}${{ inputs.free-threaded }}
@@ -40,23 +44,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Cuda Toolkit 12.4 on Windows
-        shell: bash
-        run: |
-          choco install unzip -y --no-progress
-
-          .github/scripts/windows/install_cuda_toolkit_12.4.sh
-
-          echo "C:\\\\Program Files\\\\NVIDIA GPU Computing Toolkit\\\\CUDA\\\\v12.4\\\\bin" >> $GITHUB_PATH
-          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4" >> $GITHUB_ENV
-
       - name: Build
         run: |
           .\packaging\vc_env_helper.bat                 `
             bash                                        `
               .github/scripts/windows/build_package.sh  `
               "${{ inputs.python-version }}"            `
-              "${{ inputs.free-threaded }}"
+              '"${{ inputs.free-threaded }}"'           `
+              "${{ inputs.cuda-version }}"
+          # note the `inputs.free-threaded` can be empty so that the most outer
+          # single bracket is necessary
 
       - uses: actions/upload-artifact@v4
         name: Upload build artifact

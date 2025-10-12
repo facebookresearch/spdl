@@ -47,17 +47,20 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         free-threaded: [""]
+        cuda-version: ["12.4.1"]
         include:
           - python-version: "3.13"
             free-threaded: "ft"
+            cuda-version: "12.4.1"
           - python-version: "3.14"
             free-threaded: "ft"
+            cuda-version: "12.4.1"
     uses: ./.github/workflows/_build_windows.yml
     with:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "${{ matrix.python-version == '3.13'}} && ${{ matrix.free-threaded != 'ft' }}"
-      # Note: CUDA version is hard-coded in installation script
+      cuda-version: "${{ matrix.cuda-version }}"
+      run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3
 
   #############################################################################
