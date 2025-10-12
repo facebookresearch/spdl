@@ -45,6 +45,8 @@ cudaVideoCodec convert_codec_id(spdl::core::CodecID id) {
       return cudaVideoCodec_JPEG;
     case spdl::core::CodecID::AV1:
       return cudaVideoCodec_AV1;
+    default:
+      throw std::domain_error("[INTERNAL ERROR] Unexpected value is provided.");
   }
 }
 
