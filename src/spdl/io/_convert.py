@@ -6,7 +6,9 @@
 
 # pyre-unsafe
 
-from spdl.io import CPUBuffer, CUDABuffer
+from typing import Any, Protocol, runtime_checkable
+
+from spdl.io import CUDABuffer
 
 from ._internal import import_utils
 
@@ -20,14 +22,74 @@ __all__ = [
     "to_numpy",
     "to_torch",
     "to_jax",
+    "ArrayInterface",
+    "CUDAArrayInterface",
 ]
 
 
-def to_numpy(buffer: CPUBuffer):
+@runtime_checkable
+class ArrayInterface(Protocol):
+    """Protocol for objects that implement the NumPy Array Interface Protocol.
+
+    Objects implementing this protocol expose their data through the
+    ``__array_interface__`` attribute, allowing zero-copy conversion to NumPy arrays.
+
+    See: https://numpy.org/doc/stable/reference/arrays.interface.html
+    """
+
+    @property
+    def __array_interface__(self) -> dict[str, Any]:
+        """Return a dictionary containing array interface metadata.
+
+        The dictionary must contain:
+            - ``version``: Protocol version (3)
+            - ``shape``: Tuple of array dimensions
+            - ``typestr``: Data type string
+            - ``data``: Tuple of (data_pointer, read_only_flag)
+            - ``owner``: Optional object owning the data buffer
+
+        Returns:
+            Dictionary with array interface metadata.
+        """
+        ...
+
+
+@runtime_checkable
+class CUDAArrayInterface(Protocol):
+    """Protocol for objects that implement the CUDA Array Interface Protocol.
+
+    Objects implementing this protocol expose their CUDA data through the
+    ``__cuda_array_interface__`` attribute, allowing zero-copy conversion to
+    CUDA-aware libraries like PyTorch and Numba.
+
+    See: https://numba.pydata.org/numba-doc/latest/cuda/cuda_array_interface.html
+    """
+
+    @property
+    def __cuda_array_interface__(self) -> dict[str, Any]:
+        """Return a dictionary containing CUDA array interface metadata.
+
+        The dictionary must contain:
+            - ``version``: Protocol version (typically 3)
+            - ``shape``: Tuple of array dimensions
+            - ``typestr``: Data type string
+            - ``data``: Tuple of (data_pointer, read_only_flag)
+            - ``strides``: Optional tuple of strides (in bytes)
+            - ``descr``: Optional data type descriptor
+            - ``mask``: Optional mask array interface
+
+        Returns:
+            Dictionary with CUDA array interface metadata.
+        """
+        ...
+
+
+def to_numpy(buffer: ArrayInterface):
     """Convert to NumPy NDArray.
 
     Args:
-        buffer: Object implements the array interface protocol.
+        buffer: Object that implements the array interface protocol
+        (has ``__array_interface__``).
 
     Returns:
         (NDArray): A NumPy array.
@@ -42,11 +104,12 @@ def to_numpy(buffer: CPUBuffer):
     return np.array(buffer, copy=False)
 
 
-def to_torch(buffer: CPUBuffer | CUDABuffer):
+def to_torch(buffer: ArrayInterface | CUDABuffer):
     """Convert to PyTorch Tensor.
 
     Args:
-        buffer: Object implements the (CUDA) array interface protocol.
+        buffer: Object that implements the array interface protocol
+        (has ``__array_interface__``) or :py:class:`CUDABuffer` object.
 
     Returns:
         (torch.Tensor): A PyTorch Tensor.
@@ -55,7 +118,7 @@ def to_torch(buffer: CPUBuffer | CUDABuffer):
         # Note: this is to silence pyre errors.
         # Usually, it should be asserting that `buffer` is a CUDABuffer,
         # but CUDABuffer class is a stub, so it would fail.
-        assert not isinstance(buffer, CPUBuffer)
+        assert not isinstance(buffer, ArrayInterface)
         if any(s == 0 for s in interface.get("shape", [])):
             raise ValueError("0-element array is not supported.")
 
@@ -78,11 +141,13 @@ def to_torch(buffer: CPUBuffer | CUDABuffer):
     return torch.as_tensor(np.array(buffer, copy=False))
 
 
-def to_numba(buffer: CPUBuffer | CUDABuffer):
+def to_numba(buffer: ArrayInterface | CUDAArrayInterface):
     """Convert to Numba DeviceNDArray or NumPy NDArray.
 
     Args:
-        buffer: Object implements the (CUDA) array interface protocol.
+        buffer: Object that implements the array interface protocol
+        (has ``__array_interface__``) or
+        CUDA array interface protocol (has ``__cuda_array_interface__``).
 
     Returns:
         (DeviceNDArray or NDArray): A Numba DeviceNDArray or NumPy NDArray.
@@ -96,11 +161,12 @@ def to_numba(buffer: CPUBuffer | CUDABuffer):
     return np.array(buffer, copy=False)
 
 
-def to_jax(buffer: CPUBuffer):
+def to_jax(buffer: ArrayInterface):
     """Convert to JAX Array.
 
     Args:
-        buffer: Object implements the array interface protocol.
+        buffer: Object that implements the array interface protocol
+        (has ``__array_interface__``).
 
     Returns:
         (jax.Array): A JAX Array.

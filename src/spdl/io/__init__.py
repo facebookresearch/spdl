@@ -63,6 +63,8 @@ from ._config import (
     video_encode_config,
 )
 from ._convert import (
+    ArrayInterface,
+    CUDAArrayInterface,
     to_jax,
     to_numba,
     to_numpy,
@@ -163,6 +165,8 @@ __all__ = [
     "nv12_to_rgb",
     "nv12_to_bgr",
     # CAST
+    "ArrayInterface",
+    "CUDAArrayInterface",
     "to_numba",
     "to_numpy",
     "to_torch",
