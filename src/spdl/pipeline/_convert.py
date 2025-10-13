@@ -12,21 +12,12 @@ import sys
 import traceback
 from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterator
 from concurrent.futures import Executor, ProcessPoolExecutor
-from typing import TypeAlias, TypeVar
+from typing import TypeVar
+
+from .defs._defs import _TAsyncCallables, _TCallables
 
 T = TypeVar("T")
 U = TypeVar("U")
-
-
-Callables: TypeAlias = (
-    Callable[[T], U]
-    | Callable[[T], Iterable[U]]
-    | Callable[[T], Awaitable[U]]
-    | Callable[[T], AsyncIterable[U]]
-)
-AsyncCallables: TypeAlias = (
-    Callable[[T], Awaitable[U]] | Callable[[T], AsyncIterable[U]]
-)
 
 
 def _func_in_subprocess(func: Callable[[T], U], item: T) -> U:
@@ -123,9 +114,9 @@ def _to_async_gen(
 
 
 def convert_to_async(
-    op: Callables[T, U],
+    op: _TCallables[T, U],
     executor: Executor | None,
-) -> AsyncCallables[T, U]:
+) -> _TAsyncCallables[T, U]:
     if inspect.ismethod(op.__call__):
         op = op.__call__
 

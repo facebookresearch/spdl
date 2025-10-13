@@ -5,14 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import inspect
-from collections.abc import AsyncIterable, Callable, Iterable, Sequence
+from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from enum import IntEnum
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
-
-from .._convert import Callables
 
 # pyre-strict
 
@@ -22,6 +20,8 @@ U = TypeVar("U")
 __all__ = [
     "_PipeArgs",
     "_PipeType",
+    "_TCallables",
+    "_TAsyncCallables",
     "_TPipeInputs",
     "_ConfigBase",
     "MergeConfig",
@@ -34,6 +34,19 @@ __all__ = [
     "Aggregate",
     "Disaggregate",
 ]
+
+
+_TCallables: TypeAlias = (
+    Callable[[T], U]
+    | Callable[[T], Iterable[U]]
+    | Callable[[T], Awaitable[U]]
+    | Callable[[T], AsyncIterable[U]]
+)
+
+
+_TAsyncCallables: TypeAlias = (
+    Callable[[T], Awaitable[U]] | Callable[[T], AsyncIterable[U]]
+)
 
 
 class _ConfigBase:
@@ -108,7 +121,7 @@ class _PipeType(IntEnum):
 
 @dataclass
 class _PipeArgs(Generic[T, U]):
-    op: Callables[T, U]
+    op: _TCallables[T, U]
     executor: Executor | None = None
     concurrency: int = 1
     op_requires_eof: bool = False
@@ -284,7 +297,7 @@ class SupportsGetItem(Protocol[T, U]):
     def __getitem__(self, key: T) -> U: ...
 
 
-_TPipeInputs: TypeAlias = Callables[T, U] | SupportsGetItem[T, U]
+_TPipeInputs: TypeAlias = _TCallables[T, U] | SupportsGetItem[T, U]
 
 
 def Pipe(
