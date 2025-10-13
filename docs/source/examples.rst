@@ -18,3 +18,4 @@ Examples
    hydra_integration
    pipeline_definitions
    benchmark_wav
+   pipeline_profiling

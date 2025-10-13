@@ -150,7 +150,7 @@ def build_pipeline(
 
     .. seealso::
 
-       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
 
        :py:func:`profile_pipeline`

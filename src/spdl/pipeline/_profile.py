@@ -249,6 +249,11 @@ def profile_pipeline(
     concurrency levels (32, 16, 8, 4, 1) to identify optimal performance settings.
     It measures both throughput (QPS) and queue occupancy rates.
 
+    .. seealso::
+
+       :ref:`Example: Pipeline Profiling <example-pipeline-profiling>`
+          Illustrates how to run profiling and how to interpret the result.
+
     Args:
         cfg: Pipeline configuration containing source, pipes, and sink definitions.
         num_inputs: The number of source items to use for profiling each stage.

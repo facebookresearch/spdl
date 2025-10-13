@@ -51,7 +51,7 @@ class SourceConfig(Generic[T], _ConfigBase):
 
     .. seealso::
 
-       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
 
@@ -79,7 +79,7 @@ class MergeConfig(Generic[T], _ConfigBase):
 
     .. seealso::
 
-       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
 
@@ -136,7 +136,7 @@ class PipeConfig(Generic[T, U], _ConfigBase):
 
     .. seealso::
 
-       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
 
@@ -189,7 +189,7 @@ class SinkConfig(Generic[T], _ConfigBase):
 
     .. seealso::
 
-       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
 
@@ -220,7 +220,7 @@ class PipelineConfig(Generic[T, U], _ConfigBase):
 
     .. seealso::
 
-       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
 

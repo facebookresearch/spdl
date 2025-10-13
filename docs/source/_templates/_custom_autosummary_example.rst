@@ -18,6 +18,8 @@
 
    <div class="custom_autosummary">
 
+.. _example-{{ name.replace('_', '-')}}:
+
 {{ name.capitalize().replace('_', ' ') | escape | underline }}
 
 .. automodule:: {{ fullname }}

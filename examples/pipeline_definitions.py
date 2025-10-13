@@ -7,8 +7,6 @@
 
 """Comprehensive example defining a complex pipeline with :py:mod:`spdl.pipeline.defs`.
 
-.. _pipeline-definitions-example:
-
 This example showcases the usage of all configuration classes available in the
 :py:mod:`spdl.pipeline.defs` module, including:
 
