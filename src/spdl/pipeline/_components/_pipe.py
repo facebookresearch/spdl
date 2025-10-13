@@ -57,10 +57,15 @@ class _FailCounter(TaskHook):
         self._max_stage_failures = max_stage_failures
 
         self._num_stage_failures: int = 0
+        self._exeeded: bool = False
 
     def _increment(self) -> None:
         self.__class__._num_global_failures += 1
         self._num_stage_failures += 1
+
+        if (threshold := self.max_failures) >= 0:
+            if self.num_failures >= threshold:
+                self._exeeded = True
 
     @property
     def max_failures(self) -> int:
@@ -79,9 +84,7 @@ class _FailCounter(TaskHook):
         )
 
     def too_many_failures(self) -> bool:
-        if (threshold := self.max_failures) >= 0:
-            return self.num_failures >= threshold
-        return False
+        return self._exeeded
 
     @asynccontextmanager
     async def task_hook(self) -> AsyncIterator[None]:
