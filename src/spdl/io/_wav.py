@@ -11,6 +11,7 @@
 # Importing `spdl.io.lib` instead of `spdl.io.lilb._archive`
 # so as to delay the import of C++ extension module
 from . import lib as _libspdl
+from ._convert import ArrayInterface
 
 __all__ = [
     "load_wav",
@@ -21,7 +22,7 @@ def __dir__():
     return __all__
 
 
-class WAVArrayInterface:
+class _WAVArrayInterface(ArrayInterface):
     """Wrapper class that exposes WAV data through the Array Interface Protocol.
 
     This class holds the array interface dictionary returned by the C++ binding
@@ -57,7 +58,7 @@ def load_wav(
     data: bytes,
     time_offset_seconds: float | None = None,
     duration_seconds: float | None = None,
-) -> WAVArrayInterface:
+) -> ArrayInterface:
     """Extract audio samples from WAV data.
 
     Args:
@@ -66,23 +67,22 @@ def load_wav(
         duration_seconds: Optional duration in seconds (default: until end)
 
     Returns:
-        WAVArrayInterface: Object exposing audio samples through the Array Interface Protocol.
+        ArrayInterface: Object exposing audio samples through the Array Interface Protocol.
             The object can be consumed by NumPy (np.asarray) and other libraries supporting
             the array interface. The underlying array has shape (num_samples, num_channels).
             The dtype depends on bits_per_sample:
 
-               - 8 bits: uint8
-               - 16 bits: int16
-               - 32 bits: int32 or float32
-               - 64 bits: float64
+            - 8 bits: uint8
+            - 16 bits: int16
+            - 32 bits: int32 or float32
+            - 64 bits: float64
 
     Raises:
         ValueError: If the WAV data is invalid or time range is out of bounds.
 
     .. seealso::
 
-       :ref:example-benchmark-wav
-
+       :ref:`example-benchmark-wav`
           A benchmark script that compares the performance of ``load_wav`` function with
           :py:func:`load_audio` and ``libsoundfile``.
     """
@@ -91,4 +91,4 @@ def load_wav(
         time_offset_seconds=time_offset_seconds,
         duration_seconds=duration_seconds,
     )
-    return WAVArrayInterface(array_interface_dict)
+    return _WAVArrayInterface(array_interface_dict)

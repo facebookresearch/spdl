@@ -29,7 +29,9 @@ __all__ = [
 
 @runtime_checkable
 class ArrayInterface(Protocol):
-    """Protocol for objects that implement the NumPy Array Interface Protocol.
+    """ArrayInterface()
+
+    Protocol for objects that implement the NumPy Array Interface Protocol.
 
     Objects implementing this protocol expose their data through the
     ``__array_interface__`` attribute, allowing zero-copy conversion to NumPy arrays.
@@ -56,7 +58,9 @@ class ArrayInterface(Protocol):
 
 @runtime_checkable
 class CUDAArrayInterface(Protocol):
-    """Protocol for objects that implement the CUDA Array Interface Protocol.
+    """CUDAArrayInterface()
+
+    Protocol for objects that implement the CUDA Array Interface Protocol.
 
     Objects implementing this protocol expose their CUDA data through the
     ``__cuda_array_interface__`` attribute, allowing zero-copy conversion to
