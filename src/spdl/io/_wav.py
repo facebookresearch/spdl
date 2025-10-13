@@ -78,6 +78,13 @@ def load_wav(
 
     Raises:
         ValueError: If the WAV data is invalid or time range is out of bounds.
+
+    .. seealso::
+
+       :ref:example-benchmark-wav
+
+          A benchmark script that compares the performance of ``load_wav`` function with
+          :py:func:`load_audio` and ``libsoundfile``.
     """
     array_interface_dict = _libspdl._wav.load_wav(
         data,

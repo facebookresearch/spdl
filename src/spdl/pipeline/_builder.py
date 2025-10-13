@@ -69,7 +69,7 @@ class PipelineBuilder(Generic[T, U]):
           Covers how to switch (or combine) multi-threading and
           multi-processing in detail.
 
-       :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline that
           ``PipelineBuilder`` does not support.
     """

@@ -6,13 +6,13 @@
 
 # pyre-strict
 
-"""Benchmark WAV audio loading performance.
+"""This example measuers the performance of loading WAV audio.
 
-This module benchmarks and compares three different approaches for loading WAV files:
+It compares three different approaches for loading WAV files:
 
-- spdl.io.load_wav: Fast native WAV parser optimized for simple PCM formats
-- spdl.io.load_audio: General-purpose audio loader using FFmpeg backend
-- soundfile (libsndfile): Popular third-party audio I/O library
+- :py:func:`spdl.io.load_wav`: Fast native WAV parser optimized for simple PCM formats
+- :py:func:`spdl.io.load_audio`: General-purpose audio loader using FFmpeg backend
+- ``soundfile`` (``libsndfile``): Popular third-party audio I/O library
 
 The benchmark suite evaluates performance across multiple dimensions:
 
@@ -21,21 +21,43 @@ The benchmark suite evaluates performance across multiple dimensions:
 - Statistical analysis with 95% confidence intervals using Student's t-distribution
 - Queries per second (QPS) as the primary performance metric
 
-Results can be output as CSV data to stdout and optionally plotted as
-publication-quality figures using matplotlib and seaborn.
+**Example**
 
-Example:
-   Run the benchmark suite with default configurations::
+.. code-block:: shell
 
-   .. code-block:: shell
+   $ python benchmark_wav.py --plot --output results.png
 
-      $ python benchmark_wav.py
+**Result**
 
-   Generate benchmark results with visualization::
+The following plot shows the QPS (measured by the number of files processed) of each
+functions with different audio durations.
 
-   .. code-block:: shell
+.. image:: ../../_static/data/example-benchmark-wav.webp
 
-      $ python benchmark_wav.py --plot --output results.png
+
+The :py:func:`spdl.io.load_wav` is a lot faster than the others, because all it
+does is reinterpret the input byte string as array.
+It shows the same performance for audio with longer duration.
+
+And since parsing WAV is instant, the spdl.io.load_wav function spends more time on
+creation of NumPy Array.
+It needs to acquire the GIL, thus the performance does not scale in multi-threading.
+(This performance pattern of this function is pretty same as the
+:ref:`spdl.io.load_npz <data-format>`.)
+
+The following is the same plot without ``load_wav``.
+
+.. image:: ../../_static/data/example-benchmark-wav-2.webp
+
+``libsoundfile`` has to process data iteratively (using ``io.BytesIO``) because
+it does not support directly loading from byte string, so it takes longer to process
+longer audio data.
+The performance trend (single thread being the fastest) suggests that
+it does not release the GIL majority of the time.
+
+The :py:func:`spdl.io.load_audio` function (the generic FFmpeg-based implementation) does
+a lot of work so its overall performance is not as good,
+but it scales in multi-threading as it releases the GIL almost entirely.
 """
 
 __all__ = [
@@ -53,18 +75,15 @@ __all__ = [
 
 import argparse
 import io
+import struct
 import time
+import wave
 from collections.abc import Callable
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from dataclasses import dataclass
 
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import scipy.io.wavfile
 import scipy.stats
-import seaborn as sns
 import soundfile as sf
 import spdl.io
 from numpy.typing import NDArray
@@ -101,16 +120,36 @@ def create_wav_data(
     for channel_idx in range(num_channels):
         frequency = 440.0 + (channel_idx * 110.0)  # A4 and harmonics
         t = np.linspace(0, duration_seconds, num_samples)
-        wave = np.sin(2 * np.pi * frequency * t)
+        sine_wave = np.sin(2 * np.pi * frequency * t)
 
         if bits_per_sample == 16:
-            samples[:, channel_idx] = (wave * 32767).astype(dtype)
+            samples[:, channel_idx] = (sine_wave * 32767).astype(dtype)
         elif bits_per_sample == 32:
-            samples[:, channel_idx] = (wave * 2147483647).astype(dtype)
+            samples[:, channel_idx] = (sine_wave * 2147483647).astype(dtype)
 
-    # Use scipy to write WAV file to memory buffer
+    # Use Python's built-in wave module to write WAV file to memory buffer
     wav_buffer = io.BytesIO()
-    scipy.io.wavfile.write(wav_buffer, sample_rate, samples)
+    with wave.open(wav_buffer, "wb") as wav_file:
+        wav_file.setnchannels(num_channels)
+        wav_file.setsampwidth(bits_per_sample // 8)
+        wav_file.setframerate(sample_rate)
+
+        # Convert samples to bytes
+        if bits_per_sample == 16:
+            format_char = "h"  # signed short
+        elif bits_per_sample == 32:
+            format_char = "i"  # signed int
+        else:
+            raise ValueError(f"Unsupported bits_per_sample: {bits_per_sample}")
+
+        # Interleave channels and pack to bytes
+        frames = b""
+        for frame_idx in range(num_samples):
+            for channel_idx in range(num_channels):
+                frames += struct.pack(format_char, int(samples[frame_idx, channel_idx]))
+
+        wav_file.writeframes(frames)
+
     wav_data = wav_buffer.getvalue()
 
     return wav_data, samples
@@ -321,9 +360,13 @@ def plot_benchmark_results(
         results: List of BenchmarkResult objects containing benchmark data
         output_file: Output file path for the saved plot
     """
+    import matplotlib
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import seaborn as sns
+
     matplotlib.use("Agg")  # Use non-interactive backend
 
-    # Convert results to DataFrame for easier plotting
     data = [
         {
             "num_threads": r.num_threads,
@@ -337,16 +380,9 @@ def plot_benchmark_results(
     ]
     df = pd.DataFrame(data)
 
-    # Set seaborn style
     sns.set_theme(style="whitegrid")
-
-    # Create figure
     _, ax = plt.subplots(figsize=(12, 6))
-
-    # Create a combined label for function and duration
     df["label"] = df["function"] + " (" + df["duration"] + ")"
-
-    # Plot lines for each function and duration combination
     for label in df["label"].unique():
         subset = df[df["label"] == label].sort_values("num_threads")
         line = ax.plot(

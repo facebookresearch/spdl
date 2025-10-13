@@ -8,7 +8,7 @@
 
 .. seealso::
 
-   :ref:`Example: Pipeline definitions <pipeline-definitions-example>`
+   :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
       Illustrates how to build a complex pipeline.
 
 You can build a pipeline by creating a :py:class:`PipelineConfig`,
