@@ -38,6 +38,7 @@ concurrency, and it degrades as more threads are added. (``"op_with_contention"`
 import argparse
 import logging
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 from spdl.pipeline import profile_pipeline, ProfileResult
@@ -169,7 +170,7 @@ def print_profile_result(result: ProfileResult) -> None:
 
 
 def plot_profile_results(
-    results: list[ProfileResult], output_path: Path | None = None
+    results: Sequence[ProfileResult], output_path: Path | None = None
 ) -> None:
     """Plot profiling results showing QPS vs concurrency for each stage.
 
@@ -207,7 +208,7 @@ def plot_profile_results(
         plt.show()
 
 
-def run_profiling_example(num_inputs: int = 500) -> list[ProfileResult]:
+def run_profiling_example(num_inputs: int = 500) -> Sequence[ProfileResult]:
     """Run the profiling example.
 
     Args:
