@@ -101,7 +101,7 @@ class ProfileHook(ABC):
 
     @abstractmethod
     @contextmanager
-    def stage_profile_hook(self) -> Iterator[None]:
+    def stage_profile_hook(self, stage: str, concurrency: int) -> Iterator[None]:
         """A context manager that is executed around each stage profiling."""
         ...
 
@@ -114,7 +114,7 @@ class ProfileHook(ABC):
 
 class _NoOpHook(ProfileHook):
     @contextmanager
-    def stage_profile_hook(self) -> Iterator[None]:
+    def stage_profile_hook(self, stage: str, concurrency: int) -> Iterator[None]:  # noqa: ARG002
         yield
 
     @contextmanager
@@ -178,8 +178,9 @@ def _profile_pipe(
     cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
     for concurrency in concurrencies:
         pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
-        with hook_.stage_profile_hook():
+        with hook_.stage_profile_hook(pipe.name, concurrency):
             qps_, outputs = _run(pipeline)
+
         occupancy_rate = (
             pipeline._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
         )
