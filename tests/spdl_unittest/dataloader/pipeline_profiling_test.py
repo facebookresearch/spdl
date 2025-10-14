@@ -19,7 +19,7 @@ from spdl.pipeline._profile import (
 from spdl.pipeline.defs import (
     Aggregate,
     Disaggregate,
-    MergeConfig,
+    Merge,
     Pipe,
     PipelineConfig,
     SinkConfig,
@@ -234,7 +234,7 @@ class TestProfileHookTest(unittest.TestCase):
 
 
 def test_profile_pipeline_with_merge_config_and_post_merge_stages():
-    """Test that profile_pipeline profiles all stages including those in MergeConfig and post-merge stages."""
+    """Test that profile_pipeline profiles all stages including those in Merge and post-merge stages."""
 
     def double(i: int) -> int:
         return i * 2
@@ -265,7 +265,7 @@ def test_profile_pipeline_with_merge_config_and_post_merge_stages():
     )
 
     main_cfg = PipelineConfig(
-        src=MergeConfig([plc1, plc2]),
+        src=Merge([plc1, plc2]),
         pipes=[
             Pipe(add_ten, name="add_ten"),
             Pipe(square, name="square"),

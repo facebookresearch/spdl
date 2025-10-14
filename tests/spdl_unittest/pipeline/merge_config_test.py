@@ -13,7 +13,7 @@ import unittest
 
 from spdl.pipeline import build_pipeline
 from spdl.pipeline.defs import (
-    MergeConfig,
+    Merge,
     Pipe,
     PipelineConfig,
     SinkConfig,
@@ -39,7 +39,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[],
             sink=SinkConfig(buffer_size=10),
         )
@@ -70,7 +70,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[],
             sink=SinkConfig(buffer_size=10),
         )
@@ -106,7 +106,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2, plc3]),
+            src=Merge([plc1, plc2, plc3]),
             pipes=[],
             sink=SinkConfig(buffer_size=10),
         )
@@ -136,7 +136,7 @@ class MergeConfigTest(unittest.TestCase):
         multiply_by_5_pipe = Pipe(lambda x: x * 5)
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[multiply_by_5_pipe],
             sink=SinkConfig(buffer_size=10),
         )
@@ -171,7 +171,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[],
             sink=SinkConfig(buffer_size=10),
         )
@@ -199,7 +199,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[],
             sink=SinkConfig(buffer_size=10),
         )
@@ -227,7 +227,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[],
             sink=SinkConfig(buffer_size=10),
         )
@@ -243,7 +243,7 @@ class MergeConfigTest(unittest.TestCase):
     def test_merge_config_validation_empty_list(self) -> None:
         """Test MergeConfig validation fails with empty pipeline list."""
         with self.assertRaises(ValueError) as cm:
-            MergeConfig([])
+            Merge([])
 
         self.assertIn("at least one upstream pipeline", str(cm.exception))
 
@@ -267,7 +267,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[],
             sink=SinkConfig(buffer_size=10),
         )
@@ -297,7 +297,7 @@ class MergeConfigTest(unittest.TestCase):
         )
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[],
             sink=SinkConfig(buffer_size=50),
         )
@@ -338,7 +338,7 @@ class MergeConfigTest(unittest.TestCase):
         post_process_pipe = Pipe(lambda x: x + 100)
 
         main_pipeline_config = PipelineConfig(
-            src=MergeConfig([plc1, plc2]),
+            src=Merge([plc1, plc2]),
             pipes=[post_process_pipe],
             sink=SinkConfig(buffer_size=20),
         )
