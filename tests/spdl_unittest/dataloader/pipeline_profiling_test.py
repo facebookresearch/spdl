@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 from spdl.pipeline._profile import (
     _build_pipeline_config,
     _fetch_inputs,
+    _NoOpHook,
     profile_pipeline,
     ProfileHook,
     ProfileResult,
@@ -25,6 +26,13 @@ from spdl.pipeline.defs import (
     SinkConfig,
     SourceConfig,
 )
+
+
+@contextmanager
+def _use_default_hook():
+    default_hook = _NoOpHook()
+    with patch("spdl.pipeline._profile._DEFAULT_HOOK", default_hook):
+        yield
 
 
 def test_fetch_inputs():
@@ -86,7 +94,10 @@ def test_profile_pipeline():
             return ret
 
     mock = Intercept_()
-    with patch("spdl.pipeline._profile._build_pipeline_config", mock):
+    with (
+        _use_default_hook(),
+        patch("spdl.pipeline._profile._build_pipeline_config", mock),
+    ):
         profile_pipeline(cfg)
 
     assert mock.i == 5
@@ -107,7 +118,8 @@ def test_profile_pipeline_callback():
     )
 
     callback_mock = MagicMock()
-    results = profile_pipeline(cfg, num_inputs=5, callback=callback_mock)
+    with _use_default_hook():
+        results = profile_pipeline(cfg, num_inputs=5, callback=callback_mock)
 
     callback_mock.assert_called_once()
     called_args = callback_mock.call_args[0]
@@ -137,7 +149,8 @@ def test_profile_pipeline_no_callback():
         sink=SinkConfig(1),
     )
 
-    results = profile_pipeline(cfg, num_inputs=3, callback=None)
+    with _use_default_hook():
+        results = profile_pipeline(cfg, num_inputs=3, callback=None)
 
     assert len(results) == 1
     assert results[0].name == "simple_op"
@@ -167,10 +180,12 @@ class TestProfileHookTest(unittest.TestCase):
 
         class MockProfileHook(ProfileHook):
             @contextmanager
-            def stage_profile_hook(self) -> Iterator[None]:
+            def stage_profile_hook(
+                self, _stage: str, _concurrency: int
+            ) -> Iterator[None]:
                 stage_hook_mock()
                 try:
-                    yield
+                    yield None
                 finally:
                     stage_hook_mock()
 
@@ -224,8 +239,10 @@ class TestProfileHookTest(unittest.TestCase):
             ],
             sink=SinkConfig(1),
         )
-
-        with patch("spdl.pipeline._profile._get_local_rank", return_value=0):
+        with (
+            _use_default_hook(),
+            patch("spdl.pipeline._profile._get_local_rank", return_value=0),
+        ):
             results = profile_pipeline(cfg, num_inputs=3)
 
         self.assertGreater(len(results), 0)
@@ -272,8 +289,8 @@ def test_profile_pipeline_with_merge_config_and_post_merge_stages():
         ],
         sink=SinkConfig(1),
     )
-
-    results = profile_pipeline(main_cfg, num_inputs=3)
+    with _use_default_hook():
+        results = profile_pipeline(main_cfg, num_inputs=3)
 
     assert len(results) == 4
 
