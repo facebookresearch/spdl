@@ -102,6 +102,7 @@ from ._preprocessing import (
     get_filter_desc,
     get_video_filter_desc,
 )
+from ._tar import iter_tarfile
 from ._transfer import transfer_tensor
 from ._wav import (
     load_wav,
@@ -200,6 +201,8 @@ __all__ = [
     "load_npz",
     "load_npy",
     # WAV AUDIO
+    # Archive
+    "iter_tarfile",
 ]
 
 

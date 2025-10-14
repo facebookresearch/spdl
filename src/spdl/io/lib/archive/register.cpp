@@ -12,6 +12,7 @@
 #include <nanobind/stl/vector.h>
 
 #include "numpy_support.h"
+#include "register_tar.h"
 #include "zip_impl.h"
 
 namespace nb = nanobind;
@@ -65,6 +66,8 @@ NB_MODULE(_archive, m) {
       nb::arg("compressed_size"),
       nb::arg("uncompressed_size"),
       nb::call_guard<nb::gil_scoped_release>());
+
+  register_tar(m);
 }
 
 } // namespace

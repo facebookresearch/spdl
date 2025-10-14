@@ -11,7 +11,7 @@ message(STATUS "########################################")
 set(name _archive)
 message(STATUS "Building ${name}")
 
-set(srcs register.cpp zip_impl.cpp numpy_support.cpp)
+set(srcs register.cpp zip_impl.cpp numpy_support.cpp tar_iterator.cpp register_tar.cpp)
 set(deps ZLIB::ZLIBSTATIC fmt::fmt glog::glog libdeflate::libdeflate_static)
 set(nb_options
   STABLE_ABI
