@@ -23,15 +23,16 @@ __all__ = [
     "_PipeArgs",
     "_PipeType",
     "_TPipeInputs",
-    "Aggregate",
-    "Disaggregate",
-    "MergeConfig",
-    "Pipe",
     "_ConfigBase",
+    "MergeConfig",
     "PipeConfig",
     "PipelineConfig",
     "SinkConfig",
     "SourceConfig",
+    "Merge",
+    "Pipe",
+    "Aggregate",
+    "Disaggregate",
 ]
 
 
@@ -75,7 +76,10 @@ class SourceConfig(Generic[T], _ConfigBase):
 
 @dataclass(frozen=True)
 class MergeConfig(Generic[T], _ConfigBase):
-    """Merge multiple pipelines into one output queue.
+    """MergeConfig()
+
+    Merge multiple pipelines into one output queue.
+    Use :py:func:`Merge` to create a config.
 
     .. seealso::
 
@@ -83,7 +87,7 @@ class MergeConfig(Generic[T], _ConfigBase):
           Illustrates how to build a complex pipeline.
     """
 
-    pipeline_configs: "Sequence[PipelineConfig[Any, Any]]"
+    pipeline_configs: "tuple[PipelineConfig[Any, Any]]"
 
     def __post_init__(self) -> None:
         if len(self.pipeline_configs) < 1:
@@ -247,6 +251,26 @@ class PipelineConfig(Generic[T, U], _ConfigBase):
 ##############################################################################
 # Specialization for ease of use for users.
 ##############################################################################
+def Merge(pipeline_configs: Sequence[PipelineConfig[Any, Any]]) -> MergeConfig[Any]:
+    """Create a :py:class:`MergeConfig`.
+
+    Merge multiple pipelines into one output queue.
+
+    Args:
+        pipeline_configs: A list of pipeline configs.
+        name: The name (prefix) to give to the task.
+
+    Returns:
+        The config object.
+
+    .. seealso::
+
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
+          Illustrates how to build a complex pipeline.
+    """
+    return MergeConfig(tuple(pipeline_configs))
+
+
 def _get_op_name(op: Callable) -> str:
     if isinstance(op, partial):
         return _get_op_name(op.func)
@@ -335,8 +359,8 @@ def Pipe(
 
     .. seealso::
 
-       - :py:class:`PipelineConfig`
-       - :py:func:`spdl.pipeline.build_pipeline`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
+          Illustrates how to build a complex pipeline.
     """
 
     if output_order not in ["completion", "input"]:
@@ -384,8 +408,8 @@ def Aggregate(num_items: int, /, *, drop_last: bool = False) -> PipeConfig[Any, 
 
     .. seealso::
 
-       - :py:class:`PipelineConfig`
-       - :py:func:`spdl.pipeline.build_pipeline`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
+          Illustrates how to build a complex pipeline.
     """
 
     # To avoid circular deps
@@ -417,8 +441,8 @@ def Disaggregate() -> PipeConfig[Any, Any]:
 
     .. seealso::
 
-       - :py:class:`PipelineConfig`
-       - :py:func:`spdl.pipeline.build_pipeline`
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
+          Illustrates how to build a complex pipeline.
     """
 
     # To avoid circular deps

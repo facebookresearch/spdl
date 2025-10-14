@@ -16,7 +16,7 @@ This example showcases the usage of all configuration classes available in the
 - :py:class:`PipeConfig`: Configures individual processing stages (via factory functions)
 - :py:class:`SinkConfig`: Configures output buffering for pipelines
 - :py:class:`PipelineConfig`: Top-level pipeline configuration combining all components
-- :py:class:`MergeConfig`: Merges outputs from multiple pipelines into a single stream
+- :py:class:`Merge`: Merges outputs from multiple pipelines into a single stream
 
 The example also demonstrates the factory functions:
 
@@ -46,7 +46,7 @@ The pipeline structure created by this example is illustrated below:
        end
 
        subgraph "Main Pipeline"
-           SNK1 --> M[MergeConfig]
+           SNK1 --> M[Merge]
            SNK2 --> M
            M --> NORM[Pipe: normalize_to_lists]
            NORM --> DISAGG[Disaggregate]
@@ -89,7 +89,7 @@ from spdl.pipeline import build_pipeline
 from spdl.pipeline.defs import (
     Aggregate,
     Disaggregate,
-    MergeConfig,
+    Merge,
     Pipe,
     PipelineConfig,
     SinkConfig,
@@ -181,7 +181,7 @@ def create_main_pipeline(
 
     .. code-block:: text
 
-       MergeConfig([sub1, sub2])
+       Merge([sub1, sub2])
          → normalize_to_lists
          → disaggregate
          → multiply_by_10
@@ -193,7 +193,7 @@ def create_main_pipeline(
     Returns:
         Main pipeline configuration that merges and processes the sub-pipeline outputs.
     """
-    merge_config = MergeConfig([sub_pipeline_1, sub_pipeline_2])
+    merge_config = Merge([sub_pipeline_1, sub_pipeline_2])
     normalize_pipe = Pipe(normalize_to_lists)
     disaggregate_pipe = Disaggregate()
     multiply_pipe = Pipe(

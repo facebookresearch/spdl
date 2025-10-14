@@ -28,6 +28,7 @@ The following step explains the steps to build a pipeline using the building blo
 from ._defs import (
     Aggregate,
     Disaggregate,
+    Merge,
     MergeConfig,
     Pipe,
     PipeConfig,
@@ -39,6 +40,7 @@ from ._defs import (
 __all__ = [
     "Aggregate",
     "Disaggregate",
+    "Merge",
     "MergeConfig",
     "Pipe",
     "PipeConfig",
