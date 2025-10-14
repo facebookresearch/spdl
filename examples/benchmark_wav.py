@@ -75,14 +75,14 @@ __all__ = [
 
 import argparse
 import io
-import struct
+import os.path
 import time
-import wave
 from collections.abc import Callable
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from dataclasses import dataclass
 
 import numpy as np
+import scipy.io.wavfile
 import scipy.stats
 import soundfile as sf
 import spdl.io
@@ -108,48 +108,20 @@ def create_wav_data(
     """
     num_samples = int(sample_rate * duration_seconds)
 
-    # Generate audio samples with sine wave pattern
     dtype_map = {
         16: np.int16,
         32: np.int32,
     }
     dtype = dtype_map[bits_per_sample]
+    max_amplitude = 32767 if bits_per_sample == 16 else 2147483647
 
-    # Create audio samples with a simple sine wave pattern
-    samples = np.zeros((num_samples, num_channels), dtype=dtype)
-    for channel_idx in range(num_channels):
-        frequency = 440.0 + (channel_idx * 110.0)  # A4 and harmonics
-        t = np.linspace(0, duration_seconds, num_samples)
-        sine_wave = np.sin(2 * np.pi * frequency * t)
+    t = np.linspace(0, duration_seconds, num_samples)
+    frequencies = 440.0 + np.arange(num_channels) * 110.0
+    sine_waves = np.sin(2 * np.pi * frequencies[:, np.newaxis] * t)
+    samples = (sine_waves.T * max_amplitude).astype(dtype)
 
-        if bits_per_sample == 16:
-            samples[:, channel_idx] = (sine_wave * 32767).astype(dtype)
-        elif bits_per_sample == 32:
-            samples[:, channel_idx] = (sine_wave * 2147483647).astype(dtype)
-
-    # Use Python's built-in wave module to write WAV file to memory buffer
     wav_buffer = io.BytesIO()
-    with wave.open(wav_buffer, "wb") as wav_file:
-        wav_file.setnchannels(num_channels)
-        wav_file.setsampwidth(bits_per_sample // 8)
-        wav_file.setframerate(sample_rate)
-
-        # Convert samples to bytes
-        if bits_per_sample == 16:
-            format_char = "h"  # signed short
-        elif bits_per_sample == 32:
-            format_char = "i"  # signed int
-        else:
-            raise ValueError(f"Unsupported bits_per_sample: {bits_per_sample}")
-
-        # Interleave channels and pack to bytes
-        frames = b""
-        for frame_idx in range(num_samples):
-            for channel_idx in range(num_channels):
-                frames += struct.pack(format_char, int(samples[frame_idx, channel_idx]))
-
-        wav_file.writeframes(frames)
-
+    scipy.io.wavfile.write(wav_buffer, sample_rate, samples)
     wav_data = wav_buffer.getvalue()
 
     return wav_data, samples
@@ -434,6 +406,11 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _suffix(path: str) -> str:
+    p1, p2 = os.path.splitext(path)
+    return f"{p1}_2{p2}"
+
+
 def main() -> None:
     """Run comprehensive benchmark suite for WAV loading performance.
 
@@ -488,6 +465,11 @@ def main() -> None:
 
     if args.plot:
         plot_benchmark_results(results, args.output)
+        k = "spdl.io.load_wav"
+        plot_benchmark_results(
+            [r for r in results if r.function_name != k],
+            _suffix(args.output),
+        )
 
 
 if __name__ == "__main__":
