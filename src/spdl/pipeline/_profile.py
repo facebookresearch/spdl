@@ -9,7 +9,7 @@ import os
 import random
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, TypeVar
@@ -30,6 +30,7 @@ from .defs._defs import (
 
 __all__ = [
     "profile_pipeline",
+    "ProfileHook",
     "ProfileResult",
     "_build_pipeline_diagnostic_mode",
 ]
@@ -130,20 +131,19 @@ class _ProfileStats:
 
 @dataclass
 class ProfileResult:
-    """A data class contains profiling result, returned by :py:func:`profile_pipeline`."""
+    """ProfileResult()
+
+    A data class contains profiling result, returned by :py:func:`profile_pipeline`."""
 
     name: str
     """The name of the pipe stage."""
 
-    stats: list["_ProfileStats"]
+    stats: Sequence["_ProfileStats"]
     """Dataclass objects for each concurrency level tested, where each stat includes:
 
       - ``concurrency``: The concurrency level used for this benchmark.
       - ``qps``: The number of items the stage processed per second.
       - ``occupancy_rate``: The percentage of time the queue was occupied (0.0 to 1.0)."""
-
-
-_ProfileResult = ProfileResult  # temp
 
 
 def no_op(_: ProfileResult) -> None:
@@ -241,7 +241,7 @@ def profile_pipeline(
     *,
     callback: Callable[[ProfileResult], None] | None = None,
     hook: ProfileHook | None = None,
-) -> list[ProfileResult]:
+) -> Sequence[ProfileResult]:
     """**[Experimental]** Profile pipeline by running pipes separately
     while changing the concurrency, measuring performance and logging results.
 
