@@ -360,10 +360,27 @@ async def _disaggregate(items: list[T]) -> AsyncIterator[T]:
         yield item
 
 
+async def _default_merge(
+    name: str, input_queues: list[AsyncQueue[T]], output_queue: AsyncQueue[T]
+) -> None:
+    async def _pass(in_q: AsyncQueue[...]) -> None:
+        while True:
+            item = await in_q.get()
+            if item is _EOF:
+                return
+            await output_queue.put(item)  # pyre-ignore: [6]
+
+    tasks = [
+        create_task(_pass(in_q), name=f"{name}:{i}")
+        for i, in_q in enumerate(input_queues)
+    ]
+    await asyncio.wait(tasks)
+
+
 def _merge(
     name: str,
     input_queues: list[AsyncQueue[T]],
-    output_queue: AsyncQueue[U],
+    output_queue: AsyncQueue[T],
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
 ) -> Coroutine:
@@ -375,26 +392,9 @@ def _merge(
 
     hooks: list[TaskHook] = [*task_hooks, fail_counter]
 
-    async def _pass(in_q: AsyncQueue[...]) -> None:
-        while not fail_counter.too_many_failures():
-            item = await in_q.get()
-            if item is _EOF:
-                return
-            await output_queue.put(item)  # pyre-ignore: [6]
-
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def merge() -> None:
-        tasks = [
-            create_task(_pass(in_q), name=f"{name}:{i}")
-            for i, in_q in enumerate(input_queues)
-        ]
-        await asyncio.wait(tasks)
-
-        if fail_counter.too_many_failures():
-            raise RuntimeError(
-                f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
-                f"which exceeds the threshold ({fail_counter.max_failures})."
-            )
+        await _default_merge(name, input_queues, output_queue)
 
     return merge()
