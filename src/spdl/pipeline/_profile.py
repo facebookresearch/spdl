@@ -255,6 +255,14 @@ def profile_pipeline(
        :ref:`Example: Pipeline Profiling <example-pipeline-profiling>`
           Illustrates how to run profiling and how to interpret the result.
 
+    .. note::
+
+       If environment variable ``SPDL_PIPELINE_DIAGNOSTIC_MODE=1`` is set, then
+       :py:func:`build_pipeline` function builds a Pipeline in self-diagnostic mode.
+       In self-diagnostic mode, the pipeline will call ``profile_pipeline`` function
+       and benchmark each stage with different concurrency.
+       Once the profiling is done, then the program exits.
+
     Args:
         cfg: Pipeline configuration containing source, pipes, and sink definitions.
         num_inputs: The number of source items to use for profiling each stage.
