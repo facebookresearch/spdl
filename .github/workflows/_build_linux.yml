@@ -43,24 +43,20 @@ jobs:
         run: |
           set -ex
 
+          # Figure out versions
+          py_ver="${{ inputs.python-version }}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            py_ver="${py_ver}t"
+          fi
+
           uv --version
+          uv python pin "${py_ver}"
           uv python list --only-installed
+          uv venv
 
-          # note: 3.14t is in cp314-cp314t directory, others are in cp314-cp314 directory
-          v=${{ inputs.python-version }}
-          dir="cp${v//[.t]/}-cp${v//[.]/}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            dir="${dir}t"
-          fi
-          python_exe="/opt/python/${dir}/bin/python"
-          "${python_exe}" --version
-          uv venv --python "${python_exe}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            source .venv/bin/activate
-          fi
+          # Build package
           uv build --no-python-downloads --all-packages --wheel
-
-          ./packaging/repair_wheels.sh manylinux_2_28_${{ inputs.arch }} ./dist ~/package
+          ./packaging/repair_wheels.sh manylinux_2_27_${{ inputs.arch }} ./dist ~/package
 
       - uses: actions/upload-artifact@v4
         name: Upload build artifact
@@ -73,12 +69,8 @@ jobs:
 
       - name: Check package
         run: |
-          # CFFI is not available yet for 3.14t, which prevents the installation of twine
-          # https://github.com/python-cffi/cffi/releases/tag/v1.17.0
-          # So we use the regular 3.14
-          v=${{ inputs.python-version }}
-          dir="cp${v//[.t]/}-cp${v//[.t]/}"
-          python_exe="/opt/python/${dir}/bin/python"
+          # Use latest Python. (it shuold not matter)
+          python_exe="/opt/python/cp314-cp314/bin/python"
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
 
