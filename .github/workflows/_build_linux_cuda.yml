@@ -61,17 +61,10 @@ jobs:
           fi
           cuda_ver="${{ inputs.cuda-version }}"
 
-          # Setup Python
-          # wget -qO- https://astral.sh/uv/install.sh | sh
           uv --version
-
           uv python pin "${py_ver}"
           uv python list --only-installed
           uv venv
-          source .venv/bin/activate
-
-          which python
-          python --version
 
           # Install CUDA
           cuda_dir="/opt/cuda"
@@ -103,12 +96,8 @@ jobs:
 
       - name: Check package
         run: |
-          # CFFI is not available yet for 3.13t, which prevents the installation of twine
-          # https://github.com/python-cffi/cffi/releases/tag/v1.17.0
-          # So we use the regular 3.13
-          v=${{ inputs.python-version }}
-          dir="cp${v//[.t]/}-cp${v//[.t]/}"
-          python_exe="/opt/python/${dir}/bin/python"
+          # Use latest Python. (it shuold not matter)
+          python_exe="/opt/python/cp314-cp314/bin/python"
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
 
