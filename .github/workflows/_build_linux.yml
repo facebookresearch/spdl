@@ -56,7 +56,7 @@ jobs:
 
           # Build package
           uv build --no-python-downloads --all-packages --wheel
-          ./packaging/repair_wheels.sh manylinux_2_27_${{ inputs.arch }} ./dist ~/package
+          ./packaging/repair_wheels.sh manylinux_2_26_${{ inputs.arch }} ./dist ~/package
 
       - uses: actions/upload-artifact@v4
         name: Upload build artifact
