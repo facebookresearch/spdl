@@ -21,6 +21,16 @@ The benchmark:
 3. Measures queries per second (QPS) for each configuration
 4. Plots the results comparing the three implementations
 
+**Example**
+
+.. code-block:: shell
+
+   $ python benchmark_tarfile.py --output iter_tarfile_benchmark_results.csv
+   # Plot results
+   $ python plot_tar_benchmark.py --input iter_tarfile_benchmark_results.csv --output wav_benchmark_plot.png
+   # Plot results without load_wav
+   $ python plot_tar_benchmark.py --input iter_tarfile_benchmark_results.csv --output wav_benchmark_plot_2.png --filter '4. SPDL iter_tarfile (bytes w/o convert)'
+
 **Result**
 
 The following plot shows the QPS (measured by the number of files processed) of each
@@ -63,7 +73,7 @@ __all__ = [
     "create_test_tar",
     "iter_tarfile_builtin",
     "main",
-    "plot_results",
+    "save_results_to_csv",
     "process_tar_builtin",
     "process_tar_spdl",
     "process_tar_spdl_filelike",
@@ -71,9 +81,9 @@ __all__ = [
 ]
 
 import argparse
+import csv
 import io
 import logging
-import os
 import tarfile
 import time
 from collections.abc import Callable, Iterator
@@ -345,113 +355,48 @@ def run_benchmark(
     return results
 
 
-def plot_results(
+def save_results_to_csv(
     results: list[BenchmarkResult],
-    output_path: str,
+    output_file: str = "benchmark_tarfile_results.csv",
 ) -> None:
-    """Plot benchmark results with 95% confidence intervals and save to file.
-
-    Creates subplots for each file size tested, showing QPS vs. thread count
-    with shaded confidence interval regions.
+    """Save benchmark results to a CSV file that Excel can open.
 
     Args:
-        results: List of :py:class:`BenchmarkResult` containing all benchmark data.
-        output_path: Path to save the plot (e.g., ``benchmark_results.png``).
+        results: List of BenchmarkResult objects containing benchmark data
+        output_file: Output file path for the CSV file
     """
-    import matplotlib.pyplot as plt
+    with open(output_file, "w", newline="") as csvfile:
+        fieldnames = [
+            "function_name",
+            "tar_size",
+            "file_size",
+            "num_files",
+            "num_threads",
+            "num_iterations",
+            "qps_mean",
+            "qps_lower_ci",
+            "qps_upper_ci",
+            "total_files_processed",
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    # Extract unique file sizes and function names
-    file_sizes = sorted({r.file_size for r in results})
-    function_names = sorted({r.function_name for r in results})
-
-    # Create subplots: at most 3 columns, multiple rows if needed
-    num_sizes = len(file_sizes)
-    max_cols = 3
-    num_cols = min(num_sizes, max_cols)
-    num_rows = (num_sizes + max_cols - 1) // max_cols  # Ceiling division
-
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(6 * num_cols, 5 * num_rows))
-
-    # Flatten axes array for easier indexing
-    if num_rows == 1 and num_cols == 1:
-        axes = [axes]
-    elif num_rows == 1 or num_cols == 1:
-        axes = axes.flatten()
-    else:
-        axes = axes.flatten()
-
-    for idx, file_size in enumerate(file_sizes):
-        ax = axes[idx]
-        first_tar_size = 0
-        first_thread_counts = None
-        first_num_files = 0
-
-        for func_name in function_names:
-            # Filter results for this function and file size
-            func_results = [
-                r
-                for r in results
-                if r.function_name == func_name and r.file_size == file_size
-            ]
-
-            if not func_results:
-                continue
-
-            # Sort by thread count
-            func_results.sort(key=lambda r: r.num_threads)
-
-            thread_counts = [r.num_threads for r in func_results]
-            qps_means = [r.qps_mean for r in func_results]
-            qps_lower_cis = [r.qps_lower_ci for r in func_results]
-            qps_upper_cis = [r.qps_upper_ci for r in func_results]
-
-            if first_thread_counts is None:
-                first_tar_size = func_results[0].tar_size
-                first_thread_counts = thread_counts
-                first_num_files = func_results[0].num_files
-
-            ax.plot(
-                thread_counts,
-                qps_means,
-                marker="o",
-                label=func_name,
-                linewidth=2,
+        writer.writeheader()
+        for r in results:
+            writer.writerow(
+                {
+                    "function_name": r.function_name,
+                    "tar_size": r.tar_size,
+                    "file_size": r.file_size,
+                    "num_files": r.num_files,
+                    "num_threads": r.num_threads,
+                    "num_iterations": r.num_iterations,
+                    "qps_mean": r.qps_mean,
+                    "qps_lower_ci": r.qps_lower_ci,
+                    "qps_upper_ci": r.qps_upper_ci,
+                    "total_files_processed": r.total_files_processed,
+                }
             )
-
-            # Add shaded confidence interval
-            ax.fill_between(
-                thread_counts,
-                qps_lower_cis,
-                qps_upper_cis,
-                alpha=0.2,
-            )
-
-        ax.set_xlabel("Number of Threads", fontsize=11)
-        ax.set_ylabel("Queries Per Second (QPS)", fontsize=11)
-        ax.set_title(
-            f"File Size: {_size_str(first_tar_size)} ({first_num_files} x {_size_str(file_size)})",
-            fontsize=12,
-        )
-        ax.legend(fontsize=9)
-        ax.grid(True, alpha=0.3)
-        ax.set_ylim([0, None])
-        if first_thread_counts:
-            ax.set_xticks(first_thread_counts)
-            ax.set_xticklabels(first_thread_counts)
-
-    # Hide any unused subplots
-    total_subplots = num_rows * num_cols
-    for idx in range(num_sizes, total_subplots):
-        axes[idx].set_visible(False)
-
-    fig.suptitle(
-        "TAR File Parsing Performance: SPDL vs Python tarfile\n(with 95% Confidence Intervals)",
-        fontsize=14,
-    )
-
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150)
-    _LG.info("Plot saved to: %s", output_path)
+    _LG.info("Results saved to %s", output_file)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -473,8 +418,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=str,
-        default="benchmark_tarfile_results.png",
-        help="Output path for the plot",
+        default="iter_tarfile_benchmark_results.csv",
+        help="Output path for the results",
     )
     parser.add_argument(
         "--log-level",
@@ -485,11 +430,6 @@ def _parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
-
-
-def _suffix(path: str) -> str:
-    p1, p2 = os.path.splitext(path)
-    return f"{p1}_2{p2}"
 
 
 def main() -> None:
@@ -535,12 +475,14 @@ def main() -> None:
         thread_counts=thread_counts,
     )
 
-    plot_results(results, args.output)
-    # plot another for easier view
-    k = configs[-1][0]
-    plot_results(
-        [r for r in results if r.function_name != k],
-        _suffix(args.output),
+    # Save results to CSV
+    save_results_to_csv(results, args.output)
+
+    _LG.info(
+        "Benchmark complete. To generate plots, run: "
+        "python plot_tar_benchmark.py --input %s --output %s",
+        args.outpu,
+        args.output.replace(".csv", ".png"),
     )
 
 

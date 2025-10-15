@@ -25,7 +25,11 @@ The benchmark suite evaluates performance across multiple dimensions:
 
 .. code-block:: shell
 
-   $ python benchmark_wav.py --plot --output results.png
+   $ python benchmark_wav.py --output wav_benchmark_results.csv
+   # Plot results
+   $ python plot_wav_benchmark.py --input wav_benchmark_results.csv --output wav_benchmark_plot.png
+   # Plot results without load_wav
+   $ python plot_wav_benchmark.py --input wav_benchmark_results.csv --output wav_benchmark_plot_2.png --filter '3. spdl.io.load_wav'
 
 **Result**
 
@@ -69,13 +73,13 @@ __all__ = [
     "load_spdl_wav",
     "benchmark",
     "run_benchmark_suite",
-    "plot_benchmark_results",
+    "save_results_to_csv",
     "main",
 ]
 
 import argparse
+import csv
 import io
-import os.path
 import time
 from collections.abc import Callable
 from concurrent.futures import as_completed, ThreadPoolExecutor
@@ -269,7 +273,7 @@ def run_benchmark_suite(
     num_sets = 100
 
     spdl_wav_result, output = benchmark(
-        name="spdl.io.load_wav",
+        name="3. spdl.io.load_wav",
         func=lambda: load_spdl_wav(wav_data),
         iterations=iterations,
         num_threads=num_threads,
@@ -283,7 +287,7 @@ def run_benchmark_suite(
     num_sets = 5
 
     spdl_audio_result, output = benchmark(
-        name="spdl.io.load_audio",
+        name="2. spdl.io.load_audio",
         func=lambda: load_spdl_audio(wav_data),
         iterations=iterations,
         num_threads=num_threads,
@@ -292,7 +296,7 @@ def run_benchmark_suite(
     )
     np.testing.assert_array_equal(output, ref)
     soundfile_result, output = benchmark(
-        name="soundfile",
+        name="1. soundfile",
         func=lambda: load_sf(wav_data),
         iterations=iterations,
         num_threads=num_threads,
@@ -323,66 +327,41 @@ class BenchmarkConfig:
     duration_seconds: float
 
 
-def plot_benchmark_results(
-    results: list[BenchmarkResult], output_file: str = "benchmark_results.png"
+def save_results_to_csv(
+    results: list[BenchmarkResult], output_file: str = "benchmark_results.csv"
 ) -> None:
-    """Plot benchmark results and save to file.
+    """Save benchmark results to a CSV file that Excel can open.
 
     Args:
         results: List of BenchmarkResult objects containing benchmark data
-        output_file: Output file path for the saved plot
+        output_file: Output file path for the CSV file
     """
-    import matplotlib
-    import matplotlib.pyplot as plt
-    import pandas as pd
-    import seaborn as sns
+    with open(output_file, "w", newline="") as csvfile:
+        fieldnames = [
+            "function_name",
+            "duration_seconds",
+            "num_threads",
+            "qps",
+            "ci_lower",
+            "ci_upper",
+            "duration",
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    matplotlib.use("Agg")  # Use non-interactive backend
-
-    data = [
-        {
-            "num_threads": r.num_threads,
-            "qps": r.qps,
-            "ci_lower": r.ci_lower,
-            "ci_upper": r.ci_upper,
-            "function": r.function_name,
-            "duration": f"{r.duration_seconds}s",
-        }
-        for r in results
-    ]
-    df = pd.DataFrame(data)
-
-    sns.set_theme(style="whitegrid")
-    _, ax = plt.subplots(figsize=(12, 6))
-    df["label"] = df["function"] + " (" + df["duration"] + ")"
-    for label in df["label"].unique():
-        subset = df[df["label"] == label].sort_values("num_threads")
-        line = ax.plot(
-            subset["num_threads"],
-            subset["qps"],
-            marker="o",
-            label=label,
-            linewidth=2,
-        )
-
-        # Add confidence interval as shaded region
-        ax.fill_between(
-            subset["num_threads"],
-            subset["ci_lower"],
-            subset["ci_upper"],
-            alpha=0.2,
-            color=line[0].get_color(),
-        )
-
-    ax.set_xlabel("Number of Threads", fontsize=12)
-    ax.set_ylabel("QPS (Queries Per Second)", fontsize=12)
-    ax.set_title("WAV Loading Performance Benchmark", fontsize=14, fontweight="bold")
-    ax.legend(title="Function", bbox_to_anchor=(1.05, 1), loc="upper left")
-    ax.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches="tight")
-    print(f"Plot saved to {output_file}")
+        writer.writeheader()
+        for r in results:
+            writer.writerow(
+                {
+                    "function_name": r.function_name,
+                    "duration_seconds": r.duration_seconds,
+                    "num_threads": r.num_threads,
+                    "qps": r.qps,
+                    "ci_lower": r.ci_lower,
+                    "ci_upper": r.ci_upper,
+                    "duration": r.duration,
+                }
+            )
+    print(f"Results saved to {output_file}")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -393,22 +372,12 @@ def _parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(description="Benchmark WAV loading performance")
     parser.add_argument(
-        "--plot",
-        action="store_true",
-        help="Generate and save a plot of the benchmark results",
-    )
-    parser.add_argument(
         "--output",
         type=str,
-        default="benchmark_results.png",
-        help="Output file path for the plot (default: benchmark_results.png)",
+        default="wav_benchmark_results.csv",
+        help="Output file path.",
     )
     return parser.parse_args()
-
-
-def _suffix(path: str) -> str:
-    p1, p2 = os.path.splitext(path)
-    return f"{p1}_2{p2}"
 
 
 def main() -> None:
@@ -463,13 +432,11 @@ def main() -> None:
                 f"{soundfile_result.qps:.2f},{soundfile_result.ci_lower:.2f},{soundfile_result.ci_upper:.2f}"
             )
 
-    if args.plot:
-        plot_benchmark_results(results, args.output)
-        k = "spdl.io.load_wav"
-        plot_benchmark_results(
-            [r for r in results if r.function_name != k],
-            _suffix(args.output),
-        )
+    save_results_to_csv(results, args.output)
+    print(
+        f"\nBenchmark complete. To generate plots, run:\n"
+        f"python plot_wav_benchmark.py --input {args.output} --output {args.output.replace('.csv', '.png')}"
+    )
 
 
 if __name__ == "__main__":
