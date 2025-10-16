@@ -278,14 +278,14 @@ class Pipeline(Generic[T]):
     def __init__(
         self,
         coro: Coroutine[None, None, None],
-        output_queue: AsyncQueue[T],
+        output_queue: AsyncQueue,
         executor: ThreadPoolExecutor,
         *,
         desc: str,
     ) -> None:
         self._str: str = "\n".join([repr(self), desc])
 
-        self._output_queue: AsyncQueue[T] = output_queue
+        self._output_queue: AsyncQueue = output_queue
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
 

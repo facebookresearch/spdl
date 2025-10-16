@@ -75,7 +75,7 @@ class ConfigTest(unittest.TestCase):
     def test_queue_class_can_be_set_and_retrieved(self) -> None:
         """Test that queue class can be set and retrieved correctly."""
 
-        class CustomQueue(StatsQueue[int]):
+        class CustomQueue(StatsQueue):
             pass
 
         set_default_queue_class(CustomQueue)
@@ -85,7 +85,7 @@ class ConfigTest(unittest.TestCase):
     def test_queue_class_via_config_module(self) -> None:
         """Test that queue class can be accessed via _config module."""
 
-        class CustomQueue(StatsQueue[int]):
+        class CustomQueue(StatsQueue):
             pass
 
         set_default_queue_class(CustomQueue)
@@ -170,7 +170,7 @@ class ConfigTest(unittest.TestCase):
         class CustomHook(TaskHook):
             pass
 
-        class CustomQueue(AsyncQueue[int]):
+        class CustomQueue(AsyncQueue):
             pass
 
         def custom_callback(_: object) -> None:

@@ -31,7 +31,7 @@ _EOF = _Sentinel("EOF")  # Indicate the end of stream.
 
 
 @asynccontextmanager
-async def _queue_stage_hook(queue: AsyncQueue[T]) -> AsyncGenerator[None, None]:
+async def _queue_stage_hook(queue: AsyncQueue) -> AsyncGenerator[None, None]:
     # Responsibility
     #   1. Call the `stage_hook`` context manager
     #   2. Put _EOF when the stage is done for reasons other than cancel.
