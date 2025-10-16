@@ -107,7 +107,7 @@ def _get_fail_counter() -> type[_FailCounter]:
 
 
 async def _wrap_afunc(
-    coro: Awaitable[U], hooks: list[TaskHook], queue: AsyncQueue[U]
+    coro: Awaitable[U], hooks: list[TaskHook], queue: AsyncQueue
 ) -> None:
     async with _task_hooks(hooks):
         result = await coro
@@ -119,7 +119,7 @@ async def _wrap_afunc(
 
 
 async def _wrap_agen(
-    coro: AsyncIterator[U], hooks: list[TaskHook], queue: AsyncQueue[U]
+    coro: AsyncIterator[U], hooks: list[TaskHook], queue: AsyncQueue
 ) -> None:
     exhausted = False
     while not exhausted:
@@ -164,8 +164,8 @@ async def _wrap_agen(
 
 def _pipe(
     name: str,
-    input_queue: AsyncQueue[T],
-    output_queue: AsyncQueue[U],
+    input_queue: AsyncQueue,
+    output_queue: AsyncQueue,
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
@@ -227,8 +227,8 @@ def _pipe(
 
 def _ordered_pipe(
     name: str,
-    input_queue: AsyncQueue[T],
-    output_queue: AsyncQueue[U],
+    input_queue: AsyncQueue,
+    output_queue: AsyncQueue,
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
@@ -273,7 +273,7 @@ def _ordered_pipe(
         convert_to_async(args.op, args.executor)
     )
 
-    inter_queue: AsyncQueue[asyncio.Task[U]] = AsyncQueue(
+    inter_queue: AsyncQueue = AsyncQueue(
         f"{name}_interqueue", buffer_size=args.concurrency
     )
 
@@ -361,14 +361,14 @@ async def _disaggregate(items: list[T]) -> AsyncIterator[T]:
 
 
 async def _default_merge(
-    name: str, input_queues: list[AsyncQueue[T]], output_queue: AsyncQueue[T]
+    name: str, input_queues: list[AsyncQueue], output_queue: AsyncQueue
 ) -> None:
-    async def _pass(in_q: AsyncQueue[...]) -> None:
+    async def _pass(in_q: AsyncQueue) -> None:
         while True:
             item = await in_q.get()
             if item is _EOF:
                 return
-            await output_queue.put(item)  # pyre-ignore: [6]
+            await output_queue.put(item)
 
     tasks = [
         create_task(_pass(in_q), name=f"{name}:{i}")
@@ -379,8 +379,8 @@ async def _default_merge(
 
 def _merge(
     name: str,
-    input_queues: list[AsyncQueue[T]],
-    output_queue: AsyncQueue[T],
+    input_queues: list[AsyncQueue],
+    output_queue: AsyncQueue,
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
 ) -> Coroutine:

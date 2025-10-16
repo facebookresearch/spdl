@@ -18,7 +18,7 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-async def _sink(input_queue: AsyncQueue[T], output_queue: AsyncQueue[T]) -> None:
+async def _sink(input_queue: AsyncQueue, output_queue: AsyncQueue) -> None:
     async with output_queue.stage_hook():
         while True:
             item = await input_queue.get()

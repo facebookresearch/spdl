@@ -222,7 +222,7 @@ class PipelineBuilder(Generic[T, U]):
         num_threads: int,
         max_failures: int = -1,
         report_stats_interval: float = -1,
-        queue_class: type[AsyncQueue[...]] | None = None,
+        queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
         stage_id: int = 0,
     ) -> Pipeline[U]:
@@ -292,7 +292,7 @@ class _Wrapper(Generic[U]):
         num_threads: int,
         max_failures: int,
         report_stats_interval: float,
-        queue_class: type[AsyncQueue[T]] | None,
+        queue_class: type[AsyncQueue] | None,
         task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     ) -> None:
         self.builder = builder
@@ -320,7 +320,7 @@ def run_pipeline_in_subprocess(
     num_threads: int,
     max_failures: int = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue[T]] | None = None,
+    queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     **kwargs: dict[str, Any],
 ) -> Iterable[T]:
