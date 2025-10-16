@@ -9,6 +9,7 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
+from spdl.pipeline import _config
 from spdl.pipeline._profile import (
     _build_pipeline_config,
     _fetch_inputs,
@@ -30,9 +31,17 @@ from spdl.pipeline.defs import (
 
 @contextmanager
 def _use_default_hook():
+    """Context manager to use NoOp hook for testing purposes."""
     default_hook = _NoOpHook()
-    with patch("spdl.pipeline._profile._DEFAULT_HOOK", default_hook):
+    original_hook = _config.get_default_profile_hook()
+    original_callback = _config.get_default_profile_callback()
+    try:
+        _config.set_default_profile_hook(default_hook)
+        _config.set_default_profile_callback(lambda _: None)
         yield
+    finally:
+        _config.set_default_profile_hook(original_hook)
+        _config.set_default_profile_callback(original_callback)
 
 
 def test_fetch_inputs():
@@ -174,7 +183,6 @@ class TestProfileHookTest(unittest.TestCase):
             sink=SinkConfig(1),
         )
 
-        # Create a custom ProfileHook mock
         stage_hook_mock = MagicMock()
         pipeline_hook_mock = MagicMock()
 
@@ -199,13 +207,20 @@ class TestProfileHookTest(unittest.TestCase):
 
         custom_hook = MockProfileHook()
 
-        results = profile_pipeline(cfg, num_inputs=3, hook=custom_hook)
+        original_hook = _config.get_default_profile_hook()
+        original_callback = _config.get_default_profile_callback()
+        try:
+            _config.set_default_profile_hook(None)
+            _config.set_default_profile_callback(None)
 
-        self.assertTrue(len(results) > 0)
-        self.assertEqual(pipeline_hook_mock.call_count, 2)
-        # stage_profile_hook should be called twice per concurrency level (start and end)
-        # Default concurrency levels are [32, 16, 8, 4, 1] = 5 levels, so 10 calls total
-        self.assertEqual(stage_hook_mock.call_count, 10)
+            results = profile_pipeline(cfg, num_inputs=3, hook=custom_hook)
+
+            self.assertTrue(len(results) > 0)
+            self.assertEqual(pipeline_hook_mock.call_count, 2)
+            self.assertEqual(stage_hook_mock.call_count, 10)
+        finally:
+            _config.set_default_profile_hook(original_hook)
+            _config.set_default_profile_callback(original_callback)
 
     def test_profile_pipeline_skips_when_local_rank_not_zero(self):
         """Test that profiling is skipped if LOCAL_RANK is not '0'."""
@@ -239,6 +254,7 @@ class TestProfileHookTest(unittest.TestCase):
             ],
             sink=SinkConfig(1),
         )
+
         with (
             _use_default_hook(),
             patch("spdl.pipeline._profile._get_local_rank", return_value=0),

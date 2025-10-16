@@ -7,9 +7,26 @@
 import logging
 import os
 
+from ._hook import get_default_hook_class, set_default_hook_class
+from ._profile import (
+    get_default_profile_callback,
+    get_default_profile_hook,
+    set_default_profile_callback,
+    set_default_profile_hook,
+)
+from ._queue import get_default_queue_class, set_default_queue_class
+
 __all__ = [
     "_diagnostic_mode_enabled",
     "_diagnostic_mode_num_sources",
+    "set_default_hook_class",
+    "get_default_hook_class",
+    "set_default_queue_class",
+    "get_default_queue_class",
+    "set_default_profile_hook",
+    "get_default_profile_hook",
+    "set_default_profile_callback",
+    "get_default_profile_callback",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
