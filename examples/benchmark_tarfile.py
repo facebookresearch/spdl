@@ -25,7 +25,7 @@ The benchmark:
 
 .. code-block:: shell
 
-   $ python benchmark_tarfile.py --output iter_tarfile_benchmark_results.csv
+   $ numactl --membind 0 --cpubind 0 python benchmark_tarfile.py --output iter_tarfile_benchmark_results.csv
    # Plot results
    $ python plot_tar_benchmark.py --input iter_tarfile_benchmark_results.csv --output wav_benchmark_plot.png
    # Plot results without load_wav
@@ -84,6 +84,7 @@ import argparse
 import csv
 import io
 import logging
+import sys
 import tarfile
 import time
 from collections.abc import Callable, Iterator
@@ -95,6 +96,24 @@ import numpy as np
 import spdl.io
 
 _LG = logging.getLogger(__name__)
+
+
+def _get_python_info() -> tuple[str, bool]:
+    """Get Python version and free-threaded ABI information.
+
+    Returns:
+        Tuple of (python_version, is_free_threaded)
+    """
+    python_version = (
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
+    # Check if Python is running with free-threaded ABI (PEP 703)
+    # _is_gil_enabled is only available in Python 3.13+
+    try:
+        is_free_threaded = sys._is_gil_enabled()  # pyre-ignore[16]
+    except AttributeError:
+        is_free_threaded = False
+    return python_version, is_free_threaded
 
 
 def iter_tarfile_builtin(tar_data: bytes) -> Iterator[tuple[str, bytes]]:
@@ -258,6 +277,10 @@ class BenchmarkResult:
     "Upper bound of 95% confidence interval for QPS."
     total_files_processed: int
     "Total number of files processed during the benchmark."
+    python_version: str
+    "Python version used for the benchmark."
+    free_threaded: bool
+    "Whether Python is running with free-threaded ABI (PEP 703)."
 
 
 def create_test_tar(num_files: int, file_size: int) -> bytes:
@@ -337,6 +360,7 @@ def run_benchmark(
                     total_count,
                 )
 
+                python_version, free_threaded = _get_python_info()
                 results.append(
                     BenchmarkResult(
                         function_name=func_name,
@@ -349,6 +373,8 @@ def run_benchmark(
                         qps_lower_ci=qps_lower_ci,
                         qps_upper_ci=qps_upper_ci,
                         total_files_processed=total_count,
+                        python_version=python_version,
+                        free_threaded=free_threaded,
                     )
                 )
 
@@ -377,6 +403,8 @@ def save_results_to_csv(
             "qps_lower_ci",
             "qps_upper_ci",
             "total_files_processed",
+            "python_version",
+            "free_threaded",
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -394,6 +422,8 @@ def save_results_to_csv(
                     "qps_lower_ci": r.qps_lower_ci,
                     "qps_upper_ci": r.qps_upper_ci,
                     "total_files_processed": r.total_files_processed,
+                    "python_version": r.python_version,
+                    "free_threaded": r.free_threaded,
                 }
             )
     _LG.info("Results saved to %s", output_file)
@@ -481,7 +511,7 @@ def main() -> None:
     _LG.info(
         "Benchmark complete. To generate plots, run: "
         "python plot_tar_benchmark.py --input %s --output %s",
-        args.outpu,
+        args.output,
         args.output.replace(".csv", ".png"),
     )
 

@@ -89,6 +89,15 @@ def plot_results(
     import pandas as pd
 
     df = pd.read_csv(csv_file)
+
+    # Extract Python info from the first row (all rows should have same Python info)
+    python_version = (
+        df["python_version"].iloc[0] if "python_version" in df.columns else "unknown"
+    )
+    free_threaded = (
+        df["free_threaded"].iloc[0] if "free_threaded" in df.columns else False
+    )
+
     results = [
         BenchmarkResult(
             function_name=row["function_name"],
@@ -194,10 +203,13 @@ def plot_results(
     for idx in range(num_sizes, total_subplots):
         axes[idx].set_visible(False)
 
-    fig.suptitle(
-        "TAR File Parsing Performance: SPDL vs Python tarfile\n(with 95% Confidence Intervals)",
-        fontsize=14,
+    # Create main title with Python info
+    abi_info = " (free-threaded)" if free_threaded else ""
+    main_title = (
+        f"TAR File Parsing Performance: SPDL vs Python tarfile\n"
+        f"(with 95% Confidence Intervals) - Python {python_version}{abi_info}"
     )
+    fig.suptitle(main_title, fontsize=14)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)

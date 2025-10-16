@@ -47,6 +47,17 @@ def plot_benchmark_results(
     if filter_function:
         df = df[df["function_name"] != filter_function]
 
+    # Extract Python info from the first row (all rows should have same Python info)
+    python_version = (
+        df["python_version"].iloc[0] if "python_version" in df.columns else "unknown"
+    )
+    free_threaded = (
+        df["free_threaded"].iloc[0] if "free_threaded" in df.columns else False
+    )
+
+    # Create ABI info string
+    abi_info = " (free-threaded)" if free_threaded else ""
+
     df["label"] = df["function_name"] + " (" + df["duration_seconds"].astype(str) + "s)"
 
     sns.set_theme(style="whitegrid")
@@ -71,7 +82,8 @@ def plot_benchmark_results(
 
     ax.set_xlabel("Number of Threads", fontsize=12)
     ax.set_ylabel("QPS (Queries Per Second)", fontsize=12)
-    ax.set_title("WAV Loading Performance Benchmark", fontsize=14, fontweight="bold")
+    title = f"WAV Loading Performance Benchmark\nPython {python_version}{abi_info}"
+    ax.set_title(title, fontsize=14, fontweight="bold")
     ax.legend(title="Function", bbox_to_anchor=(1.05, 1), loc="upper left")
     ax.grid(True, alpha=0.3)
 
