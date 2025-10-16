@@ -310,6 +310,9 @@ def _ordered_pipe(
             except Exception:
                 pass
             else:
+                if result is _SKIP:
+                    continue
+
                 await output_queue.put(result)
 
         # Drain until EOF

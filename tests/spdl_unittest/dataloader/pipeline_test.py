@@ -937,6 +937,105 @@ def test_pipeline_order_input_sync_func():
         assert src == list(pipeline.get_iterator(timeout=3))
 
 
+def test_pipeline_order_input_filter_none():
+    """Ordered pipe filters out None values returned by the pipe operation."""
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(list(range(10)))
+        .pipe(lambda x: None if x % 2 == 0 else x, output_order="input")
+        .add_sink(2)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        result = list(pipeline.get_iterator(timeout=3))
+        assert result == [1, 3, 5, 7, 9]
+
+
+def test_pipeline_order_input_filter_none_async():
+    """Ordered pipe filters out None values with async function."""
+
+    async def filter_even(x):
+        await asyncio.sleep(0.01)
+        return None if x % 2 == 0 else x
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(list(range(10)))
+        .pipe(filter_even, output_order="input", concurrency=3)
+        .add_sink(2)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        result = list(pipeline.get_iterator(timeout=3))
+        assert result == [1, 3, 5, 7, 9]
+
+
+def test_pipeline_order_input_filter_none_with_concurrency():
+    """Ordered pipe filters out None values with high concurrency."""
+
+    def slow_filter(x):
+        time.sleep(0.05)
+        return None if x % 3 == 0 else x
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(list(range(15)))
+        .pipe(slow_filter, output_order="input", concurrency=5)
+        .add_sink(10)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        result = list(pipeline.get_iterator(timeout=5))
+        # Filters out 0, 3, 6, 9, 12
+        assert result == [1, 2, 4, 5, 7, 8, 10, 11, 13, 14]
+
+
+def test_pipeline_order_input_all_none():
+    """Ordered pipe handles case where all values are None."""
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(list(range(5)))
+        .pipe(lambda _: None, output_order="input")
+        .add_sink(2)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        result = list(pipeline.get_iterator(timeout=3))
+        assert result == []
+
+
+def test_pipeline_order_input_mixed_none_and_values():
+    """Ordered pipe correctly handles mixed None and values in specific pattern."""
+
+    def pattern_filter(x):
+        if x < 2:
+            return None
+        if x < 5:
+            return x
+        if x < 7:
+            return None
+        return x
+
+    pipeline = (
+        PipelineBuilder()
+        .add_source(list(range(10)))
+        .pipe(pattern_filter, output_order="input")
+        .add_sink(5)
+        .build(num_threads=1)
+    )
+
+    with pipeline.auto_stop():
+        result = list(pipeline.get_iterator(timeout=3))
+        # Returns 2, 3, 4 (x < 5), and 7, 8, 9 (x >= 7)
+        assert result == [2, 3, 4, 7, 8, 9]
+
+
 ################################################################################
 # AsyncPipeline2
 ################################################################################
