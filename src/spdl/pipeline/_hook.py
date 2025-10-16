@@ -26,6 +26,8 @@ __all__ = [
     "TaskHook",
     "TaskStatsHook",
     "TaskPerfStats",
+    "set_default_hook_class",
+    "get_default_hook_class",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -431,3 +433,26 @@ class TaskStatsHook(TaskHook):
             _time_str(stats.ave_time),
             stacklevel=2,
         )
+
+
+_default_hook_class: type[TaskHook] | None = TaskStatsHook
+
+
+def set_default_hook_class(hook_class: type[TaskHook] | None = TaskStatsHook) -> None:
+    """Set the default hook class to be used for pipeline stages.
+
+    Args:
+        hook_class: The hook class to use as default.
+            If ``None``, then it disables hook.
+    """
+    global _default_hook_class
+    _default_hook_class = hook_class
+
+
+def get_default_hook_class() -> type[TaskHook] | None:
+    """Get the currently configured default hook class.
+
+    Returns:
+        The default hook class, or None if it is disabled.
+    """
+    return _default_hook_class

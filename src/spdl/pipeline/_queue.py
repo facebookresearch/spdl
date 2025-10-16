@@ -12,7 +12,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from ._hook import _periodic_dispatch, _StatsCounter, _time_str
 from ._utils import create_task
@@ -21,6 +21,8 @@ __all__ = [
     "AsyncQueue",
     "StatsQueue",
     "QueuePerfStats",
+    "set_default_queue_class",
+    "get_default_queue_class",
 ]
 
 T = TypeVar("T")
@@ -280,3 +282,25 @@ class StatsQueue(AsyncQueue[T]):
             100 * stats.occupancy_rate,
             stacklevel=2,
         )
+
+
+_default_queue_class: type[AsyncQueue[Any]] = StatsQueue
+
+
+def set_default_queue_class(queue_class: type[AsyncQueue[Any]] = StatsQueue) -> None:
+    """Set the default queue class to be used for connecting pipeline stages.
+
+    Args:
+        queue_class: The queue class to use as default.
+    """
+    global _default_queue_class
+    _default_queue_class = StatsQueue if queue_class is None else queue_class
+
+
+def get_default_queue_class() -> type[AsyncQueue[Any]]:
+    """Get the currently configured default queue class.
+
+    Returns:
+        The default queue class, or None if not configured.
+    """
+    return _default_queue_class
