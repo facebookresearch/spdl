@@ -11,7 +11,7 @@ import concurrent.futures
 import logging
 import time
 import warnings
-from asyncio import AbstractEventLoop
+from asyncio import AbstractEventLoop, Queue as AsyncQueue
 from collections.abc import Coroutine, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -21,7 +21,6 @@ from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 
-from ._queue import AsyncQueue
 from ._utils import create_task
 
 __all__ = ["Pipeline"]
