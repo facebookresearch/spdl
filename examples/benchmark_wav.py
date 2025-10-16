@@ -25,7 +25,7 @@ The benchmark suite evaluates performance across multiple dimensions:
 
 .. code-block:: shell
 
-   $ python benchmark_wav.py --output wav_benchmark_results.csv
+   $ numactl --membind 0 --cpubind 0 python benchmark_wav.py --output wav_benchmark_results.csv
    # Plot results
    $ python plot_wav_benchmark.py --input wav_benchmark_results.csv --output wav_benchmark_plot.png
    # Plot results without load_wav
@@ -80,6 +80,7 @@ __all__ = [
 import argparse
 import csv
 import io
+import sys
 import time
 from collections.abc import Callable
 from concurrent.futures import as_completed, ThreadPoolExecutor
@@ -91,6 +92,24 @@ import scipy.stats
 import soundfile as sf
 import spdl.io
 from numpy.typing import NDArray
+
+
+def _get_python_info() -> tuple[str, bool]:
+    """Get Python version and free-threaded ABI information.
+
+    Returns:
+        Tuple of (python_version, is_free_threaded)
+    """
+    python_version = (
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
+    # Check if Python is running with free-threaded ABI (PEP 703)
+    # _is_gil_enabled is only available in Python 3.13+
+    try:
+        is_free_threaded = sys._is_gil_enabled()  # pyre-ignore[16]
+    except AttributeError:
+        is_free_threaded = False
+    return python_version, is_free_threaded
 
 
 def create_wav_data(
@@ -180,6 +199,8 @@ class BenchmarkResult:
     num_threads: int
     function_name: str
     duration_seconds: float
+    python_version: str
+    free_threaded: bool
 
 
 def benchmark(
@@ -239,6 +260,7 @@ def benchmark(
     )
 
     duration = 1.0 / qps_mean
+    python_version, free_threaded = _get_python_info()
     result = BenchmarkResult(
         duration=duration,
         qps=qps_mean,
@@ -247,6 +269,8 @@ def benchmark(
         num_threads=num_threads,
         function_name=name,
         duration_seconds=duration_seconds,
+        python_version=python_version,
+        free_threaded=free_threaded,
     )
     return result, output  # pyre-ignore[61]
 
@@ -345,6 +369,8 @@ def save_results_to_csv(
             "ci_lower",
             "ci_upper",
             "duration",
+            "python_version",
+            "free_threaded",
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -359,6 +385,8 @@ def save_results_to_csv(
                     "ci_lower": r.ci_lower,
                     "ci_upper": r.ci_upper,
                     "duration": r.duration,
+                    "python_version": r.python_version,
+                    "free_threaded": r.free_threaded,
                 }
             )
     print(f"Results saved to {output_file}")
