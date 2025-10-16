@@ -250,7 +250,7 @@ def build_pipeline(
         .add_sink()
         .build(
             num_threads=concurrency,
-            queue_class=partial(
+            queue_class=partial(  # pyre-ignore[6]
                 CustomQueue,
                 writer=writer,
                 interval=log_interval,

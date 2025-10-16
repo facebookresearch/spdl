@@ -45,7 +45,7 @@ class _Node(Generic[T]):
     name: str
     cfg: _ConfigBase
     upstream: "Sequence[_Node]"
-    queue: AsyncQueue[T]
+    queue: AsyncQueue
     _coro: Coroutine[None, None, None] | None = None
     _task: Task | None = None
 
@@ -127,7 +127,7 @@ _BUFFER_SIZE: int = 2
 
 def _convert_config(
     plc: PipelineConfig,
-    q_class: type[AsyncQueue[...]],
+    q_class: type[AsyncQueue],
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
@@ -209,7 +209,7 @@ def _build_pipeline_node(
     plc: PipelineConfig,
     pipeline_id: int,
     stage_id: int,
-    q_class: type[AsyncQueue[...]],
+    q_class: type[AsyncQueue],
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int,

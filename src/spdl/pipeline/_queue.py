@@ -12,7 +12,6 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, TypeVar
 
 from ._hook import _periodic_dispatch, _StatsCounter, _time_str
 from ._utils import create_task
@@ -25,11 +24,10 @@ __all__ = [
     "get_default_queue_class",
 ]
 
-T = TypeVar("T")
 _LG: logging.Logger = logging.getLogger(__name__)
 
 
-class AsyncQueue(asyncio.Queue[T]):
+class AsyncQueue(asyncio.Queue):
     """Extends :py:class:`asyncio.Queue` with init/finalize logic.
 
     When a pipeline stage starts, :py:class:`PipelineBuilder` calls
@@ -117,7 +115,7 @@ class QueuePerfStats:
         return self.num_items / self.elapsed
 
 
-class StatsQueue(AsyncQueue[T]):
+class StatsQueue(AsyncQueue):
     """Measures the time stages are blocked on upstream/downstream stage.
     Extends :py:class:`AsyncQueue`.
 
@@ -160,7 +158,7 @@ class StatsQueue(AsyncQueue[T]):
         self._lap_ave_put_time = 0.0
         self._lap_dur_empty = 0.0
 
-    async def get(self) -> T:
+    async def get(self) -> object:
         """Remove and return an item from the queue, track the time."""
         with self._getc.count():
             item = await super().get()
@@ -170,7 +168,7 @@ class StatsQueue(AsyncQueue[T]):
 
         return item
 
-    async def put(self, item: T) -> None:
+    async def put(self, item: object) -> None:
         """Remove and return an item from the queue, track the time."""
         if self.qsize() == 0:
             self._dur_empty += time.monotonic() - self._empty_t0
@@ -284,10 +282,10 @@ class StatsQueue(AsyncQueue[T]):
         )
 
 
-_default_queue_class: type[AsyncQueue[Any]] = StatsQueue
+_default_queue_class: type[AsyncQueue] = StatsQueue
 
 
-def set_default_queue_class(queue_class: type[AsyncQueue[Any]] = StatsQueue) -> None:
+def set_default_queue_class(queue_class: type[AsyncQueue] = StatsQueue) -> None:
     """Set the default queue class to be used for connecting pipeline stages.
 
     Args:
@@ -297,7 +295,7 @@ def set_default_queue_class(queue_class: type[AsyncQueue[Any]] = StatsQueue) -> 
     _default_queue_class = StatsQueue if queue_class is None else queue_class
 
 
-def get_default_queue_class() -> type[AsyncQueue[Any]]:
+def get_default_queue_class() -> type[AsyncQueue]:
     """Get the currently configured default queue class.
 
     Returns:

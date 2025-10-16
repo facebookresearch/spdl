@@ -13,7 +13,7 @@ import logging
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from . import _config
 from ._components._pipe import _get_fail_counter
@@ -81,7 +81,7 @@ _PIPELINE_ID: int = -1
 ################################################################################
 
 
-def _default_q(interval: float) -> type[AsyncQueue[Any]]:
+def _default_q(interval: float) -> type[AsyncQueue]:
     queue_class = _config.get_default_queue_class()
     return partial(queue_class, interval=interval)  # pyre-ignore[7]
 
@@ -109,7 +109,7 @@ def _build_pipeline(
     num_threads: int,
     max_failures: int = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue[...]] | None = None,
+    queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
 ) -> Pipeline[U]:
@@ -154,7 +154,7 @@ def build_pipeline(
     num_threads: int,
     max_failures: int = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue[...]] | None = None,
+    queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
 ) -> Pipeline[U]:

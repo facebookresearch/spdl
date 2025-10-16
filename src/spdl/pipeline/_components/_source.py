@@ -21,7 +21,7 @@ U = TypeVar("U")
 
 async def _source(
     src: Iterable[T] | AsyncIterable[T],
-    queue: AsyncQueue[T],
+    queue: AsyncQueue,
     max_items: int | None = None,
 ) -> None:
     src_: AsyncIterable[T] = (  # pyre-ignore: [9]
