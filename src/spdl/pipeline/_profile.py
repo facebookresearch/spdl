@@ -33,6 +33,10 @@ __all__ = [
     "ProfileHook",
     "ProfileResult",
     "_build_pipeline_diagnostic_mode",
+    "set_default_profile_hook",
+    "get_default_profile_hook",
+    "set_default_profile_callback",
+    "get_default_profile_callback",
 ]
 
 
@@ -322,8 +326,11 @@ def profile_pipeline(
             #   Concurrency 4: QPS=1200.44, Occupancy=0.55
             #   Concurrency 1: QPS=450.22, Occupancy=0.30
     """
-    hook_ = hook or _DEFAULT_HOOK
-    callback_ = callback or _DEFAULT_CALLBACK
+    default_hook = _config.get_default_profile_hook() or _DEFAULT_HOOK
+    default_callback = _config.get_default_profile_callback() or _DEFAULT_CALLBACK
+
+    hook_ = hook or default_hook
+    callback_ = callback or default_callback
 
     with hook_.pipeline_profile_hook():
         if _get_local_rank() != 0:
@@ -365,3 +372,49 @@ class _ProfilePipeline(Pipeline[U]):
 def _build_pipeline_diagnostic_mode(cfg: PipelineConfig[T, U]) -> Pipeline[U]:
     num_items = _config._diagnostic_mode_num_sources()
     return _ProfilePipeline(cfg, num_items)
+
+
+_default_profile_hook: ProfileHook | None = None
+_default_profile_callback: Callable[[ProfileResult], None] | None = None
+
+
+def set_default_profile_hook(hook: ProfileHook | None = None) -> None:
+    """Set the default profile hook to be used for pipeline profiling.
+
+    Args:
+        hook: The profile hook instance to use as default.
+            If ``None`` a hook is disabled.
+    """
+    global _default_profile_hook
+    _default_profile_hook = hook
+
+
+def get_default_profile_hook() -> ProfileHook | None:
+    """Get the currently configured default profile hook.
+
+    Returns:
+        The default profile hook, or None if not configured.
+    """
+    return _default_profile_hook
+
+
+def set_default_profile_callback(
+    callback: Callable[[ProfileResult], None] | None = None,
+) -> None:
+    """Set the default profile callback to be called after profiling each stage.
+            If ``None`` a callback is disabled.
+
+    Args:
+        callback: The callback function to use as default.
+    """
+    global _default_profile_callback
+    _default_profile_callback = callback
+
+
+def get_default_profile_callback() -> Callable[[ProfileResult], None] | None:
+    """Get the currently configured default profile callback.
+
+    Returns:
+        The default profile callback, or None if not configured.
+    """
+    return _default_profile_callback
