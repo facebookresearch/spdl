@@ -24,7 +24,6 @@ from unittest import skipIf
 
 import pytest
 from spdl.pipeline import (
-    _build,
     AsyncQueue,
     PipelineBuilder,
     PipelineFailure,
@@ -32,6 +31,7 @@ from spdl.pipeline import (
     TaskHook,
     TaskStatsHook,
 )
+from spdl.pipeline._components import _node
 from spdl.pipeline._components._common import _EOF
 from spdl.pipeline._components._hook import _periodic_dispatch
 from spdl.pipeline._components._pipe import (
@@ -2237,8 +2237,8 @@ class _validate_pipeline_id:
         self.val = val
 
     def __iter__(self) -> Iterator[int]:
-        if _build._PIPELINE_ID != self.val:
-            raise AssertionError(f"{_build._PIPELINE_ID=} != {self.val=}")
+        if _node._PIPELINE_ID != self.val:
+            raise AssertionError(f"{_node._PIPELINE_ID=} != {self.val=}")
         yield 0
 
 
@@ -2249,8 +2249,8 @@ class _validate_pipeline_id:
 def test_run_pipeline_in_subprocess_pipeline_id():
     """The pipeline construdted in a subprocess inherits the global ID from the main process"""
     # Set to a number that's not zero and something unlikely to happen during the testing
-    _build._PIPELINE_ID = 123456
-    ref = _build._PIPELINE_ID + 1
+    _node._PIPELINE_ID = 123456
+    ref = _node._PIPELINE_ID + 1
 
     builder = PipelineBuilder().add_source(_validate_pipeline_id(ref)).add_sink()
 
