@@ -16,11 +16,11 @@ from functools import partial
 from typing import TypeVar
 
 from . import _config
+from ._components._hook import TaskHook
 from ._components._pipe import _get_fail_counter
-from ._hook import TaskHook
+from ._components._queue import AsyncQueue
 from ._node import _build_pipeline_node, _run_pipeline_coroutines
 from ._pipeline import Pipeline
-from ._queue import AsyncQueue
 from .defs._defs import PipelineConfig
 
 # pyre-strict

@@ -9,14 +9,15 @@
 import asyncio
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-from ._hook import _periodic_dispatch, _StatsCounter, _time_str
-from ._utils import create_task
+from .._utils import create_task
+from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str
 
 __all__ = [
+    "_queue_stage_hook",
     "AsyncQueue",
     "StatsQueue",
     "QueuePerfStats",
@@ -54,6 +55,25 @@ class AsyncQueue(asyncio.Queue):
     async def stage_hook(self) -> AsyncIterator[None]:
         """Context manager, which handles init/final logic for the stage."""
         yield
+
+
+@asynccontextmanager
+async def _queue_stage_hook(queue: AsyncQueue) -> AsyncGenerator[None, None]:
+    # Responsibility
+    #   1. Call the `stage_hook`` context manager
+    #   2. Put _EOF when the stage is done for reasons other than cancel.
+
+    # Note:
+    # `asyncio.CancelledError` is a subclass of BaseException, so it won't be
+    # caught in the following, and EOF won't be passed to the output queue.
+    async with queue.stage_hook():
+        try:
+            yield
+        except Exception:
+            await queue.put(_EOF)  # pyre-ignore: [6]
+            raise
+        else:
+            await queue.put(_EOF)  # pyre-ignore: [6]
 
 
 @dataclass

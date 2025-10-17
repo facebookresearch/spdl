@@ -8,8 +8,8 @@ __all__ = ["_sink"]
 
 from typing import TypeVar
 
-from .._queue import AsyncQueue
 from ._common import _EOF
+from ._queue import AsyncQueue
 
 # pyre-strict
 
