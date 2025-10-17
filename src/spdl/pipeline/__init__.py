@@ -11,8 +11,8 @@
 from ._build import build_pipeline
 from ._builder import PipelineBuilder, run_pipeline_in_subprocess
 from ._components._hook import TaskHook, TaskPerfStats, TaskStatsHook
+from ._components._node import PipelineFailure
 from ._components._queue import AsyncQueue, QueuePerfStats, StatsQueue
-from ._node import PipelineFailure
 from ._pipeline import Pipeline
 from ._profile import profile_pipeline, ProfileHook, ProfileResult
 from ._utils import cache_iterator, create_task, iterate_in_subprocess
