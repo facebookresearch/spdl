@@ -10,11 +10,11 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Coroutine, Generic, TypeVar
 
+from ._components._hook import TaskHook
 from ._components._pipe import _FailCounter, _merge, _ordered_pipe, _pipe
+from ._components._queue import AsyncQueue
 from ._components._sink import _sink
 from ._components._source import _source
-from ._hook import TaskHook
-from ._queue import AsyncQueue
 from ._utils import create_task
 from .defs._defs import (
     _ConfigBase,

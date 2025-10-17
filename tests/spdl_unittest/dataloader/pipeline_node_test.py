@@ -6,6 +6,7 @@
 
 import asyncio
 
+from spdl.pipeline._components._queue import AsyncQueue
 from spdl.pipeline._node import (
     _cancel_recursive,
     _cancel_upstreams_of_errors,
@@ -14,7 +15,6 @@ from spdl.pipeline._node import (
     _Node,
     _start_tasks,
 )
-from spdl.pipeline._queue import AsyncQueue
 
 # pyre-strict
 

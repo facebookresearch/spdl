@@ -33,6 +33,7 @@ from spdl.pipeline import (
     TaskStatsHook,
 )
 from spdl.pipeline._components._common import _EOF
+from spdl.pipeline._components._hook import _periodic_dispatch
 from spdl.pipeline._components._pipe import (
     _FailCounter,
     _get_fail_counter,
@@ -41,7 +42,6 @@ from spdl.pipeline._components._pipe import (
 )
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
-from spdl.pipeline._hook import _periodic_dispatch
 from spdl.source.utils import embed_shuffle
 
 T = TypeVar("T")

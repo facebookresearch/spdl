@@ -21,11 +21,11 @@ from functools import partial
 from typing import Generic, TypeVar
 
 from .._convert import convert_to_async
-from .._hook import _stage_hooks, _task_hooks, TaskHook
-from .._queue import AsyncQueue
 from .._utils import create_task
 from ..defs._defs import _PipeArgs
-from ._common import _EOF, _queue_stage_hook
+from ._common import _EOF
+from ._hook import _stage_hooks, _task_hooks, TaskHook
+from ._queue import _queue_stage_hook, AsyncQueue
 
 # pyre-strict
 
