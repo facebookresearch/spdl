@@ -23,6 +23,7 @@ from spdl.pipeline.defs import (
     Disaggregate,
     Merge,
     Pipe,
+    PipeConfig,
     PipelineConfig,
     SinkConfig,
     SourceConfig,
@@ -77,7 +78,7 @@ def test_profile_pipeline():
 
     N, m = 25, 3
 
-    cfg = PipelineConfig(
+    plc = PipelineConfig(
         src=SourceConfig(range(N)),
         pipes=[
             Pipe(foo),
@@ -96,9 +97,11 @@ def test_profile_pipeline():
         def __call__(self, inputs, pipe, concurrency):
             num_inputs = N if self.i < 2 else (N + m - 1) // m
             assert len(inputs) == num_inputs
-            assert pipe == cfg.pipes[self.i]
+            assert pipe == plc.pipes[self.i]
             ret = _build_pipeline_config(inputs, pipe, concurrency)
-            assert ret.pipes[0]._args.op is cfg.pipes[self.i]._args.op
+            assert len(ret.pipes) == 1
+            if isinstance(pipe, PipeConfig):
+                assert ret.pipes[0]._args.op is plc.pipes[self.i]._args.op
             self.i += 1
             return ret
 
@@ -107,7 +110,7 @@ def test_profile_pipeline():
         _use_default_hook(),
         patch("spdl.pipeline._profile._build_pipeline_config", mock),
     ):
-        profile_pipeline(cfg)
+        profile_pipeline(plc)
 
     assert mock.i == 5
 

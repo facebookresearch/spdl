@@ -14,7 +14,10 @@ from typing import Any, Generic, TypeVar
 from .._utils import create_task
 from ..defs._defs import (
     _ConfigBase,
+    _PipeArgs,
     _PipeType,
+    AggregateConfig,
+    DisaggregateConfig,
     MergeConfig,
     PipeConfig,
     PipelineConfig,
@@ -22,7 +25,15 @@ from ..defs._defs import (
     SourceConfig,
 )
 from ._hook import get_default_hook_class, TaskHook
-from ._pipe import _FailCounter, _get_fail_counter, _merge, _ordered_pipe, _pipe
+from ._pipe import (
+    _Aggregate,
+    _disaggregate,
+    _FailCounter,
+    _get_fail_counter,
+    _merge,
+    _ordered_pipe,
+    _pipe,
+)
 from ._queue import AsyncQueue, get_default_queue_class
 from ._sink import _sink
 from ._source import _source
@@ -107,8 +118,12 @@ def _get_names(
             base = "sink"
         case PipeConfig():
             base = cfg.name
-            if cfg._type == _PipeType.Pipe and cfg._args.concurrency > 1:
+            if cfg._args.concurrency > 1:
                 base = f"{base}[{cfg._args.concurrency}]"
+        case AggregateConfig():
+            base = f"aggregate({cfg.num_items}, drop_last={cfg.drop_last})"
+        case DisaggregateConfig():
+            base = "disaggregate"
         case MergeConfig():
             base = "merge"
         case _:
@@ -195,7 +210,7 @@ def _build_node(
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures, cfg._max_failures)
             match cfg._type:
-                case _PipeType.Pipe | _PipeType.Aggregate | _PipeType.Disaggregate:
+                case _PipeType.Pipe:
                     node._coro = _pipe(node.name, in_q, out_q, cfg._args, fc, hooks)
                 case _PipeType.OrderedPipe:
                     node._coro = _ordered_pipe(
@@ -203,6 +218,29 @@ def _build_node(
                     )
                 case _:  # pragma: no cover
                     raise ValueError(f"Unexpected process type: {cfg._type}")
+
+        case AggregateConfig():
+            cfg: AggregateConfig = node.cfg
+            assert len(node.upstream) == 1
+
+            in_q, out_q = node.upstream[0].queue, node.queue
+            hooks = task_hook_factory(node.name)
+            fc = fc_class(max_failures)
+            args = _PipeArgs(
+                op=_Aggregate(cfg.num_items, cfg.drop_last),
+                op_requires_eof=True,
+            )
+            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks)
+
+        case DisaggregateConfig():
+            cfg: DisaggregateConfig = node.cfg
+            assert len(node.upstream) == 1
+
+            in_q, out_q = node.upstream[0].queue, node.queue
+            hooks = task_hook_factory(node.name)
+            fc = fc_class(max_failures)
+            args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
+            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks)
 
 
 # Used to append stage name with pipeline
