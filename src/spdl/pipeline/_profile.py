@@ -395,6 +395,13 @@ class _ProfilePipeline(Pipeline[U]):
         _LG.info("Profiling completed. Exiting.")
         raise SystemExit(0)
 
+    def __del__(self) -> None:
+        # overriding as the parent class __del__ is called otherwise,
+        # and it leaves error logs, such as
+        # `AttributeError: '_ProfilePipeline' object has no attribute '_event_loop_state'`
+        # which is confusing.
+        pass
+
 
 def _build_pipeline_diagnostic_mode(cfg: PipelineConfig[T, U]) -> Pipeline[U]:
     num_items = _diagnostic_mode_num_sources()
