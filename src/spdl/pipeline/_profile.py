@@ -14,7 +14,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from . import _build, _config
+from . import _build
+from ._common._misc import _get_env_bool
 from ._pipeline import Pipeline
 from .defs import (
     _PipeArgs,
@@ -35,6 +36,8 @@ __all__ = [
     "ProfileHook",
     "ProfileResult",
     "_build_pipeline_diagnostic_mode",
+    "_is_diagnostic_mode_enabled",
+    "_diagnostic_mode_num_sources",
     "set_default_profile_hook",
     "get_default_profile_hook",
     "set_default_profile_callback",
@@ -342,8 +345,8 @@ def profile_pipeline(
             #   Concurrency 4: QPS=1200.44, Occupancy=0.55
             #   Concurrency 1: QPS=450.22, Occupancy=0.30
     """
-    default_hook = _config.get_default_profile_hook() or _DEFAULT_HOOK
-    default_callback = _config.get_default_profile_callback() or _DEFAULT_CALLBACK
+    default_hook = get_default_profile_hook() or _DEFAULT_HOOK
+    default_callback = get_default_profile_callback() or _DEFAULT_CALLBACK
 
     hook_ = hook or default_hook
     callback_ = callback or default_callback
@@ -363,6 +366,14 @@ def profile_pipeline(
 ##############################################################################
 # Self-Diagnostic Pipeline
 ##############################################################################
+
+
+def _is_diagnostic_mode_enabled() -> bool:
+    return _get_env_bool("SPDL_PIPELINE_DIAGNOSTIC_MODE")
+
+
+def _diagnostic_mode_num_sources() -> int:
+    return int(os.environ.get("SPDL_PIPELINE_DIAGNOSTIC_MODE_NUM_ITEMS", 1000))
 
 
 class _ProfilePipeline(Pipeline[U]):
@@ -386,12 +397,12 @@ class _ProfilePipeline(Pipeline[U]):
 
 
 def _build_pipeline_diagnostic_mode(cfg: PipelineConfig[T, U]) -> Pipeline[U]:
-    num_items = _config._diagnostic_mode_num_sources()
+    num_items = _diagnostic_mode_num_sources()
     return _ProfilePipeline(cfg, num_items)
 
 
-_default_profile_hook: ProfileHook | None = None
-_default_profile_callback: Callable[[ProfileResult], None] | None = None
+_DEFAULT_PROFILE_HOOK: ProfileHook | None = None
+_DEFAULT_PROFILE_CALLBACK: Callable[[ProfileResult], None] | None = None
 
 
 def set_default_profile_hook(hook: ProfileHook | None = None) -> None:
@@ -401,8 +412,8 @@ def set_default_profile_hook(hook: ProfileHook | None = None) -> None:
         hook: The profile hook instance to use as default.
             If ``None`` a hook is disabled.
     """
-    global _default_profile_hook
-    _default_profile_hook = hook
+    global _DEFAULT_PROFILE_HOOK
+    _DEFAULT_PROFILE_HOOK = hook
 
 
 def get_default_profile_hook() -> ProfileHook | None:
@@ -411,7 +422,7 @@ def get_default_profile_hook() -> ProfileHook | None:
     Returns:
         The default profile hook, or None if not configured.
     """
-    return _default_profile_hook
+    return _DEFAULT_PROFILE_HOOK
 
 
 def set_default_profile_callback(
@@ -423,8 +434,8 @@ def set_default_profile_callback(
     Args:
         callback: The callback function to use as default.
     """
-    global _default_profile_callback
-    _default_profile_callback = callback
+    global _DEFAULT_PROFILE_CALLBACK
+    _DEFAULT_PROFILE_CALLBACK = callback
 
 
 def get_default_profile_callback() -> Callable[[ProfileResult], None] | None:
@@ -433,4 +444,4 @@ def get_default_profile_callback() -> Callable[[ProfileResult], None] | None:
     Returns:
         The default profile callback, or None if not configured.
     """
-    return _default_profile_callback
+    return _DEFAULT_PROFILE_CALLBACK
