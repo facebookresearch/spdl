@@ -6,15 +6,15 @@
 
 import asyncio
 
-from spdl.pipeline._components._queue import AsyncQueue
-from spdl.pipeline._node import (
+from spdl.pipeline._components._node import (
     _cancel_recursive,
     _cancel_upstreams_of_errors,
-    _ConfigBase,
     _gather_error,
     _Node,
     _start_tasks,
 )
+from spdl.pipeline._components._queue import AsyncQueue
+from spdl.pipeline.defs._defs import _ConfigBase
 
 # pyre-strict
 
