@@ -15,8 +15,7 @@ from typing import Any, Generic, TypeVar
 from spdl._internal import log_api_usage_once
 
 from ._build import build_pipeline
-from ._components._hook import TaskHook
-from ._components._queue import AsyncQueue
+from ._components import AsyncQueue, TaskHook
 from ._pipeline import Pipeline
 from ._utils import iterate_in_subprocess
 from .defs._defs import (
