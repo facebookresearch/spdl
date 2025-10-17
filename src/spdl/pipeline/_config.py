@@ -7,8 +7,12 @@
 import logging
 import os
 
-from ._components._hook import get_default_hook_class, set_default_hook_class
-from ._components._queue import get_default_queue_class, set_default_queue_class
+from ._components import (
+    get_default_hook_class,
+    get_default_queue_class,
+    set_default_hook_class,
+    set_default_queue_class,
+)
 from ._profile import (
     get_default_profile_callback,
     get_default_profile_hook,

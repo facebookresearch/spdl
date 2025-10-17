@@ -15,9 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
 
 from . import _config
-from ._components._hook import TaskHook
-from ._components._node import _build_pipeline_coro
-from ._components._queue import AsyncQueue
+from ._components import _build_pipeline_coro, AsyncQueue, TaskHook
 from ._pipeline import Pipeline
 from .defs._defs import PipelineConfig
 
