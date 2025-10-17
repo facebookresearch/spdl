@@ -19,7 +19,7 @@ from unittest.mock import patch
 
 import pytest
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
-from spdl.pipeline._utils import _Cmd, _execute_iterable, _Status
+from spdl.pipeline._iter_utils import _Cmd, _execute_iterable, _Status
 from spdl.source.utils import (
     embed_shuffle,
     IterableWithShuffle,

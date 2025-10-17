@@ -16,8 +16,8 @@ from spdl._internal import log_api_usage_once
 
 from ._build import build_pipeline
 from ._components import AsyncQueue, TaskHook
+from ._iter_utils import iterate_in_subprocess
 from ._pipeline import Pipeline
-from ._utils import iterate_in_subprocess
 from .defs import (
     _TPipeInputs,
     Aggregate,

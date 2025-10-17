@@ -6,6 +6,11 @@
 
 # pyre-strict
 
+__all__ = [
+    "convert_to_async",
+    "_to_async_gen",
+]
+
 import asyncio
 import inspect
 import sys
@@ -14,7 +19,7 @@ from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterat
 from concurrent.futures import Executor, ProcessPoolExecutor
 from typing import TypeVar
 
-from .defs import _TAsyncCallables, _TCallables
+from ._types import _TAsyncCallables, _TCallables
 
 T = TypeVar("T")
 U = TypeVar("U")

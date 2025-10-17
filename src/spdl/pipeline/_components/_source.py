@@ -9,7 +9,7 @@ __all__ = ["_source"]
 from collections.abc import AsyncIterable, Iterable
 from typing import TypeVar
 
-from .._convert import _to_async_gen
+from .._common._convert import _to_async_gen
 from ._queue import _queue_stage_hook, AsyncQueue
 
 # pyre-strict

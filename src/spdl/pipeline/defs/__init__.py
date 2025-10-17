@@ -29,8 +29,6 @@ from ._defs import (
     _ConfigBase,
     _PipeArgs,
     _PipeType,
-    _TAsyncCallables,
-    _TCallables,
     _TPipeInputs,
     Aggregate,
     AggregateConfig,

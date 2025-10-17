@@ -10,6 +10,7 @@
 
 from ._build import build_pipeline
 from ._builder import PipelineBuilder, run_pipeline_in_subprocess
+from ._common._misc import create_task
 from ._components import (
     AsyncQueue,
     PipelineFailure,
@@ -19,9 +20,9 @@ from ._components import (
     TaskPerfStats,
     TaskStatsHook,
 )
+from ._iter_utils import cache_iterator, iterate_in_subprocess
 from ._pipeline import Pipeline
 from ._profile import profile_pipeline, ProfileHook, ProfileResult
-from ._utils import cache_iterator, create_task, iterate_in_subprocess
 
 __all__ = [
     "build_pipeline",
@@ -74,8 +75,8 @@ def __getattr__(name: str) -> object:
             "_iterate_results",
             "_SubprocessIterable",
         ]:
-            from . import _utils
+            from . import _iter_utils
 
-            return getattr(_utils, name)
+            return getattr(_iter_utils, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
