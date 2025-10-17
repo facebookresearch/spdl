@@ -6,9 +6,10 @@
 
 import asyncio
 from asyncio import Task
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
-from typing import Coroutine, Generic, TypeVar
+from functools import partial
+from typing import Any, Generic, TypeVar
 
 from .._utils import create_task
 from ..defs._defs import (
@@ -20,9 +21,9 @@ from ..defs._defs import (
     SinkConfig,
     SourceConfig,
 )
-from ._hook import TaskHook
-from ._pipe import _FailCounter, _merge, _ordered_pipe, _pipe
-from ._queue import AsyncQueue
+from ._hook import get_default_hook_class, TaskHook
+from ._pipe import _FailCounter, _get_fail_counter, _merge, _ordered_pipe, _pipe
+from ._queue import AsyncQueue, get_default_queue_class
 from ._sink import _sink
 from ._source import _source
 
@@ -30,8 +31,7 @@ T = TypeVar("T")
 
 __all__ = [
     "_Node",
-    "_build_pipeline_node",
-    "_run_pipeline_coroutines",
+    "_build_pipeline_coro",
     "PipelineFailure",
 ]
 
@@ -205,17 +205,54 @@ def _build_node(
                     raise ValueError(f"Unexpected process type: {cfg._type}")
 
 
+# Used to append stage name with pipeline
+_PIPELINE_ID: int = -1
+
+
+def _default_q(interval: float) -> type[AsyncQueue]:
+    queue_class = get_default_queue_class()
+    return partial(queue_class, interval=interval)  # pyre-ignore[7]
+
+
+def _default_hook_factory(
+    report_stats_interval: float,
+) -> Callable[[str], list[TaskHook]]:
+    if (hook_class := get_default_hook_class()) is not None:
+
+        def _hook_factory(name: str) -> list[TaskHook]:
+            return [hook_class(name=name, interval=report_stats_interval)]
+
+    else:
+
+        def _hook_factory(_: str) -> list[TaskHook]:
+            return []
+
+    return _hook_factory
+
+
 def _build_pipeline_node(
     plc: PipelineConfig,
-    pipeline_id: int,
-    stage_id: int,
-    q_class: type[AsyncQueue],
-    fc_class: type[_FailCounter],
-    task_hook_factory: Callable[[str], list[TaskHook]],
+    /,
+    *,
     max_failures: int,
+    report_stats_interval: float,
+    queue_class: type[AsyncQueue] | None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None,
+    stage_id: int,
 ):
-    node = _convert_config(plc, q_class, pipeline_id, _MutableInt(stage_id))
-    _build_node(node, fc_class, task_hook_factory, max_failures)
+    global _PIPELINE_ID
+    _PIPELINE_ID += 1
+
+    q_class = _default_q(report_stats_interval) if queue_class is None else queue_class
+    hook_factory = (
+        _default_hook_factory(report_stats_interval)
+        if task_hook_factory is None
+        else task_hook_factory
+    )
+
+    fc_class = _get_fail_counter()
+    node = _convert_config(plc, q_class, _PIPELINE_ID, _MutableInt(stage_id))
+    _build_node(node, fc_class, hook_factory, max_failures)
     return node
 
 
@@ -316,3 +353,26 @@ async def _run_pipeline_coroutines(node: _Node[T]) -> None:
 
     if errs := _gather_error(node):
         raise PipelineFailure(errs)
+
+
+def _build_pipeline_coro(
+    plc: PipelineConfig[Any, Any],
+    /,
+    *,
+    max_failures: int = -1,
+    report_stats_interval: float = -1,
+    queue_class: type[AsyncQueue] | None = None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    stage_id: int = 0,
+) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
+    node = _build_pipeline_node(
+        plc,
+        max_failures=max_failures,
+        report_stats_interval=report_stats_interval,
+        queue_class=queue_class,
+        task_hook_factory=task_hook_factory,
+        stage_id=stage_id,
+    )
+    coro = _run_pipeline_coroutines(node)
+
+    return coro, node.queue

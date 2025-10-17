@@ -12,13 +12,11 @@ __all__ = [
 import logging
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from functools import partial
 from typing import TypeVar
 
 from . import _config
 from ._components._hook import TaskHook
-from ._components._node import _build_pipeline_node, _run_pipeline_coroutines
-from ._components._pipe import _get_fail_counter
+from ._components._node import _build_pipeline_coro
 from ._components._queue import AsyncQueue
 from ._pipeline import Pipeline
 from .defs._defs import PipelineConfig
@@ -72,34 +70,9 @@ _LG: logging.Logger = logging.getLogger(__name__)
 #
 
 
-# Used to append stage name with pipeline
-_PIPELINE_ID: int = -1
-
-
 ################################################################################
 # Coroutine execution logics
 ################################################################################
-
-
-def _default_q(interval: float) -> type[AsyncQueue]:
-    queue_class = _config.get_default_queue_class()
-    return partial(queue_class, interval=interval)  # pyre-ignore[7]
-
-
-def _default_hook_factory(
-    report_stats_interval: float,
-) -> Callable[[str], list[TaskHook]]:
-    if (hook_class := _config.get_default_hook_class()) is not None:
-
-        def _hook_factory(name: str) -> list[TaskHook]:
-            return [hook_class(name=name, interval=report_stats_interval)]
-
-    else:
-
-        def _hook_factory(_: str) -> list[TaskHook]:
-            return []
-
-    return _hook_factory
 
 
 def _build_pipeline(
@@ -117,34 +90,20 @@ def _build_pipeline(
 
     _LG.debug("%s", desc)
 
-    _fail_counter_class = _get_fail_counter()
-
-    global _PIPELINE_ID
-    _PIPELINE_ID += 1
-
-    q_class = _default_q(report_stats_interval) if queue_class is None else queue_class
-    hook_factory = (
-        _default_hook_factory(report_stats_interval)
-        if task_hook_factory is None
-        else task_hook_factory
-    )
-
-    node = _build_pipeline_node(
+    coro, queue = _build_pipeline_coro(
         pipeline_cfg,
-        _PIPELINE_ID,
-        stage_id,
-        q_class,
-        _fail_counter_class,
-        hook_factory,
-        max_failures,
+        max_failures=max_failures,
+        report_stats_interval=report_stats_interval,
+        queue_class=queue_class,
+        task_hook_factory=task_hook_factory,
+        stage_id=stage_id,
     )
-    coro = _run_pipeline_coroutines(node)
 
     executor = ThreadPoolExecutor(
         max_workers=num_threads,
         thread_name_prefix="spdl_worker_thread_",
     )
-    return Pipeline(coro, node.queue, executor, desc=desc)
+    return Pipeline(coro, queue, executor, desc=desc)
 
 
 def build_pipeline(
