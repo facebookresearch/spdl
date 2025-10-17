@@ -292,7 +292,7 @@ def _ordered_pipe(
             task = create_task(_run(item), name=f"{name}:{(i := i + 1)}")
             await inter_queue.put(task)
 
-        await inter_queue.put(_EOF)  # pyre-ignore: [6]
+        await inter_queue.put(_EOF)
 
     async def get_check_put() -> None:
         while not fail_counter.too_many_failures():

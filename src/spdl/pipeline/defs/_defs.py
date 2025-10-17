@@ -26,6 +26,8 @@ __all__ = [
     "_ConfigBase",
     "MergeConfig",
     "PipeConfig",
+    "AggregateConfig",
+    "DisaggregateConfig",
     "PipelineConfig",
     "SinkConfig",
     "SourceConfig",
@@ -140,8 +142,12 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
+class _PipeConfigBase(_ConfigBase):
+    pass
+
+
 @dataclass(frozen=True)
-class PipeConfig(Generic[T, U], _ConfigBase):
+class PipeConfig(Generic[T, U], _PipeConfigBase):
     """PipeConfig()
 
     A pipe configuration.
@@ -195,6 +201,53 @@ class PipeConfig(Generic[T, U], _ConfigBase):
                 return str(self._type)
 
 
+@dataclass(frozen=True)
+class AggregateConfig(Generic[T], _PipeConfigBase):
+    """Configuration for aggregation operation.
+
+    Buffers incoming items and emits once enough items are buffered.
+    """
+
+    name: str
+    """Name of the aggregation stage."""
+
+    num_items: int
+    """Number of items to buffer before emitting."""
+
+    drop_last: bool = False
+    """Whether to drop the last aggregation if it has fewer than num_items."""
+
+    _type: _PipeType = _PipeType.Aggregate
+
+    def __post_init__(self) -> None:
+        if self.num_items < 1:
+            raise ValueError(f"`num_items` must be >= 1. Found: {self.num_items}")
+
+    def __repr__(self) -> str:
+        name = self.name or (
+            f"aggregate({self.num_items}, drop_last={self.drop_last})"
+            if self.drop_last
+            else f"aggregate({self.num_items})"
+        )
+        return name
+
+
+@dataclass(frozen=True)
+class DisaggregateConfig(Generic[T], _PipeConfigBase):
+    """Configuration for disaggregation operation.
+
+    Slices incoming lists of items and yields them one by one.
+    """
+
+    name: str
+    """Name of the disaggregation stage."""
+
+    _type: _PipeType = _PipeType.Disaggregate
+
+    def __repr__(self) -> str:
+        return self.name or "disaggregate"
+
+
 ################################################################################
 # Sink
 ################################################################################
@@ -244,7 +297,9 @@ class PipelineConfig(Generic[T, U], _ConfigBase):
     src: SourceConfig[T] | MergeConfig[T]
     """Source configuration."""
 
-    pipes: Sequence[PipeConfig[Any, Any]]
+    pipes: Sequence[
+        PipeConfig[Any, Any] | AggregateConfig[Any] | DisaggregateConfig[Any]
+    ]
     """Pipe configurations."""
 
     sink: SinkConfig[U]
@@ -407,8 +462,8 @@ def Pipe(
     )
 
 
-def Aggregate(num_items: int, /, *, drop_last: bool = False) -> PipeConfig[Any, Any]:
-    """Create a :py:class:`PipeConfig` object for aggregation.
+def Aggregate(num_items: int, /, *, drop_last: bool = False) -> AggregateConfig[Any]:
+    """Create a :py:class:`_AggregateConfig` object for aggregation.
 
     The aggregation buffers the incoming items and emits once enough items are buffered.
 
@@ -424,27 +479,16 @@ def Aggregate(num_items: int, /, *, drop_last: bool = False) -> PipeConfig[Any, 
        :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
-
-    # To avoid circular deps
-    from .._components._pipe import _Aggregate
-
     name = (
         f"aggregate({num_items}, {drop_last=})"
         if drop_last
         else f"aggregate({num_items})"
     )
-    return PipeConfig(
-        name=name,
-        _type=_PipeType.Aggregate,
-        _args=_PipeArgs(
-            op=_Aggregate(num_items, drop_last),
-            op_requires_eof=True,
-        ),
-    )
+    return AggregateConfig(num_items=num_items, drop_last=drop_last, name=name)
 
 
-def Disaggregate() -> PipeConfig[Any, Any]:
-    """Create a :py:class:`PipeConfig` object for disaggregation.
+def Disaggregate() -> DisaggregateConfig[Any]:
+    """Create a :py:class:`_DisaggregateConfig` object for disaggregation.
 
     The disaggregate slices the incoming list of items and yield them
     one by one.
@@ -457,14 +501,4 @@ def Disaggregate() -> PipeConfig[Any, Any]:
        :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
-
-    # To avoid circular deps
-    from .._components._pipe import _disaggregate
-
-    return PipeConfig(
-        name="disaggregate",
-        _type=_PipeType.Disaggregate,
-        _args=_PipeArgs(
-            op=_disaggregate,  # pyre-ignore: [6]
-        ),
-    )
+    return DisaggregateConfig(name="disaggregate")

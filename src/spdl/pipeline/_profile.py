@@ -19,6 +19,8 @@ from ._pipeline import Pipeline
 from .defs._defs import (
     _PipeArgs,
     _PipeType,
+    AggregateConfig,
+    DisaggregateConfig,
     MergeConfig,
     PipeConfig,
     PipelineConfig,
@@ -80,22 +82,36 @@ def _fetch_inputs(src: SourceConfig[T], num_items: int) -> list[T]:
 
 
 def _build_pipeline_config(
-    src: list[T], pipe: PipeConfig[T, U], concurrency: int
+    src: list[T],
+    cfg: PipeConfig[T, U] | AggregateConfig[T] | DisaggregateConfig[T],
+    concurrency: int,
 ) -> PipelineConfig[T, U]:
-    return PipelineConfig(
-        src=SourceConfig(src),
-        pipes=[
-            PipeConfig(
-                name=pipe.name,
-                _type=pipe._type,
+    match cfg:
+        case PipeConfig() as cfg_:
+            pipe = PipeConfig(
+                name=cfg_.name,
+                _type=cfg_._type,
                 _args=_PipeArgs(
-                    op=pipe._args.op,
+                    op=cfg_._args.op,
                     executor=None,
                     concurrency=concurrency,
-                    op_requires_eof=pipe._args.op_requires_eof,
+                    op_requires_eof=cfg_._args.op_requires_eof,
                 ),
             )
-        ],
+        case AggregateConfig() as cfg_:
+            pipe = AggregateConfig(
+                num_items=cfg_.num_items,
+                drop_last=cfg_.drop_last,
+                name=cfg_.name,
+            )
+        case DisaggregateConfig() as cfg_:
+            pipe = DisaggregateConfig(name=cfg_.name)
+        case _:
+            raise ValueError(f"[INTERNAL ERROR] Uxpected pipe type {type(cfg)}")
+
+    return PipelineConfig(
+        src=SourceConfig(src),
+        pipes=[pipe],
         sink=SinkConfig(2),
     )
 
@@ -168,7 +184,7 @@ def _get_local_rank() -> int:
 
 def _profile_pipe(
     inputs: list[T],
-    pipe: PipeConfig[T, U],
+    pipe: PipeConfig[T, U] | AggregateConfig[T] | DisaggregateConfig[T],
     hook_: ProfileHook,
     callback_: Callable[[ProfileResult], None],
 ) -> tuple[list[U], ProfileResult]:

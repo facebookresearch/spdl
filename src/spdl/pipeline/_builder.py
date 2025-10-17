@@ -22,7 +22,9 @@ from ._utils import iterate_in_subprocess
 from .defs._defs import (
     _TPipeInputs,
     Aggregate,
+    AggregateConfig,
     Disaggregate,
+    DisaggregateConfig,
     Pipe,
     PipeConfig,
     PipelineConfig,
@@ -78,7 +80,9 @@ class PipelineBuilder(Generic[T, U]):
         log_api_usage_once("spdl.pipeline.PipelineBuilder")
 
         self._src: SourceConfig[T] | None = None
-        self._process_args: list[PipeConfig] = []  # pyre-ignore: [24]
+        self._process_args: list[  # pyre-ignore: [24]
+            PipeConfig | AggregateConfig | DisaggregateConfig
+        ] = []
         self._sink: SinkConfig[U] | None = None
 
     def add_source(
