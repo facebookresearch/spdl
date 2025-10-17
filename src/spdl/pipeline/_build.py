@@ -14,7 +14,6 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
 
-from . import _config
 from ._components import _build_pipeline_coro, AsyncQueue, TaskHook
 from ._pipeline import Pipeline
 from .defs import PipelineConfig
@@ -170,10 +169,10 @@ def build_pipeline(
 
         stage_id: The index of the initial stage  used for logging.
     """
-    if _config._diagnostic_mode_enabled():
-        from ._profile import _build_pipeline_diagnostic_mode
+    from . import _profile
 
-        return _build_pipeline_diagnostic_mode(pipeline_cfg)
+    if _profile._is_diagnostic_mode_enabled():
+        return _profile._build_pipeline_diagnostic_mode(pipeline_cfg)
 
     return _build_pipeline(
         pipeline_cfg,

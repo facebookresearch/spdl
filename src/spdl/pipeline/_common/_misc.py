@@ -10,6 +10,7 @@
 
 import asyncio
 import logging
+import os
 import sys
 import traceback
 from asyncio import Task
@@ -19,6 +20,7 @@ from typing import Any, TypeVar
 
 __all__ = [
     "create_task",
+    "_get_env_bool",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -26,6 +28,32 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+
+##############################################################################
+# Helper function for parsing environment variable
+##############################################################################
+def _get_env_bool(name: str, default: bool = False) -> bool:
+    if name not in os.environ:
+        return default
+
+    val = os.environ.get(name, "0")
+    trues = ["1", "true", "TRUE", "on", "ON", "yes", "YES"]
+    falses = ["0", "false", "FALSE", "off", "OFF", "no", "NO"]
+    if val in trues:
+        return True
+    if val not in falses:
+        _LG.warning(
+            f"Unexpected environment variable value `{name}={val}`. "
+            f"Expected one of {trues + falses}",
+            stacklevel=2,
+        )
+    return False
+
+
+##############################################################################
+# Wrapper for asyncio's create_task.
+##############################################################################
 
 # Dictionary to track exception counts by file and line number
 _exception_counts: dict[tuple[str, int], int] = defaultdict(int)
@@ -113,7 +141,26 @@ def create_task(
     suppression_threshold: int = 5,
     suppression_warning_interval: int = 100,
 ) -> Task[T]:
-    """Wrapper around :py:func:`asyncio.create_task`. Add logging callback."""
+    """Wrap :py:func:`asyncio.create_task` and add logging callback.
+
+    Args:
+        coro: The coroutine or generator to be executed as a task.
+        name: Optional name for the task. If ``None``, asyncio will generate a default name.
+        log_cancelled: If ``True``, log a warning when the task is cancelled.
+            Defaults to ``False``.
+        suppress_repeated_logs: If ``True``, suppress repeated exception logs from the same
+            location after reaching the suppression threshold.
+            Defaults to ``False``.
+        suppression_threshold: Number of exceptions from the same location before suppression
+            kicks in.
+            Defaults to ``5``.
+        suppression_warning_interval: Interval at which to log suppression warnings after
+            threshold is reached.
+            Defaults to ``100``.
+
+        Returns:
+            Task[T]: The created asyncio Task with exception logging callback attached.
+    """
     task = asyncio.create_task(coro, name=name)
     task.add_done_callback(
         lambda t: _log_exception(
