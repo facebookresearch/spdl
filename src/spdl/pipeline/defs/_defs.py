@@ -5,12 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import inspect
-from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Sequence
+from collections.abc import AsyncIterable, Callable, Iterable, Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from enum import IntEnum
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
+
+from .._common._types import _TCallables
 
 # pyre-strict
 
@@ -20,8 +22,6 @@ U = TypeVar("U")
 __all__ = [
     "_PipeArgs",
     "_PipeType",
-    "_TCallables",
-    "_TAsyncCallables",
     "_TPipeInputs",
     "_ConfigBase",
     "MergeConfig",
@@ -36,19 +36,6 @@ __all__ = [
     "Aggregate",
     "Disaggregate",
 ]
-
-
-_TCallables: TypeAlias = (
-    Callable[[T], U]
-    | Callable[[T], Iterable[U]]
-    | Callable[[T], Awaitable[U]]
-    | Callable[[T], AsyncIterable[U]]
-)
-
-
-_TAsyncCallables: TypeAlias = (
-    Callable[[T], Awaitable[U]] | Callable[[T], AsyncIterable[U]]
-)
 
 
 class _ConfigBase:

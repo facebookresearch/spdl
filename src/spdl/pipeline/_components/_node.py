@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any, Generic, TypeVar
 
-from .._utils import create_task
+from .._common._misc import create_task
 from ..defs import (
     _ConfigBase,
     _PipeArgs,

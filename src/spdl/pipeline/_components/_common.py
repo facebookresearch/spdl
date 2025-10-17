@@ -18,7 +18,7 @@ from collections.abc import Callable, Coroutine, Iterator
 from contextlib import contextmanager
 from typing import TypeVar
 
-from .._utils import create_task
+from .._common._misc import create_task
 
 # pyre-strict
 

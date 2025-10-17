@@ -20,8 +20,8 @@ from contextlib import asynccontextmanager
 from functools import partial
 from typing import Generic, TypeVar
 
-from .._convert import convert_to_async
-from .._utils import create_task
+from .._common._convert import convert_to_async
+from .._common._misc import create_task
 from ..defs import _PipeArgs
 from ._common import _EOF
 from ._hook import _stage_hooks, _task_hooks, TaskHook
