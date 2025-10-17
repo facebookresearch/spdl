@@ -17,7 +17,7 @@ from typing import TypeVar
 from . import _config
 from ._components import _build_pipeline_coro, AsyncQueue, TaskHook
 from ._pipeline import Pipeline
-from .defs._defs import PipelineConfig
+from .defs import PipelineConfig
 
 # pyre-strict
 

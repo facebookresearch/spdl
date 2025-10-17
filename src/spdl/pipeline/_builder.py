@@ -18,7 +18,7 @@ from ._build import build_pipeline
 from ._components import AsyncQueue, TaskHook
 from ._pipeline import Pipeline
 from ._utils import iterate_in_subprocess
-from .defs._defs import (
+from .defs import (
     _TPipeInputs,
     Aggregate,
     AggregateConfig,

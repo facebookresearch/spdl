@@ -14,7 +14,7 @@ from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterat
 from concurrent.futures import Executor, ProcessPoolExecutor
 from typing import TypeVar
 
-from .defs._defs import _TAsyncCallables, _TCallables
+from .defs import _TAsyncCallables, _TCallables
 
 T = TypeVar("T")
 U = TypeVar("U")

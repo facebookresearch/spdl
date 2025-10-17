@@ -12,7 +12,7 @@ from functools import partial
 from typing import Any, Generic, TypeVar
 
 from .._utils import create_task
-from ..defs._defs import (
+from ..defs import (
     _ConfigBase,
     _PipeArgs,
     _PipeType,

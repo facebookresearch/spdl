@@ -16,7 +16,7 @@ from typing import Any, TypeVar
 
 from . import _build, _config
 from ._pipeline import Pipeline
-from .defs._defs import (
+from .defs import (
     _PipeArgs,
     _PipeType,
     AggregateConfig,
