@@ -13,7 +13,8 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-from .._common._misc import create_task
+from spdl.pipeline._common._misc import create_task
+
 from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str
 
 __all__ = [

@@ -10,12 +10,13 @@
 # Implement the configuration system where it is used.
 # This module should be just exposing them to external consumers.
 
-from ._components import (
+from spdl.pipeline._components import (
     get_default_hook_class,
     get_default_queue_class,
     set_default_hook_class,
     set_default_queue_class,
 )
+
 from ._profile import (
     _diagnostic_mode_num_sources,
     _is_diagnostic_mode_enabled,
