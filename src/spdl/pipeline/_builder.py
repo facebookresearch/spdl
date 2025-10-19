@@ -13,12 +13,8 @@ from functools import partial
 from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
-
-from ._build import build_pipeline
-from ._components import AsyncQueue, TaskHook
-from ._iter_utils import iterate_in_subprocess
-from ._pipeline import Pipeline
-from .defs import (
+from spdl.pipeline._components import AsyncQueue, TaskHook
+from spdl.pipeline.defs import (
     _TPipeInputs,
     Aggregate,
     AggregateConfig,
@@ -30,6 +26,10 @@ from .defs import (
     SinkConfig,
     SourceConfig,
 )
+
+from ._build import build_pipeline
+from ._iter_utils import iterate_in_subprocess
+from ._pipeline import Pipeline
 
 __all__ = [
     "PipelineBuilder",

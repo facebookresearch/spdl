@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any, Generic, TypeVar
 
-from .._common._misc import create_task
-from ..defs import (
+from spdl.pipeline._common._misc import create_task
+from spdl.pipeline.defs import (
     _ConfigBase,
     _PipeArgs,
     _PipeType,
@@ -24,6 +24,7 @@ from ..defs import (
     SinkConfig,
     SourceConfig,
 )
+
 from ._hook import get_default_hook_class, TaskHook
 from ._pipe import (
     _Aggregate,
