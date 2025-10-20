@@ -24,6 +24,7 @@ __all__ = [
     "_PipeType",
     "_TPipeInputs",
     "_ConfigBase",
+    "EOF",
     "MergeConfig",
     "PipeConfig",
     "AggregateConfig",
@@ -40,6 +41,47 @@ __all__ = [
 
 class _ConfigBase:
     pass
+
+
+################################################################################
+# Sentinel
+################################################################################
+class _Sentinel:
+    """Sentinel object used for special control flow in the pipeline."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __str__(self) -> str:
+        return self.name
+
+
+EOF = _Sentinel("EOF")
+"""Sentinel object indicating the end of stream in a pipeline.
+
+This sentinel is used internally by the pipeline to signal when data processing
+should stop. It is automatically handled by the pipeline stages.
+
+In most cases, you don't need to use this directly. However, when implementing
+custom operations that require special handling at the end of stream (such as
+aggregation with `drop_last=False`), you may need to check for this sentinel.
+
+Example:
+    >>> from spdl.pipeline import EOF
+    >>>
+    >>> def custom_aggregator(item):
+    ...     if item is EOF:
+    ...         # Flush buffered items
+    ...         return flush_buffer()
+    ...     else:
+    ...         # Process normal items
+    ...         return process_item(item)
+
+.. seealso::
+
+   :py:func:`~spdl.pipeline.Aggregate`
+       An example of pipeline operation that handles EOF for flushing buffered items.
+"""
 
 
 ################################################################################
@@ -115,11 +157,11 @@ class _PipeArgs(Generic[T, U]):
     concurrency: int = 1
     op_requires_eof: bool = False
     # Used to pass EOF to op.
-    # Usually pipe does not pas EOF to op. This is because op is expected to be
-    #  stateless, and requiring users to handle EOF is cumbersome, and there is
+    # Usually pipe does not pass EOF to op. This is because op is expected to be
+    # stateless, and requiring users to handle EOF is cumbersome, and there is
     # no real benefit.
     # However, some ops are exception. The aggregation (with drop_last=False)
-    # requires to benotified when the pipeline reached the EOF, so that it can
+    # requires to be notified when the pipeline reached the EOF, so that it can
     # flush the buffered items.
 
     def __post_init__(self) -> None:

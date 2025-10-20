@@ -32,7 +32,6 @@ from spdl.pipeline import (
     TaskStatsHook,
 )
 from spdl.pipeline._components import _node
-from spdl.pipeline._components._common import _EOF
 from spdl.pipeline._components._hook import _periodic_dispatch
 from spdl.pipeline._components._pipe import (
     _FailCounter,
@@ -42,6 +41,7 @@ from spdl.pipeline._components._pipe import (
 )
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
+from spdl.pipeline.defs import EOF
 from spdl.source.utils import embed_shuffle
 
 T = TypeVar("T")
@@ -51,7 +51,7 @@ def _put_aqueue(queue, vals, *, eof):
     for val in vals:
         queue.put_nowait(val)
     if eof:
-        queue.put_nowait(_EOF)
+        queue.put_nowait(EOF)
 
 
 def _flush_aqueue(queue):
@@ -75,7 +75,7 @@ def test_async_enqueue_empty():
     queue = AsyncQueue(name="foo", buffer_size=0)
     coro = _source([], queue)
     asyncio.run(coro)
-    assert _flush_aqueue(queue) == [_EOF]
+    assert _flush_aqueue(queue) == [EOF]
 
 
 def test_async_enqueue_simple():
@@ -85,7 +85,7 @@ def test_async_enqueue_simple():
     coro = _source(src, queue)
     asyncio.run(coro)
     vals = _flush_aqueue(queue)
-    assert vals == [*src, _EOF]
+    assert vals == [*src, EOF]
 
 
 def test_async_enqueue_iterator_failure():
@@ -200,7 +200,7 @@ def test_async_pipe():
 
         result = _flush_aqueue(output_queue)
 
-        assert result == [v * 2 for v in ref] + [_EOF]
+        assert result == [v * 2 for v in ref] + [EOF]
 
     asyncio.run(test())
 
@@ -228,7 +228,7 @@ def test_async_pipe_skip():
 
         result = _flush_aqueue(output_queue)
 
-        assert result == [*list(range(1, 10, 2)), _EOF]
+        assert result == [*list(range(1, 10, 2)), EOF]
 
     asyncio.run(test())
 
@@ -259,7 +259,7 @@ def test_async_pipe_wrong_task_signature():
         assert remaining == ref[1:]
 
         result = _flush_aqueue(output_queue)
-        assert result == [_EOF]
+        assert result == [EOF]
 
     asyncio.run(test())
 
@@ -365,7 +365,7 @@ def test_async_pipe_concurrency_throughput():
         input_queue = AsyncQueue(name="input", buffer_size=0)
         output_queue = AsyncQueue(name="output", buffer_size=0)
 
-        ref = [4, 5, 6, 7, _EOF]
+        ref = [4, 5, 6, 7, EOF]
         _put_aqueue(input_queue, ref, eof=False)
 
         t0 = time.monotonic()
@@ -385,7 +385,7 @@ def test_async_pipe_concurrency_throughput():
         result = _flush_aqueue(output_queue)
 
         assert set(result) == set(ref)
-        assert result[-1] == ref[-1] == _EOF
+        assert result[-1] == ref[-1] == EOF
 
         return elapsed
 

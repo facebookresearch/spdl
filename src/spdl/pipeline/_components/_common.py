@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
-    "_EOF",
     "_periodic_dispatch",
     "_StatsCounter",
     "_time_str",
@@ -25,18 +24,6 @@ from spdl.pipeline._common._misc import create_task
 
 T = TypeVar("T")
 U = TypeVar("U")
-
-
-# Sentinel objects used to instruct AsyncPipeline to take special actions.
-class _Sentinel:
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __str__(self) -> str:
-        return self.name
-
-
-_EOF = _Sentinel("EOF")  # Indicate the end of stream.
 
 
 def _time_str(val: float) -> str:

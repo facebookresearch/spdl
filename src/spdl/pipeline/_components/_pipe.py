@@ -22,9 +22,8 @@ from typing import Generic, TypeVar
 
 from spdl.pipeline._common._convert import convert_to_async
 from spdl.pipeline._common._misc import create_task
-from spdl.pipeline.defs import _PipeArgs
+from spdl.pipeline.defs import _PipeArgs, EOF
 
-from ._common import _EOF
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
 
@@ -199,7 +198,7 @@ def _pipe(
         i, tasks = 0, set()
         while not fail_counter.too_many_failures():
             item = await input_queue.get()
-            if item is _EOF and not args.op_requires_eof:
+            if item is EOF and not args.op_requires_eof:
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
@@ -211,7 +210,7 @@ def _pipe(
                     tasks, return_when=asyncio.FIRST_COMPLETED
                 )
 
-            if item is _EOF:
+            if item is EOF:
                 break
 
         if tasks:
@@ -287,19 +286,19 @@ def _ordered_pipe(
         while not fail_counter.too_many_failures():
             item = await input_queue.get()
 
-            if item is _EOF:
+            if item is EOF:
                 break
 
             task = create_task(_run(item), name=f"{name}:{(i := i + 1)}")
             await inter_queue.put(task)
 
-        await inter_queue.put(_EOF)
+        await inter_queue.put(EOF)
 
     async def get_check_put() -> None:
         while not fail_counter.too_many_failures():
             task = await inter_queue.get()
 
-            if task is _EOF:
+            if task is EOF:
                 # Propagating EOF is done by `_queue_stage_hook`
                 return
 
@@ -317,7 +316,7 @@ def _ordered_pipe(
                 await output_queue.put(result)
 
         # Drain until EOF
-        while (await inter_queue.get()) is not _EOF:
+        while (await inter_queue.get()) is not EOF:
             pass
 
     @_queue_stage_hook(output_queue)
@@ -341,11 +340,11 @@ class _Aggregate(Generic[T]):
         self._vals: list[T] = []
 
     def __call__(self, item: T) -> list[T]:
-        if item is not _EOF:
+        if item is not EOF:
             self._vals.append(item)
 
         if (len(self._vals) >= self.n) or (
-            item is _EOF and not self.drop_last and self._vals
+            item is EOF and not self.drop_last and self._vals
         ):
             ret, self._vals = self._vals, []
             return ret
@@ -370,7 +369,7 @@ async def _default_merge(
     async def _pass(in_q: AsyncQueue) -> None:
         while True:
             item = await in_q.get()
-            if item is _EOF:
+            if item is EOF:
                 return
             await output_queue.put(item)
 
