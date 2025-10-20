@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from ._common import is_eof
 from ._hook import (
     get_default_hook_class,
     set_default_hook_class,
@@ -24,6 +25,7 @@ __all__ = [
     "_build_pipeline_coro",
     "get_default_hook_class",
     "get_default_queue_class",
+    "is_eof",
     "PipelineFailure",
     "set_default_hook_class",
     "set_default_queue_class",
