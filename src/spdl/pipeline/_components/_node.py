@@ -47,6 +47,8 @@ __all__ = [
     "PipelineFailure",
 ]
 
+# pyre-strict
+
 
 # Used to express the upstream relation ship of coroutines.
 # Currently only a chain is used, but we plan to extend it to
@@ -56,7 +58,7 @@ __all__ = [
 class _Node(Generic[T]):
     name: str
     cfg: _ConfigBase
-    upstream: "Sequence[_Node]"
+    upstream: "Sequence[_Node[Any]]"
     queue: AsyncQueue
     _coro: Coroutine[None, None, None] | None = None
     _task: Task | None = None
@@ -142,12 +144,12 @@ _BUFFER_SIZE: int = 2
 
 
 def _convert_config(
-    plc: PipelineConfig,
+    plc: PipelineConfig[T],
     q_class: type[AsyncQueue],
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
-) -> _Node:
+) -> _Node[T]:
     name, q_name = _get_names(plc.src, pipeline_id, stage_id)
     stage_id += 1
 
@@ -176,7 +178,7 @@ def _convert_config(
 
 
 def _build_node(
-    node: _Node,
+    node: _Node[Any],
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int,
@@ -271,7 +273,7 @@ def _default_hook_factory(
 
 
 def _build_pipeline_node(
-    plc: PipelineConfig,
+    plc: PipelineConfig[T],
     /,
     *,
     max_failures: int,
@@ -279,7 +281,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None,
     stage_id: int,
-):
+) -> _Node[T]:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
