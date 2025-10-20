@@ -116,7 +116,7 @@ def multiply_by_10(x: int) -> int:
     return x * 10
 
 
-def create_sub_pipeline_1() -> PipelineConfig[int, list[int]]:
+def create_sub_pipeline_1() -> PipelineConfig[list[int]]:
     """Create a sub-pipeline that squares numbers and aggregates them.
 
     .. code-block:: text
@@ -141,7 +141,7 @@ def create_sub_pipeline_1() -> PipelineConfig[int, list[int]]:
     )
 
 
-def create_sub_pipeline_2() -> PipelineConfig[int, int]:
+def create_sub_pipeline_2() -> PipelineConfig[int]:
     """Create a sub-pipeline that adds 100 to numbers.
 
     .. code-block:: text
@@ -174,9 +174,9 @@ def normalize_to_lists(item: Any) -> list[Any]:
 
 
 def create_main_pipeline(
-    sub_pipeline_1: PipelineConfig[int, list[int]],
-    sub_pipeline_2: PipelineConfig[int, int],
-) -> PipelineConfig[Any, int]:
+    sub_pipeline_1: PipelineConfig[list[int]],
+    sub_pipeline_2: PipelineConfig[int],
+) -> PipelineConfig[int]:
     """Create the main pipeline that merges outputs from sub-pipelines.
 
     .. code-block:: text
