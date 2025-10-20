@@ -13,6 +13,7 @@ from ._builder import PipelineBuilder, run_pipeline_in_subprocess
 from ._common._misc import create_task
 from ._components import (
     AsyncQueue,
+    is_eof,
     PipelineFailure,
     QueuePerfStats,
     StatsQueue,
@@ -26,6 +27,7 @@ from ._profile import profile_pipeline, ProfileHook, ProfileResult
 
 __all__ = [
     "build_pipeline",
+    "is_eof",
     "profile_pipeline",
     "ProfileResult",
     "ProfileHook",

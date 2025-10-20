@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
-    "_EOF",
     "_periodic_dispatch",
     "_StatsCounter",
     "_time_str",
@@ -16,7 +15,7 @@ import time
 from asyncio import Task
 from collections.abc import Callable, Coroutine, Iterator
 from contextlib import contextmanager
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 
@@ -37,6 +36,11 @@ class _Sentinel:
 
 
 _EOF = _Sentinel("EOF")  # Indicate the end of stream.
+
+
+def is_eof(item: Any) -> bool:
+    """Test whether the input item is EOF sentinel value."""
+    return bool(item is _EOF)
 
 
 def _time_str(val: float) -> str:

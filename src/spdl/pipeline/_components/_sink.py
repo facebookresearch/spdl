@@ -8,7 +8,7 @@ __all__ = ["_sink"]
 
 from typing import TypeVar
 
-from ._common import _EOF
+from ._common import is_eof
 from ._queue import AsyncQueue
 
 # pyre-strict
@@ -23,6 +23,6 @@ async def _sink(input_queue: AsyncQueue, output_queue: AsyncQueue) -> None:
         while True:
             item = await input_queue.get()
 
-            if item is _EOF:
+            if is_eof(item):
                 break
             await output_queue.put(item)
