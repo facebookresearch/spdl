@@ -196,6 +196,7 @@ def test_async_pipe():
             _PipeArgs(op=adouble),
             _FailCounter(),
             [],
+            False,
         )
 
         result = _flush_aqueue(output_queue)
@@ -224,6 +225,7 @@ def test_async_pipe_skip():
             _PipeArgs(op=skip_even),
             _FailCounter(),
             [],
+            False,
         )
 
         result = _flush_aqueue(output_queue)
@@ -253,6 +255,7 @@ def test_async_pipe_wrong_task_signature():
                 _PipeArgs(op=_2args, concurrency=3),
                 _FailCounter(),
                 [],
+                False,
             )
 
         remaining = _flush_aqueue(input_queue)
@@ -294,6 +297,7 @@ def test_async_pipe_cancel(full):
             _PipeArgs(op=astuck),
             _FailCounter(),
             [],
+            False,
         )
         task = asyncio.create_task(coro)
 
@@ -333,6 +337,7 @@ def test_async_pipe_concurrency():
             ),
             _FailCounter(),
             [],
+            False,
         )
 
         task = asyncio.create_task(coro)
@@ -379,6 +384,7 @@ def test_async_pipe_concurrency_throughput():
             ),
             _FailCounter(),
             [],
+            False,
         )
         elapsed = time.monotonic() - t0
 

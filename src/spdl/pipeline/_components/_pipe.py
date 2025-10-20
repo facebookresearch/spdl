@@ -170,6 +170,7 @@ def _pipe(
     args: _PipeArgs[T, U],
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
+    op_requires_eof: bool,
 ) -> Coroutine:
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different.")
@@ -199,7 +200,7 @@ def _pipe(
         i, tasks = 0, set()
         while not fail_counter.too_many_failures():
             item = await input_queue.get()
-            if item is _EOF and not args.op_requires_eof:
+            if item is _EOF and not op_requires_eof:
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
