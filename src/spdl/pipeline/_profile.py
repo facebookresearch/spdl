@@ -82,6 +82,9 @@ def _fetch_inputs(src: SourceConfig[T], num_items: int) -> list[T]:
             ret.append(item)
             if len(ret) >= num_items:
                 break
+    _LG.info("Fetched %d input samples.", len(ret))
+    if not ret:
+        raise RuntimeError("No input samples are fetched.")
     return ret
 
 
@@ -193,6 +196,9 @@ def _profile_pipe(
     callback_: Callable[[ProfileResult], None],
 ) -> tuple[list[U], ProfileResult]:
     """Internal function that profiles a single pipe stage."""
+    if len(inputs) == 0:
+        raise RuntimeError(f"An empty input was provided to stage {pipe.name}")
+
     if pipe._type in (_PipeType.Aggregate, _PipeType.Disaggregate):
         concurrencies = [1]
     else:
@@ -200,6 +206,7 @@ def _profile_pipe(
 
     stats = []
     cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
+    outputs = []
     for concurrency in concurrencies:
         pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
         with hook_.stage_profile_hook(pipe.name, concurrency):
@@ -216,7 +223,7 @@ def _profile_pipe(
 
     result = ProfileResult(pipe.name, stats)
     callback_(result)
-    return outputs, result  # pyre-ignore[61]
+    return outputs, result
 
 
 def _profile_merge(
