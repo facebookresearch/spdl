@@ -9,6 +9,7 @@ API Reference
 
    spdl.pipeline
    spdl.pipeline.defs
+   spdl.pipeline.config
    spdl.dataloader
    spdl.source
 
