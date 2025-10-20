@@ -71,10 +71,10 @@ async def _queue_stage_hook(queue: AsyncQueue) -> AsyncGenerator[None, None]:
         try:
             yield
         except Exception:
-            await queue.put(_EOF)  # pyre-ignore: [6]
+            await queue.put(_EOF)
             raise
         else:
-            await queue.put(_EOF)  # pyre-ignore: [6]
+            await queue.put(_EOF)
 
 
 @dataclass
@@ -303,7 +303,7 @@ class StatsQueue(AsyncQueue):
         )
 
 
-_default_queue_class: type[AsyncQueue] = StatsQueue
+_DEFAULT_QUEUE_CLASS: type[AsyncQueue] = StatsQueue
 
 
 def set_default_queue_class(queue_class: type[AsyncQueue] = StatsQueue) -> None:
@@ -311,15 +311,16 @@ def set_default_queue_class(queue_class: type[AsyncQueue] = StatsQueue) -> None:
 
     Args:
         queue_class: The queue class to use as default.
+            Default: :py:class:`~spdl.pipeline.StatsQueue`.
     """
-    global _default_queue_class
-    _default_queue_class = StatsQueue if queue_class is None else queue_class
+    global _DEFAULT_QUEUE_CLASS
+    _DEFAULT_QUEUE_CLASS = StatsQueue if queue_class is None else queue_class
 
 
 def get_default_queue_class() -> type[AsyncQueue]:
     """Get the currently configured default queue class.
 
     Returns:
-        The default queue class, or None if not configured.
+        The default queue class, or ``None`` if not configured.
     """
-    return _default_queue_class
+    return _DEFAULT_QUEUE_CLASS

@@ -372,7 +372,7 @@ class TaskStatsHook(TaskHook):
         )
 
 
-_default_hook_class: type[TaskHook] | None = TaskStatsHook
+_DEFAULT_HOOK_CLASS: type[TaskHook] | None = TaskStatsHook
 
 
 def set_default_hook_class(hook_class: type[TaskHook] | None = TaskStatsHook) -> None:
@@ -381,15 +381,16 @@ def set_default_hook_class(hook_class: type[TaskHook] | None = TaskStatsHook) ->
     Args:
         hook_class: The hook class to use as default.
             If ``None``, then it disables hook.
+            Default: :py:class:`~spdl.pipeline.TaskStatsHook`.
     """
-    global _default_hook_class
-    _default_hook_class = hook_class
+    global _DEFAULT_HOOK_CLASS
+    _DEFAULT_HOOK_CLASS = hook_class
 
 
 def get_default_hook_class() -> type[TaskHook] | None:
     """Get the currently configured default hook class.
 
     Returns:
-        The default hook class, or None if it is disabled.
+        The default hook class, or ``None`` if it is disabled.
     """
-    return _default_hook_class
+    return _DEFAULT_HOOK_CLASS
