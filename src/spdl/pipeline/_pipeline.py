@@ -11,6 +11,7 @@ import concurrent.futures
 import logging
 import time
 import warnings
+import weakref
 from asyncio import AbstractEventLoop, Queue as AsyncQueue
 from collections.abc import Coroutine, Iterator
 from concurrent.futures import ThreadPoolExecutor
@@ -177,6 +178,25 @@ class _EventLoop:
         return asyncio.run_coroutine_threadsafe(coro, self._loop)  # pyre-ignore[6]
 
 
+def _ensure_stopped(event_loop: _EventLoop) -> None:
+    """Stop the pipeline if running."""
+    # Check if the event loop was actually started by checking the thread
+    if event_loop.is_started() and not event_loop.is_task_completed():
+        warnings.warn(
+            "Pipeline is running in the background, but "
+            "there is no valid reference pointing the foreground object. "
+            "Stopping the background thread. "
+            "It is strongly advised to stop the pipeline explicitly, "
+            "using the `auto_stop` context manager. "
+            "If you are using a framework and you cannot use the "
+            "context manager, try calling `stop` in done callback and "
+            "error callback.",
+            stacklevel=1,
+        )
+        event_loop.stop()
+        event_loop.join()
+
+
 ################################################################################
 # Pipeline
 ################################################################################
@@ -287,26 +307,12 @@ class Pipeline(Generic[T]):
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
 
+        self._finalizer = weakref.finalize(self, _ensure_stopped, self._event_loop)
+
         log_api_usage_once("spdl.pipeline.Pipeline")
 
     def __str__(self) -> str:
         return self._str
-
-    def __del__(self) -> None:
-        """Stop the pipeline if running."""
-        if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
-            warnings.warn(
-                f"Pipeline ({self!r}) is running in the background, but "
-                "there is no valid reference pointing the foreground object. "
-                "Stopping the background thread. "
-                "It is strongly advised to stop the pipeline explicitly, "
-                "using the `auto_stop` context manager. "
-                "If you are using a framework and you cannot use the "
-                "context manager, try calling `stop` in done callback and "
-                "error callback.",
-                stacklevel=1,
-            )
-            self.stop()
 
     def start(self, *, timeout: float | None = None, **kwargs: Any) -> None:
         """Start the pipeline in background thread.
@@ -340,6 +346,7 @@ class Pipeline(Generic[T]):
             self._event_loop.stop()
             self._event_loop.join(timeout=timeout)
             self._event_loop_state = _EventLoopState.STOPPED
+            self._finalizer.detach()
 
         if self._event_loop._task_exception is not None:
             raise self._event_loop._task_exception
