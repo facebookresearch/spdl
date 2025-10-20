@@ -14,9 +14,10 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
 
-from ._components import _build_pipeline_coro, AsyncQueue, TaskHook
+from spdl.pipeline._components import _build_pipeline_coro, AsyncQueue, TaskHook
+from spdl.pipeline.defs import PipelineConfig
+
 from ._pipeline import Pipeline
-from .defs import PipelineConfig
 
 # pyre-strict
 

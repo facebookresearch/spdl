@@ -20,9 +20,10 @@ from contextlib import asynccontextmanager
 from functools import partial
 from typing import Generic, TypeVar
 
-from .._common._convert import convert_to_async
-from .._common._misc import create_task
-from ..defs import _PipeArgs
+from spdl.pipeline._common._convert import convert_to_async
+from spdl.pipeline._common._misc import create_task
+from spdl.pipeline.defs import _PipeArgs
+
 from ._common import _EOF
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue

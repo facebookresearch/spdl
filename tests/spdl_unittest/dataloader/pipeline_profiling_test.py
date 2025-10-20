@@ -9,14 +9,16 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
-from spdl.pipeline import _config
+from spdl.pipeline import (
+    _config,
+    profile_pipeline,
+    ProfileHook,
+    ProfileResult,
+)
 from spdl.pipeline._profile import (
     _build_pipeline_config,
     _fetch_inputs,
     _NoOpHook,
-    profile_pipeline,
-    ProfileHook,
-    ProfileResult,
 )
 from spdl.pipeline.defs import (
     Aggregate,

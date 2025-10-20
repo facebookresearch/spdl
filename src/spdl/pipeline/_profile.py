@@ -14,10 +14,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from . import _build
-from ._common._misc import _get_env_bool
-from ._pipeline import Pipeline
-from .defs import (
+from spdl.pipeline._common._misc import _get_env_bool
+from spdl.pipeline.defs import (
     _PipeArgs,
     _PipeType,
     AggregateConfig,
@@ -28,6 +26,9 @@ from .defs import (
     SinkConfig,
     SourceConfig,
 )
+
+from . import _build
+from ._pipeline import Pipeline
 
 # pyre-strict
 

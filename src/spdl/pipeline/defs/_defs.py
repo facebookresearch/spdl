@@ -12,7 +12,7 @@ from enum import IntEnum
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
-from .._common._types import _TCallables
+from spdl.pipeline._common._types import _TCallables
 
 # pyre-strict
 
