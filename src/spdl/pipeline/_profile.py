@@ -102,7 +102,6 @@ def _build_pipeline_config(
                     op=cfg_._args.op,
                     executor=None,
                     concurrency=concurrency,
-                    op_requires_eof=cfg_._args.op_requires_eof,
                 ),
             )
         case AggregateConfig() as cfg_:

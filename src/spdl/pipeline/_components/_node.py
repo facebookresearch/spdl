@@ -212,7 +212,9 @@ def _build_node(
             fc = fc_class(max_failures, cfg._max_failures)
             match cfg._type:
                 case _PipeType.Pipe:
-                    node._coro = _pipe(node.name, in_q, out_q, cfg._args, fc, hooks)
+                    node._coro = _pipe(
+                        node.name, in_q, out_q, cfg._args, fc, hooks, False
+                    )
                 case _PipeType.OrderedPipe:
                     node._coro = _ordered_pipe(
                         node.name, in_q, out_q, cfg._args, fc, hooks
@@ -229,9 +231,8 @@ def _build_node(
             fc = fc_class(max_failures)
             args = _PipeArgs(
                 op=_Aggregate(cfg.num_items, cfg.drop_last),
-                op_requires_eof=True,
             )
-            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks)
+            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, True)
 
         case DisaggregateConfig():
             cfg: DisaggregateConfig = node.cfg
@@ -241,7 +242,7 @@ def _build_node(
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
             args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
-            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks)
+            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, False)
 
 
 # Used to append stage name with pipeline

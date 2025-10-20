@@ -113,14 +113,6 @@ class _PipeArgs(Generic[T, U]):
     op: _TCallables[T, U]
     executor: Executor | None = None
     concurrency: int = 1
-    op_requires_eof: bool = False
-    # Used to pass EOF to op.
-    # Usually pipe does not pas EOF to op. This is because op is expected to be
-    #  stateless, and requiring users to handle EOF is cumbersome, and there is
-    # no real benefit.
-    # However, some ops are exception. The aggregation (with drop_last=False)
-    # requires to benotified when the pipeline reached the EOF, so that it can
-    # flush the buffered items.
 
     def __post_init__(self) -> None:
         if self.concurrency < 1:
