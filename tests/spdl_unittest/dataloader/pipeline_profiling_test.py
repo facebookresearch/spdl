@@ -31,149 +31,147 @@ from spdl.pipeline.defs import (
 )
 
 
-@contextmanager
-def _use_default_hook():
-    """Context manager to use NoOp hook for testing purposes."""
-    original_hook = config.get_default_profile_hook()
-    original_callback = config.get_default_profile_callback()
-    try:
+class FetchInputsTest(unittest.TestCase):
+    """Test _fetch_inputs functionality."""
+
+    def test_fetch_inputs(self):
+        """_fetch_inputs collects input items"""
+        src = SourceConfig(range(10))
+
+        inputs = _fetch_inputs(src, num_items=3)
+        self.assertEqual(inputs, list(range(3)))
+
+    def test_fetch_inputs_async(self):
+        """_fetch_inputs collects input items"""
+
+        async def arange(n: int) -> AsyncIterator[int]:
+            for i in range(n):
+                yield i
+
+        src = SourceConfig(arange(10))
+
+        inputs = _fetch_inputs(src, num_items=3)
+        self.assertEqual(inputs, list(range(3)))
+
+
+class ProfilePipelineTest(unittest.TestCase):
+    """Test profile_pipeline functionality."""
+
+    def setUp(self) -> None:
+        """Reset all configuration state before each test."""
         config.set_default_profile_hook()
         config.set_default_profile_callback()
-        yield
-    finally:
-        config.set_default_profile_hook(original_hook)
-        config.set_default_profile_callback(original_callback)
 
+    def test_profile_pipeline(self):
+        def foo(i: int) -> int:
+            return 2 * i
 
-def test_fetch_inputs():
-    """_fetch_inputs collects input items"""
-    src = SourceConfig(range(10))
+        def bar(items: list[int]) -> list[int]:
+            return [sum(items)]
 
-    inputs = _fetch_inputs(src, num_items=3)
-    assert inputs == list(range(3))
+        def bazz(i: int) -> int:
+            return i * i
 
+        N, m = 25, 3
 
-def test_fetch_inputs_async():
-    """_fetch_inputs collects input items"""
+        plc = PipelineConfig(
+            src=SourceConfig(range(N)),
+            pipes=[
+                Pipe(foo),
+                Aggregate(m),
+                Pipe(bar),
+                Disaggregate(),
+                Pipe(bazz),
+            ],
+            sink=SinkConfig(3),
+        )
 
-    async def arange(n: int) -> AsyncIterator[int]:
-        for i in range(n):
-            yield i
+        class Intercept_:
+            def __init__(self) -> None:
+                self.i = 0
 
-    src = SourceConfig(arange(10))
+            def __call__(self, inputs, pipe, concurrency):
+                num_inputs = N if self.i < 2 else (N + m - 1) // m
+                self.assertEqual(len(inputs), num_inputs)
+                self.assertEqual(pipe, plc.pipes[self.i])
+                ret = _build_pipeline_config(inputs, pipe, concurrency)
+                self.assertEqual(len(ret.pipes), 1)
+                if isinstance(pipe, PipeConfig):
+                    self.assertIs(ret.pipes[0]._args.op, plc.pipes[self.i]._args.op)
+                self.i += 1
+                return ret
 
-    inputs = _fetch_inputs(src, num_items=3)
-    assert inputs == list(range(3))
+        mock = Intercept_()
+        mock.assertEqual = self.assertEqual
+        mock.assertIs = self.assertIs
+        with patch("spdl.pipeline._profile._build_pipeline_config", mock):
+            profile_pipeline(plc)
 
+        self.assertEqual(mock.i, 5)
 
-def test_profile_pipeline():
-    def foo(i: int) -> int:
-        return 2 * i
+    def test_profile_pipeline_callback(self):
+        """Test that profile_pipeline calls the callback for each pipe stage."""
 
-    def bar(items: list[int]) -> list[int]:
-        return [sum(items)]
+        def simple_op(i: int) -> int:
+            return i + 1
 
-    def bazz(i: int) -> int:
-        return i * i
+        cfg = PipelineConfig(
+            src=SourceConfig(range(10)),
+            pipes=[
+                Pipe(simple_op),
+            ],
+            sink=SinkConfig(1),
+        )
 
-    N, m = 25, 3
-
-    plc = PipelineConfig(
-        src=SourceConfig(range(N)),
-        pipes=[
-            Pipe(foo),
-            Aggregate(m),
-            Pipe(bar),
-            Disaggregate(),
-            Pipe(bazz),
-        ],
-        sink=SinkConfig(3),
-    )
-
-    class Intercept_:
-        def __init__(self) -> None:
-            self.i = 0
-
-        def __call__(self, inputs, pipe, concurrency):
-            num_inputs = N if self.i < 2 else (N + m - 1) // m
-            assert len(inputs) == num_inputs
-            assert pipe == plc.pipes[self.i]
-            ret = _build_pipeline_config(inputs, pipe, concurrency)
-            assert len(ret.pipes) == 1
-            if isinstance(pipe, PipeConfig):
-                assert ret.pipes[0]._args.op is plc.pipes[self.i]._args.op
-            self.i += 1
-            return ret
-
-    mock = Intercept_()
-    with (
-        _use_default_hook(),
-        patch("spdl.pipeline._profile._build_pipeline_config", mock),
-    ):
-        profile_pipeline(plc)
-
-    assert mock.i == 5
-
-
-def test_profile_pipeline_callback():
-    """Test that profile_pipeline calls the callback for each pipe stage."""
-
-    def simple_op(i: int) -> int:
-        return i + 1
-
-    cfg = PipelineConfig(
-        src=SourceConfig(range(10)),
-        pipes=[
-            Pipe(simple_op),
-        ],
-        sink=SinkConfig(1),
-    )
-
-    callback_mock = MagicMock()
-    with _use_default_hook():
+        callback_mock = MagicMock()
         results = profile_pipeline(cfg, num_inputs=5, callback=callback_mock)
 
-    callback_mock.assert_called_once()
-    called_args = callback_mock.call_args[0]
-    assert len(called_args) == 1
-    called_result = called_args[0]
+        callback_mock.assert_called_once()
+        called_args = callback_mock.call_args[0]
+        self.assertEqual(len(called_args), 1)
+        called_result = called_args[0]
 
-    assert isinstance(called_result, ProfileResult)
-    assert called_result.name == "simple_op"
-    assert len(called_result.stats) > 0
+        self.assertIsInstance(called_result, ProfileResult)
+        self.assertEqual(called_result.name, "simple_op")
+        self.assertGreater(len(called_result.stats), 0)
 
-    assert len(results) == 1
-    assert results[0].name == called_result.name
-    assert len(results[0].stats) == len(called_result.stats)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].name, called_result.name)
+        self.assertEqual(len(results[0].stats), len(called_result.stats))
 
+    def test_profile_pipeline_no_callback(self):
+        """Test that profile_pipeline works correctly when no callback is provided."""
 
-def test_profile_pipeline_no_callback():
-    """Test that profile_pipeline works correctly when no callback is provided."""
+        def simple_op(i: int) -> int:
+            return i * 2
 
-    def simple_op(i: int) -> int:
-        return i * 2
+        cfg = PipelineConfig(
+            src=SourceConfig(range(5)),
+            pipes=[
+                Pipe(simple_op),
+            ],
+            sink=SinkConfig(1),
+        )
 
-    cfg = PipelineConfig(
-        src=SourceConfig(range(5)),
-        pipes=[
-            Pipe(simple_op),
-        ],
-        sink=SinkConfig(1),
-    )
-
-    with _use_default_hook():
         results = profile_pipeline(cfg, num_inputs=3, callback=None)
 
-    assert len(results) == 1
-    assert results[0].name == "simple_op"
-    assert len(results[0].stats) > 0
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].name, "simple_op")
+        self.assertGreater(len(results[0].stats), 0)
 
 
-class TestProfileHookTest(unittest.TestCase):
+class ProfileHookTest(unittest.TestCase):
     """Test class for ProfileHook functionality."""
 
+    def setUp(self) -> None:
+        """Reset all configuration state before each test."""
+        config.set_default_profile_hook()
+        config.set_default_profile_callback()
+
     def test_profile_pipeline_custom_hook_methods_called(self):
-        """Test that when a custom ProfileHook is provided, its stage_profile_hook and pipeline_profile_hook methods are called."""
+        """Test that custom ProfileHook's stage_profile_hook and
+        pipeline_profile_hook methods are called.
+        """
 
         def simple_op(i: int) -> int:
             return i + 10
@@ -210,20 +208,11 @@ class TestProfileHookTest(unittest.TestCase):
 
         custom_hook = MockProfileHook()
 
-        original_hook = config.get_default_profile_hook()
-        original_callback = config.get_default_profile_callback()
-        try:
-            config.set_default_profile_hook(None)
-            config.set_default_profile_callback(None)
+        results = profile_pipeline(cfg, num_inputs=3, hook=custom_hook)
 
-            results = profile_pipeline(cfg, num_inputs=3, hook=custom_hook)
-
-            self.assertTrue(len(results) > 0)
-            self.assertEqual(pipeline_hook_mock.call_count, 2)
-            self.assertEqual(stage_hook_mock.call_count, 10)
-        finally:
-            config.set_default_profile_hook(original_hook)
-            config.set_default_profile_callback(original_callback)
+        self.assertGreater(len(results), 0)
+        self.assertEqual(pipeline_hook_mock.call_count, 2)
+        self.assertEqual(stage_hook_mock.call_count, 10)
 
     def test_profile_pipeline_skips_when_local_rank_not_zero(self):
         """Test that profiling is skipped if LOCAL_RANK is not '0'."""
@@ -258,10 +247,7 @@ class TestProfileHookTest(unittest.TestCase):
             sink=SinkConfig(1),
         )
 
-        with (
-            _use_default_hook(),
-            patch("spdl.pipeline._profile._get_local_rank", return_value=0),
-        ):
+        with patch("spdl.pipeline._profile._get_local_rank", return_value=0):
             results = profile_pipeline(cfg, num_inputs=3)
 
         self.assertGreater(len(results), 0)
@@ -269,58 +255,67 @@ class TestProfileHookTest(unittest.TestCase):
         self.assertGreater(len(results[0].stats), 0)
 
 
-def test_profile_pipeline_with_merge_config_and_post_merge_stages():
-    """Test that profile_pipeline profiles all stages including those in Merge and post-merge stages."""
+class MergeConfigTest(unittest.TestCase):
+    """Test class for profile_pipeline with Merge configurations."""
 
-    def double(i: int) -> int:
-        return i * 2
+    def setUp(self) -> None:
+        """Reset all configuration state before each test."""
+        config.set_default_profile_hook()
+        config.set_default_profile_callback()
 
-    def triple(i: int) -> int:
-        return i * 3
+    def test_profile_pipeline_with_merge_config_and_post_merge_stages(self):
+        """Test that profile_pipeline profiles all stages including
+        those in Merge and post-merge stages.
+        """
 
-    def add_ten(i: int) -> int:
-        return i + 10
+        def double(i: int) -> int:
+            return i * 2
 
-    def square(i: int) -> int:
-        return i * i
+        def triple(i: int) -> int:
+            return i * 3
 
-    plc1 = PipelineConfig(
-        src=SourceConfig(range(5)),
-        pipes=[
-            Pipe(double, name="double"),
-        ],
-        sink=SinkConfig(1),
-    )
+        def add_ten(i: int) -> int:
+            return i + 10
 
-    plc2 = PipelineConfig(
-        src=SourceConfig(range(10, 15)),
-        pipes=[
-            Pipe(triple, name="triple"),
-        ],
-        sink=SinkConfig(1),
-    )
+        def square(i: int) -> int:
+            return i * i
 
-    main_cfg = PipelineConfig(
-        src=Merge([plc1, plc2]),
-        pipes=[
-            Pipe(add_ten, name="add_ten"),
-            Pipe(square, name="square"),
-        ],
-        sink=SinkConfig(1),
-    )
-    with _use_default_hook():
+        plc1 = PipelineConfig(
+            src=SourceConfig(range(5)),
+            pipes=[
+                Pipe(double, name="double"),
+            ],
+            sink=SinkConfig(1),
+        )
+
+        plc2 = PipelineConfig(
+            src=SourceConfig(range(10, 15)),
+            pipes=[
+                Pipe(triple, name="triple"),
+            ],
+            sink=SinkConfig(1),
+        )
+
+        main_cfg = PipelineConfig(
+            src=Merge([plc1, plc2]),
+            pipes=[
+                Pipe(add_ten, name="add_ten"),
+                Pipe(square, name="square"),
+            ],
+            sink=SinkConfig(1),
+        )
         results = profile_pipeline(main_cfg, num_inputs=3)
 
-    assert len(results) == 4
+        self.assertEqual(len(results), 4)
 
-    assert results[0].name == "double"
-    assert results[1].name == "triple"
-    assert results[2].name == "add_ten"
-    assert results[3].name == "square"
+        self.assertEqual(results[0].name, "double")
+        self.assertEqual(results[1].name, "triple")
+        self.assertEqual(results[2].name, "add_ten")
+        self.assertEqual(results[3].name, "square")
 
-    for result in results:
-        assert len(result.stats) > 0
-        for stat in result.stats:
-            assert hasattr(stat, "concurrency")
-            assert hasattr(stat, "qps")
-            assert hasattr(stat, "occupancy_rate")
+        for result in results:
+            self.assertGreater(len(result.stats), 0)
+            for stat in result.stats:
+                self.assertTrue(hasattr(stat, "concurrency"))
+                self.assertTrue(hasattr(stat, "qps"))
+                self.assertTrue(hasattr(stat, "occupancy_rate"))
