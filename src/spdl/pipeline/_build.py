@@ -74,7 +74,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 
 def _build_pipeline(
-    pipeline_cfg: PipelineConfig[T, U],
+    pipeline_cfg: PipelineConfig[U],
     /,
     *,
     num_threads: int,
@@ -105,7 +105,7 @@ def _build_pipeline(
 
 
 def build_pipeline(
-    pipeline_cfg: PipelineConfig[T, U],
+    pipeline_cfg: PipelineConfig[U],
     /,
     *,
     num_threads: int,

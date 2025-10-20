@@ -77,7 +77,7 @@ class SourceConfig(Generic[T], _ConfigBase):
 
 
 @dataclass(frozen=True)
-class MergeConfig(Generic[T], _ConfigBase):
+class MergeConfig(_ConfigBase):
     """MergeConfig()
 
     Merge multiple pipelines into one output queue.
@@ -89,7 +89,7 @@ class MergeConfig(Generic[T], _ConfigBase):
           Illustrates how to build a complex pipeline.
     """
 
-    pipeline_configs: "tuple[PipelineConfig[Any, Any]]"
+    pipeline_configs: "tuple[PipelineConfig[Any]]"
 
     def __post_init__(self) -> None:
         if len(self.pipeline_configs) < 1:
@@ -267,7 +267,7 @@ class SinkConfig(Generic[T], _ConfigBase):
 # Top-level Config
 ##############################################################################
 @dataclass(frozen=True)
-class PipelineConfig(Generic[T, U], _ConfigBase):
+class PipelineConfig(Generic[U], _ConfigBase):
     """A pipeline configuration.
 
     A pipeline consists of source, a series of pipes and sink.
@@ -281,7 +281,7 @@ class PipelineConfig(Generic[T, U], _ConfigBase):
           Illustrates how to build a complex pipeline.
     """
 
-    src: SourceConfig[T] | MergeConfig[T]
+    src: SourceConfig[Any] | MergeConfig
     """Source configuration."""
 
     pipes: Sequence[
@@ -306,7 +306,7 @@ class PipelineConfig(Generic[T, U], _ConfigBase):
 ##############################################################################
 # Specialization for ease of use for users.
 ##############################################################################
-def Merge(pipeline_configs: Sequence[PipelineConfig[Any, Any]]) -> MergeConfig[Any]:
+def Merge(pipeline_configs: Sequence[PipelineConfig[Any]]) -> MergeConfig:
     """Create a :py:class:`MergeConfig`.
 
     Merge multiple pipelines into one output queue.
