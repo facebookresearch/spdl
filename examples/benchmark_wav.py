@@ -47,7 +47,7 @@ And since parsing WAV is instant, the spdl.io.load_wav function spends more time
 creation of NumPy Array.
 It needs to acquire the GIL, thus the performance does not scale in multi-threading.
 (This performance pattern of this function is pretty same as the
-:ref:`spdl.io.load_npz <data-format>`.)
+:ref:`spdl.io.load_npz <example-data-formats>`.)
 
 The following is the same plot without ``load_wav``.
 

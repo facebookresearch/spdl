@@ -18,7 +18,7 @@ from spdl.pipeline import (
     TaskHook,
     TaskStatsHook,
 )
-from spdl.pipeline._config import (
+from spdl.pipeline.config import (
     get_default_hook_class,
     get_default_profile_callback,
     get_default_profile_hook,

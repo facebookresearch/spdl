@@ -37,8 +37,8 @@ __all__ = [
     "ProfileHook",
     "ProfileResult",
     "_build_pipeline_diagnostic_mode",
-    "_is_diagnostic_mode_enabled",
-    "_diagnostic_mode_num_sources",
+    "is_diagnostic_mode_enabled",
+    "diagnostic_mode_num_sources",
     "set_default_profile_hook",
     "get_default_profile_hook",
     "set_default_profile_callback",
@@ -166,7 +166,9 @@ class ProfileResult:
     """The name of the pipe stage."""
 
     stats: Sequence["_ProfileStats"]
-    """Dataclass objects for each concurrency level tested, where each stat includes:
+    """Dataclass objects for each concurrency level tested.
+    
+    Each stat includes:
 
       - ``concurrency``: The concurrency level used for this benchmark.
       - ``qps``: The number of items the stage processed per second.
@@ -376,11 +378,33 @@ def profile_pipeline(
 ##############################################################################
 
 
-def _is_diagnostic_mode_enabled() -> bool:
+def is_diagnostic_mode_enabled() -> bool:
+    """Check if the pipeline diagnostic mode is enabled.
+
+    Returns:
+        ``True`` if the ``SPDL_PIPELINE_DIAGNOSTIC_MODE`` environment variable is set
+        to a truthy value, ``False`` otherwise.
+
+    Note:
+        When diagnostic mode is enabled, :py:func:`~spdl.pipeline.build_pipeline` will
+        create a pipeline that automatically runs profiling with
+        :py:func:`~spdl.pipeline.profile_pipeline` and exits after completion.
+    """
     return _get_env_bool("SPDL_PIPELINE_DIAGNOSTIC_MODE")
 
 
-def _diagnostic_mode_num_sources() -> int:
+def diagnostic_mode_num_sources() -> int:
+    """Get the number of source items to use for diagnostic mode profiling.
+
+    Returns:
+        The number of items specified by the ``SPDL_PIPELINE_DIAGNOSTIC_MODE_NUM_ITEMS``
+        environment variable, or 1000 if not set.
+
+    Note:
+        This value is used by :py:func:`~spdl.pipeline.profile_pipeline` when
+        running in diagnostic mode to determine how many source items to process
+        during profiling.
+    """
     return int(os.environ.get("SPDL_PIPELINE_DIAGNOSTIC_MODE_NUM_ITEMS", 1000))
 
 
@@ -412,7 +436,7 @@ class _ProfilePipeline(Pipeline[U]):
 
 
 def _build_pipeline_diagnostic_mode(cfg: PipelineConfig[U]) -> Pipeline[U]:
-    num_items = _diagnostic_mode_num_sources()
+    num_items = diagnostic_mode_num_sources()
     return _ProfilePipeline(cfg, num_items)
 
 

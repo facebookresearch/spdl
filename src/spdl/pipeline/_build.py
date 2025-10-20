@@ -172,7 +172,7 @@ def build_pipeline(
     """
     from . import _profile
 
-    if _profile._is_diagnostic_mode_enabled():
+    if _profile.is_diagnostic_mode_enabled():
         return _profile._build_pipeline_diagnostic_mode(pipeline_cfg)
 
     return _build_pipeline(
