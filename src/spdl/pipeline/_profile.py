@@ -89,7 +89,7 @@ def _build_pipeline_config(
     src: list[T],
     cfg: PipeConfig[T, U] | AggregateConfig[T] | DisaggregateConfig[T],
     concurrency: int,
-) -> PipelineConfig[T, U]:
+) -> PipelineConfig[U]:
     match cfg:
         case PipeConfig() as cfg_:
             pipe = PipeConfig(
@@ -220,11 +220,11 @@ def _profile_pipe(
 
 
 def _profile_merge(
-    merge_cfg: MergeConfig[T],
+    merge_cfg: MergeConfig,
     num_inputs: int,
     hook: ProfileHook,
     callback: Callable[[ProfileResult], None],
-) -> tuple[list[T], list[ProfileResult]]:
+) -> tuple[list[Any], list[ProfileResult]]:
     """Internal function that profiles a merge configuration."""
     outputs, results = [], []
     for plc in merge_cfg.pipeline_configs:
@@ -236,7 +236,7 @@ def _profile_merge(
 
 
 def _profile_pipeline(
-    cfg: PipelineConfig[T, U],
+    cfg: PipelineConfig[U],
     num_inputs: int,
     hook: ProfileHook,
     callback: Callable[[ProfileResult], None],
@@ -261,7 +261,7 @@ def _profile_pipeline(
 
 
 def profile_pipeline(
-    cfg: PipelineConfig[T, U],
+    cfg: PipelineConfig[U],
     num_inputs: int = 1000,
     *,
     callback: Callable[[ProfileResult], None] | None = None,
@@ -378,7 +378,7 @@ def _diagnostic_mode_num_sources() -> int:
 
 
 class _ProfilePipeline(Pipeline[U]):
-    def __init__(self, pipeline_cfg: PipelineConfig[T, U], num_items: int) -> None:
+    def __init__(self, pipeline_cfg: PipelineConfig[U], num_items: int) -> None:
         self._pipeline_cfg = pipeline_cfg
         self._num_items = num_items
 
@@ -404,7 +404,7 @@ class _ProfilePipeline(Pipeline[U]):
         pass
 
 
-def _build_pipeline_diagnostic_mode(cfg: PipelineConfig[T, U]) -> Pipeline[U]:
+def _build_pipeline_diagnostic_mode(cfg: PipelineConfig[U]) -> Pipeline[U]:
     num_items = _diagnostic_mode_num_sources()
     return _ProfilePipeline(cfg, num_items)
 

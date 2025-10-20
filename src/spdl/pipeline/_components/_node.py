@@ -395,7 +395,7 @@ async def _run_pipeline_coroutines(node: _Node[T]) -> None:
 
 
 def _build_pipeline_coro(
-    plc: PipelineConfig[Any, Any],
+    plc: PipelineConfig[Any],
     /,
     *,
     max_failures: int = -1,

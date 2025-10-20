@@ -119,7 +119,7 @@ def op_with_contention(x: int) -> int:
     return x**2
 
 
-def create_pipeline(num_sources: int = 1000) -> PipelineConfig[int, int]:
+def create_pipeline(num_sources: int = 1000) -> PipelineConfig[int]:
     """Create a pipeline configuration with multiple stages.
 
     Args:
