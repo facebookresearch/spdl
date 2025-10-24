@@ -200,7 +200,7 @@ def _build_node(
             input_queues = [n.queue for n in node.upstream]
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
-            node._coro = _merge(node.name, input_queues, node.queue, fc, hooks)
+            node._coro = _merge(node.name, input_queues, node.queue, fc, hooks, cfg.op)
         case SinkConfig():
             cfg: SinkConfig = node.cfg
             assert len(node.upstream) == 1

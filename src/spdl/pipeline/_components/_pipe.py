@@ -15,13 +15,14 @@ __all__ = [
 
 import asyncio
 import inspect
-from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager
 from functools import partial
 from typing import Generic, TypeVar
 
 from spdl.pipeline._common._convert import convert_to_async
 from spdl.pipeline._common._misc import create_task
+from spdl.pipeline._common._types import _TMergeOp
 from spdl.pipeline.defs import _PipeArgs
 
 from ._common import _EOF, is_eof
@@ -366,9 +367,9 @@ async def _disaggregate(items: list[T]) -> AsyncIterator[T]:
 
 
 async def _default_merge(
-    name: str, input_queues: list[AsyncQueue], output_queue: AsyncQueue
+    name: str, input_queues: Sequence[asyncio.Queue], output_queue: asyncio.Queue
 ) -> None:
-    async def _pass(in_q: AsyncQueue) -> None:
+    async def _pass(in_q: asyncio.Queue) -> None:
         while True:
             item = await in_q.get()
             if is_eof(item):
@@ -384,10 +385,11 @@ async def _default_merge(
 
 def _merge(
     name: str,
-    input_queues: list[AsyncQueue],
+    input_queues: Sequence[AsyncQueue],
     output_queue: AsyncQueue,
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
+    merge_op: _TMergeOp | None,
 ) -> Coroutine:
     if not input_queues:
         raise ValueError("There must be at least one input queue.")
@@ -397,9 +399,11 @@ def _merge(
 
     hooks: list[TaskHook] = [*task_hooks, fail_counter]
 
+    op: _TMergeOp = merge_op or _default_merge
+
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def merge() -> None:
-        await _default_merge(name, input_queues, output_queue)
+        await op(name, input_queues, output_queue)
 
     return merge()

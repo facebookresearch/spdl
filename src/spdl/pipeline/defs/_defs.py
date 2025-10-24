@@ -12,7 +12,7 @@ from enum import IntEnum
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
-from spdl.pipeline._common._types import _TCallables
+from spdl.pipeline._common._types import _TCallables, _TMergeOp
 
 # pyre-strict
 
@@ -90,6 +90,18 @@ class MergeConfig(_ConfigBase):
     """
 
     pipeline_configs: "tuple[PipelineConfig[Any]]"
+    """The pipeline configurations to merge."""
+
+    op: _TMergeOp | None = None
+    """Optional custom merge operation.
+
+    If provided, this custom operation will be used to merge items from the input queues.
+    The operation should be an async function with signature:
+    ``(name: str, input_queues: Sequence[Queue], output_queue: Queue) -> None``
+
+    If not provided, the default merge operation will be used, which passes items from
+    all input queues to the output queue in the order they become available.
+    """
 
     def __post_init__(self) -> None:
         if len(self.pipeline_configs) < 1:
@@ -298,24 +310,79 @@ class PipelineConfig(Generic[U], _ConfigBase):
 ##############################################################################
 # Specialization for ease of use for users.
 ##############################################################################
-def Merge(pipeline_configs: Sequence[PipelineConfig[Any]]) -> MergeConfig:
+def Merge(
+    pipeline_configs: Sequence[PipelineConfig[Any]], op: _TMergeOp | None = None
+) -> MergeConfig:
     """Create a :py:class:`MergeConfig`.
 
     Merge multiple pipelines into one output queue.
 
     Args:
         pipeline_configs: A list of pipeline configs.
-        name: The name (prefix) to give to the task.
+        op: Optional custom merge operation. If provided, this custom operation will be
+            used to merge items from the input queues. The operation should be an async
+            function with signature:
+            ``(name: str, input_queues: Sequence[Queue], output_queue: Queue) -> None``
+
+            If not provided, the default merge operation will be used, which passes items
+            from all input queues to the output queue in the order they become available.
 
     Returns:
         The config object.
+
+    .. admonition:: Example
+       :class: note
+
+       Custom round-robin merge operation that checks queues one by one::
+
+       .. code-block::
+
+          import asyncio
+          from collections.abc import Sequence
+          from spdl.pipeline._components import is_eof
+          from spdl.pipeline import build_pipeline, PipelineConfig, Merge, SourceConfig, SinkConfig
+
+          async def round_robin_merge(
+              name: str,
+              input_queues: Sequence[asyncio.Queue],
+              output_queue: asyncio.Queue,
+          ) -> None:
+              \"\"\"Merge that polls queues in round-robin order.\"\"\"
+              active_queues = list(input_queues)
+
+              while active_queues:
+                  for queue in list(active_queues):
+                      try:
+                          # Wait for item with a small timeout to check next queue
+                          item = await asyncio.wait_for(queue.get(), timeout=0.1)
+
+                          if is_eof(item):
+                              # Remove exhausted queue from rotation
+                              active_queues.remove(queue)
+                          else:
+                              await output_queue.put(item)
+                      except asyncio.TimeoutError:
+                          # No item available, check next queue
+                          continue
+
+          # Use the custom merge operation
+          plc1 = PipelineConfig(src=SourceConfig([1, 2, 3]), pipes=[], sink=SinkConfig(10))
+          plc2 = PipelineConfig(src=SourceConfig([4, 5, 6]), pipes=[], sink=SinkConfig(10))
+
+          pipeline_config = PipelineConfig(
+              src=Merge([plc1, plc2], op=round_robin_merge),
+              pipes=[],
+              sink=SinkConfig(10),
+          )
+
+          pipeline = build_pipeline(pipeline_config)
 
     .. seealso::
 
        :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
-    return MergeConfig(tuple(pipeline_configs))
+    return MergeConfig(tuple(pipeline_configs), op=op)
 
 
 def _get_op_name(op: Callable) -> str:

@@ -10,8 +10,9 @@
 
 import asyncio
 import unittest
+from collections.abc import Sequence
 
-from spdl.pipeline import build_pipeline
+from spdl.pipeline import build_pipeline, create_task, is_eof
 from spdl.pipeline.defs import (
     Merge,
     Pipe,
@@ -361,6 +362,69 @@ class MergeConfigTest(unittest.TestCase):
 
         expected_all = pipeline1_expected + pipeline2_expected
         self.assertCountEqual(results, expected_all)
+
+    def test_merge_config_with_custom_merge_op(self) -> None:
+        """Test MergeConfig accepts and uses custom merge operation."""
+
+        # Track which pipelines contributed items (for verification)
+        collected_items = []
+
+        async def custom_merge_op(
+            name: str,
+            input_queues: Sequence[asyncio.Queue],
+            output_queue: asyncio.Queue,
+        ) -> None:
+            """Custom merge that adds a prefix to each item based on its source pipeline."""
+
+            async def process_queue(queue_idx: int, in_q: asyncio.Queue) -> None:
+                while True:
+                    item = await in_q.get()
+                    if is_eof(item):
+                        return
+                    # Add prefix based on source pipeline
+                    prefixed_item = f"p{queue_idx}_{item}"
+                    collected_items.append(prefixed_item)
+                    await output_queue.put(prefixed_item)
+
+            tasks = [
+                create_task(process_queue(i, in_q), name=f"{name}:{i}")
+                for i, in_q in enumerate(input_queues)
+            ]
+            await asyncio.wait(tasks)
+
+        plc1 = PipelineConfig(
+            src=SourceConfig([1, 2, 3]),
+            pipes=[],
+            sink=SinkConfig(buffer_size=10),
+        )
+
+        plc2 = PipelineConfig(
+            src=SourceConfig([4, 5, 6]),
+            pipes=[],
+            sink=SinkConfig(buffer_size=10),
+        )
+
+        main_pipeline_config = PipelineConfig(
+            src=Merge([plc1, plc2], op=custom_merge_op),
+            pipes=[],
+            sink=SinkConfig(buffer_size=10),
+        )
+
+        pipeline = build_pipeline(main_pipeline_config, num_threads=2)
+
+        with pipeline.auto_stop():
+            results = list(pipeline.get_iterator(timeout=3))
+
+        # Verify we got all items with prefixes
+        self.assertEqual(len(results), 6)
+        # Items from pipeline 0 should have p0_ prefix
+        self.assertIn("p0_1", results)
+        self.assertIn("p0_2", results)
+        self.assertIn("p0_3", results)
+        # Items from pipeline 1 should have p1_ prefix
+        self.assertIn("p1_4", results)
+        self.assertIn("p1_5", results)
+        self.assertIn("p1_6", results)
 
 
 if __name__ == "__main__":
