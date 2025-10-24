@@ -333,7 +333,7 @@ def Merge(
     .. admonition:: Example
        :class: note
 
-       Custom round-robin merge operation that checks queues one by one::
+       Custom round-robin merge operation that checks queues one by one.
 
        .. code-block::
 
@@ -347,27 +347,23 @@ def Merge(
               input_queues: Sequence[asyncio.Queue],
               output_queue: asyncio.Queue,
           ) -> None:
-              \"\"\"Merge that polls queues in round-robin order.\"\"\"
+              '''Merge that polls queues in round-robin order.'''
               active_queues = list(input_queues)
 
               while active_queues:
                   for queue in list(active_queues):
-                      try:
-                          # Wait for item with a small timeout to check next queue
-                          item = await asyncio.wait_for(queue.get(), timeout=0.1)
+                      item = await queue.get()
 
-                          if is_eof(item):
-                              # Remove exhausted queue from rotation
-                              active_queues.remove(queue)
-                          else:
-                              await output_queue.put(item)
-                      except asyncio.TimeoutError:
-                          # No item available, check next queue
-                          continue
+                      if is_eof(item):
+                          active_queues.remove(queue)
+                      else:
+                          await output_queue.put(item)
 
           # Use the custom merge operation
-          plc1 = PipelineConfig(src=SourceConfig([1, 2, 3]), pipes=[], sink=SinkConfig(10))
-          plc2 = PipelineConfig(src=SourceConfig([4, 5, 6]), pipes=[], sink=SinkConfig(10))
+          plc1 = PipelineConfig(
+              src=SourceConfig([1, 2, 3]), pipes=[], sink=SinkConfig(10))
+          plc2 = PipelineConfig(
+              src=SourceConfig([4, 5, 6]), pipes=[], sink=SinkConfig(10))
 
           pipeline_config = PipelineConfig(
               src=Merge([plc1, plc2], op=round_robin_merge),
