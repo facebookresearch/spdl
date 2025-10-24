@@ -8,16 +8,15 @@
 
 """Module to stash things common to all the modules internal to SPDL"""
 
-import logging
-from collections.abc import AsyncIterable, Awaitable, Callable, Iterable
+from asyncio import Queue
+from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Sequence
 from typing import TypeAlias, TypeVar
 
 __all__ = [
     "_TAsyncCallables",
     "_TCallables",
+    "_TMergeOp",
 ]
-
-_LG: logging.Logger = logging.getLogger(__name__)
 
 
 T = TypeVar("T")
@@ -35,3 +34,6 @@ _TCallables: TypeAlias = (
 _TAsyncCallables: TypeAlias = (
     Callable[[T], Awaitable[U]] | Callable[[T], AsyncIterable[U]]
 )
+
+
+_TMergeOp: TypeAlias = Callable[[str, Sequence[Queue], Queue], Awaitable[None]]
