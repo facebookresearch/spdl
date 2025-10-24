@@ -8,6 +8,7 @@
 
 import gc
 import sys
+import unittest
 
 import numpy as np
 import spdl.io
@@ -17,40 +18,44 @@ from spdl.io import get_video_filter_desc
 from ..fixture import FFMPEG_CLI, get_sample
 
 
-def test_buffer_conversion_refcount():
-    """NumPy array created from Buffer should increment a reference to the buffer
-    so that array keeps working after the original Buffer variable is deleted.
-    """
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    sample = get_sample(cmd)
+class TestBufferConversionRefcount(unittest.TestCase):
+    def test_buffer_conversion_refcount(self) -> None:
+        """NumPy array created from Buffer should increment a reference to the buffer
+        so that array keeps working after the original Buffer variable is deleted.
+        """
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
+            "-frames:v 100 sample.mp4"
+        )
+        sample = get_sample(cmd)
 
-    buf = spdl.io.load_video(
-        sample.path,
-        filter_desc=get_video_filter_desc(pix_fmt="rgb24"),
-    )
+        buf = spdl.io.load_video(
+            sample.path,
+            filter_desc=get_video_filter_desc(pix_fmt="rgb24"),
+        )
 
-    assert hasattr(buf, "__array_interface__")
-    print(f"{buf.__array_interface__=}")
+        self.assertTrue(hasattr(buf, "__array_interface__"))
+        print(f"{buf.__array_interface__=}")
 
-    gc.collect()
+        gc.collect()
 
-    n = sys.getrefcount(buf)
+        n = sys.getrefcount(buf)
 
-    arr = np.array(buf, copy=False)
+        arr = np.array(buf, copy=False)
 
-    n1 = sys.getrefcount(buf)
-    assert n1 == n + 1
+        n1 = sys.getrefcount(buf)
+        self.assertEqual(n1, n + 1)
 
-    print(f"{arr.__array_interface__=}")
-    assert arr.__array_interface__ is not buf.__array_interface__
-    assert arr.__array_interface__ == buf.__array_interface__
+        print(f"{arr.__array_interface__=}")
+        self.assertIsNot(arr.__array_interface__, buf.__array_interface__)
+        self.assertEqual(arr.__array_interface__, buf.__array_interface__)
 
-    vals = arr.tolist()
+        vals = arr.tolist()
 
-    # Not sure if this will properly fail in case that NumPy array does not
-    # keep the reference to the Buffer object. But let's do it anyways
-    del buf
-    gc.collect()
+        # Not sure if this will properly fail in case that NumPy array does not
+        # keep the reference to the Buffer object. But let's do it anyways
+        del buf
+        gc.collect()
 
-    vals2 = arr.tolist()
-    assert vals == vals2
+        vals2 = arr.tolist()
+        self.assertEqual(vals, vals2)
