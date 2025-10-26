@@ -15,7 +15,7 @@ import sys
 import traceback
 from asyncio import Task
 from collections import defaultdict
-from collections.abc import Coroutine, Generator
+from collections.abc import Coroutine
 from typing import Any, TypeVar
 
 __all__ = [
@@ -134,7 +134,7 @@ def _log_exception(
 
 
 def create_task(
-    coro: Coroutine[Any, Any, T] | Generator[Any, None, T],
+    coro: Coroutine[Any, Any, T],
     name: str | None = None,
     log_cancelled: bool = False,
     suppress_repeated_logs: bool = False,
