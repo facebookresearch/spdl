@@ -6,158 +6,176 @@
 
 # pyre-unsafe
 
+import unittest
 from tempfile import NamedTemporaryFile
 
 import numpy as np
-import pytest
 import spdl.io
+from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample, load_ref_video
 
 
-@pytest.mark.parametrize("pix_fmt", ["rgb24", "bgr24", "yuv444p"])
-def test_encode_video_multi_color(pix_fmt):
-    height, width = 240, 320
-    frame_rate = [30000, 1001]
-    duration = 3
-    batch_size = 32
+class TestEncodeVideoMultiColor(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("rgb24",),
+            ("bgr24",),
+            ("yuv444p",),
+        ]
+    )
+    def test_encode_video_multi_color(self, pix_fmt: str) -> None:
+        height, width = 240, 320
+        frame_rate = (30000, 1001)
+        duration = 3
+        batch_size = 32
 
-    num_frames = int(frame_rate[0] / frame_rate[1] * duration)
-    match pix_fmt:
-        case "yuv444p":
-            shape = [num_frames, 3, height, width]
-        case _:
-            shape = [num_frames, height, width, 3]
-    ref = np.random.randint(0, 255, size=shape, dtype=np.uint8)
+        num_frames = int(frame_rate[0] / frame_rate[1] * duration)
+        match pix_fmt:
+            case "yuv444p":
+                shape = (num_frames, 3, height, width)
+            case _:
+                shape = (num_frames, height, width, 3)
+        ref = np.random.randint(0, 255, size=shape, dtype=np.uint8)
 
-    with NamedTemporaryFile(suffix=".raw") as f:
-        f.close()  # for windows
-        muxer = spdl.io.Muxer(f.name, format="rawvideo")
-        encoder = muxer.add_encode_stream(
-            config=spdl.io.video_encode_config(
-                height=height,
-                width=width,
-                pix_fmt=pix_fmt,
-                frame_rate=frame_rate,
-            ),
-        )
-        with muxer.open():
-            for start in range(0, num_frames, batch_size):
-                frames = spdl.io.create_reference_video_frame(
-                    array=ref[start : start + batch_size, ...],
+        with NamedTemporaryFile(suffix=".raw") as f:
+            f.close()  # for windows
+            muxer = spdl.io.Muxer(f.name, format="rawvideo")
+            encoder = muxer.add_encode_stream(
+                config=spdl.io.video_encode_config(
+                    height=height,
+                    width=width,
                     pix_fmt=pix_fmt,
                     frame_rate=frame_rate,
-                    pts=start,
-                )
-                print(frames, flush=True)
+                ),
+            )
+            with muxer.open():
+                for start in range(0, num_frames, batch_size):
+                    frames = spdl.io.create_reference_video_frame(
+                        array=ref[start : start + batch_size, ...],
+                        pix_fmt=pix_fmt,
+                        frame_rate=frame_rate,
+                        pts=start,
+                    )
+                    print(frames, flush=True)
 
-                if (packets := encoder.encode(frames)) is not None:
+                    if (packets := encoder.encode(frames)) is not None:
+                        print(packets)
+                        muxer.write(0, packets)
+
+                if (packets := encoder.flush()) is not None:
                     print(packets)
                     muxer.write(0, packets)
 
-            if (packets := encoder.flush()) is not None:
-                print(packets)
-                muxer.write(0, packets)
+            hyp = load_ref_video(
+                f.name,
+                filter_desc=None,
+                shape=shape,
+                dtype=np.uint8,
+                raw={
+                    "pix_fmt": pix_fmt,
+                    "width": str(width),
+                    "height": str(height),
+                },
+            )
 
-        hyp = load_ref_video(
-            f.name,
-            filter_desc=None,
-            shape=shape,
-            dtype=np.uint8,
-            raw={
-                "pix_fmt": pix_fmt,
-                "width": width,
-                "height": height,
-            },
-        )
-
-        np.testing.assert_array_equal(hyp, ref)
+            np.testing.assert_array_equal(hyp, ref)
 
 
-@pytest.mark.parametrize("pix_fmt", ["gray8", "gray16"])
-def test_encode_video_gray(pix_fmt):
-    height, width = 240, 320
-    frame_rate = [30000, 1001]
-    duration = 3
-    batch_size = 32
+class TestEncodeVideoGray(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("gray8",),
+            ("gray16",),
+        ]
+    )
+    def test_encode_video_gray(self, pix_fmt: str) -> None:
+        height, width = 240, 320
+        frame_rate = (30000, 1001)
+        duration = 3
+        batch_size = 32
 
-    num_frames = int(frame_rate[0] / frame_rate[1] * duration)
-    shape = [num_frames, height, width]
-    dtype = np.uint8 if pix_fmt == "gray8" else np.int16
-    ref = np.random.randint(0, 255, size=shape, dtype=dtype)
+        num_frames = int(frame_rate[0] / frame_rate[1] * duration)
+        shape = (num_frames, height, width)
+        dtype = np.uint8 if pix_fmt == "gray8" else np.int16
+        ref = np.random.randint(0, 255, size=shape, dtype=dtype)
 
-    with NamedTemporaryFile(suffix=".raw") as f:
-        f.close()  # for windows
-        muxer = spdl.io.Muxer(f.name, format="rawvideo")
-        encoder = muxer.add_encode_stream(
-            config=spdl.io.video_encode_config(
-                height=height,
-                width=width,
-                pix_fmt=pix_fmt,
-                frame_rate=frame_rate,
-            ),
-        )
-        with muxer.open():
-            for start in range(0, num_frames, batch_size):
-                frames = spdl.io.create_reference_video_frame(
-                    array=ref[start : start + batch_size, ...],
+        with NamedTemporaryFile(suffix=".raw") as f:
+            f.close()  # for windows
+            muxer = spdl.io.Muxer(f.name, format="rawvideo")
+            encoder = muxer.add_encode_stream(
+                config=spdl.io.video_encode_config(
+                    height=height,
+                    width=width,
                     pix_fmt=pix_fmt,
                     frame_rate=frame_rate,
-                    pts=start,
-                )
-                print(frames, flush=True)
+                ),
+            )
+            with muxer.open():
+                for start in range(0, num_frames, batch_size):
+                    frames = spdl.io.create_reference_video_frame(
+                        array=ref[start : start + batch_size, ...],
+                        pix_fmt=pix_fmt,
+                        frame_rate=frame_rate,
+                        pts=start,
+                    )
+                    print(frames, flush=True)
 
-                if (packets := encoder.encode(frames)) is not None:
+                    if (packets := encoder.encode(frames)) is not None:
+                        print(packets)
+                        muxer.write(0, packets)
+
+                if (packets := encoder.flush()) is not None:
                     print(packets)
                     muxer.write(0, packets)
 
-            if (packets := encoder.flush()) is not None:
-                print(packets)
-                muxer.write(0, packets)
+            hyp = load_ref_video(
+                f.name,
+                filter_desc=None,
+                shape=shape,
+                dtype=dtype,
+                raw={
+                    "pix_fmt": pix_fmt,
+                    "width": str(width),
+                    "height": str(height),
+                },
+            )
 
-        hyp = load_ref_video(
-            f.name,
-            filter_desc=None,
-            shape=shape,
-            dtype=dtype,
-            raw={
-                "pix_fmt": pix_fmt,
-                "width": width,
-                "height": height,
-            },
+            np.testing.assert_array_equal(hyp, ref)
+
+
+class TestRemuxVideo(unittest.TestCase):
+    def test_remux_video(self) -> None:
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 "
+            "-frames:v 300 -pix_fmt yuvj420p sample.mp4"
         )
 
-        np.testing.assert_array_equal(hyp, ref)
+        sample = get_sample(cmd)
 
+        demuxer = spdl.io.Demuxer(sample.path)
 
-def test_remux_video():
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -frames:v 300 -pix_fmt yuvj420p sample.mp4"
+        with NamedTemporaryFile(suffix=".mp4") as f:
+            f.close()  # for windows
+            muxer = spdl.io.Muxer(f.name)
+            muxer.add_remux_stream(demuxer.video_codec)
 
-    sample = get_sample(cmd)
+            with muxer.open():
+                for packets in demuxer.streaming_demux(duration=1):
+                    muxer.write(0, packets)
 
-    demuxer = spdl.io.Demuxer(sample.path)
+            ref = load_ref_video(
+                sample.path,
+                filter_desc=None,
+                shape=(300, 1, 360, 320),
+                dtype=np.uint8,
+            )
 
-    with NamedTemporaryFile(suffix=".mp4") as f:
-        f.close()  # for windows
-        muxer = spdl.io.Muxer(f.name)
-        muxer.add_remux_stream(demuxer.video_codec)
+            hyp = load_ref_video(
+                f.name,
+                filter_desc=None,
+                shape=(300, 1, 360, 320),
+                dtype=np.uint8,
+            )
 
-        with muxer.open():
-            for packets in demuxer.streaming_demux(duration=1):
-                muxer.write(0, packets)
-
-        ref = load_ref_video(
-            sample.path,
-            filter_desc=None,
-            shape=[300, 1, 360, 320],
-            dtype=np.uint8,
-        )
-
-        hyp = load_ref_video(
-            f.name,
-            filter_desc=None,
-            shape=[300, 1, 360, 320],
-            dtype=np.uint8,
-        )
-
-        np.testing.assert_array_equal(hyp, ref)
+            np.testing.assert_array_equal(hyp, ref)
