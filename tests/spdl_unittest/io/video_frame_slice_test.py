@@ -6,8 +6,9 @@
 
 # pyre-unsafe
 
+import unittest
+
 import numpy as np
-import pytest
 import spdl.io
 import spdl.io.utils
 from spdl.io import get_video_filter_desc
@@ -27,129 +28,126 @@ def _decode_video(src, pix_fmt=None):
     )
 
 
-def test_video_frames_getitem_slice():
-    """VideoFrames.__getitem__ works for slice input"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    sample = get_sample(cmd)
+class TestVideoFramesGetitem(unittest.TestCase):
+    def test_video_frames_getitem_slice(self) -> None:
+        """VideoFrames.__getitem__ works for slice input"""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+        sample = get_sample(cmd)
 
-    frames = _decode_video(sample.path, pix_fmt="rgb24")
+        frames = _decode_video(sample.path, pix_fmt="rgb24")
 
-    assert len(frames) == 100
-    f2 = frames[::2]
-    f3 = frames[::3]
+        self.assertEqual(len(frames), 100)
+        f2 = frames[::2]
+        f3 = frames[::3]
 
-    arr = _to_numpy(frames)
+        arr = _to_numpy(frames)
 
-    assert len(f2) == 50
-    assert np.array_equal(arr[::2], _to_numpy(f2))
+        self.assertEqual(len(f2), 50)
+        self.assertTrue(np.array_equal(arr[::2], _to_numpy(f2)))
 
-    assert len(f3) == 34
-    assert np.array_equal(arr[::3], _to_numpy(f3))
+        self.assertEqual(len(f3), 34)
+        self.assertTrue(np.array_equal(arr[::3], _to_numpy(f3)))
 
+    def test_video_frames_getitem_int(self) -> None:
+        """VideoFrames.__getitem__ works for index input"""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+        n = 100
+        sample = get_sample(cmd)
 
-def test_video_frames_getitem_int():
-    """VideoFrames.__getitem__ works for index input"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    n = 100
-    sample = get_sample(cmd)
+        frames = _decode_video(sample.path, pix_fmt="rgb24")
 
-    frames = _decode_video(sample.path, pix_fmt="rgb24")
+        self.assertEqual(len(frames), n)
+        frames_split = [frames[i] for i in range(n)]
 
-    assert len(frames) == n
-    frames_split = [frames[i] for i in range(n)]
+        arr = _to_numpy(frames)
+        for i in range(n):
+            arr0 = _to_numpy(frames_split[i])
+            self.assertTrue(np.array_equal(arr0, arr[i]))
 
-    arr = _to_numpy(frames)
-    for i in range(n):
-        arr0 = _to_numpy(frames_split[i])
-        assert np.array_equal(arr0, arr[i])
+    def test_video_frames_getitem_negative_int(self) -> None:
+        """VideoFrames.__getitem__ works for negative index input"""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+        n = 100
+        sample = get_sample(cmd)
 
+        frames = _decode_video(sample.path, pix_fmt="rgb24")
 
-def test_video_frames_getitem_negative_int():
-    """VideoFrames.__getitem__ works for negative index input"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    n = 100
-    sample = get_sample(cmd)
+        self.assertEqual(len(frames), n)
+        frames_split = [frames[-i - 1] for i in range(n)]
 
-    frames = _decode_video(sample.path, pix_fmt="rgb24")
+        arr = _to_numpy(frames)
+        for i in range(n):
+            arr0 = _to_numpy(frames_split[i])
+            self.assertTrue(np.array_equal(arr0, arr[-i - 1]))
 
-    assert len(frames) == n
-    frames_split = [frames[-i - 1] for i in range(n)]
+    def test_video_frames_iterate(self) -> None:
+        """VideoFrames can be iterated"""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+        n = 100
+        sample = get_sample(cmd)
 
-    arr = _to_numpy(frames)
-    for i in range(n):
-        arr0 = _to_numpy(frames_split[i])
-        assert np.array_equal(arr0, arr[-i - 1])
+        frames = _decode_video(sample.path, pix_fmt="rgb24")
 
+        self.assertEqual(len(frames), n)
 
-def test_video_frames_iterate():
-    """VideoFrames can be iterated"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    n = 100
-    sample = get_sample(cmd)
+        arrs = [_to_numpy(f) for f in frames]
+        array = _to_numpy(frames)
 
-    frames = _decode_video(sample.path, pix_fmt="rgb24")
-
-    assert len(frames) == n
-
-    arrs = [_to_numpy(f) for f in frames]
-    array = _to_numpy(frames)
-
-    for i in range(n):
-        assert np.array_equal(array[i], arrs[i])
+        for i in range(n):
+            self.assertTrue(np.array_equal(array[i], arrs[i]))
 
 
-def test_video_frames_list_slice():
-    """VideoFrames can be sliced with list of integers"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    n = 100
-    sample = get_sample(cmd)
+class TestVideoFramesListSlice(unittest.TestCase):
+    def test_video_frames_list_slice(self) -> None:
+        """VideoFrames can be sliced with list of integers"""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+        n = 100
+        sample = get_sample(cmd)
 
-    frames = _decode_video(sample.path, pix_fmt="rgb24")
+        frames = _decode_video(sample.path, pix_fmt="rgb24")
 
-    assert len(frames) == n
+        self.assertEqual(len(frames), n)
 
-    # The valid value range is [-n, n)
-    idx = [0, 99, 1, 3, -1, -100]
+        # The valid value range is [-n, n)
+        idx = [0, 99, 1, 3, -1, -100]
 
-    sampled_frames = frames[idx]
+        sampled_frames = frames[idx]
 
-    refs = _to_numpy(frames)
-    array = _to_numpy(sampled_frames)
+        refs = _to_numpy(frames)
+        array = _to_numpy(sampled_frames)
 
-    for i in range(len(idx)):
-        assert np.array_equal(array[i], refs[idx[i]])
+        for i in range(len(idx)):
+            self.assertTrue(np.array_equal(array[i], refs[idx[i]]))
 
+    def test_video_frames_list_slice_empty(self) -> None:
+        """VideoFrames can be sliced with an empty list"""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+        n = 100
+        sample = get_sample(cmd)
 
-def test_video_frames_list_slice_empty():
-    """VideoFrames can be sliced with an empty list"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    n = 100
-    sample = get_sample(cmd)
+        frames = _decode_video(sample.path, pix_fmt="rgb24")
 
-    frames = _decode_video(sample.path, pix_fmt="rgb24")
+        self.assertEqual(len(frames), n)
 
-    assert len(frames) == n
+        # The valid value range is [-n, n)
+        sampled_frames = frames[[]]
 
-    # The valid value range is [-n, n)
-    sampled_frames = frames[[]]
+        self.assertEqual(len(sampled_frames), 0)
 
-    assert len(sampled_frames) == 0
+    def test_video_frames_list_slice_out_of_range(self) -> None:
+        """Slicing VideoFrames with an out-of-range value fails"""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
+        n = 100
+        sample = get_sample(cmd)
 
+        frames = _decode_video(sample.path, pix_fmt="rgb24")
 
-def test_video_frames_list_slice_out_of_range():
-    """Slicing VideoFrames with an out-of-range value fails"""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
-    n = 100
-    sample = get_sample(cmd)
+        self.assertEqual(len(frames), n)
 
-    frames = _decode_video(sample.path, pix_fmt="rgb24")
+        # The valid value range is [-n, n)
+        with self.assertRaises(IndexError):
+            frames[[n]]
 
-    assert len(frames) == n
-
-    # The valid value range is [-n, n)
-    with pytest.raises(IndexError):
-        frames[[n]]
-
-    # The valid value range is [-n, n)
-    with pytest.raises(IndexError):
-        frames[[-n - 1]]
+        # The valid value range is [-n, n)
+        with self.assertRaises(IndexError):
+            frames[[-n - 1]]
