@@ -339,8 +339,15 @@ def Merge(
 
           import asyncio
           from collections.abc import Sequence
-          from spdl.pipeline._components import is_eof
-          from spdl.pipeline import build_pipeline, PipelineConfig, Merge, SourceConfig, SinkConfig
+
+          from spdl.pipeline import (
+              build_pipeline,
+              is_eof,
+              PipelineConfig,
+              Merge,
+              SourceConfig,
+              SinkConfig,
+          )
 
           async def round_robin_merge(
               name: str,
