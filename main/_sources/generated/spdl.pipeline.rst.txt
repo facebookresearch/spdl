@@ -89,6 +89,16 @@ create\_task
    ~spdl.pipeline.create_task
 
 
+iterate\_in\_subinterpreter
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.iterate_in_subinterpreter
+
+
 iterate\_in\_subprocess
 ^^^^^^^^^^^^^^^^^^^^^^^
 .. autosummary::
@@ -107,6 +117,16 @@ run\_pipeline\_in\_subprocess
    :hide_from_toctree:
 
    ~spdl.pipeline.run_pipeline_in_subprocess
+
+
+run\_pipeline\_in\_subinterpreter
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.run_pipeline_in_subinterpreter
 
 
 
@@ -280,6 +300,8 @@ PipelineFailure
    ############################################################################
    Others
    ############################################################################
+
+
 
 
 

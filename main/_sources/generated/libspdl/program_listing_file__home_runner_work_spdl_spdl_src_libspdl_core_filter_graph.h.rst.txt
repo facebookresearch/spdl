@@ -31,7 +31,7 @@ Program Listing for File filter_graph.h
    }
    
    class FilterGraph {
-     detail::FilterGraphImpl* pImpl;
+     detail::FilterGraphImpl* pImpl_;
    
     public:
      explicit FilterGraph(const std::string& filter_desc);
@@ -47,7 +47,7 @@ Program Listing for File filter_graph.h
    
      void flush();
    
-     AnyFrames get_frames(const std::optional<std::string>& name);
+     std::optional<AnyFrames> get_frames(const std::optional<std::string>& name);
    
      std::string dump() const;
    };

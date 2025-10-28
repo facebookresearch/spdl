@@ -47,6 +47,9 @@ Source
 
    </details>
 
+API Reference
+-------------
+
 ..
    ############################################################################
    Functions
@@ -55,8 +58,6 @@ Source
 
 
 
-Functions
----------
 .. rubric:: Functions
 
 
@@ -74,18 +75,6 @@ Functions
 
 
 .. autofunction:: benchmark_wav.load_spdl_wav
-
-
-
-.. autofunction:: benchmark_wav.benchmark
-
-
-
-.. autofunction:: benchmark_wav.run_benchmark_suite
-
-
-
-.. autofunction:: benchmark_wav.save_results_to_csv
 
 
 
@@ -112,15 +101,8 @@ Functions
 
 
 
-Classes
--------
 
 .. rubric:: Classes
-
-
-
-.. autoclass:: benchmark_wav.BenchmarkResult
-   :members:
 
 
 

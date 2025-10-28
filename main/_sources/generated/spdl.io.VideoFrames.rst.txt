@@ -6,16 +6,12 @@ spdl.io.VideoFrames
 .. autoclass:: VideoFrames
    :members:
 
-   .. rubric:: Methods
+   .. rubric:: Attributes
 
    .. autosummary::
       ~VideoFrames.clone
       ~VideoFrames.get_pts
       ~VideoFrames.get_timestamps
-
-   .. rubric:: Attributes
-
-   .. autosummary::
       ~VideoFrames.height
       ~VideoFrames.num_frames
       ~VideoFrames.num_planes

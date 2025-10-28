@@ -6,7 +6,8 @@ spdl.io.ImageDecoder
 .. autoclass:: ImageDecoder
    :members:
 
-   .. rubric:: Methods
+   .. rubric:: Attributes
 
    .. autosummary::
       ~ImageDecoder.decode
+      ~ImageDecoder.flush

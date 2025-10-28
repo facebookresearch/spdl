@@ -6,17 +6,13 @@ spdl.io.VideoPackets
 .. autoclass:: VideoPackets
    :members:
 
-   .. rubric:: Methods
-
-   .. autosummary::
-      ~VideoPackets.clone
-      ~VideoPackets.get_timestamps
-
    .. rubric:: Attributes
 
    .. autosummary::
+      ~VideoPackets.clone
       ~VideoPackets.codec
       ~VideoPackets.frame_rate
+      ~VideoPackets.get_timestamps
       ~VideoPackets.height
       ~VideoPackets.pix_fmt
       ~VideoPackets.timestamp

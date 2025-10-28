@@ -109,15 +109,23 @@ Functions
 
 - :ref:`exhale_function_utils_8h_1abbebef003881d8734c12e03a47814732`
 
+- :ref:`exhale_function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7`
+
 - :ref:`exhale_function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f`
 
 - :ref:`exhale_function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4`
 
 - :ref:`exhale_function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16`
 
+- :ref:`exhale_function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74`
+
 - :ref:`exhale_function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3`
 
 - :ref:`exhale_function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d`
+
+- :ref:`exhale_function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420`
+
+- :ref:`exhale_function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d`
 
 - :ref:`exhale_function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11`
 
@@ -187,6 +195,8 @@ Typedefs
 - :ref:`exhale_typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7`
 
 - :ref:`exhale_typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db`
+
+- :ref:`exhale_typedef_types_8h_1a49247f362e405e358b40d1de70d44a27`
 
 - :ref:`exhale_typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e`
 

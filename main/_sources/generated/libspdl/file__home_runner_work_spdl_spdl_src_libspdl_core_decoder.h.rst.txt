@@ -33,6 +33,8 @@ Includes
 
 - ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
 
+- ``optional``
+
 
 
 

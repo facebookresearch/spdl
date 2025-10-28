@@ -6,7 +6,7 @@ spdl.io.NvDecDecoder
 .. autoclass:: NvDecDecoder
    :members:
 
-   .. rubric:: Methods
+   .. rubric:: Attributes
 
    .. autosummary::
       ~NvDecDecoder.decode

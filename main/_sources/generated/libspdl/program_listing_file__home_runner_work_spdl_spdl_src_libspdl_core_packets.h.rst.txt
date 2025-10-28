@@ -68,7 +68,7 @@ Program Listing for File packets.h
      friend struct Packets<MediaType::Video>;
      friend struct Packets<MediaType::Image>;
    
-     std::vector<AVPacket*> container = {};
+     std::vector<AVPacket*> container_ = {};
    
     public:
      PacketSeries();
@@ -99,7 +99,7 @@ Program Listing for File packets.h
      PacketSeries pkts;
      Rational time_base{};
      // window timestamp specified by user
-     std::optional<std::tuple<double, double>> timestamp;
+     std::optional<TimeWindow> timestamp;
    
      // Code should be available only when it's demuxed by `demux_window`
      // method. When streaming demuxing, codec object must be fetched from
@@ -115,7 +115,7 @@ Program Listing for File packets.h
          const std::string& src,
          int index,
          Codec<media>&& codec,
-         const std::optional<std::tuple<double, double>>& timestamp = {});
+         const std::optional<TimeWindow>& timestamp = {});
    
      // Constructing Packets from demuxer for streaming
      // No need for codec and time base, as decoder is initialized
@@ -127,7 +127,7 @@ Program Listing for File packets.h
          const std::string& src,
          int index,
          const Rational& time_base,
-         const std::optional<std::tuple<double, double>>& timestamp = {});
+         const std::optional<TimeWindow>& timestamp = {});
    
      // Constructing Packets from encoder for muxing
      Packets(uintptr_t id, int stream_index, Rational time_base);

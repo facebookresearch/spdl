@@ -47,6 +47,9 @@ Source
 
    </details>
 
+API Reference
+-------------
+
 ..
    ############################################################################
    Functions
@@ -55,13 +58,7 @@ Source
 
 
 
-Functions
----------
 .. rubric:: Functions
-
-
-
-.. autofunction:: benchmark_tarfile.benchmark
 
 
 
@@ -77,10 +74,6 @@ Functions
 
 
 
-.. autofunction:: benchmark_tarfile.save_results_to_csv
-
-
-
 .. autofunction:: benchmark_tarfile.process_tar_builtin
 
 
@@ -90,10 +83,6 @@ Functions
 
 
 .. autofunction:: benchmark_tarfile.process_tar_spdl_filelike
-
-
-
-.. autofunction:: benchmark_tarfile.run_benchmark
 
 
 
@@ -116,14 +105,12 @@ Functions
 
 
 
-Classes
--------
 
 .. rubric:: Classes
 
 
 
-.. autoclass:: benchmark_tarfile.BenchmarkResult
+.. autoclass:: benchmark_tarfile.BenchmarkConfig
    :members:
 
 

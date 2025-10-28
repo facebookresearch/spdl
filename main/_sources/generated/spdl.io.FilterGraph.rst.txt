@@ -6,9 +6,10 @@ spdl.io.FilterGraph
 .. autoclass:: FilterGraph
    :members:
 
-   .. rubric:: Methods
+   .. rubric:: Attributes
 
    .. autosummary::
       ~FilterGraph.add_frames
+      ~FilterGraph.dump
       ~FilterGraph.flush
       ~FilterGraph.get_frames

@@ -25,6 +25,7 @@ Program Listing for File encoder.h
    #include <libspdl/core/types.h>
    
    #include <memory>
+   #include <optional>
    #include <string>
    
    namespace spdl::core {
@@ -36,7 +37,7 @@ Program Listing for File encoder.h
    
    template <MediaType media>
    class Encoder {
-     detail::EncoderImpl<media>* pImpl;
+     detail::EncoderImpl<media>* pImpl_;
    
     public:
      explicit Encoder(detail::EncoderImpl<media>*);
@@ -47,9 +48,9 @@ Program Listing for File encoder.h
    
      ~Encoder();
    
-     PacketsPtr<media> encode(const FramesPtr<media>&&);
+     std::optional<PacketsPtr<media>> encode(const FramesPtr<media>&&);
    
-     PacketsPtr<media> flush();
+     std::optional<PacketsPtr<media>> flush();
    
      int get_frame_size() const
        requires(media == MediaType::Audio);

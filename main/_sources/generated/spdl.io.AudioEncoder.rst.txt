@@ -6,13 +6,9 @@ spdl.io.AudioEncoder
 .. autoclass:: AudioEncoder
    :members:
 
-   .. rubric:: Methods
+   .. rubric:: Attributes
 
    .. autosummary::
       ~AudioEncoder.encode
       ~AudioEncoder.flush
-
-   .. rubric:: Attributes
-
-   .. autosummary::
       ~AudioEncoder.frame_size

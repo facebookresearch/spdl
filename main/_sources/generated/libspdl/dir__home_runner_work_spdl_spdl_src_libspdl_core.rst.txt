@@ -29,6 +29,7 @@ Files
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h`
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h`
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_storage.h`
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
