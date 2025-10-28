@@ -1,0 +1,13 @@
+spdl.pipeline.ProfileResult
+===========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ProfileResult
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ProfileResult.name
+      ~ProfileResult.stats

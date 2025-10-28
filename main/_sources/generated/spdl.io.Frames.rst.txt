@@ -1,7 +1,0 @@
-spdl.io.Frames
-==============
-
-.. currentmodule:: spdl.io
-
-.. autoclass:: Frames
-   :members:

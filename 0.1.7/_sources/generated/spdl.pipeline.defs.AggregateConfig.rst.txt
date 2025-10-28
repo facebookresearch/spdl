@@ -1,0 +1,14 @@
+spdl.pipeline.defs.AggregateConfig
+==================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: AggregateConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AggregateConfig.drop_last
+      ~AggregateConfig.name
+      ~AggregateConfig.num_items
