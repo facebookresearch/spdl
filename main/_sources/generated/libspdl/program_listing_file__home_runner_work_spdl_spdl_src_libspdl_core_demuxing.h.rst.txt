@@ -38,7 +38,7 @@ Program Listing for File demuxing.h
    
    // StreamingDemuxer
    class StreamingDemuxer {
-     Generator<std::map<int, AnyPackets>> gen;
+     Generator<std::map<int, AnyPackets>> gen_;
    
     public:
      StreamingDemuxer(
@@ -55,7 +55,7 @@ Program Listing for File demuxing.h
    // Demuxer
    
    class Demuxer {
-     detail::DemuxerImpl* pImpl;
+     detail::DemuxerImpl* pImpl_;
    
     public:
      explicit Demuxer(DataInterfacePtr di);
@@ -73,7 +73,7 @@ Program Listing for File demuxing.h
    
      template <MediaType media>
      PacketsPtr<media> demux_window(
-         const std::optional<std::tuple<double, double>>& window = std::nullopt,
+         const std::optional<TimeWindow>& window = std::nullopt,
          const std::optional<std::string>& bsf = std::nullopt);
    
      StreamingDemuxerPtr streaming_demux(

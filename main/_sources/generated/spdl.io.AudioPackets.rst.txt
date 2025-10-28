@@ -6,14 +6,10 @@ spdl.io.AudioPackets
 .. autoclass:: AudioPackets
    :members:
 
-   .. rubric:: Methods
-
-   .. autosummary::
-      ~AudioPackets.clone
-
    .. rubric:: Attributes
 
    .. autosummary::
+      ~AudioPackets.clone
       ~AudioPackets.codec
       ~AudioPackets.num_channels
       ~AudioPackets.sample_rate

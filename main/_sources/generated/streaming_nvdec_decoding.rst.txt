@@ -47,6 +47,9 @@ Source
 
    </details>
 
+API Reference
+-------------
+
 ..
    ############################################################################
    Functions
@@ -55,8 +58,6 @@ Source
 
 
 
-Functions
----------
 .. rubric:: Functions
 
 

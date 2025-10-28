@@ -6,7 +6,7 @@ spdl.io.VideoEncoder
 .. autoclass:: VideoEncoder
    :members:
 
-   .. rubric:: Methods
+   .. rubric:: Attributes
 
    .. autosummary::
       ~VideoEncoder.encode

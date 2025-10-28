@@ -54,7 +54,7 @@ Finally call :py:meth:`Pipeline.stop` to stop the background thread.
 
 It is important to call :py:meth:`Pipeline.stop`.
 Forgetting to do so will leave the background thread running,
-leading to the situation where Python interpreter gets stuck at exit.
+which can cause the Python interpreter to hang at exit.
 
 In practice, there is always a possibility that the application is
 interrupted for unexpected reasons.
@@ -81,8 +81,7 @@ To make sure that the pipeline is stopped, it is recommended to use
 -----------
 
 Unlike processes, threads cannot be killed.
-The ``Pipeline`` object uses a thread pool, and it is important to
-shutdown the thread pool properly.
+The ``Pipeline`` object uses a thread pool, which must be shut down properly.
 
 There are seemingly unharmful patterns, which can cause a deadlock
 at the end of the Python interpreter, preventing Python from exiting.
@@ -178,7 +177,7 @@ at the end of the Python interpreter, preventing Python from exiting.
       # 🚫 Do not keep the iterator object around
       ite = iter(dataloader)
       item = next(ite)
-      # the won't be shutdown won't be shutdown until the `ite` variable
+      # the pipeline won't be shutdown until the `ite` variable
       # goes out of scope. When does that happen??
 
    The ``Pipeline.stop`` is not called until the garbage collector deletes

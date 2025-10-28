@@ -139,6 +139,26 @@ get\_default\_profile\_callback
    ~spdl.pipeline.config.get_default_profile_callback
 
 
+get\_default\_build\_callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.config.get_default_build_callback
+
+
+set\_default\_build\_callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ~spdl.pipeline.config.set_default_build_callback
+
+
 
 
 
@@ -182,6 +202,8 @@ get\_default\_profile\_callback
    ############################################################################
    Others
    ############################################################################
+
+
 
 
 

@@ -4,10 +4,10 @@ The Event Loop
 In the previous section, we attempted to build an asynchronous orchestration
 mechanism using a thread pool executor, and it became fairly complex.
 
-In this section, we look at how the event loop, the core abstraction of the async I/O,
-can make it simple.
-As a result, it allows to write complex asynchronous procedure in a form
-close to the usual synchronous procedual programming.
+In this section, we examine how the event loop—the core abstraction of Async I/O—
+simplifies this complexity.
+As a result, it allows us to write complex asynchronous procedures in a form
+close to the usual synchronous procedural programming.
 
 Now let's look at the code we had in the previous section again.
 
@@ -75,13 +75,13 @@ The following screenshot is the trace of :py:func:`asyncio.run`, which runs
 the event loop.
 The repeated pink stripes (annotated with blue circles) are where
 the event loop is waiting for a task to complete.
-The occasional patterns that look like icicles (annorated with red rectangulars)
+The occasional patterns that look like icicles (annotated with red rectangulars)
 are where new tasks are scheduled.
 
 .. image:: ../_static/data/event_loop_2.png
 
 If we zoom-in, we can see what task is being scheduled.
-           
+
 .. image:: ../_static/data/event_loop_3.png
 
 In the above case, it is a function passed to the

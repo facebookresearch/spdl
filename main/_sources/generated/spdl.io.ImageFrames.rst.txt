@@ -6,14 +6,10 @@ spdl.io.ImageFrames
 .. autoclass:: ImageFrames
    :members:
 
-   .. rubric:: Methods
-
-   .. autosummary::
-      ~ImageFrames.clone
-
    .. rubric:: Attributes
 
    .. autosummary::
+      ~ImageFrames.clone
       ~ImageFrames.height
       ~ImageFrames.metadata
       ~ImageFrames.num_planes

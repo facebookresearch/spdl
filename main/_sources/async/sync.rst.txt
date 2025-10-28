@@ -72,7 +72,7 @@ The following table summarizes them.
      - - Free from the constraint imposed by the GIL. (Can use any function to achieve concurrency.)
    * - Cons
      - - The functions must not hold the GIL. (or hold the GIL for extremely short amount of time).
-       - Potential data rase (though samples are usually independent of each other in AI application).
+       - Potential data race (though samples are usually independent of each other in AI application).
      - - Data passed between processes must be picklable.
        - Data copy between processes. (Using shared memory can improve the performance.)
        - The start up can be slow if there are libraries that perform static initialization.
@@ -108,3 +108,22 @@ you can write it to a shared memory in the worker process, then let the main pro
        shmem = SharedMemory(name=name)
        obj = pickle.loads(shmem.buf)
        return obj
+
+Summary
+-------
+
+This concludes our introduction to Async I/O. We've covered:
+
+1. **The problem**: Manual orchestration with futures is complex and non-composable
+2. **Event loops**: How they simplify task scheduling and completion handling
+3. ``async`` / ``await``: Writing asynchronous code that looks synchronous
+4. **Running sync functions**: Using executors to run blocking operations without blocking the event loop
+
+Now you should have a solid understanding of how SPDL uses async I/O to build efficient
+data loading pipelines.
+
+.. seealso::
+
+   - :ref:`pipeline-parallelism` - How SPDL applies these concepts in practice
+   - :py:mod:`spdl.io` - SPDL's efficient I/O module that releases the GIL
+   - :py:mod:`asyncio` - Python's official async I/O documentation

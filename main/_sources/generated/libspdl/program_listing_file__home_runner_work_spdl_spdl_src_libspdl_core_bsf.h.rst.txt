@@ -30,10 +30,10 @@ Program Listing for File bsf.h
    
    template <MediaType media>
    class BSF {
-     detail::BSFImpl* pImpl;
+     detail::BSFImpl* pImpl_;
    
-     Rational time_base;
-     Rational frame_rate;
+     Rational time_base_;
+     Rational frame_rate_;
    
     public:
      BSF(const Codec<media>& codec, const std::string& bsf);
@@ -45,8 +45,10 @@ Program Listing for File bsf.h
    
      Codec<media> get_codec() const;
    
-     PacketsPtr<media> filter(PacketsPtr<media> packets, bool flush = false);
-     PacketsPtr<media> flush();
+     std::optional<PacketsPtr<media>> filter(
+         PacketsPtr<media> packets,
+         bool flush = false);
+     std::optional<PacketsPtr<media>> flush();
    };
    
    } // namespace spdl::core

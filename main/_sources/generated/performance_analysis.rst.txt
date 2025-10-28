@@ -47,6 +47,9 @@ Source
 
    </details>
 
+API Reference
+-------------
+
 ..
    ############################################################################
    Functions
@@ -55,8 +58,6 @@ Source
 
 
 
-Functions
----------
 .. rubric:: Functions
 
 
@@ -96,19 +97,22 @@ Functions
 
 
 
-Classes
--------
 
 .. rubric:: Classes
 
 
 
-.. autoclass:: performance_analysis.CustomTaskHook
+.. autoclass:: performance_analysis.TaskStatsHookWithLogging
    :members:
 
 
 
-.. autoclass:: performance_analysis.CustomQueue
+.. autoclass:: performance_analysis.StatsQueueWithLogging
+   :members:
+
+
+
+.. autoclass:: performance_analysis.SQLiteStatsWriter
    :members:
 
 

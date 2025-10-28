@@ -4,7 +4,7 @@ Frequently Asked Questions
 How to work around GIL?
 -----------------------
 
-In Python, GIL (Global Interpreter Lock) practically prevents the use of multi-threading, however extension modules that are written in low-level languages, such as C, C++ and Rust, can release GIL when executing operations that do not interact with Python interpreter.
+In Python, the GIL (Global Interpreter Lock) practically prevents the use of multi-threading. However, extension modules written in low-level languages such as C, C++, and Rust can release the GIL when executing operations that do not interact with the Python interpreter.
 
 Many libraries used for data loading release the GIL. To name a few;
 
@@ -13,10 +13,9 @@ Many libraries used for data loading release the GIL. To name a few;
 - Decord
 - tiktoken
 
-Typically, the bottleneck of model training in loading and pre-processing the media data.
-So even though there are still parts of pipelines that are constrained by GIL,
-by taking advantage of pre-processing functions that release GIL,
-we can achieve high throughput.
+Typically, the bottleneck in model training is loading and pre-processing media data.
+Even though some parts of pipelines are constrained by the GIL,
+we can achieve high throughput by using pre-processing functions that release the GIL.
 
 What if a function does not release GIL?
 ----------------------------------------
@@ -59,7 +58,7 @@ This will build pipeline like the following.
    ``initializer`` and ``initargs`` arguments.
 
    The values passed as ``initializer`` and ``initargs`` must be picklable.
-   If constructing an object in a process that does not support picke, then
+   If constructing an object in a process that does not support pickle, then
    you can pass constructor arguments instead and store the resulting object
    in global scope. See also https://stackoverflow.com/a/68783184/3670924.
 

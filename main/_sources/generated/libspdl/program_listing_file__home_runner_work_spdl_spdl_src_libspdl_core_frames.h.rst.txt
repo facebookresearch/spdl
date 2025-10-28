@@ -56,12 +56,12 @@ Program Listing for File frames.h
    template <MediaType media>
    class Frames {
     private:
-     uintptr_t id{0};
+     uintptr_t id_{0};
    
-     Rational time_base;
+     Rational time_base_;
    
     private:
-     std::vector<AVFrame*> frames{};
+     std::vector<AVFrame*> frames_{};
    
     public:
      Frames(uintptr_t id, Rational time_base);

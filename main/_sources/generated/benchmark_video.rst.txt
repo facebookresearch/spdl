@@ -18,12 +18,12 @@
 
    <div class="custom_autosummary">
 
-.. _example-data-formats:
+.. _example-benchmark-video:
 
-Data formats
-============
+Benchmark video
+===============
 
-.. automodule:: data_formats
+.. automodule:: benchmark_video
 
 ..
    ############################################################################
@@ -40,12 +40,15 @@ Source
    <details>
    <summary><u>Click here to see the source.</u></summary>
 
-.. literalinclude:: ../../../examples/data_formats.py
+.. literalinclude:: ../../../examples/benchmark_video.py
    :linenos:
 
 .. raw:: html
 
    </details>
+
+API Reference
+-------------
 
 ..
    ############################################################################
@@ -55,37 +58,19 @@ Source
 
 
 
-Functions
----------
 .. rubric:: Functions
 
 
 
-.. autofunction:: data_formats.main
+.. autofunction:: benchmark_video.create_video_data
 
 
 
-.. autofunction:: data_formats.get_mock_data
+.. autofunction:: benchmark_video.load_video_with_config
 
 
 
-.. autofunction:: data_formats.get_pipeline
-
-
-
-.. autofunction:: data_formats.load_npy
-
-
-
-.. autofunction:: data_formats.load_npy_spdl
-
-
-
-.. autofunction:: data_formats.load_torch
-
-
-
-.. autofunction:: data_formats.run_pipeline
+.. autofunction:: benchmark_video.main
 
 
 
@@ -108,14 +93,12 @@ Functions
 
 
 
-Classes
--------
 
 .. rubric:: Classes
 
 
 
-.. autoclass:: data_formats.DataSource
+.. autoclass:: benchmark_video.BenchmarkConfig
    :members:
 
 

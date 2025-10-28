@@ -23,7 +23,6 @@ Program Listing for File utils.h
    #include <libspdl/core/types.h>
    
    #include <memory>
-   #include <optional>
    #include <string>
    #include <tuple>
    #include <vector>
@@ -47,7 +46,7 @@ Program Listing for File utils.h
    
    // Utilities for tracing
    class TracingSession {
-     void* sess = nullptr;
+     void* sess_ = nullptr;
    
     public:
      explicit TracingSession(void* sess = nullptr);

@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="prev" title="Development Notes" href="index.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Remote Iterable Protocol" href="remote_iterable_protocol.html" /><link rel="prev" title="Development Notes" href="index.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Implementation detail of Pipeline - SPDL 0.1.6 documentation</title>
+        <title>Implementation detail of Pipeline - SPDL 0.1.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.1.6 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.1.7 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.1.6 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.1.7 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -223,16 +223,29 @@
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/parallelism.html">Pipeline Parallelism</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/logging.html">Collecting Runtime Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing Orchestration Mechanism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing an Orchestration Mechanism</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/event_loop.html">The Event Loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/sync.html">Running Synchronous Functions</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../io/basic.html">High-Level Loading Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/decoding_overview.html">Decoding Process Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/packets_frames_concepts.html">Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/filtering.html">Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/setup.html">Composition of Pipeline</a></li>
@@ -242,20 +255,20 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../generated/image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/imagenet_classification.html">Imagenet classification</a></li>
@@ -263,19 +276,21 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/streaming_nvdec_decoding.html">Streaming nvdec decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/streaming_video_processing.html">Streaming video processing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/performance_analysis.html">Performance analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../generated/data_formats.html">Data formats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/hydra_integration.html">Hydra integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_definitions.html">Pipeline definitions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_profiling.html">Pipeline profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_utils.html">Benchmark utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_numpy.html">Benchmark numpy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_wav.html">Benchmark wav</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_video.html">Benchmark video</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -285,10 +300,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.utils.html">spdl.io.utils</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -337,11 +352,15 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a50ec9c8a7e6ab71e7827df2eb862dc40.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
@@ -379,6 +398,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db.html">Typedef spdl::core::StreamingDemuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a383bf2b0ac1564702f10e3b5f3ef03f6.html">Typedef spdl::core::VideoEncoder</a></li>
@@ -395,8 +415,10 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Development Notes</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Development Notes</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Implementation detail of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 </ul>
 </li>
 </ul>
@@ -419,6 +441,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.4">0.1.4</a></li>
@@ -474,12 +497,107 @@
         <article role="main" id="furo-main-content">
           <section id="implementation-detail-of-pipeline">
 <h1>Implementation detail of Pipeline<a class="headerlink" href="#implementation-detail-of-pipeline" title="Link to this heading">¶</a></h1>
-<p>Simply put, the data processing pipeline is an async functions executed in a background thread, and the foreground fetches the processed data from the sink.</p>
-<p>When implementing foreground/background components, it turned out that a subtle design choice in one part constraints the design choices of other parts of the system, and there are multiple constraints that must be met at the same time.</p>
-<p>This note is a memorandum of the design trade offs and their consequences encountered during the implementation of the <code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code>.</p>
+<p>This note is a memorandum of the design trade offs and their consequences encountered
+during the development of the <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.Pipeline</span></code></a>.</p>
+<p>Simply put, the data processing pipeline is an async functions executed in a background thread,
+and the foreground fetches the processed data from the sink.</p>
+<p>When implementing foreground/background components, it turned out that a subtle design choice in
+one part constraints the design choices of other parts of the system,
+and there are multiple constraints that must be met at the same time.</p>
+<section id="architecture-overview">
+<h2>Architecture Overview<a class="headerlink" href="#architecture-overview" title="Link to this heading">¶</a></h2>
+<p>The following diagram illustrates the key components of the Pipeline and their interactions:</p>
+<div class="mermaid">
+            graph TB
+    subgraph FG[&quot;Foreground Thread&quot;]
+        Client[Client Code]
+    end
+
+    subgraph BG[&quot;Background Thread&quot;]
+        EL[Event Loop]
+
+        subgraph Pipeline[&quot;Pipeline&quot;]
+            Source[Source Stage]
+            SQ1(Queue)
+            Stage1[Processing Stage 1]
+            SQ2(Queue)
+            Stage2[Processing Stage 2]
+            SQ3(Queue)
+            Sink[Sink Stage]
+            SinkQ(Sink Queue)
+
+            Source --&gt;|data| SQ1
+            SQ1 --&gt; Stage1
+            Stage1 --&gt;|data| SQ2
+            SQ2 --&gt; Stage2
+            Stage2 --&gt;|data| SQ3
+            SQ3 --&gt; Sink
+            Sink --&gt;|data| SinkQ
+        end
+    end
+
+    subgraph TP[&quot;Thread Pool&quot;]
+        TPQ(Queue)
+        Thread1[&quot;Thread 1&lt;br/&gt;(Task 1)&quot;]
+        Thread2[&quot;Thread 2&lt;br/&gt;(Task 2)&quot;]
+        Thread3[&quot;Thread 3&lt;br/&gt;(Task 3)&quot;]
+        ThreadN[&quot;Thread N&lt;br/&gt;(Task N)&quot;]
+
+        TPQ --&gt; Thread1
+        TPQ --&gt; Thread2
+        TPQ --&gt; Thread3
+        TPQ --&gt; ThreadN
+    end
+
+    Client -.-&gt;|request data from sink queue| EL
+    EL -.-&gt;|return data| Client
+
+    Source -.-&gt;|delegate task| TPQ
+    Stage1 -.-&gt;|delegate task| TPQ
+    Stage2 -.-&gt;|delegate task| TPQ
+    Sink -.-&gt;|delegate task| TPQ
+
+    EL --&gt;|manages| Pipeline
+    EL --&gt;|controls| TP
+
+    style FG fill:#e1f5ff
+    style BG fill:#fff4e1
+    style Pipeline fill:#f0f0f0
+    style TP fill:#d4edda
+    style Client fill:#4a90e2
+    style EL fill:#e67e22
+    style SinkQ fill:#e74c3c
+    style TPQ fill:#ffd700
+        </div><p>The diagram shows:</p>
+<ul class="simple">
+<li><p><strong>Foreground Thread</strong>: Contains the client code that requests data from the Pipeline</p></li>
+<li><p><strong>Background Thread</strong>: Hosts the event loop and executes the Pipeline</p></li>
+<li><p><strong>Event Loop</strong>: Manages the Pipeline execution and controls the thread pool</p></li>
+<li><p><strong>Thread Pool</strong>: Executes tasks delegated from each Pipeline stage</p></li>
+<li><p><strong>Pipeline</strong>: Consists of multiple stages (Source, Processing Stages, Sink) connected by queues</p></li>
+<li><p><strong>Tasks</strong>: Multiple tasks (Task 1, Task 2, Task 3, … Task N) executed by the thread pool for each stage</p></li>
+<li><p><strong>Data Flow</strong> (solid arrows): Data flows through the Pipeline from Source → Processing Stages → Sink → Sink Queue</p></li>
+<li><p><strong>Task Delegation</strong> (dashed arrows): Each Pipeline stage delegates tasks to the thread pool for execution</p></li>
+<li><p><strong>Data Request</strong> (dashed arrows): Foreground thread requests data from the Sink Queue</p></li>
+</ul>
+</section>
 <section id="async-io">
 <h2>Async IO<a class="headerlink" href="#async-io" title="Link to this heading">¶</a></h2>
-<p>The Pipeline is composed of async functions. This is to make it easy to integrate the network utilities which are often async functions. Also executing the data processing functions in async context makes it easy to realize inter-op and intra-op parallelism.</p>
+<p>The Pipeline is composed of async functions for the following reasons:</p>
+<ol class="arabic simple">
+<li><p><strong>Orchestration Requirements</strong>: Building a pipeline with different concurrency levels and
+flexible structure requires an orchestrator to schedule tasks.
+Using bare <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.futures.ThreadPoolExecutor</span></code></a>
+(or <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.futures.ProcessPoolExecutor</span></code></a>) makes it difficult
+to cleanly implement the Pipeline abstraction.
+The async event loop provides the necessary orchestration capabilities.
+For details on the limitations of using bare <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code>
+for pipeline implementation, see <a class="reference internal" href="../async/index.html"><span class="doc">Introduction to Async I/O</span></a>.</p></li>
+<li><p><strong>Integration and Parallelism</strong>: The async context makes it easy to integrate
+network utilities, which are often async functions.
+Additionally, executing data processing functions in async context enables
+inter-op and intra-op parallelism.</p></li>
+</ol>
 </section>
 <section id="queue-vs-async-queue-as-buffer">
 <h2>Queue vs Async Queue as Buffer<a class="headerlink" href="#queue-vs-async-queue-as-buffer" title="Link to this heading">¶</a></h2>
@@ -490,11 +608,11 @@ The accessors of async queue, <a class="reference external" href="https://docs.p
 <p>If we choose sync queue, reading from the foreground is straightforward because the its accessors are thread-safe, but writing to the queue can block the event loop.
 If we choose async queue, writing to the queue is straightforward in an event loop, but reading from the foreground is convoluted, because the access must be thread-safe, and if the loop is running and the Pipeline is still writing the queue, then the read access must use async operation as well.</p>
 <p>From the perspective of the apparent code simplicity, <a class="reference external" href="https://docs.python.org/3/library/queue.html#queue.Queue" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">queue.Queue</span></code></a> requires less code to write, however, having the blocking <a class="reference external" href="https://docs.python.org/3/library/queue.html#queue.Queue.put" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">queue.Queue.put()</span></code></a> call in event loop makes it impossible to cleanly stop the background thread. This is because the synchronous blocking call blocks the event loop, and prevents the loop from processing cancellation request.</p>
-<p>For this reason, we use <a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">asyncio.Queue</span></code></a> in the <code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code>. As a result, the implementation of <code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.get_item()</span></code> becomes a bit convoluted. The next section explains why it is the case.</p>
+<p>For this reason, we use <a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">asyncio.Queue</span></code></a> in the <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.Pipeline</span></code></a>. As a result, the implementation of <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.get_item" title="spdl.pipeline.Pipeline.get_item"><code class="xref py py-meth docutils literal notranslate"><span class="pre">spdl.pipeline.Pipeline.get_item()</span></code></a> becomes a bit convoluted. The next section explains why it is the case.</p>
 </section>
 <section id="thread-loop-and-task">
 <h2>Thread, loop and task<a class="headerlink" href="#thread-loop-and-task" title="Link to this heading">¶</a></h2>
-<p>In implementing <code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code>, there are several object states that need to be carefully managed. They are</p>
+<p>In implementing <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.Pipeline</span></code></a>, there are several object states that need to be carefully managed. They are</p>
 <ul class="simple">
 <li><p>The state of the background thread which runs the event loop.</p></li>
 <li><p>The state of the async event loop managed by the background thread.</p></li>
@@ -503,45 +621,28 @@ If we choose async queue, writing to the queue is straightforward in an event lo
 <p>When the foreground thread attempts to fetch data from sink buffer, which is an async queue, it must use the different API (sync vs async accessor) to get the data, depending on the state of the state of the pipeline execution. This is because when the pipeline is running, the pipeline puts data in the async queue, and the event loop controls its execution. To access the async queue in cooperative manner, the foreground has to issue a request to run fetch coroutine (<a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue.get" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.Queue.get()</span></code></a>) to the background thread and wait for the result. However if the event loop is not running, then this request to run the fetch coroutine will never be fulfilled. Therefore, if the event loop is not running, the foreground must use sync accessor (<a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue.get_nowait" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.Queue.get_nowait()</span></code></a>).</p>
 <p>Another thing to consider is how to run the event loop. The foreground attempts to fetch data, the fetch request must be made via <a class="reference external" href="https://docs.python.org/3/library/asyncio-task.html#asyncio.run_coroutine_threadsafe" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.run_coroutine_threadsafe()</span></code></a>, so the system needs access to the loop object. In general, however, it is recommended not to manage loop object explicitly i.e. <a class="reference external" href="https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.run_forever" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.loop.run_forever()</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.run_until_complete" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.loop.run_until_complete()</span></code></a>). Instead it is encouraged to use <a class="reference external" href="https://docs.python.org/3/library/asyncio-runner.html#asyncio.run" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.run()</span></code></a>. But if we simply pass the pipeline coroutine to the <a class="reference external" href="https://docs.python.org/3/library/asyncio-runner.html#asyncio.run" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.run()</span></code></a> function, as soon as the task completes, the event loop is stopped and closed. We would like to encapsulate the event loop in the background thread and abstract away from the foreground thread. But this way, the foreground thread cannot know if the loop is running or not.</p>
 <p>Following the above considerations, the implementation of the pipeline executions follows the following constraints.</p>
-<ul>
-<li><ol class="arabic simple">
+<ol class="arabic simple">
 <li><p>To make the state management simpler, overlap the life cycle of the background thread and the event loop.</p></li>
 </ol>
 <ul class="simple">
-<li><ol class="loweralpha simple">
 <li><p>When the thread is started, the control flow is not returned to the foreground thread until the event loop is initialized.</p></li>
-</ol>
-</li>
-<li><ol class="loweralpha simple" start="2">
 <li><p>The thread is stopped when the event loop is stopped.</p></li>
-</ol>
-</li>
 </ul>
-</li>
-<li><ol class="arabic simple" start="2">
+<ol class="arabic simple" start="2">
 <li><p>Detach the life cycle of pipeline task from that of the event loop.</p></li>
 </ol>
 <ul class="simple">
-<li><ol class="loweralpha simple">
 <li><p>Keep the event loop alive after the pipeline task is completed.</p></li>
-</ol>
-</li>
-<li><ol class="loweralpha simple" start="2">
 <li><p>Wait for the explicit request to stop the loop.</p></li>
-</ol>
-</li>
 </ul>
-</li>
-<li><ol class="arabic simple" start="3">
+<ol class="arabic simple" start="3">
 <li><p>The event loop signals the object that manages the background thread that the task is completed.</p></li>
 </ol>
-</li>
-</ul>
 <p>Following the above constraints, the foreground can decide whether it should use sync or async accessor.</p>
 <ul class="simple">
-<li><p>If the background thread is not started. -&gt; Fail</p></li>
-<li><p>If the task is completed. -&gt; Use sync API</p></li>
-<li><p>Otherwise, the task is running. -&gt;  use async API.</p></li>
+<li><p>If the background thread is not started. → Fail</p></li>
+<li><p>If the task is completed. → Use sync API</p></li>
+<li><p>Otherwise, the task is running. →  use async API.</p></li>
 </ul>
 <p>The following sequence diagram summarizes the interaction between the foreground thread, the background thread, the event loop and the pipeline task.</p>
 <div class="mermaid">
@@ -606,6 +707,537 @@ background thread to complete the loop and join.</p>
     FG Thread  -&gt;&gt;+ BG Thread: Join thread
     BG Thread  -&gt;&gt;- FG Thread: Return
         </div></section>
+<section id="building-pipeline-from-configuration">
+<h2>Building Pipeline from Configuration<a class="headerlink" href="#building-pipeline-from-configuration" title="Link to this heading">¶</a></h2>
+<p>The process of converting a <a class="reference internal" href="../generated/spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs.PipelineConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineConfig</span></code></a> into an executable <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> is handled by <a class="reference internal" href="../generated/spdl.pipeline.build_pipeline.html#spdl.pipeline.build_pipeline" title="spdl.pipeline.build_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.pipeline.build_pipeline()</span></code></a>. This section explains the multi-step transformation process.</p>
+<section id="overview-of-the-build-process">
+<h3>Overview of the Build Process<a class="headerlink" href="#overview-of-the-build-process" title="Link to this heading">¶</a></h3>
+<p>The build process can be summarized as follows:</p>
+<ol class="arabic simple">
+<li><p><strong>Config to Node Graph Conversion</strong>: The <a class="reference internal" href="../generated/spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs.PipelineConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineConfig</span></code></a> is converted into a linked list of <a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">_Node</span></code></a> objects, forming a directed acyclic graph (DAG) without branching.</p></li>
+<li><p><strong>Recursive Node Traversal</strong>: Starting from the sink node, the upstream nodes are recursively traversed.</p></li>
+<li><p><strong>Coroutine Creation</strong>: Each node is converted into a coroutine that processes a stream of input data. Each coroutine completes when it receives an EOF (End-of-File) token.</p></li>
+<li><p><strong>Main Coroutine Assembly</strong>: A main coroutine is created to monitor the state of all stage coroutines.</p></li>
+<li><p><strong>Error Handling and Cleanup</strong>: The main coroutine is responsible for handling failures, performing cleanup (ensuring upstream stages are completed or cancelled when a downstream node completes), and reacting to interrupt requests from the foreground client code.</p></li>
+<li><p><strong>Event Loop Execution</strong>: The main coroutine is executed by the event loop running in the background thread.</p></li>
+</ol>
+</section>
+<section id="detailed-build-steps">
+<h3>Detailed Build Steps<a class="headerlink" href="#detailed-build-steps" title="Link to this heading">¶</a></h3>
+<section id="step-1-configuration-to-node-graph">
+<h4>Step 1: Configuration to Node Graph<a class="headerlink" href="#step-1-configuration-to-node-graph" title="Link to this heading">¶</a></h4>
+<p>The <a class="reference internal" href="../generated/spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs.PipelineConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineConfig</span></code></a> represents the pipeline structure declaratively. The function <a class="reference internal" href="#spdl.pipeline._components._node._convert_config" title="spdl.pipeline._components._node._convert_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">_convert_config()</span></code></a> transforms this configuration into a linked list of <a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">_Node</span></code></a> objects.</p>
+<p>Each <a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">_Node</span></code></a> is linked with references to its upstream <a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">_Node</span></code></a> objects, forming a directed graph. Each node also has a queue object (<a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline.AsyncQueue"><code class="xref py py-class docutils literal notranslate"><span class="pre">AsyncQueue</span></code></a>) that will be used when building coroutines to buffer data between stages.</p>
+<p>The following diagram illustrates how a simple pipeline configuration is converted into a node graph:</p>
+<div class="mermaid">
+            graph LR
+    subgraph PConfig[&quot;PipelineConfig&quot;]
+        PC_Src[SourceConfig]
+        PC_P1[&quot;PipeConfig: Stage1&quot;]
+        PC_P2[&quot;PipeConfig: Stage2&quot;]
+        PC_Sink[SinkConfig]
+
+        PC_Src --&gt; PC_P1
+        PC_P1 --&gt; PC_P2
+        PC_P2 --&gt; PC_Sink
+    end
+
+    subgraph NGraph[&quot;Node Graph&quot;]
+        N_Src[&quot;Node: Source&quot;]
+        N_P1[&quot;Node: Stage1&quot;]
+        N_P2[&quot;Node: Stage2&quot;]
+        N_Sink[&quot;Node: Sink&quot;]
+
+        N_Src -.-&gt;|queue| N_P1
+        N_P1 -.-&gt;|queue| N_P2
+        N_P2 -.-&gt;|queue| N_Sink
+
+        N_P1 --&gt;|upstream| N_Src
+        N_P2 --&gt;|upstream| N_P1
+        N_Sink --&gt;|upstream| N_P2
+    end
+
+    PC_Src -.-&gt;|converts to| N_Src
+    PC_P1 -.-&gt;|converts to| N_P1
+    PC_P2 -.-&gt;|converts to| N_P2
+    PC_Sink -.-&gt;|converts to| N_Sink
+
+    style PC_Src fill:#e1f5ff
+    style PC_P1 fill:#e1f5ff
+    style PC_P2 fill:#e1f5ff
+    style PC_Sink fill:#e1f5ff
+    style N_Src fill:#fff4e1
+    style N_P1 fill:#fff4e1
+    style N_P2 fill:#fff4e1
+    style N_Sink fill:#fff4e1
+        </div></section>
+<section id="step-2-recursive-coroutine-creation">
+<h4>Step 2: Recursive Coroutine Creation<a class="headerlink" href="#step-2-recursive-coroutine-creation" title="Link to this heading">¶</a></h4>
+<p>The function <a class="reference internal" href="#spdl.pipeline._components._node._build_node_recursive" title="spdl.pipeline._components._node._build_node_recursive"><code class="xref py py-func docutils literal notranslate"><span class="pre">_build_node_recursive()</span></code></a> traverses
+the node graph recursively starting from the sink node and creates a coroutine for each node.
+The traversal follows the upstream references, ensuring that all upstream coroutines are created
+before the downstream coroutine.</p>
+<p>For each node type, it calls <a class="reference internal" href="#spdl.pipeline._components._node._build_node" title="spdl.pipeline._components._node._build_node"><code class="xref py py-func docutils literal notranslate"><span class="pre">_build_node()</span></code></a> to
+create a coroutine for the corresponding config.
+Each coroutine processes input data in a loop and completes when it receives an EOF token.</p>
+</section>
+<section id="step-3-main-coroutine-assembly">
+<h4>Step 3: Main Coroutine Assembly<a class="headerlink" href="#step-3-main-coroutine-assembly" title="Link to this heading">¶</a></h4>
+<p>The function <a class="reference internal" href="#spdl.pipeline._components._node._run_pipeline_coroutines" title="spdl.pipeline._components._node._run_pipeline_coroutines"><code class="xref py py-func docutils literal notranslate"><span class="pre">_run_pipeline_coroutines()</span></code></a> creates the main coroutine that orchestrates the execution of all stage coroutines. This main coroutine:</p>
+<ol class="arabic simple">
+<li><p>Creates asyncio Tasks from each node’s coroutine</p></li>
+<li><p>Monitors the tasks using <a class="reference external" href="https://docs.python.org/3/library/asyncio-task.html#asyncio.wait" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.wait()</span></code></a> with <code class="docutils literal notranslate"><span class="pre">FIRST_COMPLETED</span></code> strategy</p></li>
+<li><p>When a task completes, cancels orphaned upstream tasks</p></li>
+<li><p>Handles cancellation requests from the foreground thread</p></li>
+<li><p>Gathers errors from failed tasks and raises <a class="reference internal" href="../generated/spdl.pipeline.PipelineFailure.html#spdl.pipeline.PipelineFailure" title="spdl.pipeline.PipelineFailure"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineFailure</span></code></a> if any task failed</p></li>
+</ol>
+<p>The following diagram illustrates the execution flow of the main coroutine:</p>
+<div class="mermaid">
+            flowchart TD
+    Start([Main Coroutine Starts]) --&gt; CreateTasks[Create Tasks from All Nodes]
+    CreateTasks --&gt; StartTasks[Start All Tasks]
+    StartTasks --&gt; Wait{Wait for&lt;br/&gt;First Completion}
+
+    Wait --&gt;|Task Completed| CancelOrphans[Cancel Orphaned&lt;br/&gt;Upstream Tasks]
+    Wait --&gt;|Cancellation Request| CancelAll[Cancel All&lt;br/&gt;Pending Tasks]
+
+    CancelOrphans --&gt; CheckPending{Any Tasks&lt;br/&gt;Pending?}
+    CancelAll --&gt; WaitAll[Wait for All&lt;br/&gt;Tasks to Complete]
+
+    CheckPending --&gt;|Yes| Wait
+    CheckPending --&gt;|No| GatherErrors[Gather Errors&lt;br/&gt;from Tasks]
+
+    WaitAll --&gt; RaiseCancelled[Raise&lt;br/&gt;CancelledError]
+
+    GatherErrors --&gt; HasErrors{Any Errors?}
+    HasErrors --&gt;|Yes| RaiseFailure[Raise&lt;br/&gt;PipelineFailure]
+    HasErrors --&gt;|No| Complete([Complete Successfully])
+
+    style Start fill:#90EE90
+    style Complete fill:#90EE90
+    style RaiseFailure fill:#FFB6C1
+    style RaiseCancelled fill:#FFB6C1
+        </div></section>
+<section id="step-4-task-creation-and-monitoring">
+<h4>Step 4: Task Creation and Monitoring<a class="headerlink" href="#step-4-task-creation-and-monitoring" title="Link to this heading">¶</a></h4>
+<p>When the main coroutine starts, it recursively creates asyncio Tasks for each node
+starting from the sink and traversing upstream.
+Each task wraps the node’s coroutine and begins executing immediately.</p>
+<p>The main coroutine then enters a loop monitoring these tasks:</p>
+<ul class="simple">
+<li><p>It uses <a class="reference external" href="https://docs.python.org/3/library/asyncio-task.html#asyncio.wait" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.wait()</span></code></a> with <code class="docutils literal notranslate"><span class="pre">return_when=FIRST_COMPLETED</span></code> to wait for
+any task to complete</p></li>
+<li><p>When a task completes, it cancels upstream tasks that would become orphaned producers
+(i.e., tasks that would keep producing data that will never be consumed)</p></li>
+<li><p>If the main coroutine receives a cancellation request, it cancels all pending tasks and
+waits for them to complete before re-raising the <a class="reference external" href="https://docs.python.org/3/library/asyncio-exceptions.html#asyncio.CancelledError" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">asyncio.CancelledError</span></code></a></p></li>
+</ul>
+</section>
+<section id="step-5-error-handling-and-cleanup">
+<h4>Step 5: Error Handling and Cleanup<a class="headerlink" href="#step-5-error-handling-and-cleanup" title="Link to this heading">¶</a></h4>
+<p>The main coroutine implements a comprehensive error handling and cleanup strategy:</p>
+<p><strong>Successful Execution</strong>:
+When all tasks complete successfully, each stage passes EOF to its output queue
+before completing.
+The sink filters out EOF and does not pass it to the output queue.
+The main coroutine then gathers any errors (should be none) and completes successfully.</p>
+<p><strong>Failures at Some Stage</strong>:
+When a task fails:</p>
+<ol class="arabic simple">
+<li><p>The failed stage should pass EOF to its output queue before exiting (even when failing)</p></li>
+<li><p>The main coroutine detects the completion and cancels all upstream tasks to prevent orphaned producers</p></li>
+<li><p>Downstream tasks continue processing remaining items in their queues and eventually complete</p></li>
+<li><p>The main coroutine waits for all tasks to complete</p></li>
+<li><p>The main coroutine gathers errors and raises <a class="reference internal" href="../generated/spdl.pipeline.PipelineFailure.html#spdl.pipeline.PipelineFailure" title="spdl.pipeline.PipelineFailure"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineFailure</span></code></a></p></li>
+</ol>
+<p><strong>Cancellation</strong>:
+When the foreground thread requests cancellation:</p>
+<ol class="arabic simple">
+<li><p>The event loop signals cancellation to the main coroutine</p></li>
+<li><p>The main coroutine catches <a class="reference external" href="https://docs.python.org/3/library/asyncio-exceptions.html#asyncio.CancelledError" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">asyncio.CancelledError</span></code></a></p></li>
+<li><p>The main coroutine cancels all pending tasks</p></li>
+<li><p>The main coroutine waits for all tasks to complete (allowing graceful cleanup)</p></li>
+<li><p>The main coroutine re-raises <a class="reference external" href="https://docs.python.org/3/library/asyncio-exceptions.html#asyncio.CancelledError" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">asyncio.CancelledError</span></code></a></p></li>
+</ol>
+</section>
+<section id="step-6-pipeline-object-creation">
+<h4>Step 6: Pipeline Object Creation<a class="headerlink" href="#step-6-pipeline-object-creation" title="Link to this heading">¶</a></h4>
+<p>Finally, <a class="reference internal" href="../generated/spdl.pipeline.build_pipeline.html#spdl.pipeline.build_pipeline" title="spdl.pipeline.build_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.pipeline.build_pipeline()</span></code></a> creates a <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> object with:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">coro</span></code>: The main coroutine from <a class="reference internal" href="#spdl.pipeline._components._node._run_pipeline_coroutines" title="spdl.pipeline._components._node._run_pipeline_coroutines"><code class="xref py py-func docutils literal notranslate"><span class="pre">_run_pipeline_coroutines()</span></code></a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">queue</span></code>: The sink node’s output queue (where processed data is buffered)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">executor</span></code>: A <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code></a> for executing tasks</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">desc</span></code>: A string description of the pipeline</p></li>
+</ul>
+<p>The <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> object manages the lifecycle of the background thread and
+event loop as described in the previous sections.</p>
+</section>
+</section>
+</section>
+<section id="api-reference">
+<h2>API reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h2>
+<p>The following functions and classes are the main components of Pipeline’s implementation.</p>
+<p>They are not public API, but listed here for developers who are interested in learning
+how the <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> is implemented.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_Node</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_node.py?#L57-L109"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._node._Node" title="Link to this definition">¶</a></dt>
+<dd><p>Represents a node in the pipeline graph.</p>
+<p>Each node corresponds to a pipeline stage and contains references to its upstream
+nodes, forming a directed acyclic graph (DAG). Nodes are used internally during
+the pipeline build process to create and manage coroutines for each stage.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node.cfg">
+<span class="sig-name descname"><span class="pre">cfg</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">_ConfigBase</span></em><a class="headerlink" href="#spdl.pipeline._components._node._Node.cfg" title="Link to this definition">¶</a></dt>
+<dd><p>The configuration object that defines the behavior of this stage.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node.coro">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">coro</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Coroutine" title="(in Python v3.14)"><span class="pre">Coroutine</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#spdl.pipeline._components._node._Node.coro" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node.create_task">
+<span class="sig-name descname"><span class="pre">create_task</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Task</span></span></span><a class="headerlink" href="#spdl.pipeline._components._node._Node.create_task" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#spdl.pipeline._components._node._Node.name" title="Link to this definition">¶</a></dt>
+<dd><p>A unique identifier for the node, used for logging and task naming.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node.queue">
+<span class="sig-name descname"><span class="pre">queue</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></em><a class="headerlink" href="#spdl.pipeline._components._node._Node.queue" title="Link to this definition">¶</a></dt>
+<dd><p>An async queue for buffering data between this stage and downstream stages.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node.task">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">task</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Task</span></em><a class="headerlink" href="#spdl.pipeline._components._node._Node.task" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._Node.upstream">
+<span class="sig-name descname"><span class="pre">upstream</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><span class="pre">_Node</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#spdl.pipeline._components._node._Node.upstream" title="Link to this definition">¶</a></dt>
+<dd><p>A sequence of upstream nodes that this node depends on.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._convert_config">
+<span class="sig-name descname"><span class="pre">_convert_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_MutableInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_sink</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><span class="pre">_Node</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_node.py?#L163-L212"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._node._convert_config" title="Link to this definition">¶</a></dt>
+<dd><p>Convert a <a class="reference internal" href="../generated/spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs.PipelineConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineConfig</span></code></a> into a linked list of
+<a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">_Node</span></code></a> objects.</p>
+<p>This function recursively transforms a declarative pipeline configuration into
+a node graph where each node represents a pipeline stage. The nodes are linked
+via upstream references, forming a directed acyclic graph (DAG) without branching.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>plc</strong> – The pipeline configuration to convert.</p></li>
+<li><p><strong>q_class</strong> – The queue class to use for creating buffers between stages.</p></li>
+<li><p><strong>pipeline_id</strong> – A unique identifier for the pipeline, used in stage naming.</p></li>
+<li><p><strong>stage_id</strong> – A mutable counter for assigning unique stage IDs.</p></li>
+<li><p><strong>disable_sink</strong> – If True, skip creating the sink node (used for merge branches).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The sink node (or the last processing node if disable_sink is True) with
+all upstream nodes linked.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._build_node_recursive">
+<span class="sig-name descname"><span class="pre">_build_node_recursive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><span class="pre">_Node</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fc_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">_FailCounter</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_hook_factory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../generated/spdl.pipeline.TaskHook.html#spdl.pipeline.TaskHook" title="spdl.pipeline._components._hook.TaskHook"><span class="pre">TaskHook</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_failures</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_node.py?#L329-L353"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._node._build_node_recursive" title="Link to this definition">¶</a></dt>
+<dd><p>Recursively build coroutines for a node and all its upstream nodes.</p>
+<p>This function traverses the node graph starting from the given node, following
+upstream references recursively. For each node, it creates a coroutine based on
+the node’s configuration type (Source, Pipe, Merge, Sink, etc.).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node</strong> – The node to build coroutines for.</p></li>
+<li><p><strong>fc_class</strong> – The failure counter class for tracking task failures.</p></li>
+<li><p><strong>task_hook_factory</strong> – A factory function for creating task hooks for monitoring.</p></li>
+<li><p><strong>max_failures</strong> – The maximum number of failures allowed before halting.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><strong>RuntimeError</strong></a> – If attempting to build a coroutine for a node that already has one.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._build_node">
+<span class="sig-name descname"><span class="pre">_build_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><span class="pre">_Node</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fc_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">_FailCounter</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_hook_factory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../generated/spdl.pipeline.TaskHook.html#spdl.pipeline.TaskHook" title="spdl.pipeline._components._hook.TaskHook"><span class="pre">TaskHook</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_failures</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_node.py?#L215-L326"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._node._build_node" title="Link to this definition">¶</a></dt>
+<dd><p>Build a coroutine for a single node based on its configuration type.</p>
+<p>This function creates the appropriate coroutine for a given node by pattern
+matching on the node’s configuration type. Each configuration type corresponds
+to a specific pipeline stage behavior:</p>
+<ul>
+<li><p><a class="reference internal" href="../generated/spdl.pipeline.defs.SourceConfig.html#spdl.pipeline.defs.SourceConfig" title="spdl.pipeline.defs.SourceConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SourceConfig</span></code></a>: Creates a source coroutine that
+generates data from an iterator using
+<a class="reference internal" href="#spdl.pipeline._components._source._source" title="spdl.pipeline._components._source._source"><code class="xref py py-func docutils literal notranslate"><span class="pre">_source()</span></code></a></p></li>
+<li><p><a class="reference internal" href="../generated/spdl.pipeline.defs.MergeConfig.html#spdl.pipeline.defs.MergeConfig" title="spdl.pipeline.defs.MergeConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">MergeConfig</span></code></a>: Creates a merge coroutine that
+combines multiple input streams using
+<a class="reference internal" href="#spdl.pipeline._components._pipe._merge" title="spdl.pipeline._components._pipe._merge"><code class="xref py py-func docutils literal notranslate"><span class="pre">_merge()</span></code></a></p></li>
+<li><p><a class="reference internal" href="../generated/spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig" title="spdl.pipeline.defs.SinkConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SinkConfig</span></code></a>: Creates a sink coroutine that
+buffers output data using
+<a class="reference internal" href="#spdl.pipeline._components._sink._sink" title="spdl.pipeline._components._sink._sink"><code class="xref py py-func docutils literal notranslate"><span class="pre">_sink()</span></code></a></p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="../generated/spdl.pipeline.defs.PipeConfig.html#spdl.pipeline.defs.PipeConfig" title="spdl.pipeline.defs.PipeConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipeConfig</span></code></a>: Creates a processing coroutine</dt><dd><p>using</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#spdl.pipeline._components._pipe._pipe" title="spdl.pipeline._components._pipe._pipe"><code class="xref py py-func docutils literal notranslate"><span class="pre">_pipe()</span></code></a> or
+<a class="reference internal" href="#spdl.pipeline._components._pipe._ordered_pipe" title="spdl.pipeline._components._pipe._ordered_pipe"><code class="xref py py-func docutils literal notranslate"><span class="pre">_ordered_pipe()</span></code></a></p>
+</li>
+<li><p><a class="reference internal" href="../generated/spdl.pipeline.defs.AggregateConfig.html#spdl.pipeline.defs.AggregateConfig" title="spdl.pipeline.defs.AggregateConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">AggregateConfig</span></code></a>: Creates a pipe coroutine
+with aggregation logic using
+<a class="reference internal" href="#spdl.pipeline._components._pipe._pipe" title="spdl.pipeline._components._pipe._pipe"><code class="xref py py-func docutils literal notranslate"><span class="pre">_pipe()</span></code></a>.</p></li>
+<li><p><a class="reference internal" href="../generated/spdl.pipeline.defs.DisaggregateConfig.html#spdl.pipeline.defs.DisaggregateConfig" title="spdl.pipeline.defs.DisaggregateConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">DisaggregateConfig</span></code></a>: Creates a pipe coroutine
+with disaggregation logic using
+<a class="reference internal" href="#spdl.pipeline._components._pipe._pipe" title="spdl.pipeline._components._pipe._pipe"><code class="xref py py-func docutils literal notranslate"><span class="pre">_pipe()</span></code></a></p></li>
+</ul>
+<p>The created coroutine is stored in the node’s <code class="docutils literal notranslate"><span class="pre">_coro</span></code> attribute.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node</strong> – The node to build a coroutine for. The node must not already have
+a coroutine.</p></li>
+<li><p><strong>fc_class</strong> – The failure counter class for tracking task failures.</p></li>
+<li><p><strong>task_hook_factory</strong> – A factory function for creating task hooks for
+monitoring.</p></li>
+<li><p><strong>max_failures</strong> – The maximum number of failures allowed before halting.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If an unsupported configuration type is encountered.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#AssertionError" title="(in Python v3.14)"><strong>AssertionError</strong></a> – If the node’s upstream structure doesn’t match the
+    configuration type’s requirements (e.g., SourceConfig must have no
+    upstream nodes).</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function does not handle recursion. Use
+<a class="reference internal" href="#spdl.pipeline._components._node._build_node_recursive" title="spdl.pipeline._components._node._build_node_recursive"><code class="xref py py-func docutils literal notranslate"><span class="pre">_build_node_recursive()</span></code></a> to build coroutines for a node and all
+its upstream dependencies.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._source._source">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.AsyncIterable" title="(in Python v3.14)"><span class="pre">AsyncIterable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_source.py?#L22-L54"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._source._source" title="Link to this definition">¶</a></dt>
+<dd><p>Coroutine that generates data from an iterator and puts it into a queue.</p>
+<p>This coroutine represents the source stage of a pipeline. It consumes items from
+a synchronous or asynchronous iterable and puts them into the output queue for
+downstream processing. The coroutine completes when the iterator is exhausted or
+when the maximum number of items has been reached.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> – The source iterable (synchronous or asynchronous) to consume data from.</p></li>
+<li><p><strong>queue</strong> – The async queue to put items into for downstream consumption.</p></li>
+<li><p><strong>max_items</strong> – Optional maximum number of items to process. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, processes
+all items from the source.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The EOF token is automatically handled by the queue’s stage hook context manager,
+so this coroutine does not explicitly send EOF.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._pipe._merge">
+<span class="sig-name descname"><span class="pre">_merge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_queues</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_counter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_FailCounter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_hooks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../generated/spdl.pipeline.TaskHook.html#spdl.pipeline.TaskHook" title="spdl.pipeline._components._hook.TaskHook"><span class="pre">TaskHook</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_op</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Queue</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Queue</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Awaitable" title="(in Python v3.14)"><span class="pre">Awaitable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Coroutine" title="(in Python v3.14)"><span class="pre">Coroutine</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_pipe.py?#L435-L481"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._pipe._merge" title="Link to this definition">¶</a></dt>
+<dd><p>Create a coroutine for merging data from multiple input queues.</p>
+<p>This function creates a merge stage coroutine that consumes items from multiple
+input queues and puts them into a single output queue. By default, items from
+all input queues are passed through in the order they become available. A custom
+merge operation can be provided for more complex merging logic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – The name of the pipeline stage for logging and task naming.</p></li>
+<li><p><strong>input_queues</strong> – Sequence of queues to consume input items from.</p></li>
+<li><p><strong>output_queue</strong> – The queue to put merged items into.</p></li>
+<li><p><strong>fail_counter</strong> – Hook for tracking and limiting task failures.</p></li>
+<li><p><strong>task_hooks</strong> – List of hooks for monitoring task execution.</p></li>
+<li><p><strong>merge_op</strong> – Optional custom merge operation. If None, uses default pass-through
+merge that forwards items from all input queues to output queue.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A coroutine that executes the merge stage.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If input_queues is empty or if any input queue is the same as
+    the output queue.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._pipe._pipe">
+<span class="sig-name descname"><span class="pre">_pipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_PipeArgs</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">U</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_counter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_FailCounter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_hooks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../generated/spdl.pipeline.TaskHook.html#spdl.pipeline.TaskHook" title="spdl.pipeline._components._hook.TaskHook"><span class="pre">TaskHook</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op_requires_eof</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Coroutine" title="(in Python v3.14)"><span class="pre">Coroutine</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_pipe.py?#L167-L252"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._pipe._pipe" title="Link to this definition">¶</a></dt>
+<dd><p>Create a coroutine for processing data from input queue to output queue.</p>
+<p>This function creates a processing stage coroutine that consumes items from the
+input queue, applies a transformation operation (sync or async function/generator),
+and puts the results into the output queue. It manages concurrent execution of
+tasks up to the specified concurrency level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – The name of the pipeline stage for logging and task naming.</p></li>
+<li><p><strong>input_queue</strong> – The queue to consume input items from.</p></li>
+<li><p><strong>output_queue</strong> – The queue to put processed items into.</p></li>
+<li><p><strong>args</strong> – Pipeline arguments containing the operation, executor, and concurrency.</p></li>
+<li><p><strong>fail_counter</strong> – Hook for tracking and limiting task failures.</p></li>
+<li><p><strong>task_hooks</strong> – List of hooks for monitoring task execution.</p></li>
+<li><p><strong>op_requires_eof</strong> – If True, pass EOF token to the operation; otherwise stop
+processing before EOF.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A coroutine that executes the pipeline stage.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If input_queue and output_queue are the same object.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><strong>RuntimeError</strong></a> – If the number of failures exceeds the threshold.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._pipe._ordered_pipe">
+<span class="sig-name descname"><span class="pre">_ordered_pipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_PipeArgs</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">U</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_counter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_FailCounter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_hooks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../generated/spdl.pipeline.TaskHook.html#spdl.pipeline.TaskHook" title="spdl.pipeline._components._hook.TaskHook"><span class="pre">TaskHook</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Coroutine" title="(in Python v3.14)"><span class="pre">Coroutine</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_pipe.py?#L255-L385"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._pipe._ordered_pipe" title="Link to this definition">¶</a></dt>
+<dd><p>Create a coroutine for processing data while preserving input order.</p>
+<p>This function creates a processing stage coroutine similar to <code class="docutils literal notranslate"><span class="pre">_pipe</span></code>, but guarantees
+that output items maintain the same order as input items, regardless of task
+completion order. This is achieved by using an intermediate queue to buffer tasks
+and waiting for them to complete in sequence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – The name of the pipeline stage for logging and task naming.</p></li>
+<li><p><strong>input_queue</strong> – The queue to consume input items from.</p></li>
+<li><p><strong>output_queue</strong> – The queue to put processed items into (in order).</p></li>
+<li><p><strong>args</strong> – Pipeline arguments containing the operation, executor, and concurrency.</p></li>
+<li><p><strong>fail_counter</strong> – Hook for tracking and limiting task failures.</p></li>
+<li><p><strong>task_hooks</strong> – List of hooks for monitoring task execution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A coroutine that executes the ordered pipeline stage.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If input_queue and output_queue are the same object.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><strong>RuntimeError</strong></a> – If the number of failures exceeds the threshold.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The operation must be an async function (not an async generator) for ordered pipe.</p>
+</div>
+<p><strong>Implementation Note</strong></p>
+<p>The core idea of ordered pipe implementation is to use queue as buffer for active tasks.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>       ┌─┐
+       │ │
+       │ │ AsyncQueue: Input
+       │ │
+       └┬┘
+        │
+┌───────▼────────┐
+│ Async Function │
+└───────┬────────┘
+       ┌▼┐
+       │ │
+       │ │ AsyncQueue: Intermediate queue:
+       │ │ contains tasks. queue size == concurrency
+       └┬┘
+┌───────▼────────┐
+│     enqueue    │
+└───────┬────────┘
+       ┌▼┐
+       │ │
+       │ │ AsyncQueue: Output
+       │ │
+       └─┘
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._sink._sink">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_sink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue" title="spdl.pipeline._components._queue.AsyncQueue"><span class="pre">AsyncQueue</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_sink.py?#L21-L45"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._sink._sink" title="Link to this definition">¶</a></dt>
+<dd><p>Coroutine that consumes data from input queue and buffers it in output queue.</p>
+<p>This coroutine represents the sink stage of a pipeline. It consumes items from
+the input queue and puts them into the output queue for the foreground thread to
+fetch. The coroutine completes when it receives an EOF token, which it does not
+pass to the output queue (EOF filtering is the sink’s responsibility).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_queue</strong> – The async queue to consume items from (typically from the last
+processing stage).</p></li>
+<li><p><strong>output_queue</strong> – The async queue to buffer items for the foreground thread.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The sink filters out EOF tokens and does not pass them to the output queue.
+The EOF handling and queue cleanup is managed by the queue’s stage hook
+context manager.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="spdl.pipeline._components._node._run_pipeline_coroutines">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_run_pipeline_coroutines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#spdl.pipeline._components._node._Node" title="spdl.pipeline._components._node._Node"><span class="pre">_Node</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_node.py?#L490-L544"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._components._node._run_pipeline_coroutines" title="Link to this definition">¶</a></dt>
+<dd><p>Orchestrate the execution of all pipeline stage coroutines.</p>
+<p>This is the main coroutine that manages the lifecycle of all pipeline stage tasks.
+It creates asyncio Tasks from each node’s coroutine, monitors their execution,
+handles failures, and ensures proper cleanup.</p>
+<p>The execution flow:</p>
+<ol class="arabic simple">
+<li><p>Creates asyncio Tasks for all nodes (starting from sink, traversing upstream)</p></li>
+<li><p>Waits for tasks to complete using asyncio.wait with FIRST_COMPLETED</p></li>
+<li><p>When a task completes, cancels orphaned upstream tasks to prevent deadlocks</p></li>
+<li><p>Handles cancellation requests from the foreground thread</p></li>
+<li><p>Gathers errors from failed tasks and raises PipelineFailure if any</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>node</strong> – The sink node of the pipeline (all upstream nodes are accessed via
+the upstream references).</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/asyncio-exceptions.html#asyncio.CancelledError" title="(in Python v3.14)"><strong>asyncio.CancelledError</strong></a> – If the pipeline is cancelled by the foreground thread.</p></li>
+<li><p><a class="reference internal" href="../generated/spdl.pipeline.PipelineFailure.html#spdl.pipeline.PipelineFailure" title="spdl.pipeline._components._node.PipelineFailure"><strong>PipelineFailure</strong></a> – If any pipeline stage encounters an error.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 </section>
 
         </article>
@@ -613,7 +1245,15 @@ background thread to complete the loop and join.</p>
       <footer>
         
         <div class="related-pages">
-          
+          <a class="next-page" href="remote_iterable_protocol.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Remote Iterable Protocol</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
           <a class="prev-page" href="index.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
@@ -656,9 +1296,45 @@ background thread to complete the loop and join.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Implementation detail of Pipeline</a><ul>
+<li><a class="reference internal" href="#architecture-overview">Architecture Overview</a></li>
 <li><a class="reference internal" href="#async-io">Async IO</a></li>
 <li><a class="reference internal" href="#queue-vs-async-queue-as-buffer">Queue vs Async Queue as Buffer</a></li>
 <li><a class="reference internal" href="#thread-loop-and-task">Thread, loop and task</a></li>
+<li><a class="reference internal" href="#building-pipeline-from-configuration">Building Pipeline from Configuration</a><ul>
+<li><a class="reference internal" href="#overview-of-the-build-process">Overview of the Build Process</a></li>
+<li><a class="reference internal" href="#detailed-build-steps">Detailed Build Steps</a><ul>
+<li><a class="reference internal" href="#step-1-configuration-to-node-graph">Step 1: Configuration to Node Graph</a></li>
+<li><a class="reference internal" href="#step-2-recursive-coroutine-creation">Step 2: Recursive Coroutine Creation</a></li>
+<li><a class="reference internal" href="#step-3-main-coroutine-assembly">Step 3: Main Coroutine Assembly</a></li>
+<li><a class="reference internal" href="#step-4-task-creation-and-monitoring">Step 4: Task Creation and Monitoring</a></li>
+<li><a class="reference internal" href="#step-5-error-handling-and-cleanup">Step 5: Error Handling and Cleanup</a></li>
+<li><a class="reference internal" href="#step-6-pipeline-object-creation">Step 6: Pipeline Object Creation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#api-reference">API reference</a><ul>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node"><code class="docutils literal notranslate"><span class="pre">_Node</span></code></a><ul>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node.cfg"><code class="docutils literal notranslate"><span class="pre">_Node.cfg</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node.coro"><code class="docutils literal notranslate"><span class="pre">_Node.coro</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node.create_task"><code class="docutils literal notranslate"><span class="pre">_Node.create_task()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node.name"><code class="docutils literal notranslate"><span class="pre">_Node.name</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node.queue"><code class="docutils literal notranslate"><span class="pre">_Node.queue</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node.task"><code class="docutils literal notranslate"><span class="pre">_Node.task</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._Node.upstream"><code class="docutils literal notranslate"><span class="pre">_Node.upstream</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._convert_config"><code class="docutils literal notranslate"><span class="pre">_convert_config()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._build_node_recursive"><code class="docutils literal notranslate"><span class="pre">_build_node_recursive()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._build_node"><code class="docutils literal notranslate"><span class="pre">_build_node()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._source._source"><code class="docutils literal notranslate"><span class="pre">_source()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._pipe._merge"><code class="docutils literal notranslate"><span class="pre">_merge()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._pipe._pipe"><code class="docutils literal notranslate"><span class="pre">_pipe()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._pipe._ordered_pipe"><code class="docutils literal notranslate"><span class="pre">_ordered_pipe()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._sink._sink"><code class="docutils literal notranslate"><span class="pre">_sink()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline._components._node._run_pipeline_coroutines"><code class="docutils literal notranslate"><span class="pre">_run_pipeline_coroutines()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -671,7 +1347,7 @@ background thread to complete the loop and join.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=79d558ae"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=d0952cc8"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

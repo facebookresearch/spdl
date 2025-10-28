@@ -6,14 +6,10 @@ spdl.io.ImagePackets
 .. autoclass:: ImagePackets
    :members:
 
-   .. rubric:: Methods
-
-   .. autosummary::
-      ~ImagePackets.clone
-
    .. rubric:: Attributes
 
    .. autosummary::
+      ~ImagePackets.clone
       ~ImagePackets.codec
       ~ImagePackets.height
       ~ImagePackets.pix_fmt
