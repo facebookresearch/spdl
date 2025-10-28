@@ -6,9 +6,11 @@
 
 # pyre-unsafe
 
+import unittest
+
 import numpy as np
-import pytest
 import spdl.io
+from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample
 
@@ -24,63 +26,80 @@ def _load_from_frames(frames):
     return spdl.io.to_numpy(buffer)
 
 
-@pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_frames(media_type):
-    """Cloning frames allows to decode twice"""
-    cmd = CMDS[media_type]
-    sample = get_sample(cmd)
+class TestCloneFrames(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("audio",),
+            ("video",),
+            ("image",),
+        ]
+    )
+    def test_clone_frames(self, media_type: str) -> None:
+        """Cloning frames allows to decode twice"""
+        cmd = CMDS[media_type]
+        sample = get_sample(cmd)
 
-    demux_func = {
-        "audio": spdl.io.demux_audio,
-        "video": spdl.io.demux_video,
-        "image": spdl.io.demux_image,
-    }[media_type]
+        if media_type == "audio":
+            frames1 = spdl.io.decode_packets(spdl.io.demux_audio(sample.path))
+        elif media_type == "video":
+            frames1 = spdl.io.decode_packets(spdl.io.demux_video(sample.path))
+        else:  # image
+            frames1 = spdl.io.decode_packets(spdl.io.demux_image(sample.path))
 
-    frames1 = spdl.io.decode_packets(demux_func(sample.path))
-    frames2 = frames1.clone()
+        frames2 = frames1.clone()
 
-    array1 = _load_from_frames(frames1)
-    array2 = _load_from_frames(frames2)
+        array1 = _load_from_frames(frames1)
+        array2 = _load_from_frames(frames2)
 
-    assert np.all(array1 == array2)
+        self.assertTrue(np.all(array1 == array2))
 
+    @parameterized.expand(
+        [
+            ("audio",),
+            ("video",),
+            ("image",),
+        ]
+    )
+    def test_clone_invalid_frames(self, media_type: str) -> None:
+        """Attempt to clone already released frames raises RuntimeError instead of segfault"""
+        cmd = CMDS[media_type]
+        sample = get_sample(cmd)
 
-@pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_invalid_frames(media_type):
-    """Attempt to clone already released frames raises RuntimeError instead of segfault"""
-    cmd = CMDS[media_type]
-    sample = get_sample(cmd)
+        if media_type == "audio":
+            frames = spdl.io.decode_packets(spdl.io.demux_audio(sample.path))
+        elif media_type == "video":
+            frames = spdl.io.decode_packets(spdl.io.demux_video(sample.path))
+        else:  # image
+            frames = spdl.io.decode_packets(spdl.io.demux_image(sample.path))
 
-    demux_func = {
-        "audio": spdl.io.demux_audio,
-        "video": spdl.io.demux_video,
-        "image": spdl.io.demux_image,
-    }[media_type]
+        _ = spdl.io.convert_frames(frames)
+        with self.assertRaises(TypeError):
+            frames.clone()
 
-    frames = spdl.io.decode_packets(demux_func(sample.path))
-    _ = spdl.io.convert_frames(frames)
-    with pytest.raises(TypeError):
-        frames.clone()
+    @parameterized.expand(
+        [
+            ("audio",),
+            ("video",),
+            ("image",),
+        ]
+    )
+    def test_clone_frames_multi(self, media_type: str) -> None:
+        """Can clone multiple times"""
+        cmd = CMDS[media_type]
+        sample = get_sample(cmd)
+        N = 100
 
+        if media_type == "audio":
+            frames = spdl.io.decode_packets(spdl.io.demux_audio(sample.path))
+        elif media_type == "video":
+            frames = spdl.io.decode_packets(spdl.io.demux_video(sample.path))
+        else:  # image
+            frames = spdl.io.decode_packets(spdl.io.demux_image(sample.path))
 
-@pytest.mark.parametrize("media_type", ["audio", "video", "image"])
-def test_clone_frames_multi(media_type):
-    """Can clone multiple times"""
-    cmd = CMDS[media_type]
-    sample = get_sample(cmd)
-    N = 100
+        clones = [frames.clone() for _ in range(N)]
 
-    demux_func = {
-        "audio": spdl.io.demux_audio,
-        "video": spdl.io.demux_video,
-        "image": spdl.io.demux_image,
-    }[media_type]
+        array = _load_from_frames(frames)
+        arrays = [_load_from_frames(c) for c in clones]
 
-    frames = spdl.io.decode_packets(demux_func(sample.path))
-    clones = [frames.clone() for _ in range(N)]
-
-    array = _load_from_frames(frames)
-    arrays = [_load_from_frames(c) for c in clones]
-
-    for i in range(N):
-        assert np.all(array == arrays[i])
+        for i in range(N):
+            self.assertTrue(np.all(array == arrays[i]))
