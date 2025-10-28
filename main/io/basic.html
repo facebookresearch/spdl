@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Decoding Process Overview" href="decoding_overview.html" /><link rel="prev" title="IO Module" href="index.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Introduction to Async - SPDL 0.1.6 documentation</title>
+        <title>High-Level Loading Functions - SPDL 0.1.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.1.6 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.1.7 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.1.6 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.1.7 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -214,25 +214,36 @@
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="intro.html">Building and Running Pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stages.html">Pipeline Stages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="concurrency.html">Concurrency</a></li>
-<li class="toctree-l2"><a class="reference internal" href="parallelism.html">Pipeline Parallelism</a></li>
-<li class="toctree-l2"><a class="reference internal" href="logging.html">Collecting Runtime Statistics</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/intro.html">Building and Running Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/stages.html">Pipeline Stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/parallelism.html">Pipeline Parallelism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/logging.html">Collecting Runtime Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing Orchestration Mechanism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing an Orchestration Mechanism</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/event_loop.html">The Event Loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/sync.html">Running Synchronous Functions</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">IO Module</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">High-Level Loading Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decoding_overview.html">Decoding Process Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filtering.html">Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_filtering.html">Advanced Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="numpy_arrays.html">Loading NumPy Arrays</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/setup.html">Composition of Pipeline</a></li>
@@ -242,20 +253,20 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../generated/image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/imagenet_classification.html">Imagenet classification</a></li>
@@ -263,19 +274,16 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/streaming_nvdec_decoding.html">Streaming nvdec decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/streaming_video_processing.html">Streaming video processing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/performance_analysis.html">Performance analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../generated/data_formats.html">Data formats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/hydra_integration.html">Hydra integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_definitions.html">Pipeline definitions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_profiling.html">Pipeline profiling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_wav.html">Benchmark wav</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -285,10 +293,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.utils.html">spdl.io.utils</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -395,8 +403,10 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 </ul>
 </li>
 </ul>
@@ -419,6 +429,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.4">0.1.4</a></li>
@@ -452,7 +463,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/getting_started/async.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/io/basic.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -472,227 +483,280 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="introduction-to-async">
-<h1>Introduction to Async<a class="headerlink" href="#introduction-to-async" title="Link to this heading">¶</a></h1>
-<p>Asynchronous operations (a.k.a. async I/O) are the foundation of SPDL,
-but many ML practitioners are not familiar with such programming paradigm.</p>
-<p>For advancced usage of SPDL, it is often necessary to use async IO,
-but care must be taken as inproper usage can slow down the whole system.</p>
-<p>In this section, we share our view of what problem async I/O solves and how
-it evolved from concurrent programming in synchronous domain, in the hope
-it helps you understand how async I/O (thus the internal of SPDL pipeline)
-works and it lets you take advantage of it.</p>
-<section id="concurrent-execution-and-future">
-<h2>Concurrent execution and Future<a class="headerlink" href="#concurrent-execution-and-future" title="Link to this heading">¶</a></h2>
-<p>Let’s say, we have multiple tasks that we want to complete as soon as possible.
-(For the sake of simplicity, let’s pretend that the tasks are independent each
-other so we don’t need to think about synchronization and such.)</p>
-<p>There are multiple ways to conccurently process them.
-Python’s <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#module-concurrent.futures" title="(in Python v3.14)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">concurrent.futures</span></code></a> module offers
-<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code></a> and <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code></a>.
-There are different constraints when using multi-threading and multi-processing,
-but that is not the main concern here, and we will come back to that later.</p>
-<p>The steps to run tasks with thread/process pool executor are as following.</p>
-<ol class="arabic simple">
-<li><p>Submit a task to the executor.</p></li>
-<li><p>Wait for the task to complete.</p></li>
-<li><p>Check whether the job succeeded or not.</p></li>
-</ol>
-<p>The following code snippet† illustrates this</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># 0. Create a thread pool executor. †</span>
-<span class="n">executor</span> <span class="o">=</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=...</span><span class="p">)</span>
+          <section id="high-level-loading-functions">
+<h1>High-Level Loading Functions<a class="headerlink" href="#high-level-loading-functions" title="Link to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>To load audio/video/image data from a file or in-memory buffer, you can use the following high-level functions:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../generated/spdl.io.load_audio.html#spdl.io.load_audio" title="spdl.io.load_audio"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_audio()</span></code></a></p></li>
+<li><p><a class="reference internal" href="../generated/spdl.io.load_video.html#spdl.io.load_video" title="spdl.io.load_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_video()</span></code></a></p></li>
+<li><p><a class="reference internal" href="../generated/spdl.io.load_image.html#spdl.io.load_image" title="spdl.io.load_image"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_image()</span></code></a></p></li>
+</ul>
+<p>These functions provide a simple interface that handles the entire decoding pipeline internally.
+They return a <a class="reference internal" href="../generated/spdl.io.CPUBuffer.html#spdl.io.CPUBuffer" title="spdl.io.CPUBuffer"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.io.CPUBuffer</span></code></a> or <a class="reference internal" href="../generated/spdl.io.CUDABuffer.html#spdl.io.CUDABuffer" title="spdl.io.CUDABuffer"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.io.CUDABuffer</span></code></a> object containing the decoded data as a contiguous memory region.</p>
+</section>
+<section id="basic-usage">
+<h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
+<section id="loading-audio">
+<h3>Loading Audio<a class="headerlink" href="#loading-audio" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
 
-<span class="c1"># 1. Submit a task</span>
-<span class="n">future</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="c1"># Load from file with minimum input</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_audio</span><span class="p">(</span><span class="s2">&quot;audio.mp3&quot;</span><span class="p">)</span>
 
-<span class="c1"># 2. Wait for the task to complete.</span>
-<span class="c1"># The code can do other things meanwhile.</span>
-<span class="o">...</span>
+<span class="c1"># The buffer can be converted to different array types</span>
 
-<span class="c1"># 3. Attend to the completion and check the result.</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
-<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-    <span class="c1"># Task failed</span>
-    <span class="o">...</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="c1"># Task succeeded</span>
-    <span class="o">...</span>
+<span class="c1"># NumPy array</span>
+<span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>  <span class="c1"># shape: (time, channel), dtype: float32</span>
+
+<span class="c1"># PyTorch tensor</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+
+<span class="c1"># JAX array</span>
+<span class="n">jax_array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_jax</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+
+<span class="c1"># Load from bytes</span>
+<span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="n">download_from_remote_storage</span><span class="p">(</span><span class="s2">&quot;audio.mp3&quot;</span><span class="p">)</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_audio</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+<span class="c1"># Load specific time window</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_audio</span><span class="p">(</span><span class="s2">&quot;audio.wav&quot;</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">))</span>  <span class="c1"># 5-10 seconds</span>
+</pre></div>
+</div>
+</section>
+<section id="loading-video">
+<h3>Loading Video<a class="headerlink" href="#loading-video" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+
+<span class="c1"># Load from file with minimum input</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_video</span><span class="p">(</span><span class="s2">&quot;video.mp4&quot;</span><span class="p">)</span>
+
+<span class="c1"># The buffer can be converted to different array types</span>
+
+<span class="c1"># NumPy array</span>
+<span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>  <span class="c1"># shape: (time, height, width, channel), dtype: uint8</span>
+
+<span class="c1"># PyTorch tensor</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+
+<span class="c1"># JAX array</span>
+<span class="n">jax_array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_jax</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+
+<span class="c1"># Load from URL</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_video</span><span class="p">(</span><span class="s2">&quot;https://example.com/video.mp4&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load specific time window</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_video</span><span class="p">(</span><span class="s2">&quot;video.mp4&quot;</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">))</span>  <span class="c1"># First 5 seconds</span>
+</pre></div>
+</div>
+</section>
+<section id="loading-image">
+<h3>Loading Image<a class="headerlink" href="#loading-image" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+
+<span class="c1"># Load from file with minimum input</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_image</span><span class="p">(</span><span class="s2">&quot;image.jpg&quot;</span><span class="p">)</span>
+
+<span class="c1"># The buffer can be converted to different array types</span>
+
+<span class="c1"># NumPy array</span>
+<span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>  <span class="c1"># shape: (height, width, channel), dtype: uint8</span>
+
+<span class="c1"># PyTorch tensor</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+
+<span class="c1"># JAX array</span>
+<span class="n">jax_array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_jax</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+
+<span class="c1"># Load from bytes</span>
+<span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="n">download_from_remote_storage</span><span class="p">(</span><span class="s2">&quot;image.png&quot;</span><span class="p">)</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="buffer-objects">
+<h2>Buffer Objects<a class="headerlink" href="#buffer-objects" title="Link to this heading">¶</a></h2>
+<p>The buffer objects returned by the loading functions implement standard array interface protocols:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.interface.html">The array interface protocol</a> for CPU buffers</p></li>
+<li><p><a class="reference external" href="https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html">The CUDA array interface</a> for CUDA buffers</p></li>
+</ul>
+<p>This allows zero-copy conversion to commonly used array classes.</p>
+<p>SPDL provides the following conversion functions:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../generated/spdl.io.to_numpy.html#spdl.io.to_numpy" title="spdl.io.to_numpy"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.to_numpy()</span></code></a> (CPU only)</p></li>
+<li><p><a class="reference internal" href="../generated/spdl.io.to_torch.html#spdl.io.to_torch" title="spdl.io.to_torch"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.to_torch()</span></code></a></p></li>
+<li><p><a class="reference internal" href="../generated/spdl.io.to_jax.html#spdl.io.to_jax" title="spdl.io.to_jax"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.to_jax()</span></code></a> (CPU only)</p></li>
+<li><p><a class="reference internal" href="../generated/spdl.io.to_numba.html#spdl.io.to_numba" title="spdl.io.to_numba"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.to_numba()</span></code></a></p></li>
+</ul>
+</section>
+<section id="default-output-formats">
+<h2>Default Output Formats<a class="headerlink" href="#default-output-formats" title="Link to this heading">¶</a></h2>
+<p>By default, the loading functions produce the following formats:</p>
+<p><strong>Audio:</strong></p>
+<ul class="simple">
+<li><p>Sample format: 32-bit floating point (<code class="docutils literal notranslate"><span class="pre">float32</span></code>)</p></li>
+<li><p>Channel layout: Interleaved (channel-last)</p></li>
+<li><p>Shape: <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">channel)</span></code></p></li>
+</ul>
+<p><strong>Video:</strong></p>
+<ul class="simple">
+<li><p>Pixel format: RGB24 (interleaved)</p></li>
+<li><p>Layout: <code class="docutils literal notranslate"><span class="pre">NHWC</span></code> where <code class="docutils literal notranslate"><span class="pre">N</span></code> is time, <code class="docutils literal notranslate"><span class="pre">C=3</span></code> (RGB)</p></li>
+<li><p>Shape: <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">height,</span> <span class="pre">width,</span> <span class="pre">channel)</span></code></p></li>
+<li><p>Data type: <code class="docutils literal notranslate"><span class="pre">uint8</span></code></p></li>
+</ul>
+<p><strong>Image:</strong></p>
+<ul class="simple">
+<li><p>Pixel format: RGB24 (interleaved)</p></li>
+<li><p>Layout: <code class="docutils literal notranslate"><span class="pre">HWC</span></code> where <code class="docutils literal notranslate"><span class="pre">C=3</span></code> (RGB)</p></li>
+<li><p>Shape: <code class="docutils literal notranslate"><span class="pre">(height,</span> <span class="pre">width,</span> <span class="pre">channel)</span></code></p></li>
+<li><p>Data type: <code class="docutils literal notranslate"><span class="pre">uint8</span></code></p></li>
+</ul>
+</section>
+<section id="customizing-output-format">
+<h2>Customizing Output Format<a class="headerlink" href="#customizing-output-format" title="Link to this heading">¶</a></h2>
+<p>You can customize the output format by providing a <code class="docutils literal notranslate"><span class="pre">filter_desc</span></code> parameter.
+SPDL provides helper functions to construct filter descriptions:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../generated/spdl.io.get_audio_filter_desc.html#spdl.io.get_audio_filter_desc" title="spdl.io.get_audio_filter_desc"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.get_audio_filter_desc()</span></code></a> - For audio preprocessing</p></li>
+<li><p><a class="reference internal" href="../generated/spdl.io.get_video_filter_desc.html#spdl.io.get_video_filter_desc" title="spdl.io.get_video_filter_desc"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.get_video_filter_desc()</span></code></a> - For video and image preprocessing</p></li>
+<li><p><a class="reference internal" href="../generated/spdl.io.get_filter_desc.html#spdl.io.get_filter_desc" title="spdl.io.get_filter_desc"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.get_filter_desc()</span></code></a> - For advanced custom filters</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="../generated/spdl.io.get_video_filter_desc.html#spdl.io.get_video_filter_desc" title="spdl.io.get_video_filter_desc"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.get_video_filter_desc()</span></code></a> can be used for both image and video loading.</p>
+</div>
+<p>These helper functions allow you to specify common preprocessing operations such as:</p>
+<ul class="simple">
+<li><p>Resampling/rescaling</p></li>
+<li><p>Format conversion</p></li>
+<li><p>Cropping</p></li>
+<li><p>Frame rate adjustment</p></li>
+<li><p>Trimming to specific number of frames/samples</p></li>
+</ul>
+<p>For detailed information about custom filter creation, see <a class="reference internal" href="filtering.html"><span class="doc">Filter Graphs</span></a>.</p>
+<section id="custom-audio-format-example">
+<h3>Custom Audio Format Example<a class="headerlink" href="#custom-audio-format-example" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+
+<span class="c1"># Resample to 16kHz, convert to mono, change format to 16-bit signed integer</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_audio</span><span class="p">(</span>
+    <span class="s2">&quot;audio.wav&quot;</span><span class="p">,</span>
+    <span class="n">filter_desc</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_audio_filter_desc</span><span class="p">(</span>
+        <span class="n">sample_rate</span><span class="o">=</span><span class="mi">16_000</span><span class="p">,</span>
+        <span class="n">num_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">sample_fmt</span><span class="o">=</span><span class="s2">&quot;s16p&quot;</span><span class="p">,</span>
+        <span class="n">num_frames</span><span class="o">=</span><span class="mi">80_000</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="custom-video-format-example">
+<h3>Custom Video Format Example<a class="headerlink" href="#custom-video-format-example" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+
+<span class="c1"># Resize to 256x256, then crop to 224x224, adjust frame rate to 30fps</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_video</span><span class="p">(</span>
+    <span class="s2">&quot;video.mp4&quot;</span><span class="p">,</span>
+    <span class="n">filter_desc</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_video_filter_desc</span><span class="p">(</span>
+        <span class="n">frame_rate</span><span class="o">=</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>  <span class="c1"># 30 fps as (numerator, denominator)</span>
+        <span class="n">scale_width</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+        <span class="n">scale_height</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+        <span class="n">scale_algo</span><span class="o">=</span><span class="s1">&#39;bicubic&#39;</span><span class="p">,</span>
+        <span class="n">crop_width</span><span class="o">=</span><span class="mi">224</span><span class="p">,</span>
+        <span class="n">crop_height</span><span class="o">=</span><span class="mi">224</span><span class="p">,</span>
+        <span class="n">num_frames</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="custom-image-format-example">
+<h3>Custom Image Format Example<a class="headerlink" href="#custom-image-format-example" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+
+<span class="c1"># Note: get_video_filter_desc works for images too</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_image</span><span class="p">(</span>
+    <span class="s2">&quot;image.jpg&quot;</span><span class="p">,</span>
+    <span class="n">filter_desc</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">get_video_filter_desc</span><span class="p">(</span>
+        <span class="n">scale_width</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+        <span class="n">scale_height</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+        <span class="n">crop_width</span><span class="o">=</span><span class="mi">224</span><span class="p">,</span>
+        <span class="n">crop_height</span><span class="o">=</span><span class="mi">224</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="transferring-to-gpu">
+<h2>Transferring to GPU<a class="headerlink" href="#transferring-to-gpu" title="Link to this heading">¶</a></h2>
+<p>High-level loading functions accept a <code class="docutils literal notranslate"><span class="pre">device_config</span></code> parameter to automatically transfer decoded data to GPU:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+
+<span class="c1"># Create GPU device configuration</span>
+<span class="n">cuda_config</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">cuda_config</span><span class="p">(</span><span class="n">device_index</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Audio</span>
+<span class="n">audio_buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_audio</span><span class="p">(</span><span class="s2">&quot;audio.mp3&quot;</span><span class="p">,</span> <span class="n">device_config</span><span class="o">=</span><span class="n">cuda_config</span><span class="p">)</span>
+<span class="n">audio_tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">audio_buffer</span><span class="p">)</span>  <span class="c1"># CUDA tensor</span>
+
+<span class="c1"># Video</span>
+<span class="n">video_buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_video</span><span class="p">(</span><span class="s2">&quot;video.mp4&quot;</span><span class="p">,</span> <span class="n">device_config</span><span class="o">=</span><span class="n">cuda_config</span><span class="p">)</span>
+<span class="n">video_tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">video_buffer</span><span class="p">)</span>  <span class="c1"># CUDA tensor</span>
+
+<span class="c1"># Image</span>
+<span class="n">image_buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_image</span><span class="p">(</span><span class="s2">&quot;image.jpg&quot;</span><span class="p">,</span> <span class="n">device_config</span><span class="o">=</span><span class="n">cuda_config</span><span class="p">)</span>
+<span class="n">image_tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">image_buffer</span><span class="p">)</span>  <span class="c1"># CUDA tensor</span>
 </pre></div>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>When using executor, it is advised to use a context manager to
-properly shutdown it.
-Here, it is omitted for brevity.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">device_config</span></code> parameter performs CPU decoding followed by GPU transfer.
+It does <strong>not</strong> use hardware-accelerated video decoding.</p>
+<p>For hardware-accelerated video decoding using NVIDIA’s NVDEC hardware decoder, see <a class="reference internal" href="gpu_decoding.html"><span class="doc">Hardware-Accelerated Video Decoding</span></a>.</p>
 </div>
-<p>It uses a thread to execute the task and the main thread waits its completion.</p>
-<a class="reference internal image-reference" href="../_images/concurrent_1.png"><img alt="../_images/concurrent_1.png" src="../_images/concurrent_1.png" style="width: 180px;" />
-</a>
-</section>
-<section id="difficulty-with-composing-futures">
-<h2>Difficulty with composing futures<a class="headerlink" href="#difficulty-with-composing-futures" title="Link to this heading">¶</a></h2>
-<p>Now let’s try to make the scenario closer to the real-world application; concurrent
-task execution. It reveals many awkwardness when we aim to achieve high throughput
-with more than one concurrency.</p>
-</section>
-<section id="pipelining-attempt">
-<h2>Pipelining Attempt<a class="headerlink" href="#pipelining-attempt" title="Link to this heading">¶</a></h2>
-<p>Since data loading is composed of operations with different bounding factors
-(such as network bandwidth, compute resource, and memory bandwidth),
-we want to split the data loading procedure into small units and pipeline them.</p>
-<p>We can extend the previous example by attaching the next step when the task
-completed successfully.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">future1</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fn1</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">result1</span> <span class="o">=</span> <span class="n">future1</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
-<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-    <span class="o">...</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="n">future2</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fn2</span><span class="p">,</span> <span class="n">result1</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">result2</span> <span class="o">=</span> <span class="n">future2</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
-    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-        <span class="o">...</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">future3</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fn3</span><span class="p">,</span> <span class="n">result2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">result3</span> <span class="o">=</span> <span class="n">future3</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="o">...</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="o">...</span>
-</pre></div>
-</div>
-<p>The cyclomatic complexity of the code increased a lot.
-It resembles the notorious issue of callback hell, which was quite common
-in JavaScript before the invention of promise chaining and async/await.
-(In fact, this tutorial is reliving the evolution of asynchronous
-programming paradigm, though we skip the intermediate and go straight to async I/O)</p>
-<p>If we squash error handlings, then this could be simplified
-like the following, which makes it easy to see the more fundamental issue.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
-    <span class="n">future1</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task1</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-    <span class="n">result1</span> <span class="o">=</span> <span class="n">future1</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>  <span class="c1"># blocking</span>
-    <span class="n">future2</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task2</span><span class="p">,</span> <span class="n">result1</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-    <span class="n">result2</span> <span class="o">=</span> <span class="n">future2</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>  <span class="c1"># blocking</span>
-    <span class="n">future3</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task3</span><span class="p">,</span> <span class="n">result2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-    <span class="n">result3</span> <span class="o">=</span> <span class="n">future3</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>  <span class="c1"># blocking</span>
-<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-    <span class="o">...</span>
-</pre></div>
-</div>
-<p>We need to attend to the comletion with <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future.result" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Future.result()</span></code></a> method,
-but since this method is blocking, at most only one such apprach can be used at a time.
-In other words, even when we wrap this code into a function, we cannot execute multiple
-of it concurrently.</p>
-<p>So we are not really executing tasks concurrently.</p>
-<a class="reference internal image-reference" href="../_images/concurrent_2.png"><img alt="../_images/concurrent_2.png" src="../_images/concurrent_2.png" style="width: 180px;" />
-</a>
-</section>
-<section id="running-multiple-pipelines">
-<h2>Running multiple pipelines<a class="headerlink" href="#running-multiple-pipelines" title="Link to this heading">¶</a></h2>
-<p>If we want to process multiple tasks concurrently, we can submit multiple tasks as follow.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">futures</span> <span class="o">=</span> <span class="p">[</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
-</pre></div>
-</div>
-<p>This code snippet may look like a simple extension of the original one, but this change
-introduces many complications.</p>
-<p>The first concern is execution time. We cannot assume that the tasks complete in
-the order they are scheduled. To maximize the throughput of the pipeline, we want to
-react to the tasks in the order they complete, and as soon as possible.</p>
-<p>Fortunately, there is a out-of-box solution for this.
-The <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.wait" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">concurrent.futures.wait()</span></code></a> function can attend to multiple of
-<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.futures.Future</span></code></a> objects and return when one of them is completed.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">futures</span> <span class="o">=</span> <span class="p">{</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task</span><span class="o">...</span><span class="p">)</span> <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">}</span>
+<section id="custom-memory-allocators">
+<span id="custom-allocators"></span><h3>Custom Memory Allocators<a class="headerlink" href="#custom-memory-allocators" title="Link to this heading">¶</a></h3>
+<p>For better integration with PyTorch or other frameworks, you can specify custom memory allocators
+via the <code class="docutils literal notranslate"><span class="pre">allocator</span></code> parameter in <a class="reference internal" href="../generated/spdl.io.cuda_config.html#spdl.io.cuda_config" title="spdl.io.cuda_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.cuda_config()</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
-<span class="k">while</span> <span class="n">futures</span><span class="p">:</span>
-    <span class="n">done</span><span class="p">,</span> <span class="n">futures</span> <span class="o">=</span> <span class="n">wait</span><span class="p">(</span><span class="n">futures</span><span class="p">,</span> <span class="n">return_when</span><span class="o">=</span><span class="n">FIRST_COMPLETED</span><span class="p">)</span>
+<span class="c1"># Use PyTorch&#39;s caching allocator</span>
+<span class="n">cuda_config</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">cuda_config</span><span class="p">(</span>
+    <span class="n">device_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">allocator</span><span class="o">=</span><span class="p">(</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">caching_allocator_alloc</span><span class="p">,</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">caching_allocator_delete</span>
+    <span class="p">)</span>
+<span class="p">)</span>
 
-    <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">done</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="c1"># A task failed</span>
-            <span class="o">...</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># A task succeeded</span>
-            <span class="o">...</span>
+<span class="c1"># Load and transfer using PyTorch&#39;s allocator</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_video</span><span class="p">(</span><span class="s2">&quot;video.mp4&quot;</span><span class="p">,</span> <span class="n">device_config</span><span class="o">=</span><span class="n">cuda_config</span><span class="p">)</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_torch</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+<span class="c1"># Memory is managed by PyTorch&#39;s allocator</span>
 </pre></div>
 </div>
-<img alt="../_images/concurrent_3.png" src="../_images/concurrent_3.png" />
-<p>Now, let’s try to build pipeline on top of it.
-Say the tasks we invoked in the previous example represent the first step
-of data loading pipeline, we can invoke the next step when they succeed.</p>
-<p>Say we have some magical helper function <code class="docutils literal notranslate"><span class="pre">get_next_task</span></code> which returns
-a function for the next stage, and <code class="docutils literal notranslate"><span class="pre">None</span></code> if there is no next stage.</p>
-<p>We can extend the pipeline like the following.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">futures</span> <span class="o">=</span> <span class="p">{</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task</span><span class="o">...</span><span class="p">)</span> <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">}</span>
-
-<span class="k">while</span> <span class="n">futures</span><span class="p">:</span>
-    <span class="n">done</span><span class="p">,</span> <span class="n">futures</span> <span class="o">=</span> <span class="n">wait</span><span class="p">(</span><span class="n">tasks</span><span class="p">,</span> <span class="n">return_when</span><span class="o">=</span><span class="n">FIRST_COMPLETED</span><span class="p">)</span>
-
-    <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">done</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="c1"># A task failed</span>
-            <span class="o">...</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># A task succeed</span>
-            <span class="c1"># Check and fetch the next stage</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">task_fn</span> <span class="o">:=</span> <span class="n">get_next_task</span><span class="p">(</span><span class="n">result</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># Invoke</span>
-                <span class="n">future</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task_fn</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
-                <span class="n">futures</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
-</pre></div>
+<p><strong>Benefits of custom allocators:</strong></p>
+<ul class="simple">
+<li><p>Unified memory management with your framework</p></li>
+<li><p>Better memory pooling and reuse</p></li>
+<li><p>Reduced memory fragmentation</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Custom allocators work with all GPU operations in SPDL, including hardware-accelerated
+video decoding. See <a class="reference internal" href="gpu_decoding.html"><span class="doc">Hardware-Accelerated Video Decoding</span></a> for more details.</p>
 </div>
-<img alt="../_images/concurrent_4.png" src="../_images/concurrent_4.png" />
-<p>This approach accomplishes the basic pipelining, but it only runs the pipeline
-for the items submitted at the beginning. We want to start running pipelines for
-more items as the current ones complete.
-We also want to assign different concurrency for different stages.
-For example, GPUs do not supoprt transfering multiple data concurrently so
-we want to have at most one transfer task anytime.
-It is not straightforward to add such features.</p>
 </section>
-<section id="the-event-loop">
-<h2>The event loop<a class="headerlink" href="#the-event-loop" title="Link to this heading">¶</a></h2>
-<p>We can keep going, but let’s pause here and look at what we have.
-Even though our code is not feature-complete, it is already complex
-and likely maintaining it is error-prune.</p>
-<p>One intersting aspect of the code is that it is task-agnostic.
-The task functions are usually provided by library users.
-There is nothing specific about the task being handled.</p>
-<p>From the perspective of performance, we need to make sure that this code does
-not introduce any delay. The code we have here is all about orchestrating the
-user-provided functions, and it needs to be efficiently.</p>
-<p>This is a very common problem, especially when building server-type system.
-The programming paradigm has evolved to solve this, and async I/O is one of them.</p>
-<p>In async I/O, there is a notion of event loop, which does a similar thing
-as the code snippet we saw, but more efficiently and provides more flexibility.
-The event loop is responsible for <strong>scheduling tasks</strong> and
-<strong>reacting when a task completes</strong>.</p>
-<p>The following diagram is our attempt at depicting the features of event loop
-in a similar flow chart as before.</p>
-<img alt="_static/data/event_loop.png" src="_static/data/event_loop.png" />
-<p>The event loop does not wait for a particular future to complete, instead,
-it is notified when one completes, and reacts to it.</p>
-<p>It supports complex execution flow like branching to multiple tasks and
-waiting for multiple tasks.
-The later involves waiting for a particular task explicitly.</p>
-<p>The event loop is generic in the sense that the way it starts tasks
-and reacts to the completion follows the Future-like object protocol
-(i.e. the <code class="docutils literal notranslate"><span class="pre">__await__</span></code> method [<a class="reference external" href="https://peps.python.org/pep-0492/#await-expression">ref</a>]).
-There is no constraints for the implementation of <code class="docutils literal notranslate"><span class="pre">__await__</span></code> that
-necessitates the use of multi-threading or multi-processing, but it is
-possible to convert <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.futures.Future</span></code></a> objects
-into awaitable (<a class="reference external" href="https://docs.python.org/3/library/asyncio-future.html#asyncio.Future" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">asyncio.Future</span></code></a>), meaning that it is possible
-to execute synchronous function as asynchronous function by using
-multi-threading or multi-processing.</p>
-</section>
-<section id="the-async-and-await-keywords">
-<h2>The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords<a class="headerlink" href="#the-async-and-await-keywords" title="Link to this heading">¶</a></h2>
 </section>
 </section>
 
@@ -701,8 +765,26 @@ multi-threading or multi-processing.</p>
       <footer>
         
         <div class="related-pages">
-          
-          
+          <a class="next-page" href="decoding_overview.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Decoding Process Overview</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">IO Module</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -733,13 +815,26 @@ multi-threading or multi-processing.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Introduction to Async</a><ul>
-<li><a class="reference internal" href="#concurrent-execution-and-future">Concurrent execution and Future</a></li>
-<li><a class="reference internal" href="#difficulty-with-composing-futures">Difficulty with composing futures</a></li>
-<li><a class="reference internal" href="#pipelining-attempt">Pipelining Attempt</a></li>
-<li><a class="reference internal" href="#running-multiple-pipelines">Running multiple pipelines</a></li>
-<li><a class="reference internal" href="#the-event-loop">The event loop</a></li>
-<li><a class="reference internal" href="#the-async-and-await-keywords">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
+<li><a class="reference internal" href="#">High-Level Loading Functions</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#basic-usage">Basic Usage</a><ul>
+<li><a class="reference internal" href="#loading-audio">Loading Audio</a></li>
+<li><a class="reference internal" href="#loading-video">Loading Video</a></li>
+<li><a class="reference internal" href="#loading-image">Loading Image</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#buffer-objects">Buffer Objects</a></li>
+<li><a class="reference internal" href="#default-output-formats">Default Output Formats</a></li>
+<li><a class="reference internal" href="#customizing-output-format">Customizing Output Format</a><ul>
+<li><a class="reference internal" href="#custom-audio-format-example">Custom Audio Format Example</a></li>
+<li><a class="reference internal" href="#custom-video-format-example">Custom Video Format Example</a></li>
+<li><a class="reference internal" href="#custom-image-format-example">Custom Image Format Example</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#transferring-to-gpu">Transferring to GPU</a><ul>
+<li><a class="reference internal" href="#custom-memory-allocators">Custom Memory Allocators</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -752,7 +847,7 @@ multi-threading or multi-processing.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=79d558ae"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=d0952cc8"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.pipeline.iterate_in_subprocess - SPDL 0.1.6 documentation</title>
+        <title>spdl.pipeline.iterate_in_subprocess - SPDL 0.1.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.1.6 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.1.7 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.1.6 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.1.7 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -223,16 +223,27 @@
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/parallelism.html">Pipeline Parallelism</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/logging.html">Collecting Runtime Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing Orchestration Mechanism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing an Orchestration Mechanism</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/event_loop.html">The Event Loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/sync.html">Running Synchronous Functions</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../io/basic.html">High-Level Loading Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/decoding_overview.html">Decoding Process Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/filtering.html">Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/setup.html">Composition of Pipeline</a></li>
@@ -242,20 +253,20 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="imagenet_classification.html">Imagenet classification</a></li>
@@ -263,19 +274,16 @@
 <li class="toctree-l2"><a class="reference internal" href="streaming_nvdec_decoding.html">Streaming nvdec decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="streaming_video_processing.html">Streaming video processing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="performance_analysis.html">Performance analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data_formats.html">Data formats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="hydra_integration.html">Hydra integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pipeline_definitions.html">Pipeline definitions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pipeline_profiling.html">Pipeline profiling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="benchmark_wav.html">Benchmark wav</a></li>
-<li class="toctree-l2"><a class="reference internal" href="benchmark_tarfile.html">Benchmark tarfile</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -285,10 +293,10 @@
 <li class="toctree-l2"><a class="reference internal" href="spdl.io.utils.html">spdl.io.utils</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -395,8 +403,10 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 </ul>
 </li>
 </ul>
@@ -419,6 +429,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.4">0.1.4</a></li>
@@ -476,7 +487,7 @@
 <h1>spdl.pipeline.iterate_in_subprocess<a class="headerlink" href="#spdl-pipeline-iterate-in-subprocess" title="Link to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.pipeline.iterate_in_subprocess">
-<span class="sig-name descname"><span class="pre">iterate_in_subprocess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initializer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mp_context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">daemon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L450-L602"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.iterate_in_subprocess" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">iterate_in_subprocess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initializer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mp_context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">daemon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_subprocess.py?#L100-L157"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.iterate_in_subprocess" title="Link to this definition">¶</a></dt>
 <dd><p><strong>[Experimental]</strong> Run the given <code class="docutils literal notranslate"><span class="pre">iterable</span></code> in a subprocess.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -506,261 +517,9 @@ any item for this amount of time, the process is terminated.</p></li>
 <li><p><a class="reference internal" href="spdl.pipeline.run_pipeline_in_subprocess.html#spdl.pipeline.run_pipeline_in_subprocess" title="spdl.pipeline.run_pipeline_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_pipeline_in_subprocess()</span></code></a> for runinng a <a class="reference internal" href="spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> in
 a subprocess</p></li>
 <li><p><a class="reference internal" href="../case_studies/parallelism.html#parallelism-performance"><span class="std std-ref">Parallelism and Performance</span></a> for the context in which this function was created.</p></li>
+<li><p><a class="reference internal" href="../notes/remote_iterable_protocol.html"><span class="doc">Remote Iterable Protocol</span></a> for implementation details</p></li>
 </ul>
 </div>
-<section id="implementation-detail">
-<h2>Implementation Detail<a class="headerlink" href="#implementation-detail" title="Link to this heading">¶</a></h2>
-<p>Manipulting an iterable object in a subprocess requires somewhat elaborated state
-control.
-The following section go over the implementation detail.</p>
-<p><strong>Wroker State</strong></p>
-<p>The iterable object is manipulated in the worker process.
-The worker process has three states, “Initialization”, “Stand By” and “Iteration”.
-The Initialization state performs global initialization and create the iterable object.
-When the Initialization completes, the worker transition to Stand By mode, where
-it waits for a command from the parent process. The command can be “START_ITERATION”
-or “ABORT”.
-When the “START_ITERATION” is received, the worker process transition to the
-Iteration mode. In the Iteration mode, the worker creates an iterator object from
-the iterable, then executes it.
-The resulting data are put in the queue, which the parent process is watching.</p>
-<p>The following diagram illustrates worker’s state transition in simplified manner.
-Detailed diagram alongside the actual implementation is found in
-<code class="xref py py-func docutils literal notranslate"><span class="pre">_execute_iterable()</span></code>.</p>
-<div class="mermaid">
-            stateDiagram-v2
- state Parent {
-     p1: Start Iteration
-     p2: Iterate on the result
-     state pf &lt;&lt;fork&gt;&gt;
-     state pj &lt;&lt;join&gt;&gt;
-
-     [*] --&gt; p1
-     p1 --&gt; pf
-     pf --&gt; pj: Wait for worker process
-     pj --&gt;  p2
-     p2 --&gt; [*]
- }
-
- state Worker {
-     state wf &lt;&lt;fork&gt;&gt;
-     w0: Initialization
-     w1: Stand By
-     w2: Iteration
-
-     [*]--&gt; w0
-     w0 --&gt; w1: Success
-     w0 --&gt; [*]: Fail
-     w1 --&gt; wf: Iteration started
-     wf --&gt; w2
-     w2 --&gt; w1: Iteration completed
-
-     w1 --&gt; [*]: Abort
-     w2 --&gt; [*]: Fail / Abort
- }
- pf --&gt; w1: Issue START_ITERATION command
- wf --&gt; pj: Notify ITERATION_STARTED
- w2 --&gt; p2: Results passed via queue
-        </div><section id="helper-functions-and-data-structures">
-<h3>Helper functions and data structures<a class="headerlink" href="#helper-functions-and-data-structures" title="Link to this heading">¶</a></h3>
-<p>The follosing functions and data structures are used to implement the
-<a class="reference internal" href="#spdl.pipeline.iterate_in_subprocess" title="spdl.pipeline.iterate_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">iterate_in_subprocess()</span></code></a> function.
-They are not public interface, but the logic is sufficiently elaborated,
-and it is helpful to have them in the documentation, so they are listed here.</p>
-<dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_Cmd</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L34-L62"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Command issued from the parent process to the worker process in
-<a class="reference internal" href="#spdl.pipeline.iterate_in_subprocess" title="spdl.pipeline.iterate_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">iterate_in_subprocess()</span></code></a>.</p>
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">ABORT</span></span></dt>
-<dd><p>Instruct the worker process to abort and exit.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">START_ITERATION</span></span></dt>
-<dd><p>Instruct the worker process to start the iteration.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">STOP_ITERATION</span></span></dt>
-<dd><p>Instruct the worker process to stop the ongoing iteration,
-and go back to the stand-by mode.</p>
-<p>If the worker process receive this command in stand-by mode,
-it is sliently ignored.
-(This allows the parent process to be sure that the worker process is
-in the stand-by mode or failure mode, and not in iteration mode.)</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_Status</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L66-L114"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Status reported by the worker process in <a class="reference internal" href="#spdl.pipeline.iterate_in_subprocess" title="spdl.pipeline.iterate_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">iterate_in_subprocess()</span></code></a>.</p>
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">INITIALIZATION_FAILED</span></span></dt>
-<dd><p>Initialization (global, or creation of iterable) failed.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">INITIALIZATION_SUCCEEDED</span></span></dt>
-<dd><p>Initialization succeeded.
-The worker process is transitioning to stand-by mode.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">ITERATION_FINISHED</span></span></dt>
-<dd><p>The worker finished an iteration, transitioning back to the stand-by mode.</p>
-<p>Note that this will be sent in both cases where the the iterator exhausted
-or the parent process issued <code class="docutils literal notranslate"><span class="pre">STOP_ITERATION</span></code> command.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">ITERATION_STARTED</span></span></dt>
-<dd><p>The worker is transitioning to iteration mode.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">ITERATOR_FAILED</span></span></dt>
-<dd><p>There was an error in an iteration step.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">ITERATOR_SUCCESS</span></span></dt>
-<dd><p>One step of iteration has been succeeded.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">UNEXPECTED_CMD_RECIEVED</span></span></dt>
-<dd><p>Received a command unexpected.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">_execute_iterable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L161-L318"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Worker implementation for <a class="reference internal" href="#spdl.pipeline.iterate_in_subprocess" title="spdl.pipeline.iterate_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">iterate_in_subprocess()</span></code></a>.</p>
-<p>The following diagram illustrates the state transition with more details.</p>
-<div class="mermaid">
-            stateDiagram-v2
-    state Initialization {
-        init0: Call Initializer
-        init1: Create Iterable
-        init0 --&gt; init1
-    }
-    state stand_by {
-        i2: Wait for a command (block)
-        state i3 &lt;&lt;choice&gt;&gt;
-    }
-    stand_by: Stand By
-
-    init_fail: Push INITIALIZATION_FAILED
-    init_success: Push INITIALIZATION_SUCCESS
-    i4: Push ITERATION_START
-    i5: Iteration
-    i6: Push UNEXPECTED_COMMAND
-    init_fail--&gt;Done
-
-    [*] --&gt; Initialization
-    Initialization --&gt; init_success: Success
-    Initialization --&gt; init_fail: Failed
-    init_success --&gt; i2
-
-    i2 --&gt; i3: Command recieved
-    i3 --&gt; i4: START_ITERATION
-    i3 --&gt; i2: STOP_ITERATION
-    i3 --&gt; i6: Other commands
-    i3 --&gt; Done: ABORT
-    i4 --&gt; j0
-    i6 --&gt; Done
-    Done --&gt; [*]
-
-    state i5 {
-        j0: Create Iterator
-        j1: Check command queue (non-blocking)
-        j2: Get Next Item
-        state j3 &lt;&lt;choice&gt;&gt;
-        j4: Push ITERATE_SUCCESS (block)
-        j5: Push ITERATION_FINISHED
-        j6: Push ITERATE_FAILED
-
-        j0 --&gt; j1 : Success
-        j0 --&gt; j6 : Fail
-        j1 --&gt; j2 : Command Not Found
-        j1 --&gt; j3: Command Found
-        j3 --&gt; j5 : STOP_ITERATION
-
-        j2 --&gt; j4 : Success
-        j2 --&gt; j5 : EOF
-        j2 --&gt; j6 : Fail
-        j4 --&gt; j1
-        j5 --&gt; [*] : Iteration completed without and error (go back to Stand By)
-    }
-    j3 --&gt; i6 : START_ITERATION or other commands
-    j3 --&gt; Done : ABORT
-    j6 --&gt; Done
-    i5 --&gt; i2: Iteration completed without an error
-        </div></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">_enter_iteration_mode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L346-L384"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Instruct the worker process to enter iteration mode and wait for the acknowledgement.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">_iterate_results</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L387-L418"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Watch the result queue and iterate on the results.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_SubprocessIterable</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L421-L447"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>An Iterable interface that manipulates the iterable in worker process
-and fetch the results.</p>
-<dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils.py?#L428-L438"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Instruct the worker process to enter iteration mode and iterate on the results.</p>
-</dd></dl>
-
-</dd></dl>
-
-</section>
-</section>
 </dd></dl>
 
 </section>
@@ -816,13 +575,11 @@ and fetch the results.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=79d558ae"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=d0952cc8"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
     <script src="../_static/collapsible-lists/js/CollapsibleLists.compressed.js?v=73120307"></script>
     <script src="../_static/collapsible-lists/js/apply-collapsible-lists.js?v=660e4f45"></script>
-    <script src="https://unpkg.com/mermaid@11.10.0/dist/mermaid.min.js"></script>
-    <script>mermaid.initialize({startOnLoad:true});</script>
     </body>
 </html>

@@ -5,7 +5,7 @@ Pipeline Parallelism
 
 .. currentmodule:: spdl.pipeline
 
-The :py:class:`Pipeline` supports multi-threading and multi-processing.
+The :py:class:`Pipeline` class supports multi-threading and multi-processing.
 You can also use a ``Pipeline`` objects as source iterator of another ``Pipeline``.
 When experimenting, this flexibility makes it easy to switch multi-threading,
 multi-processing and mixtures of them.
@@ -87,8 +87,7 @@ There are cases where you want to use a dedicated thread for certain task.
    (caching for faster execution or storing the application context)
 #. You want to specify a different number of concurrency.
 
-One notable example that comports with these conditions is transferring a
-data to the GPU.
+One notable example that meets these conditions is transferring data to the GPU.
 Due to the hardware constraints, only one data transfer can be performed
 at a time.
 To transfer data without interrupting the model training,

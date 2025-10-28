@@ -4,9 +4,8 @@ Best Practices
 Avoid creating intermediate tensors
 -----------------------------------
 
-For efficient and performant data processing, it is advised to not create
-an intermediate Tensor for each individual media object (such as single image),
-instead create a batch Tensor directly.
+For efficient and performant data processing, avoid creating intermediate Tensors
+for individual media objects (such as single images). Instead, create batch Tensors directly.
 
 We recommend decoding individual frames, then using :py:func:`spdl.io.convert_frames`
 to create a batch Tensor directly without creating an intermediate Tensors.
@@ -33,8 +32,8 @@ separately.
        return spdl.io.to_torch(buffer)
 
 They can be combined in :py:class:`~spdl.pipeline.Pipeline`, which automatically
-discards the items failed to process (for example due to invalid data), and
-keep the batch size consistent by using other items successfully processed.
+discards items that fail to process (for example, due to invalid data) and
+maintains consistent batch size by using successfully processed items.
 
 .. code-block::
 
@@ -76,7 +75,7 @@ might look like the following.
        def __getitem__(self, key: int) -> tuple[Tensor, int]:
            ...
 
-We recommend to separate the source and process and make them additional
+We recommend to separate the source and processing and make them additional
 public interface.
 (Also, as described above, we recommend to not convert each item into
 ``Tensor`` for the performance reasons.)
