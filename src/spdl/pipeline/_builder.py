@@ -79,9 +79,7 @@ class PipelineBuilder(Generic[T, U]):
         log_api_usage_once("spdl.pipeline.PipelineBuilder")
 
         self._src: SourceConfig[T] | None = None
-        self._process_args: list[  # pyre-ignore: [24]
-            PipeConfig | AggregateConfig | DisaggregateConfig
-        ] = []
+        self._process_args: list[PipeConfig | AggregateConfig | DisaggregateConfig] = []
         self._sink: SinkConfig[U] | None = None
 
     def add_source(
@@ -219,6 +217,23 @@ class PipelineBuilder(Generic[T, U]):
         self._sink = SinkConfig(buffer_size)
         return self
 
+    def get_config(self) -> PipelineConfig[U]:
+        """Get the pipeline configuration.
+
+        Returns:
+            A PipelineConfig object representing the current pipeline configuration.
+
+        Raises:
+            RuntimeError: If source or sink is not set.
+        """
+        if (src := self._src) is None:
+            raise RuntimeError("Source is not set. Did you call `add_source`?")
+
+        if (sink := self._sink) is None:
+            raise RuntimeError("Sink is not set. Did you call `add_sink`?")
+
+        return PipelineConfig(src, self._process_args, sink)
+
     def build(
         self,
         *,
@@ -262,18 +277,8 @@ class PipelineBuilder(Generic[T, U]):
 
             stage_id: The index of the initial stage  used for logging.
         """
-        if (src := self._src) is None:
-            raise RuntimeError("Source is not set. Did you call `add_source`?")
-
-        if (sink := self._sink) is None:
-            raise RuntimeError("Sink is not set. Did you call `add_sink`?")
-
         return build_pipeline(
-            PipelineConfig(
-                src,
-                self._process_args,
-                sink,
-            ),
+            self.get_config(),
             num_threads=num_threads,
             max_failures=max_failures,
             queue_class=queue_class,
@@ -291,14 +296,14 @@ class PipelineBuilder(Generic[T, U]):
 class _Wrapper(Generic[U]):
     def __init__(
         self,
-        builder: PipelineBuilder[T, U],
+        config: PipelineConfig[U],
         num_threads: int,
         max_failures: int,
         report_stats_interval: float,
         queue_class: type[AsyncQueue] | None,
         task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     ) -> None:
-        self.builder = builder
+        self.config = config
         self.num_threads = num_threads
         self.max_failures = max_failures
         self.report_stats_interval = report_stats_interval
@@ -306,7 +311,8 @@ class _Wrapper(Generic[U]):
         self.task_hook_factory = task_hook_factory
 
     def __iter__(self) -> Iterator[U]:
-        pipeline = self.builder.build(
+        pipeline = build_pipeline(
+            self.config,
             num_threads=self.num_threads,
             max_failures=self.max_failures,
             report_stats_interval=self.report_stats_interval,
@@ -318,7 +324,8 @@ class _Wrapper(Generic[U]):
 
 
 def run_pipeline_in_subprocess(
-    builder: PipelineBuilder[T, U],
+    config_or_builder: PipelineConfig[U] | PipelineBuilder[T, U],
+    /,
     *,
     num_threads: int,
     max_failures: int = -1,
@@ -330,9 +337,10 @@ def run_pipeline_in_subprocess(
     """Run the given Pipeline in a subprocess, and iterate on the result.
 
     Args:
-        builder: The definition of :py:class:`Pipeline`.
+        config_or_builder: The definition of :py:class:`Pipeline`. Can be either a
+            :py:class:`PipelineConfig` or :py:class:`PipelineBuilder`.
         num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory:
-            Passed to :py:meth:`PipelineBuilder.build`.
+            Passed to :py:func:`build_pipeline`.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
 
     Yields:
@@ -344,10 +352,15 @@ def run_pipeline_in_subprocess(
          in a subprocess.
        - :ref:`parallelism-performance` for the context in which this function was created.
     """
+    config = (
+        config_or_builder.get_config()
+        if isinstance(config_or_builder, PipelineBuilder)
+        else config_or_builder
+    )
     return iterate_in_subprocess(
         fn=partial(
             _Wrapper,
-            builder=builder,
+            config=config,
             num_threads=num_threads,
             max_failures=max_failures,
             report_stats_interval=report_stats_interval,
