@@ -30,15 +30,25 @@ from spdl.pipeline.config import (
 )
 
 
+def reset() -> None:
+    set_default_hook_class()
+    set_default_queue_class()
+    set_default_profile_hook()
+    set_default_profile_callback()
+
+
 class ConfigTest(unittest.TestCase):
     """Test the configuration setter/getter functions."""
 
     def setUp(self) -> None:
         """Reset all configuration state before each test."""
-        set_default_hook_class()
-        set_default_queue_class()
-        set_default_profile_hook()
-        set_default_profile_callback()
+        super().setUp()
+        reset()
+
+    def tearDown(self) -> None:
+        """Reset all configuration state after each test."""
+        reset()
+        super().tearDown()
 
     def test_hook_class_default_is_none(self) -> None:
         """Test that default hook class is None when not configured."""
