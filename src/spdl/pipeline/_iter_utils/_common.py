@@ -6,27 +6,35 @@
 
 # pyre-strict
 
+"""Common utilities for subprocess and subinterpreter-based iteration.
+
+This module contains shared functionality used by both iterate_in_subprocess
+and iterate_in_subinterpreter implementations.
+"""
+
 import enum
-import logging
 import multiprocessing as mp
 import queue
 import time
-import weakref
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any, Generic, Protocol, TypeVar
 
 __all__ = [
-    "iterate_in_subprocess",
-    "cache_iterator",
+    "_Cmd",
+    "_Status",
+    "_Msg",
+    "_drain",
+    "_wait_for_init",
+    "_enter_iteration_mode",
+    "_iterate_results",
+    "_execute_iterable",
 ]
-
-_LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
 
-class QueueLike(Protocol[T]):
+class _Queue(Protocol[T]):
     """Protocol for queue-like objects used in subprocess and subinterpreter communication.
 
     This protocol defines the common interface for both multiprocessing.Queue
@@ -49,11 +57,6 @@ class QueueLike(Protocol[T]):
     def empty(self) -> bool:
         """Return True if the queue is empty, False otherwise."""
         ...
-
-
-################################################################################
-# iterate_in_subprocess
-################################################################################
 
 
 # Command from parent to worker
@@ -149,7 +152,7 @@ class _Msg(Generic[T]):
     message: T | str = ""
 
 
-def _drain(q: QueueLike[Any]) -> None:
+def _drain(q: _Queue[Any]) -> None:
     """Drain a queue by removing all items.
 
     Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
@@ -159,36 +162,6 @@ def _drain(q: QueueLike[Any]) -> None:
             q.get_nowait()
         except queue.Empty:
             break
-
-
-def _join(process: mp.Process) -> None:
-    process.join(3)
-
-    if process.exitcode is None:
-        _LG.warning("Terminaging the worker process.")
-        process.terminate()
-        process.join(10)
-
-    if process.exitcode is None:
-        _LG.warning("Killing the worker process.")
-        process.kill()
-        process.join(10)
-
-    if process.exitcode is None:
-        _LG.warning("Failed to kill the worker process.")
-
-
-@dataclass
-class _ipc(Generic[T]):
-    process: mp.Process
-    cmd_q: queue.Queue[_Cmd]
-    data_q: queue.Queue[_Msg[T]]
-    timeout: float
-
-    def terminate(self) -> None:
-        self.cmd_q.put(_Cmd.ABORT)
-        _drain(self.data_q)
-        _join(self.process)
 
 
 def _execute_iterable(
@@ -351,9 +324,7 @@ def _execute_iterable(
                 return
 
 
-def _wait_for_init(
-    data_q: QueueLike[_Msg[T]], timeout: float, worker_type: str
-) -> None:
+def _wait_for_init(data_q: _Queue[_Msg[T]], timeout: float, worker_type: str) -> None:
     """Wait for initialization to complete.
 
     Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
@@ -388,8 +359,8 @@ def _wait_for_init(
 
 
 def _enter_iteration_mode(
-    cmd_q: QueueLike[_Cmd],
-    data_q: QueueLike[_Msg[Any]],
+    cmd_q: _Queue[_Cmd],
+    data_q: _Queue[_Msg[Any]],
     timeout: float,
     worker_type: str,
 ) -> None:
@@ -440,8 +411,8 @@ def _enter_iteration_mode(
 
 
 def _iterate_results(
-    data_q: QueueLike[_Msg[T]], timeout: float, worker_type: str
-) -> Iterator[T]:
+    data_q: _Queue[_Msg[T]], timeout: float, worker_type: str
+) -> Iterable[T]:
     """Watch the result queue and iterate on the results.
 
     Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
@@ -484,276 +455,3 @@ def _iterate_results(
                     raise RuntimeError(
                         f"[INTERNAL ERROR] Unexpected return value: {item}"
                     )
-
-
-class _SubprocessIterable(Iterable[T]):
-    """An Iterable interface that manipulates the iterable in worker process
-    and fetch the results."""
-
-    def __init__(self, interface: _ipc[T]) -> None:
-        self._interface: _ipc[T] | None = interface
-        self._finalizer = weakref.finalize(self, interface.terminate)
-
-    def __iter__(self) -> Iterator[T]:
-        """Instruct the worker process to enter iteration mode and iterate on the results."""
-        if (if_ := self._interface) is None:
-            raise RuntimeError("The worker process is shutdown. Cannot iterate again.")
-
-        try:
-            # pyre-ignore[6]
-            _enter_iteration_mode(if_.cmd_q, if_.data_q, if_.timeout, "subprocess")
-            yield from _iterate_results(if_.data_q, if_.timeout, "subprocess")
-        except (Exception, KeyboardInterrupt):
-            self._shutdown()
-            raise
-
-    def _shutdown(self) -> None:
-        if (interface := self._interface) is not None:
-            interface.terminate()
-            self._finalizer.detach()
-            self._interface = None
-
-
-def iterate_in_subprocess(
-    fn: Callable[[], Iterable[T]],
-    *,
-    buffer_size: int = 3,
-    initializer: Callable[[], None] | Sequence[Callable[[], None]] | None = None,
-    mp_context: str | None = None,
-    timeout: float | None = None,
-    daemon: bool = False,
-) -> Iterable[T]:
-    """**[Experimental]** Run the given ``iterable`` in a subprocess.
-
-    Args:
-        fn: Function that returns an iterator. Use :py:func:`functools.partial` to
-            pass arguments to the function.
-        buffer_size: Maximum number of items to buffer in the queue.
-        initializer: Functions executed in the subprocess before iteration starts.
-        mp_context: Context to use for multiprocessing.
-            If not specified, a default method is used.
-        timeout: Timeout for inactivity. If the generator function does not yield
-            any item for this amount of time, the process is terminated.
-        daemon: Whether to run the process as a daemon. Use it only for debugging.
-
-    Returns:
-        Iterator over the results of the generator function.
-
-    .. note::
-
-       The function and the values yielded by the iterator of generator must be picklable.
-
-    .. seealso::
-
-       - :py:func:`run_pipeline_in_subprocess` for runinng a :py:class:`Pipeline` in
-         a subprocess
-       - :ref:`parallelism-performance` for the context in which this function was created.
-
-
-    Implementation Detail
-    ---------------------
-
-    Manipulting an iterable object in a subprocess requires somewhat elaborated state
-    control.
-    The following section go over the implementation detail.
-
-    **Wroker State**
-
-    The iterable object is manipulated in the worker process.
-    The worker process has three states, "Initialization", "Stand By" and "Iteration".
-    The Initialization state performs global initialization and create the iterable object.
-    When the Initialization completes, the worker transition to Stand By mode, where
-    it waits for a command from the parent process. The command can be "START_ITERATION"
-    or "ABORT".
-    When the "START_ITERATION" is received, the worker process transition to the
-    Iteration mode. In the Iteration mode, the worker creates an iterator object from
-    the iterable, then executes it.
-    The resulting data are put in the queue, which the parent process is watching.
-
-    The following diagram illustrates worker's state transition in simplified manner.
-    Detailed diagram alongside the actual implementation is found in
-    :py:func:`~spdl.pipeline._execute_iterable`.
-
-    .. mermaid::
-
-       stateDiagram-v2
-        state Parent {
-            p1: Start Iteration
-            p2: Iterate on the result
-            state pf <<fork>>
-            state pj <<join>>
-
-            [*] --> p1
-            p1 --> pf
-            pf --> pj: Wait for worker process
-            pj -->  p2
-            p2 --> [*]
-        }
-
-        state Worker {
-            state wf <<fork>>
-            w0: Initialization
-            w1: Stand By
-            w2: Iteration
-
-            [*]--> w0
-            w0 --> w1: Success
-            w0 --> [*]: Fail
-            w1 --> wf: Iteration started
-            wf --> w2
-            w2 --> w1: Iteration completed
-
-            w1 --> [*]: Abort
-            w2 --> [*]: Fail / Abort
-        }
-        pf --> w1: Issue START_ITERATION command
-        wf --> pj: Notify ITERATION_STARTED
-        w2 --> p2: Results passed via queue
-
-    Helper functions and data structures
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-    The follosing functions and data structures are used to implement the
-    :py:func:`iterate_in_subprocess` function.
-    They are not public interface, but the logic is sufficiently elaborated,
-    and it is helpful to have them in the documentation, so they are listed here.
-
-    .. autoclass:: _Cmd
-       :noindex:
-       :members:
-
-    .. autoclass:: _Status
-       :noindex:
-       :members:
-
-    .. autofunction:: _execute_iterable()
-       :noindex:
-
-    .. autofunction:: _enter_iteration_mode()
-       :noindex:
-
-    .. autofunction:: _iterate_results()
-       :noindex:
-
-    .. autoclass:: _SubprocessIterable()
-       :noindex:
-       :members: __iter__
-    """
-    initializers = (
-        None
-        if initializer is None
-        else ([initializer] if not isinstance(initializer, Sequence) else initializer)
-    )
-
-    ctx = mp.get_context(mp_context)
-    cmd_q: queue.Queue[_Cmd] = ctx.Queue()
-    data_q: queue.Queue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
-    process = ctx.Process(
-        target=_execute_iterable,
-        args=(cmd_q, data_q, fn, initializers),
-        daemon=daemon,
-    )
-
-    if_ = _ipc(process, cmd_q, data_q, float("inf") if timeout is None else timeout)
-
-    process.start()
-
-    _wait_for_init(if_.data_q, if_.timeout, "subprocess")
-
-    return _SubprocessIterable(if_)
-
-
-#######################################################################################
-# cache_iterator
-#######################################################################################
-
-
-def cache_iterator(
-    src: Iterable[T],
-    num_caches: int,
-    *,
-    return_caches_after: int | None = None,
-    stop_after: int | None = None,
-    delete_src: bool = True,
-) -> Iterator[T]:
-    """Caches values from the iterator and returns caches after the given iteration.
-
-    The function is intended for estimating the maximum performance gain achieved
-    by optimizing the data loader.
-
-    You can wrap your data loader with this function, and run it in the training
-    pipeline, and compare the performance to see if the training pipeline is
-    bottlenecked with data loading.
-
-    Args:
-        src: Source iterator. Expected to be a data loader object.
-
-        num_caches: The number of items (batches) to cache.
-
-        return_caches_after: The number of iterations to use the original
-            iterator. By default, it uses the same value as ``num_caches``.
-
-        stop_after: If provided, the iteration stops after the given number
-            of iteration is completed (including before and after cached values
-            are returned). If not provided, the iterator keeps yielding
-            the cached values forever.
-
-        delete_src: When this iterator starts returning the cached value,
-            call ``del`` on the original data loader so that resources are
-            released.
-
-    Returns:
-        The wrapper iterator.
-    """
-
-    # Note - Design choice
-    # When these optional values are provided, we could choose to not validate.
-    # But the purpose of this function is to make sure you are using cache,
-    # so we raise an error if these parameters do not make logical sense.
-    if return_caches_after is not None:
-        if return_caches_after < num_caches:
-            raise ValueError(
-                "When provided, `return_caches_after` must be greater than or "
-                "equal to `num_caches`. "
-                f"{num_caches=}, {return_caches_after=}"
-            )
-
-    if stop_after is not None:
-        if stop_after < num_caches:
-            raise ValueError(
-                "When provided, `stop_after` must be greater than or equal to "
-                "`num_caches`. "
-                f"{num_caches=}, {stop_after=}"
-            )
-        if return_caches_after is not None and stop_after < return_caches_after:
-            raise ValueError("")
-
-    cache: list[T] = []
-
-    run_for = num_caches if return_caches_after is None else return_caches_after
-    max_ite = stop_after or float("inf")
-
-    num_ite = 0
-    for data in src:
-        yield data
-        num_ite += 1
-
-        if len(cache) < num_caches:
-            cache.append(data)
-
-        if num_ite >= max_ite:
-            return
-
-        if num_ite >= run_for:
-            break
-
-    if delete_src:
-        del src
-
-    while True:
-        for v in cache:
-            yield v
-            num_ite += 1
-
-            if num_ite >= max_ite:
-                return
