@@ -63,7 +63,7 @@ class _Queue(Protocol[T]):
 class _Cmd(enum.IntEnum):
     """_Cmd()
     Command issued from the parent process to the worker process in
-    :py:func:`iterate_in_subprocess`.
+    :py:func:`~spdl.pipeline.iterate_in_subprocess`.
     """
 
     ABORT = enum.auto()
@@ -94,7 +94,7 @@ class _Cmd(enum.IntEnum):
 # Final status of the iterator
 class _Status(enum.IntEnum):
     """_Status()
-    Status reported by the worker process in :py:func:`iterate_in_subprocess`.
+    Status reported by the worker process in :py:func:`~spdl.pipeline.iterate_in_subprocess`.
     """
 
     UNEXPECTED_CMD_RECIEVED = enum.auto()
@@ -155,7 +155,7 @@ class _Msg(Generic[T]):
 def _drain(q: _Queue[Any]) -> None:
     """Drain a queue by removing all items.
 
-    Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
+    Works with both :py:func:`multiprocessing.Queue` and :py:func:`concurrent.interpreters.Queue`.
     """
     while True:
         try:
@@ -170,7 +170,7 @@ def _execute_iterable(
     fn: Callable[[], Iterable[T]],
     initializers: Sequence[Callable[[], None]] | None,
 ) -> None:
-    """Worker implementation for :py:func:`iterate_in_subprocess`.
+    """Worker implementation for :py:func:`~spdl.pipeline.iterate_in_subprocess`.
 
     The following diagram illustrates the state transition with more details.
 
