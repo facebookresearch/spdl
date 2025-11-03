@@ -14,6 +14,7 @@ from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 from spdl.pipeline._components import AsyncQueue, TaskHook
+from spdl.pipeline._iter_utils import iterate_in_subprocess
 from spdl.pipeline.defs import (
     _TPipeInputs,
     Aggregate,
@@ -28,7 +29,6 @@ from spdl.pipeline.defs import (
 )
 
 from ._build import build_pipeline
-from ._iter_utils import iterate_in_subprocess
 from ._pipeline import Pipeline
 
 __all__ = [
