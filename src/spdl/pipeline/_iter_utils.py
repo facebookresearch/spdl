@@ -14,7 +14,7 @@ import queue
 import time
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 __all__ = [
     "iterate_in_subprocess",
@@ -24,6 +24,32 @@ __all__ = [
 _LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+class QueueLike(Protocol[T]):
+    """Protocol for queue-like objects used in subprocess and subinterpreter communication.
+
+    This protocol defines the common interface for both multiprocessing.Queue
+    and concurrent.interpreters.Queue, allowing code reuse between subprocess
+    and subinterpreter implementations.
+    """
+
+    def put(self, item: T, block: bool = True, timeout: float | None = None) -> None:
+        """Put an item into the queue."""
+        ...
+
+    def get(self, block: bool = True, timeout: float | None = None) -> T:
+        """Remove and return an item from the queue."""
+        ...
+
+    def get_nowait(self) -> T:
+        """Remove and return an item if one is immediately available, else raise Empty."""
+        ...
+
+    def empty(self) -> bool:
+        """Return True if the queue is empty, False otherwise."""
+        ...
+
 
 ################################################################################
 # iterate_in_subprocess
@@ -123,9 +149,16 @@ class _Msg(Generic[T]):
     message: T | str = ""
 
 
-def _drain(q: queue.Queue[T]) -> None:
-    while not q.empty():
-        q.get_nowait()
+def _drain(q: QueueLike[Any]) -> None:
+    """Drain a queue by removing all items.
+
+    Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
+    """
+    while True:
+        try:
+            q.get_nowait()
+        except queue.Empty:
+            break
 
 
 def _join(process: mp.Process) -> None:
@@ -318,17 +351,28 @@ def _execute_iterable(
                 return
 
 
-def _wait_for_init(interface: _ipc[T]) -> None:
-    """_wait_for_init()"""
-    wait = min(0.1, interface.timeout)
+def _wait_for_init(
+    data_q: QueueLike[_Msg[T]], timeout: float, worker_type: str
+) -> None:
+    """Wait for initialization to complete.
+
+    Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
+
+    Args:
+        data_q: Queue to receive initialization status messages
+        timeout: Maximum time to wait for initialization
+        worker_name: Name of the worker (for error messages)
+    """
+    wtype = f"worker {worker_type}"
+    wait = min(0.1, timeout)
     t0 = time.monotonic()
     while True:
         try:
-            item = interface.data_q.get(timeout=wait)
+            item = data_q.get(timeout=wait)
         except queue.Empty:
-            if (elapsed := time.monotonic() - t0) > interface.timeout:
+            if (elapsed := time.monotonic() - t0) > timeout:
                 raise RuntimeError(
-                    f"The worker process did not initialize after {elapsed:.2f} seconds."
+                    f"The {wtype} did not initialize after {elapsed:.2f} seconds."
                 ) from None
             continue
         else:
@@ -336,36 +380,49 @@ def _wait_for_init(interface: _ipc[T]) -> None:
                 case _Status.INITIALIZATION_SUCCEEDED:
                     return
                 case _Status.INITIALIZATION_FAILED:
-                    raise RuntimeError(f"The worker process quit. {item.message}")
+                    raise RuntimeError(f"The {wtype} quit. {item.message}")
                 case _:
                     raise RuntimeError(
-                        f"[INTERNAL ERROR] The worker is in an unexpected state: {item}"
+                        f"[INTERNAL ERROR] The {wtype} is in an unexpected state: {item}"
                     )
 
 
-def _enter_iteration_mode(interface: _ipc[T]) -> None:
-    """Instruct the worker process to enter iteration mode and wait for the acknowledgement."""
+def _enter_iteration_mode(
+    cmd_q: QueueLike[_Cmd],
+    data_q: QueueLike[_Msg[Any]],
+    timeout: float,
+    worker_type: str,
+) -> None:
+    """Instruct the worker to enter iteration mode and wait for the acknowledgement.
 
-    interface.cmd_q.put(_Cmd.STOP_ITERATION)
-    interface.cmd_q.put(_Cmd.START_ITERATION)
+    Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
 
-    wait = min(0.1, interface.timeout)
+    Args:
+        cmd_q: Queue to send commands to the worker
+        data_q: Queue to receive status messages from the worker
+        timeout: Maximum time to wait for acknowledgement
+        worker_type: Type of worker (for error messages)
+    """
+    wtype = f"worker {worker_type}"
+    cmd_q.put(_Cmd.STOP_ITERATION)
+    cmd_q.put(_Cmd.START_ITERATION)
+
+    wait = min(0.1, timeout)
     t0 = time.monotonic()
     while True:
         try:
-            item = interface.data_q.get(timeout=wait)
+            item = data_q.get(timeout=wait)
             t0 = time.monotonic()
         except queue.Empty:
-            if (elapsed := time.monotonic() - t0) > interface.timeout:
+            if (elapsed := time.monotonic() - t0) > timeout:
                 raise RuntimeError(
-                    "The worker process did not produce any data for "
-                    f"{elapsed:.2f} seconds."
+                    f"The {wtype} did not produce any data for {elapsed:.2f} seconds."
                 ) from None
             continue
         else:
             match item.status:
                 case _Status.ITERATION_STARTED:
-                    # the worker process is properly transitioning to the iteration mode
+                    # the worker is properly transitioning to the iteration mode
                     return
                 case _Status.ITERATION_FINISHED | _Status.ITERATOR_SUCCESS:
                     # residual from previous iteration. Could be iteration was abandoned, or
@@ -374,29 +431,40 @@ def _enter_iteration_mode(interface: _ipc[T]) -> None:
                 case _Status.UNEXPECTED_CMD_RECIEVED:
                     # the worker was in the invalid state (iteration mode)
                     raise RuntimeError(
-                        "The worker process was not in the stand-by mode. Please make sure "
+                        f"The {wtype} was not in the stand-by mode. Please make sure "
                         "that the previous iterator was exhausted before iterating again. "
                         f"{item.message}"
                     )
                 case _:
-                    raise RuntimeError(
-                        f"The worker process is in an unexpected state. {item}"
-                    )
+                    raise RuntimeError(f"The {wtype} is in an unexpected state. {item}")
 
 
-def _iterate_results(interface: _ipc[T]) -> Iterator[T]:
-    """Watch the result queue and iterate on the results."""
-    wait = min(0.1, interface.timeout)
+def _iterate_results(
+    data_q: QueueLike[_Msg[T]], timeout: float, worker_type: str
+) -> Iterator[T]:
+    """Watch the result queue and iterate on the results.
+
+    Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
+
+    Args:
+        data_q: Queue to receive iteration results
+        timeout: Maximum time to wait between results
+        worker_name: Name of the worker (for error messages)
+
+    Yields:
+        Items from the iterator
+    """
+    wtype = f"worker {worker_type}"
+    wait = min(0.1, timeout)
     t0 = time.monotonic()
     while True:
         try:
-            item = interface.data_q.get(timeout=wait)
+            item = data_q.get(timeout=wait)
             t0 = time.monotonic()
         except queue.Empty:
-            if (elapsed := time.monotonic() - t0) > interface.timeout:
+            if (elapsed := time.monotonic() - t0) > timeout:
                 raise RuntimeError(
-                    "The worker process did not produce any data for "
-                    f"{elapsed:.2f} seconds."
+                    f"The {wtype} did not produce any data for {elapsed:.2f} seconds."
                 ) from None
             continue
         else:
@@ -406,10 +474,10 @@ def _iterate_results(interface: _ipc[T]) -> Iterator[T]:
                 case _Status.ITERATION_FINISHED:
                     return
                 case _Status.ITERATOR_FAILED:
-                    raise RuntimeError(f"The worker process quit. {item.message}")
+                    raise RuntimeError(f"The {wtype} quit. {item.message}")
                 case _Status.UNEXPECTED_CMD_RECIEVED:
                     raise RuntimeError(
-                        "[INTERNAL ERROR] The worker received unexpected command: "
+                        f"[INTERNAL ERROR] The {wtype} received unexpected command: "
                         f"{item.message}"
                     )
                 case _:
@@ -427,12 +495,13 @@ class _SubprocessIterable(Iterable[T]):
 
     def __iter__(self) -> Iterator[T]:
         """Instruct the worker process to enter iteration mode and iterate on the results."""
-        if (interface := self._interface) is None:
+        if (if_ := self._interface) is None:
             raise RuntimeError("The worker process is shutdown. Cannot iterate again.")
 
         try:
-            _enter_iteration_mode(interface)
-            yield from _iterate_results(interface)
+            # pyre-ignore[6]
+            _enter_iteration_mode(if_.cmd_q, if_.data_q, if_.timeout, "subprocess")
+            yield from _iterate_results(if_.data_q, if_.timeout, "subprocess")
         except (Exception, KeyboardInterrupt):
             self._shutdown()
             raise
@@ -587,19 +656,17 @@ def iterate_in_subprocess(
         daemon=daemon,
     )
 
-    interface = _ipc(
-        process, cmd_q, data_q, float("inf") if timeout is None else timeout
-    )
+    if_ = _ipc(process, cmd_q, data_q, float("inf") if timeout is None else timeout)
 
     # Register an exit callback in case Python tries to exit while the subprocess
     # is blocked on the data_q.put.
-    atexit.register(interface.terminate)
+    atexit.register(if_.terminate)
 
     process.start()
 
-    _wait_for_init(interface)  # Block until the initialization is completed
+    _wait_for_init(if_.data_q, if_.timeout, "subprocess")
 
-    return _SubprocessIterable(interface)
+    return _SubprocessIterable(if_)
 
 
 #######################################################################################

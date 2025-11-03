@@ -352,7 +352,7 @@ def test_iterate_in_subprocess_initializer():
 
 
 def test_iterate_in_subprocess_multiple_initializer():
-    """iterate_in_subprocess accepts multiple iterators"""
+    """iterate_in_subprocess accepts multiple initializers"""
     N = 10
     val1 = str(random.random())
     val2 = str(random.random())
@@ -697,7 +697,7 @@ def test_iterate_in_subprocess_timeout():
     iterable = iterate_in_subprocess(_src6, buffer_size=-1, timeout=3)
     iterator = iter(iterable)
     with pytest.raises(
-        RuntimeError, match=r"The worker process did not produce any data for"
+        RuntimeError, match=r"The worker subprocess did not produce any data for"
     ):
         next(iterator)
 
