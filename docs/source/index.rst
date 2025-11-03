@@ -23,15 +23,15 @@ Please use the following BibTex for citing our project if you find it useful.
 .. code-block:: text
 
    @misc{hira2025scalableperformantdataloading,
-      title={Scalable and Performant Data Loading}, 
+      title={Scalable and Performant Data Loading},
       author={Moto Hira and Christian Puhrsch and Valentin Andrei and Roman Malinovskyy and Gael Le Lan and Abhinandan Krishnan and Joseph Cummings and Miguel Martin and Gokul Gunasekaran and Yuta Inoue and Alex J Turner and Raghuraman Krishnamoorthi},
       year={2025},
       eprint={2504.20067},
       archivePrefix={arXiv},
       primaryClass={cs.DC},
-      url={https://arxiv.org/abs/2504.20067}, 
+      url={https://arxiv.org/abs/2504.20067},
    }
-  
+
 .. toctree::
    :hidden:
 
