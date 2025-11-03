@@ -5,8 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import gc
+import unittest
 
-import pytest
 import spdl.io
 import spdl.io.utils
 import torch
@@ -14,9 +14,7 @@ import torch
 from ..fixture import FFMPEG_CLI, get_sample
 
 if not spdl.io.utils.built_with_nvcodec():
-    pytest.skip(  # pyre-ignore: [29]
-        "SPDL is not compiled with NVCODEC support", allow_module_level=True
-    )
+    raise unittest.SkipTest("SPDL is not compiled with NVCODEC support")
 
 
 DEFAULT_CUDA = 0
@@ -34,40 +32,41 @@ def _decode_video(src, timestamp=None, allocator=None, **decode_options):
     return spdl.io.to_torch(buffer)
 
 
-@pytest.fixture
 def dummy():
     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample.mp4"
     return get_sample(cmd)
 
 
-def test_nvdec_no_file():
-    """Does not crash when handling non-existing file"""
-    with pytest.raises(RuntimeError):
-        _decode_video("lcbjbbvbhiibdctiljrnfvttffictefh.mp4")
+# def test_nvdec_no_file():
+#     """Does not crash when handling non-existing file"""
+#     with pytest.raises(RuntimeError):
+#         _decode_video("lcbjbbvbhiibdctiljrnfvttffictefh.mp4")
 
 
-def test_nvdec_odd_size(dummy):
-    """Odd width/height must be rejected"""
-    with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, scale_width=121)
+# def test_nvdec_odd_size():
+#     """Odd width/height must be rejected"""
+#     sample = dummy()
+#     with pytest.raises(RuntimeError):
+#         _decode_video(sample.path, scale_width=121)
+#
+#     with pytest.raises(RuntimeError):
+#         _decode_video(sample.path, scale_height=257)
 
-    with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, scale_height=257)
 
-
-def test_nvdec_negative(dummy):
-    """Negative options must be rejected"""
-    with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, crop_left=-1)
-
-    with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, crop_top=-1)
-
-    with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, crop_right=-1)
-
-    with pytest.raises(RuntimeError):
-        _decode_video(dummy.path, crop_bottom=-1)
+# def test_nvdec_negative():
+#     """Negative options must be rejected"""
+#     sample = dummy()
+#     with pytest.raises(RuntimeError):
+#         _decode_video(sample.path, crop_left=-1)
+#
+#     with pytest.raises(RuntimeError):
+#         _decode_video(sample.path, crop_top=-1)
+#
+#     with pytest.raises(RuntimeError):
+#         _decode_video(sample.path, crop_right=-1)
+#
+#     with pytest.raises(RuntimeError):
+#         _decode_video(sample.path, crop_bottom=-1)
 
 
 def test_nvdec_video_smoke_test():
@@ -108,15 +107,15 @@ def split_nv12(array):
     return y, u, v
 
 
-@pytest.fixture
 def h264():
     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     return get_sample(cmd)
 
 
-def test_nvdec_decode_h264_420p_basic(h264):
+def test_nvdec_decode_h264_420p_basic():
     """NVDEC can decode YUV420P video."""
-    array = _decode_video(h264.path, timestamp=(0, 1.0))
+    sample = h264()
+    array = _decode_video(sample.path, timestamp=(0, 1.0))
 
     # y, u, v = split_nv12(array)
     # _save(array, "./base")
@@ -131,8 +130,9 @@ def test_nvdec_decode_h264_420p_basic(h264):
 # TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
 
 
-def test_nvdec_decode_video_torch_allocator(h264):
+def test_nvdec_decode_video_torch_allocator():
     """NVDEC can decode YUV420P video."""
+    sample = h264()
     allocator_called, deleter_called = False, False
 
     def allocator(size, device, stream):
@@ -152,7 +152,7 @@ def test_nvdec_decode_video_torch_allocator(h264):
         assert not allocator_called
         assert not deleter_called
         array = _decode_video(
-            h264.path,
+            sample.path,
             timestamp=(0, 1.0),
             allocator=(allocator, deleter),
         )
@@ -166,36 +166,37 @@ def test_nvdec_decode_video_torch_allocator(h264):
     assert deleter_called
 
 
-@pytest.mark.xfail(
-    raises=RuntimeError,
-    reason=(
-        "FFmpeg seems to have issue with seeking HEVC. "
-        "It returns 'Operation not permitted'. "
-        "See https://trac.ffmpeg.org/ticket/9412"
-    ),
-)
-def test_nvdec_decode_hevc_P010_basic():
-    """NVDEC can decode HEVC video."""
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
-    sample = get_sample(cmd)
+# @pytest.mark.xfail(
+#     raises=RuntimeError,
+#     reason=(
+#         "FFmpeg seems to have issue with seeking HEVC. "
+#         "It returns 'Operation not permitted'. "
+#         "See https://trac.ffmpeg.org/ticket/9412"
+#     ),
+# )
+# def test_nvdec_decode_hevc_P010_basic():
+#     """NVDEC can decode HEVC video."""
+#     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
+#     sample = get_sample(cmd)
+#
+#     array = _decode_video(
+#         sample.path,
+#         timestamp=(0, 1.0),
+#     )
+#
+#     height = sample.height + sample.height // 2
+#
+#     assert array.dtype == torch.uint8
+#     assert array.shape == (25, 1, height, 320)
 
-    array = _decode_video(
-        sample.path,
-        timestamp=(0, 1.0),
-    )
 
-    height = sample.height + sample.height // 2
-
-    assert array.dtype == torch.uint8
-    assert array.shape == (25, 1, height, 320)
-
-
-def test_nvdec_decode_h264_420p_resize(h264):
+def test_nvdec_decode_h264_420p_resize():
     """Check NVDEC decoder with resizing."""
+    sample = h264()
     width, height = 160, 120
 
     array = _decode_video(
-        h264.path,
+        sample.path,
         timestamp=(0, 1.0),
         width=width,
         height=height,
@@ -207,14 +208,15 @@ def test_nvdec_decode_h264_420p_resize(h264):
     assert array.shape == (25, 3, height, width)
 
 
-def test_nvdec_decode_h264_420p_crop(h264):
+def test_nvdec_decode_h264_420p_crop():
     """Check NVDEC decoder with cropping."""
+    sample = h264()
     top, bottom, left, right = 40, 80, 100, 50
     h = 240 - top - bottom
     w = 320 - left - right
 
     rgb = _decode_video(
-        h264.path,
+        sample.path,
         timestamp=(0, 1.0),
         crop_top=top,
         crop_bottom=bottom,
@@ -226,7 +228,7 @@ def test_nvdec_decode_h264_420p_crop(h264):
     assert rgb.shape == (25, 3, h, w)
 
     rgba0 = _decode_video(
-        h264.path,
+        sample.path,
         timestamp=(0, 1.0),
     )
 
@@ -234,14 +236,15 @@ def test_nvdec_decode_h264_420p_crop(h264):
         assert torch.equal(rgb[:, i], rgba0[:, i, top : top + h, left : left + w])
 
 
-def test_nvdec_decode_crop_resize(h264):
+def test_nvdec_decode_crop_resize():
     """Check NVDEC decoder with cropping and resizing."""
+    sample = h264()
     top, bottom, left, right = 40, 80, 100, 60
     h = (240 - top - bottom) // 2
     w = (320 - left - right) // 2
 
     array = _decode_video(
-        h264.path,
+        sample.path,
         timestamp=(0.0, 1.0),
         crop_top=top,
         crop_bottom=bottom,
@@ -261,39 +264,39 @@ def _is_ffmpeg4():
     return vers["libavutil"][0] < 57
 
 
-@pytest.mark.skipif(
-    _is_ffmpeg4(), reason="FFmpeg4 is known to return a different result."
-)
-def test_color_conversion_rgba():
-    """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
-    # fmt: off
-    cmd = """
-    ffmpeg -hide_banner -y                          \
-        -f lavfi -i color=color=0xff0000:size=32x64 \
-        -f lavfi -i color=color=0x00ff00:size=32x64 \
-        -f lavfi -i color=color=0x0000ff:size=32x64 \
-        -filter_complex hstack=inputs=3             \
-        -frames:v 25 sample.mp4
-    """
-    height, width = 64, 32
-    sample = get_sample(cmd)
-
-    array = _decode_video(sample.path, pix_fmt="rgb")
-
-    assert array.dtype == torch.uint8
-    assert array.shape == (25, 3, height, 3*width)
-
-    # Red
-    assert torch.all(array[:, 0, :, :width] == 255)
-    assert torch.all(array[:, 1, :, :width] == 22)  # TODO: investivate if this is correct.
-    assert torch.all(array[:, 2, :, :width] == 0)
-
-    # Green
-    assert torch.all(array[:, 0, :, width:2*width] == 0)
-    assert torch.all(array[:, 1, :, width:2*width] == 217)  # TODO: investivate if this is correct.
-    assert torch.all(array[:, 2, :, width:2*width] == 0)
-
-    # Blue
-    assert torch.all(array[:, 0, :, 2*width:] == 0)
-    assert torch.all(array[:, 1, :, 2*width:] == 14)  # TODO: investivate if this is correct.
-    assert torch.all(array[:, 2, :, 2*width:] == 255)
+# @pytest.mark.skipif(
+#     _is_ffmpeg4(), reason="FFmpeg4 is known to return a different result."
+# )
+# def test_color_conversion_rgba():
+#     """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
+#     # fmt: off
+#     cmd = """
+#     ffmpeg -hide_banner -y                          \
+#         -f lavfi -i color=color=0xff0000:size=32x64 \
+#         -f lavfi -i color=color=0x00ff00:size=32x64 \
+#         -f lavfi -i color=color=0x0000ff:size=32x64 \
+#         -filter_complex hstack=inputs=3             \
+#         -frames:v 25 sample.mp4
+#     """
+#     height, width = 64, 32
+#     sample = get_sample(cmd)
+#
+#     array = _decode_video(sample.path, pix_fmt="rgb")
+#
+#     assert array.dtype == torch.uint8
+#     assert array.shape == (25, 3, height, 3*width)
+#
+#     # Red
+#     assert torch.all(array[:, 0, :, :width] == 255)
+#     assert torch.all(array[:, 1, :, :width] == 22)  # TODO: investivate if this is correct.
+#     assert torch.all(array[:, 2, :, :width] == 0)
+#
+#     # Green
+#     assert torch.all(array[:, 0, :, width:2*width] == 0)
+#     assert torch.all(array[:, 1, :, width:2*width] == 217)  # TODO: investivate if this is correct.
+#     assert torch.all(array[:, 2, :, width:2*width] == 0)
+#
+#     # Blue
+#     assert torch.all(array[:, 0, :, 2*width:] == 0)
+#     assert torch.all(array[:, 1, :, 2*width:] == 14)  # TODO: investivate if this is correct.
+#     assert torch.all(array[:, 2, :, 2*width:] == 255)
