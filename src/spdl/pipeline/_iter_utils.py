@@ -6,12 +6,12 @@
 
 # pyre-strict
 
-import atexit
 import enum
 import logging
 import multiprocessing as mp
 import queue
 import time
+import weakref
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any, Generic, Protocol, TypeVar
@@ -492,6 +492,7 @@ class _SubprocessIterable(Iterable[T]):
 
     def __init__(self, interface: _ipc[T]) -> None:
         self._interface: _ipc[T] | None = interface
+        self._finalizer = weakref.finalize(self, interface.terminate)
 
     def __iter__(self) -> Iterator[T]:
         """Instruct the worker process to enter iteration mode and iterate on the results."""
@@ -509,11 +510,8 @@ class _SubprocessIterable(Iterable[T]):
     def _shutdown(self) -> None:
         if (interface := self._interface) is not None:
             interface.terminate()
-            atexit.unregister(interface.terminate)
+            self._finalizer.detach()
             self._interface = None
-
-    def __del__(self) -> None:
-        self._shutdown()
 
 
 def iterate_in_subprocess(
@@ -657,10 +655,6 @@ def iterate_in_subprocess(
     )
 
     if_ = _ipc(process, cmd_q, data_q, float("inf") if timeout is None else timeout)
-
-    # Register an exit callback in case Python tries to exit while the subprocess
-    # is blocked on the data_q.put.
-    atexit.register(if_.terminate)
 
     process.start()
 
