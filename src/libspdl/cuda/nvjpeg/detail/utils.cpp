@@ -82,10 +82,11 @@ nvjpegBackend_t get_nvjpeg_backend(const std::optional<std::string>& v) {
   if (mapping.contains(be)) {
     return mapping.at(be);
   }
-  SPDL_FAIL(fmt::format(
-      "Unexpected backend: {}. Supported values are \"{}\"",
-      be,
-      fmt::join(get_keys(mapping), "\", \"")));
+  SPDL_FAIL(
+      fmt::format(
+          "Unexpected backend: {}. Supported values are \"{}\"",
+          be,
+          fmt::join(get_keys(mapping), "\", \"")));
 }
 
 nvjpegOutputFormat_t get_nvjpeg_output_format(const std::string& f) {
@@ -98,10 +99,11 @@ nvjpegOutputFormat_t get_nvjpeg_output_format(const std::string& f) {
   if (mapping.contains(f)) {
     return mapping.at(f);
   }
-  SPDL_FAIL(fmt::format(
-      "Unexpected pix_fmt: {}. Supported values are \"{}\"",
-      f,
-      fmt::join(get_keys(mapping), "\", \"")));
+  SPDL_FAIL(
+      fmt::format(
+          "Unexpected pix_fmt: {}. Supported values are \"{}\"",
+          f,
+          fmt::join(get_keys(mapping), "\", \"")));
 }
 
 std::string to_string(nvjpegStatus_t s) {

@@ -55,10 +55,11 @@ struct FileObjTarParserImpl {
     size_t num_read = data.size();
     pos_ += num_read;
     if (num_read > n) {
-      throw std::runtime_error(fmt::format(
-          "Recieved {} bytes which exceeds the requested size of {}.",
-          num_read,
-          n));
+      throw std::runtime_error(
+          fmt::format(
+              "Recieved {} bytes which exceeds the requested size of {}.",
+              num_read,
+              n));
     }
     if (num_read < n) {
       throw std::runtime_error("Failed to fetch data.");

@@ -86,9 +86,10 @@ const AVCodec* get_codec(
   }
   const AVCodec* c = avcodec_find_encoder(default_codec);
   if (!c) [[unlikely]] {
-    SPDL_FAIL(fmt::format(
-        "The `{}` codec does not have a default encoder. Please specify one.",
-        avcodec_get_name(default_codec)));
+    SPDL_FAIL(
+        fmt::format(
+            "The `{}` codec does not have a default encoder. Please specify one.",
+            avcodec_get_name(default_codec)));
   }
   return c;
 }
@@ -169,10 +170,11 @@ void MuxerImpl::write(
     const std::vector<AVPacket*>& packets,
     AVRational time_base) {
   if (i < 0 || (int)fmt_ctx->nb_streams <= i) {
-    SPDL_FAIL(fmt::format(
-        "The stream index ({}) is out of bound. (0, {}]",
-        i,
-        fmt_ctx->nb_streams));
+    SPDL_FAIL(
+        fmt::format(
+            "The stream index ({}) is out of bound. (0, {}]",
+            i,
+            fmt_ctx->nb_streams));
   }
   AVStream* s = fmt_ctx->streams[i];
   for (auto* p : packets) {

@@ -70,21 +70,23 @@ AVPixelFormat get_pix_fmt(
       SPDL_FAIL(fmt::format("Unexpected pixel format: {}.", override.value()));
     }
     if (!is_pix_fmt_supported(fmt, pix_fmts)) {
-      SPDL_FAIL(fmt::format(
-          "`{}` does not support the pixel format `{}`. "
-          "Supported values are {}",
-          ctx->codec->name,
-          override.value(),
-          to_str(pix_fmts)));
+      SPDL_FAIL(
+          fmt::format(
+              "`{}` does not support the pixel format `{}`. "
+              "Supported values are {}",
+              ctx->codec->name,
+              override.value(),
+              to_str(pix_fmts)));
     }
     return fmt;
   }
   if (pix_fmts) {
     return pix_fmts[0];
   }
-  SPDL_FAIL(fmt::format(
-      "`{}` does not have a default pixel format. Please specify one.",
-      ctx->codec->name));
+  SPDL_FAIL(
+      fmt::format(
+          "`{}` does not have a default pixel format. Please specify one.",
+          ctx->codec->name));
 }
 
 bool is_frame_rate_supported(AVRational rate, const AVRational* rates) {
@@ -128,28 +130,31 @@ AVRational get_frame_rate(
   if (override) {
     const auto& rate = override.value();
     if (rate.num <= 0 || rate.den <= 0) {
-      SPDL_FAIL(fmt::format(
-          "Frame rate must be positive finite. Found: {}/{}",
-          rate.num,
-          rate.den));
+      SPDL_FAIL(
+          fmt::format(
+              "Frame rate must be positive finite. Found: {}/{}",
+              rate.num,
+              rate.den));
     }
     if (!is_frame_rate_supported(rate, supported_framerates)) {
-      SPDL_FAIL(fmt::format(
-          "Codec `{}` does not support the frame rate `{}/{}`. "
-          "Supported values are {}",
-          ctx->codec->name,
-          rate.num,
-          rate.den,
-          fmt::join(to_str(supported_framerates), ", ")));
+      SPDL_FAIL(
+          fmt::format(
+              "Codec `{}` does not support the frame rate `{}/{}`. "
+              "Supported values are {}",
+              ctx->codec->name,
+              rate.num,
+              rate.den,
+              fmt::join(to_str(supported_framerates), ", ")));
     }
     return rate;
   }
   if (supported_framerates) {
     return supported_framerates[0];
   }
-  SPDL_FAIL(fmt::format(
-      "Codec `{}` does not have a default frame rate. Please specify one.",
-      ctx->codec->name));
+  SPDL_FAIL(
+      fmt::format(
+          "Codec `{}` does not have a default frame rate. Please specify one.",
+          ctx->codec->name));
 }
 
 AVCodecContextPtr get_codec_context(
@@ -246,20 +251,22 @@ AVSampleFormat get_sample_fmt(
       SPDL_FAIL(fmt::format("Unexpected sample format: {}", override.value()));
     }
     if (!is_sample_fmt_supported(fmt, sample_fmts)) {
-      SPDL_FAIL(fmt::format(
-          "Codec `{}` does not support the sample format `{}`. Supported values are `{}`",
-          ctx->codec->name,
-          override.value(),
-          fmt::join(to_str(sample_fmts), ", ")));
+      SPDL_FAIL(
+          fmt::format(
+              "Codec `{}` does not support the sample format `{}`. Supported values are `{}`",
+              ctx->codec->name,
+              override.value(),
+              fmt::join(to_str(sample_fmts), ", ")));
     }
     return fmt;
   }
   if (sample_fmts) {
     return sample_fmts[0];
   }
-  SPDL_FAIL(fmt::format(
-      "Codec `{}` does not have a default sample format. Please specify one.",
-      ctx->codec->name));
+  SPDL_FAIL(
+      fmt::format(
+          "Codec `{}` does not have a default sample format. Please specify one.",
+          ctx->codec->name));
 }
 
 bool is_sample_rate_supported(int rate, const int* rates) {
@@ -301,11 +308,12 @@ int get_sample_rate(
   // supported_samplerates so we hard code it here.
   if (ctx->codec->id == AV_CODEC_ID_ADPCM_G722) {
     if (override && *override != 16'000) {
-      SPDL_FAIL(fmt::format(
-          "Codec `{}` does not support the sample rate `{}`. "
-          "Supported values are 16000.",
-          ctx->codec->name,
-          *override));
+      SPDL_FAIL(
+          fmt::format(
+              "Codec `{}` does not support the sample rate `{}`. "
+              "Supported values are 16000.",
+              ctx->codec->name,
+              *override));
     }
     return 16'000;
   }
@@ -317,20 +325,22 @@ int get_sample_rate(
           fmt::format("Sample rate must be greater than 0. Found: {}", rate));
     }
     if (!is_sample_rate_supported(rate, supported_samplerates)) {
-      SPDL_FAIL(fmt::format(
-          "Codec `{}` does not support the sample rate `{}`. Supported values are {}",
-          ctx->codec->name,
-          rate,
-          fmt::join(to_str(supported_samplerates), ", ")));
+      SPDL_FAIL(
+          fmt::format(
+              "Codec `{}` does not support the sample rate `{}`. Supported values are {}",
+              ctx->codec->name,
+              rate,
+              fmt::join(to_str(supported_samplerates), ", ")));
     }
     return rate;
   }
   if (supported_samplerates) {
     return supported_samplerates[0];
   }
-  SPDL_FAIL(fmt::format(
-      "Codec `{}` does not have a default sample rate. Please specify one.",
-      ctx->codec->name));
+  SPDL_FAIL(
+      fmt::format(
+          "Codec `{}` does not have a default sample rate. Please specify one.",
+          ctx->codec->name));
 }
 
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 17, 100)
@@ -380,11 +390,12 @@ void set_channels(AVCodecContext* ctx, int num_channels) {
     }
     p++;
   }
-  SPDL_FAIL(fmt::format(
-      "Codec `{}` does not support {} channels. Supported values are {}.",
-      ctx->codec->name,
-      num_channels,
-      fmt::join(to_str(ch_layouts), ", ")));
+  SPDL_FAIL(
+      fmt::format(
+          "Codec `{}` does not support {} channels. Supported values are {}.",
+          ctx->codec->name,
+          num_channels,
+          fmt::join(to_str(ch_layouts), ", ")));
 }
 #else
 std::vector<std::string> to_str(const uint64_t* layouts) {
@@ -404,11 +415,12 @@ int64_t get_channel_layout(const AVCodec* codec, int num_channels) {
       return *it;
     }
   }
-  SPDL_FAIL(fmt::format(
-      "Codec `{}` does not support {} channels. Supported values are {}",
-      codec->name,
-      num_channels,
-      fmt::join(to_str(codec->channel_layouts), ", ")));
+  SPDL_FAIL(
+      fmt::format(
+          "Codec `{}` does not support {} channels. Supported values are {}",
+          codec->name,
+          num_channels,
+          fmt::join(to_str(codec->channel_layouts), ", ")));
 }
 
 void set_channels(AVCodecContext* ctx, int num_channels) {
@@ -511,47 +523,53 @@ const std::string parse_unmatch(AVCodecContext* c, AVFrame* f) {
   switch (c->codec_type) {
     case AVMEDIA_TYPE_VIDEO: {
       if (c->pix_fmt != f->format) {
-        parts.emplace_back(fmt::format(
-            "pix_fmt ({} != {})",
-            av_get_pix_fmt_name(c->pix_fmt),
-            av_get_pix_fmt_name((AVPixelFormat)f->format)));
+        parts.emplace_back(
+            fmt::format(
+                "pix_fmt ({} != {})",
+                av_get_pix_fmt_name(c->pix_fmt),
+                av_get_pix_fmt_name((AVPixelFormat)f->format)));
       }
       if (c->width != f->width || c->height != f->height) {
-        parts.emplace_back(fmt::format(
-            "video_size ({}x{} != {}x{})",
-            c->width,
-            c->height,
-            f->width,
-            f->height));
+        parts.emplace_back(
+            fmt::format(
+                "video_size ({}x{} != {}x{})",
+                c->width,
+                c->height,
+                f->width,
+                f->height));
       }
       break;
     }
     case AVMEDIA_TYPE_AUDIO: {
       if (c->sample_fmt != f->format) {
-        parts.emplace_back(fmt::format(
-            "sample_fmt ({} != {})",
-            av_get_sample_fmt_name(c->sample_fmt),
-            av_get_sample_fmt_name((AVSampleFormat)f->format)));
+        parts.emplace_back(
+            fmt::format(
+                "sample_fmt ({} != {})",
+                av_get_sample_fmt_name(c->sample_fmt),
+                av_get_sample_fmt_name((AVSampleFormat)f->format)));
       }
       if (c->sample_rate != f->sample_rate) {
-        parts.emplace_back(fmt::format(
-            "sample_rate ({} != {})", c->sample_rate, f->sample_rate));
+        parts.emplace_back(
+            fmt::format(
+                "sample_rate ({} != {})", c->sample_rate, f->sample_rate));
       }
       if (c->frame_size != f->nb_samples) {
         parts.emplace_back(
             fmt::format("frame_size ({} != {})", c->frame_size, f->nb_samples));
       }
       if (GET_NUM_CHANNELS(c) != GET_NUM_CHANNELS(f)) {
-        parts.emplace_back(fmt::format(
-            "num_channels ({} != {})",
-            GET_NUM_CHANNELS(c),
-            GET_NUM_CHANNELS(f)));
+        parts.emplace_back(
+            fmt::format(
+                "num_channels ({} != {})",
+                GET_NUM_CHANNELS(c),
+                GET_NUM_CHANNELS(f)));
       }
       if (GET_LAYOUT(c) != GET_LAYOUT(f)) {
-        parts.emplace_back(fmt::format(
-            "channel_layout ({} != {})",
-            GET_CHANNEL_LAYOUT_STRING(c),
-            GET_CHANNEL_LAYOUT_STRING(f)));
+        parts.emplace_back(
+            fmt::format(
+                "channel_layout ({} != {})",
+                GET_CHANNEL_LAYOUT_STRING(c),
+                GET_CHANNEL_LAYOUT_STRING(f)));
       }
       break;
     }

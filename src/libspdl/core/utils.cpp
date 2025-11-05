@@ -178,8 +178,10 @@ void trace_counter(int _(i), Number _(val)) {
     _CASE(6)
     _CASE(7)
     default:
-      SPDL_FAIL(fmt::format(
-          "Counter {} is not supported. The valid value range is [0, 7].", i));
+      SPDL_FAIL(
+          fmt::format(
+              "Counter {} is not supported. The valid value range is [0, 7].",
+              i));
   }
 #undef _CASE
 

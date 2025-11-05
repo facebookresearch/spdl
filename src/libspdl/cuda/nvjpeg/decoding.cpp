@@ -40,8 +40,9 @@ std::tuple<size_t, bool> get_shape(nvjpegOutputFormat_t out_fmt) {
       return {1, false};
     default:
       // It should be already handled by `get_nvjpeg_output_format`
-      SPDL_FAIL_INTERNAL(fmt::format(
-          "Unexpected output format: {}", detail::to_string(out_fmt)));
+      SPDL_FAIL_INTERNAL(
+          fmt::format(
+              "Unexpected output format: {}", detail::to_string(out_fmt)));
   }
 }
 

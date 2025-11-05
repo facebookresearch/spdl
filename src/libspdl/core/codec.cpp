@@ -160,8 +160,10 @@ CodecID Codec<media>::get_codec_id() const {
     case AV_CODEC_ID_AV1:
       return CodecID::AV1;
     default:
-      SPDL_FAIL(fmt::format(
-          "Unsupported codec ID: {}", avcodec_get_name(codecpar->codec_id)));
+      SPDL_FAIL(
+          fmt::format(
+              "Unsupported codec ID: {}",
+              avcodec_get_name(codecpar->codec_id)));
   }
 }
 

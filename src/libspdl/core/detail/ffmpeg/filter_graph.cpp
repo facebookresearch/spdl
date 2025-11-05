@@ -97,40 +97,50 @@ const std::string parse_unmatched(const AVFilterLink* l, const AVFrame* f) {
   switch (l->type) {
     case AVMEDIA_TYPE_VIDEO: {
       if (l->format != f->format) {
-        parts.emplace_back(fmt::format(
-            "pix_fmt ({} != {})",
-            av_get_pix_fmt_name((AVPixelFormat)l->format),
-            av_get_pix_fmt_name((AVPixelFormat)f->format)));
+        parts.emplace_back(
+            fmt::format(
+                "pix_fmt ({} != {})",
+                av_get_pix_fmt_name((AVPixelFormat)l->format),
+                av_get_pix_fmt_name((AVPixelFormat)f->format)));
       }
       if (l->w != f->width || l->h != f->height) {
-        parts.emplace_back(fmt::format(
-            "video_size ({}x{} != {}x{})", l->w, l->h, f->width, f->height));
+        parts.emplace_back(
+            fmt::format(
+                "video_size ({}x{} != {}x{})",
+                l->w,
+                l->h,
+                f->width,
+                f->height));
       }
       return fmt::format(
           "The following arguments do not match: {}", fmt::join(parts, ", "));
     }
     case AVMEDIA_TYPE_AUDIO: {
       if (l->format != f->format) {
-        parts.emplace_back(fmt::format(
-            "sample_fmt ({} != {})",
-            av_get_sample_fmt_name((AVSampleFormat)l->format),
-            av_get_sample_fmt_name((AVSampleFormat)f->format)));
+        parts.emplace_back(
+            fmt::format(
+                "sample_fmt ({} != {})",
+                av_get_sample_fmt_name((AVSampleFormat)l->format),
+                av_get_sample_fmt_name((AVSampleFormat)f->format)));
       }
       if (l->sample_rate != f->sample_rate) {
-        parts.emplace_back(fmt::format(
-            "sample_rate ({} != {})", l->sample_rate, f->sample_rate));
+        parts.emplace_back(
+            fmt::format(
+                "sample_rate ({} != {})", l->sample_rate, f->sample_rate));
       }
       if (GET_NUM_CHANNELS(l) != GET_NUM_CHANNELS(f)) {
-        parts.emplace_back(fmt::format(
-            "num_channels ({} != {})",
-            GET_NUM_CHANNELS(l),
-            GET_NUM_CHANNELS(f)));
+        parts.emplace_back(
+            fmt::format(
+                "num_channels ({} != {})",
+                GET_NUM_CHANNELS(l),
+                GET_NUM_CHANNELS(f)));
       }
       if (GET_LAYOUT(l) != GET_LAYOUT(f)) {
-        parts.emplace_back(fmt::format(
-            "channel_layout ({} != {})",
-            GET_CHANNEL_LAYOUT_STRING(l),
-            GET_CHANNEL_LAYOUT_STRING(f)));
+        parts.emplace_back(
+            fmt::format(
+                "channel_layout ({} != {})",
+                GET_CHANNEL_LAYOUT_STRING(l),
+                GET_CHANNEL_LAYOUT_STRING(f)));
       }
       return fmt::format(
           "The following arguments do not match: {}", fmt::join(parts, ", "));
@@ -183,10 +193,11 @@ void FilterGraphImpl::add_frames(
 
 void FilterGraphImpl::add_frames(const std::vector<AVFrame*>& frames) {
   if (inputs.size() != 1) {
-    SPDL_FAIL(fmt::format(
-        "Key must be provided when there are multiple inputs. "
-        "Available values are {}",
-        fmt::join(std::views::keys(inputs), ", ")));
+    SPDL_FAIL(
+        fmt::format(
+            "Key must be provided when there are multiple inputs. "
+            "Available values are {}",
+            fmt::join(std::views::keys(inputs), ", ")));
   }
   auto* filter_ctx = inputs.cbegin()->second;
   for (auto* frame : frames) {
@@ -235,17 +246,19 @@ AnyFrames FilterGraphImpl::get_frames(const std::string& name) {
       return get_frames<MediaType::Video>(filter_ctx);
     default:;
   }
-  SPDL_FAIL(fmt::format(
-      "Unsupported output type: {}",
-      av_get_media_type_string(filter_ctx->inputs[0]->type)));
+  SPDL_FAIL(
+      fmt::format(
+          "Unsupported output type: {}",
+          av_get_media_type_string(filter_ctx->inputs[0]->type)));
 }
 
 AnyFrames FilterGraphImpl::get_frames() {
   if (outputs.size() != 1) {
-    SPDL_FAIL(fmt::format(
-        "Key must be provided when there are multiple inputs. "
-        "Available values are {}",
-        fmt::join(std::views::keys(outputs), ", ")));
+    SPDL_FAIL(
+        fmt::format(
+            "Key must be provided when there are multiple inputs. "
+            "Available values are {}",
+            fmt::join(std::views::keys(outputs), ", ")));
   }
   return this->get_frames(outputs.cbegin()->first);
 }

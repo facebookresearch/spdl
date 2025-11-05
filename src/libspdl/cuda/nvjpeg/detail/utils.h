@@ -50,11 +50,12 @@ nvjpegOutputFormat_t get_nvjpeg_output_format(const std::string&);
 
 } // namespace spdl::cuda::detail
 
-#define CHECK_NVJPEG(expr, msg)                                     \
-  do {                                                              \
-    auto _status = expr;                                            \
-    if (_status != NVJPEG_STATUS_SUCCESS) {                         \
-      SPDL_FAIL(fmt::format(                                        \
-          "{} ({})", msg, spdl::cuda::detail::to_string(_status))); \
-    }                                                               \
+#define CHECK_NVJPEG(expr, msg)                                         \
+  do {                                                                  \
+    auto _status = expr;                                                \
+    if (_status != NVJPEG_STATUS_SUCCESS) {                             \
+      SPDL_FAIL(                                                        \
+          fmt::format(                                                  \
+              "{} ({})", msg, spdl::cuda::detail::to_string(_status))); \
+    }                                                                   \
   } while (0)
