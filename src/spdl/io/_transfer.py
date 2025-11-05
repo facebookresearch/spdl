@@ -166,7 +166,7 @@ def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
             This parameter helps mitigate race conditions when using
             multi-threading with multiple CUDA streams.
 
-            See :ref:`pytorch_cuda_race_condition`
+            See :doc:`../notes/pytorch_cuda_race_condition`
             for details on the rationale behind this parameter.
 
     Returns:
