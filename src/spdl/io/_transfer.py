@@ -14,6 +14,7 @@ import threading
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from dataclasses import fields, is_dataclass
+from functools import partial
 from types import ModuleType
 from typing import TYPE_CHECKING, TypeVar
 
@@ -21,9 +22,10 @@ from ._internal import import_utils
 
 if TYPE_CHECKING:
     import torch
-    from torch import device as TDevice
+    from torch import device as TDevice, Tensor
 else:
     torch: ModuleType = import_utils.lazy_import("torch")
+    Tensor = object
     TDevice = object
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -78,31 +80,38 @@ def _recursive_apply(fn: Callable[[T], T], obj: T) -> T:
             return fn(obj)  # pyre-ignore: [6]
 
 
-def _transfer(obj: T, device: TDevice) -> T:
+def _transfer(obj: T, device: TDevice, pinned_memory_cache: set[Tensor]) -> T:
     if isinstance(obj, torch.Tensor):
-        obj = obj.pin_memory().to(device, non_blocking=True)
+        pinned = obj.pin_memory()
+        pinned_memory_cache.add(pinned)
+        obj = pinned.to(device, non_blocking=True)
     return obj
 
 
 class _DataTransfer:
-    def __init__(self, device: TDevice) -> None:
+    def __init__(self, device: TDevice, num_caches: int) -> None:
         self._device = device
         self._stream = torch.cuda.Stream(device)
+        self._batch_cache: list[Tensor] = [torch.empty(0) for _ in range(num_caches)]
 
-    def _transfer(self, obj: T) -> T:
-        return _transfer(obj, self._device)
+    def _transfer(self, obj: T, pinned_memory_cache: set[Tensor]) -> T:
+        return _transfer(obj, self._device, pinned_memory_cache)
 
     def __call__(self, batch: T) -> T:
+        pinned_memory_cache = set()
+        fn = partial(self._transfer, pinned_memory_cache=pinned_memory_cache)
         with torch.cuda.stream(self._stream):
-            batch = _recursive_apply(self._transfer, batch)
+            batch = _recursive_apply(fn, batch)
         self._stream.synchronize()
+        self._batch_cache.append(batch)
+        self._batch_cache.pop(0)
         return batch
 
 
 _THREAD_LOCAL = threading.local()
 
 
-def _get_trancfer_func() -> _DataTransfer:
+def _get_trancfer_func(num_caches: int) -> _DataTransfer:
     if not hasattr(_THREAD_LOCAL, "transfer"):
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         if local_rank >= torch.cuda.device_count():
@@ -111,11 +120,13 @@ def _get_trancfer_func() -> _DataTransfer:
             )
         device = torch.device(f"cuda:{local_rank}")
         _LG.info("Creating transfer stream on %s", device)
-        _THREAD_LOCAL.transfer = _DataTransfer(device)  # pyre-ignore: [16]
+        _THREAD_LOCAL.transfer = _DataTransfer(  # pyre-ignore: [16]
+            device, num_caches=num_caches
+        )
     return _THREAD_LOCAL.transfer
 
 
-def transfer_tensor(batch: T, /) -> T:
+def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
     """Transfers PyTorch CPU Tensors to CUDA in a dedicated stream.
 
     This function wraps calls to :py:meth:`torch.Tensor.pin_memory` and
@@ -151,9 +162,16 @@ def transfer_tensor(batch: T, /) -> T:
             with container types such as ``list``, ``tuple``, ``dict``
             and ``dataclass``.
 
+        num_caches: Number of batch caches to maintain the reference to.
+            This parameter helps mitigate race conditions when using
+            multi-threading with multiple CUDA streams.
+
+            See :ref:`pytorch_cuda_race_condition`
+            for details on the rationale behind this parameter.
+
     Returns:
         An object of the same type as the input, but the PyTorch
         tensors are transferred to CUDA device.
     """
-    transfer = _get_trancfer_func()
+    transfer = _get_trancfer_func(num_caches)
     return transfer(batch)
