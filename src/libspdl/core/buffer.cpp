@@ -50,10 +50,11 @@ CPUBufferPtr cpu_buffer(
 
   if (storage) {
     if (storage->size < size) [[unlikely]] {
-      SPDL_FAIL(fmt::format(
-          "The provided storage does not have enough capacity. ({} < {})",
-          storage->size,
-          size));
+      SPDL_FAIL(
+          fmt::format(
+              "The provided storage does not have enough capacity. ({} < {})",
+              storage->size,
+              size));
     }
   }
 

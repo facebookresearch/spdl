@@ -58,35 +58,38 @@ bool is_compatible(const CUVIDEOFORMAT* fmt, const CUVIDDECODECAPS& caps) {
 
 void check_support(CUVIDEOFORMAT* fmt, CUVIDDECODECAPS caps) {
   if (!caps.bIsSupported) {
-    SPDL_FAIL(fmt::format(
-        "Codec not supported on this GPU. Codec: {}, Bit Depth: {}, Chroma Format: {}",
-        get_codec_name(fmt->codec),
-        fmt->bit_depth_luma_minus8 + 8,
-        get_chroma_name(fmt->chroma_format)));
+    SPDL_FAIL(
+        fmt::format(
+            "Codec not supported on this GPU. Codec: {}, Bit Depth: {}, Chroma Format: {}",
+            get_codec_name(fmt->codec),
+            fmt->bit_depth_luma_minus8 + 8,
+            get_chroma_name(fmt->chroma_format)));
   }
   if ((fmt->coded_width < caps.nMinWidth) ||
       (fmt->coded_width > caps.nMaxWidth) ||
       (fmt->coded_height < caps.nMinHeight) ||
       (fmt->coded_height > caps.nMaxHeight)) {
-    SPDL_FAIL(fmt::format(
-        "Resolution is outside of the supported range for this GPU. "
-        "Input video resolution is {}x{} (wxh). "
-        "The minimum/maximum supported resolutions are {}x{}, {}x{}",
-        fmt->coded_width,
-        fmt->coded_height,
-        caps.nMinWidth,
-        caps.nMinHeight,
-        caps.nMaxWidth,
-        caps.nMaxHeight));
+    SPDL_FAIL(
+        fmt::format(
+            "Resolution is outside of the supported range for this GPU. "
+            "Input video resolution is {}x{} (wxh). "
+            "The minimum/maximum supported resolutions are {}x{}, {}x{}",
+            fmt->coded_width,
+            fmt->coded_height,
+            caps.nMinWidth,
+            caps.nMinHeight,
+            caps.nMaxWidth,
+            caps.nMaxHeight));
   }
   if (auto mb_count = (fmt->coded_width >> 4) * (fmt->coded_height >> 4);
       mb_count > caps.nMaxMBCount) {
-    SPDL_FAIL(fmt::format(
-        "Number of macroblocks too large for this GPU. "
-        "Input video macroblock count {}. "
-        "Maximum supported number of macroblocks {}.",
-        mb_count,
-        caps.nMaxMBCount));
+    SPDL_FAIL(
+        fmt::format(
+            "Number of macroblocks too large for this GPU. "
+            "Input video macroblock count {}. "
+            "Maximum supported number of macroblocks {}.",
+            mb_count,
+            caps.nMaxMBCount));
   }
 }
 
@@ -143,20 +146,22 @@ CUVIDDECODECREATEINFO get_create_info(
   int height = video_fmt->display_area.bottom - video_fmt->display_area.top -
       crop.top - crop.bottom;
   if (width <= 0) {
-    SPDL_FAIL(fmt::format(
-        "Invalid image width: {} (source width: {}, crop.left: {}, crop.right: {})",
-        width,
-        video_fmt->display_area.right - video_fmt->display_area.left,
-        crop.left,
-        crop.right));
+    SPDL_FAIL(
+        fmt::format(
+            "Invalid image width: {} (source width: {}, crop.left: {}, crop.right: {})",
+            width,
+            video_fmt->display_area.right - video_fmt->display_area.left,
+            crop.left,
+            crop.right));
   }
   if (height <= 0) {
-    SPDL_FAIL(fmt::format(
-        "Invalid image height: {} (source height: {}, crop.top: {}, crop.bottom: {})",
-        height,
-        video_fmt->display_area.bottom - video_fmt->display_area.top,
-        crop.top,
-        crop.bottom));
+    SPDL_FAIL(
+        fmt::format(
+            "Invalid image height: {} (source height: {}, crop.top: {}, crop.bottom: {})",
+            height,
+            video_fmt->display_area.bottom - video_fmt->display_area.top,
+            crop.top,
+            crop.bottom));
   }
 
   // Note: The frame is first cropped then resized to target_width/height
@@ -231,9 +236,10 @@ cudaVideoSurfaceFormat get_output_sufrace_format(
         // YUV422 as output is not supported, so we use NV12
         return cudaVideoSurfaceFormat_NV12;
       default:
-        SPDL_FAIL(fmt::format(
-            "Unsupported chroma format: {}",
-            get_chroma_name(video_fmt->chroma_format)));
+        SPDL_FAIL(
+            fmt::format(
+                "Unsupported chroma format: {}",
+                get_chroma_name(video_fmt->chroma_format)));
     }
   }();
 
@@ -653,52 +659,67 @@ std::string get_diff(
     const CUVIDDECODECREATEINFO& i2) {
   std::vector<std::string> diffs;
   if (i1.CodecType != i2.CodecType) {
-    diffs.emplace_back(fmt::format(
-        "CodecType: {} -> {}",
-        get_codec_name(i1.CodecType),
-        get_codec_name(i2.CodecType)));
+    diffs.emplace_back(
+        fmt::format(
+            "CodecType: {} -> {}",
+            get_codec_name(i1.CodecType),
+            get_codec_name(i2.CodecType)));
   }
   if (i1.DeinterlaceMode != i2.DeinterlaceMode) {
-    diffs.emplace_back(fmt::format(
-        "DeinterlaceMode: {} -> {}",
-        int(i1.DeinterlaceMode),
-        int(i2.DeinterlaceMode)));
+    diffs.emplace_back(
+        fmt::format(
+            "DeinterlaceMode: {} -> {}",
+            int(i1.DeinterlaceMode),
+            int(i2.DeinterlaceMode)));
   }
   if (i1.bitDepthMinus8 != i2.bitDepthMinus8) {
-    diffs.emplace_back(fmt::format(
-        "BitDepth: {} -> {}", i1.bitDepthMinus8 + 8, i2.bitDepthMinus8 + 8));
+    diffs.emplace_back(
+        fmt::format(
+            "BitDepth: {} -> {}",
+            i1.bitDepthMinus8 + 8,
+            i2.bitDepthMinus8 + 8));
   }
   if (i1.ChromaFormat != i2.ChromaFormat) {
-    diffs.emplace_back(fmt::format(
-        "ChromaFormat: {} -> {}",
-        get_chroma_name(i1.ChromaFormat),
-        get_chroma_name(i2.ChromaFormat)));
+    diffs.emplace_back(
+        fmt::format(
+            "ChromaFormat: {} -> {}",
+            get_chroma_name(i1.ChromaFormat),
+            get_chroma_name(i2.ChromaFormat)));
   }
   if (i1.OutputFormat != i2.OutputFormat) {
-    diffs.emplace_back(fmt::format(
-        "OutputFormat: {} -> {}",
-        get_surface_format_name(i1.OutputFormat),
-        get_surface_format_name(i2.OutputFormat)));
+    diffs.emplace_back(
+        fmt::format(
+            "OutputFormat: {} -> {}",
+            get_surface_format_name(i1.OutputFormat),
+            get_surface_format_name(i2.OutputFormat)));
   }
   if (i1.ulCreationFlags != i2.ulCreationFlags) {
-    diffs.emplace_back(fmt::format(
-        "ulCreationFlags: {} -> {}", i1.ulCreationFlags, i2.ulCreationFlags));
+    diffs.emplace_back(
+        fmt::format(
+            "ulCreationFlags: {} -> {}",
+            i1.ulCreationFlags,
+            i2.ulCreationFlags));
   }
   if (i1.ulIntraDecodeOnly != i2.ulIntraDecodeOnly) {
-    diffs.emplace_back(fmt::format(
-        "ulIntraDecodeOnly: {} -> {}",
-        i1.ulIntraDecodeOnly,
-        i2.ulIntraDecodeOnly));
+    diffs.emplace_back(
+        fmt::format(
+            "ulIntraDecodeOnly: {} -> {}",
+            i1.ulIntraDecodeOnly,
+            i2.ulIntraDecodeOnly));
   }
   if (i1.ulNumOutputSurfaces != i2.ulNumOutputSurfaces) {
-    diffs.emplace_back(fmt::format(
-        "ulNumOutputSurfaces: {} -> {}",
-        i1.ulNumOutputSurfaces,
-        i2.ulNumOutputSurfaces));
+    diffs.emplace_back(
+        fmt::format(
+            "ulNumOutputSurfaces: {} -> {}",
+            i1.ulNumOutputSurfaces,
+            i2.ulNumOutputSurfaces));
   }
   if (i1.enableHistogram != i2.enableHistogram) {
-    diffs.emplace_back(fmt::format(
-        "enableHistogram: {} -> {}", i1.enableHistogram, i2.enableHistogram));
+    diffs.emplace_back(
+        fmt::format(
+            "enableHistogram: {} -> {}",
+            i1.enableHistogram,
+            i2.enableHistogram));
   }
   if (i1.ulMaxWidth < i2.ulWidth) {
     diffs.emplace_back(
@@ -717,64 +738,77 @@ std::string get_diff(
         fmt::format("ulHeight: {} -> {}", i1.ulHeight, i2.ulHeight));
   }
   if (i1.ulTargetWidth != i2.ulTargetWidth) {
-    diffs.emplace_back(fmt::format(
-        "ulTargetWidth: {} -> {}", i1.ulTargetWidth, i2.ulTargetWidth));
+    diffs.emplace_back(
+        fmt::format(
+            "ulTargetWidth: {} -> {}", i1.ulTargetWidth, i2.ulTargetWidth));
   }
   if (i1.ulTargetHeight != i2.ulTargetHeight) {
-    diffs.emplace_back(fmt::format(
-        "ulTargetHeight: {} -> {}", i1.ulTargetHeight, i2.ulTargetHeight));
+    diffs.emplace_back(
+        fmt::format(
+            "ulTargetHeight: {} -> {}", i1.ulTargetHeight, i2.ulTargetHeight));
   }
   if (i1.ulNumDecodeSurfaces != i2.ulNumDecodeSurfaces) {
-    diffs.emplace_back(fmt::format(
-        "ulNumDecodeSurfaces: {} -> {}",
-        i1.ulNumDecodeSurfaces,
-        i2.ulNumDecodeSurfaces));
+    diffs.emplace_back(
+        fmt::format(
+            "ulNumDecodeSurfaces: {} -> {}",
+            i1.ulNumDecodeSurfaces,
+            i2.ulNumDecodeSurfaces));
   }
   if (i1.display_area.left != i2.display_area.left) {
-    diffs.emplace_back(fmt::format(
-        "display_area.left: {} -> {}",
-        i1.display_area.left,
-        i2.display_area.left));
+    diffs.emplace_back(
+        fmt::format(
+            "display_area.left: {} -> {}",
+            i1.display_area.left,
+            i2.display_area.left));
   }
   if (i1.display_area.top != i2.display_area.top) {
-    diffs.emplace_back(fmt::format(
-        "display_area.top: {} -> {}",
-        i1.display_area.top,
-        i2.display_area.top));
+    diffs.emplace_back(
+        fmt::format(
+            "display_area.top: {} -> {}",
+            i1.display_area.top,
+            i2.display_area.top));
   }
   if (i1.display_area.right != i2.display_area.right) {
-    diffs.emplace_back(fmt::format(
-        "display_area.right: {} -> {}",
-        i1.display_area.right,
-        i2.display_area.right));
+    diffs.emplace_back(
+        fmt::format(
+            "display_area.right: {} -> {}",
+            i1.display_area.right,
+            i2.display_area.right));
   }
   if (i1.display_area.bottom != i2.display_area.bottom) {
-    diffs.emplace_back(fmt::format(
-        "display_area.bottom: {} -> {}",
-        i1.display_area.bottom,
-        i2.display_area.bottom));
+    diffs.emplace_back(
+        fmt::format(
+            "display_area.bottom: {} -> {}",
+            i1.display_area.bottom,
+            i2.display_area.bottom));
   }
   if (i1.target_rect.left == i2.target_rect.left) {
-    diffs.emplace_back(fmt::format(
-        "target_rect.left: {} -> {}",
-        i1.target_rect.left,
-        i2.target_rect.left));
+    diffs.emplace_back(
+        fmt::format(
+            "target_rect.left: {} -> {}",
+            i1.target_rect.left,
+            i2.target_rect.left));
   }
   if (i1.target_rect.top != i2.target_rect.top) {
-    diffs.emplace_back(fmt::format(
-        "target_rect.top: {} -> {}", i1.target_rect.top, i2.target_rect.top));
+    diffs.emplace_back(
+        fmt::format(
+            "target_rect.top: {} -> {}",
+            i1.target_rect.top,
+            i2.target_rect.top));
   }
   if (i1.target_rect.right == i2.target_rect.right) {
-    diffs.emplace_back(fmt::format(
-        "target_rect.right: {} -> {}",
-        i1.target_rect.right,
-        i2.target_rect.right));
+    diffs.emplace_back(
+        fmt::format(
+            "target_rect.right: {} -> {}",
+            i1.target_rect.right,
+            i2.target_rect.right));
   }
   if (i1.target_rect.bottom != i2.target_rect.bottom) {
-    diffs.emplace_back(fmt::format(
-        "target_rect.bottom: {} -> {}",
-        i1.target_rect.bottom,
-        i2.target_rect.bottom));
+    diffs.emplace_back(
+        fmt::format(
+            "target_rect.bottom: {} -> {}",
+            i1.target_rect.bottom,
+            i2.target_rect.bottom));
   }
   return fmt::format("{}", fmt::join(diffs, "\n    "));
 }

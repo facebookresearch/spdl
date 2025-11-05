@@ -77,8 +77,9 @@ void register_packets(nb::module_& m) {
                 fmt::format("src=\"{}:{}\"", self.src, self.stream_index)};
             if (auto ts = get_timestamps(self); !ts.empty()) {
               parts.push_back(fmt::format("num_packets={}", num_packets(self)));
-              parts.push_back(fmt::format(
-                  "pts=[{:.3f}, {:.3f}~]", ts[0], ts[ts.size() - 1]));
+              parts.push_back(
+                  fmt::format(
+                      "pts=[{:.3f}, {:.3f}~]", ts[0], ts[ts.size() - 1]));
               // Note: Audio end time is not precise due to the fact that
               // one packet contains multiple samples.
               // So we add tilde
@@ -186,8 +187,9 @@ void register_packets(nb::module_& m) {
                 fmt::format("src=\"{}:{}\"", self.src, self.stream_index)};
             if (auto ts = get_timestamps(self); !ts.empty()) {
               parts.push_back(fmt::format("num_packets={}", num_packets(self)));
-              parts.push_back(fmt::format(
-                  "pts=[{:.3f}, {:.3f}]", ts[0], ts[ts.size() - 1]));
+              parts.push_back(
+                  fmt::format(
+                      "pts=[{:.3f}, {:.3f}]", ts[0], ts[ts.size() - 1]));
             }
             if (self.timestamp) {
               parts.push_back(get_ts(*self.timestamp));

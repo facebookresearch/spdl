@@ -47,13 +47,15 @@ std::string get_internal_err_str(
 
 } // namespace spdl::core::detail
 
-#define SPDL_FAIL(msg)                                      \
-  throw std::runtime_error(spdl::core::detail::get_err_str( \
-      msg, spdl::core::detail::source_location::current()))
+#define SPDL_FAIL(msg)                 \
+  throw std::runtime_error(            \
+      spdl::core::detail::get_err_str( \
+          msg, spdl::core::detail::source_location::current()))
 
-#define SPDL_FAIL_INTERNAL(msg)                                             \
-  throw spdl::core::InternalError(spdl::core::detail::get_internal_err_str( \
-      msg, spdl::core::detail::source_location::current()))
+#define SPDL_FAIL_INTERNAL(msg)                 \
+  throw spdl::core::InternalError(              \
+      spdl::core::detail::get_internal_err_str( \
+          msg, spdl::core::detail::source_location::current()))
 
 #include <glog/logging.h>
 

@@ -37,8 +37,11 @@ Frames<media>::Frames(uintptr_t id_, Rational time_base_)
     : id(id_), time_base(time_base_) {
   TRACE_EVENT("decoding", "Frames::Frames", perfetto::Flow::ProcessScoped(id));
   if (time_base.den == 0) {
-    SPDL_FAIL(fmt::format(
-        "Invalid time base was provided. {}/{}", time_base.num, time_base.den));
+    SPDL_FAIL(
+        fmt::format(
+            "Invalid time base was provided. {}/{}",
+            time_base.num,
+            time_base.den));
   }
 }
 

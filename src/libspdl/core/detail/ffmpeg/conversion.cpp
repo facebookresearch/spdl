@@ -100,20 +100,25 @@ CPUBufferPtr convert_frames(
       SPDL_FAIL("No frame to convert to buffer.");
     }
     if (num_frames != num_frames0) {
-      SPDL_FAIL(fmt::format(
-          "Inconsistent number of frames: {} vs {}", num_frames0, num_frames));
+      SPDL_FAIL(
+          fmt::format(
+              "Inconsistent number of frames: {} vs {}",
+              num_frames0,
+              num_frames));
     }
     if (sample_fmt0 != sample_fmt) {
-      SPDL_FAIL(fmt::format(
-          "Inconsistent sample format: {} vs {}",
-          av_get_sample_fmt_name(sample_fmt0),
-          av_get_sample_fmt_name(sample_fmt)));
+      SPDL_FAIL(
+          fmt::format(
+              "Inconsistent sample format: {} vs {}",
+              av_get_sample_fmt_name(sample_fmt0),
+              av_get_sample_fmt_name(sample_fmt)));
     }
     if (num_channels0 != num_channels) {
-      SPDL_FAIL(fmt::format(
-          "Inconsistent number of channels: {} vs {}",
-          num_channels0,
-          num_channels));
+      SPDL_FAIL(
+          fmt::format(
+              "Inconsistent number of channels: {} vs {}",
+              num_channels0,
+              num_channels));
     }
   }
   switch (sample_fmt0) {
@@ -151,8 +156,10 @@ CPUBufferPtr convert_frames(
       return convert_frames<8, ElemClass::Float, true>(
           batch, std::move(storage));
     default:
-      SPDL_FAIL_INTERNAL(fmt::format(
-          "Unexpected sample format: {}", av_get_sample_fmt_name(sample_fmt0)));
+      SPDL_FAIL_INTERNAL(
+          fmt::format(
+              "Unexpected sample format: {}",
+              av_get_sample_fmt_name(sample_fmt0)));
   }
 }
 
@@ -306,9 +313,10 @@ void check_frame_consistency(const Frames<media>* frames_ptr)
   }
   if constexpr (media == MediaType::Image) {
     if (numel != 1) {
-      SPDL_FAIL_INTERNAL(fmt::format(
-          "There must be exactly one frame to convert to buffer. Found: {}",
-          numel));
+      SPDL_FAIL_INTERNAL(
+          fmt::format(
+              "There must be exactly one frame to convert to buffer. Found: {}",
+              numel));
     }
   }
   auto frames = frames_ptr->get_frames();
@@ -320,17 +328,19 @@ void check_frame_consistency(const Frames<media>* frames_ptr)
   int height = frames[0]->height, width = frames[0]->width;
   for (auto* f : frames) {
     if (f->height != height || f->width != width) {
-      SPDL_FAIL(fmt::format(
-          "Cannot convert the frames as the frames do not have the same size. "
-          "Reference WxH = {}x{}, found {}x{}.",
-          height,
-          width,
-          f->height,
-          f->width));
+      SPDL_FAIL(
+          fmt::format(
+              "Cannot convert the frames as the frames do not have the same size. "
+              "Reference WxH = {}x{}, found {}x{}.",
+              height,
+              width,
+              f->height,
+              f->width));
     }
     if (static_cast<AVPixelFormat>(f->format) != pix_fmt) {
-      SPDL_FAIL(fmt::format(
-          "Cannot convert the frames as the frames do not have the same pixel format."));
+      SPDL_FAIL(
+          fmt::format(
+              "Cannot convert the frames as the frames do not have the same pixel format."));
     }
   }
 }
@@ -351,25 +361,28 @@ void check_batch_frame_consistency(
     auto frames = frames_ptr->get_frames();
     auto pix_fmt = static_cast<AVPixelFormat>(frames.at(0)->format);
     if (pix_fmt != pix_fmt0) {
-      SPDL_FAIL(fmt::format(
-          "The input video frames must have the same pixel format. Expected {}, but found {}",
-          av_get_pix_fmt_name(pix_fmt0),
-          av_get_pix_fmt_name(pix_fmt)));
+      SPDL_FAIL(
+          fmt::format(
+              "The input video frames must have the same pixel format. Expected {}, but found {}",
+              av_get_pix_fmt_name(pix_fmt0),
+              av_get_pix_fmt_name(pix_fmt)));
     }
     if (frames.size() != num_frames) {
-      SPDL_FAIL(fmt::format(
-          "The number of frames must be the same. Expected {}, but found {}",
-          num_frames,
-          frames.size()));
+      SPDL_FAIL(
+          fmt::format(
+              "The number of frames must be the same. Expected {}, but found {}",
+              num_frames,
+              frames.size()));
     }
     for (auto& frame : frames) {
       if (frame->width != w || frame->height != h) {
-        SPDL_FAIL(fmt::format(
-            "The input video frames must be the same size. Expected {}x{}, but found {}x{}",
-            w,
-            h,
-            frame->width,
-            frame->height));
+        SPDL_FAIL(
+            fmt::format(
+                "The input video frames must be the same size. Expected {}x{}, but found {}x{}",
+                w,
+                h,
+                frame->width,
+                frame->height));
       }
     }
   }
@@ -424,8 +437,9 @@ CPUBufferPtr convert_frames(
         return convert_nv12(pix_fmt, batch, std::move(storage));
       }
       default:
-        SPDL_FAIL(fmt::format(
-            "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
+        SPDL_FAIL(
+            fmt::format(
+                "Unsupported pixel format: {}", av_get_pix_fmt_name(pix_fmt)));
     }
   }();
 
@@ -493,10 +507,11 @@ AudioFramesPtr create_reference_audio_frame(
   }
 
   if (auto bps = av_get_bytes_per_sample(fmt); bps != 0 && bps != bits / 8) {
-    SPDL_FAIL(fmt::format(
-        "The input dtype must be {} bytes par element. Found {}",
-        bps,
-        bits / 8));
+    SPDL_FAIL(
+        fmt::format(
+            "The input dtype must be {} bytes par element. Found {}",
+            bps,
+            bits / 8));
   }
 
   detail::AVFramePtr f{CHECK_AVALLOCATE(av_frame_alloc())};
@@ -508,11 +523,12 @@ AudioFramesPtr create_reference_audio_frame(
     // Planar == channel_first
     // NOTE: nanobind's stride is element count. Not bytes
     if (stride[1] != 1) {
-      SPDL_FAIL(fmt::format(
-          "The planar audio frame is requested, but the input data is "
-          "not contiguous along channel planes. (stride[1] must be 1) "
-          "Found: Stride: ({})",
-          fmt::join(stride, ", ")));
+      SPDL_FAIL(
+          fmt::format(
+              "The planar audio frame is requested, but the input data is "
+              "not contiguous along channel planes. (stride[1] must be 1) "
+              "Found: Stride: ({})",
+              fmt::join(stride, ", ")));
     }
     auto c = (int)shape[0];
     f->nb_samples = (int)shape[1];
@@ -548,12 +564,13 @@ AudioFramesPtr create_reference_audio_frame(
     // interleaved == channel_last
     // NOTE: nanobind's stride is element count. Not bytes
     if (stride[0] != (int)shape[1]) {
-      SPDL_FAIL(fmt::format(
-          "The interleaved audio frame is requested, but the input data is "
-          "not contiguous. (stride[0] must match shape[1]) "
-          "Found: Shape: ({}), Stride: ({})",
-          fmt::join(shape, ", "),
-          fmt::join(stride, ", ")));
+      SPDL_FAIL(
+          fmt::format(
+              "The interleaved audio frame is requested, but the input data is "
+              "not contiguous. (stride[0] must match shape[1]) "
+              "Found: Shape: ({}), Stride: ({})",
+              fmt::join(shape, ", "),
+              fmt::join(stride, ", ")));
     }
     auto c = (int)shape[1];
 
@@ -587,17 +604,19 @@ void validate_nhwc(
   }
   // Note: nanobind's stride is element count, not byte.
   if ((int)shape[3] != c) {
-    SPDL_FAIL(fmt::format(
-        "The shape must be (N, H, W, C=={}). Found: ({})",
-        c,
-        fmt::join(shape, ", ")));
+    SPDL_FAIL(
+        fmt::format(
+            "The shape must be (N, H, W, C=={}). Found: ({})",
+            c,
+            fmt::join(shape, ", ")));
   }
   if (!(stride[3] == 1 && stride[2] == c)) {
-    SPDL_FAIL(fmt::format(
-        "Each row must be contiguous. (stride == [..., {}, 1]) "
-        "Found: Stride ({})",
-        c,
-        fmt::join(stride, ", ")));
+    SPDL_FAIL(
+        fmt::format(
+            "Each row must be contiguous. (stride == [..., {}, 1]) "
+            "Found: Stride ({})",
+            c,
+            fmt::join(stride, ", ")));
   }
 }
 
@@ -610,16 +629,18 @@ void validate_nchw(
   }
   // Note: nanobind's stride is element count, not byte.
   if ((int)shape[1] != c) {
-    SPDL_FAIL(fmt::format(
-        "The shape must be (N, C=={}, H, W). Found: ({})",
-        c,
-        fmt::join(shape, ", ")));
+    SPDL_FAIL(
+        fmt::format(
+            "The shape must be (N, C=={}, H, W). Found: ({})",
+            c,
+            fmt::join(shape, ", ")));
   }
   if (!(stride[3] == 1)) {
-    SPDL_FAIL(fmt::format(
-        "Each row must be contiguous. (stride == [..., 1]) "
-        "Found: Stride ({})",
-        fmt::join(stride, ", ")));
+    SPDL_FAIL(
+        fmt::format(
+            "Each row must be contiguous. (stride == [..., 1]) "
+            "Found: Stride ({})",
+            fmt::join(stride, ", ")));
   }
 }
 
@@ -631,10 +652,11 @@ void validate_nhw(
   }
   // Note: nanobind's stride is element count, not byte.
   if (!(stride[2] == 1)) {
-    SPDL_FAIL(fmt::format(
-        "Each row must be contiguous. (stride == [..., 1]) "
-        "Found: Stride ({})",
-        fmt::join(stride, ", ")));
+    SPDL_FAIL(
+        fmt::format(
+            "Each row must be contiguous. (stride == [..., 1]) "
+            "Found: Stride ({})",
+            fmt::join(stride, ", ")));
   }
 }
 
@@ -708,10 +730,11 @@ VideoFramesPtr create_reference_video_frame(
     SPDL_FAIL(fmt::format("Unexpected pix_fmt: {}", pix_fmt));
   }
 
-#define CHECK_BITS(x, y)                                                \
-  if (x != y) {                                                         \
-    SPDL_FAIL(fmt::format(                                              \
-        "The input dtype must be {} bit par element. Found {}", y, x)); \
+#define CHECK_BITS(x, y)                                                    \
+  if (x != y) {                                                             \
+    SPDL_FAIL(                                                              \
+        fmt::format(                                                        \
+            "The input dtype must be {} bit par element. Found {}", y, x)); \
   }
 
   switch (fmt) {

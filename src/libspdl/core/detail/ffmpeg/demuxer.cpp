@@ -42,17 +42,19 @@ void init_fmt_ctx(AVFormatContext* fmt_ctx) {
 void enable_for_stream(AVFormatContext* fmt_ctx, const std::set<int>& indices) {
   for (auto i : indices) {
     if (i < 0 || (int)fmt_ctx->nb_streams <= i) {
-      SPDL_FAIL(fmt::format(
-          "Stream index must be in range of [0, {}). Found: {}",
-          fmt_ctx->nb_streams,
-          i));
+      SPDL_FAIL(
+          fmt::format(
+              "Stream index must be in range of [0, {}). Found: {}",
+              fmt_ctx->nb_streams,
+              i));
     }
     auto t = fmt_ctx->streams[i]->codecpar->codec_type;
     if (!(t == AVMEDIA_TYPE_AUDIO || t == AVMEDIA_TYPE_VIDEO)) {
-      SPDL_FAIL(fmt::format(
-          "Only audio/video streams are supported. Stream index {} is {}.",
-          i,
-          av_get_media_type_string(t)));
+      SPDL_FAIL(
+          fmt::format(
+              "Only audio/video streams are supported. Stream index {} is {}.",
+              i,
+              av_get_media_type_string(t)));
     }
   }
   // Disable other streams
@@ -144,10 +146,11 @@ int DemuxerImpl::get_default_stream_index(MediaType media) const {
     idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
   }
   if (idx < 0) {
-    SPDL_FAIL(fmt::format(
-        "No {} stream was found in {}.",
-        av_get_media_type_string(type),
-        fmt_ctx->url));
+    SPDL_FAIL(
+        fmt::format(
+            "No {} stream was found in {}.",
+            av_get_media_type_string(type),
+            fmt_ctx->url));
   }
   return idx;
 }
@@ -281,9 +284,10 @@ mk_packets(AVStream* stream, const char* src, std::vector<AVPacketPtr>&& pkts) {
     }
     default:;
   }
-  SPDL_FAIL(fmt::format(
-      "Unexpected media type was provided: {}",
-      av_get_media_type_string(stream->codecpar->codec_type)));
+  SPDL_FAIL(
+      fmt::format(
+          "Unexpected media type was provided: {}",
+          av_get_media_type_string(stream->codecpar->codec_type)));
 }
 } // namespace
 

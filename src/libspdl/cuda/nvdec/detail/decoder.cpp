@@ -176,8 +176,9 @@ void NvDecDecoderCore::init(
         fmt::format("crop_right must be non-negative. Found: {}", crop_.right));
   }
   if (crop_.bottom < 0) {
-    SPDL_FAIL(fmt::format(
-        "crop_bottom must be non-negative. Found: {}", crop_.bottom));
+    SPDL_FAIL(
+        fmt::format(
+            "crop_bottom must be non-negative. Found: {}", crop_.bottom));
   }
   if (tgt_w > 0 && tgt_w % 2) {
     SPDL_FAIL(fmt::format("target_width must be positive. Found: {}", tgt_w));
@@ -253,9 +254,10 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   auto output_fmt = get_output_sufrace_format(video_fmt, &caps);
 
   if (output_fmt != cudaVideoSurfaceFormat_NV12) {
-    SPDL_FAIL(fmt::format(
-        "Only NV12 output is supported. Found: {}",
-        get_surface_format_name(output_fmt)));
+    SPDL_FAIL(
+        fmt::format(
+            "Only NV12 output is supported. Found: {}",
+            get_surface_format_name(output_fmt)));
   }
 
   unsigned long max_width =
@@ -379,9 +381,10 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   auto height = decoder_param.ulTargetHeight;
 
   if (decoder_param.OutputFormat != cudaVideoSurfaceFormat_NV12) {
-    SPDL_FAIL(fmt::format(
-        "Only NV12 is supported. Found: {}",
-        get_surface_format_name(decoder_param.OutputFormat)));
+    SPDL_FAIL(
+        fmt::format(
+            "Only NV12 is supported. Found: {}",
+            get_surface_format_name(decoder_param.OutputFormat)));
   }
   auto h2 = height + height / 2;
   auto frame = std::make_shared<CUDAStorage>(width * h2, device_config);
@@ -412,12 +415,13 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
       "Failed to copy Y plane from decoder output surface.");
   CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
 
-  frame_buffer->emplace_back(CUDABuffer{
-      device_config.device_index,
-      frame,
-      {h2, width},
-      core::ElemClass::UInt,
-      sizeof(uint8_t)});
+  frame_buffer->emplace_back(
+      CUDABuffer{
+          device_config.device_index,
+          frame,
+          {h2, width},
+          core::ElemClass::UInt,
+          sizeof(uint8_t)});
 
   return 1;
 }

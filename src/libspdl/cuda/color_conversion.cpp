@@ -37,19 +37,21 @@ void validate_shape_consistency(const std::vector<CUDABuffer>& frames) {
     }
 
     if (f.shape != f0.shape) {
-      SPDL_FAIL(fmt::format(
-          "The shape of the buffer does not match. Found [{}] at 0, and [{}] at {}",
-          fmt::join(f0.shape, ", "),
-          fmt::join(f.shape, ", "),
-          i));
+      SPDL_FAIL(
+          fmt::format(
+              "The shape of the buffer does not match. Found [{}] at 0, and [{}] at {}",
+              fmt::join(f0.shape, ", "),
+              fmt::join(f.shape, ", "),
+              i));
     }
 
     if (f.device_index != f0.device_index) {
-      SPDL_WARN(fmt::format(
-          "The frames are in different devices. Frame 0 is on device {} and Frame {} is oon device {}",
-          f0.device_index,
-          i,
-          f.device_index));
+      SPDL_WARN(
+          fmt::format(
+              "The frames are in different devices. Frame 0 is on device {} and Frame {} is oon device {}",
+              f0.device_index,
+              i,
+              f.device_index));
     }
   }
 }
@@ -66,8 +68,10 @@ CUDABufferPtr nv12_to_rgb(
   const auto& f0 = frames[0];
   auto height = f0.shape[0], width = f0.shape[1];
   if (height % 3) {
-    SPDL_FAIL(fmt::format(
-        "The height of NV12 image must be divisble by 3. Found: {}", height));
+    SPDL_FAIL(
+        fmt::format(
+            "The height of NV12 image must be divisble by 3. Found: {}",
+            height));
   }
   auto h0 = height / 3 * 2;
 

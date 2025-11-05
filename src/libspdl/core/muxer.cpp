@@ -75,11 +75,12 @@ void Muxer::write(int i, Packets<media>& packets) {
     SPDL_FAIL(fmt::format("Index {} is out of range (0, {}]", i, types.size()));
   }
   if (types.at(i) != media) {
-    SPDL_FAIL(fmt::format(
-        "Stream {} expects {} type, but {} type was provided.",
-        i,
-        to_str(types.at(i)),
-        to_str(media)));
+    SPDL_FAIL(
+        fmt::format(
+            "Stream {} expects {} type, but {} type was provided.",
+            i,
+            to_str(types.at(i)),
+            to_str(media)));
   }
   pImpl->write(i, packets.pkts.get_packets(), packets.time_base);
 }
