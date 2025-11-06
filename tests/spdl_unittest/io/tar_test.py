@@ -32,7 +32,9 @@ class TestIterTarfile(unittest.TestCase):
         # In-memory parsing
         outputs = list(spdl.io.iter_tarfile(tar_data))
         self.assertEqual(len(outputs), len(ref_data))
-        for (ref_path, ref_content), (path, content_view) in zip(ref_data, outputs):
+        for (ref_path, ref_content), (path, content_view) in zip(
+            ref_data, outputs, strict=True
+        ):
             # content_view is now a memoryview, convert to bytes for comparison
             content = bytes(content_view)
             self.assertEqual(path, ref_path)
@@ -41,7 +43,9 @@ class TestIterTarfile(unittest.TestCase):
         # file-like object
         outputs = list(spdl.io.iter_tarfile(io.BytesIO(tar_data)))  # pyre-ignore
         self.assertEqual(len(outputs), len(ref_data))
-        for (ref_path, ref_content), (path, content) in zip(ref_data, outputs):
+        for (ref_path, ref_content), (path, content) in zip(
+            ref_data, outputs, strict=True
+        ):
             self.assertEqual(path, ref_path)
             self.assertEqual(content, ref_content)
 

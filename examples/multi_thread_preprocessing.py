@@ -209,7 +209,7 @@ def exp_spdl(
     )
 
     def convert(items):
-        frames, cls = list(zip(*items))
+        frames, cls = list(zip(*items, strict=True))
         buffer = spdl.io.convert_frames(frames)
         tensor = spdl.io.to_torch(buffer).permute(0, 3, 1, 2)
         return tensor, cls
