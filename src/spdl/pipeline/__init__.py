@@ -21,7 +21,11 @@ from ._components import (
     TaskPerfStats,
     TaskStatsHook,
 )
-from ._iter_utils import cache_iterator, iterate_in_subprocess
+from ._iter_utils import (
+    cache_iterator,
+    iterate_in_subinterpreter,
+    iterate_in_subprocess,
+)
 from ._pipeline import Pipeline
 from ._profile import profile_pipeline, ProfileHook, ProfileResult
 
@@ -42,6 +46,7 @@ __all__ = [
     "AsyncQueue",
     "StatsQueue",
     "QueuePerfStats",
+    "iterate_in_subinterpreter",
     "iterate_in_subprocess",
     "run_pipeline_in_subprocess",
 ]
