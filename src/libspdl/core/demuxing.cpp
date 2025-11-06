@@ -8,7 +8,6 @@
 
 #include <libspdl/core/demuxing.h>
 
-#include "libspdl/core/detail/ffmpeg/bsf.h"
 #include "libspdl/core/detail/ffmpeg/demuxer.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
