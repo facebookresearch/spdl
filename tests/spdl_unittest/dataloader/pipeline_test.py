@@ -11,7 +11,6 @@ import os
 import platform
 import random
 import re
-import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -20,7 +19,6 @@ from contextlib import asynccontextmanager
 from functools import partial
 from multiprocessing import Process
 from typing import TypeVar
-from unittest import skipIf
 
 import pytest
 from spdl.pipeline import (
@@ -31,7 +29,7 @@ from spdl.pipeline import (
     TaskHook,
     TaskStatsHook,
 )
-from spdl.pipeline._components import _node
+from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._components._common import _EOF
 from spdl.pipeline._components._hook import _periodic_dispatch
 from spdl.pipeline._components._pipe import (
@@ -2243,20 +2241,16 @@ class _validate_pipeline_id:
         self.val = val
 
     def __iter__(self) -> Iterator[int]:
-        if _node._PIPELINE_ID != self.val:
-            raise AssertionError(f"{_node._PIPELINE_ID=} != {self.val=}")
+        if (v := _get_global_id()) != self.val:
+            raise AssertionError(f"_node._PIPELINE_ID={v} != {self.val=}")
         yield 0
 
 
-# TODO: Fix this.
-@skipIf(
-    sys.platform == "win32", "On Windows module-level global variable is not inherited."
-)
 def test_run_pipeline_in_subprocess_pipeline_id():
     """The pipeline construdted in a subprocess inherits the global ID from the main process"""
     # Set to a number that's not zero and something unlikely to happen during the testing
-    _node._PIPELINE_ID = 123456
-    ref = _node._PIPELINE_ID + 1
+    _set_global_id(123456)
+    ref = _get_global_id() + 1
 
     builder = PipelineBuilder().add_source(_validate_pipeline_id(ref)).add_sink()
 

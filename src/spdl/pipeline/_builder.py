@@ -7,13 +7,18 @@
 # pyre-strict
 
 import logging
-from collections.abc import AsyncIterable, Callable, Iterable, Iterator
+from collections.abc import AsyncIterable, Callable, Iterable, Iterator, Sequence
 from concurrent.futures import Executor
 from functools import partial
 from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
-from spdl.pipeline._components import AsyncQueue, TaskHook
+from spdl.pipeline._components import (
+    _get_global_id,
+    _set_global_id,
+    AsyncQueue,
+    TaskHook,
+)
 from spdl.pipeline._iter_utils import iterate_in_subprocess
 from spdl.pipeline.defs import (
     _TPipeInputs,
@@ -323,6 +328,19 @@ class _Wrapper(Generic[U]):
             yield from pipeline
 
 
+def _get_initializer(kwargs: Any) -> Sequence[Callable[[], None]]:
+    initializer = [partial(_set_global_id, _get_global_id())]
+    if "initializer" not in kwargs:
+        return initializer
+
+    init_ = kwargs.pop("initializer")
+    if not isinstance(init_, Sequence):
+        initializer.append(init_)
+    else:
+        initializer.extend(init_)
+    return initializer
+
+
 def run_pipeline_in_subprocess(
     config_or_builder: PipelineConfig[U] | PipelineBuilder[T, U],
     /,
@@ -332,7 +350,7 @@ def run_pipeline_in_subprocess(
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
-    **kwargs: dict[str, Any],
+    **kwargs: Any,
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
 
@@ -357,6 +375,8 @@ def run_pipeline_in_subprocess(
         if isinstance(config_or_builder, PipelineBuilder)
         else config_or_builder
     )
+
+    initializer = _get_initializer(kwargs)
     return iterate_in_subprocess(
         fn=partial(
             _Wrapper,
@@ -367,5 +387,6 @@ def run_pipeline_in_subprocess(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
         ),
+        initializer=initializer,
         **kwargs,  # pyre-ignore: [6]
     )
