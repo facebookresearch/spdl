@@ -740,7 +740,6 @@ def test_periodic_dispatch_smoke_test():
     calls = []
 
     async def afun():
-        nonlocal calls
         print("afun: ", time.time())
         calls.append(time.monotonic())
 
