@@ -44,6 +44,8 @@ T = TypeVar("T")
 __all__ = [
     "_Node",
     "_build_pipeline_coro",
+    "_get_global_id",
+    "_set_global_id",
     "PipelineFailure",
 ]
 
@@ -249,6 +251,15 @@ def _build_node(
 
 # Used to append stage name with pipeline
 _PIPELINE_ID: int = -1
+
+
+def _get_global_id() -> int:
+    return _PIPELINE_ID
+
+
+def _set_global_id(val: int) -> None:
+    global _PIPELINE_ID
+    _PIPELINE_ID = val
 
 
 def _default_q(interval: float) -> type[AsyncQueue]:
