@@ -384,12 +384,13 @@ class TestIterateInSubprocess(unittest.TestCase):
             next(ite)
 
 
-def iter_range_and_store(n: int, path: str) -> Iterable[int]:
+def iter_range_and_store_with_sync(n: int, sync_queue: mp.Queue) -> Iterable[int]:
+    """Generator that synchronizes with main process via queue."""
     yield 0
     for i in range(n):
         yield i
-        with open(path, "w") as f:
-            f.write(str(i))
+        # Signal main process that we've yielded this value
+        sync_queue.put(i)
 
 
 class TestIterateInSubprocessBufferSize(unittest.TestCase):
@@ -398,53 +399,69 @@ class TestIterateInSubprocessBufferSize(unittest.TestCase):
 
         N = 10
 
-        with tempfile.TemporaryDirectory() as dir:
-            path = os.path.join(dir, "foo.txt")
+        # Use queue for synchronization between processes
+        sync_queue = mp.Queue()
 
-            src = iterate_in_subprocess(
-                fn=partial(iter_range_and_store, n=N, path=path),
-                daemon=True,
-                buffer_size=1,
+        src = iterate_in_subprocess(
+            fn=partial(iter_range_and_store_with_sync, n=N, sync_queue=sync_queue),
+            daemon=True,
+            buffer_size=1,
+        )
+        ite = iter(src)
+        self.assertEqual(next(ite), 0)
+
+        for i in range(N):
+            # Wait for subprocess to signal it has yielded value i
+            # Use timeout to avoid hanging if subprocess fails
+            subprocess_value = sync_queue.get(timeout=5)
+            self.assertEqual(
+                subprocess_value, i, f"Expected {i}, got {subprocess_value}"
             )
-            ite = iter(src)
-            self.assertEqual(next(ite), 0)
 
-            for i in range(N):
-                time.sleep(0.1)
+            # With buffer_size=1, the queue should be empty after fetching
+            self.assertTrue(
+                sync_queue.empty(), f"Queue should be empty after fetching item {i}"
+            )
 
-                with open(path, "r") as f:
-                    self.assertEqual(int(f.read()), i)
+            # Now fetch the value from the iterator
+            self.assertEqual(next(ite), i)
 
-                self.assertEqual(next(ite), i)
-
-            with self.assertRaises(StopIteration):
-                next(ite)
+        with self.assertRaises(StopIteration):
+            next(ite)
 
     def test_iterate_in_subprocess_buffer_size_64(self) -> None:
         """big buffer_size makes iterate_in_subprocess processes data in one go"""
 
         N = 10
 
-        with tempfile.TemporaryDirectory() as dir:
-            path = os.path.join(dir, "foo.txt")
+        # Use queue for synchronization between processes
+        sync_queue = mp.Queue()
 
-            src = iterate_in_subprocess(
-                fn=partial(iter_range_and_store, n=N, path=path),
-                daemon=True,
-                buffer_size=64,
+        src = iterate_in_subprocess(
+            fn=partial(iter_range_and_store_with_sync, n=N, sync_queue=sync_queue),
+            daemon=True,
+            buffer_size=64,
+        )
+        ite = iter(src)
+        self.assertEqual(next(ite), 0)
+
+        # With buffer_size=64, subprocess should process all data without waiting
+        # Wait for subprocess to signal all values have been processed
+        for expected_i in range(N):
+            # Use timeout to avoid hanging
+            subprocess_value = sync_queue.get(timeout=5)
+            self.assertEqual(
+                subprocess_value,
+                expected_i,
+                f"Expected {expected_i}, got {subprocess_value}",
             )
-            ite = iter(src)
-            self.assertEqual(next(ite), 0)
 
-            time.sleep(0.1)
-            for i in range(N):
-                with open(path, "r") as f:
-                    self.assertEqual(int(f.read()), 9)
+        # Now all data should be available in the buffer, fetch them
+        for i in range(N):
+            self.assertEqual(next(ite), i)
 
-                self.assertEqual(next(ite), i)
-
-            with self.assertRaises(StopIteration):
-                next(ite)
+        with self.assertRaises(StopIteration):
+            next(ite)
 
 
 class SourceIterable:
