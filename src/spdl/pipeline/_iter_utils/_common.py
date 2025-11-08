@@ -97,8 +97,8 @@ class _Status(enum.IntEnum):
     Status reported by the worker process in :py:func:`~spdl.pipeline.iterate_in_subprocess`.
     """
 
-    UNEXPECTED_CMD_RECIEVED = enum.auto()
-    """Received a command unexpected.
+    UNEXPECTED_CMD_RECEIVED = enum.auto()
+    """Received an unexpected command.
 
     :meta hide-value:
     """
@@ -200,7 +200,7 @@ def _execute_iterable(
            Initialization --> init_fail: Failed
            init_success --> i2
 
-           i2 --> i3: Command recieved
+           i2 --> i3: Command received
            i3 --> i4: START_ITERATION
            i3 --> i2: STOP_ITERATION
            i3 --> i6: Other commands
@@ -276,7 +276,7 @@ def _execute_iterable(
                 case _Cmd.ABORT:
                     return
                 case _:
-                    data_q.put(_Msg(_Status.UNEXPECTED_CMD_RECIEVED, str(cmd)))
+                    data_q.put(_Msg(_Status.UNEXPECTED_CMD_RECEIVED, str(cmd)))
                     return
 
         # One iteration
@@ -305,7 +305,7 @@ def _execute_iterable(
                     case _Cmd.ABORT:
                         return
                     case _:
-                        data_q.put(_Msg(_Status.UNEXPECTED_CMD_RECIEVED, str(cmd)))
+                        data_q.put(_Msg(_Status.UNEXPECTED_CMD_RECEIVED, str(cmd)))
                         return
 
             try:
@@ -399,7 +399,7 @@ def _enter_iteration_mode(
                     # residual from previous iteration. Could be iteration was abandoned, or
                     # the iteration had been completed when parent commanded STOP_ITERATION.
                     continue
-                case _Status.UNEXPECTED_CMD_RECIEVED:
+                case _Status.UNEXPECTED_CMD_RECEIVED:
                     # the worker was in the invalid state (iteration mode)
                     raise RuntimeError(
                         f"The {wtype} was not in the stand-by mode. Please make sure "
@@ -446,7 +446,7 @@ def _iterate_results(
                     return
                 case _Status.ITERATOR_FAILED:
                     raise RuntimeError(f"The {wtype} quit. {item.message}")
-                case _Status.UNEXPECTED_CMD_RECIEVED:
+                case _Status.UNEXPECTED_CMD_RECEIVED:
                     raise RuntimeError(
                         f"[INTERNAL ERROR] The {wtype} received unexpected command: "
                         f"{item.message}"

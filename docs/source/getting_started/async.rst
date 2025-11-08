@@ -4,8 +4,8 @@ Introduction to Async
 Asynchronous operations (a.k.a. async I/O) are the foundation of SPDL,
 but many ML practitioners are not familiar with such programming paradigm.
 
-For advancced usage of SPDL, it is often necessary to use async IO,
-but care must be taken as inproper usage can slow down the whole system.
+For advanced usage of SPDL, it is often necessary to use async IO,
+but care must be taken as improper usage can slow down the whole system.
 
 In this section, we share our view of what problem async I/O solves and how
 it evolved from concurrent programming in synchronous domain, in the hope
@@ -22,7 +22,7 @@ Let's say, we have multiple tasks that we want to complete as soon as possible.
 (For the sake of simplicity, let's pretend that the tasks are independent each
 other so we don't need to think about synchronization and such.)
 
-There are multiple ways to conccurently process them.
+There are multiple ways to concurrently process them.
 Python's :py:mod:`concurrent.futures` module offers
 :py:class:`ThreadPoolExecutor` and :py:class:`ProcessPoolExecutor`.
 There are different constraints when using multi-threading and multi-processing,
@@ -131,8 +131,8 @@ like the following, which makes it easy to see the more fundamental issue.
        ...
 
 
-We need to attend to the comletion with :py:meth:`Future.result` method,
-but since this method is blocking, at most only one such apprach can be used at a time.
+We need to attend to the completion with :py:meth:`Future.result` method,
+but since this method is blocking, at most only one such approach can be used at a time.
 In other words, even when we wrap this code into a function, we cannot execute multiple
 of it concurrently.
 
@@ -218,7 +218,7 @@ This approach accomplishes the basic pipelining, but it only runs the pipeline
 for the items submitted at the beginning. We want to start running pipelines for
 more items as the current ones complete.
 We also want to assign different concurrency for different stages.
-For example, GPUs do not supoprt transfering multiple data concurrently so
+For example, GPUs do not support transferring multiple data concurrently so
 we want to have at most one transfer task anytime.
 It is not straightforward to add such features.
 
@@ -227,9 +227,9 @@ The event loop
 
 We can keep going, but let's pause here and look at what we have.
 Even though our code is not feature-complete, it is already complex
-and likely maintaining it is error-prune.
+and likely maintaining it is error-prone.
 
-One intersting aspect of the code is that it is task-agnostic.
+One interesting aspect of the code is that it is task-agnostic.
 The task functions are usually provided by library users.
 There is nothing specific about the task being handled.
 

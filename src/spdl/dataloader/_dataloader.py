@@ -39,7 +39,7 @@ Functions: TypeAlias = Callable[[T], U] | Callable[[T], Awaitable[U]]
 class DataLoader(Generic[Source, Output]):
     """A data preprocessing pipeline composed of source, preprocessing and aggregation.
 
-    It generates source items, preprocess them concurrently, and aggergates them and store
+    It generates source items, preprocesses them concurrently, and aggregates them and stores
     the result in buffer.
 
     .. code-block::
@@ -93,7 +93,7 @@ class DataLoader(Generic[Source, Output]):
         batch_size: The number of items to aggregate before it's passed to the aggregator.
 
         drop_last: If ``True`` and the number of source items are not divisible by
-            ``batch_size``, then drop the reminder.
+            ``batch_size``, then drop the remainder.
 
         transfer_fn: A function applied to the output of aggregator function.
             It is intended for transferring data to GPU devices.
