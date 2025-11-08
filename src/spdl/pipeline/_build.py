@@ -17,7 +17,7 @@ import warnings
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypedDict, TypeVar, Unpack
 
 from spdl.pipeline._components import (
     _build_pipeline_coro,
@@ -233,17 +233,51 @@ class _Wrapper(Generic[U]):
             yield from pipeline
 
 
-def _get_initializer(kwargs: Any) -> Sequence[Callable[[], None]]:
-    initializer = [partial(_set_global_id, _get_global_id())]
-    if "initializer" not in kwargs:
-        return initializer
+class SubprocessKwargs(TypedDict, total=False):
+    """Keyword arguments for subprocess-based iteration.
 
-    init_ = kwargs.pop("initializer")
-    if not isinstance(init_, Sequence):
-        initializer.append(init_)
-    else:
-        initializer.extend(init_)
-    return initializer
+    Attributes:
+        buffer_size: Maximum number of items to buffer in the queue.
+        initializer: Functions executed in the subprocess before iteration starts.
+        mp_context: Context to use for multiprocessing.
+        timeout: Timeout for inactivity.
+        daemon: Whether to run the process as a daemon.
+    """
+
+    buffer_size: int
+    initializer: Callable[[], None] | Sequence[Callable[[], None]]
+    mp_context: str | None
+    timeout: float | None
+    daemon: bool
+
+
+class SubinterpreterKwargs(TypedDict, total=False):
+    """Keyword arguments for subinterpreter-based iteration.
+
+    Attributes:
+        buffer_size: Maximum number of items to buffer in the queue.
+        initializer: Functions executed in the subinterpreter before iteration starts.
+        timeout: Timeout for inactivity.
+    """
+
+    buffer_size: int
+    initializer: Callable[[], None] | Sequence[Callable[[], None]]
+    timeout: float | None
+
+
+def _update_initializer(
+    kwargs: SubinterpreterKwargs | SubprocessKwargs,
+) -> None:
+    """Update the initializer in kwargs to prepend the global ID setter."""
+    inits: list[Callable[[], None]] = [partial(_set_global_id, _get_global_id())]
+
+    if (initializer := kwargs.pop("initializer", None)) is not None:
+        if not isinstance(initializer, Sequence):
+            inits.append(initializer)
+        else:
+            inits.extend(initializer)
+
+    kwargs["initializer"] = inits
 
 
 def run_pipeline_in_subprocess(
@@ -255,7 +289,7 @@ def run_pipeline_in_subprocess(
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
-    **kwargs: Any,
+    **kwargs: Unpack[SubprocessKwargs],
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
 
@@ -294,7 +328,7 @@ def run_pipeline_in_subprocess(
         else config_or_builder.get_config()  # pyre-ignore[16]
     )
 
-    initializer = _get_initializer(kwargs)
+    _update_initializer(kwargs)
     return iterate_in_subprocess(
         fn=partial(
             _Wrapper,
@@ -305,7 +339,6 @@ def run_pipeline_in_subprocess(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
         ),
-        initializer=initializer,
         **kwargs,
     )
 
@@ -324,7 +357,7 @@ def run_pipeline_in_subinterpreter(
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
-    **kwargs: Any,
+    **kwargs: Unpack[SubinterpreterKwargs],
 ) -> Iterable[T]:
     """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.
 
@@ -343,7 +376,7 @@ def run_pipeline_in_subinterpreter(
          in a subinterpreter.
        - :ref:`parallelism-performance` for the context in which this function was created.
     """
-    initializer = _get_initializer(kwargs)
+    _update_initializer(kwargs)
     return iterate_in_subinterpreter(
         fn=partial(
             _Wrapper,
@@ -354,6 +387,5 @@ def run_pipeline_in_subinterpreter(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
         ),
-        initializer=initializer,
         **kwargs,
     )
