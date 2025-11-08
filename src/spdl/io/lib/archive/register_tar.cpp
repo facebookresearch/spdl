@@ -57,7 +57,7 @@ struct FileObjTarParserImpl {
     if (num_read > n) {
       throw std::runtime_error(
           fmt::format(
-              "Recieved {} bytes which exceeds the requested size of {}.",
+              "Received {} bytes which exceeds the requested size of {}.",
               num_read,
               n));
     }
