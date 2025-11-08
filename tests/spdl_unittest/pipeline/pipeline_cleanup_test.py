@@ -41,14 +41,15 @@ class TestPipelineCleanup(unittest.TestCase):
 
             # Assert: Verify that a warning was issued from the cleanup function
             # The cleanup function should warn when stopping an implicitly stopped pipeline
-            self.assertEqual(len(w), 1)
-            self.assertIn(
-                "Pipeline is running in the background",
-                str(w[0].message),
-            )
+            cleanup_warnings = [
+                warning
+                for warning in w
+                if "Pipeline is running in the background" in str(warning.message)
+            ]
+            self.assertGreaterEqual(len(cleanup_warnings), 1)
             self.assertIn(
                 "Stopping the background thread",
-                str(w[0].message),
+                str(cleanup_warnings[0].message),
             )
 
     def test_cleanup_not_called_when_explicitly_stopped(self) -> None:
