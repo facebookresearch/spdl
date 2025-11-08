@@ -8,8 +8,8 @@
 
 # pyre-strict
 
-from ._build import build_pipeline
-from ._builder import PipelineBuilder, run_pipeline_in_subprocess
+from ._build import build_pipeline, run_pipeline_in_subprocess
+from ._builder import PipelineBuilder
 from ._common._misc import create_task
 from ._components import (
     AsyncQueue,

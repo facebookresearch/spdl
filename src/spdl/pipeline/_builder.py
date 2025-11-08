@@ -7,19 +7,12 @@
 # pyre-strict
 
 import logging
-from collections.abc import AsyncIterable, Callable, Iterable, Iterator, Sequence
+from collections.abc import AsyncIterable, Callable, Iterable
 from concurrent.futures import Executor
-from functools import partial
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
-from spdl.pipeline._components import (
-    _get_global_id,
-    _set_global_id,
-    AsyncQueue,
-    TaskHook,
-)
-from spdl.pipeline._iter_utils import iterate_in_subprocess
+from spdl.pipeline._components import AsyncQueue, TaskHook
 from spdl.pipeline.defs import (
     _TPipeInputs,
     Aggregate,
@@ -38,7 +31,6 @@ from ._pipeline import Pipeline
 
 __all__ = [
     "PipelineBuilder",
-    "run_pipeline_in_subprocess",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -291,102 +283,3 @@ class PipelineBuilder(Generic[T, U]):
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
         )
-
-
-################################################################################
-# run in subprocess
-################################################################################
-
-
-class _Wrapper(Generic[U]):
-    def __init__(
-        self,
-        config: PipelineConfig[U],
-        num_threads: int,
-        max_failures: int,
-        report_stats_interval: float,
-        queue_class: type[AsyncQueue] | None,
-        task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
-    ) -> None:
-        self.config = config
-        self.num_threads = num_threads
-        self.max_failures = max_failures
-        self.report_stats_interval = report_stats_interval
-        self.queue_class = queue_class
-        self.task_hook_factory = task_hook_factory
-
-    def __iter__(self) -> Iterator[U]:
-        pipeline = build_pipeline(
-            self.config,
-            num_threads=self.num_threads,
-            max_failures=self.max_failures,
-            report_stats_interval=self.report_stats_interval,
-            queue_class=self.queue_class,
-            task_hook_factory=self.task_hook_factory,
-        )
-        with pipeline.auto_stop():
-            yield from pipeline
-
-
-def _get_initializer(kwargs: Any) -> Sequence[Callable[[], None]]:
-    initializer = [partial(_set_global_id, _get_global_id())]
-    if "initializer" not in kwargs:
-        return initializer
-
-    init_ = kwargs.pop("initializer")
-    if not isinstance(init_, Sequence):
-        initializer.append(init_)
-    else:
-        initializer.extend(init_)
-    return initializer
-
-
-def run_pipeline_in_subprocess(
-    config_or_builder: PipelineConfig[U] | PipelineBuilder[T, U],
-    /,
-    *,
-    num_threads: int,
-    max_failures: int = -1,
-    report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue] | None = None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
-    **kwargs: Any,
-) -> Iterable[T]:
-    """Run the given Pipeline in a subprocess, and iterate on the result.
-
-    Args:
-        config_or_builder: The definition of :py:class:`Pipeline`. Can be either a
-            :py:class:`PipelineConfig` or :py:class:`PipelineBuilder`.
-        num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory:
-            Passed to :py:func:`build_pipeline`.
-        kwargs: Passed to :py:func:`iterate_in_subprocess`.
-
-    Yields:
-        The results yielded from the pipeline.
-
-    .. seealso::
-
-       - :py:func:`iterate_in_subprocess` implements the logic for manipulating an iterable
-         in a subprocess.
-       - :ref:`parallelism-performance` for the context in which this function was created.
-    """
-    config = (
-        config_or_builder.get_config()
-        if isinstance(config_or_builder, PipelineBuilder)
-        else config_or_builder
-    )
-
-    initializer = _get_initializer(kwargs)
-    return iterate_in_subprocess(
-        fn=partial(
-            _Wrapper,
-            config=config,
-            num_threads=num_threads,
-            max_failures=max_failures,
-            report_stats_interval=report_stats_interval,
-            queue_class=queue_class,
-            task_hook_factory=task_hook_factory,
-        ),
-        initializer=initializer,
-        **kwargs,  # pyre-ignore: [6]
-    )
