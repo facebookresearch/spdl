@@ -8,10 +8,12 @@
 
 import sys
 import unittest
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from typing import Generic, TypeVar
 
 from parameterized import parameterized
+from spdl.pipeline import PipelineBuilder, run_pipeline_in_subinterpreter
+from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._iter_utils._subinterpreter import (
     iterate_in_subinterpreter as _iterate_in_subinterpreter,
 )
@@ -121,3 +123,156 @@ if sys.version_info >= (3, 14):
                 if i >= 4:
                     break
             self.assertEqual(result, [0, 1, 2, 3, 4])
+
+
+# Module-level functions and classes (required for pickling/subinterpreter compatibility)
+def _double(x: int) -> int:
+    """Helper function to double a value."""
+    return x * 2
+
+
+def _only_even(x: int) -> int | None:
+    """Helper function to filter only even numbers."""
+    return x if x % 2 == 0 else None
+
+
+class _StatefulSource:
+    """Stateful source that tracks iteration calls."""
+
+    def __init__(self, n: int) -> None:
+        self.n = n
+        self.calls = 0
+
+    def __iter__(self) -> Iterator[int]:
+        start = self.calls * self.n
+        self.calls += 1
+        yield from range(start, start + self.n)
+
+
+class _validate_pipeline_id:
+    """Helper class to validate that the pipeline ID is as expected."""
+
+    def __init__(self, val: int) -> None:
+        self.val = val
+
+    def __iter__(self) -> Iterator[int]:
+        if (v := _get_global_id()) != self.val:
+            raise AssertionError(f"_node._PIPELINE_ID={v} != {self.val=}")
+        yield 0
+
+
+if sys.version_info >= (3, 14):
+
+    class TestRunPipelineInSubinterpreter(unittest.TestCase):
+        """Test cases for run_pipeline_in_subinterpreter function."""
+
+        def test_basic_pipeline(self) -> None:
+            """Test basic pipeline execution in subinterpreter."""
+            condig = PipelineBuilder().add_source(range(5)).add_sink().get_config()
+            iterable = run_pipeline_in_subinterpreter(condig, num_threads=1, timeout=5)
+            result = list(iterable)
+            self.assertEqual(result, [0, 1, 2, 3, 4])
+
+        def test_pipeline_with_pipe(self) -> None:
+            """Test pipeline with pipe operation in subinterpreter."""
+            config = (
+                PipelineBuilder()
+                .add_source(range(5))
+                .pipe(_double)
+                .add_sink()
+                .get_config()
+            )
+            iterable = run_pipeline_in_subinterpreter(config, num_threads=1, timeout=5)
+            result = list(iterable)
+            self.assertEqual(result, [0, 2, 4, 6, 8])
+
+        def test_pipeline_multiple_iterations(self) -> None:
+            """Test that the pipeline can be iterated multiple times."""
+            config = (
+                PipelineBuilder()
+                .add_source(_StatefulSource(3))
+                .add_sink(buffer_size=10)
+                .get_config()
+            )
+            iterable = run_pipeline_in_subinterpreter(config, num_threads=1, timeout=5)
+
+            # First iteration
+            result1 = list(iterable)
+            self.assertEqual(result1, [0, 1, 2])
+
+            # Second iteration should start from where we left off
+            result2 = list(iterable)
+            self.assertEqual(result2, [3, 4, 5])
+
+        def test_pipeline_with_aggregate(self) -> None:
+            """Test pipeline with aggregation in subinterpreter."""
+            config = (
+                PipelineBuilder()
+                .add_source(range(10))
+                .aggregate(3)
+                .add_sink(buffer_size=10)
+                .get_config()
+            )
+            iterable = run_pipeline_in_subinterpreter(config, num_threads=1, timeout=5)
+            result = list(iterable)
+            self.assertEqual(result, [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]])
+
+        def test_pipeline_empty_source(self) -> None:
+            """Test pipeline with empty source in subinterpreter."""
+            config = PipelineBuilder().add_source([]).add_sink().get_config()
+            iterable = run_pipeline_in_subinterpreter(config, num_threads=1, timeout=5)
+            result = list(iterable)
+            self.assertEqual(result, [])
+
+        def test_pipeline_with_filter(self) -> None:
+            """Test pipeline with filter operation (returning None to skip items)."""
+            config = (
+                PipelineBuilder()
+                .add_source(range(10))
+                .pipe(_only_even)
+                .add_sink()
+                .get_config()
+            )
+            iterable = run_pipeline_in_subinterpreter(config, num_threads=1, timeout=5)
+            result = list(iterable)
+            self.assertEqual(result, [0, 2, 4, 6, 8])
+
+        def test_pipeline_with_buffer_size(self) -> None:
+            """Test run_pipeline_in_subinterpreter with custom buffer_size."""
+            config = PipelineBuilder().add_source(range(10)).add_sink().get_config()
+            iterable = run_pipeline_in_subinterpreter(
+                config, num_threads=1, buffer_size=5, timeout=5
+            )
+            result = list(iterable)
+            self.assertEqual(result, list(range(10)))
+
+        def test_run_pipeline_in_subinterpreter_pipeline_id(self) -> None:
+            """Test pipeline inherits global ID in subinterpreter."""
+            # Set to a number that's not zero and something unlikely to
+            # happen during testing
+            _set_global_id(123456)
+            ref = _get_global_id() + 1
+
+            config = (
+                PipelineBuilder()
+                .add_source(_validate_pipeline_id(ref))
+                .add_sink()
+                .get_config()
+            )
+
+            iterable = run_pipeline_in_subinterpreter(config, num_threads=1, timeout=5)
+
+            for _ in iterable:
+                pass
+
+else:
+
+    class TestRunPipelineInSubinterpreter(unittest.TestCase):
+        """Placeholder tests for Python < 3.14."""
+
+        def test_requires_python_3_14(self) -> None:
+            """Test that run_pipeline_in_subinterpreter requires Python 3.14+."""
+            config = PipelineBuilder().add_source([1, 2, 3]).add_sink().get_config()
+            with self.assertRaises(RuntimeError) as cm:
+                run_pipeline_in_subinterpreter(config, num_threads=1)
+            self.assertIn("Python 3.14", str(cm.exception))

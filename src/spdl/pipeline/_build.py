@@ -8,6 +8,7 @@
 __all__ = [
     "_build_pipeline",
     "build_pipeline",
+    "run_pipeline_in_subinterpreter",
     "run_pipeline_in_subprocess",
 ]
 
@@ -25,7 +26,7 @@ from spdl.pipeline._components import (
     AsyncQueue,
     TaskHook,
 )
-from spdl.pipeline._iter_utils import iterate_in_subprocess
+from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
 from spdl.pipeline.defs import PipelineConfig
 
 from ._pipeline import Pipeline
@@ -295,6 +296,55 @@ def run_pipeline_in_subprocess(
 
     initializer = _get_initializer(kwargs)
     return iterate_in_subprocess(
+        fn=partial(
+            _Wrapper,
+            config=config,
+            num_threads=num_threads,
+            max_failures=max_failures,
+            report_stats_interval=report_stats_interval,
+            queue_class=queue_class,
+            task_hook_factory=task_hook_factory,
+        ),
+        initializer=initializer,
+        **kwargs,
+    )
+
+
+################################################################################
+# run in subinterpreter
+################################################################################
+
+
+def run_pipeline_in_subinterpreter(
+    config: PipelineConfig[T],
+    /,
+    *,
+    num_threads: int,
+    max_failures: int = -1,
+    report_stats_interval: float = -1,
+    queue_class: type[AsyncQueue] | None = None,
+    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    **kwargs: Any,
+) -> Iterable[T]:
+    """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.
+
+    Args:
+        config: The definition of :py:class:`Pipeline`.
+        num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory:
+            Passed to :py:func:`build_pipeline`.
+        kwargs: Passed to :py:func:`iterate_in_subinterpreter`.
+
+    Yields:
+        The results yielded from the pipeline.
+
+    .. seealso::
+
+       - :py:func:`iterate_in_subinterpreter` implements the logic for manipulating an iterable
+         in a subinterpreter.
+       - :ref:`parallelism-performance` for the context in which this function was created.
+    """
+    initializer = _get_initializer(kwargs)
+    return iterate_in_subinterpreter(
         fn=partial(
             _Wrapper,
             config=config,
