@@ -25,7 +25,7 @@ The following command will build and install ``spdl`` Python package.
 .. note::
 
    Make sure to use ``-v`` to see the log from the actual build process.
-   The build front end by defaults hide the log of build process.
+   The build front end by default hides the log of build process.
 
 The build process first downloads/builds/installs some third-party
 dependencies, then it builds SPDL and its binding code.

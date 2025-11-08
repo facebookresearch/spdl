@@ -229,7 +229,7 @@ def run_pipeline_example() -> list[int]:
 
     _LG.info("Main pipeline config: %s", main_pipeline_config)
 
-    _LG.info("Builting the pipeline.")
+    _LG.info("Building the pipeline.")
     pipeline = build_pipeline(main_pipeline_config, num_threads=4)
 
     _LG.info("Executing the pipeline.")
@@ -242,7 +242,7 @@ def run_pipeline_example() -> list[int]:
 
 
 def run() -> None:
-    """Run example pipeline and check the resutl."""
+    """Run example pipeline and check the result."""
     results = run_pipeline_example()
 
     _LG.info("Final results: %s", results)

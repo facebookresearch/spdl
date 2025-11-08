@@ -6,7 +6,7 @@ Concurrency
 The pipelines we looked at so far process data sequentially.
 Now let's introduce concurrency to the pipeline so that it finishes jobs faster.
 
-There are two parameters that affects the pipeline performance.
+There are two parameters that affect pipeline performance:
 
 1. Stage concurrency
 2. Thread pool size
@@ -20,9 +20,8 @@ This argument determines at most how many operations of the stage the event loop
 
 .. important::
 
-   Please note that **scheduling multiple tasks concurrently does not necessarily mean
-   all of them are executed concurrently.** The execution of scheduled tasks is subject to
-   the availability of resources required for the execution.
+   Please note that **scheduling multiple tasks concurrently does not guarantee
+   concurrent execution.** Task execution depends on the availability of required resources.
 
    See the :ref:`Thread Pool Size<Thread Pool Size>` for the detail.
 
