@@ -36,3 +36,4 @@ This section provides detailed documentation on how to use these implementations
    :maxdepth: 2
 
    basic
+   decoding_overview
