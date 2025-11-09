@@ -37,3 +37,5 @@ This section provides detailed documentation on how to use these implementations
 
    basic
    decoding_overview
+   filtering
+   advanced_filtering

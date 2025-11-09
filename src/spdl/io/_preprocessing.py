@@ -75,6 +75,7 @@ def get_audio_filter_desc(
         Filter description.
 
     See Also:
+        - :doc:`../io/filtering` - Complete guide to FFmpeg filters
         - :doc:`../io/basic` - Using filters with high-level loading functions
     """
     parts = []
@@ -181,6 +182,7 @@ def get_video_filter_desc(
         Filter description.
 
     See Also:
+        - :doc:`../io/filtering` - Complete guide to FFmpeg filters
         - :doc:`../io/basic` - Using filters with high-level loading functions
     """
     parts = []
@@ -439,6 +441,7 @@ class FilterGraph:
                                                                  +---------------------+
 
     See Also:
+        - :doc:`../io/advanced_filtering` - Complete guide to complex filter graphs
         - :doc:`../io/filtering` - Basic filter usage
     """
 
