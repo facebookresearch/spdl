@@ -133,6 +133,7 @@ def load_audio(
 
     See Also:
         - :doc:`../io/basic` - High-level loading functions documentation
+        - :doc:`../io/decoding_overview` - Understanding the decoding pipeline
     """
     _core.log_api_usage_once("spdl.io.load_audio")
 
@@ -198,6 +199,7 @@ def load_video(
 
     See Also:
         - :doc:`../io/basic` - High-level loading functions documentation
+        - :doc:`../io/decoding_overview` - Understanding the decoding pipeline
     """
     _core.log_api_usage_once("spdl.io.load_video")
 
@@ -260,6 +262,7 @@ def load_image(
 
     See Also:
         - :doc:`../io/basic` - High-level loading functions documentation
+        - :doc:`../io/decoding_overview` - Understanding the decoding pipeline
     """
     _core.log_api_usage_once("spdl.io.load_image")
 
