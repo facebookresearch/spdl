@@ -73,6 +73,9 @@ def get_audio_filter_desc(
 
     Returns:
         Filter description.
+
+    See Also:
+        - :doc:`../io/basic` - Using filters with high-level loading functions
     """
     parts = []
     if num_channels is not None:
@@ -176,6 +179,9 @@ def get_video_filter_desc(
 
     Returns:
         Filter description.
+
+    See Also:
+        - :doc:`../io/basic` - Using filters with high-level loading functions
     """
     parts = []
     if frame_rate is not None:
@@ -431,6 +437,9 @@ class FilterGraph:
           Parsed_showwaves_1:default--[600x240 1:1 rgba]--default| Parsed_buffersink_2 |
                                                                  |    (buffersink)     |
                                                                  +---------------------+
+
+    See Also:
+        - :doc:`../io/filtering` - Basic filter usage
     """
 
     def __init__(self, filter_desc: str) -> None:
