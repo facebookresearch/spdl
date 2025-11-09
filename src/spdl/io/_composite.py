@@ -130,6 +130,9 @@ def load_audio(
 
     Returns:
         Buffer object.
+
+    See Also:
+        - :doc:`../io/basic` - High-level loading functions documentation
     """
     _core.log_api_usage_once("spdl.io.load_audio")
 
@@ -192,6 +195,9 @@ def load_video(
 
     Returns:
         Buffer object.
+
+    See Also:
+        - :doc:`../io/basic` - High-level loading functions documentation
     """
     _core.log_api_usage_once("spdl.io.load_video")
 
@@ -251,6 +257,9 @@ def load_image(
 
     Returns:
         Buffer object.
+
+    See Also:
+        - :doc:`../io/basic` - High-level loading functions documentation
     """
     _core.log_api_usage_once("spdl.io.load_image")
 
