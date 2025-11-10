@@ -158,8 +158,9 @@ def iterate_in_subinterpreter(
         Iterator over the results of the generator function.
 
     Note:
-        This function requires Python 3.14 or later. The function and the values
-        yielded by the iterator must be shareable between interpreters.
+        - This function requires Python 3.14 or later.
+        - The function and the values yielded by the iterator must be
+          shareable between interpreters.
 
     See Also:
         :py:func:`iterate_in_subprocess` for running in a subprocess instead.

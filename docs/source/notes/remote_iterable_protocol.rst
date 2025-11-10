@@ -66,30 +66,23 @@ Helper functions and data structures
 -------------------------------------
 
 The follosing functions and data structures are used to implement
-the :py:func:`~spdl.pipeline.iterate_in_subprocess` and :py:func:`iterate_in_subinterpreter` functions.
+the :py:func:`~spdl.pipeline.iterate_in_subprocess` and :py:func:`~spdl.pipeline.iterate_in_subinterpreter` functions.
 They are not public interface, but the logic is sufficiently elaborated,
 and it is helpful to have them in the documentation, so they are listed here.
 
-.. autoclass:: _Cmd
-   :noindex:
+.. autoclass:: _Cmd()
    :members:
 
-.. autoclass:: _Status
-   :noindex:
+.. autoclass:: _Status()
    :members:
 
 .. autofunction:: _enter_iteration_mode()
-   :noindex:
 
 .. autofunction:: _execute_iterable()
-   :noindex:
 
 .. autofunction:: _drain()
-   :noindex:
 
 .. autofunction:: _iterate_results()
-   :noindex:
 
 .. autoclass:: _SubprocessIterable()
-   :noindex:
    :members: __iter__

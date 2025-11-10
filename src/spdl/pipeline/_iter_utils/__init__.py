@@ -32,6 +32,7 @@ def __getattr__(name: str) -> object:
             "_execute_iterable",
             "_Cmd",
             "_Status",
+            "_drain",
             "_enter_iteration_mode",
             "_iterate_results",
         ):

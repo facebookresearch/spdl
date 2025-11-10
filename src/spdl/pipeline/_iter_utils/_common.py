@@ -61,30 +61,27 @@ class _Queue(Protocol[T]):
 
 # Command from parent to worker
 class _Cmd(enum.IntEnum):
-    """_Cmd()
-    Command issued from the parent process to the worker process in
-    :py:func:`~spdl.pipeline.iterate_in_subprocess`.
-    """
+    """Command issued to the worker."""
 
     ABORT = enum.auto()
-    """Instruct the worker process to abort and exit.
+    """Instruct the worker to abort and exit.
 
     :meta hide-value:
     """
 
     START_ITERATION = enum.auto()
-    """Instruct the worker process to start the iteration.
+    """Instruct the worker to start the iteration.
 
     :meta hide-value:
     """
 
     STOP_ITERATION = enum.auto()
-    """Instruct the worker process to stop the ongoing iteration,
+    """Instruct the worker to stop the ongoing iteration,
     and go back to the stand-by mode.
 
-    If the worker process receive this command in stand-by mode,
+    If the worker receive this command in stand-by mode,
     it is sliently ignored.
-    (This allows the parent process to be sure that the worker process is
+    (This allows the parent process to be sure that the worker is
     in the stand-by mode or failure mode, and not in iteration mode.)
 
     :meta hide-value:
@@ -93,9 +90,7 @@ class _Cmd(enum.IntEnum):
 
 # Final status of the iterator
 class _Status(enum.IntEnum):
-    """_Status()
-    Status reported by the worker process in :py:func:`~spdl.pipeline.iterate_in_subprocess`.
-    """
+    """Status reported by the worker."""
 
     UNEXPECTED_CMD_RECEIVED = enum.auto()
     """Received an unexpected command.
@@ -155,7 +150,8 @@ class _Msg(Generic[T]):
 def _drain(q: _Queue[Any]) -> None:
     """Drain a queue by removing all items.
 
-    Works with both :py:func:`multiprocessing.Queue` and :py:func:`concurrent.interpreters.Queue`.
+    Works with both :py:class:`multiprocessing.Queue`
+    and :py:class:`concurrent.interpreters.Queue`.
     """
     while True:
         try:
@@ -170,7 +166,8 @@ def _execute_iterable(
     fn: Callable[[], Iterable[T]],
     initializers: Sequence[Callable[[], None]] | None,
 ) -> None:
-    """Worker implementation for :py:func:`~spdl.pipeline.iterate_in_subprocess`.
+    """Worker implementation for :py:func:`~spdl.pipeline.iterate_in_subprocess`
+    and :py:func:`~spdl.pipeline.iterate_in_subinterpreter`.
 
     The following diagram illustrates the state transition with more details.
 
@@ -366,7 +363,8 @@ def _enter_iteration_mode(
 ) -> None:
     """Instruct the worker to enter iteration mode and wait for the acknowledgement.
 
-    Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
+    Works with both :py:class:`multiprocessing.Queue` and
+    :py:class:`concurrent.interpreters.Queue.`
 
     Args:
         cmd_q: Queue to send commands to the worker
