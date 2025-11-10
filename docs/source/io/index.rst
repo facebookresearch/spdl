@@ -39,3 +39,4 @@ This section provides detailed documentation on how to use these implementations
    decoding_overview
    filtering
    advanced_filtering
+   streaming_decoding
