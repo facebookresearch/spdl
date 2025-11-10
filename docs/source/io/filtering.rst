@@ -359,7 +359,35 @@ The following example shows how to change augmentation values dynamically.
        # augmented_image.shape: (224, 224, 3)
 
 
-The following image is one outcome of above.
+The following is an example filter descriptions generated and the resulting
+images.
+
+.. code-block::
+
+   "hflip,rotate=angle=-0.05,scale=256:256,crop=224:224:x=0.18*(iw-ow):y=0.17*(ih-oh)"
+   "hflip,vflip,rotate=angle=-0.37,scale=256:256,crop=224:224:x=0.09*(iw-ow):y=0.96*(ih-oh)"
+   "rotate=angle=0.33,scale=256:256,crop=224:224:x=0.58*(iw-ow):y=0.57*(ih-oh)"
+   "hflip,vflip,rotate=angle=0.30,scale=256:256,crop=224:224:x=0.80*(iw-ow):y=0.35*(ih-oh)"
+   "hflip,vflip,rotate=angle=0.02,scale=256:256,crop=224:224:x=0.01*(iw-ow):y=0.25*(ih-oh)"
+   "vflip,rotate=angle=0.35,scale=256:256,crop=224:224:x=0.42*(iw-ow):y=0.69*(ih-oh)"
+   "hflip,rotate=angle=0.22,scale=256:256,crop=224:224:x=0.10*(iw-ow):y=0.03*(ih-oh)"
+   "hflip,rotate=angle=-0.18,scale=256:256,crop=224:224:x=0.65*(iw-ow):y=0.31*(ih-oh)"
+   "rotate=angle=-0.13,scale=256:256,crop=224:224:x=0.37*(iw-ow):y=0.75*(ih-oh)"
+   "hflip,vflip,rotate=angle=0.01,scale=256:256,crop=224:224:x=0.27*(iw-ow):y=0.84*(ih-oh)"
+   "hflip,rotate=angle=-0.31,scale=256:256,crop=224:224:x=0.43*(iw-ow):y=0.92*(ih-oh)"
+   "hflip,rotate=angle=-0.27,scale=256:256,crop=224:224:x=0.96*(iw-ow):y=0.92*(ih-oh)"
+   "vflip,rotate=angle=-0.28,scale=256:256,crop=224:224:x=0.61*(iw-ow):y=0.04*(ih-oh)"
+   "hflip,vflip,rotate=angle=0.08,scale=256:256,crop=224:224:x=0.84*(iw-ow):y=0.57*(ih-oh)"
+   "hflip,vflip,rotate=angle=0.41,scale=256:256,crop=224:224:x=0.24*(iw-ow):y=0.92*(ih-oh)"
+   "hflip,rotate=angle=-0.02,scale=256:256,crop=224:224:x=0.47*(iw-ow):y=0.87*(ih-oh)"
+   "hflip,rotate=angle=-0.15,scale=256:256,crop=224:224:x=0.73*(iw-ow):y=0.30*(ih-oh)"
+   "vflip,rotate=angle=-0.13,scale=256:256,crop=224:224:x=0.91*(iw-ow):y=0.85*(ih-oh)"
+   "vflip,rotate=angle=0.28,scale=256:256,crop=224:224:x=0.62*(iw-ow):y=0.02*(ih-oh)"
+   "rotate=angle=0.24,scale=256:256,crop=224:224:x=0.85*(iw-ow):y=0.61*(ih-oh)"
+   "vflip,rotate=angle=-0.52,scale=256:256,crop=224:224:x=0.61*(iw-ow):y=0.59*(ih-oh)"
+   "vflip,rotate=angle=0.06,scale=256:256,crop=224:224:x=0.08*(iw-ow):y=0.04*(ih-oh)"
+   "hflip,rotate=angle=0.50,scale=256:256,crop=224:224:x=0.23*(iw-ow):y=0.42*(ih-oh)"
+   "vflip,rotate=angle=0.18,scale=256:256,crop=224:224:x=0.54*(iw-ow):y=0.34*(ih-oh)
 
 .. image:: ../_static/data/io_preprocessing_random_aug.png
 
