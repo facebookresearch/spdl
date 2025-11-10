@@ -142,7 +142,7 @@ def iterate_in_subinterpreter(
     """**[Experimental]** Run the given ``iterable`` in a subinterpreter.
 
     This function behaves similarly to :py:func:`iterate_in_subprocess`, but uses
-    Python 3.14's ``concurrent.interpreters`` module instead of multiprocessing.
+    Python 3.14's :py:mod:`concurrent.interpreters` module instead of multiprocessing.
     Subinterpreters provide isolation while sharing the same process, which can be
     more lightweight than spawning a separate process.
 
