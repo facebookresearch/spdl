@@ -4,9 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import sys
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from spdl.io.lib import _libspdl
@@ -25,7 +26,7 @@ def tracing(
     buffer_size: int = 4096,
     process_name: str | None = None,
     enable: bool = True,
-):
+) -> Generator[None, None, None]:
     """Enable tracing.
 
     Args:
@@ -55,7 +56,7 @@ def tracing(
 
 
 @contextmanager
-def trace_event(name: str):
+def trace_event(name: str) -> Generator[None, None, None]:
     """Trace an operation with custom name.
 
     Args:
@@ -73,7 +74,7 @@ def trace_event(name: str):
     _libspdl.trace_event_end()
 
 
-def trace_counter(i: int, val: int | float):
+def trace_counter(i: int, val: int | float) -> None:
     """Trace a counter value.
 
     Note:
@@ -93,11 +94,11 @@ def trace_counter(i: int, val: int | float):
     _libspdl.trace_counter(i, val)
 
 
-def trace_gc():
+def trace_gc() -> None:
     """Attach tracer to garbage collection."""
     import gc
 
-    def _func(phase, _info):
+    def _func(phase: str, _info: object) -> None:
         if phase == "start":
             _libspdl.trace_event_begin("gc")
         else:
