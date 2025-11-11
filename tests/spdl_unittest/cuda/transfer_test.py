@@ -4,13 +4,13 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 import torch
 from spdl.io import transfer_tensor
 
-# pyre-unsafe
 
-
-def test_gpu_transfer():
+def test_gpu_transfer() -> None:
     ref = torch.randint(256, (16, 3, 4608, 5328), dtype=torch.uint8)
     print(ref)
 
