@@ -40,3 +40,4 @@ This section provides detailed documentation on how to use these implementations
    filtering
    advanced_filtering
    streaming_decoding
+   gpu_decoding
