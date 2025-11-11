@@ -41,3 +41,4 @@ This section provides detailed documentation on how to use these implementations
    advanced_filtering
    streaming_decoding
    gpu_decoding
+   numpy_arrays
