@@ -5,6 +5,7 @@
 fb
 TARGETS
 BUCK
+*.bzl
 *.zip
 *.tar.gz
 *.tar.xz
