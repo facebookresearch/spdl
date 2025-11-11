@@ -20,36 +20,19 @@ comparing performance across different implementations.
 """
 
 import argparse
-import logging
-from dataclasses import dataclass
+import os
 
-_LG: logging.Logger = logging.getLogger(__name__)
+import matplotlib.pyplot as plt
 
-
-@dataclass
-class BenchmarkResult:
-    """Single benchmark result for a specific configuration."""
-
-    function_name: str
-    "Name of the function being benchmarked."
-    tar_size: int
-    "Size of the TAR archive in bytes."
-    file_size: int
-    "Size of each file in the TAR archive in bytes."
-    num_files: int
-    "Number of files in the TAR archive."
-    num_threads: int
-    "Number of threads used for this benchmark."
-    num_iterations: int
-    "Number of iterations performed."
-    qps_mean: float
-    "Mean queries per second (QPS)."
-    qps_lower_ci: float
-    "Lower bound of 95% confidence interval for QPS."
-    qps_upper_ci: float
-    "Upper bound of 95% confidence interval for QPS."
-    total_files_processed: int
-    "Total number of files processed during the benchmark."
+try:
+    from examples.benchmark_tarfile import (  # pyre-ignore[21]
+        BenchmarkConfig,
+        DEFAULT_RESULT_PATH,
+    )
+    from examples.benchmark_utils import load_results_from_csv  # pyre-ignore[21]
+except ImportError:
+    from spdl.examples.benchmark_tarfile import BenchmarkConfig, DEFAULT_RESULT_PATH
+    from spdl.examples.benchmark_utils import load_results_from_csv
 
 
 def _size_str(n: int) -> str:
@@ -85,42 +68,24 @@ def plot_results(
         output_path: Path to save the plot (e.g., ``benchmark_results.png``).
         filter_function: Optional function name to filter out from the plot.
     """
-    import matplotlib.pyplot as plt
-    import pandas as pd
-
-    df = pd.read_csv(csv_file)
-
-    # Extract Python info from the first row (all rows should have same Python info)
-    python_version = (
-        df["python_version"].iloc[0] if "python_version" in df.columns else "unknown"
-    )
-    free_threaded = (
-        df["free_threaded"].iloc[0] if "free_threaded" in df.columns else False
-    )
-
-    results = [
-        BenchmarkResult(
-            function_name=row["function_name"],
-            tar_size=row["tar_size"],
-            file_size=row["file_size"],
-            num_files=row["num_files"],
-            num_threads=row["num_threads"],
-            num_iterations=row["num_iterations"],
-            qps_mean=row["qps_mean"],
-            qps_lower_ci=row["qps_lower_ci"],
-            qps_upper_ci=row["qps_upper_ci"],
-            total_files_processed=row["total_files_processed"],
-        )
-        for _, row in df.iterrows()
-    ]
+    # Load results from CSV
+    results = load_results_from_csv(csv_file, BenchmarkConfig)
 
     # Filter out specific function if requested
     if filter_function:
-        results = [r for r in results if r.function_name != filter_function]
+        results = [r for r in results if r.config.function_name != filter_function]
+
+    if not results:
+        print("No results to plot")
+        return
+
+    # Extract Python info from the first result
+    python_version = results[0].python_version
+    free_threaded = results[0].free_threaded
 
     # Extract unique file sizes and function names
-    file_sizes = sorted({r.file_size for r in results})
-    function_names = sorted({r.function_name for r in results})
+    file_sizes = sorted({r.config.file_size for r in results})
+    function_names = sorted({r.config.function_name for r in results})
 
     # Create subplots: at most 3 columns, multiple rows if needed
     num_sizes = len(file_sizes)
@@ -149,24 +114,25 @@ def plot_results(
             func_results = [
                 r
                 for r in results
-                if r.function_name == func_name and r.file_size == file_size
+                if r.config.function_name == func_name
+                and r.config.file_size == file_size
             ]
 
             if not func_results:
                 continue
 
             # Sort by thread count
-            func_results.sort(key=lambda r: r.num_threads)
+            func_results.sort(key=lambda r: r.config.num_threads)
 
-            thread_counts = [r.num_threads for r in func_results]
-            qps_means = [r.qps_mean for r in func_results]
-            qps_lower_cis = [r.qps_lower_ci for r in func_results]
-            qps_upper_cis = [r.qps_upper_ci for r in func_results]
+            thread_counts = [r.config.num_threads for r in func_results]
+            qps_means = [r.qps for r in func_results]
+            qps_lower_cis = [r.ci_lower for r in func_results]
+            qps_upper_cis = [r.ci_upper for r in func_results]
 
             if first_thread_counts is None:
-                first_tar_size = func_results[0].tar_size
+                first_tar_size = func_results[0].config.tar_size
                 first_thread_counts = thread_counts
-                first_num_files = func_results[0].num_files
+                first_num_files = func_results[0].config.num_files
 
             ax.plot(
                 thread_counts,
@@ -213,7 +179,7 @@ def plot_results(
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
-    _LG.info("Plot saved to: %s", output_path)
+    print(f"Plot saved to: {output_path}")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -222,19 +188,19 @@ def _parse_args() -> argparse.Namespace:
     Returns:
         Parsed arguments.
     """
+
     parser = argparse.ArgumentParser(
-        description="Plot TAR file benchmark results from CSV"
+        description="Plot iter_tarfile benchmark results from CSV"
     )
     parser.add_argument(
         "--input",
-        type=str,
-        required=True,
+        type=lambda p: os.path.realpath(p),
+        default=DEFAULT_RESULT_PATH,
         help="Input CSV file with benchmark results",
     )
     parser.add_argument(
         "--output",
-        type=str,
-        default="benchmark_tarfile_plot.png",
+        type=lambda p: os.path.realpath(p),
         help="Output path for the plot",
     )
     parser.add_argument(
@@ -242,13 +208,6 @@ def _parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Filter out a specific function name from the plot",
-    )
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Logging level",
     )
 
     return parser.parse_args()
@@ -261,13 +220,10 @@ def main() -> None:
     """
     args = _parse_args()
 
-    logging.basicConfig(
-        level=getattr(logging, args.log_level),
-        format="%(asctime)s [%(levelname).1s]: %(message)s",
+    print(f"Loading benchmark results from: {args.input}")
+    plot_results(
+        args.input, args.output or args.input.replace(".csv", ".png"), args.filter
     )
-
-    _LG.info("Loading benchmark results from: %s", args.input)
-    plot_results(args.input, args.output, args.filter)
 
 
 if __name__ == "__main__":

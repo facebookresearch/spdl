@@ -27,9 +27,9 @@ The benchmark suite evaluates performance across multiple dimensions:
 
    $ numactl --membind 0 --cpubind 0 python benchmark_wav.py --output wav_benchmark_results.csv
    # Plot results
-   $ python plot_wav_benchmark.py --input wav_benchmark_results.csv --output wav_benchmark_plot.png
+   $ python benchmark_wav_plot.py --input wav_benchmark_results.csv --output wav_benchmark_plot.png
    # Plot results without load_wav
-   $ python plot_wav_benchmark.py --input wav_benchmark_results.csv --output wav_benchmark_plot_2.png --filter '3. spdl.io.load_wav'
+   $ python benchmark_wav_plot.py --input wav_benchmark_results.csv --output wav_benchmark_plot_2.png --filter '3. spdl.io.load_wav'
 
 **Result**
 
@@ -65,51 +65,74 @@ but it scales in multi-threading as it releases the GIL almost entirely.
 """
 
 __all__ = [
-    "BenchmarkResult",
     "BenchmarkConfig",
     "create_wav_data",
     "load_sf",
     "load_spdl_audio",
     "load_spdl_wav",
-    "benchmark",
-    "run_benchmark_suite",
-    "save_results_to_csv",
     "main",
 ]
 
 import argparse
-import csv
 import io
-import sys
-import time
+import os
 from collections.abc import Callable
-from concurrent.futures import as_completed, ThreadPoolExecutor
 from dataclasses import dataclass
 
 import numpy as np
 import scipy.io.wavfile
-import scipy.stats
 import soundfile as sf
 import spdl.io
 from numpy.typing import NDArray
 
-
-def _get_python_info() -> tuple[str, bool]:
-    """Get Python version and free-threaded ABI information.
-
-    Returns:
-        Tuple of (python_version, is_free_threaded)
-    """
-    python_version = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+try:
+    from examples.benchmark_utils import (  # pyre-ignore[21]
+        BenchmarkResult,
+        BenchmarkRunner,
+        ExecutorType,
+        get_default_result_path,
+        save_results_to_csv,
     )
-    # Check if Python is running with free-threaded ABI (PEP 703)
-    # _is_gil_enabled is only available in Python 3.13+
-    try:
-        is_free_threaded = sys._is_gil_enabled()  # pyre-ignore[16]
-    except AttributeError:
-        is_free_threaded = False
-    return python_version, is_free_threaded
+except ImportError:
+    from spdl.examples.benchmark_utils import (
+        BenchmarkResult,
+        BenchmarkRunner,
+        ExecutorType,
+        get_default_result_path,
+        save_results_to_csv,
+    )
+
+
+DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
+
+
+@dataclass(frozen=True)
+class BenchmarkConfig:
+    """Configuration for a single WAV benchmark run.
+
+    Combines both audio file parameters and benchmark execution parameters.
+
+    Attributes:
+        function_name: Name of the function being tested
+        function: The actual function to benchmark
+        sample_rate: Audio sample rate in Hz
+        num_channels: Number of audio channels
+        bits_per_sample: Bit depth per sample (16 or 32)
+        duration_seconds: Duration of the audio file in seconds
+        num_threads: Number of concurrent threads
+        iterations: Number of iterations per run
+        num_runs: Number of runs for statistical analysis
+    """
+
+    function_name: str
+    function: Callable[[bytes], NDArray]
+    sample_rate: int
+    num_channels: int
+    bits_per_sample: int
+    duration_seconds: float
+    num_threads: int
+    iterations: int
+    num_runs: int
 
 
 def create_wav_data(
@@ -188,210 +211,6 @@ def load_spdl_wav(wav_data: bytes) -> NDArray:
     return spdl.io.to_numpy(spdl.io.load_wav(wav_data))
 
 
-@dataclass(frozen=True)
-class BenchmarkResult:
-    """Results from a single benchmark run."""
-
-    duration: float
-    qps: float
-    ci_lower: float
-    ci_upper: float
-    num_threads: int
-    function_name: str
-    duration_seconds: float
-    python_version: str
-    free_threaded: bool
-
-
-def benchmark(
-    name: str,
-    func: Callable[[], NDArray],
-    iterations: int,
-    num_threads: int,
-    num_sets: int,
-    duration_seconds: float,
-) -> tuple[BenchmarkResult, NDArray]:
-    """Benchmark a function using multiple threads and calculate statistics.
-
-    Executes a warmup phase followed by multiple benchmark sets to compute
-    performance metrics including mean queries per second (QPS) and 95%
-    confidence intervals using Student's t-distribution.
-
-    Args:
-        name: Descriptive name for the benchmark (used in results)
-        func: Callable function to benchmark (takes no args, returns NDArray)
-        iterations: Total number of function calls per benchmark set
-        num_threads: Number of concurrent threads for parallel execution
-        num_sets: Number of independent benchmark sets for confidence interval
-        duration_seconds: Duration of audio file being processed (for metadata)
-
-    Returns:
-        Tuple containing:
-            - BenchmarkResult with timing statistics, QPS, confidence intervals
-            - Output NDArray from the last function execution
-    """
-
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        # Warmup
-        futures = [executor.submit(func) for _ in range(num_threads * 30)]
-        for future in as_completed(futures):
-            output = future.result()
-
-        # Run multiple sets for confidence interval
-        qps_samples = []
-        for _ in range(num_sets):
-            t0 = time.perf_counter()
-            futures = [executor.submit(func) for _ in range(iterations)]
-            for future in as_completed(futures):
-                output = future.result()
-            elapsed = time.perf_counter() - t0
-            qps_samples.append(iterations / elapsed)
-
-    # Calculate mean and 95% confidence interval
-    qps_mean = np.mean(qps_samples)
-    qps_std = np.std(qps_samples, ddof=1)
-    confidence_level = 0.95
-    degrees_freedom = num_sets - 1
-    confidence_interval = scipy.stats.t.interval(
-        confidence_level,
-        degrees_freedom,
-        loc=qps_mean,
-        scale=qps_std / np.sqrt(num_sets),
-    )
-
-    duration = 1.0 / qps_mean
-    python_version, free_threaded = _get_python_info()
-    result = BenchmarkResult(
-        duration=duration,
-        qps=qps_mean,
-        ci_lower=float(confidence_interval[0]),
-        ci_upper=float(confidence_interval[1]),
-        num_threads=num_threads,
-        function_name=name,
-        duration_seconds=duration_seconds,
-        python_version=python_version,
-        free_threaded=free_threaded,
-    )
-    return result, output  # pyre-ignore[61]
-
-
-def run_benchmark_suite(
-    wav_data: bytes,
-    ref: NDArray,
-    num_threads: int,
-    duration_seconds: float,
-) -> tuple[BenchmarkResult, BenchmarkResult, BenchmarkResult]:
-    """Run benchmarks for both libraries with given parameters.
-
-    Args:
-        wav_data: WAV file data as bytes
-        ref: Reference audio array for validation
-        num_threads: Number of threads (use 1 for single-threaded)
-        duration_seconds: Duration of audio in seconds
-
-    Returns:
-        Tuple of (spdl_wav_result, spdl_audio_result, soundfile_result)
-    """
-    # load_wav is fast but the performance is unstable, so we need to run more
-    iterations = 100 * num_threads
-    num_sets = 100
-
-    spdl_wav_result, output = benchmark(
-        name="3. spdl.io.load_wav",
-        func=lambda: load_spdl_wav(wav_data),
-        iterations=iterations,
-        num_threads=num_threads,
-        num_sets=num_sets,
-        duration_seconds=duration_seconds,
-    )
-    np.testing.assert_array_equal(output, ref)
-
-    # others are slow but the performance is stable.
-    iterations = 10 * num_threads
-    num_sets = 5
-
-    spdl_audio_result, output = benchmark(
-        name="2. spdl.io.load_audio",
-        func=lambda: load_spdl_audio(wav_data),
-        iterations=iterations,
-        num_threads=num_threads,
-        num_sets=num_sets,
-        duration_seconds=duration_seconds,
-    )
-    np.testing.assert_array_equal(output, ref)
-    soundfile_result, output = benchmark(
-        name="1. soundfile",
-        func=lambda: load_sf(wav_data),
-        iterations=iterations,
-        num_threads=num_threads,
-        num_sets=num_sets,
-        duration_seconds=duration_seconds,
-    )
-    if output.ndim == 1:
-        output = output[:, None]
-    np.testing.assert_array_equal(output, ref)
-
-    return spdl_wav_result, spdl_audio_result, soundfile_result
-
-
-@dataclass(frozen=True)
-class BenchmarkConfig:
-    """Configuration for audio file parameters used in benchmarking.
-
-    Attributes:
-        sample_rate: Audio sample rate in Hz (e.g., 44100 for CD quality)
-        num_channels: Number of audio channels (1=mono, 2=stereo, etc.)
-        bits_per_sample: Bit depth per sample (16 or 32)
-        duration_seconds: Duration of the audio file in seconds
-    """
-
-    sample_rate: int
-    num_channels: int
-    bits_per_sample: int
-    duration_seconds: float
-
-
-def save_results_to_csv(
-    results: list[BenchmarkResult], output_file: str = "benchmark_results.csv"
-) -> None:
-    """Save benchmark results to a CSV file that Excel can open.
-
-    Args:
-        results: List of BenchmarkResult objects containing benchmark data
-        output_file: Output file path for the CSV file
-    """
-    with open(output_file, "w", newline="") as csvfile:
-        fieldnames = [
-            "function_name",
-            "duration_seconds",
-            "num_threads",
-            "qps",
-            "ci_lower",
-            "ci_upper",
-            "duration",
-            "python_version",
-            "free_threaded",
-        ]
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        writer.writeheader()
-        for r in results:
-            writer.writerow(
-                {
-                    "function_name": r.function_name,
-                    "duration_seconds": r.duration_seconds,
-                    "num_threads": r.num_threads,
-                    "qps": r.qps,
-                    "ci_lower": r.ci_lower,
-                    "ci_upper": r.ci_upper,
-                    "duration": r.duration,
-                    "python_version": r.python_version,
-                    "free_threaded": r.free_threaded,
-                }
-            )
-    print(f"Results saved to {output_file}")
-
-
 def _parse_args() -> argparse.Namespace:
     """Parse command line arguments for the benchmark script.
 
@@ -401,8 +220,8 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Benchmark WAV loading performance")
     parser.add_argument(
         "--output",
-        type=str,
-        default="wav_benchmark_results.csv",
+        type=lambda p: os.path.realpath(p),
+        default=DEFAULT_RESULT_PATH,
         help="Output file path.",
     )
     return parser.parse_args()
@@ -417,42 +236,94 @@ def main() -> None:
     """
     args = _parse_args()
 
-    benchmark_configs = [
-        # (sample_rate, num_channels, bits_per_sample, duration_seconds, iterations)
-        # BenchmarkConfig(8000, 1, 16, 1.0),  # Low quality mono
-        # BenchmarkConfig(16000, 1, 16, 1.0),  # Speech quality mono
-        # BenchmarkConfig(48000, 2, 16, 1.0),  # High quality stereo
-        # BenchmarkConfig(48000, 8, 16, 1.0),  # Multi-channel audio
-        BenchmarkConfig(44100, 2, 16, 1.0),  # CD quality stereo
-        BenchmarkConfig(44100, 2, 16, 10.0),  #
-        BenchmarkConfig(44100, 2, 16, 60.0),  #
-        # (44100, 2, 24, 1.0, 100),  # 24-bit audio
+    # Define audio configurations to test
+    audio_configs = [
+        # (sample_rate, num_channels, bits_per_sample, duration_seconds)
+        # (8000, 1, 16, 1.0),  # Low quality mono
+        # (16000, 1, 16, 1.0),  # Speech quality mono
+        # (48000, 2, 16, 1.0),  # High quality stereo
+        # (48000, 8, 16, 1.0),  # Multi-channel audio
+        (44100, 2, 16, 1.0),  # CD quality stereo
+        (44100, 2, 16, 10.0),  #
+        (44100, 2, 16, 60.0),  #
+        # (44100, 2, 24, 1.0),  # 24-bit audio
     ]
 
-    results: list[BenchmarkResult] = []
+    thread_counts = [1, 2, 4, 8, 16]
 
-    for cfg in benchmark_configs:
-        print(cfg)
+    # Define benchmark function configurations
+    # (function_name, function, iterations_multiplier, num_runs)
+    benchmark_functions = [
+        ("3. spdl.io.load_wav", load_spdl_wav, 100, 100),  # Fast but unstable
+        ("2. spdl.io.load_audio", load_spdl_audio, 10, 5),  # Slower but stable
+        ("1. soundfile", load_sf, 10, 5),  # Slower but stable
+    ]
+
+    results: list[BenchmarkResult[BenchmarkConfig]] = []
+
+    for sample_rate, num_channels, bits_per_sample, duration_seconds in audio_configs:
+        # Create WAV data for this audio configuration
         wav_data, ref = create_wav_data(
-            sample_rate=cfg.sample_rate,
-            num_channels=cfg.num_channels,
-            bits_per_sample=cfg.bits_per_sample,
-            duration_seconds=cfg.duration_seconds,
+            sample_rate=sample_rate,
+            num_channels=num_channels,
+            bits_per_sample=bits_per_sample,
+            duration_seconds=duration_seconds,
+        )
+
+        print(
+            f"\n{sample_rate}Hz, {num_channels}ch, {bits_per_sample}bit, {duration_seconds}s"
         )
         print(
             f"Threads,"
-            f"SPDL WAV QPS ({cfg.duration_seconds} sec),CI Lower, CI Upper,"
-            f"SPDL Audio QPS ({cfg.duration_seconds} sec),CI Lower, CI Upper,"
-            f"soundfile QPS ({cfg.duration_seconds} sec),CI Lower, CI Upper"
+            f"SPDL WAV QPS ({duration_seconds} sec),CI Lower,CI Upper,"
+            f"SPDL Audio QPS ({duration_seconds} sec),CI Lower,CI Upper,"
+            f"soundfile QPS ({duration_seconds} sec),CI Lower,CI Upper"
         )
-        for num_threads in [1, 2, 4, 8, 16]:
-            spdl_wav_result, spdl_audio_result, soundfile_result = run_benchmark_suite(
-                wav_data,
-                ref,
-                num_threads=num_threads,
-                duration_seconds=cfg.duration_seconds,
-            )
-            results.extend([spdl_wav_result, spdl_audio_result, soundfile_result])
+
+        for num_threads in thread_counts:
+            thread_results: list[BenchmarkResult[BenchmarkConfig]] = []
+
+            with BenchmarkRunner(
+                executor_type=ExecutorType.THREAD,
+                num_workers=num_threads,
+            ) as runner:
+                for (
+                    function_name,
+                    function,
+                    iterations_multiplier,
+                    num_runs,
+                ) in benchmark_functions:
+                    config = BenchmarkConfig(
+                        function_name=function_name,
+                        function=function,
+                        sample_rate=sample_rate,
+                        num_channels=num_channels,
+                        bits_per_sample=bits_per_sample,
+                        duration_seconds=duration_seconds,
+                        num_threads=num_threads,
+                        iterations=iterations_multiplier * num_threads,
+                        num_runs=num_runs,
+                    )
+
+                    result, output = runner.run(
+                        config,
+                        lambda fn=function, data=wav_data: fn(data),
+                        config.iterations,
+                        num_runs=config.num_runs,
+                    )
+
+                    output_to_validate = output
+                    if output_to_validate.ndim == 1:
+                        output_to_validate = output_to_validate[:, None]
+                    np.testing.assert_array_equal(output_to_validate, ref)
+
+                    thread_results.append(result)
+                    results.append(result)
+
+            # Print results for this thread count (all 3 benchmarks)
+            spdl_wav_result = thread_results[0]
+            spdl_audio_result = thread_results[1]
+            soundfile_result = thread_results[2]
             print(
                 f"{num_threads},"
                 f"{spdl_wav_result.qps:.2f},{spdl_wav_result.ci_lower:.2f},{spdl_wav_result.ci_upper:.2f},"
@@ -463,7 +334,8 @@ def main() -> None:
     save_results_to_csv(results, args.output)
     print(
         f"\nBenchmark complete. To generate plots, run:\n"
-        f"python plot_wav_benchmark.py --input {args.output} --output {args.output.replace('.csv', '.png')}"
+        f"python benchmark_wav_plot.py --input {args.output} "
+        f"--output {args.output.replace('.csv', '.png')}"
     )
 
 
