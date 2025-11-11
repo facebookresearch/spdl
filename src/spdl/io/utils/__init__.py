@@ -6,7 +6,7 @@
 
 """Utility functions."""
 
-# pyre-unsafe
+# pyre-strict
 
 from . import _build, _ffmpeg, _tracing
 
@@ -23,7 +23,7 @@ def __dir__() -> list[str]:
     return __all__
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> object:
     for mod in _mods:
         if name in mod.__all__:
             return getattr(mod, name)
