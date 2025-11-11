@@ -20,6 +20,20 @@ comparing performance across different implementations.
 """
 
 import argparse
+import os
+
+import matplotlib
+import matplotlib.pyplot as plt
+
+try:
+    from examples.benchmark_utils import load_results_from_csv  # pyre-ignore[21]
+    from examples.benchmark_wav import (  # pyre-ignore[21]
+        BenchmarkConfig,
+        DEFAULT_RESULT_PATH,
+    )
+except ImportError:
+    from spdl.examples.benchmark_utils import load_results_from_csv
+    from spdl.examples.benchmark_wav import BenchmarkConfig, DEFAULT_RESULT_PATH
 
 
 def plot_benchmark_results(
@@ -34,48 +48,66 @@ def plot_benchmark_results(
         output_file: Output file path for the saved plot
         filter_function: Optional function name to filter out from the plot
     """
-    import matplotlib
-    import matplotlib.pyplot as plt
-    import pandas as pd
-    import seaborn as sns
-
     matplotlib.use("Agg")  # Use non-interactive backend
 
-    df = pd.read_csv(csv_file)
+    # Load results from CSV
+    results = load_results_from_csv(csv_file, BenchmarkConfig)
 
     # Filter out specific function if requested
     if filter_function:
-        df = df[df["function_name"] != filter_function]
+        results = [r for r in results if r.config.function_name != filter_function]
 
-    # Extract Python info from the first row (all rows should have same Python info)
-    python_version = (
-        df["python_version"].iloc[0] if "python_version" in df.columns else "unknown"
-    )
-    free_threaded = (
-        df["free_threaded"].iloc[0] if "free_threaded" in df.columns else False
-    )
+    if not results:
+        print("No results to plot")
+        return
+
+    # Extract Python info from the first result
+    python_version = results[0].python_version
+    free_threaded = results[0].free_threaded
 
     # Create ABI info string
     abi_info = " (free-threaded)" if free_threaded else ""
 
-    df["label"] = df["function_name"] + " (" + df["duration_seconds"].astype(str) + "s)"
+    # Group results by label
+    labels_data: dict[str, list[tuple[int, float, float, float]]] = {}
+    for result in results:
+        label = f"{result.config.function_name} ({result.config.duration_seconds}s)"
+        if label not in labels_data:
+            labels_data[label] = []
+        labels_data[label].append(
+            (
+                result.config.num_threads,
+                result.qps,
+                result.ci_lower,
+                result.ci_upper,
+            )
+        )
 
-    sns.set_theme(style="whitegrid")
+    # Sort data by thread count
+    for label in labels_data:
+        labels_data[label].sort(key=lambda x: x[0])
+
     _, ax = plt.subplots(figsize=(12, 6))
-    for label in sorted(df["label"].unique()):
-        subset = df[df["label"] == label].sort_values("num_threads")
+
+    for label in sorted(labels_data.keys()):
+        data = labels_data[label]
+        thread_counts = [x[0] for x in data]
+        qps_values = [x[1] for x in data]
+        ci_lower_values = [x[2] for x in data]
+        ci_upper_values = [x[3] for x in data]
+
         line = ax.plot(
-            subset["num_threads"],
-            subset["qps"],
+            thread_counts,
+            qps_values,
             marker="o",
             label=label,
             linewidth=2,
         )
 
         ax.fill_between(
-            subset["num_threads"],
-            subset["ci_lower"],
-            subset["ci_upper"],
+            thread_counts,
+            ci_lower_values,
+            ci_upper_values,
             alpha=0.2,
             color=line[0].get_color(),
         )
@@ -103,14 +135,13 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input",
-        type=str,
-        required=True,
+        type=lambda p: os.path.realpath(p),
+        default=DEFAULT_RESULT_PATH,
         help="Input CSV file with benchmark results",
     )
     parser.add_argument(
         "--output",
-        type=str,
-        default="benchmark_wav_plot.png",
+        type=lambda p: os.path.realpath(p),
         help="Output path for the plot",
     )
     parser.add_argument(
@@ -131,7 +162,9 @@ def main() -> None:
     args = _parse_args()
 
     print(f"Loading benchmark results from: {args.input}")
-    plot_benchmark_results(args.input, args.output, args.filter)
+    plot_benchmark_results(
+        args.input, args.output or args.input.replace(".csv", ".png"), args.filter
+    )
 
 
 if __name__ == "__main__":

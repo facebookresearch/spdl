@@ -14,9 +14,9 @@ Examples
    streaming_nvdec_decoding
    streaming_video_processing
    performance_analysis
-   data_formats
    hydra_integration
    pipeline_definitions
    pipeline_profiling
+   benchmark_numpy
    benchmark_wav
    benchmark_tarfile

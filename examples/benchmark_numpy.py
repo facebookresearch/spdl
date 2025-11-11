@@ -15,64 +15,47 @@ the performance of the training pipeline.
 __all__ = [
     "main",
     "get_mock_data",
-    "get_pipeline",
     "load_npy",
     "load_npy_spdl",
+    "load_npz",
+    "load_npz_spdl",
     "load_torch",
-    "run_pipeline",
-    "DataSource",
+    "BenchmarkConfig",
 ]
 
-import time
-from collections.abc import Callable, Iterable, Iterator
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+# pyre-strict
+
+import argparse
+import os
+from collections.abc import Callable
+from dataclasses import dataclass
+from functools import partial
 from io import BytesIO
-from typing import Generic, TypeVar
 
 import numpy as np
 import spdl.io
 import torch
 from numpy.typing import NDArray
-from spdl.pipeline import Pipeline, PipelineBuilder
 
-# pyre-strict
-
-T = TypeVar("T")
-
-
-def get_pipeline(
-    src: Iterable[T],
-    load_fn: Callable[[T], list[NDArray]],
-    num_workers: int,
-    mode: str,
-) -> Pipeline:
-    """Build a pipeline to iterate the source with the load function in different parallelism.
-
-    Args:
-        src: The data source.
-        load_fn: The function that loads NumPy NDArray from the source byte string.
-        num_workers: The number of worker threads or processes.
-        mode: The mode of parallelism. The valid values are ``"mt"`` (multi-threading)
-            and ``"mp"`` (multi-processing).
-
-    Returns:
-        The resulting pipeline.
-    """
-    match mode:
-        case "mt":
-            executor = ThreadPoolExecutor(num_workers)
-        case "mp":
-            executor = ProcessPoolExecutor(num_workers)
-        case _:
-            raise ValueError(f'The `mode` must be either "mt" or "mp". Found: {mode}')
-
-    return (
-        PipelineBuilder()
-        .add_source(src)
-        .pipe(load_fn, concurrency=num_workers, executor=executor)
-        .add_sink(buffer_size=1)
-        .build(num_threads=1)
+try:
+    from examples.benchmark_utils import (  # pyre-ignore[21]
+        BenchmarkResult,
+        BenchmarkRunner,
+        ExecutorType,
+        get_default_result_path,
+        save_results_to_csv,
     )
+except ImportError:
+    from spdl.examples.benchmark_utils import (
+        BenchmarkResult,
+        BenchmarkRunner,
+        ExecutorType,
+        get_default_result_path,
+        save_results_to_csv,
+    )
+
+
+DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
 
 
 def load_npy(items: list[bytes]) -> list[NDArray]:
@@ -118,34 +101,6 @@ def _get_load_fn(
             return load_npz
         case _:
             raise ValueError(f"Unexpected data format: {data_format}")
-
-
-class DataSource(Generic[T]):
-    """Keep yielding the same data given times.
-
-    Args:
-        data: Data to be yielded.
-        repeat: The number of yields.
-    """
-
-    def __init__(self, data: T, repeat: int) -> None:
-        self.data = data
-        self.repeat = repeat
-
-    def __iter__(self) -> Iterator[T]:
-        for _ in range(self.repeat):
-            yield self.data
-
-
-def run_pipeline(pipeline: Pipeline[...]) -> tuple[int, float]:
-    """Run the pipeline and measure the time."""
-    t0 = time.monotonic()
-    with pipeline.auto_stop():
-        num_items = 0
-        for _ in pipeline:
-            num_items += 1
-    elapsed = time.monotonic() - t0
-    return num_items, elapsed
 
 
 def _dump_np(arr: NDArray | dict[str, NDArray], compressed: bool = False) -> bytes:
@@ -196,9 +151,45 @@ def get_mock_data(format: str, compressed: bool = False) -> tuple[bytes, bytes] 
             raise ValueError(f"Unexpected `format`: {format}")
 
 
+@dataclass
+class BenchmarkConfig:
+    """Configuration for a single benchmark run."""
+
+    data_format: str
+    compressed: bool
+    impl: str
+    num_workers: int
+
+
+def _parse_args() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Returns:
+        Parsed arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description="Benchmark data format loading performance"
+    )
+    parser.add_argument(
+        "--output",
+        type=lambda p: os.path.realpath(p),
+        default=DEFAULT_RESULT_PATH,
+        help="Output path for the results",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     """The entrypoint from CLI."""
-    configs = [
+    args = _parse_args()
+
+    # Define explicit configuration lists
+    worker_counts = [32, 16, 8, 4, 2, 1]
+    executor_types = [ExecutorType.PROCESS, ExecutorType.THREAD]
+
+    # Define benchmark configurations
+    # (data_format, compressed, impl)
+    data_configs = [
         ("torch", False, "torch"),
         ("npy", False, "np"),
         ("npy", False, "spdl"),
@@ -207,22 +198,46 @@ def main() -> None:
         ("npz", False, "spdl"),
         ("npz", True, "spdl"),
     ]
-    for data_format, compressed, impl in configs:
-        src = DataSource(get_mock_data(data_format, compressed), repeat=1000)
-        load_fn = _get_load_fn(data_format, impl)
-        for mode in ["mp", "mt"]:
-            for num_workers in [32, 16, 8, 4, 2, 1]:
-                pipeline = get_pipeline(
-                    src,  # pyre-ignore: [6]
-                    load_fn,
-                    num_workers,
-                    mode,
-                )
-                num_items, elapsed = run_pipeline(pipeline)
-                qps = num_items / elapsed
-                print(
-                    f"{data_format},{compressed},{impl},{mode},{num_workers},{qps:.1f}"
-                )
+
+    results: list[BenchmarkResult[BenchmarkConfig]] = []
+    iterations = 1000
+    num_runs = 5
+
+    for num_workers in worker_counts:
+        for executor_type in executor_types:
+            with BenchmarkRunner(
+                executor_type=executor_type,
+                num_workers=num_workers,
+                warmup_iterations=30 * num_workers,
+            ) as runner:
+                for data_format, compressed, impl in data_configs:
+                    data = get_mock_data(data_format, compressed)
+
+                    load_fn = _get_load_fn(data_format, impl)
+
+                    result, _ = runner.run(
+                        BenchmarkConfig(
+                            data_format=data_format,
+                            compressed=compressed,
+                            impl=impl,
+                            num_workers=num_workers,
+                        ),
+                        partial(load_fn, data),
+                        iterations,
+                        num_runs=num_runs,
+                    )
+
+                    results.append(result)
+                    print(
+                        f"{data_format},{compressed},{impl},{executor_type.value},{num_workers},{result.qps:.1f}"
+                    )
+
+    save_results_to_csv(results, args.output)
+    plot_output = args.output.replace(".csv", ".png")
+    print(
+        f"\nBenchmark complete. To generate plots, run:\n"
+        f"python benchmark_numpy_plot.py --input {args.output} --output {plot_output}"
+    )
 
 
 if __name__ == "__main__":

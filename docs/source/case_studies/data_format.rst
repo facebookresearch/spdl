@@ -19,7 +19,7 @@ Data Format and Performance
 
 .. note::
 
-   The benchmark script used in this section is found at :py:mod:`data_formats`
+   The benchmark script used in this section is found at :py:mod:`benchmark_numpy`
    example.
 
 We often see teams work on data collection bundle multiple arrays with and metadata in
