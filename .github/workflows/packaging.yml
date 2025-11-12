@@ -47,14 +47,14 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         free-threaded: [""]
-        cuda-version: ["12.8.1"]
+        cuda-version: ["13.0.1"]
         include:
           - python-version: "3.13"
             free-threaded: "ft"
-            cuda-version: "12.8.1"
+            cuda-version: "13.0.1"
           - python-version: "3.14"
             free-threaded: "ft"
-            cuda-version: "12.8.1"
+            cuda-version: "13.0.1"
     uses: ./.github/workflows/_build_windows.yml
     with:
       python-version: "${{ matrix.python-version }}"
@@ -97,15 +97,15 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        cuda-version: ["12.8.1"]
+        cuda-version: ["13.0.1"]
         free-threaded: [""]
         include:
           - python-version: "3.13"
             free-threaded: "ft"
-            cuda-version: "12.8.1"
+            cuda-version: "13.0.1"
           - python-version: "3.14"
             free-threaded: "ft"
-            cuda-version: "12.8.1"
+            cuda-version: "13.0.1"
     uses: ./.github/workflows/_build_linux_cuda.yml
     with:
       python-version: "${{ matrix.python-version }}"
