@@ -191,6 +191,7 @@ cython_debug/
 /src/spdl/io/lib/*
 !/src/spdl/io/lib/*.h
 !/src/spdl/io/lib/*.py
+!/src/spdl/io/lib/*.pyi
 !/src/spdl/io/lib/*.cpp
 !/src/spdl/io/lib/core/
 !/src/spdl/io/lib/core/*.h
