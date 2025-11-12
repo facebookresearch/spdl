@@ -13,6 +13,8 @@ from . import lib as _libspdl
 
 # pyre-strict
 
+__all__ = ["iter_tarfile"]
+
 
 class SupportsRead(Protocol):
     def read(self, n: int = -1) -> bytes: ...

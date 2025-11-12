@@ -30,7 +30,7 @@ import contextlib
 import logging
 import time
 from argparse import Namespace
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import spdl.io
@@ -219,7 +219,7 @@ def get_decode_func(
     device_index: int,
     width: int = 224,
     height: int = 224,
-) -> Callable[[list[tuple[str, int]]], Awaitable[tuple[Tensor, Tensor]]]:
+) -> Callable[[list[tuple[str, int]]], tuple[Tensor, Tensor]]:
     """Get a function to decode images from a list of paths.
 
     Args:
@@ -241,11 +241,11 @@ def get_decode_func(
         pix_fmt="rgb24",
     )
 
-    async def decode_images(items: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
+    def decode_images(items: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
         labels = [[item] for _, item in items]
         labels = torch.tensor(labels, dtype=torch.int64).to(device)
-        buffer = await spdl.io.async_load_image_batch(
+        buffer = spdl.io.load_image_batch(
             paths,
             width=None,
             height=None,
@@ -271,7 +271,7 @@ def _get_experimental_nvjpeg_decode_function(
     device_index: int,
     width: int = 224,
     height: int = 224,
-) -> Callable[[list[tuple[str, int]]], Awaitable[tuple[Tensor, Tensor]]]:
+) -> Callable[[list[tuple[str, int]]], tuple[Tensor, Tensor]]:
     device: torch.device = torch.device(f"cuda:{device_index}")
     device_config: spdl.io.CUDAConfig = spdl.io.cuda_config(
         device_index=device_index,
@@ -281,13 +281,13 @@ def _get_experimental_nvjpeg_decode_function(
         ),
     )
 
-    async def decode_images_nvjpeg(
+    def decode_images_nvjpeg(
         items: list[tuple[str, int]],
     ) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
         labels = [[item] for _, item in items]
         labels = torch.tensor(labels, dtype=torch.int64).to(device)
-        buffer = await spdl.io.async_load_image_batch_nvjpeg(
+        buffer = spdl.io.load_image_batch_nvjpeg(
             paths,
             device_config=device_config,
             width=width,
@@ -304,7 +304,7 @@ def _get_experimental_nvjpeg_decode_function(
 def get_dataloader(
     src: Iterator[tuple[str, int]],
     batch_size: int,
-    decode_func: Callable[[list[tuple[str, int]]], Awaitable[tuple[Tensor, Tensor]]],
+    decode_func: Callable[[list[tuple[str, int]]], tuple[Tensor, Tensor]],
     buffer_size: int,
     num_threads: int,
 ) -> Iterator[tuple[Tensor, Tensor]]:

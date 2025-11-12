@@ -10,7 +10,7 @@ import unittest
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import cast, Union
+from typing import Any, cast, Union
 from unittest.mock import MagicMock, patch
 
 import spdl.io._transfer
@@ -32,7 +32,7 @@ class _Item:
 
 class TestRecursiveApply(unittest.TestCase):
     def test_recursive_apply_basic(self) -> None:
-        obj = (1, 2, 3)
+        obj: Any = (1, 2, 3)
         self.assertEqual(_recursive_apply(fn, obj), (2, 4, 6))
 
         obj = [4, 5, 6]
@@ -57,7 +57,7 @@ class TestRecursiveApply(unittest.TestCase):
         self.assertEqual(_recursive_apply(fn, obj), ref)
 
     def test_recursive_apply_nested(self) -> None:
-        obj = (1, 2, (3, 4, 5), 6)
+        obj: Any = (1, 2, (3, 4, 5), 6)
         self.assertEqual(_recursive_apply(fn, obj), (2, 4, (6, 8, 10), 12))
 
         obj = [1, 2, [3, 4, 5], 6]

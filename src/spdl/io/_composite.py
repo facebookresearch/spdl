@@ -474,7 +474,7 @@ def _get_bytes(srcs: list[str | bytes]) -> list[bytes]:
 
 
 def load_image_batch_nvjpeg(
-    srcs: list[str | bytes],
+    srcs: Sequence[str | bytes],
     *,
     device_config: CUDAConfig,
     width: int | None,
