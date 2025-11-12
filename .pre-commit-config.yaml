@@ -34,7 +34,7 @@ repos:
         files: "src/|tests/|examples/"
         exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
-        args: [ "--check" ]
+        args: [ "--check", "--diff" ]
 
   # This check is set to never fail, but will print all current mypy failures. See:
   # https://stackoverflow.com/a/59745587
