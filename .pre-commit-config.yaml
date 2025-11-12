@@ -25,13 +25,16 @@ repos:
     hooks:
       # Run the linter.
       - id: ruff
-        exclude: .github/scripts
+        files: "src/|tests/|examples/"
+        exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
-        args: [ "--fix" ]
-        # Run the formatter.
+        args: [ "--fix", "--show-files" ]
+      # Run the formatter.
       - id: ruff-format
-        exclude: .github/scripts
+        files: "src/|tests/|examples/"
+        exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
+        args: [ "--check" ]
 
   # This check is set to never fail, but will print all current mypy failures. See:
   # https://stackoverflow.com/a/59745587
@@ -39,7 +42,7 @@ repos:
     rev: v1.16.1
     hooks:
       - id: mypy
-        exclude: .github/scripts
+        files: "src/|tests/|examples/"
         verbose: true
         entry: bash -c
         args:
