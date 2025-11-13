@@ -6,38 +6,86 @@
 
 """Implements the core I/O functionalities."""
 
-# pyre-unsafe
+# pyre-strict
 
-from typing import Any
+# These are classes defined in C++ extensions which depend on FFmpeg.
+# We want to expose them for the sake of convenience.
+# However, due to the possibility that FFmpeg might not be available, and
+# `spdl.io` is only imported by a third-party library which is no
+# interest of the end user, so we apply `try ~ except`.
+from . import lib
 
-# This has to happen before other sub modules are imporeted.
-# Otherwise circular import would occur.
-from ._type_stub import (  # isort: skip
-    CPUBuffer,
-    CUDABuffer,
-    Packets,
-    AudioCodec,
-    VideoCodec,
-    ImageCodec,
-    AudioPackets,
-    VideoPackets,
-    ImagePackets,
-    Frames,
-    AudioFrames,
-    VideoFrames,
-    ImageFrames,
-    AudioEncoder,
-    VideoEncoder,
-    AudioDecoder,
-    VideoDecoder,
-    ImageDecoder,
-    DemuxConfig,
-    DecodeConfig,
-    VideoEncodeConfig,
-    AudioEncodeConfig,
-    CUDAConfig,
-    CPUStorage,
-)
+try:
+    lib._LG.disabled = True
+
+    CPUStorage = lib._libspdl.CPUStorage
+    CPUBuffer = lib._libspdl.CPUBuffer
+    AudioCodec = lib._libspdl.AudioCodec
+    VideoCodec = lib._libspdl.VideoCodec
+    ImageCodec = lib._libspdl.ImageCodec
+    AudioPackets = lib._libspdl.AudioPackets
+    VideoPackets = lib._libspdl.VideoPackets
+    ImagePackets = lib._libspdl.ImagePackets
+    AudioFrames = lib._libspdl.AudioFrames
+    VideoFrames = lib._libspdl.VideoFrames
+    ImageFrames = lib._libspdl.ImageFrames
+    AudioEncoder = lib._libspdl.AudioEncoder
+    VideoEncoder = lib._libspdl.VideoEncoder
+    AudioDecoder = lib._libspdl.AudioDecoder
+    VideoDecoder = lib._libspdl.VideoDecoder
+    ImageDecoder = lib._libspdl.ImageDecoder
+    DemuxConfig = lib._libspdl.DemuxConfig
+    DecodeConfig = lib._libspdl.DecodeConfig
+    VideoEncodeConfig = lib._libspdl.VideoEncodeConfig
+    AudioEncodeConfig = lib._libspdl.AudioEncodeConfig
+
+
+except RuntimeError:
+
+    class _placeholder:
+        def __init__(*_: object, **__: object) -> None:
+            raise RuntimeError("Failed to load `_libspdl`. Is FFmpeg available?")
+
+    CPUStorage = _placeholder
+    CPUBuffer = _placeholder
+    AudioCodec = _placeholder
+    VideoCodec = _placeholder
+    ImageCodec = _placeholder
+    AudioPackets = _placeholder
+    VideoPackets = _placeholder
+    ImagePackets = _placeholder
+    AudioFrames = _placeholder
+    VideoFrames = _placeholder
+    ImageFrames = _placeholder
+    AudioEncoder = _placeholder
+    VideoEncoder = _placeholder
+    AudioDecoder = _placeholder
+    VideoDecoder = _placeholder
+    ImageDecoder = _placeholder
+    DemuxConfig = _placeholder
+    DecodeConfig = _placeholder
+    VideoEncodeConfig = _placeholder
+    AudioEncodeConfig = _placeholder
+finally:
+    lib._LG.disabled = False
+
+try:
+    from .lib import _libspdl_cuda
+
+    CUDABuffer = _libspdl_cuda.CUDABuffer
+    CUDAConfig = _libspdl_cuda.CUDAConfig
+except RuntimeError:
+
+    class _placeholder:
+        def __init__(*_: object, **__: object) -> None:
+            raise RuntimeError(
+                "Faield to load `_libspdl_cuda`. Is CUDA runtime available?"
+            )
+
+    CUDABuffer = _placeholder
+    CUDAConfig = _placeholder
+finally:
+    lib._LG.disabled = False
 
 from ._array import (
     load_npy,
@@ -127,7 +175,6 @@ __all__ = [
     "demux_audio",
     "demux_video",
     "demux_image",
-    "Packets",
     "AudioPackets",
     "VideoPackets",
     "ImagePackets",
@@ -146,7 +193,6 @@ __all__ = [
     "decode_image_nvjpeg",
     "NvDecDecoder",
     "nvdec_decoder",
-    "Frames",
     "AudioFrames",
     "VideoFrames",
     "ImageFrames",
@@ -206,11 +252,11 @@ __all__ = [
 ]
 
 
-def __dir__():
+def __dir__() -> list[str]:
     return __all__
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> object:
     if name == "__version__":
         from importlib.metadata import PackageNotFoundError, version
 

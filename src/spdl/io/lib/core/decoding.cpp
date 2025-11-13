@@ -55,32 +55,46 @@ void register_decoding(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Decoder
   ////////////////////////////////////////////////////////////////////////////////
-  nb::class_<Decoder<MediaType::Audio>>(m, "AudioDecoder")
+  nb::class_<Decoder<MediaType::Audio>>(
+      m,
+      "AudioDecoder",
+      "Decode stream of audio packets. See :py:class:`Decoder` for the detail.")
       .def(
           "decode",
           &Decoder<MediaType::Audio>::decode,
           nb::call_guard<nb::gil_scoped_release>(),
-          nb::arg("packets"))
+          nb::arg("packets"),
+          "Decode the given packets")
       .def(
           "flush",
           &Decoder<MediaType::Audio>::flush,
-          nb::call_guard<nb::gil_scoped_release>());
-  nb::class_<Decoder<MediaType::Video>>(m, "VideoDecoder")
+          nb::call_guard<nb::gil_scoped_release>(),
+          "Flush the internally buffered frames. Use only at the end of stream");
+  nb::class_<Decoder<MediaType::Video>>(
+      m,
+      "VideoDecoder",
+      "Decode stream of video packets. See :py:class:`Decoder` for the detail.")
       .def(
           "decode",
           &Decoder<MediaType::Video>::decode,
           nb::call_guard<nb::gil_scoped_release>(),
-          nb::arg("packets"))
+          nb::arg("packets"),
+          "Decode the given packets")
       .def(
           "flush",
           &Decoder<MediaType::Video>::flush,
-          nb::call_guard<nb::gil_scoped_release>());
-  nb::class_<Decoder<MediaType::Image>>(m, "ImageDecoder")
+          nb::call_guard<nb::gil_scoped_release>(),
+          "Flush the internally buffered frames. Use only at the end of stream");
+  nb::class_<Decoder<MediaType::Image>>(
+      m,
+      "ImageDecoder",
+      "Decode an image packet. See :py:class:`Decoder` for the detail.")
       .def(
           "decode",
           &Decoder<MediaType::Image>::decode,
           nb::call_guard<nb::gil_scoped_release>(),
-          nb::arg("packets"))
+          nb::arg("packets"),
+          "Decode the given packets")
       .def(
           "flush",
           &Decoder<MediaType::Image>::flush,
