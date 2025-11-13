@@ -95,6 +95,7 @@ def run(output_dir: Path) -> None:
 
     for module, output_name in modules:
         stub_content = generate_stub_content(module)
+        stub_content = stub_content.replace("_spdl_ffmpeg", "_libspdl")
         write_stub_file(stub_content, output_dir, output_name)
 
     print("All stubs generated successfully!")
