@@ -28,6 +28,7 @@ __all__ = [
     "get_filter_desc",
     "FilterGraph",
     "get_abuffer_desc",
+    "get_buffer_desc",
 ]
 
 

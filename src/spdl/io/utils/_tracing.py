@@ -7,7 +7,7 @@
 # pyre-strict
 
 import sys
-from collections.abc import Generator
+from collections.abc import Iterator
 from contextlib import contextmanager
 
 from spdl.io.lib import _libspdl
@@ -26,7 +26,7 @@ def tracing(
     buffer_size: int = 4096,
     process_name: str | None = None,
     enable: bool = True,
-) -> Generator[None, None, None]:
+) -> Iterator[None]:
     """Enable tracing.
 
     Args:
@@ -56,7 +56,7 @@ def tracing(
 
 
 @contextmanager
-def trace_event(name: str) -> Generator[None, None, None]:
+def trace_event(name: str) -> Iterator[None]:
     """Trace an operation with custom name.
 
     Args:

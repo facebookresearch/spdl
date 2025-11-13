@@ -8,24 +8,34 @@
 
 # pyre-strict
 
-from . import _build, _ffmpeg, _tracing
+from ._build import (
+    built_with_cuda,
+    built_with_nvcodec,
+    built_with_nvjpeg,
+)
+from ._ffmpeg import (
+    get_ffmpeg_filters,
+    get_ffmpeg_log_level,
+    get_ffmpeg_versions,
+    set_ffmpeg_log_level,
+)
+from ._tracing import (
+    trace_counter,
+    trace_event,
+    trace_gc,
+    tracing,
+)
 
-_mods = [
-    _build,
-    _ffmpeg,
-    _tracing,
+__all__ = [
+    "built_with_cuda",
+    "built_with_nvcodec",
+    "built_with_nvjpeg",
+    "get_ffmpeg_filters",
+    "get_ffmpeg_log_level",
+    "get_ffmpeg_versions",
+    "set_ffmpeg_log_level",
+    "trace_counter",
+    "trace_event",
+    "trace_gc",
+    "tracing",
 ]
-
-__all__ = sorted(item for mod in _mods for item in mod.__all__)
-
-
-def __dir__() -> list[str]:
-    return __all__
-
-
-def __getattr__(name: str) -> object:
-    for mod in _mods:
-        if name in mod.__all__:
-            return getattr(mod, name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
