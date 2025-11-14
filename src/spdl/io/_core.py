@@ -11,7 +11,7 @@ import threading
 import warnings
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import Generic, overload, TYPE_CHECKING, TypeAlias, TypeVar
+from typing import Generic, overload, TYPE_CHECKING, TypeVar
 
 # We import NumPy only when type-checking.
 # The functions of this module do not need NumPy itself to run.
@@ -19,11 +19,20 @@ from typing import Generic, overload, TYPE_CHECKING, TypeAlias, TypeVar
 # Once NumPy supports FT Python, we can import normally.
 if TYPE_CHECKING:
     import numpy as np
-    import torch
-    from numpy.typing import NDArray
 
-    UintArray = NDArray[np.uint8]
-    Tensor = torch.Tensor
+    try:
+        from numpy.typing import NDArray
+
+        UintArray = NDArray[np.uint8]
+    except ImportError:
+        UintArray = np.ndarray
+
+    try:
+        import torch
+
+        Tensor = torch.Tensor
+    except ImportError:
+        Tensor = object
 else:
     UintArray = object
     Tensor = object
@@ -105,7 +114,7 @@ T = TypeVar("T")
 _FILTER_DESC_DEFAULT = "__PLACEHOLDER__"
 
 
-SourceType: TypeAlias = str | Path | bytes | UintArray | Tensor
+SourceType = str | Path | bytes | UintArray | Tensor
 
 ################################################################################
 # Demuxing
