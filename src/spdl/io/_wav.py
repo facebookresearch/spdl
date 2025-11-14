@@ -4,9 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 """WAV audio processing utilities."""
+
+from typing import Any
 
 # Importing `spdl.io.lib` instead of `spdl.io.lilb._archive`
 # so as to delay the import of C++ extension module
@@ -18,7 +20,7 @@ __all__ = [
 ]
 
 
-def __dir__():
+def __dir__() -> list[str]:
     return __all__
 
 
@@ -30,7 +32,7 @@ class _WAVArrayInterface(ArrayInterface):
     with NumPy and other libraries that support the array interface protocol.
     """
 
-    def __init__(self, array_interface_dict: dict) -> None:
+    def __init__(self, array_interface_dict: dict[str, Any]) -> None:
         """Initialize with an array interface dictionary.
 
         Args:
@@ -40,7 +42,7 @@ class _WAVArrayInterface(ArrayInterface):
         self._array_interface = array_interface_dict
 
     @property
-    def __array_interface__(self) -> dict:
+    def __array_interface__(self) -> dict[str, Any]:
         """Return the array interface dictionary for NumPy compatibility.
 
         Returns:
