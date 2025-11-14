@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import logging
 import threading
@@ -640,11 +640,11 @@ def decode_packets(
 
 
 def decode_packets(
-    packets,
-    filter_desc=_FILTER_DESC_DEFAULT,
-    decode_config=None,
-    **kwargs,
-):
+    packets: AudioPackets | VideoPackets | ImagePackets,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: DecodeConfig | None = None,
+    **kwargs: object,
+) -> AudioFrames | VideoFrames | ImageFrames:
     """Decode packets.
 
     Args:

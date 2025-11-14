@@ -4,9 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import math
+from typing import Any
 
 from spdl.io import (
     AudioCodec,
@@ -239,7 +240,7 @@ def get_video_filter_desc(
 
 
 def get_filter_desc(
-    packets: AudioPackets | VideoPackets | ImagePackets, **filter_args
+    packets: AudioPackets | VideoPackets | ImagePackets, **filter_args: Any
 ) -> str | None:
     """Get the filter to process the given packets.
 
@@ -255,10 +256,8 @@ def get_filter_desc(
     """
     match type(packets):
         case _libspdl.AudioPackets:
-            # pyre-ignore: [16]
             return get_audio_filter_desc(timestamp=packets.timestamp, **filter_args)
         case _libspdl.VideoPackets:
-            # pyre-ignore: [16]
             return get_video_filter_desc(timestamp=packets.timestamp, **filter_args)
         case _libspdl.ImagePackets:
             return get_video_filter_desc(timestamp=None, **filter_args)
@@ -447,7 +446,7 @@ class FilterGraph:
     """
 
     def __init__(self, filter_desc: str) -> None:
-        self._graph = _libspdl.make_filter_graph(filter_desc)
+        self._graph: object = _libspdl.make_filter_graph(filter_desc)
 
     def __repr__(self) -> str:
         return self._graph.dump()
