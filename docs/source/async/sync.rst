@@ -72,7 +72,7 @@ The following table summarizes them.
      - - Free from the constraint imposed by the GIL. (Can use any function to achieve concurrency.)
    * - Cons
      - - The functions must not hold the GIL. (or hold the GIL for extremely short amount of time).
-       - Potential data rase (though samples are usually independent of each other in AI application).
+       - Potential data race (though samples are usually independent of each other in AI application).
      - - Data passed between processes must be picklable.
        - Data copy between processes. (Using shared memory can improve the performance.)
        - The start up can be slow if there are libraries that perform static initialization.

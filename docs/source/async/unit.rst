@@ -26,7 +26,7 @@ can be converted to awaitable (:py:class:`asyncio.Future`),
 so async I/O can also run synchronous functions using
 multi-threading/multi-processing.
 
-The ``aync def`` and ``await`` expression allows to write coroutine
+The ``async def`` and ``await`` expression allows to write coroutine
 in a way very similar to synchronous procedure.
 This makes it easy to write a complex execution flow,
 such as occasionally running multiple tasks concurrently,
@@ -39,7 +39,7 @@ operations (reacting to task completions).
 It is very important that
 **time-consuming synchronous operations are not directly executed in coroutine.**
 In other words,
-**such synchronous operaitons must be delegated to an executor.**
+**such synchronous operations must be delegated to an executor.**
 
 Let's look at a toy example of ``async def`` and ``await``, and how
 the event loop processes them.

@@ -69,7 +69,7 @@ This decomposition enables:
 The Key Insight: Split I/O and CPU Work
 ----------------------------------------
 
-To achieve high performance with SPDL, you must split your data loading logic into stages based on their resource requirements:
+To achieve high performance in data loading, you must split your data loading logic into stages based on their resource requirements:
 
 **I/O-Bound Operations** (Network, Disk)
    - Fetching data from remote storage

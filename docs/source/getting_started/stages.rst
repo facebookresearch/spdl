@@ -58,6 +58,12 @@ For example
    loop from scheduling callbacks, prevent tasks from being canceled, and
    prevent the background thread from joining.
 
+.. note::
+
+   In typical ML/AI training, the source is an index-generator, so called sampler,
+   and SPDL has implementations like :py:class:`spdl.source.DistributedRandomSampler`
+   and :py:class:`spdl.source.DistributedDeterministicSampler` objects.
+
 Processing
 ----------
 
@@ -67,6 +73,11 @@ from the previous stages.
 You can define a processing stage by passing an operator function (callable) to
 :py:meth:`~PipelineBuilder.pipe`. You can also use :py:meth:`~PipelineBuilder.aggregate`
 and :py:meth:`~PipelineBuilder.disaggregate` to stack and unstack multiple items.
+
+.. seealso::
+
+   :doc:`../io/index`
+      I/O is critical for performance, so SPDL comes with an independent I/O module.
 
 The operator can be either an async function or a synchronous function.
 It must take exactly one argument†, which is an output from the earlier

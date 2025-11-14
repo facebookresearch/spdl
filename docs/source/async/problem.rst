@@ -1,12 +1,12 @@
-Implementing Orchestration Mechanism
-====================================
+Implementing an Orchestration Mechanism
+=======================================
 
-The async I/O makes it easy to build complex asynchronous execution flow.
+Async I/O makes it easy to build complex asynchronous execution flows.
 To illustrate this, in this section, we attempt to implement a pipeline
-system with a bare thread pool executor.
-It reveals that waiting on future is not composable, and the code becomes
+system using a bare thread pool executor.
+This exercise reveals that waiting on futures is not composable, and the code becomes
 complex quickly,
-which motivates the use of an alternative abstraction, the event loop.
+which motivates the use of an alternative abstraction: the event loop.
 
 Concurrent execution and Future
 -------------------------------
@@ -17,7 +17,7 @@ Let's say we have multiple tasks that we want to complete as soon as possible.
 For the sake of simplicity, let's assume that the tasks are independent each
 other so we don't need to think about synchronization and such.
 
-There are multiple ways to conccurently execute functions.
+There are multiple ways to concurrently execute functions.
 Python's :py:mod:`concurrent.futures` module offers
 :py:class:`ThreadPoolExecutor` and :py:class:`ProcessPoolExecutor`.
 (Python 3.14 will introduce |ipe|_.)
@@ -137,9 +137,10 @@ We can simplify this by putting all task functions in a sequence.
 
    def chain(task_fns: Sequence[Callable], input, executor):
        result = input
-       for fn in task_fns:
-           future = executor.submit(fn, result)
-           result = future.result()  # blocking
+       try:
+           for fn in task_fns:
+               future = executor.submit(fn, result)
+               result = future.result()  # blocking
        except Exception:
            ...
        return result
@@ -205,7 +206,7 @@ wait at the last future element of the returned values.
    result2 = futures2[-1].result()
 
 This achieves task chain with composability to some degree, but the way
-to attend to a task competion is cumbersome.
+to attend to a task completion is cumbersome.
 
 Running multiple pipelines
 --------------------------
@@ -232,7 +233,7 @@ The :py:func:`concurrent.futures.wait` function can attend to multiple of
    futures = {executor.submit(task...) for task in tasks}
 
    while futures:
-       done, futures = cnocurrent.futures.wait(futures, return_when=FIRST_COMPLETED)
+       done, futures = concurrent.futures.wait(futures, return_when=FIRST_COMPLETED)
 
        for future in done:
            try:
