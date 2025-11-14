@@ -27,7 +27,11 @@ namespace nb = nanobind;
 
 namespace spdl::cuda {
 void register_types(nb::module_& m) {
-  nb::class_<CUDAConfig>(m, "CUDAConfig");
+  nb::class_<CUDAConfig>(
+      m,
+      "CUDAConfig",
+      "Specify the CUDA device and memory management.\n\n"
+      "See the factory function :py:func:`~spdl.io.cuda_config`.");
 
   m.def(
       "cuda_config",
