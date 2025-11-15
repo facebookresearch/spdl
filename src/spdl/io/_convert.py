@@ -6,16 +6,20 @@
 
 # pyre-strict
 
-from typing import Any, Protocol, runtime_checkable
-
-from spdl.io import CUDABuffer
+from types import ModuleType
+from typing import Any, Protocol, runtime_checkable, TYPE_CHECKING
 
 from ._internal import import_utils
 
-torch = import_utils.lazy_import("torch")
-cuda = import_utils.lazy_import("numba.cuda")
-jax = import_utils.lazy_import("jax")
-np = import_utils.lazy_import("numpy")
+torch: ModuleType = import_utils.lazy_import("torch")
+cuda: ModuleType = import_utils.lazy_import("numba.cuda")
+jax: ModuleType = import_utils.lazy_import("jax")
+np: ModuleType = import_utils.lazy_import("numpy")
+
+if TYPE_CHECKING:
+    from .lib import _libspdl_cuda
+
+    CUDABuffer = _libspdl_cuda.CUDABuffer
 
 __all__ = [
     "to_numba",
@@ -108,7 +112,7 @@ def to_numpy(buffer: ArrayInterface):
     return np.array(buffer, copy=False)
 
 
-def to_torch(buffer: ArrayInterface | CUDABuffer):
+def to_torch(buffer: "ArrayInterface | CUDABuffer"):
     """Convert to PyTorch Tensor.
 
     Args:

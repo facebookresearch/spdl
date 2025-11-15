@@ -6,74 +6,6 @@
 
 # pyre-strict
 
-import logging
-import threading
-import warnings
-from collections.abc import Iterator, Sequence
-from pathlib import Path
-from typing import Generic, overload, TYPE_CHECKING, TypeVar
-
-# We import NumPy only when type-checking.
-# The functions of this module do not need NumPy itself to run.
-# This is for experimenting with FT (no-GIL) Python.
-# Once NumPy supports FT Python, we can import normally.
-if TYPE_CHECKING:
-    import numpy as np
-
-    try:
-        from numpy.typing import NDArray
-
-        UintArray = NDArray[np.uint8]
-    except ImportError:
-        UintArray = np.ndarray
-
-    try:
-        import torch
-
-        Tensor = torch.Tensor
-    except ImportError:
-        Tensor = object
-else:
-    UintArray = object
-    Tensor = object
-
-
-try:
-    from spdl._internal import log_api_usage_once
-except ImportError:
-
-    def log_api_usage_once(_: str) -> None:
-        pass
-
-
-from spdl.io import (
-    AudioCodec,
-    AudioDecoder,
-    AudioEncodeConfig,
-    AudioEncoder,
-    AudioFrames,
-    AudioPackets,
-    CPUBuffer,
-    CPUStorage,
-    CUDABuffer,
-    CUDAConfig,
-    DecodeConfig,
-    ImageCodec,
-    ImageDecoder,
-    ImageFrames,
-    ImagePackets,
-    VideoCodec,
-    VideoDecoder,
-    VideoEncodeConfig,
-    VideoEncoder,
-    VideoFrames,
-    VideoPackets,
-)
-from spdl.io._internal.import_utils import lazy_import
-
-from . import _preprocessing
-from .lib import _libspdl, _libspdl_cuda
-
 __all__ = [
     # DEMUXING
     "Demuxer",
@@ -106,15 +38,67 @@ __all__ = [
     "create_reference_video_frame",
 ]
 
-torch = lazy_import("torch")  # pyre-ignore: [31]
+import logging
+import threading
+import warnings
+from collections.abc import Iterator, Sequence
+from pathlib import Path
+from typing import Generic, overload, TYPE_CHECKING, TypeVar
 
-_LG = logging.getLogger(__name__)
+try:
+    from spdl._internal import log_api_usage_once
+except ImportError:
+
+    def log_api_usage_once(_: str) -> None:
+        pass
+
+
+from . import _preprocessing
+from .lib import _libspdl, _libspdl_cuda
+
+# We import NumPy only when type-checking.
+# The functions of this module do not need NumPy itself to run.
+# This is for experimenting with FT (no-GIL) Python.
+# Once NumPy supports FT Python, we can import normally.
+if TYPE_CHECKING:
+    import numpy as np
+    import torch
+    from numpy.typing import NDArray
+
+    UintArray = NDArray[np.uint8]
+    Tensor = torch.Tensor
+
+    AudioCodec = _libspdl.AudioCodec
+    AudioDecoder = _libspdl.AudioDecoder
+    AudioEncodeConfig = _libspdl.AudioEncodeConfig
+    AudioEncoder = _libspdl.AudioEncoder
+    AudioFrames = _libspdl.AudioFrames
+    AudioPackets = _libspdl.AudioPackets
+    CPUBuffer = _libspdl.CPUBuffer
+    CPUStorage = _libspdl.CPUStorage
+    DecodeConfig = _libspdl.DecodeConfig
+    ImageCodec = _libspdl.ImageCodec
+    ImageDecoder = _libspdl.ImageDecoder
+    ImageFrames = _libspdl.ImageFrames
+    ImagePackets = _libspdl.ImagePackets
+    VideoCodec = _libspdl.VideoCodec
+    VideoDecoder = _libspdl.VideoDecoder
+    VideoEncodeConfig = _libspdl.VideoEncodeConfig
+    VideoEncoder = _libspdl.VideoEncoder
+    VideoFrames = _libspdl.VideoFrames
+    VideoPackets = _libspdl.VideoPackets
+
+    CUDABuffer = _libspdl_cuda.CUDABuffer
+    CUDAConfig = _libspdl_cuda.CUDAConfig
+
+    SourceType = str | Path | bytes | UintArray | Tensor
+
+
+_LG: logging.Logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 _FILTER_DESC_DEFAULT = "__PLACEHOLDER__"
 
-
-SourceType = str | Path | bytes | UintArray | Tensor
 
 ################################################################################
 # Demuxing
@@ -137,7 +121,7 @@ class Demuxer:
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: SourceType, **kwargs):
+    def __init__(self, src: "SourceType", **kwargs):
         if isinstance(src, Path):
             src = str(src)
         self._demuxer = _libspdl._demuxer(src, **kwargs)
@@ -157,7 +141,7 @@ class Demuxer:
 
     def demux_audio(
         self, window: tuple[float, float] | None = None, **kwargs
-    ) -> AudioPackets:
+    ) -> "AudioPackets":
         """Demux audio from the source.
 
         Args:
@@ -173,7 +157,7 @@ class Demuxer:
 
     def demux_video(
         self, window: tuple[float, float] | None = None, **kwargs
-    ) -> VideoPackets:
+    ) -> "VideoPackets":
         """Demux video from the source.
 
         Args:
@@ -187,7 +171,7 @@ class Demuxer:
 
         return self._demuxer.demux_video(window=window, **kwargs)
 
-    def demux_image(self, **kwargs) -> ImagePackets:
+    def demux_image(self, **kwargs) -> "ImagePackets":
         """Demux image from the source.
 
         Returns:
@@ -201,7 +185,7 @@ class Demuxer:
         self,
         num_packets: int,
         bsf: str | None = None,
-    ) -> Iterator[VideoPackets]:
+    ) -> "Iterator[VideoPackets]":
         """Demux video frames in streaming fashion.
 
         Args:
@@ -226,7 +210,7 @@ class Demuxer:
         *,
         duration: float = -1,
         num_packets: int = -1,
-    ) -> Iterator[VideoPackets | AudioPackets]: ...
+    ) -> "Iterator[VideoPackets | AudioPackets]": ...
 
     @overload
     def streaming_demux(
@@ -235,7 +219,7 @@ class Demuxer:
         *,
         duration: float = -1,
         num_packets: int = -1,
-    ) -> Iterator[VideoPackets | AudioPackets]: ...
+    ) -> "Iterator[VideoPackets | AudioPackets]": ...
 
     @overload
     def streaming_demux(
@@ -244,7 +228,7 @@ class Demuxer:
         *,
         duration: float = -1,
         num_packets: int = -1,
-    ) -> Iterator[dict[int, VideoPackets | AudioPackets]]: ...
+    ) -> "Iterator[dict[int, VideoPackets | AudioPackets]]": ...
 
     def streaming_demux(
         self,
@@ -305,17 +289,17 @@ class Demuxer:
         return self._demuxer.audio_stream_index
 
     @property
-    def audio_codec(self) -> AudioCodec:
+    def audio_codec(self) -> "AudioCodec":
         """The codec metadata of the default audio stream."""
         return self._demuxer.audio_codec
 
     @property
-    def video_codec(self) -> VideoCodec:
+    def video_codec(self) -> "VideoCodec":
         """The codec metadata of the default video stream."""
         return self._demuxer.video_codec
 
     @property
-    def image_codec(self) -> ImageCodec:
+    def image_codec(self) -> "ImageCodec":
         """The codec metadata  of the default image stream."""
         return self._demuxer.image_codec
 
@@ -346,11 +330,11 @@ class _StreamingDemuxer:
 
 
 def demux_audio(
-    src: str | bytes | UintArray | Tensor,
+    src: "str | bytes | UintArray | Tensor",
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
-) -> AudioPackets:
+) -> "AudioPackets":
     """Demux audio from the source.
 
     Args:
@@ -366,11 +350,11 @@ def demux_audio(
 
 
 def demux_video(
-    src: str | bytes | UintArray | Tensor,
+    src: "SourceType",
     *,
     timestamp: tuple[float, float] | None = None,
     **kwargs,
-) -> VideoPackets:
+) -> "VideoPackets":
     """Demux video from the source.
 
     Args:
@@ -386,7 +370,7 @@ def demux_video(
         return demuxer.demux_video(window=timestamp)
 
 
-def demux_image(src: str | bytes | UintArray | Tensor, **kwargs) -> ImagePackets:
+def demux_image(src: "str | bytes | UintArray | Tensor", **kwargs) -> "ImagePackets":
     """Demux image from the source.
 
     Args:
@@ -475,11 +459,11 @@ class BSF(Generic[TCodec, TPackets]):
 
 
 @overload
-def apply_bsf(packets: AudioPackets, bsf: str) -> AudioPackets: ...
+def apply_bsf(packets: "AudioPackets", bsf: str) -> "AudioPackets": ...
 @overload
-def apply_bsf(packets: VideoPackets, bsf: str) -> VideoPackets: ...
+def apply_bsf(packets: "VideoPackets", bsf: str) -> "VideoPackets": ...
 @overload
-def apply_bsf(packets: ImagePackets, bsf: str) -> ImagePackets: ...
+def apply_bsf(packets: "ImagePackets", bsf: str) -> "ImagePackets": ...
 
 
 def apply_bsf(packets, bsf):
@@ -519,55 +503,66 @@ def apply_bsf(packets, bsf):
 
 
 def _resolve_filter_graph(
-    filter_desc: str, codec, timestamp: tuple[float, float] | None = None
+    filter_desc: str,
+    codec: "AudioCodec | VideoCodec | ImageCodec",
+    timestamp: tuple[float, float] | None = None,
 ) -> str:
     match codec:
         case _libspdl.AudioCodec():
-            if filter_desc == _FILTER_DESC_DEFAULT:
-                filter_desc = _preprocessing.get_audio_filter_desc(timestamp=timestamp)
+            fd = (
+                _preprocessing.get_audio_filter_desc(timestamp=timestamp)
+                if filter_desc == _FILTER_DESC_DEFAULT
+                else filter_desc
+            )
             src = _preprocessing.get_abuffer_desc(codec)
             sink = "abuffersink"
         case _libspdl.VideoCodec():
-            if filter_desc == _FILTER_DESC_DEFAULT:
-                filter_desc = _preprocessing.get_video_filter_desc(timestamp=timestamp)
+            fd = (
+                _preprocessing.get_video_filter_desc(timestamp=timestamp)
+                if filter_desc == _FILTER_DESC_DEFAULT
+                else filter_desc
+            )
             src = _preprocessing.get_buffer_desc(codec)
             sink = "buffersink"
         case _libspdl.ImageCodec():
-            if filter_desc == _FILTER_DESC_DEFAULT:
-                filter_desc = _preprocessing.get_video_filter_desc()
+            fd = (
+                _preprocessing.get_video_filter_desc()
+                if filter_desc == _FILTER_DESC_DEFAULT
+                else filter_desc
+            )
             src = _preprocessing.get_buffer_desc(codec)
             sink = "buffersink"
         case _:
             raise ValueError(f"Unexpected codec type: {type(codec)}")
 
-    return f"{src},{filter_desc},{sink}"
+    return f"{src},{fd},{sink}"
 
 
 @overload
 def Decoder(
-    codec: AudioCodec,
+    codec: "AudioCodec",
     *,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: DecodeConfig | None = None,
-) -> AudioDecoder: ...
+    decode_config: "DecodeConfig | None" = None,
+) -> "AudioDecoder": ...
 
 
 @overload
 def Decoder(
-    codec: VideoCodec,
+    codec: "VideoCodec",
     *,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: DecodeConfig | None = None,
-) -> VideoDecoder: ...
+    decode_config: "DecodeConfig | None" = None,
+) -> "VideoDecoder": ...
 
 
 @overload
 def Decoder(
-    codec: ImageCodec,
+    codec: "ImageCodec",
     *,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: DecodeConfig | None = None,
-) -> ImageDecoder: ...
+    decode_config: "DecodeConfig | None" = None,
+) -> "ImageDecoder": ...
 
 
 class _Decoder:
@@ -627,33 +622,33 @@ def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
 
 @overload
 def decode_packets(
-    packets: AudioPackets,
+    packets: "AudioPackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: DecodeConfig | None = None,
+    decode_config: "DecodeConfig | None" = None,
     **kwargs,
-) -> AudioFrames: ...
+) -> "AudioFrames": ...
 @overload
 def decode_packets(
-    packets: VideoPackets,
+    packets: "VideoPackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: DecodeConfig | None = None,
+    decode_config: "DecodeConfig | None" = None,
     **kwargs,
-) -> VideoFrames: ...
+) -> "VideoFrames": ...
 @overload
 def decode_packets(
-    packets: ImagePackets,
+    packets: "ImagePackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: DecodeConfig | None = None,
+    decode_config: "DecodeConfig | None" = None,
     **kwargs,
-) -> ImageFrames: ...
+) -> "ImageFrames": ...
 
 
 def decode_packets(
-    packets: AudioPackets | VideoPackets | ImagePackets,
+    packets: "AudioPackets | VideoPackets | ImagePackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: DecodeConfig | None = None,
+    decode_config: "DecodeConfig | None" = None,
     **kwargs: object,
-) -> AudioFrames | VideoFrames | ImageFrames:
+) -> "AudioFrames | VideoFrames | ImageFrames":
     """Decode packets.
 
     Args:
@@ -695,12 +690,12 @@ def decode_packets(
 
 
 def decode_packets_nvdec(
-    packets: VideoPackets,
+    packets: "VideoPackets",
     *,
-    device_config: CUDAConfig,
+    device_config: "CUDAConfig",
     pix_fmt: str = "rgb",
     **kwargs,
-) -> CUDABuffer:
+) -> "CUDABuffer":
     """**[Experimental]** Decode packets with NVDEC.
 
     .. warning::
@@ -791,9 +786,9 @@ def decode_packets_nvdec(
 def decode_image_nvjpeg(
     src: str | bytes | Sequence[bytes],
     *,
-    device_config: CUDAConfig | None = None,
+    device_config: "CUDAConfig | None" = None,
     **kwargs,
-) -> CUDABuffer:
+) -> "CUDABuffer":
     """**[Experimental]** Decode image with nvJPEG.
 
     .. warning::
@@ -924,8 +919,8 @@ class NvDecDecoder:
 
     def init(
         self,
-        cuda_config: CUDAConfig,
-        codec: VideoCodec,
+        cuda_config: "CUDAConfig",
+        codec: "VideoCodec",
         *,
         crop_left: int = 0,
         crop_top: int = 0,
@@ -975,7 +970,7 @@ class NvDecDecoder:
             scale_height=scale_height,
         )
 
-    def decode(self, packets: VideoPackets) -> list[CUDABuffer]:
+    def decode(self, packets: "VideoPackets") -> "list[CUDABuffer]":
         """Decode video frames from the give packets.
 
         .. note::
@@ -994,7 +989,7 @@ class NvDecDecoder:
         """
         return self._decoder.decode(packets)
 
-    def flush(self) -> list[CUDABuffer]:
+    def flush(self) -> "list[CUDABuffer]":
         """Notify the decoder the end of video stream, and fetch buffered frames.
 
         Returns:
@@ -1034,17 +1029,10 @@ def nvdec_decoder(use_cache: bool = True) -> NvDecDecoder:
 
 
 def convert_frames(
-    frames: (
-        AudioFrames
-        | VideoFrames
-        | ImageFrames
-        | list[AudioFrames]
-        | list[VideoFrames]
-        | list[ImageFrames]
-    ),
-    storage: CPUStorage | None = None,
+    frames: "AudioFrames | VideoFrames | ImageFrames | list[AudioFrames] | list[VideoFrames] | list[ImageFrames]",
+    storage: "CPUStorage | None" = None,
     **kwargs,
-) -> CPUBuffer:
+) -> "CPUBuffer":
     """Convert the decoded frames to buffer.
 
     Args:
@@ -1079,7 +1067,7 @@ def convert_frames(
     return _libspdl.convert_frames(frames, storage=storage, **kwargs)
 
 
-def convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
+def convert_array(vals, storage: "CPUStorage | None" = None) -> "CPUBuffer":
     """Convert the given array to buffer.
 
     This function is intended to be used when sending class labels (which is
@@ -1098,7 +1086,7 @@ def convert_array(vals, storage: CPUStorage | None = None) -> CPUBuffer:
 
 def create_reference_audio_frame(
     array, sample_fmt: str, sample_rate: int, pts: int
-) -> AudioFrames:
+) -> "AudioFrames":
     """Create an AudioFrame object which refers to the given array/tensor.
 
     This function should be used when the media data processed in Python should
@@ -1148,7 +1136,7 @@ def create_reference_audio_frame(
 
 def create_reference_video_frame(
     array, pix_fmt: str, frame_rate: tuple[int, int], pts: int
-) -> VideoFrames:
+) -> "VideoFrames":
     """Create an VideoFrame object which refers to the given array/tensor.
 
     This function should be used when the media data processed in Python should
@@ -1194,8 +1182,8 @@ def create_reference_video_frame(
 # Device data transfer
 ################################################################################
 def transfer_buffer(
-    buffer: CPUBuffer, *, device_config: CUDAConfig | None = None, **kwargs
-) -> CUDABuffer:
+    buffer: "CPUBuffer", *, device_config: "CUDAConfig | None" = None, **kwargs
+) -> "CUDABuffer":
     """Move the given CPU buffer to CUDA device.
 
     Args:
@@ -1218,7 +1206,7 @@ def transfer_buffer(
     return _libspdl_cuda.transfer_buffer(buffer, device_config=device_config)
 
 
-def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
+def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
     """Move the given CUDA buffer to CPU.
 
     Args:
@@ -1234,12 +1222,12 @@ def transfer_buffer_cpu(buffer: CUDABuffer) -> CPUBuffer:
 # Color conversion
 ################################################################################
 def nv12_to_rgb(
-    buffers: list[CUDABuffer],
+    buffers: "list[CUDABuffer]",
     *,
-    device_config: CUDAConfig,
+    device_config: "CUDAConfig",
     coeff: int = 1,
     sync: bool = False,
-) -> CUDABuffer:
+) -> "CUDABuffer":
     """Given CUDA buffers of NV12 images, batch and convert them to (interleaved) RGB.
 
     The pixel values are converted with the following formula;
@@ -1287,12 +1275,12 @@ def nv12_to_rgb(
 
 
 def nv12_to_bgr(
-    buffers: list[CUDABuffer],
+    buffers: "list[CUDABuffer]",
     *,
-    device_config: CUDAConfig,
+    device_config: "CUDAConfig",
     coeff: int = 1,
     sync: bool = False,
-) -> CUDABuffer:
+) -> "CUDABuffer":
     """Same as :py:func:`nv12_to_rgb`, but the order of the color channel is BGR."""
     ret = _libspdl_cuda.nv12_to_planar_bgr(
         buffers,
@@ -1366,20 +1354,20 @@ class Muxer:
     @overload
     def add_encode_stream(
         self,
-        config: AudioEncodeConfig,
+        config: "AudioEncodeConfig",
         *,
         encoder: str | None = None,
         encoder_config: dict[str, str] | None = None,
-    ) -> AudioEncoder: ...
+    ) -> "AudioEncoder": ...
 
     @overload
     def add_encode_stream(
         self,
-        config: VideoEncodeConfig,
+        config: "VideoEncodeConfig",
         *,
         encoder: str | None = None,
         encoder_config: dict[str, str] | None = None,
-    ) -> VideoEncoder: ...
+    ) -> "VideoEncoder": ...
 
     def add_encode_stream(self, config, *, encoder=None, encoder_config=None):
         """Add an output stream with encoding.
@@ -1405,10 +1393,10 @@ class Muxer:
         return _Encoder(encoder)
 
     @overload
-    def add_remux_stream(self, codec: AudioCodec) -> None: ...
+    def add_remux_stream(self, codec: "AudioCodec") -> None: ...
 
     @overload
-    def add_remux_stream(self, codec: VideoCodec) -> None: ...
+    def add_remux_stream(self, codec: "VideoCodec") -> None: ...
 
     def add_remux_stream(self, codec) -> None:
         """Add an output stream without encoding.
@@ -1460,7 +1448,7 @@ class Muxer:
         self._open = True
         return self
 
-    def write(self, stream_index: int, packets: AudioPackets | VideoPackets) -> None:
+    def write(self, stream_index: int, packets: "AudioPackets | VideoPackets") -> None:
         """Write packets to muxer.
 
         Args:
