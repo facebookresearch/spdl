@@ -46,12 +46,12 @@ def __getattr__(name: str) -> ModuleType:
         return _LazilyImportedModule(name, _import_libspdl_cuda)
 
     if name == "_archive":
-        import spdl.io.lib._archive
+        import spdl.io.lib._archive  # pyre-ignore: [21]
 
         return spdl.io.lib._archive
 
     if name == "_wav":
-        import spdl.io.lib._wav
+        import spdl.io.lib._wav  # pyre-ignore: [21]
 
         return spdl.io.lib._wav
 

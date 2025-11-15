@@ -17,11 +17,7 @@ namespace nb = nanobind;
 
 namespace spdl::core {
 void register_storage(nb::module_& m) {
-  nb::class_<CPUStorage>(
-      m,
-      "CPUStorage",
-      "Allocate a block of CPU memory.\n\n"
-      "See the factory function :py:func:`~spdl.io.cpu_storage`.");
+  nb::class_<CPUStorage>(m, "CPUStorage");
 
   m.def(
       "cpu_storage",

@@ -69,8 +69,7 @@ size_t num_packets(const Packets<media>& packets) {
 } // namespace
 
 void register_packets(nb::module_& m) {
-  nb::class_<AudioPackets>(
-      m, "AudioPackets", "Packets object containing audio samples.")
+  nb::class_<AudioPackets>(m, "AudioPackets")
       .def(
           "__repr__",
           [](const AudioPackets& self) {
@@ -100,23 +99,19 @@ void register_packets(nb::module_& m) {
           [](const AudioPackets& self) {
             nb::gil_scoped_release __g;
             return self.timestamp;
-          },
-          "The window this packets covers, denoted by start and end time in second.\n\n"
-          "This is the value specified by user when demuxing the stream.")
+          })
       .def_prop_ro(
           "sample_rate",
           [](const AudioPackets& self) {
             return get_ref(self.codec).get_sample_rate();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The sample rate of the audio.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "num_channels",
           [](const AudioPackets& self) {
             return get_ref(self.codec).get_num_channels();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The number of channels.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
           [](const AudioPackets& self) -> std::optional<AudioCodec> {
@@ -125,20 +120,15 @@ void register_packets(nb::module_& m) {
             }
             return std::nullopt;
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The codec.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def(
           "clone",
           [](const AudioPackets& self) -> AudioPacketsPtr {
             return std::make_unique<AudioPackets>(self);
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "Clone the packets, so that data can be decoded multiple times.\n\n"
-          "Returns:\n"
-          "    A clone of the packets.");
+          nb::call_guard<nb::gil_scoped_release>());
 
-  nb::class_<VideoPackets>(
-      m, "VideoPackets", "Packets object containing video frames.")
+  nb::class_<VideoPackets>(m, "VideoPackets")
       .def(
           "get_timestamps",
           [](const VideoPackets& self, bool raw) -> std::vector<double> {
@@ -146,56 +136,39 @@ void register_packets(nb::module_& m) {
           },
           nb::call_guard<nb::gil_scoped_release>(),
           nb::kw_only(),
-          nb::arg("raw") = false,
-          "Get the timestamp of packets.\n\n"
-          "By default, the returned timestamps are sorted by display time,\n"
-          "and if user specified a time window when demuxing, the timestamps\n"
-          "outside of the window is discatded.\n\n"
-          "Args:\n"
-          "    raw: If ``True``, the order of timestamps correspond to the\n"
-          "        order of packets, which is not necessarily ordered by\n"
-          "        display time.\n"
-          "        Also the user-specified window is not applied, so timestamps\n"
-          "        for all the packets are returned.\n\n"
-          "        This option is mainly for debugging.")
+          nb::arg("raw") = false)
       // Note: this is a window timestamp specified by user.
       .def_prop_ro(
           "timestamp",
           [](const VideoPackets& self) {
             nb::gil_scoped_release __g;
             return self.timestamp;
-          },
-          "The window this packets covers, denoted by start and end time in second.\n\n"
-          "This is the value specified by user when demuxing the stream.")
+          })
       .def_prop_ro(
           "pix_fmt",
           [](const VideoPackets& self) {
             return get_ref(self.codec).get_pix_fmt();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The name of the pixel format, such as ``\"yuv420p\"``.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "width",
           [](const VideoPackets& self) {
             return get_ref(self.codec).get_width();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The width of video.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "height",
           [](const VideoPackets& self) {
             return get_ref(self.codec).get_height();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The height of video.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "frame_rate",
           [](const VideoPackets& self) {
             auto rate = get_ref(self.codec).get_frame_rate();
             return std::tuple<int, int>(rate.num, rate.den);
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The frame rate of the video in the form of ``(numerator, denominator)``.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
           [](const VideoPackets& self) -> std::optional<VideoCodec> {
@@ -204,14 +177,9 @@ void register_packets(nb::module_& m) {
             }
             return std::nullopt;
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The codec.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def(
-          "__len__",
-          [](const VideoPackets& self) { return num_packets(self); },
-          "Returns the number of packets.\n\n"
-          ".. note::\n\n"
-          "   Each packet typically contains one compressed frame, but it is not guaranteed.")
+          "__len__", [](const VideoPackets& self) { return num_packets(self); })
       .def(
           "__repr__",
           [](const VideoPackets& self) {
@@ -236,10 +204,7 @@ void register_packets(nb::module_& m) {
           [](const VideoPackets& self) -> VideoPacketsPtr {
             return std::make_unique<VideoPackets>(self);
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "Clone the packets, so that data can be decoded multiple times.\n\n"
-          "Returns:\n"
-          "    A clone of the packets.");
+          nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
       "_extract_packets_at_indices",
@@ -248,29 +213,25 @@ void register_packets(nb::module_& m) {
       nb::arg("packets"),
       nb::arg("indices"));
 
-  nb::class_<ImagePackets>(
-      m, "ImagePackets", "Packets object contain an image frame.")
+  nb::class_<ImagePackets>(m, "ImagePackets")
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {
             return get_ref(self.codec).get_pix_fmt();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The name of the pixel format, such as ``\"yuv420p\"``.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "width",
           [](const ImagePackets& self) {
             return get_ref(self.codec).get_width();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The width of image.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "height",
           [](const ImagePackets& self) {
             return get_ref(self.codec).get_height();
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The height of image.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro(
           "codec",
           [](const ImagePackets& self) -> std::optional<ImageCodec> {
@@ -279,8 +240,7 @@ void register_packets(nb::module_& m) {
             }
             return std::nullopt;
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "The codec.")
+          nb::call_guard<nb::gil_scoped_release>())
       .def(
           "__repr__",
           [](const ImagePackets& self) {
@@ -294,9 +254,6 @@ void register_packets(nb::module_& m) {
           [](const ImagePackets& self) -> ImagePacketsPtr {
             return std::make_unique<ImagePackets>(self);
           },
-          nb::call_guard<nb::gil_scoped_release>(),
-          "Clone the packets, so that data can be decoded multiple times.\n\n"
-          "Returns:\n"
-          "    A clone of the packets.");
+          nb::call_guard<nb::gil_scoped_release>());
 }
 } // namespace spdl::core

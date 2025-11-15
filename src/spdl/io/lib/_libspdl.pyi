@@ -19,268 +19,116 @@ from numpy.typing import ArrayLike
 
 
 class DemuxConfig:
-    """
-    Demux configuration.
-
-    See the factory function :py:func:`~spdl.io.demux_config`.
-    """
-
     def __init__(self, format: str | None = None, format_options: Mapping[str, str] | None = None, buffer_size: int = 8096) -> None: ...
 
 class DecodeConfig:
-    """
-    Decode configuration.
-
-    See the factory function :py:func:`~spdl.io.decode_config`.
-    """
-
     def __init__(self, decoder: str | None = None, decoder_options: Mapping[str, str] | None = None) -> None: ...
 
 class InternalError(AssertionError):
     pass
 
 class AudioPackets:
-    """Packets object containing audio samples."""
-
     def __repr__(self) -> str: ...
 
     def __len__(self) -> int: ...
 
     @property
-    def timestamp(self) -> tuple[float, float] | None:
-        """
-        The window this packets covers, denoted by start and end time in second.
-
-        This is the value specified by user when demuxing the stream.
-        """
+    def timestamp(self) -> tuple[float, float] | None: ...
 
     @property
-    def sample_rate(self) -> int:
-        """The sample rate of the audio."""
+    def sample_rate(self) -> int: ...
 
     @property
-    def num_channels(self) -> int:
-        """The number of channels."""
+    def num_channels(self) -> int: ...
 
     @property
-    def codec(self) -> AudioCodec | None:
-        """The codec."""
+    def codec(self) -> AudioCodec | None: ...
 
-    def clone(self) -> AudioPackets:
-        """
-        Clone the packets, so that data can be decoded multiple times.
-
-        Returns:
-            A clone of the packets.
-        """
+    def clone(self) -> AudioPackets: ...
 
 class VideoPackets:
-    """Packets object containing video frames."""
-
-    def get_timestamps(self, *, raw: bool = False) -> list[float]:
-        """
-        Get the timestamp of packets.
-
-        By default, the returned timestamps are sorted by display time,
-        and if user specified a time window when demuxing, the timestamps
-        outside of the window is discatded.
-
-        Args:
-            raw: If ``True``, the order of timestamps correspond to the
-                order of packets, which is not necessarily ordered by
-                display time.
-                Also the user-specified window is not applied, so timestamps
-                for all the packets are returned.
-
-                This option is mainly for debugging.
-        """
+    def get_timestamps(self, *, raw: bool = False) -> list[float]: ...
 
     @property
-    def timestamp(self) -> tuple[float, float] | None:
-        """
-        The window this packets covers, denoted by start and end time in second.
-
-        This is the value specified by user when demuxing the stream.
-        """
+    def timestamp(self) -> tuple[float, float] | None: ...
 
     @property
-    def pix_fmt(self) -> str:
-        """The name of the pixel format, such as ``"yuv420p"``."""
+    def pix_fmt(self) -> str: ...
 
     @property
-    def width(self) -> int:
-        """The width of video."""
+    def width(self) -> int: ...
 
     @property
-    def height(self) -> int:
-        """The height of video."""
+    def height(self) -> int: ...
 
     @property
-    def frame_rate(self) -> tuple[int, int]:
-        """
-        The frame rate of the video in the form of ``(numerator, denominator)``.
-        """
+    def frame_rate(self) -> tuple[int, int]: ...
 
     @property
-    def codec(self) -> VideoCodec | None:
-        """The codec."""
+    def codec(self) -> VideoCodec | None: ...
 
-    def __len__(self) -> int:
-        """
-        Returns the number of packets.
-
-        .. note::
-
-           Each packet typically contains one compressed frame, but it is not guaranteed.
-        """
+    def __len__(self) -> int: ...
 
     def __repr__(self) -> str: ...
 
-    def clone(self) -> VideoPackets:
-        """
-        Clone the packets, so that data can be decoded multiple times.
-
-        Returns:
-            A clone of the packets.
-        """
+    def clone(self) -> VideoPackets: ...
 
 class ImagePackets:
-    """Packets object contain an image frame."""
+    @property
+    def pix_fmt(self) -> str: ...
 
     @property
-    def pix_fmt(self) -> str:
-        """The name of the pixel format, such as ``"yuv420p"``."""
+    def width(self) -> int: ...
 
     @property
-    def width(self) -> int:
-        """The width of image."""
+    def height(self) -> int: ...
 
     @property
-    def height(self) -> int:
-        """The height of image."""
-
-    @property
-    def codec(self) -> ImageCodec | None:
-        """The codec."""
+    def codec(self) -> ImageCodec | None: ...
 
     def __repr__(self) -> str: ...
 
-    def clone(self) -> ImagePackets:
-        """
-        Clone the packets, so that data can be decoded multiple times.
-
-        Returns:
-            A clone of the packets.
-        """
+    def clone(self) -> ImagePackets: ...
 
 class AudioFrames:
-    """Audio frames."""
+    @property
+    def num_frames(self) -> int: ...
 
     @property
-    def num_frames(self) -> int:
-        """
-        The number of audio frames. Same as ``__len__`` method.
-
-        .. note::
-
-           In SPDL,
-           ``The number of samples`` == ``the number of frames`` x ``the number of channels``
-        """
+    def sample_rate(self) -> int: ...
 
     @property
-    def sample_rate(self) -> int:
-        """The sample rate of audio."""
+    def num_channels(self) -> int: ...
 
     @property
-    def num_channels(self) -> int:
-        """The number of channels."""
+    def sample_fmt(self) -> str: ...
 
-    @property
-    def sample_fmt(self) -> str:
-        """
-        The name of sample format.
-
-        Possible values are
-
-        - ``"u8"`` for unsigned 8-bit integer.
-        - ``"s16"``, ``"s32"``, ``"s64"`` for signed 16-bit, 32-bit and 64-bit integer.
-        - ``"flt"``, ``"dbl"`` for 32-bit and 64-bit float.
-
-        If the frame is planar format (separate planes for different channels), the
-        name will be suffixed with ``"p"``. When converted to buffer, the buffer's shape
-        will be channel-first format ``(channel, num_samples)`` instead of interweaved
-        ``(num_samples, channel)``.
-        """
-
-    def __len__(self) -> int:
-        """Returns the number of frames. Same as ``num_frames``."""
+    def __len__(self) -> int: ...
 
     def __repr__(self) -> str: ...
 
-    def clone(self) -> AudioFrames:
-        """
-        Clone the frames, so that data can be converted to buffer multiple times.
-
-        Returns:
-            A clone of the frame.
-        """
+    def clone(self) -> AudioFrames: ...
 
 class VideoFrames:
-    """Video frames."""
+    @property
+    def num_frames(self) -> int: ...
 
     @property
-    def num_frames(self) -> int:
-        """The number of video frames. Same as ``__len__`` method."""
+    def num_planes(self) -> int: ...
 
     @property
-    def num_planes(self) -> int:
-        """
-        The number of planes in the each frame.
-
-        .. note::
-
-           This corresponds to the number of color components, however
-           it does not always match with the number of color channels when
-           the frame is converted to buffer/array object.
-
-           For example, if a video file is YUV format (which is one of the most
-           common formats, and comprised of different plane sizes), and
-           color space conversion is disabled during the decoding, then
-           the resulting frames are converted to buffer as single channel frame
-           where all the Y, U, V components are packed.
-
-           SPDL by default converts the color space to RGB, so this is
-           usually not an issue.
-        """
+    def width(self) -> int: ...
 
     @property
-    def width(self) -> int:
-        """The width of video."""
+    def height(self) -> int: ...
 
     @property
-    def height(self) -> int:
-        """The height of video."""
+    def pix_fmt(self) -> str: ...
 
-    @property
-    def pix_fmt(self) -> str:
-        """The name of the pixel format."""
-
-    def __len__(self) -> int:
-        """Returns the number of frames. Same as ``num_frames``."""
+    def __len__(self) -> int: ...
 
     @overload
-    def __getitem__(self, arg: slice, /) -> VideoFrames:
-        """
-        Slice frame by key.
-
-        Args:
-            key: If the key is int type, a single frame is returned as ``ImageFrames``.
-                If the key is slice type, a new ``VideoFrames`` object pointing the
-                corresponding frames are returned.
-
-        Returns:
-            The sliced frame.
-        """
+    def __getitem__(self, arg: slice, /) -> VideoFrames: ...
 
     @overload
     def __getitem__(self, arg: int, /) -> ImageFrames: ...
@@ -288,98 +136,48 @@ class VideoFrames:
     @overload
     def __getitem__(self, arg: Sequence[int], /) -> VideoFrames: ...
 
-    def get_timestamps(self) -> list[float]:
-        """Get the timestamp of frames."""
+    def get_timestamps(self) -> list[float]: ...
 
-    def get_pts(self) -> list[int]:
-        """Get the PTS (Presentation Time Stamp) in timebase unit."""
+    def get_pts(self) -> list[int]: ...
 
     @property
-    def time_base(self) -> tuple[int, int]:
-        """
-        Get the time base of PTS.
-
-        The time base is expressed as ``(Numerator, denominator)``.
-
-        PTS (in seconds) == PTS (in timebase unit) * Numerator / Denominator
-        """
+    def time_base(self) -> tuple[int, int]: ...
 
     def __repr__(self) -> str: ...
 
-    def clone(self) -> VideoFrames:
-        """
-        Clone the frames, so that data can be converted to buffer multiple times.
-
-        Returns:
-            A clone of the frame.
-        """
+    def clone(self) -> VideoFrames: ...
 
 class ImageFrames:
-    """Image frames."""
+    @property
+    def num_planes(self) -> int: ...
 
     @property
-    def num_planes(self) -> int:
-        """
-        The number of planes in the each frame.
-
-        See :py:class:`~spdl.io.VideoFrames` for a caveat.
-        """
+    def width(self) -> int: ...
 
     @property
-    def width(self) -> int:
-        """The width of image."""
+    def height(self) -> int: ...
 
     @property
-    def height(self) -> int:
-        """The height of image."""
+    def pix_fmt(self) -> str: ...
 
     @property
-    def pix_fmt(self) -> str:
-        """The name of the pixel format."""
-
-    @property
-    def metadata(self) -> dict[str, str]:
-        """Metadata attached to the frame."""
+    def metadata(self) -> dict[str, str]: ...
 
     def __repr__(self) -> str: ...
 
-    def clone(self) -> ImageFrames:
-        """
-        Clone the frames, so that data can be converted to buffer multiple times.
-
-        Returns:
-            A clone of the frame.
-        """
+    def clone(self) -> ImageFrames: ...
 
     @property
-    def pts(self) -> float:
-        """
-        The presentation time stamp of the image in the source video.
-
-        This property is valid only when the ``ImageFrames`` is created from slicing
-        :py:class:`~spdl.io.VideoFrames` object.
-        """
+    def pts(self) -> float: ...
 
 class CPUStorage:
-    """
-    Allocate a block of CPU memory.
-
-    See the factory function :py:func:`~spdl.io.cpu_storage`.
-    """
+    pass
 
 def cpu_storage(size: int) -> CPUStorage: ...
 
 class CPUBuffer:
-    """
-    Buffer implements array interface.
-
-    To be passed to casting functions like :py:func:`~spdl.io.to_numpy`,
-    :py:func:`~spdl.io.to_torch` and :py:func:`~spdl.io.to_numba`.
-    """
-
     @property
-    def __array_interface__(self) -> dict:
-        """See https://numpy.org/doc/stable/reference/arrays.interface.html."""
+    def __array_interface__(self) -> dict: ...
 
 class TracingSession:
     def init(self) -> None: ...
@@ -420,118 +218,66 @@ class MultiStreamingVideoDemuxer:
     def next(self) -> dict[int, AudioPackets | VideoPackets | ImagePackets]: ...
 
 class AudioCodec:
-    """Codec metadata"""
+    @property
+    def name(self) -> str: ...
 
     @property
-    def name(self) -> str:
-        """The name of the codec"""
+    def sample_rate(self) -> int: ...
 
     @property
-    def sample_rate(self) -> int:
-        """The sample rate of the audio stream"""
+    def num_channels(self) -> int: ...
 
     @property
-    def num_channels(self) -> int:
-        """The number of channels in the audio stream"""
+    def sample_fmt(self) -> str: ...
 
     @property
-    def sample_fmt(self) -> str:
-        """The sample format of the audio."""
+    def time_base(self) -> tuple[int, int]: ...
 
     @property
-    def time_base(self) -> tuple[int, int]:
-        """
-        The internal unit of time used for timestamp.
-
-        The value is expressed as a fraction. ``(numerator, denominator)``.
-        """
-
-    @property
-    def channel_layout(self) -> str:
-        """The channel layout of the audio"""
+    def channel_layout(self) -> str: ...
 
     def __repr__(self) -> str: ...
 
 class VideoCodec:
-    """Codec metadata"""
+    @property
+    def name(self) -> str: ...
 
     @property
-    def name(self) -> str:
-        """The name of the codec"""
+    def width(self) -> int: ...
 
     @property
-    def width(self) -> int:
-        """The width of the video."""
+    def height(self) -> int: ...
 
     @property
-    def height(self) -> int:
-        """The height of the video."""
+    def pix_fmt(self) -> str: ...
 
     @property
-    def pix_fmt(self) -> str:
-        """The pixel format of the video."""
+    def frame_rate(self) -> tuple[int, int]: ...
 
     @property
-    def frame_rate(self) -> tuple[int, int]:
-        """
-        The frame rate of the video.
-
-        The value is expressed as a fraction. ``(numerator, denominator)``.
-        """
+    def time_base(self) -> tuple[int, int]: ...
 
     @property
-    def time_base(self) -> tuple[int, int]:
-        """
-        The internal unit of time used for timestamp.
-
-        The value is expressed as a fraction. ``(numerator, denominator)``.
-        """
-
-    @property
-    def sample_aspect_ratio(self) -> tuple[int, int]:
-        """
-        The aspect ratio of a single pixel.
-
-        The value is expressed as a fraction. ``(width, height)``.
-        """
+    def sample_aspect_ratio(self) -> tuple[int, int]: ...
 
 class ImageCodec:
-    """Codec metadata"""
+    @property
+    def name(self) -> str: ...
 
     @property
-    def name(self) -> str:
-        """The name of the codec"""
+    def width(self) -> int: ...
 
     @property
-    def width(self) -> int:
-        """The width of the image."""
+    def height(self) -> int: ...
 
     @property
-    def height(self) -> int:
-        """The height of the image."""
+    def pix_fmt(self) -> str: ...
 
     @property
-    def pix_fmt(self) -> str:
-        """The pixel format of the image."""
+    def time_base(self) -> tuple[int, int]: ...
 
     @property
-    def time_base(self) -> tuple[int, int]:
-        """
-        The internal unit of time used for timestamp.
-
-        For image, the actual value should be irrelevant.
-        This API is just for compatibility.
-
-        The value is expressed as a fraction. ``(numerator, denominator)``.
-        """
-
-    @property
-    def sample_aspect_ratio(self) -> tuple[int, int]:
-        """
-        The aspect ratio of a single pixel.
-
-        The value is expressed as a fraction. ``(width, height)``.
-        """
+    def sample_aspect_ratio(self) -> tuple[int, int]: ...
 
 class Demuxer:
     def demux_audio(self, window: tuple[float, float] | None = None, bsf: str | None = None) -> AudioPackets: ...
@@ -560,32 +306,17 @@ class Demuxer:
     def streaming_demux(self, indices: Set[int], *, num_packets: int, duration: float) -> MultiStreamingVideoDemuxer: ...
 
 class AudioDecoder:
-    """
-    Decode stream of audio packets. See :py:class:`Decoder` for the detail.
-    """
+    def decode(self, packets: AudioPackets) -> AudioFrames: ...
 
-    def decode(self, packets: AudioPackets) -> AudioFrames:
-        """Decode the given packets"""
-
-    def flush(self) -> AudioFrames:
-        """Flush the internally buffered frames. Use only at the end of stream"""
+    def flush(self) -> AudioFrames: ...
 
 class VideoDecoder:
-    """
-    Decode stream of video packets. See :py:class:`Decoder` for the detail.
-    """
+    def decode(self, packets: VideoPackets) -> VideoFrames: ...
 
-    def decode(self, packets: VideoPackets) -> VideoFrames:
-        """Decode the given packets"""
-
-    def flush(self) -> VideoFrames:
-        """Flush the internally buffered frames. Use only at the end of stream"""
+    def flush(self) -> VideoFrames: ...
 
 class ImageDecoder:
-    """Decode an image packet. See :py:class:`Decoder` for the detail."""
-
-    def decode(self, packets: ImagePackets) -> ImageFrames:
-        """Decode the given packets"""
+    def decode(self, packets: ImagePackets) -> ImageFrames: ...
 
     def flush(self) -> ImageFrames: ...
 
@@ -650,80 +381,27 @@ class Muxer:
 def muxer(arg0: str, *, format: str | None = None) -> Muxer: ...
 
 class AudioEncodeConfig:
-    """
-    Configuration for encoding audio.
-
-    See the factory function :py:func:`~spdl.io.audio_encode_config`.
-    """
+    pass
 
 def audio_encode_config(*, num_channels: int, sample_fmt: str | None = None, sample_rate: int | None = None, bit_rate: int = -1, compression_level: int = -1, qscale: int = -1) -> AudioEncodeConfig: ...
 
 class VideoEncodeConfig:
-    """
-    Configuration for encoding video.
-
-    See the factory function :py:func:`~spdl.io.video_encode_config`.
-    """
+    pass
 
 def video_encode_config(*, height: int, width: int, frame_rate: tuple[int, int] | None = None, pix_fmt: str | None = None, bit_rate: int = -1, compression_level: int = -1, qscale: int = -1, gop_size: int = -1, max_b_frames: int = -1, colorspace: str | None = None, color_primaries: str | None = None, color_trc: str | None = None) -> VideoEncodeConfig: ...
 
 class VideoEncoder:
-    """
-    Video encoder.
+    def encode(self, arg: VideoFrames, /) -> VideoPackets: ...
 
-    Returned by :py:meth:`Muxer.add_encode_stream`.
-    """
-
-    def encode(self, arg: VideoFrames, /) -> VideoPackets:
-        """
-        Encode video frames.
-
-        Args:
-            frames: Audio frames. Use :py:func:`create_reference_video_frame` to convert
-                tensor/array objects into frames.
-
-        Returns:
-            Packets objects if encoder generates one.
-        """
-
-    def flush(self) -> VideoPackets:
-        """
-        Notify the encoder of the end of the stream and fetch the buffered packets.
-        """
+    def flush(self) -> VideoPackets: ...
 
 class AudioEncoder:
-    """
-    Audio encoder.
+    def encode(self, arg: AudioFrames, /) -> AudioPackets: ...
 
-    Returned by :py:meth:`Muxer.add_encode_stream`.
-    """
-
-    def encode(self, arg: AudioFrames, /) -> AudioPackets:
-        """
-        Encode audio frames.
-
-        Args:
-            frames: Audio frames. Use :py:func:`create_reference_audio_frame` to convert
-                tensor/array objects into frames.
-
-        Returns:
-            Packets objects if encoder generates one.
-        """
-
-    def flush(self) -> AudioPackets:
-        """
-        Notify the encoder of the end of the stream and fetch the buffered packets.
-        """
+    def flush(self) -> AudioPackets: ...
 
     @property
-    def frame_size(self) -> int:
-        """
-        The number of frames that the internal encoder can handle at a time.
-
-        Some audio encoders are strict on the number of frames it can handle at a time.
-        In such case, retrieve the number of expected frames (par channel) here,
-        slice data accordingly, then encode slice by slice.
-        """
+    def frame_size(self) -> int: ...
 
 class FiilterGraph:
     def add_frames(self, frames: AudioFrames | VideoFrames | ImageFrames, *, key: str | None = None) -> None: ...
