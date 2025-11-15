@@ -21,16 +21,31 @@ import spdl.io.lib._libspdl
 
 
 class CUDAConfig:
-    pass
+    """
+    Specify the CUDA device and memory management.
+
+    See the factory function :py:func:`~spdl.io.cuda_config`.
+    """
 
 def cuda_config(device_index: int, stream: int = 0, allocator: tuple[Callable[[int, int, int], int], Callable[[int], None]] | None = None) -> CUDAConfig: ...
 
 class CUDABuffer:
-    @property
-    def __cuda_array_interface__(self) -> dict: ...
+    """
+    CUDABuffer implements CUDA array interface.
+
+    To be passed to casting functions like :py:func:`~spdl.io.to_torch` and
+    :py:func:`~spdl.io.to_numba`.
+    """
 
     @property
-    def device_index(self) -> int: ...
+    def __cuda_array_interface__(self) -> dict:
+        """
+        See https://numba.pydata.org/numba-doc/latest/cuda/cuda_array_interface.html.
+        """
+
+    @property
+    def device_index(self) -> int:
+        """The device index."""
 
 class NvDecDecoder:
     def reset(self) -> None: ...

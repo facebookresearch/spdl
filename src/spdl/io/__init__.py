@@ -6,38 +6,7 @@
 
 """Implements the core I/O functionalities."""
 
-# pyre-unsafe
-
-from typing import Any
-
-# This has to happen before other sub modules are imporeted.
-# Otherwise circular import would occur.
-from ._type_stub import (  # isort: skip
-    CPUBuffer,
-    CUDABuffer,
-    Packets,
-    AudioCodec,
-    VideoCodec,
-    ImageCodec,
-    AudioPackets,
-    VideoPackets,
-    ImagePackets,
-    Frames,
-    AudioFrames,
-    VideoFrames,
-    ImageFrames,
-    AudioEncoder,
-    VideoEncoder,
-    AudioDecoder,
-    VideoDecoder,
-    ImageDecoder,
-    DemuxConfig,
-    DecodeConfig,
-    VideoEncodeConfig,
-    AudioEncodeConfig,
-    CUDAConfig,
-    CPUStorage,
-)
+# pyre-strict
 
 from ._array import (
     load_npy,
@@ -127,7 +96,6 @@ __all__ = [
     "demux_audio",
     "demux_video",
     "demux_image",
-    "Packets",
     "AudioPackets",
     "VideoPackets",
     "ImagePackets",
@@ -146,7 +114,6 @@ __all__ = [
     "decode_image_nvjpeg",
     "NvDecDecoder",
     "nvdec_decoder",
-    "Frames",
     "AudioFrames",
     "VideoFrames",
     "ImageFrames",
@@ -206,11 +173,12 @@ __all__ = [
 ]
 
 
-def __dir__():
+def __dir__() -> list[str]:
     return __all__
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> object:
+    """Lazily import C++ extension modules and their contents."""
     if name == "__version__":
         from importlib.metadata import PackageNotFoundError, version
 
@@ -218,5 +186,80 @@ def __getattr__(name: str) -> Any:
             return version("spdl.io")
         except PackageNotFoundError:
             return "unknown"
+
+    # Lazy loading of C++ extension classes from _libspdl
+    _libspdl_items = {
+        "CPUStorage",
+        "CPUBuffer",
+        "AudioCodec",
+        "VideoCodec",
+        "ImageCodec",
+        "AudioPackets",
+        "VideoPackets",
+        "ImagePackets",
+        "AudioFrames",
+        "VideoFrames",
+        "ImageFrames",
+        "AudioEncoder",
+        "VideoEncoder",
+        "AudioDecoder",
+        "VideoDecoder",
+        "ImageDecoder",
+        "DemuxConfig",
+        "DecodeConfig",
+        "VideoEncodeConfig",
+        "AudioEncodeConfig",
+    }
+
+    if name in _libspdl_items:
+        from . import lib
+
+        disabled = lib._LG.disabled
+        lib._LG.disabled = True
+        try:
+            attr = getattr(lib._libspdl, name)
+            return attr
+        except RuntimeError:
+
+            class _placeholder:
+                def __init__(self, *_args: object, **_kwargs: object) -> None:
+                    raise RuntimeError(
+                        f"Failed to load `_libspdl.{name}`. " "Is FFmpeg available?"
+                    )
+
+            return _placeholder
+
+        finally:
+            lib._LG.disabled = disabled
+
+    # Lazy loading of C++ extension classes from _libspdl_cuda
+    _libspdl_cuda_items = {
+        "CUDABuffer",
+        "CUDAConfig",
+    }
+
+    if name in _libspdl_cuda_items:
+        from . import lib
+
+        disabled = lib._LG.disabled
+        lib._LG.disabled = True
+        try:
+            from .lib import _libspdl_cuda
+
+            attr = getattr(_libspdl_cuda, name)
+            return attr
+        except RuntimeError:
+
+            class _placeholder:
+                def __init__(self, *_args: object, **_kwargs: object) -> None:
+                    raise RuntimeError(
+                        f"Failed to load `_libspdl_cuda.{name}`. "
+                        "Is CUDA runtime available?"
+                    )
+
+            return _placeholder
+
+        finally:
+            lib._LG.disabled = disabled
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -56,9 +56,15 @@ nb::dict get_array_interface(CPUBuffer& b) {
 } // namespace
 
 void register_buffers(nb::module_& m) {
-  nb::class_<CPUBuffer>(m, "CPUBuffer")
-      .def_prop_ro("__array_interface__", [](CPUBuffer& self) {
-        return get_array_interface(self);
-      });
+  nb::class_<CPUBuffer>(
+      m,
+      "CPUBuffer",
+      "Buffer implements array interface.\n\n"
+      "To be passed to casting functions like :py:func:`~spdl.io.to_numpy`,\n"
+      ":py:func:`~spdl.io.to_torch` and :py:func:`~spdl.io.to_numba`.")
+      .def_prop_ro(
+          "__array_interface__",
+          [](CPUBuffer& self) { return get_array_interface(self); },
+          "See https://numpy.org/doc/stable/reference/arrays.interface.html.");
 }
 } // namespace spdl::core

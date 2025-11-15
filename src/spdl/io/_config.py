@@ -6,16 +6,6 @@
 
 # pyre-strict
 
-from spdl.io import (
-    AudioEncodeConfig,
-    CPUStorage,
-    CUDAConfig,
-    DecodeConfig,
-    DemuxConfig,
-    VideoEncodeConfig,
-)
-
-from .lib import _libspdl, _libspdl_cuda
 
 __all__ = [
     "demux_config",
@@ -26,8 +16,21 @@ __all__ = [
     "cpu_storage",
 ]
 
+from typing import TYPE_CHECKING
 
-def demux_config(**kwargs) -> DemuxConfig:
+from .lib import _libspdl, _libspdl_cuda
+
+if TYPE_CHECKING:
+    AudioEncodeConfig = _libspdl.AudioEncodeConfig
+    CPUStorage = _libspdl.CPUStorage
+    DecodeConfig = _libspdl.DecodeConfig
+    DemuxConfig = _libspdl.DemuxConfig
+    VideoEncodeConfig = _libspdl.VideoEncodeConfig
+
+    CUDAConfig = _libspdl_cuda.CUDAConfig
+
+
+def demux_config(**kwargs) -> "DemuxConfig":
     """Customize demuxing behavior.
 
     Args:
@@ -65,7 +68,7 @@ def demux_config(**kwargs) -> DemuxConfig:
     return _libspdl.DemuxConfig(**kwargs)
 
 
-def decode_config(**kwargs) -> DecodeConfig:
+def decode_config(**kwargs) -> "DecodeConfig":
     """Customize decoding behavior.
 
     Args:
@@ -100,7 +103,7 @@ def decode_config(**kwargs) -> DecodeConfig:
     return _libspdl.DecodeConfig(**kwargs)
 
 
-def cuda_config(device_index: int, **kwargs) -> CUDAConfig:
+def cuda_config(device_index: int, **kwargs) -> "CUDAConfig":
     """Sprcify the CUDA device and memory management.
 
     Args:
@@ -165,7 +168,7 @@ def video_encode_config(
     colorspace: str | None = None,
     color_primaries: str | None = None,
     color_trc: str | None = None,
-) -> VideoEncodeConfig:
+) -> "VideoEncodeConfig":
     """Customize encoding behavior.
 
     Args:
@@ -223,7 +226,7 @@ def audio_encode_config(
     bit_rate: int = -1,
     compression_level: int = -1,
     qscale: int = -1,
-) -> AudioEncodeConfig:
+) -> "AudioEncodeConfig":
     """Customize encoding behavior.
 
     Args:
@@ -266,7 +269,7 @@ def audio_encode_config(
     )
 
 
-def cpu_storage(size: int, pin_memory=True) -> CPUStorage:
+def cpu_storage(size: int, pin_memory=True) -> "CPUStorage":
     """Allocate a block of memory.
 
     This function allocates a block of memory. The intended usage is to make

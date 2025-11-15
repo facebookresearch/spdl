@@ -145,34 +145,41 @@ void register_demuxing(nb::module_& m) {
           &StreamingDemuxer::next,
           nb::call_guard<nb::gil_scoped_release>());
 
-  nb::class_<AudioCodec>(m, "AudioCodec")
+  nb::class_<AudioCodec>(m, "AudioCodec", "Codec metadata")
       .def_prop_ro(
           "name",
           &AudioCodec::get_name,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The name of the codec")
       .def_prop_ro(
           "sample_rate",
           &AudioCodec::get_sample_rate,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The sample rate of the audio stream")
       .def_prop_ro(
           "num_channels",
           &AudioCodec::get_num_channels,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The number of channels in the audio stream")
       .def_prop_ro(
           "sample_fmt",
           &AudioCodec::get_sample_fmt,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The sample format of the audio.")
       .def_prop_ro(
           "time_base",
           [](AudioCodec& self) -> std::tuple<int, int> {
             auto base = self.get_time_base();
             return {base.num, base.den};
           },
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The internal unit of time used for timestamp.\n\n"
+          "The value is expressed as a fraction. ``(numerator, denominator)``.")
       .def_prop_ro(
           "channel_layout",
           &AudioCodec::get_channel_layout,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The channel layout of the audio")
       .def("__repr__", [](const AudioCodec& self) {
         return fmt::format(
             "AudioCodec<name={}, sample_rate={}, num_channels={}, sample_fmt={}>",
@@ -181,78 +188,98 @@ void register_demuxing(nb::module_& m) {
             self.get_num_channels(),
             self.get_sample_fmt());
       });
-  nb::class_<VideoCodec>(m, "VideoCodec")
+  nb::class_<VideoCodec>(m, "VideoCodec", "Codec metadata")
       .def_prop_ro(
           "name",
           &VideoCodec::get_name,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The name of the codec")
       .def_prop_ro(
           "width",
           &VideoCodec::get_width,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The width of the video.")
       .def_prop_ro(
           "height",
           &VideoCodec::get_height,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The height of the video.")
       .def_prop_ro(
           "pix_fmt",
           &VideoCodec::get_pix_fmt,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The pixel format of the video.")
       .def_prop_ro(
           "frame_rate",
           [](VideoCodec& self) -> std::tuple<int, int> {
             auto rate = self.get_frame_rate();
             return {rate.num, rate.den};
           },
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The frame rate of the video.\n\n"
+          "The value is expressed as a fraction. ``(numerator, denominator)``.")
       .def_prop_ro(
           "time_base",
           [](VideoCodec& self) -> std::tuple<int, int> {
             auto base = self.get_time_base();
             return {base.num, base.den};
           },
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The internal unit of time used for timestamp.\n\n"
+          "The value is expressed as a fraction. ``(numerator, denominator)``.")
       .def_prop_ro(
           "sample_aspect_ratio",
           [](VideoCodec& self) -> std::tuple<int, int> {
             auto r = self.get_sample_aspect_ratio();
             return {r.num, r.den};
           },
-          nb::call_guard<nb::gil_scoped_release>()
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The aspect ratio of a single pixel.\n\n"
+          "The value is expressed as a fraction. ``(width, height)``."
 
       );
 
-  nb::class_<ImageCodec>(m, "ImageCodec")
+  nb::class_<ImageCodec>(m, "ImageCodec", "Codec metadata")
       .def_prop_ro(
           "name",
           &ImageCodec::get_name,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The name of the codec")
       .def_prop_ro(
           "width",
           &ImageCodec::get_width,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The width of the image.")
       .def_prop_ro(
           "height",
           &ImageCodec::get_height,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The height of the image.")
       .def_prop_ro(
           "pix_fmt",
           &ImageCodec::get_pix_fmt,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The pixel format of the image.")
       .def_prop_ro(
           "time_base",
           [](ImageCodec& self) -> std::tuple<int, int> {
             auto base = self.get_time_base();
             return {base.num, base.den};
           },
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The internal unit of time used for timestamp.\n\n"
+          "For image, the actual value should be irrelevant.\n"
+          "This API is just for compatibility.\n\n"
+          "The value is expressed as a fraction. ``(numerator, denominator)``.")
       .def_prop_ro(
           "sample_aspect_ratio",
           [](ImageCodec& self) -> std::tuple<int, int> {
             auto r = self.get_sample_aspect_ratio();
             return {r.num, r.den};
           },
-          nb::call_guard<nb::gil_scoped_release>());
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The aspect ratio of a single pixel.\n\n"
+          "The value is expressed as a fraction. ``(width, height)``.");
 
   nb::class_<PyDemuxer>(m, "Demuxer")
       .def(

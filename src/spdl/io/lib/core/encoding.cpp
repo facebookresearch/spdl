@@ -75,7 +75,11 @@ void register_encoding(nb::module_& m) {
       nb::kw_only(),
       nb::arg("format") = std::nullopt);
 
-  nb::class_<AudioEncodeConfig>(m, "AudioEncodeConfig");
+  nb::class_<AudioEncodeConfig>(
+      m,
+      "AudioEncodeConfig",
+      "Configuration for encoding audio.\n\n"
+      "See the factory function :py:func:`~spdl.io.audio_encode_config`.");
 
   m.def(
       "audio_encode_config",
@@ -102,7 +106,11 @@ void register_encoding(nb::module_& m) {
       nb::arg("compression_level") = -1,
       nb::arg("qscale") = -1);
 
-  nb::class_<VideoEncodeConfig>(m, "VideoEncodeConfig");
+  nb::class_<VideoEncodeConfig>(
+      m,
+      "VideoEncodeConfig",
+      "Configuration for encoding video.\n\n"
+      "See the factory function :py:func:`~spdl.io.video_encode_config`.");
 
   m.def(
       "video_encode_config",
@@ -154,29 +162,53 @@ void register_encoding(nb::module_& m) {
       nb::arg("color_primaries") = std::nullopt,
       nb::arg("color_trc") = std::nullopt);
 
-  nb::class_<VideoEncoder>(m, "VideoEncoder")
+  nb::class_<VideoEncoder>(
+      m,
+      "VideoEncoder",
+      "Video encoder.\n\nReturned by :py:meth:`Muxer.add_encode_stream`.")
       .def(
           "encode",
           &VideoEncoder::encode,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "Encode video frames.\n\n"
+          "Args:\n"
+          "    frames: Audio frames. Use :py:func:`create_reference_video_frame` to convert\n"
+          "        tensor/array objects into frames.\n\n"
+          "Returns:\n"
+          "    Packets objects if encoder generates one.")
       .def(
           "flush",
           &VideoEncoder::flush,
-          nb::call_guard<nb::gil_scoped_release>());
+          nb::call_guard<nb::gil_scoped_release>(),
+          "Notify the encoder of the end of the stream and fetch the buffered packets.");
 
-  nb::class_<AudioEncoder>(m, "AudioEncoder")
+  nb::class_<AudioEncoder>(
+      m,
+      "AudioEncoder",
+      "Audio encoder.\n\nReturned by :py:meth:`Muxer.add_encode_stream`.")
       .def(
           "encode",
           &AudioEncoder::encode,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "Encode audio frames.\n\n"
+          "Args:\n"
+          "    frames: Audio frames. Use :py:func:`create_reference_audio_frame` to convert\n"
+          "        tensor/array objects into frames.\n\n"
+          "Returns:\n"
+          "    Packets objects if encoder generates one.")
       .def(
           "flush",
           &AudioEncoder::flush,
-          nb::call_guard<nb::gil_scoped_release>())
+          nb::call_guard<nb::gil_scoped_release>(),
+          "Notify the encoder of the end of the stream and fetch the buffered packets.")
       .def_prop_ro(
           "frame_size",
           &AudioEncoder::get_frame_size,
-          nb::call_guard<nb::gil_scoped_release>());
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The number of frames that the internal encoder can handle at a time.\n\n"
+          "Some audio encoders are strict on the number of frames it can handle at a time.\n"
+          "In such case, retrieve the number of expected frames (par channel) here,\n"
+          "slice data accordingly, then encode slice by slice.");
 }
 
 } // namespace spdl::core

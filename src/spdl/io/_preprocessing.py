@@ -7,21 +7,20 @@
 # pyre-strict
 
 import math
-from typing import Any
-
-from spdl.io import (
-    AudioCodec,
-    AudioFrames,
-    AudioPackets,
-    ImageCodec,
-    ImageFrames,
-    ImagePackets,
-    VideoCodec,
-    VideoFrames,
-    VideoPackets,
-)
+from typing import Any, TYPE_CHECKING
 
 from .lib import _libspdl
+
+if TYPE_CHECKING:
+    AudioCodec = _libspdl.AudioCodec
+    AudioFrames = _libspdl.AudioFrames
+    AudioPackets = _libspdl.AudioPackets
+    ImageCodec = _libspdl.ImageCodec
+    ImageFrames = _libspdl.ImageFrames
+    ImagePackets = _libspdl.ImagePackets
+    VideoCodec = _libspdl.VideoCodec
+    VideoFrames = _libspdl.VideoFrames
+    VideoPackets = _libspdl.VideoPackets
 
 __all__ = [
     "get_audio_filter_desc",
@@ -240,7 +239,7 @@ def get_video_filter_desc(
 
 
 def get_filter_desc(
-    packets: AudioPackets | VideoPackets | ImagePackets, **filter_args: Any
+    packets: "AudioPackets | VideoPackets | ImagePackets", **filter_args: Any
 ) -> str | None:
     """Get the filter to process the given packets.
 
@@ -453,7 +452,7 @@ class FilterGraph:
 
     def add_frames(
         self,
-        frames: AudioFrames | VideoFrames | ImageFrames,
+        frames: "AudioFrames | VideoFrames | ImageFrames",
         *,
         key: str | None = None,
     ) -> None:
@@ -468,7 +467,7 @@ class FilterGraph:
 
     def get_frames(
         self, *, key: str | None = None
-    ) -> AudioFrames | VideoFrames | ImageFrames | None:
+    ) -> "AudioFrames | VideoFrames | ImageFrames | None":
         """Get a frame from an output node of the filter graph.
 
         Args:
@@ -488,7 +487,7 @@ class FilterGraph:
 
 
 def get_abuffer_desc(
-    codec: AudioCodec,
+    codec: "AudioCodec",
     *,
     label: str | None = None,
     sample_fmt: str | None = None,
@@ -543,7 +542,7 @@ def get_abuffer_desc(
 
 
 def get_buffer_desc(
-    codec: VideoCodec | ImageCodec,
+    codec: "VideoCodec | ImageCodec",
     label: str | None = None,
     pix_fmt: str | None = None,
 ) -> str:
