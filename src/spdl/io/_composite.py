@@ -6,28 +6,6 @@
 
 # pyre-strict
 
-import builtins
-import logging
-import warnings
-from collections.abc import Iterator, Sequence
-from pathlib import Path
-from typing import overload, TYPE_CHECKING
-
-from spdl.io import (
-    CPUBuffer,
-    CPUStorage,
-    CUDABuffer,
-    CUDAConfig,
-    DecodeConfig,
-    DemuxConfig,
-    ImagePackets,
-    VideoPackets,
-)
-
-from . import _config, _core, _preprocessing
-from ._core import _FILTER_DESC_DEFAULT, SourceType
-from .lib import _libspdl
-
 __all__ = [
     "load_audio",
     "load_video",
@@ -39,21 +17,36 @@ __all__ = [
     "sample_decode_video",
 ]
 
-_LG = logging.getLogger(__name__)
+import builtins
+import logging
+import warnings
+from collections.abc import Iterator, Sequence
+from pathlib import Path
+from typing import overload, TYPE_CHECKING
+
+from . import _config, _core, _preprocessing
+from ._core import _FILTER_DESC_DEFAULT
+from .lib import _libspdl, _libspdl_cuda
+
+_LG: logging.Logger = logging.getLogger(__name__)
 
 Window = tuple[float, float]
 
 
 if TYPE_CHECKING:
-    import numpy as np
+    from numpy.typing import NDArray as Array
 
-    try:
-        from numpy.typing import NDArray as Array
+    from ._core import SourceType
 
-    except ImportError:
-        Array = np.ndarray
-else:
-    Array = object
+    CPUBuffer = _libspdl.CPUBuffer
+    CPUStorage = _libspdl.CPUStorage
+    DecodeConfig = _libspdl.DecodeConfig
+    DemuxConfig = _libspdl.DemuxConfig
+    ImagePackets = _libspdl.ImagePackets
+    VideoPackets = _libspdl.VideoPackets
+
+    CUDABuffer = _libspdl_cuda.CUDABuffer
+    CUDAConfig = _libspdl_cuda.CUDAConfig
 
 
 ################################################################################
@@ -61,9 +54,9 @@ else:
 ################################################################################
 def _load_packets(
     packets,
-    decode_config: DecodeConfig | None = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    device_config: CUDAConfig | None = None,
+    device_config: "CUDAConfig | None" = None,
     **kwargs,
 ):
     if device_config is None and "cuda_config" in kwargs:
@@ -86,23 +79,23 @@ def load_audio(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
     *,
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     **kwargs,
-) -> CPUBuffer: ...
+) -> "CPUBuffer": ...
 @overload
 def load_audio(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
     *,
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    device_config: CUDAConfig,
+    device_config: "CUDAConfig",
     **kwargs,
-) -> CUDABuffer: ...
+) -> "CUDABuffer": ...
 
 
 def load_audio(
@@ -153,23 +146,23 @@ def load_video(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
     *,
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     **kwargs,
-) -> CPUBuffer: ...
+) -> "CPUBuffer": ...
 @overload
 def load_video(
     src: str | bytes,
     timestamp: tuple[float, float] | None = None,
     *,
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    device_config: CUDAConfig,
+    device_config: "CUDAConfig",
     **kwargs,
-) -> CUDABuffer: ...
+) -> "CUDABuffer": ...
 
 
 def load_video(
@@ -219,22 +212,22 @@ def load_video(
 def load_image(
     src: str | bytes,
     *,
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     **kwargs,
-) -> CPUBuffer: ...
+) -> "CPUBuffer": ...
 @overload
 def load_image(
     src: str | bytes,
     *,
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    device_config: CUDABuffer,
+    device_config: "CUDABuffer",
     **kwargs,
-) -> CUDABuffer: ...
+) -> "CUDABuffer": ...
 
 
 def load_image(
@@ -307,14 +300,14 @@ def load_image_batch(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
-    storage: CPUStorage | None = None,
+    storage: "CPUStorage | None" = None,
     strict: bool = True,
     **kwargs,
-) -> CPUBuffer: ...
+) -> "CPUBuffer": ...
 
 
 @overload
@@ -324,14 +317,14 @@ def load_image_batch(
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb24",
-    demux_config: DemuxConfig | None = None,
-    decode_config: DecodeConfig | None = None,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    device_config: CUDAConfig,
-    storage: CPUStorage | None = None,
+    device_config: "CUDAConfig",
+    storage: "CPUStorage | None" = None,
     strict: bool = True,
     **kwargs,
-) -> CUDABuffer: ...
+) -> "CUDABuffer": ...
 
 
 def load_image_batch(
@@ -344,7 +337,7 @@ def load_image_batch(
     decode_config=None,
     filter_desc=_FILTER_DESC_DEFAULT,
     device_config=None,
-    storage: CPUStorage | None = None,
+    storage: "CPUStorage | None" = None,
     strict=True,
     **kwargs,
 ):
@@ -476,12 +469,12 @@ def _get_bytes(srcs: list[str | bytes]) -> list[bytes]:
 def load_image_batch_nvjpeg(
     srcs: Sequence[str | bytes],
     *,
-    device_config: CUDAConfig,
+    device_config: "CUDAConfig",
     width: int | None,
     height: int | None,
     pix_fmt: str | None = "rgb",
     **kwargs,
-) -> CUDABuffer:
+) -> "CUDABuffer":
     """**[Experimental]** Batch load images with nvJPEG.
 
     This function decodes images using nvJPEG and resize them with NPP.
@@ -517,12 +510,12 @@ def load_image_batch_nvjpeg(
 
 
 def streaming_load_video_nvdec(
-    src: SourceType,
-    device_config: CUDAConfig,
+    src: "SourceType",
+    device_config: "CUDAConfig",
     *,
     num_frames: int,
     post_processing_params: dict[str, int] | None = None,
-) -> Iterator[list[CUDABuffer]]:
+) -> "Iterator[list[CUDABuffer]]":
     """Load video from source chunk by chunk using NVDEC.
 
     .. seealso::
@@ -610,12 +603,12 @@ def _decode_partial(packets, indices, decode_config, filter_desc):
 
 
 def sample_decode_video(
-    packets: VideoPackets,
+    packets: "VideoPackets",
     indices: list[int],
     *,
-    decode_config: DecodeConfig | None = None,
+    decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-) -> list[ImagePackets]:
+) -> "list[ImagePackets]":
     """Decode specified frames from the packets.
 
     This function decodes the input video packets and returns the frames
@@ -729,7 +722,7 @@ def sample_decode_video(
     return ret
 
 
-def save_image(path: str | Path, data: Array, pix_fmt: str = "rgb24", **kwargs):
+def save_image(path: str | Path, data: "Array", pix_fmt: str = "rgb24", **kwargs):
     """Save the given image tensor.
 
     .. note::

@@ -25,8 +25,6 @@ if TYPE_CHECKING:
     from torch import device as TDevice, Tensor
 else:
     torch: ModuleType = import_utils.lazy_import("torch")
-    Tensor = object
-    TDevice = object
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -80,7 +78,7 @@ def _recursive_apply(fn: Callable[[T], T], obj: T) -> T:
             return fn(obj)  # pyre-ignore: [6]
 
 
-def _transfer(obj: T, device: TDevice, pinned_memory_cache: set[Tensor]) -> T:
+def _transfer(obj: T, device: "TDevice", pinned_memory_cache: "set[Tensor]") -> T:
     if isinstance(obj, torch.Tensor):
         pinned = obj.pin_memory()
         pinned_memory_cache.add(pinned)
@@ -89,12 +87,12 @@ def _transfer(obj: T, device: TDevice, pinned_memory_cache: set[Tensor]) -> T:
 
 
 class _DataTransfer:
-    def __init__(self, device: TDevice, num_caches: int) -> None:
+    def __init__(self, device: "TDevice", num_caches: int) -> None:
         self._device = device
         self._stream = torch.cuda.Stream(device)
-        self._batch_cache: list[Tensor] = [torch.empty(0) for _ in range(num_caches)]
+        self._batch_cache: "list[Tensor]" = [torch.empty(0) for _ in range(num_caches)]
 
-    def _transfer(self, obj: T, pinned_memory_cache: set[Tensor]) -> T:
+    def _transfer(self, obj: T, pinned_memory_cache: "set[Tensor]") -> T:
         return _transfer(obj, self._device, pinned_memory_cache)
 
     def __call__(self, batch: T) -> T:
