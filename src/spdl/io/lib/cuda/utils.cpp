@@ -22,7 +22,7 @@ void register_utils(nb::module_& m) {
 #ifdef SPDL_USE_CUDA
       init_cuda,
 #else
-      []() {
+      []() -> void {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #endif
@@ -30,7 +30,7 @@ void register_utils(nb::module_& m) {
 
   m.def(
       "built_with_cuda",
-      []() {
+      []() -> bool {
         return
 #ifdef SPDL_USE_CUDA
             true
@@ -42,7 +42,7 @@ void register_utils(nb::module_& m) {
       nb::call_guard<nb::gil_scoped_release>());
   m.def(
       "built_with_nvcodec",
-      []() {
+      []() -> bool {
         return
 #ifdef SPDL_USE_NVCODEC
             true
@@ -54,7 +54,7 @@ void register_utils(nb::module_& m) {
       nb::call_guard<nb::gil_scoped_release>());
   m.def(
       "built_with_nvjpeg",
-      []() {
+      []() -> bool {
         return
 #ifdef SPDL_USE_NVJPEG
             true
@@ -70,7 +70,7 @@ void register_utils(nb::module_& m) {
 #ifdef SPDL_USE_CUDA
       synchronize_stream,
 #else
-      [](nb::object) {
+      [](const CUDAConfig&) -> void {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #endif
