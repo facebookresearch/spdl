@@ -67,7 +67,12 @@ nb::dict get_cuda_array_interface(CUDABuffer& b) {
 #endif
 
 void register_buffers(nb::module_& m) {
-  nb::class_<CUDABuffer>(m, "CUDABuffer")
+  nb::class_<CUDABuffer>(
+      m,
+      "CUDABuffer",
+      "CUDABuffer implements CUDA array interface.\n\n"
+      "To be passed to casting functions like :py:func:`~spdl.io.to_torch` and\n"
+      ":py:func:`~spdl.io.to_numba`.")
       .def_prop_ro(
           "__cuda_array_interface__",
           [](CUDABuffer& _(self)) {
@@ -76,7 +81,8 @@ void register_buffers(nb::module_& m) {
 #else
             return get_cuda_array_interface(self);
 #endif
-          })
+          },
+          "See https://numba.pydata.org/numba-doc/latest/cuda/cuda_array_interface.html.")
       .def_prop_ro(
           "device_index",
           [](CUDABuffer& _(self)) {
@@ -86,6 +92,7 @@ void register_buffers(nb::module_& m) {
             return self.device_index;
 #endif
           },
-          nb::call_guard<nb::gil_scoped_release>());
+          nb::call_guard<nb::gil_scoped_release>(),
+          "The device index.");
 }
 } // namespace spdl::cuda
