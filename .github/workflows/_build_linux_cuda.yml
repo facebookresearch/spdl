@@ -37,6 +37,7 @@ on:
 
 env:
   ARTIFACT: wheel-linux-py${{ inputs.python-version }}${{ inputs.free-threaded }}-cuda${{ inputs.cuda-version }}${{ inputs.use-nvdec }}
+  STUB: stub-files-${{ inputs.arch }}-${{ inputs.python-version }}${{ inputs.free-threaded }}
   SPDL_USE_TRACING: 1
   SPDL_USE_CUDA: 1
   SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
@@ -261,3 +262,60 @@ jobs:
               tests/spdl_unittest/io/ \
               tests/spdl_unittest/dataloader/ \
               tests/spdl_unittest/pipeline/
+
+  stub-check:
+    needs: ["build"]
+    runs-on: ${{ inputs.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: ~/package
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          channels: conda-forge
+          conda-remove-defaults: "true"
+
+      - name: Setup
+        run: |
+          set -ex
+
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            conda install -q -c conda-forge python-freethreading
+          fi
+
+          # Install SPDL
+          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+
+          # Install deps
+          pip install numpy nanobind==2.8.0 typing_extensions
+
+          # Install FFmpeg
+          conda install -q ffmpeg==8
+          # For some reason, the dynamic libraries are not found.
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
+
+      - name: Generate stubs
+        run: |
+          set -ex
+          python src/spdl/io/lib/stubgen.py --output-dir src/spdl/io/lib
+          git diff --exit-code
+
+      - uses: actions/upload-artifact@v4
+        name: Upload stub
+        if: failure()
+        with:
+          name: "${{ env.STUB }}"
+          path: src/spdl/io/lib/*.pyi
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
