@@ -52,7 +52,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
          int _(scale_width),
          int _(scale_height),
          const std::string& _(pix_fmt),
-         bool _(_zero_clear)) {
+         bool _(_zero_clear)) -> CUDABufferPtr {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else
@@ -84,7 +84,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
          int _(scale_width),
          int _(scale_height),
          const std::string& _(pix_fmt),
-         bool _(_zero_clear)) {
+         bool _(_zero_clear)) -> CUDABufferPtr {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else

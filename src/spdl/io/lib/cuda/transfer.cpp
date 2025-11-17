@@ -56,7 +56,7 @@ void register_transfer(nb::module_& m) {
   // CPU -> CUDA
   m.def(
       "transfer_buffer",
-      [](CPUBufferPtr _(buffer), const CUDAConfig& _(cfg)) {
+      [](CPUBufferPtr _(buffer), const CUDAConfig& _(cfg)) -> CUDABufferPtr {
 #ifdef SPDL_USE_CUDA
         return transfer_buffer(std::move(buffer), cfg);
 #else
@@ -70,7 +70,7 @@ void register_transfer(nb::module_& m) {
 
   m.def(
       "transfer_buffer",
-      [](cpu_array _(array), const CUDAConfig& _(cfg)) {
+      [](cpu_array _(array), const CUDAConfig& _(cfg)) -> CUDABufferPtr {
 #ifndef SPDL_USE_CUDA
         throw std::runtime_error("SPDL is not built with CUDA support");
 #else
@@ -95,7 +95,7 @@ void register_transfer(nb::module_& m) {
   // CUDA -> CPU
   m.def(
       "transfer_buffer_cpu",
-      [](cuda_array _(array)) {
+      [](cuda_array _(array)) -> spdl::core::CPUBufferPtr {
 #ifndef SPDL_USE_CUDA
         throw std::runtime_error("SPDL is not built with CUDA support");
 #else

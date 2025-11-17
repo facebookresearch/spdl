@@ -25,7 +25,9 @@ void register_color_conversion(nb::module_& m) {
   m.def(
       "nv12_to_planar_rgb",
 #ifndef SPDL_USE_CUDA
-      [](nb::object, const CUDAConfig&, int) -> CUDABufferPtr {
+      [](const std::vector<CUDABuffer>&,
+         const CUDAConfig&,
+         int) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else
@@ -39,7 +41,9 @@ void register_color_conversion(nb::module_& m) {
   m.def(
       "nv12_to_planar_bgr",
 #ifndef SPDL_USE_CUDA
-      [](nb::object, const CUDAConfig&, int) -> CUDABufferPtr {
+      [](const std::vector<CUDABuffer>&,
+         const CUDAConfig&,
+         int) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else

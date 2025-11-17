@@ -70,7 +70,7 @@ void register_buffers(nb::module_& m) {
   nb::class_<CUDABuffer>(m, "CUDABuffer")
       .def_prop_ro(
           "__cuda_array_interface__",
-          [](CUDABuffer& _(self)) {
+          [](CUDABuffer& _(self)) -> nb::dict {
 #ifndef SPDL_USE_CUDA
             throw std::runtime_error("SPDL is not compiled with CUDA support.");
 #else
@@ -79,7 +79,7 @@ void register_buffers(nb::module_& m) {
           })
       .def_prop_ro(
           "device_index",
-          [](CUDABuffer& _(self)) {
+          [](CUDABuffer& _(self)) -> int {
 #ifndef SPDL_USE_CUDA
             throw std::runtime_error("SPDL is not compiled with CUDA support.");
 #else

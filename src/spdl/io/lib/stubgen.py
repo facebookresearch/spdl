@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import re
 from pathlib import Path
 from types import ModuleType
 
@@ -95,7 +96,7 @@ def run(output_dir: Path) -> None:
 
     for module, output_name in modules:
         stub_content = generate_stub_content(module)
-        stub_content = stub_content.replace("_spdl_ffmpeg", "_libspdl")
+        stub_content = re.sub(r"_spdl_ffmpeg\d?", "_libspdl", stub_content)
         write_stub_file(stub_content, output_dir, output_name)
 
     print("All stubs generated successfully!")
