@@ -749,16 +749,212 @@ class AudioEncoder:
         slice data accordingly, then encode slice by slice.
         """
 
-class FiilterGraph:
-    def add_frames(self, frames: AudioFrames | VideoFrames | ImageFrames, *, key: str | None = None) -> None: ...
+class FilterGraph:
+    """
+    Construct a filter graph
 
-    def flush(self) -> None: ...
+    Args:
+        filter_desc: A filter graph description.
 
-    def get_frames(self, *, key: str | None = None) -> AudioFrames | VideoFrames | ImageFrames: ...
+    .. seealso::
+
+       - :py:func:`get_buffer_desc`, :py:func:`get_abuffer_desc`: Helper functions
+         for constructing input audio/video frames.
+
+    .. admonition:: Example - Audio filtering (passthrough)
+
+       For video processing use ``abuffer`` for input and ``abuffersink`` for output.
+
+       .. code-block::
+
+          filter_desc = "abuffer=time_base=1/44100:sample_rate=44100:sample_fmt=s16:channel_layout=1c,anull,abuffersink"
+          filter_graph = FilterGraph(filter_desc)
+
+          filter_graph.add_frames(frames)
+          frames = filter_graph.get_frames()
+
+       .. code-block::
+
+          +------------------+
+          | Parsed_abuffer_0 |default--[44100Hz s16:mono]--Parsed_anull_1:default
+          |    (abuffer)     |
+          +------------------+
+
+                                                                +----------------+
+          Parsed_abuffer_0:default--[44100Hz s16:mono]--default| Parsed_anull_1 |default--[44100Hz s16:mono]--Parsed_abuffersink_2:default
+                                                                |    (anull)     |
+                                                                +----------------+
+
+                                                              +----------------------+
+          Parsed_anull_1:default--[44100Hz s16:mono]--default| Parsed_abuffersink_2 |
+                                                              |    (abuffersink)     |
+                                                              +----------------------+
+
+    .. admonition:: Example - Video filtering (passthrough)
+
+       For video processing use ``buffer`` for input and ``buffersink`` for output.
+
+       .. code-block::
+
+          filter_desc = "buffer=video_size=320x240:pix_fmt=yuv420p:time_base=1/12800:pixel_aspect=1/1,null,buffersink"
+          filter_graph = FilterGraph(filter_desc)
+
+          filter_graph.add_frames(frames)
+          frames = filter_graph.get_frames()
+
+       .. code-block::
+
+          +-----------------+
+          | Parsed_buffer_0 |default--[320x240 1:1 yuv420p]--Parsed_null_1:default
+          |    (buffer)     |
+          +-----------------+
+
+                                                                  +---------------+
+          Parsed_buffer_0:default--[320x240 1:1 yuv420p]--default| Parsed_null_1 |default--[320x240 1:1 yuv420p]--Parsed_buffersink_2:default
+                                                                  |    (null)     |
+                                                                  +---------------+
+
+                                                                +---------------------+
+          Parsed_null_1:default--[320x240 1:1 yuv420p]--default| Parsed_buffersink_2 |
+                                                                |    (buffersink)     |
+                                                                +---------------------+
+
+    .. admonition:: Example - Multiple Inputs
+
+       Suffix the ``buffer``/``abuffer`` with node name so that it can be referred later.
+
+       .. code-block::
+
+          filter_desc = "buffer@in0=video_size=320x240:pix_fmt=yuv420p:time_base=1/12800:pixel_aspect=1/1 [in0];buffer@in1=video_size=320x240:pix_fmt=yuv420p:time_base=1/12800:pixel_aspect=1/1 [in1],[in0] [in1] vstack,buffersink"
+          filter_graph = FilterGraph(filter_desc)
+
+          filter_graph.add_frames(frames0, key="buffer@in0")
+          filter_graph.add_frames(frames1, key="buffer@in1")
+          frames = filter_graph.get_frames()
+
+       .. code-block::
+
+          +------------+
+          | buffer@in0 |default--[320x240 1:1 yuv420p]--Parsed_vstack_2:input0
+          |  (buffer)  |
+          +------------+
+
+          +------------+
+          | buffer@in1 |default--[320x240 1:1 yuv420p]--Parsed_vstack_2:input1
+          |  (buffer)  |
+          +------------+
+
+                                                           +-----------------+
+          buffer@in0:default--[320x240 1:1 yuv420p]--input0| Parsed_vstack_2 |default--[320x480 1:1 yuv420p]--Parsed_buffersink_3:default
+          buffer@in1:default--[320x240 1:1 yuv420p]--input1|    (vstack)     |
+                                                           +-----------------+
+
+                                                                  +---------------------+
+          Parsed_vstack_2:default--[320x480 1:1 yuv420p]--default| Parsed_buffersink_3 |
+                                                                  |    (buffersink)     |
+                                                                  +---------------------+
+
+    .. admonition:: Example - Multiple outputs
+
+       Suffix the ``buffersink``/``abuffersink`` with node name so that it can be referred later.
+
+       .. code-block::
+
+          filter_desc = "buffer=video_size=320x240:pix_fmt=yuv420p:time_base=1/12800:pixel_aspect=1/1 [in];[in] split [out0][out1];[out0] buffersink@out0;[out1] buffersink@out1"
+          filter_graph = FilterGraph(filter_desc)
+
+          filter_graph.add_frames(frames)
+          frames0 = filter_graph.get_frames(key="buffersink@out0")
+          frames1 = filter_graph.get_frames(key="buffersink@out1")
+
+       .. code-block::
+
+          +-----------------+
+          | Parsed_buffer_0 |default--[320x240 1:1 yuv420p]--Parsed_split_1:default
+          |    (buffer)     |
+          +-----------------+
+
+                                                                  +----------------+
+          Parsed_buffer_0:default--[320x240 1:1 yuv420p]--default| Parsed_split_1 |output0--[320x240 1:1 yuv420p]--buffersink@out0:default
+                                                                  |    (split)     |output1--[320x240 1:1 yuv420p]--buffersink@out1:default
+                                                                  +----------------+
+
+                                                                 +-----------------+
+          Parsed_split_1:output0--[320x240 1:1 yuv420p]--default| buffersink@out0 |
+                                                                 |  (buffersink)   |
+                                                                 +-----------------+
+
+                                                                 +-----------------+
+          Parsed_split_1:output1--[320x240 1:1 yuv420p]--default| buffersink@out1 |
+                                                                 |  (buffersink)   |
+                                                                 +-----------------+
+
+
+    .. admonition:: Example - Multimedia filter
+
+       Using `multimedia filters <https://ffmpeg.org/ffmpeg-filters.html#Multimedia-Filters>`_
+       allows to convert audio stream to video stream.
+
+       .. code-block::
+
+          filter_desc = "abuffer=time_base=1/44100:sample_rate=44100:sample_fmt=s16:channel_layout=1c,showwaves,buffersink"
+          filter_graph = FilterGraph(filter_desc)
+
+          filter_graph.add_frames(audio_frames)
+          video_frames = filter_graph.get_frames()
+
+       .. code-block::
+
+          +------------------+
+          | Parsed_abuffer_0 |default--[44100Hz s16:mono]--Parsed_showwaves_1:default
+          |    (abuffer)     |
+          +------------------+
+
+                                                                +--------------------+
+          Parsed_abuffer_0:default--[44100Hz s16:mono]--default| Parsed_showwaves_1 |default--[600x240 1:1 rgba]--Parsed_buffersink_2:default
+                                                                |    (showwaves)     |
+                                                                +--------------------+
+
+                                                                  +---------------------+
+          Parsed_showwaves_1:default--[600x240 1:1 rgba]--default| Parsed_buffersink_2 |
+                                                                  |    (buffersink)     |
+                                                                  +---------------------+
+
+    See Also:
+        - :doc:`../io/advanced_filtering` - Complete guide to complex filter graphs
+        - :doc:`../io/filtering` - Basic filter usage
+    """
+
+    def __init__(self, filter_desc: str) -> None: ...
+
+    def add_frames(self, frames: AudioFrames | VideoFrames | ImageFrames, *, key: str | None = None) -> None:
+        """
+        Add a frame to an input node of the filter graph.
+
+        Args:
+            frames: An input frames object.
+            key: The name of the input node.
+                This is required when the graph has multiple input nodes.
+        """
+
+    def flush(self) -> None:
+        """Notify the graph that all the input stream reached the end."""
+
+    def get_frames(self, *, key: str | None = None) -> AudioFrames | VideoFrames | ImageFrames | None:
+        """
+        Get a frame from an output node of the filter graph.
+
+        Args:
+            key: The name of the output node.
+                This is required when the graph has multiple output nodes.
+
+        Returns:
+            A Frames object if an output is ready, otherwise ``None``.
+        """
 
     def dump(self) -> str: ...
 
-def make_filter_graph(filter_desc: str) -> FiilterGraph: ...
+def make_filter_graph(filter_desc: str) -> FilterGraph: ...
 
 class VideoBSF:
     def filter(self, packets: VideoPackets, *, flush: bool = False) -> VideoPackets: ...
