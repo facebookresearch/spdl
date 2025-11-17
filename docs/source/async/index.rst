@@ -28,3 +28,8 @@ sync/async functions in a unified manner.
    event_loop
    unit
    sync
+
+.. seealso::
+
+   - :ref:`pipeline-parallelism` - How SPDL uses async I/O for pipeline parallelism
+   - :py:mod:`asyncio` - Python's official async I/O documentation

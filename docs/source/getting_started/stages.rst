@@ -58,6 +58,11 @@ For example
    loop from scheduling callbacks, prevent tasks from being canceled, and
    prevent the background thread from joining.
 
+   .. seealso::
+
+      :ref:`intro-async`
+         Learn more about async event loops and how they work in SPDL.
+
 .. note::
 
    In typical ML/AI training, the source is an index-generator, so called sampler,
