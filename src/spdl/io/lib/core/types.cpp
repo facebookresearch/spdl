@@ -19,10 +19,7 @@ namespace nb = nanobind;
 
 namespace spdl::core {
 void register_types(nb::module_& m) {
-  nb::class_<DemuxConfig>(
-      m,
-      "DemuxConfig",
-      "Demux configuration.\n\nSee the factory function :py:func:`~spdl.io.demux_config`.")
+  nb::class_<DemuxConfig>(m, "DemuxConfig")
       .def(
           nb::init<
               const std::optional<std::string>,
@@ -32,10 +29,7 @@ void register_types(nb::module_& m) {
           nb::arg("format_options") = nb::none(),
           nb::arg("buffer_size") = SPDL_DEFAULT_BUFFER_SIZE);
 
-  nb::class_<DecodeConfig>(
-      m,
-      "DecodeConfig",
-      "Decode configuration.\n\nSee the factory function :py:func:`~spdl.io.decode_config`.")
+  nb::class_<DecodeConfig>(m, "DecodeConfig")
       .def(
           nb::init<
               const std::optional<std::string>&,
