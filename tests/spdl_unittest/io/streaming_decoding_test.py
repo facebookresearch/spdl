@@ -12,6 +12,7 @@ import numpy as np
 import spdl.io
 import torch
 from parameterized import parameterized
+from spdl.io import VideoPackets
 
 from ..fixture import FFMPEG_CLI, get_sample
 
@@ -77,13 +78,16 @@ class TestDemuxer(unittest.TestCase):
 
 class TestStreamingVideoDemuxing(unittest.TestCase):
     def test_streaming_video_demuxing_smoke_test(self) -> None:
-        """`streaming_demux_video` can decode packets in streaming fashion."""
+        """`streaming_demux` can decode packets in streaming fashion."""
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
         sample = get_sample(cmd)
 
         demuxer = spdl.io.Demuxer(sample.path)
         num_packets = 0
-        for packets in demuxer.streaming_demux_video(5):
+        for packets in demuxer.streaming_demux(
+            demuxer.video_stream_index, num_packets=5
+        ):
+            assert isinstance(packets, VideoPackets)
             num_packets += len(packets)
 
         demuxer = spdl.io.Demuxer(sample.path)
@@ -92,15 +96,18 @@ class TestStreamingVideoDemuxing(unittest.TestCase):
         self.assertEqual(num_packets, len(packets))
 
     def test_streaming_video_demuxing_parity(self) -> None:
-        """`streaming_demux_video` can decode packets in streaming fashion."""
+        """`streaming_demux` can decode packets in streaming fashion."""
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
         sample = get_sample(cmd)
 
         demuxer = spdl.io.Demuxer(sample.path)
         decoder = spdl.io.Decoder(demuxer.video_codec)
         buffers = []
-        for packets in demuxer.streaming_demux_video(30):
+        for packets in demuxer.streaming_demux(
+            demuxer.video_stream_index, num_packets=30
+        ):
             print(packets)
+            assert isinstance(packets, VideoPackets)
             frames = decoder.decode(packets)
             print(frames)
             # pyre-ignore[6]
@@ -160,12 +167,13 @@ class TestStreamingDecoding(unittest.TestCase):
 
         demuxer = spdl.io.Demuxer(sample.path)
         decoder = spdl.io.Decoder(demuxer.video_codec)
-        ite = demuxer.streaming_demux_video(N)
+        ite = demuxer.streaming_demux(demuxer.video_stream_index, num_packets=N)
 
         buffers = []
         for i in range(6):
             packets = next(ite)
             print(f"{i}: {packets=}", flush=True)
+            assert isinstance(packets, VideoPackets)
             self.assertEqual(len(packets), N)
             frames = decoder.decode(packets)
             print(f"{i}: {frames=}", flush=True)
