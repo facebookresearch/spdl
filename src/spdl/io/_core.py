@@ -565,25 +565,6 @@ def Decoder(
 ) -> "ImageDecoder": ...
 
 
-class _Decoder:
-    def __init__(self, decoder) -> None:
-        self._decoder = decoder
-
-    def decode(self, packets):
-        # TODO: push down the optional to C++
-        frames = self._decoder.decode(packets)
-        if len(frames):
-            return frames
-        return None
-
-    def flush(self):
-        # TODO: push down the optional to C++
-        frames = self._decoder.flush()
-        if len(frames):
-            return frames
-        return None
-
-
 def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
     """Initialize a decoder object that can incrementally decode packets of the same stream.
 
@@ -614,10 +595,9 @@ def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
     if filter_desc is not None:
         filter_desc = _resolve_filter_graph(filter_desc, codec)
 
-    decoder = _libspdl._make_decoder(
+    return _libspdl._make_decoder(
         codec, filter_desc=filter_desc, decode_config=decode_config
     )
-    return _Decoder(decoder)
 
 
 @overload
@@ -1296,28 +1276,6 @@ def nv12_to_bgr(
 ################################################################################
 # Encoding
 ################################################################################
-class _Encoder:
-    def __init__(self, encoder) -> None:
-        self._encoder = encoder
-
-    def encode(self, frames):
-        # TODO: push down this logic to C++
-        packets = self._encoder.encode(frames)
-        if len(packets) == 0:
-            return None
-        return packets
-
-    def flush(self):
-        # TODO: push down this logic to C++
-        packets = self._encoder.flush()
-        if len(packets) == 0:
-            return None
-        return packets
-
-    def __getattr__(self, name: str):
-        return getattr(self._encoder, name)
-
-
 class Muxer:
     """Multiplexer that convines multiple packet streams. e.g. create a video
 
@@ -1387,10 +1345,9 @@ class Muxer:
             Encoder object which can be used to encode frames object into packets
                 object.
         """
-        encoder = self._muxer.add_encode_stream(
+        return self._muxer.add_encode_stream(
             config=config, encoder=encoder, encoder_config=encoder_config
         )
-        return _Encoder(encoder)
 
     @overload
     def add_remux_stream(self, codec: "AudioCodec") -> None: ...

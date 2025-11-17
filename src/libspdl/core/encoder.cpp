@@ -21,13 +21,22 @@ Encoder<media>::~Encoder() {
 }
 
 template <MediaType media>
-PacketsPtr<media> Encoder<media>::encode(const FramesPtr<media>&& frames) {
-  return pImpl->encode(std::move(frames));
+std::optional<PacketsPtr<media>> Encoder<media>::encode(
+    const FramesPtr<media>&& frames) {
+  auto packets = pImpl->encode(std::move(frames));
+  if (packets->pkts.get_packets().size() == 0) {
+    return std::nullopt;
+  }
+  return packets;
 }
 
 template <MediaType media>
-PacketsPtr<media> Encoder<media>::flush() {
-  return pImpl->flush();
+std::optional<PacketsPtr<media>> Encoder<media>::flush() {
+  auto packets = pImpl->flush();
+  if (packets->pkts.get_packets().size() == 0) {
+    return std::nullopt;
+  }
+  return packets;
 }
 
 template <MediaType media>
