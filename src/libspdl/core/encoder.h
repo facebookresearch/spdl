@@ -13,6 +13,7 @@
 #include <libspdl/core/types.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace spdl::core {
@@ -35,9 +36,9 @@ class Encoder {
 
   ~Encoder();
 
-  PacketsPtr<media> encode(const FramesPtr<media>&&);
+  std::optional<PacketsPtr<media>> encode(const FramesPtr<media>&&);
 
-  PacketsPtr<media> flush();
+  std::optional<PacketsPtr<media>> flush();
 
   int get_frame_size() const
     requires(media == MediaType::Audio);

@@ -38,13 +38,22 @@ FramesPtr<media> Decoder<media>::decode_and_flush(
 }
 
 template <MediaType media>
-FramesPtr<media> Decoder<media>::decode(PacketsPtr<media> packets) {
-  return pImpl->decode(std::move(packets));
+std::optional<FramesPtr<media>> Decoder<media>::decode(
+    PacketsPtr<media> packets) {
+  auto frames = pImpl->decode(std::move(packets));
+  if (frames->get_frames().size() == 0) {
+    return std::nullopt;
+  }
+  return frames;
 }
 
 template <MediaType media>
-FramesPtr<media> Decoder<media>::flush() {
-  return pImpl->flush();
+std::optional<FramesPtr<media>> Decoder<media>::flush() {
+  auto frames = pImpl->flush();
+  if (frames->get_frames().size() == 0) {
+    return std::nullopt;
+  }
+  return frames;
 }
 
 template class Decoder<MediaType::Audio>;

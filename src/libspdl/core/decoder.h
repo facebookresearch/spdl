@@ -13,6 +13,8 @@
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
+#include <optional>
+
 namespace spdl::core {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -43,8 +45,8 @@ class Decoder {
       PacketsPtr<media> packets,
       int num_frames = -1);
 
-  FramesPtr<media> decode(PacketsPtr<media> packets);
-  FramesPtr<media> flush();
+  std::optional<FramesPtr<media>> decode(PacketsPtr<media> packets);
+  std::optional<FramesPtr<media>> flush();
 };
 
 template <MediaType media>

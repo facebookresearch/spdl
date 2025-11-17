@@ -588,10 +588,10 @@ class AudioDecoder:
     Decode stream of audio packets. See :py:class:`Decoder` for the detail.
     """
 
-    def decode(self, packets: AudioPackets) -> AudioFrames:
+    def decode(self, packets: AudioPackets) -> AudioFrames | None:
         """Decode the given packets"""
 
-    def flush(self) -> AudioFrames:
+    def flush(self) -> AudioFrames | None:
         """Flush the internally buffered frames. Use only at the end of stream"""
 
 class VideoDecoder:
@@ -599,19 +599,19 @@ class VideoDecoder:
     Decode stream of video packets. See :py:class:`Decoder` for the detail.
     """
 
-    def decode(self, packets: VideoPackets) -> VideoFrames:
+    def decode(self, packets: VideoPackets) -> VideoFrames | None:
         """Decode the given packets"""
 
-    def flush(self) -> VideoFrames:
+    def flush(self) -> VideoFrames | None:
         """Flush the internally buffered frames. Use only at the end of stream"""
 
 class ImageDecoder:
     """Decode an image packet. See :py:class:`Decoder` for the detail."""
 
-    def decode(self, packets: ImagePackets) -> ImageFrames:
+    def decode(self, packets: ImagePackets) -> ImageFrames | None:
         """Decode the given packets"""
 
-    def flush(self) -> ImageFrames: ...
+    def flush(self) -> ImageFrames | None: ...
 
 @overload
 def decode_packets(packets: AudioPackets, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None, num_frames: int = -1) -> AudioFrames: ...
@@ -698,7 +698,7 @@ class VideoEncoder:
     Returned by :py:meth:`Muxer.add_encode_stream`.
     """
 
-    def encode(self, arg: VideoFrames, /) -> VideoPackets:
+    def encode(self, arg: VideoFrames, /) -> VideoPackets | None:
         """
         Encode video frames.
 
@@ -710,7 +710,7 @@ class VideoEncoder:
             Packets objects if encoder generates one.
         """
 
-    def flush(self) -> VideoPackets:
+    def flush(self) -> VideoPackets | None:
         """
         Notify the encoder of the end of the stream and fetch the buffered packets.
         """
@@ -722,7 +722,7 @@ class AudioEncoder:
     Returned by :py:meth:`Muxer.add_encode_stream`.
     """
 
-    def encode(self, arg: AudioFrames, /) -> AudioPackets:
+    def encode(self, arg: AudioFrames, /) -> AudioPackets | None:
         """
         Encode audio frames.
 
@@ -734,7 +734,7 @@ class AudioEncoder:
             Packets objects if encoder generates one.
         """
 
-    def flush(self) -> AudioPackets:
+    def flush(self) -> AudioPackets | None:
         """
         Notify the encoder of the end of the stream and fetch the buffered packets.
         """
