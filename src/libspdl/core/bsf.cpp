@@ -32,20 +32,28 @@ Codec<media> BSF<media>::get_codec() const {
 }
 
 template <MediaType media>
-PacketsPtr<media> BSF<media>::filter(PacketsPtr<media> packets, bool flush) {
+std::optional<PacketsPtr<media>> BSF<media>::filter(
+    PacketsPtr<media> packets,
+    bool flush) {
   auto ret = std::make_unique<Packets<media>>(
       packets->src, packets->stream_index, time_base, packets->timestamp);
   if (packets->codec) {
     ret->codec = get_codec();
   }
   pImpl->filter(packets->pkts.get_packets(), ret->pkts, flush);
+  if (ret->pkts.get_packets().size() == 0) {
+    return std::nullopt;
+  }
   return ret;
 }
 
 template <MediaType media>
-PacketsPtr<media> BSF<media>::flush() {
+std::optional<PacketsPtr<media>> BSF<media>::flush() {
   auto ret = std::make_unique<Packets<media>>("0", -1, time_base);
   pImpl->flush(ret->pkts);
+  if (ret->pkts.get_packets().size() == 0) {
+    return std::nullopt;
+  }
   return ret;
 }
 

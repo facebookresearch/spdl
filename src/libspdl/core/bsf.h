@@ -33,8 +33,10 @@ class BSF {
 
   Codec<media> get_codec() const;
 
-  PacketsPtr<media> filter(PacketsPtr<media> packets, bool flush = false);
-  PacketsPtr<media> flush();
+  std::optional<PacketsPtr<media>> filter(
+      PacketsPtr<media> packets,
+      bool flush = false);
+  std::optional<PacketsPtr<media>> flush();
 };
 
 } // namespace spdl::core
