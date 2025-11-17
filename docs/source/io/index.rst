@@ -37,7 +37,6 @@ This section provides detailed documentation on how to use these implementations
 
    basic
    decoding_overview
-   packets_frames_concepts
    filtering
    advanced_filtering
    streaming_decoding
