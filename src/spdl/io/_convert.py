@@ -17,9 +17,13 @@ jax: ModuleType = import_utils.lazy_import("jax")
 np: ModuleType = import_utils.lazy_import("numpy")
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+    from torch import Tensor
+
     from .lib import _libspdl_cuda
 
     CUDABuffer = _libspdl_cuda.CUDABuffer
+
 
 __all__ = [
     "to_numba",
@@ -92,7 +96,7 @@ class CUDAArrayInterface(Protocol):
         ...
 
 
-def to_numpy(buffer: ArrayInterface):
+def to_numpy(buffer: ArrayInterface) -> "NDArray":
     """Convert to NumPy NDArray.
 
     Args:
@@ -112,7 +116,7 @@ def to_numpy(buffer: ArrayInterface):
     return np.array(buffer, copy=False)
 
 
-def to_torch(buffer: "ArrayInterface | CUDABuffer"):
+def to_torch(buffer: "ArrayInterface | CUDABuffer") -> "Tensor":
     """Convert to PyTorch Tensor.
 
     Args:
@@ -149,7 +153,7 @@ def to_torch(buffer: "ArrayInterface | CUDABuffer"):
     return torch.as_tensor(np.array(buffer, copy=False))
 
 
-def to_numba(buffer: ArrayInterface | CUDAArrayInterface):
+def to_numba(buffer: ArrayInterface | CUDAArrayInterface):  # pyre-ignore[3]
     """Convert to Numba DeviceNDArray or NumPy NDArray.
 
     Args:
@@ -169,7 +173,7 @@ def to_numba(buffer: ArrayInterface | CUDAArrayInterface):
     return np.array(buffer, copy=False)
 
 
-def to_jax(buffer: ArrayInterface):
+def to_jax(buffer: ArrayInterface):  # pyre-ignore[3]
     """Convert to JAX Array.
 
     Args:

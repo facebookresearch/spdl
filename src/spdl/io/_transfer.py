@@ -16,7 +16,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import fields, is_dataclass
 from functools import partial
 from types import ModuleType
-from typing import TYPE_CHECKING, TypeVar
+from typing import Any, TYPE_CHECKING, TypeVar
 
 from ._internal import import_utils
 
@@ -90,7 +90,7 @@ class _DataTransfer:
     def __init__(self, device: "TDevice", num_caches: int) -> None:
         self._device = device
         self._stream = torch.cuda.Stream(device)
-        self._batch_cache: "list[Tensor]" = [torch.empty(0) for _ in range(num_caches)]
+        self._batch_cache: list[Any] = [None for _ in range(num_caches)]
 
     def _transfer(self, obj: T, pinned_memory_cache: "set[Tensor]") -> T:
         return _transfer(obj, self._device, pinned_memory_cache)

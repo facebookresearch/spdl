@@ -10,6 +10,7 @@ __all__ = [
     "NpzFile",
 ]
 from collections.abc import Iterator, Mapping
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,16 +21,14 @@ from . import lib as _libspdl
 
 # pyre-strict
 
+Buffer: TypeAlias = bytes | bytearray | memoryview  # pyre-ignore[24]
 
-def _get_pointer(data: bytes) -> int:
+
+def _get_pointer(data: Buffer) -> int:
     return np.frombuffer(data, dtype=np.byte).ctypes.data
 
 
-def load_npy(
-    data: bytes | bytearray | memoryview,  # pyre-ignore
-    *,
-    copy: bool = False,
-) -> NDArray:
+def load_npy(data: Buffer, *, copy: bool = False) -> NDArray:
     """Load NumPy NDArray from bytes.
 
     This function loads NumPy NDArray from memory. It is equivalent to
@@ -136,7 +135,7 @@ class NpzFile(Mapping):
                     "Compression method other than DEFLATE is not supported."
                 )
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self, key: str) -> bool:  # pyre-ignore[14]
         return key in self._meta or key in self.files
 
     def __repr__(self) -> str:

@@ -121,10 +121,10 @@ class Demuxer:
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: "SourceType", **kwargs):
+    def __init__(self, src: "SourceType", **kwargs) -> None:
         if isinstance(src, Path):
             src = str(src)
-        self._demuxer = _libspdl._demuxer(src, **kwargs)
+        self._demuxer: _libspdl.Demuxer = _libspdl._demuxer(src, **kwargs)
 
     def demux_audio(
         self, window: tuple[float, float] | None = None, **kwargs
@@ -552,7 +552,12 @@ def Decoder(
 ) -> "ImageDecoder": ...
 
 
-def Decoder(codec, *, filter_desc=_FILTER_DESC_DEFAULT, decode_config=None):
+def Decoder(
+    codec: "AudioCodec | VideoCodec | ImageCodec",
+    *,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    decode_config: "DecodeConfig | None" = None,
+) -> "AudioDecoder | VideoDecoder | ImageDecoder":
     """Initialize a decoder object that can incrementally decode packets of the same stream.
 
     .. admonition:: Example
@@ -1314,7 +1319,13 @@ class Muxer:
         encoder_config: dict[str, str] | None = None,
     ) -> "VideoEncoder": ...
 
-    def add_encode_stream(self, config, *, encoder=None, encoder_config=None):
+    def add_encode_stream(
+        self,
+        config: "AudioEncodeConfig | VideoEncodeConfig",
+        *,
+        encoder: str | None = None,
+        encoder_config: dict[str, str] | None = None,
+    ) -> "AudioEncoder | VideoEncoder":
         """Add an output stream with encoding.
 
         Use this method when you want to create a media from tensor/array.
@@ -1342,7 +1353,7 @@ class Muxer:
     @overload
     def add_remux_stream(self, codec: "VideoCodec") -> None: ...
 
-    def add_remux_stream(self, codec) -> None:
+    def add_remux_stream(self, codec: "AudioCodec | VideoCodec") -> None:
         """Add an output stream without encoding.
 
         Use this method when you want to pass demuxed packets to output stream
