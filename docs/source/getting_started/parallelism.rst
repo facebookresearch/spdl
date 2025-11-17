@@ -64,11 +64,43 @@ The event loop dispatches the tasks to the default
 created with the maximum concurrency specified in :py:meth:`PipelineBuilder.build`
 method.
 
+.. mermaid::
+
+   %%{init: {'theme':'base'}}%%
+   graph TB
+       subgraph Process["Process"]
+           EL["Event Loop<br/>(Main Thread)"]
+           subgraph TP["Thread Pool"]
+               T1["Worker Thread 1"]
+               T2["Worker Thread 2"]
+               T3["Worker Thread 3"]
+               T4["Worker Thread 4"]
+           end
+           EL -->|schedules tasks| TP
+           TP -->|returns results| EL
+       end
+       style Process fill:#f0f8ff
+       style EL fill:#e1f5ff
+       style TP fill:#fff4e1
+       style T1 fill:#fffacd
+       style T2 fill:#fffacd
+       style T3 fill:#fffacd
+       style T4 fill:#fffacd
+
 .. note::
 
+   **Multi-threading characteristics:**
+
+   - All threads (main thread and worker threads) run within a single process and naturally share the same memory address space
+   - Fast task startup and minimal overhead
+   - Data can be passed by reference (no copying needed) with fast inter-thread communication
+   - Constrained by the GIL for Python code - best for I/O-bound tasks or GIL-releasing operations
+
+   **GIL considerations:**
+
    Before your application can take advantage of free-threaded Python,
-   to properly achieve the concurrency, your stage functions must mainly
-   consists of functions that release the GIL.
+   to properly achieve concurrency, your stage functions must mainly
+   consist of operations that release the GIL.
 
    Libraries such as PyTorch and NumPy release the GIL when manipulating
    arrays, so they are usually fine.
@@ -177,6 +209,56 @@ subprocess.
        .add_sink(...)
    )
 
+.. mermaid::
+
+   %%{init: {'theme':'base'}}%%
+   graph TB
+       subgraph MP["Main Process"]
+           EL["Event Loop"]
+           MEM1["Memory Space"]
+       end
+
+       subgraph SP1["Subprocess 1"]
+           W1["Worker"]
+           MEM2["Memory Space"]
+       end
+
+       subgraph SP2["Subprocess 2"]
+           W2["Worker"]
+           MEM3["Memory Space"]
+       end
+
+       subgraph SP3["Subprocess 3"]
+           W3["Worker"]
+           MEM4["Memory Space"]
+       end
+
+       EL -.sends data via IPC.-> W1
+       EL -.sends data via IPC.-> W2
+       EL -.sends data via IPC.-> W3
+       W1 -.returns results via IPC.-> EL
+       W2 -.returns results via IPC.-> EL
+       W3 -.returns results via IPC.-> EL
+
+       style MP fill:#e1f5ff
+       style SP1 fill:#ffe1e1
+       style SP2 fill:#ffe1e1
+       style SP3 fill:#ffe1e1
+       style MEM1 fill:#e8f5e9
+       style MEM2 fill:#e8f5e9
+       style MEM3 fill:#e8f5e9
+       style MEM4 fill:#e8f5e9
+
+.. note::
+
+   **Multi-processing characteristics:**
+
+   - Each process has its own isolated memory space
+   - No GIL constraints - true parallelism for CPU-bound tasks
+   - Data must be pickled and copied between processes (overhead)
+   - Slower startup due to process creation
+   - Best for CPU-bound tasks that hold the GIL
+
 Note that when you dispatch the stage to subprocess, both the function (callable)
 and the argument are sent from the main process to the subprocess.
 Then the result obtained by passing the argument to the function is sent back
@@ -234,6 +316,53 @@ instance of :py:class:`PipelineBuilder` to a subprocess, build and execute the
 :py:class:`Pipeline` and put the results to inter-process queue.
 (There is also :py:func:`spdl.pipeline.iterate_in_subprocess` function for
 running a generic :py:class:`~collections.abc.Iterable` object in subprocess.)
+
+.. mermaid::
+
+   %%{init: {'theme':'base'}}%%
+   graph TB
+       subgraph MP["Main Process"]
+           MEL["Event Loop<br/>(Main Thread)"]
+           subgraph MTP["Thread Pool"]
+               MT1["Worker Thread 1<br/>(e.g., GPU Transfer)"]
+           end
+           MEL -->|schedules| MTP
+       end
+
+       subgraph SP["Subprocess"]
+           SEL["Event Loop<br/>(Sub Thread)"]
+           subgraph STP["Thread Pool"]
+               ST1["Worker Thread 1<br/>(e.g., Download)"]
+               ST2["Worker Thread 2<br/>(e.g., Decode)"]
+               ST3["Worker Thread 3<br/>(e.g., Preprocess)"]
+           end
+           SEL -->|schedules| STP
+       end
+
+       STP -->|batched data| Q["IPC Queue"]
+       Q -->|batched data| MEL
+
+       style MP fill:#e1f5ff
+       style SP fill:#ffe1e1
+       style MEL fill:#b3d9ff
+       style SEL fill:#ffb3b3
+       style MTP fill:#fff4e1
+       style STP fill:#fff4e1
+       style Q fill:#e8f5e9
+       style MT1 fill:#fffacd
+       style ST1 fill:#fffacd
+       style ST2 fill:#fffacd
+       style ST3 fill:#fffacd
+
+.. note::
+
+   **How it works:**
+
+   - **Subprocess**: Runs a full pipeline with its own event loop and thread pool
+   - **Data processing**: Download, decode, and preprocessing happen in the subprocess
+   - **IPC Queue**: Batched data is transferred to the main process via inter-process communication
+   - **Main Process**: Receives batched data and performs GPU transfer in a dedicated thread
+   - **Benefit**: Separates data loading from GPU operations, reducing main thread overhead
 
 The following example shows how to use the function.
 

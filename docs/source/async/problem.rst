@@ -309,13 +309,13 @@ Summary
 -------
 
 We can keep going, but we believe we made it clear how complex it can get to
-build a orchestration system with a bare thread/process pool.
+build an orchestration system with a bare thread/process pool.
 
 Even though our code is not feature-complete, it is already complex.
 Adding more features without introducing a bug is challenging.
 On top of it, we also need to ensure that the implementation is fast
 and efficient.
 
-Many people have faced similar issue,
+Many people have faced similar issues,
 and some people realized that a different kind of programming paradigm can
 address this challenge elegantly, and that is the Async I/O.

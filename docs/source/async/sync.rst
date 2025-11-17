@@ -108,3 +108,22 @@ you can write it to a shared memory in the worker process, then let the main pro
        shmem = SharedMemory(name=name)
        obj = pickle.loads(shmem.buf)
        return obj
+
+Summary
+-------
+
+This concludes our introduction to Async I/O. We've covered:
+
+1. **The problem**: Manual orchestration with futures is complex and non-composable
+2. **Event loops**: How they simplify task scheduling and completion handling
+3. ``async`` / ``await``: Writing asynchronous code that looks synchronous
+4. **Running sync functions**: Using executors to run blocking operations without blocking the event loop
+
+Now you should have a solid understanding of how SPDL uses async I/O to build efficient
+data loading pipelines.
+
+.. seealso::
+
+   - :ref:`pipeline-parallelism` - How SPDL applies these concepts in practice
+   - :py:mod:`spdl.io` - SPDL's efficient I/O module that releases the GIL
+   - :py:mod:`asyncio` - Python's official async I/O documentation
