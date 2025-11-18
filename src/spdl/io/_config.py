@@ -16,6 +16,7 @@ __all__ = [
     "cpu_storage",
 ]
 
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING
 
 from .lib import _libspdl, _libspdl_cuda
@@ -30,7 +31,11 @@ if TYPE_CHECKING:
     CUDAConfig = _libspdl_cuda.CUDAConfig
 
 
-def demux_config(**kwargs) -> "DemuxConfig":
+def demux_config(
+    format: str | None = None,
+    format_options: Mapping[str, str] | None = None,
+    buffer_size: int = 8096,
+) -> "DemuxConfig":
     """Customize demuxing behavior.
 
     Args:
@@ -65,10 +70,15 @@ def demux_config(**kwargs) -> "DemuxConfig":
        >>> packets = asyncio.run(spdl.io.async_demux_audio(src, demux_config=cfg))
        >>>
     """
-    return _libspdl.DemuxConfig(**kwargs)
+    return _libspdl.DemuxConfig(
+        format=format, format_options=format_options, buffer_size=buffer_size
+    )
 
 
-def decode_config(**kwargs) -> "DecodeConfig":
+def decode_config(
+    decoder: str | None = None,
+    decoder_options: Mapping[str, str] | None = None,
+) -> "DecodeConfig":
     """Customize decoding behavior.
 
     Args:
@@ -100,10 +110,15 @@ def decode_config(**kwargs) -> "DecodeConfig":
        ...     await spdl.io.async_demux_video(src),
        ...     decode_config=cfg)
     """
-    return _libspdl.DecodeConfig(**kwargs)
+    return _libspdl.DecodeConfig(decoder=decoder, decoder_options=decoder_options)
 
 
-def cuda_config(device_index: int, **kwargs) -> "CUDAConfig":
+def cuda_config(
+    device_index: int,
+    stream: int = 0,
+    allocator: tuple[Callable[[int, int, int], int], Callable[[int], None]]
+    | None = None,
+) -> "CUDAConfig":
     """Sprcify the CUDA device and memory management.
 
     Args:
@@ -151,7 +166,7 @@ def cuda_config(device_index: int, **kwargs) -> "CUDAConfig":
             :py:func:`~torch.cuda.caching_allocator_alloc` and
             :py:func:`~torch.cuda.caching_allocator_delete`.
     """
-    return _libspdl_cuda.cuda_config(device_index, **kwargs)
+    return _libspdl_cuda.cuda_config(device_index, stream=stream, allocator=allocator)
 
 
 def video_encode_config(
@@ -269,7 +284,7 @@ def audio_encode_config(
     )
 
 
-def cpu_storage(size: int, pin_memory=True) -> "CPUStorage":
+def cpu_storage(size: int, pin_memory: bool = True) -> "CPUStorage":
     """Allocate a block of memory.
 
     This function allocates a block of memory. The intended usage is to make
