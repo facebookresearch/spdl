@@ -6,173 +6,43 @@
 
 """Implements the core I/O functionalities."""
 
+# NOTE
+# 1. When exposing new Python functions/classes, simply add them in the `__all__`
+#    attributes of submodules then update `__init__.pyi`.
+# 2. If exposing new C++ class at the top-level, update the list of APIs
+#    in `__getattr__` function.
+
 # pyre-strict
 
-from ._array import (
-    load_npy,
-    load_npz,
-    NpzFile,
-)
-from ._composite import (
-    load_audio,
-    load_image,
-    load_image_batch,
-    load_image_batch_nvjpeg,
-    load_video,
-    sample_decode_video,
-    save_image,
-    streaming_load_video_nvdec,
-)
-from ._config import (
-    audio_encode_config,
-    cpu_storage,
-    cuda_config,
-    decode_config,
-    demux_config,
-    video_encode_config,
-)
-from ._convert import (
-    ArrayInterface,
-    CUDAArrayInterface,
-    to_jax,
-    to_numba,
-    to_numpy,
-    to_torch,
-)
-from ._core import (
-    apply_bsf,
-    BSF,
-    convert_array,
-    convert_frames,
-    create_reference_audio_frame,
-    create_reference_video_frame,
-    decode_image_nvjpeg,
-    decode_packets,
-    decode_packets_nvdec,
-    Decoder,
-    demux_audio,
-    demux_image,
-    demux_video,
-    Demuxer,
-    encode_image,
-    Muxer,
-    nv12_to_bgr,
-    nv12_to_rgb,
-    nvdec_decoder,
-    NvDecDecoder,
-    transfer_buffer,
-    transfer_buffer_cpu,
-)
-from ._preprocessing import (
-    get_abuffer_desc,
-    get_audio_filter_desc,
-    get_buffer_desc,
-    get_filter_desc,
-    get_video_filter_desc,
-)
-from ._tar import iter_tarfile
-from ._transfer import transfer_tensor
-from ._wav import (
-    load_wav,
+from . import (
+    _array,
+    _composite,
+    _config,
+    _convert,
+    _core,
+    _preprocessing,
+    _tar,
+    _transfer,
+    _wav,
 )
 
-__all__ = [
-    # HIGH LEVEL API
-    "load_wav",
-    "load_audio",
-    "load_video",
-    "load_image",
-    "load_image_batch",
-    "load_image_batch_nvjpeg",
-    "sample_decode_video",
-    "save_image",
-    # Metadata
-    "AudioCodec",
-    "VideoCodec",
-    "ImageCodec",
-    # DEMUXING
-    "Demuxer",
-    "demux_audio",
-    "demux_video",
-    "demux_image",
-    "AudioPackets",
-    "VideoPackets",
-    "ImagePackets",
-    # BIT STREAM FILTERING
-    "apply_bsf",
-    "BSF",
-    # DECODING
-    "Decoder",
-    "AudioDecoder",
-    "VideoDecoder",
-    "ImageDecoder",
-    "decode_packets",
-    "NvDecDecoder",
-    "decode_packets_nvdec",
-    "streaming_load_video_nvdec",
-    "decode_image_nvjpeg",
-    "NvDecDecoder",
-    "nvdec_decoder",
-    "AudioFrames",
-    "VideoFrames",
-    "ImageFrames",
-    # FILTER GRAPH
-    "FilterGraph",
-    "get_abuffer_desc",
-    "get_buffer_desc",
-    "get_audio_filter_desc",
-    "get_video_filter_desc",
-    "get_filter_desc",
-    # FRAME CONVERSION
-    "convert_array",
-    "convert_frames",
-    "CPUBuffer",
-    "CUDABuffer",
-    # DATA TRANSFER
-    "transfer_buffer",
-    "transfer_buffer_cpu",
-    "transfer_tensor",
-    # COLORSPACE CONVERSION
-    "nv12_to_rgb",
-    "nv12_to_bgr",
-    # CAST
-    "ArrayInterface",
-    "CUDAArrayInterface",
-    "to_numba",
-    "to_numpy",
-    "to_torch",
-    "to_jax",
-    # ENCODING
-    "Muxer",
-    "AudioEncoder",
-    "VideoEncoder",
-    "create_reference_audio_frame",
-    "create_reference_video_frame",
-    "encode_image",
-    # CONFIG
-    "demux_config",
-    "DemuxConfig",
-    "decode_config",
-    "DecodeConfig",
-    "VideoEncodeConfig",
-    "video_encode_config",
-    "AudioEncodeConfig",
-    "audio_encode_config",
-    "cuda_config",
-    "CUDAConfig",
-    "cpu_storage",
-    "CPUStorage",
-    # NUMPY
-    "NpzFile",
-    "load_npz",
-    "load_npy",
-    # WAV AUDIO
-    # Archive
-    "iter_tarfile",
+_mods = [
+    _array,
+    _composite,
+    _config,
+    _convert,
+    _core,
+    _preprocessing,
+    _tar,
+    _transfer,
+    _wav,
 ]
 
 
-def __dir__() -> list[str]:
+__all__ = sorted(item for mod in _mods for item in mod.__all__)
+
+
+def __dir__():
     return __all__
 
 
@@ -261,5 +131,9 @@ def __getattr__(name: str) -> object:
 
         finally:
             lib._LG.disabled = disabled
+
+    for mod in _mods:
+        if name in mod.__all__:
+            return getattr(mod, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
