@@ -18,7 +18,7 @@ on:
         required: false
         default: 'false'
         type: string
-      os:
+      machine:
         default: "windows-latest"
         type: string
       test-concurrency:
@@ -38,7 +38,7 @@ env:
 
 jobs:
   build:
-    runs-on: "${{ inputs.os }}"
+    runs-on: "${{ inputs.machine }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,7 +78,7 @@ jobs:
       fail-fast: false
       matrix:
         ffmpeg-version: ["8.0"]
-    runs-on:  "${{ inputs.os }}"
+    runs-on:  "${{ inputs.machine }}"
     defaults:
       run:
         shell: bash -el {0}
