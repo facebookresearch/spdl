@@ -65,7 +65,6 @@ from spdl.io._core import (
     transfer_buffer_cpu as transfer_buffer_cpu,
 )
 from spdl.io._preprocessing import (
-    FilterGraph as FilterGraph,
     get_abuffer_desc as get_abuffer_desc,
     get_audio_filter_desc as get_audio_filter_desc,
     get_buffer_desc as get_buffer_desc,
@@ -88,6 +87,7 @@ from spdl.io.lib._libspdl import (
     CPUStorage as CPUStorage,
     DecodeConfig as DecodeConfig,
     DemuxConfig as DemuxConfig,
+    FilterGraph as FilterGraph,
     ImageCodec as ImageCodec,
     ImageDecoder as ImageDecoder,
     ImageFrames as ImageFrames,

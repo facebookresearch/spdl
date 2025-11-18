@@ -35,7 +35,7 @@ class FilterGraph {
 
   void flush();
 
-  AnyFrames get_frames(const std::optional<std::string>& name);
+  std::optional<AnyFrames> get_frames(const std::optional<std::string>& name);
 
   std::string dump() const;
 };

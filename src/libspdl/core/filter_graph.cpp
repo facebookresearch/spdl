@@ -29,11 +29,17 @@ void FilterGraph::flush() {
   return pImpl->flush();
 }
 
-AnyFrames FilterGraph::get_frames(const std::optional<std::string>& name) {
-  if (name) {
-    return pImpl->get_frames(*name);
+std::optional<AnyFrames> FilterGraph::get_frames(
+    const std::optional<std::string>& name) {
+  AnyFrames frames = name ? pImpl->get_frames(*name) : pImpl->get_frames();
+  // Check if the frames object is empty by visiting the variant and checking
+  // the number of frames
+  bool is_empty = std::visit(
+      [](const auto& f) { return f->get_num_frames() == 0; }, frames);
+  if (is_empty) {
+    return std::nullopt;
   }
-  return pImpl->get_frames();
+  return frames;
 }
 
 std::string FilterGraph::dump() const {

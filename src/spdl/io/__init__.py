@@ -64,7 +64,6 @@ from ._core import (
     transfer_buffer_cpu,
 )
 from ._preprocessing import (
-    FilterGraph,
     get_abuffer_desc,
     get_audio_filter_desc,
     get_buffer_desc,
@@ -205,6 +204,7 @@ def __getattr__(name: str) -> object:
         "AudioDecoder",
         "VideoDecoder",
         "ImageDecoder",
+        "FilterGraph",
         "DemuxConfig",
         "DecodeConfig",
         "VideoEncodeConfig",
