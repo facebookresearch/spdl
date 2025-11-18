@@ -84,8 +84,7 @@ jobs:
       arch: aarch64
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
-      # Update to 3.14 once PyTorch is released
-      run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
+      run-test: "${{ (matrix.python-version == '3.14') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3
 
   #############################################################################
