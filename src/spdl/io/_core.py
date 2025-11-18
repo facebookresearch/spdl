@@ -228,15 +228,17 @@ class Demuxer:
 
         .. admonition:: Example - Streaming decoding audio
 
-           src = "foo.mp4"
-           with spdl.io.Demuxer(src) as demuxer:
-               index = demuxer.audio_stream_index
-               audio_decoder = spdl.io.Decoder(demuxer.audio_codec)
-               packet_stream = demuxer.streaming_demux([index], duration=3)
-               for packets in packet_stream:
-                   if index in packets:
-                       frames = decoder.decode(packets[index])
-                       buffer = spd.io.convert_frames(frames)
+           .. code-block::
+
+              src = "foo.mp4"
+              with spdl.io.Demuxer(src) as demuxer:
+                  index = demuxer.audio_stream_index
+                  audio_decoder = spdl.io.Decoder(demuxer.audio_codec)
+                  packet_stream = demuxer.streaming_demux([index], duration=3)
+                  for packets in packet_stream:
+                      if index in packets:
+                          frames = decoder.decode(packets[index])
+                          buffer = spd.io.convert_frames(frames)
 
         """
         log_api_usage_once("spdl.io.Demuxer.streaming_demux")
