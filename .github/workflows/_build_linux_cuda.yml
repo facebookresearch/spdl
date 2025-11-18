@@ -265,7 +265,7 @@ jobs:
 
   stub-check:
     needs: ["build"]
-    runs-on: ${{ inputs.os }}
+    runs-on: "${{ inputs.machine_gpu }}"
     defaults:
       run:
         shell: bash -el {0}
@@ -299,10 +299,21 @@ jobs:
           # Install deps
           pip install numpy nanobind==2.8.0 typing_extensions
 
+          # Install CUDA
+          cuda_ver="${{ inputs.cuda-version }}"
+          cuda_dir="/opt/cuda"  # not a good practice outside of one-off testing. don't copy this
+          cudart_dir="${cuda_dir}/lib"
+          .github/scripts/install_cuda_toolkit.py \
+            --base-dir "${cuda_dir}" \
+            --cuda-version "${cuda_ver}"
+          if [ ! -d "${cuda_dir}/lib64" ]; then
+            ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
+          fi
+
           # Install FFmpeg
           conda install -q ffmpeg==8
           # For some reason, the dynamic libraries are not found.
-          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cudart_dir}" >> $GITHUB_ENV
 
       - name: Generate stubs
         run: |

@@ -80,7 +80,7 @@ jobs:
             free-threaded: "ft"
     uses: ./.github/workflows/_build_linux.yml
     with:
-      os: ubuntu-24.04-arm
+      machine: ubuntu-24.04-arm
       arch: aarch64
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
