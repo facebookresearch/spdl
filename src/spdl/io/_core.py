@@ -431,18 +431,10 @@ class BSF(Generic[TCodec, TPackets]):
             Filtered packet object or ``None`` if the internal filtering mechanism
             holds the packets and does not return any packet.
         """
-        packets = self._bsf.filter(packets, flush=flush)
-        # TODO: push down the optional to C++ core signature.
-        if len(packets):
-            return packets
-        return None
+        return self._bsf.filter(packets, flush=flush)
 
     def flush(self) -> TPackets | None:
-        # TODO: push down the optional to C++ core signature.
-        packets = self._bsf.flush()
-        if len(packets):
-            return packets
-        return None
+        return self._bsf.flush()
 
 
 @overload
