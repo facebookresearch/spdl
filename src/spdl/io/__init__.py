@@ -39,11 +39,13 @@ _mods = [
 ]
 
 
-__all__ = sorted(item for mod in _mods for item in mod.__all__)
+__all__: list[str] = sorted(
+    item for mod in _mods for item in mod.__all__ if not item.startswith("_")
+)
 
 
-def __dir__():
-    return __all__
+def __dir__() -> list[str]:
+    return __all__.copy()
 
 
 def __getattr__(name: str) -> object:
