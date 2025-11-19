@@ -4,7 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Implements the core I/O functionalities."""
+"""Implements the core I/O functionalities.
+
+Please refer to :doc:`../io/index` for in-depth explanation of this module.
+"""
 
 # NOTE
 # 1. When exposing new Python functions/classes, simply add them in the `__all__`
@@ -27,20 +30,54 @@ from . import (
 )
 
 _mods = [
-    _array,
+    # High-level APIs first
     _composite,
-    _config,
-    _convert,
-    _core,
-    _preprocessing,
-    _tar,
-    _transfer,
     _wav,
+    _tar,
+    _array,
+    # Low-level APIs
+    _core,
+    _convert,
+    _preprocessing,
+    _transfer,
+    _config,
 ]
 
 
-__all__: list[str] = sorted(
-    item for mod in _mods for item in mod.__all__ if not item.startswith("_")
+_LIBSPDL_ITEMS = [
+    "CPUStorage",
+    "CPUBuffer",
+    "AudioCodec",
+    "VideoCodec",
+    "ImageCodec",
+    "AudioPackets",
+    "VideoPackets",
+    "ImagePackets",
+    "AudioFrames",
+    "VideoFrames",
+    "ImageFrames",
+    "AudioEncoder",
+    "VideoEncoder",
+    "AudioDecoder",
+    "VideoDecoder",
+    "ImageDecoder",
+    "FilterGraph",
+    "DemuxConfig",
+    "DecodeConfig",
+    "VideoEncodeConfig",
+    "AudioEncodeConfig",
+]
+
+_LIBSPDL_CUDA_ITEMS = [
+    "CUDABuffer",
+    "CUDAConfig",
+]
+
+
+__all__: list[str] = (
+    [item for m in _mods for item in m.__all__ if not item.startswith("_")]
+    + _LIBSPDL_ITEMS
+    + _LIBSPDL_CUDA_ITEMS
 )
 
 
@@ -59,31 +96,7 @@ def __getattr__(name: str) -> object:
             return "unknown"
 
     # Lazy loading of C++ extension classes from _libspdl
-    _libspdl_items = {
-        "CPUStorage",
-        "CPUBuffer",
-        "AudioCodec",
-        "VideoCodec",
-        "ImageCodec",
-        "AudioPackets",
-        "VideoPackets",
-        "ImagePackets",
-        "AudioFrames",
-        "VideoFrames",
-        "ImageFrames",
-        "AudioEncoder",
-        "VideoEncoder",
-        "AudioDecoder",
-        "VideoDecoder",
-        "ImageDecoder",
-        "FilterGraph",
-        "DemuxConfig",
-        "DecodeConfig",
-        "VideoEncodeConfig",
-        "AudioEncodeConfig",
-    }
-
-    if name in _libspdl_items:
+    if name in _LIBSPDL_ITEMS:
         from . import lib
 
         disabled = lib._LG.disabled
@@ -105,12 +118,7 @@ def __getattr__(name: str) -> object:
             lib._LG.disabled = disabled
 
     # Lazy loading of C++ extension classes from _libspdl_cuda
-    _libspdl_cuda_items = {
-        "CUDABuffer",
-        "CUDAConfig",
-    }
-
-    if name in _libspdl_cuda_items:
+    if name in _LIBSPDL_CUDA_ITEMS:
         from . import lib
 
         disabled = lib._LG.disabled
