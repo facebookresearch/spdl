@@ -254,9 +254,12 @@ def get_filter_desc(
     """
     match type(packets):
         case _libspdl.AudioPackets:
+            # When audio packets have `timestamp` attribute, we delegate to `atrim` filter.
             return get_audio_filter_desc(timestamp=packets.timestamp, **filter_args)
         case _libspdl.VideoPackets:
-            return get_video_filter_desc(timestamp=packets.timestamp, **filter_args)
+            # When video packets have `timestamp` attribute, we manually filter the frame
+            # in the decoding logic, so we don't use `trim` filter.
+            return get_video_filter_desc(timestamp=None, **filter_args)
         case _libspdl.ImagePackets:
             return get_video_filter_desc(timestamp=None, **filter_args)
         case _:

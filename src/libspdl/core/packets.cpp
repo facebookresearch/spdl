@@ -247,7 +247,8 @@ extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   auto ret = std::make_unique<VideoPackets>();
   ret->src = src->src;
   ret->codec = src->codec;
-  ret->timestamp = src->timestamp;
+  // Do not preserve timestamp as indices are already adjusted
+  ret->timestamp = std::nullopt;
   for (size_t t = start; t < end; ++t) {
     ret->pkts.push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
   }
