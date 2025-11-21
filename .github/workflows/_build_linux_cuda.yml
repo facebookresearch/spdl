@@ -43,64 +43,64 @@ env:
   SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
 
 jobs:
-  # build:
-  #   runs-on: "${{ inputs.machine }}"
-  #   container: "quay.io/pypa/manylinux_2_28_${{ inputs.arch }}"
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         persist-credentials: false
+  build:
+    runs-on: "${{ inputs.machine }}"
+    container: "quay.io/pypa/manylinux_2_28_${{ inputs.arch }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-  #     - name: Build
-  #       run: |
-  #         set -ex
+      - name: Build
+        run: |
+          set -ex
 
-  #         # Figure out versions
-  #         py_ver="${{ inputs.python-version }}"
-  #         if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-  #           py_ver="${py_ver}t"
-  #         fi
-  #         cuda_ver="${{ inputs.cuda-version }}"
+          # Figure out versions
+          py_ver="${{ inputs.python-version }}"
+          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+            py_ver="${py_ver}t"
+          fi
+          cuda_ver="${{ inputs.cuda-version }}"
 
-  #         uv --version
-  #         uv python pin "${py_ver}"
-  #         uv python list --only-installed
-  #         uv venv
+          uv --version
+          uv python pin "${py_ver}"
+          uv python list --only-installed
+          uv venv
 
-  #         # Install CUDA
-  #         cuda_dir="/opt/cuda"
-  #         .github/scripts/install_cuda_toolkit.py \
-  #           --base-dir "${cuda_dir}" \
-  #           --cuda-version "${cuda_ver}"
-  #         if [ ! -d "${cuda_dir}/lib64" ]; then
-  #           ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
-  #         fi
+          # Install CUDA
+          cuda_dir="/opt/cuda"
+          .github/scripts/install_cuda_toolkit.py \
+            --base-dir "${cuda_dir}" \
+            --cuda-version "${cuda_ver}"
+          if [ ! -d "${cuda_dir}/lib64" ]; then
+            ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
+          fi
 
-  #         export PATH="${PATH}:${cuda_dir}/bin"
-  #         export CUDA_PATH="${cuda_dir}"
-  #         # Sanity check
-  #         set -e
-  #         nvcc --version
+          export PATH="${PATH}:${cuda_dir}/bin"
+          export CUDA_PATH="${cuda_dir}"
+          # Sanity check
+          set -e
+          nvcc --version
 
-  #         # Build package
-  #         uv build --no-python-downloads --all-packages --wheel
-  #         ./packaging/repair_wheels.sh "manylinux_2_27_${{ inputs.arch }}" ./dist ~/package
+          # Build package
+          uv build --no-python-downloads --all-packages --wheel
+          ./packaging/repair_wheels.sh "manylinux_2_27_${{ inputs.arch }}" ./dist ~/package
 
-  #     - uses: actions/upload-artifact@v4
-  #       name: Upload build artifact
-  #       with:
-  #         name: "${{ env.ARTIFACT }}"
-  #         path: ~/package
-  #         if-no-files-found: error
-  #         retention-days: 7
-  #         overwrite: true
+      - uses: actions/upload-artifact@v4
+        name: Upload build artifact
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: ~/package
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
 
-  #     - name: Check package
-  #       run: |
-  #         # Use latest Python. (it shuold not matter)
-  #         python_exe="/opt/python/cp314-cp314/bin/python"
-  #         "${python_exe}" -m pip install -r ./packaging/requirements.txt
-  #         "${python_exe}" -m twine check --strict ~/package/*.whl
+      - name: Check package
+        run: |
+          # Use latest Python. (it shuold not matter)
+          python_exe="/opt/python/cp314-cp314/bin/python"
+          "${python_exe}" -m pip install -r ./packaging/requirements.txt
+          "${python_exe}" -m twine check --strict ~/package/*.whl
 
   # check-package-dependency:
   #   if: ${{ inputs.run-test == 'true' }}
@@ -133,11 +133,12 @@ jobs:
 
   test-gpu:
     if: ${{ inputs.run-test == 'true' }}
+    needs: ["build"]
     name: "test-gpu (py ${{ inputs.python-version }}, ffmpeg ${{ matrix.ffmpeg-version }})"
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["8.0"]
+        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1", "8.0"]
     runs-on: "${{ inputs.machine_gpu }}"
     defaults:
       run:
@@ -147,10 +148,10 @@ jobs:
         with:
           persist-credentials: false
 
-      # - uses: actions/download-artifact@v4
-      #   with:
-      #     name: "${{ env.ARTIFACT }}"
-      #     path: ~/package
+      - uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT }}"
+          path: ~/package
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
@@ -167,7 +168,7 @@ jobs:
           fi
 
           # Install SPDL
-          pip install spdl
+          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
           pip install pytest pytest-xdist parameterized
