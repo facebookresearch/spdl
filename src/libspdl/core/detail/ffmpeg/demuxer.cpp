@@ -207,6 +207,10 @@ PacketsPtr<media> DemuxerImpl::demux_window(
     const std::optional<std::string>& bsf) {
   TRACE_EVENT("demuxing", "detail::demux_window");
 
+  auto index = get_default_stream_index(media);
+  enable_for_stream(fmt_ctx, {index});
+  auto* stream = fmt_ctx->streams[index];
+
   auto [start, end] =
       window ? *window : std::tuple<double, double>{NEG_INF, POS_INF};
   if constexpr (media == MediaType::Video) {
@@ -217,19 +221,16 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   }
 
   if (!std::isinf(start)) {
-    int64_t t = static_cast<int64_t>(start * AV_TIME_BASE);
+    auto& tb = stream->time_base;
+    int64_t t = tb.den * start / tb.num;
     {
       TRACE_EVENT("demuxing", "av_seek_frame");
       CHECK_AVERROR(
-          av_seek_frame(fmt_ctx, -1, t, AVSEEK_FLAG_BACKWARD),
+          av_seek_frame(fmt_ctx, index, t - 1, AVSEEK_FLAG_BACKWARD),
           "Failed to seek to the timestamp {} [sec]",
           start)
     }
   }
-
-  auto index = get_default_stream_index(media);
-  enable_for_stream(fmt_ctx, {index});
-  auto* stream = fmt_ctx->streams[index];
 
   auto filter = bsf ? std::optional<BSFImpl>{BSFImpl{*bsf, stream->codecpar}}
                     : std::nullopt;
