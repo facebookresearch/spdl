@@ -17,6 +17,10 @@ from spdl.pipeline._components import (
     set_default_queue_class,
 )
 
+from ._build import (
+    get_default_build_callback,
+    set_default_build_callback,
+)
 from ._profile import (
     diagnostic_mode_num_sources,
     get_default_profile_callback,
@@ -37,4 +41,6 @@ __all__ = [
     "get_default_profile_hook",
     "set_default_profile_callback",
     "get_default_profile_callback",
+    "get_default_build_callback",
+    "set_default_build_callback",
 ]
