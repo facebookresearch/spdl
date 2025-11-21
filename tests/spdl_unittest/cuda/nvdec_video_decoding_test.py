@@ -223,8 +223,8 @@ class TestNvdecH264(unittest.TestCase):
         )
 
         for i in range(3):
-            self.assertTrue(
-                torch.equal(rgb[:, i], rgba0[:, i, top : top + h, left : left + w])
+            torch.testing.assert_close(
+                rgb[:, i], rgba0[:, i, top : top + h, left : left + w]
             )
 
     def test_nvdec_decode_crop_resize(self) -> None:
