@@ -8,6 +8,7 @@
 
 import time
 import unittest
+from collections.abc import Sequence
 from typing import cast
 
 import numpy as np
@@ -321,6 +322,50 @@ class TestPacketLen(unittest.TestCase):
 
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
         self.assertTrue(np.all(array == ref_array[25:50]))
+
+    @parameterized.expand(
+        [
+            #
+            ((0.0, 0.0), []),
+            ((1.0, 1.0), []),
+            ((2.0, 2.0), []),
+            ((3.0, 3.0), []),
+            # Exact PTS
+            ((0.00, 0.04), [0.00]),
+            ((0.00, 0.08), [0.00, 0.04]),
+            ((0.00, 0.12), [0.00, 0.04, 0.08]),
+            ((0.04, 0.08), [0.04]),
+            ((0.04, 0.12), [0.04, 0.08]),
+            # In-between PTS
+            ((0.00, 0.02), [0.00]),
+            ((0.02, 0.04), []),
+            ((0.04, 0.06), [0.04]),
+        ]
+    )
+    def test_demux_window(
+        self, timestamp: tuple[int, int], expected: Sequence[float]
+    ) -> None:
+        """VideoPackets length should exclude the preceding packets when timestamp is not None"""
+        # 3 seconds of video, and key frame at every 25th frame (starting at 0).
+        # Use the following command to check
+        # `ffprobe -loglevel error -select_streams v:0 -show_entries packet=pts_time,flags -of csv=print_section=0 sample.mp4 | grep K__`
+        # 0.000000,K__
+        # 1.000000,K__
+        # 2.000000,K__
+        # 3.000000,K__
+        cmd = f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -force_key_frames "expr:not(mod(n,25))" -frames:v 76 sample.mp4'
+        sample = get_sample(cmd)
+
+        packets = spdl.io.demux_video(sample.path, timestamp=timestamp)
+        pts = packets.get_timestamps()
+        self.assertEqual(pts, expected)
+
+        # Verify that decoding also respects the timestamp window
+        frames = spdl.io.decode_packets(packets)
+        frame_pts = [frames[i].pts for i in range(len(frames))]
+        self.assertEqual(len(frame_pts), len(expected))
+        for i, frame_pt in enumerate(frame_pts):
+            self.assertAlmostEqual(frame_pt, expected[i], places=5)
 
 
 class TestSampleDecodingWindow(unittest.TestCase):
