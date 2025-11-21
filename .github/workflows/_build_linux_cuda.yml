@@ -202,6 +202,7 @@ jobs:
           if "${{ inputs.use-nvdec == 'nvdec' }}" ; then
               python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_nvcodec()'
           fi
+          (cd tests && python foo.py)
           pytest -v -n ${{ inputs.test-concurrency }} \
               tests/spdl_unittest/cuda/ \
               tests/spdl_unittest/io/
