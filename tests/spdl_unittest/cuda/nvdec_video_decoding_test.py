@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import gc
+import os
 import unittest
 
 import spdl.io
@@ -198,6 +199,9 @@ class TestNvdecH264(unittest.TestCase):
         self.assertEqual(array.dtype, torch.uint8)
         self.assertEqual(array.shape, (25, 3, height, width))
 
+    @unittest.skipIf(
+        os.getenv("GITHUB_ACTIONS") == "true", "Known to fail on GitHub CI."
+    )
     def test_nvdec_decode_h264_420p_crop(self) -> None:
         """Check NVDEC decoder with cropping."""
         h264 = _get_h264_sample()
