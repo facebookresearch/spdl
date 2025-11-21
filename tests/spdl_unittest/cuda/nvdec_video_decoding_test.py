@@ -260,8 +260,8 @@ class TestColorConversion(unittest.TestCase):
     def test_color_conversion_rgba(self) -> None:
         """Providing pix_fmt="rgba" should produce (N,4,H,W) array."""
         # fmt: off
-        cmd = """
-        ffmpeg -hide_banner -y                          \
+        cmd = f"""
+        {FFMPEG_CLI} -hide_banner -y                    \
             -f lavfi -i color=color=0xff0000:size=32x64 \
             -f lavfi -i color=color=0x00ff00:size=32x64 \
             -f lavfi -i color=color=0x0000ff:size=32x64 \
