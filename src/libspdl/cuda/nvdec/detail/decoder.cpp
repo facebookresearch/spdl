@@ -529,6 +529,17 @@ void NvDecDecoderCore::reset() {
     flush(nullptr);
     cb_disabled = false;
   }
+
+  // Reset post-processing parameters to default state
+  crop = CropArea{0, 0, 0, 0};
+  target_width = -1;
+  target_height = -1;
+
+  // Reset source information
+  src_width = 0;
+  src_height = 0;
+  codec_id = {};
+  timebase = {};
 }
 
 } // namespace spdl::cuda::detail
