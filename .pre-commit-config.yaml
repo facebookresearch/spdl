@@ -8,7 +8,6 @@ repos:
       - id: check-docstring-first
       - id: check-toml
       - id: check-yaml
-        exclude: meta.yaml
       - id: end-of-file-fixer
         exclude_types:
           - "svg"
@@ -25,13 +24,13 @@ repos:
     hooks:
       # Run the linter.
       - id: ruff
-        files: "src/|tests/|examples/"
+        files: "src/|tests/|examples/|.github/"
         exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
         args: [ "--fix", "--show-files" ]
       # Run the formatter.
       - id: ruff-format
-        files: "src/|tests/|examples/"
+        files: "src/|tests/|examples/|.github/"
         exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
 
