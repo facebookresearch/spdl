@@ -12,6 +12,7 @@ from enum import IntEnum
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
+from spdl.pipeline._common._source_locator import locate_source
 from spdl.pipeline._common._types import _TCallables, _TMergeOp
 
 # pyre-strict
@@ -67,8 +68,16 @@ class SourceConfig(Generic[T], _ConfigBase):
 
     def __repr__(self) -> str:
         # Overwrite source repr because it might print a huge string.
-        source = f"<{self.source.__class__.__name__} object at 0x{id(self.source):0x}>"
-        return f"SourceConfig({source=})"
+        source_class = self.source.__class__.__name__
+        try:
+            loc = locate_source(self.source)
+            if loc.file_path and loc.line_number:
+                source_info = f"<{source_class} at {loc.file_path}:{loc.line_number}>"
+            else:
+                source_info = f"<{source_class} object at 0x{id(self.source):0x}>"
+        except Exception:
+            source_info = f"<{source_class} object at 0x{id(self.source):0x}>"
+        return f"SourceConfig(source={source_info})"
 
 
 ##############################################################################
@@ -108,6 +117,33 @@ class MergeConfig(_ConfigBase):
             raise ValueError(
                 "MergeConfig must have at least one upstream pipeline configs."
             )
+
+    def __repr__(self) -> str:
+        lines = ["MergeConfig("]
+
+        # Add op info if present
+        if self.op is not None:
+            try:
+                loc = locate_source(self.op)
+                op_info = (
+                    f"{loc.name} at {loc.file_path}:{loc.line_number}"
+                    if loc.file_path and loc.line_number
+                    else loc.name
+                )
+            except Exception:
+                op_info = getattr(self.op, "__name__", repr(self.op))
+            lines.append(f"  op={op_info}")
+
+        # Add each pipeline config with proper indentation
+        for i, pipeline_cfg in enumerate(self.pipeline_configs, 1):
+            lines.append(f"  Pipeline {i}:")
+            # Get pipeline repr and indent each line
+            pipeline_repr = repr(pipeline_cfg)
+            for line in pipeline_repr.split("\n"):
+                lines.append(f"    {line}")
+
+        lines.append(")")
+        return "\n".join(lines)
 
 
 ################################################################################
@@ -185,6 +221,17 @@ class PipeConfig(Generic[T, U], _PipeConfigBase):
                     args.append(f"executor={self._args.executor!r}")
                 if self._type == _PipeType.OrderedPipe:
                     args.append("output_order='input'")
+
+                # Add source location for the op
+                try:
+                    loc = locate_source(self._args.op)
+                    if loc.file_path and loc.line_number:
+                        args.append(
+                            f"op={loc.name} at {loc.file_path}:{loc.line_number}"
+                        )
+                except Exception:
+                    pass
+
                 return f"{self.name}({', '.join(args)})"
             case _PipeType.Aggregate | _PipeType.Disaggregate:
                 return self.name
@@ -298,11 +345,23 @@ class PipelineConfig(Generic[U], _ConfigBase):
 
     def __repr__(self) -> str:
         args = ["PipelineConfig"]
-        args.append(f" - Source: {self.src!r}")
+
+        # Handle source (could be SourceConfig or MergeConfig)
+        if isinstance(self.src, MergeConfig):
+            # For MergeConfig, add each line with proper indentation
+            args.append(" - Source:")
+            src_repr = repr(self.src)
+            for line in src_repr.split("\n"):
+                args.append(f"   {line}")
+        else:
+            args.append(f" - Source: {self.src!r}")
+
+        # Add pipes
         if self.pipes:
             args.append(" - Pipes:")
         for p in self.pipes:
             args.append(f"   - {p!r}")
+
         args.append(f" - Sink: {self.sink!r}")
         return "\n".join(args)
 
