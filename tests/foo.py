@@ -36,8 +36,8 @@ def main():
         # TestNvdecBasic("test_nvdec_no_file"),
         # TestNvdecBasic("test_nvdec_odd_size"),
         # TestNvdecBasic("test_nvdec_video_smoke_test"),
-        TestNvdecH264("test_nvdec_decode_crop_resize"),
-        # TestNvdecH264("test_nvdec_decode_h264_420p_basic"),
+        # TestNvdecH264("test_nvdec_decode_crop_resize"),
+        TestNvdecH264("test_nvdec_decode_h264_420p_basic"),
         TestNvdecH264("test_nvdec_decode_h264_420p_crop"),
     ]
 
