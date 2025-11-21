@@ -10,6 +10,8 @@ __all__ = [
     "build_pipeline",
     "run_pipeline_in_subinterpreter",
     "run_pipeline_in_subprocess",
+    "get_default_build_callback",
+    "set_default_build_callback",
 ]
 
 import logging
@@ -37,6 +39,30 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+_DEFAULT_BUILD_CALLBACK: Callable[[PipelineConfig[Any]], None] | None = None
+
+
+def get_default_build_callback() -> Callable[[PipelineConfig[Any]], None] | None:
+    """Get the default build callback function.
+
+    Returns:
+        The default build callback function or None if not set.
+    """
+    return _DEFAULT_BUILD_CALLBACK
+
+
+def set_default_build_callback(
+    callback: Callable[[PipelineConfig[Any]], None] | None,
+) -> None:
+    """Set the default build callback function.
+
+    Args:
+        callback: A callback function that takes a PipelineConfig object,
+            or None to unset the callback.
+    """
+    global _DEFAULT_BUILD_CALLBACK
+    _DEFAULT_BUILD_CALLBACK = callback
 
 
 # The following is how we intend pipeline to behave. If the implementation
@@ -183,6 +209,9 @@ def build_pipeline(
         stage_id: The index of the initial stage  used for logging.
     """
     from . import _profile
+
+    if _DEFAULT_BUILD_CALLBACK is not None:
+        _DEFAULT_BUILD_CALLBACK(pipeline_cfg)
 
     if _profile.is_diagnostic_mode_enabled():
         return _profile._build_pipeline_diagnostic_mode(pipeline_cfg)
