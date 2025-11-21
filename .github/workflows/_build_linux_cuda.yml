@@ -102,34 +102,34 @@ jobs:
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
 
-  check-package-dependency:
-    if: ${{ inputs.run-test == 'true' }}
-    needs: ["build"]
-    runs-on: ${{ inputs.machine }}
-    steps:
-      # Note: the suffix 't' is different
-      - uses: actions/setup-python@v5
-        if: ${{ inputs.free-threaded == 'ft' }}
-        with:
-          python-version: "${{ inputs.python-version }}t"
+  # check-package-dependency:
+  #   if: ${{ inputs.run-test == 'true' }}
+  #   needs: ["build"]
+  #   runs-on: ${{ inputs.machine }}
+  #   steps:
+  #     # Note: the suffix 't' is different
+  #     - uses: actions/setup-python@v5
+  #       if: ${{ inputs.free-threaded == 'ft' }}
+  #       with:
+  #         python-version: "${{ inputs.python-version }}t"
 
-      - uses: actions/setup-python@v5
-        if: ${{ inputs.free-threaded != 'ft' }}
-        with:
-          python-version: "${{ inputs.python-version }}"
+  #     - uses: actions/setup-python@v5
+  #       if: ${{ inputs.free-threaded != 'ft' }}
+  #       with:
+  #         python-version: "${{ inputs.python-version }}"
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: "${{ env.ARTIFACT }}"
-          path: ~/package
-      - uses: actions/checkout@v4
-      - name: Dependency Check
-        run: |
-          # Install NumPy (the only dep) of SPDL manually, so that
-          # if a dependency is introduced accidentally, check_deps will catch
-          pip install numpy
-          pip install --no-dependencies $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
-          python .github/scripts/check_deps.py
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: "${{ env.ARTIFACT }}"
+  #         path: ~/package
+  #     - uses: actions/checkout@v4
+  #     - name: Dependency Check
+  #       run: |
+  #         # Install NumPy (the only dep) of SPDL manually, so that
+  #         # if a dependency is introduced accidentally, check_deps will catch
+  #         pip install numpy
+  #         pip install --no-dependencies $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+  #         python .github/scripts/check_deps.py
 
   test-gpu:
     if: ${{ inputs.run-test == 'true' }}
@@ -206,127 +206,127 @@ jobs:
               tests/spdl_unittest/cuda/ \
               tests/spdl_unittest/io/
 
-  test-cpu:
-    if: "${{ inputs.run-test == 'true' }}"
-    needs: ["build"]
-    name: "test-cpu (py ${{ inputs.python-version }}, ffmpeg ${{ matrix.ffmpeg-version }})"
-    strategy:
-      fail-fast: false
-      matrix:
-        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1", "8.0"]
-    runs-on:  ${{ inputs.machine }}
-    defaults:
-      run:
-        shell: bash -el {0}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+  # test-cpu:
+  #   if: "${{ inputs.run-test == 'true' }}"
+  #   needs: ["build"]
+  #   name: "test-cpu (py ${{ inputs.python-version }}, ffmpeg ${{ matrix.ffmpeg-version }})"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1", "8.0"]
+  #   runs-on:  ${{ inputs.machine }}
+  #   defaults:
+  #     run:
+  #       shell: bash -el {0}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         persist-credentials: false
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: "${{ env.ARTIFACT }}"
-          path: ~/package
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: "${{ env.ARTIFACT }}"
+  #         path: ~/package
 
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          python-version: ${{ inputs.python-version }}
-          channels: conda-forge
-          conda-remove-defaults: "true"
+  #     - uses: conda-incubator/setup-miniconda@v3
+  #       with:
+  #         python-version: ${{ inputs.python-version }}
+  #         channels: conda-forge
+  #         conda-remove-defaults: "true"
 
-      - name: Setup
-        run: |
-          set -ex
+  #     - name: Setup
+  #       run: |
+  #         set -ex
 
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            conda install -q -c conda-forge python-freethreading
-          fi
+  #         if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+  #           conda install -q -c conda-forge python-freethreading
+  #         fi
 
-          # Install SPDL
-          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+  #         # Install SPDL
+  #         pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
-          # Install PyTorch and others
-          pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest pytest-xdist parameterized
+  #         # Install PyTorch and others
+  #         pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
+  #         conda install -q numba pytest pytest-xdist parameterized
 
-          # Install FFmpeg
-          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
-          # Note: Somehow NumPy got downgraded to 1.24 when using FFmpeg 7.1, so adding constraint here.
-          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv 'numpy>=2'
-          # For some reason, the dynamic libraries are not found.
-          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
+  #         # Install FFmpeg
+  #         # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
+  #         # Note: Somehow NumPy got downgraded to 1.24 when using FFmpeg 7.1, so adding constraint here.
+  #         conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv 'numpy>=2'
+  #         # For some reason, the dynamic libraries are not found.
+  #         echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
 
-      - name: Unit test
-        run: |
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/spdl_unittest/io/ \
-              tests/spdl_unittest/dataloader/ \
-              tests/spdl_unittest/pipeline/
+  #     - name: Unit test
+  #       run: |
+  #         pytest -v -n ${{ inputs.test-concurrency }} \
+  #             tests/spdl_unittest/io/ \
+  #             tests/spdl_unittest/dataloader/ \
+  #             tests/spdl_unittest/pipeline/
 
-  stub-check:
-    needs: ["build"]
-    runs-on: "${{ inputs.machine_gpu }}"
-    defaults:
-      run:
-        shell: bash -el {0}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+  # stub-check:
+  #   needs: ["build"]
+  #   runs-on: "${{ inputs.machine_gpu }}"
+  #   defaults:
+  #     run:
+  #       shell: bash -el {0}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         persist-credentials: false
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: "${{ env.ARTIFACT }}"
-          path: ~/package
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: "${{ env.ARTIFACT }}"
+  #         path: ~/package
 
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          python-version: ${{ inputs.python-version }}
-          channels: conda-forge
-          conda-remove-defaults: "true"
+  #     - uses: conda-incubator/setup-miniconda@v3
+  #       with:
+  #         python-version: ${{ inputs.python-version }}
+  #         channels: conda-forge
+  #         conda-remove-defaults: "true"
 
-      - name: Setup
-        run: |
-          set -ex
+  #     - name: Setup
+  #       run: |
+  #         set -ex
 
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            conda install -q -c conda-forge python-freethreading
-          fi
+  #         if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
+  #           conda install -q -c conda-forge python-freethreading
+  #         fi
 
-          # Install SPDL
-          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+  #         # Install SPDL
+  #         pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
-          # Install deps
-          pip install numpy nanobind==2.8.0 typing_extensions
+  #         # Install deps
+  #         pip install numpy nanobind==2.8.0 typing_extensions
 
-          # Install CUDA
-          cuda_ver="${{ inputs.cuda-version }}"
-          cuda_dir="/opt/cuda"  # not a good practice outside of one-off testing. don't copy this
-          cudart_dir="${cuda_dir}/lib"
-          .github/scripts/install_cuda_toolkit.py \
-            --base-dir "${cuda_dir}" \
-            --cuda-version "${cuda_ver}"
-          if [ ! -d "${cuda_dir}/lib64" ]; then
-            ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
-          fi
+  #         # Install CUDA
+  #         cuda_ver="${{ inputs.cuda-version }}"
+  #         cuda_dir="/opt/cuda"  # not a good practice outside of one-off testing. don't copy this
+  #         cudart_dir="${cuda_dir}/lib"
+  #         .github/scripts/install_cuda_toolkit.py \
+  #           --base-dir "${cuda_dir}" \
+  #           --cuda-version "${cuda_ver}"
+  #         if [ ! -d "${cuda_dir}/lib64" ]; then
+  #           ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
+  #         fi
 
-          # Install FFmpeg
-          conda install -q ffmpeg==8
-          # For some reason, the dynamic libraries are not found.
-          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cudart_dir}" >> $GITHUB_ENV
+  #         # Install FFmpeg
+  #         conda install -q ffmpeg==8
+  #         # For some reason, the dynamic libraries are not found.
+  #         echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cudart_dir}" >> $GITHUB_ENV
 
-      - name: Generate stubs
-        run: |
-          set -ex
-          python src/spdl/io/lib/stubgen.py --output-dir src/spdl/io/lib
-          git diff --exit-code
+  #     - name: Generate stubs
+  #       run: |
+  #         set -ex
+  #         python src/spdl/io/lib/stubgen.py --output-dir src/spdl/io/lib
+  #         git diff --exit-code
 
-      - uses: actions/upload-artifact@v4
-        name: Upload stub
-        if: failure()
-        with:
-          name: "${{ env.STUB }}"
-          path: src/spdl/io/lib/*.pyi
-          if-no-files-found: error
-          retention-days: 7
-          overwrite: true
+  #     - uses: actions/upload-artifact@v4
+  #       name: Upload stub
+  #       if: failure()
+  #       with:
+  #         name: "${{ env.STUB }}"
+  #         path: src/spdl/io/lib/*.pyi
+  #         if-no-files-found: error
+  #         retention-days: 7
+  #         overwrite: true

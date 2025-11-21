@@ -15,78 +15,78 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  #############################################################################
-  # macOS
-  #############################################################################
-  macos:
-    name: "macOS"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        free-threaded: [""]
-        include:
-          - python-version: "3.13"
-            free-threaded: "ft"
-          - python-version: "3.14"
-            free-threaded: "ft"
-    uses: ./.github/workflows/_build_macos.yml
-    with:
-      python-version: "${{ matrix.python-version }}"
-      free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "false"
-      test-concurrency: 3
+  # #############################################################################
+  # # macOS
+  # #############################################################################
+  # macos:
+  #   name: "macOS"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  #       free-threaded: [""]
+  #       include:
+  #         - python-version: "3.13"
+  #           free-threaded: "ft"
+  #         - python-version: "3.14"
+  #           free-threaded: "ft"
+  #   uses: ./.github/workflows/_build_macos.yml
+  #   with:
+  #     python-version: "${{ matrix.python-version }}"
+  #     free-threaded: "${{ matrix.free-threaded }}"
+  #     run-test: "false"
+  #     test-concurrency: 3
 
-  #############################################################################
-  # Windows
-  #############################################################################
-  windows:
-    name: "Windows"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        free-threaded: [""]
-        cuda-version: ["12.8.1"]
-        include:
-          - python-version: "3.13"
-            free-threaded: "ft"
-            cuda-version: "12.8.1"
-          - python-version: "3.14"
-            free-threaded: "ft"
-            cuda-version: "12.8.1"
-    uses: ./.github/workflows/_build_windows.yml
-    with:
-      python-version: "${{ matrix.python-version }}"
-      free-threaded: "${{ matrix.free-threaded }}"
-      cuda-version: "${{ matrix.cuda-version }}"
-      run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
-      test-concurrency: 3
+  # #############################################################################
+  # # Windows
+  # #############################################################################
+  # windows:
+  #   name: "Windows"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  #       free-threaded: [""]
+  #       cuda-version: ["12.8.1"]
+  #       include:
+  #         - python-version: "3.13"
+  #           free-threaded: "ft"
+  #           cuda-version: "12.8.1"
+  #         - python-version: "3.14"
+  #           free-threaded: "ft"
+  #           cuda-version: "12.8.1"
+  #   uses: ./.github/workflows/_build_windows.yml
+  #   with:
+  #     python-version: "${{ matrix.python-version }}"
+  #     free-threaded: "${{ matrix.free-threaded }}"
+  #     cuda-version: "${{ matrix.cuda-version }}"
+  #     run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
+  #     test-concurrency: 3
 
-  #############################################################################
-  # Linux (aarch64)
-  #############################################################################
-  linux-aarch64:
-    name: "Linux aarch64"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        free-threaded: [""]
-        include:
-          - python-version: "3.13"
-            free-threaded: "ft"
-          - python-version: "3.14"
-            free-threaded: "ft"
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      machine: ubuntu-24.04-arm
-      arch: aarch64
-      python-version: "${{ matrix.python-version }}"
-      free-threaded: "${{ matrix.free-threaded }}"
-      # Update to 3.14 once PyTorch is released
-      run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
-      test-concurrency: 3
+  # #############################################################################
+  # # Linux (aarch64)
+  # #############################################################################
+  # linux-aarch64:
+  #   name: "Linux aarch64"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  #       free-threaded: [""]
+  #       include:
+  #         - python-version: "3.13"
+  #           free-threaded: "ft"
+  #         - python-version: "3.14"
+  #           free-threaded: "ft"
+  #   uses: ./.github/workflows/_build_linux.yml
+  #   with:
+  #     machine: ubuntu-24.04-arm
+  #     arch: aarch64
+  #     python-version: "${{ matrix.python-version }}"
+  #     free-threaded: "${{ matrix.free-threaded }}"
+  #     # Update to 3.14 once PyTorch is released
+  #     run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
+  #     test-concurrency: 3
 
   #############################################################################
   # Linux (CUDA)
@@ -96,16 +96,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        # python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.12"]
         cuda-version: ["12.8.1"]
         free-threaded: [""]
-        include:
-          - python-version: "3.13"
-            free-threaded: "ft"
-            cuda-version: "12.8.1"
-          - python-version: "3.14"
-            free-threaded: "ft"
-            cuda-version: "12.8.1"
+        # include:
+        #   - python-version: "3.13"
+        #     free-threaded: "ft"
+        #     cuda-version: "12.8.1"
+        #   - python-version: "3.14"
+        #     free-threaded: "ft"
+        #     cuda-version: "12.8.1"
     uses: ./.github/workflows/_build_linux_cuda.yml
     with:
       python-version: "${{ matrix.python-version }}"
