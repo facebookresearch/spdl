@@ -12,9 +12,13 @@ import importlib.metadata
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
-sys.path.append(os.path.abspath("."))
-sys.path.append(os.path.abspath("../../examples"))
+BASE_DIR = Path(__file__).parent.parent.parent.resolve()
+
+sys.path.append(os.path.abspath("."))  # requried to load custom_directive
+sys.path.append(str(BASE_DIR))  # required to resolve the `import benchmark_util`
+sys.path.append(str(BASE_DIR / "examples"))  # required to use auto_summary on examples
 
 os.environ["SPDL_DOC_SPHINX"] = "1"
 
