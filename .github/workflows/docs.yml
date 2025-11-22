@@ -48,21 +48,12 @@ jobs:
           set -x
           wget -qO- https://astral.sh/uv/install.sh | sh
           uv pip install . -v
-          conda install -q 'ffmpeg==6' doxygen
+          conda install -q 'ffmpeg==8' doxygen
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-          # Install CUDA
-          cuda_ver="12.8.1"
-          cuda_dir="/opt/cuda"
-          .github/scripts/install_cuda_toolkit.py \
-            --base-dir "${cuda_dir}" \
-            --cuda-version "${cuda_ver}"
-          if [ ! -d "${cuda_dir}/lib64" ]; then
-            ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
-          fi
-
           export "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cuda_dir}/lib:${cuda_dir}/lib64"
-          pip install tensorboard -r docs/requirements.txt 
+          pip install tensorboard -r docs/requirements.txt
+          python -c 'import logging;logging.basicConfig(level=logging.DEBUG);from spdl.io.lib import _libspdl_cuda;_libspdl_cuda.CUDABuffer'
+          python -c 'import logging;logging.basicConfig(level=logging.DEBUG);import spdl.io;print(spdl.io.CUDABuffer.__doc__);'
           ./docs/build.sh
           mkdir upload
           mv docs/_build upload/_site
