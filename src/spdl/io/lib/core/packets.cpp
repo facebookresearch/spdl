@@ -73,7 +73,7 @@ void register_packets(nb::module_& m) {
       m,
       "AudioPackets",
       "Packets object containing audio samples.\n\n"
-      "See :doc:`/io/packets_frames_concepts` for information about the Packets base concept.")
+      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
       .def(
           "__repr__",
           [](const AudioPackets& self) {
@@ -144,7 +144,7 @@ void register_packets(nb::module_& m) {
       m,
       "VideoPackets",
       "Packets object containing video frames.\n\n"
-      "See :doc:`/io/packets_frames_concepts` for information about the Packets base concept.")
+      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
       .def(
           "get_timestamps",
           [](const VideoPackets& self, bool raw) -> std::vector<double> {
@@ -258,7 +258,7 @@ void register_packets(nb::module_& m) {
       m,
       "ImagePackets",
       "Packets object contain an image frame.\n\n"
-      "See :doc:`/io/packets_frames_concepts` for information about the Packets base concept.")
+      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {

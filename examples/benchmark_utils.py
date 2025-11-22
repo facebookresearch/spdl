@@ -8,11 +8,22 @@
 """Common utilities for benchmark scripts.
 
 This module provides a standardized framework for running benchmarks with:
-- Configurable executor types (ThreadPoolExecutor, ProcessPoolExecutor, InterpreterPoolExecutor)
+
+- Configurable executor types (
+  :py:class:`~concurrent.futures.ThreadPoolExecutor`,
+  :py:class:`~concurrent.futures.ProcessPoolExecutor`,
+  :py:class:`~concurrent.futures.InterpreterPoolExecutor`)
 - Warmup phase to exclude executor initialization overhead
 - Statistical analysis with confidence intervals
 - CSV export functionality
 - Python version and free-threaded ABI detection
+
+.. seealso::
+
+   - :doc:`./benchmark_tarfile`
+   - :doc:`./benchmark_wav`
+   - :doc:`./benchmark_numpy`
+
 """
 
 __all__ = [
@@ -89,7 +100,7 @@ def _get_python_info() -> tuple[str, bool]:
     """Get Python version and free-threaded ABI information.
 
     Returns:
-        Tuple of (python_version, is_free_threaded)
+        Tuple of (``python_version``, ``is_free_threaded``)
     """
     python_version = (
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -112,7 +123,7 @@ def _create_executor(executor_type: ExecutorType, max_workers: int) -> Executor:
         Executor instance
 
     Raises:
-        ValueError: If executor_type is not supported
+        ValueError: If ``executor_type`` is not supported
     """
     match executor_type:
         case ExecutorType.THREAD:
@@ -175,6 +186,7 @@ class BenchmarkRunner:
     """Runner for executing benchmarks with configurable executors.
 
     This class provides a standardized way to run benchmarks with:
+
     - Warmup phase to exclude executor initialization overhead
     - Multiple runs for statistical confidence intervals
     - Support for different executor types
@@ -182,8 +194,11 @@ class BenchmarkRunner:
     The executor is initialized and warmed up in the constructor to exclude
     initialization overhead from benchmark measurements.
 
-    Attributes:
-        executor_type: Type of executor to use (thread, process, or interpreter)
+    Args:
+        executor_type: Type of executor to use
+            (``"thread"``, ``"process"``, or ``"interpreter"``)
+        num_workers: Number of concurrent workers
+        warmup_iterations: Number of warmup iterations (default: ``2 * num_workers``)
     """
 
     def __init__(
@@ -192,14 +207,7 @@ class BenchmarkRunner:
         num_workers: int,
         warmup_iterations: int | None = None,
     ) -> None:
-        """Initialize the BenchmarkRunner and warm up the executor.
-
-        Args:
-            executor_type: Type of executor to use (thread, process, or interpreter)
-            num_workers: Number of concurrent workers
-            warmup_iterations: Number of warmup iterations (default: 2 * num_workers)
-        """
-        self.executor_type: ExecutorType = executor_type
+        self._executor_type: ExecutorType = executor_type
 
         warmup_iters = (
             warmup_iterations if warmup_iterations is not None else 2 * num_workers
@@ -209,6 +217,11 @@ class BenchmarkRunner:
 
         _warmup_executor(self._executor, partial(time.sleep, 1), warmup_iters)
         _verify_workers(self._executor, num_workers)
+
+    @property
+    def executor_type(self) -> ExecutorType:
+        """Get the executor type."""
+        return self._executor_type
 
     def __enter__(self) -> "BenchmarkRunner":
         """Enter context manager."""
@@ -261,11 +274,12 @@ class BenchmarkRunner:
             config: Benchmark-specific configuration
             func: Function to benchmark (takes no arguments)
             iterations: Number of iterations per run
-            num_runs: Number of benchmark runs for confidence interval calculation (default: 5)
-            confidence_level: Confidence level for interval calculation (default: 0.95)
+            num_runs: Number of benchmark runs for confidence interval calculation
+                (default: ``5``)
+            confidence_level: Confidence level for interval calculation (default: ``0.95``)
 
         Returns:
-            Tuple of (BenchmarkResult, last_output from function)
+            Tuple of (``BenchmarkResult``, last output from function)
         """
         qps_samples, last_output = self._run_iterations(func, iterations, num_runs)
 
@@ -368,7 +382,8 @@ def load_results_from_csv(
     """Load benchmark results from a CSV file.
 
     Reconstructs BenchmarkResult objects from the flattened CSV format created
-    by save_results_to_csv. Each row in the CSV is parsed into a BenchmarkResult
+    by :py:func:`save_results_to_csv`.
+    Each row in the CSV is parsed into a :py:class:`BenchmarkResult`
     with the appropriate config type.
 
     Args:
@@ -380,7 +395,7 @@ def load_results_from_csv(
 
     Raises:
         FileNotFoundError: If input_file does not exist
-        ValueError: If CSV format is invalid or config_type is not a dataclass
+        ValueError: If CSV format is invalid or ``config_type`` is not a dataclass
     """
     if not hasattr(config_type, "__dataclass_fields__"):
         raise ValueError(f"config_type must be a dataclass, got {config_type}")

@@ -7,11 +7,11 @@
 
 # pyre-strict
 
-"""Benchmark script for iter_tarfile function.
+"""Benchmark script for :py:func:`spdl.io.iter_tarfile` function.
 
-This script benchmarks the performance of :py:func:`spdl.io.iter_tarfile` against
-Python's built-in ``tarfile`` module using multi-threading.
-Two types of inputs are tested for  :py:func:`spdl.io.iter_tarfile`.
+This script benchmarks the performance of :py:func:`~spdl.io.iter_tarfile` against
+Python's built-in :py:mod:`tarfile` module using multi-threading.
+Two types of inputs are tested for :py:func:`~spdl.io.iter_tarfile`.
 Byte string and a file-like object returns byte string by chunk.
 
 The benchmark:
