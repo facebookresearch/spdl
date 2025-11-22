@@ -50,6 +50,7 @@ jobs:
           uv pip install . -v
           conda install -q 'ffmpeg==6' doxygen
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          export "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib"
           pip install tensorboard -r docs/requirements.txt 
           ./docs/build.sh
           mkdir upload
