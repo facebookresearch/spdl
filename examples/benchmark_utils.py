@@ -381,8 +381,9 @@ def save_results_to_csv(
     output_path = os.path.realpath(output_file)
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_path, "w", newline="") as csvfile:
-        # Write @generated marker as first line
-        csvfile.write("# @generated\n")
+        # Write generated marker as first line
+        # Note: Splitting the marker so as to avoid linter consider this file as generated file
+        csvfile.write("# @" "generated\n")
 
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
