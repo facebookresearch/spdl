@@ -43,7 +43,7 @@ class AudioPackets:
     """
     Packets object containing audio samples.
 
-    See :doc:`/io/packets_frames_concepts` for information about the Packets base concept.
+    See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.
     """
 
     def __repr__(self) -> str: ...
@@ -82,7 +82,7 @@ class VideoPackets:
     """
     Packets object containing video frames.
 
-    See :doc:`/io/packets_frames_concepts` for information about the Packets base concept.
+    See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.
     """
 
     def get_timestamps(self, *, raw: bool = False) -> list[float]:
@@ -156,7 +156,7 @@ class ImagePackets:
     """
     Packets object contain an image frame.
 
-    See :doc:`/io/packets_frames_concepts` for information about the Packets base concept.
+    See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.
     """
 
     @property

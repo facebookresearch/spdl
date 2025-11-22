@@ -17,6 +17,7 @@ Examples
    hydra_integration
    pipeline_definitions
    pipeline_profiling
+   benchmark_utils
    benchmark_numpy
    benchmark_wav
    benchmark_tarfile
