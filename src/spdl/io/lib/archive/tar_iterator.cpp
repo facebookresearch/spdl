@@ -7,6 +7,8 @@
  */
 
 #include "tar_iterator.h"
+
+#include <cstddef>
 #include <cstring>
 
 namespace spdl::archive {
