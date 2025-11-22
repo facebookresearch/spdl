@@ -61,39 +61,56 @@ ConfigT = TypeVar("ConfigT")
 
 @dataclass
 class BenchmarkResult(Generic[ConfigT]):
-    """Generic benchmark result containing configuration and performance metrics.
+    """BenchmarkResult()
+
+    Generic benchmark result containing configuration and performance metrics.
 
     This class holds both the benchmark-specific configuration and the
     common performance statistics. It is parameterized by the config type,
     which allows each benchmark script to define its own configuration dataclass.
-
-    Attributes:
-        config: Benchmark-specific configuration (e.g., data format, file size, etc.)
-        executor_type: Type of executor used (thread, process, or interpreter)
-        qps: Queries per second (mean)
-        ci_lower: Lower bound of 95% confidence interval for QPS
-        ci_upper: Upper bound of 95% confidence interval for QPS
-        date: ISO 8601 timestamp when benchmark was run
-        python_version: Python version used for the benchmark
-        free_threaded: Whether Python is running with free-threaded ABI (PEP 703)
     """
 
     config: ConfigT
+    """Benchmark-specific configuration (e.g., data format, file size, etc.)"""
+
     executor_type: str
+    """Type of executor used (thread, process, or interpreter)"""
+
     qps: float
+    """Queries per second (mean)"""
+
     ci_lower: float
+    """Lower bound of 95% confidence interval for QPS"""
+
     ci_upper: float
+    """Upper bound of 95% confidence interval for QPS"""
+
     date: str
+    """When benchmark was run. ISO 8601 format."""
+
     python_version: str
+    """Python version used for the benchmark"""
+
     free_threaded: bool
+    """Whether Python is running with free-threaded ABI."""
 
 
 class ExecutorType(Enum):
-    """Supported executor types for concurrent execution."""
+    """ExecutorType()
+
+    Supported executor types for concurrent execution."""
 
     THREAD = "thread"
+    """Use :py:class:`~concurrent.futures.ThreadPoolExecutor`."""
+
     PROCESS = "process"
+    """Use :py:class:`~concurrent.futures.ProcessPoolExecutor`."""
+
     INTERPRETER = "interpreter"
+    """Use :py:class:`~concurrent.futures.InterpreterPoolExecutor`.
+    
+    Requires Python 3.14+.
+    """
 
 
 def _get_python_info() -> tuple[str, bool]:
