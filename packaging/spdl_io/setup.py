@@ -57,8 +57,12 @@ def _get_ext_modules():
                 [
                     Extension(f"spdl.io.lib.libspdl_ffmpeg{v}", sources=[]),
                     Extension(f"spdl.io.lib._spdl_ffmpeg{v}", sources=[]),
+                    Extension(f"spdl.io.lib._spdl_cuda{v}", sources=[]),
                 ]
             )
+            if _SPDL_USE_CUDA:
+                ext_modules.append(
+                    Extension(f"spdl.io.lib.libspdl_cuda{v}", sources=[]))
     return ext_modules
 
 
