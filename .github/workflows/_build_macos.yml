@@ -24,7 +24,7 @@ on:
 
 env:
   ARTIFACT: wheel-macos-py${{ inputs.python-version }}${{ inputs.free-threaded }}
-        
+
 jobs:
   build:
     runs-on: "${{ inputs.machine }}"
@@ -117,7 +117,5 @@ jobs:
         run: |
           set -ex
 
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/spdl_unittest/io/ \
-              tests/spdl_unittest/dataloader/ \
-              tests/spdl_unittest/pipeline/
+          cd tests
+          pytest -v -n ${{ inputs.test-concurrency }} io dataloader pipeline

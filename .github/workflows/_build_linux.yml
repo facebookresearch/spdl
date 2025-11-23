@@ -158,10 +158,8 @@ jobs:
           set -ex
 
           python -c 'import spdl.io.utils;assert not spdl.io.utils.built_with_cuda()'
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/spdl_unittest/io/ \
-              tests/spdl_unittest/dataloader/ \
-              tests/spdl_unittest/pipeline/
+          cd tests
+          pytest -v -n ${{ inputs.test-concurrency }} io dataloader pipeline
 
   stub-check:
     needs: ["build"]

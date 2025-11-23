@@ -202,9 +202,8 @@ jobs:
           if "${{ inputs.use-nvdec == 'nvdec' }}" ; then
               python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_nvcodec()'
           fi
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/spdl_unittest/cuda/ \
-              tests/spdl_unittest/io/
+          cd tests
+          pytest -v -n ${{ inputs.test-concurrency }} cuda io
 
   test-cpu:
     if: "${{ inputs.run-test == 'true' }}"
@@ -258,10 +257,8 @@ jobs:
 
       - name: Unit test
         run: |
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/spdl_unittest/io/ \
-              tests/spdl_unittest/dataloader/ \
-              tests/spdl_unittest/pipeline/
+          cd tests
+          pytest -v -n ${{ inputs.test-concurrency }} io dataloader pipeline
 
   stub-check:
     needs: ["build"]
