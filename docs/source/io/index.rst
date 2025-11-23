@@ -43,3 +43,4 @@ This section provides detailed documentation on how to use these implementations
    streaming_decoding
    gpu_decoding
    numpy_arrays
+   encoding
