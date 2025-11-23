@@ -138,6 +138,12 @@ By default, the loading functions produce the following formats:
 - Shape: ``(height, width, channel)``
 - Data type: ``uint8``
 
+.. note::
+
+   The ``spdl.io`` module supports decoding images and videos into various color formats beyond RGB,
+   including YUV420p, NV12, and other pixel formats. You can specify the desired pixel format using
+   the ``pix_fmt`` parameter in :py:func:`spdl.io.get_video_filter_desc`. See :doc:`filtering` for details.
+
 Customizing Output Format
 --------------------------
 

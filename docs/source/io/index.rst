@@ -7,6 +7,9 @@ It is mainly designed for AI training/inference running in the cloud.
 It supports converting various data formats in byte strings (downloaded from remote storage)
 into array format, and transferring it to GPU without interrupting the model computation on GPU.
 
+The module can decode images and videos into various color formats (RGB, YUV420p, NV12, etc.)
+to support different use cases and optimize memory usage for specific applications.
+
 The following diagram illustrates this workflow:
 
 .. mermaid::
