@@ -159,9 +159,9 @@ jobs:
 
           python -c 'import spdl.io.utils;assert not spdl.io.utils.built_with_cuda()'
           pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/spdl_unittest/io/ \
-              tests/spdl_unittest/dataloader/ \
-              tests/spdl_unittest/pipeline/
+              tests/io/ \
+              tests/dataloader/ \
+              tests/pipeline/
 
   stub-check:
     needs: ["build"]
