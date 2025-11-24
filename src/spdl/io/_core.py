@@ -1143,12 +1143,12 @@ def create_reference_audio_frame(
     This function should be used when the media data processed in Python should
     be further processed by filter graph, and/or encoded.
 
-    .. attention::
+    .. note::
 
        The resulting frame object references the memory region owned by the input
-       array, but it does not own the reference to the original array.
-
-       Make sure that the array object is alive until the frame object is consumed.
+       array and keeps a reference to the original array to prevent it from being
+       garbage collected. The original data will remain alive as long as the frame
+       object is alive.
 
     Args:
         array: 2D array or tensor.
@@ -1177,12 +1177,14 @@ def create_reference_audio_frame(
     Returns:
        Frames object that references the memory region of the input data.
     """
-    return _libspdl.create_reference_audio_frame(
+    frame = _libspdl.create_reference_audio_frame(
         array=array,
         sample_fmt=sample_fmt,
         sample_rate=sample_rate,
         pts=pts,
     )
+    frame._array_ref = array
+    return frame
 
 
 def create_reference_video_frame(
@@ -1193,12 +1195,12 @@ def create_reference_video_frame(
     This function should be used when the media data processed in Python should
     be further processed by filter graph, and/or encoded.
 
-    .. attention::
+    .. note::
 
        The resulting frame object references the memory region owned by the input
-       array, but it does not own the reference to the original array.
-
-       Make sure that the array object is alive until the frame object is consumed.
+       array and keeps a reference to the original array to prevent it from being
+       garbage collected. The original data will remain alive as long as the frame
+       object is alive.
 
     Args:
         array: 3D or 4D array or tensor.
@@ -1221,12 +1223,14 @@ def create_reference_video_frame(
     Returns:
        Frames object that references the memory region of the input data.
     """
-    return _libspdl.create_reference_video_frame(
+    frame = _libspdl.create_reference_video_frame(
         array=array,
         pix_fmt=pix_fmt,
         frame_rate=frame_rate,
         pts=pts,
     )
+    frame._array_ref = array
+    return frame
 
 
 ################################################################################

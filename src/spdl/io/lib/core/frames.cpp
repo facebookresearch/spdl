@@ -66,7 +66,8 @@ void register_frames(nb::module_& m) {
       m,
       "AudioFrames",
       "Audio frames.\n\n"
-      "See :doc:`/io/packets_frames_concepts` for information about the Frames base concept.")
+      "See :doc:`/io/packets_frames_concepts` for information about the Frames base concept.",
+      nb::dynamic_attr())
       .def_prop_ro(
           "num_frames",
           [](AudioFrames& self) {
@@ -133,7 +134,8 @@ void register_frames(nb::module_& m) {
       m,
       "VideoFrames",
       "Video frames.\n\n"
-      "See :doc:`/io/packets_frames_concepts` for information about the Frames base concept.")
+      "See :doc:`/io/packets_frames_concepts` for information about the Frames base concept.",
+      nb::dynamic_attr())
       .def_prop_ro(
           "num_frames",
           [](VideoFrames& self) {
