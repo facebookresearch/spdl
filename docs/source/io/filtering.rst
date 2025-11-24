@@ -103,7 +103,7 @@ get_video_filter_desc
 - ``scale_algo``: Scaling algorithm (``"bilinear"``, ``"bicubic"``, ``"lanczos"``, etc.)
 - ``scale_mode``: How to handle aspect ratio (``"stretch"``, ``"pad"``, ``"crop"``)
 - ``crop_width``, ``crop_height``: Dimensions for center cropping
-- ``pix_fmt``: Target pixel format (e.g., ``"rgb24"``, ``"yuv420p"``)
+- ``pix_fmt``: Target pixel format (e.g., ``"rgb24"``, ``"bgr24"``, ``"yuv420p"``, ``"nv12"``, etc.)
 - ``num_frames``: Exact number of frames to output
 - ``pad_mode``: How to pad if fewer frames than requested (``"black"``, ``"repeat_last"``)
 - ``timestamp``: Time window to extract

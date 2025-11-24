@@ -331,6 +331,60 @@ Here's a complete example showing all stages:
 
    This performs stages 1-4 internally and returns the final buffer ready for conversion.
 
+Decoding to Different Color Formats
+------------------------------------
+
+The ``spdl.io`` module supports decoding images and videos into various color formats beyond RGB,
+including YUV420p, NV12, and other pixel formats supported by FFmpeg.
+
+**Example: Decode to YUV420p:**
+
+.. code-block:: python
+
+   import spdl.io
+
+   # Decode video in YUV420p format
+   buffer = spdl.io.load_video(
+       "video.mp4",
+       filter_desc=spdl.io.get_video_filter_desc(
+           scale_width=224,
+           scale_height=224,
+           pix_fmt="yuv420p"  # Keep in YUV420p format
+       )
+   )
+   tensor = spdl.io.to_torch(buffer)
+   # tensor.shape: (num_frames, 1, height * 3 // 2, width)
+   # YUV420p has Y plane at full resolution and U/V planes at half resolution
+
+**Example: Decode image to NV12:**
+
+.. code-block:: python
+
+   import spdl.io
+
+   # Decode image in NV12 format
+   buffer = spdl.io.load_image(
+       "image.jpg",
+       filter_desc=spdl.io.get_video_filter_desc(
+           scale_width=224,
+           scale_height=224,
+           pix_fmt="nv12"  # NV12 format (Y plane + interleaved UV plane)
+       )
+   )
+   array = spdl.io.to_numpy(buffer)
+   # array.shape: (1, height * 3 // 2, width)
+
+**Common pixel formats:**
+
+- ``"rgb24"`` - RGB with 8 bits per channel (default for images/videos)
+- ``"bgr24"`` - BGR with 8 bits per channel
+- ``"yuv420p"`` - YUV 4:2:0 planar format
+- ``"nv12"`` - YUV 4:2:0 with interleaved UV plane
+- ``"gray"`` - Grayscale (single channel)
+
+For a complete list of supported pixel formats, see the
+`FFmpeg Pixel Formats documentation <https://ffmpeg.org/doxygen/trunk/pixfmt_8h.html>`_.
+
 Performance Considerations
 --------------------------
 
