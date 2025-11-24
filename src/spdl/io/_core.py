@@ -1039,6 +1039,11 @@ def nvdec_decoder(
         The old pattern of calling ``decoder.init()`` after ``nvdec_decoder()``
         will be removed in a future version.
     """
+    # Force recreation if crop is provided, regardless of use_cache
+    crop_params = (crop_left, crop_top, crop_right, crop_bottom)
+    if any(param != 0 for param in crop_params):
+        use_cache = False
+
     if use_cache:
         decoder = _get_decoder()
         decoder.reset()
