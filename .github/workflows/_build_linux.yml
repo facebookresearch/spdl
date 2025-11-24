@@ -38,6 +38,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/cache/restore@v4
+        with:
+          path: src/third_party/cache
+          key: "cmake-build-dependencies-${{ hashFiles('src/third_party/**/CMakeLists.txt') }}"
+
       - name: Build
         env:
           SPDL_USE_TRACING: 1
@@ -74,6 +79,11 @@ jobs:
           python_exe="/opt/python/cp314-cp314/bin/python"
           "${python_exe}" -m pip install -r ./packaging/requirements.txt
           "${python_exe}" -m twine check --strict ~/package/*.whl
+
+      - uses: actions/cache/save@v4
+        with:
+          path: src/third_party/cache
+          key: "cmake-build-dependencies-${{ hashFiles('src/third_party/**/CMakeLists.txt') }}"
 
   check-package-dependency:
     if: "${{ inputs.run-test == 'true' }}"
