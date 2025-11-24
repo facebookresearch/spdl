@@ -277,8 +277,7 @@ For hardware-accelerated streaming video decoding with manual control, use :py:c
 
    # Initialize NVDEC decoder
    cuda_config = spdl.io.cuda_config(device_index=0)
-   decoder = spdl.io.nvdec_decoder()
-   decoder.init(cuda_config, codec)
+   decoder = spdl.io.nvdec_decoder(cuda_config, codec)
 
    # IMPORTANT: Bitstream filtering is REQUIRED when using NvDecDecoder
    # Apply bitstream filtering for H.264/HEVC

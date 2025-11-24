@@ -742,8 +742,7 @@ def decode_packets_nvdec(
         case _:
             pass
 
-    decoder = nvdec_decoder()
-    decoder.init(device_config, packets.codec, **kwargs)
+    decoder = nvdec_decoder(device_config, packets.codec, **kwargs)
     buffer = decoder.decode(packets)
     buffer += decoder.flush()
 
@@ -816,11 +815,11 @@ class NvDecDecoder:
 
     Use :py:func:`nvdec_decoder` to instantiate.
 
-    To decode videos with NVDEC, first you initialize the
-    decoder, then feed video packets. Finally, call flush to
-    let the decoder know that it reached the end of the video
-    stream, so that the decoder flushes its internally buffered
-    frames.
+    To decode videos with NVDEC, you provide the decoder configuration
+    and codec information directly to :py:func:`nvdec_decoder`, then feed
+    video packets. Finally, call flush to let the decoder know that it
+    reached the end of the video stream, so that the decoder flushes its
+    internally buffered frames.
 
     .. note::
 
@@ -850,8 +849,7 @@ class NvDecDecoder:
               packets = spdl.io.apply_bsf(f"{c}_mp4toannexb")
 
           # Initialize the decoder
-          decoder = nvdec_decoder()
-          decoder.init(cuda_config, packets.codec, ...)
+          decoder = nvdec_decoder(cuda_config, packets.codec)
 
           # Decode packets
           frames = decoder.decode(packets)
@@ -877,8 +875,8 @@ class NvDecDecoder:
               case _:
                   bsf = None
 
-          decoder = nvdec_decoder()
-          decoder.init(cuda_config, codec, ...)
+          # Initialize the decoder
+          decoder = nvdec_decoder(cuda_config, codec)
 
           for packets in demuxer.streaming_demux_video(10, bsf=bsf):
               buffer = decoder.decode(packets)
@@ -935,7 +933,23 @@ class NvDecDecoder:
 
             scale_width, scale_height (int): *Optional:* Resize the frame.
                 Resizing is applied after cropping.
+
+        .. deprecated:: 0.1.7
+
+           This method was merged with :py:func:`nvdec_decoder()`.
+           Pass these parameters directly to initialize the decoder.
+           The old pattern of calling ``decoder.init()`` after ``nvdec_decoder()``
+           will be removed in a future version.
         """
+        warnings.warn(
+            "Calling `nvdec_decoder()` without cuda_config is deprecated. "
+            "Pass `cuda_config` and `codec` directly to `nvdec_decoder()` to "
+            "initialize the decoder, and remove the `decoder.init()` call. "
+            "The pattern of calling `decoder.init()` after `nvdec_decoder()` "
+            "will be removed in a future version.",
+            stacklevel=2,
+        )
+
         self._decoder.init(
             cuda_config,
             codec,
@@ -984,18 +998,64 @@ def _get_decoder() -> "_NvDecDecoder":
     return _THREAD_LOCAL._decoder
 
 
-def nvdec_decoder(use_cache: bool = True) -> "NvDecDecoder":
+def nvdec_decoder(
+    cuda_config: "CUDAConfig | None" = None,
+    codec: "VideoCodec | None" = None,
+    *,
+    use_cache: bool = True,
+    crop_left: int = 0,
+    crop_top: int = 0,
+    crop_right: int = 0,
+    crop_bottom: int = 0,
+    scale_width: int = -1,
+    scale_height: int = -1,
+) -> "NvDecDecoder":
     """Instantiate an :py:class:`NvDecDecoder` object.
 
     Args:
+        cuda_config: The device configuration. Specifies the GPU of which
+            video decoder chip is used, the CUDA memory allocator and
+            CUDA stream used to fetch the result from the decoder engine.
+            If not provided, the decoder will not be initialized.
+
+        codec: The information of the source video.
+            If not provided, the decoder will not be initialized.
+
         use_cache: If ``True`` (default), the decoder instance cached in thread
             local storage is used. Otherwise a new decoder instance is created.
+            Note: If crop parameters are provided, the decoder will always be
+            recreated regardless of this flag.
+
+        crop_left, crop_top, crop_right, crop_bottom (int):
+            *Optional:* Crop the given number of pixels from each side.
+
+        scale_width, scale_height (int): *Optional:* Resize the frame.
+            Resizing is applied after cropping.
+
+    .. changed:: 0.1.7
+
+        Calling ``nvdec_decoder()`` without ``cuda_config`` and ``codec`` is
+        deprecated. Pass these parameters directly to initialize the decoder.
+        The old pattern of calling ``decoder.init()`` after ``nvdec_decoder()``
+        will be removed in a future version.
     """
     if use_cache:
         decoder = _get_decoder()
         decoder.reset()
     else:
         decoder = _libspdl_cuda._nvdec_decoder()
+
+    if cuda_config is not None and codec is not None:
+        decoder.init(
+            cuda_config,
+            codec,
+            crop_left=crop_left,
+            crop_top=crop_top,
+            crop_right=crop_right,
+            crop_bottom=crop_bottom,
+            scale_width=scale_width,
+            scale_height=scale_height,
+        )
 
     return NvDecDecoder(decoder)
 
