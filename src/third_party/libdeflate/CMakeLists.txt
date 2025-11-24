@@ -16,6 +16,6 @@ FetchContent_Declare(
   libdeflate
   URL https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.24.tar.gz
   URL_HASH SHA256=ad8d3723d0065c4723ab738be9723f2ff1cb0f1571e8bfcf0301ff9661f475e8
-  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cache"
   )
 FetchContent_MakeAvailable(libdeflate)
