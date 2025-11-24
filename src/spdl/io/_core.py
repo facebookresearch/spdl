@@ -990,12 +990,18 @@ class NvDecDecoder:
 
 
 _THREAD_LOCAL = threading.local()
+_THREAD_LOCAL._decoder = None  # pyre-ignore[16]
 
 
 def _get_decoder() -> "_NvDecDecoder":
-    if not hasattr(_THREAD_LOCAL, "_decoder"):
-        _THREAD_LOCAL._decoder = _libspdl_cuda._nvdec_decoder()  # pyre-ignore[16]
+    if _THREAD_LOCAL._decoder is None:  # pyre-ignore[16]
+        _THREAD_LOCAL._decoder = _libspdl_cuda._nvdec_decoder()
     return _THREAD_LOCAL._decoder
+
+
+def _del_cached_decoder() -> None:
+    if _THREAD_LOCAL._decoder is not None:  # pyre-ignore[16]
+        _THREAD_LOCAL._decoder = None
 
 
 def nvdec_decoder(
@@ -1043,7 +1049,8 @@ def nvdec_decoder(
         decoder = _get_decoder()
         decoder.reset()
     else:
-        decoder = _libspdl_cuda._nvdec_decoder()
+        _del_cached_decoder()
+        decoder = _get_decoder()
 
     if cuda_config is not None and codec is not None:
         decoder.init(
