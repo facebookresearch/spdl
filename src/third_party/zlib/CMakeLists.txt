@@ -13,6 +13,6 @@ FetchContent_Declare(
   zlib
   URL https://github.com/madler/zlib/archive/5a82f71ed1dfc0bec044d9702463dbdf84ea3b71.tar.gz
   URL_HASH SHA256=54577b3e64db3d85268e909609faac1410d816376b037a1a415418f87f35814d
-  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+  DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cache"
   )
 FetchContent_MakeAvailable(zlib)
