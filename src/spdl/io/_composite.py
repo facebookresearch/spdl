@@ -557,8 +557,9 @@ def streaming_load_video_nvdec(
         case _:
             bsf = None
 
-    decoder = _core.nvdec_decoder()
-    decoder.init(device_config, codec, **(post_processing_params or {}))
+    decoder = _core.nvdec_decoder(
+        device_config, codec, **(post_processing_params or {})
+    )
     buffers = []
     for packets in demuxer.streaming_demux_video(num_frames):
         if bsf is not None:
