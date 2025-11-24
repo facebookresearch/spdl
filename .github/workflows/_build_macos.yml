@@ -33,6 +33,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/cache/restore@v4
+        with:
+          path: src/third_party/cache
+          key: "cmake-build-dependencies-${{ hashFiles('src/third_party/**/CMakeLists.txt') }}"
+
       - name: Build
         env:
           SPDL_USE_TRACING: 1
@@ -64,6 +69,11 @@ jobs:
         run: |
           pip install -r ./packaging/requirements.txt
           twine check --strict ~/package/*.whl
+
+      - uses: actions/cache/save@v4
+        with:
+          path: src/third_party/cache
+          key: "cmake-build-dependencies-${{ hashFiles('src/third_party/**/CMakeLists.txt') }}"
 
   unit-test:
     if: "${{ inputs.run-test == 'true' }}"
