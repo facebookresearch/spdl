@@ -104,6 +104,7 @@ from spdl.io.lib._libspdl import (
 from spdl.io.lib._libspdl_cuda import (
     CUDABuffer as CUDABuffer,
     CUDAConfig as CUDAConfig,
+    NvDecDecoder as NvDecDecoder,
 )
 
 __all__ = [
