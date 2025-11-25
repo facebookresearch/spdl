@@ -9,6 +9,7 @@
 #include <libspdl/core/frames.h>
 
 #include <libspdl/core/types.h>
+#include <libspdl/core/utils.h>
 
 #include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
@@ -94,8 +95,7 @@ int64_t Frames<media>::get_pts(size_t index) const {
 
 template <MediaType media>
 double Frames<media>::get_timestamp(size_t index) const {
-  auto pts = AVRational{static_cast<int>(get_pts(index)), 1};
-  return av_q2d(av_mul_q(pts, time_base));
+  return av_q2d(detail::to_rational(get_pts(index), time_base));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

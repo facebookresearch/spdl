@@ -22,6 +22,7 @@
 extern "C" {
 #include <libavdevice/avdevice.h>
 #include <libavutil/log.h>
+#include <libavutil/rational.h>
 }
 
 #ifdef GLOG_NEWER_THAN_FIVE
@@ -202,5 +203,35 @@ void trace_event_end() {
   TRACE_EVENT_END("other");
 #endif
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Utilities moved from rational_utils.h
+////////////////////////////////////////////////////////////////////////////////
+namespace detail {
+
+bool is_within_window(
+    const AVRational& val,
+    const AVRational& start,
+    const AVRational& end) {
+  return (av_cmp_q(start, val) <= 0) && (av_cmp_q(val, end) < 0);
+}
+
+AVRational to_rational(int64_t val, const AVRational time_base) {
+  AVRational ret;
+  if (av_reduce(
+          &ret.num, &ret.den, val * time_base.num, time_base.den, INT32_MAX)) {
+    // Warn once that reduced PTS may be inexact due to rational reduction
+    // constraints.
+    static bool warned_inexact_pts = false;
+    if (!warned_inexact_pts) {
+      LOG(WARNING) << "PTS conversion was not exact during rational reduction; "
+                      "timestamps might be slightly inaccurate.";
+      warned_inexact_pts = true;
+    }
+  }
+  return ret;
+}
+
+} // namespace detail
 
 } // namespace spdl::core
