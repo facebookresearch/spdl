@@ -9,6 +9,7 @@
 #include <libspdl/core/packets.h>
 
 #include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/ffmpeg/rational_utils.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
@@ -313,11 +314,12 @@ std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
 
   auto [start, end] = packets.timestamp.value_or(NO_WINDOW);
 
+  auto s = av_d2q(start, AV_TIME_BASE);
+  auto e = av_d2q(end, AV_TIME_BASE);
   for (const auto& pkt : pkts) {
-    auto pts = AVRational{static_cast<int>(pkt->pts), 1};
-    auto ts = av_q2d(av_mul_q(pts, packets.time_base));
-    if (raw || (start <= ts && ts < end)) {
-      ret.emplace_back(ts);
+    AVRational pts = detail::to_rational(pkt->pts, packets.time_base);
+    if (raw || detail::is_within_window(pts, s, e)) {
+      ret.emplace_back(av_q2d(pts));
     }
   }
   if (!raw) {
