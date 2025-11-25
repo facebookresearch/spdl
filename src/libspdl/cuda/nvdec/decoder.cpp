@@ -56,16 +56,16 @@ void validate_nvdec_params(
 }
 } // namespace
 
-NvDecDecoder::NvDecDecoder() : core(new detail::NvDecDecoderCore()) {}
+NvDecDecoder::NvDecDecoder() : core_(new detail::NvDecDecoderCore()) {}
 
 NvDecDecoder::~NvDecDecoder() {
-  if (core) {
-    delete core;
+  if (core_) {
+    delete core_;
   }
 }
 
 void NvDecDecoder::reset() {
-  core->reset();
+  core_->reset();
 }
 
 void NvDecDecoder::init(
@@ -78,19 +78,19 @@ void NvDecDecoder::init(
     int width,
     int height) {
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
-  core->init(cuda_config, codec, crop, width, height);
+  core_->init(cuda_config, codec, crop, width, height);
 }
 
 std::vector<CUDABuffer> NvDecDecoder::decode(
     spdl::core::VideoPacketsPtr packets) {
   std::vector<CUDABuffer> ret;
-  core->decode_packets(packets.get(), &ret);
+  core_->decode_packets(packets.get(), &ret);
   return ret;
 }
 
 std::vector<CUDABuffer> NvDecDecoder::flush() {
   std::vector<CUDABuffer> ret;
-  core->flush(&ret);
+  core_->flush(&ret);
   return ret;
 }
 } // namespace spdl::cuda

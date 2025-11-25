@@ -43,7 +43,7 @@ class NvDecDecoderCore;
 // decoder.init();
 class NvDecDecoder {
 #ifdef SPDL_USE_NVCODEC
-  detail::NvDecDecoderCore* core;
+  detail::NvDecDecoderCore* core_;
 #endif
 
  public:

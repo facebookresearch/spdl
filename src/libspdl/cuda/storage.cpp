@@ -69,7 +69,7 @@ cuda_allocator default_alloc = {default_allocator, default_deleter};
 } // namespace
 
 CUDAStorage::CUDAStorage(size_t size, const CUDAConfig& cfg)
-    : stream(cfg.stream) {
+    : stream_(cfg.stream) {
   if (size == 0) {
     SPDL_FAIL("`size` must be greater than 0.");
   }
@@ -78,7 +78,7 @@ CUDAStorage::CUDAStorage(size_t size, const CUDAConfig& cfg)
   auto [allocator_fn, deleter_fn] = cfg.allocator.value_or(default_alloc);
   data_ =
       reinterpret_cast<void*>(allocator_fn(size, cfg.device_index, cfg.stream));
-  deleter = std::move(deleter_fn);
+  deleter_ = std::move(deleter_fn);
 }
 
 CUDAStorage::CUDAStorage(CUDAStorage&& other) noexcept {
@@ -88,15 +88,15 @@ CUDAStorage::CUDAStorage(CUDAStorage&& other) noexcept {
 CUDAStorage& CUDAStorage::operator=(CUDAStorage&& other) noexcept {
   using std::swap;
   swap(data_, other.data_);
-  swap(stream, other.stream);
-  swap(deleter, other.deleter);
+  swap(stream_, other.stream_);
+  swap(deleter_, other.deleter_);
   return *this;
 }
 CUDAStorage::~CUDAStorage() {
   if (data_) {
     TRACE_EVENT("decoding", "CUDAStorage::~CUDAStorage");
     VLOG(9) << "Freeing CUDA memory " << data_;
-    deleter(reinterpret_cast<uintptr_t>(data_));
+    deleter_(reinterpret_cast<uintptr_t>(data_));
   }
 }
 

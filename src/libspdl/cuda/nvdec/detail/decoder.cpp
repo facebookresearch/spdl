@@ -154,31 +154,31 @@ inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void NvDecDecoderCore::init(
-    const CUDAConfig& device_config_,
-    const spdl::core::VideoCodec& codec_,
-    const CropArea& crop_,
+    const CUDAConfig& device_config,
+    const spdl::core::VideoCodec& codec,
+    const CropArea& crop,
     int tgt_w,
     int tgt_h) {
-  if (auto tb = codec_.get_time_base(); tb.num <= 0 || tb.den <= 0) {
+  if (auto tb = codec.get_time_base(); tb.num <= 0 || tb.den <= 0) {
     SPDL_FAIL_INTERNAL(
         fmt::format("Invalid time base was found: {}/{}", tb.num, tb.den));
   }
-  if (crop_.left < 0) {
+  if (crop.left < 0) {
     SPDL_FAIL(
-        fmt::format("crop_left must be non-negative. Found: {}", crop_.left));
+        fmt::format("crop_left must be non-negative. Found: {}", crop.left));
   }
-  if (crop_.top < 0) {
+  if (crop.top < 0) {
     SPDL_FAIL(
-        fmt::format("crop_top must be non-negative. Found: {}", crop_.top));
+        fmt::format("crop_top must be non-negative. Found: {}", crop.top));
   }
-  if (crop_.right < 0) {
+  if (crop.right < 0) {
     SPDL_FAIL(
-        fmt::format("crop_right must be non-negative. Found: {}", crop_.right));
+        fmt::format("crop_right must be non-negative. Found: {}", crop.right));
   }
-  if (crop_.bottom < 0) {
+  if (crop.bottom < 0) {
     SPDL_FAIL(
         fmt::format(
-            "crop_bottom must be non-negative. Found: {}", crop_.bottom));
+            "crop_bottom must be non-negative. Found: {}", crop.bottom));
   }
   if (tgt_w > 0 && tgt_w % 2) {
     SPDL_FAIL(fmt::format("target_width must be positive. Found: {}", tgt_w));
@@ -186,33 +186,33 @@ void NvDecDecoderCore::init(
   if (tgt_h > 0 && tgt_h % 2) {
     SPDL_FAIL(fmt::format("target_height must be positive. Found: {}", tgt_h));
   }
-  if (device_config.device_index != device_config_.device_index) {
-    device_config = device_config_;
-    cu_ctx = get_cucontext(device_config.device_index);
-    lock = get_lock(cu_ctx);
-    CHECK_CU(cuCtxSetCurrent(cu_ctx), "Failed to set current context.");
+  if (device_config_.device_index != device_config.device_index) {
+    device_config_ = device_config;
+    cu_ctx_ = get_cucontext(device_config_.device_index);
+    lock_ = get_lock(cu_ctx_);
+    CHECK_CU(cuCtxSetCurrent(cu_ctx_), "Failed to set current context.");
 
-    parser = nullptr;
-    decoder = nullptr; // will be re-initialized in the callback
+    parser_ = nullptr;
+    decoder_ = nullptr; // will be re-initialized in the callback
   }
 
-  auto cdc = convert_codec_id(codec_.get_codec_id());
-  if (!parser || codec != cdc) {
+  auto cdc = convert_codec_id(codec.get_codec_id());
+  if (!parser_ || codec_ != cdc) {
     VLOG(9) << "initializing parser";
-    codec = cdc;
-    parser = get_parser(this, codec);
-    decoder = nullptr;
-    decoder_param.ulMaxHeight = 720;
-    decoder_param.ulMaxWidth = 1280;
+    codec_ = cdc;
+    parser_ = get_parser(this, codec_);
+    decoder_ = nullptr;
+    decoder_param_.ulMaxHeight = 720;
+    decoder_param_.ulMaxWidth = 1280;
   }
 
-  src_width = codec_.get_width();
-  src_height = codec_.get_height();
-  codec_id = codec_.get_codec_id();
-  timebase = codec_.get_time_base();
-  crop = crop_;
-  target_width = tgt_w;
-  target_height = tgt_h;
+  src_width_ = codec.get_width();
+  src_height_ = codec.get_height();
+  codec_id_ = codec.get_codec_id();
+  timebase_ = codec.get_time_base();
+  crop_ = crop;
+  target_width_ = tgt_w;
+  target_height_ = tgt_h;
 }
 
 int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
@@ -242,7 +242,7 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   // resolutions of input/output sizes (including rescaling and cropping).
   // What is reconfiguable is defined in CUVIDRECONFIGUREDECODERINFO in
   // `cuviddec.h` header file.
-  if (cb_disabled) {
+  if (cb_disabled_) {
     return 1;
   }
   TRACE_EVENT("nvdec", "handle_video_sequence");
@@ -250,7 +250,7 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   VLOG(9) << print(video_fmt);
 
   // Check if the input video is supported.
-  CUVIDDECODECAPS caps = check_capacity(video_fmt, cap_cache);
+  CUVIDDECODECAPS caps = check_capacity(video_fmt, cap_cache_);
   auto output_fmt = get_output_sufrace_format(video_fmt, &caps);
 
   if (output_fmt != cudaVideoSurfaceFormat_NV12) {
@@ -261,45 +261,45 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   }
 
   unsigned long max_width =
-      MAX(video_fmt->coded_width, decoder_param.ulMaxWidth);
+      MAX(video_fmt->coded_width, decoder_param_.ulMaxWidth);
   unsigned long max_height =
-      MAX(video_fmt->coded_height, decoder_param.ulMaxHeight);
+      MAX(video_fmt->coded_height, decoder_param_.ulMaxHeight);
 
   // Get parameters for creating decoder.
   auto new_decoder_param = get_create_info(
-      lock,
+      lock_,
       video_fmt,
       output_fmt,
       max_width,
       max_height,
-      crop,
-      target_width,
-      target_height);
+      crop_,
+      target_width_,
+      target_height_);
 
   VLOG(5) << print(&new_decoder_param);
 
   // Update decoder
   auto ret = [&]() -> unsigned long {
-    if (!decoder) {
-      decoder.reset(get_decoder(&new_decoder_param));
+    if (!decoder_) {
+      decoder_.reset(get_decoder(&new_decoder_param));
       return new_decoder_param.ulNumDecodeSurfaces;
     }
-    switch (update_type(decoder_param, new_decoder_param)) {
+    switch (update_type(decoder_param_, new_decoder_param)) {
       case RETAIN:
         break;
       case RECONFIGURE:
-        reconfigure_decoder(decoder.get(), new_decoder_param);
+        reconfigure_decoder(decoder_.get(), new_decoder_param);
         break;
       case RECREATE:
-        decoder.reset(get_decoder(&new_decoder_param));
+        decoder_.reset(get_decoder(&new_decoder_param));
         break;
     }
-    auto prev_num_surfs = decoder_param.ulNumDecodeSurfaces;
+    auto prev_num_surfs = decoder_param_.ulNumDecodeSurfaces;
     return prev_num_surfs == new_decoder_param.ulNumDecodeSurfaces
         ? 1
         : new_decoder_param.ulNumDecodeSurfaces;
   }();
-  decoder_param = new_decoder_param;
+  decoder_param_ = new_decoder_param;
 
   return (int)ret;
 }
@@ -312,19 +312,19 @@ int NvDecDecoderCore::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   // * 0: fail
   // * >=1: success
 
-  if (cb_disabled) {
+  if (cb_disabled_) {
     return 1;
   }
   TRACE_EVENT("nvdec", "handle_decode_picture");
 
   // LOG(INFO) << "Received decoded pictures.";
   // LOG(INFO) << print(pic_params);
-  if (!decoder) {
+  if (!decoder_) {
     SPDL_FAIL_INTERNAL("Decoder not initialized.");
   }
   TRACE_EVENT("nvdec", "cuvidDecodePicture");
   CHECK_CU(
-      cuvidDecodePicture(decoder.get(), pic_params),
+      cuvidDecodePicture(decoder_.get(), pic_params),
       "Failed to decode picture.");
   return 1;
 }
@@ -345,27 +345,27 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // * 0: fail
   // * >=1: success
 
-  if (cb_disabled) {
+  if (cb_disabled_) {
     return 1;
   }
   TRACE_EVENT("nvdec", "handle_display_picture");
 
   // LOG(INFO) << "Received display pictures.";
   // LOG(INFO) << print(disp_info);
-  double ts = double(disp_info->timestamp) * timebase.num / timebase.den;
+  double ts = double(disp_info->timestamp) * timebase_.num / timebase_.den;
 
   VLOG(9) << fmt::format(
       " --- Frame  PTS={:.3f} ({})", ts, disp_info->timestamp);
 
-  if (ts < start_time || end_time <= ts) {
+  if (ts < start_time_ || end_time_ <= ts) {
     return 1;
   }
 
   VLOG(9) << fmt::format(
-      "{} x {}", decoder_param.ulTargetWidth, decoder_param.ulTargetHeight);
+      "{} x {}", decoder_param_.ulTargetWidth, decoder_param_.ulTargetHeight);
 
-  CUstream stream = (CUstream)device_config.stream;
-  warn_if_error(decoder.get(), disp_info->picture_index);
+  CUstream stream = (CUstream)device_config_.stream;
+  warn_if_error(decoder_.get(), disp_info->picture_index);
   CUVIDPROCPARAMS proc_params{
       .progressive_frame = disp_info->progressive_frame,
       .second_field = disp_info->repeat_first_field + 1,
@@ -374,20 +374,20 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
       .output_stream = stream};
 
   // Make the decoded frame available to output surface
-  MapGuard mapping(decoder.get(), &proc_params, disp_info->picture_index);
+  MapGuard mapping(decoder_.get(), &proc_params, disp_info->picture_index);
 
   // Copy the surface to user-owning buffer
-  auto width = decoder_param.ulTargetWidth;
-  auto height = decoder_param.ulTargetHeight;
+  auto width = decoder_param_.ulTargetWidth;
+  auto height = decoder_param_.ulTargetHeight;
 
-  if (decoder_param.OutputFormat != cudaVideoSurfaceFormat_NV12) {
+  if (decoder_param_.OutputFormat != cudaVideoSurfaceFormat_NV12) {
     SPDL_FAIL(
         fmt::format(
             "Only NV12 is supported. Found: {}",
-            get_surface_format_name(decoder_param.OutputFormat)));
+            get_surface_format_name(decoder_param_.OutputFormat)));
   }
   auto h2 = height + height / 2;
-  auto frame = std::make_shared<CUDAStorage>(width * h2, device_config);
+  auto frame = std::make_shared<CUDAStorage>(width * h2, device_config_);
 
   auto cfg = CUDA_MEMCPY2D{
       .srcXInBytes = 0,
@@ -415,9 +415,9 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
       "Failed to copy Y plane from decoder output surface.");
   CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
 
-  frame_buffer->emplace_back(
+  frame_buffer_->emplace_back(
       CUDABuffer{
-          device_config.device_index,
+          device_config_.device_index,
           frame,
           {h2, width},
           core::ElemClass::UInt,
@@ -434,7 +434,7 @@ int NvDecDecoderCore::handle_operating_point(CUVIDOPERATINGPOINTINFO*) {
   //    - bit 10-10: outputAllLayers
   //    - bit 11-30: reserved
 
-  if (cb_disabled) {
+  if (cb_disabled_) {
     return 1;
   }
   TRACE_EVENT("nvdec", "handle_operating_point");
@@ -450,7 +450,7 @@ int NvDecDecoderCore::handle_sei_msg(CUVIDSEIMESSAGEINFO*) {
   // * 0: fail
   // * >=1: succeeded
 
-  if (cb_disabled) {
+  if (cb_disabled_) {
     return 1;
   }
 
@@ -464,37 +464,37 @@ void NvDecDecoderCore::decode_packet(
     const unsigned long size,
     int64_t pts,
     unsigned long flags) {
-  if (!parser) {
+  if (!parser_) {
     SPDL_FAIL_INTERNAL("Parser is not initialized.");
   }
   CUVIDSOURCEDATAPACKET packet{
       .flags = flags, .payload_size = size, .payload = data, .timestamp = pts};
   TRACE_EVENT("nvdec", "cuvidParseVideoData");
   CHECK_CU(
-      cuvidParseVideoData(parser.get(), &packet),
+      cuvidParseVideoData(parser_.get(), &packet),
       "Failed to parse video data.");
 }
 
 void NvDecDecoderCore::decode_packets(
     spdl::core::VideoPackets* packets,
     std::vector<CUDABuffer>* buffer) {
-  if (device_config.device_index < 0) {
+  if (device_config_.device_index < 0) {
     SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
   }
   TRACE_EVENT("nvdec", "decode_packets");
 
   // Init the temporary state used by the decoder callback during the decoding
-  this->frame_buffer = buffer;
+  this->frame_buffer_ = buffer;
   if (packets->timestamp) {
-    std::tie(start_time, end_time) = *(packets->timestamp);
+    std::tie(start_time_, end_time_) = *(packets->timestamp);
   } else {
-    start_time = -std::numeric_limits<double>::infinity();
-    end_time = std::numeric_limits<double>::infinity();
+    start_time_ = -std::numeric_limits<double>::infinity();
+    end_time_ = std::numeric_limits<double>::infinity();
   }
 
   auto ite = packets->pkts.iter_data();
   unsigned long flags = CUVID_PKT_TIMESTAMP;
-  switch (codec_id) {
+  switch (codec_id_) {
     case spdl::core::CodecID::MPEG4: {
       // TODO: Add special handling par
       // Video_Codec_SDK_12.1.14/blob/main/Samples/Utils/FFmpegDemuxer.h#L326-L345
@@ -518,16 +518,16 @@ void NvDecDecoderCore::decode_packets(
 }
 
 void NvDecDecoderCore::flush(std::vector<CUDABuffer>* buffer) {
-  this->frame_buffer = buffer;
+  this->frame_buffer_ = buffer;
   const unsigned char data{};
   decode_packet(&data, 0, 0, CUVID_PKT_ENDOFSTREAM);
 }
 
 void NvDecDecoderCore::reset() {
-  if (parser) {
-    cb_disabled = true;
+  if (parser_) {
+    cb_disabled_ = true;
     flush(nullptr);
-    cb_disabled = false;
+    cb_disabled_ = false;
   }
 }
 
