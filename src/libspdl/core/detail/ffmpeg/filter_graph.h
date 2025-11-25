@@ -26,9 +26,9 @@ std::vector<std::string> get_filters();
 ////////////////////////////////////////////////////////////////////////////////
 
 class FilterGraphImpl {
-  AVFilterGraphPtr filter_graph;
-  std::map<std::string, AVFilterContext*> inputs;
-  std::map<std::string, AVFilterContext*> outputs;
+  AVFilterGraphPtr filter_graph_;
+  std::map<std::string, AVFilterContext*> inputs_;
+  std::map<std::string, AVFilterContext*> outputs_;
 
  private:
   template <MediaType media_type>

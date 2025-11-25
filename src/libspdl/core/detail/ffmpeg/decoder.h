@@ -23,8 +23,8 @@ namespace spdl::core::detail {
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media>
 class DecoderImpl {
-  AVCodecContextPtr codec_ctx;
-  std::optional<FilterGraphImpl> filter_graph;
+  AVCodecContextPtr codec_ctx_;
+  std::optional<FilterGraphImpl> filter_graph_;
 
  public:
   DecoderImpl(

@@ -23,10 +23,10 @@ namespace spdl::core {
 //    information about codec that should be used for decoding.
 template <MediaType media>
 class Codec {
-  AVCodecParameters* codecpar;
+  AVCodecParameters* codecpar_;
 
-  Rational time_base;
-  Rational frame_rate;
+  Rational time_base_;
+  Rational frame_rate_;
 
  public:
   Codec() = default;

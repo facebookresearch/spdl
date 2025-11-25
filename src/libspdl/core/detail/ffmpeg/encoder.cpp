@@ -454,12 +454,12 @@ AVCodecContextPtr get_codec_context(
 }
 } // namespace
 template <MediaType media>
-EncoderImpl<media>::EncoderImpl(AVCodecContextPtr codec_ctx_, int index)
-    : codec_ctx(std::move(codec_ctx_)), stream_index(index) {}
+EncoderImpl<media>::EncoderImpl(AVCodecContextPtr codec_ctx, int index)
+    : codec_ctx_(std::move(codec_ctx)), stream_index_(index) {}
 
 template <MediaType media>
 AVRational EncoderImpl<media>::get_time_base() const {
-  return codec_ctx->time_base;
+  return codec_ctx_->time_base;
 }
 
 template <MediaType media>
@@ -470,7 +470,7 @@ AVCodecParameters* EncoderImpl<media>::get_codec_par(
   }
 
   CHECK_AVERROR(
-      avcodec_parameters_from_context(out, codec_ctx.get()),
+      avcodec_parameters_from_context(out, codec_ctx_.get()),
       "Failed to copy codec context.")
   return out;
 }
@@ -628,8 +628,8 @@ Generator<AVPacketPtr> _encode(
 template <MediaType media>
 PacketsPtr<media> EncoderImpl<media>::encode(const FramesPtr<media>&& frames) {
   auto ret = std::make_unique<Packets<media>>(
-      frames->get_id(), stream_index, codec_ctx->time_base);
-  auto encoding = _encode(codec_ctx.get(), frames->get_frames(), false);
+      frames->get_id(), stream_index_, codec_ctx_->time_base);
+  auto encoding = _encode(codec_ctx_.get(), frames->get_frames(), false);
   while (encoding) {
     ret->pkts.push(encoding().release());
   }
@@ -639,9 +639,9 @@ PacketsPtr<media> EncoderImpl<media>::encode(const FramesPtr<media>&& frames) {
 template <MediaType media>
 PacketsPtr<media> EncoderImpl<media>::flush() {
   auto ret =
-      std::make_unique<Packets<media>>(0, stream_index, codec_ctx->time_base);
+      std::make_unique<Packets<media>>(0, stream_index_, codec_ctx_->time_base);
   std::vector<AVFrame*> dummy{};
-  auto encoding = _encode(codec_ctx.get(), dummy, true);
+  auto encoding = _encode(codec_ctx_.get(), dummy, true);
   while (encoding) {
     ret->pkts.push(encoding().release());
   }
@@ -652,7 +652,7 @@ template <MediaType media>
 int EncoderImpl<media>::get_frame_size() const
   requires(media == MediaType::Audio)
 {
-  return codec_ctx->frame_size;
+  return codec_ctx_->frame_size;
 }
 
 template class EncoderImpl<MediaType::Audio>;

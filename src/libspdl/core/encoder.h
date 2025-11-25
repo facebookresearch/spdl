@@ -25,7 +25,7 @@ class EncoderImpl;
 
 template <MediaType media>
 class Encoder {
-  detail::EncoderImpl<media>* pImpl;
+  detail::EncoderImpl<media>* pImpl_;
 
  public:
   explicit Encoder(detail::EncoderImpl<media>*);

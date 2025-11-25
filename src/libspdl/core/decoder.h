@@ -27,7 +27,7 @@ class DecoderImpl;
 
 template <MediaType media>
 class Decoder {
-  detail::DecoderImpl<media>* pImpl;
+  detail::DecoderImpl<media>* pImpl_;
 
  public:
   Decoder(

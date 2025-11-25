@@ -16,7 +16,7 @@
 namespace spdl::core::detail {
 
 class BSFImpl {
-  AVBSFContextPtr bsf_ctx;
+  AVBSFContextPtr bsf_ctx_;
 
  public:
   BSFImpl(const std::string& name, const AVCodecParameters* codec_par);

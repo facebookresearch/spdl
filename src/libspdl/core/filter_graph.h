@@ -19,7 +19,7 @@ class FilterGraphImpl;
 }
 
 class FilterGraph {
-  detail::FilterGraphImpl* pImpl;
+  detail::FilterGraphImpl* pImpl_;
 
  public:
   explicit FilterGraph(const std::string& filter_desc);

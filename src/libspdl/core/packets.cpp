@@ -27,8 +27,8 @@ namespace spdl::core {
 PacketSeries::PacketSeries() {}
 
 PacketSeries::PacketSeries(const PacketSeries& other) {
-  for (const AVPacket* pkt : other.container) {
-    container.push_back(CHECK_AVALLOCATE(av_packet_clone(pkt)));
+  for (const AVPacket* pkt : other.container_) {
+    container_.push_back(CHECK_AVALLOCATE(av_packet_clone(pkt)));
   }
 }
 
@@ -44,12 +44,12 @@ PacketSeries& PacketSeries::operator=(const PacketSeries& other) {
 
 PacketSeries& PacketSeries::operator=(PacketSeries&& other) noexcept {
   using std::swap;
-  swap(container, other.container);
+  swap(container_, other.container_);
   return *this;
 }
 
 PacketSeries::~PacketSeries() {
-  std::for_each(container.begin(), container.end(), [](AVPacket* p) {
+  std::for_each(container_.begin(), container_.end(), [](AVPacket* p) {
     if (p) {
       av_packet_unref(p);
       av_packet_free(&p);
@@ -61,7 +61,7 @@ void PacketSeries::push(AVPacket* p) {
   if (!p) {
     SPDL_FAIL_INTERNAL("Packet is NULL.");
   }
-  container.push_back(p);
+  container_.push_back(p);
 }
 
 template <MediaType media>
@@ -141,11 +141,11 @@ Packets<media>& Packets<media>::operator=(Packets<media>&& other) noexcept {
 }
 
 const std::vector<AVPacket*>& PacketSeries::get_packets() const {
-  return container;
+  return container_;
 }
 
 Generator<RawPacketData> PacketSeries::iter_data() const {
-  for (auto& pkt : container) {
+  for (auto& pkt : container_) {
     co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
   }
 }

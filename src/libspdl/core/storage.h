@@ -26,7 +26,7 @@ class CPUStorage : public Storage {
   static void* default_alloc(size_t s);
   static void default_dealloc(void* p);
 
-  deallocator_type deallocator;
+  deallocator_type deallocator_;
 
  public:
   size_t size;
@@ -35,7 +35,7 @@ class CPUStorage : public Storage {
   // the interface/abstraction. (Is virtual `get_size` better?)
  private:
   void* data_ = nullptr;
-  bool memory_pinned = false;
+  bool memory_pinned_ = false;
 
  public:
   void* data() const override;

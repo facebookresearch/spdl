@@ -20,8 +20,8 @@
 namespace spdl::core::detail {
 
 class DemuxerImpl {
-  DataInterfacePtr di;
-  AVFormatContext* fmt_ctx = nullptr;
+  DataInterfacePtr di_;
+  AVFormatContext* fmt_ctx_ = nullptr;
 
   Generator<AVPacketPtr>
   demux_window(AVStream* stream, const double end, std::optional<BSFImpl>& bsf);

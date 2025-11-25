@@ -69,14 +69,14 @@ void enable_for_stream(AVFormatContext* fmt_ctx, const std::set<int>& indices) {
 
 } // namespace
 
-DemuxerImpl::DemuxerImpl(DataInterfacePtr di_) : di(std::move(di_)) {
-  fmt_ctx = di->get_fmt_ctx();
-  init_fmt_ctx(fmt_ctx);
+DemuxerImpl::DemuxerImpl(DataInterfacePtr di) : di_(std::move(di)) {
+  fmt_ctx_ = di_->get_fmt_ctx();
+  init_fmt_ctx(fmt_ctx_);
 }
 
 DemuxerImpl::~DemuxerImpl() {
   TRACE_EVENT("demuxing", "Demuxer::~Demuxer");
-  di.reset();
+  di_.reset();
   // Technically, this is not necessary, but doing it here puts
   // the destruction of AVFormatContext under ~StreamingDemuxe, which
   // makes the trace easier to interpret.
@@ -85,8 +85,8 @@ DemuxerImpl::~DemuxerImpl() {
 template <MediaType media>
 Codec<media> DemuxerImpl::get_default_codec() const {
   int i = get_default_stream_index(media);
-  AVStream* stream = fmt_ctx->streams[i];
-  auto frame_rate = av_guess_frame_rate(fmt_ctx, stream, nullptr);
+  AVStream* stream = fmt_ctx_->streams[i];
+  auto frame_rate = av_guess_frame_rate(fmt_ctx_, stream, nullptr);
   return Codec<media>{stream->codecpar, stream->time_base, frame_rate};
 }
 
@@ -108,9 +108,9 @@ int DemuxerImpl::get_default_stream_index() const {
     }
     SPDL_FAIL_INTERNAL("Unexpected media type.");
   }();
-  int i = av_find_best_stream(fmt_ctx, t, -1, -1, nullptr, 0);
+  int i = av_find_best_stream(fmt_ctx_, t, -1, -1, nullptr, 0);
   CHECK_AVERROR_NUM(
-      i, fmt::format("Failed to find an audio stream in {}", fmt_ctx->url))
+      i, fmt::format("Failed to find an audio stream in {}", fmt_ctx_->url))
   return i;
 }
 
@@ -119,8 +119,8 @@ template int DemuxerImpl::get_default_stream_index<MediaType::Video>() const;
 template int DemuxerImpl::get_default_stream_index<MediaType::Image>() const;
 
 bool DemuxerImpl::has_audio() const {
-  for (int i = 0; i < (int)fmt_ctx->nb_streams; ++i) {
-    if (AVMEDIA_TYPE_AUDIO == fmt_ctx->streams[i]->codecpar->codec_type) {
+  for (int i = 0; i < (int)fmt_ctx_->nb_streams; ++i) {
+    if (AVMEDIA_TYPE_AUDIO == fmt_ctx_->streams[i]->codecpar->codec_type) {
       return true;
     }
   }
@@ -143,14 +143,14 @@ int DemuxerImpl::get_default_stream_index(MediaType media) const {
   int idx;
   {
     TRACE_EVENT("demuxing", "av_find_best_stream");
-    idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
+    idx = av_find_best_stream(fmt_ctx_, type, -1, -1, nullptr, 0);
   }
   if (idx < 0) {
     SPDL_FAIL(
         fmt::format(
             "No {} stream was found in {}.",
             av_get_media_type_string(type),
-            fmt_ctx->url));
+            fmt_ctx_->url));
   }
   return idx;
 }
@@ -160,11 +160,11 @@ Generator<AVPacketPtr> DemuxerImpl::demux() {
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
     {
       TRACE_EVENT("demuxing", "av_read_frame");
-      errnum = av_read_frame(fmt_ctx, packet.get());
+      errnum = av_read_frame(fmt_ctx_, packet.get());
     }
     if (errnum < 0 && errnum != AVERROR_EOF) {
       CHECK_AVERROR_NUM(
-          errnum, fmt::format("Failed to read a packet. ({})", fmt_ctx->url))
+          errnum, fmt::format("Failed to read a packet. ({})", fmt_ctx_->url))
     }
     if (errnum == AVERROR_EOF) {
       break;
@@ -208,8 +208,8 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   TRACE_EVENT("demuxing", "detail::demux_window");
 
   auto index = get_default_stream_index(media);
-  enable_for_stream(fmt_ctx, {index});
-  auto* stream = fmt_ctx->streams[index];
+  enable_for_stream(fmt_ctx_, {index});
+  auto* stream = fmt_ctx_->streams[index];
 
   auto [start, end] =
       window ? *window : std::tuple<double, double>{NEG_INF, POS_INF};
@@ -226,7 +226,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
     {
       TRACE_EVENT("demuxing", "av_seek_frame");
       CHECK_AVERROR(
-          av_seek_frame(fmt_ctx, index, t - 1, AVSEEK_FLAG_BACKWARD),
+          av_seek_frame(fmt_ctx_, index, t - 1, AVSEEK_FLAG_BACKWARD),
           "Failed to seek to the timestamp {} [sec]",
           start)
     }
@@ -236,12 +236,12 @@ PacketsPtr<media> DemuxerImpl::demux_window(
                     : std::nullopt;
 
   auto ret = std::make_unique<Packets<media>>(
-      fmt_ctx->url,
+      fmt_ctx_->url,
       stream->index,
       Codec<media>{
           bsf ? filter->get_output_codec_par() : stream->codecpar,
           bsf ? filter->get_output_time_base() : stream->time_base,
-          av_guess_frame_rate(fmt_ctx, stream, nullptr)},
+          av_guess_frame_rate(fmt_ctx_, stream, nullptr)},
       window);
 
   auto demuxing = this->demux_window(stream, end, filter);
@@ -303,7 +303,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
     SPDL_FAIL("Only one of `duration` or `num_packets` can be specified.");
   }
 
-  enable_for_stream(fmt_ctx, stream_indices);
+  enable_for_stream(fmt_ctx_, stream_indices);
   std::map<int, AnyPackets> ret;
   auto demuxing = this->demux();
 
@@ -319,7 +319,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
   while (demuxing) {
     auto packet = demuxing();
     auto i = packet->stream_index;
-    auto* stream = fmt_ctx->streams[i];
+    auto* stream = fmt_ctx_->streams[i];
     double pts =
         double(packet->pts) * stream->time_base.num / stream->time_base.den;
     if (t0 < -99) {
@@ -332,7 +332,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
 
     if (stream_indices.contains(i)) {
       if (!ret.contains(i)) {
-        ret.emplace(i, mk_packets(stream, fmt_ctx->url, {}));
+        ret.emplace(i, mk_packets(stream, fmt_ctx_->url, {}));
       }
       std::visit([&](auto& v) { v->pkts.push(packet.release()); }, ret[i]);
       int num_pkts = std::visit(

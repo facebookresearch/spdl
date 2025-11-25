@@ -21,8 +21,8 @@ namespace spdl::core::detail {
 
 template <MediaType media>
 class EncoderImpl {
-  AVCodecContextPtr codec_ctx;
-  int stream_index;
+  AVCodecContextPtr codec_ctx_;
+  int stream_index_;
 
  public:
   EncoderImpl(AVCodecContextPtr codec_ctx, int stream_index);

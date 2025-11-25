@@ -18,10 +18,10 @@ class BSFImpl;
 
 template <MediaType media>
 class BSF {
-  detail::BSFImpl* pImpl;
+  detail::BSFImpl* pImpl_;
 
-  Rational time_base;
-  Rational frame_rate;
+  Rational time_base_;
+  Rational frame_rate_;
 
  public:
   BSF(const Codec<media>& codec, const std::string& bsf);

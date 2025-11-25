@@ -23,24 +23,24 @@ Decoder<media>::Decoder(
     const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc)
-    : pImpl(new detail::DecoderImpl<media>(codec, cfg, filter_desc)) {}
+    : pImpl_(new detail::DecoderImpl<media>(codec, cfg, filter_desc)) {}
 
 template <MediaType media>
 Decoder<media>::~Decoder() {
-  delete pImpl;
+  delete pImpl_;
 }
 
 template <MediaType media>
 FramesPtr<media> Decoder<media>::decode_and_flush(
     PacketsPtr<media> packets,
     int num_frames) {
-  return pImpl->decode_and_flush(std::move(packets), num_frames);
+  return pImpl_->decode_and_flush(std::move(packets), num_frames);
 }
 
 template <MediaType media>
 std::optional<FramesPtr<media>> Decoder<media>::decode(
     PacketsPtr<media> packets) {
-  auto frames = pImpl->decode(std::move(packets));
+  auto frames = pImpl_->decode(std::move(packets));
   if (frames->get_frames().size() == 0) {
     return std::nullopt;
   }
@@ -49,7 +49,7 @@ std::optional<FramesPtr<media>> Decoder<media>::decode(
 
 template <MediaType media>
 std::optional<FramesPtr<media>> Decoder<media>::flush() {
-  auto frames = pImpl->flush();
+  auto frames = pImpl_->flush();
   if (frames->get_frames().size() == 0) {
     return std::nullopt;
   }
