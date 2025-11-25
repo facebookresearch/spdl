@@ -8,9 +8,10 @@
 
 #include "libspdl/core/detail/ffmpeg/decoder.h"
 
+#include <libspdl/core/utils.h>
+
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
-#include "libspdl/core/detail/ffmpeg/rational_utils.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <glog/logging.h>
@@ -188,7 +189,7 @@ VideoFramesPtr DecoderImpl<MediaType::Video>::decode_and_flush(
     return std::make_tuple(false, AVRational{-1, 0}, AVRational{1, 0});
   }();
 
-  auto ret = std::make_unique<VideoFrames>(packets->id, get_output_time_base());
+  auto ret = std::make_unique<VideoFrames>(packets->id, time_base);
   auto gen = decode_packets(
       codec_ctx, packets->pkts.get_packets(), filter_graph, true);
   int num_yielded = 0;
