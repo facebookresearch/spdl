@@ -71,6 +71,7 @@ _LIBSPDL_ITEMS = [
 _LIBSPDL_CUDA_ITEMS = [
     "CUDABuffer",
     "CUDAConfig",
+    "NvDecDecoder",
 ]
 
 

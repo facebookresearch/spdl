@@ -48,13 +48,147 @@ class CUDABuffer:
         """The device index."""
 
 class NvDecDecoder:
-    def reset(self) -> None: ...
+    """
+    Decods video packets using NVDEC hardware acceleration.
 
-    def init(self, device_config: CUDAConfig, codec: spdl.io.lib._libspdl.VideoCodec, *, crop_left: int = 0, crop_top: int = 0, crop_right: int = 0, crop_bottom: int = 0, scale_width: int = -1, scale_height: int = -1) -> None: ...
+    Use :py:func:`nvdec_decoder` to instantiate.
 
-    def decode(self, packets: spdl.io.lib._libspdl.VideoPackets) -> list[CUDABuffer]: ...
+    To decode videos with NVDEC, you provide the decoder configuration
+    and codec information directly to :py:func:`nvdec_decoder`, then feed
+    video packets. Finally, call flush to let the decoder know that it
+    reached the end of the video stream, so that the decoder flushes its
+    internally buffered frames.
 
-    def flush(self) -> list[CUDABuffer]: ...
+    .. note::
+
+       To decode H264 and HEVC videos, the packets must be Annex B
+       format. You can convert video packets to Annex B format by
+       applying bit stream filter while demuxing or after demuxing.
+       See the examples bellow.
+
+    .. seealso::
+
+       - :py:func:`decode_packets_nvdec`: Decode video packets using
+         NVDEC.
+       - :py:func:`streaming_load_video_nvdec`: Decode video frames
+         from source in streaming fashion.
+       - :py:mod:`streaming_nvdec_decoding`: Demonstrates how to
+         decode a long video using NVDEC.
+
+    .. admonition:: Example - decoding the whole video
+
+       .. code-block::
+
+          cuda_config = spdl.io.cuda_config(device_index=0)
+
+          packets = spdl.io.demux_video(src)
+          # Convert to Annex B format
+          if (c := packets.codec.name) in ("h264", "hevc"):
+              packets = spdl.io.apply_bsf(f"{c}_mp4toannexb")
+
+          # Initialize the decoder
+          decoder = nvdec_decoder(cuda_config, packets.codec)
+
+          # Decode packets
+          frames = decoder.decode(packets)
+
+          # Done
+          frames += decoder.flush()
+
+          # Convert (and batch) the NV12 frames into RGB
+          frames = spdl.io.nv12_to_rgb(frames)
+
+    .. admonition:: Example - incremental decoding
+
+       .. code-block::
+
+          cuda_config = spdl.io.cuda_config(device_index=0)
+
+          demuxer = spdl.io.Demuxer(src)
+          codec = demuxer.video_codec
+
+          match codec.name:
+              case "h264" | "hevc":
+                  bsf = f"{codec.name}_mp4toannexb"
+              case _:
+                  bsf = None
+
+          # Initialize the decoder
+          decoder = nvdec_decoder(cuda_config, codec)
+
+          for packets in demuxer.streaming_demux_video(10, bsf=bsf):
+              buffer = decoder.decode(packets)
+              buffer = spdl.io.nv12_to_rgb(buffer)
+              # Process buffer here
+
+          buffer = decoder.flush()
+          buffer = spdl.io.nv12_to_rgb(buffer)
+    """
+
+    def init(self, device_config: CUDAConfig, codec: spdl.io.lib._libspdl.VideoCodec, *, crop_left: int = 0, crop_top: int = 0, crop_right: int = 0, crop_bottom: int = 0, scale_width: int = -1, scale_height: int = -1) -> None:
+        """
+        Initialize the decoder.
+
+        .. deprecated:: 0.1.7
+
+           This method was merged with :py:func:`nvdec_decoder()`.
+           Pass these parameters directly to initialize the decoder.
+           The old pattern of calling ``decoder.init()`` after ``nvdec_decoder()``
+           will be removed in a future version.
+
+        .. note::
+
+           Creation of underlying decoder object is expensive.
+           Typically, it takes about 300ms or more.
+
+           To mitigate this the implementation tries to reuse the decoder.
+           This works if the new video uses the same codecs as
+           the previous one, and the difference is limited to the
+           resolution of the video.
+
+           If you are processing videos of different codecs, then the
+           decoder has to be re-created.
+
+        Args:
+            cuda_config: The device configuration. Specifies the GPU of which
+                video decoder chip is used, the CUDA memory allocator and
+                CUDA stream used to fetch the result from the decoder engine.
+
+            codec: The information of the source video.
+
+            crop_left, crop_top, crop_right, crop_bottom (int):
+                *Optional:* Crop the given number of pixels from each side.
+
+            scale_width, scale_height (int): *Optional:* Resize the frame.
+                Resizing is applied after cropping.
+        """
+
+    def decode(self, packets: spdl.io.lib._libspdl.VideoPackets) -> list[CUDABuffer]:
+        """
+        Decode video frames from the give packets.
+
+        .. note::
+
+           Due to how video codec works, the number of returned frames
+           do not necessarily match the number of packets provided.
+
+           The method can return less number of frames or more number of
+           frames.
+
+        Args:
+            packets: Video packets.
+
+        Returns:
+            The decoded frames.
+        """
+
+    def flush(self) -> list[CUDABuffer]:
+        """
+        Notify the decoder the end of video stream, and fetch buffered frames.
+
+        Returns:
+            The decoded frames. (can be empty)
+        """
 
 @overload
 def decode_image_nvjpeg(data: bytes, *, device_config: CUDAConfig, scale_width: int = -1, scale_height: int = -1, pix_fmt: str = 'rgb', _zero_clear: bool = False) -> CUDABuffer: ...
