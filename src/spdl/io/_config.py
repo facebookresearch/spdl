@@ -54,7 +54,6 @@ def demux_config(
 
     .. admonition:: Example: Loading headeless audio file (raw PCM)
 
-       >>> import asyncio
        >>> import spdl.io
        >>>
        >>> # Say, this file contains raw PCM samples.
@@ -63,11 +62,11 @@ def demux_config(
        >>> src = "sample.raw"
        >>>
        >>> # This won't work
-       >>> # packets = asyncio.run(spdl.io.async_demux_media("audio", src))
+       >>> # packets = spdl.io.demux_media("audio", src)
        >>>
        >>> # This works.
        >>> cfg = demux_config(format="s16le")
-       >>> packets = asyncio.run(spdl.io.async_demux_audio(src, demux_config=cfg))
+       >>> packets = spdl.io.demux_audio(src, demux_config=cfg)
        >>>
     """
     return _libspdl.DemuxConfig(
@@ -96,8 +95,8 @@ def decode_config(
        >>> # Use libopenh264 decoder to decode video
        >>> cfg = DecodeConfig(decoder="libopenh264")
        >>>
-       >>> frames = await spdl.io.async_decode_packets(
-       ...     await spdl.io.async_demux_media("video", src),
+       >>> frames = spdl.io.decode_packets(
+       ...     spdl.io.demux_media("video", src),
        ...     decode_config=cfg)
 
     .. admonition:: Example: Change the number of threads internal to FFmpeg decoder
@@ -106,8 +105,8 @@ def decode_config(
        >>> # Note: By default, SPDL specifies decoders to use a single thread.
        >>> cfg = DecodeConfig(decoder_options={"threads": "0"})
        >>>
-       >>> frames = await spdl.io.async_decode_packets(
-       ...     await spdl.io.async_demux_video(src),
+       >>> frames = spdl.io.decode_packets(
+       ...     spdl.io.demux_video(src),
        ...     decode_config=cfg)
     """
     return _libspdl.DecodeConfig(decoder=decoder, decoder_options=decoder_options)
