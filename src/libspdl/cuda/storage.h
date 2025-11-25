@@ -23,9 +23,9 @@ class CUDAStorage : public core::Storage {
   void* data_ = nullptr;
 
  public:
-  uintptr_t stream = 0;
+  uintptr_t stream_ = 0;
 
-  cuda_deleter_fn deleter;
+  cuda_deleter_fn deleter_;
 
   void* data() const override;
 

@@ -39,7 +39,7 @@ class NvDecDecoderCore {
   //---------------------------------------------------------------------------
   // used to check if decoder configuration needs to be updated.
   // or allocating new memory
-  CUDAConfig device_config{
+  CUDAConfig device_config_{
       .device_index = -1
       // Initialize with invalid index, otherwise when `init` is called, it
       // cannot tell whether it's genuinely initialized.
@@ -50,45 +50,45 @@ class NvDecDecoderCore {
   // Codec config
   //---------------------------------------------------------------------------
   // Codec associated with the parser
-  cudaVideoCodec codec{};
+  cudaVideoCodec codec_{};
   // Params from previous decoder creation.
-  CUVIDDECODECREATEINFO decoder_param{};
+  CUVIDDECODECREATEINFO decoder_param_{};
   //---------------------------------------------------------------------------
 
   //---------------------------------------------------------------------------
   // Global objects (handle to device)
   //---------------------------------------------------------------------------
-  CUcontext cu_ctx;
-  CUvideoctxlock lock;
+  CUcontext cu_ctx_;
+  CUvideoctxlock lock_;
   //---------------------------------------------------------------------------
 
   // Cache the result of `cuvidGetDecoderCaps` as
   // `cuvidGetDecoderCaps` is expensive.
-  std::vector<CUVIDDECODECAPS> cap_cache{};
+  std::vector<CUVIDDECODECAPS> cap_cache_{};
 
   // Core decoder objects
-  CUvideoparserPtr parser{nullptr};
-  CUvideodecoderPtr decoder{nullptr};
+  CUvideoparserPtr parser_{nullptr};
+  CUvideodecoderPtr decoder_{nullptr};
 
  private:
   // Source packet information. Initialized in init
-  int src_width = 0;
-  int src_height = 0;
-  spdl::core::CodecID codec_id;
-  spdl::core::Rational timebase{}; // Time base of the PTS
+  int src_width_ = 0;
+  int src_height_ = 0;
+  spdl::core::CodecID codec_id_;
+  spdl::core::Rational timebase_{}; // Time base of the PTS
 
   //---------------------------------------------------------------------------
   // Post processing params
   //---------------------------------------------------------------------------
   // Resize option Negative values mean not resizing.
-  int target_width = -1;
-  int target_height = -1;
+  int target_width_ = -1;
+  int target_height_ = -1;
   // Cropping options
-  CropArea crop;
+  CropArea crop_;
   //---------------------------------------------------------------------------
 
   // Used to disable all the callbacks during reset.
-  bool cb_disabled = false;
+  bool cb_disabled_ = false;
 
   //---------------------------------------------------------------------------
   // Attributes used for decoding, only during the decoding.
@@ -97,9 +97,9 @@ class NvDecDecoderCore {
   //---------------------------------------------------------------------------
   // Storage for the output frames
   // Used as a reference point for the callback during the decoding.
-  std::vector<CUDABuffer>* frame_buffer;
+  std::vector<CUDABuffer>* frame_buffer_;
   // The user-specified timestamp. Frames outside of this will be discarded.
-  double start_time, end_time;
+  double start_time_, end_time_;
   //---------------------------------------------------------------------------
 
  public:
