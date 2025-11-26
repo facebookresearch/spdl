@@ -112,15 +112,30 @@ DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
 
 @dataclass
 class BenchmarkConfig:
-    """Configuration for a single TAR benchmark run."""
+    """BenchmarkConfig()
+
+    Configuration for a single TAR benchmark run."""
 
     function_name: str
+    """Name of the function being tested"""
+
     tar_size: int
+    """Total size of the TAR archive in bytes"""
+
     file_size: int
+    """Size of each file in the TAR archive in bytes"""
+
     num_files: int
+    """Number of files in the TAR archive"""
+
     num_threads: int
+    """Number of concurrent threads"""
+
     num_iterations: int
+    """Number of iterations per run"""
+
     total_files_processed: int
+    """Total number of files processed across all iterations"""
 
 
 def iter_tarfile_builtin(tar_data: bytes) -> Iterator[tuple[str, bytes]]:

@@ -108,31 +108,39 @@ DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
 
 @dataclass(frozen=True)
 class BenchmarkConfig:
-    """Configuration for a single WAV benchmark run.
+    """BenchmarkConfig()
+
+    Configuration for a single WAV benchmark run.
 
     Combines both audio file parameters and benchmark execution parameters.
-
-    Attributes:
-        function_name: Name of the function being tested
-        function: The actual function to benchmark
-        sample_rate: Audio sample rate in Hz
-        num_channels: Number of audio channels
-        bits_per_sample: Bit depth per sample (16 or 32)
-        duration_seconds: Duration of the audio file in seconds
-        num_threads: Number of concurrent threads
-        iterations: Number of iterations per run
-        num_runs: Number of runs for statistical analysis
     """
 
     function_name: str
+    """Name of the function being tested"""
+
     function: Callable[[bytes], NDArray]
+    """The actual function to benchmark"""
+
     sample_rate: int
+    """Audio sample rate in Hz"""
+
     num_channels: int
+    """Number of audio channels"""
+
     bits_per_sample: int
+    """Bit depth per sample (16 or 32)"""
+
     duration_seconds: float
+    """Duration of the audio file in seconds"""
+
     num_threads: int
+    """Number of concurrent threads"""
+
     iterations: int
+    """Number of iterations per run"""
+
     num_runs: int
+    """Number of runs for statistical analysis"""
 
 
 def create_wav_data(
