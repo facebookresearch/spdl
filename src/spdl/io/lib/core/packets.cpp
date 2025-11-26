@@ -9,6 +9,7 @@
 #include "register_spdl_core_extensions.h"
 
 #include <libspdl/core/packets.h>
+#include <libspdl/core/rational_utils.h>
 #include <libspdl/core/types.h>
 
 #include <nanobind/nanobind.h>
@@ -52,10 +53,7 @@ std::string get_summary(const Codec<media>& c) {
 
 std::string get_ts(const TimeWindow& ts) {
   auto [start, end] = ts;
-  // TODO: Use av_q2d
-  double start_val = static_cast<double>(start.num) / start.den;
-  double end_val = static_cast<double>(end.num) / end.den;
-  return fmt::format("timestamp=({}, {})", start_val, end_val);
+  return fmt::format("timestamp=({}, {})", to_double(start), to_double(end));
 }
 
 template <MediaType media>
@@ -110,11 +108,8 @@ void register_packets(nb::module_& m) {
               -> std::optional<std::tuple<double, double>> {
             nb::gil_scoped_release __g;
             if (self.timestamp) {
-              auto [start, end] = *self.timestamp;
-              // TODO: Use av_q2d
-              return std::make_tuple(
-                  static_cast<double>(start.num) / start.den,
-                  static_cast<double>(end.num) / end.den);
+              auto [s, e] = *self.timestamp;
+              return std::make_tuple(to_double(s), to_double(e));
             }
             return std::nullopt;
           },
@@ -185,11 +180,8 @@ void register_packets(nb::module_& m) {
               -> std::optional<std::tuple<double, double>> {
             nb::gil_scoped_release __g;
             if (self.timestamp) {
-              // TODO: Use av_q2d
-              auto [start, end] = *self.timestamp;
-              return std::make_tuple(
-                  static_cast<double>(start.num) / start.den,
-                  static_cast<double>(end.num) / end.den);
+              auto [s, e] = *self.timestamp;
+              return std::make_tuple(to_double(s), to_double(e));
             }
             return std::nullopt;
           },

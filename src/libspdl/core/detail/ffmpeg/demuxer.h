@@ -23,8 +23,10 @@ class DemuxerImpl {
   DataInterfacePtr di_;
   AVFormatContext* fmt_ctx_ = nullptr;
 
-  Generator<AVPacketPtr>
-  demux_window(AVStream* stream, const double end, std::optional<BSFImpl>& bsf);
+  Generator<AVPacketPtr> demux_window(
+      AVStream* stream,
+      const AVRational end,
+      std::optional<BSFImpl>& bsf);
 
  public:
   explicit DemuxerImpl(DataInterfacePtr di);

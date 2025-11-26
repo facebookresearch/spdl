@@ -8,6 +8,7 @@
 
 #include <libspdl/core/frames.h>
 
+#include <libspdl/core/rational_utils.h>
 #include <libspdl/core/types.h>
 #include <libspdl/core/utils.h>
 
@@ -96,7 +97,7 @@ int64_t Frames<media>::get_pts(size_t index) const {
 
 template <MediaType media>
 double Frames<media>::get_timestamp(size_t index) const {
-  return av_q2d(detail::to_rational(get_pts(index), time_base_));
+  return av_q2d(to_rational(get_pts(index), time_base_));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

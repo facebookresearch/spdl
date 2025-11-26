@@ -8,6 +8,7 @@
 
 #include "libspdl/core/detail/ffmpeg/decoder.h"
 
+#include <libspdl/core/rational_utils.h>
 #include <libspdl/core/utils.h>
 
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"

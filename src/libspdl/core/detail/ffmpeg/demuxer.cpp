@@ -7,6 +7,9 @@
  */
 
 #include "libspdl/core/detail/ffmpeg/demuxer.h"
+
+#include <libspdl/core/rational_utils.h>
+
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
@@ -175,7 +178,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux() {
 
 Generator<AVPacketPtr> DemuxerImpl::demux_window(
     AVStream* stream,
-    const double end,
+    const AVRational end,
     std::optional<BSFImpl>& filter) {
   auto demuxing = this->demux();
   while (demuxing) {
@@ -184,8 +187,8 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
       continue;
     }
     if (!filter) {
-      // TODO: Compare with AVRational
-      if (packet->pts * av_q2d(stream->time_base) > end) {
+      auto pts = to_rational(packet->pts, stream->time_base);
+      if (av_cmp_q(pts, end) >= 0) {
         co_return;
       }
       co_yield std::move(packet);
@@ -193,8 +196,8 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
       auto filtering = filter->filter(packet.get());
       while (filtering) {
         auto filtered = filtering();
-        // TODO: Compare with AVRational
-        if (filtered->pts * av_q2d(stream->time_base) > end) {
+        auto pts = to_rational(filtered->pts, stream->time_base);
+        if (av_cmp_q(pts, end) >= 0) {
           co_return;
         }
         co_yield std::move(filtered);
@@ -213,32 +216,18 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   enable_for_stream(fmt_ctx_, {index});
   auto* stream = fmt_ctx_->streams[index];
 
-  double start = NEG_INF;
-  double end = POS_INF;
-
-  // TODO: Use AVRational for comparison
   if (window) {
-    auto [start_rational, end_rational] = *window;
-    start = av_q2d(start_rational);
-    end = av_q2d(end_rational);
-  }
-
-  if constexpr (media == MediaType::Video) {
-    // Note:
-    // Since the video frames can be non-chronological order, so we add small
-    // margin to end
-    end += 0.3;
-  }
-
-  if (!std::isinf(start)) {
-    auto& tb = stream->time_base;
-    int64_t t = tb.den * start / tb.num;
+    auto s = std::get<0>(*window);
+    auto tb = stream->time_base;
+    auto t = av_rescale(s.num, tb.den, s.den * tb.num);
     {
       TRACE_EVENT("demuxing", "av_seek_frame");
       CHECK_AVERROR(
           av_seek_frame(fmt_ctx_, index, t - 1, AVSEEK_FLAG_BACKWARD),
-          "Failed to seek to the timestamp {} [sec]",
-          start)
+          "Failed to seek to the timestamp {} ({}/{}) [sec]",
+          to_double(s),
+          s.num,
+          s.den);
     }
   }
 
@@ -254,6 +243,16 @@ PacketsPtr<media> DemuxerImpl::demux_window(
           av_guess_frame_rate(fmt_ctx_, stream, nullptr)},
       window);
 
+  AVRational end = {1, 0};
+  if (window) {
+    end = std::get<1>(*window);
+    if constexpr (media == MediaType::Video) {
+      // Note:
+      // Since the video frames can be non-chronological order,
+      // we add small margin to the end
+      end = av_add_q(end, {3, 10});
+    }
+  }
   auto demuxing = this->demux_window(stream, end, filter);
   while (demuxing) {
     ret->pkts.push(demuxing().release());
@@ -330,9 +329,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
     auto packet = demuxing();
     auto i = packet->stream_index;
     auto* stream = fmt_ctx_->streams[i];
-    // TODO: Use AVRational for comaprison
-    double pts =
-        double(packet->pts) * stream->time_base.num / stream->time_base.den;
+    double pts = to_double(to_rational(packet->pts, stream->time_base));
     if (t0 < -99) {
       t0 = pts;
     }
