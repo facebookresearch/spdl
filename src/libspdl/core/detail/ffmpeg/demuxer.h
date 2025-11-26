@@ -48,8 +48,8 @@ class DemuxerImpl {
  public:
   template <MediaType media>
   PacketsPtr<media> demux_window(
-      const std::optional<std::tuple<double, double>>& window,
-      const std::optional<std::string>& bsf);
+      const std::optional<TimeWindow>& window = std::nullopt,
+      const std::optional<std::string>& bsf = std::nullopt);
 
   int get_default_stream_index(MediaType media) const;
 

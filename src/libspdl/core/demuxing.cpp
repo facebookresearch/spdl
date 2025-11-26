@@ -92,21 +92,21 @@ template int Demuxer::get_default_stream_index<MediaType::Image>() const;
 
 template <MediaType media>
 PacketsPtr<media> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf) {
   return pImpl_->demux_window<media>(window, bsf);
 }
 
 template PacketsPtr<MediaType::Audio> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Video> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Image> Demuxer::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf);
 
 StreamingDemuxerPtr Demuxer::streaming_demux(

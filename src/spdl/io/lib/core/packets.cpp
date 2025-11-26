@@ -9,6 +9,7 @@
 #include "register_spdl_core_extensions.h"
 
 #include <libspdl/core/packets.h>
+#include <libspdl/core/types.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/optional.h>
@@ -49,8 +50,12 @@ std::string get_summary(const Codec<media>& c) {
   return fmt::format("Codec=<{}>", fmt::join(p, ", "));
 }
 
-std::string get_ts(const std::tuple<double, double>& ts) {
-  return fmt::format("timestamp=({}, {})", std::get<0>(ts), std::get<1>(ts));
+std::string get_ts(const TimeWindow& ts) {
+  auto [start, end] = ts;
+  // TODO: Use av_q2d
+  double start_val = static_cast<double>(start.num) / start.den;
+  double end_val = static_cast<double>(end.num) / end.den;
+  return fmt::format("timestamp=({}, {})", start_val, end_val);
 }
 
 template <MediaType media>
@@ -98,11 +103,20 @@ void register_packets(nb::module_& m) {
           })
       .def(
           "__len__", [](const AudioPackets& self) { return num_packets(self); })
+      // Note: this is a window timestamp specified by user.
       .def_prop_ro(
           "timestamp",
-          [](const AudioPackets& self) {
+          [](const AudioPackets& self)
+              -> std::optional<std::tuple<double, double>> {
             nb::gil_scoped_release __g;
-            return self.timestamp;
+            if (self.timestamp) {
+              auto [start, end] = *self.timestamp;
+              // TODO: Use av_q2d
+              return std::make_tuple(
+                  static_cast<double>(start.num) / start.den,
+                  static_cast<double>(end.num) / end.den);
+            }
+            return std::nullopt;
           },
           "The window this packets covers, denoted by start and end time in second.\n\n"
           "This is the value specified by user when demuxing the stream.")
@@ -167,9 +181,17 @@ void register_packets(nb::module_& m) {
       // Note: this is a window timestamp specified by user.
       .def_prop_ro(
           "timestamp",
-          [](const VideoPackets& self) {
+          [](const VideoPackets& self)
+              -> std::optional<std::tuple<double, double>> {
             nb::gil_scoped_release __g;
-            return self.timestamp;
+            if (self.timestamp) {
+              // TODO: Use av_q2d
+              auto [start, end] = *self.timestamp;
+              return std::make_tuple(
+                  static_cast<double>(start.num) / start.den,
+                  static_cast<double>(end.num) / end.den);
+            }
+            return std::nullopt;
           },
           "The window this packets covers, denoted by start and end time in second.\n\n"
           "This is the value specified by user when demuxing the stream.")

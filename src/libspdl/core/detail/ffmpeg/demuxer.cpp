@@ -184,6 +184,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
       continue;
     }
     if (!filter) {
+      // TODO: Compare with AVRational
       if (packet->pts * av_q2d(stream->time_base) > end) {
         co_return;
       }
@@ -192,6 +193,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
       auto filtering = filter->filter(packet.get());
       while (filtering) {
         auto filtered = filtering();
+        // TODO: Compare with AVRational
         if (filtered->pts * av_q2d(stream->time_base) > end) {
           co_return;
         }
@@ -203,7 +205,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
 
 template <MediaType media>
 PacketsPtr<media> DemuxerImpl::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf) {
   TRACE_EVENT("demuxing", "detail::demux_window");
 
@@ -211,8 +213,16 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   enable_for_stream(fmt_ctx_, {index});
   auto* stream = fmt_ctx_->streams[index];
 
-  auto [start, end] =
-      window ? *window : std::tuple<double, double>{NEG_INF, POS_INF};
+  double start = NEG_INF;
+  double end = POS_INF;
+
+  // TODO: Use AVRational for comparison
+  if (window) {
+    auto [start_rational, end_rational] = *window;
+    start = av_q2d(start_rational);
+    end = av_q2d(end_rational);
+  }
+
   if constexpr (media == MediaType::Video) {
     // Note:
     // Since the video frames can be non-chronological order, so we add small
@@ -252,15 +262,15 @@ PacketsPtr<media> DemuxerImpl::demux_window(
 }
 
 template PacketsPtr<MediaType::Audio> DemuxerImpl::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Video> DemuxerImpl::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf);
 
 template PacketsPtr<MediaType::Image> DemuxerImpl::demux_window(
-    const std::optional<std::tuple<double, double>>& window,
+    const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf);
 
 namespace {
@@ -320,6 +330,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
     auto packet = demuxing();
     auto i = packet->stream_index;
     auto* stream = fmt_ctx_->streams[i];
+    // TODO: Use AVRational for comaprison
     double pts =
         double(packet->pts) * stream->time_base.num / stream->time_base.den;
     if (t0 < -99) {

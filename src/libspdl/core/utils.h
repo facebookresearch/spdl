@@ -79,6 +79,8 @@ bool is_within_window(
 
 AVRational to_rational(int64_t val, const AVRational time_base);
 
+Rational make_rational(const std::tuple<int64_t, int64_t>& val);
+
 } // namespace detail
 
 } // namespace spdl::core
