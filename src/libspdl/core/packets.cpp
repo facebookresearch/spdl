@@ -69,7 +69,7 @@ Packets<media>::Packets(
     const std::string& src_,
     int index,
     Codec<media>&& codec_,
-    const std::optional<std::tuple<double, double>>& timestamp_)
+    const std::optional<TimeWindow>& timestamp_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
       stream_index(index),
@@ -85,7 +85,7 @@ Packets<media>::Packets(
     const std::string& src_,
     int index,
     const Rational& time_base_,
-    const std::optional<std::tuple<double, double>>& timestamp_)
+    const std::optional<TimeWindow>& timestamp_)
     : id(reinterpret_cast<uintptr_t>(this)),
       src(src_),
       stream_index(index),
@@ -268,7 +268,9 @@ extract_packets_at_indices(
   // So we adjust the `indices` by shifting the number of frames before the
   // window.
   if (src->timestamp) {
-    auto [start, end] = *(src->timestamp);
+    // TODO: Compare using AVRational
+    double start = av_q2d(std::get<0>(*(src->timestamp)));
+
     size_t offset = 0;
     auto tb = src->time_base;
     for (auto& packet : src_packets) {
@@ -301,12 +303,6 @@ extract_packets_at_indices(
   return ret;
 }
 
-namespace {
-#define POS_INF std::numeric_limits<double>::infinity()
-#define NEG_INF -std::numeric_limits<double>::infinity()
-static const auto NO_WINDOW = std::tuple<double, double>{NEG_INF, POS_INF};
-} // namespace
-
 template <MediaType media>
 std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
   const auto& pkts = packets.pkts.get_packets();
@@ -314,16 +310,23 @@ std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
   std::vector<double> ret{};
   ret.reserve(pkts.size());
 
-  auto [start, end] = packets.timestamp.value_or(NO_WINDOW);
-
-  auto s = av_d2q(start, AV_TIME_BASE);
-  auto e = av_d2q(end, AV_TIME_BASE);
-  for (const auto& pkt : pkts) {
-    AVRational pts = detail::to_rational(pkt->pts, packets.time_base);
-    if (raw || detail::is_within_window(pts, s, e)) {
+  // When timestamp is not set, include all packets
+  if (!packets.timestamp || raw) {
+    for (const auto& pkt : pkts) {
+      AVRational pts = detail::to_rational(pkt->pts, packets.time_base);
       ret.emplace_back(av_q2d(pts));
     }
+  } else {
+    // When timestamp is set, filter packets within the window
+    auto [s, e] = *(packets.timestamp);
+    for (const auto& pkt : pkts) {
+      AVRational pts = detail::to_rational(pkt->pts, packets.time_base);
+      if (detail::is_within_window(pts, s, e)) {
+        ret.emplace_back(av_q2d(pts));
+      }
+    }
   }
+
   if (!raw) {
     std::sort(ret.begin(), ret.end());
   }

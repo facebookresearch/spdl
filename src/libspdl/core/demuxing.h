@@ -65,7 +65,7 @@ class Demuxer {
 
   template <MediaType media>
   PacketsPtr<media> demux_window(
-      const std::optional<std::tuple<double, double>>& window = std::nullopt,
+      const std::optional<TimeWindow>& window = std::nullopt,
       const std::optional<std::string>& bsf = std::nullopt);
 
   StreamingDemuxerPtr streaming_demux(

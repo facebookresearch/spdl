@@ -38,6 +38,7 @@ namespace spdl::core {
 using OptionDict = std::map<std::string, std::string>;
 
 using Rational = AVRational;
+using TimeWindow = std::tuple<Rational, Rational>;
 
 // simplified version of AVMediaType so that public headers do not
 // include ffmpeg headers

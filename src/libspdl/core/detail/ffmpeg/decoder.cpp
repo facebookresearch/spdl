@@ -141,7 +141,7 @@ Rational DecoderImpl<media>::get_output_time_base() const {
   if (filter_graph_) {
     return filter_graph_->get_sink_time_base();
   }
-  return {codec_ctx_->time_base.num, codec_ctx_->time_base.den};
+  return codec_ctx_->time_base;
 }
 
 // For audio and image.
@@ -176,29 +176,21 @@ template <>
 VideoFramesPtr DecoderImpl<MediaType::Video>::decode_and_flush(
     VideoPacketsPtr packets,
     int num_frames) {
-  auto time_base = get_output_time_base();
-  auto [has_timestamp, start, end] =
-      [&]() -> std::tuple<bool, AVRational, AVRational> {
-    if (packets->timestamp) {
-      auto [start_time, end_time] = *packets->timestamp;
-      return std::make_tuple(
-          true,
-          av_d2q(start_time, AV_TIME_BASE),
-          av_d2q(end_time, AV_TIME_BASE));
-    }
-    return std::make_tuple(false, AVRational{-1, 0}, AVRational{1, 0});
-  }();
+  auto tb = get_output_time_base();
+  AVRational s, e;
+  if (packets->timestamp) {
+    std::tie(s, e) = *(packets->timestamp);
+  }
 
-  auto ret = std::make_unique<VideoFrames>(packets->id, time_base);
+  auto ret = std::make_unique<VideoFrames>(packets->id, tb);
   auto gen = decode_packets(
       codec_ctx_, packets->pkts.get_packets(), filter_graph_, true);
   int num_yielded = 0;
   while (gen) {
     // For video, we manualy apply timestamps.
     auto frame = gen().release();
-    if (has_timestamp && frame) {
-      auto frame_pts = detail::to_rational(frame->pts, time_base);
-      if (!is_within_window(frame_pts, start, end)) {
+    if (packets->timestamp && frame) {
+      if (!is_within_window(to_rational(frame->pts, tb), s, e)) {
         av_frame_free(&frame);
         continue;
       }
@@ -235,30 +227,19 @@ FramesPtr<media> DecoderImpl<media>::decode(PacketsPtr<media> packets) {
 // specialization for video.
 template <>
 VideoFramesPtr DecoderImpl<MediaType::Video>::decode(VideoPacketsPtr packets) {
-  auto ret = std::make_unique<VideoFrames>(packets->id, get_output_time_base());
-  auto gen = decode_packets(
-      codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
-
-  auto time_base = get_output_time_base();
-  AVRational start = {0, 1};
-  AVRational end = {0, 1};
-  bool has_timestamp = false;
-
+  auto tb = get_output_time_base();
+  AVRational s, e;
   if (packets->timestamp) {
-    auto [start_time, end_time] = *packets->timestamp;
-    start = av_d2q(start_time, AV_TIME_BASE);
-    end = av_d2q(end_time, AV_TIME_BASE);
-    has_timestamp = true;
+    std::tie(s, e) = *(packets->timestamp);
   }
 
+  auto ret = std::make_unique<VideoFrames>(packets->id, tb);
+  auto gen = decode_packets(
+      codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
   while (gen) {
     auto frame = gen().release();
-
-    if (has_timestamp && frame) {
-      auto frame_pts = AVRational{
-          static_cast<int>(frame->pts * time_base.num), time_base.den};
-
-      if (!is_within_window(frame_pts, start, end)) {
+    if (packets->timestamp && frame) {
+      if (!is_within_window(to_rational(frame->pts, tb), s, e)) {
         av_frame_free(&frame);
         continue;
       }

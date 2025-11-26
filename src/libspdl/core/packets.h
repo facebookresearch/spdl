@@ -87,7 +87,7 @@ struct Packets {
   PacketSeries pkts;
   Rational time_base{};
   // window timestamp specified by user
-  std::optional<std::tuple<double, double>> timestamp;
+  std::optional<TimeWindow> timestamp;
 
   // Code should be available only when it's demuxed by `demux_window`
   // method. When streaming demuxing, codec object must be fetched from
@@ -103,7 +103,7 @@ struct Packets {
       const std::string& src,
       int index,
       Codec<media>&& codec,
-      const std::optional<std::tuple<double, double>>& timestamp = {});
+      const std::optional<TimeWindow>& timestamp = {});
 
   // Constructing Packets from demuxer for streaming
   // No need for codec and time base, as decoder is initialized
@@ -115,7 +115,7 @@ struct Packets {
       const std::string& src,
       int index,
       const Rational& time_base,
-      const std::optional<std::tuple<double, double>>& timestamp = {});
+      const std::optional<TimeWindow>& timestamp = {});
 
   // Constructing Packets from encoder for muxing
   Packets(uintptr_t id, int stream_index, Rational time_base);

@@ -350,6 +350,8 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   }
   TRACE_EVENT("nvdec", "handle_display_picture");
 
+  // TODO: Use AVRational for comparison
+  //
   // LOG(INFO) << "Received display pictures.";
   // LOG(INFO) << print(disp_info);
   double ts = double(disp_info->timestamp) * timebase_.num / timebase_.den;
@@ -486,7 +488,9 @@ void NvDecDecoderCore::decode_packets(
   // Init the temporary state used by the decoder callback during the decoding
   this->frame_buffer_ = buffer;
   if (packets->timestamp) {
-    std::tie(start_time_, end_time_) = *(packets->timestamp);
+    auto [start_rational, end_rational] = *(packets->timestamp);
+    start_time_ = static_cast<double>(start_rational.num) / start_rational.den;
+    end_time_ = static_cast<double>(end_rational.num) / end_rational.den;
   } else {
     start_time_ = -std::numeric_limits<double>::infinity();
     end_time_ = std::numeric_limits<double>::infinity();

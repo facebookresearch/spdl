@@ -9,6 +9,7 @@
 #include "register_spdl_core_extensions.h"
 
 #include <libspdl/core/demuxing.h>
+#include <libspdl/core/utils.h>
 
 #include <fmt/core.h>
 
@@ -66,10 +67,22 @@ struct PyDemuxer {
 
   template <MediaType media>
   PacketsPtr<media> demux(
-      const std::optional<std::tuple<double, double>>& window,
+      const std::optional<std::tuple<
+          std::tuple<int64_t, int64_t>,
+          std::tuple<int64_t, int64_t>>>& window,
       const std::optional<std::string>& bsf) {
     nb::gil_scoped_release __g;
-    return demuxer->demux_window<media>(window, bsf);
+
+    // Convert from Python format ((num1, den1), (num2, den2)) to C++ AVRational
+    // format
+    std::optional<std::tuple<Rational, Rational>> cpp_window = std::nullopt;
+    if (window) {
+      cpp_window = std::make_tuple(
+          detail::make_rational(std::get<0>(*window)),
+          detail::make_rational(std::get<1>(*window)));
+    }
+
+    return demuxer->demux_window<media>(cpp_window, bsf);
   }
 
   PacketsPtr<MediaType::Image> demux_image(

@@ -42,6 +42,8 @@ import logging
 import threading
 import warnings
 from collections.abc import Iterator, Sequence
+from decimal import Decimal
+from fractions import Fraction
 from pathlib import Path
 from typing import Generic, overload, TYPE_CHECKING, TypeVar
 
@@ -100,6 +102,28 @@ T = TypeVar("T")
 
 _FILTER_DESC_DEFAULT = "__PLACEHOLDER__"
 
+# Type alias for timestamp values that can be float or fraction (as tuple or Fraction)
+TimeValue = float | Decimal | str | Fraction
+TimeWindow = tuple[TimeValue, TimeValue]
+
+
+def _convert_time_window(window: TimeWindow) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Convert a time window to AVRational pairs.
+
+    Args:
+        window: Time window with start and end values
+
+    Returns:
+        A tuple of two (numerator, denominator) pairs
+    """
+
+    def _(val: float | Decimal | str | Fraction) -> tuple[int, int]:
+        frac = Fraction(val)
+        return (frac.numerator, frac.denominator)
+
+    start, end = window
+    return (_(start), _(end))
+
 
 ################################################################################
 # Demuxing
@@ -127,37 +151,37 @@ class Demuxer:
             src = str(src)
         self._demuxer: _libspdl.Demuxer = _libspdl._demuxer(src, **kwargs)
 
-    def demux_audio(
-        self, window: tuple[float, float] | None = None, **kwargs
-    ) -> "AudioPackets":
+    def demux_audio(self, window: TimeWindow | None = None, **kwargs) -> "AudioPackets":
         """Demux audio from the source.
 
         Args:
-            timestamp:
-                A time window. If omitted, the entire audio are demuxed.
+            window:
+                A time window specifying start and end times.
+                If omitted, the entire audio is demuxed.
 
         Returns:
             Demuxed audio packets.
         """
         log_api_usage_once("spdl.io.Demuxer.demux_audio")
 
-        return self._demuxer.demux_audio(window=window, **kwargs)
+        window_ = _convert_time_window(window) if window is not None else None
+        return self._demuxer.demux_audio(window=window_, **kwargs)
 
-    def demux_video(
-        self, window: tuple[float, float] | None = None, **kwargs
-    ) -> "VideoPackets":
+    def demux_video(self, window: TimeWindow | None = None, **kwargs) -> "VideoPackets":
         """Demux video from the source.
 
         Args:
-            timestamp:
-                A time window. If omitted, the entire audio are demuxed.
+            window:
+                A time window specifying start and end times.
+                If omitted, the entire video is demuxed.
 
         Returns:
             Demuxed video packets.
         """
         log_api_usage_once("spdl.io.Demuxer.demux_video")
 
-        return self._demuxer.demux_video(window=window, **kwargs)
+        window_ = _convert_time_window(window) if window is not None else None
+        return self._demuxer.demux_video(window=window_, **kwargs)
 
     def demux_image(self, **kwargs) -> "ImagePackets":
         """Demux image from the source.
@@ -322,7 +346,7 @@ class _StreamingDemuxer:
 def demux_audio(
     src: "str | bytes | UintArray | Tensor",
     *,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     **kwargs,
 ) -> "AudioPackets":
     """Demux audio from the source.
@@ -342,7 +366,7 @@ def demux_audio(
 def demux_video(
     src: "SourceType",
     *,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     **kwargs,
 ) -> "VideoPackets":
     """Demux video from the source.
