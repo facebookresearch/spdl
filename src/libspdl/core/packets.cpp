@@ -8,6 +8,7 @@
 
 #include <libspdl/core/packets.h>
 
+#include <libspdl/core/rational_utils.h>
 #include <libspdl/core/utils.h>
 
 #include "libspdl/core/detail/ffmpeg/logging.h"
@@ -268,14 +269,12 @@ extract_packets_at_indices(
   // So we adjust the `indices` by shifting the number of frames before the
   // window.
   if (src->timestamp) {
-    // TODO: Compare using AVRational
-    double start = av_q2d(std::get<0>(*(src->timestamp)));
-
+    auto start = std::get<0>(*(src->timestamp));
     size_t offset = 0;
     auto tb = src->time_base;
     for (auto& packet : src_packets) {
-      auto pts = static_cast<double>(packet->pts) * tb.num / tb.den;
-      if (pts < start) {
+      auto pts = to_rational(packet->pts, tb);
+      if (av_cmp_q(pts, start) < 0) {
         offset += 1;
       }
     }
@@ -313,15 +312,15 @@ std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
   // When timestamp is not set, include all packets
   if (!packets.timestamp || raw) {
     for (const auto& pkt : pkts) {
-      AVRational pts = detail::to_rational(pkt->pts, packets.time_base);
+      AVRational pts = to_rational(pkt->pts, packets.time_base);
       ret.emplace_back(av_q2d(pts));
     }
   } else {
     // When timestamp is set, filter packets within the window
     auto [s, e] = *(packets.timestamp);
     for (const auto& pkt : pkts) {
-      AVRational pts = detail::to_rational(pkt->pts, packets.time_base);
-      if (detail::is_within_window(pts, s, e)) {
+      AVRational pts = to_rational(pkt->pts, packets.time_base);
+      if (is_within_window(pts, s, e)) {
         ret.emplace_back(av_q2d(pts));
       }
     }

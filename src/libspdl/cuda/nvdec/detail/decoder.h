@@ -9,6 +9,7 @@
 #pragma once
 
 #include <libspdl/core/packets.h>
+#include <libspdl/core/types.h>
 #include <libspdl/cuda/buffer.h>
 
 #include "libspdl/cuda/nvdec/detail/wrapper.h"
@@ -19,6 +20,7 @@
 #include <vector>
 
 namespace spdl::cuda::detail {
+using spdl::core::Rational;
 
 // NOTE
 // This class is designed to be used as thread local.
@@ -99,7 +101,7 @@ class NvDecDecoderCore {
   // Used as a reference point for the callback during the decoding.
   std::vector<CUDABuffer>* frame_buffer_;
   // The user-specified timestamp. Frames outside of this will be discarded.
-  double start_time_, end_time_;
+  std::optional<std::tuple<Rational, Rational>> time_window_ = std::nullopt;
   //---------------------------------------------------------------------------
 
  public:

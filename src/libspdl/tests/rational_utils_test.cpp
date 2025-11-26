@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <libspdl/core/utils.h>
+#include <libspdl/core/rational_utils.h>
 
 #include <gtest/gtest.h>
 
@@ -14,7 +14,7 @@ extern "C" {
 #include <libavutil/rational.h>
 }
 
-namespace spdl::core::detail {
+namespace spdl::core {
 namespace {
 
 TEST(RationalUtilsTest, IsWithinWindowBasic) {
@@ -141,4 +141,4 @@ TEST(RationalUtilsTest, ToRationalNegativeValue) {
 }
 
 } // namespace
-} // namespace spdl::core::detail
+} // namespace spdl::core

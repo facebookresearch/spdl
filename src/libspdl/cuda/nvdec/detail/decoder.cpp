@@ -8,6 +8,8 @@
 
 #include <libspdl/core/codec.h>
 
+#include <libspdl/core/rational_utils.h>
+
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
@@ -22,6 +24,10 @@
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLOCKRATE 1
+
+using spdl::core::is_within_window;
+using spdl::core::to_double;
+using spdl::core::to_rational;
 
 namespace spdl::cuda::detail {
 namespace {
@@ -350,17 +356,18 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   }
   TRACE_EVENT("nvdec", "handle_display_picture");
 
-  // TODO: Use AVRational for comparison
-  //
   // LOG(INFO) << "Received display pictures.";
   // LOG(INFO) << print(disp_info);
-  double ts = double(disp_info->timestamp) * timebase_.num / timebase_.den;
+  auto pts = to_rational(disp_info->timestamp, timebase_);
 
   VLOG(9) << fmt::format(
-      " --- Frame  PTS={:.3f} ({})", ts, disp_info->timestamp);
+      " --- Frame  PTS={:.3f} ({})", to_double(pts), disp_info->timestamp);
 
-  if (ts < start_time_ || end_time_ <= ts) {
-    return 1;
+  if (time_window_) {
+    auto [s, t] = *time_window_;
+    if (!is_within_window(pts, s, t)) {
+      return 1;
+    }
   }
 
   VLOG(9) << fmt::format(
@@ -487,14 +494,7 @@ void NvDecDecoderCore::decode_packets(
 
   // Init the temporary state used by the decoder callback during the decoding
   this->frame_buffer_ = buffer;
-  if (packets->timestamp) {
-    auto [start_rational, end_rational] = *(packets->timestamp);
-    start_time_ = static_cast<double>(start_rational.num) / start_rational.den;
-    end_time_ = static_cast<double>(end_rational.num) / end_rational.den;
-  } else {
-    start_time_ = -std::numeric_limits<double>::infinity();
-    end_time_ = std::numeric_limits<double>::infinity();
-  }
+  time_window_ = packets->timestamp;
 
   auto ite = packets->pkts.iter_data();
   unsigned long flags = CUVID_PKT_TIMESTAMP;

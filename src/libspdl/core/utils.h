@@ -11,7 +11,6 @@
 #include <libspdl/core/types.h>
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -64,23 +63,5 @@ template <typename Number>
 void trace_counter(int i, Number counter);
 void trace_event_begin(const std::string& name);
 void trace_event_end();
-
-//////////////////////////////////////////////////////////////////////////////////
-// Non-user facing utilities
-//////////////////////////////////////////////////////////////////////////////////
-namespace detail {
-
-// Check if a given AVRational value falls within a specified window [start,
-// end). Returns true if start <= val < end (half-open interval).
-bool is_within_window(
-    const AVRational& val,
-    const AVRational& start,
-    const AVRational& end);
-
-AVRational to_rational(int64_t val, const AVRational time_base);
-
-Rational make_rational(const std::tuple<int64_t, int64_t>& val);
-
-} // namespace detail
 
 } // namespace spdl::core

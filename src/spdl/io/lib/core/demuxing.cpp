@@ -9,7 +9,7 @@
 #include "register_spdl_core_extensions.h"
 
 #include <libspdl/core/demuxing.h>
-#include <libspdl/core/utils.h>
+#include <libspdl/core/rational_utils.h>
 
 #include <fmt/core.h>
 
@@ -75,14 +75,13 @@ struct PyDemuxer {
 
     // Convert from Python format ((num1, den1), (num2, den2)) to C++ AVRational
     // format
-    std::optional<std::tuple<Rational, Rational>> cpp_window = std::nullopt;
+    std::optional<std::tuple<Rational, Rational>> w = std::nullopt;
     if (window) {
-      cpp_window = std::make_tuple(
-          detail::make_rational(std::get<0>(*window)),
-          detail::make_rational(std::get<1>(*window)));
+      w = std::make_tuple(
+          make_rational(std::get<0>(*window)),
+          make_rational(std::get<1>(*window)));
     }
-
-    return demuxer->demux_window<media>(cpp_window, bsf);
+    return demuxer->demux_window<media>(w, bsf);
   }
 
   PacketsPtr<MediaType::Image> demux_image(
@@ -183,7 +182,7 @@ void register_demuxing(nb::module_& m) {
           "time_base",
           [](AudioCodec& self) -> std::tuple<int, int> {
             auto base = self.get_time_base();
-            return {base.num, base.den};
+            return std::tuple<int, int>{base.num, base.den};
           },
           nb::call_guard<nb::gil_scoped_release>(),
           "The internal unit of time used for timestamp.\n\n"
@@ -226,7 +225,7 @@ void register_demuxing(nb::module_& m) {
           "frame_rate",
           [](VideoCodec& self) -> std::tuple<int, int> {
             auto rate = self.get_frame_rate();
-            return {rate.num, rate.den};
+            return std::tuple<int, int>{rate.num, rate.den};
           },
           nb::call_guard<nb::gil_scoped_release>(),
           "The frame rate of the video.\n\n"
@@ -235,7 +234,7 @@ void register_demuxing(nb::module_& m) {
           "time_base",
           [](VideoCodec& self) -> std::tuple<int, int> {
             auto base = self.get_time_base();
-            return {base.num, base.den};
+            return std::tuple<int, int>{base.num, base.den};
           },
           nb::call_guard<nb::gil_scoped_release>(),
           "The internal unit of time used for timestamp.\n\n"
@@ -244,7 +243,7 @@ void register_demuxing(nb::module_& m) {
           "sample_aspect_ratio",
           [](VideoCodec& self) -> std::tuple<int, int> {
             auto r = self.get_sample_aspect_ratio();
-            return {r.num, r.den};
+            return std::tuple<int, int>{r.num, r.den};
           },
           nb::call_guard<nb::gil_scoped_release>(),
           "The aspect ratio of a single pixel.\n\n"
@@ -277,7 +276,7 @@ void register_demuxing(nb::module_& m) {
           "time_base",
           [](ImageCodec& self) -> std::tuple<int, int> {
             auto base = self.get_time_base();
-            return {base.num, base.den};
+            return std::tuple<int, int>{base.num, base.den};
           },
           nb::call_guard<nb::gil_scoped_release>(),
           "The internal unit of time used for timestamp.\n\n"
@@ -288,7 +287,7 @@ void register_demuxing(nb::module_& m) {
           "sample_aspect_ratio",
           [](ImageCodec& self) -> std::tuple<int, int> {
             auto r = self.get_sample_aspect_ratio();
-            return {r.num, r.den};
+            return std::tuple<int, int>{r.num, r.den};
           },
           nb::call_guard<nb::gil_scoped_release>(),
           "The aspect ratio of a single pixel.\n\n"
