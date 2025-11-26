@@ -644,6 +644,17 @@ def decode_packets(
 
     Returns:
         Frames object.
+
+    Note:
+        The decoder thread configuration can significantly affect video decoding
+        performance. By default, SPDL uses a single thread for decoding. You can
+        customize this via ``decode_config`` using
+        ``decoder_options={"threads": "X"}``, where ``X`` is the number of threads
+        (or ``"0"`` to let FFmpeg choose automatically).
+
+        The optimal configuration depends on your workload's characteristics.
+        For benchmarking different thread configurations, see
+        :doc:`../examples/benchmark_video`.
     """
 
     if filter_desc is not None:

@@ -53,6 +53,7 @@ from functools import partial
 from typing import Any, Generic, TypeVar
 
 import numpy as np
+import psutil
 import scipy.stats
 
 T = TypeVar("T")
@@ -93,6 +94,9 @@ class BenchmarkResult(Generic[ConfigT]):
 
     free_threaded: bool
     """Whether Python is running with free-threaded ABI."""
+
+    cpu_percent: float
+    """Average CPU utilization percentage during benchmark execution."""
 
 
 class ExecutorType(Enum):
@@ -253,8 +257,8 @@ class BenchmarkRunner:
         func: Callable[[], T],
         iterations: int,
         num_runs: int,
-    ) -> tuple[list[float], T]:
-        """Run benchmark iterations and collect QPS samples.
+    ) -> tuple[list[float], list[float], T]:
+        """Run benchmark iterations and collect QPS and CPU utilization samples.
 
         Args:
             func: Function to benchmark (takes no arguments)
@@ -262,20 +266,26 @@ class BenchmarkRunner:
             num_runs: Number of benchmark runs
 
         Returns:
-            Tuple of (list of QPS samples from each run, last function output)
+            Tuple of (list of QPS samples, list of CPU percent samples, last function output)
         """
         qps_samples: list[float] = []
+        cpu_samples: list[float] = []
         last_output: T | None = None
 
+        process = psutil.Process()
+
         for _ in range(num_runs):
+            process.cpu_percent()
             t0 = time.perf_counter()
             futures = [self._executor.submit(func) for _ in range(iterations)]
             for future in as_completed(futures):
                 last_output = future.result()
             elapsed = time.perf_counter() - t0
+            cpu_percent = process.cpu_percent()
             qps_samples.append(iterations / elapsed)
+            cpu_samples.append(cpu_percent / iterations)
 
-        return qps_samples, last_output  # pyre-ignore[7]
+        return qps_samples, cpu_samples, last_output  # pyre-ignore[7]
 
     def run(
         self,
@@ -298,7 +308,9 @@ class BenchmarkRunner:
         Returns:
             Tuple of (``BenchmarkResult``, last output from function)
         """
-        qps_samples, last_output = self._run_iterations(func, iterations, num_runs)
+        qps_samples, cpu_samples, last_output = self._run_iterations(
+            func, iterations, num_runs
+        )
 
         qps_mean = np.mean(qps_samples)
         qps_std = np.std(qps_samples, ddof=1)
@@ -309,6 +321,8 @@ class BenchmarkRunner:
             loc=qps_mean,
             scale=qps_std / np.sqrt(num_runs),
         )
+
+        cpu_mean = np.mean(cpu_samples)
 
         python_version, free_threaded = _get_python_info()
         date = datetime.now(timezone.utc).isoformat()
@@ -322,6 +336,7 @@ class BenchmarkRunner:
             date=date,
             python_version=python_version,
             free_threaded=free_threaded,
+            cpu_percent=float(cpu_mean),
         )
 
         return result, last_output
@@ -372,6 +387,7 @@ def save_results_to_csv(
             "qps": result.qps,
             "ci_lower": result.ci_lower,
             "ci_upper": result.ci_upper,
+            "cpu_percent": result.cpu_percent,
         }
         flattened_results.append(flattened)
 
@@ -434,6 +450,7 @@ def load_results_from_csv(
         "date",
         "python_version",
         "free_threaded",
+        "cpu_percent",
     }
 
     results: list[BenchmarkResult[ConfigT]] = []
@@ -488,6 +505,7 @@ def load_results_from_csv(
                 python_version=result_dict["python_version"],
                 free_threaded=result_dict["free_threaded"].lower()
                 in ("true", "1", "yes"),
+                cpu_percent=float(result_dict.get("cpu_percent", 0.0)),
             )
 
             results.append(result)
