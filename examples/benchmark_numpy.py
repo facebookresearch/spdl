@@ -10,6 +10,15 @@
 See `Case Studies / Data Format <../case_studies/data_format.html>`_ for
 the detail of how data format and the loading function affects
 the performance of the training pipeline.
+
+**Example**
+
+.. code-block:: shell
+
+   $ numactl --membind 0 --cpubind 0 python benchmark_numpy.py --output results.csv
+   # Plot results
+   $ python benchmark_numpy_plot.py --input results.csv --output plot.png
+
 """
 
 __all__ = [
@@ -153,12 +162,21 @@ def get_mock_data(format: str, compressed: bool = False) -> tuple[bytes, bytes] 
 
 @dataclass
 class BenchmarkConfig:
-    """Configuration for a single benchmark run."""
+    """BenchmarkConfig()
+
+    Configuration for a single benchmark run."""
 
     data_format: str
+    """Data format (``"npy"``, ``"npz"``, or ``"torch"``)"""
+
     compressed: bool
+    """Whether NPZ file is compressed"""
+
     impl: str
+    """Implementation (``"np"``, ``"spdl"``, or ``"torch"``)"""
+
     num_workers: int
+    """Number of concurrent workers"""
 
 
 def _parse_args() -> argparse.Namespace:
