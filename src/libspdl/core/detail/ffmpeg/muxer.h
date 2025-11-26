@@ -20,7 +20,7 @@
 namespace spdl::core::detail {
 
 class MuxerImpl {
-  AVFormatOutputContextPtr fmt_ctx;
+  AVFormatOutputContextPtr fmt_ctx_;
 
  public:
   MuxerImpl(const std::string& uri, const std::optional<std::string>& format);

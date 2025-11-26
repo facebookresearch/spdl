@@ -21,8 +21,8 @@ class MuxerImpl;
 } // namespace detail
 
 class Muxer {
-  detail::MuxerImpl* pImpl;
-  std::vector<MediaType> types;
+  detail::MuxerImpl* pImpl_;
+  std::vector<MediaType> types_;
 
  public:
   Muxer(const std::string& uri, const std::optional<std::string>& muxer);

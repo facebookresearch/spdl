@@ -35,14 +35,14 @@ namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media>
 Frames<media>::Frames(uintptr_t id_, Rational time_base_)
-    : id(id_), time_base(time_base_) {
-  TRACE_EVENT("decoding", "Frames::Frames", perfetto::Flow::ProcessScoped(id));
-  if (time_base.den == 0) {
+    : id_(id_), time_base_(time_base_) {
+  TRACE_EVENT("decoding", "Frames::Frames", perfetto::Flow::ProcessScoped(id_));
+  if (time_base_.den == 0) {
     SPDL_FAIL(
         fmt::format(
             "Invalid time base was provided. {}/{}",
-            time_base.num,
-            time_base.den));
+            time_base_.num,
+            time_base_.den));
   }
 }
 
@@ -54,15 +54,16 @@ Frames<media>::Frames(Frames&& other) noexcept {
 template <MediaType media>
 Frames<media>& Frames<media>::operator=(Frames<media>&& other) noexcept {
   using std::swap;
-  swap(id, other.id);
-  swap(frames, other.frames);
+  swap(id_, other.id_);
+  swap(frames_, other.frames_);
   return *this;
 }
 
 template <MediaType media>
 Frames<media>::~Frames() {
-  TRACE_EVENT("decoding", "Frames::~Frames", perfetto::Flow::ProcessScoped(id));
-  std::for_each(frames.begin(), frames.end(), [](AVFrame* p) {
+  TRACE_EVENT(
+      "decoding", "Frames::~Frames", perfetto::Flow::ProcessScoped(id_));
+  std::for_each(frames_.begin(), frames_.end(), [](AVFrame* p) {
     DEBUG_PRINT_AVFRAME_REFCOUNT(p);
     av_frame_unref(p);
     av_frame_free(&p);
@@ -71,31 +72,31 @@ Frames<media>::~Frames() {
 
 template <MediaType media>
 uint64_t Frames<media>::get_id() const {
-  return id;
+  return id_;
 }
 
 template <MediaType media>
 void Frames<media>::push_back(AVFrame* frame) {
   if constexpr (media == MediaType::Image) {
-    if (frames.size() > 0) {
+    if (frames_.size() > 0) {
       SPDL_FAIL_INTERNAL("Attempted to store multiple frames to ImageFrames");
     }
   }
-  frames.push_back(frame);
+  frames_.push_back(frame);
 }
 
 template <MediaType media>
 int64_t Frames<media>::get_pts(size_t index) const {
-  if (auto num_frames = frames.size(); index >= num_frames) {
+  if (auto num_frames = frames_.size(); index >= num_frames) {
     throw std::out_of_range(
         fmt::format("{} is out of range [0, {})", index, num_frames));
   }
-  return frames.at(index)->pts;
+  return frames_.at(index)->pts;
 }
 
 template <MediaType media>
 double Frames<media>::get_timestamp(size_t index) const {
-  return av_q2d(detail::to_rational(get_pts(index), time_base));
+  return av_q2d(detail::to_rational(get_pts(index), time_base_));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,42 +105,42 @@ double Frames<media>::get_timestamp(size_t index) const {
 
 template <MediaType media>
 const char* Frames<media>::get_media_format_name() const {
-  if (frames.size() == 0) {
+  if (frames_.size() == 0) {
     return "n/a";
   }
-  return detail::get_media_format_name<media>(frames[0]->format);
+  return detail::get_media_format_name<media>(frames_[0]->format);
 }
 
 template <MediaType media>
 OptionDict Frames<media>::get_metadata() const {
-  if (frames.size() == 0) {
+  if (frames_.size() == 0) {
     return {};
   }
-  return detail::parse_dict(frames[0]->metadata);
+  return detail::parse_dict(frames_[0]->metadata);
 }
 
 template <MediaType media>
 int Frames<media>::get_num_frames() const {
   if constexpr (_IS_AUDIO) {
     int ret = 0;
-    for (auto& f : frames) {
+    for (auto& f : frames_) {
       ret += f->nb_samples;
     }
     return ret;
   } else {
-    return (int)frames.size();
+    return (int)frames_.size();
   }
 }
 
 template <MediaType media>
 const std::vector<AVFrame*>& Frames<media>::get_frames() const {
-  return frames;
+  return frames_;
 }
 
 template <MediaType media>
 FramesPtr<media> Frames<media>::clone() const {
-  auto other = std::make_unique<Frames<media>>(id, time_base);
-  for (const AVFrame* f : frames) {
+  auto other = std::make_unique<Frames<media>>(id_, time_base_);
+  for (const AVFrame* f : frames_) {
     other->push_back(CHECK_AVALLOCATE(av_frame_clone(f)));
   }
   return other;
@@ -147,7 +148,7 @@ FramesPtr<media> Frames<media>::clone() const {
 
 template <MediaType media>
 Rational Frames<media>::get_time_base() const {
-  return time_base;
+  return time_base_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -157,14 +158,14 @@ template <MediaType media>
 int Frames<media>::get_sample_rate() const
   requires _IS_AUDIO
 {
-  return frames.size() ? frames[0]->sample_rate : -1;
+  return frames_.size() ? frames_[0]->sample_rate : -1;
 }
 
 template <MediaType media>
 int Frames<media>::get_num_channels() const
   requires _IS_AUDIO
 {
-  return frames.size() ? GET_NUM_CHANNELS(frames[0]) : -1;
+  return frames_.size() ? GET_NUM_CHANNELS(frames_[0]) : -1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -174,8 +175,8 @@ template <MediaType media>
 int Frames<media>::get_num_planes() const
   requires(_IS_IMAGE || _IS_VIDEO)
 {
-  return frames.size()
-      ? av_pix_fmt_count_planes((AVPixelFormat)frames[0]->format)
+  return frames_.size()
+      ? av_pix_fmt_count_planes((AVPixelFormat)frames_[0]->format)
       : -1;
 }
 
@@ -183,14 +184,14 @@ template <MediaType media>
 int Frames<media>::get_width() const
   requires(_IS_IMAGE || _IS_VIDEO)
 {
-  return frames.size() ? frames[0]->width : -1;
+  return frames_.size() ? frames_[0]->width : -1;
 }
 
 template <MediaType media>
 int Frames<media>::get_height() const
   requires(_IS_IMAGE || _IS_VIDEO)
 {
-  return frames.size() ? frames[0]->height : -1;
+  return frames_.size() ? frames_[0]->height : -1;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -237,17 +238,17 @@ template <MediaType media>
 VideoFramesPtr Frames<media>::slice(int start, int stop, int step) const
   requires _IS_VIDEO
 {
-  const auto numel = (int)frames.size();
+  const auto numel = (int)frames_.size();
   int len = adjust_indices(numel, &start, &stop, step);
 
-  auto out = std::make_unique<VideoFrames>(id, time_base);
+  auto out = std::make_unique<VideoFrames>(id_, time_base_);
   if (!len) {
     return out;
   }
 
   for (int i = start; i < stop; i += step) {
     assert(0 <= i && i < numel);
-    out->frames.push_back(detail::make_reference(frames.at(i)));
+    out->frames_.push_back(detail::make_reference(frames_.at(i)));
   }
   return out;
 }
@@ -256,14 +257,14 @@ template <MediaType media>
 VideoFramesPtr Frames<media>::slice(const std::vector<int64_t>& index) const
   requires _IS_VIDEO
 {
-  const auto numel = (int)frames.size();
+  const auto numel = (int)frames_.size();
   for (const auto& i : index) {
     if (i >= numel || i < -numel) {
       throw std::out_of_range(
-          fmt::format("Index {} is outside of [0, {})", i, frames.size()));
+          fmt::format("Index {} is outside of [0, {})", i, frames_.size()));
     }
   }
-  auto out = std::make_unique<VideoFrames>(id, time_base);
+  auto out = std::make_unique<VideoFrames>(id_, time_base_);
   if (!index.size()) {
     return out;
   }
@@ -271,7 +272,7 @@ VideoFramesPtr Frames<media>::slice(const std::vector<int64_t>& index) const
     if (i < 0) {
       i += numel;
     }
-    out->frames.push_back(detail::make_reference(frames.at(i)));
+    out->frames_.push_back(detail::make_reference(frames_.at(i)));
   }
   return out;
 }
@@ -280,7 +281,7 @@ template <MediaType media>
 ImageFramesPtr Frames<media>::slice(int64_t i) const
   requires _IS_VIDEO
 {
-  const auto numel = (int)frames.size();
+  const auto numel = (int)frames_.size();
   if (i >= numel || i < -numel) {
     throw std::out_of_range(
         fmt::format("Index {} is outside of [0, {})", i, numel));
@@ -289,8 +290,8 @@ ImageFramesPtr Frames<media>::slice(int64_t i) const
     i += numel;
   }
   assert(0 <= i && i < numel);
-  auto out = std::make_unique<Frames<MediaType::Image>>(id, time_base);
-  out->push_back(detail::make_reference(frames.at(i)));
+  auto out = std::make_unique<Frames<MediaType::Image>>(id_, time_base_);
+  out->push_back(detail::make_reference(frames_.at(i)));
   return out;
 }
 

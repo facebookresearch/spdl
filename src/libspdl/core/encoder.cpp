@@ -13,17 +13,17 @@
 namespace spdl::core {
 
 template <MediaType media>
-Encoder<media>::Encoder(detail::EncoderImpl<media>* p) : pImpl(p) {}
+Encoder<media>::Encoder(detail::EncoderImpl<media>* p) : pImpl_(p) {}
 
 template <MediaType media>
 Encoder<media>::~Encoder() {
-  delete pImpl;
+  delete pImpl_;
 }
 
 template <MediaType media>
 std::optional<PacketsPtr<media>> Encoder<media>::encode(
     const FramesPtr<media>&& frames) {
-  auto packets = pImpl->encode(std::move(frames));
+  auto packets = pImpl_->encode(std::move(frames));
   if (packets->pkts.get_packets().size() == 0) {
     return std::nullopt;
   }
@@ -32,7 +32,7 @@ std::optional<PacketsPtr<media>> Encoder<media>::encode(
 
 template <MediaType media>
 std::optional<PacketsPtr<media>> Encoder<media>::flush() {
-  auto packets = pImpl->flush();
+  auto packets = pImpl_->flush();
   if (packets->pkts.get_packets().size() == 0) {
     return std::nullopt;
   }
@@ -43,7 +43,7 @@ template <MediaType media>
 int Encoder<media>::get_frame_size() const
   requires(media == MediaType::Audio)
 {
-  return pImpl->get_frame_size();
+  return pImpl_->get_frame_size();
 }
 
 template class Encoder<MediaType::Audio>;

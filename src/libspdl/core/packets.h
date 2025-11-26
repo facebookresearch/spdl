@@ -56,7 +56,7 @@ class PacketSeries {
   friend struct Packets<MediaType::Video>;
   friend struct Packets<MediaType::Image>;
 
-  std::vector<AVPacket*> container = {};
+  std::vector<AVPacket*> container_ = {};
 
  public:
   PacketSeries();

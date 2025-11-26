@@ -129,19 +129,19 @@ DecoderImpl<media>::DecoderImpl(
     const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc)
-    : codec_ctx(get_decode_codec_ctx_ptr(
+    : codec_ctx_(get_decode_codec_ctx_ptr(
           codec.get_parameters(),
           codec.get_time_base(),
           cfg ? cfg->decoder : std::nullopt,
           cfg ? cfg->decoder_options : std::nullopt)),
-      filter_graph(filter_desc) {}
+      filter_graph_(filter_desc) {}
 
 template <MediaType media>
 Rational DecoderImpl<media>::get_output_time_base() const {
-  if (filter_graph) {
-    return filter_graph->get_sink_time_base();
+  if (filter_graph_) {
+    return filter_graph_->get_sink_time_base();
   }
-  return {codec_ctx->time_base.num, codec_ctx->time_base.den};
+  return {codec_ctx_->time_base.num, codec_ctx_->time_base.den};
 }
 
 // For audio and image.
@@ -155,7 +155,7 @@ FramesPtr<media> DecoderImpl<media>::decode_and_flush(
   auto ret =
       std::make_unique<Frames<media>>(packets->id, get_output_time_base());
   auto gen = decode_packets(
-      codec_ctx, packets->pkts.get_packets(), filter_graph, true);
+      codec_ctx_, packets->pkts.get_packets(), filter_graph_, true);
   int num_yielded = 0;
   while (gen) {
     ret->push_back(gen().release());
@@ -191,7 +191,7 @@ VideoFramesPtr DecoderImpl<MediaType::Video>::decode_and_flush(
 
   auto ret = std::make_unique<VideoFrames>(packets->id, time_base);
   auto gen = decode_packets(
-      codec_ctx, packets->pkts.get_packets(), filter_graph, true);
+      codec_ctx_, packets->pkts.get_packets(), filter_graph_, true);
   int num_yielded = 0;
   while (gen) {
     // For video, we manualy apply timestamps.
@@ -221,7 +221,7 @@ FramesPtr<media> DecoderImpl<media>::decode(PacketsPtr<media> packets) {
   auto ret =
       std::make_unique<Frames<media>>(packets->id, get_output_time_base());
   auto gen = decode_packets(
-      codec_ctx, packets->pkts.get_packets(), filter_graph, false);
+      codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
   while (gen) {
     ret->push_back(gen().release());
   }
@@ -237,7 +237,7 @@ template <>
 VideoFramesPtr DecoderImpl<MediaType::Video>::decode(VideoPacketsPtr packets) {
   auto ret = std::make_unique<VideoFrames>(packets->id, get_output_time_base());
   auto gen = decode_packets(
-      codec_ctx, packets->pkts.get_packets(), filter_graph, false);
+      codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
 
   auto time_base = get_output_time_base();
   AVRational start = {0, 1};
@@ -274,7 +274,7 @@ FramesPtr<media> DecoderImpl<media>::flush() {
   auto ret = std::make_unique<Frames<media>>(
       reinterpret_cast<uintptr_t>(this), get_output_time_base());
   std::vector<AVPacket*> dummy{};
-  auto gen = decode_packets(codec_ctx, dummy, filter_graph, true);
+  auto gen = decode_packets(codec_ctx_, dummy, filter_graph_, true);
   while (gen) {
     ret->push_back(gen().release());
   }

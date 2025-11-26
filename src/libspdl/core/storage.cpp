@@ -31,7 +31,7 @@ CPUStorage::CPUStorage(
     allocator_type alloc,
     deallocator_type dealloc,
     bool pin_memory)
-    : deallocator(dealloc), size(s), memory_pinned(pin_memory) {
+    : deallocator_(dealloc), size(s), memory_pinned_(pin_memory) {
   TRACE_EVENT(
       "decoding",
       "CPUStorage::CPUStorage",
@@ -46,12 +46,12 @@ CPUStorage::CPUStorage(CPUStorage&& other) noexcept {
   *this = std::move(other);
 }
 bool CPUStorage::is_pinned() const {
-  return memory_pinned;
+  return memory_pinned_;
 }
 CPUStorage& CPUStorage::operator=(CPUStorage&& other) noexcept {
   using std::swap;
   swap(data_, other.data_);
-  swap(deallocator, other.deallocator);
+  swap(deallocator_, other.deallocator_);
   return *this;
 }
 CPUStorage::~CPUStorage() {
@@ -60,7 +60,7 @@ CPUStorage::~CPUStorage() {
         "decoding",
         "CPUStorage::~CPUStorage",
         perfetto::Flow::ProcessScoped(reinterpret_cast<uintptr_t>(this)));
-    deallocator(data_);
+    deallocator_(data_);
   }
 }
 

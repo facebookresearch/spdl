@@ -16,10 +16,10 @@
 namespace spdl::core {
 
 Muxer::Muxer(const std::string& uri, const std::optional<std::string>& muxer)
-    : pImpl(new detail::MuxerImpl(uri, muxer)) {}
+    : pImpl_(new detail::MuxerImpl(uri, muxer)) {}
 
 Muxer::~Muxer() {
-  delete pImpl;
+  delete pImpl_;
 }
 
 template <MediaType media>
@@ -27,8 +27,8 @@ EncoderPtr<media> Muxer::add_encode_stream(
     const EncodeConfigBase<media>& codec_config,
     const std::optional<std::string>& encoder,
     const std::optional<OptionDict>& encoder_config) {
-  auto p = pImpl->add_encode_stream(codec_config, encoder, encoder_config);
-  types.push_back(media);
+  auto p = pImpl_->add_encode_stream(codec_config, encoder, encoder_config);
+  types_.push_back(media);
   return std::make_unique<Encoder<media>>(p.release());
 }
 
@@ -43,15 +43,15 @@ template VideoEncoderPtr Muxer::add_encode_stream(
 
 template <MediaType media>
 void Muxer::add_remux_stream(const Codec<media>& codec) {
-  pImpl->add_remux_stream(codec);
-  types.push_back(media);
+  pImpl_->add_remux_stream(codec);
+  types_.push_back(media);
 }
 
 template void Muxer::add_remux_stream(const AudioCodec& codec);
 template void Muxer::add_remux_stream(const VideoCodec& codec);
 
 void Muxer::open(const std::optional<OptionDict>& muxer_config) {
-  pImpl->open(muxer_config);
+  pImpl_->open(muxer_config);
 }
 
 namespace {
@@ -71,29 +71,30 @@ std::string to_str(MediaType media) {
 
 template <MediaType media>
 void Muxer::write(int i, Packets<media>& packets) {
-  if (i < 0 || i >= (int)types.size()) {
-    SPDL_FAIL(fmt::format("Index {} is out of range (0, {}]", i, types.size()));
+  if (i < 0 || i >= (int)types_.size()) {
+    SPDL_FAIL(
+        fmt::format("Index {} is out of range (0, {}]", i, types_.size()));
   }
-  if (types.at(i) != media) {
+  if (types_.at(i) != media) {
     SPDL_FAIL(
         fmt::format(
             "Stream {} expects {} type, but {} type was provided.",
             i,
-            to_str(types.at(i)),
+            to_str(types_.at(i)),
             to_str(media)));
   }
-  pImpl->write(i, packets.pkts.get_packets(), packets.time_base);
+  pImpl_->write(i, packets.pkts.get_packets(), packets.time_base);
 }
 
 template void Muxer::write<MediaType::Audio>(int, Packets<MediaType::Audio>&);
 template void Muxer::write<MediaType::Video>(int, Packets<MediaType::Video>&);
 
 void Muxer::flush() {
-  pImpl->flush();
+  pImpl_->flush();
 }
 
 void Muxer::close() {
-  pImpl->close();
+  pImpl_->close();
 }
 
 } // namespace spdl::core

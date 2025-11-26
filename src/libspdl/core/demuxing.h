@@ -28,7 +28,7 @@ class DemuxerImpl;
 // StreamingDemuxer
 ////////////////////////////////////////////////////////////////////////////////
 class StreamingDemuxer {
-  Generator<std::map<int, AnyPackets>> gen;
+  Generator<std::map<int, AnyPackets>> gen_;
 
  public:
   StreamingDemuxer(
@@ -47,7 +47,7 @@ using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer>;
 ////////////////////////////////////////////////////////////////////////////////
 
 class Demuxer {
-  detail::DemuxerImpl* pImpl;
+  detail::DemuxerImpl* pImpl_;
 
  public:
   explicit Demuxer(DataInterfacePtr di);

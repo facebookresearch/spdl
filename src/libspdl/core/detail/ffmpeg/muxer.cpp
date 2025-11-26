@@ -26,7 +26,7 @@ namespace {} // namespace
 MuxerImpl::MuxerImpl(
     const std::string& uri,
     const std::optional<std::string>& format)
-    : fmt_ctx(get_output_format_ctx(uri, format)) {}
+    : fmt_ctx_(get_output_format_ctx(uri, format)) {}
 
 namespace {
 template <MediaType media>
@@ -98,15 +98,15 @@ const AVCodec* get_codec(
 template <MediaType media>
 void MuxerImpl::assert_media_is_supported() const {
   if constexpr (media == MediaType::Audio) {
-    if (fmt_ctx->oformat->audio_codec == AV_CODEC_ID_NONE) [[unlikely]] {
+    if (fmt_ctx_->oformat->audio_codec == AV_CODEC_ID_NONE) [[unlikely]] {
       SPDL_FAIL(
-          fmt::format("`{}` does not support audio.", fmt_ctx->oformat->name));
+          fmt::format("`{}` does not support audio.", fmt_ctx_->oformat->name));
     }
   }
   if constexpr (media == MediaType::Video) {
-    if (fmt_ctx->oformat->video_codec == AV_CODEC_ID_NONE) [[unlikely]] {
+    if (fmt_ctx_->oformat->video_codec == AV_CODEC_ID_NONE) [[unlikely]] {
       SPDL_FAIL(
-          fmt::format("`{}` does not support video.", fmt_ctx->oformat->name));
+          fmt::format("`{}` does not support video.", fmt_ctx_->oformat->name));
     }
   }
 }
@@ -118,16 +118,16 @@ EncoderImplPtr<media> MuxerImpl::add_encode_stream(
     const std::optional<OptionDict>& encoder_config) {
   assert_media_is_supported<media>();
 
-  const AVCodec* codec = get_codec<media>(fmt_ctx.get(), encoder_name);
+  const AVCodec* codec = get_codec<media>(fmt_ctx_.get(), encoder_name);
   auto ret = make_encoder(
       codec,
       codec_config,
       encoder_config,
-      fmt_ctx->nb_streams,
-      fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER);
+      fmt_ctx_->nb_streams,
+      fmt_ctx_->oformat->flags & AVFMT_GLOBALHEADER);
 
   // Register the stream
-  AVStream* s = CHECK_AVALLOCATE(avformat_new_stream(fmt_ctx.get(), nullptr));
+  AVStream* s = CHECK_AVALLOCATE(avformat_new_stream(fmt_ctx_.get(), nullptr));
 
   // Note: time base may be adjusted when `calling avformat_write_header()`
   // https://ffmpeg.org/doxygen/5.1/structAVStream.html#a9db755451f14e2bf590d4b85d82b32e6
@@ -151,7 +151,7 @@ template <MediaType media>
 void MuxerImpl::add_remux_stream(const Codec<media>& codec) {
   assert_media_is_supported<media>();
 
-  AVStream* s = CHECK_AVALLOCATE(avformat_new_stream(fmt_ctx.get(), nullptr));
+  AVStream* s = CHECK_AVALLOCATE(avformat_new_stream(fmt_ctx_.get(), nullptr));
   s->time_base = codec.get_time_base();
   CHECK_AVERROR(
       avcodec_parameters_copy(s->codecpar, codec.get_parameters()),
@@ -162,44 +162,44 @@ template void MuxerImpl::add_remux_stream(const AudioCodec& codec);
 template void MuxerImpl::add_remux_stream(const VideoCodec& codec);
 
 void MuxerImpl::open(const std::optional<OptionDict>& muxer_config) {
-  open_format(fmt_ctx.get(), muxer_config);
+  open_format(fmt_ctx_.get(), muxer_config);
 }
 
 void MuxerImpl::write(
     int i,
     const std::vector<AVPacket*>& packets,
     AVRational time_base) {
-  if (i < 0 || (int)fmt_ctx->nb_streams <= i) {
+  if (i < 0 || (int)fmt_ctx_->nb_streams <= i) {
     SPDL_FAIL(
         fmt::format(
             "The stream index ({}) is out of bound. (0, {}]",
             i,
-            fmt_ctx->nb_streams));
+            fmt_ctx_->nb_streams));
   }
-  AVStream* s = fmt_ctx->streams[i];
+  AVStream* s = fmt_ctx_->streams[i];
   for (auto* p : packets) {
     av_packet_rescale_ts(p, time_base, s->time_base);
     p->stream_index = s->index;
     CHECK_AVERROR(
-        av_interleaved_write_frame(fmt_ctx.get(), p),
+        av_interleaved_write_frame(fmt_ctx_.get(), p),
         "Failed to write a packet.")
   }
 }
 
 void MuxerImpl::flush() {
   CHECK_AVERROR(
-      av_interleaved_write_frame(fmt_ctx.get(), nullptr), "Failed to flush.")
+      av_interleaved_write_frame(fmt_ctx_.get(), nullptr), "Failed to flush.")
 }
 
 void MuxerImpl::close() {
-  CHECK_AVERROR(av_write_trailer(fmt_ctx.get()), "Failed to write trailer.")
+  CHECK_AVERROR(av_write_trailer(fmt_ctx_.get()), "Failed to write trailer.")
   // Close the file if it was not provided by client code (i.e. when not
   // file-like object)
-  AVFORMAT_CONST AVOutputFormat* fmt = fmt_ctx->oformat;
+  AVFORMAT_CONST AVOutputFormat* fmt = fmt_ctx_->oformat;
   if (!(fmt->flags & AVFMT_NOFILE) &&
-      !(fmt_ctx->flags & AVFMT_FLAG_CUSTOM_IO)) {
+      !(fmt_ctx_->flags & AVFMT_FLAG_CUSTOM_IO)) {
     // avio_closep can be only applied to AVIOContext opened by avio_open
-    avio_closep(&(fmt_ctx->pb));
+    avio_closep(&(fmt_ctx_->pb));
   }
 }
 

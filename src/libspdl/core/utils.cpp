@@ -101,17 +101,17 @@ void init_glog(const char* name) {
 ////////////////////////////////////////////////////////////////////////////////
 // Tracing
 ////////////////////////////////////////////////////////////////////////////////
-TracingSession::TracingSession(void* s) : sess(s) {}
+TracingSession::TracingSession(void* s) : sess_(s) {}
 TracingSession::TracingSession(TracingSession&& other) noexcept {
   *this = std::move(other);
 }
 TracingSession& TracingSession::operator=(TracingSession&& other) noexcept {
   using std::swap;
-  swap(sess, other.sess);
+  swap(sess_, other.sess_);
   return *this;
 }
 TracingSession::~TracingSession() {
-  if (sess) {
+  if (sess_) {
     stop();
   }
 }
@@ -135,22 +135,22 @@ void TracingSession::config(const std::string& _(process_name)) {
 
 void TracingSession::start(int _(fd), int _(buffer_size_in_kb)) {
 #ifdef SPDL_USE_TRACING
-  if (sess) {
+  if (sess_) {
     SPDL_FAIL("Tracing session is active.");
   }
-  sess =
+  sess_ =
       (void*)(detail::start_tracing_session(fd, buffer_size_in_kb).release());
 #endif
 }
 
 void TracingSession::stop() {
 #ifdef SPDL_USE_TRACING
-  if (!sess) {
+  if (!sess_) {
     SPDL_FAIL("Tracing session is not active.");
   }
   std::unique_ptr<perfetto::TracingSession> p;
-  p.reset((perfetto::TracingSession*)sess);
-  sess = nullptr;
+  p.reset((perfetto::TracingSession*)sess_);
+  sess_ = nullptr;
   detail::stop_tracing_session(std::move(p));
 #endif
 }

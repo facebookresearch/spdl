@@ -57,20 +57,20 @@ struct Generator {
   }
   T operator()() {
     fill();
-    full = false;
+    full_ = false;
     return std::move(h_.promise().value);
   }
 
  private:
-  bool full = false;
+  bool full_ = false;
 
   void fill() {
-    if (!full) {
+    if (!full_) {
       h_();
       if (h_.promise().exception) {
         std::rethrow_exception(h_.promise().exception);
       }
-      full = true;
+      full_ = true;
     }
   }
 };

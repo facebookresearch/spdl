@@ -59,22 +59,22 @@ Generator<AVPacket*> stream_packets(
 } // namespace
 
 BSFImpl::BSFImpl(const std::string& name, const AVCodecParameters* codec_par)
-    : bsf_ctx(init_bsf(name, codec_par)) {}
+    : bsf_ctx_(init_bsf(name, codec_par)) {}
 
 AVCodecParameters* BSFImpl::get_output_codec_par() {
-  return bsf_ctx->par_out;
+  return bsf_ctx_->par_out;
 }
 
 AVRational BSFImpl::get_output_time_base() {
-  return bsf_ctx->time_base_out;
+  return bsf_ctx_->time_base_out;
 }
 
 Generator<AVPacketPtr> BSFImpl::filter(AVPacket* packet) {
-  send_packet(bsf_ctx.get(), packet);
+  send_packet(bsf_ctx_.get(), packet);
   int errnum;
   do {
     AVPacketPtr ret{CHECK_AVALLOCATE(av_packet_alloc())};
-    switch ((errnum = redeivce_paccket(bsf_ctx.get(), ret.get()))) {
+    switch ((errnum = redeivce_paccket(bsf_ctx_.get(), ret.get()))) {
       case AVERROR(EAGAIN):
         co_return;
       case AVERROR_EOF:

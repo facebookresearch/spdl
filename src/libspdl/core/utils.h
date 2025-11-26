@@ -41,7 +41,7 @@ void init_glog(const char* name);
 // Utilities for tracing
 //////////////////////////////////////////////////////////////////////////////////
 class TracingSession {
-  void* sess = nullptr;
+  void* sess_ = nullptr;
 
  public:
   explicit TracingSession(void* sess = nullptr);

@@ -43,14 +43,14 @@ StreamingDemuxer::StreamingDemuxer(
     const std::set<int>& stream_indices,
     int num_packets,
     double duration)
-    : gen(p->streaming_demux(stream_indices, num_packets, duration)) {}
+    : gen_(p->streaming_demux(stream_indices, num_packets, duration)) {}
 
 bool StreamingDemuxer::done() {
-  return !bool(gen);
+  return !bool(gen_);
 }
 
 std::map<int, AnyPackets> StreamingDemuxer::next() {
-  return gen();
+  return gen_();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -58,21 +58,21 @@ std::map<int, AnyPackets> StreamingDemuxer::next() {
 ////////////////////////////////////////////////////////////////////////////////
 
 Demuxer::Demuxer(DataInterfacePtr di)
-    : pImpl(new detail::DemuxerImpl(std::move(di))) {}
+    : pImpl_(new detail::DemuxerImpl(std::move(di))) {}
 
 Demuxer::~Demuxer() {
-  if (pImpl) {
-    delete pImpl;
+  if (pImpl_) {
+    delete pImpl_;
   }
 }
 
 bool Demuxer::has_audio() const {
-  return pImpl->has_audio();
+  return pImpl_->has_audio();
 }
 
 template <MediaType media>
 Codec<media> Demuxer::get_default_codec() const {
-  return pImpl->get_default_codec<media>();
+  return pImpl_->get_default_codec<media>();
 }
 template Codec<MediaType::Audio> Demuxer::get_default_codec<MediaType::Audio>()
     const;
@@ -83,7 +83,7 @@ template Codec<MediaType::Image> Demuxer::get_default_codec<MediaType::Image>()
 
 template <MediaType media>
 int Demuxer::get_default_stream_index() const {
-  return pImpl->get_default_stream_index<media>();
+  return pImpl_->get_default_stream_index<media>();
 }
 
 template int Demuxer::get_default_stream_index<MediaType::Audio>() const;
@@ -94,7 +94,7 @@ template <MediaType media>
 PacketsPtr<media> Demuxer::demux_window(
     const std::optional<std::tuple<double, double>>& window,
     const std::optional<std::string>& bsf) {
-  return pImpl->demux_window<media>(window, bsf);
+  return pImpl_->demux_window<media>(window, bsf);
 }
 
 template PacketsPtr<MediaType::Audio> Demuxer::demux_window(
@@ -114,7 +114,7 @@ StreamingDemuxerPtr Demuxer::streaming_demux(
     int num_packets,
     double duration) {
   return std::make_unique<StreamingDemuxer>(
-      pImpl, indices, num_packets, duration);
+      pImpl_, indices, num_packets, duration);
 }
 
 DemuxerPtr make_demuxer(
