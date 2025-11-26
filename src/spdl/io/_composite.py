@@ -191,10 +191,22 @@ def load_video(
     Returns:
         Buffer object.
 
+    Note:
+        The decoder thread configuration can significantly affect video decoding
+        performance. By default, SPDL uses a single thread for decoding. You can
+        customize this via ``decode_config`` using
+        ``decoder_options={"threads": "X"}``, where ``X`` is the number of threads
+        (or ``"0"`` to let FFmpeg choose automatically).
+
+        The optimal configuration depends on your workload's characteristics.
+        For benchmarking different thread configurations, see
+        :doc:`../examples/benchmark_video`.
+
     See Also:
         - :doc:`../io/basic` - High-level loading functions documentation
         - :doc:`../io/decoding_overview` - Understanding the decoding pipeline
         - :doc:`../io/filtering` - Customizing output with filters
+        - :doc:`../examples/benchmark_video` - Benchmark for thread configuration
     """
     _core.log_api_usage_once("spdl.io.load_video")
 
