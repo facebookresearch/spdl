@@ -29,8 +29,10 @@ The benchmark evaluates how throughput changes with:
 
 **Result**
 
-The benchmark helps identify optimal concurrency settings for video decoding workloads,
-showing how throughput scales with different combinations of worker and decoder threads.
+In many cases, when decoding H264 videos, using 2 threads give a good performance.
+
+.. image:: ../../_static/data/example-benchmark-video.png
+
 """
 
 __all__ = [
