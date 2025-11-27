@@ -101,7 +101,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     "-Werror=deprecated-copy-with-user-provided-dtor"
     "-Werror=deprecated-dynamic-exception-spec"
     "-Werror=duplicate-enum"
-    "-Werror=extra-semi-stmt"
     "-Werror=implicit-const-int-float-conversion"
     "-Werror=missing-prototypes"
     "-Werror=shorten-64-to-32"
