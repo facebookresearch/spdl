@@ -21,3 +21,4 @@ Examples
    benchmark_numpy
    benchmark_wav
    benchmark_tarfile
+   benchmark_video
