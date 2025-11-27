@@ -70,7 +70,6 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.
 
 __all__ = [
     "BenchmarkConfig",
-    "BenchmarkResult",
     "create_test_tar",
     "iter_tarfile_builtin",
     "main",

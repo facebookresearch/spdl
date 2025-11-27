@@ -46,6 +46,9 @@ Source
 
    </details>
 
+API Reference
+-------------
+
 ..
    ############################################################################
    Functions
@@ -54,8 +57,6 @@ Source
 {% block functions %}
 {% if functions %}
 
-Functions
----------
 .. rubric:: {{ _('Functions') }}
 
 {% for item in functions %}
@@ -73,8 +74,7 @@ Functions
 
 {% block attributes %}
 {% if attributes %}
-Attributes
-----------
+
 .. rubric:: {{ _('Module Attributes') }}
 
 {% for item in attributes %}
@@ -94,8 +94,6 @@ Attributes
 {% block classes %}
 {% if classes %}
 
-Classes
--------
 
 .. rubric:: {{ _('Classes') }}
 

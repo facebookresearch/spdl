@@ -678,7 +678,7 @@ def decode_packets(
 
         The optimal configuration depends on your workload's characteristics.
         For benchmarking different thread configurations, see
-        :doc:`../examples/benchmark_video`.
+        :doc:`./benchmark_video`.
     """
 
     if filter_desc is not None:
@@ -893,7 +893,7 @@ def nvdec_decoder(
         scale_width, scale_height (int): *Optional:* Resize the frame.
             Resizing is applied after cropping.
 
-    .. changed:: 0.1.7
+    .. versionchanged:: 0.1.7
 
         Calling ``nvdec_decoder()`` without ``cuda_config`` and ``codec`` is
         deprecated. Pass these parameters directly to initialize the decoder.

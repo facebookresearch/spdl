@@ -73,27 +73,33 @@ DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
 
 @dataclass(frozen=True)
 class BenchmarkConfig:
-    """Configuration for a single video decoding benchmark run.
+    """BenchmarkConfig()
 
-    Attributes:
-        resolution: Video resolution label (e.g., "SD", "HD", "4K")
-        width: Video width in pixels
-        height: Video height in pixels
-        duration_seconds: Duration of the video in seconds
-        num_workers: Number of concurrent worker threads
-        decoder_threads: Number of FFmpeg decoder threads
-        iterations: Number of iterations per run
-        num_runs: Number of runs for statistical analysis
-    """
+    Configuration for a single video decoding benchmark run."""
 
     resolution: str
+    """Video resolution label (e.g., "SD", "HD", "4K")"""
+
     width: int
+    """Video width in pixels"""
+
     height: int
+    """Video height in pixels"""
+
     duration_seconds: float
+    """Duration of the video in seconds"""
+
     num_workers: int
+    """Number of concurrent worker threads"""
+
     decoder_threads: int
+    """Number of FFmpeg decoder threads"""
+
     iterations: int
+    """Number of iterations per run"""
+
     num_runs: int
+    """Number of runs for statistical analysis"""
 
 
 def create_video_data(
