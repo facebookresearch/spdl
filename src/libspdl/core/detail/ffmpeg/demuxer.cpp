@@ -220,12 +220,13 @@ PacketsPtr<media> DemuxerImpl::demux_window(
     auto s = std::get<0>(*window);
     auto tb = stream->time_base;
     auto t = av_rescale(s.num, tb.den, s.den * tb.num);
+    auto start = to_double(s);
     {
       TRACE_EVENT("demuxing", "av_seek_frame");
       CHECK_AVERROR(
           av_seek_frame(fmt_ctx_, index, t - 1, AVSEEK_FLAG_BACKWARD),
           "Failed to seek to the timestamp {} ({}/{}) [sec]",
-          to_double(s),
+          start,
           s.num,
           s.den);
     }

@@ -35,8 +35,8 @@ namespace spdl::core {
 // FFmpeg Common
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media>
-Frames<media>::Frames(uintptr_t id_, Rational time_base_)
-    : id_(id_), time_base_(time_base_) {
+Frames<media>::Frames(uintptr_t id, Rational time_base)
+    : id_(id), time_base_(time_base) {
   TRACE_EVENT("decoding", "Frames::Frames", perfetto::Flow::ProcessScoped(id_));
   if (time_base_.den == 0) {
     SPDL_FAIL(
