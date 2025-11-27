@@ -51,7 +51,7 @@ jobs:
           conda install -q 'ffmpeg==8' doxygen
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           export "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cuda_dir}/lib:${cuda_dir}/lib64"
-          pip install tensorboard -r docs/requirements.txt
+          pip install tensorboard psutil -r docs/requirements.txt
           python -c 'import logging;logging.basicConfig(level=logging.DEBUG);from spdl.io.lib import _libspdl_cuda;_libspdl_cuda.CUDABuffer'
           python -c 'import logging;logging.basicConfig(level=logging.DEBUG);import spdl.io;print(spdl.io.CUDABuffer.__doc__);'
           ./docs/build.sh
