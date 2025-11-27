@@ -200,13 +200,13 @@ def load_video(
 
         The optimal configuration depends on your workload's characteristics.
         For benchmarking different thread configurations, see
-        :doc:`../examples/benchmark_video`.
+        :doc:`./benchmark_video`.
 
     See Also:
         - :doc:`../io/basic` - High-level loading functions documentation
         - :doc:`../io/decoding_overview` - Understanding the decoding pipeline
         - :doc:`../io/filtering` - Customizing output with filters
-        - :doc:`../examples/benchmark_video` - Benchmark for thread configuration
+        - :doc:`./benchmark_video` - Benchmark for thread configuration
     """
     _core.log_api_usage_once("spdl.io.load_video")
 
