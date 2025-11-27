@@ -44,6 +44,7 @@ set(srcs
   muxer.cpp
   packets.cpp
   utils.cpp
+  rational_utils.cpp
   )
 
 if(SPDL_USE_TRACING)
