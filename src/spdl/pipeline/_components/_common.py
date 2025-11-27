@@ -7,6 +7,7 @@
 __all__ = [
     "_periodic_dispatch",
     "_StatsCounter",
+    "_StageCompleted",
     "_time_str",
 ]
 
@@ -105,3 +106,9 @@ async def _periodic_dispatch(
 
     if pending:
         await asyncio.wait(pending)
+
+
+class _StageCompleted(Exception):
+    """Notify the pipeline execution system this stage is completed."""
+
+    pass

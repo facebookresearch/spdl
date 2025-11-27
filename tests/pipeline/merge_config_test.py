@@ -426,6 +426,48 @@ class MergeConfigTest(unittest.TestCase):
         self.assertIn("p1_5", results)
         self.assertIn("p1_6", results)
 
+    def test_merge_config_with_custom_merge_op_early_exit(self) -> None:
+        """Test MergeConfig accepts and uses custom merge operation."""
+
+        async def custom_merge_op(
+            _: str,
+            input_queues: Sequence[asyncio.Queue],
+            output_queue: asyncio.Queue,
+        ) -> None:
+            """Custom merge that exists when one sub-pipeline completes"""
+            while True:
+                for in_q in input_queues:
+                    item = await in_q.get()
+                    if is_eof(item):
+                        return
+
+                    await output_queue.put(item)
+
+        plc1 = PipelineConfig(
+            src=SourceConfig([1, 2, 3]),
+            pipes=[],
+            sink=SinkConfig(buffer_size=10),
+        )
+
+        plc2 = PipelineConfig(
+            src=SourceConfig([4, 5, 6, 7, 8, 9]),
+            pipes=[],
+            sink=SinkConfig(buffer_size=10),
+        )
+
+        main_pipeline_config = PipelineConfig(
+            src=Merge([plc1, plc2], op=custom_merge_op),
+            pipes=[],
+            sink=SinkConfig(buffer_size=10),
+        )
+
+        pipeline = build_pipeline(main_pipeline_config, num_threads=2)
+
+        with pipeline.auto_stop():
+            results = list(pipeline.get_iterator(timeout=3))
+
+        self.assertEqual(results, [1, 4, 2, 5, 3, 6])
+
 
 if __name__ == "__main__":
     unittest.main()

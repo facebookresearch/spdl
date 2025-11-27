@@ -25,7 +25,7 @@ from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import _TMergeOp
 from spdl.pipeline.defs import _PipeArgs
 
-from ._common import _EOF, is_eof
+from ._common import _EOF, _StageCompleted, is_eof
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
 
@@ -405,5 +405,10 @@ def _merge(
     @_stage_hooks(hooks)
     async def merge() -> None:
         await op(name, input_queues, output_queue)
+
+        # This notifies the Pipeline execution system that this stage is
+        # completed regardless of the state of the upstream stages.
+        # The Pipeline execution system should clean up the upstream stages.
+        raise _StageCompleted()
 
     return merge()
