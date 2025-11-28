@@ -6,15 +6,18 @@
 
 # pyre-strict
 
+import unittest
+
 import torch
 from spdl.io import transfer_tensor
 
 
-def test_gpu_transfer() -> None:
-    ref = torch.randint(256, (16, 3, 4608, 5328), dtype=torch.uint8)
-    print(ref)
+class TransferTest(unittest.TestCase):
+    def test_gpu_transfer(self) -> None:
+        ref = torch.randint(256, (16, 3, 4608, 5328), dtype=torch.uint8)
+        print(ref)
 
-    cuda = transfer_tensor(ref)
-    print(cuda)
-    assert cuda.device.type == "cuda"
-    assert torch.equal(cuda, ref.cuda())
+        cuda = transfer_tensor(ref)
+        print(cuda)
+        self.assertEqual(cuda.device.type, "cuda")
+        self.assertTrue(torch.equal(cuda, ref.cuda()))

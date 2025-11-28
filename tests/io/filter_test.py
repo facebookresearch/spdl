@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import os
+import unittest
 
 import numpy as np
 import spdl.io
@@ -15,250 +16,247 @@ from spdl.io import get_abuffer_desc, get_buffer_desc
 from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio, load_ref_video
 
 
-def test_filter_graph_abuffer_basic():
-    cmd = (
-        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
-    )
+class FilterTest(unittest.TestCase):
+    def test_filter_graph_abuffer_basic(self):
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
 
-    sample = get_sample(cmd)
+        sample = get_sample(cmd)
 
-    demuxer = spdl.io.Demuxer(sample.path)
-    codec = demuxer.audio_codec
-    decoder = spdl.io.Decoder(codec, filter_desc=None)
+        demuxer = spdl.io.Demuxer(sample.path)
+        codec = demuxer.audio_codec
+        decoder = spdl.io.Decoder(codec, filter_desc=None)
 
-    filter_desc = f"{get_abuffer_desc(codec)},anull,abuffersink"
-    print(filter_desc)
+        filter_desc = f"{get_abuffer_desc(codec)},anull,abuffersink"
+        print(filter_desc)
 
-    filter_graph = spdl.io.FilterGraph(filter_desc)
-    print(filter_graph)
-    buffers = []
-    for packets in demuxer.streaming_demux(duration=1):
-        frames = decoder.decode(packets)
-        filter_graph.add_frames(frames)
-        frames = filter_graph.get_frames()
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
+        filter_graph = spdl.io.FilterGraph(filter_desc)
+        print(filter_graph)
+        buffers = []
+        for packets in demuxer.streaming_demux(duration=1):
+            frames = decoder.decode(packets)
+            filter_graph.add_frames(frames)
+            frames = filter_graph.get_frames()
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-    if (frames := decoder.flush()) is not None:
-        filter_graph.add_frames(frames)
+        if (frames := decoder.flush()) is not None:
+            filter_graph.add_frames(frames)
 
-    filter_graph.flush()
+        filter_graph.flush()
 
-    if (frames := filter_graph.get_frames()) is not None:
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
+        if (frames := filter_graph.get_frames()) is not None:
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-    ref = load_ref_audio(
-        sample.path, shape=[-1, 1], filter_desc=None, format="s16le", dtype=np.int16
-    )
-    hyp = np.concatenate(buffers)
+        ref = load_ref_audio(
+            sample.path,
+            shape=[-1, 1],
+            filter_desc=None,
+            format="s16le",
+            dtype=np.int16,
+        )
+        hyp = np.concatenate(buffers)
 
-    np.testing.assert_array_equal(hyp, ref)
+        np.testing.assert_array_equal(hyp, ref)
 
+    def test_filter_graph_buffer_basic(self):
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
-def test_filter_graph_buffer_basic():
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
+        sample = get_sample(cmd)
 
-    sample = get_sample(cmd)
+        demuxer = spdl.io.Demuxer(sample.path)
+        codec = demuxer.video_codec
+        decoder = spdl.io.Decoder(codec, filter_desc=None)
 
-    demuxer = spdl.io.Demuxer(sample.path)
-    codec = demuxer.video_codec
-    decoder = spdl.io.Decoder(codec, filter_desc=None)
+        filter_desc = f"{get_buffer_desc(codec)},null,buffersink"
+        print(filter_desc)
 
-    filter_desc = f"{get_buffer_desc(codec)},null,buffersink"
-    print(filter_desc)
+        filter_graph = spdl.io.FilterGraph(filter_desc)
+        print(filter_graph)
+        buffers = []
+        for packets in demuxer.streaming_demux(duration=1):
+            frames = decoder.decode(packets)
+            filter_graph.add_frames(frames)
+            frames = filter_graph.get_frames()
 
-    filter_graph = spdl.io.FilterGraph(filter_desc)
-    print(filter_graph)
-    buffers = []
-    for packets in demuxer.streaming_demux(duration=1):
-        frames = decoder.decode(packets)
-        filter_graph.add_frames(frames)
-        frames = filter_graph.get_frames()
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
+        if (frames := decoder.flush()) is not None:
+            filter_graph.add_frames(frames)
 
-    if (frames := decoder.flush()) is not None:
-        filter_graph.add_frames(frames)
+        filter_graph.flush()
 
-    filter_graph.flush()
+        if (frames := filter_graph.get_frames()) is not None:
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-    if (frames := filter_graph.get_frames()) is not None:
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
+        ref = load_ref_video(
+            sample.path,
+            shape=[-1, 1, 360, 320],
+            filter_desc=None,
+        )
+        hyp = np.concatenate(buffers)
 
-    ref = load_ref_video(
-        sample.path,
-        shape=[-1, 1, 360, 320],
-        filter_desc=None,
-    )
-    hyp = np.concatenate(buffers)
+        np.testing.assert_array_equal(hyp, ref)
 
-    np.testing.assert_array_equal(hyp, ref)
+    def test_filter_graph_multiple_inputs(self):
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
+        sample = get_sample(cmd)
 
-def test_filter_graph_multiple_inputs():
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
+        demuxer = spdl.io.Demuxer(sample.path)
+        codec = demuxer.video_codec
+        decoder = spdl.io.Decoder(codec, filter_desc=None)
 
-    sample = get_sample(cmd)
+        buf0 = get_buffer_desc(codec, label="in0")
+        buf1 = get_buffer_desc(codec, label="in1")
+        filter_desc = f"{buf0} [in0];{buf1} [in1],[in0] [in1] vstack,buffersink"
+        print(filter_desc)
 
-    demuxer = spdl.io.Demuxer(sample.path)
-    codec = demuxer.video_codec
-    decoder = spdl.io.Decoder(codec, filter_desc=None)
+        filter_graph = spdl.io.FilterGraph(filter_desc)
+        print(filter_graph)
 
-    buf0 = get_buffer_desc(codec, label="in0")
-    buf1 = get_buffer_desc(codec, label="in1")
-    filter_desc = f"{buf0} [in0];{buf1} [in1],[in0] [in1] vstack,buffersink"
-    print(filter_desc)
+        buffers = []
+        num_packets = 0
+        for packets in demuxer.streaming_demux(duration=1):
+            num_packets += len(packets)
+            frames = decoder.decode(packets)
+            filter_graph.add_frames(frames.clone(), key="buffer@in0")
+            filter_graph.add_frames(frames, key="buffer@in1")
+            frames = filter_graph.get_frames()
 
-    filter_graph = spdl.io.FilterGraph(filter_desc)
-    print(filter_graph)
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-    buffers = []
-    num_packets = 0
-    for packets in demuxer.streaming_demux(duration=1):
-        num_packets += len(packets)
-        frames = decoder.decode(packets)
-        filter_graph.add_frames(frames.clone(), key="buffer@in0")
-        filter_graph.add_frames(frames, key="buffer@in1")
-        frames = filter_graph.get_frames()
+        if (frames := decoder.flush()) is not None:
+            filter_graph.add_frames(frames.clone(), key="buffer@in0")
+            filter_graph.add_frames(frames, key="buffer@in1")
 
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
+        filter_graph.flush()
 
-    if (frames := decoder.flush()) is not None:
-        filter_graph.add_frames(frames.clone(), key="buffer@in0")
-        filter_graph.add_frames(frames, key="buffer@in1")
+        if (frames := filter_graph.get_frames()) is not None:
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-    filter_graph.flush()
+        print(f"{num_packets=}")
+        ref = load_ref_video(
+            sample.path,
+            shape=[-1, 1, 720, 320],
+            filter_desc=None,
+            filter_complex="split [o0][o1];[o0] [o1] vstack",
+        )
+        hyp = np.concatenate(buffers)
 
-    if (frames := filter_graph.get_frames()) is not None:
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
+        np.testing.assert_array_equal(hyp, ref)
 
-    print(f"{num_packets=}")
-    ref = load_ref_video(
-        sample.path,
-        shape=[-1, 1, 720, 320],
-        filter_desc=None,
-        filter_complex="split [o0][o1];[o0] [o1] vstack",
-    )
-    hyp = np.concatenate(buffers)
+    def test_filter_graph_multiple_outputs(self):
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
-    np.testing.assert_array_equal(hyp, ref)
+        sample = get_sample(cmd)
 
+        demuxer = spdl.io.Demuxer(sample.path)
+        codec = demuxer.video_codec
+        decoder = spdl.io.Decoder(codec, filter_desc=None)
 
-def test_filter_graph_multiple_outputs():
-    cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
+        filter_desc = ";".join(
+            [
+                f"{get_buffer_desc(codec)} [in]",
+                "[in] split [out0][out1]",
+                "[out0] buffersink@out0",
+                "[out1] buffersink@out1",
+            ]
+        )
+        print(filter_desc)
 
-    sample = get_sample(cmd)
+        filter_graph = spdl.io.FilterGraph(filter_desc)
+        print(filter_graph)
+        buffers0, buffers1 = [], []
+        for packets in demuxer.streaming_demux(duration=1):
+            frames = decoder.decode(packets)
+            filter_graph.add_frames(frames)
 
-    demuxer = spdl.io.Demuxer(sample.path)
-    codec = demuxer.video_codec
-    decoder = spdl.io.Decoder(codec, filter_desc=None)
+            frames = filter_graph.get_frames(key="buffersink@out0")
+            buffer = spdl.io.convert_frames(frames)
+            buffers0.append(spdl.io.to_numpy(buffer))
 
-    filter_desc = ";".join(
-        [
-            f"{get_buffer_desc(codec)} [in]",
-            "[in] split [out0][out1]",
-            "[out0] buffersink@out0",
-            "[out1] buffersink@out1",
-        ]
-    )
-    print(filter_desc)
+            frames = filter_graph.get_frames(key="buffersink@out1")
+            buffer = spdl.io.convert_frames(frames)
+            buffers1.append(spdl.io.to_numpy(buffer))
 
-    filter_graph = spdl.io.FilterGraph(filter_desc)
-    print(filter_graph)
-    buffers0, buffers1 = [], []
-    for packets in demuxer.streaming_demux(duration=1):
-        frames = decoder.decode(packets)
-        filter_graph.add_frames(frames)
+        if (frames := decoder.flush()) is not None:
+            filter_graph.add_frames(frames)
 
-        frames = filter_graph.get_frames(key="buffersink@out0")
-        buffer = spdl.io.convert_frames(frames)
-        buffers0.append(spdl.io.to_numpy(buffer))
+        filter_graph.flush()
 
-        frames = filter_graph.get_frames(key="buffersink@out1")
-        buffer = spdl.io.convert_frames(frames)
-        buffers1.append(spdl.io.to_numpy(buffer))
+        if (frames := filter_graph.get_frames(key="buffersink@out0")) is not None:
+            buffer = spdl.io.convert_frames(frames)
+            buffers0.append(spdl.io.to_numpy(buffer))
 
-    if (frames := decoder.flush()) is not None:
-        filter_graph.add_frames(frames)
+        if (frames := filter_graph.get_frames(key="buffersink@out1")) is not None:
+            buffer = spdl.io.convert_frames(frames)
+            buffers1.append(spdl.io.to_numpy(buffer))
 
-    filter_graph.flush()
+        ref = load_ref_video(
+            sample.path,
+            shape=[-1, 1, 360, 320],
+            filter_desc=None,
+        )
+        hyp0 = np.concatenate(buffers0)
+        hyp1 = np.concatenate(buffers1)
 
-    if (frames := filter_graph.get_frames(key="buffersink@out0")) is not None:
-        buffer = spdl.io.convert_frames(frames)
-        buffers0.append(spdl.io.to_numpy(buffer))
+        np.testing.assert_array_equal(hyp0, ref)
+        np.testing.assert_array_equal(hyp1, ref)
 
-    if (frames := filter_graph.get_frames(key="buffersink@out1")) is not None:
-        buffer = spdl.io.convert_frames(frames)
-        buffers1.append(spdl.io.to_numpy(buffer))
+    def test_filter_graph_audio_in_video_out(self):
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
 
-    ref = load_ref_video(
-        sample.path,
-        shape=[-1, 1, 360, 320],
-        filter_desc=None,
-    )
-    hyp0 = np.concatenate(buffers0)
-    hyp1 = np.concatenate(buffers1)
+        sample = get_sample(cmd)
 
-    np.testing.assert_array_equal(hyp0, ref)
-    np.testing.assert_array_equal(hyp1, ref)
+        demuxer = spdl.io.Demuxer(sample.path)
+        codec = demuxer.audio_codec
+        decoder = spdl.io.Decoder(codec, filter_desc=None)
 
+        filter_desc = f"{get_abuffer_desc(codec)},showwaves,buffersink"
+        print(filter_desc)
 
-def test_filter_graph_audio_in_video_out():
-    cmd = (
-        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
-    )
+        filter_graph = spdl.io.FilterGraph(filter_desc)
+        print(filter_graph)
+        buffers = []
+        for packets in demuxer.streaming_demux(duration=1):
+            print(packets)
+            frames = decoder.decode(packets)
+            print(frames)
+            filter_graph.add_frames(frames)
+            frames = filter_graph.get_frames()
+            print(frames)
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-    sample = get_sample(cmd)
+        if (frames := decoder.flush()) is not None:
+            print(frames)
+            filter_graph.add_frames(frames)
 
-    demuxer = spdl.io.Demuxer(sample.path)
-    codec = demuxer.audio_codec
-    decoder = spdl.io.Decoder(codec, filter_desc=None)
+        filter_graph.flush()
 
-    filter_desc = f"{get_abuffer_desc(codec)},showwaves,buffersink"
-    print(filter_desc)
+        if (frames := filter_graph.get_frames()) is not None:
+            print(frames)
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
 
-    filter_graph = spdl.io.FilterGraph(filter_desc)
-    print(filter_graph)
-    buffers = []
-    for packets in demuxer.streaming_demux(duration=1):
-        print(packets)
-        frames = decoder.decode(packets)
-        print(frames)
-        filter_graph.add_frames(frames)
-        frames = filter_graph.get_frames()
-        print(frames)
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
+        # The result matches as long as the library and CLI version match.
+        # Unfortunately, that's not the case for some of our environment
 
-    if (frames := decoder.flush()) is not None:
-        print(frames)
-        filter_graph.add_frames(frames)
+        if os.environ.get("SPDL_SKIP_FILTER_PARITY_TEST", "0") == "1":
+            return
 
-    filter_graph.flush()
+        ref = load_ref_video(
+            sample.path,
+            filter_desc=None,
+            shape=[-1, 240, 600, 4],
+            filter_complex="showwaves",
+        )
+        hyp = np.concatenate(buffers)
 
-    if (frames := filter_graph.get_frames()) is not None:
-        print(frames)
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
-
-    # The result matches as long as the library and CLI version match.
-    # Unfortunately, that's not the case for some of our environment
-
-    if os.environ.get("SPDL_SKIP_FILTER_PARITY_TEST", "0") == "1":
-        return
-
-    ref = load_ref_video(
-        sample.path,
-        filter_desc=None,
-        shape=[-1, 240, 600, 4],
-        filter_complex="showwaves",
-    )
-    hyp = np.concatenate(buffers)
-
-    # np.savez("debug.npz", ref=ref, hyp=hyp)
-    np.testing.assert_array_equal(hyp, ref[-len(hyp) :])
+        # np.savez("debug.npz", ref=ref, hyp=hyp)
+        np.testing.assert_array_equal(hyp, ref[-len(hyp) :])

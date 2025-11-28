@@ -4,7 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 import asyncio
+import unittest
 
 from spdl.pipeline._components import AsyncQueue
 from spdl.pipeline._components._node import (
@@ -15,8 +18,6 @@ from spdl.pipeline._components._node import (
     _start_tasks,
 )
 from spdl.pipeline.defs import _ConfigBase
-
-# pyre-strict
 
 
 class DummyException(Exception):
@@ -37,220 +38,221 @@ def _node(
     return n
 
 
-def test_node_chain_start_and_cancel() -> None:
-    #  A -> B -> C
+class PipelineNodeTest(unittest.TestCase):
+    def test_node_chain_start_and_cancel(self) -> None:
+        #  A -> B -> C
 
-    async def run() -> None:
-        a = _node("A", [])
-        b = _node("B", [a])
-        c = _node("C", [b])
-        tasks = _start_tasks(c)
-        assert all(isinstance(t, asyncio.Task) for t in tasks)
-        assert len(tasks) == 3
+        async def run() -> None:
+            a = _node("A", [])
+            b = _node("B", [a])
+            c = _node("C", [b])
+            tasks = _start_tasks(c)
+            self.assertTrue(all(isinstance(t, asyncio.Task) for t in tasks))
+            self.assertEqual(len(tasks), 3)
 
-        canceled = _cancel_recursive(c)
-        assert canceled == tasks
-        await asyncio.wait(tasks)
-        assert all(t.cancelled() for t in tasks)
+            canceled = _cancel_recursive(c)
+            self.assertEqual(canceled, tasks)
+            await asyncio.wait(tasks)
+            self.assertTrue(all(t.cancelled() for t in tasks))
 
-    asyncio.run(run())
+        asyncio.run(run())
 
+    def test_node_y_shape_upstream(self) -> None:
+        #  A1      B1
+        #   |      |
+        #  A2      B2
+        #    \    /
+        #      C1
 
-def test_node_y_shape_upstream() -> None:
-    #  A1      B1
-    #   |      |
-    #  A2      B2
-    #    \    /
-    #      C1
+        async def run() -> None:
+            a1 = _node("A1", [])
+            a2 = _node("A2", [a1])
+            b1 = _node("B1", [])
+            b2 = _node("B2", [b1])
+            c1 = _node("C1", [a2, b2])
+            tasks = _start_tasks(c1)
+            self.assertEqual(len(tasks), 5)
 
-    async def run() -> None:
-        a1 = _node("A1", [])
-        a2 = _node("A2", [a1])
-        b1 = _node("B1", [])
-        b2 = _node("B2", [b1])
-        c1 = _node("C1", [a2, b2])
-        tasks = _start_tasks(c1)
-        assert len(tasks) == 5
+            canceled = _cancel_recursive(c1)
+            self.assertEqual(canceled, tasks)
+            await asyncio.wait(tasks)
+            self.assertTrue(all(t.cancelled() for t in tasks))
 
-        canceled = _cancel_recursive(c1)
-        assert canceled == tasks
-        await asyncio.wait(tasks)
-        assert all(t.cancelled() for t in tasks)
+        asyncio.run(run())
 
-    asyncio.run(run())
+    def test_cancel_error_upstreams_and_gather_error(self) -> None:
+        #  A1      B1
+        #   |      |
+        #  A2      B2 (raises)
+        #    \    /
+        #      C1
 
+        async def run() -> None:
+            a1 = _node("A1", [])
+            a2 = _node("A2", [a1])
+            b1 = _node("B1", [])
+            b2 = _node("B2", [b1], exc=DummyException("fail B2"))
+            c1 = _node("C1", [a2, b2])
+            tasks = _start_tasks(c1)
+            await asyncio.sleep(0)
 
-def test_cancel_error_upstreams_and_gather_error() -> None:
-    #  A1      B1
-    #   |      |
-    #  A2      B2 (raises)
-    #    \    /
-    #      C1
+            # Let B2 fail
+            await asyncio.wait([b2.task])
 
-    async def run() -> None:
-        a1 = _node("A1", [])
-        a2 = _node("A2", [a1])
-        b1 = _node("B1", [])
-        b2 = _node("B2", [b1], exc=DummyException("fail B2"))
-        c1 = _node("C1", [a2, b2])
-        tasks = _start_tasks(c1)
-        await asyncio.sleep(0)  # Let tasks start
+            canceled = _cancel_upstreams_of_errors(c1)
+            self.assertNotIn(a1.task, canceled)
+            self.assertNotIn(a2.task, canceled)
+            self.assertIn(b1.task, canceled)
+            self.assertNotIn(b2.task, canceled)
+            self.assertNotIn(c1.task, canceled)
 
-        # Let B2 fail
-        await asyncio.wait([b2.task])
+            await asyncio.wait(tasks)
 
-        canceled = _cancel_upstreams_of_errors(c1)
-        # Only B1 should be canceled, since B2 errored
-        assert a1.task not in canceled
-        assert a2.task not in canceled
-        assert b1.task in canceled
-        assert b2.task not in canceled
-        assert c1.task not in canceled
+            errs = _gather_error(c1)
+            self.assertEqual(len(errs), 1)
+            name, err = errs[0]
+            self.assertEqual(name, "B2")
+            self.assertIsInstance(err, DummyException)
+            self.assertEqual(err.args[0], "fail B2")
 
-        await asyncio.wait(tasks)
+        asyncio.run(run())
 
-        errs = _gather_error(c1)
-        assert len(errs) == 1
-        name, err = errs[0]
-        assert name == "B2"
-        assert isinstance(err, DummyException) and err.args[0] == "fail B2"
+    def test_cancel_error_upstreams_and_gather_error_multiple(self) -> None:
+        #          A1      B1
+        #           |      |
+        # (raises) A2      B2 (raises)
+        #            \    /
+        #              C1
+        async def run() -> None:
+            a1 = _node("A1", [])
+            a2 = _node("A2", [a1], exc=DummyException("fail A2"))
+            b1 = _node("B1", [])
+            b2 = _node("B2", [b1], exc=DummyException("fail B2"))
+            c1 = _node("C1", [a2, b2])
 
-    asyncio.run(run())
+            tasks = _start_tasks(c1)
+            await asyncio.sleep(0)
 
+            # Let A2, B2 fail
+            await asyncio.wait([a2.task, b2.task])
 
-def test_cancel_error_upstreams_and_gather_error_multiple() -> None:
-    #          A1      B1
-    #           |      |
-    # (raises) A2      B2 (raises)
-    #            \    /
-    #              C1
-    async def run() -> None:
-        a1 = _node("A1", [])
-        a2 = _node("A2", [a1], exc=DummyException("fail A2"))
-        b1 = _node("B1", [])
-        b2 = _node("B2", [b1], exc=DummyException("fail B2"))
-        c1 = _node("C1", [a2, b2])
+            canceled = _cancel_upstreams_of_errors(c1)
+            self.assertIn(a1.task, canceled)
+            self.assertNotIn(a2.task, canceled)
+            self.assertIn(b1.task, canceled)
+            self.assertNotIn(b2.task, canceled)
+            self.assertNotIn(c1.task, canceled)
 
-        tasks = _start_tasks(c1)
-        await asyncio.sleep(0)  # Let tasks start
+            await asyncio.wait(tasks)
 
-        # Let A2, B2 fail
-        await asyncio.wait([a2.task, b2.task])
+            errs = _gather_error(c1)
+            self.assertEqual(len(errs), 2)
+            name, err = errs[0]
+            self.assertEqual(name, "A2")
+            self.assertIsInstance(err, DummyException)
+            self.assertEqual(err.args[0], "fail A2")
+            name, err = errs[1]
+            self.assertEqual(name, "B2")
+            self.assertIsInstance(err, DummyException)
+            self.assertEqual(err.args[0], "fail B2")
 
-        canceled = _cancel_upstreams_of_errors(c1)
-        assert a1.task in canceled
-        assert a2.task not in canceled
-        assert b1.task in canceled
-        assert b2.task not in canceled
-        assert c1.task not in canceled
+        asyncio.run(run())
 
-        await asyncio.wait(tasks)
+    def test_cancel_error_upstreams_and_gather_error_complex(self) -> None:
+        #           B1      C1
+        #            |      |
+        #  (raises) B2      C2 (raises)
+        #             \    /
+        #          A1   D1  E1
+        #           |   |   |
+        # (raises) A2   D2  E2
+        #            \  |  /
+        #               F1
 
-        errs = _gather_error(c1)
-        assert len(errs) == 2
-        name, err = errs[0]
-        assert name == "A2"
-        assert isinstance(err, DummyException) and err.args[0] == "fail A2"
-        name, err = errs[1]
-        assert name == "B2"
-        assert isinstance(err, DummyException) and err.args[0] == "fail B2"
+        async def run() -> None:
+            a1 = _node("A1", [])
+            a2 = _node("A2", [a1], exc=DummyException("fail A2"))
+            b1 = _node("B1", [])
+            b2 = _node("B2", [b1], exc=DummyException("fail B2"))
+            c1 = _node("C1", [])
+            c2 = _node("C2", [c1], exc=DummyException("fail C2"))
+            d1 = _node("D1", [b2, c2])
+            d2 = _node("D2", [d1])
+            e1 = _node("E1", [])
+            e2 = _node("E1", [e1])
+            f1 = _node("F1", [a2, d2, e2])
 
-    asyncio.run(run())
+            tasks = _start_tasks(f1)
+            await asyncio.sleep(0)
 
+            # Let A2, B2, C2 fail
+            await asyncio.wait([a2.task, b2.task, c2.task])
 
-def test_cancel_error_upstreams_and_gather_error_complex() -> None:
-    #           B1      C1
-    #            |      |
-    #  (raises) B2      C2 (raises)
-    #             \    /
-    #          A1   D1  E1
-    #           |   |   |
-    # (raises) A2   D2  E2
-    #            \  |  /
-    #               F1
+            canceled = _cancel_upstreams_of_errors(f1)
+            self.assertIn(a1.task, canceled)
+            self.assertNotIn(a2.task, canceled)
+            self.assertIn(b1.task, canceled)
+            self.assertNotIn(b2.task, canceled)
+            self.assertIn(c1.task, canceled)
+            self.assertNotIn(c2.task, canceled)
+            self.assertNotIn(d1.task, canceled)
+            self.assertNotIn(d2.task, canceled)
+            self.assertNotIn(e1.task, canceled)
+            self.assertNotIn(e2.task, canceled)
+            self.assertNotIn(f1.task, canceled)
 
-    async def run() -> None:
-        a1 = _node("A1", [])
-        a2 = _node("A2", [a1], exc=DummyException("fail A2"))
-        b1 = _node("B1", [])
-        b2 = _node("B2", [b1], exc=DummyException("fail B2"))
-        c1 = _node("C1", [])
-        c2 = _node("C2", [c1], exc=DummyException("fail C2"))
-        d1 = _node("D1", [b2, c2])
-        d2 = _node("D2", [d1])
-        e1 = _node("E1", [])
-        e2 = _node("E1", [e1])
-        f1 = _node("F1", [a2, d2, e2])
+            await asyncio.wait(tasks)
 
-        tasks = _start_tasks(f1)
-        await asyncio.sleep(0)  # Let tasks start
+            errs = _gather_error(f1)
+            self.assertEqual(len(errs), 3)
+            name, err = errs[0]
+            self.assertEqual(name, "A2")
+            self.assertIsInstance(err, DummyException)
+            self.assertEqual(err.args[0], "fail A2")
+            name, err = errs[1]
+            self.assertEqual(name, "B2")
+            self.assertIsInstance(err, DummyException)
+            self.assertEqual(err.args[0], "fail B2")
+            name, err = errs[2]
+            self.assertEqual(name, "C2")
+            self.assertIsInstance(err, DummyException)
+            self.assertEqual(err.args[0], "fail C2")
 
-        # Let A2, B2, C2 fail
-        await asyncio.wait([a2.task, b2.task, c2.task])
+        asyncio.run(run())
 
-        canceled = _cancel_upstreams_of_errors(f1)
-        assert a1.task in canceled
-        assert a2.task not in canceled
-        assert b1.task in canceled
-        assert b2.task not in canceled
-        assert c1.task in canceled
-        assert c2.task not in canceled
-        assert d1.task not in canceled
-        assert d2.task not in canceled
-        assert e1.task not in canceled
-        assert e2.task not in canceled
-        assert f1.task not in canceled
+    def test_gather_error_with_cancelled(self) -> None:
+        #  A1      B1
+        #   |      |
+        #  A2      B2
+        #    \    /
+        #      C1 (raises)
 
-        await asyncio.wait(tasks)
+        async def run() -> None:
+            a1 = _node("A1", [])
+            a2 = _node("A2", [a1])
+            b1 = _node("B1", [])
+            b2 = _node("B2", [b1])
+            c1 = _node("C1", [a2, b2], exc=DummyException("fail C"))
 
-        errs = _gather_error(f1)
-        assert len(errs) == 3
-        name, err = errs[0]
-        assert name == "A2"
-        assert isinstance(err, DummyException) and err.args[0] == "fail A2"
-        name, err = errs[1]
-        assert name == "B2"
-        assert isinstance(err, DummyException) and err.args[0] == "fail B2"
-        name, err = errs[2]
-        assert name == "C2"
-        assert isinstance(err, DummyException) and err.args[0] == "fail C2"
+            tasks = _start_tasks(c1)
+            await asyncio.sleep(0)
 
-    asyncio.run(run())
+            # Let C fail
+            await asyncio.wait([c1.task])
 
+            canceled = _cancel_upstreams_of_errors(c1)
+            self.assertIn(a1.task, canceled)
+            self.assertIn(a2.task, canceled)
+            self.assertIn(b1.task, canceled)
+            self.assertIn(b2.task, canceled)
+            self.assertNotIn(c1.task, canceled)
 
-def test_gather_error_with_cancelled() -> None:
-    #  A1      B1
-    #   |      |
-    #  A2      B2
-    #    \    /
-    #      C1 (raises)
+            await asyncio.wait(tasks)
 
-    async def run() -> None:
-        a1 = _node("A1", [])
-        a2 = _node("A2", [a1])
-        b1 = _node("B1", [])
-        b2 = _node("B2", [b1])
-        c1 = _node("C1", [a2, b2], exc=DummyException("fail C"))
+            errs = _gather_error(c1)
+            self.assertEqual(len(errs), 1)
+            name, err = errs[0]
+            self.assertEqual(name, "C1")
+            self.assertIsInstance(err, DummyException)
 
-        tasks = _start_tasks(c1)
-        await asyncio.sleep(0)  # Let tasks start
-
-        # Let C fail
-        await asyncio.wait([c1.task])
-
-        canceled = _cancel_upstreams_of_errors(c1)
-        assert a1.task in canceled
-        assert a2.task in canceled
-        assert b1.task in canceled
-        assert b2.task in canceled
-        assert c1.task not in canceled
-
-        await asyncio.wait(tasks)
-
-        errs = _gather_error(c1)
-        assert len(errs) == 1
-        name, err = errs[0]
-        assert name == "C1"
-        assert isinstance(err, DummyException)
-
-    asyncio.run(run())
+        asyncio.run(run())
