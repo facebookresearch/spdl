@@ -25,6 +25,7 @@ from spdl.pipeline.defs import (
     SourceConfig,
 )
 
+from ._common import _StageCompleted
 from ._hook import get_default_hook_class, TaskHook
 from ._pipe import (
     _Aggregate,
@@ -404,7 +405,9 @@ async def _run_pipeline_coroutines(node: _Node[T]) -> None:
         if canceled := _cancel_upstreams_of_errors(node):
             await asyncio.wait(canceled)
 
-    if errs := _gather_error(node):
+    errs = _gather_error(node)
+    errs = [(n, e) for n, e in errs if not isinstance(e, _StageCompleted)]
+    if errs:
         raise PipelineFailure(errs)
 
 
