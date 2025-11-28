@@ -11,8 +11,8 @@ import unittest
 
 from spdl.pipeline._components import AsyncQueue
 from spdl.pipeline._components._node import (
+    _cancel_orphaned,
     _cancel_recursive,
-    _cancel_upstreams_of_errors,
     _gather_error,
     _Node,
     _start_tasks,
@@ -31,7 +31,7 @@ def _node(
         if exc:
             raise exc
         else:
-            await asyncio.sleep(0)
+            await asyncio.sleep(10)
 
     n = _Node(name, _ConfigBase(), deps, AsyncQueue(name))
     n._coro = coro()
@@ -50,8 +50,7 @@ class PipelineNodeTest(unittest.TestCase):
             self.assertTrue(all(isinstance(t, asyncio.Task) for t in tasks))
             self.assertEqual(len(tasks), 3)
 
-            canceled = _cancel_recursive(c)
-            self.assertEqual(canceled, tasks)
+            _cancel_recursive(c)
             await asyncio.wait(tasks)
             self.assertTrue(all(t.cancelled() for t in tasks))
 
@@ -72,9 +71,7 @@ class PipelineNodeTest(unittest.TestCase):
             c1 = _node("C1", [a2, b2])
             tasks = _start_tasks(c1)
             self.assertEqual(len(tasks), 5)
-
-            canceled = _cancel_recursive(c1)
-            self.assertEqual(canceled, tasks)
+            _cancel_recursive(c1)
             await asyncio.wait(tasks)
             self.assertTrue(all(t.cancelled() for t in tasks))
 
@@ -99,14 +96,15 @@ class PipelineNodeTest(unittest.TestCase):
             # Let B2 fail
             await asyncio.wait([b2.task])
 
-            canceled = _cancel_upstreams_of_errors(c1)
-            self.assertNotIn(a1.task, canceled)
-            self.assertNotIn(a2.task, canceled)
-            self.assertIn(b1.task, canceled)
-            self.assertNotIn(b2.task, canceled)
-            self.assertNotIn(c1.task, canceled)
-
+            _cancel_orphaned(c1)
             await asyncio.wait(tasks)
+
+            # Only B1 should be cancelled, since B2 errored
+            self.assertFalse(a1.task.cancelled())
+            self.assertFalse(a2.task.cancelled())
+            self.assertTrue(b1.task.cancelled())
+            self.assertFalse(b2.task.cancelled())
+            self.assertFalse(c1.task.cancelled())
 
             errs = _gather_error(c1)
             self.assertEqual(len(errs), 1)
@@ -136,14 +134,14 @@ class PipelineNodeTest(unittest.TestCase):
             # Let A2, B2 fail
             await asyncio.wait([a2.task, b2.task])
 
-            canceled = _cancel_upstreams_of_errors(c1)
-            self.assertIn(a1.task, canceled)
-            self.assertNotIn(a2.task, canceled)
-            self.assertIn(b1.task, canceled)
-            self.assertNotIn(b2.task, canceled)
-            self.assertNotIn(c1.task, canceled)
-
+            _cancel_orphaned(c1)
             await asyncio.wait(tasks)
+
+            self.assertTrue(a1.task.cancelled())
+            self.assertFalse(a2.task.cancelled())
+            self.assertTrue(b1.task.cancelled())
+            self.assertFalse(b2.task.cancelled())
+            self.assertFalse(c1.task.cancelled())
 
             errs = _gather_error(c1)
             self.assertEqual(len(errs), 2)
@@ -188,18 +186,22 @@ class PipelineNodeTest(unittest.TestCase):
             # Let A2, B2, C2 fail
             await asyncio.wait([a2.task, b2.task, c2.task])
 
-            canceled = _cancel_upstreams_of_errors(f1)
-            self.assertIn(a1.task, canceled)
-            self.assertNotIn(a2.task, canceled)
-            self.assertIn(b1.task, canceled)
-            self.assertNotIn(b2.task, canceled)
-            self.assertIn(c1.task, canceled)
-            self.assertNotIn(c2.task, canceled)
-            self.assertNotIn(d1.task, canceled)
-            self.assertNotIn(d2.task, canceled)
-            self.assertNotIn(e1.task, canceled)
-            self.assertNotIn(e2.task, canceled)
-            self.assertNotIn(f1.task, canceled)
+            _cancel_orphaned(f1)
+
+            # Let the cancellations propagate
+            await asyncio.sleep(0)
+
+            self.assertTrue(a1.task.cancelled())
+            self.assertFalse(a2.task.cancelled())
+            self.assertTrue(b1.task.cancelled())
+            self.assertFalse(b2.task.cancelled())
+            self.assertTrue(c1.task.cancelled())
+            self.assertFalse(c2.task.cancelled())
+            self.assertFalse(d1.task.cancelled())
+            self.assertFalse(d2.task.cancelled())
+            self.assertFalse(e1.task.cancelled())
+            self.assertFalse(e2.task.cancelled())
+            self.assertFalse(f1.task.cancelled())
 
             await asyncio.wait(tasks)
 
@@ -240,14 +242,14 @@ class PipelineNodeTest(unittest.TestCase):
             # Let C fail
             await asyncio.wait([c1.task])
 
-            canceled = _cancel_upstreams_of_errors(c1)
-            self.assertIn(a1.task, canceled)
-            self.assertIn(a2.task, canceled)
-            self.assertIn(b1.task, canceled)
-            self.assertIn(b2.task, canceled)
-            self.assertNotIn(c1.task, canceled)
-
+            _cancel_orphaned(c1)
             await asyncio.wait(tasks)
+
+            self.assertTrue(a1.task.cancelled())
+            self.assertTrue(a2.task.cancelled())
+            self.assertTrue(b1.task.cancelled())
+            self.assertTrue(b2.task.cancelled())
+            self.assertFalse(c1.task.cancelled())
 
             errs = _gather_error(c1)
             self.assertEqual(len(errs), 1)

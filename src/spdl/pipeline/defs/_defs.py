@@ -386,6 +386,11 @@ def Merge(
             If not provided, the default merge operation will be used, which passes items
             from all input queues to the output queue in the order they become available.
 
+            .. versionchanged:: 0.1.7
+               Custom merge operations can now exit early without hanging the pipeline.
+               The upstream stages are automatically cleaned up when the merge operation
+               returns.
+
     Returns:
         The config object.
 

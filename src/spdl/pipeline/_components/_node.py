@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
-from asyncio import Task
+from asyncio import ALL_COMPLETED, FIRST_COMPLETED, Task
 from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
 from functools import partial
@@ -25,7 +25,6 @@ from spdl.pipeline.defs import (
     SourceConfig,
 )
 
-from ._common import _StageCompleted
 from ._hook import get_default_hook_class, TaskHook
 from ._pipe import (
     _Aggregate,
@@ -53,10 +52,8 @@ __all__ = [
 # pyre-strict
 
 
-# Used to express the upstream relation ship of coroutines.
-# Currently only a chain is used, but we plan to extend it to
-# (possibly nested) "Y" shape.
-# Retaining relationship is necessary for graceful shutdown.
+# Used to express the upstream relation ship of coroutines,
+# which is necessary for graceful shutdown.
 @dataclass
 class _Node(Generic[T]):
     name: str
@@ -115,8 +112,6 @@ class _MutableInt:
 def _get_names(
     cfg: _ConfigBase, pipeline_id: int, stage_id: _MutableInt
 ) -> tuple[str, str]:
-    # Note: Do not change the pattern used for naming.
-    # They are used by dashboard to query runtime data.
     match cfg:
         case SourceConfig():
             base = "src"
@@ -134,6 +129,8 @@ def _get_names(
             base = "merge"
         case _:
             raise NotImplementedError(f"`{type(cfg)}` is not supported.")
+    # Note: Do not change the following pattern used for naming.
+    # They are used by dashboard to query runtime data.
     name = f"{pipeline_id}:{stage_id}:{base}"
     return name, f"{name}_queue"
 
@@ -321,25 +318,36 @@ def _start_tasks(node: _Node[T]) -> set[Task]:
     return ret
 
 
-def _cancel_recursive(node: _Node[T]) -> set[Task]:
-    task = node.task
-    task.cancel()
-    ret = {task}
+def _cancel_recursive(node: _Node[T]) -> None:
+    node.task.cancel()
     for n in node.upstream:
-        ret |= _cancel_recursive(n)
-    return ret
+        _cancel_recursive(n)
 
 
-def _cancel_upstreams_of_errors(node: _Node[T]) -> set[Task]:
+def _cancel_orphaned(node: _Node[T]) -> None:
+    """
+    Cancel upstream tasks when the current node's task has completed to prevent orphaned producers.
+
+    This function traverses the pipeline graph upstream from the given node.
+    If the current node's asyncio Task is done (completed, errored, or cancelled),
+    all upstream tasks are recursively cancelled to avoid deadlocks where upstream
+    producers keep waiting to push data into queues that will no longer be consumed.
+
+    The function then continues traversing upstream regardless of the current node's
+    state to ensure any upstream nodes that have completed also trigger their own
+    upstream cancellations.
+
+    Args:
+        node: The pipeline node whose task and upstream relationship are inspected
+              for potential cancellation.
+    """
     task = node.task
-    canceled = set()
-    if task.done() and not task.cancelled() and task.exception() is not None:
+    if task.done():  # done includes success, error or cancelled.
         for n in node.upstream:
-            canceled |= _cancel_recursive(n)
+            _cancel_recursive(n)
 
     for n in node.upstream:
-        canceled |= _cancel_upstreams_of_errors(n)
-    return canceled
+        _cancel_orphaned(n)
 
 
 def _gather_error(node: _Node[T]) -> list[tuple[str, Exception]]:
@@ -387,27 +395,25 @@ async def _run_pipeline_coroutines(node: _Node[T]) -> None:
         # demonstrate the behavior.
         # https://gist.github.com/mthrok/3a1c11c2d8012e29f4835679ac0baaee
         try:
-            _, pending = await asyncio.wait(
-                pending, return_when=asyncio.FIRST_EXCEPTION
-            )
+            _, pending = await asyncio.wait(pending, return_when=FIRST_COMPLETED)
         except asyncio.CancelledError:
             for task in pending:
                 task.cancel()
-            await asyncio.wait(pending)
+            await asyncio.wait(pending, return_when=ALL_COMPLETED)
             raise
+        else:
+            # If a task is done, we cancel all of its upstream stages, because
+            # otherwise they get stuck.
+            # This does not happen usually because we implement pipes in a way that
+            # upstream stages complete first.
+            # But `Merge` with custom op can exit before all the upstream stages complete.
+            # https://github.com/facebookresearch/spdl/issues/1204
+            #
+            # Note: Usually, one must await the cancelled task, but since we await all
+            # tasks in this `while pending` loop, here we cancel and not await.
+            _cancel_orphaned(node)
 
-        if not pending:
-            break
-
-        # Check if any of the task caused an error.
-        # If an error occurred, we cancel the stages upstream to the failed one,
-        # then continue waiting the downstream ones.
-        if canceled := _cancel_upstreams_of_errors(node):
-            await asyncio.wait(canceled)
-
-    errs = _gather_error(node)
-    errs = [(n, e) for n, e in errs if not isinstance(e, _StageCompleted)]
-    if errs:
+    if errs := _gather_error(node):
         raise PipelineFailure(errs)
 
 
