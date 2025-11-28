@@ -60,6 +60,8 @@ jobs:
           uv python list --only-installed
           uv venv
 
+          dnf install -qy cmake ninja-build
+
           # Build package
           uv build --no-python-downloads --all-packages --wheel
           ./packaging/repair_wheels.sh manylinux_2_26_${{ inputs.arch }} ./dist ~/package

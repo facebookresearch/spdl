@@ -72,6 +72,8 @@ jobs:
           uv python list --only-installed
           uv venv
 
+          dnf install -qy cmake ninja-build
+
           # Install CUDA
           cuda_dir="/opt/cuda"
           .github/scripts/install_cuda_toolkit.py \
