@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import unittest
 from collections.abc import Iterator
 
 from spdl.source.utils import embed_shuffle
@@ -25,69 +26,67 @@ class IterableWithShuffle_:
         self.vals = self.vals[1:] + self.vals[:1]
 
 
-def test_embed_shuffle():
-    """Iterable created by embed_shuffle calls shuffle automatically"""
+class SourceUtilsTest(unittest.TestCase):
+    def test_embed_shuffle(self):
+        """Iterable created by embed_shuffle calls shuffle automatically"""
 
-    foo = IterableWithShuffle_(3)
-    assert foo._seed is None
-    iterable = embed_shuffle(foo)
-    assert list(iterable) == [1, 2, 0]
-    assert foo._seed == 0
-    assert list(iterable) == [2, 0, 1]
-    assert foo._seed == 1
-    assert list(iterable) == [0, 1, 2]
-    assert foo._seed == 2
+        foo = IterableWithShuffle_(3)
+        self.assertIsNone(foo._seed)
+        iterable = embed_shuffle(foo)
+        self.assertEqual(list(iterable), [1, 2, 0])
+        self.assertEqual(foo._seed, 0)
+        self.assertEqual(list(iterable), [2, 0, 1])
+        self.assertEqual(foo._seed, 1)
+        self.assertEqual(list(iterable), [0, 1, 2])
+        self.assertEqual(foo._seed, 2)
 
+    def test_embed_shuffle_halt(self):
+        """The value is shuffled with different seed even after an iteration is halted."""
 
-def test_embed_shuffle_halt():
-    """The value is shuffled with different seed even after an iteration is halted."""
+        foo = IterableWithShuffle_(5)
+        iterable = embed_shuffle(foo)
 
-    foo = IterableWithShuffle_(5)
-    iterable = embed_shuffle(foo)
+        iterator = iter(iterable)
+        self.assertIsNone(foo._seed)
+        self.assertEqual(next(iterator), 1)
+        self.assertEqual(foo._seed, 0)
+        self.assertEqual(next(iterator), 2)
+        del iterator
 
-    iterator = iter(iterable)
-    assert foo._seed is None
-    assert next(iterator) == 1
-    assert foo._seed == 0
-    assert next(iterator) == 2
-    del iterator
+        iterator = iter(iterable)
+        self.assertEqual(next(iterator), 2)
+        self.assertEqual(foo._seed, 1)
+        self.assertEqual(next(iterator), 3)
+        del iterator
 
-    iterator = iter(iterable)
-    assert next(iterator) == 2
-    assert foo._seed == 1
-    assert next(iterator) == 3
-    del iterator
+    def test_embed_shuffle_shuffle_after(self):
+        """Iterable created by embed_shuffle calls shuffle automatically after iteration"""
 
+        foo = IterableWithShuffle_(3)
+        iterable = embed_shuffle(foo, shuffle_last=True)
+        self.assertIsNone(foo._seed)
+        self.assertEqual(list(iterable), [0, 1, 2])
+        self.assertEqual(foo._seed, 0)
+        self.assertEqual(list(iterable), [1, 2, 0])
+        self.assertEqual(foo._seed, 1)
+        self.assertEqual(list(iterable), [2, 0, 1])
+        self.assertEqual(foo._seed, 2)
 
-def test_embed_shuffle_shuffle_after():
-    """Iterable created by embed_shuffle calls shuffle automatically after iteration"""
+    def test_embed_shuffle_shuffle_after_halt(self):
+        """The value is shuffled with different seed even after an iteration is halted."""
 
-    foo = IterableWithShuffle_(3)
-    iterable = embed_shuffle(foo, shuffle_last=True)
-    assert foo._seed is None
-    assert list(iterable) == [0, 1, 2]
-    assert foo._seed == 0
-    assert list(iterable) == [1, 2, 0]
-    assert foo._seed == 1
-    assert list(iterable) == [2, 0, 1]
-    assert foo._seed == 2
+        foo = IterableWithShuffle_(5)
+        iterable = embed_shuffle(foo, shuffle_last=True)
 
+        iterator = iter(iterable)
+        self.assertEqual(next(iterator), 0)
+        self.assertEqual(next(iterator), 1)
+        self.assertIsNone(foo._seed)
+        del iterator
+        self.assertEqual(foo._seed, 0)
 
-def test_embed_shuffle_shuffle_after_halt():
-    """The value is shuffled with different seed even after an iteration is halted."""
-
-    foo = IterableWithShuffle_(5)
-    iterable = embed_shuffle(foo, shuffle_last=True)
-
-    iterator = iter(iterable)
-    assert next(iterator) == 0
-    assert next(iterator) == 1
-    assert foo._seed is None
-    del iterator
-    assert foo._seed == 0
-
-    iterator = iter(iterable)
-    assert next(iterator) == 1
-    assert next(iterator) == 2
-    del iterator
-    assert foo._seed == 1
+        iterator = iter(iterable)
+        self.assertEqual(next(iterator), 1)
+        self.assertEqual(next(iterator), 2)
+        del iterator
+        self.assertEqual(foo._seed, 1)
