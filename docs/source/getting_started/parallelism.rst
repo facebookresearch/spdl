@@ -314,8 +314,6 @@ the case study :ref:`parallelism-performance`.
 The :py:func:`spdl.pipeline.run_pipeline_in_subprocess` function moves the given
 instance of :py:class:`PipelineBuilder` to a subprocess, build and execute the
 :py:class:`Pipeline` and put the results to inter-process queue.
-(There is also :py:func:`spdl.pipeline.iterate_in_subprocess` function for
-running a generic :py:class:`~collections.abc.Iterable` object in subprocess.)
 
 .. mermaid::
 
@@ -368,7 +366,7 @@ The following example shows how to use the function.
 
 .. code-block:: python
 
-   # Construct a builder
+   # Construct a builder and get its config
    builder = (
        spdl.pipeline.PipelineBuilder()
        .add_source(...)
@@ -376,9 +374,10 @@ The following example shows how to use the function.
        ...
        .add_sink(...)
    )
+   config = builder.get_config()
 
    # Move it to the subprocess, build the Pipeline
-   iterable = run_pipeline_in_subprocess(builder, ...)
+   iterable = run_pipeline_in_subprocess(config, num_threads=...)
 
    # Iterate - epoch 0
    for item in iterable:
@@ -387,6 +386,20 @@ The following example shows how to use the function.
    # Iterate - epoch 1
    for item in iterable:
        ...
+
+.. note::
+
+   **Advanced Usage:**
+
+   - **Pipelines with Merge**: You can run pipelines with sub-pipelines constructed
+     using ``Merge`` by directly passing the ``PipelineConfig`` object to
+     ``run_pipeline_in_subprocess``. This allows complex pipeline topologies to be
+     executed in a subprocess.
+
+   - **Subinterpreter Execution**: For Python 3.14 and above, the
+     :py:func:`run_pipeline_in_subinterpreter` function is also available. It executes
+     the pipeline in a separate interpreter within the same process, providing
+     interpreter-level isolation while being lighter weight than a full subprocess.
 
 Since the result of the ``run_pipeline_in_subprocess`` is an ``iterable``,
 you can build a pipeline on top of it.
@@ -407,8 +420,9 @@ We refer this pattern as MTP ("multi-threading in subprocess").
        .pipe(collate)
        .add_sink(...)
    )
+   config = builder.get_config()
 
-   src = run_pipeline_in_subprocess(builder, ...)
+   src = run_pipeline_in_subprocess(config, num_threads=...)
 
    # Build another pipeline on top of it, which transfers the data to a
    # GPU
