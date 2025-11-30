@@ -24,6 +24,23 @@ async def _source(
     queue: AsyncQueue,
     max_items: int | None = None,
 ) -> None:
+    """Coroutine that generates data from an iterator and puts it into a queue.
+
+    This coroutine represents the source stage of a pipeline. It consumes items from
+    a synchronous or asynchronous iterable and puts them into the output queue for
+    downstream processing. The coroutine completes when the iterator is exhausted or
+    when the maximum number of items has been reached.
+
+    Args:
+        src: The source iterable (synchronous or asynchronous) to consume data from.
+        queue: The async queue to put items into for downstream consumption.
+        max_items: Optional maximum number of items to process. If ``None``, processes
+            all items from the source.
+
+    Note:
+        The EOF token is automatically handled by the queue's stage hook context manager,
+        so this coroutine does not explicitly send EOF.
+    """
     src_: AsyncIterable[T] = (  # pyre-ignore: [9]
         src if hasattr(src, "__aiter__") else _to_async_gen(iter, None)(src)
     )
