@@ -186,9 +186,6 @@ def _build_node(
     if node._coro is not None:
         raise RuntimeError(f"[Internal Error] coroutine cannot be built twice. {node}")
 
-    for n in node.upstream:
-        _build_node(n, fc_class, task_hook_factory, max_failures)
-
     match node.cfg:
         case SourceConfig():
             cfg: SourceConfig = node.cfg
@@ -247,6 +244,18 @@ def _build_node(
             node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, False)
 
 
+def _build_node_recursive(
+    node: _Node[Any],
+    fc_class: type[_FailCounter],
+    task_hook_factory: Callable[[str], list[TaskHook]],
+    max_failures: int,
+) -> None:
+    for n in node.upstream:
+        _build_node_recursive(n, fc_class, task_hook_factory, max_failures)
+
+    _build_node(node, fc_class, task_hook_factory, max_failures)
+
+
 # Used to append stage name with pipeline
 _PIPELINE_ID: int = -1
 
@@ -303,7 +312,7 @@ def _build_pipeline_node(
 
     fc_class = _get_fail_counter()
     node = _convert_config(plc, q_class, _PIPELINE_ID, _MutableInt(stage_id))
-    _build_node(node, fc_class, hook_factory, max_failures)
+    _build_node_recursive(node, fc_class, hook_factory, max_failures)
     return node
 
 
