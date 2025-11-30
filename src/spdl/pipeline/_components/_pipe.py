@@ -173,6 +173,30 @@ def _pipe(
     task_hooks: list[TaskHook],
     op_requires_eof: bool,
 ) -> Coroutine:
+    """Create a coroutine for processing data from input queue to output queue.
+
+    This function creates a processing stage coroutine that consumes items from the
+    input queue, applies a transformation operation (sync or async function/generator),
+    and puts the results into the output queue. It manages concurrent execution of
+    tasks up to the specified concurrency level.
+
+    Args:
+        name: The name of the pipeline stage for logging and task naming.
+        input_queue: The queue to consume input items from.
+        output_queue: The queue to put processed items into.
+        args: Pipeline arguments containing the operation, executor, and concurrency.
+        fail_counter: Hook for tracking and limiting task failures.
+        task_hooks: List of hooks for monitoring task execution.
+        op_requires_eof: If True, pass EOF token to the operation; otherwise stop
+            processing before EOF.
+
+    Returns:
+        A coroutine that executes the pipeline stage.
+
+    Raises:
+        ValueError: If input_queue and output_queue are the same object.
+        RuntimeError: If the number of failures exceeds the threshold.
+    """
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different.")
 
@@ -236,11 +260,36 @@ def _ordered_pipe(
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
 ) -> Coroutine:
-    """
+    """Create a coroutine for processing data while preserving input order.
 
-    Implementation Note:
+    This function creates a processing stage coroutine similar to ``_pipe``, but guarantees
+    that output items maintain the same order as input items, regardless of task
+    completion order. This is achieved by using an intermediate queue to buffer tasks
+    and waiting for them to complete in sequence.
+
+    Args:
+        name: The name of the pipeline stage for logging and task naming.
+        input_queue: The queue to consume input items from.
+        output_queue: The queue to put processed items into (in order).
+        args: Pipeline arguments containing the operation, executor, and concurrency.
+        fail_counter: Hook for tracking and limiting task failures.
+        task_hooks: List of hooks for monitoring task execution.
+
+    Returns:
+        A coroutine that executes the ordered pipeline stage.
+
+    Raises:
+        ValueError: If input_queue and output_queue are the same object.
+        RuntimeError: If the number of failures exceeds the threshold.
+
+    Note:
+        The operation must be an async function (not an async generator) for ordered pipe.
+
+    **Implementation Note**
 
     The core idea of ordered pipe implementation is to use queue as buffer for active tasks.
+
+    .. code-block::
 
                   ┌─┐
                   │ │
@@ -391,6 +440,29 @@ def _merge(
     task_hooks: list[TaskHook],
     merge_op: _TMergeOp | None,
 ) -> Coroutine:
+    """Create a coroutine for merging data from multiple input queues.
+
+    This function creates a merge stage coroutine that consumes items from multiple
+    input queues and puts them into a single output queue. By default, items from
+    all input queues are passed through in the order they become available. A custom
+    merge operation can be provided for more complex merging logic.
+
+    Args:
+        name: The name of the pipeline stage for logging and task naming.
+        input_queues: Sequence of queues to consume input items from.
+        output_queue: The queue to put merged items into.
+        fail_counter: Hook for tracking and limiting task failures.
+        task_hooks: List of hooks for monitoring task execution.
+        merge_op: Optional custom merge operation. If None, uses default pass-through
+            merge that forwards items from all input queues to output queue.
+
+    Returns:
+        A coroutine that executes the merge stage.
+
+    Raises:
+        ValueError: If input_queues is empty or if any input queue is the same as
+            the output queue.
+    """
     if not input_queues:
         raise ValueError("There must be at least one input queue.")
 
