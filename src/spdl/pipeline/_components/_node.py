@@ -56,10 +56,27 @@ __all__ = [
 # which is necessary for graceful shutdown.
 @dataclass
 class _Node(Generic[T]):
+    """_Node()
+
+    Represents a node in the pipeline graph.
+
+    Each node corresponds to a pipeline stage and contains references to its upstream
+    nodes, forming a directed acyclic graph (DAG). Nodes are used internally during
+    the pipeline build process to create and manage coroutines for each stage.
+    """
+
     name: str
+    """A unique identifier for the node, used for logging and task naming."""
+
     cfg: _ConfigBase
+    """The configuration object that defines the behavior of this stage."""
+
     upstream: "Sequence[_Node[Any]]"
+    """A sequence of upstream nodes that this node depends on."""
+
     queue: AsyncQueue
+    """An async queue for buffering data between this stage and downstream stages."""
+
     _coro: Coroutine[None, None, None] | None = None
     _task: Task | None = None
 
@@ -150,6 +167,24 @@ def _convert_config(
     stage_id: _MutableInt,
     disable_sink: bool = False,
 ) -> _Node[T]:
+    """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
+    :py:class:`~spdl.pipeline._components._node._Node` objects.
+
+    This function recursively transforms a declarative pipeline configuration into
+    a node graph where each node represents a pipeline stage. The nodes are linked
+    via upstream references, forming a directed acyclic graph (DAG) without branching.
+
+    Args:
+        plc: The pipeline configuration to convert.
+        q_class: The queue class to use for creating buffers between stages.
+        pipeline_id: A unique identifier for the pipeline, used in stage naming.
+        stage_id: A mutable counter for assigning unique stage IDs.
+        disable_sink: If True, skip creating the sink node (used for merge branches).
+
+    Returns:
+        The sink node (or the last processing node if disable_sink is True) with
+        all upstream nodes linked.
+    """
     name, q_name = _get_names(plc.src, pipeline_id, stage_id)
     stage_id += 1
 
@@ -183,6 +218,53 @@ def _build_node(
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int,
 ) -> None:
+    """Build a coroutine for a single node based on its configuration type.
+
+    This function creates the appropriate coroutine for a given node by pattern
+    matching on the node's configuration type. Each configuration type corresponds
+    to a specific pipeline stage behavior:
+
+    - :py:class:`~spdl.pipeline.defs.SourceConfig`: Creates a source coroutine that
+      generates data from an iterator using
+      :py:func:`~spdl.pipeline._components._source._source`
+    - :py:class:`~spdl.pipeline.defs.MergeConfig`: Creates a merge coroutine that
+      combines multiple input streams using
+      :py:func:`~spdl.pipeline._components._pipe._merge`
+    - :py:class:`~spdl.pipeline.defs.SinkConfig`: Creates a sink coroutine that
+      buffers output data using
+      :py:func:`~spdl.pipeline._components._sink._sink`
+    - :py:class:`~spdl.pipeline.defs.PipeConfig`: Creates a processing coroutine
+       using
+      :py:func:`~spdl.pipeline._components._pipe._pipe` or
+      :py:func:`~spdl.pipeline._components._pipe._ordered_pipe`
+    - :py:class:`~spdl.pipeline.defs.AggregateConfig`: Creates a pipe coroutine
+      with aggregation logic using
+      :py:func:`~spdl.pipeline._components._pipe._pipe`.
+    - :py:class:`~spdl.pipeline.defs.DisaggregateConfig`: Creates a pipe coroutine
+      with disaggregation logic using
+      :py:func:`~spdl.pipeline._components._pipe._pipe`
+
+    The created coroutine is stored in the node's ``_coro`` attribute.
+
+    Args:
+        node: The node to build a coroutine for. The node must not already have
+            a coroutine.
+        fc_class: The failure counter class for tracking task failures.
+        task_hook_factory: A factory function for creating task hooks for
+            monitoring.
+        max_failures: The maximum number of failures allowed before halting.
+
+    Raises:
+        ValueError: If an unsupported configuration type is encountered.
+        AssertionError: If the node's upstream structure doesn't match the
+            configuration type's requirements (e.g., SourceConfig must have no
+            upstream nodes).
+
+    Note:
+        This function does not handle recursion. Use
+        :py:func:`_build_node_recursive` to build coroutines for a node and all
+        its upstream dependencies.
+    """
     if node._coro is not None:
         raise RuntimeError(f"[Internal Error] coroutine cannot be built twice. {node}")
 
@@ -250,6 +332,21 @@ def _build_node_recursive(
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int,
 ) -> None:
+    """Recursively build coroutines for a node and all its upstream nodes.
+
+    This function traverses the node graph starting from the given node, following
+    upstream references recursively. For each node, it creates a coroutine based on
+    the node's configuration type (Source, Pipe, Merge, Sink, etc.).
+
+    Args:
+        node: The node to build coroutines for.
+        fc_class: The failure counter class for tracking task failures.
+        task_hook_factory: A factory function for creating task hooks for monitoring.
+        max_failures: The maximum number of failures allowed before halting.
+
+    Raises:
+        RuntimeError: If attempting to build a coroutine for a node that already has one.
+    """
     for n in node.upstream:
         _build_node_recursive(n, fc_class, task_hook_factory, max_failures)
 
@@ -391,7 +488,28 @@ class PipelineFailure(RuntimeError):
 
 
 async def _run_pipeline_coroutines(node: _Node[T]) -> None:
-    """Run the pipeline coroutines and handle errors."""
+    """Orchestrate the execution of all pipeline stage coroutines.
+
+    This is the main coroutine that manages the lifecycle of all pipeline stage tasks.
+    It creates asyncio Tasks from each node's coroutine, monitors their execution,
+    handles failures, and ensures proper cleanup.
+
+    The execution flow:
+
+    1. Creates asyncio Tasks for all nodes (starting from sink, traversing upstream)
+    2. Waits for tasks to complete using asyncio.wait with FIRST_COMPLETED
+    3. When a task completes, cancels orphaned upstream tasks to prevent deadlocks
+    4. Handles cancellation requests from the foreground thread
+    5. Gathers errors from failed tasks and raises PipelineFailure if any
+
+    Args:
+        node: The sink node of the pipeline (all upstream nodes are accessed via
+            the upstream references).
+
+    Raises:
+        asyncio.CancelledError: If the pipeline is cancelled by the foreground thread.
+        PipelineFailure: If any pipeline stage encounters an error.
+    """
     pending = _start_tasks(node)
 
     while pending:

@@ -32,4 +32,5 @@ sync/async functions in a unified manner.
 .. seealso::
 
    - :ref:`pipeline-parallelism` - How SPDL uses async I/O for pipeline parallelism
+   - :doc:`../notes/pipeline_impl` - Implementation details of Pipeline, including how async I/O enables the orchestration of pipeline stages
    - :py:mod:`asyncio` - Python's official async I/O documentation
