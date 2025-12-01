@@ -122,6 +122,12 @@ def _build_pipeline(
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
 ) -> Pipeline[U]:
+    if _DEFAULT_BUILD_CALLBACK is not None:
+        try:
+            _DEFAULT_BUILD_CALLBACK(pipeline_cfg)
+        except Exception:
+            _LG.exception("Build callback failed.")
+
     desc = repr(pipeline_cfg)
 
     _LG.debug("%s", desc)
@@ -209,9 +215,6 @@ def build_pipeline(
         stage_id: The index of the initial stage  used for logging.
     """
     from . import _profile
-
-    if _DEFAULT_BUILD_CALLBACK is not None:
-        _DEFAULT_BUILD_CALLBACK(pipeline_cfg)
 
     if _profile.is_diagnostic_mode_enabled():
         return _profile._build_pipeline_diagnostic_mode(pipeline_cfg)
