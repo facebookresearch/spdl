@@ -26,7 +26,8 @@ to a SQLite database by a dedicated writer thread.
 Architecture
 ------------
 
-The following diagram illustrates the relationship between the pipeline, buffer, and writer thread:
+The following diagram illustrates the relationship between the pipeline, buffer,
+and writer thread:
 
 .. mermaid::
 
@@ -51,10 +52,49 @@ This example demonstrates:
 #. Using :py:class:`StatsQueueWithLogging` to log queue performance to a buffer
 #. Using :py:class:`SQLiteStatsWriter` to asynchronously flush the buffer to SQLite
 
-And the accompanying plot script demonstrates:
+Running this example on Kinetics K400 dataset produces the following output:
 
-#. Querying the collected statistics from the database using standalone query functions
-#. Analyzing pipeline performance over time
+.. code-block:: text
+
+   ================================================================================
+   PIPELINE PERFORMANCE SUMMARY
+   ================================================================================
+   📊 Task Statistics:
+   --------------------------------------------------------------------------------
+
+     Stage: 0:1:decode[10]
+       Total tasks processed: 240435
+       Total failures: 1458
+       Average task time: 0.4241s
+       Success rate: 99.4%
+       Number of log entries: 169
+
+   📈 Queue Statistics:
+   --------------------------------------------------------------------------------
+
+     Queue: 0:0:src_queue
+       Total items processed: 240445
+       Average QPS: 23.71
+       Average put time: 0.0417s
+       Average get time: 0.0000s
+       Average occupancy rate: 100.0%
+       Number of log entries: 169
+
+     Queue: 0:1:decode[10]_queue
+       Total items processed: 238977
+       Average QPS: 23.57
+       Average put time: 0.0000s
+       Average get time: 0.0424s
+       Average occupancy rate: 0.1%
+       Number of log entries: 169
+
+     Queue: 0:2:sink_queue
+       Total items processed: 238977
+       Average QPS: 23.57
+       Average put time: 0.0000s
+       Average get time: 0.0421s
+       Average occupancy rate: 0.1%
+       Number of log entries: 169
 
 Visualization
 -------------
@@ -68,6 +108,11 @@ built-in query API to analyze:
 
 You can use the ``performance_analysis_plot.py`` script to query the data from
 the database and generate plots for visualization and analysis.
+
+.. image:: ../_static/data/example-performance-analysis-task-stats.png
+
+.. image:: ../_static/data/example-performance-analysis-queue-stats.png
+
 """
 
 import argparse
@@ -129,6 +174,7 @@ class TaskStatsHookWithLogging(TaskStatsHook):
 
     This hook collects task performance statistics and writes them to a
     plain Python queue.
+
     Args:
         name: Name of the stage/task.
         buffer: Shared queue to write stats entries. This queue is typically
@@ -351,7 +397,7 @@ def main() -> None:
     """The main entry point for the example."""
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname).1s] - %(message)s",
+        format="%(asctime)s [%(levelname).1s]: %(message)s",
     )
 
     args = parse_args()

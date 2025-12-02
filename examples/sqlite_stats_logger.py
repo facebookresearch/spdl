@@ -655,6 +655,9 @@ def query_queue_stats(
 def log_stats_summary(db_path: str | Path) -> None:
     """Log a summary of the collected statistics using the logger.
 
+    This function aggregates all log entries to compute totals and averages
+    across the entire pipeline execution.
+
     Args:
         db_path: Path to the SQLite database.
     """
@@ -675,19 +678,25 @@ def log_stats_summary(db_path: str | Path) -> None:
         for name in sorted(task_names):
             name_stats = [s for s in task_stats if s["name"] == name]
             if name_stats:
-                latest = name_stats[0]
+                # Calculate totals across all log entries
+                total_tasks = sum(s["num_tasks"] for s in name_stats)
+                total_failures = sum(s["num_failures"] for s in name_stats)
+
+                # Calculate weighted average time (weighted by num_tasks)
+                weighted_sum = sum(s["ave_time"] * s["num_tasks"] for s in name_stats)
+                avg_time = weighted_sum / total_tasks if total_tasks > 0 else 0.0
+
+                success_rate = (
+                    (total_tasks - total_failures) / max(1, total_tasks) * 100
+                )
+
                 _LG.info("")
                 _LG.info("  Stage: %s", name)
-                _LG.info("    Total tasks: %d", latest["num_tasks"])
-                _LG.info("    Failures: %d", latest["num_failures"])
-                _LG.info("    Average time: %.4fs", latest["ave_time"])
-                success_rate = (
-                    (latest["num_tasks"] - latest["num_failures"])
-                    / max(1, latest["num_tasks"])
-                    * 100
-                )
+                _LG.info("    Total tasks processed: %d", total_tasks)
+                _LG.info("    Total failures: %d", total_failures)
+                _LG.info("    Average task time: %.4fs", avg_time)
                 _LG.info("    Success rate: %.1f%%", success_rate)
-                _LG.info("    Total entries: %d", len(name_stats))
+                _LG.info("    Number of log entries: %d", len(name_stats))
 
     # Queue stats
     queue_stats = query_queue_stats(db_path_str)
@@ -701,21 +710,44 @@ def log_stats_summary(db_path: str | Path) -> None:
         for name in sorted(queue_names):
             name_stats = [s for s in queue_stats if s["name"] == name]
             if name_stats:
-                latest = name_stats[0]
+                # Calculate totals across all log entries
+                total_items = sum(s["num_items"] for s in name_stats)
+                total_elapsed: float = sum(s["elapsed"] for s in name_stats)
+
+                # Calculate weighted averages (weighted by num_items)
+                weighted_put_time = sum(
+                    s["ave_put_time"] * s["num_items"] for s in name_stats
+                )
+                weighted_get_time = sum(
+                    s["ave_get_time"] * s["num_items"] for s in name_stats
+                )
+                weighted_occupancy = sum(
+                    s["occupancy_rate"] * s["num_items"] for s in name_stats
+                )
+
+                avg_put_time = (
+                    weighted_put_time / total_items if total_items > 0 else 0.0
+                )
+                avg_get_time = (
+                    weighted_get_time / total_items if total_items > 0 else 0.0
+                )
+                avg_occupancy = (
+                    weighted_occupancy / total_items if total_items > 0 else 0.0
+                )
+
+                # Calculate average QPS
+                avg_qps = (
+                    float(total_items) / total_elapsed if total_elapsed > 0 else 0.0
+                )
+
                 _LG.info("")
                 _LG.info("  Queue: %s", name)
-                _LG.info("    Total items: %d", latest["num_items"])
-                # Calculate QPS from elapsed time and num_items
-                qps = (
-                    latest["num_items"] / latest["elapsed"]
-                    if latest["elapsed"] > 0
-                    else 0
-                )
-                _LG.info("    QPS: %.2f", qps)
-                _LG.info("    Avg put time: %.4fs", latest["ave_put_time"])
-                _LG.info("    Avg get time: %.4fs", latest["ave_get_time"])
-                _LG.info("    Occupancy rate: %.1f%%", latest["occupancy_rate"] * 100)
-                _LG.info("    Total entries: %d", len(name_stats))
+                _LG.info("    Total items processed: %d", total_items)
+                _LG.info("    Average QPS: %.2f", avg_qps)
+                _LG.info("    Average put time: %.4fs", avg_put_time)
+                _LG.info("    Average get time: %.4fs", avg_get_time)
+                _LG.info("    Average occupancy rate: %.1f%%", avg_occupancy * 100)
+                _LG.info("    Number of log entries: %d", len(name_stats))
 
     _LG.info("")
     _LG.info("=" * 80)

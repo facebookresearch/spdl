@@ -27,6 +27,7 @@ Example usage:
 """
 
 import argparse
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -35,6 +36,7 @@ import matplotlib.pyplot as plt
 
 try:
     from examples.sqlite_stats_logger import (  # pyre-ignore[21]
+        log_stats_summary,
         query_event_stats,
         query_queue_stats,
         query_task_stats,
@@ -43,6 +45,7 @@ try:
     )
 except ImportError:
     from spdl.examples.sqlite_stats_logger import (
+        log_stats_summary,
         query_event_stats,
         query_queue_stats,
         query_task_stats,
@@ -593,11 +596,18 @@ def plot_queue_stats(
 
 def main() -> None:
     """Main entry point for the plotting script."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname).1s]: %(message)s",
+    )
+
     args = parse_args()
 
     # Validate database exists
     if not args.db_path.exists():
         raise FileNotFoundError(f"Database not found: {args.db_path}")
+
+    log_stats_summary(args.db_path)
 
     # Create output directory
     args.output.mkdir(parents=True, exist_ok=True)
