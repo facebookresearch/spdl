@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import inspect
-from collections.abc import AsyncIterable, Callable, Iterable, Sequence
+from collections.abc import AsyncIterable, Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from enum import IntEnum
@@ -465,7 +465,9 @@ class SupportsGetItem(Protocol[T, U]):
     def __getitem__(self, key: T) -> U: ...
 
 
-_TPipeInputs: TypeAlias = _TCallables[T, U] | SupportsGetItem[T, U]
+_TPipeInputs: TypeAlias = (
+    _TCallables[T, U] | SupportsGetItem[T, U] | Mapping[T, U] | Sequence[T]
+)
 
 
 def Pipe(
@@ -563,11 +565,17 @@ def Pipe(
         # but usually callable class name contains readable information, so
         # we don't do that here. (it happens in to_async helper function)
 
+    # After extracting __getitem__, op is now a callable.
+    # We need to narrow the type for Pyre, since it can't infer that
+    # SupportsGetItem.__getitem__ results in a callable.
+    assert callable(op)
+    callable_op: _TCallables[T, U] = op  # type: ignore[assignment]
+
     return PipeConfig(
-        name=name or _get_op_name(op),
+        name=name or _get_op_name(callable_op),
         _type=_type,
         _args=_PipeArgs(
-            op=op,
+            op=callable_op,
             executor=executor,
             concurrency=concurrency,
         ),
