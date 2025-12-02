@@ -36,7 +36,7 @@ std::vector<std::string> get_filters() {
   std::vector<std::string> ret;
   void* t = nullptr;
   const AVFilter* filter;
-  while (!(filter = av_filter_iterate(&t))) {
+  while ((filter = av_filter_iterate(&t))) {
     ret.emplace_back(filter->name);
   }
   return ret;
