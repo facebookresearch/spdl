@@ -325,21 +325,34 @@ class TestPacketLen(unittest.TestCase):
 
     @parameterized.expand(
         [
-            #
+            # Empty ranges: [start, end) where start == end should produce no frames
             ((0.0, 0.0), []),
             ((1.0, 1.0), []),
             ((2.0, 2.0), []),
             ((3.0, 3.0), []),
-            # Exact PTS
+            # Exact PTS - half-open range [start, end)
             ((0.00, 0.04), [0.00]),
             ((0.00, 0.08), [0.00, 0.04]),
             ((0.00, 0.12), [0.00, 0.04, 0.08]),
             ((0.04, 0.08), [0.04]),
             ((0.04, 0.12), [0.04, 0.08]),
-            # In-between PTS
+            # In-between PTS - frames at or after start, but before end
             ((0.00, 0.02), [0.00]),
             ((0.02, 0.04), []),
             ((0.04, 0.06), [0.04]),
+            # Additional edge cases for half-open range validation
+            # End timestamp exactly at frame PTS should exclude that frame
+            ((0.00, 0.04), [0.00]),  # Frame at 0.04 is excluded
+            ((0.08, 0.12), [0.08]),  # Frame at 0.12 is excluded
+            # Ranges that span multiple frames
+            ((0.00, 0.16), [0.00, 0.04, 0.08, 0.12]),
+            ((0.04, 0.20), [0.04, 0.08, 0.12, 0.16]),
+            # Start slightly before a frame PTS should include that frame
+            ((0.01, 0.08), [0.04]),
+            ((0.03, 0.12), [0.04, 0.08]),
+            # End slightly after a frame PTS should include that frame
+            ((0.00, 0.041), [0.00, 0.04]),
+            ((0.00, 0.081), [0.00, 0.04, 0.08]),
         ]
     )
     def test_demux_window(
