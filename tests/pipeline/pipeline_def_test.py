@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import unittest
+from collections.abc import Iterable, Mapping
 from typing import TypeVar
 
 from spdl.pipeline import build_pipeline
@@ -21,8 +22,11 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
+# pyre-strict
+
+
 class PipelineDefTest(unittest.TestCase):
-    def test_source_repr(self):
+    def test_source_repr(self) -> None:
         """`repr` of SourceConfig should not generate a huge string."""
 
         src = SourceConfig(list(range(10000)))
@@ -30,7 +34,7 @@ class PipelineDefTest(unittest.TestCase):
         self.assertGreater(len(repr(src.source)), 10000)
         self.assertLess(len(repr(src)), 10000)
 
-    def test_pipe_args_repr(self):
+    def test_pipe_args_repr(self) -> None:
         """`repr` of Pipe should not generate a huge string."""
 
         lst = list(range(10000))
@@ -45,7 +49,7 @@ class PipelineDefTest(unittest.TestCase):
         self.assertLess(len(repr(pipe._args.op)), 10000)
         self.assertLess(len(repr(pipe)), 10000)
 
-    def _test_build_pipeline(self, cfg: PipelineConfig, expected: list) -> None:
+    def _test_build_pipeline(self, cfg: PipelineConfig[T], expected: list[T]) -> None:
         print(cfg)
         pipeline = build_pipeline(cfg, num_threads=1)
 
@@ -53,7 +57,7 @@ class PipelineDefTest(unittest.TestCase):
             ite = pipeline.get_iterator(timeout=3)
             self.assertEqual(list(ite), expected)
 
-    def test_build_pipeline_simple(self):
+    def test_build_pipeline_simple(self) -> None:
         """PipelineConfig and build_pipeline works without pipes."""
         src = range(10)
         cfg = PipelineConfig(
@@ -64,7 +68,7 @@ class PipelineDefTest(unittest.TestCase):
 
         self._test_build_pipeline(cfg, list(src))
 
-    def test_build_pipeline_aggregate(self):
+    def test_build_pipeline_aggregate(self) -> None:
         """Aggregate works"""
         cfg = PipelineConfig(
             src=SourceConfig(range(8)),
@@ -77,7 +81,7 @@ class PipelineDefTest(unittest.TestCase):
         expected = [[0, 1, 2], [3, 4, 5], [6, 7]]
         self._test_build_pipeline(cfg, expected)
 
-    def test_build_pipeline_aggregate_drop_last(self):
+    def test_build_pipeline_aggregate_drop_last(self) -> None:
         """Aggregate works"""
         cfg = PipelineConfig(
             src=SourceConfig(range(8)),
@@ -90,7 +94,7 @@ class PipelineDefTest(unittest.TestCase):
         expected = [[0, 1, 2], [3, 4, 5]]
         self._test_build_pipeline(cfg, expected)
 
-    def test_build_pipeline_disaggregate(self):
+    def test_build_pipeline_disaggregate(self) -> None:
         """Disaggregate works"""
         cfg = PipelineConfig(
             src=SourceConfig([[0, 1, 2, 3]]),
@@ -103,7 +107,7 @@ class PipelineDefTest(unittest.TestCase):
         expected = [0, 1, 2, 3]
         self._test_build_pipeline(cfg, expected)
 
-    def test_build_pipeline_pipe_identity(self):
+    def test_build_pipeline_pipe_identity(self) -> None:
         """Pipe works with identity"""
         cfg = PipelineConfig(
             src=SourceConfig(range(5)),
@@ -116,7 +120,7 @@ class PipelineDefTest(unittest.TestCase):
         expected = list(range(5))
         self._test_build_pipeline(cfg, expected)
 
-    def test_build_pipeline_pipe_double(self):
+    def test_build_pipeline_pipe_double(self) -> None:
         """Pipe works with simple lambda"""
         cfg = PipelineConfig(
             src=SourceConfig(range(5)),
@@ -129,7 +133,7 @@ class PipelineDefTest(unittest.TestCase):
         expected = [2 * i for i in range(5)]
         self._test_build_pipeline(cfg, expected)
 
-    def test_build_pipeline_pipe_sum(self):
+    def test_build_pipeline_pipe_sum(self) -> None:
         """Pipe works with aggregated data"""
         cfg = PipelineConfig(
             src=SourceConfig(range(8)),
@@ -143,28 +147,23 @@ class PipelineDefTest(unittest.TestCase):
         expected = [3, 12, 13]
         self._test_build_pipeline(cfg, expected)
 
-    def test_build_pipeline_pipe_list(self):
+    def test_build_pipeline_pipe_list(self) -> None:
         """Pipe works with list"""
+        mapping = [i * i for i in range(8)]
         cfg = PipelineConfig(
             src=SourceConfig(range(8)),
-            pipes=[
-                Pipe([i * i for i in range(8)]),
-            ],
+            pipes=[Pipe(mapping)],
             sink=SinkConfig(3),
         )
+        self._test_build_pipeline(cfg, mapping)
 
-        expected = [i * i for i in range(8)]
-        self._test_build_pipeline(cfg, expected)
-
-    def test_build_pipeline_pipe_map(self):
+    def test_build_pipeline_pipe_map(self) -> None:
         """Pipe works with map (dict)"""
+        mapping = {i: i * i for i in range(8)}
         cfg = PipelineConfig(
             src=SourceConfig(range(8)),
-            pipes=[
-                Pipe({i: i * i for i in range(8)}),
-            ],
+            pipes=[Pipe(mapping)],
             sink=SinkConfig(3),
         )
 
-        expected = [i * i for i in range(8)]
-        self._test_build_pipeline(cfg, expected)
+        self._test_build_pipeline(cfg, list(mapping.values()))
