@@ -12,7 +12,7 @@ Module for locating source code of functions, callable objects, and wrapped func
 
 import functools
 import inspect
-from typing import Any, Dict, List, NamedTuple, Tuple
+from typing import Any, NamedTuple
 
 
 def _get_qualified_name(obj: Any) -> str:
@@ -37,8 +37,24 @@ class SourceLocation(NamedTuple):
     name: str
     file_path: str | None
     line_number: int | None
-    partial_args: Tuple[Any, ...]
-    partial_kwargs: Dict[str, Any]
+    partial_args: tuple[Any, ...]
+    partial_kwargs: dict[str, Any]
+
+
+_BUILTIN_TYPES: tuple[type[Any], ...] = (
+    tuple,
+    list,
+    dict,
+    str,
+    bool,
+    int,
+    float,
+    set,
+    frozenset,
+    bytes,
+    bytearray,
+    memoryview,
+)
 
 
 def locate_source(func: Any) -> SourceLocation:
@@ -51,8 +67,8 @@ def locate_source(func: Any) -> SourceLocation:
     Returns:
         SourceLocation containing file path, line number, name, and any partial args
     """
-    partial_args: List[Any] = []
-    partial_kwargs: Dict[str, Any] = {}
+    partial_args: list[Any] = []
+    partial_kwargs: dict[str, Any] = {}
 
     # Unwrap nested functools.partial instances
     while isinstance(func, functools.partial):
@@ -61,6 +77,15 @@ def locate_source(func: Any) -> SourceLocation:
         if func.keywords:
             partial_kwargs = {**func.keywords, **partial_kwargs}
         func = func.func
+
+    if isinstance(func, _BUILTIN_TYPES):
+        return SourceLocation(
+            file_path=None,
+            line_number=None,
+            name=type(func).__name__,
+            partial_args=tuple(partial_args),
+            partial_kwargs=partial_kwargs,
+        )
 
     # Determine the actual callable and get its name
     if inspect.isfunction(func) or inspect.ismethod(func):
@@ -81,8 +106,8 @@ def locate_source(func: Any) -> SourceLocation:
         name = _get_qualified_name(target)
     else:
         # Fallback
+        name = "unknown"
         target = func
-        name = getattr(func, "__name__", repr(func))
 
     file_path = None
     try:
