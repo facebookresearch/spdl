@@ -40,7 +40,6 @@ __all__ = [
 
 import logging
 import threading
-import warnings
 from collections.abc import Iterator, Sequence
 from decimal import Decimal
 from fractions import Fraction
@@ -192,28 +191,6 @@ class Demuxer:
         log_api_usage_once("spdl.io.Demuxer.demux_image")
 
         return self._demuxer.demux_image(**kwargs)
-
-    def _streaming_demux_video(
-        self,
-        num_packets: int,
-        bsf: str | None = None,
-    ) -> "Iterator[VideoPackets]":
-        """Demux video frames in streaming fashion.
-
-        Args:
-            num_packets: The number of packets to return at a time.
-            bsf: An optional bitstream filter.
-        """
-        bsf_ = None if bsf is None else BSF(self.video_codec, bsf)
-
-        ite = self.streaming_demux(self.video_stream_index, num_packets=num_packets)
-        for packets in ite:
-            if bsf_ is not None:
-                packets = bsf_.filter(packets)
-            yield packets
-
-        if bsf_ is not None and len(packets := bsf_.flush()):
-            yield packets
 
     @overload
     def streaming_demux(
@@ -741,15 +718,6 @@ def decode_packets_nvdec(
     """
     log_api_usage_once("spdl.io.decode_packets_nvdec")
 
-    for k in ("width", "height"):
-        if k in kwargs:
-            warnings.warn(
-                f"The argument '{k}' has been renamed to 'scale_{k}'. "
-                "Please update the function call.",
-                stacklevel=2,
-            )
-            kwargs[f"scale_{k}"] = kwargs.pop(k)
-
     # Note
     # FFmpeg's implementation applies BSF to all H264/HEVC formats,
     #
@@ -825,14 +793,7 @@ def decode_image_nvjpeg(
     log_api_usage_once("spdl.io.decode_image_nvjpeg")
 
     if device_config is None:
-        if "cuda_config" not in kwargs:
-            raise ValueError("device_config must be provided.")
-        if "cuda_config" in kwargs:
-            warnings.warn(
-                "`cuda_config` argument has been renamed to `device_config`.",
-                stacklevel=2,
-            )
-            device_config = kwargs["cuda_config"]
+        raise ValueError("device_config must be provided.")
 
     if isinstance(src, str):
         with open(src, "rb") as f:
@@ -964,12 +925,6 @@ def convert_frames(
             - ``W``: width
             - ``H``: height
     """
-    if "pin_memory" in kwargs:
-        warnings.warn(
-            "`pin_memory` argument has been removed. Use `storage` instead.",
-            stacklevel=2,
-        )
-        kwargs.pop("pin_memory")
     return _libspdl.convert_frames(frames, storage=storage, **kwargs)  # pyre-ignore[6]
 
 
@@ -1094,7 +1049,9 @@ def create_reference_video_frame(
 # Device data transfer
 ################################################################################
 def transfer_buffer(
-    buffer: "CPUBuffer", *, device_config: "CUDAConfig | None" = None, **kwargs
+    buffer: "CPUBuffer",
+    *,
+    device_config: "CUDAConfig",
 ) -> "CUDABuffer":
     """Move the given CPU buffer to CUDA device.
 
@@ -1105,16 +1062,6 @@ def transfer_buffer(
     Returns:
         Buffer data on the target GPU device.
     """
-    if device_config is None:
-        if "cuda_config" not in kwargs:
-            raise ValueError("device_config must be provided.")
-        if "cuda_config" in kwargs:
-            warnings.warn(
-                "`cuda_config` argument has been renamed to `device_config`.",
-                stacklevel=2,
-            )
-            device_config = kwargs["cuda_config"]
-
     return _libspdl_cuda.transfer_buffer(buffer, device_config=device_config)
 
 

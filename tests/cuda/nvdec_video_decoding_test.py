@@ -189,8 +189,8 @@ class TestNvdecH264(unittest.TestCase):
         array = _decode_video(
             h264.path,
             timestamp=(0, 1.0),
-            width=width,
-            height=height,
+            scale_width=width,
+            scale_height=height,
         )
 
         # _save(array, "./resize")
@@ -241,8 +241,8 @@ class TestNvdecH264(unittest.TestCase):
             crop_bottom=bottom,
             crop_left=left,
             crop_right=right,
-            width=w,
-            height=h,
+            scale_width=w,
+            scale_height=h,
         )
 
         self.assertEqual(array.dtype, torch.uint8)
