@@ -83,6 +83,7 @@ if TYPE_CHECKING:
     ImageDecoder = _libspdl.ImageDecoder
     ImageFrames = _libspdl.ImageFrames
     ImagePackets = _libspdl.ImagePackets
+    _MultiStreamingVideoDemuxer = _libspdl.MultiStreamingVideoDemuxer
     VideoCodec = _libspdl.VideoCodec
     VideoDecoder = _libspdl.VideoDecoder
     VideoEncodeConfig = _libspdl.VideoEncodeConfig
@@ -118,7 +119,7 @@ def _convert_time_window(window: TimeWindow) -> tuple[tuple[int, int], tuple[int
     """
 
     def _(val: float | Decimal | str | Fraction) -> tuple[int, int]:
-        frac = Fraction(val)
+        frac = Fraction(val)  # pyre-ignore[6]
         return (frac.numerator, frac.denominator)
 
     start, end = window
@@ -213,7 +214,7 @@ class Demuxer:
         *,
         duration: float = -1,
         num_packets: int = -1,
-    ) -> "Iterator[VideoPackets | AudioPackets]": ...
+    ) -> "Iterator[VideoPackets | AudioPackets | ImagePackets]": ...
 
     @overload
     def streaming_demux(
@@ -222,7 +223,7 @@ class Demuxer:
         *,
         duration: float = -1,
         num_packets: int = -1,
-    ) -> "Iterator[VideoPackets | AudioPackets]": ...
+    ) -> "Iterator[VideoPackets | AudioPackets | ImagePackets]": ...
 
     @overload
     def streaming_demux(
@@ -231,15 +232,15 @@ class Demuxer:
         *,
         duration: float = -1,
         num_packets: int = -1,
-    ) -> "Iterator[dict[int, VideoPackets | AudioPackets]]": ...
+    ) -> "Iterator[dict[int, VideoPackets | AudioPackets | ImagePackets]]": ...
 
     def streaming_demux(
         self,
-        indices=None,
+        indices: Sequence[int] | set[int] | int | None = None,
         *,
-        duration=-1,
-        num_packets=-1,
-    ):
+        duration: float = -1,
+        num_packets: int = -1,
+    ) -> "Iterator[dict[int, AudioPackets | VideoPackets | ImagePackets] | AudioPackets | VideoPackets | ImagePackets]":
         """Stream demux packets from the source.
 
         .. admonition:: Example - Streaming decoding audio
@@ -272,7 +273,7 @@ class Demuxer:
         else:
             idxs = set([indices] if isinstance(indices, int) else indices)
 
-        ite = self._demuxer.streaming_demux(
+        ite: _MultiStreamingVideoDemuxer = self._demuxer.streaming_demux(
             idxs, duration=duration, num_packets=num_packets
         )
         return _StreamingDemuxer(
@@ -311,20 +312,24 @@ class Demuxer:
     def __enter__(self) -> "Demuxer":
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
-        self._demuxer._drop()
+    def __exit__(self, exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
+        self._demuxer._drop()  # pyre-ignore[16]
 
 
 class _StreamingDemuxer:
-    def __init__(self, ite, demuxer: Demuxer, unwrap: bool) -> None:
+    def __init__(
+        self, ite: "_MultiStreamingVideoDemuxer", demuxer: Demuxer, unwrap: bool
+    ) -> None:
         self._demuxer = demuxer  # For keeping the reference.
         self._ite = ite
         self._unwrap = unwrap
 
-    def __iter__(self):
+    def __iter__(self) -> "_StreamingDemuxer":
         return self
 
-    def __next__(self):
+    def __next__(
+        self,
+    ) -> "dict[int, AudioPackets | VideoPackets | ImagePackets] | AudioPackets | VideoPackets | ImagePackets":
         if self._ite.done():
             raise StopIteration
         item = self._ite.next()
@@ -688,8 +693,9 @@ def decode_packets(
     """
 
     if filter_desc is not None:
+        assert (codec := packets.codec) is not None
         filter_desc = _resolve_filter_graph(
-            filter_desc, packets.codec, getattr(packets, "timestamp", None)
+            filter_desc, codec, getattr(packets, "timestamp", None)
         )
 
     return _libspdl.decode_packets(
@@ -1048,7 +1054,7 @@ def create_reference_audio_frame(
         sample_rate=sample_rate,
         pts=pts,
     )
-    frame._array_ref = array
+    frame._array_ref = array  # pyre-ignore[16]
     return frame
 
 
@@ -1094,7 +1100,7 @@ def create_reference_video_frame(
         frame_rate=frame_rate,
         pts=pts,
     )
-    frame._array_ref = array
+    frame._array_ref = array  # pyre-ignore[16]
     return frame
 
 
@@ -1284,7 +1290,9 @@ class Muxer:
                 object.
         """
         return self._muxer.add_encode_stream(
-            config=config, encoder=encoder, encoder_config=encoder_config
+            config=config,  # pyre-ingore[6]
+            encoder=encoder,
+            encoder_config=encoder_config,
         )
 
     @overload
@@ -1343,12 +1351,14 @@ class Muxer:
         self._open = True
         return self
 
-    def write(self, stream_index: int, packets: "AudioPackets | VideoPackets") -> None:
+    def write(
+        self, stream_index: int, packets: "AudioPackets | VideoPackets | ImagePackets"
+    ) -> None:
         """Write packets to muxer.
 
         Args:
             stream_index: The stream to write to.
-            packets: Audio/video data.
+            packets: Audio/video/image data.
         """
         self._muxer.write(stream_index, packets)  # pyre-ignore[6]
 
@@ -1381,7 +1391,7 @@ class Muxer:
         """
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *_: object) -> None:
         """Flush the internally buffered packets and close the open resource.
 
         .. seealso::
