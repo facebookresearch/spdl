@@ -44,7 +44,7 @@ from collections.abc import Iterator, Sequence
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
-from typing import Generic, overload, TYPE_CHECKING, TypeVar
+from typing import Any, Generic, overload, TYPE_CHECKING, TypeVar
 
 try:
     from spdl._internal import log_api_usage_once
@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     CPUBuffer = _libspdl.CPUBuffer
     CPUStorage = _libspdl.CPUStorage
     DecodeConfig = _libspdl.DecodeConfig
+    DemuxConfig = _libspdl.DemuxConfig
     ImageCodec = _libspdl.ImageCodec
     ImageDecoder = _libspdl.ImageDecoder
     ImageFrames = _libspdl.ImageFrames
@@ -145,18 +146,29 @@ class Demuxer:
         demux_config (DemuxConfig): Custom I/O config.
     """
 
-    def __init__(self, src: "SourceType", **kwargs) -> None:
+    def __init__(
+        self,
+        src: "SourceType",
+        *,
+        demux_config: "DemuxConfig | None" = None,
+        **kwargs: Any,
+    ) -> None:
         if isinstance(src, Path):
             src = str(src)
-        self._demuxer: _libspdl.Demuxer = _libspdl._demuxer(src, **kwargs)
+        self._demuxer: _libspdl.Demuxer = _libspdl._demuxer(
+            src, demux_config=demux_config, **kwargs
+        )
 
-    def demux_audio(self, window: TimeWindow | None = None, **kwargs) -> "AudioPackets":
+    def demux_audio(
+        self, window: TimeWindow | None = None, *, bsf: str | None = None
+    ) -> "AudioPackets":
         """Demux audio from the source.
 
         Args:
             window:
                 A time window specifying start and end times.
                 If omitted, the entire audio is demuxed.
+            bsf: Bit-stream filter expression
 
         Returns:
             Demuxed audio packets.
@@ -164,9 +176,11 @@ class Demuxer:
         log_api_usage_once("spdl.io.Demuxer.demux_audio")
 
         window_ = _convert_time_window(window) if window is not None else None
-        return self._demuxer.demux_audio(window=window_, **kwargs)
+        return self._demuxer.demux_audio(window=window_, bsf=bsf)
 
-    def demux_video(self, window: TimeWindow | None = None, **kwargs) -> "VideoPackets":
+    def demux_video(
+        self, window: TimeWindow | None = None, *, bsf: str | None = None
+    ) -> "VideoPackets":
         """Demux video from the source.
 
         Args:
@@ -180,9 +194,9 @@ class Demuxer:
         log_api_usage_once("spdl.io.Demuxer.demux_video")
 
         window_ = _convert_time_window(window) if window is not None else None
-        return self._demuxer.demux_video(window=window_, **kwargs)
+        return self._demuxer.demux_video(window=window_, bsf=bsf)
 
-    def demux_image(self, **kwargs) -> "ImagePackets":
+    def demux_image(self, *, bsf: str | None = None) -> "ImagePackets":
         """Demux image from the source.
 
         Returns:
@@ -190,7 +204,7 @@ class Demuxer:
         """
         log_api_usage_once("spdl.io.Demuxer.demux_image")
 
-        return self._demuxer.demux_image(**kwargs)
+        return self._demuxer.demux_image(bsf=bsf)
 
     @overload
     def streaming_demux(
@@ -324,7 +338,9 @@ def demux_audio(
     src: "str | bytes | UintArray | Tensor",
     *,
     timestamp: TimeWindow | None = None,
-    **kwargs,
+    demux_config: "DemuxConfig | None" = None,
+    bsf: str | None = None,
+    **kwargs: Any,
 ) -> "AudioPackets":
     """Demux audio from the source.
 
@@ -336,15 +352,17 @@ def demux_audio(
     Returns:
         Demuxed audio packets.
     """
-    with Demuxer(src, **kwargs) as demuxer:
-        return demuxer.demux_audio(window=timestamp)
+    with Demuxer(src, demux_config=demux_config, **kwargs) as demuxer:
+        return demuxer.demux_audio(window=timestamp, bsf=bsf)
 
 
 def demux_video(
     src: "SourceType",
     *,
     timestamp: TimeWindow | None = None,
-    **kwargs,
+    demux_config: "DemuxConfig | None" = None,
+    bsf: str | None = None,
+    **kwargs: Any,
 ) -> "VideoPackets":
     """Demux video from the source.
 
@@ -352,27 +370,34 @@ def demux_video(
         src: See :py:class:`~spdl.io.Demuxer`.
         timestamp: See :py:meth:`spdl.io.Demuxer.demux_video`.
         demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
-
+        bsf: Bit-stream filter expression
 
     Returns:
         Demuxed video packets.
     """
-    with Demuxer(src, **kwargs) as demuxer:
-        return demuxer.demux_video(window=timestamp)
+    with Demuxer(src, demux_config=demux_config, **kwargs) as demuxer:
+        return demuxer.demux_video(window=timestamp, bsf=bsf)
 
 
-def demux_image(src: "str | bytes | UintArray | Tensor", **kwargs) -> "ImagePackets":
+def demux_image(
+    src: "str | bytes | UintArray | Tensor",
+    *,
+    demux_config: "DemuxConfig | None" = None,
+    bsf: str | None = None,
+    **kwargs: Any,
+) -> "ImagePackets":
     """Demux image from the source.
 
     Args:
         src: See :py:class:`~spdl.io.Demuxer`.
         demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
+        bsf: Bit-stream filter expression
 
     Returns:
         Demuxed image packets.
     """
-    with Demuxer(src, **kwargs) as demuxer:
-        return demuxer.demux_image()
+    with Demuxer(src, demux_config=demux_config, **kwargs) as demuxer:
+        return demuxer.demux_image(bsf=bsf)
 
 
 ################################################################################
@@ -593,21 +618,24 @@ def decode_packets(
     packets: "AudioPackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     decode_config: "DecodeConfig | None" = None,
-    **kwargs,
+    *,
+    num_frames: int = -1,
 ) -> "AudioFrames": ...
 @overload
 def decode_packets(
     packets: "VideoPackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     decode_config: "DecodeConfig | None" = None,
-    **kwargs,
+    *,
+    num_frames: int = -1,
 ) -> "VideoFrames": ...
 @overload
 def decode_packets(
     packets: "ImagePackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     decode_config: "DecodeConfig | None" = None,
-    **kwargs,
+    *,
+    num_frames: int = -1,
 ) -> "ImageFrames": ...
 
 
@@ -615,7 +643,8 @@ def decode_packets(
     packets: "AudioPackets | VideoPackets | ImagePackets",
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     decode_config: "DecodeConfig | None" = None,
-    **kwargs: object,
+    *,
+    num_frames: int = -1,
 ) -> "AudioFrames | VideoFrames | ImageFrames":
     """Decode packets.
 
@@ -664,7 +693,10 @@ def decode_packets(
         )
 
     return _libspdl.decode_packets(
-        packets, filter_desc=filter_desc, decode_config=decode_config, **kwargs
+        packets,
+        filter_desc=filter_desc,
+        decode_config=decode_config,
+        num_frames=num_frames,
     )
 
 
@@ -673,7 +705,12 @@ def decode_packets_nvdec(
     *,
     device_config: "CUDAConfig",
     pix_fmt: str = "rgb",
-    **kwargs,
+    crop_left: int = 0,
+    crop_top: int = 0,
+    crop_right: int = 0,
+    crop_bottom: int = 0,
+    scale_width: int = -1,
+    scale_height: int = -1,
 ) -> "CUDABuffer":
     """**[Experimental]** Decode packets with NVDEC.
 
@@ -745,7 +782,16 @@ def decode_packets_nvdec(
         case _:
             pass
 
-    decoder = nvdec_decoder(device_config, packets.codec, **kwargs)
+    decoder = nvdec_decoder(
+        device_config,
+        packets.codec,
+        crop_left=crop_left,
+        crop_top=crop_top,
+        crop_right=crop_right,
+        crop_bottom=crop_bottom,
+        scale_width=scale_width,
+        scale_height=scale_height,
+    )
     buffer = decoder.decode(packets)
     buffer += decoder.flush()
 
@@ -766,7 +812,10 @@ def decode_image_nvjpeg(
     src: str | bytes | Sequence[bytes],
     *,
     device_config: "CUDAConfig | None" = None,
-    **kwargs,
+    scale_width: int = -1,
+    scale_height: int = -1,
+    pix_fmt: str = "rgb",
+    _zero_clear: bool = False,
 ) -> "CUDABuffer":
     """**[Experimental]** Decode image with nvJPEG.
 
@@ -801,7 +850,12 @@ def decode_image_nvjpeg(
     else:
         data = src
     return _libspdl_cuda.decode_image_nvjpeg(
-        data, device_config=device_config, **kwargs
+        data,
+        device_config=device_config,
+        scale_width=scale_width,
+        scale_height=scale_height,
+        pix_fmt=pix_fmt,
+        _zero_clear=_zero_clear,
     )
 
 
@@ -898,7 +952,6 @@ def nvdec_decoder(
 def convert_frames(
     frames: "AudioFrames | VideoFrames | ImageFrames | list[AudioFrames] | list[VideoFrames] | list[ImageFrames]",
     storage: "CPUStorage | None" = None,
-    **kwargs,
 ) -> "CPUBuffer":
     """Convert the decoded frames to buffer.
 
@@ -925,7 +978,7 @@ def convert_frames(
             - ``W``: width
             - ``H``: height
     """
-    return _libspdl.convert_frames(frames, storage=storage, **kwargs)  # pyre-ignore[6]
+    return _libspdl.convert_frames(frames, storage=storage)
 
 
 def convert_array(
@@ -1343,7 +1396,13 @@ class Muxer:
 Array = TypeVar("Array")
 
 
-def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
+def encode_image(
+    path: str,
+    data: Array,
+    pix_fmt: str = "rgb24",
+    *,
+    encode_config: "DecodeConfig | None" = None,
+) -> None:
     """Save the given image array/tensor to file.
 
     Args:
@@ -1399,4 +1458,6 @@ def encode_image(path: str, data: Array, pix_fmt: str = "rgb24", **kwargs):
         >>> encode(data)
         >>>
     """
-    return _libspdl.encode_image(path, data, pix_fmt=pix_fmt, **kwargs)
+    return _libspdl.encode_image(
+        path, data, pix_fmt=pix_fmt, encode_config=encode_config
+    )
