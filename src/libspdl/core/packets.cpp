@@ -9,7 +9,6 @@
 #include <libspdl/core/packets.h>
 
 #include <libspdl/core/rational_utils.h>
-#include <libspdl/core/utils.h>
 
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
