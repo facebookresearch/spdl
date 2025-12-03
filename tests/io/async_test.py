@@ -57,53 +57,48 @@ class TestDecodeAudio(unittest.TestCase):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav"
         sample = get_sample(cmd)
 
-        def _test():
-            timestamps = [(i, i + 1) for i in range(2)]
-            demuxer = spdl.io.Demuxer(sample.path)
-            arrays = _test_decode(demuxer.demux_audio, timestamps)
+        timestamps = [(i, i + 1) for i in range(2)]
+        demuxer = spdl.io.Demuxer(sample.path)
+        arrays = _test_decode(demuxer.demux_audio, timestamps)
 
-            self.assertEqual(len(arrays), 2)
-            for i, arr in enumerate(arrays):
-                print(i, arr.shape, arr.dtype)
-                self.assertEqual(arr.shape, (1, 48000))
-                self.assertEqual(arr.dtype, np.float32)
-
-        _test()
+        self.assertEqual(len(arrays), 2)
+        for i, arr in enumerate(arrays):
+            print(i, arr.shape, arr.dtype)
+            self.assertEqual(arr.shape, (1, 48000))
+            self.assertEqual(arr.dtype, np.float32)
 
     def test_decode_audio_clips_num_frames(self) -> None:
         """Can decode audio clips with padding/dropping."""
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=16000:duration=1 -c:a pcm_s16le sample.wav"
         sample = get_sample(cmd)
 
-        def _decode(src, num_frames=None):
-            with spdl.io.Demuxer(src) as demuxer:
-                packets = demuxer.demux_audio(window=(0, 1))
-                filter_desc = get_audio_filter_desc(
-                    timestamp=(0, 1), num_frames=num_frames, sample_fmt="s16"
-                )
-                frames = spdl.io.decode_packets(packets, filter_desc=filter_desc)
-                buffer = spdl.io.convert_frames(frames)
-                return spdl.io.to_numpy(buffer)
+        with spdl.io.Demuxer(sample.path) as demuxer:
+            packets = demuxer.demux_audio(window=(0, 1))
 
-        def _test(src):
-            arr0 = _decode(src)
-            self.assertEqual(arr0.dtype, np.int16)
-            self.assertEqual(arr0.shape, (16000, 1))
+        def _decode(num_frames=None):
+            filter_desc = get_audio_filter_desc(
+                timestamp=(0, 1), num_frames=num_frames, sample_fmt="s16"
+            )
+            frames = spdl.io.decode_packets(packets.clone(), filter_desc=filter_desc)
+            buffer = spdl.io.convert_frames(frames)
+            return spdl.io.to_numpy(buffer)
 
-            num_frames = 8000
-            arr1 = _decode(src, num_frames=num_frames)
-            self.assertEqual(arr1.dtype, np.int16)
-            self.assertEqual(arr1.shape, (num_frames, 1))
-            self.assertTrue(np.all(arr1 == arr0[:num_frames]))
+        arr0 = _decode()
+        self.assertEqual(arr0.dtype, np.int16)
+        self.assertEqual(arr0.shape, (16000, 1))
 
-            num_frames = 32000
-            arr2 = _decode(src, num_frames=num_frames)
-            self.assertEqual(arr2.dtype, np.int16)
-            self.assertEqual(arr2.shape, (num_frames, 1))
-            self.assertTrue(np.all(arr2[:16000] == arr0))
-            self.assertTrue(np.all(arr2[16000:] == 0))
+        num_frames = 8000
+        arr1 = _decode(num_frames=num_frames)
+        self.assertEqual(arr1.dtype, np.int16)
+        self.assertEqual(arr1.shape, (num_frames, 1))
+        self.assertTrue(np.all(arr1 == arr0[:num_frames]))
 
-        _test(sample.path)
+        num_frames = 32000
+        arr2 = _decode(num_frames=num_frames)
+        self.assertEqual(arr2.dtype, np.int16)
+        self.assertEqual(arr2.shape, (num_frames, 1))
+        self.assertTrue(np.all(arr2[:16000] == arr0))
+        self.assertTrue(np.all(arr2[16000:] == 0))
 
     def test_decode_audio_many_channels_6(self) -> None:
         """Can decode audio with more than 6 channels.
@@ -174,17 +169,14 @@ class TestDecodeVideo(unittest.TestCase):
         sample = get_sample(cmd)
         N = 10
 
-        def _test():
-            timestamps = [(i, i + 1) for i in range(N)]
-            demuxer = spdl.io.Demuxer(sample.path)
-            arrays = _test_decode(demuxer.demux_video, timestamps)
-            self.assertEqual(len(arrays), N)
-            for i, arr in enumerate(arrays):
-                print(i, arr.shape, arr.dtype)
-                self.assertEqual(arr.shape, (25, 240, 320, 3))
-                self.assertEqual(arr.dtype, np.uint8)
-
-        _test()
+        timestamps = [(i, i + 1) for i in range(N)]
+        demuxer = spdl.io.Demuxer(sample.path)
+        arrays = _test_decode(demuxer.demux_video, timestamps)
+        self.assertEqual(len(arrays), N)
+        for i, arr in enumerate(arrays):
+            print(i, arr.shape, arr.dtype)
+            self.assertEqual(arr.shape, (25, 240, 320, 3))
+            self.assertEqual(arr.dtype, np.uint8)
 
     # This test requires "tpad filter (FFmepg >= 4.2.")
     @unittest.skipUnless(
@@ -265,20 +257,17 @@ class TestDecodeVideo(unittest.TestCase):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -r 10 -frames:v 20 sample.mp4"
         sample = get_sample(cmd)
 
-        def _test(src):
-            packets = spdl.io.demux_video(src)
-            frames_ref = spdl.io.decode_packets(packets.clone())
-            frames = spdl.io.decode_packets(
-                packets, filter_desc=get_video_filter_desc(frame_rate=(5, 1))
-            )
+        packets = spdl.io.demux_video(sample.path)
+        frames_ref = spdl.io.decode_packets(packets.clone())
+        frames = spdl.io.decode_packets(
+            packets, filter_desc=get_video_filter_desc(frame_rate=(5, 1))
+        )
 
-            pts_ref = frames_ref.get_timestamps()
-            pts = frames.get_timestamps()
-            print(pts_ref, pts)
+        pts_ref = frames_ref.get_timestamps()
+        pts = frames.get_timestamps()
+        print(pts_ref, pts)
 
-            self.assertTrue(np.all(pts_ref[::2] == pts))
-
-        _test(sample.path)
+        self.assertTrue(np.all(pts_ref[::2] == pts))
 
 
 class TestConvertFrames(unittest.TestCase):
@@ -287,30 +276,24 @@ class TestConvertFrames(unittest.TestCase):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav"
         sample = get_sample(cmd)
 
-        def _test(src):
-            ts = [(1, 2)]
-            demuxer = spdl.io.Demuxer(src)
-            arrays = _test_decode(demuxer.demux_audio, ts)
-            array = arrays[0]
-            print(array.dtype, array.shape)
-            self.assertEqual(array.shape, (1, 48000))
-
-        _test(sample.path)
+        ts = [(1, 2)]
+        demuxer = spdl.io.Demuxer(sample.path)
+        arrays = _test_decode(demuxer.demux_audio, ts)
+        array = arrays[0]
+        print(array.dtype, array.shape)
+        self.assertEqual(array.shape, (1, 48000))
 
     def test_convert_video(self) -> None:
         """convert_frames can convert VideoFrames to Buffer"""
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4"
         sample = get_sample(cmd)
 
-        def _test(src):
-            packets = spdl.io.demux_video(src)
-            frames = spdl.io.decode_packets(packets)
-            buffer = spdl.io.convert_frames(frames)
-            array = spdl.io.to_numpy(buffer)
-            print(array.dtype, array.shape)
-            self.assertEqual(array.shape, (1000, 240, 320, 3))
-
-        _test(sample.path)
+        packets = spdl.io.demux_video(sample.path)
+        frames = spdl.io.decode_packets(packets)
+        buffer = spdl.io.convert_frames(frames)
+        array = spdl.io.to_numpy(buffer)
+        print(array.dtype, array.shape)
+        self.assertEqual(array.shape, (1000, 240, 320, 3))
 
     def test_convert_image(self) -> None:
         """convert_frames can convert ImageFrames to Buffer"""
