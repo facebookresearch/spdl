@@ -560,20 +560,30 @@ def streaming_load_video_nvdec(
 
     demuxer = _core.Demuxer(src)
     codec = demuxer.video_codec
-    bsf = None
+
+    # Determine BSF filter name based on codec
+    bsf_name = None
     match codec.name:
         case "h264":
-            bsf = _core.BSF(codec, "h264_mp4toannexb")
+            bsf_name = "h264_mp4toannexb"
         case "hevc":
-            bsf = _core.BSF(codec, "hevc_mp4toannexb")
-        case _:
-            bsf = None
+            bsf_name = "hevc_mp4toannexb"
 
     decoder = _core.nvdec_decoder(
         device_config, codec, **(post_processing_params or {})
     )
+
     buffers = []
-    for packets in demuxer.streaming_demux_video(num_frames):
+    # Use streaming_demux with video stream index
+    packet_stream = demuxer.streaming_demux(
+        demuxer.video_stream_index, num_packets=num_frames
+    )
+
+    # Create BSF if needed
+    bsf = _core.BSF(codec, bsf_name) if bsf_name is not None else None
+
+    for packets in packet_stream:
+        # Apply bitstream filter if needed
         if bsf is not None:
             packets = bsf.filter(packets)
 
@@ -583,17 +593,21 @@ def streaming_load_video_nvdec(
             tmp, buffers = buffers[:num_frames], buffers[num_frames:]
             yield tmp
 
+    # Flush BSF if needed
     if bsf is not None:
-        packets = bsf.flush()
-        if len(packets):
-            buffers += decoder.decode(packets)
+        flushed_packets = bsf.flush()
+        if flushed_packets is not None and len(flushed_packets):
+            buffers += decoder.decode(flushed_packets)
 
+    # Flush decoder
     buffers += decoder.flush()
 
+    # Yield remaining buffers in chunks
     while len(buffers) >= num_frames:
         tmp, buffers = buffers[:num_frames], buffers[num_frames:]
         yield tmp
 
+    # Yield any remaining buffers
     if buffers:
         yield buffers
 
