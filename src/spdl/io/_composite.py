@@ -57,14 +57,7 @@ def _load_packets(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
-    **kwargs,
 ):
-    if device_config is None and "cuda_config" in kwargs:
-        warnings.warn(
-            "`cuda_config` argument has been renamed to `device_config`.", stacklevel=3
-        )
-        device_config = kwargs["cuda_config"]
-
     frames = _core.decode_packets(
         packets, decode_config=decode_config, filter_desc=filter_desc
     )
@@ -418,20 +411,6 @@ def load_image_batch(
 
     if not srcs:
         raise ValueError("`srcs` must not be empty.")
-
-    if "pin_memory" in kwargs:
-        warnings.warn(
-            "`pin_memory` argument has been removed. Use `storage` instead.",
-            stacklevel=2,
-        )
-        kwargs.pop("pin_memory")
-
-    if device_config is None and "cuda_config" in kwargs:
-        warnings.warn(
-            "The `cuda_config` argument has ben renamed to `device_config`.",
-            stacklevel=2,
-        )
-        device_config = kwargs["cuda_config"]
 
     if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_video_filter_desc(
