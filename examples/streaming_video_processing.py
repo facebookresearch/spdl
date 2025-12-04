@@ -71,12 +71,12 @@ from pathlib import Path
 
 import spdl.io
 from spdl.io import (
-    AudioPackets,
     Demuxer,
     FilterGraph,
     Muxer,
     VideoDecoder,
     VideoEncoder,
+    VideoPackets,
 )
 
 # pyre-strict
@@ -164,8 +164,7 @@ def process(
             if (video_packets := packets.get(video_index)) is None:
                 continue
 
-            assert not isinstance(video_packets, AudioPackets)
-
+            assert isinstance(video_packets, VideoPackets)
             if (frames := video_decoder.decode(video_packets)) is not None:
                 buffer = spdl.io.convert_frames(frames)
                 array = spdl.io.to_numpy(buffer)
