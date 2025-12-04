@@ -9,7 +9,6 @@
 import time
 import unittest
 from collections.abc import Sequence
-from typing import cast
 
 import numpy as np
 import spdl.io
@@ -248,9 +247,7 @@ class TestSampleDecodingTime(unittest.TestCase):
         array_ref = spdl.io.to_numpy(buffer)
 
         t0 = time.monotonic()
-        frames = cast(
-            list[spdl.io.ImageFrames], spdl.io.sample_decode_video(packets, indices)
-        )
+        frames = spdl.io.sample_decode_video(packets, indices)
         elapsed = time.monotonic() - t0
         buffer = spdl.io.convert_frames(frames)
         array = spdl.io.to_numpy(buffer)
@@ -286,9 +283,7 @@ class TestSampleDecodingTime(unittest.TestCase):
         array_ref = spdl.io.to_numpy(buffer)
 
         t0 = time.monotonic()
-        frames = cast(
-            list[spdl.io.ImageFrames], spdl.io.sample_decode_video(packets, indices)
-        )
+        frames = spdl.io.sample_decode_video(packets, indices)
         elapsed = time.monotonic() - t0
         buffer = spdl.io.convert_frames(frames)
         array = spdl.io.to_numpy(buffer)
@@ -406,9 +401,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
 
         # Sample decode should offset the indices
         indices = list(range(0, 25, 2))
-        frames = cast(
-            list[spdl.io.ImageFrames], spdl.io.sample_decode_video(packets, indices)
-        )
+        frames = spdl.io.sample_decode_video(packets, indices)
         self.assertEqual(len(indices), 13)
         self.assertEqual(len(frames), 13)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
@@ -439,9 +432,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
 
         # Sample decode should offset the indices
         indices = list(range(0, 25, 2))
-        frames = cast(
-            list[spdl.io.ImageFrames], spdl.io.sample_decode_video(packets, indices)
-        )
+        frames = spdl.io.sample_decode_video(packets, indices)
         self.assertEqual(len(indices), 13)
         self.assertEqual(len(frames), 13)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
@@ -494,10 +485,7 @@ class TestSampleDecodeVideoWithWindowedPacketsAndFilter(unittest.TestCase):
 
         self.assertEqual(len(packets), 15)
         idx = [0, 2, 4, 6, 8, 10, 12, 14]
-        frames = cast(
-            list[spdl.io.ImageFrames],
-            spdl.io.sample_decode_video(packets, idx, filter_desc=filter_desc),
-        )
+        frames = spdl.io.sample_decode_video(packets, idx, filter_desc=filter_desc)
         self.assertEqual(
             [f.pts for f in frames],
             [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0],

@@ -19,7 +19,6 @@ __all__ = [
 
 import builtins
 import logging
-import warnings
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import overload, TYPE_CHECKING
@@ -44,6 +43,7 @@ if TYPE_CHECKING:
     DecodeConfig = _libspdl.DecodeConfig
     DemuxConfig = _libspdl.DemuxConfig
     ImagePackets = _libspdl.ImagePackets
+    ImageFrames = _libspdl.ImageFrames
     VideoFrames = _libspdl.VideoFrames
     VideoPackets = _libspdl.VideoPackets
 
@@ -132,7 +132,6 @@ def load_audio(
         decode_config=decode_config,
         filter_desc=filter_desc,
         device_config=device_config,
-        **kwargs,
     )
 
 
@@ -211,7 +210,6 @@ def load_video(
         decode_config=decode_config,
         filter_desc=filter_desc,
         device_config=device_config,
-        **kwargs,
     )
 
 
@@ -275,7 +273,6 @@ def load_image(
         decode_config=decode_config,
         filter_desc=filter_desc,
         device_config=device_config,
-        **kwargs,
     )
 
 
@@ -471,7 +468,7 @@ def load_image_batch_nvjpeg(
     width: int,
     height: int,
     pix_fmt: str = "rgb",
-    **kwargs: object,
+    **kwargs,
 ) -> "CUDABuffer":
     """**[Experimental]** Batch load images with nvJPEG.
 
@@ -512,7 +509,7 @@ def streaming_load_video_nvdec(
     device_config: "CUDAConfig",
     *,
     num_frames: int,
-    post_processing_params: dict[str, int] | None = None,
+    post_processing_params: dict[str, int | bool] | None = None,
 ) -> "Iterator[list[CUDABuffer]]":
     """Load video from source chunk by chunk using NVDEC.
 
@@ -626,7 +623,7 @@ def sample_decode_video(
     *,
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-) -> "list[ImagePackets]":
+) -> "list[ImageFrames]":
     """Decode specified frames from the packets.
 
     This function decodes the input video packets and returns the frames
@@ -742,7 +739,18 @@ def sample_decode_video(
 
 
 def save_image(
-    path: str | Path, data: "Array", pix_fmt: str = "rgb24", **kwargs: object
+    path: str | Path,
+    data: "Array",
+    pix_fmt: str = "rgb24",
+    *,
+    bit_rate: int = -1,
+    compression_level: int = -1,
+    qscale: int = -1,
+    gop_size: int = -1,
+    max_b_frames: int = -1,
+    colorspace: str | None = None,
+    color_primaries: str | None = None,
+    color_trc: str | None = None,
 ) -> None:
     """Save the given image tensor.
 
@@ -819,7 +827,14 @@ def save_image(
             width=width,
             frame_rate=(1, 1),
             pix_fmt=pix_fmt,
-            **kwargs,
+            bit_rate=bit_rate,
+            compression_level=compression_level,
+            qscale=qscale,
+            gop_size=gop_size,
+            max_b_frames=max_b_frames,
+            colorspace=colorspace,
+            color_primaries=color_primaries,
+            color_trc=color_trc,
         )
     )
 
