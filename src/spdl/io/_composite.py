@@ -38,11 +38,13 @@ if TYPE_CHECKING:
 
     from ._core import SourceType
 
+    AudioPackets = _libspdl.AudioPackets
     CPUBuffer = _libspdl.CPUBuffer
     CPUStorage = _libspdl.CPUStorage
     DecodeConfig = _libspdl.DecodeConfig
     DemuxConfig = _libspdl.DemuxConfig
     ImagePackets = _libspdl.ImagePackets
+    VideoFrames = _libspdl.VideoFrames
     VideoPackets = _libspdl.VideoPackets
 
     CUDABuffer = _libspdl_cuda.CUDABuffer
@@ -53,7 +55,7 @@ if TYPE_CHECKING:
 # Load
 ################################################################################
 def _load_packets(
-    packets,
+    packets: "AudioPackets | ImagePackets | VideoPackets",
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
@@ -76,7 +78,7 @@ def load_audio(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
-    **kwargs,
+    **kwargs: object,
 ) -> "CPUBuffer": ...
 @overload
 def load_audio(
@@ -87,20 +89,20 @@ def load_audio(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
-    **kwargs,
+    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
 def load_audio(
-    src,
-    timestamp=None,
+    src: str | bytes,
+    timestamp: tuple[float, float] | None = None,
     *,
-    demux_config=None,
-    decode_config=None,
-    filter_desc=_FILTER_DESC_DEFAULT,
-    device_config=None,
-    **kwargs,
-):
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    device_config: "CUDAConfig | None" = None,
+    **kwargs: object,
+) -> "CPUBuffer | CUDABuffer":
     """Load audio from source into buffer.
 
     This function combines :py:func:`~spdl.io.demux_audio`,
@@ -143,7 +145,7 @@ def load_video(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
-    **kwargs,
+    **kwargs: object,
 ) -> "CPUBuffer": ...
 @overload
 def load_video(
@@ -154,20 +156,20 @@ def load_video(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
-    **kwargs,
+    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
 def load_video(
     src: str | bytes,
-    timestamp=None,
+    timestamp: tuple[float, float] | None = None,
     *,
-    demux_config=None,
-    decode_config=None,
-    filter_desc=_FILTER_DESC_DEFAULT,
-    device_config=None,
-    **kwargs,
-):
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    device_config: "CUDAConfig | None" = None,
+    **kwargs: object,
+) -> "CPUBuffer | CUDABuffer":
     """Load video from source into buffer.
 
     This function combines :py:func:`~spdl.io.demux_video`,
@@ -221,7 +223,7 @@ def load_image(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
-    **kwargs,
+    **kwargs: object,
 ) -> "CPUBuffer": ...
 @overload
 def load_image(
@@ -230,20 +232,20 @@ def load_image(
     demux_config: "DemuxConfig | None" = None,
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    device_config: "CUDABuffer",
-    **kwargs,
+    device_config: "CUDAConfig",
+    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
 def load_image(
-    src,
+    src: str | bytes,
     *,
-    demux_config=None,
-    decode_config=None,
-    filter_desc=_FILTER_DESC_DEFAULT,
-    device_config=None,
-    **kwargs,
-):
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    device_config: "CUDAConfig | None" = None,
+    **kwargs: object,
+) -> "CPUBuffer | CUDABuffer":
     """Load image from source into buffer.
 
     This function combines :py:func:`~spdl.io.demux_image`,
@@ -282,7 +284,7 @@ def load_image(
 ################################################################################
 
 
-def _get_err_msg(src, err):
+def _get_err_msg(src: str | bytes, err: Exception) -> str:
     match type(src):
         case builtins.bytes:
             src_ = f"bytes object at {id(src)}"
@@ -291,7 +293,12 @@ def _get_err_msg(src, err):
     return f"Failed to decode an image from {src_}: {err}."
 
 
-def _decode(src, demux_config, decode_config, filter_desc):
+def _decode(
+    src: str | bytes,
+    demux_config: "DemuxConfig | None",
+    decode_config: "DecodeConfig | None",
+    filter_desc: str | None,
+) -> "_libspdl.ImageFrames":
     pkts = _core.demux_image(src, demux_config=demux_config)
     return _core.decode_packets(
         pkts, decode_config=decode_config, filter_desc=filter_desc
@@ -311,7 +318,7 @@ def load_image_batch(
     device_config: None = None,
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs,
+    **kwargs: object,
 ) -> "CPUBuffer": ...
 
 
@@ -328,24 +335,24 @@ def load_image_batch(
     device_config: "CUDAConfig",
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs,
+    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
 def load_image_batch(
     srcs: Sequence[str | bytes],
     *,
-    width,
-    height,
-    pix_fmt="rgb24",
-    demux_config=None,
-    decode_config=None,
-    filter_desc=_FILTER_DESC_DEFAULT,
-    device_config=None,
+    width: int | None,
+    height: int | None,
+    pix_fmt: str | None = "rgb24",
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    device_config: "CUDAConfig | None" = None,
     storage: "CPUStorage | None" = None,
-    strict=True,
-    **kwargs,
-):
+    strict: bool = True,
+    **kwargs: object,
+) -> "CPUBuffer | CUDABuffer":
     """Batch load images.
 
     This function combines :py:func:`~spdl.io.demux_image`,
@@ -442,7 +449,7 @@ def load_image_batch(
     return buffer
 
 
-def _get_bytes(srcs: list[str | bytes]) -> list[bytes]:
+def _get_bytes(srcs: Sequence[str | bytes]) -> list[bytes]:
     ret: list[bytes] = []
     for src in srcs:
         if isinstance(src, bytes):
@@ -461,10 +468,10 @@ def load_image_batch_nvjpeg(
     srcs: Sequence[str | bytes],
     *,
     device_config: "CUDAConfig",
-    width: int | None,
-    height: int | None,
-    pix_fmt: str | None = "rgb",
-    **kwargs,
+    width: int,
+    height: int,
+    pix_fmt: str = "rgb",
+    **kwargs: object,
 ) -> "CUDABuffer":
     """**[Experimental]** Batch load images with nvJPEG.
 
@@ -596,7 +603,12 @@ def streaming_load_video_nvdec(
 ################################################################################
 
 
-def _decode_partial(packets, indices, decode_config, filter_desc):
+def _decode_partial(
+    packets: "VideoPackets",
+    indices: list[int],
+    decode_config: "DecodeConfig | None",
+    filter_desc: str | None,
+) -> "VideoFrames":
     """Decode packets but return early when requested frames are decoded."""
     num_frames = max(indices) + 1
     frames = _core.decode_packets(
@@ -605,7 +617,7 @@ def _decode_partial(packets, indices, decode_config, filter_desc):
         filter_desc=filter_desc,
         num_frames=num_frames,
     )
-    return frames[indices]
+    return frames
 
 
 def sample_decode_video(
@@ -724,11 +736,14 @@ def sample_decode_video(
 
     ret = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
-        ret.extend(_decode_partial(split, idxes, decode_config, filter_desc))
+        frames = _decode_partial(split, idxes, decode_config, filter_desc)
+        ret.extend(frames[idxes])
     return ret
 
 
-def save_image(path: str | Path, data: "Array", pix_fmt: str = "rgb24", **kwargs):
+def save_image(
+    path: str | Path, data: "Array", pix_fmt: str = "rgb24", **kwargs: object
+) -> None:
     """Save the given image tensor.
 
     .. note::
