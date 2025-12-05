@@ -59,9 +59,11 @@ def _load_packets(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
-):
+) -> "CPUBuffer | CUDABuffer":
     frames = _core.decode_packets(
-        packets, decode_config=decode_config, filter_desc=filter_desc
+        packets,  # pyre-ignore[6]
+        decode_config=decode_config,
+        filter_desc=filter_desc,
     )
     buffer = _core.convert_frames(frames)
     if device_config is not None:
@@ -468,7 +470,7 @@ def load_image_batch_nvjpeg(
     width: int,
     height: int,
     pix_fmt: str = "rgb",
-    **kwargs,
+    _zero_clear: bool = False,
 ) -> "CUDABuffer":
     """**[Experimental]** Batch load images with nvJPEG.
 
@@ -500,7 +502,7 @@ def load_image_batch_nvjpeg(
         scale_height=height,
         device_config=device_config,
         pix_fmt=pix_fmt,
-        **kwargs,
+        _zero_clear=_zero_clear,
     )
 
 
@@ -510,6 +512,7 @@ def streaming_load_video_nvdec(
     *,
     num_frames: int,
     post_processing_params: dict[str, int | bool] | None = None,
+    use_cache: bool = True,
 ) -> "Iterator[list[CUDABuffer]]":
     """Load video from source chunk by chunk using NVDEC.
 
@@ -553,7 +556,10 @@ def streaming_load_video_nvdec(
             bsf_name = "hevc_mp4toannexb"
 
     decoder = _core.nvdec_decoder(
-        device_config, codec, **(post_processing_params or {})
+        device_config,
+        codec,
+        use_cache=use_cache,
+        **(post_processing_params if post_processing_params is not None else {}),
     )
 
     buffers = []
@@ -731,10 +737,10 @@ def sample_decode_video(
     if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_video_filter_desc()
 
-    ret = []
+    ret: "list[ImageFrames]" = []
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
         frames = _decode_partial(split, idxes, decode_config, filter_desc)
-        ret.extend(frames[idxes])
+        ret.extend([frames[i] for i in idxes])  # type: ignore[arg-type]
     return ret
 
 

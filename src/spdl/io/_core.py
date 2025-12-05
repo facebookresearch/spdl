@@ -451,7 +451,7 @@ class BSF(Generic[TCodec, TPackets]):
     """
 
     def __init__(self, codec: TCodec, bsf: str) -> None:
-        self._bsf = _libspdl._make_bsf(codec, bsf)
+        self._bsf: Any = _libspdl._make_bsf(codec, bsf)
 
     def filter(self, packets: TPackets, flush: bool = False) -> TPackets | None:
         """Apply the filter to the input packets
@@ -479,7 +479,9 @@ def apply_bsf(packets: "VideoPackets", bsf: str) -> "VideoPackets": ...
 def apply_bsf(packets: "ImagePackets", bsf: str) -> "ImagePackets": ...
 
 
-def apply_bsf(packets, bsf):
+def apply_bsf(
+    packets: "AudioPackets | VideoPackets | ImagePackets", bsf: str
+) -> "AudioPackets | VideoPackets | ImagePackets":
     """Apply bit stream filter to packets.
 
     The primal usecase of BFS in SPDL is to convert the H264 video packets to
@@ -956,7 +958,7 @@ def nvdec_decoder(
 
 
 def convert_frames(
-    frames: "AudioFrames | VideoFrames | ImageFrames | list[AudioFrames] | list[VideoFrames] | list[ImageFrames]",
+    frames: "AudioFrames | VideoFrames | ImageFrames | Sequence[AudioFrames] | Sequence[VideoFrames] | Sequence[ImageFrames]",
     storage: "CPUStorage | None" = None,
 ) -> "CPUBuffer":
     """Convert the decoded frames to buffer.
@@ -984,7 +986,7 @@ def convert_frames(
             - ``W``: width
             - ``H``: height
     """
-    return _libspdl.convert_frames(frames, storage=storage)
+    return _libspdl.convert_frames(frames, storage=storage)  # type: ignore[arg-type]
 
 
 def convert_array(
