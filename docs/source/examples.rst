@@ -14,6 +14,7 @@ Examples
    streaming_nvdec_decoding
    streaming_video_processing
    performance_analysis
+   performance_simulation
    hydra_integration
    pipeline_definitions
    pipeline_profiling

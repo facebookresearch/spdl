@@ -321,7 +321,13 @@ def plot_task_stats(
     ax1 = axes[0]
     ax1.set_ylabel("Count", fontsize=11, fontweight="medium")
     ax1.set_title("Task Throughput", fontsize=12, fontweight="semibold", pad=10)
-    ax1.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
+    ax1.legend(
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+        fontsize=9,
+        framealpha=0.9,
+        edgecolor="#CCCCCC",
+    )
     ax1.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax1.set_facecolor("#F7F7F7")
     ax1.spines["top"].set_visible(False)
@@ -331,7 +337,6 @@ def plot_task_stats(
     ax2 = axes[1]
     ax2.set_ylabel("Count", fontsize=11, fontweight="medium")
     ax2.set_title("Successful Tasks", fontsize=12, fontweight="semibold", pad=10)
-    ax2.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
     ax2.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax2.set_facecolor("#F7F7F7")
     ax2.spines["top"].set_visible(False)
@@ -341,7 +346,6 @@ def plot_task_stats(
     ax3 = axes[2]
     ax3.set_ylabel("Count", fontsize=11, fontweight="medium")
     ax3.set_title("Failed Tasks", fontsize=12, fontweight="semibold", pad=10)
-    ax3.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
     ax3.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax3.set_facecolor("#F7F7F7")
     ax3.spines["top"].set_visible(False)
@@ -354,7 +358,6 @@ def plot_task_stats(
     ax4.set_title(
         "Average Task Execution Time", fontsize=12, fontweight="semibold", pad=10
     )
-    ax4.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
     ax4.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax4.set_facecolor("#F7F7F7")
     ax4.spines["top"].set_visible(False)
@@ -526,7 +529,13 @@ def plot_queue_stats(
         fontweight="semibold",
         pad=10,
     )
-    ax1.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
+    ax1.legend(
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+        fontsize=9,
+        framealpha=0.9,
+        edgecolor="#CCCCCC",
+    )
     ax1.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax1.set_facecolor("#F7F7F7")
     ax1.spines["top"].set_visible(False)
@@ -537,7 +546,6 @@ def plot_queue_stats(
     ax2.set_ylabel("Occupancy (%)", fontsize=11, fontweight="medium")
     ax2.set_title("Queue Occupancy Rate", fontsize=12, fontweight="semibold", pad=10)
     ax2.set_ylim(-5, 105)
-    ax2.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
     ax2.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax2.set_facecolor("#F7F7F7")
     ax2.spines["top"].set_visible(False)
@@ -547,7 +555,6 @@ def plot_queue_stats(
     ax3 = axes[2]
     ax3.set_ylabel("Time (ms)", fontsize=11, fontweight="medium")
     ax3.set_title("Average Put Wait Time", fontsize=12, fontweight="semibold", pad=10)
-    ax3.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
     ax3.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax3.set_facecolor("#F7F7F7")
     ax3.spines["top"].set_visible(False)
@@ -557,7 +564,6 @@ def plot_queue_stats(
     ax4 = axes[3]
     ax4.set_ylabel("Time (ms)", fontsize=11, fontweight="medium")
     ax4.set_title("Average Get Wait Time", fontsize=12, fontweight="semibold", pad=10)
-    ax4.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
     ax4.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax4.set_facecolor("#F7F7F7")
     ax4.spines["top"].set_visible(False)
@@ -568,7 +574,6 @@ def plot_queue_stats(
     ax5.set_ylabel("Count", fontsize=11, fontweight="medium")
     ax5.set_xlabel("Time", fontsize=11, fontweight="medium")
     ax5.set_title("Items Processed", fontsize=12, fontweight="semibold", pad=10)
-    ax5.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="#CCCCCC")
     ax5.grid(True, alpha=0.25, linestyle="--", linewidth=0.8)
     ax5.set_facecolor("#F7F7F7")
     ax5.spines["top"].set_visible(False)
