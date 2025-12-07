@@ -584,7 +584,7 @@ def Pipe(
 
 
 def Aggregate(num_items: int, /, *, drop_last: bool = False) -> AggregateConfig[Any]:
-    """Create a :py:class:`_AggregateConfig` object for aggregation.
+    """Create a :py:class:`AggregateConfig` object for aggregation.
 
     The aggregation buffers the incoming items and emits once enough items are buffered.
 
@@ -609,7 +609,7 @@ def Aggregate(num_items: int, /, *, drop_last: bool = False) -> AggregateConfig[
 
 
 def Disaggregate() -> DisaggregateConfig[Any]:
-    """Create a :py:class:`_DisaggregateConfig` object for disaggregation.
+    """Create a :py:class:`DisaggregateConfig` object for disaggregation.
 
     The disaggregate slices the incoming list of items and yield them
     one by one.
