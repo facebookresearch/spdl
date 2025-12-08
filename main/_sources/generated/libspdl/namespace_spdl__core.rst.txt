@@ -31,6 +31,8 @@ Classes
 
 - :ref:`exhale_struct_structspdl_1_1core_1_1Generator`
 
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1iterator`
+
 - :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1promise__type`
 
 - :ref:`exhale_struct_structspdl_1_1core_1_1Packets`
@@ -62,8 +64,6 @@ Classes
 - :ref:`exhale_class_classspdl_1_1core_1_1Muxer`
 
 - :ref:`exhale_class_classspdl_1_1core_1_1PacketSeries`
-
-- :ref:`exhale_class_classspdl_1_1core_1_1StreamingDemuxer`
 
 - :ref:`exhale_class_classspdl_1_1core_1_1TracingSession`
 
@@ -103,7 +103,7 @@ Functions
 
 - :ref:`exhale_function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53`
 
-- :ref:`exhale_function_packets_8h_1a50ec9c8a7e6ab71e7827df2eb862dc40`
+- :ref:`exhale_function_packets_8h_1a375c1c657bca786016f8a705e3f2a624`
 
 - :ref:`exhale_function_utils_8h_1af82c781c7484afbad6cbac32ff925793`
 
@@ -111,9 +111,9 @@ Functions
 
 - :ref:`exhale_function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7`
 
-- :ref:`exhale_function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4`
+- :ref:`exhale_function_demuxing_8h_1a78b157beb45e215aad69f013831788ac`
 
-- :ref:`exhale_function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f`
+- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
 
 - :ref:`exhale_function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16`
 
@@ -121,7 +121,7 @@ Functions
 
 - :ref:`exhale_function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3`
 
-- :ref:`exhale_function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d`
+- :ref:`exhale_function_utils_8h_1a49d051162e06f26b896c8aef4605524b`
 
 - :ref:`exhale_function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420`
 
@@ -141,6 +141,8 @@ Typedefs
 - :ref:`exhale_typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa`
 
 - :ref:`exhale_typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b`
+
+- :ref:`exhale_typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22`
 
 - :ref:`exhale_typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba`
 
@@ -193,8 +195,6 @@ Typedefs
 - :ref:`exhale_typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d`
 
 - :ref:`exhale_typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7`
-
-- :ref:`exhale_typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db`
 
 - :ref:`exhale_typedef_types_8h_1a49247f362e405e358b40d1de70d44a27`
 

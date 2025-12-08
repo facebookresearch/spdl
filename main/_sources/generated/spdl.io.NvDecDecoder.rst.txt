@@ -10,5 +10,6 @@ spdl.io.NvDecDecoder
 
    .. autosummary::
       ~NvDecDecoder.decode
+      ~NvDecDecoder.decode_all
       ~NvDecDecoder.flush
       ~NvDecDecoder.init

@@ -65,7 +65,7 @@ LocalDirectory
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.local_directory.LocalDirectory
+   LocalDirectory
 
 
 

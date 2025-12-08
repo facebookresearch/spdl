@@ -46,7 +46,7 @@ get\_mappings
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.source.imagenet.get_mappings
+   get_mappings
 
 
 parse\_wnid
@@ -56,7 +56,7 @@ parse\_wnid
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.source.imagenet.parse_wnid
+   parse_wnid
 
 
 
@@ -89,7 +89,7 @@ ImageNet
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.imagenet.ImageNet
+   ImageNet
 
 
 

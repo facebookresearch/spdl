@@ -35,10 +35,15 @@ Program Listing for File filter_graph.h
    
     public:
      explicit FilterGraph(const std::string& filter_desc);
+   
      ~FilterGraph();
+   
      FilterGraph(const FilterGraph&) = delete;
+   
      FilterGraph& operator=(const FilterGraph&) = delete;
+   
      FilterGraph(FilterGraph&&) = delete;
+   
      FilterGraph& operator=(FilterGraph&&) = delete;
    
      void add_frames(

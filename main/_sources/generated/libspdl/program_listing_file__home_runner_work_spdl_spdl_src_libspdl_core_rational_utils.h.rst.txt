@@ -27,8 +27,6 @@ Program Listing for File rational_utils.h
    
    namespace spdl::core {
    
-   // Check if a given AVRational value falls within a specified window [start,
-   // end). Returns true if start <= val < end (half-open interval).
    bool is_within_window(
        const Rational& val,
        const Rational& start,

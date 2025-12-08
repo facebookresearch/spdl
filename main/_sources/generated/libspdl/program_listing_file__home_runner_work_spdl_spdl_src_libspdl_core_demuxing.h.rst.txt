@@ -36,21 +36,7 @@ Program Listing for File demuxing.h
    class DemuxerImpl;
    } // namespace detail
    
-   // StreamingDemuxer
-   class StreamingDemuxer {
-     Generator<std::map<int, AnyPackets>> gen_;
-   
-    public:
-     StreamingDemuxer(
-         detail::DemuxerImpl* p,
-         const std::set<int>& stream_index,
-         int num_packets,
-         double duration);
-     bool done();
-     std::map<int, AnyPackets> next();
-   };
-   
-   using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer>;
+   using AnyPacketsGenerator = Generator<std::map<int, AnyPackets>>;
    
    // Demuxer
    
@@ -64,7 +50,6 @@ Program Listing for File demuxing.h
    
      bool has_audio() const;
    
-     // Get the codec of the default stream of the given media type
      template <MediaType media>
      Codec<media> get_default_codec() const;
    
@@ -76,7 +61,7 @@ Program Listing for File demuxing.h
          const std::optional<TimeWindow>& window = std::nullopt,
          const std::optional<std::string>& bsf = std::nullopt);
    
-     StreamingDemuxerPtr streaming_demux(
+     AnyPacketsGenerator streaming_demux(
          const std::set<int>& indices,
          int num_packets,
          double duration);
@@ -84,15 +69,15 @@ Program Listing for File demuxing.h
    
    using DemuxerPtr = std::unique_ptr<Demuxer>;
    
-   // Create a demuxer from an URI (file path, http, etc.)
    DemuxerPtr make_demuxer(
        const std::string& src,
        const SourceAdaptorPtr& adaptor = nullptr,
-       const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
+       const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+       const std::optional<std::string>& name = std::nullopt);
    
-   // Create a demuxer from an externally managed in-memory data
    DemuxerPtr make_demuxer(
        const std::string_view data,
-       const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
+       const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+       const std::optional<std::string>& name = std::nullopt);
    
    } // namespace spdl::core

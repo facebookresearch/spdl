@@ -46,7 +46,7 @@ build\_pipeline
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.build_pipeline
+   build_pipeline
 
 
 is\_eof
@@ -56,7 +56,7 @@ is\_eof
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.is_eof
+   is_eof
 
 
 profile\_pipeline
@@ -66,7 +66,7 @@ profile\_pipeline
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.profile_pipeline
+   profile_pipeline
 
 
 cache\_iterator
@@ -76,7 +76,7 @@ cache\_iterator
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.cache_iterator
+   cache_iterator
 
 
 create\_task
@@ -86,7 +86,7 @@ create\_task
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.create_task
+   create_task
 
 
 iterate\_in\_subinterpreter
@@ -96,7 +96,7 @@ iterate\_in\_subinterpreter
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.iterate_in_subinterpreter
+   iterate_in_subinterpreter
 
 
 iterate\_in\_subprocess
@@ -106,7 +106,7 @@ iterate\_in\_subprocess
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.iterate_in_subprocess
+   iterate_in_subprocess
 
 
 run\_pipeline\_in\_subprocess
@@ -116,7 +116,7 @@ run\_pipeline\_in\_subprocess
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.run_pipeline_in_subprocess
+   run_pipeline_in_subprocess
 
 
 run\_pipeline\_in\_subinterpreter
@@ -126,7 +126,7 @@ run\_pipeline\_in\_subinterpreter
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.run_pipeline_in_subinterpreter
+   run_pipeline_in_subinterpreter
 
 
 
@@ -159,7 +159,7 @@ ProfileResult
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.ProfileResult
+   ProfileResult
 
 
 ProfileHook
@@ -170,7 +170,7 @@ ProfileHook
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.ProfileHook
+   ProfileHook
 
 
 Pipeline
@@ -181,7 +181,7 @@ Pipeline
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.Pipeline
+   Pipeline
 
 
 PipelineBuilder
@@ -192,7 +192,7 @@ PipelineBuilder
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.PipelineBuilder
+   PipelineBuilder
 
 
 TaskHook
@@ -203,7 +203,7 @@ TaskHook
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.TaskHook
+   TaskHook
 
 
 TaskStatsHook
@@ -214,7 +214,7 @@ TaskStatsHook
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.TaskStatsHook
+   TaskStatsHook
 
 
 TaskPerfStats
@@ -225,7 +225,7 @@ TaskPerfStats
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.TaskPerfStats
+   TaskPerfStats
 
 
 AsyncQueue
@@ -236,7 +236,7 @@ AsyncQueue
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.AsyncQueue
+   AsyncQueue
 
 
 StatsQueue
@@ -247,7 +247,7 @@ StatsQueue
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.StatsQueue
+   StatsQueue
 
 
 QueuePerfStats
@@ -258,7 +258,7 @@ QueuePerfStats
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.QueuePerfStats
+   QueuePerfStats
 
 
 
@@ -281,7 +281,7 @@ PipelineFailure
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.PipelineFailure
+   PipelineFailure
 
 
 

@@ -34,7 +34,9 @@ Program Listing for File buffer.h
      std::shared_ptr<CPUStorage> storage;
    
      std::vector<size_t> shape;
+   
      ElemClass elem_class = ElemClass::UInt;
+   
      size_t depth = sizeof(uint8_t);
    
      void* data();
