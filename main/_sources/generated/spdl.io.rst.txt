@@ -46,7 +46,7 @@ load\_audio
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_audio
+   load_audio
 
 
 load\_video
@@ -56,7 +56,7 @@ load\_video
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_video
+   load_video
 
 
 load\_image
@@ -66,7 +66,7 @@ load\_image
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_image
+   load_image
 
 
 save\_image
@@ -76,7 +76,7 @@ save\_image
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.save_image
+   save_image
 
 
 load\_image\_batch
@@ -86,7 +86,7 @@ load\_image\_batch
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_image_batch
+   load_image_batch
 
 
 load\_image\_batch\_nvjpeg
@@ -96,7 +96,7 @@ load\_image\_batch\_nvjpeg
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_image_batch_nvjpeg
+   load_image_batch_nvjpeg
 
 
 streaming\_load\_video\_nvdec
@@ -106,7 +106,7 @@ streaming\_load\_video\_nvdec
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.streaming_load_video_nvdec
+   streaming_load_video_nvdec
 
 
 sample\_decode\_video
@@ -116,7 +116,7 @@ sample\_decode\_video
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.sample_decode_video
+   sample_decode_video
 
 
 load\_wav
@@ -126,7 +126,17 @@ load\_wav
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_wav
+   load_wav
+
+
+parse\_wav
+^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   parse_wav
 
 
 iter\_tarfile
@@ -136,7 +146,7 @@ iter\_tarfile
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.iter_tarfile
+   iter_tarfile
 
 
 load\_npy
@@ -146,7 +156,7 @@ load\_npy
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_npy
+   load_npy
 
 
 load\_npz
@@ -156,7 +166,7 @@ load\_npz
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.load_npz
+   load_npz
 
 
 demux\_audio
@@ -166,7 +176,7 @@ demux\_audio
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.demux_audio
+   demux_audio
 
 
 demux\_video
@@ -176,7 +186,7 @@ demux\_video
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.demux_video
+   demux_video
 
 
 demux\_image
@@ -186,7 +196,7 @@ demux\_image
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.demux_image
+   demux_image
 
 
 apply\_bsf
@@ -196,7 +206,7 @@ apply\_bsf
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.apply_bsf
+   apply_bsf
 
 
 Decoder
@@ -206,7 +216,7 @@ Decoder
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.Decoder
+   Decoder
 
 
 decode\_packets
@@ -216,7 +226,7 @@ decode\_packets
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.decode_packets
+   decode_packets
 
 
 decode\_packets\_nvdec
@@ -226,7 +236,7 @@ decode\_packets\_nvdec
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.decode_packets_nvdec
+   decode_packets_nvdec
 
 
 decode\_image\_nvjpeg
@@ -236,7 +246,7 @@ decode\_image\_nvjpeg
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.decode_image_nvjpeg
+   decode_image_nvjpeg
 
 
 nvdec\_decoder
@@ -246,7 +256,7 @@ nvdec\_decoder
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.nvdec_decoder
+   nvdec_decoder
 
 
 convert\_array
@@ -256,7 +266,7 @@ convert\_array
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.convert_array
+   convert_array
 
 
 convert\_frames
@@ -266,7 +276,7 @@ convert\_frames
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.convert_frames
+   convert_frames
 
 
 transfer\_buffer
@@ -276,7 +286,7 @@ transfer\_buffer
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.transfer_buffer
+   transfer_buffer
 
 
 transfer\_buffer\_cpu
@@ -286,7 +296,7 @@ transfer\_buffer\_cpu
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.transfer_buffer_cpu
+   transfer_buffer_cpu
 
 
 nv12\_to\_rgb
@@ -296,7 +306,7 @@ nv12\_to\_rgb
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.nv12_to_rgb
+   nv12_to_rgb
 
 
 nv12\_to\_bgr
@@ -306,7 +316,7 @@ nv12\_to\_bgr
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.nv12_to_bgr
+   nv12_to_bgr
 
 
 encode\_image
@@ -316,7 +326,7 @@ encode\_image
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.encode_image
+   encode_image
 
 
 create\_reference\_audio\_frame
@@ -326,7 +336,7 @@ create\_reference\_audio\_frame
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.create_reference_audio_frame
+   create_reference_audio_frame
 
 
 create\_reference\_video\_frame
@@ -336,7 +346,7 @@ create\_reference\_video\_frame
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.create_reference_video_frame
+   create_reference_video_frame
 
 
 to\_numba
@@ -346,7 +356,7 @@ to\_numba
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.to_numba
+   to_numba
 
 
 to\_numpy
@@ -356,7 +366,7 @@ to\_numpy
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.to_numpy
+   to_numpy
 
 
 to\_torch
@@ -366,7 +376,7 @@ to\_torch
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.to_torch
+   to_torch
 
 
 to\_jax
@@ -376,7 +386,7 @@ to\_jax
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.to_jax
+   to_jax
 
 
 get\_audio\_filter\_desc
@@ -386,7 +396,7 @@ get\_audio\_filter\_desc
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.get_audio_filter_desc
+   get_audio_filter_desc
 
 
 get\_video\_filter\_desc
@@ -396,7 +406,7 @@ get\_video\_filter\_desc
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.get_video_filter_desc
+   get_video_filter_desc
 
 
 get\_filter\_desc
@@ -406,7 +416,7 @@ get\_filter\_desc
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.get_filter_desc
+   get_filter_desc
 
 
 get\_abuffer\_desc
@@ -416,7 +426,7 @@ get\_abuffer\_desc
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.get_abuffer_desc
+   get_abuffer_desc
 
 
 get\_buffer\_desc
@@ -426,7 +436,7 @@ get\_buffer\_desc
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.get_buffer_desc
+   get_buffer_desc
 
 
 transfer\_tensor
@@ -436,7 +446,7 @@ transfer\_tensor
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.transfer_tensor
+   transfer_tensor
 
 
 demux\_config
@@ -446,7 +456,7 @@ demux\_config
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.demux_config
+   demux_config
 
 
 decode\_config
@@ -456,7 +466,7 @@ decode\_config
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.decode_config
+   decode_config
 
 
 video\_encode\_config
@@ -466,7 +476,7 @@ video\_encode\_config
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.video_encode_config
+   video_encode_config
 
 
 audio\_encode\_config
@@ -476,7 +486,7 @@ audio\_encode\_config
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.audio_encode_config
+   audio_encode_config
 
 
 cuda\_config
@@ -486,7 +496,7 @@ cuda\_config
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.cuda_config
+   cuda_config
 
 
 cpu\_storage
@@ -496,7 +506,7 @@ cpu\_storage
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.cpu_storage
+   cpu_storage
 
 
 
@@ -529,7 +539,7 @@ NpzFile
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.NpzFile
+   NpzFile
 
 
 Demuxer
@@ -540,7 +550,7 @@ Demuxer
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.Demuxer
+   Demuxer
 
 
 BSF
@@ -551,7 +561,7 @@ BSF
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.BSF
+   BSF
 
 
 NvDecDecoder
@@ -562,7 +572,7 @@ NvDecDecoder
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.NvDecDecoder
+   NvDecDecoder
 
 
 Muxer
@@ -573,7 +583,7 @@ Muxer
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.Muxer
+   Muxer
 
 
 ArrayInterface
@@ -584,7 +594,7 @@ ArrayInterface
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.ArrayInterface
+   ArrayInterface
 
 
 CUDAArrayInterface
@@ -595,7 +605,7 @@ CUDAArrayInterface
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.CUDAArrayInterface
+   CUDAArrayInterface
 
 
 CPUStorage
@@ -606,7 +616,7 @@ CPUStorage
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.CPUStorage
+   CPUStorage
 
 
 CPUBuffer
@@ -617,7 +627,7 @@ CPUBuffer
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.CPUBuffer
+   CPUBuffer
 
 
 AudioCodec
@@ -628,7 +638,7 @@ AudioCodec
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.AudioCodec
+   AudioCodec
 
 
 VideoCodec
@@ -639,7 +649,7 @@ VideoCodec
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.VideoCodec
+   VideoCodec
 
 
 ImageCodec
@@ -650,7 +660,7 @@ ImageCodec
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.ImageCodec
+   ImageCodec
 
 
 AudioPackets
@@ -661,7 +671,7 @@ AudioPackets
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.AudioPackets
+   AudioPackets
 
 
 VideoPackets
@@ -672,7 +682,7 @@ VideoPackets
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.VideoPackets
+   VideoPackets
 
 
 ImagePackets
@@ -683,7 +693,7 @@ ImagePackets
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.ImagePackets
+   ImagePackets
 
 
 AudioFrames
@@ -694,7 +704,7 @@ AudioFrames
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.AudioFrames
+   AudioFrames
 
 
 VideoFrames
@@ -705,7 +715,7 @@ VideoFrames
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.VideoFrames
+   VideoFrames
 
 
 ImageFrames
@@ -716,7 +726,7 @@ ImageFrames
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.ImageFrames
+   ImageFrames
 
 
 AudioEncoder
@@ -727,7 +737,7 @@ AudioEncoder
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.AudioEncoder
+   AudioEncoder
 
 
 VideoEncoder
@@ -738,7 +748,7 @@ VideoEncoder
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.VideoEncoder
+   VideoEncoder
 
 
 AudioDecoder
@@ -749,7 +759,7 @@ AudioDecoder
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.AudioDecoder
+   AudioDecoder
 
 
 VideoDecoder
@@ -760,7 +770,7 @@ VideoDecoder
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.VideoDecoder
+   VideoDecoder
 
 
 ImageDecoder
@@ -771,7 +781,7 @@ ImageDecoder
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.ImageDecoder
+   ImageDecoder
 
 
 FilterGraph
@@ -782,7 +792,7 @@ FilterGraph
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.FilterGraph
+   FilterGraph
 
 
 DemuxConfig
@@ -793,7 +803,7 @@ DemuxConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.DemuxConfig
+   DemuxConfig
 
 
 DecodeConfig
@@ -804,7 +814,7 @@ DecodeConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.DecodeConfig
+   DecodeConfig
 
 
 VideoEncodeConfig
@@ -815,7 +825,7 @@ VideoEncodeConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.VideoEncodeConfig
+   VideoEncodeConfig
 
 
 AudioEncodeConfig
@@ -826,7 +836,7 @@ AudioEncodeConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.AudioEncodeConfig
+   AudioEncodeConfig
 
 
 CUDABuffer
@@ -837,7 +847,7 @@ CUDABuffer
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.CUDABuffer
+   CUDABuffer
 
 
 CUDAConfig
@@ -848,7 +858,7 @@ CUDAConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.io.CUDAConfig
+   CUDAConfig
 
 
 
@@ -951,6 +961,24 @@ CUDAConfig
 
 
 
+
+
+
+
+
+
+
+.. rubric:: Others
+WAVHeader
+^^^^^^^^^
+
+.. autosummary::
+   :template: _custom_autosummary_others.rst
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   WAVHeader
 
 
 

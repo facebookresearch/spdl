@@ -65,7 +65,7 @@ IterableWithShuffle
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.IterableWithShuffle
+   IterableWithShuffle
 
 
 SizedIterable
@@ -76,7 +76,7 @@ SizedIterable
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.SizedIterable
+   SizedIterable
 
 
 SizedIterableWithShuffle
@@ -87,7 +87,7 @@ SizedIterableWithShuffle
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.SizedIterableWithShuffle
+   SizedIterableWithShuffle
 
 
 DistributedRandomSampler
@@ -98,7 +98,7 @@ DistributedRandomSampler
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.DistributedRandomSampler
+   DistributedRandomSampler
 
 
 DistributedDeterministicSampler
@@ -109,7 +109,7 @@ DistributedDeterministicSampler
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.DistributedDeterministicSampler
+   DistributedDeterministicSampler
 
 
 

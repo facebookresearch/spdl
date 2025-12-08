@@ -46,7 +46,7 @@ Aggregate
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.defs.Aggregate
+   Aggregate
 
 
 Disaggregate
@@ -56,7 +56,7 @@ Disaggregate
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.defs.Disaggregate
+   Disaggregate
 
 
 Merge
@@ -66,7 +66,7 @@ Merge
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.defs.Merge
+   Merge
 
 
 Pipe
@@ -76,7 +76,7 @@ Pipe
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.defs.Pipe
+   Pipe
 
 
 
@@ -109,7 +109,7 @@ AggregateConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.defs.AggregateConfig
+   AggregateConfig
 
 
 DisaggregateConfig
@@ -120,7 +120,7 @@ DisaggregateConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.defs.DisaggregateConfig
+   DisaggregateConfig
 
 
 MergeConfig
@@ -131,7 +131,7 @@ MergeConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.defs.MergeConfig
+   MergeConfig
 
 
 PipeConfig
@@ -142,7 +142,7 @@ PipeConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.defs.PipeConfig
+   PipeConfig
 
 
 PipelineConfig
@@ -153,7 +153,7 @@ PipelineConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.defs.PipelineConfig
+   PipelineConfig
 
 
 SinkConfig
@@ -164,7 +164,7 @@ SinkConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.defs.SinkConfig
+   SinkConfig
 
 
 SourceConfig
@@ -175,7 +175,7 @@ SourceConfig
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.pipeline.defs.SourceConfig
+   SourceConfig
 
 
 

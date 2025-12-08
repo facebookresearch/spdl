@@ -46,7 +46,7 @@ built\_with\_cuda
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.built_with_cuda
+   built_with_cuda
 
 
 built\_with\_nvcodec
@@ -56,7 +56,7 @@ built\_with\_nvcodec
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.built_with_nvcodec
+   built_with_nvcodec
 
 
 built\_with\_nvjpeg
@@ -66,7 +66,7 @@ built\_with\_nvjpeg
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.built_with_nvjpeg
+   built_with_nvjpeg
 
 
 get\_ffmpeg\_filters
@@ -76,7 +76,7 @@ get\_ffmpeg\_filters
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.get_ffmpeg_filters
+   get_ffmpeg_filters
 
 
 get\_ffmpeg\_log\_level
@@ -86,7 +86,7 @@ get\_ffmpeg\_log\_level
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.get_ffmpeg_log_level
+   get_ffmpeg_log_level
 
 
 get\_ffmpeg\_versions
@@ -96,7 +96,7 @@ get\_ffmpeg\_versions
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.get_ffmpeg_versions
+   get_ffmpeg_versions
 
 
 set\_ffmpeg\_log\_level
@@ -106,7 +106,7 @@ set\_ffmpeg\_log\_level
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.set_ffmpeg_log_level
+   set_ffmpeg_log_level
 
 
 trace\_counter
@@ -116,7 +116,7 @@ trace\_counter
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.trace_counter
+   trace_counter
 
 
 trace\_event
@@ -126,7 +126,7 @@ trace\_event
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.trace_event
+   trace_event
 
 
 trace\_gc
@@ -136,7 +136,7 @@ trace\_gc
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.trace_gc
+   trace_gc
 
 
 tracing
@@ -146,7 +146,7 @@ tracing
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.io.utils.tracing
+   tracing
 
 
 

@@ -46,7 +46,7 @@ get\_pytorch\_dataloader
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.dataloader.get_pytorch_dataloader
+   get_pytorch_dataloader
 
 
 
@@ -79,7 +79,7 @@ DataLoader
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.dataloader.DataLoader
+   DataLoader
 
 
 CacheDataLoader
@@ -90,7 +90,7 @@ CacheDataLoader
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.dataloader.CacheDataLoader
+   CacheDataLoader
 
 
 PyTorchDataLoader
@@ -101,7 +101,7 @@ PyTorchDataLoader
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.dataloader.PyTorchDataLoader
+   PyTorchDataLoader
 
 
 

@@ -72,7 +72,7 @@ Functions
 
 - :ref:`exhale_function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3`
 
-- :ref:`exhale_function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d`
+- :ref:`exhale_function_utils_8h_1a49d051162e06f26b896c8aef4605524b`
 
 - :ref:`exhale_function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11`
 

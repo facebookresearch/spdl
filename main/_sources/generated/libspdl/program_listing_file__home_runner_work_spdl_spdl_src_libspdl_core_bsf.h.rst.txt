@@ -37,10 +37,15 @@ Program Listing for File bsf.h
    
     public:
      BSF(const Codec<media>& codec, const std::string& bsf);
+   
      BSF(const BSF&) = delete;
+   
      BSF& operator=(const BSF&) = delete;
+   
      BSF(BSF&&) = delete;
+   
      BSF& operator=(BSF&&) = delete;
+   
      ~BSF();
    
      Codec<media> get_codec() const;
@@ -48,6 +53,7 @@ Program Listing for File bsf.h
      std::optional<PacketsPtr<media>> filter(
          PacketsPtr<media> packets,
          bool flush = false);
+   
      std::optional<PacketsPtr<media>> flush();
    };
    

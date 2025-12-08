@@ -40,10 +40,14 @@ Program Listing for File encoder.h
      detail::EncoderImpl<media>* pImpl_;
    
     public:
-     explicit Encoder(detail::EncoderImpl<media>*);
+     explicit Encoder(detail::EncoderImpl<media>* pImpl);
+   
      Encoder(const Encoder<media>&) = delete;
+   
      Encoder& operator=(const Encoder<media>&) = delete;
+   
      Encoder(Encoder<media>&&) = delete;
+   
      Encoder& operator=(Encoder<media>&&) = delete;
    
      ~Encoder();

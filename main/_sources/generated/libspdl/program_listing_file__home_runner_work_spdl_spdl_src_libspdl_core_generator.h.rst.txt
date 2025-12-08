@@ -33,40 +33,53 @@ Program Listing for File generator.h
      struct promise_type {
        T value;
        std::exception_ptr exception;
+   
        Generator get_return_object() {
          return Generator(handle_type::from_promise(*this));
        }
+   
        std::suspend_always initial_suspend() {
          return {};
        }
+   
        std::suspend_always final_suspend() noexcept {
          return {};
        }
+   
        void unhandled_exception() {
          exception = std::current_exception();
        }
+   
        template <std::convertible_to<T> From>
        std::suspend_always yield_value(From&& from) {
          value = std::forward<From>(from);
          return {};
        }
+   
        void return_void() {}
      };
    
      handle_type h_;
    
      explicit Generator(handle_type h) : h_(h) {}
+   
      Generator(const Generator&) = delete;
+   
      Generator& operator=(const Generator&) = delete;
+   
      Generator(Generator&&) = default;
+   
      Generator& operator=(Generator&&) = default;
+   
      ~Generator() {
        h_.destroy();
      }
+   
      explicit operator bool() {
        fill();
        return !h_.done();
      }
+   
      T operator()() {
        fill();
        full_ = false;
