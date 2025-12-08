@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Class CPUStorage" href="classspdl_1_1core_1_1CPUStorage.html" /><link rel="prev" title="Template Class BSF" href="classspdl_1_1core_1_1BSF.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Template Class Codec - SPDL 0.1.7 documentation</title>
+        <title>Template Class Codec - SPDL 0.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">SPDL 0.1.7 documentation</div></a>
+      <a href="../../index.html"><div class="brand">SPDL 0.2.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.1.7 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.2.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -318,6 +318,7 @@
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
@@ -336,7 +337,6 @@
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
-<li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1StreamingDemuxer.html">Class StreamingDemuxer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
 <li class="toctree-l3"><a class="reference internal" href="enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
 <li class="toctree-l3"><a class="reference internal" href="enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
@@ -351,16 +351,16 @@
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a50ec9c8a7e6ab71e7827df2eb862dc40.html">Template Function spdl::core::get_timestamps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1a78b157beb45e215aad69f013831788ac.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1a325a3202908e610862ad04182e7da81a.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
@@ -373,6 +373,7 @@
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b.html">Typedef spdl::core::AnyPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d.html">Typedef spdl::core::AudioEncoder</a></li>
@@ -399,7 +400,6 @@
 <li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
-<li class="toctree-l3"><a class="reference internal" href="typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db.html">Typedef spdl::core::StreamingDemuxerPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
@@ -421,6 +421,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
 </ul>
 </li>
 </ul>
@@ -443,6 +444,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
@@ -507,117 +509,226 @@
 <dl class="cpp class">
 <dt class="sig sig-object cpp" id="_CPPv4I_9MediaTypeEN4spdl4core5CodecE">
 <span id="_CPPv3I_9MediaTypeEN4spdl4core5CodecE"></span><span id="_CPPv2I_9MediaTypeEN4spdl4core5CodecE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html#_CPPv4N4spdl4core9MediaTypeE" title="spdl::core::MediaType"><span class="n"><span class="pre">MediaType</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">media</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classspdl_1_1core_1_1Codec"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Codec</span></span></span><a class="headerlink" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="Link to this definition">¶</a><br /></dt>
-<dd><div class="breathe-sectiondef docutils container">
+<dd><p><a class="reference internal" href="#classspdl_1_1core_1_1Codec"><span class="std std-ref">Codec</span></a> information wrapper.</p>
+<p>This class encapsulates codec parameters and provides a media-type-aware interface for accessing codec properties. It abstracts away AVCodecParameters so that SPDL public headers do not require FFmpeg headers.</p>
+<p>This class is primarily intended to carry information about codecs for decoding operations, as AVCodecParameters is required when creating decoders. </p>
+<div class="breathe-sectiondef docutils container">
 <p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core5Codec5CodecEv">
 <span id="_CPPv3N4spdl4core5Codec5CodecEv"></span><span id="_CPPv2N4spdl4core5Codec5CodecEv"></span><span id="spdl::core::Codec::Codec"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a074988909d00e47bdb12cdc003a0fdf5"></span><span class="sig-name descname"><span class="n"><span class="pre">Codec</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N4spdl4core5Codec5CodecEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Default constructor. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core5Codec5CodecEPK17AVCodecParameters8Rational8Rational">
-<span id="_CPPv3N4spdl4core5Codec5CodecEPK17AVCodecParameters8Rational8Rational"></span><span id="_CPPv2N4spdl4core5Codec5CodecEPK17AVCodecParameters8Rational8Rational"></span><span id="spdl::core::Codec::Codec__AVCodecParametersCP.Rational.Rational"></span><span class="target" id="classspdl_1_1core_1_1Codec_1ab5b9c30c26c2bc908107af2a13df59f0"></span><span class="sig-name descname"><span class="n"><span class="pre">Codec</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">AVCodecParameters</span></span><span class="p"><span class="pre">*</span></span>, <a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">time_base</span></span>, <a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">frame_rate</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4spdl4core5Codec5CodecEPK17AVCodecParameters8Rational8Rational" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<span id="_CPPv3N4spdl4core5Codec5CodecEPK17AVCodecParameters8Rational8Rational"></span><span id="_CPPv2N4spdl4core5Codec5CodecEPK17AVCodecParameters8Rational8Rational"></span><span id="spdl::core::Codec::Codec__AVCodecParametersCP.Rational.Rational"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a751be2ba705d58e95532c8d56ba3b146"></span><span class="sig-name descname"><span class="n"><span class="pre">Codec</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">AVCodecParameters</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">codecpar</span></span>, <a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">time_base</span></span>, <a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">frame_rate</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4spdl4core5Codec5CodecEPK17AVCodecParameters8Rational8Rational" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Construct codec from decoding/demuxing context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>codecpar</strong> – <a class="reference internal" href="#classspdl_1_1core_1_1Codec"><span class="std std-ref">Codec</span></a> parameters from FFmpeg. </p></li>
+<li><p><strong>time_base</strong> – Time base of the stream. </p></li>
+<li><p><strong>frame_rate</strong> – Frame rate of the stream. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core5CodecD0Ev">
 <span id="_CPPv3N4spdl4core5CodecD0Ev"></span><span id="_CPPv2N4spdl4core5CodecD0Ev"></span><span id="spdl::core::Codec::~Codec"></span><span class="target" id="classspdl_1_1core_1_1Codec_1afc54fb77599e6b9c9be9894645575f40"></span><span class="sig-name descname"><span class="n"><span class="pre">~Codec</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4spdl4core5CodecD0Ev" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Destructor. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core5Codec5CodecERK5CodecI5mediaE">
 <span id="_CPPv3N4spdl4core5Codec5CodecERK5CodecI5mediaE"></span><span id="_CPPv2N4spdl4core5Codec5CodecERK5CodecI5mediaE"></span><span id="spdl::core::Codec::Codec__Codec:media:CR"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a0e0d981276956c3bb8a5be07d3d4a245"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Codec</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4spdl4core5Codec5CodecERK5CodecI5mediaE" title="spdl::core::Codec::Codec"><span class="n"><span class="pre">Codec</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec::media"><span class="n"><span class="pre">media</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4spdl4core5Codec5CodecERK5CodecI5mediaE" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Copy constructor. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core5Codec5CodecERR5CodecI5mediaE">
 <span id="_CPPv3N4spdl4core5Codec5CodecERR5CodecI5mediaE"></span><span id="_CPPv2N4spdl4core5Codec5CodecERR5CodecI5mediaE"></span><span id="spdl::core::Codec::Codec__Codec:media:RR"></span><span class="target" id="classspdl_1_1core_1_1Codec_1ae87b1dbc0bccbde13819f84a308339c4"></span><span class="sig-name descname"><span class="n"><span class="pre">Codec</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4spdl4core5Codec5CodecERR5CodecI5mediaE" title="spdl::core::Codec::Codec"><span class="n"><span class="pre">Codec</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec::media"><span class="n"><span class="pre">media</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4spdl4core5Codec5CodecERR5CodecI5mediaE" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Move constructor. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core5CodecaSERK5CodecI5mediaE">
 <span id="_CPPv3N4spdl4core5CodecaSERK5CodecI5mediaE"></span><span id="_CPPv2N4spdl4core5CodecaSERK5CodecI5mediaE"></span><span id="spdl::core::Codec::assign-operator__Codec:media:CR"></span><span class="target" id="classspdl_1_1core_1_1Codec_1af85bbe87f651aead4afd2e545aba219b"></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec"><span class="n"><span class="pre">Codec</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec::media"><span class="n"><span class="pre">media</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec"><span class="n"><span class="pre">Codec</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec::media"><span class="n"><span class="pre">media</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4spdl4core5CodecaSERK5CodecI5mediaE" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Copy assignment operator. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core5CodecaSERR5CodecI5mediaE">
 <span id="_CPPv3N4spdl4core5CodecaSERR5CodecI5mediaE"></span><span id="_CPPv2N4spdl4core5CodecaSERR5CodecI5mediaE"></span><span id="spdl::core::Codec::assign-operator__Codec:media:RR"></span><span class="target" id="classspdl_1_1core_1_1Codec_1aab53aa016bfcd7dd7cfdf01a0ab380c2"></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec"><span class="n"><span class="pre">Codec</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec::media"><span class="n"><span class="pre">media</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec"><span class="n"><span class="pre">Codec</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core5CodecE" title="spdl::core::Codec::media"><span class="n"><span class="pre">media</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4spdl4core5CodecaSERR5CodecI5mediaE" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Move assignment operator. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec8get_nameEv">
 <span id="_CPPv3NK4spdl4core5Codec8get_nameEv"></span><span id="_CPPv2NK4spdl4core5Codec8get_nameEv"></span><span id="spdl::core::Codec::get_nameC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a1295f86c02d4943b3df4a5f98031c9ea"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_name</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec8get_nameEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the codec name. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#classspdl_1_1core_1_1Codec"><span class="std std-ref">Codec</span></a> name as a string. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec12get_codec_idEv">
 <span id="_CPPv3NK4spdl4core5Codec12get_codec_idEv"></span><span id="_CPPv2NK4spdl4core5Codec12get_codec_idEv"></span><span id="spdl::core::Codec::get_codec_idC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a87774e78975cf0a6f037217835422e6b"></span><a class="reference internal" href="enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html#_CPPv4N4spdl4core7CodecIDE" title="spdl::core::CodecID"><span class="n"><span class="pre">CodecID</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_codec_id</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec12get_codec_idEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the codec ID. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#classspdl_1_1core_1_1Codec"><span class="std std-ref">Codec</span></a> identifier. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec12get_bit_rateEv">
 <span id="_CPPv3NK4spdl4core5Codec12get_bit_rateEv"></span><span id="_CPPv2NK4spdl4core5Codec12get_bit_rateEv"></span><span id="spdl::core::Codec::get_bit_rateC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a216b7dc010be7e68693fcf413886a992"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_bit_rate</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec12get_bit_rateEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the bit rate. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Bit rate in bits per second. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec19get_bits_per_sampleEv">
 <span id="_CPPv3NK4spdl4core5Codec19get_bits_per_sampleEv"></span><span id="_CPPv2NK4spdl4core5Codec19get_bits_per_sampleEv"></span><span id="spdl::core::Codec::get_bits_per_sampleC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1aa2d2174c8edee43a7476909237b5e33d"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_bits_per_sample</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec19get_bits_per_sampleEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get bits per sample. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of bits per sample. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec13get_time_baseEv">
 <span id="_CPPv3NK4spdl4core5Codec13get_time_baseEv"></span><span id="_CPPv2NK4spdl4core5Codec13get_time_baseEv"></span><span id="spdl::core::Codec::get_time_baseC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1ae79f07b15617f76a15770c9e43a26967"></span><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_time_base</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec13get_time_baseEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the time base. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Time base as a rational number. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec14get_frame_rateEv">
 <span id="_CPPv3NK4spdl4core5Codec14get_frame_rateEv"></span><span id="_CPPv2NK4spdl4core5Codec14get_frame_rateEv"></span><span id="spdl::core::Codec::get_frame_rateC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a762154a4a1c489dc8eb109970c08073d"></span><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_frame_rate</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec14get_frame_rateEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the frame rate. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Frame rate as a rational number. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec14get_parametersEv">
 <span id="_CPPv3NK4spdl4core5Codec14get_parametersEv"></span><span id="_CPPv2NK4spdl4core5Codec14get_parametersEv"></span><span id="spdl::core::Codec::get_parametersC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a4d3fbfee26aa662282ffa42a2525f801"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">AVCodecParameters</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">get_parameters</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec14get_parametersEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the underlying codec parameters. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pointer to AVCodecParameters. The returned pointer must not outlive the <a class="reference internal" href="#classspdl_1_1core_1_1Codec"><span class="std std-ref">Codec</span></a> object. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec15get_sample_rateEv">
 <span id="_CPPv3NK4spdl4core5Codec15get_sample_rateEv"></span><span id="_CPPv2NK4spdl4core5Codec15get_sample_rateEv"></span><span id="spdl::core::Codec::get_sample_rateC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a3a3e16e449774652dbd3bfc03eb66fe6"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_sample_rate</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec15get_sample_rateEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the audio sample rate. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sample rate in Hz. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec16get_num_channelsEv">
 <span id="_CPPv3NK4spdl4core5Codec16get_num_channelsEv"></span><span id="_CPPv2NK4spdl4core5Codec16get_num_channelsEv"></span><span id="spdl::core::Codec::get_num_channelsC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1aad43354e012bebed0c794740a3356106"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_num_channels</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec16get_num_channelsEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the number of audio channels. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of channels. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec14get_sample_fmtEv">
 <span id="_CPPv3NK4spdl4core5Codec14get_sample_fmtEv"></span><span id="_CPPv2NK4spdl4core5Codec14get_sample_fmtEv"></span><span id="spdl::core::Codec::get_sample_fmtC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a549d2ff1169b4c30f37c020f46218577"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_sample_fmt</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec14get_sample_fmtEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the audio sample format. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sample format as a string. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec18get_channel_layoutEv">
 <span id="_CPPv3NK4spdl4core5Codec18get_channel_layoutEv"></span><span id="_CPPv2NK4spdl4core5Codec18get_channel_layoutEv"></span><span id="spdl::core::Codec::get_channel_layoutC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1ac7a13ca872b61f9a8b06ef1c27cde23f"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_channel_layout</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec18get_channel_layoutEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the audio channel layout. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Channel layout as a string. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec9get_widthEv">
 <span id="_CPPv3NK4spdl4core5Codec9get_widthEv"></span><span id="_CPPv2NK4spdl4core5Codec9get_widthEv"></span><span id="spdl::core::Codec::get_widthC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1ae15a8757716bd684f16fcadb9ce9d78a"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_width</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec9get_widthEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the video/image width. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Width in pixels. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec10get_heightEv">
 <span id="_CPPv3NK4spdl4core5Codec10get_heightEv"></span><span id="_CPPv2NK4spdl4core5Codec10get_heightEv"></span><span id="spdl::core::Codec::get_heightC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a3727cb674a8e16e9b8c9c3bd13951167"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_height</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec10get_heightEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the video/image height. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Height in pixels. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec11get_pix_fmtEv">
 <span id="_CPPv3NK4spdl4core5Codec11get_pix_fmtEv"></span><span id="_CPPv2NK4spdl4core5Codec11get_pix_fmtEv"></span><span id="spdl::core::Codec::get_pix_fmtC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a60ed9ae6614ccbdc87d3310c41c8ea70"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_pix_fmt</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec11get_pix_fmtEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the pixel format. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pixel format as a string. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core5Codec23get_sample_aspect_ratioEv">
 <span id="_CPPv3NK4spdl4core5Codec23get_sample_aspect_ratioEv"></span><span id="_CPPv2NK4spdl4core5Codec23get_sample_aspect_ratioEv"></span><span id="spdl::core::Codec::get_sample_aspect_ratioC"></span><span class="target" id="classspdl_1_1core_1_1Codec_1a89a2ee22d85a0f2a49caa58e21890236"></span><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_sample_aspect_ratio</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core5Codec23get_sample_aspect_ratioEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get the sample aspect ratio. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sample aspect ratio as a rational number. </p>
+</dd>
+</dl>
+</dd></dl>
 
 </div>
 </dd></dl>
@@ -654,7 +765,7 @@
         <div class="bottom-of-page">
           <div class="left-details">
             <div class="copyright">
-                Copyright &#169; 2025, Meta Platforms, Inc.
+                Copyright &#169; 2026, Meta Platforms, Inc.
             </div>
             Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
             
@@ -721,7 +832,7 @@
     </aside>
   </div>
 </div>
-    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=d0952cc8"></script>
+    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=95e61db4"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

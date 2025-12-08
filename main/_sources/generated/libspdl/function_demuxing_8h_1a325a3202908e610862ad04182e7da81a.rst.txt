@@ -1,0 +1,14 @@
+.. _exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a:
+
+Function spdl::core::make_demuxer(const std::string_view, const std::optional<DemuxConfig>&, const std::optional<std::string>&)
+===============================================================================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::make_demuxer(const std::string_view, const std::optional<DemuxConfig>&, const std::optional<std::string>&)
+   :project: libspdl

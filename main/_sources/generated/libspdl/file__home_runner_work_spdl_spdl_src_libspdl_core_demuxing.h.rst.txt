@@ -65,23 +65,21 @@ Classes
 
 - :ref:`exhale_class_classspdl_1_1core_1_1Demuxer`
 
-- :ref:`exhale_class_classspdl_1_1core_1_1StreamingDemuxer`
-
 
 Functions
 ---------
 
 
-- :ref:`exhale_function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f`
+- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
 
-- :ref:`exhale_function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4`
+- :ref:`exhale_function_demuxing_8h_1a78b157beb45e215aad69f013831788ac`
 
 
 Typedefs
 --------
 
 
-- :ref:`exhale_typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b`
+- :ref:`exhale_typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22`
 
-- :ref:`exhale_typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db`
+- :ref:`exhale_typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b`
 

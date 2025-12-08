@@ -13,6 +13,7 @@ Nested Relationships
 Nested Types
 ************
 
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1iterator`
 - :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1promise__type`
 
 

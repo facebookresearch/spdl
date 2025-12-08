@@ -46,7 +46,7 @@ is\_diagnostic\_mode\_enabled
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.is_diagnostic_mode_enabled
+   is_diagnostic_mode_enabled
 
 
 diagnostic\_mode\_num\_sources
@@ -56,7 +56,7 @@ diagnostic\_mode\_num\_sources
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.diagnostic_mode_num_sources
+   diagnostic_mode_num_sources
 
 
 set\_default\_hook\_class
@@ -66,7 +66,7 @@ set\_default\_hook\_class
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.set_default_hook_class
+   set_default_hook_class
 
 
 get\_default\_hook\_class
@@ -76,7 +76,7 @@ get\_default\_hook\_class
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.get_default_hook_class
+   get_default_hook_class
 
 
 set\_default\_queue\_class
@@ -86,7 +86,7 @@ set\_default\_queue\_class
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.set_default_queue_class
+   set_default_queue_class
 
 
 get\_default\_queue\_class
@@ -96,7 +96,7 @@ get\_default\_queue\_class
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.get_default_queue_class
+   get_default_queue_class
 
 
 set\_default\_profile\_hook
@@ -106,7 +106,7 @@ set\_default\_profile\_hook
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.set_default_profile_hook
+   set_default_profile_hook
 
 
 get\_default\_profile\_hook
@@ -116,7 +116,7 @@ get\_default\_profile\_hook
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.get_default_profile_hook
+   get_default_profile_hook
 
 
 set\_default\_profile\_callback
@@ -126,7 +126,7 @@ set\_default\_profile\_callback
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.set_default_profile_callback
+   set_default_profile_callback
 
 
 get\_default\_profile\_callback
@@ -136,7 +136,7 @@ get\_default\_profile\_callback
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.get_default_profile_callback
+   get_default_profile_callback
 
 
 get\_default\_build\_callback
@@ -146,7 +146,7 @@ get\_default\_build\_callback
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.get_default_build_callback
+   get_default_build_callback
 
 
 set\_default\_build\_callback
@@ -156,7 +156,17 @@ set\_default\_build\_callback
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.pipeline.config.set_default_build_callback
+   set_default_build_callback
+
+
+set\_compact\_log
+^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   set_compact_log
 
 
 
@@ -202,6 +212,7 @@ set\_default\_build\_callback
    ############################################################################
    Others
    ############################################################################
+
 
 
 

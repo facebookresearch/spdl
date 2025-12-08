@@ -29,10 +29,11 @@ Program Listing for File utils.h
    
    namespace spdl::core {
    
-   // Utilities for FFmpeg
+   // FFmpeg utilities
+   
    int get_ffmpeg_log_level();
    
-   void set_ffmpeg_log_level(int);
+   void set_ffmpeg_log_level(int level);
    
    void register_avdevices();
    
@@ -41,33 +42,44 @@ Program Listing for File utils.h
    std::map<std::string, std::tuple<int64_t, int64_t, int64_t>>
    get_ffmpeg_versions();
    
-   // Utilities for Glog
+   // Glog utilities
+   
    void init_glog(const char* name);
    
-   // Utilities for tracing
+   // Tracing utilities
+   
    class TracingSession {
      void* sess_ = nullptr;
    
     public:
      explicit TracingSession(void* sess = nullptr);
+   
      TracingSession(const TracingSession&) = delete;
+   
      TracingSession& operator=(const TracingSession&) = delete;
+   
      TracingSession(TracingSession&& other) noexcept;
+   
      TracingSession& operator=(TracingSession&& other) noexcept;
+   
      ~TracingSession();
    
      void init();
+   
      void config(const std::string& process_name);
+   
      void start(int fd, int buffer_size_in_kb);
+   
      void stop();
    };
    
    std::unique_ptr<TracingSession> init_tracing();
    
-   // These utilities are for adding custom tracing on Python side
    template <typename Number>
    void trace_counter(int i, Number counter);
+   
    void trace_event_begin(const std::string& name);
+   
    void trace_event_end();
    
    } // namespace spdl::core

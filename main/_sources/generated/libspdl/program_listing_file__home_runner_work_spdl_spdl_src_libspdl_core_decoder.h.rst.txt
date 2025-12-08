@@ -44,9 +44,13 @@ Program Listing for File decoder.h
          const Codec<media>& codec,
          const std::optional<DecodeConfig>& cfg,
          const std::optional<std::string>& filter_desc);
+   
      Decoder(const Decoder&) = delete;
+   
      Decoder& operator=(const Decoder&) = delete;
+   
      Decoder(Decoder&&) = delete;
+   
      Decoder& operator=(Decoder&&) = delete;
    
      ~Decoder();
@@ -56,6 +60,7 @@ Program Listing for File decoder.h
          int num_frames = -1);
    
      std::optional<FramesPtr<media>> decode(PacketsPtr<media> packets);
+   
      std::optional<FramesPtr<media>> flush();
    };
    

@@ -54,15 +54,12 @@ Program Listing for File packets.h
    class PacketSeries;
    using PacketSeriesPtr = std::unique_ptr<PacketSeries>;
    
-   // Used to expose the row data without exposing AVPacket* struct
-   // This allows NVDEC decoder to not include the libavutil header.
    struct RawPacketData {
      uint8_t* data;
      int size;
      int64_t pts;
    };
    
-   // Helper struct which manages a series of AVPacket* pointers.
    class PacketSeries {
      friend struct Packets<MediaType::Audio>;
      friend struct Packets<MediaType::Video>;
@@ -73,23 +70,23 @@ Program Listing for File packets.h
     public:
      PacketSeries();
    
-     // Destructor releases AVPacket* resources
      ~PacketSeries();
+   
      explicit PacketSeries(const PacketSeries&);
+   
      PacketSeries& operator=(const PacketSeries&);
+   
      PacketSeries(PacketSeries&& other) noexcept;
+   
      PacketSeries& operator=(PacketSeries&& other) noexcept;
    
-     // Add a new AVPacket
-     void push(AVPacket*);
-     // Iterate through the packets
+     void push(AVPacket* packet);
+   
      const std::vector<AVPacket*>& get_packets() const;
+   
      Generator<RawPacketData> iter_data() const;
    };
    
-   // Struct passed from IO thread pool to decoder thread pool.
-   // Similar to Frames, AVFrame pointers are bulk released.
-   // Optionally, it carries codec information for decoding and bitstream filtering
    template <MediaType media>
    struct Packets {
      uintptr_t id{};
@@ -98,44 +95,34 @@ Program Listing for File packets.h
    
      PacketSeries pkts;
      Rational time_base{};
-     // window timestamp specified by user
      std::optional<TimeWindow> timestamp;
    
-     // Code should be available only when it's demuxed by `demux_window`
-     // method. When streaming demuxing, codec object must be fetched from
-     // demuxer directly.
      std::optional<Codec<media>> codec;
    
      Packets() = default;
    
-     // Constructing Packets from demuxer for one-time decoding
-     // Need codec to initialize the decoder.
-     // Optionally remember the timestamp (window) user asked.
      Packets(
          const std::string& src,
          int index,
          Codec<media>&& codec,
          const std::optional<TimeWindow>& timestamp = {});
    
-     // Constructing Packets from demuxer for streaming
-     // No need for codec and time base, as decoder is initialized
-     // seprately.
-     // Note: index/time_base is not required for decoding as decoder is
-     // initialized separately using Codec class, but it's handy when
-     // debugging.
      Packets(
          const std::string& src,
          int index,
          const Rational& time_base,
          const std::optional<TimeWindow>& timestamp = {});
    
-     // Constructing Packets from encoder for muxing
      Packets(uintptr_t id, int stream_index, Rational time_base);
    
      explicit Packets(const Packets<media>&);
+   
      Packets<media>& operator=(const Packets<media>&);
+   
      Packets(Packets<media>&&) noexcept;
+   
      Packets<media>& operator=(Packets<media>&&) noexcept;
+   
      ~Packets() = default;
    };
    
@@ -144,12 +131,9 @@ Program Listing for File packets.h
        const VideoPacketsPtr& src,
        std::vector<size_t> indices);
    
-   // Get the timestamps of packets in seconds.
-   // It is aware of user-specified window, and the result is sorted for video
-   // use case.
-   // Providing `raw=True` disable window filtering and sorting.
-   // It returns the timestamp of internal packets as-is.
    template <MediaType media>
-   std::vector<double> get_timestamps(const Packets<media>&, bool raw = false);
+   std::vector<double> get_timestamps(
+       const Packets<media>& packets,
+       bool raw = false);
    
    } // namespace spdl::core

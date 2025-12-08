@@ -50,11 +50,14 @@ Program Listing for File types.h
    using OptionDict = std::map<std::string, std::string>;
    
    using Rational = AVRational;
+   
    using TimeWindow = std::tuple<Rational, Rational>;
    
-   // simplified version of AVMediaType so that public headers do not
-   // include ffmpeg headers
-   enum class MediaType { Audio, Video, Image };
+   enum class MediaType {
+     Audio, 
+     Video, 
+     Image 
+   };
    
    struct DemuxConfig {
      std::optional<std::string> format = std::nullopt;
@@ -67,23 +70,24 @@ Program Listing for File types.h
      std::optional<OptionDict> decoder_options = std::nullopt;
    };
    
-   // Used to construct Dtype when converting buffer to array
-   enum class ElemClass { Int, UInt, Float };
+   enum class ElemClass {
+     Int, 
+     UInt, 
+     Float 
+   };
    
-   // Subset of AVCodecID used by nvdec so that we can build NVDEC without
-   // including FFmpeg headers
    enum class CodecID {
-     MPEG1VIDEO,
-     MPEG2VIDEO,
-     MPEG4,
-     WMV3,
-     VC1,
-     H264,
-     HEVC,
-     VP8,
-     VP9,
-     MJPEG,
-     AV1
+     MPEG1VIDEO, 
+     MPEG2VIDEO, 
+     MPEG4, 
+     WMV3, 
+     VC1, 
+     H264, 
+     HEVC, 
+     VP8, 
+     VP9, 
+     MJPEG, 
+     AV1 
    };
    
    template <MediaType media>
@@ -94,7 +98,7 @@ Program Listing for File types.h
      int height;
      int width;
    
-     // Overrides
+     // Optional overrides
      const std::optional<std::string> pix_fmt = std::nullopt;
      const std::optional<Rational> frame_rate = std::nullopt;
    
@@ -119,7 +123,8 @@ Program Listing for File types.h
    template <>
    struct EncodeConfigBase<MediaType::Audio> {
      int num_channels;
-     // Overrides
+   
+     // Optional overrides
      const std::optional<std::string> sample_fmt = std::nullopt;
      const std::optional<int> sample_rate = std::nullopt;
    
@@ -137,7 +142,6 @@ Program Listing for File types.h
    using VideoEncodeConfig = EncodeConfigBase<MediaType::Video>;
    using AudioEncodeConfig = EncodeConfigBase<MediaType::Audio>;
    
-   // Thrown when unexpected internal error occurs.
    class InternalError : public std::logic_error {
      using std::logic_error::logic_error;
    };

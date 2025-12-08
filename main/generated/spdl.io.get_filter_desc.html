@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.io.get_filter_desc - SPDL 0.1.7 documentation</title>
+        <title>spdl.io.get_filter_desc - SPDL 0.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.1.7 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.2.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.1.7 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.2.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -318,6 +318,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
@@ -336,7 +337,6 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1StreamingDemuxer.html">Class StreamingDemuxer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
@@ -351,16 +351,16 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a50ec9c8a7e6ab71e7827df2eb862dc40.html">Template Function spdl::core::get_timestamps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_demuxing_8h_1a78b157beb45e215aad69f013831788ac.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_demuxing_8h_1a325a3202908e610862ad04182e7da81a.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
@@ -373,6 +373,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b.html">Typedef spdl::core::AnyPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d.html">Typedef spdl::core::AudioEncoder</a></li>
@@ -399,7 +400,6 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db.html">Typedef spdl::core::StreamingDemuxerPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
@@ -421,6 +421,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
 </ul>
 </li>
 </ul>
@@ -443,6 +444,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
@@ -501,7 +503,7 @@
 <h1>spdl.io.get_filter_desc<a class="headerlink" href="#spdl-io-get-filter-desc" title="Link to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.io.get_filter_desc">
-<span class="sig-name descname"><span class="pre">get_filter_desc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">packets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.AudioPackets.html#spdl.io.AudioPackets" title="spdl.io.AudioPackets"><span class="pre">AudioPackets</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.VideoPackets.html#spdl.io.VideoPackets" title="spdl.io.VideoPackets"><span class="pre">VideoPackets</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.ImagePackets.html#spdl.io.ImagePackets" title="spdl.io.ImagePackets"><span class="pre">ImagePackets</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">filter_args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/io/_preprocessing.py?#L240-L266"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.io.get_filter_desc" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_filter_desc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">packets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.AudioPackets.html#spdl.io.AudioPackets" title="spdl.io.AudioPackets"><span class="pre">AudioPackets</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.VideoPackets.html#spdl.io.VideoPackets" title="spdl.io.VideoPackets"><span class="pre">VideoPackets</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.ImagePackets.html#spdl.io.ImagePackets" title="spdl.io.ImagePackets"><span class="pre">ImagePackets</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">filter_args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/io/_preprocessing.py?#L257-L283"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.io.get_filter_desc" title="Link to this definition">¶</a></dt>
 <dd><p>Get the filter to process the given packets.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -535,7 +537,7 @@
         <div class="bottom-of-page">
           <div class="left-details">
             <div class="copyright">
-                Copyright &#169; 2025, Meta Platforms, Inc.
+                Copyright &#169; 2026, Meta Platforms, Inc.
             </div>
             Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
             
@@ -575,7 +577,7 @@
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=d0952cc8"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=95e61db4"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

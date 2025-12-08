@@ -28,8 +28,6 @@ Program Listing for File conversion.h
    
    namespace spdl::core {
    
-   // The actual implementation is found in
-   // detail/ffmpeg/conversion.cpp
    template <MediaType media>
    CPUBufferPtr convert_frames(
        const std::vector<const Frames<media>*>& batch,

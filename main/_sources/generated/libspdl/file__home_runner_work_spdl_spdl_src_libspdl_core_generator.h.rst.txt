@@ -29,6 +29,12 @@ Includes
 
 - ``exception``
 
+- ``iterator``
+
+- ``stdexcept``
+
+- ``utility``
+
 
 
 Included By
@@ -56,6 +62,8 @@ Classes
 
 
 - :ref:`exhale_struct_structspdl_1_1core_1_1Generator`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1iterator`
 
 - :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1promise__type`
 

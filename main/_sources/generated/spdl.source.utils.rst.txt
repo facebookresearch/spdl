@@ -46,7 +46,7 @@ repeat\_source
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.source.utils.repeat_source
+   repeat_source
 
 
 embed\_shuffle
@@ -56,7 +56,7 @@ embed\_shuffle
    :nosignatures:
    :hide_from_toctree:
 
-   ~spdl.source.utils.embed_shuffle
+   embed_shuffle
 
 
 
@@ -89,7 +89,7 @@ MergeIterator
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~spdl.source.utils.MergeIterator
+   MergeIterator
 
 
 

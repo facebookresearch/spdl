@@ -9,6 +9,8 @@ spdl.io.NvDecDecoder
    .. rubric:: Attributes
 
    .. autosummary::
-      ~NvDecDecoder.decode
+      ~NvDecDecoder.decode_packets
       ~NvDecDecoder.flush
-      ~NvDecDecoder.init
+      ~NvDecDecoder.init_buffer
+      ~NvDecDecoder.init_decoder
+      ~NvDecDecoder.streaming_decode_packets

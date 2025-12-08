@@ -28,6 +28,7 @@ Program Listing for File storage.h
    namespace spdl::core {
    struct Storage {
      virtual void* data() const = 0;
+   
      virtual ~Storage() = default;
    };
    
@@ -45,25 +46,30 @@ Program Listing for File storage.h
      // So far, we only need this in CPUStorage. So we are not adding it
      // in CUDAStorage. If we need to add that to CUDAStorage, revisit
      // the interface/abstraction. (Is virtual `get_size` better?)
+   
     private:
      void* data_ = nullptr;
      bool memory_pinned_ = false;
    
     public:
      void* data() const override;
+   
      bool is_pinned() const;
    
      CPUStorage() = default;
+   
      explicit CPUStorage(
          size_t size,
-         allocator_type = default_alloc,
-         deallocator_type = default_dealloc,
+         allocator_type allocator = default_alloc,
+         deallocator_type deallocator = default_dealloc,
          bool pin_memory = false);
    
      CPUStorage(const CPUStorage&) = delete;
+   
      CPUStorage& operator=(const CPUStorage&) = delete;
    
      CPUStorage(CPUStorage&&) noexcept;
+   
      CPUStorage& operator=(CPUStorage&&) noexcept;
    
      ~CPUStorage() override;

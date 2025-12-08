@@ -40,8 +40,11 @@ Program Listing for File muxer.h
      Muxer(const std::string& uri, const std::optional<std::string>& muxer);
    
      Muxer(const Muxer&) = delete;
+   
      Muxer& operator=(const Muxer&) = delete;
+   
      Muxer(Muxer&&) = delete;
+   
      Muxer& operator=(Muxer&&) = delete;
    
      ~Muxer();
@@ -61,6 +64,7 @@ Program Listing for File muxer.h
      void write(int i, Packets<media>& packets);
    
      void flush();
+   
      void close();
    };
    

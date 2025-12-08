@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Template Class Decoder" href="classspdl_1_1core_1_1Decoder.html" /><link rel="prev" title="Template Class Codec" href="classspdl_1_1core_1_1Codec.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Class CPUStorage - SPDL 0.1.7 documentation</title>
+        <title>Class CPUStorage - SPDL 0.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">SPDL 0.1.7 documentation</div></a>
+      <a href="../../index.html"><div class="brand">SPDL 0.2.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.1.7 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.2.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -318,6 +318,7 @@
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
@@ -336,7 +337,6 @@
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
-<li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1StreamingDemuxer.html">Class StreamingDemuxer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
 <li class="toctree-l3"><a class="reference internal" href="enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
 <li class="toctree-l3"><a class="reference internal" href="enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
@@ -351,16 +351,16 @@
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a50ec9c8a7e6ab71e7827df2eb862dc40.html">Template Function spdl::core::get_timestamps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1ad3fdb02bd04d231cd7238e034c27711f.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1a590baa95f8eeb6bc0092c723ff060dd4.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1a78b157beb45e215aad69f013831788ac.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_demuxing_8h_1a325a3202908e610862ad04182e7da81a.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a9b6c16227a1a8445319b487cacb0cd1d.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
@@ -373,6 +373,7 @@
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b.html">Typedef spdl::core::AnyPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d.html">Typedef spdl::core::AudioEncoder</a></li>
@@ -399,7 +400,6 @@
 <li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
-<li class="toctree-l3"><a class="reference internal" href="typedef_demuxing_8h_1a0a7f8c140cd7110dc5f3f6537fae67db.html">Typedef spdl::core::StreamingDemuxerPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
@@ -421,6 +421,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
 </ul>
 </li>
 </ul>
@@ -443,6 +444,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
@@ -516,52 +518,83 @@
 <dl class="cpp class">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorageE">
 <span id="_CPPv3N4spdl4core10CPUStorageE"></span><span id="_CPPv2N4spdl4core10CPUStorageE"></span><span id="spdl::core::CPUStorage"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CPUStorage</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">spdl</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">core</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="structspdl_1_1core_1_1Storage.html#_CPPv4N4spdl4core7StorageE" title="spdl::core::Storage"><span class="n"><span class="pre">Storage</span></span></a><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorageE" title="Link to this definition">¶</a><br /></dt>
-<dd><div class="breathe-sectiondef docutils container">
+<dd><p>CPU memory storage with optional memory pinning.</p>
+<p><a class="reference internal" href="#classspdl_1_1core_1_1CPUStorage"><span class="std std-ref">CPUStorage</span></a> manages a block of CPU memory with configurable allocation and deallocation functions. Supports pinned (page-locked) memory for efficient transfers to GPU. </p>
+<div class="breathe-sectiondef docutils container">
 <p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core10CPUStorage4dataEv">
 <span id="_CPPv3NK4spdl4core10CPUStorage4dataEv"></span><span id="_CPPv2NK4spdl4core10CPUStorage4dataEv"></span><span id="spdl::core::CPUStorage::dataC"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1ad8c1f5905ca432e7ad7f29811b86c5e7"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">data</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core10CPUStorage4dataEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Get pointer to the stored data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pointer to the data. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core10CPUStorage9is_pinnedEv">
 <span id="_CPPv3NK4spdl4core10CPUStorage9is_pinnedEv"></span><span id="_CPPv2NK4spdl4core10CPUStorage9is_pinnedEv"></span><span id="spdl::core::CPUStorage::is_pinnedC"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1aafc79d6877eaaaffca46069a51d4defa"></span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">is_pinned</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core10CPUStorage9is_pinnedEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Check if memory is pinned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>true if memory is pinned, false otherwise. </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorage10CPUStorageEv">
 <span id="_CPPv3N4spdl4core10CPUStorage10CPUStorageEv"></span><span id="_CPPv2N4spdl4core10CPUStorage10CPUStorageEv"></span><span id="spdl::core::CPUStorage::CPUStorage"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a530fe118e75dd8204644452e367b8670"></span><span class="sig-name descname"><span class="n"><span class="pre">CPUStorage</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorage10CPUStorageEv" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Default constructor. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorage10CPUStorageE6size_t14allocator_type16deallocator_typeb">
-<span id="_CPPv3N4spdl4core10CPUStorage10CPUStorageE6size_t14allocator_type16deallocator_typeb"></span><span id="_CPPv2N4spdl4core10CPUStorage10CPUStorageE6size_t14allocator_type16deallocator_typeb"></span><span id="spdl::core::CPUStorage::CPUStorage__s.allocator_type.deallocator_type.b"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a0c9d64037729e30b532d8f416e7b8b4b"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CPUStorage</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">allocator_type</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">default_alloc</span></span>, <span class="n"><span class="pre">deallocator_type</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">default_dealloc</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">pin_memory</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">false</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorage10CPUStorageE6size_t14allocator_type16deallocator_typeb" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<span id="_CPPv3N4spdl4core10CPUStorage10CPUStorageE6size_t14allocator_type16deallocator_typeb"></span><span id="_CPPv2N4spdl4core10CPUStorage10CPUStorageE6size_t14allocator_type16deallocator_typeb"></span><span id="spdl::core::CPUStorage::CPUStorage__s.allocator_type.deallocator_type.b"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1afca7c2424c128f4861625479f92cf3e5"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CPUStorage</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">allocator_type</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">allocator</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">default_alloc</span></span>, <span class="n"><span class="pre">deallocator_type</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">deallocator</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">default_dealloc</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">pin_memory</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">false</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorage10CPUStorageE6size_t14allocator_type16deallocator_typeb" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Construct CPU storage with custom allocator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> – Size of storage in bytes. </p></li>
+<li><p><strong>allocator</strong> – Optional custom allocator function. </p></li>
+<li><p><strong>deallocator</strong> – Optional custom deallocator function. </p></li>
+<li><p><strong>pin_memory</strong> – Whether to pin (page-lock) the memory. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorage10CPUStorageERK10CPUStorage">
 <span id="_CPPv3N4spdl4core10CPUStorage10CPUStorageERK10CPUStorage"></span><span id="_CPPv2N4spdl4core10CPUStorage10CPUStorageERK10CPUStorage"></span><span id="spdl::core::CPUStorage::CPUStorage__CPUStorageCR"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a6dfc2c53fa7184f79c8fc3b363658f7b"></span><span class="sig-name descname"><span class="n"><span class="pre">CPUStorage</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4spdl4core10CPUStorage10CPUStorageERK10CPUStorage" title="spdl::core::CPUStorage::CPUStorage"><span class="n"><span class="pre">CPUStorage</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorage10CPUStorageERK10CPUStorage" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Deleted copy constructor. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorageaSERK10CPUStorage">
 <span id="_CPPv3N4spdl4core10CPUStorageaSERK10CPUStorage"></span><span id="_CPPv2N4spdl4core10CPUStorageaSERK10CPUStorage"></span><span id="spdl::core::CPUStorage::assign-operator__CPUStorageCR"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a1926816065dfb4c371ce7d20ee462d7c"></span><a class="reference internal" href="#_CPPv4N4spdl4core10CPUStorageE" title="spdl::core::CPUStorage"><span class="n"><span class="pre">CPUStorage</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4spdl4core10CPUStorageE" title="spdl::core::CPUStorage"><span class="n"><span class="pre">CPUStorage</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorageaSERK10CPUStorage" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Deleted copy assignment operator. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorage10CPUStorageERR10CPUStorage">
 <span id="_CPPv3N4spdl4core10CPUStorage10CPUStorageERR10CPUStorage"></span><span id="_CPPv2N4spdl4core10CPUStorage10CPUStorageERR10CPUStorage"></span><span id="spdl::core::CPUStorage::CPUStorage__CPUStorageRR"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a1c1f6a8cb70514d350ef1336bc168a6b"></span><span class="sig-name descname"><span class="n"><span class="pre">CPUStorage</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4spdl4core10CPUStorage10CPUStorageERR10CPUStorage" title="spdl::core::CPUStorage::CPUStorage"><span class="n"><span class="pre">CPUStorage</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorage10CPUStorageERR10CPUStorage" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Move constructor. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorageaSERR10CPUStorage">
 <span id="_CPPv3N4spdl4core10CPUStorageaSERR10CPUStorage"></span><span id="_CPPv2N4spdl4core10CPUStorageaSERR10CPUStorage"></span><span id="spdl::core::CPUStorage::assign-operator__CPUStorageRR"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a9525b637704789132259d91bde379c4c"></span><a class="reference internal" href="#_CPPv4N4spdl4core10CPUStorageE" title="spdl::core::CPUStorage"><span class="n"><span class="pre">CPUStorage</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4spdl4core10CPUStorageE" title="spdl::core::CPUStorage"><span class="n"><span class="pre">CPUStorage</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorageaSERR10CPUStorage" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Move assignment operator. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorageD0Ev">
 <span id="_CPPv3N4spdl4core10CPUStorageD0Ev"></span><span id="_CPPv2N4spdl4core10CPUStorageD0Ev"></span><span id="spdl::core::CPUStorage::~CPUStorage"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a8513ff10f859f456c11e2c974150fb0b"></span><span class="sig-name descname"><span class="n"><span class="pre">~CPUStorage</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorageD0Ev" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Destructor. </p>
+</dd></dl>
 
 </div>
 <div class="breathe-sectiondef docutils container">
@@ -569,7 +602,8 @@
 <dl class="cpp var">
 <dt class="sig sig-object cpp" id="_CPPv4N4spdl4core10CPUStorage4sizeE">
 <span id="_CPPv3N4spdl4core10CPUStorage4sizeE"></span><span id="_CPPv2N4spdl4core10CPUStorage4sizeE"></span><span id="spdl::core::CPUStorage::size__s"></span><span class="target" id="classspdl_1_1core_1_1CPUStorage_1a289a38fa534cb22dd58a93bac3812e0c"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">size</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core10CPUStorage4sizeE" title="Link to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Size of the storage in bytes. </p>
+</dd></dl>
 
 </div>
 </dd></dl>
@@ -606,7 +640,7 @@
         <div class="bottom-of-page">
           <div class="left-details">
             <div class="copyright">
-                Copyright &#169; 2025, Meta Platforms, Inc.
+                Copyright &#169; 2026, Meta Platforms, Inc.
             </div>
             Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
             
@@ -665,7 +699,7 @@
     </aside>
   </div>
 </div>
-    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=d0952cc8"></script>
+    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=95e61db4"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
