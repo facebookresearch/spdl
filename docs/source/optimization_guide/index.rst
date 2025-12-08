@@ -7,7 +7,7 @@ Optimization Guide
 
 In this section, we share the methodologies we developed while
 optimizing production AI training pipelines.
-            
+
 When optimizing a training pipeline, it is important to determine
 if data loading is a bottleneck, and identify which part of the pipeline
 is the bottleneck.
@@ -27,6 +27,7 @@ and examine some cases, and discuss how we approach performance issues.
    noisy_neighbour
    setup
    analysis
+   stats
    fleet_metrics
    straggler
    resolution
