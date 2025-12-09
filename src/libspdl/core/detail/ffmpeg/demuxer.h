@@ -26,7 +26,8 @@ class DemuxerImpl {
   Generator<AVPacketPtr> demux_window(
       AVStream* stream,
       const AVRational end,
-      std::optional<BSFImpl>& bsf);
+      std::optional<BSFImpl>& bsf,
+      std::optional<AVRational> seek_time = std::nullopt);
 
  public:
   explicit DemuxerImpl(DataInterfacePtr di);
@@ -45,7 +46,9 @@ class DemuxerImpl {
   bool has_audio() const;
 
  private:
-  Generator<AVPacketPtr> demux();
+  Generator<AVPacketPtr> demux(
+      int stream_index = -1,
+      std::optional<AVRational> seek_time = std::nullopt);
 
  public:
   template <MediaType media>
