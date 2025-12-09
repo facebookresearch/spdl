@@ -157,7 +157,25 @@ int DemuxerImpl::get_default_stream_index(MediaType media) const {
   }
   return idx;
 }
-Generator<AVPacketPtr> DemuxerImpl::demux() {
+Generator<AVPacketPtr> DemuxerImpl::demux(
+    int stream_index,
+    std::optional<AVRational> seek_time) {
+  if (seek_time && stream_index >= 0) {
+    auto* stream = fmt_ctx_->streams[stream_index];
+    auto tb = stream->time_base;
+    auto t = av_rescale(seek_time->num, tb.den, seek_time->den * tb.num);
+    auto start = to_double(*seek_time);
+    {
+      TRACE_EVENT("demuxing", "av_seek_frame");
+      CHECK_AVERROR(
+          av_seek_frame(fmt_ctx_, stream_index, t - 1, AVSEEK_FLAG_BACKWARD),
+          "Failed to seek to the timestamp {} ({}/{}) [sec]",
+          start,
+          seek_time->num,
+          seek_time->den);
+    }
+  }
+
   int errnum = 0;
   while (errnum >= 0) {
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
@@ -179,8 +197,9 @@ Generator<AVPacketPtr> DemuxerImpl::demux() {
 Generator<AVPacketPtr> DemuxerImpl::demux_window(
     AVStream* stream,
     const AVRational end,
-    std::optional<BSFImpl>& filter) {
-  auto demuxing = this->demux();
+    std::optional<BSFImpl>& filter,
+    std::optional<AVRational> seek_time) {
+  auto demuxing = this->demux(stream->index, seek_time);
   while (demuxing) {
     auto packet = demuxing();
     if (packet->stream_index != stream->index) {
@@ -216,20 +235,9 @@ PacketsPtr<media> DemuxerImpl::demux_window(
   enable_for_stream(fmt_ctx_, {index});
   auto* stream = fmt_ctx_->streams[index];
 
+  std::optional<AVRational> seek_time = std::nullopt;
   if (window) {
-    auto s = std::get<0>(*window);
-    auto tb = stream->time_base;
-    auto t = av_rescale(s.num, tb.den, s.den * tb.num);
-    auto start = to_double(s);
-    {
-      TRACE_EVENT("demuxing", "av_seek_frame");
-      CHECK_AVERROR(
-          av_seek_frame(fmt_ctx_, index, t - 1, AVSEEK_FLAG_BACKWARD),
-          "Failed to seek to the timestamp {} ({}/{}) [sec]",
-          start,
-          s.num,
-          s.den);
-    }
+    seek_time = std::get<0>(*window);
   }
 
   auto filter = bsf ? std::optional<BSFImpl>{BSFImpl{*bsf, stream->codecpar}}
@@ -254,7 +262,7 @@ PacketsPtr<media> DemuxerImpl::demux_window(
       end = av_add_q(end, {3, 10});
     }
   }
-  auto demuxing = this->demux_window(stream, end, filter);
+  auto demuxing = this->demux_window(stream, end, filter, seek_time);
   while (demuxing) {
     ret->pkts.push(demuxing().release());
   }
