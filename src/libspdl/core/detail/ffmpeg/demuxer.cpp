@@ -161,8 +161,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux(
     int stream_index,
     std::optional<AVRational> seek_time) {
   if (seek_time && stream_index >= 0) {
-    auto* stream = fmt_ctx_->streams[stream_index];
-    auto tb = stream->time_base;
+    auto tb = fmt_ctx_->streams[stream_index]->time_base;
     auto t = av_rescale(seek_time->num, tb.den, seek_time->den * tb.num);
     auto start = to_double(*seek_time);
     {
@@ -177,6 +176,8 @@ Generator<AVPacketPtr> DemuxerImpl::demux(
   }
 
   int errnum = 0;
+  bool is_first_packet = (seek_time && stream_index >= 0);
+
   while (errnum >= 0) {
     AVPacketPtr packet{CHECK_AVALLOCATE(av_packet_alloc())};
     {
@@ -190,6 +191,46 @@ Generator<AVPacketPtr> DemuxerImpl::demux(
     if (errnum == AVERROR_EOF) {
       break;
     }
+
+    // Handle RASL frames on best-effort basis
+    //
+    // RASL (Random Access Skipped Leading) frames in HEVC (H.265) refers to
+    // special pictures that appear after a key random access point
+    // (like a CRA picture) but depend on pictures that come before the random
+    // access point in coding order, making them undecodable if you start from
+    // the CRA picture; they are typically skipped during playback to enable
+    // clean, immediate starts at CRA points, unlike RADL (Random Access
+    // Decodable Leading) pictures which are decodable.
+    //
+    // Here, if the first packet has PTS higher than seek time, it might be
+    // RASL. So we seek again using DTS - 1
+    if (is_first_packet) {
+      is_first_packet = false;
+      auto tb = fmt_ctx_->streams[stream_index]->time_base;
+      auto t = av_rescale(seek_time->num, tb.den, seek_time->den * tb.num);
+
+      // If packet PTS is higher than seek time, it might be RASL.
+      // seek again using DTS - 1
+      if (packet->pts > t) {
+        auto dts_seek_target = packet->dts - 1;
+        {
+          TRACE_EVENT("demuxing", "av_seek_frame (retry)");
+          CHECK_AVERROR(
+              av_seek_frame(
+                  fmt_ctx_,
+                  stream_index,
+                  dts_seek_target,
+                  AVSEEK_FLAG_BACKWARD),
+              "Failed to seek to DTS-based timestamp {} [{}/{}}]",
+              dts_seek_target,
+              tb.den,
+              tb.num);
+        }
+        // Continue to read from the new position
+        continue;
+      }
+    }
+
     co_yield std::move(packet);
   }
 }
