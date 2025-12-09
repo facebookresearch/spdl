@@ -16,13 +16,31 @@
 
 namespace spdl::core {
 
-// The actual implementation is found in
-// detail/ffmpeg/conversion.cpp
+/// Convert a batch of frames to a CPU buffer.
+///
+/// Converts decoded frames into a contiguous CPU buffer suitable for
+/// processing or copying to other memory systems.
+///
+/// @tparam media Media type (Audio, Video, or Image).
+/// @param batch Vector of frame pointers to convert.
+/// @param storage Optional pre-allocated storage. If not provided, allocates
+/// new storage.
+/// @return CPU buffer containing the converted frame data.
 template <MediaType media>
 CPUBufferPtr convert_frames(
     const std::vector<const Frames<media>*>& batch,
     std::shared_ptr<CPUStorage> storage = nullptr);
 
+/// Convert a single frame to a CPU buffer.
+///
+/// Converts decoded frames into a contiguous CPU buffer suitable for
+/// processing or copying to other memory systems.
+///
+/// @tparam media Media type (Audio, Video, or Image).
+/// @param frames Frames to convert.
+/// @param storage Optional pre-allocated storage. If not provided, allocates
+/// new storage.
+/// @return CPU buffer containing the converted frame data.
 template <MediaType media>
 CPUBufferPtr convert_frames(
     const Frames<media>* frames,
@@ -34,6 +52,19 @@ CPUBufferPtr convert_frames(
   return ret;
 }
 
+/// Create an audio frame referencing external data.
+///
+/// Creates a frame that references externally managed memory without copying.
+/// The caller must ensure the data remains valid for the lifetime of the frame.
+///
+/// @param sample_fmt Sample format string (e.g., "s16", "f32").
+/// @param data Pointer to external audio data.
+/// @param bits Bits per sample.
+/// @param shape Shape array [num_channels, num_samples].
+/// @param stride Stride array [channel_stride, sample_stride].
+/// @param sample_rate Sample rate in Hz.
+/// @param pts Presentation timestamp.
+/// @return Audio frames referencing the external data.
 AudioFramesPtr create_reference_audio_frame(
     const std::string& sample_fmt,
     const void* data,
@@ -43,6 +74,19 @@ AudioFramesPtr create_reference_audio_frame(
     int sample_rate,
     int64_t pts);
 
+/// Create a video frame referencing external data.
+///
+/// Creates a frame that references externally managed memory without copying.
+/// The caller must ensure the data remains valid for the lifetime of the frame.
+///
+/// @param sample_fmt Pixel format string (e.g., "rgb24", "yuv420p").
+/// @param data Pointer to external video data.
+/// @param bits Bits per component.
+/// @param shape Shape vector [height, width, ...].
+/// @param stride Stride vector for each dimension.
+/// @param frame_rate Frame rate as a rational number.
+/// @param pts Presentation timestamp.
+/// @return Video frames referencing the external data.
 VideoFramesPtr create_reference_video_frame(
     const std::string& sample_fmt,
     const void* data,

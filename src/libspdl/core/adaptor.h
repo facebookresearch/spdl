@@ -20,39 +20,51 @@ namespace spdl::core {
 
 struct SourceAdaptor;
 
+/// Shared pointer to a SourceAdaptor.
 using SourceAdaptorPtr = std::shared_ptr<SourceAdaptor>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // DataInterface
 ////////////////////////////////////////////////////////////////////////////////
 
-// DataInterface serves two purposes:
-// 1. It encapsulates the AVFormatContext, AVIOContext and other
-//    objects so that their lifetimes are aligned.
-//    These are consumed in demuxer functions.
-// 2. Abstract away the difference between the interfaces. Each
-//    interface can require additional/specific implementation to
-//    talk to the actual data source. Such things are distilled to
-//    merely AVFormatContext*.
-
-// Note:
-// The demuxer impl uses `AVFormatContext::url` in error reporting,
-// so make sure that it is populated.
+/// Interface for accessing media data sources.
+///
+/// DataInterface encapsulates FFmpeg's AVFormatContext and AVIOContext,
+/// managing their lifetimes and providing a uniform interface for different
+/// data sources (files, URLs, memory buffers).
+///
+/// The demuxer implementation uses AVFormatContext::url for error reporting,
+/// so implementations should ensure this field is populated.
 struct DataInterface {
+  /// Virtual destructor.
   virtual ~DataInterface() = default;
+
+  /// Get the FFmpeg format context.
+  ///
+  /// @return Pointer to AVFormatContext.
   virtual AVFormatContext* get_fmt_ctx() = 0;
 };
 
+/// Unique pointer to a DataInterface.
 using DataInterfacePtr = std::unique_ptr<DataInterface>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Adaptor
 ////////////////////////////////////////////////////////////////////////////////
-// Adaptor optionally modifies the input resource indicator, and create
-// DataInterface from the result.
+
+/// Adaptor for custom data sources.
+///
+/// SourceAdaptor optionally modifies the input resource indicator and
+/// creates a DataInterface to access the actual data source.
 struct SourceAdaptor {
+  /// Virtual destructor.
   virtual ~SourceAdaptor() = default;
 
+  /// Create a data interface for the given URL.
+  ///
+  /// @param url Resource URL or identifier.
+  /// @param dmx_cfg Demuxer configuration.
+  /// @return DataInterface for accessing the resource.
   virtual DataInterfacePtr get_interface(
       std::string_view url,
       const DemuxConfig& dmx_cfg) const;
@@ -61,7 +73,17 @@ struct SourceAdaptor {
 ////////////////////////////////////////////////////////////////////////////////
 // Bytes
 ////////////////////////////////////////////////////////////////////////////////
+
+/// Adaptor for in-memory data.
+///
+/// BytesAdaptor creates a data interface for complete, contiguous media data
+/// stored in memory (not partial/streaming data).
 struct BytesAdaptor : public SourceAdaptor {
+  /// Create a data interface for in-memory data.
+  ///
+  /// @param data String view of the media data.
+  /// @param dmx_cfg Demuxer configuration.
+  /// @return DataInterface for accessing the memory buffer.
   DataInterfacePtr get_interface(
       std::string_view data,
       const DemuxConfig& dmx_cfg) const override;

@@ -15,11 +15,31 @@
 
 namespace spdl::cuda {
 
+/// Convert NV12 frames to planar RGB format on GPU.
+///
+/// Performs color space conversion from NV12 (YUV 4:2:0 with interleaved UV)
+/// to planar RGB format using CUDA.
+///
+/// @param frames Vector of NV12 frame buffers to convert.
+/// @param cfg CUDA configuration including device and stream.
+/// @param matrix_coefficients Color matrix coefficients for conversion
+/// (default: BT.709).
+/// @return CUDA buffer containing planar RGB data.
 CUDABufferPtr nv12_to_planar_rgb(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1);
 
+/// Convert NV12 frames to planar BGR format on GPU.
+///
+/// Performs color space conversion from NV12 (YUV 4:2:0 with interleaved UV)
+/// to planar BGR format using CUDA.
+///
+/// @param frames Vector of NV12 frame buffers to convert.
+/// @param cfg CUDA configuration including device and stream.
+/// @param matrix_coefficients Color matrix coefficients for conversion
+/// (default: BT.709).
+/// @return CUDA buffer containing planar BGR data.
 CUDABufferPtr nv12_to_planar_bgr(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
