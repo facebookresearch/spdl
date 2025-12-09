@@ -42,9 +42,15 @@ Rational make_rational(const std::tuple<int64_t, int64_t>& val) {
   auto& [num, den] = val;
   Rational ret;
   if (!av_reduce(&ret.num, &ret.den, num, den, INT32_MAX)) {
-    LOG(WARNING)
-        << "Timestamp conversion was not exact during rational reduction; "
-           "timestamp might be slightly inaccurate.";
+    // Warn once that reduced PTS may be inexact due to rational reduction
+    // constraints.
+    static bool warned_inexact_pts = false;
+    if (!warned_inexact_pts) {
+      LOG(WARNING)
+          << "Timestamp conversion was not exact during rational reduction; "
+             "timestamp might be slightly inaccurate.";
+      warned_inexact_pts = true;
+    }
   }
   return ret;
 }
