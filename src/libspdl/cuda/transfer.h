@@ -15,9 +15,25 @@
 
 namespace spdl::cuda {
 
-// CPU -> CUDA
+/// Transfer CPU buffer to CUDA device.
+///
+/// Copies data from CPU memory to GPU memory.
+///
+/// @param buffer CPU buffer to transfer.
+/// @param cfg CUDA configuration including device and stream.
+/// @return CUDA buffer containing the transferred data.
 CUDABufferPtr transfer_buffer(core::CPUBufferPtr buffer, const CUDAConfig& cfg);
-// For transferring generic arrays like NumPy.
+
+/// Transfer generic array from CPU to CUDA device.
+///
+/// Copies data from a generic CPU array (e.g., NumPy array) to GPU memory.
+///
+/// @param shape Dimensions of the array.
+/// @param elem_class Element class (Int, UInt, or Float).
+/// @param depth Size of each element in bytes.
+/// @param ptr Pointer to CPU data.
+/// @param cfg CUDA configuration including device and stream.
+/// @return CUDA buffer containing the transferred data.
 CUDABufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
     core::ElemClass elem_class,
@@ -25,13 +41,26 @@ CUDABufferPtr transfer_buffer(
     void* ptr,
     const CUDAConfig& cfg);
 
-// CUDA -> CPU
+/// Transfer data from CUDA device to CPU.
+///
+/// Copies data from GPU memory to a new CPU buffer.
+///
+/// @param shape Dimensions of the array.
+/// @param elem_class Element class (Int, UInt, or Float).
+/// @param depth Size of each element in bytes.
+/// @param ptr Pointer to GPU data.
+/// @return CPU buffer containing the transferred data.
 spdl::core::CPUBufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
     core::ElemClass elem_class,
     size_t depth,
     const void* ptr);
 
+/// Copy data from GPU to CPU storage.
+///
+/// @param src Pointer to source GPU data.
+/// @param shape Dimensions of the data.
+/// @return CPU storage containing the copied data.
 spdl::core::CPUStorage cp_to_cpu(
     const void* src,
     const std::vector<size_t>& shape);

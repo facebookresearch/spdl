@@ -13,48 +13,90 @@
 
 namespace spdl::core {
 
+/// Coroutine-based generator for lazy iteration.
+///
+/// Generator provides a C++20 coroutine-based iterator that yields values
+/// on demand. Used for streaming operations where producing all values
+/// upfront would be inefficient.
+///
+/// @tparam T Type of values yielded by the generator.
 template <typename T>
 struct Generator {
+  /// Promise type for coroutine support.
   struct promise_type;
   using handle_type = std::coroutine_handle<promise_type>;
 
+  /// Coroutine promise implementation.
   struct promise_type {
+    /// Current yielded value.
     T value;
+    /// Exception captured during generation.
     std::exception_ptr exception;
+
+    /// Create generator from promise.
     Generator get_return_object() {
       return Generator(handle_type::from_promise(*this));
     }
+
+    /// Suspend at coroutine start.
     std::suspend_always initial_suspend() {
       return {};
     }
+
+    /// Suspend at coroutine end.
     std::suspend_always final_suspend() noexcept {
       return {};
     }
+
+    /// Handle unhandled exceptions.
     void unhandled_exception() {
       exception = std::current_exception();
     }
+
+    /// Yield a value from the coroutine.
     template <std::convertible_to<T> From>
     std::suspend_always yield_value(From&& from) {
       value = std::forward<From>(from);
       return {};
     }
+
+    /// Complete coroutine without returning a value.
     void return_void() {}
   };
 
   handle_type h_;
 
+  /// Construct generator from coroutine handle.
   explicit Generator(handle_type h) : h_(h) {}
+
+  /// Deleted copy constructor.
   Generator(const Generator&) = delete;
+
+  /// Deleted copy assignment operator.
   Generator& operator=(const Generator&) = delete;
+
+  /// Default move constructor.
   Generator(Generator&&) = default;
+
+  /// Default move assignment operator.
   Generator& operator=(Generator&&) = default;
+
+  /// Destructor destroys the coroutine handle.
   ~Generator() {
     h_.destroy();
   }
+
+  /// Check if more values are available.
+  ///
+  /// @return true if generator has more values, false otherwise.
   explicit operator bool() {
     fill();
     return !h_.done();
   }
+
+  /// Get the next value from the generator.
+  ///
+  /// @return Next yielded value.
   T operator()() {
     fill();
     full_ = false;
