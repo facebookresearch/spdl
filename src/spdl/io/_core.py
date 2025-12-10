@@ -875,18 +875,17 @@ def decode_image_nvjpeg(
 
 
 _THREAD_LOCAL = threading.local()
-_THREAD_LOCAL._decoder = None  # pyre-ignore[16]
 
 
 def _get_decoder() -> "NvDecDecoder":
-    if _THREAD_LOCAL._decoder is None:  # pyre-ignore[16]
+    if getattr(_THREAD_LOCAL, "_decoder", None) is None:
         _THREAD_LOCAL._decoder = _libspdl_cuda._nvdec_decoder()  # pyre-ignore[16]
     return _THREAD_LOCAL._decoder
 
 
 def _del_cached_decoder() -> None:
-    if _THREAD_LOCAL._decoder is not None:  # pyre-ignore[16]
-        _THREAD_LOCAL._decoder = None
+    if hasattr(_THREAD_LOCAL, "_decoder"):
+        delattr(_THREAD_LOCAL, "_decoder")
 
 
 def nvdec_decoder(
