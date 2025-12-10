@@ -11,7 +11,7 @@ custom hooks and then export the data to a database.
 .. note::
 
    To learn how to interpret the performance statistics, please refer to
-   `Optimization Guide <../performance_analysis/index.html>`_.
+   :doc:`../optimization_guide/index`.
 
 The :py:class:`~spdl.pipeline.Pipeline` class can collect runtime statistics
 and periodically publish them via hooks and queues.
