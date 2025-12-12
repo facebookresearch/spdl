@@ -24,12 +24,10 @@ from pathlib import Path
 from typing import overload, TYPE_CHECKING
 
 from . import _config, _core, _preprocessing
-from ._core import _FILTER_DESC_DEFAULT
+from ._core import _FILTER_DESC_DEFAULT, TimeWindow
 from .lib import _libspdl, _libspdl_cuda
 
 _LG: logging.Logger = logging.getLogger(__name__)
-
-Window = tuple[float, float]
 
 
 if TYPE_CHECKING:
@@ -74,7 +72,7 @@ def _load_packets(
 @overload
 def load_audio(
     src: str | bytes,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     *,
     demux_config: "DemuxConfig | None" = None,
     decode_config: "DecodeConfig | None" = None,
@@ -86,7 +84,7 @@ def load_audio(
 @overload
 def load_audio(
     src: str | bytes,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     *,
     demux_config: "DemuxConfig | None" = None,
     decode_config: "DecodeConfig | None" = None,
@@ -99,7 +97,7 @@ def load_audio(
 
 def load_audio(
     src: str | bytes,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     *,
     demux_config: "DemuxConfig | None" = None,
     decode_config: "DecodeConfig | None" = None,
@@ -147,7 +145,7 @@ def load_audio(
 @overload
 def load_video(
     src: str | bytes,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     *,
     demux_config: "DemuxConfig | None" = None,
     decode_config: "DecodeConfig | None" = None,
@@ -159,7 +157,7 @@ def load_video(
 @overload
 def load_video(
     src: str | bytes,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     *,
     demux_config: "DemuxConfig | None" = None,
     decode_config: "DecodeConfig | None" = None,
@@ -172,7 +170,7 @@ def load_video(
 
 def load_video(
     src: str | bytes,
-    timestamp: tuple[float, float] | None = None,
+    timestamp: TimeWindow | None = None,
     *,
     demux_config: "DemuxConfig | None" = None,
     decode_config: "DecodeConfig | None" = None,
