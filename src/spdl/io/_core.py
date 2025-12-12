@@ -145,6 +145,13 @@ class Demuxer:
             source.
 
         demux_config (DemuxConfig): Custom I/O config.
+
+        name: Optional custom name for this demuxer instance. When provided,
+            this name will be used in error messages instead of generic identifiers
+            like memory addresses. This is particularly useful when demuxing from
+            in-memory data (bytes/arrays) to make debugging easier. For file-based
+            sources, the filename already provides context, so this parameter is
+            typically not needed.
     """
 
     def __init__(
@@ -152,12 +159,13 @@ class Demuxer:
         src: "SourceType",
         *,
         demux_config: "DemuxConfig | None" = None,
+        name: str | None = None,
         **kwargs: Any,
     ) -> None:
         if isinstance(src, Path):
             src = str(src)
         self._demuxer: _libspdl.Demuxer = _libspdl._demuxer(
-            src, demux_config=demux_config, **kwargs
+            src, demux_config=demux_config, name=name, **kwargs
         )
 
     def demux_audio(
@@ -345,6 +353,7 @@ def demux_audio(
     timestamp: TimeWindow | None = None,
     demux_config: "DemuxConfig | None" = None,
     bsf: str | None = None,
+    name: str | None = None,
     **kwargs: Any,
 ) -> "AudioPackets":
     """Demux audio from the source.
@@ -353,11 +362,12 @@ def demux_audio(
         src: See :py:class:`~spdl.io.Demuxer`.
         timestamp: See :py:meth:`spdl.io.Demuxer.demux_audio`.
         demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
+        name: Optional name for error messages.
 
     Returns:
         Demuxed audio packets.
     """
-    with Demuxer(src, demux_config=demux_config, **kwargs) as demuxer:
+    with Demuxer(src, demux_config=demux_config, name=name, **kwargs) as demuxer:
         return demuxer.demux_audio(window=timestamp, bsf=bsf)
 
 
@@ -367,6 +377,7 @@ def demux_video(
     timestamp: TimeWindow | None = None,
     demux_config: "DemuxConfig | None" = None,
     bsf: str | None = None,
+    name: str | None = None,
     **kwargs: Any,
 ) -> "VideoPackets":
     """Demux video from the source.
@@ -376,11 +387,12 @@ def demux_video(
         timestamp: See :py:meth:`spdl.io.Demuxer.demux_video`.
         demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
         bsf: Bit-stream filter expression
+        name: Optional name for error messages.
 
     Returns:
         Demuxed video packets.
     """
-    with Demuxer(src, demux_config=demux_config, **kwargs) as demuxer:
+    with Demuxer(src, demux_config=demux_config, name=name, **kwargs) as demuxer:
         return demuxer.demux_video(window=timestamp, bsf=bsf)
 
 
@@ -389,6 +401,7 @@ def demux_image(
     *,
     demux_config: "DemuxConfig | None" = None,
     bsf: str | None = None,
+    name: str | None = None,
     **kwargs: Any,
 ) -> "ImagePackets":
     """Demux image from the source.
@@ -397,11 +410,12 @@ def demux_image(
         src: See :py:class:`~spdl.io.Demuxer`.
         demux_config (DemuxConfig): See :py:class:`~spdl.io.Demuxer`.
         bsf: Bit-stream filter expression
+        name: Optional name for error messages.
 
     Returns:
         Demuxed image packets.
     """
-    with Demuxer(src, demux_config=demux_config, **kwargs) as demuxer:
+    with Demuxer(src, demux_config=demux_config, name=name, **kwargs) as demuxer:
         return demuxer.demux_image(bsf=bsf)
 
 

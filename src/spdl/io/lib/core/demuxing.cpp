@@ -113,32 +113,35 @@ using PyDemuxerPtr = std::unique_ptr<PyDemuxer>;
 PyDemuxerPtr _make_demuxer(
     const std::string& src,
     const std::optional<DemuxConfig>& dmx_cfg,
-    SourceAdaptorPtr _adaptor) {
+    SourceAdaptorPtr _adaptor,
+    const std::optional<std::string>& name) {
   nb::gil_scoped_release __g;
   return std::make_unique<PyDemuxer>(
-      make_demuxer(src, std::move(_adaptor), dmx_cfg));
+      make_demuxer(src, std::move(_adaptor), dmx_cfg, name));
 }
 
 PyDemuxerPtr _make_demuxer_bytes(
     nb::bytes data,
     const std::optional<DemuxConfig>& dmx_cfg,
-    bool zero_clear = false) {
+    bool zero_clear,
+    const std::optional<std::string>& name) {
   auto data_ = std::string_view{data.c_str(), data.size()};
   nb::gil_scoped_release __g;
   return std::make_unique<PyDemuxer>(
-      make_demuxer(data_, dmx_cfg), data_, zero_clear);
+      make_demuxer(data_, dmx_cfg, name), data_, zero_clear);
 }
 
 PyDemuxerPtr _make_demuxer_array(
     cpu_array data,
     const std::optional<DemuxConfig>& dmx_cfg,
-    bool zero_clear = false) {
+    bool zero_clear,
+    const std::optional<std::string>& name) {
   auto ptr = reinterpret_cast<const char*>(data.data());
   // Note size() returns the number of elements, not the size in bytes.
   auto data_ = std::string_view{ptr, data.size()};
   nb::gil_scoped_release __g;
   return std::make_unique<PyDemuxer>(
-      make_demuxer(data_, dmx_cfg), data_, zero_clear);
+      make_demuxer(data_, dmx_cfg, name), data_, zero_clear);
 }
 
 } // namespace
@@ -333,7 +336,8 @@ void register_demuxing(nb::module_& m) {
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
-      nb::arg("_adaptor") = nullptr);
+      nb::arg("_adaptor") = nullptr,
+      nb::arg("name") = nb::none());
 
   m.def(
       "_demuxer",
@@ -341,13 +345,15 @@ void register_demuxing(nb::module_& m) {
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
-      nb::arg("_zero_clear") = false);
+      nb::arg("_zero_clear") = false,
+      nb::arg("name") = nb::none());
   m.def(
       "_demuxer",
       &_make_demuxer_array,
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
-      nb::arg("_zero_clear") = false);
+      nb::arg("_zero_clear") = false,
+      nb::arg("name") = nb::none());
 }
 } // namespace spdl::core

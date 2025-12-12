@@ -138,7 +138,8 @@ using DemuxerPtr = std::unique_ptr<Demuxer>;
 DemuxerPtr make_demuxer(
     const std::string& src,
     const SourceAdaptorPtr& adaptor = nullptr,
-    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+    const std::optional<std::string>& name = std::nullopt);
 
 /// Create a demuxer from externally managed in-memory data.
 ///
@@ -147,6 +148,7 @@ DemuxerPtr make_demuxer(
 /// @return Demuxer instance.
 DemuxerPtr make_demuxer(
     const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt);
+    const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+    const std::optional<std::string>& name = std::nullopt);
 
 } // namespace spdl::core

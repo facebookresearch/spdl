@@ -18,19 +18,21 @@ namespace {
 DataInterfacePtr get_interface(
     const std::string_view src,
     const SourceAdaptorPtr& adaptor,
-    const std::optional<DemuxConfig>& dmx_cfg) {
+    const std::optional<DemuxConfig>& dmx_cfg,
+    const std::optional<std::string>& name) {
   if (!adaptor) {
     thread_local auto p = std::make_shared<SourceAdaptor>();
-    return p->get_interface(src, dmx_cfg.value_or(DemuxConfig{}));
+    return p->get_interface(src, dmx_cfg.value_or(DemuxConfig{}), name);
   }
-  return adaptor->get_interface(src, dmx_cfg.value_or(DemuxConfig{}));
+  return adaptor->get_interface(src, dmx_cfg.value_or(DemuxConfig{}), name);
 }
 
 DataInterfacePtr get_in_memory_interface(
     const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg) {
+    const std::optional<DemuxConfig>& dmx_cfg,
+    const std::optional<std::string>& name) {
   thread_local SourceAdaptorPtr adaptor = std::make_shared<BytesAdaptor>();
-  return get_interface(data, adaptor, dmx_cfg);
+  return adaptor->get_interface(data, dmx_cfg.value_or(DemuxConfig{}), name);
 }
 } // namespace
 } // namespace detail
@@ -120,18 +122,20 @@ StreamingDemuxerPtr Demuxer::streaming_demux(
 DemuxerPtr make_demuxer(
     const std::string& src,
     const SourceAdaptorPtr& adaptor,
-    const std::optional<DemuxConfig>& dmx_cfg) {
+    const std::optional<DemuxConfig>& dmx_cfg,
+    const std::optional<std::string>& name) {
   TRACE_EVENT("demuxing", "make_demuxer");
   return std::make_unique<Demuxer>(
-      detail::get_interface(src, adaptor, dmx_cfg));
+      detail::get_interface(src, adaptor, dmx_cfg, name));
 }
 
 DemuxerPtr make_demuxer(
     const std::string_view data,
-    const std::optional<DemuxConfig>& dmx_cfg) {
+    const std::optional<DemuxConfig>& dmx_cfg,
+    const std::optional<std::string>& name) {
   TRACE_EVENT("demuxing", "make_demuxer");
   return std::make_unique<Demuxer>(
-      detail::get_in_memory_interface(data, dmx_cfg));
+      detail::get_in_memory_interface(data, dmx_cfg, name));
 }
 
 } // namespace spdl::core
