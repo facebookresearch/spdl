@@ -64,10 +64,12 @@ struct SourceAdaptor {
   ///
   /// @param url Resource URL or identifier.
   /// @param dmx_cfg Demuxer configuration.
+  /// @param name Optional custom name for the source (used in error messages).
   /// @return DataInterface for accessing the resource.
   virtual DataInterfacePtr get_interface(
       std::string_view url,
-      const DemuxConfig& dmx_cfg) const;
+      const DemuxConfig& dmx_cfg,
+      const std::optional<std::string>& name = std::nullopt) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,7 +88,8 @@ struct BytesAdaptor : public SourceAdaptor {
   /// @return DataInterface for accessing the memory buffer.
   DataInterfacePtr get_interface(
       std::string_view data,
-      const DemuxConfig& dmx_cfg) const override;
+      const DemuxConfig& dmx_cfg,
+      const std::optional<std::string>& name = std::nullopt) const override;
 };
 
 } // namespace spdl::core

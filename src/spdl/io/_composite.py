@@ -80,6 +80,7 @@ def load_audio(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
+    name: str | None = None,
     **kwargs: object,
 ) -> "CPUBuffer": ...
 @overload
@@ -91,6 +92,7 @@ def load_audio(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
+    name: str | None = None,
     **kwargs: object,
 ) -> "CUDABuffer": ...
 
@@ -103,6 +105,7 @@ def load_audio(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
+    name: str | None = None,
     **kwargs: object,
 ) -> "CPUBuffer | CUDABuffer":
     """Load audio from source into buffer.
@@ -117,6 +120,8 @@ def load_audio(
         decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
         device_config: See :py:func:`~spdl.io.transfer_buffer`.
             Providing this argument will move the buffer to CUDA device.
+        name: Optional custom name for the source. Used in error messages to
+            provide better context when demuxing fails.
 
     Returns:
         Buffer object.
@@ -128,7 +133,9 @@ def load_audio(
     """
     _core.log_api_usage_once("spdl.io.load_audio")
 
-    packets = _core.demux_audio(src, timestamp=timestamp, demux_config=demux_config)
+    packets = _core.demux_audio(
+        src, timestamp=timestamp, demux_config=demux_config, name=name
+    )
     return _load_packets(
         packets,
         decode_config=decode_config,
@@ -146,6 +153,7 @@ def load_video(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
+    name: str | None = None,
     **kwargs: object,
 ) -> "CPUBuffer": ...
 @overload
@@ -157,6 +165,7 @@ def load_video(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
+    name: str | None = None,
     **kwargs: object,
 ) -> "CUDABuffer": ...
 
@@ -169,6 +178,7 @@ def load_video(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
+    name: str | None = None,
     **kwargs: object,
 ) -> "CPUBuffer | CUDABuffer":
     """Load video from source into buffer.
@@ -183,6 +193,8 @@ def load_video(
         decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
         device_config: See :py:func:`~spdl.io.transfer_buffer`.
             Providing this argument will move the buffer to CUDA device.
+        name: Optional custom name for the source. Used in error messages to
+            provide better context when demuxing fails.
 
     Returns:
         Buffer object.
@@ -206,7 +218,9 @@ def load_video(
     """
     _core.log_api_usage_once("spdl.io.load_video")
 
-    packets = _core.demux_video(src, timestamp=timestamp, demux_config=demux_config)
+    packets = _core.demux_video(
+        src, timestamp=timestamp, demux_config=demux_config, name=name
+    )
     return _load_packets(
         packets,
         decode_config=decode_config,
@@ -223,6 +237,7 @@ def load_image(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
+    name: str | None = None,
     **kwargs: object,
 ) -> "CPUBuffer": ...
 @overload
@@ -233,6 +248,7 @@ def load_image(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
+    name: str | None = None,
     **kwargs: object,
 ) -> "CUDABuffer": ...
 
@@ -244,6 +260,7 @@ def load_image(
     decode_config: "DecodeConfig | None" = None,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
+    name: str | None = None,
     **kwargs: object,
 ) -> "CPUBuffer | CUDABuffer":
     """Load image from source into buffer.
@@ -258,6 +275,8 @@ def load_image(
         decode_config, filter_desc: See :py:func:`~spdl.io.decode_packets`.
         device_config: See :py:func:`~spdl.io.transfer_buffer`.
             Providing this argument will move the buffer to CUDA device.
+        name: Optional custom name for the source. Used in error messages to
+            provide better context when demuxing fails.
 
     Returns:
         Buffer object.
@@ -269,7 +288,7 @@ def load_image(
     """
     _core.log_api_usage_once("spdl.io.load_image")
 
-    packets = _core.demux_image(src, demux_config=demux_config)
+    packets = _core.demux_image(src, demux_config=demux_config, name=name)
     return _load_packets(
         packets,
         decode_config=decode_config,

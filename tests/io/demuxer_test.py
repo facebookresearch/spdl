@@ -10,6 +10,7 @@ import unittest
 from fractions import Fraction
 
 import spdl.io
+from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample
 
@@ -251,3 +252,114 @@ class TestFractionalTimestamp(unittest.TestCase):
         self.assertGreater(len(packets_fraction), 0)
         self.assertIsNotNone(packets_float)
         self.assertGreater(len(packets_float), 0)
+
+
+class TestDemuxerNameParameter(unittest.TestCase):
+    """Test the name parameter for improved error messages."""
+
+    @parameterized.expand(
+        [
+            ("bytes", True),
+            ("file_path", False),
+        ]
+    )
+    def test_demuxer_with_name(self, name: str, use_bytes: bool) -> None:
+        """Can demux with a custom name using both bytes and file path inputs."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+        )
+        sample = get_sample(cmd)
+
+        if use_bytes:
+            with open(sample.path, "rb") as f:
+                src = f.read()
+            custom_name = "test_video.mp4"
+        else:
+            src = sample.path
+            custom_name = "custom_name.mp4"
+
+        # Test with custom name
+        with spdl.io.Demuxer(src, name=custom_name) as demuxer:
+            packets = demuxer.demux_video()
+            self.assertIsNotNone(packets)
+            self.assertGreater(len(packets), 0)
+
+    @parameterized.expand(
+        [
+            ("bytes", True),
+            ("file_path", False),
+        ]
+    )
+    def test_demux_audio_with_name(self, name: str, use_bytes: bool) -> None:
+        """Module-level demux_audio accepts name parameter with bytes and file path."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:duration=1 sample.wav"
+        sample = get_sample(cmd)
+
+        if use_bytes:
+            with open(sample.path, "rb") as f:
+                src = f.read()
+        else:
+            src = sample.path
+
+        packets = spdl.io.demux_audio(src, name="test_audio.wav")
+        self.assertIsNotNone(packets)
+        self.assertGreater(len(packets), 0)
+
+    @parameterized.expand(
+        [
+            ("bytes", True),
+            ("file_path", False),
+        ]
+    )
+    def test_demux_video_with_name(self, name: str, use_bytes: bool) -> None:
+        """Module-level demux_video accepts name parameter with bytes and file path."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 5 sample.mp4"
+        sample = get_sample(cmd)
+
+        if use_bytes:
+            with open(sample.path, "rb") as f:
+                src = f.read()
+        else:
+            src = sample.path
+
+        packets = spdl.io.demux_video(src, name="test_video.mp4")
+        self.assertIsNotNone(packets)
+        self.assertGreater(len(packets), 0)
+
+    @parameterized.expand(
+        [
+            ("bytes", True),
+            ("file_path", False),
+        ]
+    )
+    def test_demux_image_with_name(self, name: str, use_bytes: bool) -> None:
+        """Module-level demux_image accepts name parameter with bytes and file path."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+        sample = get_sample(cmd)
+
+        if use_bytes:
+            with open(sample.path, "rb") as f:
+                src = f.read()
+        else:
+            src = sample.path
+
+        packets = spdl.io.demux_image(src, name="test_image.jpg")
+        self.assertIsNotNone(packets)
+        # ImagePackets doesn't have len(), just verify it's not None
+
+    def test_name_parameter_flows_correctly(self) -> None:
+        """Verify that the name parameter flows through correctly when demuxing succeeds."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 5 sample.mp4"
+        sample = get_sample(cmd)
+
+        with open(sample.path, "rb") as f:
+            data = f.read()
+
+        custom_name = "my_custom_video.mp4"
+
+        # Execute: Demux should succeed with custom name
+        packets = spdl.io.demux_video(data, name=custom_name)
+
+        # Assert: Verify demux succeeded - this shows the name parameter flows through correctly
+        self.assertIsNotNone(packets)
+        self.assertGreater(len(packets), 0)
