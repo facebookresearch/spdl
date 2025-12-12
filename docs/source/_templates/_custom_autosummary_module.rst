@@ -44,7 +44,7 @@ API Reference
    :nosignatures:
    :hide_from_toctree:
 
-   ~{{ fullname }}.{{ item }}
+   {{ item }}
 
 {% endfor %}
 {% endif %}
@@ -66,7 +66,7 @@ API Reference
    :nosignatures:
    :hide_from_toctree:
 
-   ~{{ fullname }}.{{ item }}
+   {{ item }}
 
 {% endfor %}
 {% endif %}
@@ -89,7 +89,7 @@ API Reference
    :hide_from_toctree:
    :template: _custom_autosummary_class.rst
 
-   ~{{ fullname }}.{{ item }}
+   {{ item }}
 
 {% endfor %}
 {% endif %}
@@ -111,7 +111,7 @@ API Reference
    :nosignatures:
    :hide_from_toctree:
 
-   ~{{ fullname }}.{{ item }}
+   {{ item }}
 
 {% endfor %}
 {% endif %}
@@ -165,7 +165,7 @@ API Reference
    :nosignatures:
    :hide_from_toctree:
 
-   ~{{ fullname }}.{{ item }}
+   {{ item }}
 
 {% endfor %}
 

@@ -590,15 +590,17 @@ def Decoder(
 
     .. admonition:: Example
 
-       src = "foo.mp4"
+       .. code-block::
 
-       demuxer = spdl.io.Demuxer(src)
-       decoder = spdl.io.Decoder(demuxer.video_codec)
-       for packets in demuxer.streaming_demux_video(num_frames):
-           frames: VideoFrames | None = decoder.decode(packets)
-           ...
+          src = "foo.mp4"
 
-        frames: VideoFrames | None = decoder.flush()
+          demuxer = spdl.io.Demuxer(src)
+          decoder = spdl.io.Decoder(demuxer.video_codec)
+          for packets in demuxer.streaming_demux_video(num_frames):
+              frames: VideoFrames | None = decoder.decode(packets)
+              ...
+
+          frames: VideoFrames | None = decoder.flush()
 
     Args:
         codec (AudioCodec, VideoCodec or ImageCodec):
@@ -1340,19 +1342,23 @@ class Muxer:
 
         .. admonition:: Example - Protocol option
 
-           muxer = spdl.io.Muxer("rtmp://localhost:1234/live/app", format="flv")
-           muxer.add_encode_stream(...)
-           # Passing protocol option `listen=1` makes Muxer act as RTMP server.
-           with muxer.open(muxer_config={"listen": "1"}):
-               muxer.write(0, video_packet)
+           .. code-block::
+
+              muxer = spdl.io.Muxer("rtmp://localhost:1234/live/app", format="flv")
+              muxer.add_encode_stream(...)
+              # Passing protocol option `listen=1` makes Muxer act as RTMP server.
+              with muxer.open(muxer_config={"listen": "1"}):
+                  muxer.write(0, video_packet)
 
         .. admonition:: Example - Device option
 
-           muxer = spdl.io.Muxer("-", format="sdl")
-           muxer.add_encode_stream(...)
-           # Open SDL video player with fullscreen
-           with muxer.open(muxer_config={"window_fullscreen": "1"}):
-               muxer.write(0, video_packet)
+           .. code-block::
+
+              muxer = spdl.io.Muxer("-", format="sdl")
+              muxer.add_encode_stream(...)
+              # Open SDL video player with fullscreen
+              with muxer.open(muxer_config={"window_fullscreen": "1"}):
+                  muxer.write(0, video_packet)
 
         """
         self._muxer.open(muxer_config)
