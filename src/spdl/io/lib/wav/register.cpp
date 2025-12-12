@@ -19,6 +19,25 @@ namespace nb = nanobind;
 namespace spdl::core {
 namespace {
 NB_MODULE(_wav, m) {
+  nb::class_<WAVHeader>(m, "WAVHeader", "WAV file header information.")
+      .def_ro(
+          "audio_format",
+          &WAVHeader::audio_format,
+          "Audio format code (1=PCM, 3=IEEE float, etc.)")
+      .def_ro(
+          "num_channels", &WAVHeader::num_channels, "Number of audio channels")
+      .def_ro("sample_rate", &WAVHeader::sample_rate, "Sample rate in Hz")
+      .def_ro(
+          "byte_rate",
+          &WAVHeader::byte_rate,
+          "Byte rate (sample_rate * num_channels * bits_per_sample / 8)")
+      .def_ro(
+          "block_align",
+          &WAVHeader::block_align,
+          "Block alignment (num_channels * bits_per_sample / 8)")
+      .def_ro("bits_per_sample", &WAVHeader::bits_per_sample, "Bits per sample")
+      .def_ro(
+          "data_size", &WAVHeader::data_size, "Size of audio data in bytes");
   m.def(
       "load_wav",
       [](const nb::bytes& data,
@@ -66,7 +85,7 @@ NB_MODULE(_wav, m) {
 
         return array_interface;
       },
-      nb::arg("wav_data"),
+      nb::arg("data"),
       nb::kw_only(),
       nb::arg("time_offset_seconds") = nb::none(),
       nb::arg("duration_seconds") = nb::none(),
@@ -84,6 +103,35 @@ NB_MODULE(_wav, m) {
       "        - owner: Object owning the data buffer\n\n"
       "Raises:\n"
       "    WAVParseError: If the WAV data is invalid or time range is out of bounds");
+
+  m.def(
+      "parse_wav",
+      [](const nb::bytes& data) -> WAVHeader {
+        const char* p = data.c_str();
+        size_t s = data.size();
+        WAVHeader header;
+        {
+          nb::gil_scoped_release _{};
+          std::string_view d{p, s};
+          header = parse_wav_header(d);
+        }
+        return header;
+      },
+      nb::arg("data"),
+      "Parse WAV file header and extract metadata.\n\n"
+      "Args:\n"
+      "    data: Binary WAV data as bytes\n\n"
+      "Returns:\n"
+      "    WAVHeader: Object containing WAV header information with attributes:\n"
+      "        - audio_format: Audio format code (1=PCM, 3=IEEE float, etc.)\n"
+      "        - num_channels: Number of audio channels\n"
+      "        - sample_rate: Sample rate in Hz\n"
+      "        - byte_rate: Byte rate (sample_rate * num_channels * bits_per_sample / 8)\n"
+      "        - block_align: Block alignment (num_channels * bits_per_sample / 8)\n"
+      "        - bits_per_sample: Bits per sample\n"
+      "        - data_size: Size of audio data in bytes\n\n"
+      "Raises:\n"
+      "    WAVParseError: If the WAV data is invalid or malformed");
 }
 } // namespace
 } // namespace spdl::core

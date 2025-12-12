@@ -106,6 +106,216 @@ class WAVUtilsTest(unittest.TestCase):
         # Validate against reference waveform
         np.testing.assert_array_equal(samples, expected_reference)
 
+
+class ParseWAVTest(unittest.TestCase):
+    def test_parse_wav_basic_metadata(self):
+        """Test that parse_wav extracts correct basic metadata from a WAV file."""
+        # Setup: Create a simple WAV file with known parameters
+        sample_rate = 8000
+        num_channels = 2
+        bits_per_sample = 16
+        num_samples = 1000
+
+        wav_data, _ = create_wav_data(
+            sample_rate=sample_rate,
+            num_channels=num_channels,
+            bits_per_sample=bits_per_sample,
+            num_samples=num_samples,
+        )
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify all header fields are correct
+        self.assertEqual(header.sample_rate, sample_rate)
+        self.assertEqual(header.num_channels, num_channels)
+        self.assertEqual(header.bits_per_sample, bits_per_sample)
+
+        # Verify calculated fields
+        expected_byte_rate = sample_rate * num_channels * (bits_per_sample // 8)
+        expected_block_align = num_channels * (bits_per_sample // 8)
+        expected_data_size = num_samples * expected_block_align
+
+        self.assertEqual(header.byte_rate, expected_byte_rate)
+        self.assertEqual(header.block_align, expected_block_align)
+        self.assertEqual(header.data_size, expected_data_size)
+
+    def test_parse_wav_audio_format_pcm(self):
+        """Test that parse_wav correctly identifies PCM audio format."""
+        # Setup: Create a PCM WAV file (16-bit PCM has audio_format=1)
+        wav_data, _ = create_wav_data(bits_per_sample=16)
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify audio_format is 1 (PCM)
+        self.assertEqual(header.audio_format, 1)
+
+    @parameterized.expand(
+        [
+            (1,),
+            (2,),
+            (4,),
+            (8,),
+        ]
+    )
+    def test_parse_wav_multi_channel(self, num_channels):
+        """Test that parse_wav correctly handles different channel counts."""
+        # Setup: Create a WAV file with specific number of channels
+        wav_data, _ = create_wav_data(num_channels=num_channels, num_samples=100)
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify num_channels is correct
+        self.assertEqual(header.num_channels, num_channels)
+
+    @parameterized.expand(
+        [
+            (8000,),
+            (16000,),
+            (22050,),
+            (44100,),
+            (48000,),
+        ]
+    )
+    def test_parse_wav_sample_rates(self, sample_rate):
+        """Test that parse_wav correctly handles different sample rates."""
+        # Setup: Create a WAV file with specific sample rate
+        wav_data, _ = create_wav_data(sample_rate=sample_rate, num_samples=100)
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify sample_rate is correct
+        self.assertEqual(header.sample_rate, sample_rate)
+
+    @parameterized.expand(
+        [
+            (8,),
+            (16,),
+            (32,),
+        ]
+    )
+    def test_parse_wav_bit_depths(self, bits_per_sample):
+        """Test that parse_wav correctly handles different bit depths."""
+        # Setup: Create a WAV file with specific bit depth
+        wav_data, _ = create_wav_data(bits_per_sample=bits_per_sample, num_samples=100)
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify bits_per_sample is correct
+        self.assertEqual(header.bits_per_sample, bits_per_sample)
+
+    def test_parse_wav_returns_wav_header(self):
+        """Test that parse_wav returns a WAVHeader with all required attributes."""
+        # Setup: Create a simple WAV file
+        wav_data, _ = create_wav_data(num_samples=100)
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify return type is WAVHeader and contains all expected attributes
+        self.assertIsInstance(header, spdl.io.WAVHeader)
+
+        # Verify all expected attributes exist and are accessible
+        self.assertTrue(hasattr(header, "audio_format"))
+        self.assertTrue(hasattr(header, "num_channels"))
+        self.assertTrue(hasattr(header, "sample_rate"))
+        self.assertTrue(hasattr(header, "byte_rate"))
+        self.assertTrue(hasattr(header, "block_align"))
+        self.assertTrue(hasattr(header, "bits_per_sample"))
+        self.assertTrue(hasattr(header, "data_size"))
+
+    def test_parse_wav_invalid_data(self):
+        """Test that parse_wav raises ValueError for invalid WAV data."""
+        # Setup: Create invalid WAV data (not a real WAV file)
+        invalid_data = b"This is not a WAV file"
+
+        # Execute & Assert: Verify that parsing invalid data raises ValueError
+        with self.assertRaises(ValueError):
+            spdl.io.parse_wav(invalid_data)
+
+    def test_parse_wav_empty_data(self):
+        """Test that parse_wav raises ValueError for empty data."""
+        # Setup: Create empty bytes
+        empty_data = b""
+
+        # Execute & Assert: Verify that parsing empty data raises ValueError
+        with self.assertRaises(ValueError):
+            spdl.io.parse_wav(empty_data)
+
+    def test_parse_wav_consistency_with_load_wav(self):
+        """Test that parse_wav metadata matches the actual loaded audio data."""
+        # Setup: Create a WAV file with known parameters
+        sample_rate = 16000
+        num_channels = 2
+        bits_per_sample = 16
+        num_samples = 500
+
+        wav_data, _ = create_wav_data(
+            sample_rate=sample_rate,
+            num_channels=num_channels,
+            bits_per_sample=bits_per_sample,
+            num_samples=num_samples,
+        )
+
+        # Execute: Parse header and load audio data
+        header = spdl.io.parse_wav(wav_data)
+        wav_array_interface = spdl.io.load_wav(wav_data)
+        samples = spdl.io.to_numpy(wav_array_interface)
+
+        # Assert: Verify header metadata matches actual loaded data
+        self.assertEqual(header.num_channels, samples.shape[1])
+        self.assertEqual(header.sample_rate, sample_rate)
+
+        # Calculate expected samples from header metadata
+        expected_num_samples = header.data_size // header.block_align
+        self.assertEqual(expected_num_samples, samples.shape[0])
+
+    def test_parse_wav_byte_rate_calculation(self):
+        """Test that parse_wav correctly calculates byte_rate."""
+        # Setup: Create a WAV file with specific parameters
+        sample_rate = 44100
+        num_channels = 2
+        bits_per_sample = 16
+
+        wav_data, _ = create_wav_data(
+            sample_rate=sample_rate,
+            num_channels=num_channels,
+            bits_per_sample=bits_per_sample,
+            num_samples=100,
+        )
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify byte_rate calculation
+        # byte_rate = sample_rate * num_channels * (bits_per_sample / 8)
+        expected_byte_rate = sample_rate * num_channels * (bits_per_sample // 8)
+        self.assertEqual(header.byte_rate, expected_byte_rate)
+
+    def test_parse_wav_block_align_calculation(self):
+        """Test that parse_wav correctly calculates block_align."""
+        # Setup: Create a WAV file with specific parameters
+        num_channels = 4
+        bits_per_sample = 16
+
+        wav_data, _ = create_wav_data(
+            num_channels=num_channels,
+            bits_per_sample=bits_per_sample,
+            num_samples=100,
+        )
+
+        # Execute: Parse the WAV header
+        header = spdl.io.parse_wav(wav_data)
+
+        # Assert: Verify block_align calculation
+        # block_align = num_channels * (bits_per_sample / 8)
+        expected_block_align = num_channels * (bits_per_sample // 8)
+        self.assertEqual(header.block_align, expected_block_align)
+
     def test_extract_with_offset_and_duration(self):
         sample_rate = 8000
         num_channels = 2
