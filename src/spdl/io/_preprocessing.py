@@ -7,9 +7,11 @@
 # pyre-strict
 
 import math
+from functools import cache
 from typing import Any, TYPE_CHECKING
 
 from .lib import _libspdl
+from .utils import get_ffmpeg_filters
 
 if TYPE_CHECKING:
     AudioCodec = _libspdl.AudioCodec
@@ -29,6 +31,16 @@ __all__ = [
     "get_abuffer_desc",
     "get_buffer_desc",
 ]
+
+
+@cache
+def _is_tpad_available() -> bool:
+    """Check if tpad filter is available in the FFmpeg build.
+
+    Returns:
+        True if tpad filter is available, False otherwise.
+    """
+    return "tpad" in get_ffmpeg_filters()
 
 
 def get_audio_filter_desc(
@@ -221,6 +233,11 @@ def get_video_filter_desc(
     if crop_width is not None or crop_height is not None:
         parts.append(f"crop=w={crop_width or 0}:h={crop_height or 0}")
     if num_frames is not None:
+        if not _is_tpad_available():
+            raise RuntimeError(
+                "The `tpad` filter is not available in your FFmpeg build. "
+                "Using `num_frames` requires FFmpeg 4.2 or later."
+            )
         pad = (
             "tpad=stop=-1:stop_mode=clone"
             if pad_mode is None
