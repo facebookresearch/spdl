@@ -58,6 +58,43 @@ def _get_env_bool(name: str, default: bool = False) -> bool:
 # Dictionary to track exception counts by file and line number
 _exception_counts: dict[tuple[str, int], int] = defaultdict(int)
 
+# Global variable for compact logging mode
+_COMPACT_LOG: bool | None = None
+
+
+def _get_compact_log() -> bool:
+    """Get the compact log setting.
+
+    If the setting is None, check the environment variable SPDL_PIPELINE_COMPACT_LOG.
+    If the environment variable evaluates to a truthy value, set the global to True,
+    otherwise set it to False.
+
+    Returns:
+        bool: The compact log setting.
+    """
+    global _COMPACT_LOG
+    if _COMPACT_LOG is None:
+        _COMPACT_LOG = _get_env_bool("SPDL_PIPELINE_COMPACT_LOG", default=False)
+    return _COMPACT_LOG
+
+
+def _set_compact_log(value: bool | None) -> None:
+    """Set the compact log setting.
+
+    Compact logging mode reduces the verbosity of task exception logs by showing
+    only essential information (exception type, message, and source location) in a
+    single line, instead of full stack traces. This is useful in environments where
+    full tracebacks can be noisy.
+
+    Args:
+        value: The compact log setting. Can be ``True`` to enable compact logging,
+            ``False`` to disable compact logging (full tracebacks), or ``None`` to
+            reset to the default behavior (checking the ``SPDL_PIPELINE_COMPACT_LOG``
+            environment variable, and resorting to ``False`` if not specified).
+    """
+    global _COMPACT_LOG
+    _COMPACT_LOG = value
+
 
 # Note:
 # This function is intentionally made in a way it cannot be directly attached to
@@ -170,7 +207,7 @@ def create_task(
             suppress_repeated_logs=suppress_repeated_logs,
             suppression_threshold=suppression_threshold,
             suppression_warning_interval=suppression_warning_interval,
-            compact=False,
+            compact=_get_compact_log(),
         )
     )
     return task
