@@ -21,6 +21,9 @@ from ._build import (
     get_default_build_callback,
     set_default_build_callback,
 )
+from ._common._misc import (
+    _set_compact_log as set_compact_log,
+)
 from ._profile import (
     diagnostic_mode_num_sources,
     get_default_profile_callback,
@@ -43,4 +46,5 @@ __all__ = [
     "get_default_profile_callback",
     "get_default_build_callback",
     "set_default_build_callback",
+    "set_compact_log",
 ]
