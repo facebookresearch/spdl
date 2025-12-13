@@ -42,11 +42,13 @@ Cons
     composition to functional composition), it is inevitable to require some changes on the
     model training code.
 
-2. *Requires functions that release GIL*
-    Until free-threaded (a.k.a no-GIL) Python becomes available, to achieve high throughput
-    with :py:class:`spdl.dataloader.Pipeline`, one must use functions that are thread-safe
-    and release GIL.
+2. *Requires careful pipeline design*
+    Until free-threaded (a.k.a no-GIL) Python becomes available, building efficient pipelines
+    with :py:class:`spdl.dataloader.Pipeline` requires careful code review and expertise.
+    It is easy to inadvertently mix functions that hold the GIL with those that release it,
+    which can severely degrade performance.
 
+    To achieve high throughput, one must use functions that are thread-safe and release GIL.
     Since SPDL comes with multimedia submodule which supports audio/video/image, and
     `OpenAI's tiktoken <https://github.com/openai/tiktoken>`_ and
     `HuggingFace's Tokenizers <https://github.com/huggingface/tokenizers>`_ † release GIL,
@@ -55,9 +57,3 @@ Cons
     † The tokenizers is not thread-safe so it requires
     `a workaround <https://github.com/huggingface/tokenizers/issues/537#issuecomment-1372231603>`_.
     (note: You can use `thread local storage <https://docs.python.org/3/library/threading.html#thread-local-data>`_.)
-
-3. *New library*
-    SPDL is a new attempt in data loading. Although the development team is making every
-    efforts to make sure that the code works in intended way and easy to use, unseen
-    issues would arise. We make our best efforts to resolve them, but initially some
-    instability is expected.
