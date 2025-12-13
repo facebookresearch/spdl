@@ -73,7 +73,7 @@ from spdl.io._preprocessing import (
 )
 from spdl.io._tar import iter_tarfile as iter_tarfile
 from spdl.io._transfer import transfer_tensor as transfer_tensor
-from spdl.io._wav import load_wav as load_wav
+from spdl.io._wav import load_wav as load_wav, parse_wav as parse_wav
 
 # C++ extension classes and functions from _libspdl
 from spdl.io.lib._libspdl import (
@@ -105,6 +105,11 @@ from spdl.io.lib._libspdl_cuda import (
     CUDABuffer as CUDABuffer,
     CUDAConfig as CUDAConfig,
     NvDecDecoder as NvDecDecoder,
+)
+
+# C++ extension classes and functions from _wav
+from spdl.io.lib._wav import (
+    WAVHeader as WAVHeader,
 )
 
 __all__ = [
@@ -171,6 +176,8 @@ __all__ = [
     "transfer_tensor",
     # From _wav
     "load_wav",
+    "parse_wav",
+    "WAVHeader",
     # From lib._libspdl
     "AudioCodec",
     "AudioDecoder",

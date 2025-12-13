@@ -8,16 +8,20 @@
 
 """WAV audio processing utilities."""
 
-from typing import Any
+__all__ = [
+    "load_wav",
+    "parse_wav",
+]
+
+from typing import Any, TYPE_CHECKING
 
 # Importing `spdl.io.lib` instead of `spdl.io.lilb._archive`
 # so as to delay the import of C++ extension module
 from . import lib as _libspdl
 from ._convert import ArrayInterface
 
-__all__ = [
-    "load_wav",
-]
+if TYPE_CHECKING:
+    WAVHeader = _libspdl._wav.WAVHeader
 
 
 def __dir__() -> list[str]:
@@ -94,3 +98,18 @@ def load_wav(
         duration_seconds=duration_seconds,
     )
     return _WAVArrayInterface(array_interface_dict)
+
+
+def parse_wav(data: bytes) -> "WAVHeader":
+    """Parse WAV file header and extract metadata.
+
+    Args:
+        data: Binary WAV data as bytes
+
+    Returns:
+        WAVHeader: Object containing WAV header information.
+
+    Raises:
+        ValueError: If the WAV data is invalid or malformed.
+    """
+    return _libspdl._wav.parse_wav(data)

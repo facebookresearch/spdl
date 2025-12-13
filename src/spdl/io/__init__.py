@@ -68,6 +68,10 @@ _LIBSPDL_ITEMS = [
     "AudioEncodeConfig",
 ]
 
+_LIBSPDL_WAV_ITEMS = [
+    "WAVHeader",
+]
+
 _LIBSPDL_CUDA_ITEMS = [
     "CUDABuffer",
     "CUDAConfig",
@@ -78,6 +82,7 @@ _LIBSPDL_CUDA_ITEMS = [
 __all__: list[str] = (
     [item for m in _mods for item in m.__all__ if not item.startswith("_")]
     + _LIBSPDL_ITEMS
+    + _LIBSPDL_WAV_ITEMS
     + _LIBSPDL_CUDA_ITEMS
 )
 
@@ -117,6 +122,12 @@ def __getattr__(name: str) -> object:
 
         finally:
             lib._LG.disabled = disabled
+
+    # Lazy loading of C++ extension classes from _libspdl_wav
+    if name in _LIBSPDL_WAV_ITEMS:
+        from .lib import _wav
+
+        return getattr(_wav, name)
 
     # Lazy loading of C++ extension classes from _libspdl_cuda
     if name in _LIBSPDL_CUDA_ITEMS:

@@ -14,7 +14,38 @@
 
 
 
-def load_wav(wav_data: bytes, *, time_offset_seconds: float | None = None, duration_seconds: float | None = None) -> dict:
+class WAVHeader:
+    """WAV file header information."""
+
+    @property
+    def audio_format(self) -> int:
+        """Audio format code (1=PCM, 3=IEEE float, etc.)"""
+
+    @property
+    def num_channels(self) -> int:
+        """Number of audio channels"""
+
+    @property
+    def sample_rate(self) -> int:
+        """Sample rate in Hz"""
+
+    @property
+    def byte_rate(self) -> int:
+        """Byte rate (sample_rate * num_channels * bits_per_sample / 8)"""
+
+    @property
+    def block_align(self) -> int:
+        """Block alignment (num_channels * bits_per_sample / 8)"""
+
+    @property
+    def bits_per_sample(self) -> int:
+        """Bits per sample"""
+
+    @property
+    def data_size(self) -> int:
+        """Size of audio data in bytes"""
+
+def load_wav(data: bytes, *, time_offset_seconds: float | None = None, duration_seconds: float | None = None) -> dict:
     """
     Extract audio samples from WAV data.
 
@@ -33,4 +64,25 @@ def load_wav(wav_data: bytes, *, time_offset_seconds: float | None = None, durat
 
     Raises:
         WAVParseError: If the WAV data is invalid or time range is out of bounds
+    """
+
+def parse_wav(data: bytes) -> WAVHeader:
+    """
+    Parse WAV file header and extract metadata.
+
+    Args:
+        data: Binary WAV data as bytes
+
+    Returns:
+        WAVHeader: Object containing WAV header information with attributes:
+            - audio_format: Audio format code (1=PCM, 3=IEEE float, etc.)
+            - num_channels: Number of audio channels
+            - sample_rate: Sample rate in Hz
+            - byte_rate: Byte rate (sample_rate * num_channels * bits_per_sample / 8)
+            - block_align: Block alignment (num_channels * bits_per_sample / 8)
+            - bits_per_sample: Bits per sample
+            - data_size: Size of audio data in bytes
+
+    Raises:
+        WAVParseError: If the WAV data is invalid or malformed
     """
