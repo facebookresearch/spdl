@@ -76,6 +76,7 @@ void register_transfer(nb::module_& m) {
 #else
         std::vector<size_t> shape;
         auto src_ptr = array.shape_ptr();
+        shape.reserve(array.ndim());
         for (size_t i = 0; i < array.ndim(); ++i) {
           shape.push_back(src_ptr[i]);
         }
@@ -101,6 +102,7 @@ void register_transfer(nb::module_& m) {
 #else
         std::vector<size_t> shape;
         auto src_ptr = array.shape_ptr();
+        shape.reserve(array.ndim());
         for (size_t i = 0; i < array.ndim(); ++i) {
           shape.push_back(src_ptr[i]);
         }

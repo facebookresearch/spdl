@@ -52,6 +52,7 @@ template <MediaType media>
 std::vector<const spdl::core::Frames<media>*> _ref(
     std::vector<FramesPtr<media>>& frames) {
   std::vector<const spdl::core::Frames<media>*> ret;
+  ret.reserve(frames.size());
   for (auto& frame : frames) {
     ret.push_back(frame.get());
   }
@@ -75,6 +76,7 @@ CPUBufferPtr convert_array(
   }
   // Obtain shape
   std::vector<size_t> shape;
+  shape.reserve(vals.ndim());
   for (size_t i = 0; i < vals.ndim(); ++i) {
     shape.push_back(vals.shape(i));
   }
