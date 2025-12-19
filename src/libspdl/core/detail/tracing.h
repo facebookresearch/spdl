@@ -38,4 +38,38 @@ void stop_tracing_session(std::unique_ptr<perfetto::TracingSession> sess);
 
 } // namespace spdl::core::detail
 
+#ifdef SPDL_USE_TORCH_RECORD_FUNCTION
+
+// Use PyTorch record_function for TRACE_EVENT so that the trace shows
+// up on PyTorch profiler.
+// Note: Currently `_ExperimentalConfig(profile_all_threads=True)` is required
+// to show the traces in subthreads.
+
+#include <c10/util/ScopeExit.h>
+#include <torch/csrc/autograd/record_function_ops.h>
+
+#define SPDL_CONCAT_IMPL(x, y) x##y
+#define SPDL_CONCAT(x, y) SPDL_CONCAT_IMPL(x, y)
+
+namespace spdl::core::detail {
+
+thread_local inline c10::intrusive_ptr<
+    torch::autograd::profiler::PythonRecordFunction>
+    _REC;
+
+}
+
+#undef TRACE_EVENT
+#define TRACE_EVENT(category, name, ...)                          \
+  spdl::core::detail::_REC =                                      \
+      torch::autograd::profiler::record_function_enter_new(name); \
+  auto SPDL_CONCAT(pytorch_record_guard_, __COUNTER__) =          \
+      c10::make_scope_exit([&]() {                                \
+        if (spdl::core::detail::_REC) {                           \
+          spdl::core::detail::_REC->record.end();                 \
+          spdl::core::detail::_REC.reset();                       \
+        }                                                         \
+      });
+#endif
+
 #endif
