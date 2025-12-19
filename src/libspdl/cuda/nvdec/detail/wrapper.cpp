@@ -8,7 +8,7 @@
 
 #include "libspdl/cuda/nvdec/detail/wrapper.h"
 
-#include "libspdl/core/detail/tracing.h"
+#include "libspdl/common/tracing.h"
 #include "libspdl/cuda/detail/utils.h"
 
 #include <fmt/core.h>

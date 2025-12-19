@@ -8,8 +8,8 @@
 
 #include <libspdl/cuda/nvdec/decoder.h>
 
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 
 #include "libspdl/cuda/nvdec/detail/decoder.h"
 

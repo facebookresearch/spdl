@@ -9,8 +9,8 @@
 #include "libspdl/core/detail/ffmpeg/bsf.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 
 namespace spdl::core::detail {
 namespace {

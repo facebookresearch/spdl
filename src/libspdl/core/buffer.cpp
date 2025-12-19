@@ -8,7 +8,7 @@
 
 #include <libspdl/core/buffer.h>
 
-#include "libspdl/core/detail/logging.h"
+#include "libspdl/common/logging.h"
 
 #include <fmt/format.h>
 #include <glog/logging.h>

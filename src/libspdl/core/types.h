@@ -11,7 +11,6 @@
 #include <cstdint>
 #include <map>
 #include <optional>
-#include <stdexcept>
 #include <string>
 
 #define SPDL_DEFAULT_BUFFER_SIZE 8096
@@ -176,10 +175,5 @@ struct EncodeConfigBase<MediaType::Audio> {
 using VideoEncodeConfig = EncodeConfigBase<MediaType::Video>;
 /// Audio encoding configuration type alias.
 using AudioEncodeConfig = EncodeConfigBase<MediaType::Audio>;
-
-/// Exception thrown when unexpected internal error occurs.
-class InternalError : public std::logic_error {
-  using std::logic_error::logic_error;
-};
 
 } // namespace spdl::core

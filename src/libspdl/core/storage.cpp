@@ -8,8 +8,8 @@
 
 #include <libspdl/core/storage.h>
 
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 
 #include <utility>
 

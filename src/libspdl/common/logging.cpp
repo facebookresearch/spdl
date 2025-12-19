@@ -6,11 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/logging.h"
+#include "libspdl/common/logging.h"
 
 #include <fmt/core.h>
 
-namespace spdl::core::detail {
+namespace spdl::common {
 
 // TODO: Add stacktrace
 std::string get_err_str(
@@ -29,4 +29,4 @@ std::string get_internal_err_str(
       location.line());
 }
 
-} // namespace spdl::core::detail
+} // namespace spdl::common

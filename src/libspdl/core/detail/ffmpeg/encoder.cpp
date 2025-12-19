@@ -9,10 +9,10 @@
 #include "libspdl/core/detail/ffmpeg/encoder.h"
 
 #include <libspdl/core/generator.h>
+#include "libspdl/common/logging.h"
 #include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
-#include "libspdl/core/detail/logging.h"
 
 #include <fmt/core.h>
 #include <fmt/format.h>

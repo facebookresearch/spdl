@@ -8,8 +8,8 @@
 
 #include <libspdl/core/muxer.h>
 
+#include "libspdl/common/logging.h"
 #include "libspdl/core/detail/ffmpeg/muxer.h"
-#include "libspdl/core/detail/logging.h"
 
 #include <fmt/core.h>
 
