@@ -12,8 +12,8 @@
 #include <libspdl/cuda/types.h>
 #include "libspdl/cuda/detail/utils.h"
 
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 #include "libspdl/cuda/nvjpeg/detail/utils.h"
 
 #ifdef SPDL_USE_NPPI

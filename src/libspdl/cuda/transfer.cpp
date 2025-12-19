@@ -8,8 +8,8 @@
 
 #include <libspdl/cuda/transfer.h>
 
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 #include "libspdl/cuda/detail/utils.h"
 
 #include <glog/logging.h>

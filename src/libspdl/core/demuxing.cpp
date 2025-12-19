@@ -8,9 +8,9 @@
 
 #include <libspdl/core/demuxing.h>
 
+#include "libspdl/common/tracing.h"
 #include "libspdl/core/detail/ffmpeg/demuxer.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
-#include "libspdl/core/detail/tracing.h"
 
 namespace spdl::core {
 namespace detail {

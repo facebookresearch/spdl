@@ -8,11 +8,11 @@
 
 #include <libspdl/core/conversion.h>
 
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 #include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
 
 #include <fmt/format.h>
 #include <glog/logging.h>

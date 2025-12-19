@@ -8,16 +8,6 @@
 
 #pragma once
 
-#ifndef SPDL_USE_TRACING
-
-#define TRACE_COUNTER(...)
-#define TRACE_EVENT(...)
-#define TRACE_EVENT_BEGIN(...)
-#define TRACE_EVENT_END(...)
-#define TRACE_EVENT_INSTANT(...)
-
-#else
-
 #include <perfetto.h>
 
 PERFETTO_DEFINE_CATEGORIES(
@@ -37,5 +27,3 @@ std::unique_ptr<perfetto::TracingSession> start_tracing_session(
 void stop_tracing_session(std::unique_ptr<perfetto::TracingSession> sess);
 
 } // namespace spdl::core::detail
-
-#endif

@@ -10,7 +10,7 @@
 #include <libspdl/cuda/buffer.h>
 #include <libspdl/cuda/color_conversion.h>
 
-#include "libspdl/core/detail/logging.h"
+#include "libspdl/common/logging.h"
 #include "libspdl/cuda/detail/color_conversion.h"
 
 #include <fmt/core.h>

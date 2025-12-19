@@ -8,6 +8,7 @@
 
 #include "register_spdl_core_extensions.h"
 
+#include <libspdl/common/logging.h>
 #include <libspdl/core/types.h>
 
 #include <nanobind/nanobind.h>
@@ -43,7 +44,7 @@ void register_types(nb::module_& m) {
           nb::arg("decoder") = nb::none(),
           nb::arg("decoder_options") = nb::none());
 
-  nb::exception<spdl::core::InternalError>(
+  nb::exception<spdl::common::InternalError>(
       m, "InternalError", PyExc_AssertionError);
 }
 } // namespace spdl::core

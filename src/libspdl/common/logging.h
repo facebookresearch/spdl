@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include <libspdl/core/types.h>
+#include <glog/logging.h>
 
-#include <exception>
+#include <stdexcept>
 #include <string_view>
 #include <version>
 
@@ -27,7 +27,7 @@
     "Neither <source_location> or <experimental/source_location> is available."
 #endif
 
-namespace spdl::core::detail {
+namespace spdl::common {
 
 #if defined SPDL_USE_CUDA && __has_include(<experimental/source_location>)
 using std::experimental::source_location;
@@ -45,20 +45,23 @@ std::string get_internal_err_str(
     const std::string_view msg,
     const source_location& location);
 
-} // namespace spdl::core::detail
+/// Exception thrown when unexpected internal error occurs.
+class InternalError : public std::logic_error {
+  using std::logic_error::logic_error;
+};
 
-#define SPDL_FAIL(msg)                 \
-  throw std::runtime_error(            \
-      spdl::core::detail::get_err_str( \
-          msg, spdl::core::detail::source_location::current()))
+} // namespace spdl::common
 
-#define SPDL_FAIL_INTERNAL(msg)                 \
-  throw spdl::core::InternalError(              \
-      spdl::core::detail::get_internal_err_str( \
-          msg, spdl::core::detail::source_location::current()))
+#define SPDL_FAIL(msg)           \
+  throw std::runtime_error(      \
+      spdl::common::get_err_str( \
+          msg, spdl::common::source_location::current()))
 
-#include <glog/logging.h>
+#define SPDL_FAIL_INTERNAL(msg)           \
+  throw spdl::common::InternalError(      \
+      spdl::common::get_internal_err_str( \
+          msg, spdl::common::source_location::current()))
 
-#define SPDL_WARN(msg)                              \
-  LOG(WARNING) << (spdl::core::detail::get_err_str( \
-      msg, spdl::core::detail::source_location::current()))
+#define SPDL_WARN(msg)                        \
+  LOG(WARNING) << (spdl::common::get_err_str( \
+      msg, spdl::common::source_location::current()))

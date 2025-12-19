@@ -6,9 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/tracing.h"
-
-#ifdef SPDL_USE_TRACING
+#include "libspdl/common/tracing/perfetto.h"
 
 #include <glog/logging.h>
 
@@ -56,5 +54,3 @@ void stop_tracing_session(std::unique_ptr<perfetto::TracingSession> session) {
 }
 
 } // namespace spdl::core::detail
-
-#endif

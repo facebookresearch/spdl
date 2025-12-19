@@ -8,11 +8,11 @@
 
 #include <libspdl/core/decoder.h>
 
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/decoder.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
 
 namespace spdl::core {
 ////////////////////////////////////////////////////////////////////////////////

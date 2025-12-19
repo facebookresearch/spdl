@@ -8,10 +8,10 @@
 
 #include <libspdl/core/utils.h>
 
+#include "libspdl/common/logging.h"
+#include "libspdl/common/tracing.h"
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/filter_graph.h"
-#include "libspdl/core/detail/logging.h"
-#include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
 #include <glog/logging.h>

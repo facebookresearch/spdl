@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "libspdl/core/detail/tracing.h"
+#include "libspdl/common/tracing.h"
 #include "libspdl/cuda/detail/color_conversion.h"
 #include "libspdl/cuda/detail/utils.h"
 
