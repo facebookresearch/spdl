@@ -79,7 +79,7 @@ def _recursive_apply(fn: Callable[[T], T], obj: T) -> T:
 
 
 def _transfer(obj: T, device: "TDevice", pinned_memory_cache: "set[Tensor]") -> T:
-    if isinstance(obj, torch.Tensor):
+    if isinstance(obj, torch.Tensor) and obj.is_cpu:
         pinned = obj.pin_memory()
         pinned_memory_cache.add(pinned)
         obj = pinned.to(device, non_blocking=True)
