@@ -27,7 +27,7 @@ class CUDAConfig:
     See the factory function :py:func:`~spdl.io.cuda_config`.
     """
 
-def cuda_config(device_index: int, stream: int = 0, allocator: tuple[Callable[[int, int, int], int], Callable[[int], None]] | None = None) -> CUDAConfig: ...
+def cuda_config(device_index: int, stream: int = 2, allocator: tuple[Callable[[int, int, int], int], Callable[[int], None]] | None = None) -> CUDAConfig: ...
 
 class CUDABuffer:
     """

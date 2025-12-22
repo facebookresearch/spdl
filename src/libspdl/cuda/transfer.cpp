@@ -26,10 +26,10 @@ size_t prod(const std::vector<size_t>& shape) {
   return ret;
 }
 
-std::once_flag WARN_DEFAULT_STREAM_FLAG;
-void warn_default_stream() noexcept {
+std::once_flag WARN_LEGACY_DEFAULT_STREAM_FLAG;
+void warn_legacy_default_stream() noexcept {
   LOG(WARNING)
-      << "The CPUStorage is page-locked (pinned), but the default CUDA stream is used. "
+      << "The CPUStorage is page-locked (pinned), but the legacy default CUDA stream (0) is used. "
          "This is likely not what you intend. "
          "Please use a non-default CUDA stream to overlap the data transfer with kernel execution.";
 }
@@ -46,8 +46,9 @@ CUDABufferPtr transfer_buffer_impl(
   size_t size = depth * prod(shape);
 
   if (pinned_memory) {
-    if (!cfg.stream) {
-      std::call_once(WARN_DEFAULT_STREAM_FLAG, warn_default_stream);
+    if (cfg.stream == 0) {
+      std::call_once(
+          WARN_LEGACY_DEFAULT_STREAM_FLAG, warn_legacy_default_stream);
     }
     auto s = (cudaStream_t)cfg.stream;
     CHECK_CUDA(

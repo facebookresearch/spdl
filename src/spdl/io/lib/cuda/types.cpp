@@ -46,7 +46,7 @@ void register_types(nb::module_& m) {
       },
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("device_index"),
-      nb::arg("stream") = 0,
+      nb::arg("stream") = 0x2,
       nb::arg("allocator") = nb::none());
 }
 } // namespace spdl::cuda
