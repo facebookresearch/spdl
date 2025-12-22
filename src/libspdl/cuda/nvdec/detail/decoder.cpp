@@ -251,7 +251,7 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
   if (cb_disabled_) {
     return 1;
   }
-  TRACE_EVENT("nvdec", "handle_video_sequence");
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_video_sequence");
 
   VLOG(9) << print(video_fmt);
 
@@ -321,7 +321,7 @@ int NvDecDecoderCore::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   if (cb_disabled_) {
     return 1;
   }
-  TRACE_EVENT("nvdec", "handle_decode_picture");
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_decode_picture");
 
   // LOG(INFO) << "Received decoded pictures.";
   // LOG(INFO) << print(pic_params);
@@ -354,7 +354,7 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   if (cb_disabled_) {
     return 1;
   }
-  TRACE_EVENT("nvdec", "handle_display_picture");
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture");
 
   // LOG(INFO) << "Received display pictures.";
   // LOG(INFO) << print(disp_info);
@@ -446,7 +446,7 @@ int NvDecDecoderCore::handle_operating_point(CUVIDOPERATINGPOINTINFO*) {
   if (cb_disabled_) {
     return 1;
   }
-  TRACE_EVENT("nvdec", "handle_operating_point");
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_operating_point");
 
   // LOG(INFO) << "Received operating points.";
 
@@ -490,7 +490,7 @@ void NvDecDecoderCore::decode_packets(
   if (device_config_.device_index < 0) {
     SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
   }
-  TRACE_EVENT("nvdec", "decode_packets");
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_packets");
 
   // Init the temporary state used by the decoder callback during the decoding
   this->frame_buffer_ = buffer;
