@@ -114,34 +114,44 @@ def decode_config(
 
 def cuda_config(
     device_index: int,
-    stream: int = 0,
+    stream: int = 0x2,
     allocator: tuple[Callable[[int, int, int], int], Callable[[int], None]]
     | None = None,
 ) -> "CUDAConfig":
-    """Sprcify the CUDA device and memory management.
+    """Specify the CUDA device and memory management.
 
     Args:
         device_index (int): The device to move the data to.
 
         stream (int):
-            *Optional:* Pointer to a custom CUDA stream. By default, per-thread
-            default stream is used.
-
+            *Optional:* Pointer to a custom CUDA stream.
             The value corresponds to ``uintptr_t`` of CUDA API.
 
-            .. admonition:: Using PyTorch default CUDA stream
+            By default, SPDL uses the per-thread default stream
+            (``cudaStreamPerThread``, value ``0x2``).
+            To use the legacy default stream, explicitly pass ``stream=0``.
+            To use a custom stream, pass the stream's ``uintptr_t`` value.
 
-                It is possible to provide the same stream as the one used in Python's
-                main thread. For example, you can fetch the default CUDA stream that
-                PyTorch is using as follow.
+            .. admonition:: Using PyTorch CUDA stream
 
-                >>> stream = torch.cuda.Stream()
-                >>> cuda_stream = stream.cuda_stream
+                You can create a custom CUDA stream and use it with SPDL:
+
+                >>> import torch
+                >>> stream = torch.cuda.Stream()  # Creates a new CUDA stream
+                >>> cuda_stream = stream.cuda_stream  # Get the stream handle
+                >>> cuda_config = spdl.io.cuda_config(device_index=0, stream=cuda_stream)
+
+                To use PyTorch's current stream (the stream PyTorch operations use by default):
+
+                >>> import torch
+                >>> current_stream = torch.cuda.current_stream()
+                >>> cuda_stream = current_stream.cuda_stream
+                >>> cuda_config = spdl.io.cuda_config(device_index=0, stream=cuda_stream)
 
                 .. warning::
 
                    Using the same stream as a model is running might introduce
-                   undesired synchronization.
+                   undesired synchronization between SPDL operations and model operations.
 
         allocator (tuple[Callable[[int, int, int], int], Callable[[int], None]]):
             *Optional:* A pair of custom CUDA memory allocator and deleter functions.
