@@ -20,12 +20,14 @@ CUDABufferPtr decode_image_nvjpeg(
     const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
-    const std::string& pix_fmt);
+    const std::string& pix_fmt,
+    bool sync = true);
 
 CUDABufferPtr decode_image_nvjpeg(
     const std::vector<std::string_view>& data,
     const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
-    const std::string& pix_fmt);
+    const std::string& pix_fmt,
+    bool sync = true);
 } // namespace spdl::cuda

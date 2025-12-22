@@ -25,9 +25,8 @@ void register_color_conversion(nb::module_& m) {
   m.def(
       "nv12_to_planar_rgb",
 #ifndef SPDL_USE_CUDA
-      [](const std::vector<CUDABuffer>&,
-         const CUDAConfig&,
-         int) -> CUDABufferPtr {
+      [](const std::vector<CUDABuffer>&, const CUDAConfig&, int, bool)
+          -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else
@@ -37,13 +36,13 @@ void register_color_conversion(nb::module_& m) {
       nb::arg("buffers"),
       nb::kw_only(),
       nb::arg("device_config"),
-      nb::arg("matrix_coeff") = 1);
+      nb::arg("matrix_coeff") = 1,
+      nb::arg("sync") = true);
   m.def(
       "nv12_to_planar_bgr",
 #ifndef SPDL_USE_CUDA
-      [](const std::vector<CUDABuffer>&,
-         const CUDAConfig&,
-         int) -> CUDABufferPtr {
+      [](const std::vector<CUDABuffer>&, const CUDAConfig&, int, bool)
+          -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else
@@ -53,6 +52,7 @@ void register_color_conversion(nb::module_& m) {
       nb::arg("buffers"),
       nb::kw_only(),
       nb::arg("device_config"),
-      nb::arg("matrix_coeff") = 1);
+      nb::arg("matrix_coeff") = 1,
+      nb::arg("sync") = true);
 }
 } // namespace spdl::cuda

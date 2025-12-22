@@ -12,6 +12,7 @@
 
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/cuda/detail/color_conversion.h"
+#include "libspdl/cuda/detail/utils.h"
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
@@ -63,7 +64,8 @@ template <Nv2Converter Fn>
 CUDABufferPtr nv12_to_rgb(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
-    int matrix_coefficients) {
+    int matrix_coefficients,
+    bool sync) {
   validate_shape_consistency(frames);
   const auto& f0 = frames[0];
   auto height = f0.shape[0], width = f0.shape[1];
@@ -89,6 +91,13 @@ CUDABufferPtr nv12_to_rgb(
        matrix_coefficients);
     dst += 3 * h0 * width;
   }
+
+  if (sync) {
+    CHECK_CUDA(
+        cudaStreamSynchronize((cudaStream_t)cfg.stream),
+        "Failed to synchronize stream after color conversion.");
+  }
+
   return ret;
 }
 
@@ -97,16 +106,18 @@ CUDABufferPtr nv12_to_rgb(
 CUDABufferPtr nv12_to_planar_rgb(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
-    int matrix_coefficients) {
+    int matrix_coefficients,
+    bool sync) {
   return nv12_to_rgb<detail::nv12_to_planar_rgb>(
-      frames, cfg, matrix_coefficients);
+      frames, cfg, matrix_coefficients, sync);
 }
 
 CUDABufferPtr nv12_to_planar_bgr(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
-    int matrix_coefficients) {
+    int matrix_coefficients,
+    bool sync) {
   return nv12_to_rgb<detail::nv12_to_planar_bgr>(
-      frames, cfg, matrix_coefficients);
+      frames, cfg, matrix_coefficients, sync);
 }
 } // namespace spdl::cuda
