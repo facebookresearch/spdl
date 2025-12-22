@@ -335,6 +335,67 @@ int NvDecDecoderCore::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   return 1;
 }
 
+namespace {
+// Core logic for copying decoded frame from decoder's internal buffer to
+// destination. This function handles the mapping, validation, and async copy.
+//
+// Args:
+//   decoder: The NVDEC decoder handle
+//   disp_info: Display info from parser callback
+//   decoder_param: Decoder parameters (for dimensions and format)
+//   stream: CUDA stream for async operations
+//   dst_ptr: Destination buffer pointer
+//   dst_pitch: Pitch of destination buffer (typically width for contiguous)
+void copy_decoded_frame(
+    CUvideodecoder decoder,
+    CUVIDPARSERDISPINFO* disp_info,
+    const CUVIDDECODECREATEINFO& decoder_param,
+    CUstream stream,
+    void* dst_ptr,
+    size_t dst_pitch) {
+  warn_if_error(decoder, disp_info->picture_index);
+
+  CUVIDPROCPARAMS proc_params{
+      .progressive_frame = disp_info->progressive_frame,
+      .second_field = disp_info->repeat_first_field + 1,
+      .top_field_first = disp_info->top_field_first,
+      .unpaired_field = disp_info->repeat_first_field < 0,
+      .output_stream = stream};
+
+  // Make the decoded frame available to output surface
+  MapGuard mapping(decoder, &proc_params, disp_info->picture_index);
+
+  auto width = decoder_param.ulTargetWidth;
+  auto height = decoder_param.ulTargetHeight;
+  auto h2 = height + height / 2;
+
+  auto cfg = CUDA_MEMCPY2D{
+      .srcXInBytes = 0,
+      .srcY = 0,
+      .srcMemoryType = CU_MEMORYTYPE_DEVICE,
+      .srcHost = nullptr,
+      .srcDevice = (CUdeviceptr)mapping.frame,
+      .srcArray = nullptr,
+      .srcPitch = mapping.pitch,
+
+      .dstXInBytes = 0,
+      .dstY = 0,
+      .dstMemoryType = CU_MEMORYTYPE_DEVICE,
+      .dstHost = nullptr,
+      .dstDevice = (CUdeviceptr)dst_ptr,
+      .dstArray = nullptr,
+      .dstPitch = dst_pitch,
+
+      .WidthInBytes = width,
+      .Height = h2,
+  };
+
+  TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
+  CHECK_CU(cuMemcpy2DAsync(&cfg, stream), "Failed to copy decoded frame.");
+  CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
+}
+} // namespace
+
 int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // This function is called by the parser when the decoding (including
   // post-processing, such as rescaling) is done.
@@ -356,6 +417,15 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   }
   TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture");
 
+  return handle_display_picture_buffered(disp_info);
+}
+
+int NvDecDecoderCore::handle_display_picture_buffered(
+    CUVIDPARSERDISPINFO* disp_info) {
+  // Buffered mode: allocates a new buffer for each frame and appends to
+  // frame_buffer_.
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture_buffered");
+
   // LOG(INFO) << "Received display pictures.";
   // LOG(INFO) << print(disp_info);
   auto pts = to_rational(disp_info->timestamp, timebase_);
@@ -370,24 +440,10 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
     }
   }
 
-  VLOG(9) << fmt::format(
-      "{} x {}", decoder_param_.ulTargetWidth, decoder_param_.ulTargetHeight);
-
-  CUstream stream = (CUstream)device_config_.stream;
-  warn_if_error(decoder_.get(), disp_info->picture_index);
-  CUVIDPROCPARAMS proc_params{
-      .progressive_frame = disp_info->progressive_frame,
-      .second_field = disp_info->repeat_first_field + 1,
-      .top_field_first = disp_info->top_field_first,
-      .unpaired_field = disp_info->repeat_first_field < 0,
-      .output_stream = stream};
-
-  // Make the decoded frame available to output surface
-  MapGuard mapping(decoder_.get(), &proc_params, disp_info->picture_index);
-
-  // Copy the surface to user-owning buffer
   auto width = decoder_param_.ulTargetWidth;
   auto height = decoder_param_.ulTargetHeight;
+
+  VLOG(9) << fmt::format("{} x {}", width, height);
 
   if (decoder_param_.OutputFormat != cudaVideoSurfaceFormat_NV12) {
     SPDL_FAIL(
@@ -398,31 +454,13 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   auto h2 = height + height / 2;
   auto frame = std::make_shared<CUDAStorage>(width * h2, device_config_);
 
-  auto cfg = CUDA_MEMCPY2D{
-      .srcXInBytes = 0,
-      .srcY = 0,
-      .srcMemoryType = CU_MEMORYTYPE_DEVICE,
-      .srcHost = nullptr,
-      .srcDevice = (CUdeviceptr)mapping.frame,
-      .srcArray = nullptr,
-      .srcPitch = mapping.pitch,
-
-      .dstXInBytes = 0,
-      .dstY = 0,
-      .dstMemoryType = CU_MEMORYTYPE_DEVICE,
-      .dstHost = nullptr,
-      .dstDevice = (CUdeviceptr)(frame->data()),
-      .dstArray = nullptr,
-      .dstPitch = width,
-
-      .WidthInBytes = width,
-      .Height = h2,
-  };
-  TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
-  CHECK_CU(
-      cuMemcpy2DAsync(&cfg, stream),
-      "Failed to copy Y plane from decoder output surface.");
-  CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
+  copy_decoded_frame(
+      decoder_.get(),
+      disp_info,
+      decoder_param_,
+      (CUstream)device_config_.stream,
+      frame->data(),
+      width);
 
   frame_buffer_->emplace_back(
       CUDABuffer{

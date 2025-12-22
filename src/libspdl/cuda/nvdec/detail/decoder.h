@@ -148,6 +148,10 @@ class NvDecDecoderCore {
   int handle_display_picture(CUVIDPARSERDISPINFO*);
   int handle_operating_point(CUVIDOPERATINGPOINTINFO*);
   int handle_sei_msg(CUVIDSEIMESSAGEINFO*);
+
+ private:
+  // Internal handlers for display_picture callback, dispatched based on mode
+  int handle_display_picture_buffered(CUVIDPARSERDISPINFO*);
 };
 
 } // namespace spdl::cuda::detail
