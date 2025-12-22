@@ -52,6 +52,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
          int _(scale_width),
          int _(scale_height),
          const std::string& _(pix_fmt),
+         bool _(sync),
          bool _(_zero_clear)) -> CUDABufferPtr {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
@@ -61,7 +62,8 @@ void register_decoding_nvjpeg(nb::module_& m) {
             cuda_config,
             scale_width,
             scale_height,
-            pix_fmt);
+            pix_fmt,
+            sync);
         if (_zero_clear) {
           zero_clear(data);
         }
@@ -75,6 +77,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
       nb::arg("scale_width") = -1,
       nb::arg("scale_height") = -1,
       nb::arg("pix_fmt") = "rgb",
+      nb::arg("sync") = true,
       nb::arg("_zero_clear") = false);
 
   m.def(
@@ -84,6 +87,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
          int _(scale_width),
          int _(scale_height),
          const std::string& _(pix_fmt),
+         bool _(sync),
          bool _(_zero_clear)) -> CUDABufferPtr {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
@@ -94,7 +98,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
           dataset.emplace_back(d.c_str(), d.size());
         }
         auto ret = decode_image_nvjpeg(
-            dataset, cuda_config, scale_width, scale_height, pix_fmt);
+            dataset, cuda_config, scale_width, scale_height, pix_fmt, sync);
         if (_zero_clear) {
           for (const auto& d : data) {
             zero_clear(d);
@@ -110,6 +114,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
       nb::arg("scale_width"),
       nb::arg("scale_height"),
       nb::arg("pix_fmt") = "rgb",
+      nb::arg("sync") = true,
       nb::arg("_zero_clear") = false);
 }
 } // namespace spdl::cuda

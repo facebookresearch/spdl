@@ -9,6 +9,7 @@
 #pragma once
 
 #include <nvjpeg.h>
+#include <cstdint>
 
 namespace spdl::cuda::detail {
 
@@ -19,6 +20,8 @@ void resize_npp(
     int src_height,
     nvjpegImage_t dst,
     int dst_width,
-    int dst_height);
+    int dst_height,
+    uintptr_t stream,
+    bool sync = true);
 
 } // namespace spdl::cuda::detail

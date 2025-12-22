@@ -159,7 +159,8 @@ CUDABufferPtr decode_image_nvjpeg(
     const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
-    const std::string& pix_fmt) {
+    const std::string& pix_fmt,
+    bool sync) {
   auto fmt = detail::get_nvjpeg_output_format(pix_fmt);
 
   detail::set_cuda_primary_context(cuda_config.device_index);
@@ -183,10 +184,18 @@ CUDABufferPtr decode_image_nvjpeg(
         (int)src_meta.height,
         resized,
         scale_width,
-        scale_height);
+        scale_height,
+        cuda_config.stream,
+        sync);
 
     return std::move(buffer2);
 #endif
+  }
+
+  if (sync) {
+    CHECK_CUDA(
+        cudaStreamSynchronize((cudaStream_t)cuda_config.stream),
+        "Failed to synchronize stream after NVJPEG decoding.");
   }
 
   return std::move(buffer);
@@ -197,7 +206,8 @@ CUDABufferPtr decode_image_nvjpeg(
     const CUDAConfig& cuda_config,
     int scale_width,
     int scale_height,
-    const std::string& pix_fmt) {
+    const std::string& pix_fmt,
+    bool sync) {
 #ifndef SPDL_USE_NPPI
   SPDL_FAIL(
       "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
@@ -229,8 +239,17 @@ CUDABufferPtr decode_image_nvjpeg(
         (int)src_meta.height,
         out_wrapper,
         scale_width,
-        scale_height);
+        scale_height,
+        cuda_config.stream,
+        false);
   }
+
+  if (sync) {
+    CHECK_CUDA(
+        cudaStreamSynchronize((cudaStream_t)cuda_config.stream),
+        "Failed to synchronize stream after batch NVJPEG decoding.");
+  }
+
   return std::move(out_buffer);
 #endif
 }

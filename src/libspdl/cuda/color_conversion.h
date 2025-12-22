@@ -24,11 +24,14 @@ namespace spdl::cuda {
 /// @param cfg CUDA configuration including device and stream.
 /// @param matrix_coefficients Color matrix coefficients for conversion
 /// (default: BT.709).
+/// @param sync If true, synchronizes the stream before returning (default:
+/// true).
 /// @return CUDA buffer containing planar RGB data.
 CUDABufferPtr nv12_to_planar_rgb(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
-    int matrix_coefficients = 1);
+    int matrix_coefficients = 1,
+    bool sync = true);
 
 /// Convert NV12 frames to planar BGR format on GPU.
 ///
@@ -39,10 +42,13 @@ CUDABufferPtr nv12_to_planar_rgb(
 /// @param cfg CUDA configuration including device and stream.
 /// @param matrix_coefficients Color matrix coefficients for conversion
 /// (default: BT.709).
+/// @param sync If true, synchronizes the stream before returning (default:
+/// true).
 /// @return CUDA buffer containing planar BGR data.
 CUDABufferPtr nv12_to_planar_bgr(
     const std::vector<CUDABuffer>& frames,
     const CUDAConfig& cfg,
-    int matrix_coefficients = 1);
+    int matrix_coefficients = 1,
+    bool sync = true);
 
 } // namespace spdl::cuda

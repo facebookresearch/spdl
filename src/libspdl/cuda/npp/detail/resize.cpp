@@ -9,6 +9,7 @@
 #include "libspdl/cuda/npp/detail/resize.h"
 #include "libspdl/core/detail/logging.h"
 #include "libspdl/core/detail/tracing.h"
+#include "libspdl/cuda/detail/utils.h"
 #include "libspdl/cuda/npp/detail/utils.h"
 #include "libspdl/cuda/nvjpeg/detail/utils.h"
 
@@ -67,9 +68,11 @@ void resize_npp(
     int src_height,
     nvjpegImage_t dst,
     int dst_width,
-    int dst_height) {
+    int dst_height,
+    uintptr_t stream_handle,
+    bool sync) {
   NppStreamContext stream;
-  stream.hStream = nullptr; // default stream
+  stream.hStream = (cudaStream_t)stream_handle;
 
   NppiSize src_size{.width = src_width, .height = src_height};
   NppiSize dst_size{.width = dst_width, .height = dst_height};
@@ -103,6 +106,12 @@ void resize_npp(
       // It should be already handled by `get_nvjpeg_output_format`
       SPDL_FAIL_INTERNAL(
           fmt::format("Unexpected output format: {}", to_string(fmt)));
+  }
+
+  if (sync) {
+    CHECK_CUDA(
+        cudaStreamSynchronize((cudaStream_t)stream_handle),
+        "Failed to synchronize stream after NPP resize.");
   }
 }
 
