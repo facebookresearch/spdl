@@ -104,6 +104,16 @@ class NvDecDecoderCore {
   std::optional<std::tuple<Rational, Rational>> time_window_ = std::nullopt;
   //---------------------------------------------------------------------------
 
+  //---------------------------------------------------------------------------
+  // Batch decoding mode state variables
+  // When batch_buffer_ is non-null, decoded frames are written directly to
+  // the pre-allocated buffer instead of creating new allocations per frame.
+  //---------------------------------------------------------------------------
+  CUDABuffer* batch_buffer_ = nullptr;
+  size_t batch_frame_index_ = 0;
+  size_t batch_max_frames_ = 0;
+  //---------------------------------------------------------------------------
+
  public:
   NvDecDecoderCore() = default;
   NvDecDecoderCore(const NvDecDecoderCore&) = delete;
@@ -140,6 +150,11 @@ class NvDecDecoderCore {
   // Same as `decode` but notify the decode of the end of the stream.
   void flush(std::vector<CUDABuffer>* buffer);
 
+  // Decode all packets into an internally allocated output buffer.
+  // Returns a CUDABuffer with shape [actual_frames, height*1.5, width].
+  // The buffer is allocated based on the packet count estimate.
+  CUDABuffer decode_all(spdl::core::VideoPackets* packets);
+
   ////////////////////////////////////////////////////////////////////////////
   // Callbacks required by CUVID API
   ////////////////////////////////////////////////////////////////////////////
@@ -152,6 +167,7 @@ class NvDecDecoderCore {
  private:
   // Internal handlers for display_picture callback, dispatched based on mode
   int handle_display_picture_buffered(CUVIDPARSERDISPINFO*);
+  int handle_display_picture_batch(CUVIDPARSERDISPINFO*);
 };
 
 } // namespace spdl::cuda::detail

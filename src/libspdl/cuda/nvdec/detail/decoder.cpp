@@ -417,6 +417,10 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   }
   TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture");
 
+  // Dispatch based on mode
+  if (batch_buffer_ != nullptr) {
+    return handle_display_picture_batch(disp_info);
+  }
   return handle_display_picture_buffered(disp_info);
 }
 
@@ -470,6 +474,76 @@ int NvDecDecoderCore::handle_display_picture_buffered(
           core::ElemClass::UInt,
           sizeof(uint8_t)});
 
+  return 1;
+}
+
+int NvDecDecoderCore::handle_display_picture_batch(
+    CUVIDPARSERDISPINFO* disp_info) {
+  // Batch mode: writes decoded frames directly to pre-allocated buffer
+  // at the appropriate offset.
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture_batch");
+
+  auto pts = to_rational(disp_info->timestamp, timebase_);
+  VLOG(9) << fmt::format(
+      " --- Frame  PTS={:.3f} ({})", to_double(pts), disp_info->timestamp);
+
+  if (time_window_) {
+    auto [s, t] = *time_window_;
+    if (!is_within_window(pts, s, t)) {
+      return 1;
+    }
+  }
+
+  // Check if buffer is full
+  if (batch_frame_index_ >= batch_max_frames_) {
+    VLOG(9) << "Batch buffer full, skipping frame at index "
+            << batch_frame_index_;
+    return 1;
+  }
+
+  auto width = decoder_param_.ulTargetWidth;
+  auto height = decoder_param_.ulTargetHeight;
+
+  VLOG(9) << fmt::format("{} x {}", width, height);
+
+  if (decoder_param_.OutputFormat != cudaVideoSurfaceFormat_NV12) {
+    SPDL_FAIL(
+        fmt::format(
+            "Only NV12 is supported. Found: {}",
+            get_surface_format_name(decoder_param_.OutputFormat)));
+  }
+
+  auto h2 = height + height / 2;
+
+  // Sanity check: verify buffer dimensions match decoder output
+  if (batch_buffer_->shape.size() >= 2) {
+    auto buf_h2 = batch_buffer_->shape[1];
+    auto buf_width = batch_buffer_->shape[2];
+    if (buf_h2 != h2 || buf_width != width) {
+      SPDL_FAIL(
+          fmt::format(
+              "Pre-allocated buffer dimensions ({}x{}) do not match "
+              "decoder output dimensions ({}x{})",
+              buf_h2,
+              buf_width,
+              h2,
+              width));
+    }
+  }
+
+  size_t frame_size = width * h2;
+  size_t offset = batch_frame_index_ * frame_size;
+  auto* dst_ptr = (uint8_t*)batch_buffer_->data() + offset;
+
+  copy_decoded_frame(
+      decoder_.get(),
+      disp_info,
+      decoder_param_,
+      (CUstream)device_config_.stream,
+      dst_ptr,
+      width);
+
+  batch_frame_index_++;
   return 1;
 }
 
@@ -571,6 +645,82 @@ void NvDecDecoderCore::reset() {
     flush(nullptr);
     cb_disabled_ = false;
   }
+}
+
+CUDABuffer NvDecDecoderCore::decode_all(spdl::core::VideoPackets* packets) {
+  if (device_config_.device_index < 0) {
+    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
+  }
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_all");
+
+  // Calculate output dimensions based on decoder configuration
+  // These are set during init() and updated after handle_video_sequence()
+  int width =
+      target_width_ > 0 ? target_width_ : src_width_ - crop_.left - crop_.right;
+  int height = target_height_ > 0 ? target_height_
+                                  : src_height_ - crop_.top - crop_.bottom;
+
+  // Use packet count as max frames estimate
+  size_t max_frames = packets->pkts.get_packets().size();
+
+  // Pre-allocate NV12 buffer: shape is [max_frames, height*1.5, width]
+  size_t h2 = height + height / 2;
+  auto storage =
+      std::make_shared<CUDAStorage>(max_frames * h2 * width, device_config_);
+  CUDABuffer nv12_buffer{
+      device_config_.device_index,
+      storage,
+      {max_frames, h2, static_cast<size_t>(width)},
+      core::ElemClass::UInt,
+      sizeof(uint8_t)};
+
+  // Set up batch mode state
+  batch_buffer_ = &nv12_buffer;
+  batch_frame_index_ = 0;
+  batch_max_frames_ = max_frames;
+  time_window_ = packets->timestamp;
+
+  // We still need frame_buffer_ to be set for the non-batch path
+  // (though it won't be used in batch mode)
+  std::vector<CUDABuffer> dummy_buffer;
+  frame_buffer_ = &dummy_buffer;
+
+  auto ite = packets->pkts.iter_data();
+  unsigned long flags = CUVID_PKT_TIMESTAMP;
+  switch (codec_id_) {
+    case spdl::core::CodecID::MPEG4: {
+      SPDL_FAIL("NOT IMPLEMENTED.");
+    }
+    case spdl::core::CodecID::AV1: {
+      SPDL_FAIL("NOT IMPLEMENTED.");
+    }
+    default:;
+  }
+
+  flags |= CUVID_PKT_ENDOFPICTURE;
+  while (ite) {
+    auto pkt = ite();
+    VLOG(9) << fmt::format("pkt.pts {}:", pkt.pts);
+    decode_packet(pkt.data, pkt.size, pkt.pts, flags);
+  }
+
+  // Flush the decoder
+  const unsigned char data{};
+  decode_packet(&data, 0, 0, CUVID_PKT_ENDOFSTREAM);
+
+  // Save the actual frame count before resetting batch mode state
+  size_t actual_frames = batch_frame_index_;
+
+  // Reset batch mode state
+  batch_buffer_ = nullptr;
+  batch_frame_index_ = 0;
+  batch_max_frames_ = 0;
+  frame_buffer_ = nullptr;
+
+  // Update the first dimension of the buffer shape to reflect actual frames
+  nv12_buffer.shape[0] = actual_frames;
+
+  return nv12_buffer;
 }
 
 } // namespace spdl::cuda::detail

@@ -190,6 +190,23 @@ class NvDecDecoder:
             The decoded frames. (can be empty)
         """
 
+    def decode_all(self, packets: spdl.io.lib._libspdl.VideoPackets) -> CUDABuffer:
+        """
+        Decode all packets and return NV12 buffer.
+
+        This method decodes all packets and flushes the decoder in one operation,
+        and returns the resulting frames as one contiguous memory buffer.
+
+        Args:
+            packets: Video packets to decode.
+
+        Returns:
+            A :py:class:`~spdl.io.CUDABuffer` containing NV12 frames with shape
+            ``[num_frames, h*1.5, width]``, where ``num_frames`` reflects
+            the actual number of decoded frames, which should match
+            the number of packets.
+        """
+
 @overload
 def decode_image_nvjpeg(data: bytes, *, device_config: CUDAConfig, scale_width: int = -1, scale_height: int = -1, pix_fmt: str = 'rgb', sync: bool = True, _zero_clear: bool = False) -> CUDABuffer: ...
 
@@ -219,3 +236,33 @@ def synchronize_stream(arg: CUDAConfig, /) -> None: ...
 def nv12_to_planar_rgb(buffers: Sequence[CUDABuffer], *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer: ...
 
 def nv12_to_planar_bgr(buffers: Sequence[CUDABuffer], *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer: ...
+
+def nv12_to_planar_rgb_batched(nv12_batch: CUDABuffer, num_frames: int, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
+    """
+    Convert batched NV12 frames to planar RGB.
+
+    Args:
+        nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+        num_frames: Actual number of frames to convert (may be ``<= max_frames``).
+        device_config: The CUDA device configuration.
+        matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
+        sync: If ``True``, synchronizes the stream before returning.
+
+    Returns:
+        CUDA buffer containing planar RGB data with shape ``[num_frames, 3, height, width]``.
+    """
+
+def nv12_to_planar_bgr_batched(nv12_batch: CUDABuffer, num_frames: int, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
+    """
+    Convert batched NV12 frames to planar BGR.
+
+    Args:
+        nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+        num_frames: Actual number of frames to convert (may be ``<= max_frames``).
+        device_config: The CUDA device configuration.
+        matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
+        sync: If ``True``, synchronizes the stream before returning.
+
+    Returns:
+        CUDA buffer containing planar BGR data with shape ``[num_frames, 3, height, width]``.
+    """

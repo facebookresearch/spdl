@@ -93,4 +93,8 @@ std::vector<CUDABuffer> NvDecDecoder::flush() {
   core_->flush(&ret);
   return ret;
 }
+
+CUDABuffer NvDecDecoder::decode_all(spdl::core::VideoPacketsPtr packets) {
+  return core_->decode_all(packets.get());
+}
 } // namespace spdl::cuda

@@ -75,6 +75,11 @@ class NvDecDecoder {
 
   // Call this method at the end of video stream.
   _RET_ATTR std::vector<CUDABuffer> flush();
+
+  // Decode all packets and return NV12 buffer.
+  // Allocates the buffer internally based on packet count.
+  // The buffer shape's first dimension reflects the actual frame count.
+  _RET_ATTR CUDABuffer decode_all(spdl::core::VideoPacketsPtr packets);
 };
 
 } // namespace spdl::cuda

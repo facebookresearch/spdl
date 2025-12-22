@@ -120,4 +120,88 @@ CUDABufferPtr nv12_to_planar_bgr(
   return nv12_to_rgb<detail::nv12_to_planar_bgr>(
       frames, cfg, matrix_coefficients, sync);
 }
+
+namespace {
+template <Nv2Converter Fn>
+CUDABufferPtr nv12_to_rgb_batched(
+    const CUDABuffer& nv12_batch,
+    size_t num_frames,
+    const CUDAConfig& cfg,
+    int matrix_coefficients,
+    bool sync) {
+  if (nv12_batch.shape.size() != 3) {
+    SPDL_FAIL(
+        fmt::format(
+            "Expected 3D buffer [num_frames, h*1.5, width]. Found: {}D",
+            nv12_batch.shape.size()));
+  }
+  if (num_frames > nv12_batch.shape[0]) {
+    SPDL_FAIL(
+        fmt::format(
+            "num_frames ({}) exceeds buffer capacity ({})",
+            num_frames,
+            nv12_batch.shape[0]));
+  }
+  if (num_frames == 0) {
+    SPDL_FAIL("num_frames must be greater than 0");
+  }
+
+  auto h2 = nv12_batch.shape[1];
+  auto width = nv12_batch.shape[2];
+
+  if (h2 % 3 != 0) {
+    SPDL_FAIL(
+        fmt::format(
+            "The height of NV12 image (h*1.5) must be divisible by 3. Found: {}",
+            h2));
+  }
+  auto height = h2 / 3 * 2;
+
+  auto ret = cuda_buffer({num_frames, 3, height, width}, cfg);
+
+  auto* src = (uint8_t*)nv12_batch.data();
+  auto* dst = (uint8_t*)ret->data();
+  size_t nv12_frame_size = h2 * width;
+  size_t rgb_frame_size = 3 * height * width;
+
+  for (size_t i = 0; i < num_frames; ++i) {
+    Fn((CUstream)cfg.stream,
+       src + i * nv12_frame_size,
+       (int)width,
+       dst + i * rgb_frame_size,
+       (int)width,
+       (int)width,
+       (int)height,
+       matrix_coefficients);
+  }
+
+  if (sync) {
+    CHECK_CUDA(
+        cudaStreamSynchronize((cudaStream_t)cfg.stream),
+        "Failed to synchronize stream after batched color conversion.");
+  }
+
+  return ret;
+}
+} // namespace
+
+CUDABufferPtr nv12_to_planar_rgb_batched(
+    const CUDABuffer& nv12_batch,
+    size_t num_frames,
+    const CUDAConfig& cfg,
+    int matrix_coefficients,
+    bool sync) {
+  return nv12_to_rgb_batched<detail::nv12_to_planar_rgb>(
+      nv12_batch, num_frames, cfg, matrix_coefficients, sync);
+}
+
+CUDABufferPtr nv12_to_planar_bgr_batched(
+    const CUDABuffer& nv12_batch,
+    size_t num_frames,
+    const CUDAConfig& cfg,
+    int matrix_coefficients,
+    bool sync) {
+  return nv12_to_rgb_batched<detail::nv12_to_planar_bgr>(
+      nv12_batch, num_frames, cfg, matrix_coefficients, sync);
+}
 } // namespace spdl::cuda

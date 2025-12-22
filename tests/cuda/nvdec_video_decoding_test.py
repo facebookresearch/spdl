@@ -513,3 +513,77 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         self.assertEqual(
             len(set(results)), 3, "Each thread should have a unique decoder instance"
         )
+
+
+class TestDecodeAll(unittest.TestCase):
+    """Tests for the decode_all method (batch decoding with pre-allocated buffers)."""
+
+    def test_decode_all_outputs_expected_data(self) -> None:
+        """Verify decode_all outputs data with expected shape and dtype."""
+        # Setup: Create test video sample
+        h264 = _get_h264_sample()
+        cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+        packets = spdl.io.demux_video(h264.path, timestamp=(0, 1.0))
+
+        # Apply BSF for H264
+        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+
+        # Execute: Use nvdec_decoder with decode_all
+        decoder = spdl.io.nvdec_decoder(cuda_config, packets.codec)
+        nv12_buffer = decoder.decode_all(packets)
+
+        # Convert to torch tensor to verify shape and dtype
+        tensor = spdl.io.to_torch(nv12_buffer)
+
+        # Assert: Verify expected data format
+        # decode_all returns NV12 buffer with shape [num_frames, h*1.5, width]
+        # For testsrc default 320x240: h*1.5 = 360
+        self.assertEqual(tensor.dtype, torch.uint8)
+        self.assertEqual(len(tensor.shape), 3)  # [num_frames, h*1.5, width]
+        self.assertEqual(tensor.shape[0], 25)  # 25 frames for 1 second at 25fps
+        self.assertEqual(tensor.shape[1], 360)  # 240 * 1.5 = 360 (NV12 height)
+        self.assertEqual(tensor.shape[2], 320)  # testsrc default width
+
+    def test_decode_all_matches_regular_decode(self) -> None:
+        """Verify decode_all produces the same result as decode() + flush()."""
+        # Setup: Create test video sample
+        h264 = _get_h264_sample()
+        cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+
+        # Demux the same video twice for separate decoding paths
+        packets1 = spdl.io.demux_video(h264.path, timestamp=(0, 1.0))
+        packets2 = spdl.io.demux_video(h264.path, timestamp=(0, 1.0))
+
+        # Apply BSF for H264
+        packets1 = spdl.io.apply_bsf(packets1, "h264_mp4toannexb")
+        packets2 = spdl.io.apply_bsf(packets2, "h264_mp4toannexb")
+
+        # Execute: Decode using regular decode + flush
+        decoder1 = spdl.io.nvdec_decoder(cuda_config, packets1.codec, use_cache=False)
+        regular_buffers = decoder1.decode(packets1)
+        regular_buffers += decoder1.flush()
+
+        # Convert regular output to comparable format
+        # nv12_to_planar_rgb expects list of 2D NV12 buffers
+        regular_rgb = spdl.io.lib._libspdl_cuda.nv12_to_planar_rgb(
+            regular_buffers, device_config=cuda_config
+        )
+        regular_tensor = spdl.io.to_torch(regular_rgb)
+
+        # Execute: Decode using decode_all
+        decoder2 = spdl.io.nvdec_decoder(cuda_config, packets2.codec, use_cache=False)
+        batch_buffer = decoder2.decode_all(packets2)
+        num_frames = batch_buffer.__cuda_array_interface__["shape"][0]
+
+        # Convert batch output to RGB using batched conversion
+        batch_rgb = spdl.io.lib._libspdl_cuda.nv12_to_planar_rgb_batched(
+            batch_buffer, num_frames, device_config=cuda_config
+        )
+        batch_tensor = spdl.io.to_torch(batch_rgb)
+
+        # Assert: Both methods should produce the same output
+        self.assertEqual(regular_tensor.shape, batch_tensor.shape)
+        self.assertEqual(regular_tensor.dtype, batch_tensor.dtype)
+
+        # Compare actual pixel values
+        torch.testing.assert_close(regular_tensor, batch_tensor)

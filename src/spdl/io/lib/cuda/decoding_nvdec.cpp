@@ -27,7 +27,7 @@ namespace spdl::cuda {
 #ifndef SPDL_USE_NVCODEC
 NvDecDecoder::NvDecDecoder() {}
 NvDecDecoder::~NvDecDecoder() {}
-void NvDecDecoder::reset() {
+CUDABuffer NvDecDecoder::decode_all(spdl::core::VideoPacketsPtr) {
   NOT_SUPPORTED_NVCODEC;
 }
 void NvDecDecoder::init(
@@ -42,6 +42,9 @@ std::vector<CUDABuffer> NvDecDecoder::decode(spdl::core::VideoPacketsPtr) {
   NOT_SUPPORTED_NVCODEC;
 }
 std::vector<CUDABuffer> NvDecDecoder::flush() {
+  NOT_SUPPORTED_NVCODEC;
+}
+void NvDecDecoder::reset() {
   NOT_SUPPORTED_NVCODEC;
 }
 #endif
@@ -227,7 +230,26 @@ Returns:
 Returns:
     The decoded frames. (can be empty)
 )",
-          nb::call_guard<nb::gil_scoped_release>());
+          nb::call_guard<nb::gil_scoped_release>())
+      .def(
+          "decode_all",
+          &NvDecDecoder::decode_all,
+          R"(Decode all packets and return NV12 buffer.
+
+This method decodes all packets and flushes the decoder in one operation,
+and returns the resulting frames as one contiguous memory buffer.
+
+Args:
+    packets: Video packets to decode.
+
+Returns:
+    A :py:class:`~spdl.io.CUDABuffer` containing NV12 frames with shape
+    ``[num_frames, h*1.5, width]``, where ``num_frames`` reflects
+    the actual number of decoded frames, which should match
+    the number of packets.
+)",
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("packets"));
 
   m.def(
       "_nvdec_decoder",

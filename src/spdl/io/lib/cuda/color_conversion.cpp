@@ -54,5 +54,63 @@ void register_color_conversion(nb::module_& m) {
       nb::arg("device_config"),
       nb::arg("matrix_coeff") = 1,
       nb::arg("sync") = true);
+  m.def(
+      "nv12_to_planar_rgb_batched",
+#ifndef SPDL_USE_CUDA
+      [](const CUDABuffer&, size_t, const CUDAConfig&, int, bool)
+          -> CUDABufferPtr {
+        throw std::runtime_error("SPDL is not built with CUDA support.");
+      },
+#else
+      &nv12_to_planar_rgb_batched,
+#endif
+      R"(Convert batched NV12 frames to planar RGB.
+
+Args:
+    nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+    num_frames: Actual number of frames to convert (may be ``<= max_frames``).
+    device_config: The CUDA device configuration.
+    matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
+    sync: If ``True``, synchronizes the stream before returning.
+
+Returns:
+    CUDA buffer containing planar RGB data with shape ``[num_frames, 3, height, width]``.
+)",
+      nb::call_guard<nb::gil_scoped_release>(),
+      nb::arg("nv12_batch"),
+      nb::arg("num_frames"),
+      nb::kw_only(),
+      nb::arg("device_config"),
+      nb::arg("matrix_coeff") = 1,
+      nb::arg("sync") = true);
+  m.def(
+      "nv12_to_planar_bgr_batched",
+#ifndef SPDL_USE_CUDA
+      [](const CUDABuffer&, size_t, const CUDAConfig&, int, bool)
+          -> CUDABufferPtr {
+        throw std::runtime_error("SPDL is not built with CUDA support.");
+      },
+#else
+      &nv12_to_planar_bgr_batched,
+#endif
+      R"(Convert batched NV12 frames to planar BGR.
+
+Args:
+    nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+    num_frames: Actual number of frames to convert (may be ``<= max_frames``).
+    device_config: The CUDA device configuration.
+    matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
+    sync: If ``True``, synchronizes the stream before returning.
+
+Returns:
+    CUDA buffer containing planar BGR data with shape ``[num_frames, 3, height, width]``.
+)",
+      nb::call_guard<nb::gil_scoped_release>(),
+      nb::arg("nv12_batch"),
+      nb::arg("num_frames"),
+      nb::kw_only(),
+      nb::arg("device_config"),
+      nb::arg("matrix_coeff") = 1,
+      nb::arg("sync") = true);
 }
 } // namespace spdl::cuda
