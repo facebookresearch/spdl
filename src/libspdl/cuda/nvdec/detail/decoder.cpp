@@ -219,6 +219,9 @@ void NvDecDecoderCore::init(
   crop_ = crop;
   target_width_ = tgt_w;
   target_height_ = tgt_h;
+
+  // Reset pending frames counter for new stream
+  pending_frames_ = 0;
 }
 
 int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
@@ -412,6 +415,11 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // * 0: fail
   // * >=1: success
 
+  if (pending_frames_ == 0) {
+    SPDL_FAIL_INTERNAL("Invalid value pending_frames_ = 0.");
+  }
+  --pending_frames_;
+
   if (cb_disabled_) {
     return 1;
   }
@@ -496,9 +504,10 @@ int NvDecDecoderCore::handle_display_picture_batch(
 
   // Check if buffer is full
   if (batch_frame_index_ >= batch_max_frames_) {
-    VLOG(9) << "Batch buffer full, skipping frame at index "
-            << batch_frame_index_;
-    return 1;
+    SPDL_FAIL_INTERNAL(
+        fmt::format(
+            "Decoded more frames than the output buffer size ({}).",
+            batch_max_frames_));
   }
 
   auto width = decoder_param_.ulTargetWidth;
@@ -588,12 +597,28 @@ void NvDecDecoderCore::decode_packet(
   if (!parser_) {
     SPDL_FAIL_INTERNAL("Parser is not initialized.");
   }
+  if (flags & CUVID_PKT_ENDOFPICTURE && !(flags & CUVID_PKT_ENDOFSTREAM)) {
+    pending_frames_++;
+  }
+
   CUVIDSOURCEDATAPACKET packet{
       .flags = flags, .payload_size = size, .payload = data, .timestamp = pts};
   TRACE_EVENT("nvdec", "cuvidParseVideoData");
   CHECK_CU(
       cuvidParseVideoData(parser_.get(), &packet),
       "Failed to parse video data.");
+}
+
+void NvDecDecoderCore::flush_decoder() {
+  const unsigned char data{};
+  decode_packet(&data, 0, 0, CUVID_PKT_ENDOFSTREAM);
+  if (pending_frames_ != 0) {
+    SPDL_FAIL_INTERNAL(
+        fmt::format(
+            "Flushed NVDEC decoder. The number of input packets and decoded frames do not match. "
+            "Pending frames: {}",
+            pending_frames_));
+  }
 }
 
 void NvDecDecoderCore::decode_packets(
@@ -647,37 +672,39 @@ void NvDecDecoderCore::reset() {
   }
 }
 
-CUDABuffer NvDecDecoderCore::decode_all(spdl::core::VideoPackets* packets) {
-  if (device_config_.device_index < 0) {
-    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
-  }
-  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_all");
-
-  // Calculate output dimensions based on decoder configuration
-  // These are set during init() and updated after handle_video_sequence()
+CUDABuffer NvDecDecoderCore::create_nv12_buffer(size_t max_frames) const {
   int width =
       target_width_ > 0 ? target_width_ : src_width_ - crop_.left - crop_.right;
   int height = target_height_ > 0 ? target_height_
                                   : src_height_ - crop_.top - crop_.bottom;
 
-  // Use packet count as max frames estimate
-  size_t max_frames = packets->pkts.get_packets().size();
-
   // Pre-allocate NV12 buffer: shape is [max_frames, height*1.5, width]
   size_t h2 = height + height / 2;
   auto storage =
       std::make_shared<CUDAStorage>(max_frames * h2 * width, device_config_);
-  CUDABuffer nv12_buffer{
+  return CUDABuffer{
       device_config_.device_index,
       storage,
       {max_frames, h2, static_cast<size_t>(width)},
       core::ElemClass::UInt,
       sizeof(uint8_t)};
+}
+
+CUDABuffer NvDecDecoderCore::decode_all(
+    spdl::core::VideoPackets* packets,
+    bool flush_) {
+  if (device_config_.device_index < 0) {
+    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
+  }
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_all");
+
+  size_t max_frames = pending_frames_ + packets->pkts.get_packets().size();
+  CUDABuffer ret = create_nv12_buffer(max_frames);
 
   // Set up batch mode state
-  batch_buffer_ = &nv12_buffer;
+  batch_buffer_ = &ret;
   batch_frame_index_ = 0;
-  batch_max_frames_ = max_frames;
+  batch_max_frames_ = ret.shape[0];
   time_window_ = packets->timestamp;
 
   // We still need frame_buffer_ to be set for the non-batch path
@@ -704,12 +731,12 @@ CUDABuffer NvDecDecoderCore::decode_all(spdl::core::VideoPackets* packets) {
     decode_packet(pkt.data, pkt.size, pkt.pts, flags);
   }
 
-  // Flush the decoder
-  const unsigned char data{};
-  decode_packet(&data, 0, 0, CUVID_PKT_ENDOFSTREAM);
+  if (flush_) {
+    flush_decoder();
+  }
 
   // Save the actual frame count before resetting batch mode state
-  size_t actual_frames = batch_frame_index_;
+  ret.shape[0] = batch_frame_index_;
 
   // Reset batch mode state
   batch_buffer_ = nullptr;
@@ -717,10 +744,39 @@ CUDABuffer NvDecDecoderCore::decode_all(spdl::core::VideoPackets* packets) {
   batch_max_frames_ = 0;
   frame_buffer_ = nullptr;
 
-  // Update the first dimension of the buffer shape to reflect actual frames
-  nv12_buffer.shape[0] = actual_frames;
+  return ret;
+}
 
-  return nv12_buffer;
+CUDABuffer NvDecDecoderCore::flush() {
+  if (device_config_.device_index < 0) {
+    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
+  }
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_all");
+
+  CUDABuffer ret = create_nv12_buffer(pending_frames_);
+
+  // Set up batch mode state
+  batch_buffer_ = &ret;
+  batch_frame_index_ = 0;
+  batch_max_frames_ = ret.shape[0];
+
+  // We still need frame_buffer_ to be set for the non-batch path
+  // (though it won't be used in batch mode)
+  std::vector<CUDABuffer> dummy_buffer;
+  frame_buffer_ = &dummy_buffer;
+
+  flush_decoder();
+
+  // Save the actual frame count before resetting batch mode state
+  ret.shape[0] = batch_frame_index_;
+
+  // Reset batch mode state
+  batch_buffer_ = nullptr;
+  batch_frame_index_ = 0;
+  batch_max_frames_ = 0;
+  frame_buffer_ = nullptr;
+
+  return ret;
 }
 
 } // namespace spdl::cuda::detail
