@@ -75,15 +75,31 @@ struct Generator {
   /// Deleted copy assignment operator.
   Generator& operator=(const Generator&) = delete;
 
-  /// Default move constructor.
-  Generator(Generator&&) = default;
+  /// Move constructor - transfers ownership and nulls source handle.
+  Generator(Generator&& other) noexcept : h_(other.h_), full_(other.full_) {
+    other.h_ = nullptr;
+    other.full_ = false;
+  }
 
-  /// Default move assignment operator.
-  Generator& operator=(Generator&&) = default;
+  /// Move assignment operator - transfers ownership and nulls source handle.
+  Generator& operator=(Generator&& other) noexcept {
+    if (this != &other) {
+      if (h_) {
+        h_.destroy();
+      }
+      h_ = other.h_;
+      full_ = other.full_;
+      other.h_ = nullptr;
+      other.full_ = false;
+    }
+    return *this;
+  }
 
-  /// Destructor destroys the coroutine handle.
+  /// Destructor destroys the coroutine handle if valid.
   ~Generator() {
-    h_.destroy();
+    if (h_) {
+      h_.destroy();
+    }
   }
 
   /// Check if more values are available.
