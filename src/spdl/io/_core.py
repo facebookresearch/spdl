@@ -743,6 +743,9 @@ def decode_packets_nvdec(
 ) -> "CUDABuffer":
     """**[Experimental]** Decode packets with NVDEC.
 
+    This function allocates a single contiguous buffer upfront based on the
+    packet count, reducing memory allocator overhead for better performance.
+
     .. warning::
 
        This API is exmperimental. The performance is not probed, and the specification
@@ -780,7 +783,7 @@ def decode_packets_nvdec(
             Supported value is ``"rgb"`` and ``"bgr"``. Default: ``"rgb"``.
 
     Returns:
-        A CUDABuffer object.
+        A CUDABuffer object with shape [num_frames, 3, height, width].
     """
     log_api_usage_once("spdl.io.decode_packets_nvdec")
 
@@ -815,6 +818,7 @@ def decode_packets_nvdec(
         case _:
             pass
 
+    # Create decoder and decode all at once
     decoder = nvdec_decoder(
         device_config,
         packets.codec,
@@ -825,16 +829,22 @@ def decode_packets_nvdec(
         scale_width=scale_width,
         scale_height=scale_height,
     )
-    buffer = decoder.decode(packets)
-    buffer += decoder.flush()
 
+    nv12_buffer = decoder.decode_all(packets)
+    num_frames = nv12_buffer.__cuda_array_interface__["shape"][0]
+
+    # Convert NV12 to RGB/BGR using batched function
     match pix_fmt:
         case "rgb":
-            return _libspdl_cuda.nv12_to_planar_rgb(buffer, device_config=device_config)
+            return _libspdl_cuda.nv12_to_planar_rgb_batched(
+                nv12_buffer, num_frames, device_config=device_config
+            )
         case "bgr":
-            return _libspdl_cuda.nv12_to_planar_bgr(buffer, device_config=device_config)
+            return _libspdl_cuda.nv12_to_planar_bgr_batched(
+                nv12_buffer, num_frames, device_config=device_config
+            )
 
-    # Shold not reach here
+    # Should not reach here
     raise AssertionError(f"[SPDL Internal Error] Unexpected {pix_fmt=}")
 
 
