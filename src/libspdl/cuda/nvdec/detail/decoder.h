@@ -114,6 +114,15 @@ class NvDecDecoderCore {
   size_t batch_max_frames_ = 0;
   //---------------------------------------------------------------------------
 
+  //---------------------------------------------------------------------------
+  // Pending frames counter
+  // Tracks: (packets passed to decoder) - (frames output by decoder)
+  // Used by flush() to know how many frames to pre-allocate.
+  // Reset in init().
+  //---------------------------------------------------------------------------
+  size_t pending_frames_ = 0;
+  //---------------------------------------------------------------------------
+
  public:
   NvDecDecoderCore() = default;
   NvDecDecoderCore(const NvDecDecoderCore&) = delete;
@@ -134,6 +143,9 @@ class NvDecDecoderCore {
       int target_height = -1);
 
  private:
+  // Create pre-allocated NV12 buffer for batch decoding
+  CUDABuffer create_nv12_buffer(size_t num_packets) const;
+
   // Decode packets using `cuvidParseVideoData`. It synchronously triggers
   // callbacks.
   void decode_packet(
@@ -141,6 +153,7 @@ class NvDecDecoderCore {
       const unsigned long size,
       int64_t pts,
       unsigned long flags);
+  void flush_decoder();
 
  public:
   void decode_packets(
@@ -149,11 +162,12 @@ class NvDecDecoderCore {
 
   // Same as `decode` but notify the decode of the end of the stream.
   void flush(std::vector<CUDABuffer>* buffer);
+  CUDABuffer flush();
 
   // Decode all packets into an internally allocated output buffer.
   // Returns a CUDABuffer with shape [actual_frames, height*1.5, width].
   // The buffer is allocated based on the packet count estimate.
-  CUDABuffer decode_all(spdl::core::VideoPackets* packets);
+  CUDABuffer decode_all(spdl::core::VideoPackets* packets, bool flush = true);
 
   ////////////////////////////////////////////////////////////////////////////
   // Callbacks required by CUVID API
