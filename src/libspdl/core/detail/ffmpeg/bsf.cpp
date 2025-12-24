@@ -90,19 +90,16 @@ void BSFImpl::filter(
     const std::vector<AVPacket*>& packets,
     PacketSeries& out,
     bool flush) {
-  auto packet_stream = stream_packets(packets, flush);
-  while (packet_stream) {
-    auto filtering = this->filter(packet_stream());
-    while (filtering) {
-      out.push(filtering().release());
+  for (auto* packet : stream_packets(packets, flush)) {
+    for (auto&& filtered : this->filter(packet)) {
+      out.push(filtered.release());
     }
   }
 }
 
 void BSFImpl::flush(PacketSeries& out) {
-  auto filtering = this->filter(nullptr);
-  while (filtering) {
-    out.push(filtering().release());
+  for (auto&& filtered : this->filter(nullptr)) {
+    out.push(filtered.release());
   }
 }
 

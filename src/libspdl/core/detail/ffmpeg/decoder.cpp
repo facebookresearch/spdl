@@ -97,23 +97,15 @@ Generator<AVFramePtr> decode_packets(
     const std::vector<AVPacket*>& packets,
     std::optional<FilterGraphImpl>& filter,
     bool flush) {
-  auto packet_stream = _stream_packet(packets, flush);
-  if (!filter) {
-    while (packet_stream) {
-      auto decoding = _decode_packet(codec_ctx, packet_stream(), false);
-      while (decoding) {
-        co_yield decoding();
+  for (auto* packet : _stream_packet(packets, flush)) {
+    if (!filter) {
+      for (auto&& frame : _decode_packet(codec_ctx, packet, false)) {
+        co_yield std::move(frame);
       }
-    }
-  } else {
-    while (packet_stream) {
-      auto packet = packet_stream();
-      auto decoding = _decode_packet(codec_ctx, packet, !packet);
-      while (decoding) {
-        auto frame = decoding();
-        auto filtering = filter->filter(frame.get());
-        while (filtering) {
-          co_yield filtering();
+    } else {
+      for (auto&& frame : _decode_packet(codec_ctx, packet, !packet)) {
+        for (auto&& filtered : filter->filter(frame.get())) {
+          co_yield std::move(filtered);
         }
       }
     }
@@ -155,11 +147,10 @@ FramesPtr<media> DecoderImpl<media>::decode_and_flush(
     int num_frames) {
   auto ret =
       std::make_unique<Frames<media>>(packets->id, get_output_time_base());
-  auto gen = decode_packets(
-      codec_ctx_, packets->pkts.get_packets(), filter_graph_, true);
   int num_yielded = 0;
-  while (gen) {
-    ret->push_back(gen().release());
+  for (auto&& frame : decode_packets(
+           codec_ctx_, packets->pkts.get_packets(), filter_graph_, true)) {
+    ret->push_back(frame.release());
     num_yielded += 1;
     if (num_frames > 0 && num_yielded >= num_frames) {
       break;
@@ -184,19 +175,18 @@ VideoFramesPtr DecoderImpl<MediaType::Video>::decode_and_flush(
   }
 
   auto ret = std::make_unique<VideoFrames>(packets->id, tb);
-  auto gen = decode_packets(
-      codec_ctx_, packets->pkts.get_packets(), filter_graph_, true);
   int num_yielded = 0;
-  while (gen) {
+  for (auto&& frame : decode_packets(
+           codec_ctx_, packets->pkts.get_packets(), filter_graph_, true)) {
     // For video, we manualy apply timestamps.
-    auto frame = gen().release();
-    if (packets->timestamp && frame) {
-      if (!is_within_window(to_rational(frame->pts, tb), s, e)) {
-        av_frame_free(&frame);
+    auto* raw_frame = frame.release();
+    if (packets->timestamp && raw_frame) {
+      if (!is_within_window(to_rational(raw_frame->pts, tb), s, e)) {
+        av_frame_free(&raw_frame);
         continue;
       }
     }
-    ret->push_back(frame);
+    ret->push_back(raw_frame);
     num_yielded += 1;
     if (num_frames > 0 && num_yielded >= num_frames) {
       break;
@@ -213,10 +203,9 @@ template <MediaType media>
 FramesPtr<media> DecoderImpl<media>::decode(PacketsPtr<media> packets) {
   auto ret =
       std::make_unique<Frames<media>>(packets->id, get_output_time_base());
-  auto gen = decode_packets(
-      codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
-  while (gen) {
-    ret->push_back(gen().release());
+  for (auto&& frame : decode_packets(
+           codec_ctx_, packets->pkts.get_packets(), filter_graph_, false)) {
+    ret->push_back(frame.release());
   }
   return ret;
 }
@@ -235,18 +224,17 @@ VideoFramesPtr DecoderImpl<MediaType::Video>::decode(VideoPacketsPtr packets) {
   }
 
   auto ret = std::make_unique<VideoFrames>(packets->id, tb);
-  auto gen = decode_packets(
-      codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
-  while (gen) {
-    auto frame = gen().release();
-    if (packets->timestamp && frame) {
-      if (!is_within_window(to_rational(frame->pts, tb), s, e)) {
-        av_frame_free(&frame);
+  for (auto&& frame : decode_packets(
+           codec_ctx_, packets->pkts.get_packets(), filter_graph_, false)) {
+    auto* raw_frame = frame.release();
+    if (packets->timestamp && raw_frame) {
+      if (!is_within_window(to_rational(raw_frame->pts, tb), s, e)) {
+        av_frame_free(&raw_frame);
         continue;
       }
     }
 
-    ret->push_back(frame);
+    ret->push_back(raw_frame);
   }
   return ret;
 }
@@ -256,9 +244,8 @@ FramesPtr<media> DecoderImpl<media>::flush() {
   auto ret = std::make_unique<Frames<media>>(
       reinterpret_cast<uintptr_t>(this), get_output_time_base());
   std::vector<AVPacket*> dummy{};
-  auto gen = decode_packets(codec_ctx_, dummy, filter_graph_, true);
-  while (gen) {
-    ret->push_back(gen().release());
+  for (auto&& frame : decode_packets(codec_ctx_, dummy, filter_graph_, true)) {
+    ret->push_back(frame.release());
   }
   return ret;
 }

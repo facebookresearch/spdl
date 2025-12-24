@@ -633,7 +633,6 @@ void NvDecDecoderCore::decode_packets(
   this->frame_buffer_ = buffer;
   time_window_ = packets->timestamp;
 
-  auto ite = packets->pkts.iter_data();
   unsigned long flags = CUVID_PKT_TIMESTAMP;
   switch (codec_id_) {
     case spdl::core::CodecID::MPEG4: {
@@ -651,8 +650,7 @@ void NvDecDecoderCore::decode_packets(
   }
 
   flags |= CUVID_PKT_ENDOFPICTURE;
-  while (ite) {
-    auto pkt = ite();
+  for (auto pkt : packets->pkts.iter_data()) {
     VLOG(9) << fmt::format("pkt.pts {}:", pkt.pts);
     decode_packet(pkt.data, pkt.size, pkt.pts, flags);
   }
@@ -712,7 +710,6 @@ CUDABuffer NvDecDecoderCore::decode_all(
   std::vector<CUDABuffer> dummy_buffer;
   frame_buffer_ = &dummy_buffer;
 
-  auto ite = packets->pkts.iter_data();
   unsigned long flags = CUVID_PKT_TIMESTAMP;
   switch (codec_id_) {
     case spdl::core::CodecID::MPEG4: {
@@ -725,8 +722,7 @@ CUDABuffer NvDecDecoderCore::decode_all(
   }
 
   flags |= CUVID_PKT_ENDOFPICTURE;
-  while (ite) {
-    auto pkt = ite();
+  for (auto pkt : packets->pkts.iter_data()) {
     VLOG(9) << fmt::format("pkt.pts {}:", pkt.pts);
     decode_packet(pkt.data, pkt.size, pkt.pts, flags);
   }

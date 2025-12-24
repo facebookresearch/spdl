@@ -10,6 +10,7 @@
 
 #include <coroutine>
 #include <exception>
+#include <iterator>
 #include <stdexcept>
 #include <utility>
 
@@ -20,6 +21,9 @@ namespace spdl::core {
 /// Generator provides a C++20 coroutine-based iterator that yields values
 /// on demand. Used for streaming operations where producing all values
 /// upfront would be inefficient.
+///
+/// Supports both functional-style iteration via operator() and C++ iterator
+/// protocol for use with range-based for loops and standard algorithms.
 ///
 /// @tparam T Type of values yielded by the generator.
 template <typename T>
@@ -68,6 +72,33 @@ struct Generator {
     void return_void() {}
   };
 
+  /// Iterator for C++ range-based for loop support.
+  struct iterator {
+    using iterator_category = std::input_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = T;
+    using pointer = T*;
+    using reference = T&;
+
+    handle_type h_;
+
+    iterator& operator++() {
+      h_();
+      if (h_.promise().exception) {
+        std::rethrow_exception(h_.promise().exception);
+      }
+      return *this;
+    }
+
+    T& operator*() const {
+      return h_.promise().value;
+    }
+
+    bool operator==(std::default_sentinel_t) const {
+      return !h_ || h_.done();
+    }
+  };
+
   handle_type h_;
 
   /// Construct generator from coroutine handle.
@@ -99,6 +130,23 @@ struct Generator {
     if (h_) {
       h_.destroy();
     }
+  }
+
+  /// Get iterator to the beginning of the generator.
+  /// Advances to the first value.
+  iterator begin() {
+    if (h_) {
+      h_();
+      if (h_.promise().exception) {
+        std::rethrow_exception(h_.promise().exception);
+      }
+    }
+    return iterator{h_};
+  }
+
+  /// Get sentinel marking the end of the generator.
+  std::default_sentinel_t end() {
+    return {};
   }
 
   /// Check if more values are available.
