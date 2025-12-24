@@ -240,9 +240,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
     const AVRational end,
     std::optional<BSFImpl>& filter,
     std::optional<AVRational> seek_time) {
-  auto demuxing = this->demux(stream->index, seek_time);
-  while (demuxing) {
-    auto packet = demuxing();
+  for (auto&& packet : this->demux(stream->index, seek_time)) {
     if (packet->stream_index != stream->index) {
       continue;
     }
@@ -253,9 +251,7 @@ Generator<AVPacketPtr> DemuxerImpl::demux_window(
       }
       co_yield std::move(packet);
     } else {
-      auto filtering = filter->filter(packet.get());
-      while (filtering) {
-        auto filtered = filtering();
+      for (auto&& filtered : filter->filter(packet.get())) {
         auto pts = to_rational(filtered->pts, stream->time_base);
         if (av_cmp_q(pts, end) >= 0) {
           co_return;
@@ -303,9 +299,8 @@ PacketsPtr<media> DemuxerImpl::demux_window(
       end = av_add_q(end, {3, 10});
     }
   }
-  auto demuxing = this->demux_window(stream, end, filter, seek_time);
-  while (demuxing) {
-    ret->pkts.push(demuxing().release());
+  for (auto&& packet : this->demux_window(stream, end, filter, seek_time)) {
+    ret->pkts.push(packet.release());
   }
   return ret;
 }
@@ -364,7 +359,6 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
 
   enable_for_stream(fmt_ctx_, stream_indices);
   std::map<int, AnyPackets> ret;
-  auto demuxing = this->demux();
 
   // Some samples can start from negative PTS, like -0.023, so we use much
   // bigger number.
@@ -375,8 +369,7 @@ Generator<std::map<int, AnyPackets>> DemuxerImpl::streaming_demux(
   ret = std::map<int, AnyPackets>{}; \
   t0 = pts
 
-  while (demuxing) {
-    auto packet = demuxing();
+  for (auto&& packet : this->demux()) {
     auto i = packet->stream_index;
     auto* stream = fmt_ctx_->streams[i];
     double pts = to_double(to_rational(packet->pts, stream->time_base));
