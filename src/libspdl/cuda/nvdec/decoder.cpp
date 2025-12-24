@@ -13,7 +13,11 @@
 
 #include "libspdl/cuda/nvdec/detail/decoder.h"
 
+#include <libspdl/core/bsf.h>
+#include <libspdl/core/demuxing.h>
+
 #include <fmt/core.h>
+#include <set>
 
 namespace spdl::cuda {
 
@@ -97,4 +101,95 @@ std::vector<CUDABuffer> NvDecDecoder::flush() {
 CUDABuffer NvDecDecoder::decode_all(spdl::core::VideoPacketsPtr packets) {
   return core_->decode_all(packets.get());
 }
+
+#ifdef SPDL_USE_NVCODEC
+FrameBatchGenerator streaming_load_video_nvdec(
+    spdl::core::Demuxer* demuxer,
+    NvDecDecoder* decoder,
+    spdl::core::BSF<spdl::core::MediaType::Video>* bsf,
+    size_t num_frames) {
+  TRACE_EVENT("nvdec", "streaming_load_video_nvdec");
+
+  // Get video stream index
+  int video_stream_index =
+      demuxer->get_default_stream_index<spdl::core::MediaType::Video>();
+
+  // Get packet stream from demuxer
+  std::set<int> indices{video_stream_index};
+  auto packet_gen = demuxer->streaming_demux(indices, num_frames, 0.0);
+
+  // Buffer for accumulating decoded frames
+  std::vector<CUDABuffer> buffers;
+
+  // Process packets from demuxer
+  for (auto& packets_map : packet_gen) {
+    // Extract video packets for the video stream
+    auto it = packets_map.find(video_stream_index);
+    if (it == packets_map.end()) {
+      continue;
+    }
+
+    auto packets = std::move(std::get<spdl::core::VideoPacketsPtr>(it->second));
+
+    // Apply bitstream filter if provided
+    if (bsf) {
+      auto filtered = bsf->filter(std::move(packets), false);
+      if (!filtered.has_value()) {
+        continue;
+      }
+      packets = std::move(*filtered);
+    }
+
+    // Decode packets
+    auto decoded = decoder->decode(std::move(packets));
+    buffers.insert(buffers.end(), decoded.begin(), decoded.end());
+
+    // Yield when we have enough frames
+    while (buffers.size() >= num_frames) {
+      std::vector<CUDABuffer> batch(
+          buffers.begin(), buffers.begin() + num_frames);
+      buffers.erase(buffers.begin(), buffers.begin() + num_frames);
+      co_yield std::move(batch);
+    }
+  }
+
+  // Flush BSF if provided
+  if (bsf) {
+    auto flushed = bsf->flush();
+    if (flushed.has_value()) {
+      const auto& pkt_series = (*flushed)->pkts;
+      if (!pkt_series.get_packets().empty()) {
+        auto decoded = decoder->decode(std::move(*flushed));
+        buffers.insert(buffers.end(), decoded.begin(), decoded.end());
+      }
+    }
+  }
+
+  // Flush decoder
+  auto flushed_frames = decoder->flush();
+  buffers.insert(buffers.end(), flushed_frames.begin(), flushed_frames.end());
+
+  // Yield remaining buffers in chunks
+  while (buffers.size() >= num_frames) {
+    std::vector<CUDABuffer> batch(
+        buffers.begin(), buffers.begin() + num_frames);
+    buffers.erase(buffers.begin(), buffers.begin() + num_frames);
+    co_yield std::move(batch);
+  }
+
+  // Yield any remaining buffers
+  if (!buffers.empty()) {
+    co_yield std::move(buffers);
+  }
+}
+#else
+FrameBatchGenerator streaming_load_video_nvdec(
+    spdl::core::Demuxer*,
+    NvDecDecoder*,
+    spdl::core::BSF<spdl::core::MediaType::Video>*,
+    size_t) {
+  NOT_SUPPORTED_NVCODEC;
+}
+#endif
+
 } // namespace spdl::cuda

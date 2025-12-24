@@ -549,6 +549,9 @@ def streaming_load_video_nvdec(
         post_processing_params: The post processing parameters
             passed to :py:class:`NvDecDecoder.init`.
 
+        use_cache: If ``True`` (default), the decoder instance cached in thread
+            local storage is used. Otherwise a new decoder instance is created.
+
     Yields:
         List of at most ``num_frames`` CUDA buffers.
         Each CUDA buffer contain a frame in NV12 format.
@@ -564,13 +567,12 @@ def streaming_load_video_nvdec(
     demuxer = _core.Demuxer(src)
     codec = demuxer.video_codec
 
-    # Determine BSF filter name based on codec
-    bsf_name = None
     match codec.name:
-        case "h264":
-            bsf_name = "h264_mp4toannexb"
-        case "hevc":
-            bsf_name = "hevc_mp4toannexb"
+        case "h264" | "hevc":
+            bsf_name = f"{codec.name}_mp4toannexb"
+            bsf = _core.BSF(codec, bsf_name)
+        case _:
+            bsf = None
 
     decoder = _core.nvdec_decoder(
         device_config,
@@ -579,43 +581,12 @@ def streaming_load_video_nvdec(
         **(post_processing_params if post_processing_params is not None else {}),
     )
 
-    buffers = []
-    # Use streaming_demux with video stream index
-    packet_stream = demuxer.streaming_demux(
-        demuxer.video_stream_index, num_packets=num_frames
+    yield from _libspdl_cuda._streaming_load_video_nvdec(
+        demuxer=demuxer._demuxer,
+        decoder=decoder,
+        bsf=bsf._bsf if bsf else None,
+        num_frames=num_frames,
     )
-
-    # Create BSF if needed
-    bsf = _core.BSF(codec, bsf_name) if bsf_name is not None else None
-
-    for packets in packet_stream:
-        # Apply bitstream filter if needed
-        if bsf is not None:
-            packets = bsf.filter(packets)
-
-        buffers += decoder.decode(packets)
-
-        if len(buffers) >= num_frames:
-            tmp, buffers = buffers[:num_frames], buffers[num_frames:]
-            yield tmp
-
-    # Flush BSF if needed
-    if bsf is not None:
-        flushed_packets = bsf.flush()
-        if flushed_packets is not None and len(flushed_packets):
-            buffers += decoder.decode(flushed_packets)
-
-    # Flush decoder
-    buffers += decoder.flush()
-
-    # Yield remaining buffers in chunks
-    while len(buffers) >= num_frames:
-        tmp, buffers = buffers[:num_frames], buffers[num_frames:]
-        yield tmp
-
-    # Yield any remaining buffers
-    if buffers:
-        yield buffers
 
 
 ################################################################################

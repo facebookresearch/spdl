@@ -11,8 +11,15 @@
 #include <libspdl/cuda/buffer.h>
 #include <libspdl/cuda/storage.h>
 
+#include <libspdl/core/bsf.h>
+#include <libspdl/core/generator.h>
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
+
+// Forward declaration
+namespace spdl::core {
+class Demuxer;
+} // namespace spdl::core
 
 #ifdef SPDL_USE_NVCODEC
 #define _RET_ATTR
@@ -81,6 +88,26 @@ class NvDecDecoder {
   // The buffer shape's first dimension reflects the actual frame count.
   _RET_ATTR CUDABuffer decode_all(spdl::core::VideoPacketsPtr packets);
 };
+
+/// Generator type for yielding batches of decoded frames.
+using FrameBatchGenerator = spdl::core::Generator<std::vector<CUDABuffer>>;
+
+/// Load video from source chunk by chunk using NVDEC.
+///
+/// This function demuxes video packets from the source, applies bitstream
+/// filtering if needed (for H.264/HEVC), decodes using NVDEC, and yields
+/// frames in batches.
+///
+/// @param demuxer Demuxer instance for the video source.
+/// @param decoder Pre-initialized NvDecDecoder instance.
+/// @param bsf Optional pre-initialized BSF instance for bitstream filtering.
+/// @param num_frames Maximum number of frames to yield at a time.
+/// @return Generator that yields batches of CUDABuffer frames in NV12 format.
+_RET_ATTR FrameBatchGenerator streaming_load_video_nvdec(
+    spdl::core::Demuxer* demuxer,
+    NvDecDecoder* decoder,
+    spdl::core::BSF<spdl::core::MediaType::Video>* bsf,
+    size_t num_frames);
 
 } // namespace spdl::cuda
 

@@ -8,6 +8,7 @@
 
 #include "register_spdl_cuda_extensions.h"
 
+#include <libspdl/core/demuxing.h>
 #include <libspdl/cuda/nvdec/decoder.h>
 
 #include <nanobind/nanobind.h>
@@ -25,6 +26,7 @@ namespace spdl::cuda {
   throw std::runtime_error("SPDL is not built with NVCODEC support.")
 
 #ifndef SPDL_USE_NVCODEC
+#define _(var_name)
 NvDecDecoder::NvDecDecoder() {}
 NvDecDecoder::~NvDecDecoder() {}
 CUDABuffer NvDecDecoder::decode_all(spdl::core::VideoPacketsPtr) {
@@ -47,6 +49,8 @@ std::vector<CUDABuffer> NvDecDecoder::flush() {
 void NvDecDecoder::reset() {
   NOT_SUPPORTED_NVCODEC;
 }
+#else
+#define _(var_name) var_name
 #endif
 
 using namespace spdl::core;
@@ -261,5 +265,59 @@ Returns:
 #endif
       },
       nb::call_guard<nb::gil_scoped_release>());
+
+  // Bind FrameBatchGenerator - iterator for batches of CUDABuffer vectors
+  nb::class_<FrameBatchGenerator>(m, "FrameBatchIterator")
+      .def(
+          "__iter__",
+          [](FrameBatchGenerator& self) -> FrameBatchGenerator& {
+            return self;
+          },
+          nb::rv_policy::reference)
+      .def(
+          "__next__",
+          [](FrameBatchGenerator& self) -> std::vector<CUDABuffer> {
+            if (!self) {
+              throw nb::stop_iteration();
+            }
+            return self();
+          },
+          nb::call_guard<nb::gil_scoped_release>());
+
+  m.def(
+      "_streaming_load_video_nvdec",
+      [](nb::handle _(pydemuxer_handle),
+         NvDecDecoder& _(decoder),
+         nb::handle _(bsf_handle),
+         size_t _(num_frames)) -> std::unique_ptr<FrameBatchGenerator> {
+#ifdef SPDL_USE_NVCODEC
+        // Access the underlying DemuxerPtr from PyDemuxer
+        // PyDemuxer has a public member "demuxer" of type unique_ptr<Demuxer>
+        // We use nanobind's inst_ptr to get the C++ object and cast to access
+        // the member
+        struct PyDemuxerAccessor {
+          std::unique_ptr<spdl::core::Demuxer> demuxer;
+        };
+
+        auto* pydemuxer_ptr = nb::inst_ptr<PyDemuxerAccessor>(pydemuxer_handle);
+        auto* demuxer_ptr = pydemuxer_ptr->demuxer.get();
+
+        // Get BSF pointer if provided (None if not needed)
+        spdl::core::BSF<spdl::core::MediaType::Video>* bsf_ptr = nullptr;
+        if (!bsf_handle.is_none()) {
+          bsf_ptr = nb::cast<spdl::core::BSF<spdl::core::MediaType::Video>*>(
+              bsf_handle);
+        }
+
+        return std::make_unique<FrameBatchGenerator>(streaming_load_video_nvdec(
+            demuxer_ptr, &decoder, bsf_ptr, num_frames));
+#else
+        NOT_SUPPORTED_NVCODEC;
+#endif
+      },
+      nb::arg("demuxer"),
+      nb::arg("decoder"),
+      nb::arg("bsf"),
+      nb::arg("num_frames"));
 }
 } // namespace spdl::cuda

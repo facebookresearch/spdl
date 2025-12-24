@@ -207,6 +207,11 @@ class NvDecDecoder:
             the number of packets.
         """
 
+class FrameBatchIterator:
+    def __iter__(self) -> FrameBatchIterator: ...
+
+    def __next__(self) -> list[CUDABuffer]: ...
+
 @overload
 def decode_image_nvjpeg(data: bytes, *, device_config: CUDAConfig, scale_width: int = -1, scale_height: int = -1, pix_fmt: str = 'rgb', sync: bool = True, _zero_clear: bool = False) -> CUDABuffer: ...
 
