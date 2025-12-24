@@ -10,6 +10,8 @@
 
 #include <coroutine>
 #include <exception>
+#include <stdexcept>
+#include <utility>
 
 namespace spdl::core {
 
@@ -32,6 +34,8 @@ struct Generator {
     T value;
     /// Exception captured during generation.
     std::exception_ptr exception;
+    /// Whether the current value has been filled but not yet consumed.
+    bool full = false;
 
     /// Create generator from promise.
     Generator get_return_object() {
@@ -76,10 +80,8 @@ struct Generator {
   Generator& operator=(const Generator&) = delete;
 
   /// Move constructor - transfers ownership and nulls source handle.
-  Generator(Generator&& other) noexcept : h_(other.h_), full_(other.full_) {
-    other.h_ = nullptr;
-    other.full_ = false;
-  }
+  Generator(Generator&& other) noexcept
+      : h_(std::exchange(other.h_, nullptr)) {}
 
   /// Move assignment operator - transfers ownership and nulls source handle.
   Generator& operator=(Generator&& other) noexcept {
@@ -87,10 +89,7 @@ struct Generator {
       if (h_) {
         h_.destroy();
       }
-      h_ = other.h_;
-      full_ = other.full_;
-      other.h_ = nullptr;
-      other.full_ = false;
+      h_ = std::exchange(other.h_, nullptr);
     }
     return *this;
   }
@@ -106,6 +105,9 @@ struct Generator {
   ///
   /// @return true if generator has more values, false otherwise.
   explicit operator bool() {
+    if (!h_) {
+      return false;
+    }
     fill();
     return !h_.done();
   }
@@ -113,22 +115,24 @@ struct Generator {
   /// Get the next value from the generator.
   ///
   /// @return Next yielded value.
+  /// @throws std::runtime_error if generator has been moved from.
   T operator()() {
+    if (!h_) {
+      throw std::runtime_error("Generator has been moved from");
+    }
     fill();
-    full_ = false;
+    h_.promise().full = false;
     return std::move(h_.promise().value);
   }
 
  private:
-  bool full_ = false;
-
   void fill() {
-    if (!full_) {
+    if (!h_.promise().full) {
       h_();
       if (h_.promise().exception) {
         std::rethrow_exception(h_.promise().exception);
       }
-      full_ = true;
+      h_.promise().full = true;
     }
   }
 };
