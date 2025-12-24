@@ -90,12 +90,13 @@ struct PyDemuxer {
     return demuxer->demux_window<MediaType::Image>(std::nullopt, bsf);
   }
 
-  StreamingDemuxerPtr streaming_demux(
+  std::unique_ptr<AnyPacketsGenerator> streaming_demux(
       const std::set<int>& indices,
       int num_packets,
       double duration) {
     nb::gil_scoped_release __g;
-    return demuxer->streaming_demux(indices, num_packets, duration);
+    return std::make_unique<AnyPacketsGenerator>(
+        demuxer->streaming_demux(indices, num_packets, duration));
   }
 
   void _drop() {
@@ -148,16 +149,24 @@ PyDemuxerPtr _make_demuxer_array(
 
 void register_demuxing(nb::module_& m) {
   ///////////////////////////////////////////////////////////////////////////////
-  // Demuxer
+  // AnyPacketsGenerator - bind Generator directly with Python iterator
+  // protocol
   ///////////////////////////////////////////////////////////////////////////////
-  nb::class_<StreamingDemuxer>(m, "MultiStreamingVideoDemuxer")
+  nb::class_<AnyPacketsGenerator>(m, "PacketsIterator")
       .def(
-          "done",
-          &StreamingDemuxer::done,
-          nb::call_guard<nb::gil_scoped_release>())
+          "__iter__",
+          [](AnyPacketsGenerator& self) -> AnyPacketsGenerator& {
+            return self;
+          },
+          nb::rv_policy::reference)
       .def(
-          "next",
-          &StreamingDemuxer::next,
+          "__next__",
+          [](AnyPacketsGenerator& self) -> std::map<int, AnyPackets> {
+            if (!self) {
+              throw nb::stop_iteration();
+            }
+            return self();
+          },
           nb::call_guard<nb::gil_scoped_release>());
 
   nb::class_<AudioCodec>(m, "AudioCodec", "Codec metadata")

@@ -24,43 +24,8 @@ namespace detail {
 class DemuxerImpl;
 } // namespace detail
 
-////////////////////////////////////////////////////////////////////////////////
-// StreamingDemuxer
-////////////////////////////////////////////////////////////////////////////////
-/// Streaming demuxer for continuous packet extraction.
-///
-/// StreamingDemuxer provides an iterator-like interface for extracting packets
-/// from media streams in a streaming fashion, useful for processing large files
-/// or real-time streams.
-class StreamingDemuxer {
-  Generator<std::map<int, AnyPackets>> gen_;
-
- public:
-  /// Construct a streaming demuxer.
-  ///
-  /// @param p Pointer to demuxer implementation.
-  /// @param stream_index Set of stream indices to demux.
-  /// @param num_packets Number of packets to extract per iteration.
-  /// @param duration Duration in seconds to extract per iteration.
-  StreamingDemuxer(
-      detail::DemuxerImpl* p,
-      const std::set<int>& stream_index,
-      int num_packets,
-      double duration);
-
-  /// Check if demuxing is complete.
-  ///
-  /// @return true if no more packets are available, false otherwise.
-  bool done();
-
-  /// Get the next batch of packets.
-  ///
-  /// @return Map of stream index to packets for that stream.
-  std::map<int, AnyPackets> next();
-};
-
-/// Unique pointer to a StreamingDemuxer instance.
-using StreamingDemuxerPtr = std::unique_ptr<StreamingDemuxer>;
+/// Generator type for streaming demux operations.
+using AnyPacketsGenerator = Generator<std::map<int, AnyPackets>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Demuxer
@@ -119,8 +84,8 @@ class Demuxer {
   /// @param indices Set of stream indices to demux.
   /// @param num_packets Number of packets to extract per iteration.
   /// @param duration Duration in seconds to extract per iteration.
-  /// @return Streaming demuxer instance.
-  StreamingDemuxerPtr streaming_demux(
+  /// @return Generator that yields packets from the specified streams.
+  AnyPacketsGenerator streaming_demux(
       const std::set<int>& indices,
       int num_packets,
       double duration);

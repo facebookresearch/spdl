@@ -83,7 +83,7 @@ if TYPE_CHECKING:
     ImageDecoder = _libspdl.ImageDecoder
     ImageFrames = _libspdl.ImageFrames
     ImagePackets = _libspdl.ImagePackets
-    _MultiStreamingVideoDemuxer = _libspdl.MultiStreamingVideoDemuxer
+    _PacketsIterator = _libspdl.PacketsIterator
     VideoCodec = _libspdl.VideoCodec
     VideoDecoder = _libspdl.VideoDecoder
     VideoEncodeConfig = _libspdl.VideoEncodeConfig
@@ -281,7 +281,7 @@ class Demuxer:
         else:
             idxs = set([indices] if isinstance(indices, int) else indices)
 
-        ite: _MultiStreamingVideoDemuxer = self._demuxer.streaming_demux(
+        ite: _PacketsIterator = self._demuxer.streaming_demux(
             idxs, duration=duration, num_packets=num_packets
         )
         return _StreamingDemuxer(
@@ -325,9 +325,7 @@ class Demuxer:
 
 
 class _StreamingDemuxer:
-    def __init__(
-        self, ite: "_MultiStreamingVideoDemuxer", demuxer: Demuxer, unwrap: bool
-    ) -> None:
+    def __init__(self, ite: "_PacketsIterator", demuxer: Demuxer, unwrap: bool) -> None:
         self._demuxer = demuxer  # For keeping the reference.
         self._ite = ite
         self._unwrap = unwrap
@@ -338,9 +336,7 @@ class _StreamingDemuxer:
     def __next__(
         self,
     ) -> "dict[int, AudioPackets | VideoPackets | ImagePackets] | AudioPackets | VideoPackets | ImagePackets":
-        if self._ite.done():
-            raise StopIteration
-        item = self._ite.next()
+        item = next(self._ite)
         if self._unwrap:
             assert len(item) == 1
             return next(iter(item.values()))

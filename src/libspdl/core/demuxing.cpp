@@ -38,24 +38,6 @@ DataInterfacePtr get_in_memory_interface(
 } // namespace detail
 
 ////////////////////////////////////////////////////////////////////////////////
-// StreamingDemuxer
-////////////////////////////////////////////////////////////////////////////////
-StreamingDemuxer::StreamingDemuxer(
-    detail::DemuxerImpl* p,
-    const std::set<int>& stream_indices,
-    int num_packets,
-    double duration)
-    : gen_(p->streaming_demux(stream_indices, num_packets, duration)) {}
-
-bool StreamingDemuxer::done() {
-  return !bool(gen_);
-}
-
-std::map<int, AnyPackets> StreamingDemuxer::next() {
-  return gen_();
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // Demuxer
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -111,12 +93,11 @@ template PacketsPtr<MediaType::Image> Demuxer::demux_window(
     const std::optional<TimeWindow>& window,
     const std::optional<std::string>& bsf);
 
-StreamingDemuxerPtr Demuxer::streaming_demux(
+AnyPacketsGenerator Demuxer::streaming_demux(
     const std::set<int>& indices,
     int num_packets,
     double duration) {
-  return std::make_unique<StreamingDemuxer>(
-      pImpl_, indices, num_packets, duration);
+  return pImpl_->streaming_demux(indices, num_packets, duration);
 }
 
 DemuxerPtr make_demuxer(
