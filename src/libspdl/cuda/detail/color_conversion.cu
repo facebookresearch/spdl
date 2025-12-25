@@ -85,6 +85,7 @@ yuv_to_rgb_pixel(uint8_t y, uint8_t u, uint8_t v, float mat[3][3]) {
   return rgb;
 }
 
+// Original non-batched kernel
 template <class COLOR24>
 __global__ static void nv12_to_planar_rgb24(
     uint8_t* yuv_ptr,
@@ -125,6 +126,58 @@ __global__ static void nv12_to_planar_rgb24(
     *(rgb_ptr + rgb_pitch) = rgb10.v[i];
     *(rgb_ptr + rgb_pitch + 1) = rgb11.v[i];
     rgb_ptr += height * rgb_pitch;
+  }
+}
+
+// New batched kernel for processing multiple frames in a single launch
+template <class COLOR24>
+__global__ static void nv12_to_planar_rgb24_batched(
+    uint8_t* yuv_ptr,
+    int yuv_pitch,
+    uint8_t* rgb_ptr,
+    int rgb_pitch,
+    int width,
+    int height,
+    int matrix_coefficients) {
+  int x = (threadIdx.x + blockIdx.x * blockDim.x) * 2;
+  int y = (threadIdx.y + blockIdx.y * blockDim.y) * 2;
+  auto frame_idx = blockIdx.z;
+
+  if (x + 1 >= width || y + 1 >= height) {
+    return;
+  }
+
+  size_t nv12_frame_size = (height + height / 2) * width;
+  size_t rgb_frame_size = 3 * height * width;
+
+  uint8_t* frame_yuv = yuv_ptr + frame_idx * nv12_frame_size;
+  uint8_t* frame_rgb = rgb_ptr + frame_idx * rgb_frame_size;
+
+  uint8_t* y00 = frame_yuv + y * yuv_pitch + x;
+  uint8_t* y01 = y00 + 1;
+  uint8_t* y10 = y00 + yuv_pitch;
+  uint8_t* y11 = y10 + 1;
+
+  uint8_t* u = frame_yuv + ((height + y / 2) * yuv_pitch) + x;
+  uint8_t* v = u + 1;
+
+  if (matrix_coefficients <= 0 || 10 < matrix_coefficients) {
+    matrix_coefficients = 1;
+  }
+  auto mat = yuv2rgb[matrix_coefficients - 1];
+
+  auto rgb00 = yuv_to_rgb_pixel<COLOR24>(*y00, *u, *v, mat),
+       rgb01 = yuv_to_rgb_pixel<COLOR24>(*y01, *u, *v, mat),
+       rgb10 = yuv_to_rgb_pixel<COLOR24>(*y10, *u, *v, mat),
+       rgb11 = yuv_to_rgb_pixel<COLOR24>(*y11, *u, *v, mat);
+
+  frame_rgb += x + y * rgb_pitch;
+  for (int i = 0; i < 3; ++i) {
+    *frame_rgb = rgb00.v[i];
+    *(frame_rgb + 1) = rgb01.v[i];
+    *(frame_rgb + rgb_pitch) = rgb10.v[i];
+    *(frame_rgb + rgb_pitch + 1) = rgb11.v[i];
+    frame_rgb += height * rgb_pitch;
   }
 }
 
@@ -173,11 +226,51 @@ void nv12_to_planar_bgr(
     int matrix_coefficients) {
   auto dimGrid = dim3((width + 63) / 64, (height + 3) / 4);
   auto dimBlock = dim3(32, 2);
-  TRACE_EVENT("nvdec", "nv12_to_planar_bgra");
+  TRACE_EVENT("nvdec", "nv12_to_planar_bgr");
   nv12_to_planar_rgb24<BGR24><<<dimGrid, dimBlock, 0, stream>>>(
       src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
   CHECK_CUDA(
       cudaPeekAtLastError(),
       "Failed to launch kernel nv12_to_planar_bgr<BGR24>");
+}
+
+void nv12_to_planar_rgb_batched(
+    CUstream stream,
+    uint8_t* src,
+    int src_pitch,
+    uint8_t* dst,
+    int dst_pitch,
+    int width,
+    int height,
+    int num_frames,
+    int matrix_coefficients) {
+  auto dimGrid = dim3((width + 63) / 64, (height + 3) / 4, num_frames);
+  auto dimBlock = dim3(32, 2);
+  TRACE_EVENT("nvdec", "nv12_to_planar_rgb_batched");
+  nv12_to_planar_rgb24_batched<RGB24><<<dimGrid, dimBlock, 0, stream>>>(
+      src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
+  CHECK_CUDA(
+      cudaPeekAtLastError(),
+      "Failed to launch kernel nv12_to_planar_rgb_batched<RGB24>");
+}
+
+void nv12_to_planar_bgr_batched(
+    CUstream stream,
+    uint8_t* src,
+    int src_pitch,
+    uint8_t* dst,
+    int dst_pitch,
+    int width,
+    int height,
+    int num_frames,
+    int matrix_coefficients) {
+  auto dimGrid = dim3((width + 63) / 64, (height + 3) / 4, num_frames);
+  auto dimBlock = dim3(32, 2);
+  TRACE_EVENT("nvdec", "nv12_to_planar_bgr_batched");
+  nv12_to_planar_rgb24_batched<BGR24><<<dimGrid, dimBlock, 0, stream>>>(
+      src, src_pitch, dst, dst_pitch, width, height, matrix_coefficients);
+  CHECK_CUDA(
+      cudaPeekAtLastError(),
+      "Failed to launch kernel nv12_to_planar_bgr_batched<BGR24>");
 }
 } // namespace spdl::cuda::detail

@@ -827,17 +827,16 @@ def decode_packets_nvdec(
     )
 
     nv12_buffer = decoder.decode_all(packets)
-    num_frames = nv12_buffer.__cuda_array_interface__["shape"][0]
 
     # Convert NV12 to RGB/BGR using batched function
     match pix_fmt:
         case "rgb":
             return _libspdl_cuda.nv12_to_planar_rgb_batched(
-                nv12_buffer, num_frames, device_config=device_config
+                nv12_buffer, device_config=device_config
             )
         case "bgr":
             return _libspdl_cuda.nv12_to_planar_bgr_batched(
-                nv12_buffer, num_frames, device_config=device_config
+                nv12_buffer, device_config=device_config
             )
 
     # Should not reach here

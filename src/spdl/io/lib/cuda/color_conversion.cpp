@@ -57,8 +57,7 @@ void register_color_conversion(nb::module_& m) {
   m.def(
       "nv12_to_planar_rgb_batched",
 #ifndef SPDL_USE_CUDA
-      [](const CUDABuffer&, size_t, const CUDAConfig&, int, bool)
-          -> CUDABufferPtr {
+      [](const CUDABuffer&, const CUDAConfig&, int, bool) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else
@@ -68,7 +67,6 @@ void register_color_conversion(nb::module_& m) {
 
 Args:
     nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
-    num_frames: Actual number of frames to convert (may be ``<= max_frames``).
     device_config: The CUDA device configuration.
     matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
     sync: If ``True``, synchronizes the stream before returning.
@@ -78,7 +76,6 @@ Returns:
 )",
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("nv12_batch"),
-      nb::arg("num_frames"),
       nb::kw_only(),
       nb::arg("device_config"),
       nb::arg("matrix_coeff") = 1,
@@ -86,8 +83,7 @@ Returns:
   m.def(
       "nv12_to_planar_bgr_batched",
 #ifndef SPDL_USE_CUDA
-      [](const CUDABuffer&, size_t, const CUDAConfig&, int, bool)
-          -> CUDABufferPtr {
+      [](const CUDABuffer&, const CUDAConfig&, int, bool) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
       },
 #else
@@ -97,7 +93,6 @@ Returns:
 
 Args:
     nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
-    num_frames: Actual number of frames to convert (may be ``<= max_frames``).
     device_config: The CUDA device configuration.
     matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
     sync: If ``True``, synchronizes the stream before returning.
@@ -107,7 +102,6 @@ Returns:
 )",
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("nv12_batch"),
-      nb::arg("num_frames"),
       nb::kw_only(),
       nb::arg("device_config"),
       nb::arg("matrix_coeff") = 1,
