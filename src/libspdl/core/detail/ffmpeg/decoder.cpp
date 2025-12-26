@@ -122,11 +122,15 @@ DecoderImpl<media>::DecoderImpl(
     const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc)
-    : codec_ctx_(get_decode_codec_ctx_ptr(
-          codec.get_parameters(),
-          codec.get_time_base(),
-          cfg ? cfg->decoder : std::nullopt,
-          cfg ? cfg->decoder_options : std::nullopt)),
+    : codec_ctx_([&codec, &cfg]() {
+        static const std::optional<std::string> default_decoder = std::nullopt;
+        static const std::optional<OptionDict> empty_option = std::nullopt;
+        return get_decode_codec_ctx_ptr(
+            codec.get_parameters(),
+            codec.get_time_base(),
+            cfg ? cfg->decoder : default_decoder,
+            cfg ? cfg->decoder_options : empty_option);
+      }()),
       filter_graph_(filter_desc) {}
 
 template <MediaType media>
