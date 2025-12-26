@@ -56,8 +56,7 @@ CUDABufferPtr nv12_to_planar_bgr(
 /// This is an optimized version that takes a pre-allocated 3D buffer containing
 /// multiple NV12 frames, reducing memory allocation overhead.
 ///
-/// @param nv12_batch 3D buffer with shape [max_frames, height*1.5, width].
-/// @param num_frames Actual number of frames to convert (may be <= max_frames).
+/// @param nv12_batch 3D buffer with shape [num_frames, height*1.5, width].
 /// @param cfg CUDA configuration including device and stream.
 /// @param matrix_coefficients Color matrix coefficients for conversion
 /// (default: BT.709).
@@ -67,7 +66,6 @@ CUDABufferPtr nv12_to_planar_bgr(
 /// height, width].
 CUDABufferPtr nv12_to_planar_rgb_batched(
     const CUDABuffer& nv12_batch,
-    size_t num_frames,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1,
     bool sync = true);
@@ -77,8 +75,7 @@ CUDABufferPtr nv12_to_planar_rgb_batched(
 /// This is an optimized version that takes a pre-allocated 3D buffer containing
 /// multiple NV12 frames, reducing memory allocation overhead.
 ///
-/// @param nv12_batch 3D buffer with shape [max_frames, height*1.5, width].
-/// @param num_frames Actual number of frames to convert (may be <= max_frames).
+/// @param nv12_batch 3D buffer with shape [num_frames, height*1.5, width].
 /// @param cfg CUDA configuration including device and stream.
 /// @param matrix_coefficients Color matrix coefficients for conversion
 /// (default: BT.709).
@@ -88,7 +85,6 @@ CUDABufferPtr nv12_to_planar_rgb_batched(
 /// height, width].
 CUDABufferPtr nv12_to_planar_bgr_batched(
     const CUDABuffer& nv12_batch,
-    size_t num_frames,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1,
     bool sync = true);

@@ -577,7 +577,7 @@ class TestDecodeAll(unittest.TestCase):
 
         # Convert batch output to RGB using batched conversion
         batch_rgb = spdl.io.lib._libspdl_cuda.nv12_to_planar_rgb_batched(
-            batch_buffer, num_frames, device_config=cuda_config
+            batch_buffer, device_config=cuda_config
         )
         batch_tensor = spdl.io.to_torch(batch_rgb)
 
