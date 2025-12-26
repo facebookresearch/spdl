@@ -826,18 +826,14 @@ def decode_packets_nvdec(
         scale_height=scale_height,
     )
 
-    nv12_buffer = decoder.decode_all(packets)
+    buffer = decoder.decode_all(packets)
 
     # Convert NV12 to RGB/BGR using batched function
     match pix_fmt:
         case "rgb":
-            return _libspdl_cuda.nv12_to_planar_rgb_batched(
-                nv12_buffer, device_config=device_config
-            )
+            return nv12_to_rgb(buffer, device_config=device_config)
         case "bgr":
-            return _libspdl_cuda.nv12_to_planar_bgr_batched(
-                nv12_buffer, device_config=device_config
-            )
+            return nv12_to_bgr(buffer, device_config=device_config)
 
     # Should not reach here
     raise AssertionError(f"[SPDL Internal Error] Unexpected {pix_fmt=}")
@@ -1169,7 +1165,7 @@ def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
 # Color conversion
 ################################################################################
 def nv12_to_rgb(
-    buffers: "list[CUDABuffer]",
+    buffers: "list[CUDABuffer] | CUDABuffer",
     *,
     device_config: "CUDAConfig",
     coeff: int = 1,
@@ -1212,7 +1208,7 @@ def nv12_to_rgb(
         A CUDA buffer object with the shape ``(batch, height, width, color=3)``.
     """
     ret = _libspdl_cuda.nv12_to_planar_rgb(
-        buffers,
+        buffers,  # pyre-ignore[6]
         device_config=device_config,
         matrix_coeff=coeff,
     )
@@ -1222,7 +1218,7 @@ def nv12_to_rgb(
 
 
 def nv12_to_bgr(
-    buffers: "list[CUDABuffer]",
+    buffers: "list[CUDABuffer] | CUDABuffer",
     *,
     device_config: "CUDAConfig",
     coeff: int = 1,
@@ -1230,13 +1226,12 @@ def nv12_to_bgr(
 ) -> "CUDABuffer":
     """Same as :py:func:`nv12_to_rgb`, but the order of the color channel is BGR."""
     ret = _libspdl_cuda.nv12_to_planar_bgr(
-        buffers,
+        buffers,  # pyre-ignore[6]
         device_config=device_config,
         matrix_coeff=coeff,
     )
     if sync:
         _libspdl_cuda.synchronize_stream(device_config)
-
     return ret
 
 
