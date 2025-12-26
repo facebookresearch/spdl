@@ -233,16 +233,16 @@ def built_with_nvjpeg() -> bool: ...
 
 def synchronize_stream(arg: CUDAConfig, /) -> None: ...
 
+@overload
 def nv12_to_planar_rgb(buffers: Sequence[CUDABuffer], *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer: ...
 
-def nv12_to_planar_bgr(buffers: Sequence[CUDABuffer], *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer: ...
-
-def nv12_to_planar_rgb_batched(nv12_batch: CUDABuffer, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
+@overload
+def nv12_to_planar_rgb(buffer: CUDABuffer, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
     """
     Convert batched NV12 frames to planar RGB.
 
     Args:
-        nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+        buffer: 3D buffer with shape ``[num_frames, height*1.5, width]``.
         device_config: The CUDA device configuration.
         matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
         sync: If ``True``, synchronizes the stream before returning.
@@ -251,12 +251,16 @@ def nv12_to_planar_rgb_batched(nv12_batch: CUDABuffer, *, device_config: CUDACon
         CUDA buffer containing planar RGB data with shape ``[num_frames, 3, height, width]``.
     """
 
-def nv12_to_planar_bgr_batched(nv12_batch: CUDABuffer, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
+@overload
+def nv12_to_planar_bgr(buffers: Sequence[CUDABuffer], *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer: ...
+
+@overload
+def nv12_to_planar_bgr(buffer: CUDABuffer, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
     """
     Convert batched NV12 frames to planar BGR.
 
     Args:
-        nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+        buffer: 3D buffer with shape ``[num_frames, height*1.5, width]``.
         device_config: The CUDA device configuration.
         matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
         sync: If ``True``, synchronizes the stream before returning.

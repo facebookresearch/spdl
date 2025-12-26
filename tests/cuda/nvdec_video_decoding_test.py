@@ -530,10 +530,10 @@ class TestDecodeAll(unittest.TestCase):
 
         # Execute: Use nvdec_decoder with decode_all
         decoder = spdl.io.nvdec_decoder(cuda_config, packets.codec)
-        nv12_buffer = decoder.decode_all(packets)
+        buffers = decoder.decode_all(packets)
 
         # Convert to torch tensor to verify shape and dtype
-        tensor = spdl.io.to_torch(nv12_buffer)
+        tensor = spdl.io.to_torch(buffers)
 
         # Assert: Verify expected data format
         # decode_all returns NV12 buffer with shape [num_frames, h*1.5, width]
@@ -565,20 +565,15 @@ class TestDecodeAll(unittest.TestCase):
 
         # Convert regular output to comparable format
         # nv12_to_planar_rgb expects list of 2D NV12 buffers
-        regular_rgb = spdl.io.lib._libspdl_cuda.nv12_to_planar_rgb(
-            regular_buffers, device_config=cuda_config
-        )
+        regular_rgb = spdl.io.nv12_to_rgb(regular_buffers, device_config=cuda_config)
         regular_tensor = spdl.io.to_torch(regular_rgb)
 
         # Execute: Decode using decode_all
         decoder2 = spdl.io.nvdec_decoder(cuda_config, packets2.codec, use_cache=False)
         batch_buffer = decoder2.decode_all(packets2)
-        num_frames = batch_buffer.__cuda_array_interface__["shape"][0]
 
         # Convert batch output to RGB using batched conversion
-        batch_rgb = spdl.io.lib._libspdl_cuda.nv12_to_planar_rgb_batched(
-            batch_buffer, device_config=cuda_config
-        )
+        batch_rgb = spdl.io.nv12_to_rgb(batch_buffer, device_config=cuda_config)
         batch_tensor = spdl.io.to_torch(batch_rgb)
 
         # Assert: Both methods should produce the same output

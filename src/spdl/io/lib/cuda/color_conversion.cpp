@@ -55,7 +55,7 @@ void register_color_conversion(nb::module_& m) {
       nb::arg("matrix_coeff") = 1,
       nb::arg("sync") = true);
   m.def(
-      "nv12_to_planar_rgb_batched",
+      "nv12_to_planar_rgb",
 #ifndef SPDL_USE_CUDA
       [](const CUDABuffer&, const CUDAConfig&, int, bool) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
@@ -66,7 +66,7 @@ void register_color_conversion(nb::module_& m) {
       R"(Convert batched NV12 frames to planar RGB.
 
 Args:
-    nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+    buffer: 3D buffer with shape ``[num_frames, height*1.5, width]``.
     device_config: The CUDA device configuration.
     matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
     sync: If ``True``, synchronizes the stream before returning.
@@ -75,13 +75,13 @@ Returns:
     CUDA buffer containing planar RGB data with shape ``[num_frames, 3, height, width]``.
 )",
       nb::call_guard<nb::gil_scoped_release>(),
-      nb::arg("nv12_batch"),
+      nb::arg("buffer"),
       nb::kw_only(),
       nb::arg("device_config"),
       nb::arg("matrix_coeff") = 1,
       nb::arg("sync") = true);
   m.def(
-      "nv12_to_planar_bgr_batched",
+      "nv12_to_planar_bgr",
 #ifndef SPDL_USE_CUDA
       [](const CUDABuffer&, const CUDAConfig&, int, bool) -> CUDABufferPtr {
         throw std::runtime_error("SPDL is not built with CUDA support.");
@@ -92,7 +92,7 @@ Returns:
       R"(Convert batched NV12 frames to planar BGR.
 
 Args:
-    nv12_batch: 3D buffer with shape ``[num_frames, height*1.5, width]``.
+    buffer: 3D buffer with shape ``[num_frames, height*1.5, width]``.
     device_config: The CUDA device configuration.
     matrix_coeff: Color matrix coefficients for conversion (default: ``BT.709``).
     sync: If ``True``, synchronizes the stream before returning.
@@ -101,7 +101,7 @@ Returns:
     CUDA buffer containing planar BGR data with shape ``[num_frames, 3, height, width]``.
 )",
       nb::call_guard<nb::gil_scoped_release>(),
-      nb::arg("nv12_batch"),
+      nb::arg("buffer"),
       nb::kw_only(),
       nb::arg("device_config"),
       nb::arg("matrix_coeff") = 1,
