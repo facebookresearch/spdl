@@ -36,6 +36,7 @@ set(srcs
 if (SPDL_USE_NVCODEC)
   list(APPEND srcs
     nvdec/decoder.cpp
+    nvdec/detail/buffer.cpp
     nvdec/detail/decoder.cpp
     nvdec/detail/utils.cpp
     nvdec/detail/wrapper.cpp

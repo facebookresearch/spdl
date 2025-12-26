@@ -426,7 +426,7 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture");
 
   // Dispatch based on mode
-  if (batch_buffer_ != nullptr) {
+  if (frame_buffer_obj_) {
     return handle_display_picture_batch(disp_info);
   }
   return handle_display_picture_buffered(disp_info);
@@ -487,8 +487,7 @@ int NvDecDecoderCore::handle_display_picture_buffered(
 
 int NvDecDecoderCore::handle_display_picture_batch(
     CUVIDPARSERDISPINFO* disp_info) {
-  // Batch mode: writes decoded frames directly to pre-allocated buffer
-  // at the appropriate offset.
+  // Batch mode: writes decoded frames using FrameBuffer
   TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture_batch");
 
   auto pts = to_rational(disp_info->timestamp, timebase_);
@@ -502,12 +501,8 @@ int NvDecDecoderCore::handle_display_picture_batch(
     }
   }
 
-  // Check if buffer is full
-  if (batch_frame_index_ >= batch_max_frames_) {
-    SPDL_FAIL_INTERNAL(
-        fmt::format(
-            "Decoded more frames than the output buffer size ({}).",
-            batch_max_frames_));
+  if (!frame_buffer_obj_) {
+    SPDL_FAIL_INTERNAL("FrameBuffer not initialized.");
   }
 
   auto width = decoder_param_.ulTargetWidth;
@@ -522,37 +517,21 @@ int NvDecDecoderCore::handle_display_picture_batch(
             get_surface_format_name(decoder_param_.OutputFormat)));
   }
 
-  auto h2 = height + height / 2;
+  warn_if_error(decoder_.get(), disp_info->picture_index);
 
-  // Sanity check: verify buffer dimensions match decoder output
-  if (batch_buffer_->shape.size() >= 2) {
-    auto buf_h2 = batch_buffer_->shape[1];
-    auto buf_width = batch_buffer_->shape[2];
-    if (buf_h2 != h2 || buf_width != width) {
-      SPDL_FAIL(
-          fmt::format(
-              "Pre-allocated buffer dimensions ({}x{}) do not match "
-              "decoder output dimensions ({}x{})",
-              buf_h2,
-              buf_width,
-              h2,
-              width));
-    }
-  }
+  CUVIDPROCPARAMS proc_params{
+      .progressive_frame = disp_info->progressive_frame,
+      .second_field = disp_info->repeat_first_field + 1,
+      .top_field_first = disp_info->top_field_first,
+      .unpaired_field = disp_info->repeat_first_field < 0,
+      .output_stream = (CUstream)device_config_.stream};
 
-  size_t frame_size = width * h2;
-  size_t offset = batch_frame_index_ * frame_size;
-  auto* dst_ptr = (uint8_t*)batch_buffer_->data() + offset;
+  // Make the decoded frame available to output surface
+  MapGuard mapping(decoder_.get(), &proc_params, disp_info->picture_index);
 
-  copy_decoded_frame(
-      decoder_.get(),
-      disp_info,
-      decoder_param_,
-      (CUstream)device_config_.stream,
-      dst_ptr,
-      width);
+  // Push frame to FrameBuffer
+  frame_buffer_obj_->push((void*)mapping.frame, mapping.pitch);
 
-  batch_frame_index_++;
   return 1;
 }
 
@@ -688,6 +667,16 @@ CUDABuffer NvDecDecoderCore::create_nv12_buffer(size_t max_frames) const {
       sizeof(uint8_t)};
 }
 
+void NvDecDecoderCore::init_frame_buffer(size_t num_frames) {
+  int width =
+      target_width_ > 0 ? target_width_ : src_width_ - crop_.left - crop_.right;
+  int height = target_height_ > 0 ? target_height_
+                                  : src_height_ - crop_.top - crop_.bottom;
+
+  frame_buffer_obj_ =
+      std::make_unique<FrameBuffer>(num_frames, width, height, device_config_);
+}
+
 CUDABuffer NvDecDecoderCore::decode_all(
     spdl::core::VideoPackets* packets,
     bool flush_) {
@@ -697,18 +686,10 @@ CUDABuffer NvDecDecoderCore::decode_all(
   TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_all");
 
   size_t max_frames = pending_frames_ + packets->pkts.get_packets().size();
-  CUDABuffer ret = create_nv12_buffer(max_frames);
 
-  // Set up batch mode state
-  batch_buffer_ = &ret;
-  batch_frame_index_ = 0;
-  batch_max_frames_ = ret.shape[0];
+  // Set up FrameBuffer for batch mode
+  init_frame_buffer(max_frames);
   time_window_ = packets->timestamp;
-
-  // We still need frame_buffer_ to be set for the non-batch path
-  // (though it won't be used in batch mode)
-  std::vector<CUDABuffer> dummy_buffer;
-  frame_buffer_ = &dummy_buffer;
 
   unsigned long flags = CUVID_PKT_TIMESTAMP;
   switch (codec_id_) {
@@ -731,48 +712,45 @@ CUDABuffer NvDecDecoderCore::decode_all(
     flush_decoder();
   }
 
-  // Save the actual frame count before resetting batch mode state
-  ret.shape[0] = batch_frame_index_;
+  // Flush any remaining frames in the current buffer
+  frame_buffer_obj_->flush();
+
+  // Retrieve the buffer from FrameBuffer
+  if (frame_buffer_obj_->empty()) {
+    SPDL_FAIL_INTERNAL("No frames were decoded.");
+  }
+  CUDABufferPtr ret_ptr = frame_buffer_obj_->pop();
 
   // Reset batch mode state
-  batch_buffer_ = nullptr;
-  batch_frame_index_ = 0;
-  batch_max_frames_ = 0;
-  frame_buffer_ = nullptr;
+  frame_buffer_obj_.reset();
 
-  return ret;
+  return std::move(*ret_ptr);
 }
 
 CUDABuffer NvDecDecoderCore::flush() {
   if (device_config_.device_index < 0) {
     SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
   }
-  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_all");
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::flush");
 
-  CUDABuffer ret = create_nv12_buffer(pending_frames_);
-
-  // Set up batch mode state
-  batch_buffer_ = &ret;
-  batch_frame_index_ = 0;
-  batch_max_frames_ = ret.shape[0];
-
-  // We still need frame_buffer_ to be set for the non-batch path
-  // (though it won't be used in batch mode)
-  std::vector<CUDABuffer> dummy_buffer;
-  frame_buffer_ = &dummy_buffer;
+  // Set up FrameBuffer for batch mode
+  init_frame_buffer(pending_frames_);
 
   flush_decoder();
 
-  // Save the actual frame count before resetting batch mode state
-  ret.shape[0] = batch_frame_index_;
+  // Flush any remaining frames in the current buffer
+  frame_buffer_obj_->flush();
+
+  // Retrieve the buffer from FrameBuffer
+  if (frame_buffer_obj_->empty()) {
+    SPDL_FAIL_INTERNAL("No frames were decoded.");
+  }
+  CUDABufferPtr ret_ptr = frame_buffer_obj_->pop();
 
   // Reset batch mode state
-  batch_buffer_ = nullptr;
-  batch_frame_index_ = 0;
-  batch_max_frames_ = 0;
-  frame_buffer_ = nullptr;
+  frame_buffer_obj_.reset();
 
-  return ret;
+  return std::move(*ret_ptr);
 }
 
 } // namespace spdl::cuda::detail

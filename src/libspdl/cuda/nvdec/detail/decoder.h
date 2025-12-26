@@ -12,11 +12,13 @@
 #include <libspdl/core/types.h>
 #include <libspdl/cuda/buffer.h>
 
+#include "libspdl/cuda/nvdec/detail/buffer.h"
 #include "libspdl/cuda/nvdec/detail/wrapper.h"
 
 #include <cuda.h>
 #include <nvcuvid.h>
 
+#include <memory>
 #include <vector>
 
 namespace spdl::cuda::detail {
@@ -100,18 +102,10 @@ class NvDecDecoderCore {
   // Storage for the output frames
   // Used as a reference point for the callback during the decoding.
   std::vector<CUDABuffer>* frame_buffer_;
+  // FrameBuffer for batch mode decoding
+  std::unique_ptr<FrameBuffer> frame_buffer_obj_;
   // The user-specified timestamp. Frames outside of this will be discarded.
   std::optional<std::tuple<Rational, Rational>> time_window_ = std::nullopt;
-  //---------------------------------------------------------------------------
-
-  //---------------------------------------------------------------------------
-  // Batch decoding mode state variables
-  // When batch_buffer_ is non-null, decoded frames are written directly to
-  // the pre-allocated buffer instead of creating new allocations per frame.
-  //---------------------------------------------------------------------------
-  CUDABuffer* batch_buffer_ = nullptr;
-  size_t batch_frame_index_ = 0;
-  size_t batch_max_frames_ = 0;
   //---------------------------------------------------------------------------
 
   //---------------------------------------------------------------------------
@@ -145,6 +139,9 @@ class NvDecDecoderCore {
  private:
   // Create pre-allocated NV12 buffer for batch decoding
   CUDABuffer create_nv12_buffer(size_t num_packets) const;
+
+  // Initialize FrameBuffer for batch mode decoding
+  void init_frame_buffer(size_t num_frames);
 
   // Decode packets using `cuvidParseVideoData`. It synchronously triggers
   // callbacks.
