@@ -50,6 +50,8 @@ class FrameBuffer {
   FrameBuffer(FrameBuffer&&) = delete;
   FrameBuffer& operator=(FrameBuffer&&) = delete;
 
+  ~FrameBuffer() = default;
+
   /// Returns whether the buffer queue is empty.
   ///
   /// @return true if no completed buffers are available, false otherwise

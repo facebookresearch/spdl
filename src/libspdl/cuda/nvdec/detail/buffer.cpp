@@ -12,7 +12,6 @@
 #include "libspdl/cuda/detail/utils.h"
 
 #include <cuda.h>
-#include <cuda_runtime.h>
 
 #include <fmt/core.h>
 

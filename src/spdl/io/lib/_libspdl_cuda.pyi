@@ -49,83 +49,56 @@ class CUDABuffer:
 
 class NvDecDecoder:
     """
-    Decods video packets using NVDEC hardware acceleration.
+    Decodes video packets using NVDEC hardware acceleration.
 
     Use :py:func:`nvdec_decoder` to instantiate.
 
-    To decode videos with NVDEC, you provide the decoder configuration
-    and codec information directly to :py:func:`nvdec_decoder`, then feed
-    video packets. Finally, call flush to let the decoder know that it
-    reached the end of the video stream, so that the decoder flushes its
-    internally buffered frames.
+    This decoder supports two decoding workflows:
+
+    1. **Batch decoding** - Decode all packets at once:
+
+       .. code-block:: python
+
+          decoder = spdl.io.nvdec_decoder(cuda_config, codec)
+          nv12_buffer = decoder.decode_packets(packets)
+          # Buffer shape: [num_frames, height*1.5, width]
+
+    2. **Streaming decoding** - Process packets incrementally with batched output:
+
+       .. code-block:: python
+
+          decoder = spdl.io.nvdec_decoder(cuda_config, codec)
+          decoder.init_buffer(num_frames)  # Initialize frame buffer
+
+          for packets in packet_stream:
+              for batch in decoder.streaming_decode_packets(packets):
+                  # batch is CUDABuffer with shape [num_frames, h*1.5, w]
+                  rgb = spdl.io.nv12_to_rgb([batch], cuda_config)
+                  # Process rgb frames
+
+          # Flush and get remaining frames
+          for batch in decoder.flush():
+              rgb = spdl.io.nv12_to_rgb([batch], cuda_config)
+              # Process final frames
 
     .. note::
 
-       To decode H264 and HEVC videos, the packets must be Annex B
-       format. You can convert video packets to Annex B format by
-       applying bit stream filter while demuxing or after demuxing.
-       See the examples bellow.
+       To decode H264 and HEVC videos, packets must be in Annex B format.
+       Use :py:func:`~spdl.io.apply_bsf` to convert:
+
+       .. code-block:: python
+
+          if codec.name in ("h264", "hevc"):
+              packets = spdl.io.apply_bsf(packets, f"{codec.name}_mp4toannexb")
 
     .. seealso::
 
-       - :py:func:`decode_packets_nvdec`: Decode video packets using
-         NVDEC.
-       - :py:func:`streaming_load_video_nvdec`: Decode video frames
-         from source in streaming fashion.
-       - :py:mod:`streaming_nvdec_decoding`: Demonstrates how to
-         decode a long video using NVDEC.
-
-    .. admonition:: Example - decoding the whole video
-
-       .. code-block::
-
-          cuda_config = spdl.io.cuda_config(device_index=0)
-
-          packets = spdl.io.demux_video(src)
-          # Convert to Annex B format
-          if (c := packets.codec.name) in ("h264", "hevc"):
-              packets = spdl.io.apply_bsf(f"{c}_mp4toannexb")
-
-          # Initialize the decoder
-          decoder = nvdec_decoder(cuda_config, packets.codec)
-
-          # Decode packets
-          frames = decoder.decode(packets)
-
-          # Done
-          frames += decoder.flush()
-
-          # Convert (and batch) the NV12 frames into RGB
-          frames = spdl.io.nv12_to_rgb(frames)
-
-    .. admonition:: Example - incremental decoding
-
-       .. code-block::
-
-          cuda_config = spdl.io.cuda_config(device_index=0)
-
-          demuxer = spdl.io.Demuxer(src)
-          codec = demuxer.video_codec
-
-          match codec.name:
-              case "h264" | "hevc":
-                  bsf = f"{codec.name}_mp4toannexb"
-              case _:
-                  bsf = None
-
-          # Initialize the decoder
-          decoder = nvdec_decoder(cuda_config, codec)
-
-          for packets in demuxer.streaming_demux_video(10, bsf=bsf):
-              buffer = decoder.decode(packets)
-              buffer = spdl.io.nv12_to_rgb(buffer)
-              # Process buffer here
-
-          buffer = decoder.flush()
-          buffer = spdl.io.nv12_to_rgb(buffer)
+       - :py:func:`decode_packets_nvdec`: Decode video packets using NVDEC
+       - :py:func:`streaming_load_video_nvdec`: Decode video frames in streaming fashion
+       - :py:mod:`streaming_nvdec_decoding`: Tutorial for streaming video decode
     """
 
-    def init(self, device_config: CUDAConfig, codec: spdl.io.lib._libspdl.VideoCodec, *, crop_left: int = 0, crop_top: int = 0, crop_right: int = 0, crop_bottom: int = 0, scale_width: int = -1, scale_height: int = -1) -> None:
+    def init_decoder(self, device_config: CUDAConfig, codec: spdl.io.lib._libspdl.VideoCodec, *, crop_left: int = 0, crop_top: int = 0, crop_right: int = 0, crop_bottom: int = 0, scale_width: int = -1, scale_height: int = -1) -> None:
         """
         Initialize the decoder.
 
@@ -163,34 +136,7 @@ class NvDecDecoder:
                 Resizing is applied after cropping.
         """
 
-    def decode(self, packets: spdl.io.lib._libspdl.VideoPackets) -> list[CUDABuffer]:
-        """
-        Decode video frames from the give packets.
-
-        .. note::
-
-           Due to how video codec works, the number of returned frames
-           do not necessarily match the number of packets provided.
-
-           The method can return less number of frames or more number of
-           frames.
-
-        Args:
-            packets: Video packets.
-
-        Returns:
-            The decoded frames.
-        """
-
-    def flush(self) -> list[CUDABuffer]:
-        """
-        Notify the decoder the end of video stream, and fetch buffered frames.
-
-        Returns:
-            The decoded frames. (can be empty)
-        """
-
-    def decode_all(self, packets: spdl.io.lib._libspdl.VideoPackets) -> CUDABuffer:
+    def decode_packets(self, packets: spdl.io.lib._libspdl.VideoPackets) -> CUDABuffer:
         """
         Decode all packets and return NV12 buffer.
 
@@ -206,6 +152,46 @@ class NvDecDecoder:
             the actual number of decoded frames, which should match
             the number of packets.
         """
+
+    def init_buffer(self, num_frames: int) -> None:
+        """
+        Initialize frame buffer for streaming decode.
+
+        This must be called before using streaming_decode_packets() for streaming decode.
+
+        Args:
+            num_frames: The number of frames per batch.
+        """
+
+    def flush(self) -> CUDABufferIterator:
+        """
+        Flush the decoder and yield remaining batches.
+
+        Call this method at the end of video stream to flush the decoder
+        and retrieve any remaining buffered frames as batches.
+
+        Returns:
+            Iterator that yields remaining CUDABuffer batches in NV12 format.
+        """
+
+    def streaming_decode_packets(self, packets: spdl.io.lib._libspdl.VideoPackets) -> CUDABufferIterator:
+        """
+        Streaming decode packets and yield batches.
+
+        This method decodes packets and yields batches of frames as they become ready.
+        The frame buffer must be initialized with init_buffer() before calling this.
+
+        Args:
+            packets: Video packets to decode.
+
+        Returns:
+            Iterator that yields CUDABuffer batches in NV12 format.
+        """
+
+class CUDABufferIterator:
+    def __iter__(self) -> CUDABufferIterator: ...
+
+    def __next__(self) -> CUDABuffer: ...
 
 @overload
 def decode_image_nvjpeg(data: bytes, *, device_config: CUDAConfig, scale_width: int = -1, scale_height: int = -1, pix_fmt: str = 'rgb', sync: bool = True, _zero_clear: bool = False) -> CUDABuffer: ...

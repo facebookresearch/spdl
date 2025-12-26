@@ -15,6 +15,14 @@
 
 #include <fmt/core.h>
 
+// Macro for hiding argument names if not using this module.
+// So as to workaround -Werror=unused-variable
+#ifdef SPDL_USE_NVCODEC
+#define _(var_name) var_name
+#else
+#define _(var_name)
+#endif
+
 namespace spdl::cuda {
 
 namespace {
@@ -56,19 +64,32 @@ void validate_nvdec_params(
 }
 } // namespace
 
-NvDecDecoder::NvDecDecoder() : core_(new detail::NvDecDecoderCore()) {}
+NvDecDecoder::NvDecDecoder()
+#ifdef SPDL_USE_NVCODEC
+    : core_(new detail::NvDecDecoderCore())
+#endif
+{
+}
 
 NvDecDecoder::~NvDecDecoder() {
+#ifndef SPDL_USE_NVCODEC
+  NOT_SUPPORTED_NVCODEC;
+#else
   if (core_) {
     delete core_;
   }
+#endif
 }
 
 void NvDecDecoder::reset() {
+#ifndef SPDL_USE_NVCODEC
+  NOT_SUPPORTED_NVCODEC;
+#else
   core_->reset();
+#endif
 }
 
-void NvDecDecoder::init(
+void NvDecDecoder::init_decoder(
     // device config
     const CUDAConfig& cuda_config,
     // Source codec information
@@ -77,24 +98,63 @@ void NvDecDecoder::init(
     CropArea crop,
     int width,
     int height) {
+#ifndef SPDL_USE_NVCODEC
+  NOT_SUPPORTED_NVCODEC;
+#else
   validate_nvdec_params(cuda_config.device_index, crop, width, height);
-  core_->init(cuda_config, codec, crop, width, height);
+  core_->init_decoder(cuda_config, codec, crop, width, height);
+#endif
 }
 
-std::vector<CUDABuffer> NvDecDecoder::decode(
-    spdl::core::VideoPacketsPtr packets) {
-  std::vector<CUDABuffer> ret;
-  core_->decode_packets(packets.get(), &ret);
-  return ret;
+CUDABufferGenerator NvDecDecoder::flush() {
+#ifndef SPDL_USE_NVCODEC
+  NOT_SUPPORTED_NVCODEC;
+#else
+  TRACE_EVENT("nvdec", "flush");
+
+  // Flush decoder
+  core_->flush();
+
+  // Yield all remaining batches from the frame buffer
+  while (core_->has_batch_ready()) {
+    co_yield core_->pop_batch();
+  }
+#endif
 }
 
-std::vector<CUDABuffer> NvDecDecoder::flush() {
-  std::vector<CUDABuffer> ret;
-  core_->flush(&ret);
-  return ret;
+void NvDecDecoder::init_buffer(size_t num_frames) {
+#ifndef SPDL_USE_NVCODEC
+  NOT_SUPPORTED_NVCODEC;
+#else
+  core_->init_buffer(num_frames);
+#endif
 }
 
-CUDABuffer NvDecDecoder::decode_all(spdl::core::VideoPacketsPtr packets) {
-  return core_->decode_all(packets.get());
+CUDABuffer NvDecDecoder::decode_packets(spdl::core::VideoPacketsPtr packets) {
+#ifndef SPDL_USE_NVCODEC
+  NOT_SUPPORTED_NVCODEC;
+#else
+  return core_->decode_packets(packets.get());
+#endif
 }
+
+CUDABufferGenerator NvDecDecoder::streaming_decode_packets(
+    spdl::core::VideoPacketsPtr _(packets)) {
+#ifndef SPDL_USE_NVCODEC
+  NOT_SUPPORTED_NVCODEC;
+#else
+  TRACE_EVENT("nvdec", "streaming_decode_packets");
+
+  // Process packets one by one
+  for (auto pkt : packets->pkts.iter_data()) {
+    core_->decode_packet(pkt);
+
+    // Check if buffer has batch ready and yield
+    while (core_->has_batch_ready()) {
+      co_yield core_->pop_batch();
+    }
+  }
+#endif
+}
+
 } // namespace spdl::cuda

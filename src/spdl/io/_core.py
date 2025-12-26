@@ -805,7 +805,6 @@ def decode_packets_nvdec(
             "NvDecDecoder object manually."
         )
 
-    assert codec is not None  # for type-checker
     match codec.name:
         case "h264":
             packets = apply_bsf(packets, "h264_mp4toannexb")
@@ -814,10 +813,9 @@ def decode_packets_nvdec(
         case _:
             pass
 
-    # Create decoder and decode all at once
     decoder = nvdec_decoder(
         device_config,
-        packets.codec,
+        codec,
         crop_left=crop_left,
         crop_top=crop_top,
         crop_right=crop_right,
@@ -825,8 +823,7 @@ def decode_packets_nvdec(
         scale_width=scale_width,
         scale_height=scale_height,
     )
-
-    buffer = decoder.decode_all(packets)
+    buffer = decoder.decode_packets(packets)
 
     # Convert NV12 to RGB/BGR using batched function
     match pix_fmt:
@@ -906,8 +903,8 @@ def _del_cached_decoder() -> None:
 
 
 def nvdec_decoder(
-    cuda_config: "CUDAConfig | None" = None,
-    codec: "VideoCodec | None" = None,
+    cuda_config: "CUDAConfig",
+    codec: "VideoCodec",
     *,
     use_cache: bool = True,
     crop_left: int = 0,
@@ -939,6 +936,13 @@ def nvdec_decoder(
         scale_width, scale_height (int): *Optional:* Resize the frame.
             Resizing is applied after cropping.
 
+    .. versionchanged:: 0.2.0
+
+       The ``cuda_config`` and ``codec`` arguments are now required.
+       The ``decoder.init()`` method was renamed to
+       ``decoder.init_decoder()``, and it is called by this function,
+       so it is no necessary to call it explicitly.
+
     .. versionchanged:: 0.1.7
 
         Calling ``nvdec_decoder()`` without ``cuda_config`` and ``codec`` is
@@ -960,17 +964,16 @@ def nvdec_decoder(
         _del_cached_decoder()
         decoder = _get_decoder()
 
-    if cuda_config is not None and codec is not None:
-        decoder.init(
-            cuda_config,
-            codec,
-            crop_left=crop_left,
-            crop_top=crop_top,
-            crop_right=crop_right,
-            crop_bottom=crop_bottom,
-            scale_width=scale_width,
-            scale_height=scale_height,
-        )
+    decoder.init_decoder(
+        cuda_config,
+        codec,
+        crop_left=crop_left,
+        crop_top=crop_top,
+        crop_right=crop_right,
+        crop_bottom=crop_bottom,
+        scale_width=scale_width,
+        scale_height=scale_height,
+    )
 
     return decoder
 
