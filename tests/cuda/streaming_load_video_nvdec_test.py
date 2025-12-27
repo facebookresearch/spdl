@@ -39,26 +39,31 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
             num_frames=32,
         )
 
-        chunks = list(streamer)
-        total_frames = sum(len(chunk) for chunk in chunks)
+        batches = list(streamer)
 
-        # We expect 100 frames total (3 chunks of 32, 32, 36)
+        # Calculate total frames from all batches using CUDA array interface
+        total_frames = sum(
+            batch.__cuda_array_interface__["shape"][0] for batch in batches
+        )
+
+        # We expect 100 frames total (3 batches of 32, 32, 32, 4)
         self.assertEqual(total_frames, 100)
-        self.assertEqual(len(chunks), 4)  # 32, 32, 32, 4 frames
+        self.assertEqual(len(batches), 4)  # 32, 32, 32, 4 frames
 
-        # Check first chunk
-        first_chunk = chunks[0]
-        self.assertEqual(len(first_chunk), 32)
+        # Check first batch
+        first_batch = batches[0]
+        batch_shape = first_batch.__cuda_array_interface__["shape"]
+        self.assertEqual(batch_shape[0], 32)  # 32 frames in batch
 
-        # Convert first buffer to tensor to validate format
-        first_buffer = first_chunk[0]
-        tensor = spdl.io.to_torch(first_buffer)
+        # Convert first batch to tensor to validate format
+        tensor = spdl.io.to_torch(first_batch)
 
         # NV12 format: height = original_height + original_height // 2
         # testsrc default is 320x240, so NV12 height = 240 + 120 = 360
-        # Shape is (height, width) not (channels, height, width)
-        self.assertEqual(tensor.shape[0], 360)  # Height in NV12 format
-        self.assertEqual(tensor.shape[1], 320)  # Width
+        # Shape is (num_frames, height, width)
+        self.assertEqual(tensor.shape[0], 32)  # Number of frames
+        self.assertEqual(tensor.shape[1], 360)  # Height in NV12 format
+        self.assertEqual(tensor.shape[2], 320)  # Width
         self.assertEqual(tensor.dtype, torch.uint8)
 
     def test_streaming_load_video_nvdec_with_scaling(self) -> None:
@@ -76,20 +81,23 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
             },
         )
 
-        chunks = list(streamer)
-        total_frames = sum(len(chunk) for chunk in chunks)
+        batches = list(streamer)
+        total_frames = sum(
+            batch.__cuda_array_interface__["shape"][0] for batch in batches
+        )
 
         self.assertEqual(total_frames, 100)
 
         # Check frame dimensions
-        first_buffer = chunks[0][0]
-        tensor = spdl.io.to_torch(first_buffer)
+        first_batch = batches[0]
+        tensor = spdl.io.to_torch(first_batch)
 
         # NV12 format: height = scaled_height + scaled_height // 2
         # Scaled to 160x120, so NV12 height = 120 + 60 = 180
-        # Shape is (height, width) not (channels, height, width)
-        self.assertEqual(tensor.shape[0], 180)  # Scaled NV12 height
-        self.assertEqual(tensor.shape[1], 160)  # Scaled width
+        # Shape is (num_frames, height, width)
+        self.assertEqual(tensor.shape[0], 16)  # Number of frames
+        self.assertEqual(tensor.shape[1], 180)  # Scaled NV12 height
+        self.assertEqual(tensor.shape[2], 160)  # Scaled width
 
     def test_streaming_load_video_nvdec_with_cropping(self) -> None:
         """Can stream video frames with cropping"""
@@ -111,14 +119,16 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
             },
         )
 
-        chunks = list(streamer)
-        total_frames = sum(len(chunk) for chunk in chunks)
+        batches = list(streamer)
+        total_frames = sum(
+            batch.__cuda_array_interface__["shape"][0] for batch in batches
+        )
 
         self.assertEqual(total_frames, 100)
 
         # Check cropped dimensions
-        first_buffer = chunks[0][0]
-        tensor = spdl.io.to_torch(first_buffer)
+        first_batch = batches[0]
+        tensor = spdl.io.to_torch(first_batch)
 
         # Cropped dimensions: 320 - 100 - 50 = 170 width
         # 240 - 40 - 80 = 120 height
@@ -127,9 +137,10 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
         expected_height_yuv = 240 - crop_top - crop_bottom
         expected_nv12_height = expected_height_yuv + expected_height_yuv // 2
 
-        # Shape is (height, width) not (channels, height, width)
-        self.assertEqual(tensor.shape[0], expected_nv12_height)
-        self.assertEqual(tensor.shape[1], expected_width)
+        # Shape is (num_frames, height, width)
+        self.assertEqual(tensor.shape[0], 25)  # Number of frames
+        self.assertEqual(tensor.shape[1], expected_nv12_height)
+        self.assertEqual(tensor.shape[2], expected_width)
 
     def test_streaming_load_video_nvdec_small_chunks(self) -> None:
         """Can stream video with small chunk sizes"""
@@ -142,16 +153,18 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
             num_frames=5,
         )
 
-        chunks = list(streamer)
-        total_frames = sum(len(chunk) for chunk in chunks)
+        batches = list(streamer)
+        total_frames = sum(
+            batch.__cuda_array_interface__["shape"][0] for batch in batches
+        )
 
-        # 100 frames with chunk size of 5 should give 20 chunks
+        # 100 frames with batch size of 5 should give 20 batches
         self.assertEqual(total_frames, 100)
-        self.assertEqual(len(chunks), 20)
+        self.assertEqual(len(batches), 20)
 
-        # Each chunk should have 5 frames
-        for chunk in chunks:
-            self.assertEqual(len(chunk), 5)
+        # Each batch should have 5 frames
+        for batch in batches:
+            self.assertEqual(batch.__cuda_array_interface__["shape"][0], 5)
 
     def test_streaming_load_video_nvdec_to_rgb(self) -> None:
         """Can convert NV12 frames to RGB during streaming"""
@@ -164,12 +177,13 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
             num_frames=32,
         )
 
-        # Get first chunk and convert to RGB
-        first_chunk = next(iter(streamer))
-        self.assertEqual(len(first_chunk), 32)
+        # Get first batch and convert to RGB
+        first_batch = next(iter(streamer))
+        num_frames = first_batch.__cuda_array_interface__["shape"][0]
+        self.assertEqual(num_frames, 32)  # 32 frames in batch
 
-        # Convert NV12 to RGB
-        rgb_buffer = spdl.io.nv12_to_rgb(first_chunk, device_config=device_config)
+        # Convert batched NV12 to RGB using the batched conversion function
+        rgb_buffer = spdl.io.nv12_to_rgb(first_batch, device_config=device_config)
         rgb_tensor = spdl.io.to_torch(rgb_buffer)
 
         # RGB format should be (N, 3, H, W)
@@ -203,8 +217,42 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
             num_frames=200,  # More than 100 frames in video
         )
 
-        chunks = list(streamer)
+        batches = list(streamer)
 
-        # Should get 1 chunk with all 100 frames
-        self.assertEqual(len(chunks), 1)
-        self.assertEqual(len(chunks[0]), 100)
+        # Should get 1 batch with all 100 frames
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches[0].__cuda_array_interface__["shape"][0], 100)
+
+    def test_streaming_load_video_nvdec_decoder_cache(self) -> None:
+        """Using cached decoder can decode frames properly"""
+
+        # Setup: Create test video sample
+        h264 = _get_h264_sample()
+        cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
+
+        packets = spdl.io.demux_video(h264.path)
+        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        codec = packets.codec
+        assert codec is not None
+        decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=False)
+        ref = spdl.io.to_torch(decoder.decode_packets(packets.clone()))
+
+        packets = spdl.io.demux_video(h264.path, timestamp=(1.0, 2.0))
+        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        codec = packets.codec
+        assert codec is not None
+        decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=False)
+        _ = spdl.io.to_torch(decoder.decode_packets(packets.clone()))
+        # implementation detail: at this point, the timestamp is stored in decoder.
+        # it must be internally reset before the next decoding.
+
+        tensors = []
+        for buffer in spdl.io.streaming_load_video_nvdec(
+            h264.path, cuda_config, num_frames=16
+        ):
+            tensors.append(spdl.io.to_torch(buffer))
+        hyp = torch.cat(tensors)
+
+        print(f"{hyp.shape=}")
+        print(f"{ref.shape=}")
+        torch.testing.assert_close(hyp, ref)
