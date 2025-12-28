@@ -182,7 +182,7 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
         num_frames = first_batch.__cuda_array_interface__["shape"][0]
         self.assertEqual(num_frames, 32)  # 32 frames in batch
 
-        # Convert batched NV12 to RGB using the batched conversion function
+        # Convert batched NV12 to RGB
         rgb_buffer = spdl.io.nv12_to_rgb(first_batch, device_config=device_config)
         rgb_tensor = spdl.io.to_torch(rgb_buffer)
 

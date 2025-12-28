@@ -1168,13 +1168,13 @@ def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
 # Color conversion
 ################################################################################
 def nv12_to_rgb(
-    buffers: "list[CUDABuffer] | CUDABuffer",
+    buffers: "CUDABuffer",
     *,
     device_config: "CUDAConfig",
     coeff: int = 1,
     sync: bool = False,
 ) -> "CUDABuffer":
-    """Given CUDA buffers of NV12 images, batch and convert them to (interleaved) RGB.
+    """Given a batched CUDA buffer of NV12 images, convert them to (planar) RGB.
 
     The pixel values are converted with the following formula;
 
@@ -1188,9 +1188,9 @@ def nv12_to_rgb(
     By default, it uses BT709 conversion.
 
     Args:
-        buffers: A list of buffers. The size of images must be same.
-            Since it's NV12 format, the expected input size is ``(H + H/2, W)``.
-        device_config: Secifies the target CUDA device, and stream to use.
+        buffers: A batched buffer with shape ``[num_frames, H*1.5, W]`` where H*1.5
+            accounts for NV12 format.
+        device_config: Specifies the target CUDA device, and stream to use.
         coeff: Select the matrix coefficient used for color conversion.
             The following values are supported.
 
@@ -1208,20 +1208,19 @@ def nv12_to_rgb(
         sync: If True, the function waits for the completion after launching the kernel.
 
     Returns:
-        A CUDA buffer object with the shape ``(batch, height, width, color=3)``.
+        A CUDA buffer object with the shape ``(num_frames, 3, height, width)``.
     """
     ret = _libspdl_cuda.nv12_to_planar_rgb(
-        buffers,  # pyre-ignore[6]
+        buffers,
         device_config=device_config,
         matrix_coeff=coeff,
+        sync=sync,
     )
-    if sync:
-        _libspdl_cuda.synchronize_stream(device_config)
     return ret
 
 
 def nv12_to_bgr(
-    buffers: "list[CUDABuffer] | CUDABuffer",
+    buffers: "CUDABuffer",
     *,
     device_config: "CUDAConfig",
     coeff: int = 1,
@@ -1229,12 +1228,11 @@ def nv12_to_bgr(
 ) -> "CUDABuffer":
     """Same as :py:func:`nv12_to_rgb`, but the order of the color channel is BGR."""
     ret = _libspdl_cuda.nv12_to_planar_bgr(
-        buffers,  # pyre-ignore[6]
+        buffers,
         device_config=device_config,
         matrix_coeff=coeff,
+        sync=sync,
     )
-    if sync:
-        _libspdl_cuda.synchronize_stream(device_config)
     return ret
 
 

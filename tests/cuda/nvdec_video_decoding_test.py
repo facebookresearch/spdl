@@ -547,7 +547,7 @@ class TestDecodePackets(unittest.TestCase):
         self.assertEqual(tensor.shape[2], 320)  # testsrc default width
 
     def test_decode_packets_matches_streaming_decode(self) -> None:
-        """Verify decode_packets produces the same result as streaming decode."""
+        """Verify decode_packets produces the same result as streaming_load_video_nvdec."""
         # Setup: Create test video sample
         h264 = _get_h264_sample()
         cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
