@@ -805,7 +805,6 @@ def decode_packets_nvdec(
             "NvDecDecoder object manually."
         )
 
-    assert codec is not None  # for type-checker
     match codec.name:
         case "h264":
             packets = apply_bsf(packets, "h264_mp4toannexb")
@@ -814,10 +813,9 @@ def decode_packets_nvdec(
         case _:
             pass
 
-    # Create decoder and decode all at once
     decoder = nvdec_decoder(
         device_config,
-        packets.codec,
+        codec,
         crop_left=crop_left,
         crop_top=crop_top,
         crop_right=crop_right,
@@ -825,8 +823,7 @@ def decode_packets_nvdec(
         scale_width=scale_width,
         scale_height=scale_height,
     )
-
-    buffer = decoder.decode_all(packets)
+    buffer = decoder.decode_packets(packets)
 
     # Convert NV12 to RGB/BGR using batched function
     match pix_fmt:
@@ -906,8 +903,8 @@ def _del_cached_decoder() -> None:
 
 
 def nvdec_decoder(
-    cuda_config: "CUDAConfig | None" = None,
-    codec: "VideoCodec | None" = None,
+    cuda_config: "CUDAConfig",
+    codec: "VideoCodec",
     *,
     use_cache: bool = True,
     crop_left: int = 0,
@@ -939,6 +936,13 @@ def nvdec_decoder(
         scale_width, scale_height (int): *Optional:* Resize the frame.
             Resizing is applied after cropping.
 
+    .. versionchanged:: 0.2.0
+
+       The ``cuda_config`` and ``codec`` arguments are now required.
+       The ``decoder.init()`` method was renamed to
+       ``decoder.init_decoder()``, and it is called by this function,
+       so it is no necessary to call it explicitly.
+
     .. versionchanged:: 0.1.7
 
         Calling ``nvdec_decoder()`` without ``cuda_config`` and ``codec`` is
@@ -960,17 +964,16 @@ def nvdec_decoder(
         _del_cached_decoder()
         decoder = _get_decoder()
 
-    if cuda_config is not None and codec is not None:
-        decoder.init(
-            cuda_config,
-            codec,
-            crop_left=crop_left,
-            crop_top=crop_top,
-            crop_right=crop_right,
-            crop_bottom=crop_bottom,
-            scale_width=scale_width,
-            scale_height=scale_height,
-        )
+    decoder.init_decoder(
+        cuda_config,
+        codec,
+        crop_left=crop_left,
+        crop_top=crop_top,
+        crop_right=crop_right,
+        crop_bottom=crop_bottom,
+        scale_width=scale_width,
+        scale_height=scale_height,
+    )
 
     return decoder
 
@@ -1165,13 +1168,13 @@ def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
 # Color conversion
 ################################################################################
 def nv12_to_rgb(
-    buffers: "list[CUDABuffer] | CUDABuffer",
+    buffers: "CUDABuffer",
     *,
     device_config: "CUDAConfig",
     coeff: int = 1,
     sync: bool = False,
 ) -> "CUDABuffer":
-    """Given CUDA buffers of NV12 images, batch and convert them to (interleaved) RGB.
+    """Given a batched CUDA buffer of NV12 images, convert them to (planar) RGB.
 
     The pixel values are converted with the following formula;
 
@@ -1185,9 +1188,9 @@ def nv12_to_rgb(
     By default, it uses BT709 conversion.
 
     Args:
-        buffers: A list of buffers. The size of images must be same.
-            Since it's NV12 format, the expected input size is ``(H + H/2, W)``.
-        device_config: Secifies the target CUDA device, and stream to use.
+        buffers: A batched buffer with shape ``[num_frames, H*1.5, W]`` where H*1.5
+            accounts for NV12 format.
+        device_config: Specifies the target CUDA device, and stream to use.
         coeff: Select the matrix coefficient used for color conversion.
             The following values are supported.
 
@@ -1205,20 +1208,19 @@ def nv12_to_rgb(
         sync: If True, the function waits for the completion after launching the kernel.
 
     Returns:
-        A CUDA buffer object with the shape ``(batch, height, width, color=3)``.
+        A CUDA buffer object with the shape ``(num_frames, 3, height, width)``.
     """
     ret = _libspdl_cuda.nv12_to_planar_rgb(
-        buffers,  # pyre-ignore[6]
+        buffers,
         device_config=device_config,
         matrix_coeff=coeff,
+        sync=sync,
     )
-    if sync:
-        _libspdl_cuda.synchronize_stream(device_config)
     return ret
 
 
 def nv12_to_bgr(
-    buffers: "list[CUDABuffer] | CUDABuffer",
+    buffers: "CUDABuffer",
     *,
     device_config: "CUDAConfig",
     coeff: int = 1,
@@ -1226,12 +1228,11 @@ def nv12_to_bgr(
 ) -> "CUDABuffer":
     """Same as :py:func:`nv12_to_rgb`, but the order of the color channel is BGR."""
     ret = _libspdl_cuda.nv12_to_planar_bgr(
-        buffers,  # pyre-ignore[6]
+        buffers,
         device_config=device_config,
         matrix_coeff=coeff,
+        sync=sync,
     )
-    if sync:
-        _libspdl_cuda.synchronize_stream(device_config)
     return ret
 
 
