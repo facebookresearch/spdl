@@ -159,7 +159,7 @@ inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
 // NvDecDecoderCore
 ////////////////////////////////////////////////////////////////////////////////
 
-void NvDecDecoderCore::init(
+void NvDecDecoderCore::init_decoder(
     const CUDAConfig& device_config,
     const spdl::core::VideoCodec& codec,
     const CropArea& crop,
@@ -220,8 +220,9 @@ void NvDecDecoderCore::init(
   target_width_ = tgt_w;
   target_height_ = tgt_h;
 
-  // Reset pending frames counter for new stream
-  pending_frames_ = 0;
+  // Reset frame buffer for new stream
+  frame_buffer_.reset();
+  time_window_ = std::nullopt;
 }
 
 int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
@@ -338,67 +339,6 @@ int NvDecDecoderCore::handle_decode_picture(CUVIDPICPARAMS* pic_params) {
   return 1;
 }
 
-namespace {
-// Core logic for copying decoded frame from decoder's internal buffer to
-// destination. This function handles the mapping, validation, and async copy.
-//
-// Args:
-//   decoder: The NVDEC decoder handle
-//   disp_info: Display info from parser callback
-//   decoder_param: Decoder parameters (for dimensions and format)
-//   stream: CUDA stream for async operations
-//   dst_ptr: Destination buffer pointer
-//   dst_pitch: Pitch of destination buffer (typically width for contiguous)
-void copy_decoded_frame(
-    CUvideodecoder decoder,
-    CUVIDPARSERDISPINFO* disp_info,
-    const CUVIDDECODECREATEINFO& decoder_param,
-    CUstream stream,
-    void* dst_ptr,
-    size_t dst_pitch) {
-  warn_if_error(decoder, disp_info->picture_index);
-
-  CUVIDPROCPARAMS proc_params{
-      .progressive_frame = disp_info->progressive_frame,
-      .second_field = disp_info->repeat_first_field + 1,
-      .top_field_first = disp_info->top_field_first,
-      .unpaired_field = disp_info->repeat_first_field < 0,
-      .output_stream = stream};
-
-  // Make the decoded frame available to output surface
-  MapGuard mapping(decoder, &proc_params, disp_info->picture_index);
-
-  auto width = decoder_param.ulTargetWidth;
-  auto height = decoder_param.ulTargetHeight;
-  auto h2 = height + height / 2;
-
-  auto cfg = CUDA_MEMCPY2D{
-      .srcXInBytes = 0,
-      .srcY = 0,
-      .srcMemoryType = CU_MEMORYTYPE_DEVICE,
-      .srcHost = nullptr,
-      .srcDevice = (CUdeviceptr)mapping.frame,
-      .srcArray = nullptr,
-      .srcPitch = mapping.pitch,
-
-      .dstXInBytes = 0,
-      .dstY = 0,
-      .dstMemoryType = CU_MEMORYTYPE_DEVICE,
-      .dstHost = nullptr,
-      .dstDevice = (CUdeviceptr)dst_ptr,
-      .dstArray = nullptr,
-      .dstPitch = dst_pitch,
-
-      .WidthInBytes = width,
-      .Height = h2,
-  };
-
-  TRACE_EVENT("nvdec", "cuMemcpy2DAsync");
-  CHECK_CU(cuMemcpy2DAsync(&cfg, stream), "Failed to copy decoded frame.");
-  CHECK_CU(cuStreamSynchronize(stream), "Failed to synchronize stream.");
-}
-} // namespace
-
 int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // This function is called by the parser when the decoding (including
   // post-processing, such as rescaling) is done.
@@ -415,31 +355,14 @@ int NvDecDecoderCore::handle_display_picture(CUVIDPARSERDISPINFO* disp_info) {
   // * 0: fail
   // * >=1: success
 
-  if (pending_frames_ == 0) {
-    SPDL_FAIL_INTERNAL("Invalid value pending_frames_ = 0.");
-  }
-  --pending_frames_;
+  // LOG(INFO) << "Received display pictures.";
+  // LOG(INFO) << print(disp_info);
 
   if (cb_disabled_) {
     return 1;
   }
   TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture");
 
-  // Dispatch based on mode
-  if (frame_buffer_obj_) {
-    return handle_display_picture_batch(disp_info);
-  }
-  return handle_display_picture_buffered(disp_info);
-}
-
-int NvDecDecoderCore::handle_display_picture_buffered(
-    CUVIDPARSERDISPINFO* disp_info) {
-  // Buffered mode: allocates a new buffer for each frame and appends to
-  // frame_buffer_.
-  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture_buffered");
-
-  // LOG(INFO) << "Received display pictures.";
-  // LOG(INFO) << print(disp_info);
   auto pts = to_rational(disp_info->timestamp, timebase_);
 
   VLOG(9) << fmt::format(
@@ -452,56 +375,7 @@ int NvDecDecoderCore::handle_display_picture_buffered(
     }
   }
 
-  auto width = decoder_param_.ulTargetWidth;
-  auto height = decoder_param_.ulTargetHeight;
-
-  VLOG(9) << fmt::format("{} x {}", width, height);
-
-  if (decoder_param_.OutputFormat != cudaVideoSurfaceFormat_NV12) {
-    SPDL_FAIL(
-        fmt::format(
-            "Only NV12 is supported. Found: {}",
-            get_surface_format_name(decoder_param_.OutputFormat)));
-  }
-  auto h2 = height + height / 2;
-  auto frame = std::make_shared<CUDAStorage>(width * h2, device_config_);
-
-  copy_decoded_frame(
-      decoder_.get(),
-      disp_info,
-      decoder_param_,
-      (CUstream)device_config_.stream,
-      frame->data(),
-      width);
-
-  frame_buffer_->emplace_back(
-      CUDABuffer{
-          device_config_.device_index,
-          frame,
-          {h2, width},
-          core::ElemClass::UInt,
-          sizeof(uint8_t)});
-
-  return 1;
-}
-
-int NvDecDecoderCore::handle_display_picture_batch(
-    CUVIDPARSERDISPINFO* disp_info) {
-  // Batch mode: writes decoded frames using FrameBuffer
-  TRACE_EVENT("nvdec", "NvDecDecoderCore::handle_display_picture_batch");
-
-  auto pts = to_rational(disp_info->timestamp, timebase_);
-  VLOG(9) << fmt::format(
-      " --- Frame  PTS={:.3f} ({})", to_double(pts), disp_info->timestamp);
-
-  if (time_window_) {
-    auto [s, t] = *time_window_;
-    if (!is_within_window(pts, s, t)) {
-      return 1;
-    }
-  }
-
-  if (!frame_buffer_obj_) {
+  if (!frame_buffer_) {
     SPDL_FAIL_INTERNAL("FrameBuffer not initialized.");
   }
 
@@ -530,7 +404,7 @@ int NvDecDecoderCore::handle_display_picture_batch(
   MapGuard mapping(decoder_.get(), &proc_params, disp_info->picture_index);
 
   // Push frame to FrameBuffer
-  frame_buffer_obj_->push((void*)mapping.frame, mapping.pitch);
+  frame_buffer_->push((void*)mapping.frame, mapping.pitch);
 
   return 1;
 }
@@ -569,50 +443,9 @@ int NvDecDecoderCore::handle_sei_msg(CUVIDSEIMESSAGEINFO*) {
 }
 
 void NvDecDecoderCore::decode_packet(
-    const uint8_t* data,
-    const unsigned long size,
-    int64_t pts,
+    const spdl::core::RawPacketData& pkt,
     unsigned long flags) {
-  if (!parser_) {
-    SPDL_FAIL_INTERNAL("Parser is not initialized.");
-  }
-  if (flags & CUVID_PKT_ENDOFPICTURE && !(flags & CUVID_PKT_ENDOFSTREAM)) {
-    pending_frames_++;
-  }
-
-  CUVIDSOURCEDATAPACKET packet{
-      .flags = flags, .payload_size = size, .payload = data, .timestamp = pts};
-  TRACE_EVENT("nvdec", "cuvidParseVideoData");
-  CHECK_CU(
-      cuvidParseVideoData(parser_.get(), &packet),
-      "Failed to parse video data.");
-}
-
-void NvDecDecoderCore::flush_decoder() {
-  const unsigned char data{};
-  decode_packet(&data, 0, 0, CUVID_PKT_ENDOFSTREAM);
-  if (pending_frames_ != 0) {
-    SPDL_FAIL_INTERNAL(
-        fmt::format(
-            "Flushed NVDEC decoder. The number of input packets and decoded frames do not match. "
-            "Pending frames: {}",
-            pending_frames_));
-  }
-}
-
-void NvDecDecoderCore::decode_packets(
-    spdl::core::VideoPackets* packets,
-    std::vector<CUDABuffer>* buffer) {
-  if (device_config_.device_index < 0) {
-    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
-  }
-  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_packets");
-
-  // Init the temporary state used by the decoder callback during the decoding
-  this->frame_buffer_ = buffer;
-  time_window_ = packets->timestamp;
-
-  unsigned long flags = CUVID_PKT_TIMESTAMP;
+  VLOG(9) << fmt::format("pkt.pts {}:", pkt.pts);
   switch (codec_id_) {
     case spdl::core::CodecID::MPEG4: {
       // TODO: Add special handling par
@@ -627,128 +460,101 @@ void NvDecDecoderCore::decode_packets(
     }
     default:;
   }
-
-  flags |= CUVID_PKT_ENDOFPICTURE;
-  for (auto pkt : packets->pkts.iter_data()) {
-    VLOG(9) << fmt::format("pkt.pts {}:", pkt.pts);
-    decode_packet(pkt.data, pkt.size, pkt.pts, flags);
+  // TODO: Turn these check into debug-only assertions. because they are only
+  // used by `NvDecDecoder`.
+  if (device_config_.device_index < 0) {
+    SPDL_FAIL("Decoder is not initialized. Did you call `init_decoder`?");
   }
-}
+  if (!cb_disabled_ && !frame_buffer_) {
+    SPDL_FAIL_INTERNAL(
+        "Frame buffer is not initialized. Did you call `init_buffer`?");
+  }
+  if (!parser_) {
+    SPDL_FAIL_INTERNAL("Parser is not initialized.");
+  }
 
-void NvDecDecoderCore::flush(std::vector<CUDABuffer>* buffer) {
-  this->frame_buffer_ = buffer;
-  const unsigned char data{};
-  decode_packet(&data, 0, 0, CUVID_PKT_ENDOFSTREAM);
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_packet");
+
+  CUVIDSOURCEDATAPACKET packet{
+      .flags = flags,
+      .payload_size = static_cast<unsigned long>(pkt.size),
+      .payload = pkt.data,
+      .timestamp = pkt.pts};
+
+  CHECK_CU(
+      cuvidParseVideoData(parser_.get(), &packet),
+      "Failed to parse video data.");
 }
 
 void NvDecDecoderCore::reset() {
   if (parser_) {
     cb_disabled_ = true;
-    flush(nullptr);
+    flush();
     cb_disabled_ = false;
   }
 }
 
-CUDABuffer NvDecDecoderCore::create_nv12_buffer(size_t max_frames) const {
+void NvDecDecoderCore::init_buffer(size_t num_frames) {
   int width =
       target_width_ > 0 ? target_width_ : src_width_ - crop_.left - crop_.right;
   int height = target_height_ > 0 ? target_height_
                                   : src_height_ - crop_.top - crop_.bottom;
 
-  // Pre-allocate NV12 buffer: shape is [max_frames, height*1.5, width]
-  size_t h2 = height + height / 2;
-  auto storage =
-      std::make_shared<CUDAStorage>(max_frames * h2 * width, device_config_);
-  return CUDABuffer{
-      device_config_.device_index,
-      storage,
-      {max_frames, h2, static_cast<size_t>(width)},
-      core::ElemClass::UInt,
-      sizeof(uint8_t)};
-}
-
-void NvDecDecoderCore::init_frame_buffer(size_t num_frames) {
-  int width =
-      target_width_ > 0 ? target_width_ : src_width_ - crop_.left - crop_.right;
-  int height = target_height_ > 0 ? target_height_
-                                  : src_height_ - crop_.top - crop_.bottom;
-
-  frame_buffer_obj_ =
+  frame_buffer_ =
       std::make_unique<FrameBuffer>(num_frames, width, height, device_config_);
 }
 
-CUDABuffer NvDecDecoderCore::decode_all(
-    spdl::core::VideoPackets* packets,
-    bool flush_) {
-  if (device_config_.device_index < 0) {
-    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
-  }
-  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_all");
-
-  size_t max_frames = pending_frames_ + packets->pkts.get_packets().size();
-
-  // Set up FrameBuffer for batch mode
-  init_frame_buffer(max_frames);
-  time_window_ = packets->timestamp;
-
-  unsigned long flags = CUVID_PKT_TIMESTAMP;
-  switch (codec_id_) {
-    case spdl::core::CodecID::MPEG4: {
-      SPDL_FAIL("NOT IMPLEMENTED.");
-    }
-    case spdl::core::CodecID::AV1: {
-      SPDL_FAIL("NOT IMPLEMENTED.");
-    }
-    default:;
-  }
-
-  flags |= CUVID_PKT_ENDOFPICTURE;
-  for (auto pkt : packets->pkts.iter_data()) {
-    VLOG(9) << fmt::format("pkt.pts {}:", pkt.pts);
-    decode_packet(pkt.data, pkt.size, pkt.pts, flags);
-  }
-
-  if (flush_) {
-    flush_decoder();
-  }
-
-  // Flush any remaining frames in the current buffer
-  frame_buffer_obj_->flush();
-
-  // Retrieve the buffer from FrameBuffer
-  if (frame_buffer_obj_->empty()) {
-    SPDL_FAIL_INTERNAL("No frames were decoded.");
-  }
-  CUDABufferPtr ret_ptr = frame_buffer_obj_->pop();
-
-  // Reset batch mode state
-  frame_buffer_obj_.reset();
-
-  return std::move(*ret_ptr);
+bool NvDecDecoderCore::has_batch_ready() const {
+  return frame_buffer_ && !frame_buffer_->empty();
 }
 
-CUDABuffer NvDecDecoderCore::flush() {
+CUDABuffer NvDecDecoderCore::pop_batch() {
+  if (!frame_buffer_ || frame_buffer_->empty()) {
+    SPDL_FAIL_INTERNAL("No batch ready to pop");
+  }
+  return std::move(*frame_buffer_->pop());
+}
+
+void NvDecDecoderCore::flush() {
   if (device_config_.device_index < 0) {
-    SPDL_FAIL("Decoder is not initialized. Did you call `init`?");
+    SPDL_FAIL("Decoder is not initialized. Did you call `init_decoder`?");
   }
   TRACE_EVENT("nvdec", "NvDecDecoderCore::flush");
 
+  // Flush decoder by sending empty packet with ENDOFSTREAM flag
+  unsigned char data{};
+  decode_packet({&data, 0, 0}, CUVID_PKT_ENDOFSTREAM);
+
+  if (frame_buffer_) {
+    frame_buffer_->flush();
+  }
+}
+
+CUDABuffer NvDecDecoderCore::decode_packets(spdl::core::VideoPackets* packets) {
+  if (device_config_.device_index < 0) {
+    SPDL_FAIL("Decoder is not initialized. Did you call `init_decoder`?");
+  }
+  TRACE_EVENT("nvdec", "NvDecDecoderCore::decode_packets");
+
+  size_t max_frames = packets->pkts.get_packets().size();
+
   // Set up FrameBuffer for batch mode
-  init_frame_buffer(pending_frames_);
+  init_buffer(max_frames);
+  time_window_ = packets->timestamp;
 
-  flush_decoder();
-
-  // Flush any remaining frames in the current buffer
-  frame_buffer_obj_->flush();
+  for (auto pkt : packets->pkts.iter_data()) {
+    decode_packet(pkt);
+  }
+  flush();
 
   // Retrieve the buffer from FrameBuffer
-  if (frame_buffer_obj_->empty()) {
+  if (frame_buffer_->empty()) {
     SPDL_FAIL_INTERNAL("No frames were decoded.");
   }
-  CUDABufferPtr ret_ptr = frame_buffer_obj_->pop();
+  CUDABufferPtr ret_ptr = frame_buffer_->pop();
 
   // Reset batch mode state
-  frame_buffer_obj_.reset();
+  frame_buffer_.reset();
 
   return std::move(*ret_ptr);
 }
