@@ -15,42 +15,6 @@
 
 namespace spdl::cuda {
 
-/// Convert NV12 frames to planar RGB format on GPU.
-///
-/// Performs color space conversion from NV12 (YUV 4:2:0 with interleaved UV)
-/// to planar RGB format using CUDA.
-///
-/// @param frames Vector of NV12 frame buffers to convert.
-/// @param cfg CUDA configuration including device and stream.
-/// @param matrix_coefficients Color matrix coefficients for conversion
-/// (default: BT.709).
-/// @param sync If true, synchronizes the stream before returning (default:
-/// true).
-/// @return CUDA buffer containing planar RGB data.
-CUDABufferPtr nv12_to_planar_rgb(
-    const std::vector<CUDABuffer>& frames,
-    const CUDAConfig& cfg,
-    int matrix_coefficients = 1,
-    bool sync = true);
-
-/// Convert NV12 frames to planar BGR format on GPU.
-///
-/// Performs color space conversion from NV12 (YUV 4:2:0 with interleaved UV)
-/// to planar BGR format using CUDA.
-///
-/// @param frames Vector of NV12 frame buffers to convert.
-/// @param cfg CUDA configuration including device and stream.
-/// @param matrix_coefficients Color matrix coefficients for conversion
-/// (default: BT.709).
-/// @param sync If true, synchronizes the stream before returning (default:
-/// true).
-/// @return CUDA buffer containing planar BGR data.
-CUDABufferPtr nv12_to_planar_bgr(
-    const std::vector<CUDABuffer>& frames,
-    const CUDAConfig& cfg,
-    int matrix_coefficients = 1,
-    bool sync = true);
-
 /// Convert batched NV12 frames (3D buffer) to planar RGB format on GPU.
 ///
 /// This is an optimized version that takes a pre-allocated 3D buffer containing
@@ -64,7 +28,7 @@ CUDABufferPtr nv12_to_planar_bgr(
 /// true).
 /// @return CUDA buffer containing planar RGB data with shape [num_frames, 3,
 /// height, width].
-CUDABufferPtr nv12_to_planar_rgb_batched(
+CUDABufferPtr nv12_to_planar_rgb(
     const CUDABuffer& nv12_batch,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1,
@@ -83,7 +47,7 @@ CUDABufferPtr nv12_to_planar_rgb_batched(
 /// true).
 /// @return CUDA buffer containing planar BGR data with shape [num_frames, 3,
 /// height, width].
-CUDABufferPtr nv12_to_planar_bgr_batched(
+CUDABufferPtr nv12_to_planar_bgr(
     const CUDABuffer& nv12_batch,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1,

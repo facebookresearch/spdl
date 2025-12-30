@@ -219,10 +219,6 @@ def built_with_nvjpeg() -> bool: ...
 
 def synchronize_stream(arg: CUDAConfig, /) -> None: ...
 
-@overload
-def nv12_to_planar_rgb(buffers: Sequence[CUDABuffer], *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer: ...
-
-@overload
 def nv12_to_planar_rgb(buffer: CUDABuffer, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
     """
     Convert batched NV12 frames to planar RGB.
@@ -237,10 +233,6 @@ def nv12_to_planar_rgb(buffer: CUDABuffer, *, device_config: CUDAConfig, matrix_
         CUDA buffer containing planar RGB data with shape ``[num_frames, 3, height, width]``.
     """
 
-@overload
-def nv12_to_planar_bgr(buffers: Sequence[CUDABuffer], *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer: ...
-
-@overload
 def nv12_to_planar_bgr(buffer: CUDABuffer, *, device_config: CUDAConfig, matrix_coeff: int = 1, sync: bool = True) -> CUDABuffer:
     """
     Convert batched NV12 frames to planar BGR.
