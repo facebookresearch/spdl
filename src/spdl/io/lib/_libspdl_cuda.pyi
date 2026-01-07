@@ -61,6 +61,7 @@ class NvDecDecoder:
 
           decoder = spdl.io.nvdec_decoder(cuda_config, codec)
           nv12_buffer = decoder.decode_packets(packets)
+          rgb = spdl.io.nv12_to_rgb(nv12_buffer, cuda_config)
           # Buffer shape: [num_frames, height*1.5, width]
 
     2. **Streaming decoding** - Process packets incrementally with batched output:
@@ -73,12 +74,12 @@ class NvDecDecoder:
           for packets in packet_stream:
               for batch in decoder.streaming_decode_packets(packets):
                   # batch is CUDABuffer with shape [num_frames, h*1.5, w]
-                  rgb = spdl.io.nv12_to_rgb([batch], cuda_config)
+                  rgb = spdl.io.nv12_to_rgb(batch, cuda_config)
                   # Process rgb frames
 
           # Flush and get remaining frames
           for batch in decoder.flush():
-              rgb = spdl.io.nv12_to_rgb([batch], cuda_config)
+              rgb = spdl.io.nv12_to_rgb(batch, cuda_config)
               # Process final frames
 
     .. note::
@@ -101,6 +102,10 @@ class NvDecDecoder:
     def init_decoder(self, device_config: CUDAConfig, codec: spdl.io.lib._libspdl.VideoCodec, *, crop_left: int = 0, crop_top: int = 0, crop_right: int = 0, crop_bottom: int = 0, scale_width: int = -1, scale_height: int = -1) -> None:
         """
         Initialize the decoder.
+
+        .. versionchanged:: 0.2.0
+
+           This method was renamed from ``init()``.
 
         .. deprecated:: 0.1.7
 
