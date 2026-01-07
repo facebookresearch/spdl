@@ -1,0 +1,18 @@
+spdl.pipeline.PipelineBuilder
+=============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: PipelineBuilder
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~PipelineBuilder.add_sink
+      ~PipelineBuilder.add_source
+      ~PipelineBuilder.aggregate
+      ~PipelineBuilder.build
+      ~PipelineBuilder.disaggregate
+      ~PipelineBuilder.get_config
+      ~PipelineBuilder.pipe

@@ -1,0 +1,13 @@
+spdl.io.ImageDecoder
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: ImageDecoder
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ImageDecoder.decode
+      ~ImageDecoder.flush

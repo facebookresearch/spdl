@@ -1,0 +1,69 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h:
+
+File generator.h
+================
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/generator.h``)
+-------------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``coroutine``
+
+- ``exception``
+
+- ``iterator``
+
+- ``stdexcept``
+
+- ``utility``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1iterator`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1Generator_1_1promise__type`
+

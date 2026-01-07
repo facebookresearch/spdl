@@ -1,0 +1,6 @@
+spdl.pipeline.config.diagnostic\_mode\_num\_sources
+===================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: diagnostic_mode_num_sources

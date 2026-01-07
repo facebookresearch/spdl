@@ -1,0 +1,6 @@
+spdl.io.to\_jax
+===============
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: to_jax

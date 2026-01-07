@@ -1,0 +1,1404 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Metrics across Ranks" href="fleet_metrics.html" /><link rel="prev" title="Analyzing the Performance" href="analysis.html" />
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
+        <title>Understanding the performance statistics - SPDL 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
+    <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=a8e03d5d" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SNXS50Q2E3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SNXS50Q2E3');
+</script>
+</head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">SPDL 0.2.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">SPDL 0.2.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/intro.html">Building and Running Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/stages.html">Pipeline Stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/parallelism.html">Pipeline Parallelism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/logging.html">Collecting Runtime Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing an Orchestration Mechanism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/event_loop.html">The Event Loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/sync.html">Running Synchronous Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../io/basic.html">High-Level Loading Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/decoding_overview.html">Decoding Process Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/packets_frames_concepts.html">Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/filtering.html">Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Optimization Guide</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="headspace_analysis.html">Headspace Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="noisy_neighbour.html">Noisy Neighbour</a></li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">Composition of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analyzing the Performance</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Understanding the performance statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fleet_metrics.html">Metrics across Ranks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="straggler.html">The Straggler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="resolution.html">Resolving the Bottleneck</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/image_dataloading.html">Image dataloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/video_dataloading.html">Video dataloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/imagenet_classification.html">Imagenet classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/multi_thread_preprocessing.html">Multi thread preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/streaming_nvdec_decoding.html">Streaming nvdec decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/streaming_video_processing.html">Streaming video processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/performance_analysis.html">Performance analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/performance_simulation.html">Performance simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/hydra_integration.html">Hydra integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_definitions.html">Pipeline definitions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_profiling.html">Pipeline profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_utils.html">Benchmark utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_numpy.html">Benchmark numpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_wav.html">Benchmark wav</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_video.html">Benchmark video</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API References</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.html">spdl.pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.config.html">spdl.pipeline.config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.dataloader.html">spdl.dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.source.html">spdl.source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.html">spdl.io</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.utils.html">spdl.io.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_class.html">Class List</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_file.html">File List</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl.html">Namespace spdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_std.html">Namespace std</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structAVRational.html">Struct AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1BytesAdaptor.html">Struct BytesAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1CPUBuffer.html">Struct CPUBuffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DataInterface.html">Struct DataInterface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DecodeConfig.html">Struct DecodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Codec.html">Template Class Codec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1CPUStorage.html">Class CPUStorage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Decoder.html">Template Class Decoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Demuxer.html">Class Demuxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1detail_1_1DecoderImpl.html">Template Class DecoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1detail_1_1EncoderImpl.html">Template Class EncoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Encoder.html">Template Class Encoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1FilterGraph.html">Class FilterGraph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html">Enum MediaType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349.html">Template Function spdl::core::clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a3f08ca7a5c09ab82603e239e50dff4d7.html">Template Function spdl::core::convert_frames(const std::vector&lt;const Frames&lt;media&gt; *&gt;&amp;, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1ae55bfac2f391205603d77241fc25ca1a.html">Template Function spdl::core::convert_frames(const Frames&lt;media&gt; *, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8.html">Function spdl::core::create_reference_audio_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1a78b157beb45e215aad69f013831788ac.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1a325a3202908e610862ad04182e7da81a.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b.html">Typedef spdl::core::AnyPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d.html">Typedef spdl::core::AudioEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html">Typedef spdl::core::AudioPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html">Typedef spdl::core::AudioPacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b.html">Typedef spdl::core::DemuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339.html">Typedef spdl::core::EncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_filter__graph_8h_1a29554b40f89e4b227521ff86ccf69b8b.html">Typedef spdl::core::FilterGraphPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1ad628496b3863230dd76eeccc4fa66437.html">Typedef spdl::core::FramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html">Typedef spdl::core::ImagePackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html">Typedef spdl::core::ImagePacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html">Typedef spdl::core::PacketSeriesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a383bf2b0ac1564702f10e3b5f3ef03f6.html">Typedef spdl::core::VideoEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html">Typedef spdl::core::VideoPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html">Typedef spdl::core::VideoPacketsPtr</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../genindex.html">API Index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+<div class="sidebar-tree">
+<ul>
+  <li class="toctree-l1 has-children">
+    <span class="reference">Versions</span>
+    <input class="toctree-checkbox" id="toctree-checkbox-versions" name="toctree-checkbox-versions" role="switch" type="checkbox">
+    <label for="toctree-checkbox-versions">
+      <div class="visually-hidden">Toggle navigattion of Versions</div>
+      <i class="icon">
+        <svg>
+          <use href="#svg-arrow-right"></use>
+        </svg>
+      </i>
+    </label>
+    <ul>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.4">0.1.4</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.3">0.1.3</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.2">0.1.2</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.1">0.1.1</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.0">0.1.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.14">0.0.14</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.13">0.0.13</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.12">0.0.12</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.11">0.0.11</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.10">0.0.10</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.9">0.0.9</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.8">0.0.8</a></li>
+    </ul>
+  </li>
+</ul>
+</div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/optimization_guide/stats.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <script src='https://cdn.plot.ly/plotly-2.34.0.min.js'></script>
+<script src='../_static/js/plot_perf_stats.js'></script><section id="understanding-the-performance-statistics">
+<span id="stats"></span><h1>Understanding the performance statistics<a class="headerlink" href="#understanding-the-performance-statistics" title="Link to this heading">¶</a></h1>
+<p>To optimize the pipeline performance, we need to infer how the pipeline is behaving through performance statistics.
+In this section, we simulate some pipeline behavior patterns for simple cases to understand what the pipeline performance looks like.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="../generated/performance_analysis.html#example-performance-analysis"><span class="std std-ref">Performance analysis</span></a></dt><dd><p>Explains how to collect the pipeline runtime performance statistics.</p>
+</dd>
+<dt><a class="reference internal" href="../generated/performance_simulation.html#example-performance-simulation"><span class="std std-ref">Performance simulation</span></a></dt><dd><p>The script used in this section to simulate the pipeline runtime behavior.</p>
+</dd>
+</dl>
+</div>
+<section id="single-stage-pipeline">
+<h2>Single-stage Pipeline<a class="headerlink" href="#single-stage-pipeline" title="Link to this heading">¶</a></h2>
+<p>First, we look at pipelines with one (mock) preprocessing stage, and how the performance statistics look
+for cases where the data loading is fast enough and otherwise.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op1</span><span class="p">)</span>
+    <span class="c1"># We will change the task time (25 ms and 35 ms) to simulate the cases where</span>
+    <span class="c1"># the data loading is faster or slower than the foreground task.</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">():</span>
+        <span class="n">process</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>  <span class="c1"># Assume this takes 30 ms</span>
+</pre></div>
+</div>
+<p>The following diagram illustrates the structure of a single-stage pipeline used in our performance analysis:</p>
+<div class="mermaid">
+            graph LR
+    subgraph Pipeline
+        direction LR
+        Source
+        Q0&#64;{ shape: das, label: &quot;Source Queue&quot; }
+
+        subgraph S1[Stage 1]
+            O1[Op 1]
+            Q1&#64;{ shape: das, label: &quot;Queue 1&quot; }
+        end
+        style S1 stroke-width:3px
+
+        Sink
+        QE&#64;{ shape: das, label: &quot;Sink Queue&quot; }
+    end
+
+    Source
+    --&gt; |Put| Q0
+    --&gt; |Get| O1
+    --&gt; |Put| Q1
+    --&gt; |Get| Sink
+    --&gt; |Put| QE
+    --&gt; |Get| Foreground
+        </div><p>Suppose that we have a foreground job (can be inference, training or anything else) that takes 30 ms to complete.
+If the data loading pipeline can produce one batch within 30 ms, then we can keep the foreground busy.</p>
+<p>We construct pipelines with one stage, and simulate its performance by having the stage sleep either for 25 ms or 35 ms.
+We run the pipeline and gather the performance statistics.</p>
+<section id="task-execution-time-and-throughput">
+<h3>Task Execution Time and Throughput<a class="headerlink" href="#task-execution-time-and-throughput" title="Link to this heading">¶</a></h3>
+<p>The following figure shows the average task time and throughput when the preprocessing stage takes 25 ms to complete.</p>
+<div id="single1-1"></div>
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+        'single1-1',
+        '../_static/data/example_simu_single1.json',
+        ['task_time', 'qps']);
+    },
+    false);
+</script><p>We can see that the preprocessing stage takes about 25 ms.
+The throughput (QPS) is around 33 ms (~ 1000 / 30), which corresponds to the speed that foreground code consumes the data.</p>
+<p>When we change the task execution time to 35 ms, we obtain the following.</p>
+<div id="single2-1"></div>
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats('single2-1',
+        '../_static/data/example_simu_single2.json',
+        ['task_time', 'qps']);
+    },
+    false);
+</script><p>The throughput is now around 28 ms (~ 1000 / 35).
+Because the data loading is now slower than the foreground consumer,
+the pipeline throughput is governed by the slowest stage of the data loading pipeline.</p>
+<p>Since the SPDL pipeline is composed of series of asynchronously-blocking queues
+with fixed buffer size, the throughput of each pipe is affected by its upstream
+and downstream stages.
+Therefore, the throughput is governed by the slowest stage (including the foreground task)
+and its value is the same everywhere(†) in the pipeline.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>(†) When using aggregate and disaggregate, the value of throughput reported is multiplied by the
+size of the batch, and it appears different on the surface, but they should produce the same value if
+normalized by the batch size. We discuss this later.</p>
+</div>
+</section>
+<section id="queue-get-put-time">
+<h3>Queue Get/Put Time<a class="headerlink" href="#queue-get-put-time" title="Link to this heading">¶</a></h3>
+<p>Since multiple tasks are executed concurrently for a pipeline stage,
+the task performance does not illustrate the pipeline’s overall performance.
+To understand the overall performance, we need to look at the performance
+statistics of queue inputs and outputs.</p>
+<p>First we look at the average time it takes to complete the
+<a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue.get" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.Queue.get()</span></code></a> and <a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue.put" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.Queue.put()</span></code></a> operations.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the following, the put time refers to the time it takes to put data
+<strong>in the queue</strong>, and the get time refers to the time it takes to get data
+<strong>from the queue</strong>.
+The <code class="docutils literal notranslate"><span class="pre">STAGE_queue</span></code> refers to the queue attached at the end of the <code class="docutils literal notranslate"><span class="pre">STAGE</span></code>.</p>
+<p>So the put time of <code class="docutils literal notranslate"><span class="pre">OP_queue</span></code> refers to the time for <code class="docutils literal notranslate"><span class="pre">op</span></code> to put a
+result to the <code class="docutils literal notranslate"><span class="pre">OP_queue</span></code>.
+The get time of <code class="docutils literal notranslate"><span class="pre">OP_queue</span></code> refers to the time for <strong>the downstream stage
+(not the ``OP`` referred to by the queue name)</strong> to retrieve the data from the
+<code class="docutils literal notranslate"><span class="pre">OP_queue</span></code>.</p>
+</div>
+<section id="fast-to-slow">
+<h4>Fast to slow<a class="headerlink" href="#fast-to-slow" title="Link to this heading">¶</a></h4>
+<p>When a stage is faster than its downstream,
+that stage has to wait for the downstream to consume data from the queue.</p>
+<div class="mermaid">
+            graph LR
+
+    s1 e1&#64;==&gt; |Put| q e2&#64;--&gt; |Get| s2
+    s1&#64;{ label: &quot;Fast Op&quot; }
+    s2&#64;{ label: &quot;Slow Op&quot; }
+    q&#64;{ shape: das, label: &quot;Queue&quot; }
+    e1&#64;{ animation: fast }
+    e2&#64;{ animation: slow }
+        </div><p>This translates to the observation that the <code class="docutils literal notranslate"><span class="pre">put</span></code> operation gets blocked
+more often because the downstream is not consuming the data fast enough
+and there is no space in the queue.
+Meanwhile the <code class="docutils literal notranslate"><span class="pre">get</span></code> operation completes quickly, because the data is
+always available.</p>
+<p>In the following example, the pipeline is operating at 30 ms per batch.
+The pipe stage takes 25 ms to complete the task then put the result to the queue,
+so its put wait time is 5 ms (30 - 25).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The source stage has no performance overhead because it has
+no operation to perform.
+Therefore it is always blocked on the put operation, which
+corresponds to the pipeline throughput. (30 ms in this case)</p>
+</div>
+<div id="single1-2"></div>
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'single1-2',
+            '../_static/data/example_simu_single1.json',
+            ['get_time',  'put_time'],
+            hideSourceSink=true);
+    },
+    false);
+</script></section>
+<section id="slow-to-fast">
+<h4>Slow to fast<a class="headerlink" href="#slow-to-fast" title="Link to this heading">¶</a></h4>
+<p>When a stage is slower than its downstream, the downstream consumes all data
+before the stage completes.</p>
+<div class="mermaid">
+            graph LR
+
+    s1 e1&#64;--&gt; |Put| q e2&#64;==&gt; |Get| s2
+    s1&#64;{ label: &quot;Slow Op&quot; }
+    s2&#64;{ label: &quot;Fast Op&quot; }
+    q&#64;{ shape: das, label: &quot;Queue&quot; }
+    e1&#64;{ animation: slow }
+    e2&#64;{ animation: fast }
+        </div><p>In such cases, we see the queue stats flipped from the fast-to-slow case.
+The <code class="docutils literal notranslate"><span class="pre">put</span></code> operation completes quickly because the data put in the queue
+is fetched immediately by the downstream task, thus there is always space in the queue.
+The <code class="docutils literal notranslate"><span class="pre">get</span></code> operation is blocked because the upstream stage is not producing
+the data fast enough and there is no data to get from the queue.</p>
+<p>The following figures show the average queue get/put time when the pipe stage takes 35 ms.</p>
+<div id="single2-2"></div>
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'single2-2',
+            '../_static/data/example_simu_single2.json',
+             ['get_time',  'put_time'],
+             hideSourceSink=true);
+    },
+    false);
+</script><p>The get time for <code class="docutils literal notranslate"><span class="pre">35ms_queue</span></code> (that is, the sink stage’s attempt to
+get data from the pipe stage) takes about 35 ms, which corresponds to
+the pipe task execution time.</p>
+<p>The put time for <code class="docutils literal notranslate"><span class="pre">35ms_queue</span></code> (that is, the <code class="docutils literal notranslate"><span class="pre">35ms</span></code> stage’s attempt to
+put result data to the queue) takes no time.</p>
+</section>
+</section>
+<section id="queue-occupancy-data-readiness">
+<h3>Queue Occupancy (Data Readiness)<a class="headerlink" href="#queue-occupancy-data-readiness" title="Link to this heading">¶</a></h3>
+<p>The queue put/get times reveal whether the pipeline stage is fast enough
+regardless of its task execution time and concurrency.
+However, it turns out that we cannot judge the performance from the absolute
+value of wait time, so we always have to watch these metrics as a pair.
+This is inconvenient.
+Essentially, what we are interested in is whether the next data to consume
+is available or not.
+We can approximately measure the data readiness by how often the queue
+has data.
+We call such metrics Queue Occupancy or Data Readiness.</p>
+<p>According to the previous observations, when the pipeline is producing the
+data fast enough, the queue has always data.
+So the queue occupancy becomes 100%.</p>
+<div id="single1-3"></div>
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'single1-3',
+            '../_static/data/example_simu_single1.json',
+            ['occupancy'],
+            hideSourceSink=true);
+    },
+    false);
+</script><p>On contrary, when a stage in the pipeline is not producing the data fast enough,
+the subsequent queues do not have data available.
+So the queue occupancy becomes 0%.</p>
+<div id="single2-3"></div>
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'single2-3',
+            '../_static/data/example_simu_single2.json',
+            ['occupancy'],
+            hideSourceSink=true);
+    },
+    false);
+</script><p>The first clue to see if a pipeline is operating at a speed that is fast enough for
+its consumer is to check the data readiness of the sink stage.</p>
+</section>
+</section>
+<section id="performance-characteristics-summary">
+<h2>Performance Characteristics Summary<a class="headerlink" href="#performance-characteristics-summary" title="Link to this heading">¶</a></h2>
+<p>The following table summarizes how queue metrics behave depending on whether the pipeline runs faster or slower than the foreground loop:</p>
+<div class="table-wrapper colwidths-given docutils container" id="id3">
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-text">Queue Metrics vs Pipeline/Foreground Speed</span><a class="headerlink" href="#id3" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Scenario</p></th>
+<th class="head"><p>Queue Put Time</p></th>
+<th class="head"><p>Queue Get Time</p></th>
+<th class="head"><p>Queue Occupancy</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>✅ Pipeline is fast enough</p></td>
+<td><p>High (queues full)</p></td>
+<td><p>Low (data always available)</p></td>
+<td><p>High occupancy</p></td>
+</tr>
+<tr class="row-odd"><td><p>❌ Pipeline is not fast enough</p></td>
+<td><p>Low (queues rarely full)</p></td>
+<td><p>High (data rarely available)</p></td>
+<td><p>Low occupancy</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="multi-stage-pipeline-structure">
+<h2>Multi-Stage Pipeline Structure<a class="headerlink" href="#multi-stage-pipeline-structure" title="Link to this heading">¶</a></h2>
+<p>Now we understand how the performance statistics look like for a single stage pipeline,
+let’s look at the multi-stage pipeline.</p>
+<p>We consider a pipeline with 3 stages.
+We change the task time of each stage to 10, 25 and 40 ms, and run the pipeline.
+Then we reversed the order of the stages and run the pipeline again.</p>
+<p>The following code and figure illustrate the 3-stage pipeline.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op2</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op3</span><span class="p">)</span>
+    <span class="c1"># We will change the task time (10, 25, 40 ms and the reversed order) to</span>
+    <span class="c1"># simulate the cases where bottlenecks come at early or late stages.</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">():</span>
+        <span class="n">process</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>  <span class="c1"># Assume this takes 30 ms</span>
+</pre></div>
+</div>
+<div class="mermaid">
+            graph LR
+    subgraph Pipeline
+        direction LR
+        subgraph S1[Stage1]
+            O1[Op 1]
+            Q1&#64;{ shape: das, label: &quot;Queue 1&quot; }
+        end
+        subgraph S2[Stage2]
+            O2[Op 2]
+            Q2&#64;{ shape: das, label: &quot;Queue 2&quot; }
+        end
+        subgraph S3[Stage3]
+            O3[Op 3]
+            Q3&#64;{ shape: das, label: &quot;Queue 3&quot; }
+        end
+        Source:::invisible
+        --&gt; |Get| O1
+        --&gt; |Put| Q1
+        --&gt; |Get| O2
+        --&gt; |Put| Q2
+        --&gt; |Get| O3
+        --&gt; |Put| Q3
+        --&gt; |Get| Sink:::invisible
+    end
+
+    style S1 stroke-width:3px
+    style S2 stroke-width:3px
+    style S3 stroke-width:3px
+
+    style Source fill-opacity:0, stroke-opacity:0
+    classDef invisible display:none;
+        </div><section id="id1">
+<h3>Fast to Slow<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<p>We assign the task execution time of 10, 25 and 40 ms to each stage.
+The foreground task takes 30 ms to complete.</p>
+<p>First, we check the average task execution time and throughput.</p>
+<div id="multi1-1"></div>
+
+ <script>
+ document.addEventListener(
+     'DOMContentLoaded',
+     function() {
+         loadAndPlotQueueStats(
+             'multi1-1',
+             '../_static/data/example_simu_multi1.json',
+             ['task_time', 'qps']);
+     },
+     false);
+ </script><p>The pipeline throughput is governed by the slowest stage, which takes 40 ms
+per each invocation.
+So the throughput is 25 (~ 1000/40 ms).</p>
+<p>Now we look at the queue stats.</p>
+<div id="multi1-2"></div>
+
+ <script>
+ document.addEventListener(
+     'DOMContentLoaded',
+     function() {
+         loadAndPlotQueueStats(
+             'multi1-2',
+             '../_static/data/example_simu_multi1.json',
+             ['put_time', 'get_time', 'occupancy']);
+     },
+     false);
+ </script><p><strong>Put time</strong></p>
+<p>The pipeline is operating at the speed of 40 ms / iteration, so the source has to
+wait for 40 ms to put the next item.</p>
+<p>Stages 1, 2 and 3 take 10, 25 and 40 ms, so the queue put time for each stage
+corresponds to the subtraction of the task execution time from the
+pipeline throughput, that is 30 ms (40 - 10), 15 ms (40 - 25), 0 ms (40 - 40) for
+each stage respectively.</p>
+<p><strong>Get time</strong></p>
+<p>Since the source and stages 1 and 2 are operating faster than their downstream stage,
+their queue get time is 0.
+(The get time is the time the next stage pulls data from the queue.)</p>
+<p>The sink has no work to do and it has to wait for stage 3 to complete, so its
+get time is 40ms.
+The foreground completes its task in 30ms, so it waits for 10 ms until the next
+batch becomes available in the sink.</p>
+<p><strong>Occupancy</strong></p>
+<p>The queue occupancy communicates this information in a compact manner.
+The queue occupancy of the source, stage 1 and stage 2 are close to 100%,
+which indicates that each stage is faster than the previous one.</p>
+<p>The occupancy of stage 3 and the sink drop to 0, meaning they are not
+fast enough for their downstream consumer.</p>
+</section>
+<section id="id2">
+<h3>Slow to fast<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<p>Now we reverse the order of the stages, and run the pipeline again.
+The bottleneck is now at the stage 1.</p>
+<div id="multi2-1"></div>
+
+ <script>
+ document.addEventListener(
+     'DOMContentLoaded',
+     function() {
+         loadAndPlotQueueStats(
+             'multi2-1',
+             '../_static/data/example_simu_multi2.json',
+             ['task_time', 'qps']);
+     },
+     false);
+ </script><p>The pipeline throughput is still governed by the slowest stage,
+so the throughput is same as before. (25)</p>
+<div id="multi2-2"></div>
+
+ <script>
+ document.addEventListener(
+     'DOMContentLoaded',
+     function() {
+         loadAndPlotQueueStats(
+             'multi2-2',
+             '../_static/data/example_simu_multi2.json',
+             ['put_time', 'get_time', 'occupancy']);
+     },
+     false);
+ </script><p><strong>Put time</strong></p>
+<p>The queue put time is 0 everywhere in the pipe except source.
+This is because the bottleneck stage is at the very beginning of the pipeline,
+queues are empty so the entire pipeline is starving for the data.</p>
+<p><strong>Get time</strong></p>
+<p>Since the pipeline is starving everywhere, the queue get time is high.
+It corresponds to the <code class="docutils literal notranslate"><span class="pre">iteration</span> <span class="pre">time</span> <span class="pre">-</span> <span class="pre">task</span> <span class="pre">execution</span> <span class="pre">time</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">next</span> <span class="pre">stage</span></code>.
+So, it is 0 ms (40 - 40) for the <code class="docutils literal notranslate"><span class="pre">src_queue</span></code>,
+15 ms (40 - 25) for the <code class="docutils literal notranslate"><span class="pre">40ms_queue</span></code>,
+30 ms (40 - 10) for the <code class="docutils literal notranslate"><span class="pre">25ms_queue</span></code>,
+40 ms (40 - 0) for the <code class="docutils literal notranslate"><span class="pre">10ms_queue</span></code>,
+and 10 ms (40 - 30) for the <code class="docutils literal notranslate"><span class="pre">sink_queue</span></code>.</p>
+<p><strong>Occupancy</strong></p>
+<p>The queue occupancy drops to 0% at the stage 1, and subsequent stages are not able to recover
+even though their data processing speed is faster than previous stages.</p>
+</section>
+<section id="introducing-the-concurrency">
+<h3>Introducing the Concurrency<a class="headerlink" href="#introducing-the-concurrency" title="Link to this heading">¶</a></h3>
+<p>So far, we have looked at pipelines without concurrency, but in real use cases,
+stages are executed with concurrency.</p>
+<p>Let’s see how adding concurrency changes the statistics.</p>
+<p>We use the fast-to-slow example from the previous 3-stage pipeline,
+and set the concurrency of the slowest stage to 2.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op2</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op3</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="c1">#          ^^^^^^^^^^^^^^</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="mermaid">
+            graph LR
+    subgraph Pipeline
+        direction LR
+        subgraph S1[Stage1]
+            O1[Op 1]
+            Q1&#64;{ shape: das, label: &quot;Queue 1&quot; }
+        end
+        subgraph S2[Stage2]
+            O2[Op 2]
+            Q2&#64;{ shape: das, label: &quot;Queue 2&quot; }
+        end
+        subgraph S3[Stage3]
+            O31[Op 3]
+            O32[Op 3]
+            Q3&#64;{ shape: das, label: &quot;Queue 3&quot; }
+        end
+        Source:::invisible
+        --&gt; |Get| O1
+        --&gt; |Put| Q1
+        --&gt; |Get| O2
+        --&gt; |Put| Q2
+        Q2 --&gt; |Get| O31 --&gt; |Put| Q3
+        Q2 --&gt; |Get| O32 --&gt; |Put| Q3
+        --&gt; |Get| Sink:::invisible
+    end
+
+    style S1 stroke-width:3px
+    style S2 stroke-width:3px
+    style S3 stroke-width:3px
+
+    style Source fill-opacity:0, stroke-opacity:0
+    classDef invisible display:none;
+        </div><div id="multi3-1"></div>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'multi3-1',
+            '../_static/data/example_simu_multi3.json',
+            ['task_time', 'qps']);
+    },
+    false);
+</script><p>The task execution time does not change, but since there are
+two tasks of stage 3 executed concurrently, the stage 3 is twice faster.
+The stage 3 is now faster than the speed of the foreground consumer.
+Therefore, the throughput of the pipeline has been improved,
+and now the bottleneck is the foreground consumer.</p>
+<div id="multi3-2"></div>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'multi3-2',
+            '../_static/data/example_simu_multi3.json',
+            ['put_time', 'get_time', 'occupancy']);
+    },
+    false);
+</script><p><strong>Put Time</strong></p>
+<p>For the source, the stage 1 and the stage 2, there is no change.
+The put time corresponds to <code class="docutils literal notranslate"><span class="pre">iteration</span> <span class="pre">time</span> <span class="pre">-</span> <span class="pre">task</span> <span class="pre">execution</span> <span class="pre">time</span></code>.
+That is 30 ms (30 - 0) for the source, 20 ms (30 - 10) for the stage 1,
+5 ms (30 - 25) for the stage 2.</p>
+<p>For the stage 3, it is slightly different from the others.
+The stage 2 is producing data at 30 ms / iteration.
+The stage 3 can now consume the data at 20 ms / iteration on average.
+So each invocation of the stage 3 tasks has to wait for 10 ms on average.
+But since now there are two tasks calling <code class="docutils literal notranslate"><span class="pre">put</span></code> operation, so the total
+wait time becomes 20 ms.</p>
+<p><strong>Get Time</strong></p>
+<p>The queue get time is now all 0 because all the stages on average are
+operating faster than the foreground consumer.</p>
+<p><strong>Occupancy</strong></p>
+<p>Now that the bottleneck at stage 3 is resolved, the pipeline is not
+data-starved, and the queue occupancy is 100% everywhere.</p>
+</section>
+<section id="concurrency-beyond-optimal-setting">
+<h3>Concurrency beyond optimal setting<a class="headerlink" href="#concurrency-beyond-optimal-setting" title="Link to this heading">¶</a></h3>
+<p>What happens if we increase the concurrency to a value beyond the optimal
+pipeline behavior?</p>
+<p>The following is the queue performance statistics of the same pipeline
+but the concurrency of stage 3 is set to 3.</p>
+<div id="multi4-2"></div>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'multi4-2',
+            '../_static/data/example_simu_multi4.json',
+            ['put_time', 'get_time', 'occupancy']);
+    },
+    false);
+</script><p>With 3 concurrent tasks, the stage 3 can process the data at 13 (40/3)
+ms on average.
+So each task is blocked about 17 ms on average.
+In the reported stats, the queue get time is summed up, so now we see
+the value of queue put time for the stage 3 is 51 ms.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You may wonder why SPDL does not take the average get/put time when
+the concurrency is more than 1.</p>
+<p>This is just an implementation detail.
+The queue stats measurement is implemented by extending the
+<a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Queue</span></code></a> class.
+And by the nature of async function, it is not aware of the concurrent
+method calls.</p>
+<p>Passing the information of concurrency does not provide a benefit despite
+the increased complexity.</p>
+</div>
+</section>
+</section>
+<section id="aggregation">
+<h2>Aggregation<a class="headerlink" href="#aggregation" title="Link to this heading">¶</a></h2>
+<p>Now we introduce <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> step to the pipeline and
+see how it affects the performance stats.</p>
+<p>We look at the following pipeline that performs some preprocessing before aggregation.
+We change the size of the batch to simulate the case where the
+pipeline is faster than the consumer and otherwise.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">op1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
+    <span class="c1">#^^^^^^^^^^^^^^^^^^^^^</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="mermaid">
+            graph LR
+    subgraph Pipeline
+        direction LR
+        subgraph S1[Stage1]
+            O1[Op 1]
+            Q1&#64;{ shape: das, label: &quot;Queue 1&quot; }
+        end
+        subgraph S2[Aggregate]
+            O2[[aggregate]]
+            Q2&#64;{ shape: das, label: &quot;Queue 2&quot; }
+        end
+        Source:::invisible
+        --&gt; |Get| O1
+        --&gt; |Put| Q1
+        --&gt; |Get| O2
+        --&gt; |Put| Q2
+        --&gt; |Get| Sink:::invisible
+    end
+
+    style S2 stroke-width:3px
+
+    style Source fill-opacity:0, stroke-opacity:0
+    classDef invisible display:none;
+        </div><section id="optimal">
+<h3>Optimal<a class="headerlink" href="#optimal" title="Link to this heading">¶</a></h3>
+<p>Let’s look at a case where the aggregation is fast enough.
+We set the task average time to 6 ms and the aggregation size to 4.
+So it takes the pipeline 24 ms to create a batch, which is
+faster than the consumer’s speed of 30 ms.</p>
+<div id="agg-11"></div>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'agg-11',
+            '../_static/data/example_simu_agg1.json',
+            ['task_time', 'qps']);
+    },
+    false);
+</script><p>Same as the previous cases, the pipeline is operating at the speed of the
+consumer, so the QPS at the sink and aggregation is 33 (~ 1000 / 30).</p>
+<p>When an aggregation is involved, the apparent throughput changes.
+This is because SPDL pipeline is not aware of the semantics of the operations
+it is executing.
+SPDL only counts the number of items emitted from the pipeline stages.
+Aggregation step emits the data only when the batch is full.
+In this case, the throughput of the aggregation step is
+the throughput of the pipeline.
+The stages before the aggregation have throughput higher than the aggregation
+(multiplied by the batch size), but they essentially mean the same.</p>
+<div id="agg-12"></div>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'agg-12',
+            '../_static/data/example_simu_agg1.json',
+            ['put_time', 'get_time', 'occupancy']);
+    },
+    false);
+</script><p><strong>Put Time</strong></p>
+<p>The pipeline is operating at the pace of 30 ms / iteration.
+But now each batch contains 4 items.
+So before the aggregation stage, on average one sample is processed every 7.5 ms.</p>
+<p>We see this in the source queue put value.
+The source is putting data to the queue every 7.5 ms.
+Then stage 1 takes 6 ms to process each.
+So stage 1 waits for 1.5 ms until its queue has space.</p>
+<p>The sink stage has no operation overhead, so it spends time
+only on putting data to the queue.
+So the queue put time for the sink stage is 30 ms, which is same as
+the speed of the foreground consumption.</p>
+<p>The aggregation stage is a bit different and more elaborate.
+The aggregation stage is also producing data every 30 ms.
+It starts the put operation when all the underlying data arrives.
+This is supposed to take 24 ms (6 * 4), but
+the queue itself has 2 slots for buffering and the task that is attempting to
+put the next item serves as extra buffering, so when the aggregation
+stage completes and starts to collect the next batch, only one task is required.
+Since one task of stage 1 takes 6 ms, the aggregation batch can have the
+next batch ready in around 6 ms, and it starts the next put effort, then
+gets blocked for 24 ms.</p>
+<p><strong>Get Time</strong></p>
+<p>Since the pipeline is operating at the optimal speed, the get time is 0
+almost everywhere.</p>
+<p>However the get time for <code class="docutils literal notranslate"><span class="pre">6ms_queue</span></code> is an exception.
+This is the time that the aggregation stage tries to fetch data from stage 1.
+As mentioned in the <strong>Put Time</strong> section, the aggregation stage needs to
+wait for one complete cycle of stage 1 when fetching one batch (4 items).
+So the corresponding queue get time is around 1.5 ms (~ 6 / 4).</p>
+<p><strong>Occupancy</strong></p>
+<p>There is something unique about the occupancy of the aggregation step.
+Even though the pipeline is producing data at a speed optimal for the
+foreground consumer, stage 1 does not always have the queue full.</p>
+<p>This is because the aggregation step drains the queue when it starts
+creating the next batch.</p>
+<p>In this case, while the aggregation step is putting a batch to its queue,
+stage 1 can produce 3 items. 2 of them are put in the queue, and the
+last one is held in the blocked attempt to put the next item to the queue.
+When the aggregation step completes putting the batch in its queue, it
+starts to collect the next batch.
+It will quickly pick up the 3 already processed items, which makes the queue
+empty.
+Then the aggregate will take the 4th item to complete a batch and start
+putting it in its queue.
+This keeps the stage 1 queue empty for 6 ms.
+Stage 1 now processes the next item and puts it in the queue,
+which takes another 6 ms.</p>
+<p>So in the cycle of 30 ms, there are about 12 ms of window that the queue is
+empty.
+This is the ~57% occupancy we see in the above figure.</p>
+</section>
+<section id="non-optimal">
+<h3>Non-optimal<a class="headerlink" href="#non-optimal" title="Link to this heading">¶</a></h3>
+<p>When we increase the batch size to 6, the pipeline no longer produces the data
+at the speed that the foreground consumer needs.
+It takes the pipeline 36 ms to create a batch,
+which is slower than the rate of the consumption. (30 ms)</p>
+<div id="agg-21"></div>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'agg-21',
+            '../_static/data/example_simu_agg2.json',
+            ['qps']);
+    },
+    false);
+</script><p>The throughput is a little below 27.7 (~ 1000/36 ms) after the aggregation,
+and 6 times that before the aggregation.</p>
+<div id="agg-22"></div>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function() {
+        loadAndPlotQueueStats(
+            'agg-22',
+            '../_static/data/example_simu_agg2.json',
+            ['put_time', 'get_time', 'occupancy']);
+    },
+    false);
+</script><p>Since the pipeline is starving for data everywhere other than the source,
+the put time is 0 and the occupancy is 0%.</p>
+<p>The get time mostly corresponds to <code class="docutils literal notranslate"><span class="pre">Pipeline</span> <span class="pre">iteration</span> <span class="pre">time</span> <span class="pre">-</span> <span class="pre">stage</span> <span class="pre">task</span> <span class="pre">execution</span> <span class="pre">time</span></code>.</p>
+</section>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">¶</a></h2>
+<p>Throughout this guide, we’ve explored how fast and slow stages interact and how these interactions
+manifest in queue statistics. The key relationships are:</p>
+<p><strong>Fast-to-Slow Stages:</strong></p>
+<p>When a stage is faster than its downstream consumer, data accumulates in the queue between them.
+This results in high put time (the fast stage waits for queue space), low get time (data is always available),
+and high queue occupancy (typically near 100%).</p>
+<p><strong>Slow-to-Fast Stages:</strong></p>
+<p>When a stage is slower than its downstream consumer, the downstream stage starves for data.
+This results in low put time (queue space is always available), high get time (downstream waits for data),
+and low queue occupancy (typically near 0%).</p>
+<section id="the-effect-of-concurrency">
+<h3>The Effect of Concurrency<a class="headerlink" href="#the-effect-of-concurrency" title="Link to this heading">¶</a></h3>
+<p>Increasing concurrency has the effect of virtually reducing the task execution time of a stage.
+If a stage takes 40 ms per task but runs with concurrency of 2, it can effectively process data at 20 ms per batch.
+This allows you to improve pipeline throughput by parallelizing slow stages without changing the underlying operation.
+However, the reported queue statistics (put/get times) are summed across all concurrent tasks, not averaged,
+so you need to account for the concurrency level when interpreting these values.</p>
+</section>
+<section id="special-considerations-for-aggregation">
+<h3>Special Considerations for Aggregation<a class="headerlink" href="#special-considerations-for-aggregation" title="Link to this heading">¶</a></h3>
+<p>When using aggregate operations, the queue occupancy of the stage before aggregation may not reach 100%
+even when the pipeline is running at optimal speed. This is because the aggregation stage drains the
+queue when collecting a batch, creating periods where the queue is temporarily empty while waiting for
+the next batch to be assembled. This behavior is normal and does not indicate a performance problem
+as long as the overall pipeline throughput meets the foreground consumer’s requirements.</p>
+</section>
+<section id="real-world-complexity">
+<h3>Real-World Complexity<a class="headerlink" href="#real-world-complexity" title="Link to this heading">¶</a></h3>
+<p>The simulations in this guide assume idealized conditions with consistent task execution times and no resource contention.
+Real-world use cases are more complex due to:</p>
+<ul class="simple">
+<li><p><strong>Limited CPU resources:</strong> Multiple stages competing for CPU cores can affect execution times</p></li>
+<li><p><strong>Network bandwidth constraints:</strong> Data fetching operations may experience variable latency and throughput</p></li>
+<li><p><strong>Noisy neighbor phenomenon:</strong> Other processes on the same machine can interfere with pipeline performance (see <a class="reference internal" href="noisy_neighbour.html"><span class="doc">Noisy Neighbour</span></a>)</p></li>
+<li><p><strong>Other resource contentions:</strong> Memory pressure, disk I/O, GPU utilization, etc.</p></li>
+</ul>
+<p>These factors mean that the background data loading pipeline and the foreground inference/training loop
+are not independent. Resource contention between them can create performance characteristics that differ
+from the idealized simulations. When optimizing real pipelines, consider monitoring system resource utilization
+alongside the queue statistics to identify bottlenecks caused by resource contention rather than
+just computational complexity.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="fleet_metrics.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Metrics across Ranks</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="analysis.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Analyzing the Performance</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, Meta Platforms, Inc.
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Understanding the performance statistics</a><ul>
+<li><a class="reference internal" href="#single-stage-pipeline">Single-stage Pipeline</a><ul>
+<li><a class="reference internal" href="#task-execution-time-and-throughput">Task Execution Time and Throughput</a></li>
+<li><a class="reference internal" href="#queue-get-put-time">Queue Get/Put Time</a><ul>
+<li><a class="reference internal" href="#fast-to-slow">Fast to slow</a></li>
+<li><a class="reference internal" href="#slow-to-fast">Slow to fast</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#queue-occupancy-data-readiness">Queue Occupancy (Data Readiness)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#performance-characteristics-summary">Performance Characteristics Summary</a></li>
+<li><a class="reference internal" href="#multi-stage-pipeline-structure">Multi-Stage Pipeline Structure</a><ul>
+<li><a class="reference internal" href="#id1">Fast to Slow</a></li>
+<li><a class="reference internal" href="#id2">Slow to fast</a></li>
+<li><a class="reference internal" href="#introducing-the-concurrency">Introducing the Concurrency</a></li>
+<li><a class="reference internal" href="#concurrency-beyond-optimal-setting">Concurrency beyond optimal setting</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#aggregation">Aggregation</a><ul>
+<li><a class="reference internal" href="#optimal">Optimal</a></li>
+<li><a class="reference internal" href="#non-optimal">Non-optimal</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#summary">Summary</a><ul>
+<li><a class="reference internal" href="#the-effect-of-concurrency">The Effect of Concurrency</a></li>
+<li><a class="reference internal" href="#special-considerations-for-aggregation">Special Considerations for Aggregation</a></li>
+<li><a class="reference internal" href="#real-world-complexity">Real-World Complexity</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=95e61db4"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../_static/collapsible-lists/js/CollapsibleLists.compressed.js?v=73120307"></script>
+    <script src="../_static/collapsible-lists/js/apply-collapsible-lists.js?v=660e4f45"></script>
+    <script src="https://unpkg.com/mermaid@11.10.0/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    </body>
+</html>

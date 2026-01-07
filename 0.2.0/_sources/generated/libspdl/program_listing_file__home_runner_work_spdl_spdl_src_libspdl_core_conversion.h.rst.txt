@@ -1,0 +1,65 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h:
+
+Program Listing for File conversion.h
+=====================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/conversion.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   #include <libspdl/core/buffer.h>
+   #include <libspdl/core/frames.h>
+   #include <libspdl/core/types.h>
+   
+   #include <array>
+   #include <vector>
+   
+   namespace spdl::core {
+   
+   template <MediaType media>
+   CPUBufferPtr convert_frames(
+       const std::vector<const Frames<media>*>& batch,
+       std::shared_ptr<CPUStorage> storage = nullptr);
+   
+   template <MediaType media>
+   CPUBufferPtr convert_frames(
+       const Frames<media>* frames,
+       std::shared_ptr<CPUStorage> storage = nullptr) {
+     const std::vector<const Frames<media>*> batch{frames};
+     // Use the same impl as batch conversion
+     auto ret = convert_frames<media>(batch, std::move(storage));
+     ret->shape.erase(ret->shape.begin()); // Trim the batch dim
+     return ret;
+   }
+   
+   AudioFramesPtr create_reference_audio_frame(
+       const std::string& sample_fmt,
+       const void* data,
+       int bits,
+       const std::array<size_t, 2>& shape,
+       const std::array<int64_t, 2>& stride,
+       int sample_rate,
+       int64_t pts);
+   
+   VideoFramesPtr create_reference_video_frame(
+       const std::string& sample_fmt,
+       const void* data,
+       int bits,
+       const std::vector<size_t>& shape,
+       const std::vector<int64_t>& stride,
+       Rational frame_rate,
+       int64_t pts);
+   
+   } // namespace spdl::core

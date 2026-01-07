@@ -1,0 +1,13 @@
+spdl.io.AudioDecoder
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: AudioDecoder
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AudioDecoder.decode
+      ~AudioDecoder.flush

@@ -1,0 +1,113 @@
+:orphan:
+
+
+Full API
+========
+
+Directories
+***********
+
+
+.. toctree::
+   :maxdepth: 5
+
+   dir__home_runner_work_spdl_spdl_src.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   dir__home_runner_work_spdl_spdl_src_libspdl.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   dir__home_runner_work_spdl_spdl_src_libspdl_core.rst
+
+Files
+*****
+
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_bsf.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_storage.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_types.h.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h.rst
