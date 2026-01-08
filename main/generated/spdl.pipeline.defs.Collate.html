@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.pipeline.config.set_default_hook_class - SPDL 0.2.0 documentation</title>
+        <title>spdl.pipeline.defs.Collate - SPDL 0.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -479,7 +479,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/generated/spdl.pipeline.config.set_default_hook_class.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/generated/spdl.pipeline.defs.Collate.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -499,19 +499,87 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="spdl-pipeline-config-set-default-hook-class">
-<h1>spdl.pipeline.config.set_default_hook_class<a class="headerlink" href="#spdl-pipeline-config-set-default-hook-class" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="spdl.pipeline.config.set_default_hook_class">
-<span class="sig-name descname"><span class="pre">set_default_hook_class</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hook_class:</span> <span class="pre">type[~spdl.pipeline._components._hook.TaskHook]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'spdl.pipeline._components._hook.TaskStatsHook'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_hook.py?#L384-L393"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.config.set_default_hook_class" title="Link to this definition">¶</a></dt>
-<dd><p>Set the default hook class to be used for pipeline stages.</p>
+          <section id="spdl-pipeline-defs-collate">
+<h1>spdl.pipeline.defs.Collate<a class="headerlink" href="#spdl-pipeline-defs-collate" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="spdl.pipeline.defs.Collate">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Collate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/defs/_defs.py?#L705-L779"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.defs.Collate" title="Link to this definition">¶</a></dt>
+<dd><p>Aggregator that collects items into batches of a specified size.</p>
+<p>This is a built-in <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a> implementation that batches
+incoming items into lists of size <code class="docutils literal notranslate"><span class="pre">n</span></code>.</p>
+<p>When used with <a class="reference internal" href="spdl.pipeline.defs.Aggregate.html#spdl.pipeline.defs.Aggregate" title="spdl.pipeline.defs.Aggregate"><code class="xref py py-func docutils literal notranslate"><span class="pre">Aggregate()</span></code></a>, it will:</p>
+<ol class="arabic simple">
+<li><p>Accumulate items until <code class="docutils literal notranslate"><span class="pre">n</span></code> items are collected</p></li>
+<li><p>Return the batch as a list and reset the internal buffer</p></li>
+<li><p>On flush (stream end), return any remaining items if <code class="docutils literal notranslate"><span class="pre">drop_last=False</span></code></p></li>
+</ol>
+<p>The following construction of pipe are all equivalent</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">AggregateConfig(op=Collate(N))</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Aggregate(N)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PipelineBuilder.aggregate(N)</span></code></p></li>
+</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>hook_class</strong> – The hook class to use as default.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, then it disables hook.
-Default: <a class="reference internal" href="spdl.pipeline.TaskStatsHook.html#spdl.pipeline.TaskStatsHook" title="spdl.pipeline.TaskStatsHook"><code class="xref py py-class docutils literal notranslate"><span class="pre">TaskStatsHook</span></code></a>.</p>
+<dd class="field-odd"><p><strong>n</strong> – The number of items to collect before emitting a batch.</p>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline.defs</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aggregate</span><span class="p">,</span> <span class="n">Collate</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">Aggregate</span><span class="p">(</span><span class="n">Collate</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Output: [0, 1, 2], [3, 4, 5], [6, 7, 8], [9]</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.defs.Collate.accumulate" title="spdl.pipeline.defs.Collate.accumulate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">accumulate</span></code></a>(item)</p></td>
+<td><p>Add an item to the buffer and return a batch when full.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.defs.Collate.flush" title="spdl.pipeline.defs.Collate.flush"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flush</span></code></a>()</p></td>
+<td><p>Return any remaining items in the buffer.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.defs.Collate.accumulate">
+<span class="sig-name descname"><span class="pre">accumulate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/defs/_defs.py?#L747-L762"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.defs.Collate.accumulate" title="Link to this definition">¶</a></dt>
+<dd><p>Add an item to the buffer and return a batch when full.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>item</strong> – The item to add to the current batch.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of <code class="docutils literal notranslate"><span class="pre">n</span></code> items when the batch is full, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if
+more items are needed to complete the batch.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.defs.Collate.flush">
+<span class="sig-name descname"><span class="pre">flush</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/defs/_defs.py?#L764-L776"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.defs.Collate.flush" title="Link to this definition">¶</a></dt>
+<dd><p>Return any remaining items in the buffer.</p>
+<p>This method is called when the stream ends and <code class="docutils literal notranslate"><span class="pre">drop_last=False</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list of remaining items if the buffer is non-empty,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the buffer is empty.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -553,8 +621,12 @@ Default: <a class="reference internal" href="spdl.pipeline.TaskStatsHook.html#sp
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">spdl.pipeline.config.set_default_hook_class</a><ul>
-<li><a class="reference internal" href="#spdl.pipeline.config.set_default_hook_class"><code class="docutils literal notranslate"><span class="pre">set_default_hook_class()</span></code></a></li>
+<li><a class="reference internal" href="#">spdl.pipeline.defs.Collate</a><ul>
+<li><a class="reference internal" href="#spdl.pipeline.defs.Collate"><code class="docutils literal notranslate"><span class="pre">Collate</span></code></a><ul>
+<li><a class="reference internal" href="#spdl.pipeline.defs.Collate.accumulate"><code class="docutils literal notranslate"><span class="pre">Collate.accumulate()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.defs.Collate.flush"><code class="docutils literal notranslate"><span class="pre">Collate.flush()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

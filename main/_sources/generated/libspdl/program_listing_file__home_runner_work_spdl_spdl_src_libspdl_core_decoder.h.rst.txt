@@ -22,6 +22,7 @@ Program Listing for File decoder.h
    
    #include <libspdl/core/codec.h>
    #include <libspdl/core/frames.h>
+   #include <libspdl/core/generator.h>
    #include <libspdl/core/packets.h>
    #include <libspdl/core/types.h>
    
@@ -55,13 +56,23 @@ Program Listing for File decoder.h
    
      ~Decoder();
    
-     FramesPtr<media> decode_and_flush(
+     // One-off decoding
+   
+     FramesPtr<media> decode_packets(
          PacketsPtr<media> packets,
          int num_frames = -1);
    
-     std::optional<FramesPtr<media>> decode(PacketsPtr<media> packets);
+     // Streaming decoding
    
-     std::optional<FramesPtr<media>> flush();
+     void set_buffer_size(size_t num_frames)
+       requires(media == MediaType::Video);
+   
+     Generator<FramesPtr<media>> streaming_decode_packets(
+         PacketsPtr<media> packets)
+       requires(media == MediaType::Video || media == MediaType::Audio);
+   
+     Generator<FramesPtr<media>> flush()
+       requires(media == MediaType::Video || media == MediaType::Audio);
    };
    
    template <MediaType media>

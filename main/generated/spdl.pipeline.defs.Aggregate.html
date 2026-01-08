@@ -503,23 +503,119 @@
 <h1>spdl.pipeline.defs.Aggregate<a class="headerlink" href="#spdl-pipeline-defs-aggregate" title="Link to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.pipeline.defs.Aggregate">
-<span class="sig-name descname"><span class="pre">Aggregate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_last</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.AggregateConfig.html#spdl.pipeline.defs.AggregateConfig" title="spdl.pipeline.defs._defs.AggregateConfig"><span class="pre">AggregateConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/defs/_defs.py?#L586-L608"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.defs.Aggregate" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">Aggregate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs._defs.Aggregator"><span class="pre">Aggregator</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_last</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.AggregateConfig.html#spdl.pipeline.defs.AggregateConfig" title="spdl.pipeline.defs._defs.AggregateConfig"><span class="pre">AggregateConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/defs/_defs.py?#L782-L905"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.defs.Aggregate" title="Link to this definition">¶</a></dt>
 <dd><p>Create a <a class="reference internal" href="spdl.pipeline.defs.AggregateConfig.html#spdl.pipeline.defs.AggregateConfig" title="spdl.pipeline.defs.AggregateConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">AggregateConfig</span></code></a> object for aggregation.</p>
 <p>The aggregation buffers the incoming items and emits once enough items are buffered.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>num_items</strong> – The number of items to buffer.</p></li>
-<li><p><strong>drop_last</strong> – Drop the last aggregation if it has less than <code class="docutils literal notranslate"><span class="pre">num_aggregate</span></code> items.</p></li>
+<li><p><strong>input</strong> – <p>Either an integer specifying the number of items to buffer, or an
+<a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a> instance for custom aggregation logic.</p>
+<ul>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">int</span></code>: Buffers that many items before emitting as a list.</p></li>
+<li><p>If <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a>: Custom aggregation using the
+<a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator.accumulate" title="spdl.pipeline.defs.Aggregator.accumulate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">accumulate()</span></code></a> and <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator.flush" title="spdl.pipeline.defs.Aggregator.flush"><code class="xref py py-meth docutils literal notranslate"><span class="pre">flush()</span></code></a>
+methods. The <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a> abstraction handles EOF automatically,
+so you don’t need to explicitly check for EOF markers in your implementation.</p>
+<p>The pipeline will call <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator.accumulate" title="spdl.pipeline.defs.Aggregator.accumulate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">accumulate()</span></code></a> for each item
+and <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator.flush" title="spdl.pipeline.defs.Aggregator.flush"><code class="xref py py-meth docutils literal notranslate"><span class="pre">flush()</span></code></a> when the stream ends (if <code class="docutils literal notranslate"><span class="pre">drop_last=False</span></code>).</p>
+</li>
+</ul>
+</p></li>
+<li><p><strong>drop_last</strong> – <p>Drop the last aggregation if incomplete.</p>
+<ul>
+<li><dl class="simple">
+<dt>When <code class="docutils literal notranslate"><span class="pre">drop_last=False</span></code> (default):</dt><dd><ul>
+<li><p>For <code class="docutils literal notranslate"><span class="pre">int</span></code> input: Emits the last batch even if it has fewer items</p></li>
+<li><p>For <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a> input: Calls <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator.flush" title="spdl.pipeline.defs.Aggregator.flush"><code class="xref py py-meth docutils literal notranslate"><span class="pre">flush()</span></code></a>
+at EOF to emit remaining buffered items</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>When <code class="docutils literal notranslate"><span class="pre">drop_last=True</span></code>:</dt><dd><ul>
+<li><p>For <code class="docutils literal notranslate"><span class="pre">int</span></code> input: Drops the last batch if it has fewer items</p></li>
+<li><p>For <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a> input: Does NOT call
+<a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator.flush" title="spdl.pipeline.defs.Aggregator.flush"><code class="xref py py-meth docutils literal notranslate"><span class="pre">flush()</span></code></a>, effectively dropping incomplete batches</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The config object.</p>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<p>Simple batching (buffering N items):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineBuilder</span>
+
+<span class="c1"># Buffer 3 items at a time</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="p">)</span>
+<span class="c1"># Produces: [0,1,2], [3,4,5], [6,7,8], [9]</span>
+
+<span class="c1"># Drop last incomplete batch</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="p">)</span>
+<span class="c1"># Produces: [0,1,2], [3,4,5], [6,7,8]</span>
+</pre></div>
+</div>
+<p>Custom aggregation using <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline.defs</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aggregator</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SizeBasedAggregator</span><span class="p">(</span><span class="n">Aggregator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Aggregate strings when total size exceeds threshold.&#39;&#39;&#39;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="o">=</span> <span class="n">threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">accumulate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="p">[],</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="p">[],</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;bb&quot;</span><span class="p">,</span> <span class="s2">&quot;ccc&quot;</span><span class="p">,</span> <span class="s2">&quot;dddd&quot;</span><span class="p">,</span> <span class="s2">&quot;e&quot;</span><span class="p">,</span> <span class="s2">&quot;ff&quot;</span><span class="p">])</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">SizeBasedAggregator</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <dl class="simple">
+<dt><a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a></dt><dd><p>Abstract base class for custom aggregation operations.</p>
+</dd>
+<dt><a class="reference internal" href="spdl.pipeline.defs.Collate.html#spdl.pipeline.defs.Collate" title="spdl.pipeline.defs.Collate"><code class="xref py py-class docutils literal notranslate"><span class="pre">Collate</span></code></a></dt><dd><p>The aggregator used when the input is integer.</p>
+</dd>
 <dt><a class="reference internal" href="pipeline_definitions.html#example-pipeline-definitions"><span class="std std-ref">Example: Pipeline definitions</span></a></dt><dd><p>Illustrates how to build a complex pipeline.</p>
 </dd>
 </dl>

@@ -503,21 +503,34 @@
 <h1>spdl.pipeline.defs.AggregateConfig<a class="headerlink" href="#spdl-pipeline-defs-aggregateconfig" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.pipeline.defs.AggregateConfig">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">AggregateConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_last</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_PipeType</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">_PipeType.Aggregate</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/defs/_defs.py?#L242-L270"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.defs.AggregateConfig" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">AggregateConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">op</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs._defs.Aggregator"><span class="pre">Aggregator</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_last</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">_PipeType</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">_PipeType.Aggregate</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/defs/_defs.py?#L357-L389"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.defs.AggregateConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Configuration for aggregation operation.</p>
-<p>Buffers incoming items and emits once enough items are buffered.</p>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 0.2.1: </span>The config has been generalized to support custom aggregation method.
+You can provide a custom implementation by subclassing
+<a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a> class and passing it via <code class="docutils literal notranslate"><span class="pre">op</span></code>.</p>
+<p>With this change, <code class="docutils literal notranslate"><span class="pre">num_items</span></code> has been moved to <a class="reference internal" href="spdl.pipeline.defs.Collate.html#spdl.pipeline.defs.Collate" title="spdl.pipeline.defs.Collate"><code class="xref py py-class docutils literal notranslate"><span class="pre">Collate</span></code></a>.</p>
+<ul class="simple">
+<li><p><strong>Before</strong> <code class="docutils literal notranslate"><span class="pre">AggregateConfig(...,</span> <span class="pre">num_items=N,</span> <span class="pre">...)</span></code></p></li>
+<li><p><strong>After</strong> <code class="docutils literal notranslate"><span class="pre">AggregateConfig(...,</span> <span class="pre">op=Collate(N),</span> <span class="pre">...)</span></code></p></li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can use <a class="reference internal" href="spdl.pipeline.defs.Aggregate.html#spdl.pipeline.defs.Aggregate" title="spdl.pipeline.defs.Aggregate"><code class="xref py py-func docutils literal notranslate"><span class="pre">Aggregate()</span></code></a> to instantiate this config.</p>
+</div>
 <p class="rubric">Attributes</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.drop_last" title="spdl.pipeline.defs.AggregateConfig.drop_last"><code class="xref py py-obj docutils literal notranslate"><span class="pre">drop_last</span></code></a></p></td>
-<td><p>Whether to drop the last aggregation if it has fewer than num_items.</p></td>
+<td><p>Whether to drop the last aggregation.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.name" title="spdl.pipeline.defs.AggregateConfig.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></a></p></td>
 <td><p>Name of the aggregation stage.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.num_items" title="spdl.pipeline.defs.AggregateConfig.num_items"><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_items</span></code></a></p></td>
-<td><p>Number of items to buffer before emitting.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.op" title="spdl.pipeline.defs.AggregateConfig.op"><code class="xref py py-obj docutils literal notranslate"><span class="pre">op</span></code></a></p></td>
+<td><p>Aggregation operation.</p></td>
 </tr>
 </tbody>
 </table>
@@ -525,7 +538,7 @@
 <dl class="py attribute">
 <dt class="sig sig-object py" id="spdl.pipeline.defs.AggregateConfig.drop_last">
 <span class="sig-name descname"><span class="pre">drop_last</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#spdl.pipeline.defs.AggregateConfig.drop_last" title="Link to this definition">¶</a></dt>
-<dd><p>Whether to drop the last aggregation if it has fewer than num_items.</p>
+<dd><p>Whether to drop the last aggregation.</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -535,9 +548,9 @@
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spdl.pipeline.defs.AggregateConfig.num_items">
-<span class="sig-name descname"><span class="pre">num_items</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#spdl.pipeline.defs.AggregateConfig.num_items" title="Link to this definition">¶</a></dt>
-<dd><p>Number of items to buffer before emitting.</p>
+<dt class="sig sig-object py" id="spdl.pipeline.defs.AggregateConfig.op">
+<span class="sig-name descname"><span class="pre">op</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs._defs.Aggregator"><span class="pre">Aggregator</span></a></em><a class="headerlink" href="#spdl.pipeline.defs.AggregateConfig.op" title="Link to this definition">¶</a></dt>
+<dd><p>Aggregation operation. It must be a subclass of <a class="reference internal" href="spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aggregator</span></code></a></p>
 </dd></dl>
 
 </dd></dl>
@@ -585,7 +598,7 @@
 <li><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig"><code class="docutils literal notranslate"><span class="pre">AggregateConfig</span></code></a><ul>
 <li><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.drop_last"><code class="docutils literal notranslate"><span class="pre">AggregateConfig.drop_last</span></code></a></li>
 <li><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.name"><code class="docutils literal notranslate"><span class="pre">AggregateConfig.name</span></code></a></li>
-<li><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.num_items"><code class="docutils literal notranslate"><span class="pre">AggregateConfig.num_items</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.defs.AggregateConfig.op"><code class="docutils literal notranslate"><span class="pre">AggregateConfig.op</span></code></a></li>
 </ul>
 </li>
 </ul>
