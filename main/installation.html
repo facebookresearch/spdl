@@ -506,6 +506,12 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">spdl</span>
 </pre></div>
 </div>
+<p>The <cite>spdl</cite> package is the top-level package for installing the component libraries.
+You can install the component libraries separately.</p>
+<ul class="simple">
+<li><p><cite>pip install spdl-core</cite> for pipeline constructions. This is a pure-Python package.</p></li>
+<li><p><cite>pip install spdl-io</cite> for I/O processing. This package contains extension modules written in C++.</p></li>
+</ul>
 </section>
 <section id="from-source">
 <h2>From source<a class="headerlink" href="#from-source" title="Link to this heading">¶</a></h2>
@@ -546,7 +552,7 @@ for the up-to-date available options.</p>
 <section id="requirements">
 <h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p>Supported OS: Linux, macOS</p></li>
+<li><p>Supported OS: Linux (aarch64, x64), macOS, Windows</p></li>
 <li><dl class="simple">
 <dt>Build requirements</dt><dd><ul>
 <li><p>C++20 compiler (Tested on GCC 11 and Clang 15)</p></li>

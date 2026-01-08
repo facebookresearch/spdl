@@ -41,6 +41,8 @@ Included By
 -----------
 
 
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
 
 - :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`

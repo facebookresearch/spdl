@@ -728,7 +728,7 @@ match, and you need to call <code class="docutils literal notranslate"><span cla
 <span class="linenos">165</span>                <span class="k">continue</span>
 <span class="linenos">166</span>
 <span class="linenos">167</span>            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">video_packets</span><span class="p">,</span> <span class="n">VideoPackets</span><span class="p">)</span>
-<span class="linenos">168</span>            <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">video_packets</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">168</span>            <span class="k">for</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">streaming_decode_packets</span><span class="p">(</span><span class="n">video_packets</span><span class="p">):</span>
 <span class="linenos">169</span>                <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">convert_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
 <span class="linenos">170</span>                <span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
 <span class="linenos">171</span>
@@ -757,7 +757,7 @@ match, and you need to call <code class="docutils literal notranslate"><span cla
 <span class="linenos">194</span>        <span class="c1"># -------------------------------------------------------------</span>
 <span class="linenos">195</span>
 <span class="linenos">196</span>        <span class="c1"># Flush decoder</span>
-<span class="linenos">197</span>        <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">flush</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">197</span>        <span class="k">for</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">flush</span><span class="p">():</span>
 <span class="linenos">198</span>            <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">convert_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
 <span class="linenos">199</span>            <span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
 <span class="linenos">200</span>

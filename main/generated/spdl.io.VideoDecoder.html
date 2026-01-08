@@ -509,25 +509,34 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.io.VideoDecoder.decode" title="spdl.io.VideoDecoder.decode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">decode</span></code></a></p></td>
-<td><p>Decode the given packets</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.io.VideoDecoder.flush" title="spdl.io.VideoDecoder.flush"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flush</span></code></a></p></td>
+<td><p>Flush the decoder and yield remaining frames</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spdl.io.VideoDecoder.flush" title="spdl.io.VideoDecoder.flush"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flush</span></code></a></p></td>
-<td><p>Flush the internally buffered frames.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.io.VideoDecoder.set_buffer_size" title="spdl.io.VideoDecoder.set_buffer_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_buffer_size</span></code></a></p></td>
+<td><p>Set the buffer size for streaming decoding.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.io.VideoDecoder.streaming_decode_packets" title="spdl.io.VideoDecoder.streaming_decode_packets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">streaming_decode_packets</span></code></a></p></td>
+<td><p>Streaming decode packets and yield frames</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spdl.io.VideoDecoder.decode">
-<span class="sig-name descname"><span class="pre">decode</span></span><a class="headerlink" href="#spdl.io.VideoDecoder.decode" title="Link to this definition">¶</a></dt>
-<dd><p>Decode the given packets</p>
+<dt class="sig sig-object py" id="spdl.io.VideoDecoder.flush">
+<span class="sig-name descname"><span class="pre">flush</span></span><a class="headerlink" href="#spdl.io.VideoDecoder.flush" title="Link to this definition">¶</a></dt>
+<dd><p>Flush the decoder and yield remaining frames</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spdl.io.VideoDecoder.flush">
-<span class="sig-name descname"><span class="pre">flush</span></span><a class="headerlink" href="#spdl.io.VideoDecoder.flush" title="Link to this definition">¶</a></dt>
-<dd><p>Flush the internally buffered frames. Use only at the end of stream</p>
+<dt class="sig sig-object py" id="spdl.io.VideoDecoder.set_buffer_size">
+<span class="sig-name descname"><span class="pre">set_buffer_size</span></span><a class="headerlink" href="#spdl.io.VideoDecoder.set_buffer_size" title="Link to this definition">¶</a></dt>
+<dd><p>Set the buffer size for streaming decoding. Providing 0 will disable the fixed-frame streaming, and the number of frames yielded can vary.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spdl.io.VideoDecoder.streaming_decode_packets">
+<span class="sig-name descname"><span class="pre">streaming_decode_packets</span></span><a class="headerlink" href="#spdl.io.VideoDecoder.streaming_decode_packets" title="Link to this definition">¶</a></dt>
+<dd><p>Streaming decode packets and yield frames</p>
 </dd></dl>
 
 </dd></dl>
@@ -573,8 +582,9 @@
             <ul>
 <li><a class="reference internal" href="#">spdl.io.VideoDecoder</a><ul>
 <li><a class="reference internal" href="#spdl.io.VideoDecoder"><code class="docutils literal notranslate"><span class="pre">VideoDecoder</span></code></a><ul>
-<li><a class="reference internal" href="#spdl.io.VideoDecoder.decode"><code class="docutils literal notranslate"><span class="pre">VideoDecoder.decode</span></code></a></li>
 <li><a class="reference internal" href="#spdl.io.VideoDecoder.flush"><code class="docutils literal notranslate"><span class="pre">VideoDecoder.flush</span></code></a></li>
+<li><a class="reference internal" href="#spdl.io.VideoDecoder.set_buffer_size"><code class="docutils literal notranslate"><span class="pre">VideoDecoder.set_buffer_size</span></code></a></li>
+<li><a class="reference internal" href="#spdl.io.VideoDecoder.streaming_decode_packets"><code class="docutils literal notranslate"><span class="pre">VideoDecoder.streaming_decode_packets</span></code></a></li>
 </ul>
 </li>
 </ul>

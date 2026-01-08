@@ -773,17 +773,6 @@ VideoDecoder
    VideoDecoder
 
 
-ImageDecoder
-^^^^^^^^^^^^
-.. autosummary::
-   :toctree:
-   :nosignatures:
-   :hide_from_toctree:
-   :template: _custom_autosummary_class.rst
-
-   ImageDecoder
-
-
 FilterGraph
 ^^^^^^^^^^^
 .. autosummary::
@@ -968,7 +957,20 @@ CUDAConfig
 
 
 
+
 .. rubric:: Others
+ImageDecoder
+^^^^^^^^^^^^
+
+.. autosummary::
+   :template: _custom_autosummary_others.rst
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   ImageDecoder
+
+
 WAVHeader
 ^^^^^^^^^
 

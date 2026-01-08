@@ -9,5 +9,5 @@ spdl.io.AudioDecoder
    .. rubric:: Attributes
 
    .. autosummary::
-      ~AudioDecoder.decode
       ~AudioDecoder.flush
+      ~AudioDecoder.streaming_decode_packets

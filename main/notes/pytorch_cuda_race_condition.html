@@ -594,7 +594,7 @@ can create another CUDA tensor, and the CCA can assign the same memory region to
 <section id="the-solution-caching-the-reference-in-transfer-tensor">
 <h2>The Solution: Caching the reference in <code class="docutils literal notranslate"><span class="pre">transfer_tensor</span></code><a class="headerlink" href="#the-solution-caching-the-reference-in-transfer-tensor" title="Link to this heading">¶</a></h2>
 <p>PyTorch provides a mitigation for multi-stream applications, such as
-<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.record_stream.html#torch.Tensor.record_stream" title="(in PyTorch v2.9)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">record_stream()</span></code></a>.
+<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.record_stream.html#torch.Tensor.record_stream" title="(in PyTorch v2.10)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">record_stream()</span></code></a>.
 However, we are not certain that this works for multi-threading situations,
 so we resort to a more primitive approach.</p>
 <p>The <a class="reference internal" href="../generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor" title="spdl.io.transfer_tensor"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor()</span></code></a> function now holds a strong reference to the batches

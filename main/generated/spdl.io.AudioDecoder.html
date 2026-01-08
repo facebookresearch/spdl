@@ -509,25 +509,25 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.io.AudioDecoder.decode" title="spdl.io.AudioDecoder.decode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">decode</span></code></a></p></td>
-<td><p>Decode the given packets</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.io.AudioDecoder.flush" title="spdl.io.AudioDecoder.flush"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flush</span></code></a></p></td>
+<td><p>Flush the decoder and yield remaining frames</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spdl.io.AudioDecoder.flush" title="spdl.io.AudioDecoder.flush"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flush</span></code></a></p></td>
-<td><p>Flush the internally buffered frames.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.io.AudioDecoder.streaming_decode_packets" title="spdl.io.AudioDecoder.streaming_decode_packets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">streaming_decode_packets</span></code></a></p></td>
+<td><p>Streaming decode packets and yield frames</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spdl.io.AudioDecoder.decode">
-<span class="sig-name descname"><span class="pre">decode</span></span><a class="headerlink" href="#spdl.io.AudioDecoder.decode" title="Link to this definition">¶</a></dt>
-<dd><p>Decode the given packets</p>
+<dt class="sig sig-object py" id="spdl.io.AudioDecoder.flush">
+<span class="sig-name descname"><span class="pre">flush</span></span><a class="headerlink" href="#spdl.io.AudioDecoder.flush" title="Link to this definition">¶</a></dt>
+<dd><p>Flush the decoder and yield remaining frames</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spdl.io.AudioDecoder.flush">
-<span class="sig-name descname"><span class="pre">flush</span></span><a class="headerlink" href="#spdl.io.AudioDecoder.flush" title="Link to this definition">¶</a></dt>
-<dd><p>Flush the internally buffered frames. Use only at the end of stream</p>
+<dt class="sig sig-object py" id="spdl.io.AudioDecoder.streaming_decode_packets">
+<span class="sig-name descname"><span class="pre">streaming_decode_packets</span></span><a class="headerlink" href="#spdl.io.AudioDecoder.streaming_decode_packets" title="Link to this definition">¶</a></dt>
+<dd><p>Streaming decode packets and yield frames</p>
 </dd></dl>
 
 </dd></dl>
@@ -573,8 +573,8 @@
             <ul>
 <li><a class="reference internal" href="#">spdl.io.AudioDecoder</a><ul>
 <li><a class="reference internal" href="#spdl.io.AudioDecoder"><code class="docutils literal notranslate"><span class="pre">AudioDecoder</span></code></a><ul>
-<li><a class="reference internal" href="#spdl.io.AudioDecoder.decode"><code class="docutils literal notranslate"><span class="pre">AudioDecoder.decode</span></code></a></li>
 <li><a class="reference internal" href="#spdl.io.AudioDecoder.flush"><code class="docutils literal notranslate"><span class="pre">AudioDecoder.flush</span></code></a></li>
+<li><a class="reference internal" href="#spdl.io.AudioDecoder.streaming_decode_packets"><code class="docutils literal notranslate"><span class="pre">AudioDecoder.streaming_decode_packets</span></code></a></li>
 </ul>
 </li>
 </ul>
