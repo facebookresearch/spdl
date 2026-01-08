@@ -514,6 +514,7 @@
 
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;libspdl/core/codec.h&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;libspdl/core/frames.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;libspdl/core/generator.h&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;libspdl/core/packets.h&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;libspdl/core/types.h&gt;</span>
 
@@ -547,13 +548,23 @@
 
 <span class="w">  </span><span class="o">~</span><span class="n">Decoder</span><span class="p">();</span>
 
-<span class="w">  </span><span class="n">FramesPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;</span><span class="w"> </span><span class="n">decode_and_flush</span><span class="p">(</span>
+<span class="w">  </span><span class="c1">// One-off decoding</span>
+
+<span class="w">  </span><span class="n">FramesPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;</span><span class="w"> </span><span class="n">decode_packets</span><span class="p">(</span>
 <span class="w">      </span><span class="n">PacketsPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;</span><span class="w"> </span><span class="n">packets</span><span class="p">,</span>
 <span class="w">      </span><span class="kt">int</span><span class="w"> </span><span class="n">num_frames</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">);</span>
 
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">optional</span><span class="o">&lt;</span><span class="n">FramesPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">decode</span><span class="p">(</span><span class="n">PacketsPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;</span><span class="w"> </span><span class="n">packets</span><span class="p">);</span>
+<span class="w">  </span><span class="c1">// Streaming decoding</span>
 
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">optional</span><span class="o">&lt;</span><span class="n">FramesPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">flush</span><span class="p">();</span>
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="nf">set_buffer_size</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">num_frames</span><span class="p">)</span>
+<span class="w">    </span><span class="k">requires</span><span class="p">(</span><span class="n">media</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">MediaType</span><span class="o">::</span><span class="n">Video</span><span class="p">);</span>
+
+<span class="w">  </span><span class="n">Generator</span><span class="o">&lt;</span><span class="n">FramesPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">streaming_decode_packets</span><span class="p">(</span>
+<span class="w">      </span><span class="n">PacketsPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;</span><span class="w"> </span><span class="n">packets</span><span class="p">)</span>
+<span class="w">    </span><span class="k">requires</span><span class="p">(</span><span class="n">media</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">MediaType</span><span class="o">::</span><span class="n">Video</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">media</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">MediaType</span><span class="o">::</span><span class="n">Audio</span><span class="p">);</span>
+
+<span class="w">  </span><span class="n">Generator</span><span class="o">&lt;</span><span class="n">FramesPtr</span><span class="o">&lt;</span><span class="n">media</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">flush</span><span class="p">()</span>
+<span class="w">    </span><span class="k">requires</span><span class="p">(</span><span class="n">media</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">MediaType</span><span class="o">::</span><span class="n">Video</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">media</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">MediaType</span><span class="o">::</span><span class="n">Audio</span><span class="p">);</span>
 <span class="p">};</span>
 
 <span class="k">template</span><span class="w"> </span><span class="o">&lt;</span><span class="n">MediaType</span><span class="w"> </span><span class="n">media</span><span class="o">&gt;</span>

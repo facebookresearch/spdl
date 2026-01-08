@@ -507,10 +507,10 @@ and compares its performance against PyTorch DataLoader.</p>
 resize, batching, and pixel normalization then the data is transferred
 to GPU.</p>
 <p>In the PyTorch and TorchVision native solution, the images are decoded
-and resized using Pillow, batched with <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.default_collate" title="(in PyTorch v2.9)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.utils.data.default_collate()</span></code></a>,
-pixel normalization is applied with <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.transforms.Normalize.html#torchvision.transforms.Normalize" title="(in Torchvision v0.24)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.transforms.Normalize</span></code></a>,
+and resized using Pillow, batched with <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.default_collate" title="(in PyTorch v2.10)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.utils.data.default_collate()</span></code></a>,
+pixel normalization is applied with <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.transforms.Normalize.html#torchvision.transforms.Normalize" title="(in Torchvision v0.25)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.transforms.Normalize</span></code></a>,
 and data are transferred to GPU with <code class="xref py py-func docutils literal notranslate"><span class="pre">torch.Tensor.cuda()</span></code>.</p>
-<p>Using <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code></a>, the batch is created and
+<p>Using <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code></a>, the batch is created and
 normalized in subprocess and transferred to the main process before they are
 sent to GPU.</p>
 <p>The following diagram illustrates this.</p>
