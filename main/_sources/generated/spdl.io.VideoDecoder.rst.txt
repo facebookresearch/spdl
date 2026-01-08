@@ -9,5 +9,5 @@ spdl.io.VideoDecoder
    .. rubric:: Attributes
 
    .. autosummary::
-      ~VideoDecoder.decode
       ~VideoDecoder.flush
+      ~VideoDecoder.streaming_decode_packets

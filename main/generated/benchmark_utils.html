@@ -639,7 +639,7 @@
 <span class="linenos">112</span>
 <span class="linenos">113</span>    <span class="n">INTERPRETER</span> <span class="o">=</span> <span class="s2">&quot;interpreter&quot;</span>
 <span class="linenos">114</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Use :py:class:`~concurrent.futures.InterpreterPoolExecutor`.</span>
-<span class="linenos">115</span><span class="sd">    </span>
+<span class="linenos">115</span>
 <span class="linenos">116</span><span class="sd">    Requires Python 3.14+.</span>
 <span class="linenos">117</span><span class="sd">    &quot;&quot;&quot;</span>
 <span class="linenos">118</span>
@@ -926,118 +926,119 @@
 <span class="linenos">399</span>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
 <span class="linenos">400</span>        <span class="c1"># Write generated marker as first line</span>
 <span class="linenos">401</span>        <span class="c1"># Note: Splitting the marker so as to avoid linter consider this file as generated file</span>
-<span class="linenos">402</span>        <span class="n">csvfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# @&quot;</span> <span class="s2">&quot;generated</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="linenos">403</span>
-<span class="linenos">404</span>        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
-<span class="linenos">405</span>        <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span>
-<span class="linenos">406</span>        <span class="k">for</span> <span class="n">result_dict</span> <span class="ow">in</span> <span class="n">flattened_results</span><span class="p">:</span>
-<span class="linenos">407</span>            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">result_dict</span><span class="p">)</span>
-<span class="linenos">408</span>
-<span class="linenos">409</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="linenos">410</span>
+<span class="linenos">402</span>        <span class="n">csvfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# @&quot;</span><span class="p">)</span>
+<span class="linenos">403</span>        <span class="n">csvfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;generated</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos">404</span>
+<span class="linenos">405</span>        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
+<span class="linenos">406</span>        <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span>
+<span class="linenos">407</span>        <span class="k">for</span> <span class="n">result_dict</span> <span class="ow">in</span> <span class="n">flattened_results</span><span class="p">:</span>
+<span class="linenos">408</span>            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">result_dict</span><span class="p">)</span>
+<span class="linenos">409</span>
+<span class="linenos">410</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="linenos">411</span>
-<span class="linenos">412</span><span class="k">def</span><span class="w"> </span><span class="nf">load_results_from_csv</span><span class="p">(</span>
-<span class="linenos">413</span>    <span class="n">input_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<span class="linenos">414</span>    <span class="n">config_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">ConfigT</span><span class="p">],</span>
-<span class="linenos">415</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">ConfigT</span><span class="p">]]:</span>
-<span class="linenos">416</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load benchmark results from a CSV file.</span>
-<span class="linenos">417</span>
-<span class="linenos">418</span><span class="sd">    Reconstructs BenchmarkResult objects from the flattened CSV format created</span>
-<span class="linenos">419</span><span class="sd">    by :py:func:`save_results_to_csv`.</span>
-<span class="linenos">420</span><span class="sd">    Each row in the CSV is parsed into a :py:class:`BenchmarkResult`</span>
-<span class="linenos">421</span><span class="sd">    with the appropriate config type.</span>
-<span class="linenos">422</span>
-<span class="linenos">423</span><span class="sd">    Args:</span>
-<span class="linenos">424</span><span class="sd">        input_file: Input CSV file path</span>
-<span class="linenos">425</span><span class="sd">        config_type: The dataclass type to use for the config field</span>
-<span class="linenos">426</span>
-<span class="linenos">427</span><span class="sd">    Returns:</span>
-<span class="linenos">428</span><span class="sd">        List of BenchmarkResult instances with parsed config objects</span>
-<span class="linenos">429</span>
-<span class="linenos">430</span><span class="sd">    Raises:</span>
-<span class="linenos">431</span><span class="sd">        FileNotFoundError: If input_file does not exist</span>
-<span class="linenos">432</span><span class="sd">        ValueError: If CSV format is invalid or ``config_type`` is not a dataclass</span>
-<span class="linenos">433</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">434</span>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config_type</span><span class="p">,</span> <span class="s2">&quot;__dataclass_fields__&quot;</span><span class="p">):</span>
-<span class="linenos">435</span>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;config_type must be a dataclass, got </span><span class="si">{</span><span class="n">config_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="linenos">436</span>    <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">config_type</span><span class="o">.</span><span class="n">__dataclass_fields__</span>  <span class="c1"># pyre-ignore[16]</span>
-<span class="linenos">437</span>
-<span class="linenos">438</span>    <span class="c1"># Normalize input path and resolve symbolic links</span>
-<span class="linenos">439</span>    <span class="n">input_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>
-<span class="linenos">440</span>
-<span class="linenos">441</span>    <span class="c1"># Get the field names from the config dataclass</span>
-<span class="linenos">442</span>    <span class="n">config_fields</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">fields</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-<span class="linenos">443</span>
-<span class="linenos">444</span>    <span class="c1"># Performance metric fields that are part of BenchmarkResult</span>
-<span class="linenos">445</span>    <span class="n">result_fields</span> <span class="o">=</span> <span class="p">{</span>
-<span class="linenos">446</span>        <span class="s2">&quot;executor_type&quot;</span><span class="p">,</span>
-<span class="linenos">447</span>        <span class="s2">&quot;qps&quot;</span><span class="p">,</span>
-<span class="linenos">448</span>        <span class="s2">&quot;ci_lower&quot;</span><span class="p">,</span>
-<span class="linenos">449</span>        <span class="s2">&quot;ci_upper&quot;</span><span class="p">,</span>
-<span class="linenos">450</span>        <span class="s2">&quot;date&quot;</span><span class="p">,</span>
-<span class="linenos">451</span>        <span class="s2">&quot;python_version&quot;</span><span class="p">,</span>
-<span class="linenos">452</span>        <span class="s2">&quot;free_threaded&quot;</span><span class="p">,</span>
-<span class="linenos">453</span>        <span class="s2">&quot;cpu_percent&quot;</span><span class="p">,</span>
-<span class="linenos">454</span>    <span class="p">}</span>
-<span class="linenos">455</span>
-<span class="linenos">456</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">ConfigT</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="linenos">457</span>
-<span class="linenos">458</span>    <span class="n">TRUES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;yes&quot;</span><span class="p">)</span>
-<span class="linenos">459</span>
-<span class="linenos">460</span>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
-<span class="linenos">461</span>        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">((</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">csvfile</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">v</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)))</span>
-<span class="linenos">462</span>
-<span class="linenos">463</span>        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
-<span class="linenos">464</span>            <span class="c1"># Split row into config fields and result fields</span>
-<span class="linenos">465</span>            <span class="n">config_dict</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="linenos">466</span>            <span class="n">result_dict</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="linenos">467</span>
-<span class="linenos">468</span>            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-<span class="linenos">469</span>                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">config_fields</span><span class="p">:</span>
-<span class="linenos">470</span>                    <span class="n">config_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-<span class="linenos">471</span>                <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">result_fields</span><span class="p">:</span>
-<span class="linenos">472</span>                    <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-<span class="linenos">473</span>                <span class="k">else</span><span class="p">:</span>
-<span class="linenos">474</span>                    <span class="c1"># Unknown field - could be from config or result</span>
-<span class="linenos">475</span>                    <span class="c1"># Try to infer based on whether it matches a config field name</span>
-<span class="linenos">476</span>                    <span class="n">config_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-<span class="linenos">477</span>
-<span class="linenos">478</span>            <span class="c1"># Convert string values to appropriate types for config</span>
-<span class="linenos">479</span>            <span class="n">typed_config_dict</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="linenos">480</span>            <span class="k">for</span> <span class="n">field_name</span><span class="p">,</span> <span class="n">field_info</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-<span class="linenos">481</span>                <span class="k">if</span> <span class="n">field_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config_dict</span><span class="p">:</span>
-<span class="linenos">482</span>                    <span class="k">continue</span>
-<span class="linenos">483</span>
-<span class="linenos">484</span>                <span class="n">value</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span>
-<span class="linenos">485</span>                <span class="n">field_type</span> <span class="o">=</span> <span class="n">field_info</span><span class="o">.</span><span class="n">type</span>
-<span class="linenos">486</span>
-<span class="linenos">487</span>                <span class="c1"># Handle type conversions</span>
-<span class="linenos">488</span>                <span class="k">if</span> <span class="n">field_type</span> <span class="ow">is</span> <span class="nb">int</span> <span class="ow">or</span> <span class="n">field_type</span> <span class="o">==</span> <span class="s2">&quot;int&quot;</span><span class="p">:</span>
-<span class="linenos">489</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-<span class="linenos">490</span>                <span class="k">elif</span> <span class="n">field_type</span> <span class="ow">is</span> <span class="nb">float</span> <span class="ow">or</span> <span class="n">field_type</span> <span class="o">==</span> <span class="s2">&quot;float&quot;</span><span class="p">:</span>
-<span class="linenos">491</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-<span class="linenos">492</span>                <span class="k">elif</span> <span class="n">field_type</span> <span class="ow">is</span> <span class="nb">bool</span> <span class="ow">or</span> <span class="n">field_type</span> <span class="o">==</span> <span class="s2">&quot;bool&quot;</span><span class="p">:</span>
-<span class="linenos">493</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">TRUES</span>
-<span class="linenos">494</span>                <span class="k">else</span><span class="p">:</span>
-<span class="linenos">495</span>                    <span class="c1"># Keep as string or use the value as-is</span>
-<span class="linenos">496</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-<span class="linenos">497</span>
-<span class="linenos">498</span>            <span class="n">result</span> <span class="o">=</span> <span class="n">BenchmarkResult</span><span class="p">(</span>
-<span class="linenos">499</span>                <span class="n">config</span><span class="o">=</span><span class="n">config_type</span><span class="p">(</span><span class="o">**</span><span class="n">typed_config_dict</span><span class="p">),</span>
-<span class="linenos">500</span>                <span class="n">executor_type</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;executor_type&quot;</span><span class="p">],</span>
-<span class="linenos">501</span>                <span class="n">qps</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;qps&quot;</span><span class="p">]),</span>
-<span class="linenos">502</span>                <span class="n">ci_lower</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;ci_lower&quot;</span><span class="p">]),</span>
-<span class="linenos">503</span>                <span class="n">ci_upper</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;ci_upper&quot;</span><span class="p">]),</span>
-<span class="linenos">504</span>                <span class="n">date</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
-<span class="linenos">505</span>                <span class="n">python_version</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;python_version&quot;</span><span class="p">],</span>
-<span class="linenos">506</span>                <span class="n">free_threaded</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;free_threaded&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-<span class="linenos">507</span>                <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;yes&quot;</span><span class="p">),</span>
-<span class="linenos">508</span>                <span class="n">cpu_percent</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cpu_percent&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
-<span class="linenos">509</span>            <span class="p">)</span>
-<span class="linenos">510</span>
-<span class="linenos">511</span>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-<span class="linenos">512</span>
-<span class="linenos">513</span>    <span class="k">return</span> <span class="n">results</span>
+<span class="linenos">412</span>
+<span class="linenos">413</span><span class="k">def</span><span class="w"> </span><span class="nf">load_results_from_csv</span><span class="p">(</span>
+<span class="linenos">414</span>    <span class="n">input_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="linenos">415</span>    <span class="n">config_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">ConfigT</span><span class="p">],</span>
+<span class="linenos">416</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">ConfigT</span><span class="p">]]:</span>
+<span class="linenos">417</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load benchmark results from a CSV file.</span>
+<span class="linenos">418</span>
+<span class="linenos">419</span><span class="sd">    Reconstructs BenchmarkResult objects from the flattened CSV format created</span>
+<span class="linenos">420</span><span class="sd">    by :py:func:`save_results_to_csv`.</span>
+<span class="linenos">421</span><span class="sd">    Each row in the CSV is parsed into a :py:class:`BenchmarkResult`</span>
+<span class="linenos">422</span><span class="sd">    with the appropriate config type.</span>
+<span class="linenos">423</span>
+<span class="linenos">424</span><span class="sd">    Args:</span>
+<span class="linenos">425</span><span class="sd">        input_file: Input CSV file path</span>
+<span class="linenos">426</span><span class="sd">        config_type: The dataclass type to use for the config field</span>
+<span class="linenos">427</span>
+<span class="linenos">428</span><span class="sd">    Returns:</span>
+<span class="linenos">429</span><span class="sd">        List of BenchmarkResult instances with parsed config objects</span>
+<span class="linenos">430</span>
+<span class="linenos">431</span><span class="sd">    Raises:</span>
+<span class="linenos">432</span><span class="sd">        FileNotFoundError: If input_file does not exist</span>
+<span class="linenos">433</span><span class="sd">        ValueError: If CSV format is invalid or ``config_type`` is not a dataclass</span>
+<span class="linenos">434</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">435</span>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config_type</span><span class="p">,</span> <span class="s2">&quot;__dataclass_fields__&quot;</span><span class="p">):</span>
+<span class="linenos">436</span>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;config_type must be a dataclass, got </span><span class="si">{</span><span class="n">config_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos">437</span>    <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">config_type</span><span class="o">.</span><span class="n">__dataclass_fields__</span>  <span class="c1"># pyre-ignore[16]</span>
+<span class="linenos">438</span>
+<span class="linenos">439</span>    <span class="c1"># Normalize input path and resolve symbolic links</span>
+<span class="linenos">440</span>    <span class="n">input_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>
+<span class="linenos">441</span>
+<span class="linenos">442</span>    <span class="c1"># Get the field names from the config dataclass</span>
+<span class="linenos">443</span>    <span class="n">config_fields</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">fields</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="linenos">444</span>
+<span class="linenos">445</span>    <span class="c1"># Performance metric fields that are part of BenchmarkResult</span>
+<span class="linenos">446</span>    <span class="n">result_fields</span> <span class="o">=</span> <span class="p">{</span>
+<span class="linenos">447</span>        <span class="s2">&quot;executor_type&quot;</span><span class="p">,</span>
+<span class="linenos">448</span>        <span class="s2">&quot;qps&quot;</span><span class="p">,</span>
+<span class="linenos">449</span>        <span class="s2">&quot;ci_lower&quot;</span><span class="p">,</span>
+<span class="linenos">450</span>        <span class="s2">&quot;ci_upper&quot;</span><span class="p">,</span>
+<span class="linenos">451</span>        <span class="s2">&quot;date&quot;</span><span class="p">,</span>
+<span class="linenos">452</span>        <span class="s2">&quot;python_version&quot;</span><span class="p">,</span>
+<span class="linenos">453</span>        <span class="s2">&quot;free_threaded&quot;</span><span class="p">,</span>
+<span class="linenos">454</span>        <span class="s2">&quot;cpu_percent&quot;</span><span class="p">,</span>
+<span class="linenos">455</span>    <span class="p">}</span>
+<span class="linenos">456</span>
+<span class="linenos">457</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">ConfigT</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">458</span>
+<span class="linenos">459</span>    <span class="n">TRUES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;yes&quot;</span><span class="p">)</span>
+<span class="linenos">460</span>
+<span class="linenos">461</span>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+<span class="linenos">462</span>        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">((</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">csvfile</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">v</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)))</span>
+<span class="linenos">463</span>
+<span class="linenos">464</span>        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+<span class="linenos">465</span>            <span class="c1"># Split row into config fields and result fields</span>
+<span class="linenos">466</span>            <span class="n">config_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="linenos">467</span>            <span class="n">result_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="linenos">468</span>
+<span class="linenos">469</span>            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<span class="linenos">470</span>                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">config_fields</span><span class="p">:</span>
+<span class="linenos">471</span>                    <span class="n">config_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="linenos">472</span>                <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">result_fields</span><span class="p">:</span>
+<span class="linenos">473</span>                    <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="linenos">474</span>                <span class="k">else</span><span class="p">:</span>
+<span class="linenos">475</span>                    <span class="c1"># Unknown field - could be from config or result</span>
+<span class="linenos">476</span>                    <span class="c1"># Try to infer based on whether it matches a config field name</span>
+<span class="linenos">477</span>                    <span class="n">config_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="linenos">478</span>
+<span class="linenos">479</span>            <span class="c1"># Convert string values to appropriate types for config</span>
+<span class="linenos">480</span>            <span class="n">typed_config_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="linenos">481</span>            <span class="k">for</span> <span class="n">field_name</span><span class="p">,</span> <span class="n">field_info</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<span class="linenos">482</span>                <span class="k">if</span> <span class="n">field_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config_dict</span><span class="p">:</span>
+<span class="linenos">483</span>                    <span class="k">continue</span>
+<span class="linenos">484</span>
+<span class="linenos">485</span>                <span class="n">value</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span>
+<span class="linenos">486</span>                <span class="n">field_type</span> <span class="o">=</span> <span class="n">field_info</span><span class="o">.</span><span class="n">type</span>
+<span class="linenos">487</span>
+<span class="linenos">488</span>                <span class="c1"># Handle type conversions</span>
+<span class="linenos">489</span>                <span class="k">if</span> <span class="n">field_type</span> <span class="ow">is</span> <span class="nb">int</span> <span class="ow">or</span> <span class="n">field_type</span> <span class="o">==</span> <span class="s2">&quot;int&quot;</span><span class="p">:</span>
+<span class="linenos">490</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="linenos">491</span>                <span class="k">elif</span> <span class="n">field_type</span> <span class="ow">is</span> <span class="nb">float</span> <span class="ow">or</span> <span class="n">field_type</span> <span class="o">==</span> <span class="s2">&quot;float&quot;</span><span class="p">:</span>
+<span class="linenos">492</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="linenos">493</span>                <span class="k">elif</span> <span class="n">field_type</span> <span class="ow">is</span> <span class="nb">bool</span> <span class="ow">or</span> <span class="n">field_type</span> <span class="o">==</span> <span class="s2">&quot;bool&quot;</span><span class="p">:</span>
+<span class="linenos">494</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">TRUES</span>
+<span class="linenos">495</span>                <span class="k">else</span><span class="p">:</span>
+<span class="linenos">496</span>                    <span class="c1"># Keep as string or use the value as-is</span>
+<span class="linenos">497</span>                    <span class="n">typed_config_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="linenos">498</span>
+<span class="linenos">499</span>            <span class="n">result</span> <span class="o">=</span> <span class="n">BenchmarkResult</span><span class="p">(</span>
+<span class="linenos">500</span>                <span class="n">config</span><span class="o">=</span><span class="n">config_type</span><span class="p">(</span><span class="o">**</span><span class="n">typed_config_dict</span><span class="p">),</span>
+<span class="linenos">501</span>                <span class="n">executor_type</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;executor_type&quot;</span><span class="p">],</span>
+<span class="linenos">502</span>                <span class="n">qps</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;qps&quot;</span><span class="p">]),</span>
+<span class="linenos">503</span>                <span class="n">ci_lower</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;ci_lower&quot;</span><span class="p">]),</span>
+<span class="linenos">504</span>                <span class="n">ci_upper</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;ci_upper&quot;</span><span class="p">]),</span>
+<span class="linenos">505</span>                <span class="n">date</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
+<span class="linenos">506</span>                <span class="n">python_version</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;python_version&quot;</span><span class="p">],</span>
+<span class="linenos">507</span>                <span class="n">free_threaded</span><span class="o">=</span><span class="n">result_dict</span><span class="p">[</span><span class="s2">&quot;free_threaded&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+<span class="linenos">508</span>                <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;yes&quot;</span><span class="p">),</span>
+<span class="linenos">509</span>                <span class="n">cpu_percent</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">result_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cpu_percent&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+<span class="linenos">510</span>            <span class="p">)</span>
+<span class="linenos">511</span>
+<span class="linenos">512</span>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="linenos">513</span>
+<span class="linenos">514</span>    <span class="k">return</span> <span class="n">results</span>
 </pre></div>
 </div>
 </details></section>
@@ -1052,7 +1053,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_utils.load_results_from_csv">
-<span class="sig-name descname"><span class="pre">load_results_from_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">ConfigT</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchmark_utils.BenchmarkResult" title="benchmark_utils.BenchmarkResult"><span class="pre">BenchmarkResult</span></a><span class="p"><span class="pre">[</span></span><span class="pre">ConfigT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_utils.py?#L412-L513"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_utils.load_results_from_csv" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_results_from_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">ConfigT</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchmark_utils.BenchmarkResult" title="benchmark_utils.BenchmarkResult"><span class="pre">BenchmarkResult</span></a><span class="p"><span class="pre">[</span></span><span class="pre">ConfigT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_utils.py?#L413-L514"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_utils.load_results_from_csv" title="Link to this definition">¶</a></dt>
 <dd><p>Load benchmark results from a CSV file.</p>
 <p>Reconstructs BenchmarkResult objects from the flattened CSV format created
 by <a class="reference internal" href="#benchmark_utils.save_results_to_csv" title="benchmark_utils.save_results_to_csv"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_results_to_csv()</span></code></a>.
@@ -1079,7 +1080,7 @@ with the appropriate config type.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_utils.save_results_to_csv">
-<span class="sig-name descname"><span class="pre">save_results_to_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchmark_utils.BenchmarkResult" title="benchmark_utils.BenchmarkResult"><span class="pre">BenchmarkResult</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_utils.py?#L357-L409"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_utils.save_results_to_csv" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">save_results_to_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchmark_utils.BenchmarkResult" title="benchmark_utils.BenchmarkResult"><span class="pre">BenchmarkResult</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_utils.py?#L357-L410"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_utils.save_results_to_csv" title="Link to this definition">¶</a></dt>
 <dd><p>Save benchmark results to a CSV file.</p>
 <p>Flattens the nested BenchmarkResult structure (config + performance metrics)
 into a flat CSV format. Each row contains both the benchmark configuration

@@ -111,9 +111,9 @@ Functions
 
 - :ref:`exhale_function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7`
 
-- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
-
 - :ref:`exhale_function_demuxing_8h_1a78b157beb45e215aad69f013831788ac`
+
+- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
 
 - :ref:`exhale_function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16`
 
