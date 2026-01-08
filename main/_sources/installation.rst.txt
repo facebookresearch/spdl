@@ -8,6 +8,11 @@ From PyPI
 
    pip install spdl
 
+The `spdl` package is the top-level package for installing the component libraries.
+You can install the component libraries separately.
+
+- `pip install spdl-core` for pipeline constructions. This is a pure-Python package.
+- `pip install spdl-io` for I/O processing. This package contains extension modules written in C++.
 
 From source
 -----------
@@ -55,7 +60,7 @@ To rebuild the extension module of SPDL IO, you can do the following.
 Requirements
 ------------
 
-* Supported OS: Linux, macOS
+* Supported OS: Linux (aarch64, x64), macOS, Windows
 
 * Build requirements
     - C++20 compiler (Tested on GCC 11 and Clang 15)

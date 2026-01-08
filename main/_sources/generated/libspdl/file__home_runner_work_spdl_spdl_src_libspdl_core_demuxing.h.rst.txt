@@ -70,9 +70,9 @@ Functions
 ---------
 
 
-- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
-
 - :ref:`exhale_function_demuxing_8h_1a78b157beb45e215aad69f013831788ac`
+
+- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
 
 
 Typedefs

@@ -101,6 +101,17 @@ Pipe
 .. rubric:: Classes
 
 
+Aggregator
+^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   Aggregator
+
+
 AggregateConfig
 ^^^^^^^^^^^^^^^
 .. autosummary::
@@ -110,6 +121,17 @@ AggregateConfig
    :template: _custom_autosummary_class.rst
 
    AggregateConfig
+
+
+Collate
+^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   Collate
 
 
 DisaggregateConfig
@@ -203,6 +225,8 @@ SourceConfig
    ############################################################################
    Others
    ############################################################################
+
+
 
 
 

@@ -503,7 +503,7 @@
 <h1>spdl.pipeline.TaskHook<a class="headerlink" href="#spdl-pipeline-taskhook" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.pipeline.TaskHook">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">TaskHook</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_hook.py?#L40-L185"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.TaskHook" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">TaskHook</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_hook.py?#L40-L189"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.TaskHook" title="Link to this definition">¶</a></dt>
 <dd><p>Base class for hooks to be used in the pipeline.</p>
 <p><code class="docutils literal notranslate"><span class="pre">TaskHook</span></code> can add custom actions when executing pipeline.
 It is useful for logging and profiling the pipeline execution.</p>
@@ -601,7 +601,7 @@ the pipeline might run forever.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.TaskHook.stage_hook" title="spdl.pipeline.TaskHook.stage_hook"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stage_hook</span></code></a>()</p></td>
 <td><p>Perform custom action when the pipeline stage is initialized and completed.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.TaskHook.task_hook" title="spdl.pipeline.TaskHook.task_hook"><code class="xref py py-obj docutils literal notranslate"><span class="pre">task_hook</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.TaskHook.task_hook" title="spdl.pipeline.TaskHook.task_hook"><code class="xref py py-obj docutils literal notranslate"><span class="pre">task_hook</span></code></a>([input_item])</p></td>
 <td><p>Perform custom action before and after task is executed.</p></td>
 </tr>
 </tbody>
@@ -629,14 +629,20 @@ make sure to use <code class="docutils literal notranslate"><span class="pre">as
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline.TaskHook.task_hook">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">task_hook</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.AsyncIterator" title="(in Python v3.14)"><span class="pre">AsyncIterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_hook.py?#L163-L185"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.TaskHook.task_hook" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">task_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.AsyncIterator" title="(in Python v3.14)"><span class="pre">AsyncIterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_hook.py?#L163-L189"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.TaskHook.task_hook" title="Link to this definition">¶</a></dt>
 <dd><p>Perform custom action before and after task is executed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_item</strong> – The input data item being processed by this task.
+This allows hooks to inspect the input on failure.</p>
+</dd>
+</dl>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p>This method has to be async context manager. So when overriding the method,
 make sure to use <code class="docutils literal notranslate"><span class="pre">async</span></code> keyword and <code class="docutils literal notranslate"><span class="pre">&#64;asynccontextmanager</span></code> decorator.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@asynccontextmanager</span>
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stask_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">task_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_item</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="c1"># Add custom logic here</span>
 </pre></div>
 </div>
