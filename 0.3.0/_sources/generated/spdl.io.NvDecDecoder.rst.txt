@@ -1,0 +1,16 @@
+spdl.io.NvDecDecoder
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: NvDecDecoder
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~NvDecDecoder.decode_packets
+      ~NvDecDecoder.flush
+      ~NvDecDecoder.init_buffer
+      ~NvDecDecoder.init_decoder
+      ~NvDecDecoder.streaming_decode_packets

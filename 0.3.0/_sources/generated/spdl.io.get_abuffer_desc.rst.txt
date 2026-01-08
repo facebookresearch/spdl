@@ -1,0 +1,6 @@
+spdl.io.get\_abuffer\_desc
+==========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: get_abuffer_desc

@@ -1,0 +1,41 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h:
+
+Program Listing for File rational_utils.h
+=========================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/rational_utils.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   
+   #include <libspdl/core/types.h>
+   
+   #include <cstdint>
+   #include <tuple>
+   
+   namespace spdl::core {
+   
+   bool is_within_window(
+       const Rational& val,
+       const Rational& start,
+       const Rational& end);
+   
+   Rational to_rational(int64_t val, const Rational time_base);
+   
+   Rational make_rational(const std::tuple<int64_t, int64_t>& val);
+   
+   double to_double(const Rational& val);
+   
+   } // namespace spdl::core

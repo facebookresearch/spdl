@@ -1,0 +1,6 @@
+spdl.io.iter\_tarfile
+=====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: iter_tarfile

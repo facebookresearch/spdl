@@ -1,0 +1,6 @@
+spdl.io.utils.built\_with\_nvjpeg
+=================================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: built_with_nvjpeg

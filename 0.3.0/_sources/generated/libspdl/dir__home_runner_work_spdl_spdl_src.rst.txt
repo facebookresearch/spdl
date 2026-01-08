@@ -1,0 +1,16 @@
+.. _dir__home_runner_work_spdl_spdl_src:
+
+
+Directory src
+=============
+
+
+*Directory path:* ``/home/runner/work/spdl/spdl/src``
+
+Subdirectories
+--------------
+
+- :ref:`dir__home_runner_work_spdl_spdl_src_libspdl`
+
+
+

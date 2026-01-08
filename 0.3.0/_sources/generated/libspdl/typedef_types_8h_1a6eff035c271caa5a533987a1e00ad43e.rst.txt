@@ -1,0 +1,14 @@
+.. _exhale_typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e:
+
+Typedef AVRational
+==================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: AVRational
+   :project: libspdl

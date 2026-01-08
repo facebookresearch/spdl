@@ -1,0 +1,14 @@
+.. _exhale_define_frames_8h_1a9beaa64113e413112d43491ba5c13670:
+
+Define _IS_VIDEO
+================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: _IS_VIDEO
+   :project: libspdl

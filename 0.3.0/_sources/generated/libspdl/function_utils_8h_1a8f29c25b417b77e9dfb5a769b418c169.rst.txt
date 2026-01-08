@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169:
+
+Function spdl::core::trace_event_end
+====================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::trace_event_end()
+   :project: libspdl

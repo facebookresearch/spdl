@@ -1,0 +1,7 @@
+spdl.io.AudioEncodeConfig
+=========================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: AudioEncodeConfig
+   :members:

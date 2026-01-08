@@ -1,0 +1,13 @@
+spdl.pipeline.defs.MergeConfig
+==============================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: MergeConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~MergeConfig.op
+      ~MergeConfig.pipeline_configs

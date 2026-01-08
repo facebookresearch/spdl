@@ -1,0 +1,13 @@
+spdl.pipeline.ProfileHook
+=========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ProfileHook
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~ProfileHook.pipeline_profile_hook
+      ~ProfileHook.stage_profile_hook

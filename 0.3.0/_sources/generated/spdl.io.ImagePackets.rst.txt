@@ -1,0 +1,16 @@
+spdl.io.ImagePackets
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: ImagePackets
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ImagePackets.clone
+      ~ImagePackets.codec
+      ~ImagePackets.height
+      ~ImagePackets.pix_fmt
+      ~ImagePackets.width

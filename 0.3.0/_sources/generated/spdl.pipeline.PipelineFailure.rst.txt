@@ -1,0 +1,6 @@
+spdl.pipeline.PipelineFailure
+=============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoexception:: PipelineFailure

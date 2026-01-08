@@ -1,0 +1,6 @@
+spdl.pipeline.profile\_pipeline
+===============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: profile_pipeline

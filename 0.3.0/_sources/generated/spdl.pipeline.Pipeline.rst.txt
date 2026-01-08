@@ -1,0 +1,16 @@
+spdl.pipeline.Pipeline
+======================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: Pipeline
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~Pipeline.auto_stop
+      ~Pipeline.get_item
+      ~Pipeline.get_iterator
+      ~Pipeline.start
+      ~Pipeline.stop

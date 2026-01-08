@@ -1,0 +1,6 @@
+spdl.io.demux\_image
+====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: demux_image

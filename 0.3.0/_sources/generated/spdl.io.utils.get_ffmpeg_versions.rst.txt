@@ -1,0 +1,6 @@
+spdl.io.utils.get\_ffmpeg\_versions
+===================================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: get_ffmpeg_versions

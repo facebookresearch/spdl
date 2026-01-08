@@ -1,0 +1,26 @@
+spdl.pipeline.AsyncQueue
+========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: AsyncQueue
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~AsyncQueue.empty
+      ~AsyncQueue.full
+      ~AsyncQueue.get
+      ~AsyncQueue.get_nowait
+      ~AsyncQueue.join
+      ~AsyncQueue.put
+      ~AsyncQueue.put_nowait
+      ~AsyncQueue.qsize
+      ~AsyncQueue.stage_hook
+      ~AsyncQueue.task_done
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AsyncQueue.maxsize

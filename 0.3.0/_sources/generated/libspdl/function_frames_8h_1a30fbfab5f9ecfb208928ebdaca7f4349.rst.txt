@@ -1,0 +1,14 @@
+.. _exhale_function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349:
+
+Template Function spdl::core::clone
+===================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::clone(const Frames<media>&)
+   :project: libspdl

@@ -1,0 +1,83 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h:
+
+Program Listing for File demuxing.h
+===================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/demuxing.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   
+   #include <libspdl/core/adaptor.h>
+   #include <libspdl/core/codec.h>
+   #include <libspdl/core/generator.h>
+   #include <libspdl/core/packets.h>
+   #include <libspdl/core/types.h>
+   
+   #include <optional>
+   #include <set>
+   #include <string_view>
+   #include <tuple>
+   
+   namespace spdl::core {
+   namespace detail {
+   class DemuxerImpl;
+   } // namespace detail
+   
+   using AnyPacketsGenerator = Generator<std::map<int, AnyPackets>>;
+   
+   // Demuxer
+   
+   class Demuxer {
+     detail::DemuxerImpl* pImpl_;
+   
+    public:
+     explicit Demuxer(DataInterfacePtr di);
+   
+     ~Demuxer();
+   
+     bool has_audio() const;
+   
+     template <MediaType media>
+     Codec<media> get_default_codec() const;
+   
+     template <MediaType media>
+     int get_default_stream_index() const;
+   
+     template <MediaType media>
+     PacketsPtr<media> demux_window(
+         const std::optional<TimeWindow>& window = std::nullopt,
+         const std::optional<std::string>& bsf = std::nullopt);
+   
+     AnyPacketsGenerator streaming_demux(
+         const std::set<int>& indices,
+         int num_packets,
+         double duration);
+   };
+   
+   using DemuxerPtr = std::unique_ptr<Demuxer>;
+   
+   DemuxerPtr make_demuxer(
+       const std::string& src,
+       const SourceAdaptorPtr& adaptor = nullptr,
+       const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+       const std::optional<std::string>& name = std::nullopt);
+   
+   DemuxerPtr make_demuxer(
+       const std::string_view data,
+       const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
+       const std::optional<std::string>& name = std::nullopt);
+   
+   } // namespace spdl::core

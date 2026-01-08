@@ -1,0 +1,6 @@
+spdl.source.utils.repeat\_source
+================================
+
+.. currentmodule:: spdl.source.utils
+
+.. autofunction:: repeat_source

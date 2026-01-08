@@ -1,0 +1,14 @@
+.. _exhale_define_frames_8h_1ac2ad95ac922a100ec27340436eb94940:
+
+Define _IS_AUDIO
+================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: _IS_AUDIO
+   :project: libspdl

@@ -1,0 +1,16 @@
+spdl.io.AudioFrames
+===================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: AudioFrames
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AudioFrames.clone
+      ~AudioFrames.num_channels
+      ~AudioFrames.num_frames
+      ~AudioFrames.sample_fmt
+      ~AudioFrames.sample_rate

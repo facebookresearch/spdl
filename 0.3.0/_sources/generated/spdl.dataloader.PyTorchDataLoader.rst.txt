@@ -1,0 +1,7 @@
+spdl.dataloader.PyTorchDataLoader
+=================================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoclass:: PyTorchDataLoader
+   :members:

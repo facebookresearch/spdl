@@ -1,0 +1,108 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h:
+
+File frames.h
+=============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/frames.h``)
+----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/buffer.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``variant``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Frames`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349`
+
+
+Defines
+-------
+
+
+- :ref:`exhale_define_frames_8h_1ac2ad95ac922a100ec27340436eb94940`
+
+- :ref:`exhale_define_frames_8h_1ac99c83df576500933a3691deb137be6d`
+
+- :ref:`exhale_define_frames_8h_1a9beaa64113e413112d43491ba5c13670`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa`
+
+- :ref:`exhale_typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf`
+
+- :ref:`exhale_typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62`
+
+- :ref:`exhale_typedef_frames_8h_1ad628496b3863230dd76eeccc4fa66437`
+
+- :ref:`exhale_typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a`
+
+- :ref:`exhale_typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7`
+
+- :ref:`exhale_typedef_frames_8h_1af1892953097f3723455403752ef79fc5`
+
+- :ref:`exhale_typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d`
+

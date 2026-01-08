@@ -1,0 +1,14 @@
+.. _exhale_define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2:
+
+Define SPDL_DEFAULT_BUFFER_SIZE
+===============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: SPDL_DEFAULT_BUFFER_SIZE
+   :project: libspdl

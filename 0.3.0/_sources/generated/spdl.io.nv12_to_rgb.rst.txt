@@ -1,0 +1,6 @@
+spdl.io.nv12\_to\_rgb
+=====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: nv12_to_rgb

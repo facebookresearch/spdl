@@ -1,0 +1,85 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h:
+
+Program Listing for File utils.h
+================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/utils.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   
+   #include <libspdl/core/types.h>
+   
+   #include <memory>
+   #include <string>
+   #include <tuple>
+   #include <vector>
+   
+   namespace spdl::core {
+   
+   // FFmpeg utilities
+   
+   int get_ffmpeg_log_level();
+   
+   void set_ffmpeg_log_level(int level);
+   
+   void register_avdevices();
+   
+   std::vector<std::string> get_ffmpeg_filters();
+   
+   std::map<std::string, std::tuple<int64_t, int64_t, int64_t>>
+   get_ffmpeg_versions();
+   
+   // Glog utilities
+   
+   void init_glog(const char* name);
+   
+   // Tracing utilities
+   
+   class TracingSession {
+     void* sess_ = nullptr;
+   
+    public:
+     explicit TracingSession(void* sess = nullptr);
+   
+     TracingSession(const TracingSession&) = delete;
+   
+     TracingSession& operator=(const TracingSession&) = delete;
+   
+     TracingSession(TracingSession&& other) noexcept;
+   
+     TracingSession& operator=(TracingSession&& other) noexcept;
+   
+     ~TracingSession();
+   
+     void init();
+   
+     void config(const std::string& process_name);
+   
+     void start(int fd, int buffer_size_in_kb);
+   
+     void stop();
+   };
+   
+   std::unique_ptr<TracingSession> init_tracing();
+   
+   template <typename Number>
+   void trace_counter(int i, Number counter);
+   
+   void trace_event_begin(const std::string& name);
+   
+   void trace_event_end();
+   
+   } // namespace spdl::core

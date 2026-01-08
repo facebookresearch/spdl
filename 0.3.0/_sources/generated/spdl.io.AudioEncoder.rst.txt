@@ -1,0 +1,14 @@
+spdl.io.AudioEncoder
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: AudioEncoder
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AudioEncoder.encode
+      ~AudioEncoder.flush
+      ~AudioEncoder.frame_size

@@ -1,0 +1,14 @@
+.. _exhale_function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d:
+
+Function spdl::core::to_rational
+================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::to_rational(int64_t, const Rational)
+   :project: libspdl

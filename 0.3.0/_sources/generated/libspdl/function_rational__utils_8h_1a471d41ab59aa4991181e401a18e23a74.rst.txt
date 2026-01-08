@@ -1,0 +1,14 @@
+.. _exhale_function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74:
+
+Function spdl::core::make_rational
+==================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::make_rational(const std::tuple<int64_t, int64_t>&)
+   :project: libspdl

@@ -1,0 +1,6 @@
+spdl.io.demux\_config
+=====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: demux_config

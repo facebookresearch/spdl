@@ -1,0 +1,6 @@
+spdl.io.decode\_config
+======================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: decode_config

@@ -1,0 +1,6 @@
+spdl.io.streaming\_load\_video\_nvdec
+=====================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: streaming_load_video_nvdec

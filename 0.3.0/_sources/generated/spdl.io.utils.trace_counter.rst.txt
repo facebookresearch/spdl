@@ -1,0 +1,6 @@
+spdl.io.utils.trace\_counter
+============================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: trace_counter

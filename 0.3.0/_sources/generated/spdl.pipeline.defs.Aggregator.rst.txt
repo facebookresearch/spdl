@@ -1,0 +1,13 @@
+spdl.pipeline.defs.Aggregator
+=============================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: Aggregator
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~Aggregator.accumulate
+      ~Aggregator.flush

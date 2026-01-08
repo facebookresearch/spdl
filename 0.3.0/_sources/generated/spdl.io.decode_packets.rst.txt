@@ -1,0 +1,6 @@
+spdl.io.decode\_packets
+=======================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: decode_packets

@@ -1,0 +1,14 @@
+spdl.pipeline.TaskStatsHook
+===========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: TaskStatsHook
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~TaskStatsHook.interval_stats_callback
+      ~TaskStatsHook.stage_hook
+      ~TaskStatsHook.task_hook
