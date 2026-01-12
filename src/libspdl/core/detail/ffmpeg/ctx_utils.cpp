@@ -17,7 +17,6 @@
 
 #include <cassert>
 #include <filesystem>
-#include <mutex>
 #include <set>
 
 namespace spdl::core::detail {
