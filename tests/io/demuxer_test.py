@@ -135,7 +135,7 @@ class TestFractionalTimestamp(unittest.TestCase):
     def test_audio_demux_with_tuple_fractions(self) -> None:
         """Can demux audio using tuple fractions for timestamp."""
         # Setup: Create a 5-second test audio
-        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=5 " "sample.mp4"
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=5 sample.mp4"
         sample = get_sample(cmd)
 
         # Execute: Demux audio using tuple fractions
@@ -154,7 +154,7 @@ class TestFractionalTimestamp(unittest.TestCase):
     def test_audio_demux_with_fraction_class(self) -> None:
         """Can demux audio using Python Fraction class for timestamp."""
         # Setup: Create a 5-second test audio
-        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=5 " "sample.mp4"
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=5 sample.mp4"
         sample = get_sample(cmd)
 
         # Execute: Demux audio using Fraction class
@@ -194,7 +194,7 @@ class TestFractionalTimestamp(unittest.TestCase):
     def test_module_level_demux_audio_with_fractions(self) -> None:
         """Can use module-level demux_audio function with fractions."""
         # Setup: Create a 5-second test audio
-        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=5 " "sample.mp4"
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=5 sample.mp4"
         sample = get_sample(cmd)
 
         # Execute: Use module-level function with Fraction class
