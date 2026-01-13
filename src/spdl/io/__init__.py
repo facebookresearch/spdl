@@ -115,7 +115,7 @@ def __getattr__(name: str) -> object:
             class _placeholder:
                 def __init__(self, *_args: object, **_kwargs: object) -> None:
                     raise RuntimeError(
-                        f"Failed to load `_libspdl.{name}`. " "Is FFmpeg available?"
+                        f"Failed to load `_libspdl.{name}`. Is FFmpeg available?"
                     )
 
             return _placeholder

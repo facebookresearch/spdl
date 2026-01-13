@@ -110,8 +110,7 @@ def plot_results(
 
     abi_info = " (free-threaded)" if free_threaded else ""
     main_title = (
-        f"Data Format Loading Performance Benchmark\n"
-        f"Python {python_version}{abi_info}"
+        f"Data Format Loading Performance Benchmark\nPython {python_version}{abi_info}"
     )
     fig.suptitle(main_title, fontsize=14)
 
