@@ -112,7 +112,7 @@ class ExecutorType(Enum):
 
     INTERPRETER = "interpreter"
     """Use :py:class:`~concurrent.futures.InterpreterPoolExecutor`.
-    
+
     Requires Python 3.14+.
     """
 
@@ -399,7 +399,8 @@ def save_results_to_csv(
     with open(output_path, "w", newline="") as csvfile:
         # Write generated marker as first line
         # Note: Splitting the marker so as to avoid linter consider this file as generated file
-        csvfile.write("# @" "generated\n")
+        csvfile.write("# @")
+        csvfile.write("generated\n")
 
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
