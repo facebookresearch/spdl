@@ -205,7 +205,7 @@ Returns:
           &NvDecDecoder::init_buffer,
           R"(Initialize frame buffer for streaming decode.
 
-This must be called before using streaming_decode_packets() for streaming decode.
+This must be called before using :py:meth:`streaming_decode_packets` for streaming decode.
 
 Args:
     num_frames: The number of frames per batch.
