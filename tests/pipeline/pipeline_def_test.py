@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import unittest
-from collections.abc import Iterable, Mapping
 from typing import TypeVar
 
 from spdl.pipeline import build_pipeline
