@@ -146,13 +146,13 @@ Rational DecoderImpl<media>::get_output_time_base() const {
 // for handling timestamp.
 // This is handled through high-level Python interface.
 template <MediaType media>
-FramesPtr<media> DecoderImpl<media>::decode_and_flush(
+FramesPtr<media> DecoderImpl<media>::decode_packets(
     PacketsPtr<media> packets,
     int num_frames) {
   auto ret =
       std::make_unique<Frames<media>>(packets->id, get_output_time_base());
   int num_yielded = 0;
-  for (auto&& frame : decode_packets(
+  for (auto&& frame : detail::decode_packets(
            codec_ctx_, packets->pkts.get_packets(), filter_graph_, true)) {
     ret->push_back(frame.release());
     num_yielded += 1;
@@ -169,7 +169,7 @@ FramesPtr<media> DecoderImpl<media>::decode_and_flush(
 // but this was not properly handling the half-open range, so we have
 // specialization for video.
 template <>
-VideoFramesPtr DecoderImpl<MediaType::Video>::decode_and_flush(
+VideoFramesPtr DecoderImpl<MediaType::Video>::decode_packets(
     VideoPacketsPtr packets,
     int num_frames) {
   auto tb = get_output_time_base();
@@ -180,7 +180,7 @@ VideoFramesPtr DecoderImpl<MediaType::Video>::decode_and_flush(
 
   auto ret = std::make_unique<VideoFrames>(packets->id, tb);
   int num_yielded = 0;
-  for (auto&& frame : decode_packets(
+  for (auto&& frame : detail::decode_packets(
            codec_ctx_, packets->pkts.get_packets(), filter_graph_, true)) {
     // For video, we manualy apply timestamps.
     auto* raw_frame = frame.release();
@@ -199,59 +199,76 @@ VideoFramesPtr DecoderImpl<MediaType::Video>::decode_and_flush(
   return ret;
 }
 
-// For audio and image.
-// Note: when decoding audio with timestamp, we rely on `atrim` filter
-// for handling timestamp.
-// This is handled through high-level Python interface.
 template <MediaType media>
-FramesPtr<media> DecoderImpl<media>::decode(PacketsPtr<media> packets) {
-  auto ret =
-      std::make_unique<Frames<media>>(packets->id, get_output_time_base());
-  for (auto&& frame : decode_packets(
-           codec_ctx_, packets->pkts.get_packets(), filter_graph_, false)) {
-    ret->push_back(frame.release());
-  }
-  return ret;
-}
-
-// Specialization for video.
-// For video we want to ensure the half-open range.
-// Originally we used `trim` filter like how audio is processed above,
-// but this was not properly handling the half-open range, so we have
-// specialization for video.
-template <>
-VideoFramesPtr DecoderImpl<MediaType::Video>::decode(VideoPacketsPtr packets) {
-  auto tb = get_output_time_base();
-  AVRational s, e;
-  if (packets->timestamp) {
-    std::tie(s, e) = *(packets->timestamp);
-  }
-
-  auto ret = std::make_unique<VideoFrames>(packets->id, tb);
-  for (auto&& frame : decode_packets(
-           codec_ctx_, packets->pkts.get_packets(), filter_graph_, false)) {
-    auto* raw_frame = frame.release();
-    if (packets->timestamp && raw_frame) {
-      if (!is_within_window(to_rational(raw_frame->pts, tb), s, e)) {
-        av_frame_free(&raw_frame);
-        continue;
-      }
-    }
-
-    ret->push_back(raw_frame);
-  }
-  return ret;
-}
-
-template <MediaType media>
-FramesPtr<media> DecoderImpl<media>::flush() {
-  auto ret = std::make_unique<Frames<media>>(
+Generator<FramesPtr<media>> DecoderImpl<media>::flush()
+  requires(media == MediaType::Video || media == MediaType::Audio)
+{
+  auto frames = std::make_unique<Frames<media>>(
       reinterpret_cast<uintptr_t>(this), get_output_time_base());
   std::vector<AVPacket*> dummy{};
-  for (auto&& frame : decode_packets(codec_ctx_, dummy, filter_graph_, true)) {
-    ret->push_back(frame.release());
+  for (auto&& frame :
+       detail::decode_packets(codec_ctx_, dummy, filter_graph_, true)) {
+    frames->push_back(frame.release());
   }
-  return ret;
+  if (frames->get_frames().size() > 0) {
+    co_yield std::move(frames);
+  }
+}
+
+template <MediaType media>
+Generator<FramesPtr<media>> DecoderImpl<media>::streaming_decode_packets(
+    PacketsPtr<media> packets)
+  requires(media == MediaType::Video || media == MediaType::Audio)
+{
+  auto tb = get_output_time_base();
+  auto decoding = detail::decode_packets(
+      codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
+
+  // Specialization for video.
+  // For video we want to ensure the half-open range.
+  // Originally we used `trim` filter like how audio is processed above,
+  // but this was not properly handling the half-open range, so we have
+  // specialization for video.
+  if constexpr (media == MediaType::Video) {
+    // Temporary solution to support Generator. Yield all the frames.
+    // TODO: support pre-fixed number of frames here.
+    AVRational s, e;
+    if (packets->timestamp) {
+      std::tie(s, e) = *(packets->timestamp);
+    }
+
+    auto ret = std::make_unique<VideoFrames>(packets->id, tb);
+    for (auto&& frame : decoding) {
+      if (packets->timestamp && frame) {
+        if (!is_within_window(to_rational(frame->pts, tb), s, e)) {
+          auto* raw_frame = frame.release();
+          av_frame_free(&raw_frame);
+          continue;
+        }
+      }
+
+      ret->push_back(frame.release());
+    }
+    if (ret->get_frames().size() > 0) {
+      co_yield std::move(ret);
+    }
+  }
+
+  // For audio.
+  // Note: when decoding audio with timestamp, we rely on `atrim` filter
+  // for handling timestamp.
+  // This is handled through high-level Python interface.
+  if constexpr (media == MediaType::Audio) {
+    auto ret = std::make_unique<AudioFrames>(packets->id, tb);
+    // Temporary solution to support Generator. Yield all the frames.
+    // TODO: support pre-fixed number of samples here.
+    for (auto&& frame : decoding) {
+      ret->push_back(frame.release());
+    }
+    if (ret->get_frames().size() > 0) {
+      co_yield std::move(ret);
+    }
+  }
 }
 
 template class DecoderImpl<MediaType::Audio>;

@@ -10,6 +10,7 @@
 
 #include <libspdl/core/codec.h>
 #include <libspdl/core/frames.h>
+#include <libspdl/core/generator.h>
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
@@ -62,27 +63,42 @@ class Decoder {
   /// Destructor.
   ~Decoder();
 
-  /// Decode packets and flush the decoder in one operation.
+  ////////////////////////////////////////////////////////////////////////////
+  // One-off decoding
+  ////////////////////////////////////////////////////////////////////////////
+
+  /// Decode all packets and flush the decoder in one operation.
   ///
   /// @param packets Packets to decode.
   /// @param num_frames Maximum number of frames to decode. Negative values
   /// decode all frames.
   /// @return Decoded frames.
-  FramesPtr<media> decode_and_flush(
+  FramesPtr<media> decode_packets(
       PacketsPtr<media> packets,
       int num_frames = -1);
 
-  /// Decode packets without flushing.
+  ////////////////////////////////////////////////////////////////////////////
+  // Streaming decoding
+  ////////////////////////////////////////////////////////////////////////////
+
+  /// Streaming decode packets and yield frames.
+  ///
+  /// This method decodes packets and yields frames as they become ready.
   ///
   /// @param packets Packets to decode.
-  /// @return Decoded frames, or std::nullopt if no frames are available yet.
-  std::optional<FramesPtr<media>> decode(PacketsPtr<media> packets);
+  /// @return Generator that yields decoded frames.
+  Generator<FramesPtr<media>> streaming_decode_packets(
+      PacketsPtr<media> packets)
+    requires(media == MediaType::Video || media == MediaType::Audio);
 
-  /// Flush the decoder to retrieve any remaining frames.
+  /// Flush the decoder and yield remaining frames.
   ///
-  /// @return Remaining decoded frames, or std::nullopt if no frames are
-  /// available.
-  std::optional<FramesPtr<media>> flush();
+  /// Call this method at the end of stream to flush the decoder
+  /// and retrieve any remaining buffered frames.
+  ///
+  /// @return Generator that yields remaining decoded frames.
+  Generator<FramesPtr<media>> flush()
+    requires(media == MediaType::Video || media == MediaType::Audio);
 };
 
 /// Unique pointer to a Decoder instance.

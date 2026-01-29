@@ -48,7 +48,7 @@ TEST(SmokeTest, DecodeAudio) {
   EXPECT_GT(packets->pkts.get_packets().size(), 0);
 
   Decoder<MediaType::Audio> decoder(codec, std::nullopt, std::nullopt);
-  auto frames = decoder.decode_and_flush(std::move(packets));
+  auto frames = decoder.decode_packets(std::move(packets));
   ASSERT_NE(frames, nullptr);
   EXPECT_GT(frames->get_num_frames(), 0);
 
@@ -70,7 +70,7 @@ TEST(SmokeTest, DecodeImage) {
   EXPECT_GT(packets->pkts.get_packets().size(), 0);
 
   Decoder<MediaType::Image> decoder(codec, std::nullopt, std::nullopt);
-  auto frames = decoder.decode_and_flush(std::move(packets));
+  auto frames = decoder.decode_packets(std::move(packets));
   ASSERT_NE(frames, nullptr);
   EXPECT_GT(frames->get_num_frames(), 0);
 
@@ -92,7 +92,7 @@ TEST(SmokeTest, DecodeVideo) {
   EXPECT_GT(packets->pkts.get_packets().size(), 0);
 
   Decoder<MediaType::Video> decoder(codec, std::nullopt, std::nullopt);
-  auto frames = decoder.decode_and_flush(std::move(packets));
+  auto frames = decoder.decode_packets(std::move(packets));
   ASSERT_NE(frames, nullptr);
   EXPECT_GT(frames->get_num_frames(), 0);
 
@@ -126,7 +126,7 @@ TEST(SmokeTest, DecodeAudioWithFormatFilter) {
       fmt::format("{},aformat=sample_fmts=fltp,abuffersink", abuffer);
 
   Decoder<MediaType::Audio> decoder(codec, std::nullopt, filterDesc);
-  auto frames = decoder.decode_and_flush(std::move(packets));
+  auto frames = decoder.decode_packets(std::move(packets));
   ASSERT_NE(frames, nullptr);
   EXPECT_GT(frames->get_num_frames(), 0);
 
@@ -162,7 +162,7 @@ TEST(SmokeTest, DecodeVideoWithFormatFilter) {
       fmt::format("{},format=pix_fmts=rgb24,buffersink", buffer);
 
   Decoder<MediaType::Video> decoder(codec, std::nullopt, filterDesc);
-  auto frames = decoder.decode_and_flush(std::move(packets));
+  auto frames = decoder.decode_packets(std::move(packets));
   ASSERT_NE(frames, nullptr);
   EXPECT_GT(frames->get_num_frames(), 0);
 
@@ -198,7 +198,7 @@ TEST(SmokeTest, DecodeImageWithFormatFilter) {
       fmt::format("{},format=pix_fmts=yuv420p,buffersink", buffer);
 
   Decoder<MediaType::Image> decoder(codec, std::nullopt, filterDesc);
-  auto frames = decoder.decode_and_flush(std::move(packets));
+  auto frames = decoder.decode_packets(std::move(packets));
   ASSERT_NE(frames, nullptr);
   EXPECT_GT(frames->get_num_frames(), 0);
 
@@ -235,7 +235,7 @@ TEST(SmokeTest, DecodeVideoWithChainedFilters) {
       fmt::format("{},format=pix_fmts=rgb24,hflip,buffersink", buffer);
 
   Decoder<MediaType::Video> decoder(codec, std::nullopt, filterDesc);
-  auto frames = decoder.decode_and_flush(std::move(packets));
+  auto frames = decoder.decode_packets(std::move(packets));
   ASSERT_NE(frames, nullptr);
   EXPECT_GT(frames->get_num_frames(), 0);
 

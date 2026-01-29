@@ -588,30 +588,37 @@ class AudioDecoder:
     Decode stream of audio packets. See :py:class:`Decoder` for the detail.
     """
 
-    def decode(self, packets: AudioPackets) -> AudioFrames | None:
-        """Decode the given packets"""
+    def streaming_decode_packets(self, packets: AudioPackets) -> AudioFramesIterator:
+        """Streaming decode packets and yield frames"""
 
-    def flush(self) -> AudioFrames | None:
-        """Flush the internally buffered frames. Use only at the end of stream"""
+    def flush(self) -> AudioFramesIterator:
+        """Flush the decoder and yield remaining frames"""
 
 class VideoDecoder:
     """
     Decode stream of video packets. See :py:class:`Decoder` for the detail.
     """
 
-    def decode(self, packets: VideoPackets) -> VideoFrames | None:
-        """Decode the given packets"""
+    def streaming_decode_packets(self, packets: VideoPackets) -> VideoFramesIterator:
+        """Streaming decode packets and yield frames"""
 
-    def flush(self) -> VideoFrames | None:
-        """Flush the internally buffered frames. Use only at the end of stream"""
+    def flush(self) -> VideoFramesIterator:
+        """Flush the decoder and yield remaining frames"""
 
-class ImageDecoder:
-    """Decode an image packet. See :py:class:`Decoder` for the detail."""
+class AudioFramesIterator:
+    def __iter__(self) -> AudioFramesIterator: ...
 
-    def decode(self, packets: ImagePackets) -> ImageFrames | None:
-        """Decode the given packets"""
+    def __next__(self) -> AudioFrames: ...
 
-    def flush(self) -> ImageFrames | None: ...
+class VideoFramesIterator:
+    def __iter__(self) -> VideoFramesIterator: ...
+
+    def __next__(self) -> VideoFrames: ...
+
+class ImageFramesIterator:
+    def __iter__(self) -> ImageFramesIterator: ...
+
+    def __next__(self) -> ImageFrames: ...
 
 @overload
 def decode_packets(packets: AudioPackets, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None, num_frames: int = -1) -> AudioFrames: ...

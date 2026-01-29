@@ -40,11 +40,14 @@ class DecoderImpl {
 
   Rational get_output_time_base() const;
 
-  FramesPtr<media> decode_and_flush(
+  FramesPtr<media> decode_packets(
       PacketsPtr<media> packets,
       int num_frames = -1);
-  FramesPtr<media> decode(PacketsPtr<media> packets);
-  FramesPtr<media> flush();
+  Generator<FramesPtr<media>> streaming_decode_packets(
+      PacketsPtr<media> packets)
+    requires(media == MediaType::Video || media == MediaType::Audio);
+  Generator<FramesPtr<media>> flush()
+    requires(media == MediaType::Video || media == MediaType::Audio);
 };
 
 } // namespace spdl::core::detail
