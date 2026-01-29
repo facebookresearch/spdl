@@ -78,6 +78,35 @@ uint64_t parse_filesize(const TarHeader* header) {
   return parse_octal(header->size, sizeof(header->size));
 }
 
+std::string parse_pax_path(const char* data, size_t size) {
+  std::string_view sv(data, size);
+  const std::string_view path_key = "path=";
+
+  size_t pos = 0;
+  while (pos < size) {
+    size_t space_pos = sv.find(' ', pos);
+    if (space_pos == std::string_view::npos) {
+      break;
+    }
+
+    size_t record_start = space_pos + 1;
+    if (sv.substr(record_start, path_key.size()) == path_key) {
+      size_t value_start = record_start + path_key.size();
+      size_t newline_pos = sv.find('\n', value_start);
+      if (newline_pos != std::string_view::npos) {
+        return std::string(sv.substr(value_start, newline_pos - value_start));
+      }
+    }
+
+    size_t newline = sv.find('\n', pos);
+    if (newline == std::string_view::npos) {
+      break;
+    }
+    pos = newline + 1;
+  }
+  return {};
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // Core implementation
 //////////////////////////////////////////////////////////////////////////////
@@ -98,6 +127,8 @@ void InMemoryTarParserImpl::parse_next() {
     return;
   }
 
+  std::string pending_long_name;
+
   while (pos_ + sizeof(TarHeader) <= size_) {
     const TarHeader* header = reinterpret_cast<const TarHeader*>(data_ + pos_);
 
@@ -107,15 +138,46 @@ void InMemoryTarParserImpl::parse_next() {
     }
 
     auto filepath = parse_filepath(header);
-    if (filepath.size() == 0) {
+    if (filepath.size() == 0 && pending_long_name.empty()) {
       at_end_ = true;
       return;
     }
 
     uint64_t file_size = parse_filesize(header);
+    uint64_t padded_size = (file_size + 511) & ~511ULL;
+
+    if (header->typeflag == 'L') {
+      pos_ += 512;
+      if (pos_ + file_size > size_) {
+        at_end_ = true;
+        return;
+      }
+      pending_long_name = std::string(data_ + pos_, file_size);
+      if (!pending_long_name.empty() && pending_long_name.back() == '\0') {
+        pending_long_name.pop_back();
+      }
+      pos_ += padded_size;
+      continue;
+    }
+
+    if (header->typeflag == 'x') {
+      pos_ += 512;
+      if (pos_ + file_size > size_) {
+        at_end_ = true;
+        return;
+      }
+      pending_long_name = parse_pax_path(data_ + pos_, file_size);
+      pos_ += padded_size;
+      continue;
+    }
 
     if (header->typeflag == '0' || header->typeflag == '\0') {
       pos_ += 512;
+
+      if (!pending_long_name.empty()) {
+        filepath = std::move(pending_long_name);
+        pending_long_name.clear();
+      }
 
       if (pos_ + file_size > size_) {
         at_end_ = true;
@@ -124,13 +186,11 @@ void InMemoryTarParserImpl::parse_next() {
 
       current_entry_ = std::make_tuple(std::move(filepath), pos_, file_size);
 
-      uint64_t padded_size = (file_size + 511) & ~511ULL;
       pos_ += padded_size;
       return;
     } else {
-      pos_ += 512;
-      uint64_t padded_size = (file_size + 511) & ~511ULL;
-      pos_ += padded_size;
+      pending_long_name.clear();
+      pos_ += 512 + padded_size;
     }
   }
 

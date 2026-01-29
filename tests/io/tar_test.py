@@ -13,10 +13,12 @@ import spdl.io
 # pyre-strict
 
 
-def _create_test_tar(files: list[tuple[str, bytes]]) -> bytes:
+def _create_test_tar(
+    files: list[tuple[str, bytes]], format: int = tarfile.PAX_FORMAT
+) -> bytes:
     """Helper method to create a TAR archive in memory."""
     tar_buffer = io.BytesIO()
-    with tarfile.open(fileobj=tar_buffer, mode="w") as tar:
+    with tarfile.open(fileobj=tar_buffer, mode="w", format=format) as tar:
         for filename, content in files:
             info = tarfile.TarInfo(name=filename)
             info.size = len(content)
@@ -74,5 +76,27 @@ class TestIterTarfile(unittest.TestCase):
         """Test iter_tar with a single file."""
         ref_data = [("single.txt", b"Single file content")]
         tar_data = _create_test_tar(ref_data)
+
+        self._test(ref_data, tar_data)
+
+    def test_iter_tar_pax_long_filename(self) -> None:
+        """Test iter_tar with PAX extended header for long filenames."""
+        # Create a filename longer than 100 chars (TAR limit)
+        long_filename = "a" * 50 + "/" + "b" * 50 + "/" + "c" * 50 + ".txt"  # 154 chars
+        content = b"Content with PAX long filename"
+
+        ref_data = [(long_filename, content)]
+        tar_data = _create_test_tar(ref_data)  # Python tarfile creates PAX headers
+
+        self._test(ref_data, tar_data)
+
+    def test_iter_tar_gnu_long_filename(self) -> None:
+        """Test iter_tar with GNU extension for long filenames."""
+        long_filename = "very/" * 30 + "long_file.txt"  # ~165 chars
+        content = b"Content with GNU long filename"
+
+        ref_data = [(long_filename, content)]
+        # Create TAR with GNU format explicitly
+        tar_data = _create_test_tar(ref_data, format=tarfile.GNU_FORMAT)
 
         self._test(ref_data, tar_data)

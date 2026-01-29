@@ -43,6 +43,7 @@ static_assert(sizeof(TarHeader) == 512, "TAR header must be 512 bytes");
 bool is_valid_header(const TarHeader* header);
 std::string parse_filepath(const TarHeader*);
 uint64_t parse_filesize(const TarHeader*);
+std::string parse_pax_path(const char* data, size_t size);
 
 //////////////////////////////////////////////////////////////////////////////
 // Core implementation

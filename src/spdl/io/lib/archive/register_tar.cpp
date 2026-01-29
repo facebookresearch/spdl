@@ -72,34 +72,71 @@ struct FileObjTarParserImpl {
 
  public:
   void parse_next() {
-    // Assumption: The GIL is released at the beggining of this function call.
-    // Although gil_scoped_release/gil_scoped_acquire are reentrant, so it
-    // should not be an issue.
-    //
-    // See the note on `_read_exact` method.
     const TarHeader* header;
     std::string filepath;
     uint64_t file_size, padded_size;
     bool is_regular_file;
+    std::string pending_long_name;
+
     while (!at_end_) {
       auto data = _read_exact(512);
       {
         nb::gil_scoped_release __;
         header = reinterpret_cast<const TarHeader*>(data.data());
         filepath = parse_filepath(header);
-        if (filepath.size() == 0) {
+        if (filepath.size() == 0 && pending_long_name.empty()) {
           at_end_ = true;
           return;
         }
         file_size = parse_filesize(header);
-        is_regular_file = header->typeflag == '0' || header->typeflag == '\0';
         padded_size = (file_size + 511) & ~511ULL;
       }
+
+      if (header->typeflag == 'L') {
+        if (file_size > 0) {
+          auto longname_data = _read_exact(file_size);
+          {
+            nb::gil_scoped_release __;
+            pending_long_name =
+                std::string(longname_data.c_str(), longname_data.size());
+            if (!pending_long_name.empty() &&
+                pending_long_name.back() == '\0') {
+              pending_long_name.pop_back();
+            }
+          }
+          if (auto remaining = padded_size - file_size; remaining) {
+            _read_exact(remaining);
+          }
+        }
+        continue;
+      }
+
+      if (header->typeflag == 'x') {
+        if (file_size > 0) {
+          auto pax_data = _read_exact(file_size);
+          {
+            nb::gil_scoped_release __;
+            pending_long_name =
+                parse_pax_path(pax_data.c_str(), pax_data.size());
+          }
+          if (auto remaining = padded_size - file_size; remaining) {
+            _read_exact(remaining);
+          }
+        }
+        continue;
+      }
+
+      is_regular_file = header->typeflag == '0' || header->typeflag == '\0';
       if (!is_regular_file) {
+        pending_long_name.clear();
         if (padded_size) {
           _read_exact(padded_size);
         }
       } else {
+        if (!pending_long_name.empty()) {
+          filepath = std::move(pending_long_name);
+          pending_long_name.clear();
+        }
         entry_ = nb::make_tuple(
             nb::str(filepath.c_str(), filepath.size()),
             file_size ? _read_exact(file_size) : nb::bytes(""));
