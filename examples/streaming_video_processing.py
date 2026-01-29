@@ -165,7 +165,7 @@ def process(
                 continue
 
             assert isinstance(video_packets, VideoPackets)
-            if (frames := video_decoder.decode(video_packets)) is not None:
+            for frames in video_decoder.streaming_decode_packets(video_packets):
                 buffer = spdl.io.convert_frames(frames)
                 array = spdl.io.to_numpy(buffer)
 
@@ -194,7 +194,7 @@ def process(
         # -------------------------------------------------------------
 
         # Flush decoder
-        if (frames := video_decoder.flush()) is not None:
+        for frames in video_decoder.flush():
             buffer = spdl.io.convert_frames(frames)
             array = spdl.io.to_numpy(buffer)
 

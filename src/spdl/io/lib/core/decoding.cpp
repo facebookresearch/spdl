@@ -42,12 +42,7 @@ FramesPtr<media> decode_packets(
     throw std::runtime_error("Packets does not have codec info.");
   }
   Decoder<media> decoder{*packets->codec, cfg, filter_desc};
-  return decoder.decode_and_flush(std::move(packets), num_frames);
-}
-
-template <MediaType media>
-FramesPtr<media> decode(Decoder<media>& self, PacketsPtr<media> packets) {
-  return self.decode(std::move(packets), false, -1);
+  return decoder.decode_packets(std::move(packets), num_frames);
 }
 } // namespace
 
@@ -55,50 +50,41 @@ void register_decoding(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Decoder
   ////////////////////////////////////////////////////////////////////////////////
+  using AudioFramesGenerator = Generator<AudioFramesPtr>;
+  using VideoFramesGenerator = Generator<VideoFramesPtr>;
+  using ImageFramesGenerator = Generator<ImageFramesPtr>;
+
   nb::class_<Decoder<MediaType::Audio>>(
       m,
       "AudioDecoder",
       "Decode stream of audio packets. See :py:class:`Decoder` for the detail.")
       .def(
-          "decode",
-          &Decoder<MediaType::Audio>::decode,
+          "streaming_decode_packets",
+          &Decoder<MediaType::Audio>::streaming_decode_packets,
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("packets"),
-          "Decode the given packets")
+          "Streaming decode packets and yield frames")
       .def(
           "flush",
           &Decoder<MediaType::Audio>::flush,
           nb::call_guard<nb::gil_scoped_release>(),
-          "Flush the internally buffered frames. Use only at the end of stream");
+          "Flush the decoder and yield remaining frames");
+
   nb::class_<Decoder<MediaType::Video>>(
       m,
       "VideoDecoder",
       "Decode stream of video packets. See :py:class:`Decoder` for the detail.")
       .def(
-          "decode",
-          &Decoder<MediaType::Video>::decode,
+          "streaming_decode_packets",
+          &Decoder<MediaType::Video>::streaming_decode_packets,
           nb::call_guard<nb::gil_scoped_release>(),
           nb::arg("packets"),
-          "Decode the given packets")
+          "Streaming decode packets and yield frames")
       .def(
           "flush",
           &Decoder<MediaType::Video>::flush,
           nb::call_guard<nb::gil_scoped_release>(),
-          "Flush the internally buffered frames. Use only at the end of stream");
-  nb::class_<Decoder<MediaType::Image>>(
-      m,
-      "ImageDecoder",
-      "Decode an image packet. See :py:class:`Decoder` for the detail.")
-      .def(
-          "decode",
-          &Decoder<MediaType::Image>::decode,
-          nb::call_guard<nb::gil_scoped_release>(),
-          nb::arg("packets"),
-          "Decode the given packets")
-      .def(
-          "flush",
-          &Decoder<MediaType::Image>::flush,
-          nb::call_guard<nb::gil_scoped_release>());
+          "Flush the decoder and yield remaining frames");
 
   m.def(
       "_make_decoder",
@@ -128,6 +114,57 @@ void register_decoding(nb::module_& m) {
   ////////////////////////////////////////////////////////////////////////////////
   // Decoding
   ////////////////////////////////////////////////////////////////////////////////
+
+  nb::class_<AudioFramesGenerator>(m, "AudioFramesIterator")
+      .def(
+          "__iter__",
+          [](AudioFramesGenerator& self) -> AudioFramesGenerator& {
+            return self;
+          },
+          nb::rv_policy::reference)
+      .def(
+          "__next__",
+          [](AudioFramesGenerator& self) -> AudioFramesPtr {
+            if (!self) {
+              throw nb::stop_iteration();
+            }
+            return self();
+          },
+          nb::call_guard<nb::gil_scoped_release>());
+
+  nb::class_<VideoFramesGenerator>(m, "VideoFramesIterator")
+      .def(
+          "__iter__",
+          [](VideoFramesGenerator& self) -> VideoFramesGenerator& {
+            return self;
+          },
+          nb::rv_policy::reference)
+      .def(
+          "__next__",
+          [](VideoFramesGenerator& self) -> VideoFramesPtr {
+            if (!self) {
+              throw nb::stop_iteration();
+            }
+            return self();
+          },
+          nb::call_guard<nb::gil_scoped_release>());
+
+  nb::class_<ImageFramesGenerator>(m, "ImageFramesIterator")
+      .def(
+          "__iter__",
+          [](ImageFramesGenerator& self) -> ImageFramesGenerator& {
+            return self;
+          },
+          nb::rv_policy::reference)
+      .def(
+          "__next__",
+          [](ImageFramesGenerator& self) -> ImageFramesPtr {
+            if (!self) {
+              throw nb::stop_iteration();
+            }
+            return self();
+          },
+          nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
       "decode_packets",

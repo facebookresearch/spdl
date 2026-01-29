@@ -80,7 +80,6 @@ if TYPE_CHECKING:
     DecodeConfig = _libspdl.DecodeConfig
     DemuxConfig = _libspdl.DemuxConfig
     ImageCodec = _libspdl.ImageCodec
-    ImageDecoder = _libspdl.ImageDecoder
     ImageFrames = _libspdl.ImageFrames
     ImagePackets = _libspdl.ImagePackets
     _PacketsIterator = _libspdl.PacketsIterator
@@ -581,21 +580,12 @@ def Decoder(
 ) -> "VideoDecoder": ...
 
 
-@overload
 def Decoder(
-    codec: "ImageCodec",
+    codec: "AudioCodec | VideoCodec",
     *,
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     decode_config: "DecodeConfig | None" = None,
-) -> "ImageDecoder": ...
-
-
-def Decoder(
-    codec: "AudioCodec | VideoCodec | ImageCodec",
-    *,
-    filter_desc: str | None = _FILTER_DESC_DEFAULT,
-    decode_config: "DecodeConfig | None" = None,
-) -> "AudioDecoder | VideoDecoder | ImageDecoder":
+) -> "AudioDecoder | VideoDecoder":
     """Initialize a decoder object that can incrementally decode packets of the same stream.
 
     .. admonition:: Example
@@ -607,10 +597,13 @@ def Decoder(
           demuxer = spdl.io.Demuxer(src)
           decoder = spdl.io.Decoder(demuxer.video_codec)
           for packets in demuxer.streaming_demux_video(num_frames):
-              frames: VideoFrames | None = decoder.decode(packets)
-              ...
+              for frames in decoder.streaming_decode_packets(packets):
+                  # Process frames
+                  ...
 
-          frames: VideoFrames | None = decoder.flush()
+          for frames in decoder.flush():
+              # Process remaining frames
+              ...
 
     Args:
         codec (AudioCodec, VideoCodec or ImageCodec):

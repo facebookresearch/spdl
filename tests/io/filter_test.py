@@ -33,13 +33,13 @@ class FilterTest(unittest.TestCase):
         print(filter_graph)
         buffers = []
         for packets in demuxer.streaming_demux(duration=1):
-            frames = decoder.decode(packets)
-            filter_graph.add_frames(frames)
-            frames = filter_graph.get_frames()
-            buffer = spdl.io.convert_frames(frames)
-            buffers.append(spdl.io.to_numpy(buffer))
+            for frames in decoder.streaming_decode_packets(packets):
+                filter_graph.add_frames(frames)
+                frames = filter_graph.get_frames()
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
 
-        if (frames := decoder.flush()) is not None:
+        for frames in decoder.flush():
             filter_graph.add_frames(frames)
 
         filter_graph.flush()
@@ -75,14 +75,14 @@ class FilterTest(unittest.TestCase):
         print(filter_graph)
         buffers = []
         for packets in demuxer.streaming_demux(duration=1):
-            frames = decoder.decode(packets)
-            filter_graph.add_frames(frames)
-            frames = filter_graph.get_frames()
+            for frames in decoder.streaming_decode_packets(packets):
+                filter_graph.add_frames(frames)
+                frames = filter_graph.get_frames()
 
-            buffer = spdl.io.convert_frames(frames)
-            buffers.append(spdl.io.to_numpy(buffer))
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
 
-        if (frames := decoder.flush()) is not None:
+        for frames in decoder.flush():
             filter_graph.add_frames(frames)
 
         filter_graph.flush()
@@ -121,15 +121,15 @@ class FilterTest(unittest.TestCase):
         num_packets = 0
         for packets in demuxer.streaming_demux(duration=1):
             num_packets += len(packets)
-            frames = decoder.decode(packets)
-            filter_graph.add_frames(frames.clone(), key="buffer@in0")
-            filter_graph.add_frames(frames, key="buffer@in1")
-            frames = filter_graph.get_frames()
+            for frames in decoder.streaming_decode_packets(packets):
+                filter_graph.add_frames(frames.clone(), key="buffer@in0")
+                filter_graph.add_frames(frames, key="buffer@in1")
+                frames = filter_graph.get_frames()
 
-            buffer = spdl.io.convert_frames(frames)
-            buffers.append(spdl.io.to_numpy(buffer))
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
 
-        if (frames := decoder.flush()) is not None:
+        for frames in decoder.flush():
             filter_graph.add_frames(frames.clone(), key="buffer@in0")
             filter_graph.add_frames(frames, key="buffer@in1")
 
@@ -173,18 +173,18 @@ class FilterTest(unittest.TestCase):
         print(filter_graph)
         buffers0, buffers1 = [], []
         for packets in demuxer.streaming_demux(duration=1):
-            frames = decoder.decode(packets)
-            filter_graph.add_frames(frames)
+            for frames in decoder.streaming_decode_packets(packets):
+                filter_graph.add_frames(frames)
 
-            frames = filter_graph.get_frames(key="buffersink@out0")
-            buffer = spdl.io.convert_frames(frames)
-            buffers0.append(spdl.io.to_numpy(buffer))
+                frames = filter_graph.get_frames(key="buffersink@out0")
+                buffer = spdl.io.convert_frames(frames)
+                buffers0.append(spdl.io.to_numpy(buffer))
 
-            frames = filter_graph.get_frames(key="buffersink@out1")
-            buffer = spdl.io.convert_frames(frames)
-            buffers1.append(spdl.io.to_numpy(buffer))
+                frames = filter_graph.get_frames(key="buffersink@out1")
+                buffer = spdl.io.convert_frames(frames)
+                buffers1.append(spdl.io.to_numpy(buffer))
 
-        if (frames := decoder.flush()) is not None:
+        for frames in decoder.flush():
             filter_graph.add_frames(frames)
 
         filter_graph.flush()
@@ -225,15 +225,15 @@ class FilterTest(unittest.TestCase):
         buffers = []
         for packets in demuxer.streaming_demux(duration=1):
             print(packets)
-            frames = decoder.decode(packets)
-            print(frames)
-            filter_graph.add_frames(frames)
-            frames = filter_graph.get_frames()
-            print(frames)
-            buffer = spdl.io.convert_frames(frames)
-            buffers.append(spdl.io.to_numpy(buffer))
+            for frames in decoder.streaming_decode_packets(packets):
+                print(frames)
+                filter_graph.add_frames(frames)
+                frames = filter_graph.get_frames()
+                print(frames)
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
 
-        if (frames := decoder.flush()) is not None:
+        for frames in decoder.flush():
             print(frames)
             filter_graph.add_frames(frames)
 

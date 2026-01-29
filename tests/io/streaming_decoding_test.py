@@ -108,13 +108,11 @@ class TestStreamingVideoDemuxing(unittest.TestCase):
         ):
             print(packets)
             assert isinstance(packets, VideoPackets)
-            frames = decoder.decode(packets)
-            print(frames)
-            # pyre-ignore[6]
-            buffer = spdl.io.convert_frames(frames)
-            buffers.append(spdl.io.to_numpy(buffer))
-        if (frames := decoder.flush()) is not None:
-            # pyre-ignore[6]
+            for frames in decoder.streaming_decode_packets(packets):
+                print(frames)
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
+        for frames in decoder.flush():
             buffer = spdl.io.convert_frames(frames)
             buffers.append(spdl.io.to_numpy(buffer))
 
@@ -175,17 +173,15 @@ class TestStreamingDecoding(unittest.TestCase):
             print(f"{i}: {packets=}", flush=True)
             assert isinstance(packets, VideoPackets)
             self.assertEqual(len(packets), N)
-            frames = decoder.decode(packets)
-            print(f"{i}: {frames=}", flush=True)
-            # pyre-ignore[6]
+            for frames in decoder.streaming_decode_packets(packets):
+                print(f"{i}: {frames=}", flush=True)
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
+
+        for frames in decoder.flush():
+            print(f"^: {frames=}", flush=True)
             buffer = spdl.io.convert_frames(frames)
             buffers.append(spdl.io.to_numpy(buffer))
-
-        frames = decoder.flush()
-        print(f"^: {frames=}", flush=True)
-        # pyre-ignore[6]
-        buffer = spdl.io.convert_frames(frames)
-        buffers.append(spdl.io.to_numpy(buffer))
         hyp = np.concatenate(buffers)
 
         np.testing.assert_array_equal(hyp, ref)
@@ -211,31 +207,29 @@ class TestStreamingDecoding(unittest.TestCase):
         video_buffer = []
         for packets in packet_stream:
             if audio_index in packets:
-                print(packets[audio_index])
-                # pyre-ignore[6]
-                frames = audio_decoder.decode(packets[audio_index])
-                print(frames)
-                # pyre-ignore[6]
-                self.assertGreater(len(frames), 44100 * 3)
-                # pyre-ignore[6]
-                buffer = spdl.io.convert_frames(frames)
-                audio_buffer.append(spdl.io.to_numpy(buffer).T)
+                audio_packets = packets[audio_index]
+                print(audio_packets)
+                assert isinstance(audio_packets, spdl.io.AudioPackets)
+                for frames in audio_decoder.streaming_decode_packets(audio_packets):
+                    print(frames)
+                    self.assertGreater(len(frames), 44100 * 3)
+                    buffer = spdl.io.convert_frames(frames)
+                    audio_buffer.append(spdl.io.to_numpy(buffer).T)
             if video_index in packets:
-                print(packets[video_index])
-                # pyre-ignore[6]
-                frames = video_decoder.decode(packets[video_index])
-                print(frames)
-                # pyre-ignore[6]
-                self.assertGreater(len(frames), 25 * 3)
-                # pyre-ignore[6]
-                buffer = spdl.io.convert_frames(frames)
-                video_buffer.append(spdl.io.to_numpy(buffer))
+                video_packets = packets[video_index]
+                print(video_packets)
+                assert isinstance(video_packets, VideoPackets)
+                for frames in video_decoder.streaming_decode_packets(video_packets):
+                    print(frames)
+                    self.assertGreater(len(frames), 25 * 3)
+                    buffer = spdl.io.convert_frames(frames)
+                    video_buffer.append(spdl.io.to_numpy(buffer))
 
-        if (frames := audio_decoder.flush()) is not None:
+        for frames in audio_decoder.flush():
             buffer = spdl.io.convert_frames(frames)
             audio_buffer.append(spdl.io.to_numpy(buffer).T)
 
-        if (frames := video_decoder.flush()) is not None:
+        for frames in video_decoder.flush():
             buffer = spdl.io.convert_frames(frames)
             video_buffer.append(spdl.io.to_numpy(buffer))
 
