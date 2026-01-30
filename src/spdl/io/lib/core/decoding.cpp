@@ -75,6 +75,14 @@ void register_decoding(nb::module_& m) {
       "VideoDecoder",
       "Decode stream of video packets. See :py:class:`Decoder` for the detail.")
       .def(
+          "set_buffer_size",
+          &Decoder<MediaType::Video>::set_buffer_size,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("buffer_size"),
+          "Set the buffer size for streaming decoding. "
+          "Providing 0 will disable the fixed-frame streaming, "
+          "and the number of frames yielded can vary.")
+      .def(
           "streaming_decode_packets",
           &Decoder<MediaType::Video>::streaming_decode_packets,
           nb::call_guard<nb::gil_scoped_release>(),

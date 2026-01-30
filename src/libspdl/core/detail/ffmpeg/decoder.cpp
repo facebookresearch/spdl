@@ -200,18 +200,79 @@ VideoFramesPtr DecoderImpl<MediaType::Video>::decode_packets(
 }
 
 template <MediaType media>
+void DecoderImpl<media>::set_buffer_size(size_t buffer_size)
+  requires(media == MediaType::Video)
+{
+  buffer_size_ = buffer_size;
+}
+
+namespace {
+Generator<VideoFramesPtr> yield_video_frames(
+    Generator<AVFramePtr> decoding,
+    uintptr_t id,
+    Rational tb,
+    std::optional<TimeWindow> timestamp,
+    size_t buffer_size) {
+  auto ret = std::make_unique<VideoFrames>(id, tb);
+  for (auto&& frame : decoding) {
+    if (timestamp && frame) {
+      auto [s, e] = *timestamp;
+      if (!is_within_window(to_rational(frame->pts, tb), s, e)) {
+        auto* raw_frame = frame.release();
+        av_frame_free(&raw_frame);
+        continue;
+      }
+    }
+
+    ret->push_back(frame.release());
+    if (buffer_size > 0 && ret->get_frames().size() >= buffer_size) {
+      co_yield std::move(ret);
+      ret = std::make_unique<VideoFrames>(id, tb);
+    }
+  }
+  if (ret->get_frames().size() > 0) {
+    co_yield std::move(ret);
+  }
+}
+
+Generator<AudioFramesPtr>
+yield_audio_frames(Generator<AVFramePtr> decoding, uintptr_t id, Rational tb) {
+  auto ret = std::make_unique<AudioFrames>(id, tb);
+  for (auto&& frame : decoding) {
+    ret->push_back(frame.release());
+  }
+  if (ret->get_frames().size() > 0) {
+    co_yield std::move(ret);
+  }
+}
+} // namespace
+
+template <MediaType media>
 Generator<FramesPtr<media>> DecoderImpl<media>::flush()
   requires(media == MediaType::Video || media == MediaType::Audio)
 {
-  auto frames = std::make_unique<Frames<media>>(
-      reinterpret_cast<uintptr_t>(this), get_output_time_base());
   std::vector<AVPacket*> dummy{};
-  for (auto&& frame :
-       detail::decode_packets(codec_ctx_, dummy, filter_graph_, true)) {
-    frames->push_back(frame.release());
+  auto decoding =
+      detail::decode_packets(codec_ctx_, dummy, filter_graph_, true);
+
+  if constexpr (media == MediaType::Video) {
+    for (auto&& frames : yield_video_frames(
+             std::move(decoding),
+             reinterpret_cast<uintptr_t>(this),
+             get_output_time_base(),
+             std::nullopt,
+             buffer_size_)) {
+      co_yield std::move(frames);
+    }
   }
-  if (frames->get_frames().size() > 0) {
-    co_yield std::move(frames);
+
+  if constexpr (media == MediaType::Audio) {
+    for (auto&& frames : yield_audio_frames(
+             std::move(decoding),
+             reinterpret_cast<uintptr_t>(this),
+             get_output_time_base())) {
+      co_yield std::move(frames);
+    }
   }
 }
 
@@ -224,33 +285,14 @@ Generator<FramesPtr<media>> DecoderImpl<media>::streaming_decode_packets(
   auto decoding = detail::decode_packets(
       codec_ctx_, packets->pkts.get_packets(), filter_graph_, false);
 
-  // Specialization for video.
-  // For video we want to ensure the half-open range.
-  // Originally we used `trim` filter like how audio is processed above,
-  // but this was not properly handling the half-open range, so we have
-  // specialization for video.
   if constexpr (media == MediaType::Video) {
-    // Temporary solution to support Generator. Yield all the frames.
-    // TODO: support pre-fixed number of frames here.
-    AVRational s, e;
-    if (packets->timestamp) {
-      std::tie(s, e) = *(packets->timestamp);
-    }
-
-    auto ret = std::make_unique<VideoFrames>(packets->id, tb);
-    for (auto&& frame : decoding) {
-      if (packets->timestamp && frame) {
-        if (!is_within_window(to_rational(frame->pts, tb), s, e)) {
-          auto* raw_frame = frame.release();
-          av_frame_free(&raw_frame);
-          continue;
-        }
-      }
-
-      ret->push_back(frame.release());
-    }
-    if (ret->get_frames().size() > 0) {
-      co_yield std::move(ret);
+    for (auto&& frames : yield_video_frames(
+             std::move(decoding),
+             packets->id,
+             tb,
+             packets->timestamp,
+             buffer_size_)) {
+      co_yield std::move(frames);
     }
   }
 
@@ -259,14 +301,9 @@ Generator<FramesPtr<media>> DecoderImpl<media>::streaming_decode_packets(
   // for handling timestamp.
   // This is handled through high-level Python interface.
   if constexpr (media == MediaType::Audio) {
-    auto ret = std::make_unique<AudioFrames>(packets->id, tb);
-    // Temporary solution to support Generator. Yield all the frames.
-    // TODO: support pre-fixed number of samples here.
-    for (auto&& frame : decoding) {
-      ret->push_back(frame.release());
-    }
-    if (ret->get_frames().size() > 0) {
-      co_yield std::move(ret);
+    for (auto&& frames :
+         yield_audio_frames(std::move(decoding), packets->id, tb)) {
+      co_yield std::move(frames);
     }
   }
 }

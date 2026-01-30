@@ -241,3 +241,47 @@ class TestStreamingDecoding(unittest.TestCase):
 
         np.testing.assert_array_equal(hyp_audio, ref_audio)
         np.testing.assert_array_equal(hyp_video, ref_video)
+
+    def test_set_buffer_size(self) -> None:
+        """Test that set_buffer_size limits the number of frames yielded per iteration."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 90 sample.mp4"
+        )
+
+        sample = get_sample(cmd)
+
+        buffer_size = 10
+
+        demuxer = spdl.io.Demuxer(sample.path)
+        decoder = spdl.io.Decoder(demuxer.video_codec)
+        decoder.set_buffer_size(buffer_size)
+
+        buffers = []
+        frame_counts = []
+        for packets in demuxer.streaming_demux(
+            demuxer.video_stream_index, num_packets=30
+        ):
+            assert isinstance(packets, VideoPackets)
+            for frames in decoder.streaming_decode_packets(packets):
+                frame_counts.append(len(frames))
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
+
+        for frames in decoder.flush():
+            frame_counts.append(len(frames))
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
+
+        # Each yielded frames batch should have at most buffer_size frames
+        for count in frame_counts[:-1]:  # Last batch may have fewer frames
+            self.assertLessEqual(count, buffer_size)
+
+        hyp = np.concatenate(buffers)
+
+        # Verify parity with non-streaming decode
+        packets = spdl.io.demux_video(sample.path)
+        frames = spdl.io.decode_packets(packets)
+        buffer = spdl.io.convert_frames(frames)
+        ref = spdl.io.to_numpy(buffer)
+
+        np.testing.assert_array_equal(hyp, ref)
