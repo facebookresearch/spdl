@@ -27,6 +27,13 @@ Decoder<media>::~Decoder() {
 }
 
 template <MediaType media>
+void Decoder<media>::set_buffer_size(size_t size)
+  requires(media == MediaType::Video)
+{
+  pImpl_->set_buffer_size(size);
+}
+
+template <MediaType media>
 FramesPtr<media> Decoder<media>::decode_packets(
     PacketsPtr<media> packets,
     int num_frames) {

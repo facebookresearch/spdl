@@ -81,6 +81,11 @@ class Decoder {
   // Streaming decoding
   ////////////////////////////////////////////////////////////////////////////
 
+  /// Set the frame buffer size for streaming decode.
+  /// Effective only for video streaming decoding.
+  void set_buffer_size(size_t num_frames)
+    requires(media == MediaType::Video);
+
   /// Streaming decode packets and yield frames.
   ///
   /// This method decodes packets and yields frames as they become ready.
