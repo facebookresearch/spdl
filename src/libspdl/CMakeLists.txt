@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 set(SPDL_COMMON_DEFS)
 if (SPDL_USE_TRACING)
   list(APPEND SPDL_COMMON_DEFS SPDL_USE_TRACING)
@@ -24,4 +30,10 @@ endif(MSVC)
 add_subdirectory(core)
 if (SPDL_USE_CUDA)
 add_subdirectory(cuda)
+endif()
+
+# Enable testing
+if (SPDL_BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(tests)
 endif()
