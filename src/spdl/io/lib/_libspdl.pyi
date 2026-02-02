@@ -599,6 +599,11 @@ class VideoDecoder:
     Decode stream of video packets. See :py:class:`Decoder` for the detail.
     """
 
+    def set_buffer_size(self, buffer_size: int) -> None:
+        """
+        Set the buffer size for streaming decoding. Providing 0 will disable the fixed-frame streaming, and the number of frames yielded can vary.
+        """
+
     def streaming_decode_packets(self, packets: VideoPackets) -> VideoFramesIterator:
         """Streaming decode packets and yield frames"""
 

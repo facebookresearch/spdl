@@ -26,6 +26,9 @@ class DecoderImpl {
   AVCodecContextPtr codec_ctx_;
   std::optional<FilterGraphImpl> filter_graph_;
 
+  // Used only for video streaming decoding.
+  size_t buffer_size_ = 0;
+
  public:
   DecoderImpl(
       const Codec<media>& codec,
@@ -43,6 +46,9 @@ class DecoderImpl {
   FramesPtr<media> decode_packets(
       PacketsPtr<media> packets,
       int num_frames = -1);
+
+  void set_buffer_size(size_t num_frames)
+    requires(media == MediaType::Video);
   Generator<FramesPtr<media>> streaming_decode_packets(
       PacketsPtr<media> packets)
     requires(media == MediaType::Video || media == MediaType::Audio);
