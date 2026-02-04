@@ -46,10 +46,11 @@ from concurrent.futures import (
     ProcessPoolExecutor,
     ThreadPoolExecutor,
 )
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from functools import partial
+from sys import version_info
 from typing import Any, Generic, TypeVar
 
 import numpy as np
@@ -58,6 +59,18 @@ import scipy.stats
 
 T = TypeVar("T")
 ConfigT = TypeVar("ConfigT")
+
+
+def _is_free_threaded() -> bool:
+    """Check if Python is running with free-threaded ABI."""
+    try:
+        return not sys._is_gil_enabled()  # pyre-ignore[16]
+    except AttributeError:
+        return False
+
+
+_PYTHON_VERSION = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
+_FREE_THREADED = _is_free_threaded()
 
 
 @dataclass
@@ -89,14 +102,14 @@ class BenchmarkResult(Generic[ConfigT]):
     date: str
     """When benchmark was run. ISO 8601 format."""
 
-    python_version: str
-    """Python version used for the benchmark"""
-
-    free_threaded: bool
-    """Whether Python is running with free-threaded ABI."""
-
     cpu_percent: float
     """Average CPU utilization percentage during benchmark execution."""
+
+    python_version: str = field(default=_PYTHON_VERSION)
+    """Python version used for the benchmark"""
+
+    free_threaded: bool = field(default=_FREE_THREADED)
+    """Whether Python is running with free-threaded ABI."""
 
 
 class ExecutorType(Enum):
@@ -115,22 +128,6 @@ class ExecutorType(Enum):
 
     Requires Python 3.14+.
     """
-
-
-def _get_python_info() -> tuple[str, bool]:
-    """Get Python version and free-threaded ABI information.
-
-    Returns:
-        Tuple of (``python_version``, ``is_free_threaded``)
-    """
-    python_version = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
-    try:
-        is_free_threaded = not sys._is_gil_enabled()  # pyre-ignore[16]
-    except AttributeError:
-        is_free_threaded = False
-    return python_version, is_free_threaded
 
 
 def _create_executor(executor_type: ExecutorType, max_workers: int) -> Executor:
@@ -324,7 +321,6 @@ class BenchmarkRunner:
 
         cpu_mean = np.mean(cpu_samples)
 
-        python_version, free_threaded = _get_python_info()
         date = datetime.now(timezone.utc).isoformat()
 
         result = BenchmarkResult(
@@ -334,8 +330,6 @@ class BenchmarkRunner:
             ci_lower=float(confidence_interval[0]),
             ci_upper=float(confidence_interval[1]),
             date=date,
-            python_version=python_version,
-            free_threaded=free_threaded,
             cpu_percent=float(cpu_mean),
         )
 
@@ -347,9 +341,8 @@ def get_default_result_path(path: str, ext: str = ".csv") -> str:
     base, _ = os.path.splitext(os.path.realpath(path))
     dirname = os.path.join(os.path.dirname(base), "data")
     filename = os.path.basename(base)
-    python_version, free_threaded = _get_python_info()
     version_suffix = (
-        f"_{'.'.join(python_version.split('.')[:2])}{'t' if free_threaded else ''}"
+        f"_{'.'.join(_PYTHON_VERSION.split('.')[:2])}{'t' if _FREE_THREADED else ''}"
     )
     return os.path.join(dirname, f"{filename}{version_suffix}{ext}")
 
