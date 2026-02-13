@@ -93,7 +93,7 @@ CPUBufferPtr convert_frames(
     if (num_frames == 0) {
       SPDL_FAIL("No frame to convert to buffer.");
     }
-    auto frames = frames_ptr->get_frames();
+    const auto& frames = frames_ptr->get_frames();
     auto sample_fmt = static_cast<AVSampleFormat>(frames.at(0)->format);
     auto num_channels = GET_NUM_CHANNELS(frames.at(0));
     if (num_frames == 0) {
