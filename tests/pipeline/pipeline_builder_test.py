@@ -423,7 +423,7 @@ class TestPipeline(unittest.TestCase):
                 yield
 
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 yield
 
         with self.assertRaises(ValueError):
@@ -445,7 +445,7 @@ class TestPipeline(unittest.TestCase):
                 yield
 
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 yield
 
         with self.assertRaises(ValueError):
@@ -473,7 +473,7 @@ class CountHook(TaskHook):
         self._exit_stage_called += 1
 
     @asynccontextmanager
-    async def task_hook(self):
+    async def task_hook(self, input_item=None):
         self._enter_task_called += 1
         try:
             yield
@@ -552,7 +552,7 @@ class TestPipelineHook(unittest.TestCase):
                 self._exit_stage_called += 1
 
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 self._enter_task_called += 1
                 try:
                     yield
@@ -588,7 +588,7 @@ class TestPipelineHook(unittest.TestCase):
                 raise RuntimeError("failing")
 
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 yield
 
         pipeline = (
@@ -616,7 +616,7 @@ class TestPipelineHook(unittest.TestCase):
                 raise RuntimeError("failing")
 
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 yield
 
         pipeline = (
@@ -637,7 +637,7 @@ class TestPipelineHook(unittest.TestCase):
 
         class _hook(TaskHook):
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 raise RuntimeError("failing enter_task")
 
             @asynccontextmanager
@@ -664,7 +664,7 @@ class TestPipelineHook(unittest.TestCase):
 
         class _exit_stage_fail(TaskHook):
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 yield
                 raise RuntimeError("failing exit_task")
 
@@ -687,7 +687,7 @@ class TestPipelineHook(unittest.TestCase):
 
         class _capture(TaskHook):
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 try:
                     yield
                 except Exception as e:
@@ -715,6 +715,134 @@ class TestPipelineHook(unittest.TestCase):
             self.assertEqual(list(pipeline.get_iterator(timeout=10)), [])
 
         self.assertTrue(exc_info is err)
+
+    def test_pipeline_hook_receives_input_item(self) -> None:
+        """task_hook receives the input_item being processed."""
+
+        received_items = []
+
+        class _item_capture_hook(TaskHook):
+            @asynccontextmanager
+            async def task_hook(self, input_item=None):
+                received_items.append(input_item)
+                yield
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(5))
+            .pipe(passthrough)
+            .add_sink(1000)
+            # pyre-ignore[6]
+            .build(num_threads=1, task_hook_factory=lambda _: [_item_capture_hook()])
+        )
+
+        with pipeline.auto_stop():
+            output = list(pipeline.get_iterator(timeout=10))
+
+        self.assertEqual(output, list(range(5)))
+        self.assertEqual(received_items, list(range(5)))
+
+    def test_pipeline_hook_receives_input_item_on_failure(self) -> None:
+        """task_hook receives input_item even when the task fails."""
+
+        captured_items_on_failure = []
+
+        class _failure_capture_hook(TaskHook):
+            @asynccontextmanager
+            async def task_hook(self, input_item=None):
+                try:
+                    yield
+                except StopAsyncIteration:
+                    raise
+                except Exception:
+                    captured_items_on_failure.append(input_item)
+                    raise
+
+        def fail_on_even(x: int) -> int:
+            if x % 2 == 0:
+                raise RuntimeError(f"fail on {x}")
+            return x
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(6))
+            .pipe(fail_on_even)
+            .add_sink(1000)
+            .build(
+                num_threads=1,
+                task_hook_factory=lambda _: [_failure_capture_hook()],  # pyre-ignore[6]
+            )
+        )
+
+        with pipeline.auto_stop():
+            output = list(pipeline.get_iterator(timeout=10))
+
+        self.assertEqual(output, [1, 3, 5])
+        self.assertEqual(captured_items_on_failure, [0, 2, 4])
+
+    def test_ordered_pipe_hook_receives_input_item(self) -> None:
+        """task_hook receives input_item in ordered pipe."""
+
+        received_items = []
+
+        class _item_capture_hook(TaskHook):
+            @asynccontextmanager
+            async def task_hook(self, input_item=None):
+                received_items.append(input_item)
+                yield
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(5))
+            .pipe(passthrough, output_order="input", concurrency=4)
+            .add_sink(1000)
+            # pyre-ignore[6]
+            .build(num_threads=4, task_hook_factory=lambda _: [_item_capture_hook()])
+        )
+
+        with pipeline.auto_stop():
+            output = list(pipeline.get_iterator(timeout=10))
+
+        self.assertEqual(output, list(range(5)))
+        self.assertEqual(received_items, list(range(5)))
+
+    def test_ordered_pipe_hook_receives_input_item_on_failure(self) -> None:
+        """task_hook receives input_item on failure in ordered pipe."""
+
+        captured_items_on_failure = []
+
+        class _failure_capture_hook(TaskHook):
+            @asynccontextmanager
+            async def task_hook(self, input_item=None):
+                try:
+                    yield
+                except StopAsyncIteration:
+                    raise
+                except Exception:
+                    captured_items_on_failure.append(input_item)
+                    raise
+
+        def fail_on_even(x: int) -> int:
+            if x % 2 == 0:
+                raise RuntimeError(f"fail on {x}")
+            return x
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(6))
+            .pipe(fail_on_even, output_order="input", concurrency=4)
+            .add_sink(1000)
+            .build(
+                num_threads=4,
+                task_hook_factory=lambda _: [_failure_capture_hook()],  # pyre-ignore[6]
+            )
+        )
+
+        with pipeline.auto_stop():
+            output = list(pipeline.get_iterator(timeout=10))
+
+        self.assertEqual(output, [1, 3, 5])
+        self.assertEqual(sorted(captured_items_on_failure), [0, 2, 4])
 
 
 ################################################################################
@@ -1657,7 +1785,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         class _Hook(TaskHook):
             @asynccontextmanager
-            async def task_hook(self):
+            async def task_hook(self, input_item=None):
                 try:
                     yield
                 except StopAsyncIteration:

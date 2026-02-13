@@ -17,8 +17,7 @@ import asyncio
 import inspect
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager
-from functools import partial
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from spdl.pipeline._common._convert import convert_to_async
 from spdl.pipeline._common._misc import create_task
@@ -89,7 +88,7 @@ class _FailCounter(TaskHook):
         return self._exeeded
 
     @asynccontextmanager
-    async def task_hook(self) -> AsyncIterator[None]:
+    async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
         try:
             yield
         except StopAsyncIteration:
@@ -109,9 +108,12 @@ def _get_fail_counter() -> type[_FailCounter]:
 
 
 async def _wrap_afunc(
-    coro: Awaitable[U], hooks: list[TaskHook], queue: AsyncQueue
+    coro: Awaitable[U],
+    hooks: list[TaskHook],
+    queue: AsyncQueue,
+    item: Any = None,
 ) -> None:
-    async with _task_hooks(hooks):
+    async with _task_hooks(hooks, item):
         result = await coro
 
     if result is _SKIP:
@@ -121,7 +123,10 @@ async def _wrap_afunc(
 
 
 async def _wrap_agen(
-    coro: AsyncIterator[U], hooks: list[TaskHook], queue: AsyncQueue
+    coro: AsyncIterator[U],
+    hooks: list[TaskHook],
+    queue: AsyncQueue,
+    item: Any = None,
 ) -> None:
     exhausted = False
     while not exhausted:
@@ -145,7 +150,7 @@ async def _wrap_agen(
         # If the hooks do not absorb the StopAsyncIteration, and
         # it propagates them, then we catch it and exit.
         try:
-            async with _task_hooks(hooks):
+            async with _task_hooks(hooks, item):
                 try:
                     result = await anext(coro)
                 except StopAsyncIteration:
@@ -207,14 +212,14 @@ def _pipe(
     hooks: list[TaskHook] = [*task_hooks, fail_counter]
 
     if inspect.iscoroutinefunction(afunc):
-        _wrap: Callable[[Awaitable[U]], Coroutine] = partial(
-            _wrap_afunc, hooks=hooks, queue=output_queue
-        )
+
+        def _wrap(coro: Awaitable[U], item: Any = None) -> Coroutine:
+            return _wrap_afunc(coro, hooks, output_queue, item)
 
     elif inspect.isasyncgenfunction(afunc):
-        _wrap: Callable[[AsyncIterator[U]], Coroutine] = partial(
-            _wrap_agen, hooks=hooks, queue=output_queue
-        )
+
+        def _wrap(coro: AsyncIterator[U], item: Any = None) -> Coroutine:
+            return _wrap_agen(coro, hooks, output_queue, item)
 
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
@@ -229,7 +234,7 @@ def _pipe(
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            task = create_task(_wrap(afunc(item)), name=f"{name}:{(i := i + 1)}")
+            task = create_task(_wrap(afunc(item), item), name=f"{name}:{(i := i + 1)}")
             tasks.add(task)
 
             if len(tasks) >= args.concurrency:
@@ -330,7 +335,7 @@ def _ordered_pipe(
     )
 
     async def _run(item: T) -> U:
-        async with _task_hooks(task_hooks):
+        async with _task_hooks(task_hooks, item):
             return await afunc(item)
 
     async def get_run_put() -> None:
@@ -342,22 +347,24 @@ def _ordered_pipe(
                 break
 
             task = create_task(_run(item), name=f"{name}:{(i := i + 1)}")
-            await inter_queue.put(task)
+            await inter_queue.put((task, item))
 
         await inter_queue.put(_EOF)
 
     async def get_check_put() -> None:
         while not fail_counter.too_many_failures():
-            task = await inter_queue.get()
+            entry = await inter_queue.get()
 
-            if is_eof(task):
+            if is_eof(entry):
                 # Propagating EOF is done by `_queue_stage_hook`
                 return
+
+            task, item = entry
 
             await asyncio.wait([task])
 
             try:
-                async with fail_counter.task_hook():
+                async with fail_counter.task_hook(item):
                     result = task.result()
             except Exception:
                 pass

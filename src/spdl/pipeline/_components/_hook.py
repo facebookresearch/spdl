@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager, AsyncExitStack
 from dataclasses import dataclass
-from typing import AsyncContextManager, TypeVar
+from typing import Any, AsyncContextManager, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 
@@ -162,8 +162,12 @@ class TaskHook(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    async def task_hook(self) -> AsyncIterator[None]:
+    async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
         """Perform custom action before and after task is executed.
+
+        Args:
+            input_item: The input data item being processed by this task.
+                This allows hooks to inspect the input on failure.
 
         .. important::
 
@@ -173,7 +177,7 @@ class TaskHook(ABC):
            .. code-block:: python
 
               @asynccontextmanager
-              async def stask_hook(self):
+              async def task_hook(self, input_item=None):
                   # Add custom logic here
 
         .. note::
@@ -205,8 +209,10 @@ def _stage_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
     return stage_hooks()
 
 
-def _task_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
-    hs: list[AsyncContextManager[None]] = [hook.task_hook() for hook in hooks]
+def _task_hooks(
+    hooks: Sequence[TaskHook], input_item: Any = None
+) -> AsyncContextManager[None]:
+    hs: list[AsyncContextManager[None]] = [hook.task_hook(input_item) for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") or hasattr(h, "__aexit__") for h in hs):
         raise ValueError(
@@ -305,7 +311,7 @@ class TaskStatsHook(TaskHook):
             )
 
     @asynccontextmanager
-    async def task_hook(self) -> AsyncIterator[None]:
+    async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
         """Track task runtime and success rate."""
         t0 = time.monotonic()
         try:
