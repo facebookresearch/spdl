@@ -7,10 +7,10 @@
 __all__ = [
     "_pipe",
     "_ordered_pipe",
-    "_Aggregate",
     "_disaggregate",
     "_merge",
     "_get_fail_counter",
+    "_Collate",
 ]
 
 import asyncio
@@ -22,7 +22,7 @@ from typing import Any, Generic, TypeVar
 from spdl.pipeline._common._convert import convert_to_async
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import _TMergeOp
-from spdl.pipeline.defs import _PipeArgs
+from spdl.pipeline.defs import _PipeArgs, Aggregator
 
 from ._common import _EOF, is_eof
 from ._hook import _stage_hooks, _task_hooks, TaskHook
@@ -392,29 +392,27 @@ def _ordered_pipe(
     return ordered_pipe()
 
 
-class _Aggregate(Generic[T]):
-    def __init__(self, n: int, drop_last: bool) -> None:
+class _Collate(Generic[T], Aggregator):
+    def __init__(self, n: int) -> None:
         self.n = n
-        self.drop_last = drop_last
         self._vals: list[T] = []
 
-    def __call__(self, item: T) -> list[T]:
-        if not is_eof(item):
-            self._vals.append(item)
+    def accumulate(self, item: T) -> list[T] | None:
+        self._vals.append(item)
 
-        if (len(self._vals) >= self.n) or (
-            is_eof(item) and not self.drop_last and self._vals
-        ):
+        if len(self._vals) >= self.n:
             ret, self._vals = self._vals, []
             return ret
-        return _SKIP  # pyre-ignore: [7]
+        return None
+
+    def flush(self) -> list[T] | None:
+        if self._vals:
+            ret, self._vals = self._vals, []
+            return ret
+        return None
 
     def __repr__(self) -> str:
-        return (
-            f"aggregate({self.n}, drop_last={self.drop_last})"
-            if self.drop_last
-            else f"aggregate({self.n})"
-        )
+        return f"collate({self.n})"
 
 
 async def _disaggregate(items: list[T]) -> AsyncIterator[T]:

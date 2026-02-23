@@ -41,6 +41,7 @@ from spdl.pipeline._components._pipe import (
 )
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
+from spdl.pipeline.defs import Aggregator
 from spdl.source.utils import embed_shuffle
 
 T = TypeVar("T")
@@ -525,8 +526,11 @@ class TestPipelineHook(unittest.TestCase):
 
         self.assertEqual(h2._enter_stage_called, 1)
         self.assertEqual(h2._exit_stage_called, 1)
-        self.assertEqual(h2._enter_task_called, 11)
-        self.assertEqual(h2._exit_task_called, 11)
+        # When drop_last=False, EOF is passed to the aggregation operator (11 calls: 10 items + 1 EOF)
+        # When drop_last=True, EOF is NOT passed to the aggregation operator (10 calls: 10 items only)
+        expected_h2_calls = 10 if drop_last else 11
+        self.assertEqual(h2._enter_task_called, expected_h2_calls)
+        self.assertEqual(h2._exit_task_called, expected_h2_calls)
 
         # Even when the stage task fails,
         # the exit_stage and exit_task are still called.
@@ -1340,6 +1344,59 @@ class TestPipelineAggregate(unittest.TestCase):
         with pipeline.auto_stop():
             results = list(pipeline.get_iterator(timeout=10))
             self.assertEqual(results, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+
+    @parameterized.expand([(False,), (True,)])
+    def test_pipeline_aggregate_custom_op(self, drop_last: bool) -> None:
+        """AsyncPipeline aggregates with custom operation that concatenates when threshold is exceeded"""
+
+        # Custom aggregation: concatenate strings when total size exceeds threshold
+        class CustomAggregator(Aggregator):
+            def __init__(self, size_threshold: int = 10):
+                self.size_threshold = size_threshold
+                self.buffer: list[str] = []
+                self.total_size = 0
+
+            def _flush(self) -> str:
+                result = "".join(self.buffer)
+                self.buffer = []
+                self.total_size = 0
+                return result
+
+            def flush(self) -> str | None:
+                # Emit remaining buffer when EOF is reached
+                if self.buffer:
+                    return self._flush()
+                return None  # _SKIP
+
+            def accumulate(self, item: str) -> str | None:
+                self.buffer.append(item)
+                self.total_size += len(item)
+
+                if self.total_size >= self.size_threshold:
+                    return self._flush()
+                return None  # _SKIP
+
+        src = ["a", "bb", "ccc", "dddd", "e", "ff", "ggg", "h"]
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(src)
+            .aggregate(CustomAggregator(size_threshold=10), drop_last=drop_last)
+            .add_sink(1000)
+            .build(num_threads=1)
+        )
+
+        with pipeline.auto_stop():
+            results = list(pipeline.get_iterator(timeout=10))
+            # "a", "bb", "ccc", "dddd" = 10 chars -> first result
+            if drop_last:
+                # When drop_last=True, flush is not called,
+                # so the remaining buffer ["e", "ff", "ggg", "h"] is dropped
+                self.assertEqual(results, ["abbcccdddd"])
+            else:
+                # When drop_last=False, flush is called,
+                # so remaining buffer is emitted: "e", "ff", "ggg", "h"
+                self.assertEqual(results, ["abbcccdddd", "effgggh"])
 
 
 class TestPipelineDisaggregate(unittest.TestCase):

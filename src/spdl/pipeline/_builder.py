@@ -17,6 +17,7 @@ from spdl.pipeline.defs import (
     _TPipeInputs,
     Aggregate,
     AggregateConfig,
+    Aggregator,
     Disaggregate,
     DisaggregateConfig,
     Pipe,
@@ -180,7 +181,7 @@ class PipelineBuilder(Generic[T, U]):
 
     def aggregate(
         self,
-        num_items: int,
+        input: int | Aggregator,
         /,
         *,
         drop_last: bool = False,
@@ -188,10 +189,18 @@ class PipelineBuilder(Generic[T, U]):
         """Buffer the items in the pipeline.
 
         Args:
-            num_items: The number of items to buffer.
-            drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
+            input: Either an integer specifying the number of items to buffer, or an
+                :py:class:`~spdl.pipeline.defs.Aggregator` instance for custom aggregation logic.
+
+                - If ``int``: Buffers that many items before emitting.
+                - If :py:class:`~spdl.pipeline.defs.Aggregator`: Custom aggregation using
+                  the :py:meth:`~Aggregator.accumulate` and :py:meth:`~Aggregator.flush` methods.
+
+            drop_last: Drop the last aggregation if incomplete.
+                - When ``drop_last=False`` (default): Calls :py:meth:`~Aggregator.flush` at EOF
+                - When ``drop_last=True``: Does NOT call :py:meth:`~Aggregator.flush`, dropping incomplete batches
         """
-        self._process_args.append(Aggregate(num_items, drop_last=drop_last))
+        self._process_args.append(Aggregate(input, drop_last=drop_last))
         return self
 
     def disaggregate(self) -> "PipelineBuilder[T, U]":

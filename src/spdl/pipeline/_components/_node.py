@@ -17,6 +17,7 @@ from spdl.pipeline.defs import (
     _PipeArgs,
     _PipeType,
     AggregateConfig,
+    Aggregator,
     DisaggregateConfig,
     MergeConfig,
     PipeConfig,
@@ -25,9 +26,10 @@ from spdl.pipeline.defs import (
     SourceConfig,
 )
 
+from ._common import is_eof
 from ._hook import get_default_hook_class, TaskHook
 from ._pipe import (
-    _Aggregate,
+    _Collate,
     _disaggregate,
     _FailCounter,
     _get_fail_counter,
@@ -139,7 +141,7 @@ def _get_names(
             if cfg._args.concurrency > 1:
                 base = f"{base}[{cfg._args.concurrency}]"
         case AggregateConfig():
-            base = f"aggregate({cfg.num_items}, drop_last={cfg.drop_last})"
+            base = cfg.name or repr(cfg.op)
         case DisaggregateConfig():
             base = "disaggregate"
         case MergeConfig():
@@ -210,6 +212,17 @@ def _convert_config(
             name, plc.sink, [n], q_class(q_name, buffer_size=plc.sink.buffer_size)
         )
     return n
+
+
+class _AggregatorWrapper:
+    def __init__(self, agg: Aggregator) -> None:
+        self._agg = agg
+
+    def __call__(self, item: Any | None) -> Any | None:
+        if is_eof(item):
+            return self._agg.flush()
+        else:
+            return self._agg.accumulate(item)
 
 
 def _build_node(
@@ -311,9 +324,22 @@ def _build_node(
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
             args = _PipeArgs(
-                op=_Aggregate(cfg.num_items, cfg.drop_last),
+                op=_AggregatorWrapper(
+                    # Use custom op if provided, otherwise use default _Batch
+                    cfg.op if cfg.op is not None else _Collate(cfg.num_items)
+                )
             )
-            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, True)
+            # When drop_last=False, pass EOF to op so it can emit remaining items
+            # When drop_last=True, don't pass EOF to op, effectively dropping last batch
+            node._coro = _pipe(
+                node.name,
+                in_q,
+                out_q,
+                args,
+                fc,
+                hooks,
+                op_requires_eof=not cfg.drop_last,
+            )
 
         case DisaggregateConfig():
             cfg: DisaggregateConfig = node.cfg
