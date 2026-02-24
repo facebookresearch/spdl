@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import abc
 import inspect
 from collections.abc import AsyncIterable, Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Executor
@@ -35,6 +36,7 @@ __all__ = [
     "Merge",
     "Pipe",
     "Aggregate",
+    "Aggregator",
     "Disaggregate",
 ]
 
@@ -239,35 +241,149 @@ class PipeConfig(Generic[T, U], _PipeConfigBase):
                 return str(self._type)
 
 
+class Aggregator(abc.ABC):
+    """Abstract base class for custom aggregation operations.
+
+    When you pass an :py:class:`Aggregator` instance to
+    :py:func:`Aggregate`, the pipeline will:
+
+    1. Call :py:meth:`accumulate` for each incoming item
+    2. Call :py:meth:`flush` when the stream ends (if ``drop_last=False``)
+
+    The ``drop_last`` parameter controls whether :py:meth:`flush` is called:
+
+    - ``drop_last=False`` (default): :py:meth:`flush` is called at EOF,
+      allowing you to emit any remaining buffered items
+    - ``drop_last=True``: :py:meth:`flush` is NOT called at EOF,
+      effectively dropping incomplete batches
+
+    Example:
+        .. code-block:: python
+
+            from spdl.pipeline import PipelineBuilder
+            from spdl.pipeline.defs import Aggregator
+
+            class SizeBasedAggregator(Aggregator):
+                '''Aggregate strings when total size exceeds threshold.'''
+                def __init__(self, threshold: int = 10):
+                    self.threshold = threshold
+                    self.buffer: list[str] = []
+                    self.size = 0
+
+                def accumulate(self, item: str) -> str | None:
+                    '''Add item to buffer and emit when threshold reached.'''
+                    self.buffer.append(item)
+                    self.size += len(item)
+
+                    if self.size >= self.threshold:
+                        result = "".join(self.buffer)
+                        self.buffer = []
+                        self.size = 0
+                        return result
+                    return None  # Skip until threshold reached
+
+                def flush(self) -> str | None:
+                    '''Emit remaining buffer when stream ends.'''
+                    if self.buffer:
+                        result = "".join(self.buffer)
+                        self.buffer = []
+                        self.size = 0
+                        return result
+                    return None  # Nothing to emit
+
+            # Use with drop_last=False (default) to emit remaining items
+            pipeline = (
+                PipelineBuilder()
+                .add_source(["a", "bb", "ccc", "dddd", "e", "ff"])
+                .aggregate(SizeBasedAggregator(threshold=10))
+                .build()
+            )
+
+            # Use with drop_last=True to drop incomplete batches
+            pipeline = (
+                PipelineBuilder()
+                .add_source(["a", "bb", "ccc", "dddd", "e", "ff"])
+                .aggregate(SizeBasedAggregator(threshold=10), drop_last=True)
+                .build()
+            )
+
+    .. seealso::
+
+       :py:func:`Aggregate`
+          Function to create aggregation configurations.
+    """
+
+    @abc.abstractmethod
+    def accumulate(self, item: Any) -> Any | None:
+        """Process an incoming item and optionally emit an aggregated result.
+
+        This method is called for each item in the stream. It should add the item
+        to an internal buffer and return an aggregated result when ready, or return
+        ``None`` to skip emission and continue buffering.
+
+        Args:
+            item: An item from the input stream to process.
+
+        Returns:
+            The aggregated result to emit, or ``None`` to skip emission.
+        """
+        ...
+
+    @abc.abstractmethod
+    def flush(self) -> Any | None:
+        """Emit any remaining buffered items when the stream ends.
+
+        This method is called when the stream ends (EOF reached) and
+        ``drop_last=False``. It should emit any remaining buffered items that
+        haven't been emitted yet by :py:meth:`accumulate`.
+
+        Returns:
+            The final aggregated result from remaining items, or ``None`` if
+            there's nothing to emit.
+
+        Note:
+            This method is ONLY called when ``drop_last=False``. When
+            ``drop_last=True``, this method is NOT called, and any remaining
+            buffered items are effectively dropped.
+        """
+        ...
+
+
 @dataclass(frozen=True)
 class AggregateConfig(Generic[T], _PipeConfigBase):
     """Configuration for aggregation operation.
 
-    Buffers incoming items and emits once enough items are buffered.
+    You must provide either ``num_items`` or ``op``.
+
+    Providing ``num_items`` buffers incoming items to a list and
+    emits once enough items are buffered.
+
+    You can specify a custom behavior with ``through``,
+    by providing a subclass of :py:class:`Aggregator`.
     """
 
     name: str
     """Name of the aggregation stage."""
 
-    num_items: int
-    """Number of items to buffer before emitting."""
+    num_items: int = -1
+    """Number of items to buffer before emitting.
+    Ignored if ``op`` is not ``Non``."""
 
     drop_last: bool = False
     """Whether to drop the last aggregation if it has fewer than num_items."""
 
+    op: Aggregator | None = None
+    """Custom aggregation operation.
+    If ``None``, the default implementation is used."""
+
     _type: _PipeType = _PipeType.Aggregate
 
     def __post_init__(self) -> None:
-        if self.num_items < 1:
+        if self.op is None and self.num_items < 1:
             raise ValueError(f"`num_items` must be >= 1. Found: {self.num_items}")
 
     def __repr__(self) -> str:
-        name = self.name or (
-            f"aggregate({self.num_items}, drop_last={self.drop_last})"
-            if self.drop_last
-            else f"aggregate({self.num_items})"
-        )
-        return name
+        return self.name or f"Aggregate(op={self.op}, drop_last={self.drop_last})"
 
 
 @dataclass(frozen=True)
@@ -583,29 +699,132 @@ def Pipe(
     )
 
 
-def Aggregate(num_items: int, /, *, drop_last: bool = False) -> AggregateConfig[Any]:
+def Aggregate(
+    input: int | Aggregator,
+    /,
+    *,
+    drop_last: bool = False,
+) -> AggregateConfig[Any]:
     """Create a :py:class:`AggregateConfig` object for aggregation.
 
     The aggregation buffers the incoming items and emits once enough items are buffered.
 
     Args:
-        num_items: The number of items to buffer.
-        drop_last: Drop the last aggregation if it has less than ``num_aggregate`` items.
+        input: Either an integer specifying the number of items to buffer, or an
+            :py:class:`Aggregator` instance for custom aggregation logic.
+
+            - If ``int``: Buffers that many items before emitting as a list.
+
+            - If :py:class:`Aggregator`: Custom aggregation using the
+              :py:meth:`~Aggregator.accumulate` and :py:meth:`~Aggregator.flush`
+              methods. The :py:class:`Aggregator` abstraction handles EOF automatically,
+              so you don't need to explicitly check for EOF markers in your implementation.
+
+              The pipeline will call :py:meth:`~Aggregator.accumulate` for each item
+              and :py:meth:`~Aggregator.flush` when the stream ends (if ``drop_last=False``).
+
+        drop_last: Drop the last aggregation if incomplete.
+
+            - When ``drop_last=False`` (default):
+                - For ``int`` input: Emits the last batch even if it has fewer items
+                - For :py:class:`Aggregator` input: Calls :py:meth:`~Aggregator.flush`
+                  at EOF to emit remaining buffered items
+
+            - When ``drop_last=True``:
+                - For ``int`` input: Drops the last batch if it has fewer items
+                - For :py:class:`Aggregator` input: Does NOT call
+                  :py:meth:`~Aggregator.flush`, effectively dropping incomplete batches
 
     Returns:
         The config object.
 
+    Example:
+        Simple batching (buffering N items):
+
+        .. code-block:: python
+
+            from spdl.pipeline import PipelineBuilder
+
+            # Buffer 3 items at a time
+            pipeline = (
+                PipelineBuilder()
+                .add_source(range(10))
+                .aggregate(3)
+                .build()
+            )
+            # Produces: [0,1,2], [3,4,5], [6,7,8], [9]
+
+            # Drop last incomplete batch
+            pipeline = (
+                PipelineBuilder()
+                .add_source(range(10))
+                .aggregate(3, drop_last=True)
+                .build()
+            )
+            # Produces: [0,1,2], [3,4,5], [6,7,8]
+
+        Custom aggregation using :py:class:`Aggregator`:
+
+        .. code-block:: python
+
+            from spdl.pipeline import PipelineBuilder
+            from spdl.pipeline.defs import Aggregator
+
+            class SizeBasedAggregator(Aggregator):
+                '''Aggregate strings when total size exceeds threshold.'''
+                def __init__(self, threshold: int):
+                    self.threshold = threshold
+                    self.buffer: list[str] = []
+                    self.size = 0
+
+                def accumulate(self, item: str) -> str | None:
+                    self.buffer.append(item)
+                    self.size += len(item)
+
+                    if self.size >= self.threshold:
+                        result = "".join(self.buffer)
+                        self.buffer, self.size = [], 0
+                        return result
+                    return None
+
+                def flush(self) -> str | None:
+                    if self.buffer:
+                        result = "".join(self.buffer)
+                        self.buffer, self.size = [], 0
+                        return result
+                    return None
+
+            pipeline = (
+                PipelineBuilder()
+                .add_source(["a", "bb", "ccc", "dddd", "e", "ff"])
+                .aggregate(SizeBasedAggregator(threshold=10))
+                .build()
+            )
+
     .. seealso::
+
+       :py:class:`Aggregator`
+          Abstract base class for custom aggregation operations.
 
        :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
-    name = (
-        f"aggregate({num_items}, {drop_last=})"
-        if drop_last
-        else f"aggregate({num_items})"
-    )
-    return AggregateConfig(num_items=num_items, drop_last=drop_last, name=name)
+    match input:
+        case int():  # Standard batching
+            name = (
+                f"aggregate({input}, {drop_last=})"
+                if drop_last
+                else f"aggregate({input})"
+            )
+            return AggregateConfig(num_items=input, drop_last=drop_last, name=name)
+        case Aggregator():  # Custom aggregation
+            return AggregateConfig(
+                num_items=1, drop_last=drop_last, op=input, name="custom_aggregate"
+            )
+        case _:
+            raise TypeError(
+                f"The `input` must be either int or Aggregator. Found: {type(input)}"
+            )
 
 
 def Disaggregate() -> DisaggregateConfig[Any]:
