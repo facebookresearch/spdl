@@ -107,9 +107,8 @@ def _build_pipeline_config(
         case AggregateConfig() as cfg_:
             pipe = AggregateConfig(
                 name=cfg_.name,
-                num_items=cfg_.num_items,
-                drop_last=cfg_.drop_last,
                 op=cfg_.op,
+                drop_last=cfg_.drop_last,
             )
         case DisaggregateConfig() as cfg_:
             pipe = DisaggregateConfig(name=cfg_.name)

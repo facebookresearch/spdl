@@ -501,7 +501,7 @@ class TestPipelineHook(unittest.TestCase):
                 return [h2]
             if "_fail" in name:
                 return [h3]
-            raise RuntimeError("Unexpected")
+            raise RuntimeError(f"Unexpected name: {name}")
 
         async def _fail(_):
             raise RuntimeError("Failing")
