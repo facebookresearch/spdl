@@ -29,7 +29,6 @@ from spdl.pipeline.defs import (
 from ._common import is_eof
 from ._hook import get_default_hook_class, TaskHook
 from ._pipe import (
-    _Collate,
     _disaggregate,
     _FailCounter,
     _get_fail_counter,
@@ -323,12 +322,7 @@ def _build_node(
             in_q, out_q = node.upstream[0].queue, node.queue
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
-            args = _PipeArgs(
-                op=_AggregatorWrapper(
-                    # Use custom op if provided, otherwise use default _Batch
-                    cfg.op if cfg.op is not None else _Collate(cfg.num_items)
-                )
-            )
+            args = _PipeArgs(op=_AggregatorWrapper(cfg.op))
             # When drop_last=False, pass EOF to op so it can emit remaining items
             # When drop_last=True, don't pass EOF to op, effectively dropping last batch
             node._coro = _pipe(

@@ -10,19 +10,18 @@ __all__ = [
     "_disaggregate",
     "_merge",
     "_get_fail_counter",
-    "_Collate",
 ]
 
 import asyncio
 import inspect
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from spdl.pipeline._common._convert import convert_to_async
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import _TMergeOp
-from spdl.pipeline.defs import _PipeArgs, Aggregator
+from spdl.pipeline.defs import _PipeArgs
 
 from ._common import _EOF, is_eof
 from ._hook import _stage_hooks, _task_hooks, TaskHook
@@ -390,29 +389,6 @@ def _ordered_pipe(
             )
 
     return ordered_pipe()
-
-
-class _Collate(Generic[T], Aggregator):
-    def __init__(self, n: int) -> None:
-        self.n = n
-        self._vals: list[T] = []
-
-    def accumulate(self, item: T) -> list[T] | None:
-        self._vals.append(item)
-
-        if len(self._vals) >= self.n:
-            ret, self._vals = self._vals, []
-            return ret
-        return None
-
-    def flush(self) -> list[T] | None:
-        if self._vals:
-            ret, self._vals = self._vals, []
-            return ret
-        return None
-
-    def __repr__(self) -> str:
-        return f"collate({self.n})"
 
 
 async def _disaggregate(items: list[T]) -> AsyncIterator[T]:

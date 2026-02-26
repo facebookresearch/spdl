@@ -190,15 +190,20 @@ class PipelineBuilder(Generic[T, U]):
 
         Args:
             input: Either an integer specifying the number of items to buffer, or an
-                :py:class:`~spdl.pipeline.defs.Aggregator` instance for custom aggregation logic.
+                :py:class:`~spdl.pipeline.defs.Aggregator` instance for custom aggregation
+                logic.
 
                 - If ``int``: Buffers that many items before emitting.
+                  It uses :py:class:`~spdl.pipeline.defs.Collate` aggregator class.
                 - If :py:class:`~spdl.pipeline.defs.Aggregator`: Custom aggregation using
-                  the :py:meth:`~Aggregator.accumulate` and :py:meth:`~Aggregator.flush` methods.
+                  the :py:meth:`~Aggregator.accumulate` and :py:meth:`~Aggregator.flush`
+                  methods.
 
             drop_last: Drop the last aggregation if incomplete.
-                - When ``drop_last=False`` (default): Calls :py:meth:`~Aggregator.flush` at EOF
-                - When ``drop_last=True``: Does NOT call :py:meth:`~Aggregator.flush`, dropping incomplete batches
+                - When ``drop_last=False`` (default): Calls :py:meth:`~Aggregator.flush`
+                  at EOF
+                - When ``drop_last=True``: Does NOT call :py:meth:`~Aggregator.flush`,
+                  dropping incomplete batches
         """
         self._process_args.append(Aggregate(input, drop_last=drop_last))
         return self

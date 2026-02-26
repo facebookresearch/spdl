@@ -29,6 +29,7 @@ __all__ = [
     "MergeConfig",
     "PipeConfig",
     "AggregateConfig",
+    "Collate",
     "DisaggregateConfig",
     "PipelineConfig",
     "SinkConfig",
@@ -311,6 +312,10 @@ class Aggregator(abc.ABC):
 
        :py:func:`Aggregate`
           Function to create aggregation configurations.
+
+       :py:class:`Collate`
+          The aggregator used when calling :py:func:`Aggregate` or
+          :py:meth:`spdl.pipeline.PipelineBuilder.aggregate` with an integer.
     """
 
     @abc.abstractmethod
@@ -353,37 +358,35 @@ class Aggregator(abc.ABC):
 class AggregateConfig(Generic[T], _PipeConfigBase):
     """Configuration for aggregation operation.
 
-    You must provide either ``num_items`` or ``op``.
+    .. versionchanged:: 0.2.1
 
-    Providing ``num_items`` buffers incoming items to a list and
-    emits once enough items are buffered.
+       The config has been generalized to support custom aggregation method.
+       You can provide a custom implementation by subclassing
+       :py:class:`Aggregator` class and passing it via ``op``.
 
-    You can specify a custom behavior with ``through``,
-    by providing a subclass of :py:class:`Aggregator`.
+       With this change, ``num_items`` has been moved to :py:class:`Collate`.
+
+       - **Before** ``AggregateConfig(..., num_items=N, ...)``
+       - **After** ``AggregateConfig(..., op=Collate(N), ...)``
+
+    .. note::
+
+       You can use :py:func:`Aggregate` to instantiate this config.
     """
 
     name: str
     """Name of the aggregation stage."""
 
-    num_items: int = -1
-    """Number of items to buffer before emitting.
-    Ignored if ``op`` is not ``Non``."""
+    op: Aggregator
+    """Aggregation operation. It must be a subclass of :py:class:`Aggregator`"""
 
     drop_last: bool = False
-    """Whether to drop the last aggregation if it has fewer than num_items."""
-
-    op: Aggregator | None = None
-    """Custom aggregation operation.
-    If ``None``, the default implementation is used."""
+    """Whether to drop the last aggregation."""
 
     _type: _PipeType = _PipeType.Aggregate
 
-    def __post_init__(self) -> None:
-        if self.op is None and self.num_items < 1:
-            raise ValueError(f"`num_items` must be >= 1. Found: {self.num_items}")
-
     def __repr__(self) -> str:
-        return self.name or f"Aggregate(op={self.op}, drop_last={self.drop_last})"
+        return self.name
 
 
 @dataclass(frozen=True)
@@ -699,6 +702,83 @@ def Pipe(
     )
 
 
+class Collate(Generic[T], Aggregator):
+    """Aggregator that collects items into batches of a specified size.
+
+    This is a built-in :py:class:`Aggregator` implementation that batches
+    incoming items into lists of size ``n``.
+
+    When used with :py:func:`Aggregate`, it will:
+
+    1. Accumulate items until ``n`` items are collected
+    2. Return the batch as a list and reset the internal buffer
+    3. On flush (stream end), return any remaining items if ``drop_last=False``
+
+    The following construction of pipe are all equivalent
+
+    - ``AggregateConfig(op=Collate(N))``
+    - ``Aggregate(N)``
+    - ``PipelineBuilder.aggregate(N)``
+
+    Args:
+        n: The number of items to collect before emitting a batch.
+
+    Example:
+        .. code-block:: python
+
+            from spdl.pipeline import PipelineBuilder
+            from spdl.pipeline.defs import Aggregate, Collate
+
+            pipeline = (
+                PipelineBuilder()
+                .add_source(range(10))
+                .pipe(Aggregate(Collate(3)))
+                .add_sink(3)
+                .build(num_threads=1)
+            )
+
+            # Output: [0, 1, 2], [3, 4, 5], [6, 7, 8], [9]
+    """
+
+    def __init__(self, n: int) -> None:
+        self.n = n
+        self._vals: list[T] = []
+
+    def accumulate(self, item: T) -> list[T] | None:
+        """Add an item to the buffer and return a batch when full.
+
+        Args:
+            item: The item to add to the current batch.
+
+        Returns:
+            A list of ``n`` items when the batch is full, or ``None`` if
+            more items are needed to complete the batch.
+        """
+        self._vals.append(item)
+
+        if len(self._vals) >= self.n:
+            ret, self._vals = self._vals, []
+            return ret
+        return None
+
+    def flush(self) -> list[T] | None:
+        """Return any remaining items in the buffer.
+
+        This method is called when the stream ends and ``drop_last=False``.
+
+        Returns:
+            A list of remaining items if the buffer is non-empty,
+            or ``None`` if the buffer is empty.
+        """
+        if self._vals:
+            ret, self._vals = self._vals, []
+            return ret
+        return None
+
+    def __repr__(self) -> str:
+        return f"collate({self.n})"
+
+
 def Aggregate(
     input: int | Aggregator,
     /,
@@ -806,25 +886,23 @@ def Aggregate(
        :py:class:`Aggregator`
           Abstract base class for custom aggregation operations.
 
+       :py:class:`Collate`
+          The aggregator used when the input is integer.
+
        :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
     match input:
         case int():  # Standard batching
-            name = (
-                f"aggregate({input}, {drop_last=})"
-                if drop_last
-                else f"aggregate({input})"
-            )
-            return AggregateConfig(num_items=input, drop_last=drop_last, name=name)
+            op = Collate(input)
         case Aggregator():  # Custom aggregation
-            return AggregateConfig(
-                num_items=1, drop_last=drop_last, op=input, name="custom_aggregate"
-            )
+            op = input
         case _:
             raise TypeError(
                 f"The `input` must be either int or Aggregator. Found: {type(input)}"
             )
+    name = f"aggregate({op=}, {drop_last=})"
+    return AggregateConfig(op=op, drop_last=drop_last, name=name)
 
 
 def Disaggregate() -> DisaggregateConfig[Any]:
