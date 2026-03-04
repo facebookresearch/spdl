@@ -66,7 +66,7 @@ def load_ref_data(
     cmd: list[str],
     shape: tuple[int, ...],
     *,
-    dtype: DTypeLike = np.uint8,
+    dtype: DTypeLike = np.uint8,  # pyre-fixme[24]
 ) -> NDArray[np.uint8]:
     print(f"\n{'-' * 40}", flush=True, file=sys.stderr)
     print(f"- Executing `{' '.join(cmd)}`", flush=True, file=sys.stderr)
@@ -81,7 +81,7 @@ def load_ref_audio(
     *,
     filter_desc: str | None = "aformat=sample_fmts=fltp",
     format: str = "f32le",
-    dtype: DTypeLike = np.float32,
+    dtype: DTypeLike = np.float32,  # pyre-fixme[24]
 ) -> NDArray[np.uint8]:
     # fmt: off
     cmd = [
@@ -142,7 +142,7 @@ def load_ref_video(
     *,
     filter_desc: str | None = "format=pix_fmts=rgb24",
     filter_complex: str | None = None,
-    dtype: DTypeLike = np.uint8,
+    dtype: DTypeLike = np.uint8,  # pyre-fixme[24]
     raw: dict[str, str] | None = None,
 ) -> NDArray[np.uint8]:
     cmd = _get_video_ref_cmd(path, filter_desc, filter_complex, raw)
@@ -154,6 +154,6 @@ def load_ref_image(
     shape: tuple[int, ...],
     *,
     filter_desc: str | None = "format=pix_fmts=rgb24",
-    dtype: DTypeLike = np.uint8,
+    dtype: DTypeLike = np.uint8,  # pyre-fixme[24]
 ) -> NDArray[np.uint8]:
     return load_ref_video(path, shape, dtype=dtype, filter_desc=filter_desc)

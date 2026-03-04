@@ -170,7 +170,7 @@ def create_wav_data(
     max_amplitude = 32767 if bits_per_sample == 16 else 2147483647
 
     t = np.linspace(0, duration_seconds, num_samples)
-    frequencies = 440.0 + np.arange(num_channels) * 110.0
+    frequencies = np.asarray(440.0 + np.arange(num_channels) * 110.0)
     sine_waves = np.sin(2 * np.pi * frequencies[:, np.newaxis] * t)
     samples = (sine_waves.T * max_amplitude).astype(dtype)
 
