@@ -116,6 +116,58 @@ jobs:
           pip install --no-dependencies $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
           python .github/scripts/check_deps.py
 
+  cpp-unit-test:
+    if: "${{ inputs.run-test == 'true' }}"
+    needs: ["build"]
+    name: "C++ test (ffmpeg ${{ matrix.ffmpeg-version }})"
+    env:
+      SPDL_BUILD_TESTING: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        ffmpeg-version: ["8.0"]
+    runs-on: ${{ inputs.machine }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "3.12"
+          channels: conda-forge
+          conda-remove-defaults: "true"
+
+      - name: Setup
+        run: |
+          set -ex
+
+          # Install build dependencies
+          conda install -q cmake ninja gtest fmt glog "ffmpeg==${{ matrix.ffmpeg-version }}" pkg-config
+
+          # For some reason, the dynamic libraries are not found.
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
+
+      - name: Build and run C++ tests
+        run: |
+          set -ex
+
+          # Configure with testing enabled
+          cmake -S src/libspdl -B build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSPDL_BUILD_TESTING=ON \
+            -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}"
+
+          # Build
+          cmake --build build
+
+          # Run tests
+          ctest --test-dir build --output-on-failure
+
   unit-test:
     if: "${{ inputs.run-test == 'true' }}"
     needs: ["build"]
