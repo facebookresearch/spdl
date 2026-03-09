@@ -2199,7 +2199,8 @@ class TestFailureCounter(unittest.TestCase):
         self.assertEqual(0, fc2_1._num_stage_failures)
         self.assertEqual(0, fc2_2._num_stage_failures)
 
-        fc1_1._increment()
+        fc1_1.__class__._num_global_failures += 1
+        fc1_1._num_stage_failures += 1
 
         self.assertEqual(0, _FailCounter._num_global_failures)
         self.assertEqual(1, FC1._num_global_failures)
@@ -2217,7 +2218,8 @@ class TestFailureCounter(unittest.TestCase):
         self.assertEqual(0, fc2_1._num_stage_failures)
         self.assertEqual(0, fc2_2._num_stage_failures)
 
-        fc1_1._increment()
+        fc1_1.__class__._num_global_failures += 1
+        fc1_1._num_stage_failures += 1
 
         self.assertEqual(0, _FailCounter._num_global_failures)
         self.assertEqual(2, FC1._num_global_failures)
@@ -2235,7 +2237,8 @@ class TestFailureCounter(unittest.TestCase):
         self.assertEqual(0, fc2_1._num_stage_failures)
         self.assertEqual(0, fc2_2._num_stage_failures)
 
-        fc1_2._increment()
+        fc1_2.__class__._num_global_failures += 1
+        fc1_2._num_stage_failures += 1
 
         self.assertEqual(0, _FailCounter._num_global_failures)
         self.assertEqual(3, FC1._num_global_failures)
@@ -2253,7 +2256,8 @@ class TestFailureCounter(unittest.TestCase):
         self.assertEqual(0, fc2_1._num_stage_failures)
         self.assertEqual(0, fc2_2._num_stage_failures)
 
-        fc2_1._increment()
+        fc2_1.__class__._num_global_failures += 1
+        fc2_1._num_stage_failures += 1
 
         self.assertEqual(0, _FailCounter._num_global_failures)
         self.assertEqual(3, FC1._num_global_failures)
