@@ -10,6 +10,7 @@ from collections.abc import AsyncIterable, Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from enum import IntEnum
+from fractions import Fraction
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
@@ -200,7 +201,7 @@ class PipeConfig(Generic[T, U], _PipeConfigBase):
 
     _args: _PipeArgs[T, U]
 
-    _max_failures: int | None = None
+    _max_failures: int | Fraction | None = None
 
     def __post_init__(self) -> None:
         op = self._args.op
@@ -597,7 +598,7 @@ def Pipe(
     executor: Executor | None = None,
     name: str | None = None,
     output_order: str = "completion",
-    max_failures: int | None = None,
+    max_failures: int | Fraction | None = None,
 ) -> PipeConfig[T, U]:
     """Create a :py:class:`PipeConfig`.
 
@@ -651,8 +652,11 @@ def Pipe(
             in the order their process is completed.
             If ``"input"``, then the items are put to output queue in the order given
             in the input queue.
-        max_failures: The maximnum number of failures allowed berfore the pipe operation
-            is considered failure and the whole Pipeline is shutdown.
+        max_failures: The maximnum number (int) or rate (Fraction) of failures allowed
+            before the pipe operation is considered failure and the whole Pipeline is shutdown.
+            When an int is provided, it specifies the maximum count of failures.
+            When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
+            the maximum failure rate (failures / invocations).
             This overrides the value provided to the :py:meth:`~PipelineBuilder.build`
             method.
 
