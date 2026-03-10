@@ -18,7 +18,6 @@ import logging
 import warnings
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from fractions import Fraction
 from functools import partial
 from typing import Any, Generic, TypeVar
 
@@ -117,7 +116,7 @@ def _build_pipeline(
     /,
     *,
     num_threads: int,
-    max_failures: int | Fraction = -1,
+    max_failures: int = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
@@ -154,7 +153,7 @@ def build_pipeline(
     /,
     *,
     num_threads: int,
-    max_failures: int | Fraction = -1,
+    max_failures: int = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
@@ -188,12 +187,8 @@ def build_pipeline(
                If a stage in the pipeline has dedicated executor, that stage will
                use it.
 
-        max_failures: The maximum number (int) or rate (Fraction) of failures each pipe
-            stage can have before the pipeline is halted.
-            When an int is provided, it specifies the maximum count of failures.
-            Setting ``-1`` (default) disables it.
-            When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
-            the maximum failure rate (failures / invocations).
+        max_failures: The maximum number of failures each pipe stage can have before
+            the pipeline is halted. Setting ``-1`` (default) disables it.
 
         report_stats_interval: When provided, report the pipeline performance stats
             every given interval. Unit: [sec]
@@ -245,7 +240,7 @@ class _Wrapper(Generic[U]):
         self,
         config: PipelineConfig[U],
         num_threads: int,
-        max_failures: int | Fraction,
+        max_failures: int,
         report_stats_interval: float,
         queue_class: type[AsyncQueue] | None,
         task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
@@ -288,7 +283,7 @@ def run_pipeline_in_subprocess(
     /,
     *,
     num_threads: int,
-    max_failures: int | Fraction = -1,
+    max_failures: int = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
@@ -357,7 +352,7 @@ def run_pipeline_in_subinterpreter(
     /,
     *,
     num_threads: int,
-    max_failures: int | Fraction = -1,
+    max_failures: int = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
