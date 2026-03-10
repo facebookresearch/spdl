@@ -8,7 +8,6 @@ import asyncio
 from asyncio import ALL_COMPLETED, FIRST_COMPLETED, Task
 from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
-from fractions import Fraction
 from functools import partial
 from typing import Any, Generic, TypeVar
 
@@ -229,7 +228,7 @@ def _build_node(
     node: _Node[Any],
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
-    max_failures: int | Fraction,
+    max_failures: int,
 ) -> None:
     """Build a coroutine for a single node based on its configuration type.
 
@@ -351,7 +350,7 @@ def _build_node_recursive(
     node: _Node[Any],
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
-    max_failures: int | Fraction,
+    max_failures: int,
 ) -> None:
     """Recursively build coroutines for a node and all its upstream nodes.
 
@@ -412,7 +411,7 @@ def _build_pipeline_node(
     plc: PipelineConfig[T],
     /,
     *,
-    max_failures: int | Fraction,
+    max_failures: int,
     report_stats_interval: float,
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None,
@@ -569,7 +568,7 @@ def _build_pipeline_coro(
     plc: PipelineConfig[Any],
     /,
     *,
-    max_failures: int | Fraction = -1,
+    max_failures: int = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,

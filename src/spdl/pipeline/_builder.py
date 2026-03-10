@@ -9,7 +9,6 @@
 import logging
 from collections.abc import AsyncIterable, Callable, Iterable
 from concurrent.futures import Executor
-from fractions import Fraction
 from typing import Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
@@ -110,7 +109,7 @@ class PipelineBuilder(Generic[T, U]):
         executor: Executor | None = None,
         name: str | None = None,
         output_order: str = "completion",
-        max_failures: int | Fraction | None = None,
+        max_failures: int | None = None,
     ) -> "PipelineBuilder[T, U]":
         """Apply an operation to items in the pipeline.
 
@@ -163,12 +162,8 @@ class PipelineBuilder(Generic[T, U]):
                 If ``"input"``, then the items are put to output queue in the order given
                 in the input queue.
 
-            max_failures: The maximnum number (int) or rate (Fraction) of failures allowed
-                before the pipe operation is considered failure and the whole Pipeline is
-                shutdown.
-                When an int is provided, it specifies the maximum count of failures.
-                When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
-                the maximum failure rate (failures / invocations).
+            max_failures: The maximnum number of failures allowed berfore the pipe operation
+                is considered failure and the whole Pipeline is shutdown.
                 This overrides the value provided to the :py:meth:`~PipelineBuilder.build`
                 method.
         """
@@ -254,7 +249,7 @@ class PipelineBuilder(Generic[T, U]):
         self,
         *,
         num_threads: int,
-        max_failures: int | Fraction = -1,
+        max_failures: int = -1,
         report_stats_interval: float = -1,
         queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
@@ -266,12 +261,8 @@ class PipelineBuilder(Generic[T, U]):
             num_threads: The number of threads in the thread pool attached to
                 async event loop.
 
-            max_failures: The maximum number (int) or rate (Fraction) of failures each pipe
-                stage can have before the pipeline is halted.
-                When an int is provided, it specifies the maximum count of failures.
-                Setting ``-1`` (default) disables it.
-                When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
-                the maximum failure rate (failures / invocations).
+            max_failures: The maximum number of failures each pipe stage can have before
+                the pipeline is halted. Setting ``-1`` (default) disables it.
 
             report_stats_interval: When provided, report the pipeline performance stats
                 every given interval. Unit: [sec]
