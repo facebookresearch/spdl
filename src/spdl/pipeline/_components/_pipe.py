@@ -64,7 +64,7 @@ class _FailCounter(TaskHook):
         self._num_stage_failures += 1
 
         if (threshold := self.max_failures) >= 0:
-            if self.num_failures >= threshold:
+            if self.num_failures > threshold:
                 self._exeeded = True
 
     @property
