@@ -16,6 +16,7 @@ import asyncio
 import inspect
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager
+from fractions import Fraction
 from typing import Any, TypeVar
 
 from spdl.pipeline._common._convert import convert_to_async
@@ -39,36 +40,76 @@ _SKIP: None = None
 
 class _FailCounter(TaskHook):
     _num_global_failures: int = 0
+    _num_global_invocations: int = 0
 
     def __init__(
-        self, max_global_failures: int = -1, max_stage_failures: int | None = None
+        self,
+        max_global_failures: int | Fraction = -1,
+        max_stage_failures: int | Fraction | None = None,
     ) -> None:
         """Task hook used to watch task failures.
 
         Args:
-            max_global_failures: The maximum number of failures permitted across pipe
-                stages.
-                A negative value means any number of failure is permitted.
-            max_stage_failures: The maximum number of failures permitted for one pipe
-                stage.
+            max_global_failures: The maximum number (int) or rate (Fraction) of failures
+                permitted across pipe stages.
+                A negative int means any number of failure is permitted.
+                When using Fraction, it must be > 0 and <= 1.
+            max_stage_failures: The maximum number (int) or rate (Fraction) of failures
+                permitted for one pipe stage.
+                When using Fraction, it must be > 0 and <= 1.
+
+        Raises:
+            ValueError: If a Fraction is not in the valid range (0, 1].
         """
         super().__init__()
+
+        # Validate Fraction values
+        for name, value in [
+            ("max_global_failures", max_global_failures),
+            ("max_stage_failures", max_stage_failures),
+        ]:
+            if isinstance(value, Fraction) and not (0 < value <= 1):
+                raise ValueError(
+                    f"`{name}` Fraction must be in range (0, 1]. Got: {value}"
+                )
+
         self._max_global_failures = max_global_failures
         self._max_stage_failures = max_stage_failures
 
         self._num_stage_failures: int = 0
-        self._exeeded: bool = False
+        self._num_stage_invocations: int = 0
+        self._exceeded: bool = False
 
-    def _increment(self) -> None:
-        self.__class__._num_global_failures += 1
-        self._num_stage_failures += 1
+    # Fixed probation period for rate-based thresholds.
+    # Rate checking only starts after this many invocations.
+    _PROBATION_PERIOD: int = 100
 
-        if (threshold := self.max_failures) >= 0:
-            if self.num_failures > threshold:
-                self._exeeded = True
+    def _check_threshold(self) -> None:
+        """Check if failure threshold exceeded.
+
+        For rate-based thresholds (Fraction), we use a fixed probation period
+        of 100 invocations before checking. This prevents early false positives
+        when sample size is too small to be statistically meaningful.
+
+        Note: Python's Fraction auto-reduces (e.g., Fraction(20, 100) becomes
+        Fraction(1, 5)), so we cannot use the denominator as probation period.
+
+        For example, Fraction(3, 10) means "30% failure rate, but only start
+        checking after at least 100 invocations".
+        """
+        match threshold := self.max_failures:
+            case Fraction():
+                num, den = threshold.numerator, threshold.denominator
+                if (invocations := self.num_invocations) >= self._PROBATION_PERIOD:
+                    failures = self.num_failures
+                    if failures * den > num * invocations:
+                        self._exceeded = True
+            case int():
+                if threshold >= 0 and self.num_failures > threshold:
+                    self._exceeded = True
 
     @property
-    def max_failures(self) -> int:
+    def max_failures(self) -> int | Fraction:
         return (
             self._max_global_failures
             if self._max_stage_failures is None
@@ -83,18 +124,34 @@ class _FailCounter(TaskHook):
             else self._num_stage_failures
         )
 
+    @property
+    def num_invocations(self) -> int:
+        return (
+            self._num_global_invocations
+            if self._max_stage_failures is None
+            else self._num_stage_invocations
+        )
+
     def too_many_failures(self) -> bool:
-        return self._exeeded
+        return self._exceeded
 
     @asynccontextmanager
     async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
+        _failed = False
         try:
             yield
         except StopAsyncIteration:
             raise
         except Exception:
-            self._increment()
+            _failed = True
             raise
+        finally:
+            self.__class__._num_global_invocations += 1
+            self._num_stage_invocations += 1
+            if _failed:
+                self.__class__._num_global_failures += 1
+                self._num_stage_failures += 1
+            self._check_threshold()
 
 
 # Create a different Counter class variables for each pipeline,
@@ -248,10 +305,20 @@ def _pipe(
             await asyncio.wait(tasks)
 
         if fail_counter.too_many_failures():
-            raise RuntimeError(
-                f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
-                f"which exceeds the threshold ({fail_counter.max_failures})."
-            )
+            threshold = fail_counter.max_failures
+            if isinstance(threshold, Fraction):
+                rate = Fraction(fail_counter.num_failures, fail_counter.num_invocations)
+                raise RuntimeError(
+                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times "
+                    f"out of {fail_counter.num_invocations} invocations "
+                    f"({float(rate):.1%}), which exceeds the threshold "
+                    f"({float(threshold):.1%})."
+                )
+            else:
+                raise RuntimeError(
+                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
+                    f"which exceeds the threshold ({threshold})."
+                )
 
     return pipe()
 
@@ -383,10 +450,20 @@ def _ordered_pipe(
         await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
 
         if fail_counter.too_many_failures():
-            raise RuntimeError(
-                f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
-                f"which exceeds the threshold ({fail_counter.max_failures})."
-            )
+            threshold = fail_counter.max_failures
+            if isinstance(threshold, Fraction):
+                rate = Fraction(fail_counter.num_failures, fail_counter.num_invocations)
+                raise RuntimeError(
+                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times "
+                    f"out of {fail_counter.num_invocations} invocations "
+                    f"({float(rate):.1%}), which exceeds the threshold "
+                    f"({float(threshold):.1%})."
+                )
+            else:
+                raise RuntimeError(
+                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
+                    f"which exceeds the threshold ({threshold})."
+                )
 
     return ordered_pipe()
 
