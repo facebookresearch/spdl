@@ -2305,7 +2305,7 @@ class TestPipelineMax(unittest.TestCase):
             with pipeline.auto_stop():
                 vals = list(pipeline.get_iterator(timeout=10))
 
-        self.assertEqual([0, 2, 4], vals)
+        self.assertEqual([0, 2, 4, 6], vals)
 
     @parameterized.expand(
         [
@@ -2343,13 +2343,13 @@ class TestPipelineMax(unittest.TestCase):
             with pipeline2.auto_stop():
                 vals = list(pipeline2.get_iterator(timeout=10))
 
-        self.assertEqual([0, 2, 4], vals)
+        self.assertEqual([0, 2, 4, 6], vals)
 
         with self.assertRaises(PipelineFailure):
             with pipeline1.auto_stop():
                 vals = list(pipeline1.get_iterator(timeout=10))
 
-        self.assertEqual([0, 2], vals)
+        self.assertEqual([0, 2, 4], vals)
 
     @parameterized.expand(
         [
@@ -2378,7 +2378,7 @@ class TestPipelineMax(unittest.TestCase):
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals = list(pipeline.get_iterator(timeout=10))
-        self.assertEqual([0, 2], vals)
+        self.assertEqual([0, 2, 4], vals)
 
     @parameterized.expand(
         [
@@ -2438,14 +2438,14 @@ class TestPipelineMax(unittest.TestCase):
         )
 
         # fail_odd fails more often, but it is allowed to fail any number of times.
-        # fail_six fails less often, but at the third failure (12),
+        # fail_six fails less often, but at the fourth failure (18),
         # it should shutdown the pipeline.
 
         pipeline = builder.build(num_threads=1, max_failures=2)
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals = list(pipeline.get_iterator(timeout=10))
-        self.assertEqual([2, 4, 8, 10], vals)
+        self.assertEqual([2, 4, 8, 10, 14, 16], vals)
 
 
 class TestPipelinePropagate(unittest.TestCase):
