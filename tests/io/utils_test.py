@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import unittest
 
@@ -12,7 +12,7 @@ from spdl.io.utils import get_ffmpeg_filters
 
 
 class FFmpegUtilsTest(unittest.TestCase):
-    def test_get_ffmpeg_filters_contains_common_filters(self):
+    def test_get_ffmpeg_filters_contains_common_filters(self) -> None:
         expected_filters = ["aresample", "scale"]
         filters = get_ffmpeg_filters()
 
