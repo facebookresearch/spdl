@@ -4,10 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 import unittest
 from collections import Counter
 from functools import partial
-from typing import Optional
 
 import numpy as np
 from parameterized import parameterized
@@ -19,8 +20,6 @@ from spdl.source import (
     SizedIterableWithShuffle,
 )
 from spdl.source.utils import embed_shuffle
-
-# pyre-unsafe
 
 
 class TestDistributedSamplerInterface(unittest.TestCase):
@@ -91,7 +90,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
             (1,),
         ]
     )
-    def test_repeat(self, w: Optional[int]) -> None:
+    def test_repeat(self, w: int | None) -> None:
         """Without calling shuffle, sampler generates the same sequence."""
         N = 40
         world_size = 8
