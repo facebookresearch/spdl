@@ -45,7 +45,7 @@ NB_MODULE(_wav, m) {
          std::optional<double> duration_seconds = std::nullopt) -> nb::dict {
         const char* p = data.c_str();
         size_t s = data.size();
-        WAVHeader header;
+        WAVHeader header{};
         size_t num_samples;
         std::string_view view;
         {
@@ -109,7 +109,7 @@ NB_MODULE(_wav, m) {
       [](const nb::bytes& data) -> WAVHeader {
         const char* p = data.c_str();
         size_t s = data.size();
-        WAVHeader header;
+        WAVHeader header{};
         {
           nb::gil_scoped_release _{};
           std::string_view d{p, s};
