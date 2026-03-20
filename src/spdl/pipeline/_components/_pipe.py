@@ -153,6 +153,22 @@ class _FailCounter(TaskHook):
                 self._num_stage_failures += 1
             self._check_threshold()
 
+    def raise_for_failures(self, name: str) -> None:
+        threshold = self.max_failures
+        if isinstance(threshold, Fraction):
+            rate = Fraction(self.num_failures, self.num_invocations)
+            raise RuntimeError(
+                f"The pipeline stage ({name}) failed {self.num_failures} times "
+                f"out of {self.num_invocations} invocations "
+                f"({float(rate):.1%}), which exceeds the threshold "
+                f"({float(threshold):.1%})."
+            )
+        else:
+            raise RuntimeError(
+                f"The pipeline stage ({name}) failed {self.num_failures} times, "
+                f"which exceeds the threshold ({threshold})."
+            )
+
 
 # Create a different Counter class variables for each pipeline,
 # so that we can also track the Pipeline-global failures.
@@ -305,20 +321,7 @@ def _pipe(
             await asyncio.wait(tasks)
 
         if fail_counter.too_many_failures():
-            threshold = fail_counter.max_failures
-            if isinstance(threshold, Fraction):
-                rate = Fraction(fail_counter.num_failures, fail_counter.num_invocations)
-                raise RuntimeError(
-                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times "
-                    f"out of {fail_counter.num_invocations} invocations "
-                    f"({float(rate):.1%}), which exceeds the threshold "
-                    f"({float(threshold):.1%})."
-                )
-            else:
-                raise RuntimeError(
-                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
-                    f"which exceeds the threshold ({threshold})."
-                )
+            fail_counter.raise_for_failures(name)
 
     return pipe()
 
@@ -450,20 +453,7 @@ def _ordered_pipe(
         await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
 
         if fail_counter.too_many_failures():
-            threshold = fail_counter.max_failures
-            if isinstance(threshold, Fraction):
-                rate = Fraction(fail_counter.num_failures, fail_counter.num_invocations)
-                raise RuntimeError(
-                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times "
-                    f"out of {fail_counter.num_invocations} invocations "
-                    f"({float(rate):.1%}), which exceeds the threshold "
-                    f"({float(threshold):.1%})."
-                )
-            else:
-                raise RuntimeError(
-                    f"The pipeline stage ({name}) failed {fail_counter.num_failures} times, "
-                    f"which exceeds the threshold ({threshold})."
-                )
+            fail_counter.raise_for_failures(name)
 
     return ordered_pipe()
 
