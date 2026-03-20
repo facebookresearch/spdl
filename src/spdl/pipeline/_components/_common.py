@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
+    "_percentile",
     "_periodic_dispatch",
     "_StatsCounter",
     "_time_str",
@@ -56,10 +57,20 @@ def _time_str(val: float) -> str:
     return f"{val:6.1f} [{unit:>3s}]"
 
 
+def _percentile(times: list[float], p: float) -> float:
+    if not times:
+        return 0.0
+    sorted_times = sorted(times)
+    idx = int(len(sorted_times) * p / 100)
+    idx = min(idx, len(sorted_times) - 1)
+    return sorted_times[idx]
+
+
 class _StatsCounter:
     def __init__(self) -> None:
         self._n: int = 0
         self._t: float = 0.0
+        self._times: list[float] = []
 
     @property
     def num_items(self) -> int:
@@ -69,10 +80,22 @@ class _StatsCounter:
     def ave_time(self) -> float:
         return self._t
 
+    @property
+    def p90_time(self) -> float:
+        return _percentile(self._times, 90)
+
+    @property
+    def p99_time(self) -> float:
+        return _percentile(self._times, 99)
+
+    def times_since(self, index: int) -> list[float]:
+        return self._times[index:]
+
     def update(self, t: float, n: int = 1) -> None:
         if n > 0:
             self._n += n
             self._t += (t - self._t) * n / self._n
+            self._times.append(t)
 
     @contextmanager
     def count(self) -> Iterator[None]:

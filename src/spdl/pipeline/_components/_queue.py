@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from spdl.pipeline._common._misc import create_task
 
-from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str
+from ._common import _EOF, _percentile, _periodic_dispatch, _StatsCounter, _time_str
 
 __all__ = [
     "_queue_stage_hook",
@@ -115,6 +115,18 @@ class QueuePerfStats:
     then the average time becomes longer.
     """
 
+    p90_put_time: float
+    """The 90th percentile time (in second) ``put`` operation was blocked."""
+
+    p99_put_time: float
+    """The 99th percentile time (in second) ``put`` operation was blocked."""
+
+    p90_get_time: float
+    """The 90th percentile time (in second) ``get`` operation was blocked."""
+
+    p99_get_time: float
+    """The 99th percentile time (in second) ``get`` operation was blocked."""
+
     occupancy_rate: float
     """The relative time where the queue was not empty.
 
@@ -178,6 +190,8 @@ class StatsQueue(AsyncQueue):
         self._lap_ave_get_time = 0.0
         self._lap_ave_put_time = 0.0
         self._lap_dur_empty = 0.0
+        self._lap_put_time_index = 0
+        self._lap_get_time_index = 0
 
     async def get(self) -> object:
         """Remove and return an item from the queue, track the time."""
@@ -223,6 +237,10 @@ class StatsQueue(AsyncQueue):
                     num_items=self._getc.num_items,
                     ave_put_time=self._putc.ave_time,
                     ave_get_time=self._getc.ave_time,
+                    p90_put_time=self._putc.p90_time,
+                    p99_put_time=self._putc.p99_time,
+                    p90_get_time=self._getc.p90_time,
+                    p99_get_time=self._getc.p99_time,
                     occupancy_rate=max(0.0, occupancy_rate),
                 )
             )
@@ -256,6 +274,9 @@ class StatsQueue(AsyncQueue):
         delta_dur_empty = dur_empty - self._lap_dur_empty
         occupancy_rate = 0 if elapsed <= 0 else 1 - delta_dur_empty / elapsed
 
+        lap_put_times = self._putc.times_since(self._lap_put_time_index)
+        lap_get_times = self._getc.times_since(self._lap_get_time_index)
+
         # Update the lap
         self._lap_t0 = now
         self._lap_num_put = num_put
@@ -263,12 +284,18 @@ class StatsQueue(AsyncQueue):
         self._lap_ave_put_time = ave_put_time
         self._lap_ave_get_time = ave_get_time
         self._lap_dur_empty = dur_empty
+        self._lap_put_time_index = len(self._putc._times)
+        self._lap_get_time_index = len(self._getc._times)
 
         return QueuePerfStats(
             num_items=delta_num_get,
             elapsed=elapsed,
             ave_put_time=delta_ave_put_time,
             ave_get_time=delta_ave_get_time,
+            p90_put_time=_percentile(lap_put_times, 90),
+            p99_put_time=_percentile(lap_put_times, 99),
+            p90_get_time=_percentile(lap_get_times, 90),
+            p99_get_time=_percentile(lap_get_times, 99),
             occupancy_rate=max(0.0, occupancy_rate),
         )
 
@@ -291,6 +318,7 @@ class StatsQueue(AsyncQueue):
         _LG.info(
             "[%s]\tProcessed %5d items in %s (QPS: %6.1f) "
             "Ave wait time: put: %s, get (by next stage): %s. "
+            "P90: put: %s, get: %s. P99: put: %s, get: %s. "
             "Occupancy rate: %d%%",
             self.name,
             stats.num_items,
@@ -298,6 +326,10 @@ class StatsQueue(AsyncQueue):
             stats.qps,
             _time_str(stats.ave_put_time),
             _time_str(stats.ave_get_time),
+            _time_str(stats.p90_put_time),
+            _time_str(stats.p90_get_time),
+            _time_str(stats.p99_put_time),
+            _time_str(stats.p99_get_time),
             100 * stats.occupancy_rate,
             stacklevel=2,
         )
