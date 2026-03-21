@@ -17,7 +17,7 @@ from typing import Any, AsyncContextManager, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 
-from ._common import _periodic_dispatch, _StatsCounter, _time_str
+from ._common import _percentile, _periodic_dispatch, _StatsCounter, _time_str
 
 __all__ = [
     "_stage_hooks",
@@ -250,6 +250,12 @@ class TaskPerfStats:
     ave_time: float
     """The average execution time (in second) of successful tasks."""
 
+    p90_time: float
+    """The 90th percentile execution time (in second) of successful tasks."""
+
+    p99_time: float
+    """The 99th percentile execution time (in second) of successful tasks."""
+
 
 class TaskStatsHook(TaskHook):
     """Track the task runtimes and success rate.
@@ -277,12 +283,14 @@ class TaskStatsHook(TaskHook):
         self.num_tasks = 0
         self.num_success = 0
         self.ave_time = 0.0
+        self._times: list[float] = []
 
         # For interval
         self._lap_t0 = 0.0
         self._lap_num_tasks = 0
         self._lap_num_success = 0
         self._lap_ave_time = 0.0
+        self._lap_time_index = 0
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
@@ -307,6 +315,8 @@ class TaskStatsHook(TaskHook):
                     num_tasks=self.num_tasks,
                     num_failures=self.num_tasks - self.num_success,
                     ave_time=self.ave_time,
+                    p90_time=_percentile(self._times, 90),
+                    p99_time=_percentile(self._times, 99),
                 ),
             )
 
@@ -322,11 +332,11 @@ class TaskStatsHook(TaskHook):
             self.num_tasks += 1
             raise
         else:
-            # We only track the average runtime of successful tasks.
             elapsed = time.monotonic() - t0
             self.num_tasks += 1
             self.num_success += 1
             self.ave_time += (elapsed - self.ave_time) / self.num_success
+            self._times.append(elapsed)
 
     def _get_lap_stats(self) -> TaskPerfStats:
         num_success = self.num_success
@@ -342,14 +352,19 @@ class TaskStatsHook(TaskHook):
             lap_total_time = self._lap_ave_time * self._lap_num_success
             delta_ave_time = max(0.0, (total_time - lap_total_time) / delta_num_success)
 
+        lap_times = self._times[self._lap_time_index :]
+
         self._lap_num_tasks = num_tasks
         self._lap_num_success = num_success
         self._lap_ave_time = ave_time
+        self._lap_time_index = len(self._times)
 
         return TaskPerfStats(
             num_tasks=delta_num_tasks,
             num_failures=delta_num_tasks - delta_num_success,
             ave_time=delta_ave_time,
+            p90_time=_percentile(lap_times, 90),
+            p99_time=_percentile(lap_times, 99),
         )
 
     async def _log_interval_stats(self) -> None:
@@ -369,11 +384,14 @@ class TaskStatsHook(TaskHook):
 
     def _log_stats(self, stats: TaskPerfStats) -> None:
         _LG.info(
-            "[%s]\tCompleted %5d tasks (%3d failed). Ave task time: %s.",
+            "[%s]\tCompleted %5d tasks (%3d failed). "
+            "Ave task time: %s. P90: %s. P99: %s.",
             self.name,
             stats.num_tasks,
             stats.num_failures,
             _time_str(stats.ave_time),
+            _time_str(stats.p90_time),
+            _time_str(stats.p99_time),
             stacklevel=2,
         )
 
