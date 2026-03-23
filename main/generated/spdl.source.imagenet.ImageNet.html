@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.source.imagenet.ImageNet - SPDL 0.3.0 documentation</title>
+        <title>spdl.source.imagenet.ImageNet - SPDL 0.4.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.3.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.4.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.3.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.4.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -254,6 +254,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/autoresearch.html">Autoresearch</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -270,6 +271,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="imagenet_classification.html">Imagenet classification</a></li>
@@ -286,6 +288,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_wav.html">Benchmark wav</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_tarfile.html">Benchmark tarfile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
@@ -366,9 +369,6 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
@@ -444,6 +444,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
@@ -605,7 +607,7 @@ class ID from path.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=f129cdf0"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=1437fa6d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Best Practices" href="../best_practice.html" /><link rel="prev" title="Paradigm Shift" href="paradigm_shift.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Migrating from PyTorch DataLoader - SPDL 0.3.0 documentation</title>
+        <title>Migrating from PyTorch DataLoader - SPDL 0.4.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.3.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.4.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.3.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.4.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -254,6 +254,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/autoresearch.html">Autoresearch</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -270,6 +271,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/imagenet_classification.html">Imagenet classification</a></li>
@@ -286,6 +288,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_wav.html">Benchmark wav</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
@@ -366,9 +369,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
@@ -444,6 +444,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
@@ -502,7 +504,7 @@
         <article role="main" id="furo-main-content">
           <section id="migrating-from-pytorch-dataloader">
 <h1>Migrating from PyTorch DataLoader<a class="headerlink" href="#migrating-from-pytorch-dataloader" title="Link to this heading">¶</a></h1>
-<p>If you are using <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code></a> and decided to
+<p>If you are using <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code></a> and decided to
 migrate to SPDL, there are couple of conceptual differences
 you want to be aware of.</p>
 <p>There are three distinguished components in PyTorch’s DataLoader.</p>
@@ -518,9 +520,9 @@ distinguish the steps for data acquisition, decoding and pre-processing nor
 expose them.</p>
 <p>So as to achieve high throughput, it is important to separate the operations of
 different natures and configure them, but there is no native support for
-that in <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code></a>.</p>
+that in <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code></a>.</p>
 <p>Now let’s look into a task of image loading for classification task, using
-TorchVision’s <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.datasets.ImageNet.html#torchvision.datasets.ImageNet" title="(in Torchvision v0.25)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.ImageNet</span></code></a>.</p>
+TorchVision’s <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.datasets.ImageNet.html#torchvision.datasets.ImageNet" title="(in Torchvision vmain (0.26.0+4ab3324))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.ImageNet</span></code></a>.</p>
 <p>Here is the base dataset instance we are going to use.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torchvision.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">ImageNet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torchvision.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">Compose</span><span class="p">,</span> <span class="n">PILToTensor</span><span class="p">,</span> <span class="n">Resize</span>
@@ -533,8 +535,8 @@ TorchVision’s <a class="reference external" href="https://docs.pytorch.org/vis
 </div>
 <p>The images are decoded in
 <code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.ImageNet.__getitem__</span></code> method, then
-resized and converted to Tensor through <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.transforms.Resize.html#torchvision.transforms.Resize" title="(in Torchvision v0.25)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resize</span></code></a>
-and <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.transforms.PILToTensor.html#torchvision.transforms.PILToTensor" title="(in Torchvision v0.25)"><code class="xref py py-class docutils literal notranslate"><span class="pre">PILToTensor</span></code></a> transforms.</p>
+resized and converted to Tensor through <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.transforms.Resize.html#torchvision.transforms.Resize" title="(in Torchvision vmain (0.26.0+4ab3324))"><code class="xref py py-class docutils literal notranslate"><span class="pre">Resize</span></code></a>
+and <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.transforms.PILToTensor.html#torchvision.transforms.PILToTensor" title="(in Torchvision vmain (0.26.0+4ab3324))"><code class="xref py py-class docutils literal notranslate"><span class="pre">PILToTensor</span></code></a> transforms.</p>
 <section id="decoding-images-in-threads">
 <h2>Decoding images in threads<a class="headerlink" href="#decoding-images-in-threads" title="Link to this heading">¶</a></h2>
 <p>When adopting SPDL before free-threaded (a.k.a no-GIL) Python becomes available
@@ -550,7 +552,7 @@ the dataset logic as-is in <code class="xref py py-class docutils literal notran
 By default, TorchVision uses Pillow to load images, and
 Pillow releases GIL. The dataset is thread-safe.</p>
 <p>The following code snippets show how one can use PyTorch
-<a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader</span></code></a> to load images without batching.</p>
+<a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader</span></code></a> to load images without batching.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
 <span class="n">dataloader</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span>
@@ -662,7 +664,7 @@ so there is a good chance that they work fine in thread-based pipeline.</p>
 <p>Now we know that the basic loading operation works, we add batching.
 In PyTorch DataLoader, providing <cite>batch_size</cite> enables batching
 internally.</p>
-<p>By default, it uses <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.default_collate" title="(in PyTorch v2.10)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.utils.data.default_collate()</span></code></a>
+<p>By default, it uses <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.default_collate" title="(in PyTorch v2.11)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.utils.data.default_collate()</span></code></a>
 function.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">dataloader</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span>
     <span class="n">dataset</span><span class="p">,</span>
@@ -1009,7 +1011,7 @@ thread can be directly used by the main thread. There is no need to copy it.</p>
 <h2>Switching to SPDL I/O<a class="headerlink" href="#switching-to-spdl-i-o" title="Link to this heading">¶</a></h2>
 <p>In addition to the redundant memory copy originated from inter-process communication, there
 are few more memory-related inefficiency in the pipelines.</p>
-<p>The image data coming out of <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.datasets.ImageNet.html#torchvision.datasets.ImageNet" title="(in Torchvision v0.25)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImageNet</span></code></a> is Tensor, which is
+<p>The image data coming out of <a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.datasets.ImageNet.html#torchvision.datasets.ImageNet" title="(in Torchvision vmain (0.26.0+4ab3324))"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImageNet</span></code></a> is Tensor, which is
 contiguous memory format. In media processing, the data are more often represented as
 non-contiguous memories regions (like separate image planes),
 and usually they are not in the size.
@@ -1049,7 +1051,7 @@ level of abstraction as the previous PyTorch DataLoader figure.</p>
         </div><p>The image processing part has fewer steps than PyTorch DataLoader equivalent.</p>
 <p>Let’s swap the image decoding part and see how it helps.</p>
 <p>We change the image decoding part (which was happening inside of
-<a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.datasets.ImageNet.html#torchvision.datasets.ImageNet" title="(in Torchvision v0.25)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImageNet</span></code></a> class) as follow.</p>
+<a class="reference external" href="https://docs.pytorch.org/vision/stable/generated/torchvision.datasets.ImageNet.html#torchvision.datasets.ImageNet" title="(in Torchvision vmain (0.26.0+4ab3324))"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImageNet</span></code></a> class) as follow.</p>
 <p>First, we implement the function that decodes an image, but does not convert it to Tensor yet.
 The result of <a class="reference internal" href="../generated/spdl.io.decode_packets.html#spdl.io.decode_packets" title="spdl.io.decode_packets"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.decode_packets()</span></code></a> is <a class="reference internal" href="../generated/spdl.io.ImageFrames.html#spdl.io.ImageFrames" title="spdl.io.ImageFrames"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImageFrames</span></code></a>, which holds
 the frame data decoded by FFmpeg as-is.</p>
@@ -1342,7 +1344,7 @@ This example measures the pipeline with more processing and GPU data transfer.</
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=f129cdf0"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=1437fa6d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

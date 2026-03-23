@@ -90,7 +90,19 @@ API Reference
 
 
 
+.. autofunction:: pipeline_definitions.store_in_cache
+
+
+
 .. autofunction:: pipeline_definitions.normalize_to_lists
+
+
+
+.. autofunction:: pipeline_definitions.cache_router
+
+
+
+.. autofunction:: pipeline_definitions.load_from_cache
 
 
 

@@ -69,6 +69,16 @@ Merge
    Merge
 
 
+PathVariants
+^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   PathVariants
+
+
 Pipe
 ^^^^
 .. autosummary::
@@ -156,6 +166,17 @@ MergeConfig
    MergeConfig
 
 
+PathVariantsConfig
+^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   PathVariantsConfig
+
+
 PipeConfig
 ^^^^^^^^^^
 .. autosummary::
@@ -225,6 +246,7 @@ SourceConfig
    ############################################################################
    Others
    ############################################################################
+
 
 
 

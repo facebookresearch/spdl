@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Image dataloading" href="generated/image_dataloading.html" /><link rel="prev" title="Best Practices" href="best_practice.html" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Llm finetuning" href="generated/llm_finetune.llm_finetuning.html" /><link rel="prev" title="Best Practices" href="best_practice.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Examples - SPDL 0.3.0 documentation</title>
+        <title>Examples - SPDL 0.4.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">SPDL 0.3.0 documentation</div></a>
+      <a href="index.html"><div class="brand">SPDL 0.4.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.3.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.4.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -254,6 +254,7 @@
 <li class="toctree-l2"><a class="reference internal" href="optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimization_guide/autoresearch.html">Autoresearch</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -270,6 +271,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="generated/llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/imagenet_classification.html">Imagenet classification</a></li>
@@ -286,6 +288,7 @@
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_wav.html">Benchmark wav</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
@@ -366,9 +369,6 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
@@ -444,6 +444,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
@@ -505,53 +507,59 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/image_dataloading.html#module-image_dataloading" title="image_dataloading"><code class="xref py py-obj docutils literal notranslate"><span class="pre">image_dataloading</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/llm_finetune.llm_finetuning.html#module-llm_finetune.llm_finetuning" title="llm_finetune.llm_finetuning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">llm_finetune.llm_finetuning</span></code></a></p></td>
+<td><p>LLM fine-tuning with SPDL data loading pipeline.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/image_dataloading.html#module-image_dataloading" title="image_dataloading"><code class="xref py py-obj docutils literal notranslate"><span class="pre">image_dataloading</span></code></a></p></td>
 <td><p>Benchmark the performance of loading images from local file system to GPUs.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/video_dataloading.html#module-video_dataloading" title="video_dataloading"><code class="xref py py-obj docutils literal notranslate"><span class="pre">video_dataloading</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/video_dataloading.html#module-video_dataloading" title="video_dataloading"><code class="xref py py-obj docutils literal notranslate"><span class="pre">video_dataloading</span></code></a></p></td>
 <td><p>This example uses SPDL to decode and batch video frames, then send them to GPU.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/imagenet_classification.html#module-imagenet_classification" title="imagenet_classification"><code class="xref py py-obj docutils literal notranslate"><span class="pre">imagenet_classification</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/imagenet_classification.html#module-imagenet_classification" title="imagenet_classification"><code class="xref py py-obj docutils literal notranslate"><span class="pre">imagenet_classification</span></code></a></p></td>
 <td><p>Benchmark the performance of loading images from local file systems and classifying them using a GPU.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/multi_thread_preprocessing.html#module-multi_thread_preprocessing" title="multi_thread_preprocessing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">multi_thread_preprocessing</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/multi_thread_preprocessing.html#module-multi_thread_preprocessing" title="multi_thread_preprocessing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">multi_thread_preprocessing</span></code></a></p></td>
 <td><p>This example shows how to run PyTorch tarnsform in SPDL Pipeline, and compares its performance against PyTorch DataLoader.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/streaming_nvdec_decoding.html#module-streaming_nvdec_decoding" title="streaming_nvdec_decoding"><code class="xref py py-obj docutils literal notranslate"><span class="pre">streaming_nvdec_decoding</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/streaming_nvdec_decoding.html#module-streaming_nvdec_decoding" title="streaming_nvdec_decoding"><code class="xref py py-obj docutils literal notranslate"><span class="pre">streaming_nvdec_decoding</span></code></a></p></td>
 <td><p>This example shows how to decode a video with GPU in streaming fashion.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/streaming_video_processing.html#module-streaming_video_processing" title="streaming_video_processing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">streaming_video_processing</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/streaming_video_processing.html#module-streaming_video_processing" title="streaming_video_processing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">streaming_video_processing</span></code></a></p></td>
 <td><p>This example shows how to process video in streaming fashion.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/performance_analysis.html#module-performance_analysis" title="performance_analysis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">performance_analysis</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/performance_analysis.html#module-performance_analysis" title="performance_analysis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">performance_analysis</span></code></a></p></td>
 <td><p>This example shows how to collect runtime performance statistics using custom hooks and then export the data to a database.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/performance_simulation.html#module-performance_simulation" title="performance_simulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">performance_simulation</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/performance_simulation.html#module-performance_simulation" title="performance_simulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">performance_simulation</span></code></a></p></td>
 <td><p>Simulation script to demonstrate pipeline bottleneck scenarios.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/hydra_integration.html#module-hydra_integration" title="hydra_integration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hydra_integration</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/hydra_integration.html#module-hydra_integration" title="hydra_integration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hydra_integration</span></code></a></p></td>
 <td><p>This example shows how to build <a class="reference internal" href="generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> object with Hydra using building blocks from <a class="reference internal" href="generated/spdl.pipeline.defs.html#module-spdl.pipeline.defs" title="spdl.pipeline.defs"><code class="xref py py-mod docutils literal notranslate"><span class="pre">spdl.pipeline.defs</span></code></a> module.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/pipeline_definitions.html#module-pipeline_definitions" title="pipeline_definitions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipeline_definitions</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/pipeline_definitions.html#module-pipeline_definitions" title="pipeline_definitions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipeline_definitions</span></code></a></p></td>
 <td><p>Comprehensive example defining a complex pipeline with <a class="reference internal" href="generated/spdl.pipeline.defs.html#module-spdl.pipeline.defs" title="spdl.pipeline.defs"><code class="xref py py-mod docutils literal notranslate"><span class="pre">spdl.pipeline.defs</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/pipeline_profiling.html#module-pipeline_profiling" title="pipeline_profiling"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipeline_profiling</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/pipeline_profiling.html#module-pipeline_profiling" title="pipeline_profiling"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipeline_profiling</span></code></a></p></td>
 <td><p>Example demonstrating the use of <a class="reference internal" href="generated/spdl.pipeline.profile_pipeline.html#spdl.pipeline.profile_pipeline" title="spdl.pipeline.profile_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.pipeline.profile_pipeline()</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/benchmark_utils.html#module-benchmark_utils" title="benchmark_utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_utils</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/benchmark_utils.html#module-benchmark_utils" title="benchmark_utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_utils</span></code></a></p></td>
 <td><p>Common utilities for benchmark scripts.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/benchmark_numpy.html#module-benchmark_numpy" title="benchmark_numpy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_numpy</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/benchmark_numpy.html#module-benchmark_numpy" title="benchmark_numpy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_numpy</span></code></a></p></td>
 <td><p>This example benchmarks the speed of loading data in different formats.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/benchmark_wav.html#module-benchmark_wav" title="benchmark_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_wav</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/benchmark_wav.html#module-benchmark_wav" title="benchmark_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_wav</span></code></a></p></td>
 <td><p>This example measuers the performance of loading WAV audio.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/benchmark_tarfile.html#module-benchmark_tarfile" title="benchmark_tarfile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_tarfile</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/benchmark_tarfile.html#module-benchmark_tarfile" title="benchmark_tarfile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_tarfile</span></code></a></p></td>
 <td><p>Benchmark script for <a class="reference internal" href="generated/spdl.io.iter_tarfile.html#spdl.io.iter_tarfile" title="spdl.io.iter_tarfile"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.iter_tarfile()</span></code></a> function.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/benchmark_video.html#module-benchmark_video" title="benchmark_video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_video</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/benchmark_video.html#module-benchmark_video" title="benchmark_video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_video</span></code></a></p></td>
 <td><p>This example measures the performance of video decoding with different concurrency settings.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/benchmark_thread_output_queue.html#module-benchmark_thread_output_queue" title="benchmark_thread_output_queue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">benchmark_thread_output_queue</span></code></a></p></td>
+<td><p>Benchmark: SPDL pipeline handoff latency with and without thread output queue.</p></td>
 </tr>
 </tbody>
 </table>
@@ -563,12 +571,12 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="generated/image_dataloading.html">
+          <a class="next-page" href="generated/llm_finetune.llm_finetuning.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Image dataloading</div>
+                <div class="title">Llm finetuning</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -608,7 +616,7 @@
     </aside>
   </div>
 </div>
-    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=f129cdf0"></script>
+    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=1437fa6d"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>

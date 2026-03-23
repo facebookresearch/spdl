@@ -73,7 +73,7 @@ Program Listing for File utils.h
      void stop();
    };
    
-   std::unique_ptr<TracingSession> init_tracing();
+   [[nodiscard]] std::unique_ptr<TracingSession> init_tracing();
    
    template <typename Number>
    void trace_counter(int i, Number counter);

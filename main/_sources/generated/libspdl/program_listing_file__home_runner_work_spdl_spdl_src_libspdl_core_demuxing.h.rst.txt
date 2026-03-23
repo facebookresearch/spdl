@@ -69,13 +69,13 @@ Program Listing for File demuxing.h
    
    using DemuxerPtr = std::unique_ptr<Demuxer>;
    
-   DemuxerPtr make_demuxer(
+   [[nodiscard]] DemuxerPtr make_demuxer(
        const std::string& src,
        const SourceAdaptorPtr& adaptor = nullptr,
        const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
        const std::optional<std::string>& name = std::nullopt);
    
-   DemuxerPtr make_demuxer(
+   [[nodiscard]] DemuxerPtr make_demuxer(
        const std::string_view data,
        const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
        const std::optional<std::string>& name = std::nullopt);

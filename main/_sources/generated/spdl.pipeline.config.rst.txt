@@ -159,6 +159,26 @@ set\_default\_build\_callback
    set_default_build_callback
 
 
+get\_default\_background\_tasks
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   get_default_background_tasks
+
+
+set\_default\_background\_tasks
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   set_default_background_tasks
+
+
 set\_compact\_log
 ^^^^^^^^^^^^^^^^^
 .. autosummary::
@@ -212,6 +232,8 @@ set\_compact\_log
    ############################################################################
    Others
    ############################################################################
+
+
 
 
 

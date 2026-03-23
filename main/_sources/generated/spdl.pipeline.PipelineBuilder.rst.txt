@@ -15,4 +15,5 @@ spdl.pipeline.PipelineBuilder
       ~PipelineBuilder.build
       ~PipelineBuilder.disaggregate
       ~PipelineBuilder.get_config
+      ~PipelineBuilder.path_variants
       ~PipelineBuilder.pipe

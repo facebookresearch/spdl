@@ -9,4 +9,5 @@ spdl.pipeline.defs.SourceConfig
    .. rubric:: Attributes
 
    .. autosummary::
+      ~SourceConfig.continuous
       ~SourceConfig.source

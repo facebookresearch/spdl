@@ -75,17 +75,6 @@ Functions
 - :ref:`exhale_function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349`
 
 
-Defines
--------
-
-
-- :ref:`exhale_define_frames_8h_1ac2ad95ac922a100ec27340436eb94940`
-
-- :ref:`exhale_define_frames_8h_1ac99c83df576500933a3691deb137be6d`
-
-- :ref:`exhale_define_frames_8h_1a9beaa64113e413112d43491ba5c13670`
-
-
 Typedefs
 --------
 

@@ -1,0 +1,12 @@
+spdl.pipeline.ProcessGroupStatsMonitor
+======================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ProcessGroupStatsMonitor
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~ProcessGroupStatsMonitor.run

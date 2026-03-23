@@ -49,10 +49,6 @@ Program Listing for File frames.h
    
    using AnyFrames = std::variant<AudioFramesPtr, VideoFramesPtr, ImageFramesPtr>;
    
-   #define _IS_AUDIO (media == MediaType::Audio)
-   #define _IS_VIDEO (media == MediaType::Video)
-   #define _IS_IMAGE (media == MediaType::Image)
-   
    template <MediaType media>
    class Frames {
     private:
@@ -105,39 +101,35 @@ Program Listing for File frames.h
      // Audio specific
    
      int get_sample_rate() const
-       requires _IS_AUDIO;
+       requires(media == MediaType::Audio);
    
      int get_num_channels() const
-       requires _IS_AUDIO;
+       requires(media == MediaType::Audio);
    
      // Common to Image/Video
    
      int get_num_planes() const
-       requires(_IS_IMAGE || _IS_VIDEO);
+       requires(media == MediaType::Image || media == MediaType::Video);
    
      int get_width() const
-       requires(_IS_IMAGE || _IS_VIDEO);
+       requires(media == MediaType::Image || media == MediaType::Video);
    
      int get_height() const
-       requires(_IS_IMAGE || _IS_VIDEO);
+       requires(media == MediaType::Image || media == MediaType::Video);
    
      // Video specific
    
      VideoFramesPtr slice(int start, int stop, int step) const
-       requires _IS_VIDEO;
+       requires(media == MediaType::Video);
    
      VideoFramesPtr slice(const std::vector<int64_t>& index) const
-       requires _IS_VIDEO;
+       requires(media == MediaType::Video);
    
      ImageFramesPtr slice(int64_t index) const
-       requires _IS_VIDEO;
+       requires(media == MediaType::Video);
    };
    
    template <MediaType media>
    FramesPtr<media> clone(const Frames<media>& src);
-   
-   #undef _IS_AUDIO
-   #undef _IS_VIDEO
-   #undef _IS_IMAGE
    
    } // namespace spdl::core

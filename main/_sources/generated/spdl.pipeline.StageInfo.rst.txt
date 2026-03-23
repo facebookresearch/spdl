@@ -1,0 +1,15 @@
+spdl.pipeline.StageInfo
+=======================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: StageInfo
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~StageInfo.concurrency
+      ~StageInfo.pipeline_id
+      ~StageInfo.stage_id
+      ~StageInfo.stage_name

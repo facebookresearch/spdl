@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Pipeline profiling" href="pipeline_profiling.html" /><link rel="prev" title="Hydra integration" href="hydra_integration.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Pipeline definitions - SPDL 0.3.0 documentation</title>
+        <title>Pipeline definitions - SPDL 0.4.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.3.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.4.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.3.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.4.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -254,6 +254,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/autoresearch.html">Autoresearch</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -270,6 +271,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../examples.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="imagenet_classification.html">Imagenet classification</a></li>
@@ -286,6 +288,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_wav.html">Benchmark wav</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_tarfile.html">Benchmark tarfile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
@@ -366,9 +369,6 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
@@ -444,6 +444,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
@@ -511,17 +513,18 @@
 <li><p><a class="reference internal" href="spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig" title="spdl.pipeline.defs.SinkConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SinkConfig</span></code></a>: Configures output buffering for pipelines</p></li>
 <li><p><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs.PipelineConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineConfig</span></code></a>: Top-level pipeline configuration combining all components</p></li>
 <li><p><a class="reference internal" href="spdl.pipeline.defs.Merge.html#spdl.pipeline.defs.Merge" title="spdl.pipeline.defs.Merge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Merge</span></code></a>: Merges outputs from multiple pipelines into a single stream</p></li>
+<li><p><a class="reference internal" href="spdl.pipeline.defs.PathVariantsConfig.html#spdl.pipeline.defs.PathVariantsConfig" title="spdl.pipeline.defs.PathVariantsConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathVariantsConfig</span></code></a>: Routes items to different processing paths</p></li>
 </ul>
 <p>The example also demonstrates the factory functions:</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="spdl.pipeline.defs.Pipe.html#spdl.pipeline.defs.Pipe" title="spdl.pipeline.defs.Pipe"><code class="xref py py-func docutils literal notranslate"><span class="pre">Pipe()</span></code></a>: Creates pipe configurations for general processing</p></li>
 <li><p><a class="reference internal" href="spdl.pipeline.defs.Aggregate.html#spdl.pipeline.defs.Aggregate" title="spdl.pipeline.defs.Aggregate"><code class="xref py py-func docutils literal notranslate"><span class="pre">Aggregate()</span></code></a>: Creates configurations for batching/grouping data</p></li>
 <li><p><a class="reference internal" href="spdl.pipeline.defs.Disaggregate.html#spdl.pipeline.defs.Disaggregate" title="spdl.pipeline.defs.Disaggregate"><code class="xref py py-func docutils literal notranslate"><span class="pre">Disaggregate()</span></code></a>: Creates configurations for splitting batched data</p></li>
+<li><p><a class="reference internal" href="spdl.pipeline.defs.PathVariants.html#spdl.pipeline.defs.PathVariants" title="spdl.pipeline.defs.PathVariants"><code class="xref py py-func docutils literal notranslate"><span class="pre">PathVariants()</span></code></a>: Creates variant path routing configurations</p></li>
 </ul>
-<p>The pipeline structure created by this example is illustrated below:</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The pipeline defined here uses merge mechanism, which is not supported by
+<p>This pipeline uses the merge mechanism, which is not supported by
 <a class="reference internal" href="spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder" title="spdl.pipeline.PipelineBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineBuilder</span></code></a>.</p>
 </div>
 <div class="mermaid">
@@ -542,8 +545,13 @@
         SNK2 --&gt; M
         M --&gt; NORM[Pipe: normalize_to_lists]
         NORM --&gt; DISAGG[Disaggregate]
-        DISAGG --&gt; P3[Pipe: multiply_by_10]
-        P3 --&gt; FINAL_SINK[Final Sink]
+        DISAGG --&gt; R[Router: cache_router]
+        R --&gt;|cache hit| CACHE[Pipe: load_from_cache]
+        R --&gt;|cache miss| MUL[Pipe: multiply_by_10]
+        MUL --&gt; STORE[Pipe: store_in_cache]
+        CACHE --&gt; PV_MERGE[PathVariants merge]
+        STORE --&gt; PV_MERGE
+        PV_MERGE --&gt; FINAL_SINK[Final Sink]
     end
         </div><p>The data flow:</p>
 <ol class="arabic simple">
@@ -557,8 +565,13 @@
 <code class="docutils literal notranslate"><span class="pre">[[0,</span> <span class="pre">1],</span> <span class="pre">[4,</span> <span class="pre">9],</span> <span class="pre">[16],</span> <span class="pre">[110],</span> <span class="pre">[111],</span> <span class="pre">[112],</span> <span class="pre">[113],</span> <span class="pre">[114]]</span></code></p></li>
 <li><p>Disaggregate flattens:
 <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">4,</span> <span class="pre">9,</span> <span class="pre">16,</span> <span class="pre">110,</span> <span class="pre">111,</span> <span class="pre">112,</span> <span class="pre">113,</span> <span class="pre">114]</span></code></p></li>
-<li><p>Finally, multiply by 10:
-<code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">10,</span> <span class="pre">40,</span> <span class="pre">90,</span> <span class="pre">160,</span> <span class="pre">1100,</span> <span class="pre">1110,</span> <span class="pre">1120,</span> <span class="pre">1130,</span> <span class="pre">1140]</span></code></p></li>
+<li><p>PathVariants routes each item based on cache membership:</p>
+<ul class="simple">
+<li><p>Cache hits (pre-populated values) → <code class="docutils literal notranslate"><span class="pre">load_from_cache</span></code> (1 stage)</p></li>
+<li><p>Cache misses → <code class="docutils literal notranslate"><span class="pre">multiply_by_10</span></code> → <code class="docutils literal notranslate"><span class="pre">store_in_cache</span></code> (2 stages:
+compute <code class="docutils literal notranslate"><span class="pre">×10</span></code>, then store the result for future lookups)</p></li>
+</ul>
+</li>
 </ol>
 <section id="source">
 <h2>Source<a class="headerlink" href="#source" title="Link to this heading">¶</a></h2>
@@ -583,18 +596,18 @@
 <span class="linenos"> 17</span><span class="sd">- :py:class:`SinkConfig`: Configures output buffering for pipelines</span>
 <span class="linenos"> 18</span><span class="sd">- :py:class:`PipelineConfig`: Top-level pipeline configuration combining all components</span>
 <span class="linenos"> 19</span><span class="sd">- :py:class:`Merge`: Merges outputs from multiple pipelines into a single stream</span>
-<span class="linenos"> 20</span>
-<span class="linenos"> 21</span><span class="sd">The example also demonstrates the factory functions:</span>
-<span class="linenos"> 22</span>
-<span class="linenos"> 23</span><span class="sd">- :py:func:`Pipe`: Creates pipe configurations for general processing</span>
-<span class="linenos"> 24</span><span class="sd">- :py:func:`Aggregate`: Creates configurations for batching/grouping data</span>
-<span class="linenos"> 25</span><span class="sd">- :py:func:`Disaggregate`: Creates configurations for splitting batched data</span>
-<span class="linenos"> 26</span>
-<span class="linenos"> 27</span><span class="sd">The pipeline structure created by this example is illustrated below:</span>
+<span class="linenos"> 20</span><span class="sd">- :py:class:`PathVariantsConfig`: Routes items to different processing paths</span>
+<span class="linenos"> 21</span>
+<span class="linenos"> 22</span><span class="sd">The example also demonstrates the factory functions:</span>
+<span class="linenos"> 23</span>
+<span class="linenos"> 24</span><span class="sd">- :py:func:`Pipe`: Creates pipe configurations for general processing</span>
+<span class="linenos"> 25</span><span class="sd">- :py:func:`Aggregate`: Creates configurations for batching/grouping data</span>
+<span class="linenos"> 26</span><span class="sd">- :py:func:`Disaggregate`: Creates configurations for splitting batched data</span>
+<span class="linenos"> 27</span><span class="sd">- :py:func:`PathVariants`: Creates variant path routing configurations</span>
 <span class="linenos"> 28</span>
 <span class="linenos"> 29</span><span class="sd">.. note::</span>
 <span class="linenos"> 30</span>
-<span class="linenos"> 31</span><span class="sd">   The pipeline defined here uses merge mechanism, which is not supported by</span>
+<span class="linenos"> 31</span><span class="sd">   This pipeline uses the merge mechanism, which is not supported by</span>
 <span class="linenos"> 32</span><span class="sd">   :py:class:`~spdl.pipeline.PipelineBuilder`.</span>
 <span class="linenos"> 33</span>
 <span class="linenos"> 34</span><span class="sd">.. mermaid::</span>
@@ -616,227 +629,293 @@
 <span class="linenos"> 50</span><span class="sd">           SNK2 --&gt; M</span>
 <span class="linenos"> 51</span><span class="sd">           M --&gt; NORM[Pipe: normalize_to_lists]</span>
 <span class="linenos"> 52</span><span class="sd">           NORM --&gt; DISAGG[Disaggregate]</span>
-<span class="linenos"> 53</span><span class="sd">           DISAGG --&gt; P3[Pipe: multiply_by_10]</span>
-<span class="linenos"> 54</span><span class="sd">           P3 --&gt; FINAL_SINK[Final Sink]</span>
-<span class="linenos"> 55</span><span class="sd">       end</span>
-<span class="linenos"> 56</span>
-<span class="linenos"> 57</span><span class="sd">The data flow:</span>
-<span class="linenos"> 58</span>
-<span class="linenos"> 59</span><span class="sd">1. Pipeline 1:</span>
-<span class="linenos"> 60</span><span class="sd">   ``[0, 1, 2, 3, 4]`` → ``square`` → ``[[0, 1], [4, 9], [16]]``</span>
-<span class="linenos"> 61</span><span class="sd">2. Pipeline 2:</span>
-<span class="linenos"> 62</span><span class="sd">   ``[10, 11, 12, 13, 14]`` → ``add_100`` → ``[110, 111, 112, 113, 114]``</span>
-<span class="linenos"> 63</span><span class="sd">3. Merge combines outputs:</span>
-<span class="linenos"> 64</span><span class="sd">   ``[[0, 1], [4, 9], [16], 110, 111, 112, 113, 114]``</span>
-<span class="linenos"> 65</span><span class="sd">4. Normalize handles mixed data types:</span>
-<span class="linenos"> 66</span><span class="sd">   ``[[0, 1], [4, 9], [16], [110], [111], [112], [113], [114]]``</span>
-<span class="linenos"> 67</span><span class="sd">5. Disaggregate flattens:</span>
-<span class="linenos"> 68</span><span class="sd">   ``[0, 1, 4, 9, 16, 110, 111, 112, 113, 114]``</span>
-<span class="linenos"> 69</span><span class="sd">6. Finally, multiply by 10:</span>
-<span class="linenos"> 70</span><span class="sd">   ``[0, 10, 40, 90, 160, 1100, 1110, 1120, 1130, 1140]``</span>
-<span class="linenos"> 71</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="linenos"> 72</span>
-<span class="linenos"> 73</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-<span class="linenos"> 74</span>    <span class="s2">&quot;main&quot;</span><span class="p">,</span>
-<span class="linenos"> 75</span>    <span class="s2">&quot;create_sub_pipeline_1&quot;</span><span class="p">,</span>
-<span class="linenos"> 76</span>    <span class="s2">&quot;create_sub_pipeline_2&quot;</span><span class="p">,</span>
-<span class="linenos"> 77</span>    <span class="s2">&quot;create_main_pipeline&quot;</span><span class="p">,</span>
-<span class="linenos"> 78</span>    <span class="s2">&quot;square&quot;</span><span class="p">,</span>
-<span class="linenos"> 79</span>    <span class="s2">&quot;add_100&quot;</span><span class="p">,</span>
-<span class="linenos"> 80</span>    <span class="s2">&quot;multiply_by_10&quot;</span><span class="p">,</span>
-<span class="linenos"> 81</span>    <span class="s2">&quot;normalize_to_lists&quot;</span><span class="p">,</span>
-<span class="linenos"> 82</span>    <span class="s2">&quot;run_pipeline_example&quot;</span><span class="p">,</span>
-<span class="linenos"> 83</span><span class="p">]</span>
-<span class="linenos"> 84</span>
-<span class="linenos"> 85</span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="linenos"> 86</span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
-<span class="linenos"> 87</span>
-<span class="linenos"> 88</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_pipeline</span>
-<span class="linenos"> 89</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline.defs</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<span class="linenos"> 90</span>    <span class="n">Aggregate</span><span class="p">,</span>
-<span class="linenos"> 91</span>    <span class="n">Disaggregate</span><span class="p">,</span>
-<span class="linenos"> 92</span>    <span class="n">Merge</span><span class="p">,</span>
-<span class="linenos"> 93</span>    <span class="n">Pipe</span><span class="p">,</span>
-<span class="linenos"> 94</span>    <span class="n">PipelineConfig</span><span class="p">,</span>
-<span class="linenos"> 95</span>    <span class="n">SinkConfig</span><span class="p">,</span>
-<span class="linenos"> 96</span>    <span class="n">SourceConfig</span><span class="p">,</span>
-<span class="linenos"> 97</span><span class="p">)</span>
+<span class="linenos"> 53</span><span class="sd">           DISAGG --&gt; R[Router: cache_router]</span>
+<span class="linenos"> 54</span><span class="sd">           R --&gt;|cache hit| CACHE[Pipe: load_from_cache]</span>
+<span class="linenos"> 55</span><span class="sd">           R --&gt;|cache miss| MUL[Pipe: multiply_by_10]</span>
+<span class="linenos"> 56</span><span class="sd">           MUL --&gt; STORE[Pipe: store_in_cache]</span>
+<span class="linenos"> 57</span><span class="sd">           CACHE --&gt; PV_MERGE[PathVariants merge]</span>
+<span class="linenos"> 58</span><span class="sd">           STORE --&gt; PV_MERGE</span>
+<span class="linenos"> 59</span><span class="sd">           PV_MERGE --&gt; FINAL_SINK[Final Sink]</span>
+<span class="linenos"> 60</span><span class="sd">       end</span>
+<span class="linenos"> 61</span>
+<span class="linenos"> 62</span><span class="sd">The data flow:</span>
+<span class="linenos"> 63</span>
+<span class="linenos"> 64</span><span class="sd">1. Pipeline 1:</span>
+<span class="linenos"> 65</span><span class="sd">   ``[0, 1, 2, 3, 4]`` → ``square`` → ``[[0, 1], [4, 9], [16]]``</span>
+<span class="linenos"> 66</span><span class="sd">2. Pipeline 2:</span>
+<span class="linenos"> 67</span><span class="sd">   ``[10, 11, 12, 13, 14]`` → ``add_100`` → ``[110, 111, 112, 113, 114]``</span>
+<span class="linenos"> 68</span><span class="sd">3. Merge combines outputs:</span>
+<span class="linenos"> 69</span><span class="sd">   ``[[0, 1], [4, 9], [16], 110, 111, 112, 113, 114]``</span>
+<span class="linenos"> 70</span><span class="sd">4. Normalize handles mixed data types:</span>
+<span class="linenos"> 71</span><span class="sd">   ``[[0, 1], [4, 9], [16], [110], [111], [112], [113], [114]]``</span>
+<span class="linenos"> 72</span><span class="sd">5. Disaggregate flattens:</span>
+<span class="linenos"> 73</span><span class="sd">   ``[0, 1, 4, 9, 16, 110, 111, 112, 113, 114]``</span>
+<span class="linenos"> 74</span><span class="sd">6. PathVariants routes each item based on cache membership:</span>
+<span class="linenos"> 75</span>
+<span class="linenos"> 76</span><span class="sd">   - Cache hits (pre-populated values) → ``load_from_cache`` (1 stage)</span>
+<span class="linenos"> 77</span><span class="sd">   - Cache misses → ``multiply_by_10`` → ``store_in_cache`` (2 stages:</span>
+<span class="linenos"> 78</span><span class="sd">     compute ``×10``, then store the result for future lookups)</span>
+<span class="linenos"> 79</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 80</span>
+<span class="linenos"> 81</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos"> 82</span>    <span class="s2">&quot;main&quot;</span><span class="p">,</span>
+<span class="linenos"> 83</span>    <span class="s2">&quot;create_sub_pipeline_1&quot;</span><span class="p">,</span>
+<span class="linenos"> 84</span>    <span class="s2">&quot;create_sub_pipeline_2&quot;</span><span class="p">,</span>
+<span class="linenos"> 85</span>    <span class="s2">&quot;create_main_pipeline&quot;</span><span class="p">,</span>
+<span class="linenos"> 86</span>    <span class="s2">&quot;square&quot;</span><span class="p">,</span>
+<span class="linenos"> 87</span>    <span class="s2">&quot;add_100&quot;</span><span class="p">,</span>
+<span class="linenos"> 88</span>    <span class="s2">&quot;multiply_by_10&quot;</span><span class="p">,</span>
+<span class="linenos"> 89</span>    <span class="s2">&quot;store_in_cache&quot;</span><span class="p">,</span>
+<span class="linenos"> 90</span>    <span class="s2">&quot;normalize_to_lists&quot;</span><span class="p">,</span>
+<span class="linenos"> 91</span>    <span class="s2">&quot;cache_router&quot;</span><span class="p">,</span>
+<span class="linenos"> 92</span>    <span class="s2">&quot;load_from_cache&quot;</span><span class="p">,</span>
+<span class="linenos"> 93</span>    <span class="s2">&quot;run_pipeline_example&quot;</span><span class="p">,</span>
+<span class="linenos"> 94</span><span class="p">]</span>
+<span class="linenos"> 95</span>
+<span class="linenos"> 96</span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="linenos"> 97</span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 <span class="linenos"> 98</span>
-<span class="linenos"> 99</span><span class="c1"># pyre-strict</span>
-<span class="linenos">100</span>
-<span class="linenos">101</span><span class="n">_LG</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-<span class="linenos">102</span>
-<span class="linenos">103</span>
-<span class="linenos">104</span><span class="k">def</span><span class="w"> </span><span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos">105</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Square the input number.&quot;&quot;&quot;</span>
-<span class="linenos">106</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span>
-<span class="linenos">107</span>
-<span class="linenos">108</span>
-<span class="linenos">109</span><span class="k">def</span><span class="w"> </span><span class="nf">add_100</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos">110</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Add 100 to the input number.&quot;&quot;&quot;</span>
-<span class="linenos">111</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">100</span>
+<span class="linenos"> 99</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_pipeline</span>
+<span class="linenos">100</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline.defs</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="linenos">101</span>    <span class="n">Aggregate</span><span class="p">,</span>
+<span class="linenos">102</span>    <span class="n">Disaggregate</span><span class="p">,</span>
+<span class="linenos">103</span>    <span class="n">Merge</span><span class="p">,</span>
+<span class="linenos">104</span>    <span class="n">PathVariants</span><span class="p">,</span>
+<span class="linenos">105</span>    <span class="n">Pipe</span><span class="p">,</span>
+<span class="linenos">106</span>    <span class="n">PipelineConfig</span><span class="p">,</span>
+<span class="linenos">107</span>    <span class="n">SinkConfig</span><span class="p">,</span>
+<span class="linenos">108</span>    <span class="n">SourceConfig</span><span class="p">,</span>
+<span class="linenos">109</span><span class="p">)</span>
+<span class="linenos">110</span>
+<span class="linenos">111</span><span class="c1"># pyre-strict</span>
 <span class="linenos">112</span>
-<span class="linenos">113</span>
-<span class="linenos">114</span><span class="k">def</span><span class="w"> </span><span class="nf">multiply_by_10</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos">115</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Multiply the input by 10.&quot;&quot;&quot;</span>
-<span class="linenos">116</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span>
-<span class="linenos">117</span>
-<span class="linenos">118</span>
-<span class="linenos">119</span><span class="k">def</span><span class="w"> </span><span class="nf">create_sub_pipeline_1</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
-<span class="linenos">120</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a sub-pipeline that squares numbers and aggregates them.</span>
-<span class="linenos">121</span>
-<span class="linenos">122</span><span class="sd">    .. code-block:: text</span>
-<span class="linenos">123</span>
-<span class="linenos">124</span><span class="sd">       range(5)</span>
-<span class="linenos">125</span><span class="sd">        → square</span>
-<span class="linenos">126</span><span class="sd">        → aggregate(2)</span>
-<span class="linenos">127</span><span class="sd">        → [[squared_pairs], [remaining]]</span>
-<span class="linenos">128</span>
-<span class="linenos">129</span><span class="sd">    Returns:</span>
-<span class="linenos">130</span><span class="sd">        Configuration for a pipeline that processes</span>
-<span class="linenos">131</span><span class="sd">        ``[0,1,2,3,4]`` into batches of squared values.</span>
-<span class="linenos">132</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">133</span>    <span class="n">source_config</span> <span class="o">=</span> <span class="n">SourceConfig</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
-<span class="linenos">134</span>    <span class="n">square_pipe</span> <span class="o">=</span> <span class="n">Pipe</span><span class="p">(</span><span class="n">square</span><span class="p">)</span>
-<span class="linenos">135</span>    <span class="n">aggregate_pipe</span> <span class="o">=</span> <span class="n">Aggregate</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="linenos">136</span>    <span class="n">sink_config</span> <span class="o">=</span> <span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<span class="linenos">137</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
-<span class="linenos">138</span>        <span class="n">src</span><span class="o">=</span><span class="n">source_config</span><span class="p">,</span>
-<span class="linenos">139</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span><span class="n">square_pipe</span><span class="p">,</span> <span class="n">aggregate_pipe</span><span class="p">],</span>
-<span class="linenos">140</span>        <span class="n">sink</span><span class="o">=</span><span class="n">sink_config</span><span class="p">,</span>
-<span class="linenos">141</span>    <span class="p">)</span>
+<span class="linenos">113</span><span class="n">_LG</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="linenos">114</span>
+<span class="linenos">115</span>
+<span class="linenos">116</span><span class="k">def</span><span class="w"> </span><span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">117</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Square the input number.&quot;&quot;&quot;</span>
+<span class="linenos">118</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span>
+<span class="linenos">119</span>
+<span class="linenos">120</span>
+<span class="linenos">121</span><span class="k">def</span><span class="w"> </span><span class="nf">add_100</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">122</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Add 100 to the input number.&quot;&quot;&quot;</span>
+<span class="linenos">123</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">100</span>
+<span class="linenos">124</span>
+<span class="linenos">125</span>
+<span class="linenos">126</span><span class="c1">################################################################################</span>
+<span class="linenos">127</span><span class="c1"># Cache-based routing with PathVariants</span>
+<span class="linenos">128</span><span class="c1">################################################################################</span>
+<span class="linenos">129</span>
+<span class="linenos">130</span><span class="c1"># Cache of pre-computed results.  In a real pipeline this might be backed by</span>
+<span class="linenos">131</span><span class="c1"># a key-value store or an on-disk cache; here we use a plain dict.</span>
+<span class="linenos">132</span><span class="n">_CACHE</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">:</span> <span class="mi">40</span><span class="p">}</span>  <span class="c1"># pre-populated with a few ×10 values</span>
+<span class="linenos">133</span>
+<span class="linenos">134</span>
+<span class="linenos">135</span><span class="k">def</span><span class="w"> </span><span class="nf">cache_router</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">136</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Route items based on cache membership.</span>
+<span class="linenos">137</span>
+<span class="linenos">138</span><span class="sd">    Returns 0 for cache hits (fast path) and 1 for cache misses (slow path).</span>
+<span class="linenos">139</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">140</span>    <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">_CACHE</span> <span class="k">else</span> <span class="mi">1</span>
+<span class="linenos">141</span>
 <span class="linenos">142</span>
-<span class="linenos">143</span>
-<span class="linenos">144</span><span class="k">def</span><span class="w"> </span><span class="nf">create_sub_pipeline_2</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="linenos">145</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a sub-pipeline that adds 100 to numbers.</span>
+<span class="linenos">143</span><span class="k">def</span><span class="w"> </span><span class="nf">load_from_cache</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">144</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieve a previously computed result from the cache (fast path).&quot;&quot;&quot;</span>
+<span class="linenos">145</span>    <span class="k">return</span> <span class="n">_CACHE</span><span class="p">[</span><span class="n">item</span><span class="p">]</span>
 <span class="linenos">146</span>
-<span class="linenos">147</span><span class="sd">    .. code-block:: text</span>
-<span class="linenos">148</span>
-<span class="linenos">149</span><span class="sd">       range(10,15)</span>
-<span class="linenos">150</span><span class="sd">        → add_100</span>
-<span class="linenos">151</span><span class="sd">        → individual_values</span>
-<span class="linenos">152</span>
-<span class="linenos">153</span><span class="sd">    Returns:</span>
-<span class="linenos">154</span><span class="sd">        Configuration for a pipeline that processes</span>
-<span class="linenos">155</span><span class="sd">        ``[10,11,12,13,14]`` by adding ``100``.</span>
-<span class="linenos">156</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">157</span>    <span class="n">source_config</span> <span class="o">=</span> <span class="n">SourceConfig</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">))</span>
-<span class="linenos">158</span>    <span class="n">add_pipe</span> <span class="o">=</span> <span class="n">Pipe</span><span class="p">(</span><span class="n">add_100</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-<span class="linenos">159</span>    <span class="n">sink_config</span> <span class="o">=</span> <span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-<span class="linenos">160</span>
-<span class="linenos">161</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
-<span class="linenos">162</span>        <span class="n">src</span><span class="o">=</span><span class="n">source_config</span><span class="p">,</span>
-<span class="linenos">163</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span><span class="n">add_pipe</span><span class="p">],</span>
-<span class="linenos">164</span>        <span class="n">sink</span><span class="o">=</span><span class="n">sink_config</span><span class="p">,</span>
-<span class="linenos">165</span>    <span class="p">)</span>
-<span class="linenos">166</span>
+<span class="linenos">147</span>
+<span class="linenos">148</span><span class="k">def</span><span class="w"> </span><span class="nf">multiply_by_10</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="linenos">149</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Multiply the input by 10 (slow path, first stage).</span>
+<span class="linenos">150</span>
+<span class="linenos">151</span><span class="sd">    Returns a (key, result) tuple so the next stage can store it in the cache.</span>
+<span class="linenos">152</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">153</span>    <span class="k">return</span> <span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">item</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="linenos">154</span>
+<span class="linenos">155</span>
+<span class="linenos">156</span><span class="k">def</span><span class="w"> </span><span class="nf">store_in_cache</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">157</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Store the computed result in the cache and return it (slow path, second stage).&quot;&quot;&quot;</span>
+<span class="linenos">158</span>    <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">item</span>
+<span class="linenos">159</span>    <span class="n">_CACHE</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="linenos">160</span>    <span class="k">return</span> <span class="n">value</span>
+<span class="linenos">161</span>
+<span class="linenos">162</span>
+<span class="linenos">163</span><span class="k">def</span><span class="w"> </span><span class="nf">create_sub_pipeline_1</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="linenos">164</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a sub-pipeline that squares numbers and aggregates them.</span>
+<span class="linenos">165</span>
+<span class="linenos">166</span><span class="sd">    .. code-block:: text</span>
 <span class="linenos">167</span>
-<span class="linenos">168</span><span class="k">def</span><span class="w"> </span><span class="nf">normalize_to_lists</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
-<span class="linenos">169</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Flatten lists or wrap individual items in a list for uniform handling.&quot;&quot;&quot;</span>
-<span class="linenos">170</span>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-<span class="linenos">171</span>        <span class="k">return</span> <span class="n">item</span>
-<span class="linenos">172</span>    <span class="k">else</span><span class="p">:</span>
-<span class="linenos">173</span>        <span class="k">return</span> <span class="p">[</span><span class="n">item</span><span class="p">]</span>
-<span class="linenos">174</span>
-<span class="linenos">175</span>
-<span class="linenos">176</span><span class="k">def</span><span class="w"> </span><span class="nf">create_main_pipeline</span><span class="p">(</span>
-<span class="linenos">177</span>    <span class="n">sub_pipeline_1</span><span class="p">:</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
-<span class="linenos">178</span>    <span class="n">sub_pipeline_2</span><span class="p">:</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-<span class="linenos">179</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="linenos">180</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create the main pipeline that merges outputs from sub-pipelines.</span>
-<span class="linenos">181</span>
-<span class="linenos">182</span><span class="sd">    .. code-block:: text</span>
-<span class="linenos">183</span>
-<span class="linenos">184</span><span class="sd">       Merge([sub1, sub2])</span>
-<span class="linenos">185</span><span class="sd">         → normalize_to_lists</span>
-<span class="linenos">186</span><span class="sd">         → disaggregate</span>
-<span class="linenos">187</span><span class="sd">         → multiply_by_10</span>
-<span class="linenos">188</span>
-<span class="linenos">189</span><span class="sd">    Args:</span>
-<span class="linenos">190</span><span class="sd">        sub_pipeline_1: First sub-pipeline configuration</span>
-<span class="linenos">191</span><span class="sd">        sub_pipeline_2: Second sub-pipeline configuration</span>
+<span class="linenos">168</span><span class="sd">       range(5)</span>
+<span class="linenos">169</span><span class="sd">        → square</span>
+<span class="linenos">170</span><span class="sd">        → aggregate(2)</span>
+<span class="linenos">171</span><span class="sd">        → [[squared_pairs], [remaining]]</span>
+<span class="linenos">172</span>
+<span class="linenos">173</span><span class="sd">    Returns:</span>
+<span class="linenos">174</span><span class="sd">        Configuration for a pipeline that processes</span>
+<span class="linenos">175</span><span class="sd">        ``[0,1,2,3,4]`` into batches of squared values.</span>
+<span class="linenos">176</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">177</span>    <span class="n">source_config</span> <span class="o">=</span> <span class="n">SourceConfig</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+<span class="linenos">178</span>    <span class="n">square_pipe</span> <span class="o">=</span> <span class="n">Pipe</span><span class="p">(</span><span class="n">square</span><span class="p">)</span>
+<span class="linenos">179</span>    <span class="n">aggregate_pipe</span> <span class="o">=</span> <span class="n">Aggregate</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="linenos">180</span>    <span class="n">sink_config</span> <span class="o">=</span> <span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="linenos">181</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
+<span class="linenos">182</span>        <span class="n">src</span><span class="o">=</span><span class="n">source_config</span><span class="p">,</span>
+<span class="linenos">183</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span><span class="n">square_pipe</span><span class="p">,</span> <span class="n">aggregate_pipe</span><span class="p">],</span>
+<span class="linenos">184</span>        <span class="n">sink</span><span class="o">=</span><span class="n">sink_config</span><span class="p">,</span>
+<span class="linenos">185</span>    <span class="p">)</span>
+<span class="linenos">186</span>
+<span class="linenos">187</span>
+<span class="linenos">188</span><span class="k">def</span><span class="w"> </span><span class="nf">create_sub_pipeline_2</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="linenos">189</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a sub-pipeline that adds 100 to numbers.</span>
+<span class="linenos">190</span>
+<span class="linenos">191</span><span class="sd">    .. code-block:: text</span>
 <span class="linenos">192</span>
-<span class="linenos">193</span><span class="sd">    Returns:</span>
-<span class="linenos">194</span><span class="sd">        Main pipeline configuration that merges and processes the sub-pipeline outputs.</span>
-<span class="linenos">195</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">196</span>    <span class="n">merge_config</span> <span class="o">=</span> <span class="n">Merge</span><span class="p">([</span><span class="n">sub_pipeline_1</span><span class="p">,</span> <span class="n">sub_pipeline_2</span><span class="p">])</span>
-<span class="linenos">197</span>    <span class="n">normalize_pipe</span> <span class="o">=</span> <span class="n">Pipe</span><span class="p">(</span><span class="n">normalize_to_lists</span><span class="p">)</span>
-<span class="linenos">198</span>    <span class="n">disaggregate_pipe</span> <span class="o">=</span> <span class="n">Disaggregate</span><span class="p">()</span>
-<span class="linenos">199</span>    <span class="n">multiply_pipe</span> <span class="o">=</span> <span class="n">Pipe</span><span class="p">(</span>
-<span class="linenos">200</span>        <span class="n">multiply_by_10</span><span class="p">,</span>
-<span class="linenos">201</span>        <span class="n">concurrency</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-<span class="linenos">202</span>        <span class="n">output_order</span><span class="o">=</span><span class="s2">&quot;input&quot;</span><span class="p">,</span>  <span class="c1"># Maintain input order</span>
-<span class="linenos">203</span>    <span class="p">)</span>
+<span class="linenos">193</span><span class="sd">       range(10,15)</span>
+<span class="linenos">194</span><span class="sd">        → add_100</span>
+<span class="linenos">195</span><span class="sd">        → individual_values</span>
+<span class="linenos">196</span>
+<span class="linenos">197</span><span class="sd">    Returns:</span>
+<span class="linenos">198</span><span class="sd">        Configuration for a pipeline that processes</span>
+<span class="linenos">199</span><span class="sd">        ``[10,11,12,13,14]`` by adding ``100``.</span>
+<span class="linenos">200</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">201</span>    <span class="n">source_config</span> <span class="o">=</span> <span class="n">SourceConfig</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">))</span>
+<span class="linenos">202</span>    <span class="n">add_pipe</span> <span class="o">=</span> <span class="n">Pipe</span><span class="p">(</span><span class="n">add_100</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="linenos">203</span>    <span class="n">sink_config</span> <span class="o">=</span> <span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 <span class="linenos">204</span>
-<span class="linenos">205</span>    <span class="n">sink_config</span> <span class="o">=</span> <span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
-<span class="linenos">206</span>
-<span class="linenos">207</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
-<span class="linenos">208</span>        <span class="n">src</span><span class="o">=</span><span class="n">merge_config</span><span class="p">,</span>
-<span class="linenos">209</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span><span class="n">normalize_pipe</span><span class="p">,</span> <span class="n">disaggregate_pipe</span><span class="p">,</span> <span class="n">multiply_pipe</span><span class="p">],</span>
-<span class="linenos">210</span>        <span class="n">sink</span><span class="o">=</span><span class="n">sink_config</span><span class="p">,</span>
-<span class="linenos">211</span>    <span class="p">)</span>
-<span class="linenos">212</span>
-<span class="linenos">213</span>
-<span class="linenos">214</span><span class="k">def</span><span class="w"> </span><span class="nf">run_pipeline_example</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="linenos">215</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Execute the complete pipeline example and return results.</span>
-<span class="linenos">216</span>
-<span class="linenos">217</span><span class="sd">    Returns:</span>
-<span class="linenos">218</span><span class="sd">        List of processed integers from the merged pipeline execution.</span>
-<span class="linenos">219</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">220</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating sub-pipeline configurations...&quot;</span><span class="p">)</span>
-<span class="linenos">221</span>
-<span class="linenos">222</span>    <span class="n">sub_pipeline_1</span> <span class="o">=</span> <span class="n">create_sub_pipeline_1</span><span class="p">()</span>
-<span class="linenos">223</span>    <span class="n">sub_pipeline_2</span> <span class="o">=</span> <span class="n">create_sub_pipeline_2</span><span class="p">()</span>
-<span class="linenos">224</span>
-<span class="linenos">225</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sub-pipeline 1: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sub_pipeline_1</span><span class="p">)</span>
-<span class="linenos">226</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sub-pipeline 2: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sub_pipeline_2</span><span class="p">)</span>
-<span class="linenos">227</span>
-<span class="linenos">228</span>    <span class="n">main_pipeline_config</span> <span class="o">=</span> <span class="n">create_main_pipeline</span><span class="p">(</span><span class="n">sub_pipeline_1</span><span class="p">,</span> <span class="n">sub_pipeline_2</span><span class="p">)</span>
+<span class="linenos">205</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
+<span class="linenos">206</span>        <span class="n">src</span><span class="o">=</span><span class="n">source_config</span><span class="p">,</span>
+<span class="linenos">207</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span><span class="n">add_pipe</span><span class="p">],</span>
+<span class="linenos">208</span>        <span class="n">sink</span><span class="o">=</span><span class="n">sink_config</span><span class="p">,</span>
+<span class="linenos">209</span>    <span class="p">)</span>
+<span class="linenos">210</span>
+<span class="linenos">211</span>
+<span class="linenos">212</span><span class="k">def</span><span class="w"> </span><span class="nf">normalize_to_lists</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="linenos">213</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Flatten lists or wrap individual items in a list for uniform handling.&quot;&quot;&quot;</span>
+<span class="linenos">214</span>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+<span class="linenos">215</span>        <span class="k">return</span> <span class="n">item</span>
+<span class="linenos">216</span>    <span class="k">else</span><span class="p">:</span>
+<span class="linenos">217</span>        <span class="k">return</span> <span class="p">[</span><span class="n">item</span><span class="p">]</span>
+<span class="linenos">218</span>
+<span class="linenos">219</span>
+<span class="linenos">220</span><span class="k">def</span><span class="w"> </span><span class="nf">create_main_pipeline</span><span class="p">(</span>
+<span class="linenos">221</span>    <span class="n">sub_pipeline_1</span><span class="p">:</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+<span class="linenos">222</span>    <span class="n">sub_pipeline_2</span><span class="p">:</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+<span class="linenos">223</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="linenos">224</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create the main pipeline that merges outputs from sub-pipelines.</span>
+<span class="linenos">225</span>
+<span class="linenos">226</span><span class="sd">    After merging, normalising and disaggregating, the pipeline uses</span>
+<span class="linenos">227</span><span class="sd">    :py:func:`PathVariants` to route each item through a cache-aware</span>
+<span class="linenos">228</span><span class="sd">    multiply-by-10 stage:</span>
 <span class="linenos">229</span>
-<span class="linenos">230</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Main pipeline config: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">main_pipeline_config</span><span class="p">)</span>
-<span class="linenos">231</span>
-<span class="linenos">232</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Building the pipeline.&quot;</span><span class="p">)</span>
-<span class="linenos">233</span>    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">build_pipeline</span><span class="p">(</span><span class="n">main_pipeline_config</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
-<span class="linenos">234</span>
-<span class="linenos">235</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Executing the pipeline.&quot;</span><span class="p">)</span>
-<span class="linenos">236</span>    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="linenos">237</span>    <span class="k">with</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
-<span class="linenos">238</span>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
-<span class="linenos">239</span>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-<span class="linenos">240</span>
-<span class="linenos">241</span>    <span class="k">return</span> <span class="n">results</span>
-<span class="linenos">242</span>
-<span class="linenos">243</span>
-<span class="linenos">244</span><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">245</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Run example pipeline and check the result.&quot;&quot;&quot;</span>
-<span class="linenos">246</span>    <span class="n">results</span> <span class="o">=</span> <span class="n">run_pipeline_example</span><span class="p">()</span>
-<span class="linenos">247</span>
-<span class="linenos">248</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Final results: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
-<span class="linenos">249</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Number of items processed: </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">))</span>
-<span class="linenos">250</span>
-<span class="linenos">251</span>    <span class="c1"># Verify expected data flow</span>
-<span class="linenos">252</span>    <span class="n">expected_squared</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">]</span>  <span class="c1"># squares of 0-4</span>
-<span class="linenos">253</span>    <span class="n">expected_added</span> <span class="o">=</span> <span class="p">[</span><span class="mi">110</span><span class="p">,</span> <span class="mi">111</span><span class="p">,</span> <span class="mi">112</span><span class="p">,</span> <span class="mi">113</span><span class="p">,</span> <span class="mi">114</span><span class="p">]</span>  <span class="c1"># 10-14 + 100</span>
-<span class="linenos">254</span>    <span class="n">expected_combined_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected_squared</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected_added</span><span class="p">)</span>
+<span class="linenos">230</span><span class="sd">    - **Cache hit** → ``load_from_cache`` (1 pipe stage)</span>
+<span class="linenos">231</span><span class="sd">    - **Cache miss** → ``multiply_by_10`` → ``store_in_cache`` (2 pipe stages)</span>
+<span class="linenos">232</span>
+<span class="linenos">233</span><span class="sd">    Note that the two paths have different numbers of pipe stages,</span>
+<span class="linenos">234</span><span class="sd">    which PathVariants supports.</span>
+<span class="linenos">235</span>
+<span class="linenos">236</span><span class="sd">    .. code-block:: text</span>
+<span class="linenos">237</span>
+<span class="linenos">238</span><span class="sd">       Merge([sub1, sub2])</span>
+<span class="linenos">239</span><span class="sd">         → normalize_to_lists</span>
+<span class="linenos">240</span><span class="sd">         → disaggregate</span>
+<span class="linenos">241</span><span class="sd">         → PathVariants(cache_router)</span>
+<span class="linenos">242</span><span class="sd">             path 0 (hit):  load_from_cache</span>
+<span class="linenos">243</span><span class="sd">             path 1 (miss): multiply_by_10 → store_in_cache</span>
+<span class="linenos">244</span>
+<span class="linenos">245</span><span class="sd">    Args:</span>
+<span class="linenos">246</span><span class="sd">        sub_pipeline_1: First sub-pipeline configuration</span>
+<span class="linenos">247</span><span class="sd">        sub_pipeline_2: Second sub-pipeline configuration</span>
+<span class="linenos">248</span>
+<span class="linenos">249</span><span class="sd">    Returns:</span>
+<span class="linenos">250</span><span class="sd">        Main pipeline configuration that merges and processes the sub-pipeline outputs.</span>
+<span class="linenos">251</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">252</span>    <span class="n">merge_config</span> <span class="o">=</span> <span class="n">Merge</span><span class="p">([</span><span class="n">sub_pipeline_1</span><span class="p">,</span> <span class="n">sub_pipeline_2</span><span class="p">])</span>
+<span class="linenos">253</span>    <span class="n">normalize_pipe</span> <span class="o">=</span> <span class="n">Pipe</span><span class="p">(</span><span class="n">normalize_to_lists</span><span class="p">)</span>
+<span class="linenos">254</span>    <span class="n">disaggregate_pipe</span> <span class="o">=</span> <span class="n">Disaggregate</span><span class="p">()</span>
 <span class="linenos">255</span>
-<span class="linenos">256</span>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expected_combined_count</span><span class="p">:</span>
-<span class="linenos">257</span>        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-<span class="linenos">258</span>            <span class="sa">f</span><span class="s2">&quot;✗ Unexpected number of items: got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2">, expected </span><span class="si">{</span><span class="n">expected_combined_count</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="linenos">259</span>        <span class="p">)</span>
-<span class="linenos">260</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;✓ Pipeline processed expected number of items&quot;</span><span class="p">)</span>
-<span class="linenos">261</span>
-<span class="linenos">262</span>
-<span class="linenos">263</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">264</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point demonstrating all pipeline configuration classes.&quot;&quot;&quot;</span>
-<span class="linenos">265</span>    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
-<span class="linenos">266</span>        <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> [</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">&quot;</span>
-<span class="linenos">267</span>    <span class="p">)</span>
-<span class="linenos">268</span>
-<span class="linenos">269</span>    <span class="n">run</span><span class="p">()</span>
+<span class="linenos">256</span>    <span class="c1"># Instead of a plain Pipe(multiply_by_10), use PathVariants to</span>
+<span class="linenos">257</span>    <span class="c1"># demonstrate cache-based routing: items already in the cache are</span>
+<span class="linenos">258</span>    <span class="c1"># served instantly, while cache misses compute the result and</span>
+<span class="linenos">259</span>    <span class="c1"># populate the cache for future lookups.</span>
+<span class="linenos">260</span>    <span class="n">cached_multiply</span> <span class="o">=</span> <span class="n">PathVariants</span><span class="p">(</span>
+<span class="linenos">261</span>        <span class="n">router</span><span class="o">=</span><span class="n">cache_router</span><span class="p">,</span>
+<span class="linenos">262</span>        <span class="n">paths</span><span class="o">=</span><span class="p">[</span>
+<span class="linenos">263</span>            <span class="p">[</span><span class="n">Pipe</span><span class="p">(</span><span class="n">load_from_cache</span><span class="p">)],</span>  <span class="c1"># path 0: 1-stage (fast)</span>
+<span class="linenos">264</span>            <span class="p">[</span>
+<span class="linenos">265</span>                <span class="n">Pipe</span><span class="p">(</span><span class="n">multiply_by_10</span><span class="p">),</span>
+<span class="linenos">266</span>                <span class="n">Pipe</span><span class="p">(</span><span class="n">store_in_cache</span><span class="p">),</span>
+<span class="linenos">267</span>            <span class="p">],</span>  <span class="c1"># path 1: 2-stage (compute + cache)</span>
+<span class="linenos">268</span>        <span class="p">],</span>
+<span class="linenos">269</span>    <span class="p">)</span>
 <span class="linenos">270</span>
-<span class="linenos">271</span>
-<span class="linenos">272</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-<span class="linenos">273</span>    <span class="n">main</span><span class="p">()</span>
+<span class="linenos">271</span>    <span class="n">sink_config</span> <span class="o">=</span> <span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="linenos">272</span>
+<span class="linenos">273</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
+<span class="linenos">274</span>        <span class="n">src</span><span class="o">=</span><span class="n">merge_config</span><span class="p">,</span>
+<span class="linenos">275</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span><span class="n">normalize_pipe</span><span class="p">,</span> <span class="n">disaggregate_pipe</span><span class="p">,</span> <span class="n">cached_multiply</span><span class="p">],</span>
+<span class="linenos">276</span>        <span class="n">sink</span><span class="o">=</span><span class="n">sink_config</span><span class="p">,</span>
+<span class="linenos">277</span>    <span class="p">)</span>
+<span class="linenos">278</span>
+<span class="linenos">279</span>
+<span class="linenos">280</span><span class="k">def</span><span class="w"> </span><span class="nf">run_pipeline_example</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="linenos">281</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Execute the complete pipeline example and return results.</span>
+<span class="linenos">282</span>
+<span class="linenos">283</span><span class="sd">    Returns:</span>
+<span class="linenos">284</span><span class="sd">        List of processed integers from the merged pipeline execution.</span>
+<span class="linenos">285</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">286</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating sub-pipeline configurations...&quot;</span><span class="p">)</span>
+<span class="linenos">287</span>
+<span class="linenos">288</span>    <span class="n">sub_pipeline_1</span> <span class="o">=</span> <span class="n">create_sub_pipeline_1</span><span class="p">()</span>
+<span class="linenos">289</span>    <span class="n">sub_pipeline_2</span> <span class="o">=</span> <span class="n">create_sub_pipeline_2</span><span class="p">()</span>
+<span class="linenos">290</span>
+<span class="linenos">291</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sub-pipeline 1: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sub_pipeline_1</span><span class="p">)</span>
+<span class="linenos">292</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sub-pipeline 2: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sub_pipeline_2</span><span class="p">)</span>
+<span class="linenos">293</span>
+<span class="linenos">294</span>    <span class="n">main_pipeline_config</span> <span class="o">=</span> <span class="n">create_main_pipeline</span><span class="p">(</span><span class="n">sub_pipeline_1</span><span class="p">,</span> <span class="n">sub_pipeline_2</span><span class="p">)</span>
+<span class="linenos">295</span>
+<span class="linenos">296</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Main pipeline config: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">main_pipeline_config</span><span class="p">)</span>
+<span class="linenos">297</span>
+<span class="linenos">298</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Building the pipeline.&quot;</span><span class="p">)</span>
+<span class="linenos">299</span>    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">build_pipeline</span><span class="p">(</span><span class="n">main_pipeline_config</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="linenos">300</span>
+<span class="linenos">301</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Executing the pipeline.&quot;</span><span class="p">)</span>
+<span class="linenos">302</span>    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">303</span>    <span class="k">with</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
+<span class="linenos">304</span>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
+<span class="linenos">305</span>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+<span class="linenos">306</span>
+<span class="linenos">307</span>    <span class="k">return</span> <span class="n">results</span>
+<span class="linenos">308</span>
+<span class="linenos">309</span>
+<span class="linenos">310</span><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">311</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Run example pipeline and check the result.&quot;&quot;&quot;</span>
+<span class="linenos">312</span>    <span class="n">results</span> <span class="o">=</span> <span class="n">run_pipeline_example</span><span class="p">()</span>
+<span class="linenos">313</span>
+<span class="linenos">314</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Final results: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+<span class="linenos">315</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Number of items processed: </span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">))</span>
+<span class="linenos">316</span>
+<span class="linenos">317</span>    <span class="c1"># Verify expected data flow</span>
+<span class="linenos">318</span>    <span class="n">expected_squared</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">]</span>  <span class="c1"># squares of 0-4</span>
+<span class="linenos">319</span>    <span class="n">expected_added</span> <span class="o">=</span> <span class="p">[</span><span class="mi">110</span><span class="p">,</span> <span class="mi">111</span><span class="p">,</span> <span class="mi">112</span><span class="p">,</span> <span class="mi">113</span><span class="p">,</span> <span class="mi">114</span><span class="p">]</span>  <span class="c1"># 10-14 + 100</span>
+<span class="linenos">320</span>    <span class="n">expected_combined_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected_squared</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected_added</span><span class="p">)</span>
+<span class="linenos">321</span>
+<span class="linenos">322</span>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expected_combined_count</span><span class="p">:</span>
+<span class="linenos">323</span>        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+<span class="linenos">324</span>            <span class="sa">f</span><span class="s2">&quot;✗ Unexpected number of items: got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2">, expected </span><span class="si">{</span><span class="n">expected_combined_count</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="linenos">325</span>        <span class="p">)</span>
+<span class="linenos">326</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;✓ Pipeline processed expected number of items&quot;</span><span class="p">)</span>
+<span class="linenos">327</span>
+<span class="linenos">328</span>
+<span class="linenos">329</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">330</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point demonstrating all pipeline configuration classes.&quot;&quot;&quot;</span>
+<span class="linenos">331</span>    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+<span class="linenos">332</span>        <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> [</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">&quot;</span>
+<span class="linenos">333</span>    <span class="p">)</span>
+<span class="linenos">334</span>
+<span class="linenos">335</span>    <span class="n">run</span><span class="p">()</span>
+<span class="linenos">336</span>
+<span class="linenos">337</span>
+<span class="linenos">338</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="linenos">339</span>    <span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
 </details></section>
@@ -845,13 +924,13 @@
 <p class="rubric">Functions</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.main">
-<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L263-L269"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.main" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L329-L335"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.main" title="Link to this definition">¶</a></dt>
 <dd><p>Main entry point demonstrating all pipeline configuration classes.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.create_sub_pipeline_1">
-<span class="sig-name descname"><span class="pre">create_sub_pipeline_1</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L119-L141"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.create_sub_pipeline_1" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_sub_pipeline_1</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L163-L185"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.create_sub_pipeline_1" title="Link to this definition">¶</a></dt>
 <dd><p>Create a sub-pipeline that squares numbers and aggregates them.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>range(5)
  → square
@@ -869,7 +948,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.create_sub_pipeline_2">
-<span class="sig-name descname"><span class="pre">create_sub_pipeline_2</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L144-L165"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.create_sub_pipeline_2" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_sub_pipeline_2</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L188-L209"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.create_sub_pipeline_2" title="Link to this definition">¶</a></dt>
 <dd><p>Create a sub-pipeline that adds 100 to numbers.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>range(10,15)
  → add_100
@@ -886,12 +965,23 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.create_main_pipeline">
-<span class="sig-name descname"><span class="pre">create_main_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sub_pipeline_1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_pipeline_2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L176-L211"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.create_main_pipeline" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_main_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sub_pipeline_1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_pipeline_2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L220-L277"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.create_main_pipeline" title="Link to this definition">¶</a></dt>
 <dd><p>Create the main pipeline that merges outputs from sub-pipelines.</p>
+<p>After merging, normalising and disaggregating, the pipeline uses
+<code class="xref py py-func docutils literal notranslate"><span class="pre">PathVariants()</span></code> to route each item through a cache-aware
+multiply-by-10 stage:</p>
+<ul class="simple">
+<li><p><strong>Cache hit</strong> → <code class="docutils literal notranslate"><span class="pre">load_from_cache</span></code> (1 pipe stage)</p></li>
+<li><p><strong>Cache miss</strong> → <code class="docutils literal notranslate"><span class="pre">multiply_by_10</span></code> → <code class="docutils literal notranslate"><span class="pre">store_in_cache</span></code> (2 pipe stages)</p></li>
+</ul>
+<p>Note that the two paths have different numbers of pipe stages,
+which PathVariants supports.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merge([sub1, sub2])
   → normalize_to_lists
   → disaggregate
-  → multiply_by_10
+  → PathVariants(cache_router)
+      path 0 (hit):  load_from_cache
+      path 1 (miss): multiply_by_10 → store_in_cache
 </pre></div>
 </div>
 <dl class="field-list simple">
@@ -909,31 +999,51 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.square">
-<span class="sig-name descname"><span class="pre">square</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L104-L106"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.square" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">square</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L116-L118"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.square" title="Link to this definition">¶</a></dt>
 <dd><p>Square the input number.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.add_100">
-<span class="sig-name descname"><span class="pre">add_100</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L109-L111"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.add_100" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_100</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L121-L123"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.add_100" title="Link to this definition">¶</a></dt>
 <dd><p>Add 100 to the input number.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.multiply_by_10">
-<span class="sig-name descname"><span class="pre">multiply_by_10</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L114-L116"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.multiply_by_10" title="Link to this definition">¶</a></dt>
-<dd><p>Multiply the input by 10.</p>
+<span class="sig-name descname"><span class="pre">multiply_by_10</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L148-L153"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.multiply_by_10" title="Link to this definition">¶</a></dt>
+<dd><p>Multiply the input by 10 (slow path, first stage).</p>
+<p>Returns a (key, result) tuple so the next stage can store it in the cache.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pipeline_definitions.store_in_cache">
+<span class="sig-name descname"><span class="pre">store_in_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L156-L160"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.store_in_cache" title="Link to this definition">¶</a></dt>
+<dd><p>Store the computed result in the cache and return it (slow path, second stage).</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.normalize_to_lists">
-<span class="sig-name descname"><span class="pre">normalize_to_lists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L168-L173"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.normalize_to_lists" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">normalize_to_lists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L212-L217"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.normalize_to_lists" title="Link to this definition">¶</a></dt>
 <dd><p>Flatten lists or wrap individual items in a list for uniform handling.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="pipeline_definitions.cache_router">
+<span class="sig-name descname"><span class="pre">cache_router</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L135-L140"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.cache_router" title="Link to this definition">¶</a></dt>
+<dd><p>Route items based on cache membership.</p>
+<p>Returns 0 for cache hits (fast path) and 1 for cache misses (slow path).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pipeline_definitions.load_from_cache">
+<span class="sig-name descname"><span class="pre">load_from_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L143-L145"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.load_from_cache" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve a previously computed result from the cache (fast path).</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="pipeline_definitions.run_pipeline_example">
-<span class="sig-name descname"><span class="pre">run_pipeline_example</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L214-L241"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.run_pipeline_example" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">run_pipeline_example</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_definitions.py?#L280-L307"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_definitions.run_pipeline_example" title="Link to this definition">¶</a></dt>
 <dd><p>Execute the complete pipeline example and return results.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -1010,7 +1120,10 @@
 <li><a class="reference internal" href="#pipeline_definitions.square"><code class="docutils literal notranslate"><span class="pre">square()</span></code></a></li>
 <li><a class="reference internal" href="#pipeline_definitions.add_100"><code class="docutils literal notranslate"><span class="pre">add_100()</span></code></a></li>
 <li><a class="reference internal" href="#pipeline_definitions.multiply_by_10"><code class="docutils literal notranslate"><span class="pre">multiply_by_10()</span></code></a></li>
+<li><a class="reference internal" href="#pipeline_definitions.store_in_cache"><code class="docutils literal notranslate"><span class="pre">store_in_cache()</span></code></a></li>
 <li><a class="reference internal" href="#pipeline_definitions.normalize_to_lists"><code class="docutils literal notranslate"><span class="pre">normalize_to_lists()</span></code></a></li>
+<li><a class="reference internal" href="#pipeline_definitions.cache_router"><code class="docutils literal notranslate"><span class="pre">cache_router()</span></code></a></li>
+<li><a class="reference internal" href="#pipeline_definitions.load_from_cache"><code class="docutils literal notranslate"><span class="pre">load_from_cache()</span></code></a></li>
 <li><a class="reference internal" href="#pipeline_definitions.run_pipeline_example"><code class="docutils literal notranslate"><span class="pre">run_pipeline_example()</span></code></a></li>
 </ul>
 </li>
@@ -1026,7 +1139,7 @@
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=f129cdf0"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=1437fa6d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

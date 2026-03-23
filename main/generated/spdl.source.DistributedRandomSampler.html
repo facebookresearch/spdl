@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.source.DistributedRandomSampler - SPDL 0.3.0 documentation</title>
+        <title>spdl.source.DistributedRandomSampler - SPDL 0.4.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.3.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.4.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.3.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.4.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -254,6 +254,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/autoresearch.html">Autoresearch</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -270,6 +271,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="imagenet_classification.html">Imagenet classification</a></li>
@@ -286,6 +288,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_wav.html">Benchmark wav</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_tarfile.html">Benchmark tarfile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
@@ -366,9 +369,6 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
@@ -444,6 +444,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
@@ -504,38 +506,12 @@
 <h1>spdl.source.DistributedRandomSampler<a class="headerlink" href="#spdl-source-distributedrandomsampler" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.source.DistributedRandomSampler">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DistributedRandomSampler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">world_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_draws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L183-L316"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DistributedRandomSampler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">world_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_draws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L188-L360"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Sample dataset indices for the given distributed node while applying randomness.</p>
 <p>This sampler ensures that each rank in a distributed training setup gets a disjoint
 subset of the data indices. When distributed training is not initialized, it returns
 all indices.</p>
-<p>This sampler can apply two randomness; shuffling and wieghted sampling.</p>
-<div class="note admonition">
-<p class="admonition-title">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sampler</span> <span class="o">=</span> <span class="n">DistributedRandomSampler</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
-<span class="go">[4, 2, 0, 1, 3]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># If not shuffling, the second iteratoin generates the same sequence</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
-<span class="go">[4, 2, 0, 1, 3]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">sampler</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
-<span class="go">[3, 2, 4, 1, 5]</span>
-</pre></div>
-</div>
-<p>You can use <a class="reference internal" href="spdl.source.utils.embed_shuffle.html#spdl.source.utils.embed_shuffle" title="spdl.source.utils.embed_shuffle"><code class="xref py py-func docutils literal notranslate"><span class="pre">embed_shuffle()</span></code></a> to shuffle automatically
-at each iteration.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sampler</span> <span class="o">=</span> <span class="n">embed_shuffle</span><span class="p">(</span><span class="n">DistributedRandomSampler</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
-<span class="go">[4, 2, 0, 1, 3]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
-<span class="go">[3, 2, 4, 1, 5]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
-<span class="go">[2, 1, 4, 3, 5]</span>
-</pre></div>
-</div>
-</div>
 <div class="note admonition">
 <p class="admonition-title">Example - Distributed sampling</p>
 <p>The samplers from all ranks together cover the entire dataset.</p>
@@ -552,6 +528,62 @@ at each iteration.</p>
 </pre></div>
 </div>
 </div>
+<p>Without calling <a class="reference internal" href="#spdl.source.DistributedRandomSampler.shuffle" title="spdl.source.DistributedRandomSampler.shuffle"><code class="xref py py-meth docutils literal notranslate"><span class="pre">shuffle()</span></code></a>, the sampler produces the <strong>same</strong> sequence
+on every iteration. To get a different order each epoch, call
+<code class="docutils literal notranslate"><span class="pre">sampler.shuffle(seed=epoch)</span></code> before iterating:</p>
+<div class="note admonition">
+<p class="admonition-title">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sampler</span> <span class="o">=</span> <span class="n">DistributedRandomSampler</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+<span class="go">[4, 2, 0, 1, 3]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># If not shuffling, the second iteratoin generates the same sequence</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+<span class="go">[4, 2, 0, 1, 3]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sampler</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+<span class="go">[3, 2, 4, 1, 5]</span>
+</pre></div>
+</div>
+</div>
+<p>You can use <a class="reference internal" href="spdl.source.utils.embed_shuffle.html#spdl.source.utils.embed_shuffle" title="spdl.source.utils.embed_shuffle"><code class="xref py py-func docutils literal notranslate"><span class="pre">embed_shuffle()</span></code></a> to shuffle automatically
+at each iteration.</p>
+<div class="note admonition">
+<p class="admonition-title">Example - Auto-shuffle</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sampler</span> <span class="o">=</span> <span class="n">embed_shuffle</span><span class="p">(</span><span class="n">DistributedRandomSampler</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+<span class="go">[4, 2, 0, 1, 3]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+<span class="go">[3, 2, 4, 1, 5]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+<span class="go">[2, 1, 4, 3, 5]</span>
+</pre></div>
+</div>
+</div>
+<p>This is especially useful when the sampler is iterated in a subprocess via
+<a class="reference internal" href="spdl.pipeline.iterate_in_subprocess.html#spdl.pipeline.iterate_in_subprocess" title="spdl.pipeline.iterate_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">iterate_in_subprocess()</span></code></a>, where calling
+<a class="reference internal" href="#spdl.source.DistributedRandomSampler.shuffle" title="spdl.source.DistributedRandomSampler.shuffle"><code class="xref py py-meth docutils literal notranslate"><span class="pre">shuffle()</span></code></a> manually from the main process has no effect on the subprocess
+copy.</p>
+<div class="note admonition">
+<p class="admonition-title">Example - Running in a subprocess</p>
+<p>When iterating the sampler in a subprocess, wrap it with
+<a class="reference internal" href="spdl.source.utils.embed_shuffle.html#spdl.source.utils.embed_shuffle" title="spdl.source.utils.embed_shuffle"><code class="xref py py-func docutils literal notranslate"><span class="pre">embed_shuffle()</span></code></a> so that each epoch is automatically
+reshuffled inside the subprocess:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">iterate_in_subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistributedRandomSampler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.source.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">embed_shuffle</span>
+
+<span class="n">sampler</span> <span class="o">=</span> <span class="n">DistributedRandomSampler</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">)</span>
+<span class="n">src</span> <span class="o">=</span> <span class="n">iterate_in_subprocess</span><span class="p">(</span><span class="n">embed_shuffle</span><span class="p">(</span><span class="n">sampler</span><span class="p">))</span>
+
+<span class="c1"># Each epoch, ranks generate different disjoint set of indices</span>
+<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_epochs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">src</span><span class="p">:</span>
+        <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+<p>This sampler supports wieghted sampling.</p>
 <div class="note admonition">
 <p class="admonition-title">Example - Weighted sampling</p>
 <p>By providing sampling weights, indices are drawn to follow the sampling weights.
@@ -577,18 +609,17 @@ cover the entire dataset.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n</strong> – The size of the dataset.</p></li>
 <li><p><strong>rank</strong> – The rank in the distributed communication config.
-You can fetch the values with <a class="reference external" href="https://docs.pytorch.org/docs/stable/distributed.html#torch.distributed.get_rank" title="(in PyTorch v2.10)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.distributed.get_rank()</span></code></a>.</p></li>
+You can fetch the values with <a class="reference external" href="https://docs.pytorch.org/docs/stable/distributed.html#torch.distributed.get_rank" title="(in PyTorch v2.11)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.distributed.get_rank()</span></code></a>.</p></li>
 <li><p><strong>world_size</strong> – The number of ranks in the distributed communication config.
-You can fetch the values with <a class="reference external" href="https://docs.pytorch.org/docs/stable/distributed.html#torch.distributed.get_world_size" title="(in PyTorch v2.10)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.distributed.get_world_size()</span></code></a>.</p></li>
-<li><p><strong>num_draws</strong> – The number of samples to draw at each iteration.
-If peforming weighted sampling, (<code class="docutils literal notranslate"><span class="pre">deterministic=False</span></code> and
-<code class="docutils literal notranslate"><span class="pre">weights</span></code> is provided)  then it can be greater than the
-size of dataset. Otherwise, it must be smaller than or equal
-to the size of dataset.</p></li>
+You can fetch the values with <a class="reference external" href="https://docs.pytorch.org/docs/stable/distributed.html#torch.distributed.get_world_size" title="(in PyTorch v2.11)"><code class="xref py py-func docutils literal notranslate"><span class="pre">torch.distributed.get_world_size()</span></code></a>.</p></li>
+<li><p><strong>num_draws</strong> – <em>Oprional</em> The number of samples to draw at each iteration.
+When performing weighted sampling (<code class="docutils literal notranslate"><span class="pre">weights</span></code> is provided),
+this can be greater than the size of the dataset. Otherwise,
+it must be smaller than or equal to the size of the dataset.</p></li>
 <li><p><strong>weights</strong> – <em>Optional</em> The sampling weight of each sample in the dataset.
-When provided, the length of the sequence must match the size of the dataset.
-(<code class="docutils literal notranslate"><span class="pre">size</span></code>).
-This option is ignored if <code class="docutils literal notranslate"><span class="pre">deterministic=True</span></code>.</p></li>
+When provided, the length of the sequence must match the size of
+the dataset. (<code class="docutils literal notranslate"><span class="pre">size</span></code>).
+Indices are drawn with replacement when weights are provided.</p></li>
 <li><p><strong>seed</strong> – The seed value for generating the sequence.</p></li>
 </ul>
 </dd>
@@ -605,7 +636,7 @@ This option is ignored if <code class="docutils literal notranslate"><span class
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.source.DistributedRandomSampler.__iter__">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L299-L312"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler.__iter__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L337-L350"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler.__iter__" title="Link to this definition">¶</a></dt>
 <dd><p>Iterate over the indices assigned to the current rank.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
@@ -616,14 +647,18 @@ This option is ignored if <code class="docutils literal notranslate"><span class
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.source.DistributedRandomSampler.__len__">
-<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L295-L297"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler.__len__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L333-L335"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler.__len__" title="Link to this definition">¶</a></dt>
 <dd><p>The number of indices returned by this sampler.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.source.DistributedRandomSampler.shuffle">
-<span class="sig-name descname"><span class="pre">shuffle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L314-L316"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler.shuffle" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">shuffle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/source/_sampler.py?#L352-L360"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.source.DistributedRandomSampler.shuffle" title="Link to this definition">¶</a></dt>
 <dd><p>Set the random seed for future iterations.</p>
+<p>The resulting sequence depends only on the given <code class="docutils literal notranslate"><span class="pre">seed</span></code> value and is not
+affected by any prior iterations or previous calls to <a class="reference internal" href="#spdl.source.DistributedRandomSampler.shuffle" title="spdl.source.DistributedRandomSampler.shuffle"><code class="xref py py-meth docutils literal notranslate"><span class="pre">shuffle()</span></code></a>.
+Calling <code class="docutils literal notranslate"><span class="pre">shuffle(seed=K)</span></code> always produces the same sequence for a given
+sampler configuration, regardless of history.</p>
 </dd></dl>
 
 </dd></dl>
@@ -686,7 +721,7 @@ This option is ignored if <code class="docutils literal notranslate"><span class
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=f129cdf0"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=1437fa6d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

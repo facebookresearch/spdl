@@ -1,0 +1,14 @@
+spdl.pipeline.PriorityExecutorEntrypoint
+========================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: PriorityExecutorEntrypoint
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~PriorityExecutorEntrypoint.map
+      ~PriorityExecutorEntrypoint.shutdown
+      ~PriorityExecutorEntrypoint.submit

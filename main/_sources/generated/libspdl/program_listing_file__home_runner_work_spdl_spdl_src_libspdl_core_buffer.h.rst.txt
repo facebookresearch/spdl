@@ -40,13 +40,15 @@ Program Listing for File buffer.h
      size_t depth = sizeof(uint8_t);
    
      void* data();
+   
+     void* data() const;
    };
    
    using CPUBufferPtr = std::unique_ptr<CPUBuffer>;
    
    // Factory functions
    
-   CPUBufferPtr cpu_buffer(
+   [[nodiscard]] CPUBufferPtr cpu_buffer(
        const std::vector<size_t>& shape,
        ElemClass elem_class = ElemClass::UInt,
        size_t depth = sizeof(uint8_t),

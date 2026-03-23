@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="spdl.pipeline.defs" href="spdl.pipeline.defs.html" /><link rel="prev" title="API Reference" href="../api.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.pipeline - SPDL 0.3.0 documentation</title>
+        <title>spdl.pipeline - SPDL 0.4.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.3.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.4.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.3.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.4.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -254,6 +254,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/autoresearch.html">Autoresearch</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -270,6 +271,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="imagenet_classification.html">Imagenet classification</a></li>
@@ -286,6 +288,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_wav.html">Benchmark wav</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_tarfile.html">Benchmark tarfile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
@@ -366,9 +369,6 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac2ad95ac922a100ec27340436eb94940.html">Define _IS_AUDIO</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1ac99c83df576500933a3691deb137be6d.html">Define _IS_IMAGE</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/define_frames_8h_1a9beaa64113e413112d43491ba5c13670.html">Define _IS_VIDEO</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
@@ -444,6 +444,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
@@ -533,6 +535,18 @@
 </table>
 </div>
 </section>
+<section id="is-epoch-end">
+<h3>is_epoch_end<a class="headerlink" href="#is-epoch-end" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.is_epoch_end.html#spdl.pipeline.is_epoch_end" title="spdl.pipeline.is_epoch_end"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_epoch_end</span></code></a></p></td>
+<td><p>Test whether the input item is an epoch-end sentinel value.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="profile-pipeline">
 <h3>profile_pipeline<a class="headerlink" href="#profile-pipeline" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
@@ -617,6 +631,42 @@
 </table>
 </div>
 <p class="rubric">Classes</p>
+</section>
+<section id="backgroundtask">
+<h3>BackgroundTask<a class="headerlink" href="#backgroundtask" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.BackgroundTask.html#spdl.pipeline.BackgroundTask" title="spdl.pipeline.BackgroundTask"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BackgroundTask</span></code></a></p></td>
+<td><p>A background task that runs alongside pipeline stages.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="processgroupresourceusage">
+<h3>ProcessGroupResourceUsage<a class="headerlink" href="#processgroupresourceusage" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage" title="spdl.pipeline.ProcessGroupResourceUsage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ProcessGroupResourceUsage</span></code></a></p></td>
+<td><p>Snapshot of resource usage across all processes in the process group.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="processgroupstatsmonitor">
+<h3>ProcessGroupStatsMonitor<a class="headerlink" href="#processgroupstatsmonitor" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.ProcessGroupStatsMonitor.html#spdl.pipeline.ProcessGroupStatsMonitor" title="spdl.pipeline.ProcessGroupStatsMonitor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ProcessGroupStatsMonitor</span></code></a></p></td>
+<td><p>Background task that spawns a subprocess to collect per-process-group stats.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </section>
 <section id="profileresult">
 <h3>ProfileResult<a class="headerlink" href="#profileresult" title="Link to this heading">¶</a></h3>
@@ -714,6 +764,18 @@
 </table>
 </div>
 </section>
+<section id="stageinfo">
+<h3>StageInfo<a class="headerlink" href="#stageinfo" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.StageInfo.html#spdl.pipeline.StageInfo" title="spdl.pipeline.StageInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StageInfo</span></code></a></p></td>
+<td><p>Structured identity for a pipeline stage.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="statsqueue">
 <h3>StatsQueue<a class="headerlink" href="#statsqueue" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
@@ -737,6 +799,54 @@
 </tbody>
 </table>
 </div>
+</section>
+<section id="priorityexecutorentrypoint">
+<h3>PriorityExecutorEntrypoint<a class="headerlink" href="#priorityexecutorentrypoint" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.PriorityExecutorEntrypoint.html#spdl.pipeline.PriorityExecutorEntrypoint" title="spdl.pipeline.PriorityExecutorEntrypoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PriorityExecutorEntrypoint</span></code></a></p></td>
+<td><p>Per-stage executor proxy with a fixed priority.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="priorityinterpreterpoolexecutor">
+<h3>PriorityInterpreterPoolExecutor<a class="headerlink" href="#priorityinterpreterpoolexecutor" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.PriorityInterpreterPoolExecutor.html#spdl.pipeline.PriorityInterpreterPoolExecutor" title="spdl.pipeline.PriorityInterpreterPoolExecutor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PriorityInterpreterPoolExecutor</span></code></a></p></td>
+<td><p>Stub for Python &lt; 3.14.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="prioritythreadpoolexecutor">
+<h3>PriorityThreadPoolExecutor<a class="headerlink" href="#prioritythreadpoolexecutor" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.PriorityThreadPoolExecutor.html#spdl.pipeline.PriorityThreadPoolExecutor" title="spdl.pipeline.PriorityThreadPoolExecutor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PriorityThreadPoolExecutor</span></code></a></p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> wrapper whose internal queue is priority-ordered.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="priorityprocesspoolexecutor">
+<h3>PriorityProcessPoolExecutor<a class="headerlink" href="#priorityprocesspoolexecutor" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.PriorityProcessPoolExecutor.html#spdl.pipeline.PriorityProcessPoolExecutor" title="spdl.pipeline.PriorityProcessPoolExecutor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PriorityProcessPoolExecutor</span></code></a></p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> wrapper whose work-ID queue is priority-ordered.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <p class="rubric">Exceptions</p>
 </section>
 <section id="pipelinefailure">
@@ -746,6 +856,19 @@
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.PipelineFailure.html#spdl.pipeline.PipelineFailure" title="spdl.pipeline.PipelineFailure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PipelineFailure</span></code></a></p></td>
 <td><p>Thrown by <a class="reference internal" href="spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.Pipeline</span></code></a> when pipeline encounters an error.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Others</p>
+</section>
+<section id="backgroundtaskfactory">
+<h3>BackgroundTaskFactory<a class="headerlink" href="#backgroundtaskfactory" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="spdl.pipeline.BackgroundTaskFactory.html#spdl.pipeline.BackgroundTaskFactory" title="spdl.pipeline.BackgroundTaskFactory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BackgroundTaskFactory</span></code></a></p></td>
+<td><p>alias of <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a>[[], <a class="reference internal" href="spdl.pipeline.BackgroundTask.html#spdl.pipeline.BackgroundTask" title="spdl.pipeline._bg_task.BackgroundTask"><code class="xref py py-class docutils literal notranslate"><span class="pre">BackgroundTask</span></code></a>]</p></td>
 </tr>
 </tbody>
 </table>
@@ -814,6 +937,7 @@
 <li><a class="reference internal" href="#api-reference">API Reference</a><ul>
 <li><a class="reference internal" href="#build-pipeline">build_pipeline</a></li>
 <li><a class="reference internal" href="#is-eof">is_eof</a></li>
+<li><a class="reference internal" href="#is-epoch-end">is_epoch_end</a></li>
 <li><a class="reference internal" href="#profile-pipeline">profile_pipeline</a></li>
 <li><a class="reference internal" href="#cache-iterator">cache_iterator</a></li>
 <li><a class="reference internal" href="#create-task">create_task</a></li>
@@ -821,6 +945,9 @@
 <li><a class="reference internal" href="#iterate-in-subprocess">iterate_in_subprocess</a></li>
 <li><a class="reference internal" href="#run-pipeline-in-subprocess">run_pipeline_in_subprocess</a></li>
 <li><a class="reference internal" href="#run-pipeline-in-subinterpreter">run_pipeline_in_subinterpreter</a></li>
+<li><a class="reference internal" href="#backgroundtask">BackgroundTask</a></li>
+<li><a class="reference internal" href="#processgroupresourceusage">ProcessGroupResourceUsage</a></li>
+<li><a class="reference internal" href="#processgroupstatsmonitor">ProcessGroupStatsMonitor</a></li>
 <li><a class="reference internal" href="#profileresult">ProfileResult</a></li>
 <li><a class="reference internal" href="#profilehook">ProfileHook</a></li>
 <li><a class="reference internal" href="#pipeline">Pipeline</a></li>
@@ -829,9 +956,15 @@
 <li><a class="reference internal" href="#taskstatshook">TaskStatsHook</a></li>
 <li><a class="reference internal" href="#taskperfstats">TaskPerfStats</a></li>
 <li><a class="reference internal" href="#asyncqueue">AsyncQueue</a></li>
+<li><a class="reference internal" href="#stageinfo">StageInfo</a></li>
 <li><a class="reference internal" href="#statsqueue">StatsQueue</a></li>
 <li><a class="reference internal" href="#queueperfstats">QueuePerfStats</a></li>
+<li><a class="reference internal" href="#priorityexecutorentrypoint">PriorityExecutorEntrypoint</a></li>
+<li><a class="reference internal" href="#priorityinterpreterpoolexecutor">PriorityInterpreterPoolExecutor</a></li>
+<li><a class="reference internal" href="#prioritythreadpoolexecutor">PriorityThreadPoolExecutor</a></li>
+<li><a class="reference internal" href="#priorityprocesspoolexecutor">PriorityProcessPoolExecutor</a></li>
 <li><a class="reference internal" href="#pipelinefailure">PipelineFailure</a></li>
+<li><a class="reference internal" href="#backgroundtaskfactory">BackgroundTaskFactory</a></li>
 </ul>
 </li>
 </ul>
@@ -846,7 +979,7 @@
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=f129cdf0"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=1437fa6d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
