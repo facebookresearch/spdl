@@ -1,0 +1,6 @@
+spdl.io.audio\_encode\_config
+=============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: audio_encode_config

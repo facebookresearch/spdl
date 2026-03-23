@@ -1,0 +1,14 @@
+.. _exhale_function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8:
+
+Function spdl::core::create_reference_audio_frame
+=================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::create_reference_audio_frame(const std::string&, const void *, int, const std::array<size_t, 2>&, const std::array<int64_t, 2>&, int, int64_t)
+   :project: libspdl

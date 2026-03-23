@@ -1,0 +1,6 @@
+spdl.source.utils.embed\_shuffle
+================================
+
+.. currentmodule:: spdl.source.utils
+
+.. autofunction:: embed_shuffle

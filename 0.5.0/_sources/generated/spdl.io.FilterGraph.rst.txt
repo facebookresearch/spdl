@@ -1,0 +1,15 @@
+spdl.io.FilterGraph
+===================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: FilterGraph
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~FilterGraph.add_frames
+      ~FilterGraph.dump
+      ~FilterGraph.flush
+      ~FilterGraph.get_frames

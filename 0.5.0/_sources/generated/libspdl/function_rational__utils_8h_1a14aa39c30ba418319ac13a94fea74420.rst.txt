@@ -1,0 +1,14 @@
+.. _exhale_function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420:
+
+Function spdl::core::to_double
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::to_double(const Rational&)
+   :project: libspdl

@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1a49d051162e06f26b896c8aef4605524b:
+
+Function spdl::core::set_ffmpeg_log_level
+=========================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::set_ffmpeg_log_level(int)
+   :project: libspdl

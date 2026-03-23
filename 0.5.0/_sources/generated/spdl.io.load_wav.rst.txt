@@ -1,0 +1,6 @@
+spdl.io.load\_wav
+=================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: load_wav

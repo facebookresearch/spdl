@@ -1,0 +1,6 @@
+spdl.source.imagenet.get\_mappings
+==================================
+
+.. currentmodule:: spdl.source.imagenet
+
+.. autofunction:: get_mappings

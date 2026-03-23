@@ -1,0 +1,14 @@
+.. _exhale_function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa:
+
+Function spdl::core::cpu_buffer
+===============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_buffer.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::cpu_buffer(const std::vector<size_t>&, ElemClass, size_t, std::shared_ptr<CPUStorage>)
+   :project: libspdl

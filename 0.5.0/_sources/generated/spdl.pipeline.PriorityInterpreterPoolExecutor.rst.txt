@@ -1,0 +1,15 @@
+spdl.pipeline.PriorityInterpreterPoolExecutor
+=============================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: PriorityInterpreterPoolExecutor
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~PriorityInterpreterPoolExecutor.get_executor
+      ~PriorityInterpreterPoolExecutor.map
+      ~PriorityInterpreterPoolExecutor.shutdown
+      ~PriorityInterpreterPoolExecutor.submit

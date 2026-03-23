@@ -1,0 +1,8 @@
+spdl.autoresearch.core.TERMINAL\_STATUSES
+=========================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autodata:: TERMINAL_STATUSES
+   :annotation:
+   :no-value:

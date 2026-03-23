@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11:
+
+Template Function spdl::core::trace_counter
+===========================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::trace_counter(int, Number)
+   :project: libspdl

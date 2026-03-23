@@ -1,0 +1,14 @@
+.. _exhale_typedef_filter__graph_8h_1a29554b40f89e4b227521ff86ccf69b8b:
+
+Typedef spdl::core::FilterGraphPtr
+==================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::FilterGraphPtr
+   :project: libspdl

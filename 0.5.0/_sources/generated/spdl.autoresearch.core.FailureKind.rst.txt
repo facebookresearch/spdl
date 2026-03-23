@@ -1,0 +1,77 @@
+spdl.autoresearch.core.FailureKind
+==================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: FailureKind
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~FailureKind.encode
+      ~FailureKind.replace
+      ~FailureKind.split
+      ~FailureKind.rsplit
+      ~FailureKind.join
+      ~FailureKind.capitalize
+      ~FailureKind.casefold
+      ~FailureKind.title
+      ~FailureKind.center
+      ~FailureKind.count
+      ~FailureKind.expandtabs
+      ~FailureKind.find
+      ~FailureKind.partition
+      ~FailureKind.index
+      ~FailureKind.ljust
+      ~FailureKind.lower
+      ~FailureKind.lstrip
+      ~FailureKind.rfind
+      ~FailureKind.rindex
+      ~FailureKind.rjust
+      ~FailureKind.rstrip
+      ~FailureKind.rpartition
+      ~FailureKind.splitlines
+      ~FailureKind.strip
+      ~FailureKind.swapcase
+      ~FailureKind.translate
+      ~FailureKind.upper
+      ~FailureKind.startswith
+      ~FailureKind.endswith
+      ~FailureKind.removeprefix
+      ~FailureKind.removesuffix
+      ~FailureKind.isascii
+      ~FailureKind.islower
+      ~FailureKind.isupper
+      ~FailureKind.istitle
+      ~FailureKind.isspace
+      ~FailureKind.isdecimal
+      ~FailureKind.isdigit
+      ~FailureKind.isnumeric
+      ~FailureKind.isalpha
+      ~FailureKind.isalnum
+      ~FailureKind.isidentifier
+      ~FailureKind.isprintable
+      ~FailureKind.zfill
+      ~FailureKind.format
+      ~FailureKind.format_map
+      ~FailureKind.maketrans
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~FailureKind.CODE_CHANGE_FAILED
+      ~FailureKind.SOURCE_RESTORE_FAILED
+      ~FailureKind.BUILD_FAILED
+      ~FailureKind.LAUNCH_FAILED
+      ~FailureKind.JOB_STARTUP_FAILED
+      ~FailureKind.JOB_RUNTIME_FAILED
+      ~FailureKind.JOB_FAILED
+      ~FailureKind.JOB_STALLED
+      ~FailureKind.METRICS_COLLECTION_FAILED
+      ~FailureKind.ANALYSIS_FAILED
+      ~FailureKind.PLANNING_FAILED
+      ~FailureKind.SETUP_INSTRUMENTATION_FAILED
+      ~FailureKind.SETUP_SOURCE_FAILED
+      ~FailureKind.UNEXPECTED_EXCEPTION
+      ~FailureKind.INTERRUPTED

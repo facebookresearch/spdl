@@ -1,0 +1,6 @@
+spdl.io.utils.set\_ffmpeg\_log\_level
+=====================================
+
+.. currentmodule:: spdl.io.utils
+
+.. autofunction:: set_ffmpeg_log_level

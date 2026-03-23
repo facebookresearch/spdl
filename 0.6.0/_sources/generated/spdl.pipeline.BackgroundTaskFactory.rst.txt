@@ -1,0 +1,8 @@
+spdl.pipeline.BackgroundTaskFactory
+===================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autodata:: BackgroundTaskFactory
+   :annotation:
+   :no-value:

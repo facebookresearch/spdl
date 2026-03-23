@@ -1,0 +1,6 @@
+spdl.autoresearch.core.load\_or\_init
+=====================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autofunction:: load_or_init

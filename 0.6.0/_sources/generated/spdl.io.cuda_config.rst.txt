@@ -1,0 +1,6 @@
+spdl.io.cuda\_config
+====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: cuda_config

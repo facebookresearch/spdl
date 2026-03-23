@@ -1,0 +1,23 @@
+spdl.pipeline.SharedMemorySegmentPool
+=====================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: SharedMemorySegmentPool
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~SharedMemorySegmentPool.close
+      ~SharedMemorySegmentPool.open_reader
+      ~SharedMemorySegmentPool.open_writer
+      ~SharedMemorySegmentPool.unlink
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~SharedMemorySegmentPool.count
+      ~SharedMemorySegmentPool.published
+      ~SharedMemorySegmentPool.reclaimed
+      ~SharedMemorySegmentPool.segment_size

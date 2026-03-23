@@ -1,0 +1,6 @@
+spdl.io.create\_reference\_audio\_frame
+=======================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: create_reference_audio_frame

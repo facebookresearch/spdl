@@ -1,0 +1,6 @@
+spdl.io.load\_image
+===================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: load_image

@@ -1,0 +1,14 @@
+.. _exhale_typedef_types_8h_1a49247f362e405e358b40d1de70d44a27:
+
+Typedef spdl::core::TimeWindow
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::TimeWindow
+   :project: libspdl

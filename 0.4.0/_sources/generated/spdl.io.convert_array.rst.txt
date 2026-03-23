@@ -1,0 +1,6 @@
+spdl.io.convert\_array
+======================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: convert_array

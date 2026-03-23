@@ -1,0 +1,63 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h:
+
+File packets.h
+==============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/packets.h``)
+-----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``libspdl/core/codec.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h`)
+
+- ``libspdl/core/generator.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``string``
+
+- ``tuple``
+
+- ``variant``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_bsf.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h`
+
+
+

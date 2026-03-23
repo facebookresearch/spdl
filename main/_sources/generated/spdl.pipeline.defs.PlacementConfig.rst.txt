@@ -1,0 +1,13 @@
+spdl.pipeline.defs.PlacementConfig
+==================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: PlacementConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~PlacementConfig.name
+      ~PlacementConfig.target

@@ -1,0 +1,6 @@
+spdl.pipeline.run\_pipeline\_in\_subinterpreter
+===============================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: run_pipeline_in_subinterpreter

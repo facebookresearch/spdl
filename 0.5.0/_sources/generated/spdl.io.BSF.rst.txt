@@ -1,0 +1,13 @@
+spdl.io.BSF
+===========
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: BSF
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~BSF.filter
+      ~BSF.flush

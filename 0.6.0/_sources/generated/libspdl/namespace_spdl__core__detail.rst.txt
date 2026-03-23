@@ -1,0 +1,15 @@
+
+.. _namespace_spdl__core__detail:
+
+Namespace spdl::core::detail
+============================
+
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1detail_1_1DecoderImpl`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1detail_1_1EncoderImpl`

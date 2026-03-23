@@ -1,0 +1,6 @@
+spdl.io.load\_video
+===================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: load_video

@@ -1,0 +1,17 @@
+spdl.io.Muxer
+=============
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: Muxer
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~Muxer.add_encode_stream
+      ~Muxer.add_remux_stream
+      ~Muxer.close
+      ~Muxer.flush
+      ~Muxer.open
+      ~Muxer.write

@@ -1,0 +1,16 @@
+spdl.autoresearch.core.WorkflowProtocol
+=======================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: WorkflowProtocol
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~WorkflowProtocol.checkpoint
+      ~WorkflowProtocol.load
+      ~WorkflowProtocol.make_coro
+      ~WorkflowProtocol.on_result
+      ~WorkflowProtocol.summarize

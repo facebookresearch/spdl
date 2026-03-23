@@ -1,0 +1,926 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Architecture" href="autoresearch_architecture.html" /><link rel="prev" title="Example: Video Classification" href="autoresearch_example.html" />
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
+        <title>Example: Video Classification (MTP + Concurrency Tuning) - SPDL 0.5.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
+    <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=a8e03d5d" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SNXS50Q2E3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SNXS50Q2E3');
+</script>
+</head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">SPDL 0.5.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">SPDL 0.5.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/intro.html">Building and Running Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/stages.html">Pipeline Stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/parallelism.html">Pipeline Parallelism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/logging.html">Collecting Runtime Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing an Orchestration Mechanism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/event_loop.html">The Event Loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/sync.html">Running Synchronous Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../io/basic.html">High-Level Loading Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/decoding_overview.html">Decoding Process Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/packets_frames_concepts.html">Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/filtering.html">Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/color_space.html">Video Color Space</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/ffmpeg_cheatsheet.html">FFmpeg CLI Cheat Sheet</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/setup.html">Composition of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/analysis.html">Analyzing the Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/stats.html">Understanding the performance statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Autoresearch</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="autoresearch.html">How It Works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoresearch_example.html">Example: Video Classification</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoresearch_architecture.html">Architecture</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/image_dataloading.html">Image dataloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/video_dataloading.html">Video dataloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/imagenet_classification.html">Imagenet classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/multi_thread_preprocessing.html">Multi thread preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/streaming_nvdec_decoding.html">Streaming nvdec decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/streaming_video_processing.html">Streaming video processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/performance_analysis.html">Performance analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/performance_simulation.html">Performance simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/hydra_integration.html">Hydra integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_definitions.html">Pipeline definitions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_profiling.html">Pipeline profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_utils.html">Benchmark utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_numpy.html">Benchmark numpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_wav.html">Benchmark wav</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API References</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.html">spdl.pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.config.html">spdl.pipeline.config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.html">spdl.io</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.utils.html">spdl.io.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.autoresearch.html">spdl.autoresearch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.autoresearch.core.html">spdl.autoresearch.core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.dataloader.html">spdl.dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.source.html">spdl.source</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_class.html">Class List</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_file.html">File List</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl.html">Namespace spdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_std.html">Namespace std</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structAVRational.html">Struct AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1BytesAdaptor.html">Struct BytesAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1CPUBuffer.html">Struct CPUBuffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DataInterface.html">Struct DataInterface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DecodeConfig.html">Struct DecodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Codec.html">Template Class Codec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1CPUStorage.html">Class CPUStorage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Decoder.html">Template Class Decoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Demuxer.html">Class Demuxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1detail_1_1DecoderImpl.html">Template Class DecoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1detail_1_1EncoderImpl.html">Template Class EncoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Encoder.html">Template Class Encoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1FilterGraph.html">Class FilterGraph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html">Enum MediaType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349.html">Template Function spdl::core::clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a3f08ca7a5c09ab82603e239e50dff4d7.html">Template Function spdl::core::convert_frames(const std::vector&lt;const Frames&lt;media&gt; *&gt;&amp;, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1ae55bfac2f391205603d77241fc25ca1a.html">Template Function spdl::core::convert_frames(const Frames&lt;media&gt; *, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8.html">Function spdl::core::create_reference_audio_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1a78b157beb45e215aad69f013831788ac.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1a325a3202908e610862ad04182e7da81a.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d.html">Typedef spdl::core::AudioEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b.html">Typedef spdl::core::DemuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339.html">Typedef spdl::core::EncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_filter__graph_8h_1a29554b40f89e4b227521ff86ccf69b8b.html">Typedef spdl::core::FilterGraphPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1ad628496b3863230dd76eeccc4fa66437.html">Typedef spdl::core::FramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a383bf2b0ac1564702f10e3b5f3ef03f6.html">Typedef spdl::core::VideoEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../genindex.html">API Index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+<div class="sidebar-tree">
+<ul>
+  <li class="toctree-l1 has-children">
+    <span class="reference">Versions</span>
+    <input class="toctree-checkbox" id="toctree-checkbox-versions" name="toctree-checkbox-versions" role="switch" type="checkbox">
+    <label for="toctree-checkbox-versions">
+      <div class="visually-hidden">Toggle navigattion of Versions</div>
+      <i class="icon">
+        <svg>
+          <use href="#svg-arrow-right"></use>
+        </svg>
+      </i>
+    </label>
+    <ul>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.4">0.1.4</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.3">0.1.3</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.2">0.1.2</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.1">0.1.1</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.0">0.1.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.14">0.0.14</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.13">0.0.13</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.12">0.0.12</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.11">0.0.11</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.10">0.0.10</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.9">0.0.9</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.8">0.0.8</a></li>
+    </ul>
+  </li>
+</ul>
+</div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/autoresearch/autoresearch_example_v2.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="example-video-classification-mtp-concurrency-tuning">
+<span id="autoresearch-example-v2"></span><h1>Example: Video Classification (MTP + Concurrency Tuning)<a class="headerlink" href="#example-video-classification-mtp-concurrency-tuning" title="Link to this heading">¶</a></h1>
+<p>This page describes the second autoresearch run on the video classification
+example pipeline.  The first run (<a class="reference internal" href="autoresearch_example.html#autoresearch-example"><span class="std std-ref">Example: Video Classification</span></a>) discovered
+GPU NVDEC decode, split demux/decode, and subclip windowing — reducing
+step time from 426ms to 153ms (2.78×).  This run starts from that
+optimized baseline and pushes further by introducing subprocess isolation
+(MTP) and concurrency tuning, achieving a <strong>7.0× throughput improvement</strong>
+over the new baseline.</p>
+<section id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Link to this heading">¶</a></h2>
+<p><strong>Starting point</strong>: The pipeline from the first autoresearch run, which
+uses GPU NVDEC decode with a split demux/decode architecture, subclip
+2s windowing, dedicated thread executors, and bf16 autocast.</p>
+<p><strong>Pipeline</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Sampling → fetch (c=8) → disaggregate → demux (c=8) → NvdecDecode (c=16) → aggregate → collate
+</pre></div>
+</div>
+<p><strong>Hardware</strong>: 1×8 H100 GPUs (grandteton).</p>
+<p><strong>Engine configuration</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>spdl<span class="w"> </span>autoresearch<span class="w"> </span>engine<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--workflow<span class="w"> </span>spdl.autoresearch.pipeline_optimization:create_workflow<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--workdir<span class="w"> </span>/data/users/moto/autoresearch/video_classification_opt_v5<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--max-concurrency<span class="w"> </span><span class="m">3</span><span class="w"> </span>--platform<span class="w"> </span>auto<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pipeline-script<span class="w"> </span>video_classification.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--source-dir<span class="w"> </span>spdl/examples/video_classification<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--build-command<span class="w"> </span><span class="s1">&#39;...&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--base-launch-command<span class="w"> </span><span class="s1">&#39;torchx run ...&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--max-iterations<span class="w"> </span><span class="m">20</span><span class="w"> </span>--patience<span class="w"> </span><span class="m">5</span><span class="w"> </span>--job-timeout<span class="w"> </span><span class="m">600</span>
+</pre></div>
+</div>
+<p>The engine ran with up to 3 concurrent experiments and a 10-minute timeout
+per job.</p>
+</section>
+<section id="baseline">
+<h2>Baseline<a class="headerlink" href="#baseline" title="Link to this heading">¶</a></h2>
+<p>The starting pipeline produced <strong>195 samples/s</strong> (3,120 fps) with 14.7%
+steady-state GPU SM utilization.  The headspace analysis (CacheDataLoader)
+measured a compute floor of <strong>37.6ms/step</strong> — 94% of step time was spent
+waiting for data.</p>
+<p>Unlike the first run, MTP (subprocess pipeline) succeeded this time because
+packet serialization support was added to SPDL, enabling demuxed
+<code class="docutils literal notranslate"><span class="pre">VideoPackets</span></code> to be pickled across the process boundary.  The MTP seed
+experiment provided a modest +4% improvement (202.8 sps) by isolating CPU
+data loading threads from CUDA kernel scheduling.</p>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Link to this heading">¶</a></h2>
+<p>The best configuration (<code class="docutils literal notranslate"><span class="pre">gc_disabled_buffer_5</span></code>) achieved <strong>1,368 samples/s</strong>
+(21,890 fps), a <strong>7.0× improvement</strong> from the baseline of 195 sps (3,120 fps).
+The optimized pipeline is available in the repository at <a class="reference external" href="https://github.com/facebookresearch/spdl/commit/fa5e934c5c783444bffb06f3a73ac27051ed4878">commit fa5e934</a>.</p>
+<div class="table-wrapper colwidths-given docutils container" id="id1">
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Optimization Breakdown</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 16.7%" />
+<col style="width: 16.7%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Optimization</p></th>
+<th class="head"><p>Throughput</p></th>
+<th class="head"><p>Step Time</p></th>
+<th class="head"><p>Cumulative Improvement</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Baseline</strong> (single process, demux c=8, NVDEC c=16)</p></td>
+<td><p>195 sps</p></td>
+<td><p>632ms</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>+ MTP subprocess isolation</p></td>
+<td><p>203 sps</p></td>
+<td><p>573ms</p></td>
+<td><p>↑4%</p></td>
+</tr>
+<tr class="row-even"><td><p>+ Subclip 0.5s (from 2.0s)</p></td>
+<td><p>317 sps</p></td>
+<td><p>395ms</p></td>
+<td><p>↑63%</p></td>
+</tr>
+<tr class="row-odd"><td><p>+ NVDEC concurrency 7 (from 16)</p></td>
+<td><p>353 sps</p></td>
+<td><p>360ms</p></td>
+<td><p>↑81%</p></td>
+</tr>
+<tr class="row-even"><td><p>+ Subclip 0.5s + NVDEC c=7 combined</p></td>
+<td><p>386 sps</p></td>
+<td><p>332ms</p></td>
+<td><p>↑98%</p></td>
+</tr>
+<tr class="row-odd"><td><p>+ Demux concurrency 4 (from 8)</p></td>
+<td><p>1,126 sps</p></td>
+<td><p>113ms</p></td>
+<td><p>↑478%</p></td>
+</tr>
+<tr class="row-even"><td><p>+ Demux concurrency 3</p></td>
+<td><p>1,294 sps</p></td>
+<td><p>93ms</p></td>
+<td><p>↑564%</p></td>
+</tr>
+<tr class="row-odd"><td><p>+ GC disabled + frontend buffer=5</p></td>
+<td><p><strong>1,368 sps</strong></p></td>
+<td><p><strong>85ms</strong></p></td>
+<td><p><strong>↑601%</strong></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="key-discoveries">
+<h2>Key Discoveries<a class="headerlink" href="#key-discoveries" title="Link to this heading">¶</a></h2>
+<section id="what-worked">
+<h3>What worked<a class="headerlink" href="#what-worked" title="Link to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p><strong>Reducing demux concurrency from 8 to 3</strong> — The single biggest lever
+and the most counter-intuitive finding.  Demuxing was assumed to be a
+near-trivial operation (milliseconds per item vs hundreds of
+milliseconds for decoding), so its concurrency seemed unimportant.
+In reality, demux threads contend severely at modest concurrency
+levels, and per-item latency rises sharply:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A follow-up investigation traced the bottleneck to FFmpeg’s
+<code class="docutils literal notranslate"><span class="pre">codec_mutex</span></code> — a process-wide lock in <a class="reference external" href="https://ffmpeg.org/doxygen/8.0/avcodec_8c_source.html">libavcodec/avcodec.c</a>
+that serializes <code class="docutils literal notranslate"><span class="pre">codec-&gt;init()</span></code> for any decoder flagged
+<code class="docutils literal notranslate"><span class="pre">FF_CODEC_CAP_NOT_INIT_THREADSAFE</span></code> (applied to codecs backed
+by external libraries whose thread-safety status is unknown to
+FFmpeg).  Every <code class="docutils literal notranslate"><span class="pre">Demuxer</span></code> construction calls
+<code class="docutils literal notranslate"><span class="pre">avformat_find_stream_info</span></code>, which internally opens decoders
+to probe stream parameters, hitting this lock once per stream.</p>
+</div>
+<div class="table-wrapper colwidths-given docutils container" id="id2">
+<table class="docutils align-default" id="id2">
+<caption><span class="caption-text">Demux Contention Curve</span><a class="headerlink" href="#id2" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 28.6%" />
+<col style="width: 35.7%" />
+<col style="width: 35.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Concurrency</p></th>
+<th class="head"><p>Per-item Latency (p50)</p></th>
+<th class="head"><p>Throughput</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>c=2</p></td>
+<td><p>~0.010s</p></td>
+<td><p>1,261 sps</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>c=3</strong></p></td>
+<td><p><strong>0.013s</strong></p></td>
+<td><p><strong>1,294 sps</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>c=4</p></td>
+<td><p>0.023s</p></td>
+<td><p>1,126 sps</p></td>
+</tr>
+<tr class="row-odd"><td><p>c=6</p></td>
+<td><p>0.067s</p></td>
+<td><p>580 sps</p></td>
+</tr>
+<tr class="row-even"><td><p>c=8 (default)</p></td>
+<td><p>0.150s</p></td>
+<td><p>386 sps</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Going from c=8 to c=3 reduced per-item demux latency by <strong>11.5×</strong>
+(0.150s → 0.013s).  The agent mapped this curve methodically and
+pinpointed c=3 as the sweet spot.</p>
+</li>
+<li><p><strong>Shorter subclip duration (0.5s vs 2.0s)</strong> — The first run found
+2.0s optimal.  With MTP subprocess isolation and the improved pipeline
+architecture, 0.5s became viable — the demux seeking overhead that
+penalized short clips in the first run was eliminated by running demux
+in a separate process.</p></li>
+<li><p><strong>MTP subprocess isolation</strong> — Running demux in a subprocess via
+<code class="docutils literal notranslate"><span class="pre">spdl.pipeline.run_pipeline_in_subprocess</span></code> isolates CPU-intensive
+FFmpeg container parsing from CUDA kernel launch scheduling.  This
+required packet serialization support (pickle for <code class="docutils literal notranslate"><span class="pre">VideoPackets</span></code>).</p></li>
+<li><p><strong>GC management</strong> — Disabling automatic garbage collection during
+training steps and running <code class="docutils literal notranslate"><span class="pre">gc.collect()</span></code> between epochs eliminated
+periodic latency spikes (~30ms every 50 steps).</p></li>
+<li><p><strong>Frontend buffer size</strong> — Increasing the frontend sink buffer from
+3 to 5 smoothed NVDEC timing jitter, providing a marginal but
+consistent improvement.</p></li>
+</ol>
+</section>
+<section id="what-did-not-work">
+<h3>What did not work<a class="headerlink" href="#what-did-not-work" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p><strong>Increasing demux concurrency (c=12, c=16)</strong> — Every experiment
+with higher demux concurrency was worse than baseline.  The intuition
+“more threads = more throughput” pointed in the wrong direction for
+this memory-bandwidth-bound stage.</p></li>
+<li><p><strong>Larger batch sizes (alone)</strong> — Batch=32 without other optimizations
+only yielded +5%.  However, batch=32 combined with the full MTP +
+concurrency tuning stack was competitive (1,301 sps).</p></li>
+<li><p><strong>CPU decode</strong> — CPU-based FFmpeg decode with demux c=4 reached
+~1,060 sps — competitive but ~20% below NVDEC configurations.</p></li>
+<li><p><strong>torch.compile</strong> — Added compilation warmup with no steady-state
+improvement.  The model (R3D-18 at 112×112) is too compute-light for
+compilation to matter.</p></li>
+<li><p><strong>Streaming demux</strong> — Both streaming demux variants crashed or stalled.</p></li>
+<li><p><strong>Priority executor</strong> — Provided no improvement over standard
+ThreadPoolExecutor configurations.</p></li>
+</ol>
+</section>
+</section>
+<section id="pipeline-architecture-before-and-after">
+<h2>Pipeline Architecture: Before and After<a class="headerlink" href="#pipeline-architecture-before-and-after" title="Link to this heading">¶</a></h2>
+<p><strong>Before</strong> (single process, 195 sps):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">continuous</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">executor</span><span class="o">=</span><span class="n">fetch_executor</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">disaggregate</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">Demux</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">executor</span><span class="o">=</span><span class="n">demux_executor</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">nvdec_decode</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">executor</span><span class="o">=</span><span class="n">decode_executor</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">collate</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>After</strong> (MTP subprocess split, 1,368 sps):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Backend (subprocess) — CPU-only: fetch → disaggregate → demux</span>
+<span class="n">backend</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">continuous</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">partial</span><span class="p">(</span><span class="n">_fetch_sample</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">),</span> <span class="n">concurrency</span><span class="o">=</span><span class="n">num_fetch_threads</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">disaggregate</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span>
+        <span class="n">partial</span><span class="p">(</span><span class="n">_demux_sample</span><span class="p">,</span> <span class="n">label_to_index</span><span class="o">=</span><span class="n">label_to_index</span><span class="p">,</span> <span class="o">...</span><span class="p">),</span>
+        <span class="n">concurrency</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>  <span class="c1"># not 8 — memory-bandwidth contention</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">source2</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">run_pipeline_in_subprocess</span><span class="p">(</span>
+    <span class="n">backend</span><span class="o">.</span><span class="n">get_config</span><span class="p">(),</span>
+    <span class="n">num_threads</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">num_fetch_threads</span><span class="p">,</span> <span class="n">num_demux_threads</span><span class="p">),</span>
+    <span class="n">mp_context</span><span class="o">=</span><span class="s2">&quot;forkserver&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Frontend (main process) — GPU NVDEC decode → aggregate → collate</span>
+<span class="n">frontend</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">source2</span><span class="p">,</span> <span class="n">continuous</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">nvdec_decode</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">executor</span><span class="o">=</span><span class="n">decode_executor</span><span class="p">)</span>  <span class="c1"># match H100 HW slots</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">collate</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">frontend</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="progress">
+<h2>Progress<a class="headerlink" href="#progress" title="Link to this heading">¶</a></h2>
+<p>The following plot shows throughput, step time, SM utilization, job
+duration, and raw SM utilization across all 111 experiments.  Green dots
+mark improvements over the running best.  The dashed blue line shows the
+headspace ceiling (3,405 samples/s steady-state compute floor).</p>
+<a class="reference internal image-reference" href="../_images/autoresearch_video_classification_v2_progress.png"><img alt="Autoresearch progress over 111 experiments" src="../_images/autoresearch_video_classification_v2_progress.png" style="width: 100%;" />
+</a>
+<p>Throughput climbed steadily through the first 30 experiments as the
+engine discovered subclipping and NVDEC concurrency tuning.  The
+breakthrough at experiment ~30 (reducing demux concurrency to c=4) caused
+a sharp jump past 1,000 sps.  Subsequent experiments refined the demux
+sweet spot (c=3 vs c=2 vs c=4) and stacked GC/buffer tuning for the
+final result.</p>
+</section>
+<section id="hypothesis-tree">
+<h2>Hypothesis Tree<a class="headerlink" href="#hypothesis-tree" title="Link to this heading">¶</a></h2>
+<a class="reference internal image-reference" href="../_images/autoresearch_video_classification_v2_hypothesis_tree.png"><img alt="Hypothesis tree for 111 experiments" src="../_images/autoresearch_video_classification_v2_hypothesis_tree.png" style="width: 100%;" />
+</a>
+<p>The tree shows the engine exploring three main branches from the seed
+experiments: subclipping (the dominant branch), decode concurrency
+tuning, and batch size.  The breakthrough path runs through
+subclip 0.5s → NVDEC c=7 → demux c=4 → demux c=3 → GC+buffer tuning.
+Failed experiments (red nodes) include high demux concurrency, streaming
+demux, and torch.compile — each failure narrowed the search space and
+confirmed that concurrency reduction, not increase, was the right
+direction.</p>
+</section>
+<section id="remaining-headspace">
+<h2>Remaining Headspace<a class="headerlink" href="#remaining-headspace" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 66.7%" />
+<col style="width: 33.3%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>Compute floor (CacheDataLoader)</p></td>
+<td><p>37.6ms (3,405 sps)</p></td>
+</tr>
+<tr class="row-even"><td><p>Best achieved</p></td>
+<td><p>85ms (1,368 sps)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Remaining headspace</p></td>
+<td><p>~60%</p></td>
+</tr>
+<tr class="row-even"><td><p>Bottleneck</p></td>
+<td><p>NVDEC hardware decode rate (7 slots)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The best result is now limited by NVDEC frontend throughput — the 7
+hardware decoder slots on H100 are the binding constraint.  Further
+improvement would likely require IPC optimizations (e.g. memory arenas
+to reduce pickle/unpickle overhead across the subprocess boundary) or
+pre-decoded datasets.</p>
+</section>
+<section id="experiment-statistics">
+<h2>Experiment Statistics<a class="headerlink" href="#experiment-statistics" title="Link to this heading">¶</a></h2>
+<p>The engine ran more than 100 experiments over approximately 20 hours
+with up to 3 concurrent jobs.  About a quarter failed at runtime —
+mostly aggressive configurations (high demux concurrency, streaming
+demux, <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code>, exotic GC settings) that the engine tried
+knowing some would fail.  Of those that completed, 12 produced kept
+improvements.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="autoresearch_architecture.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Architecture</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="autoresearch_example.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Example: Video Classification</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, Meta Platforms, Inc.
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Example: Video Classification (MTP + Concurrency Tuning)</a><ul>
+<li><a class="reference internal" href="#setup">Setup</a></li>
+<li><a class="reference internal" href="#baseline">Baseline</a></li>
+<li><a class="reference internal" href="#results">Results</a></li>
+<li><a class="reference internal" href="#key-discoveries">Key Discoveries</a><ul>
+<li><a class="reference internal" href="#what-worked">What worked</a></li>
+<li><a class="reference internal" href="#what-did-not-work">What did not work</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pipeline-architecture-before-and-after">Pipeline Architecture: Before and After</a></li>
+<li><a class="reference internal" href="#progress">Progress</a></li>
+<li><a class="reference internal" href="#hypothesis-tree">Hypothesis Tree</a></li>
+<li><a class="reference internal" href="#remaining-headspace">Remaining Headspace</a></li>
+<li><a class="reference internal" href="#experiment-statistics">Experiment Statistics</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=70f82a29"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../_static/collapsible-lists/js/CollapsibleLists.compressed.js?v=73120307"></script>
+    <script src="../_static/collapsible-lists/js/apply-collapsible-lists.js?v=660e4f45"></script>
+    </body>
+</html>

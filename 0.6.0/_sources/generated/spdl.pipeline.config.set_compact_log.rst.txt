@@ -1,0 +1,6 @@
+spdl.pipeline.config.set\_compact\_log
+======================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: set_compact_log

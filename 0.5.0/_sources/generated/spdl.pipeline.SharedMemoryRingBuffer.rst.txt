@@ -1,0 +1,23 @@
+spdl.pipeline.SharedMemoryRingBuffer
+====================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: SharedMemoryRingBuffer
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~SharedMemoryRingBuffer.close
+      ~SharedMemoryRingBuffer.open_reader
+      ~SharedMemoryRingBuffer.open_writer
+      ~SharedMemoryRingBuffer.unlink
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~SharedMemoryRingBuffer.capacity
+      ~SharedMemoryRingBuffer.head
+      ~SharedMemoryRingBuffer.name
+      ~SharedMemoryRingBuffer.tail

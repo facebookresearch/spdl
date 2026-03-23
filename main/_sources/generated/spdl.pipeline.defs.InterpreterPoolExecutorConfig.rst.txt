@@ -1,0 +1,14 @@
+spdl.pipeline.defs.InterpreterPoolExecutorConfig
+================================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: InterpreterPoolExecutorConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~InterpreterPoolExecutorConfig.initargs
+      ~InterpreterPoolExecutorConfig.initializer
+      ~InterpreterPoolExecutorConfig.max_workers

@@ -1,0 +1,8 @@
+spdl.source.SizedIterable
+=========================
+
+.. currentmodule:: spdl.source
+
+.. autoclass:: SizedIterable
+   :show-inheritance:
+   :members:

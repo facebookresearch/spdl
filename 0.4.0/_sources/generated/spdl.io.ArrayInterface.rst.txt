@@ -1,0 +1,7 @@
+spdl.io.ArrayInterface
+======================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: ArrayInterface
+   :members:

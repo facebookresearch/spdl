@@ -1,0 +1,15 @@
+spdl.autoresearch.core.AnalysisResult
+=====================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: AnalysisResult
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AnalysisResult.duration
+      ~AnalysisResult.failure
+      ~AnalysisResult.improved
+      ~AnalysisResult.structured

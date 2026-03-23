@@ -1,0 +1,13 @@
+spdl.pipeline.defs.Collate
+==========================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: Collate
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~Collate.accumulate
+      ~Collate.flush

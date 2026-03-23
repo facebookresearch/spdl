@@ -1,0 +1,26 @@
+.. _exhale_class_classspdl_1_1core_1_1InternalError:
+
+Class InternalError
+===================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Inheritance Relationships
+-------------------------
+
+Base Type
+*********
+
+- ``public std::logic_error``
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: spdl::core::InternalError
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:

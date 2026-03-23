@@ -1,0 +1,6 @@
+spdl.io.parse\_wav
+==================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: parse_wav

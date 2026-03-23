@@ -1,0 +1,22 @@
+spdl.pipeline.ProcessGroupResourceUsage
+=======================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ProcessGroupResourceUsage
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ProcessGroupResourceUsage.cpu_percent
+      ~ProcessGroupResourceUsage.disk_read_bytes
+      ~ProcessGroupResourceUsage.disk_write_bytes
+      ~ProcessGroupResourceUsage.net_rx_bytes
+      ~ProcessGroupResourceUsage.net_tx_bytes
+      ~ProcessGroupResourceUsage.num_procs
+      ~ProcessGroupResourceUsage.private_bytes
+      ~ProcessGroupResourceUsage.pss_bytes
+      ~ProcessGroupResourceUsage.rss_bytes
+      ~ProcessGroupResourceUsage.pid
+      ~ProcessGroupResourceUsage.pgid

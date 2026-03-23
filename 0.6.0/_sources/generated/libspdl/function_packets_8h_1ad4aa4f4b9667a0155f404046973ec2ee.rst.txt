@@ -1,0 +1,14 @@
+.. _exhale_function_packets_8h_1ad4aa4f4b9667a0155f404046973ec2ee:
+
+Template Function spdl::core::serialize_packets
+===============================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::serialize_packets(const Packets<media>&)
+   :project: libspdl

@@ -1,0 +1,12 @@
+spdl.autoresearch.core.Orchestrator
+===================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: Orchestrator
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~Orchestrator.run

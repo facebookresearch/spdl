@@ -1,0 +1,6 @@
+spdl.io.apply\_bsf
+==================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: apply_bsf

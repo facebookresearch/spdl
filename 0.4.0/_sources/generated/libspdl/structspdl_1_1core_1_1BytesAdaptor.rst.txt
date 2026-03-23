@@ -1,0 +1,26 @@
+.. _exhale_struct_structspdl_1_1core_1_1BytesAdaptor:
+
+Struct BytesAdaptor
+===================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h`
+
+
+Inheritance Relationships
+-------------------------
+
+Base Type
+*********
+
+- ``public spdl::core::SourceAdaptor`` (:ref:`exhale_struct_structspdl_1_1core_1_1SourceAdaptor`)
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: spdl::core::BytesAdaptor
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:
