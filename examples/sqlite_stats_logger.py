@@ -78,6 +78,8 @@ class TaskStatsQueryResult(TypedDict):
     num_tasks: int
     num_failures: int
     ave_time: float
+    p90_time: float
+    p99_time: float
 
 
 class QueueStatsQueryResult(TypedDict):
@@ -89,6 +91,10 @@ class QueueStatsQueryResult(TypedDict):
     num_items: int
     ave_put_time: float
     ave_get_time: float
+    p90_put_time: float
+    p99_put_time: float
+    p90_get_time: float
+    p99_get_time: float
     occupancy_rate: float
 
 
@@ -100,7 +106,9 @@ CREATE TABLE IF NOT EXISTS task_stats (
     name TEXT NOT NULL,
     num_tasks INTEGER NOT NULL,
     num_failures INTEGER NOT NULL,
-    ave_time REAL NOT NULL
+    ave_time REAL NOT NULL,
+    p90_time REAL NOT NULL,
+    p99_time REAL NOT NULL
 )
 """
 
@@ -113,6 +121,10 @@ CREATE TABLE IF NOT EXISTS queue_stats (
     num_items INTEGER NOT NULL,
     ave_put_time REAL NOT NULL,
     ave_get_time REAL NOT NULL,
+    p90_put_time REAL NOT NULL,
+    p99_put_time REAL NOT NULL,
+    p90_get_time REAL NOT NULL,
+    p99_get_time REAL NOT NULL,
     occupancy_rate REAL NOT NULL
 )
 """
@@ -192,8 +204,8 @@ def _insert_task_stats(
     cursor.executemany(
         """
         INSERT INTO task_stats
-        (timestamp, name, num_tasks, num_failures, ave_time)
-        VALUES (?, ?, ?, ?, ?)
+        (timestamp, name, num_tasks, num_failures, ave_time, p90_time, p99_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         [
             (
@@ -202,6 +214,8 @@ def _insert_task_stats(
                 entry.stats.num_tasks,
                 entry.stats.num_failures,
                 entry.stats.ave_time,
+                entry.stats.p90_time,
+                entry.stats.p99_time,
             )
             for entry in entries
         ],
@@ -224,8 +238,9 @@ def _insert_queue_stats(
         """
         INSERT INTO queue_stats
         (timestamp, name, elapsed, num_items, ave_put_time,
-         ave_get_time, occupancy_rate)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+         ave_get_time, p90_put_time, p99_put_time,
+         p90_get_time, p99_get_time, occupancy_rate)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             (
@@ -235,6 +250,10 @@ def _insert_queue_stats(
                 entry.stats.num_items,
                 entry.stats.ave_put_time,
                 entry.stats.ave_get_time,
+                entry.stats.p90_put_time,
+                entry.stats.p99_put_time,
+                entry.stats.p90_get_time,
+                entry.stats.p99_get_time,
                 entry.stats.occupancy_rate,
             )
             for entry in entries
@@ -565,6 +584,8 @@ def query_task_stats(
                 "num_tasks": row["num_tasks"],
                 "num_failures": row["num_failures"],
                 "ave_time": row["ave_time"],
+                "p90_time": row["p90_time"],
+                "p99_time": row["p99_time"],
             }
             results.append(entry)
 
@@ -642,6 +663,10 @@ def query_queue_stats(
                 "num_items": row["num_items"],
                 "ave_put_time": row["ave_put_time"],
                 "ave_get_time": row["ave_get_time"],
+                "p90_put_time": row["p90_put_time"],
+                "p99_put_time": row["p99_put_time"],
+                "p90_get_time": row["p90_get_time"],
+                "p99_get_time": row["p99_get_time"],
                 "occupancy_rate": row["occupancy_rate"],
             }
             results.append(entry)
