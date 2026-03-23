@@ -6,6 +6,7 @@
 
 __all__ = [
     "_periodic_dispatch",
+    "_P2Percentile",
     "_StatsCounter",
     "_time_str",
 ]
@@ -56,10 +57,116 @@ def _time_str(val: float) -> str:
     return f"{val:6.1f} [{unit:>3s}]"
 
 
+class _P2Percentile:
+    """Streaming percentile estimation using the P-square algorithm.
+
+    Maintains O(1) memory (5 markers) and O(1) per update.
+    Reference: Jain & Chlamtac, "The P-Square Algorithm for Dynamic
+    Calculation of Percentiles and Histograms without Storing
+    Observations", 1985.
+    """
+
+    def __init__(self, p: float) -> None:
+        self._p: float = p / 100.0
+        self._count: int = 0
+        self._q: list[float] = [0.0] * 5
+        self._n: list[int] = [0] * 5
+        self._np: list[float] = [0.0] * 5
+        self._dn: list[float] = [0.0] * 5
+
+    @property
+    def value(self) -> float:
+        if self._count == 0:
+            return 0.0
+        if self._count < 5:
+            sorted_data = sorted(self._q[: self._count])
+            idx = min(int(self._count * self._p), self._count - 1)
+            return sorted_data[idx]
+        return self._q[2]
+
+    def update(self, x: float) -> None:
+        self._count += 1
+
+        if self._count <= 5:
+            self._q[self._count - 1] = x
+            if self._count == 5:
+                self._initialize()
+            return
+
+        self._process(x)
+
+    def reset(self) -> None:
+        self._count = 0
+        self._q = [0.0] * 5
+        self._n = [0] * 5
+        self._np = [0.0] * 5
+        self._dn = [0.0] * 5
+
+    def _initialize(self) -> None:
+        self._q.sort()
+        p = self._p
+        self._n = [0, 1, 2, 3, 4]
+        self._np = [0.0, 2.0 * p, 4.0 * p, 2.0 + 2.0 * p, 4.0]
+        self._dn = [0.0, p / 2.0, p, (1.0 + p) / 2.0, 1.0]
+
+    def _process(self, x: float) -> None:
+        if x < self._q[0]:
+            self._q[0] = x
+            k = 0
+        elif x < self._q[1]:
+            k = 0
+        elif x < self._q[2]:
+            k = 1
+        elif x < self._q[3]:
+            k = 2
+        elif x <= self._q[4]:
+            k = 3
+        else:
+            self._q[4] = x
+            k = 3
+
+        for i in range(k + 1, 5):
+            self._n[i] += 1
+
+        for i in range(5):
+            self._np[i] += self._dn[i]
+
+        for i in range(1, 4):
+            d = self._np[i] - self._n[i]
+            if (d >= 1 and self._n[i + 1] - self._n[i] > 1) or (
+                d <= -1 and self._n[i - 1] - self._n[i] < -1
+            ):
+                d_sign = 1 if d > 0 else -1
+                qi = self._parabolic(i, d_sign)
+                if self._q[i - 1] < qi < self._q[i + 1]:
+                    self._q[i] = qi
+                else:
+                    self._q[i] = self._linear(i, d_sign)
+                self._n[i] += d_sign
+
+    def _parabolic(self, i: int, d: int) -> float:
+        qi = self._q[i]
+        ni = self._n[i]
+        nim1 = self._n[i - 1]
+        nip1 = self._n[i + 1]
+        left = (ni - nim1 + d) * (self._q[i + 1] - qi) / (nip1 - ni)
+        right = (nip1 - ni - d) * (qi - self._q[i - 1]) / (ni - nim1)
+        return qi + d / (nip1 - nim1) * (left + right)
+
+    def _linear(self, i: int, d: int) -> float:
+        return self._q[i] + d * (self._q[i + d] - self._q[i]) / (
+            self._n[i + d] - self._n[i]
+        )
+
+
 class _StatsCounter:
     def __init__(self) -> None:
         self._n: int = 0
         self._t: float = 0.0
+        self._p90 = _P2Percentile(90)
+        self._p99 = _P2Percentile(99)
+        self._lap_p90 = _P2Percentile(90)
+        self._lap_p99 = _P2Percentile(99)
 
     @property
     def num_items(self) -> int:
@@ -69,10 +176,29 @@ class _StatsCounter:
     def ave_time(self) -> float:
         return self._t
 
+    @property
+    def p90_time(self) -> float:
+        return self._p90.value
+
+    @property
+    def p99_time(self) -> float:
+        return self._p99.value
+
+    def consume_lap_percentiles(self) -> tuple[float, float]:
+        p90 = self._lap_p90.value
+        p99 = self._lap_p99.value
+        self._lap_p90.reset()
+        self._lap_p99.reset()
+        return p90, p99
+
     def update(self, t: float, n: int = 1) -> None:
         if n > 0:
             self._n += n
             self._t += (t - self._t) * n / self._n
+            self._p90.update(t)
+            self._p99.update(t)
+            self._lap_p90.update(t)
+            self._lap_p99.update(t)
 
     @contextmanager
     def count(self) -> Iterator[None]:
