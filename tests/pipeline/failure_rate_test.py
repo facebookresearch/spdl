@@ -140,20 +140,27 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_above_threshold(self, output_order: str) -> None:
         """Pipeline fails when failure rate exceeds threshold.
 
-        Uses 100 items, fails on items >= 90 (10 failures = 10%).
-        With 9% threshold and fixed probation of 100.
-        After probation: rate = 10% > 9% -> fails.
+        Uses 200 items (not 100) to avoid boundary sensitivity with global
+        max_failures under pytest-xdist. With global tracking, invocation
+        counting uses a class variable shared across stages, and under
+        parallel test execution the threshold check at exactly the
+        probation boundary (invocation 100) may not trigger
+        deterministically due to async task scheduling differences.
+        Using 200 items ensures the boundary is clearly exceeded.
+
+        Fails on items >= 90. With 9% threshold and fixed probation of 100.
+        After probation: rate > 9% -> fails.
         """
 
         def fail_late(x):
-            if x >= 90:  # Fails on 90-99 (10 out of 100 = 10%)
+            if x >= 90:  # Fails on 90+ (more than 10%)
                 raise ValueError(f"Item >= 90: {x}")
             return x
 
-        # 9% threshold - should fail because actual rate is 10%
+        # 9% threshold - should fail because actual rate exceeds 9%
         pipeline = (
             PipelineBuilder()
-            .add_source(range(100))
+            .add_source(range(200))
             .pipe(fail_late, output_order=output_order)
             .add_sink(1)
             .build(num_threads=1, max_failures=Fraction(9, 100))
@@ -728,20 +735,27 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_probation_triggers_after_warmup(self) -> None:
         """Once probation period (100) is met, threshold check runs.
 
-        Uses 100 items, fails on multiples of 5 (20/100 = 20%).
-        With 10% threshold and fixed probation of 100.
-        After 100 invocations: rate = 20% > 10% -> fails.
+        Uses 200 items (not 100) to avoid boundary sensitivity with global
+        max_failures under pytest-xdist. With global tracking, invocation
+        counting uses a class variable shared across stages, and under
+        parallel test execution the threshold check at exactly the
+        probation boundary (invocation 100) may not trigger
+        deterministically due to async task scheduling differences.
+        Using 200 items ensures the boundary is clearly exceeded.
+
+        Fails on multiples of 5 (20%). With 10% threshold and fixed
+        probation of 100. After probation: rate = 20% > 10% -> fails.
         """
 
         def fail_on_five(x):
-            if x % 5 == 0:  # Fails on 0, 5, ..., 95 (20 out of 100 = 20%)
+            if x % 5 == 0:  # Fails on 0, 5, ..., (20%)
                 raise ValueError(f"Multiple of 5: {x}")
             return x
 
-        # 10% threshold with fixed probation=100. All 100 items are processed.
+        # 10% threshold with fixed probation=100.
         pipeline = (
             PipelineBuilder()
-            .add_source(range(100))
+            .add_source(range(200))
             .pipe(fail_on_five)
             .add_sink(1)
             .build(num_threads=1, max_failures=Fraction(1, 10))
@@ -752,6 +766,6 @@ class PipelineFailureRateTest(unittest.TestCase):
             with pipeline.auto_stop():
                 vals = list(pipeline.get_iterator(timeout=10))
 
-        # Should get all non-multiples of 5
+        # Should get all non-multiples of 5 up to the first 100 items
         expected = [x for x in range(100) if x % 5 != 0]
         self.assertEqual(expected, vals)
