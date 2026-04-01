@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import io
 import unittest
@@ -13,7 +13,7 @@ from io import BytesIO
 import numpy as np
 import spdl.io
 from parameterized import parameterized
-from spdl.io.lib._archive import parse_zip  # pyre-ignore
+from spdl.io.lib._archive import parse_zip
 
 
 def _dump_npy(arr: np.ndarray) -> bytes:
