@@ -62,6 +62,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
+from types import FrameType
 
 import spdl.io
 import spdl.io.utils
@@ -336,7 +337,7 @@ def worker_entrypoint(args_: list[str]) -> PerfResult:
 
     ev: Event = Event()
 
-    def handler_stop_signals(_signum, _frame) -> None:
+    def handler_stop_signals(_signum: int, _frame: FrameType | None) -> None:
         ev.set()
 
     signal.signal(signal.SIGTERM, handler_stop_signals)
