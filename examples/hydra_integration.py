@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 """This example shows how to build :py:class:`~spdl.pipeline.Pipeline`
 object with Hydra using building blocks from :py:mod:`spdl.pipeline.defs`
 module.
@@ -26,7 +28,7 @@ os.environ["HYDRA_FULL_ERROR"] = "1"
 
 
 @hydra.main(version_base=None, config_path=".", config_name="hydra_integration")
-def main(cfg: DictConfig):
+def main(cfg: DictConfig) -> None:
     """The main entry point.
 
     Args:
