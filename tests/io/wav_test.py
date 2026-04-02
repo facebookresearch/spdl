@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import io
 import unittest
@@ -62,7 +62,7 @@ def create_wav_data(
 
 
 class WAVUtilsTest(unittest.TestCase):
-    def test_extract_full_waveform(self):
+    def test_extract_full_waveform(self) -> None:
         wav_data, reference = create_wav_data(num_samples=100)
 
         wav_array_interface = spdl.io.load_wav(wav_data)
@@ -75,7 +75,7 @@ class WAVUtilsTest(unittest.TestCase):
         # Validate against reference waveform
         np.testing.assert_array_equal(samples, reference)
 
-    def test_extract_with_time_offset(self):
+    def test_extract_with_time_offset(self) -> None:
         sample_rate = 8000
         num_channels = 2
         bits_per_sample = 16
@@ -108,7 +108,7 @@ class WAVUtilsTest(unittest.TestCase):
 
 
 class ParseWAVTest(unittest.TestCase):
-    def test_parse_wav_basic_metadata(self):
+    def test_parse_wav_basic_metadata(self) -> None:
         """Test that parse_wav extracts correct basic metadata from a WAV file."""
         # Setup: Create a simple WAV file with known parameters
         sample_rate = 8000
@@ -140,7 +140,7 @@ class ParseWAVTest(unittest.TestCase):
         self.assertEqual(header.block_align, expected_block_align)
         self.assertEqual(header.data_size, expected_data_size)
 
-    def test_parse_wav_audio_format_pcm(self):
+    def test_parse_wav_audio_format_pcm(self) -> None:
         """Test that parse_wav correctly identifies PCM audio format."""
         # Setup: Create a PCM WAV file (16-bit PCM has audio_format=1)
         wav_data, _ = create_wav_data(bits_per_sample=16)
@@ -159,7 +159,7 @@ class ParseWAVTest(unittest.TestCase):
             (8,),
         ]
     )
-    def test_parse_wav_multi_channel(self, num_channels):
+    def test_parse_wav_multi_channel(self, num_channels: int) -> None:
         """Test that parse_wav correctly handles different channel counts."""
         # Setup: Create a WAV file with specific number of channels
         wav_data, _ = create_wav_data(num_channels=num_channels, num_samples=100)
@@ -179,7 +179,7 @@ class ParseWAVTest(unittest.TestCase):
             (48000,),
         ]
     )
-    def test_parse_wav_sample_rates(self, sample_rate):
+    def test_parse_wav_sample_rates(self, sample_rate: int) -> None:
         """Test that parse_wav correctly handles different sample rates."""
         # Setup: Create a WAV file with specific sample rate
         wav_data, _ = create_wav_data(sample_rate=sample_rate, num_samples=100)
@@ -197,7 +197,7 @@ class ParseWAVTest(unittest.TestCase):
             (32,),
         ]
     )
-    def test_parse_wav_bit_depths(self, bits_per_sample):
+    def test_parse_wav_bit_depths(self, bits_per_sample: int) -> None:
         """Test that parse_wav correctly handles different bit depths."""
         # Setup: Create a WAV file with specific bit depth
         wav_data, _ = create_wav_data(bits_per_sample=bits_per_sample, num_samples=100)
@@ -208,7 +208,7 @@ class ParseWAVTest(unittest.TestCase):
         # Assert: Verify bits_per_sample is correct
         self.assertEqual(header.bits_per_sample, bits_per_sample)
 
-    def test_parse_wav_returns_wav_header(self):
+    def test_parse_wav_returns_wav_header(self) -> None:
         """Test that parse_wav returns a WAVHeader with all required attributes."""
         # Setup: Create a simple WAV file
         wav_data, _ = create_wav_data(num_samples=100)
@@ -228,7 +228,7 @@ class ParseWAVTest(unittest.TestCase):
         self.assertTrue(hasattr(header, "bits_per_sample"))
         self.assertTrue(hasattr(header, "data_size"))
 
-    def test_parse_wav_invalid_data(self):
+    def test_parse_wav_invalid_data(self) -> None:
         """Test that parse_wav raises ValueError for invalid WAV data."""
         # Setup: Create invalid WAV data (not a real WAV file)
         invalid_data = b"This is not a WAV file"
@@ -237,7 +237,7 @@ class ParseWAVTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             spdl.io.parse_wav(invalid_data)
 
-    def test_parse_wav_empty_data(self):
+    def test_parse_wav_empty_data(self) -> None:
         """Test that parse_wav raises ValueError for empty data."""
         # Setup: Create empty bytes
         empty_data = b""
@@ -246,7 +246,7 @@ class ParseWAVTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             spdl.io.parse_wav(empty_data)
 
-    def test_parse_wav_consistency_with_load_wav(self):
+    def test_parse_wav_consistency_with_load_wav(self) -> None:
         """Test that parse_wav metadata matches the actual loaded audio data."""
         # Setup: Create a WAV file with known parameters
         sample_rate = 16000
@@ -274,7 +274,7 @@ class ParseWAVTest(unittest.TestCase):
         expected_num_samples = header.data_size // header.block_align
         self.assertEqual(expected_num_samples, samples.shape[0])
 
-    def test_parse_wav_byte_rate_calculation(self):
+    def test_parse_wav_byte_rate_calculation(self) -> None:
         """Test that parse_wav correctly calculates byte_rate."""
         # Setup: Create a WAV file with specific parameters
         sample_rate = 44100
@@ -296,7 +296,7 @@ class ParseWAVTest(unittest.TestCase):
         expected_byte_rate = sample_rate * num_channels * (bits_per_sample // 8)
         self.assertEqual(header.byte_rate, expected_byte_rate)
 
-    def test_parse_wav_block_align_calculation(self):
+    def test_parse_wav_block_align_calculation(self) -> None:
         """Test that parse_wav correctly calculates block_align."""
         # Setup: Create a WAV file with specific parameters
         num_channels = 4
@@ -316,7 +316,7 @@ class ParseWAVTest(unittest.TestCase):
         expected_block_align = num_channels * (bits_per_sample // 8)
         self.assertEqual(header.block_align, expected_block_align)
 
-    def test_extract_with_offset_and_duration(self):
+    def test_extract_with_offset_and_duration(self) -> None:
         sample_rate = 8000
         num_channels = 2
         bits_per_sample = 16
@@ -349,25 +349,25 @@ class ParseWAVTest(unittest.TestCase):
         # Validate against reference waveform
         np.testing.assert_array_equal(samples, expected_reference)
 
-    def test_negative_time_offset(self):
+    def test_negative_time_offset(self) -> None:
         wav_data, _ = create_wav_data(num_samples=8000)
 
         with self.assertRaises(ValueError):
             spdl.io.load_wav(wav_data, time_offset_seconds=-1.0)
 
-    def test_negative_duration(self):
+    def test_negative_duration(self) -> None:
         wav_data, _ = create_wav_data(num_samples=8000)
 
         with self.assertRaises(ValueError):
             spdl.io.load_wav(wav_data, duration_seconds=-1.0)
 
-    def test_time_offset_exceeds_duration(self):
+    def test_time_offset_exceeds_duration(self) -> None:
         wav_data, _ = create_wav_data(sample_rate=8000, num_samples=8000)
 
         with self.assertRaises(ValueError):
             spdl.io.load_wav(wav_data, time_offset_seconds=10.0)
 
-    def test_load_wav_returns_numpy_array(self):
+    def test_load_wav_returns_numpy_array(self) -> None:
         wav_data, reference = create_wav_data(
             sample_rate=8000, num_channels=2, bits_per_sample=16, num_samples=100
         )
@@ -393,7 +393,7 @@ class ParseWAVTest(unittest.TestCase):
             (32,),
         ]
     )
-    def test_load_wav_multi_channel(self, num_channels):
+    def test_load_wav_multi_channel(self, num_channels: int) -> None:
         sample_rate = 8000
         num_samples = 1000
 
@@ -423,7 +423,7 @@ class ParseWAVTest(unittest.TestCase):
             (32,),
         ]
     )
-    def test_load_wav_multi_channel_with_time_window(self, num_channels):
+    def test_load_wav_multi_channel_with_time_window(self, num_channels: int) -> None:
         sample_rate = 8000
         total_duration = 2.0
         num_samples = int(sample_rate * total_duration)
