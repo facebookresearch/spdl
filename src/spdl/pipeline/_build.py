@@ -12,6 +12,10 @@ __all__ = [
     "run_pipeline_in_subprocess",
     "get_default_build_callback",
     "set_default_build_callback",
+    "BackgroundTask",
+    "BackgroundTaskFactory",
+    "get_default_background_tasks",
+    "set_default_background_tasks",
 ]
 
 import logging
@@ -64,6 +68,67 @@ def set_default_build_callback(
     """
     global _DEFAULT_BUILD_CALLBACK
     _DEFAULT_BUILD_CALLBACK = callback
+
+
+class BackgroundTask:
+    """A background task that runs alongside pipeline stages.
+
+    Subclass this and override :py:meth:`run` to implement custom logic.
+    The task is started when the pipeline starts and cancelled when the
+    pipeline completes. Errors are logged but do not cause the pipeline
+    to fail.
+
+    Example::
+
+        class MyMonitor(BackgroundTask):
+            async def run(self) -> None:
+                while True:
+                    collect_metrics()
+                    await asyncio.sleep(60)
+
+        pipeline = build_pipeline(cfg, num_threads=4,
+                                  background_tasks=[MyMonitor])
+    """
+
+    async def run(self) -> None:
+        """Override this to implement the background task logic.
+
+        This coroutine runs in the pipeline's event loop. It will be
+        cancelled when the pipeline completes, so use ``try/except
+        asyncio.CancelledError`` if cleanup is needed.
+        """
+        raise NotImplementedError
+
+
+BackgroundTaskFactory = Callable[[], BackgroundTask]
+
+_DEFAULT_BACKGROUND_TASKS: list[BackgroundTaskFactory] | None = None
+
+
+def get_default_background_tasks() -> list[BackgroundTaskFactory] | None:
+    """Get the default background task factories.
+
+    Returns:
+        The default background task factories or None if not set.
+    """
+    return _DEFAULT_BACKGROUND_TASKS
+
+
+def set_default_background_tasks(
+    tasks: list[BackgroundTaskFactory] | None,
+) -> None:
+    """Set the default background task factories.
+
+    Each factory is called to create a :py:class:`BackgroundTask` instance
+    whose :py:meth:`~BackgroundTask.run` coroutine runs alongside the pipeline
+    stages. Tasks are cancelled when the pipeline completes. Their errors are
+    logged but do not cause the pipeline to fail.
+
+    Args:
+        tasks: A list of background task factories, or None to unset.
+    """
+    global _DEFAULT_BACKGROUND_TASKS
+    _DEFAULT_BACKGROUND_TASKS = tasks
 
 
 # The following is how we intend pipeline to behave. If the implementation
@@ -122,6 +187,7 @@ def _build_pipeline(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
+    background_tasks: list[BackgroundTaskFactory] | None = None,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -133,6 +199,13 @@ def _build_pipeline(
 
     _LG.debug("%s", desc)
 
+    # Merge per-pipeline background tasks with defaults
+    all_bg_tasks: list[BackgroundTaskFactory] = []
+    if _DEFAULT_BACKGROUND_TASKS:
+        all_bg_tasks.extend(_DEFAULT_BACKGROUND_TASKS)
+    if background_tasks:
+        all_bg_tasks.extend(background_tasks)
+
     coro, queue = _build_pipeline_coro(
         pipeline_cfg,
         max_failures=max_failures,
@@ -140,6 +213,7 @@ def _build_pipeline(
         queue_class=queue_class,
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
+        background_tasks=all_bg_tasks or None,
     )
 
     executor = ThreadPoolExecutor(
@@ -159,6 +233,7 @@ def build_pipeline(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
+    background_tasks: list[BackgroundTaskFactory] | None = None,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -218,6 +293,12 @@ def build_pipeline(
             To disable hooks, provide a function that returns an empty list.
 
         stage_id: The index of the initial stage  used for logging.
+
+        background_tasks: Optional list of :py:class:`BackgroundTaskFactory` callables.
+            Each factory is called to create a :py:class:`BackgroundTask` whose
+            :py:meth:`~BackgroundTask.run` method runs alongside the pipeline stages.
+            Tasks are cancelled when the pipeline completes. Their errors are logged
+            but do not cause the pipeline to fail.
     """
     from . import _profile
 
@@ -232,6 +313,7 @@ def build_pipeline(
         queue_class=queue_class,
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
+        background_tasks=background_tasks,
     )
 
 
@@ -249,6 +331,7 @@ class _Wrapper(Generic[U]):
         report_stats_interval: float,
         queue_class: type[AsyncQueue] | None,
         task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+        background_tasks: list[BackgroundTaskFactory] | None = None,
     ) -> None:
         self.config = config
         self.num_threads = num_threads
@@ -256,6 +339,7 @@ class _Wrapper(Generic[U]):
         self.report_stats_interval = report_stats_interval
         self.queue_class = queue_class
         self.task_hook_factory = task_hook_factory
+        self.background_tasks = background_tasks
 
     def __iter__(self) -> Iterator[U]:
         pipeline = build_pipeline(
@@ -265,6 +349,7 @@ class _Wrapper(Generic[U]):
             report_stats_interval=self.report_stats_interval,
             queue_class=self.queue_class,
             task_hook_factory=self.task_hook_factory,
+            background_tasks=self.background_tasks,
         )
         with pipeline.auto_stop():
             yield from pipeline
@@ -292,6 +377,7 @@ def run_pipeline_in_subprocess(
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    background_tasks: list[BackgroundTaskFactory] | None = None,
     **kwargs: Any,
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
@@ -305,7 +391,7 @@ def run_pipeline_in_subprocess(
                The support for :py:class:`PipelineBuilder` is deprecated, and will be removed in
                the future. Please call `get_config()` method and pass the config object.
 
-        num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory:
+        num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory,background_tasks:
             Passed to :py:func:`build_pipeline`.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
 
@@ -341,6 +427,7 @@ def run_pipeline_in_subprocess(
             report_stats_interval=report_stats_interval,
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
+            background_tasks=background_tasks,
         ),
         initializer=initializer,
         **kwargs,
@@ -361,13 +448,14 @@ def run_pipeline_in_subinterpreter(
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    background_tasks: list[BackgroundTaskFactory] | None = None,
     **kwargs: Any,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.
 
     Args:
         config: The definition of :py:class:`Pipeline`.
-        num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory:
+        num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory,background_tasks:
             Passed to :py:func:`build_pipeline`.
         kwargs: Passed to :py:func:`iterate_in_subinterpreter`.
 
@@ -390,6 +478,7 @@ def run_pipeline_in_subinterpreter(
             report_stats_interval=report_stats_interval,
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
+            background_tasks=background_tasks,
         ),
         initializer=initializer,
         **kwargs,
