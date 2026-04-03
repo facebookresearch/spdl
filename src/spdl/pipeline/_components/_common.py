@@ -5,10 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
+    "_EOF",
     "_periodic_dispatch",
     "_P2Percentile",
+    "_SKIP",
     "_StatsCounter",
     "_time_str",
+    "is_eof",
 ]
 
 import asyncio
@@ -37,6 +40,7 @@ class _Sentinel:
 
 
 _EOF = _Sentinel("EOF")  # Indicate the end of stream.
+_SKIP: None = None
 
 
 def is_eof(item: Any) -> bool:

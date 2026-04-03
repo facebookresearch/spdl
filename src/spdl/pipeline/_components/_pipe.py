@@ -24,7 +24,7 @@ from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import _TMergeOp
 from spdl.pipeline.defs import _PipeArgs
 
-from ._common import _EOF, is_eof
+from ._common import _EOF, _SKIP, is_eof
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
 
@@ -33,9 +33,6 @@ from ._queue import _queue_stage_hook, AsyncQueue
 
 T = TypeVar("T")
 U = TypeVar("U")
-
-
-_SKIP: None = None
 
 
 class _FailCounter(TaskHook):

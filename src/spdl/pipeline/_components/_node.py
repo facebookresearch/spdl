@@ -18,7 +18,6 @@ from spdl.pipeline.defs import (
     _PipeArgs,
     _PipeType,
     AggregateConfig,
-    Aggregator,
     DisaggregateConfig,
     MergeConfig,
     PipeConfig,
@@ -27,7 +26,7 @@ from spdl.pipeline.defs import (
     SourceConfig,
 )
 
-from ._common import is_eof
+from ._aggregate import _aggregate
 from ._hook import get_default_hook_class, TaskHook
 from ._pipe import (
     _disaggregate,
@@ -214,17 +213,6 @@ def _convert_config(
     return n
 
 
-class _AggregatorWrapper:
-    def __init__(self, agg: Aggregator) -> None:
-        self._agg = agg
-
-    def __call__(self, item: Any | None) -> Any | None:
-        if is_eof(item):
-            return self._agg.flush()
-        else:
-            return self._agg.accumulate(item)
-
-
 def _build_node(
     node: _Node[Any],
     fc_class: type[_FailCounter],
@@ -323,14 +311,15 @@ def _build_node(
             in_q, out_q = node.upstream[0].queue, node.queue
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
-            args = _PipeArgs(op=_AggregatorWrapper(cfg.op))
+            # Use specialized aggregate pipe that drains the input queue
+            # in bulk to reduce context switching overhead.
             # When drop_last=False, pass EOF to op so it can emit remaining items
             # When drop_last=True, don't pass EOF to op, effectively dropping last batch
-            node._coro = _pipe(
+            node._coro = _aggregate(
                 node.name,
                 in_q,
                 out_q,
-                args,
+                cfg.op,
                 fc,
                 hooks,
                 op_requires_eof=not cfg.drop_last,
