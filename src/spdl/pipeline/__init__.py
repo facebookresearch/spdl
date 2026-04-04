@@ -9,6 +9,8 @@
 # pyre-strict
 
 from ._build import (
+    BackgroundTask,
+    BackgroundTaskFactory,
     build_pipeline,
     run_pipeline_in_subinterpreter,
     run_pipeline_in_subprocess,
@@ -34,6 +36,8 @@ from ._pipeline import Pipeline
 from ._profile import profile_pipeline, ProfileHook, ProfileResult
 
 __all__ = [
+    "BackgroundTask",
+    "BackgroundTaskFactory",
     "build_pipeline",
     "is_eof",
     "profile_pipeline",

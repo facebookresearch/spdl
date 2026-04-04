@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
+import logging
 from asyncio import ALL_COMPLETED, FIRST_COMPLETED, Task
 from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
@@ -41,6 +42,8 @@ from ._sink import _sink
 from ._source import _source
 
 T = TypeVar("T")
+
+_LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
     "_Node",
@@ -497,7 +500,10 @@ class PipelineFailure(RuntimeError):
         self._errs = errs
 
 
-async def _run_pipeline_coroutines(node: _Node[T]) -> None:
+async def _run_pipeline_coroutines(
+    node: _Node[T],
+    background_tasks: Sequence[Callable[[], Any]] | None = None,
+) -> None:
     """Orchestrate the execution of all pipeline stage coroutines.
 
     This is the main coroutine that manages the lifecycle of all pipeline stage tasks.
@@ -507,20 +513,36 @@ async def _run_pipeline_coroutines(node: _Node[T]) -> None:
     The execution flow:
 
     1. Creates asyncio Tasks for all nodes (starting from sink, traversing upstream)
-    2. Waits for tasks to complete using asyncio.wait with FIRST_COMPLETED
-    3. When a task completes, cancels orphaned upstream tasks to prevent deadlocks
-    4. Handles cancellation requests from the foreground thread
-    5. Gathers errors from failed tasks and raises PipelineFailure if any
+    2. Starts background tasks that run alongside the pipeline stages
+    3. Waits for tasks to complete using asyncio.wait with FIRST_COMPLETED
+    4. When a task completes, cancels orphaned upstream tasks to prevent deadlocks
+    5. Handles cancellation requests from the foreground thread
+    6. Cancels background tasks when pipeline stages complete
+    7. Gathers errors from failed tasks and raises PipelineFailure if any
 
     Args:
         node: The sink node of the pipeline (all upstream nodes are accessed via
             the upstream references).
+        background_tasks: Optional list of BackgroundTaskFactory callables. Each
+            factory is called to create a BackgroundTask instance whose ``run()``
+            coroutine runs alongside the pipeline. Background tasks are cancelled
+            when the pipeline completes and their errors are logged but do not
+            cause the pipeline to fail.
 
     Raises:
         asyncio.CancelledError: If the pipeline is cancelled by the foreground thread.
         PipelineFailure: If any pipeline stage encounters an error.
     """
     pending = _start_tasks(node)
+
+    # Start background tasks
+    bg_tasks: set[Task] = set()
+    for factory in background_tasks or []:
+        try:
+            task_obj = factory()
+            bg_tasks.add(create_task(task_obj.run(), name="background_task"))
+        except Exception:
+            _LG.exception("Failed to start a background task.")
 
     while pending:
         # Note:
@@ -536,7 +558,10 @@ async def _run_pipeline_coroutines(node: _Node[T]) -> None:
         except asyncio.CancelledError:
             for task in pending:
                 task.cancel()
-            await asyncio.wait(pending, return_when=ALL_COMPLETED)
+            for task in bg_tasks:
+                task.cancel()
+            if tasks := (pending | bg_tasks):
+                await asyncio.wait(tasks, return_when=ALL_COMPLETED)
             raise
         else:
             # If a task is done, we cancel all of its upstream stages, because
@@ -549,6 +574,15 @@ async def _run_pipeline_coroutines(node: _Node[T]) -> None:
             # Note: Usually, one must await the cancelled task, but since we await all
             # tasks in this `while pending` loop, here we cancel and not await.
             _cancel_orphaned(node)
+
+    # Pipeline stages are done — cancel background tasks
+    for task in bg_tasks:
+        task.cancel()
+    if bg_tasks:
+        await asyncio.wait(bg_tasks, return_when=ALL_COMPLETED)
+        for task in bg_tasks:
+            if not task.cancelled() and (exc := task.exception()) is not None:
+                _LG.error("Background task failed: %s", exc, exc_info=exc)
 
     if errs := _gather_error(node):
         raise PipelineFailure(errs)
@@ -563,6 +597,7 @@ def _build_pipeline_coro(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
+    background_tasks: Sequence[Callable[[], Any]] | None = None,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     node = _build_pipeline_node(
         plc,
@@ -572,6 +607,6 @@ def _build_pipeline_coro(
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
     )
-    coro = _run_pipeline_coroutines(node)
+    coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 
     return coro, node.queue

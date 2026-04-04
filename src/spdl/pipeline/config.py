@@ -20,7 +20,9 @@ from spdl.pipeline._components import (
 )
 
 from ._build import (
+    get_default_background_tasks,
     get_default_build_callback,
+    set_default_background_tasks,
     set_default_build_callback,
 )
 from ._common._misc import (
@@ -48,5 +50,7 @@ __all__ = [
     "get_default_profile_callback",
     "get_default_build_callback",
     "set_default_build_callback",
+    "get_default_background_tasks",
+    "set_default_background_tasks",
     "set_compact_log",
 ]
