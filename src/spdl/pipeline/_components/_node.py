@@ -11,7 +11,7 @@ from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import partial
-from typing import Any, Generic, TypeAlias, TypeVar
+from typing import Any, TypeAlias, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline.defs import (
@@ -65,7 +65,7 @@ __all__ = [
 # Used to express the upstream relation ship of coroutines,
 # which is necessary for graceful shutdown.
 @dataclass
-class _Node(Generic[T]):
+class _Node:
     """_Node()
 
     Represents a node in the pipeline graph.
@@ -81,11 +81,22 @@ class _Node(Generic[T]):
     cfg: _ConfigBase
     """The configuration object that defines the behavior of this stage."""
 
-    upstream: "Sequence[_Node[Any]]"
+    upstream: "Sequence[_Node]"
     """A sequence of upstream nodes that this node depends on."""
 
-    queue: AsyncQueue
-    """An async queue for buffering data between this stage and downstream stages."""
+    input_queues: Sequence[AsyncQueue]
+    """Queues this node reads from.
+
+    Empty for source nodes. For most nodes, a single-element list containing
+    the upstream node's output queue. For merge nodes, one queue per upstream.
+    """
+
+    output_queues: Sequence[AsyncQueue]
+    """Queues this node writes to.
+
+    Typically a single-element list. Fan-out nodes (e.g. PathVariants router)
+    may have multiple output queues.
+    """
 
     _coro: Coroutine[None, None, None] | None = None
     _task: Task | None = None
@@ -172,11 +183,11 @@ _BUFFER_SIZE: int = 2
 
 def _convert_pipes(
     pipes: Sequence[_PipeConfigBase],
-    n: _Node[Any],
+    n: _Node,
     q_class: type[AsyncQueue],
     pipeline_id: int,
     stage_id: _MutableInt,
-) -> _Node[Any]:
+) -> _Node:
     """Convert a sequence of pipe configs into a chain of _Nodes.
 
     Each config becomes a new _Node linked to the previous one via upstream references.
@@ -194,7 +205,8 @@ def _convert_pipes(
     for cfg in pipes:
         name, q_name = _get_names(cfg, pipeline_id, stage_id)
         stage_id += 1
-        n = _Node(name, cfg, [n], q_class(q_name, buffer_size=_BUFFER_SIZE))
+        out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
+        n = _Node(name, cfg, [n], [n.output_queues[0]], [out_q])
     return n
 
 
@@ -204,7 +216,7 @@ def _convert_config(
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
-) -> _Node[T]:
+) -> _Node:
     """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
     :py:class:`~spdl.pipeline._components._node._Node` objects.
 
@@ -234,21 +246,22 @@ def _convert_config(
         if isinstance(plc.src, MergeConfig)
         else []
     )
-    n = _Node(name, plc.src, upstream, q_class(q_name, buffer_size=_BUFFER_SIZE))
+    src_out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
+    in_qs = [n.output_queues[0] for n in upstream] if upstream else []
+    n = _Node(name, plc.src, upstream, in_qs, [src_out_q])
 
     n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
         name, q_name = _get_names(plc.sink, pipeline_id, stage_id)
         stage_id += 1
-        n = _Node(
-            name, plc.sink, [n], q_class(q_name, buffer_size=plc.sink.buffer_size)
-        )
+        sink_out_q = q_class(q_name, buffer_size=plc.sink.buffer_size)
+        n = _Node(name, plc.sink, [n], [n.output_queues[0]], [sink_out_q])
     return n
 
 
 def _build_node(
-    node: _Node[Any],
+    node: _Node,
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int | Fraction,
@@ -307,23 +320,24 @@ def _build_node(
         case SourceConfig():
             cfg: SourceConfig = node.cfg
             assert len(node.upstream) == 0
-            node._coro = _source(cfg.source, node.queue)
+            node._coro = _source(cfg.source, node.output_queues[0])
         case MergeConfig():
             cfg: MergeConfig = node.cfg
             assert len(node.upstream) > 0
-            input_queues = [n.queue for n in node.upstream]
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
-            node._coro = _merge(node.name, input_queues, node.queue, fc, hooks, cfg.op)
+            node._coro = _merge(
+                node.name, node.input_queues, node.output_queues[0], fc, hooks, cfg.op
+            )
         case SinkConfig():
             cfg: SinkConfig = node.cfg
             assert len(node.upstream) == 1
-            node._coro = _sink(node.upstream[0].queue, node.queue)
+            node._coro = _sink(node.input_queues[0], node.output_queues[0])
         case PipeConfig():
             cfg: PipeConfig = node.cfg
             assert len(node.upstream) == 1
 
-            in_q, out_q = node.upstream[0].queue, node.queue
+            in_q, out_q = node.input_queues[0], node.output_queues[0]
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures, cfg._max_failures)
             match cfg._type:
@@ -342,7 +356,7 @@ def _build_node(
             cfg: AggregateConfig = node.cfg
             assert len(node.upstream) == 1
 
-            in_q, out_q = node.upstream[0].queue, node.queue
+            in_q, out_q = node.input_queues[0], node.output_queues[0]
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
             # Use specialized aggregate pipe that drains the input queue
@@ -363,7 +377,7 @@ def _build_node(
             cfg: DisaggregateConfig = node.cfg
             assert len(node.upstream) == 1
 
-            in_q, out_q = node.upstream[0].queue, node.queue
+            in_q, out_q = node.input_queues[0], node.output_queues[0]
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
             args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
@@ -371,7 +385,7 @@ def _build_node(
 
 
 def _build_node_recursive(
-    node: _Node[Any],
+    node: _Node,
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int | Fraction,
@@ -440,7 +454,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None,
     stage_id: int,
-) -> _Node[T]:
+) -> _Node:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
@@ -460,7 +474,7 @@ def _build_pipeline_node(
 ################################################################################
 # Coroutine execution logics
 ################################################################################
-def _start_tasks(node: _Node[T]) -> set[Task]:
+def _start_tasks(node: _Node) -> set[Task]:
     node.create_task()
     ret = {node.task}
     for n in node.upstream:
@@ -468,13 +482,13 @@ def _start_tasks(node: _Node[T]) -> set[Task]:
     return ret
 
 
-def _cancel_recursive(node: _Node[T]) -> None:
+def _cancel_recursive(node: _Node) -> None:
     node.task.cancel()
     for n in node.upstream:
         _cancel_recursive(n)
 
 
-def _cancel_orphaned(node: _Node[T]) -> None:
+def _cancel_orphaned(node: _Node) -> None:
     """
     Cancel upstream tasks when the current node's task has completed to prevent orphaned producers.
 
@@ -500,7 +514,7 @@ def _cancel_orphaned(node: _Node[T]) -> None:
         _cancel_orphaned(n)
 
 
-def _gather_error(node: _Node[T]) -> list[tuple[str, Exception]]:
+def _gather_error(node: _Node) -> list[tuple[str, Exception]]:
     task = node.task
     errs = []
     if not task.cancelled() and (err := task.exception()) is not None:
@@ -532,7 +546,7 @@ class PipelineFailure(RuntimeError):
 
 
 async def _run_pipeline_coroutines(
-    node: _Node[T],
+    node: _Node,
     background_tasks: Sequence[Callable[[], Any]] | None = None,
 ) -> None:
     """Orchestrate the execution of all pipeline stage coroutines.
@@ -640,4 +654,4 @@ def _build_pipeline_coro(
     )
     coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 
-    return coro, node.queue
+    return coro, node.output_queues[0]

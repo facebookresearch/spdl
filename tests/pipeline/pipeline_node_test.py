@@ -24,16 +24,14 @@ class DummyException(Exception):
     pass
 
 
-def _node(
-    name: str, deps: list[_Node[None]], exc: Exception | None = None
-) -> _Node[None]:
+def _node(name: str, deps: list[_Node], exc: Exception | None = None) -> _Node:
     async def coro() -> None:
         if exc:
             raise exc
         else:
             await asyncio.sleep(10)
 
-    n = _Node(name, _ConfigBase(), deps, AsyncQueue(name))
+    n = _Node(name, _ConfigBase(), deps, [], [AsyncQueue(name)])
     n._coro = coro()
     return n
 
