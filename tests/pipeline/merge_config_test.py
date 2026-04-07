@@ -6,7 +6,7 @@
 
 """Tests for MergeConfig class."""
 
-# pyre-unsafe
+# pyre-strict
 
 import asyncio
 import unittest
@@ -367,16 +367,18 @@ class MergeConfigTest(unittest.TestCase):
         """Test MergeConfig accepts and uses custom merge operation."""
 
         # Track which pipelines contributed items (for verification)
-        collected_items = []
+        collected_items: list[str] = []
 
         async def custom_merge_op(
             name: str,
-            input_queues: Sequence[asyncio.Queue],
-            output_queue: asyncio.Queue,
+            input_queues: Sequence[asyncio.Queue[object]],
+            output_queue: asyncio.Queue[object],
         ) -> None:
             """Custom merge that adds a prefix to each item based on its source pipeline."""
 
-            async def process_queue(queue_idx: int, in_q: asyncio.Queue) -> None:
+            async def process_queue(
+                queue_idx: int, in_q: asyncio.Queue[object]
+            ) -> None:
                 while True:
                     item = await in_q.get()
                     if is_eof(item):
@@ -431,8 +433,8 @@ class MergeConfigTest(unittest.TestCase):
 
         async def custom_merge_op(
             _: str,
-            input_queues: Sequence[asyncio.Queue],
-            output_queue: asyncio.Queue,
+            input_queues: Sequence[asyncio.Queue[object]],
+            output_queue: asyncio.Queue[object],
         ) -> None:
             """Custom merge that exists when one sub-pipeline completes"""
             while True:
