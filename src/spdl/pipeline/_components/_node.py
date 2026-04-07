@@ -21,6 +21,7 @@ from spdl.pipeline.defs import (
     AggregateConfig,
     DisaggregateConfig,
     MergeConfig,
+    PathVariantsConfig,
     PipeConfig,
     PipelineConfig,
     SinkConfig,
@@ -40,6 +41,7 @@ from ._pipe import (
 from ._queue import AsyncQueue, get_default_queue_class
 from ._sink import _sink
 from ._source import _source
+from ._variants import _path_variants_router
 
 T = TypeVar("T")
 S = TypeVar("S")
@@ -60,6 +62,16 @@ __all__ = [
 ]
 
 # pyre-strict
+
+
+class _PathVariantsMergeConfig:
+    """Internal config for the fan-in merge node of PathVariants.
+
+    This is not user-facing. It is used as the ``cfg`` of the merge ``_Node``
+    so that ``_build_node`` can dispatch to the correct coroutine builder.
+    """
+
+    pass
 
 
 # Used to express the upstream relation ship of coroutines,
@@ -128,7 +140,13 @@ class _SourceNode(_NodeMixin):
 class _Node(_NodeMixin):
     """Node with a single input queue and a single output queue."""
 
-    cfg: PipeConfig | AggregateConfig | DisaggregateConfig | SinkConfig
+    cfg: (
+        PipeConfig
+        | AggregateConfig
+        | DisaggregateConfig
+        | PathVariantsConfig
+        | SinkConfig
+    )
     """The configuration object that defines the behavior of this stage."""
 
     upstream: "Sequence[_TNodes]"
@@ -145,7 +163,7 @@ class _Node(_NodeMixin):
 class _FanInNode(_NodeMixin):
     """Node with multiple input queues for fan-in stages (e.g., MergeConfig)."""
 
-    cfg: MergeConfig
+    cfg: _PathVariantsMergeConfig | MergeConfig
     """The configuration object that defines the behavior of this stage."""
 
     upstream: "Sequence[_TNodes]"
@@ -170,7 +188,7 @@ class _FanOutNode(_NodeMixin):
     so graph traversals visit them multiple times.
     """
 
-    cfg: object
+    cfg: PathVariantsConfig
     """The configuration object that defines the behavior of this stage."""
 
     upstream: "Sequence[_TNodes]"
@@ -196,6 +214,18 @@ class _FanOutNode(_NodeMixin):
 
 _TNodes: TypeAlias = _SourceNode | _Node | _FanInNode | _FanOutNode
 _TOutputNodes: TypeAlias = _SourceNode | _Node | _FanInNode
+
+
+def _get_output_queue(n: _TNodes, path_idx: int) -> AsyncQueue:
+    match n:
+        case _SourceNode() | _Node() | _FanInNode():
+            assert path_idx == -1
+            return n.output_queue
+        case _FanOutNode():
+            assert path_idx >= 0
+            return n.output_queues[path_idx]
+        case _:
+            raise NotImplementedError(f"`{type(n)}` is not supported.")
 
 
 ################################################################################
@@ -231,6 +261,10 @@ def _get_names(cfg: object, pipeline_id: int, stage_id: _MutableInt) -> tuple[st
             base = "disaggregate"
         case MergeConfig():
             base = "merge"
+        case PathVariantsConfig():
+            base = cfg.name or "path_variants_router"
+        case _PathVariantsMergeConfig():
+            base = "path_variants_merge"
         case _:
             raise NotImplementedError(f"`{type(cfg)}` is not supported.")
     # Note: Do not change the following pattern used for naming.
@@ -248,11 +282,14 @@ _BUFFER_SIZE: int = 2
 
 
 def _convert_pipes(
-    pipes: Sequence[PipeConfig | AggregateConfig | DisaggregateConfig],
-    n: _TOutputNodes,
+    pipes: Sequence[
+        PipeConfig | AggregateConfig | DisaggregateConfig | PathVariantsConfig
+    ],
+    n: _TNodes,
     q_class: type[AsyncQueue],
     pipeline_id: int,
     stage_id: _MutableInt,
+    path_idx: int = -1,
 ) -> _TOutputNodes:
     """Convert a sequence of pipe configs into a chain of _Nodes.
 
@@ -264,16 +301,101 @@ def _convert_pipes(
         q_class: The queue class to use for creating buffers between stages.
         pipeline_id: A unique identifier for the pipeline, used in stage naming.
         stage_id: A mutable counter for assigning unique stage IDs.
+        path_idx: Used if the upstream node is _FanOutNode.
 
     Returns:
         The last node in the chain.
     """
-    for cfg in pipes:
-        name, q_name = _get_names(cfg, pipeline_id, stage_id)
-        stage_id += 1
-        out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
-        n = _Node(name, cfg, [n], input_queue=n.output_queue, output_queue=out_q)
-    return n
+    ret: _TOutputNodes
+    for i, cfg in enumerate(pipes):
+        idx = path_idx if i == 0 else -1
+        match cfg:
+            case PathVariantsConfig():
+                n = _convert_path_variants(cfg, n, q_class, pipeline_id, stage_id, idx)
+            case _:
+                in_q = _get_output_queue(n, idx)
+                name, q_name = _get_names(cfg, pipeline_id, stage_id)
+                stage_id += 1
+                out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
+                n = _Node(name, cfg, [n], input_queue=in_q, output_queue=out_q)
+        ret = n
+    return ret
+
+
+def _convert_path_variants(
+    cfg: PathVariantsConfig,
+    n: _TNodes,
+    q_class: type[AsyncQueue],
+    pipeline_id: int,
+    stage_id: _MutableInt,
+    path_idx: int = -1,
+) -> _FanInNode:
+    """Convert a PathVariantsConfig into a sub-graph of _Nodes.
+
+    Creates the following graph structure::
+
+        prev_node → router(output_queues=[q0,q1,...])
+                      path0_first(input_queues=[q0]) → ... → path0_end ─┐
+                      path1_first(input_queues=[q1]) → ... → path1_end ─┤
+                      ...                                                 ├→ merge → downstream
+                      pathN_first(input_queues=[qN]) → ... → pathN_end ─┘
+
+    Args:
+        cfg: The PathVariantsConfig to convert.
+        n: The upstream node to connect the router to.
+        q_class: Queue class for creating inter-stage buffers.
+        pipeline_id: Pipeline identifier for naming.
+        stage_id: Mutable stage counter.
+        path_idx: Used if the upstream node is _FanOutNode.
+
+    Returns:
+        The merge node (last node of the sub-graph).
+    """
+    if len(cfg.paths) == 0:
+        raise AssertionError(
+            "[Internal Error] No variant path. "
+            "Empty variant should be rejected by PathVariantsConfig.__post_init__."
+        )
+    if any(len(p) == 0 for p in cfg.paths):
+        raise AssertionError(
+            "[Internal Error] Empty variant path. "
+            "Empty variant should be rejected by PathVariantsConfig.__post_init__."
+        )
+
+    # Create per-path queues
+    path_queues = []
+    for i in range(len(cfg.paths)):
+        q_name = f"{pipeline_id}:{stage_id}:path_variants_path{i}_queue"
+        path_queues.append(q_class(q_name, buffer_size=_BUFFER_SIZE))
+
+    # Create router node (fan-out: 1 input, N output queues)
+    router_name, _ = _get_names(cfg, pipeline_id, stage_id)
+    stage_id += 1
+    start_node = _FanOutNode(
+        router_name,
+        cfg,
+        [n],
+        input_queue=_get_output_queue(n, path_idx),
+        output_queues=path_queues,
+    )
+    # Create each path
+    end_nodes = [
+        _convert_pipes(path_configs, start_node, q_class, pipeline_id, stage_id, i)
+        for i, path_configs in enumerate(cfg.paths)
+    ]
+    # Create merge node (fan-in: N input queues, 1 output)
+    merge_name = f"{pipeline_id}:{stage_id}:path_variants_merge"
+    stage_id += 1
+    merge_out_q = q_class(f"{merge_name}_queue", buffer_size=_BUFFER_SIZE)
+    merge_node = _FanInNode(
+        merge_name,
+        _PathVariantsMergeConfig(),
+        end_nodes,
+        input_queues=[n.output_queue for n in end_nodes],
+        output_queue=merge_out_q,
+    )
+
+    return merge_node
 
 
 def _convert_config(
@@ -317,7 +439,8 @@ def _convert_config(
         case _:
             raise NotImplementedError(f"`{type(cfg)}` is not supported.")
 
-    n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
+    if plc.pipes:
+        n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
         name, q_name = _get_names(plc.sink, pipeline_id, stage_id)
@@ -456,6 +579,23 @@ def _build_node(
             fc = fc_class(max_failures)
             args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
             node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, False)
+
+        case PathVariantsConfig():  # Router of PathVariants
+            assert isinstance(node, _FanOutNode)
+            hooks = task_hook_factory(node.name)
+            node._coro = _path_variants_router(
+                node.input_queue,
+                node.output_queues,
+                cfg.router,
+                hooks,
+            )
+        case _PathVariantsMergeConfig():
+            assert isinstance(node, _FanInNode)
+            hooks = task_hook_factory(node.name)
+            fc = fc_class(max_failures)
+            node._coro = _merge(
+                node.name, node.input_queues, node.output_queue, fc, hooks, None
+            )
 
 
 def _build_node_recursive(

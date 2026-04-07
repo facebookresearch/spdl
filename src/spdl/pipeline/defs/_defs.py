@@ -6,7 +6,14 @@
 
 import abc
 import inspect
-from collections.abc import AsyncIterable, Callable, Iterable, Mapping, Sequence
+from collections.abc import (
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Iterable,
+    Mapping,
+    Sequence,
+)
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from enum import IntEnum
@@ -39,6 +46,8 @@ __all__ = [
     "Aggregate",
     "Aggregator",
     "Disaggregate",
+    "PathVariants",
+    "PathVariantsConfig",
 ]
 
 
@@ -398,6 +407,121 @@ class DisaggregateConfig(Generic[T]):
 
 
 ################################################################################
+# PathVariants
+################################################################################
+
+
+@dataclass(frozen=True)
+class PathVariantsConfig(Generic[T]):
+    """Configuration for variant path routing.
+
+    Use :py:func:`PathVariants` to create a config.
+
+    Routes each incoming item to one of several processing paths based on a
+    router function. All paths produce the same output type and their outputs
+    are merged back into a single stream.
+
+    This is useful when items need different processing depending on runtime
+    conditions. For example:
+
+    - **Caching**: route cached items to a fast cache-read path while
+      uncached items go through full data loading.
+    - **Hybrid processing**: split items between local and remote processing
+      based on size or availability.
+
+    .. raw::
+
+       prev_node → router → path0_first → ... → path0_end ─┐
+                          → path1_first → ... → path1_end ─┤→ merge → downstream
+                          → pathN_first → ... → pathN_end ─┘
+
+    .. seealso::
+
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
+          Illustrates how to build a complex pipeline.
+
+    Example:
+
+    .. code-block:: python
+
+       from spdl.pipeline import PipelineBuilder
+
+       def cache_router(item):
+           return 0 if item in cache else 1
+
+       pipeline = (
+           PipelineBuilder()
+           .add_source(items)
+           .path_variants(
+               router=cache_router,
+               paths=[
+                   [Pipe(load_from_cache)],   # path 0: cache hit
+                   [Pipe(load_from_source)],  # path 1: cache miss
+               ],
+           )
+           .add_sink(buffer_size=10)
+           .build()
+       )
+
+    .. note::
+
+       Paths can only contain pipe stages (:py:class:`PipeConfig`,
+       :py:class:`AggregateConfig`, :py:class:`DisaggregateConfig`, or
+       nested :py:class:`PathVariantsConfig`). :py:class:`SourceConfig`
+       and :py:class:`SinkConfig` are not allowed in paths.
+    """
+
+    name: str
+    """Name of the path variants stage."""
+
+    router: Callable[[Any], int] | Callable[[Any], Awaitable[int]]
+    """A function that takes an item and returns an index into the paths list.
+
+    Can be a regular function or an async function/callable."""
+
+    paths: tuple[
+        tuple[
+            "PipeConfig[Any, Any]"
+            " | AggregateConfig[Any]"
+            " | DisaggregateConfig[Any]"
+            " | PathVariantsConfig[Any]",
+            ...,
+        ],
+        ...,
+    ]
+    """Alternative processing paths. Each path is a tuple of pipe configs."""
+
+    def __post_init__(self) -> None:
+        if not callable(self.router) and not hasattr(self.router, "__call__"):
+            raise ValueError("router must be callable.")
+        if len(self.paths) < 1:
+            raise ValueError("PathVariantsConfig must have at least 1 path.")
+        for i, path in enumerate(self.paths):
+            if len(path) == 0:
+                raise ValueError(
+                    f"Path {i} is empty. Each path must have at least one config."
+                )
+            for j, cfg in enumerate(path):
+                if isinstance(cfg, SourceConfig):
+                    raise ValueError(
+                        f"Path {i}, position {j}: SourceConfig is not allowed "
+                        f"inside PathVariants paths."
+                    )
+                if isinstance(cfg, SinkConfig):
+                    raise ValueError(
+                        f"Path {i}, position {j}: SinkConfig is not allowed "
+                        f"inside PathVariants paths."
+                    )
+
+    def __repr__(self) -> str:
+        path_strs = []
+        for i, path in enumerate(self.paths):
+            configs = ", ".join(repr(c) for c in path)
+            path_strs.append(f"path{i}=[{configs}]")
+        return f"PathVariants({', '.join(path_strs)})"
+
+
+################################################################################
 # Sink
 ################################################################################
 @dataclass(frozen=True)
@@ -447,7 +571,10 @@ class PipelineConfig(Generic[U]):
     """Source configuration."""
 
     pipes: Sequence[
-        PipeConfig[Any, Any] | AggregateConfig[Any] | DisaggregateConfig[Any]
+        PipeConfig[Any, Any]
+        | AggregateConfig[Any]
+        | DisaggregateConfig[Any]
+        | PathVariantsConfig[Any]
     ]
     """Pipe configurations."""
 
@@ -915,3 +1042,75 @@ def Disaggregate() -> DisaggregateConfig[Any]:
           Illustrates how to build a complex pipeline.
     """
     return DisaggregateConfig(name="disaggregate")
+
+
+def PathVariants(
+    router: Callable[[Any], int] | Callable[[Any], Awaitable[int]],
+    paths: Sequence[
+        Sequence[
+            PipeConfig[Any, Any]
+            | AggregateConfig[Any]
+            | DisaggregateConfig[Any]
+            | PathVariantsConfig[Any]
+        ]
+    ],
+    name: str | None = None,
+) -> PathVariantsConfig[Any]:
+    """Create a :py:class:`PathVariantsConfig` for variant path routing.
+
+    .. seealso::
+
+       :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
+          Illustrates how to build a complex pipeline.
+
+    Routes each incoming item to one of several processing paths based on
+    a router function. Each path is an independent chain of pipe configs.
+    The outputs of all paths are merged back into a single stream.
+
+    This is useful when items need different processing depending on runtime
+    conditions — e.g., routing cached items to a fast cache-read path while
+    uncached items go through full data loading, or splitting between local
+    and remote processing.
+
+    Args:
+        router: A callable that takes an item and returns an int index
+            selecting which path the item should be routed to. The returned
+            index must be in range ``[0, len(paths))``.
+        paths: A sequence of paths. Each path is a sequence of pipe configs
+            (:py:class:`PipeConfig`, :py:class:`AggregateConfig`,
+            :py:class:`DisaggregateConfig`, or nested :py:class:`PathVariantsConfig`).
+            :py:class:`SourceConfig` and :py:class:`SinkConfig` are not allowed.
+        name: Optional name for the stage.
+
+    Returns:
+        The config object.
+
+    Raises:
+        ValueError: If ``router`` is not callable, ``paths`` is empty, or
+            a path contains :py:class:`SourceConfig` or :py:class:`SinkConfig`.
+
+    Example:
+
+    .. code-block:: python
+
+       from spdl.pipeline.defs import PathVariants, Pipe, PipelineConfig, SourceConfig, SinkConfig
+
+       config = PipelineConfig(
+           src=SourceConfig(items),
+           pipes=[
+               PathVariants(
+                   router=lambda item: 0 if item in cache else 1,
+                   paths=[
+                       [Pipe(load_from_cache)],   # path 0: cache hit
+                       [Pipe(load_from_source)],  # path 1: cache miss
+                   ],
+               ),
+           ],
+           sink=SinkConfig(buffer_size=10),
+       )
+    """
+    return PathVariantsConfig(
+        name=name or "path_variants",
+        router=router,
+        paths=tuple(tuple(p) for p in paths),
+    )

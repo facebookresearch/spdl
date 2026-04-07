@@ -7,7 +7,7 @@
 # pyre-strict
 
 import logging
-from collections.abc import AsyncIterable, Callable, Iterable
+from collections.abc import AsyncIterable, Callable, Iterable, Sequence
 from concurrent.futures import Executor
 from fractions import Fraction
 from typing import Generic, TypeVar
@@ -21,6 +21,8 @@ from spdl.pipeline.defs import (
     Aggregator,
     Disaggregate,
     DisaggregateConfig,
+    PathVariants,
+    PathVariantsConfig,
     Pipe,
     PipeConfig,
     PipelineConfig,
@@ -78,7 +80,9 @@ class PipelineBuilder(Generic[T, U]):
         log_api_usage_once("spdl.pipeline.PipelineBuilder")
 
         self._src: SourceConfig[T] | None = None
-        self._process_args: list[PipeConfig | AggregateConfig | DisaggregateConfig] = []
+        self._process_args: list[
+            PipeConfig | AggregateConfig | DisaggregateConfig | PathVariantsConfig
+        ] = []
         self._sink: SinkConfig[U] | None = None
 
     def add_source(
@@ -216,6 +220,24 @@ class PipelineBuilder(Generic[T, U]):
     def disaggregate(self) -> "PipelineBuilder[T, U]":
         """Disaggregate the items in the pipeline."""
         self._process_args.append(Disaggregate())
+        return self
+
+    def path_variants(
+        self,
+        router: Callable,
+        paths: Sequence,
+        name: str | None = None,
+    ) -> "PipelineBuilder[T, U]":
+        """Route items to different processing paths based on a router function.
+
+        Args:
+            router: A callable that takes an item and returns an int index
+                selecting which path the item should be routed to.
+            paths: A sequence of paths, where each path is a sequence of
+                pipe configs.
+            name: Optional name for the stage.
+        """
+        self._process_args.append(PathVariants(router, paths, name=name))
         return self
 
     def add_sink(
