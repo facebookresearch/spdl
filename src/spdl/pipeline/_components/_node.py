@@ -17,6 +17,7 @@ from spdl.pipeline._common._misc import create_task
 from spdl.pipeline.defs import (
     _ConfigBase,
     _PipeArgs,
+    _PipeConfigBase,
     _PipeType,
     AggregateConfig,
     DisaggregateConfig,
@@ -164,6 +165,34 @@ def _get_names(
 _BUFFER_SIZE: int = 2
 
 
+def _convert_pipes(
+    pipes: Sequence[_PipeConfigBase],
+    n: _Node[Any],
+    q_class: type[AsyncQueue],
+    pipeline_id: int,
+    stage_id: _MutableInt,
+) -> _Node[Any]:
+    """Convert a sequence of pipe configs into a chain of _Nodes.
+
+    Each config becomes a new _Node linked to the previous one via upstream references.
+
+    Args:
+        pipes: The sequence of pipe configurations to convert.
+        n: The upstream node to start chaining from.
+        q_class: The queue class to use for creating buffers between stages.
+        pipeline_id: A unique identifier for the pipeline, used in stage naming.
+        stage_id: A mutable counter for assigning unique stage IDs.
+
+    Returns:
+        The last node in the chain.
+    """
+    for cfg in pipes:
+        name, q_name = _get_names(cfg, pipeline_id, stage_id)
+        stage_id += 1
+        n = _Node(name, cfg, [n], q_class(q_name, buffer_size=_BUFFER_SIZE))
+    return n
+
+
 def _convert_config(
     plc: PipelineConfig[T],
     q_class: type[AsyncQueue],
@@ -202,10 +231,7 @@ def _convert_config(
     )
     n = _Node(name, plc.src, upstream, q_class(q_name, buffer_size=_BUFFER_SIZE))
 
-    for cfg in plc.pipes:
-        name, q_name = _get_names(cfg, pipeline_id, stage_id)
-        stage_id += 1
-        n = _Node(name, cfg, [n], q_class(q_name, buffer_size=_BUFFER_SIZE))
+    n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
         name, q_name = _get_names(plc.sink, pipeline_id, stage_id)
