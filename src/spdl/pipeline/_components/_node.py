@@ -52,6 +52,8 @@ _PipeConfigBase: TypeAlias = (
 _LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
+    "_FanInNode",
+    "_FanOutNode",
     "_Node",
     "_build_pipeline_coro",
     "_get_global_id",
@@ -85,21 +87,25 @@ class _Node:
     """A sequence of upstream nodes that this node depends on."""
 
     input_queues: Sequence[AsyncQueue]
-    """Queues this node reads from.
-
-    Empty for source nodes. For most nodes, a single-element list containing
-    the upstream node's output queue. For merge nodes, one queue per upstream.
-    """
+    """Queues this node reads from. At most one for chain stages, empty for source."""
 
     output_queues: Sequence[AsyncQueue]
-    """Queues this node writes to.
-
-    Typically a single-element list. Fan-out nodes (e.g. PathVariants router)
-    may have multiple output queues.
-    """
+    """Queues this node writes to. At most one for chain stages."""
 
     _coro: Coroutine[None, None, None] | None = None
     _task: Task | None = None
+
+    def __post_init__(self) -> None:
+        if len(self.input_queues) > 1:
+            raise AssertionError(
+                f"_Node supports at most 1 input queue, got {len(self.input_queues)}. "
+                "Use _FanInNode for fan-in stages."
+            )
+        if len(self.output_queues) != 1:
+            raise AssertionError(
+                f"_Node requires exactly 1 output queue, got {len(self.output_queues)}. "
+                "Use _FanOutNode for fan-out stages."
+            )
 
     @property
     def coro(self) -> Coroutine[None, None, None]:
@@ -125,6 +131,45 @@ class _Node:
                 "[INTERNAL ERROR] Attempted to cteate a task, "
                 f"but it is already crated (started): {self}"
             )
+        task = create_task(self.coro, name=self.name)
+        self._task = task
+        return task
+
+
+@dataclass
+class _FanInNode(_Node):
+    """Node with multiple input queues for fan-in stages (e.g., MergeConfig)."""
+
+    def __post_init__(self) -> None:
+        if len(self.output_queues) != 1:
+            raise AssertionError(
+                f"_FanInNode requires exactly 1 output queue, got {len(self.output_queues)}. "
+                "Use _FanOutNode for fan-out stages."
+            )
+
+
+@dataclass
+class _FanOutNode(_Node):
+    """Node with multiple output queues for fan-out stages (e.g., PathVariants router).
+
+    Fan-out nodes are shared: they appear as upstream of multiple downstream nodes,
+    so graph traversals visit them multiple times. The ``_cancel_count`` field
+    defers cancellation until all downstream paths have requested it.
+    """
+
+    _cancel_count: int = 1
+    """Number of ``_cancel_recursive`` calls needed before actually cancelling."""
+
+    def __post_init__(self) -> None:
+        if len(self.input_queues) > 1:
+            raise AssertionError(
+                f"_FanOutNode supports at most 1 input queue, got {len(self.input_queues)}. "
+                "Use _FanInNode for fan-in stages."
+            )
+
+    def create_task(self) -> Task:
+        if self._task is not None:
+            return self._task  # Shared: return existing task on revisit.
         task = create_task(self.coro, name=self.name)
         self._task = task
         return task
@@ -248,8 +293,11 @@ def _convert_config(
     )
     src_out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
     in_qs = [n.output_queues[0] for n in upstream] if upstream else []
-    n = _Node(name, plc.src, upstream, in_qs, [src_out_q])
-
+    n = (
+        _FanInNode(name, plc.src, upstream, in_qs, [src_out_q])
+        if upstream
+        else _Node(name, plc.src, upstream, in_qs, [src_out_q])
+    )
     n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
@@ -314,6 +362,8 @@ def _build_node(
         its upstream dependencies.
     """
     if node._coro is not None:
+        if isinstance(node, _FanOutNode):
+            return
         raise RuntimeError(f"[Internal Error] coroutine cannot be built twice. {node}")
 
     match node.cfg:
@@ -405,6 +455,9 @@ def _build_node_recursive(
     Raises:
         RuntimeError: If attempting to build a coroutine for a node that already has one.
     """
+    if isinstance(node, _FanOutNode) and node._coro is not None:
+        return
+
     for n in node.upstream:
         _build_node_recursive(n, fc_class, task_hook_factory, max_failures)
 
@@ -475,6 +528,8 @@ def _build_pipeline_node(
 # Coroutine execution logics
 ################################################################################
 def _start_tasks(node: _Node) -> set[Task]:
+    if isinstance(node, _FanOutNode) and node._task is not None:
+        return {node.task}
     node.create_task()
     ret = {node.task}
     for n in node.upstream:
@@ -483,6 +538,10 @@ def _start_tasks(node: _Node) -> set[Task]:
 
 
 def _cancel_recursive(node: _Node) -> None:
+    if isinstance(node, _FanOutNode):
+        node._cancel_count -= 1
+        if node._cancel_count > 0:
+            return
     node.task.cancel()
     for n in node.upstream:
         _cancel_recursive(n)
