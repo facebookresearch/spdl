@@ -31,7 +31,9 @@ def _node(name: str, deps: list[_Node], exc: Exception | None = None) -> _Node:
         else:
             await asyncio.sleep(10)
 
-    n = _Node(name, _ConfigBase(), deps, [], [AsyncQueue(name)])
+    n = _Node(
+        name, _ConfigBase(), deps, input_queue=None, output_queue=AsyncQueue(name)
+    )
     n._coro = coro()
     return n
 

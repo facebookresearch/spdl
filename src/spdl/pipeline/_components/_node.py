@@ -8,7 +8,7 @@ import asyncio
 import logging
 from asyncio import ALL_COMPLETED, FIRST_COMPLETED, Task
 from collections.abc import Callable, Coroutine, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from functools import partial
 from typing import Any, TypeAlias, TypeVar
@@ -51,10 +51,12 @@ _PipeConfigBase: TypeAlias = (
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
+
 __all__ = [
     "_FanInNode",
     "_FanOutNode",
     "_Node",
+    "_NodeMixin",
     "_build_pipeline_coro",
     "_get_global_id",
     "_set_global_id",
@@ -67,10 +69,8 @@ __all__ = [
 # Used to express the upstream relation ship of coroutines,
 # which is necessary for graceful shutdown.
 @dataclass
-class _Node:
-    """_Node()
-
-    Represents a node in the pipeline graph.
+class _NodeMixin:
+    """Represents a node in the pipeline graph.
 
     Each node corresponds to a pipeline stage and contains references to its upstream
     nodes, forming a directed acyclic graph (DAG). Nodes are used internally during
@@ -83,29 +83,11 @@ class _Node:
     cfg: _ConfigBase
     """The configuration object that defines the behavior of this stage."""
 
-    upstream: "Sequence[_Node]"
+    upstream: "Sequence[_TNodes]"
     """A sequence of upstream nodes that this node depends on."""
 
-    input_queues: Sequence[AsyncQueue]
-    """Queues this node reads from. At most one for chain stages, empty for source."""
-
-    output_queues: Sequence[AsyncQueue]
-    """Queues this node writes to. At most one for chain stages."""
-
-    _coro: Coroutine[None, None, None] | None = None
-    _task: Task | None = None
-
-    def __post_init__(self) -> None:
-        if len(self.input_queues) > 1:
-            raise AssertionError(
-                f"_Node supports at most 1 input queue, got {len(self.input_queues)}. "
-                "Use _FanInNode for fan-in stages."
-            )
-        if len(self.output_queues) != 1:
-            raise AssertionError(
-                f"_Node requires exactly 1 output queue, got {len(self.output_queues)}. "
-                "Use _FanOutNode for fan-out stages."
-            )
+    _coro: Coroutine[None, None, None] | None = field(default=None, init=False)
+    _task: Task | None = field(default=None, init=False)
 
     @property
     def coro(self) -> Coroutine[None, None, None]:
@@ -137,35 +119,48 @@ class _Node:
 
 
 @dataclass
-class _FanInNode(_Node):
-    """Node with multiple input queues for fan-in stages (e.g., MergeConfig)."""
+class _Node(_NodeMixin):
+    """Node with a single input queue and a single output queue."""
 
-    def __post_init__(self) -> None:
-        if len(self.output_queues) != 1:
-            raise AssertionError(
-                f"_FanInNode requires exactly 1 output queue, got {len(self.output_queues)}. "
-                "Use _FanOutNode for fan-out stages."
-            )
+    input_queue: AsyncQueue | None
+    """Queue this node reads from. Empty for source."""
+
+    output_queue: AsyncQueue
+    """Queue this node writes to."""
 
 
 @dataclass
-class _FanOutNode(_Node):
+class _FanInNode(_NodeMixin):
+    """Node with multiple input queues for fan-in stages (e.g., MergeConfig)."""
+
+    input_queues: Sequence[AsyncQueue]
+    """Queues this node reads from."""
+
+    output_queue: AsyncQueue
+    """Queues this node writes to."""
+
+    def __post_init__(self) -> None:
+        if len(self.input_queues) < 1:
+            raise AssertionError("[INTERNAL ERROR] Input queues cannot be empty.")
+
+
+@dataclass
+class _FanOutNode(_NodeMixin):
     """Node with multiple output queues for fan-out stages (e.g., PathVariants router).
 
     Fan-out nodes are shared: they appear as upstream of multiple downstream nodes,
-    so graph traversals visit them multiple times. The ``_cancel_count`` field
-    defers cancellation until all downstream paths have requested it.
+    so graph traversals visit them multiple times.
     """
 
-    _cancel_count: int = 1
-    """Number of ``_cancel_recursive`` calls needed before actually cancelling."""
+    input_queue: AsyncQueue
+    """Queues this node reads from."""
+
+    output_queues: Sequence[AsyncQueue]
+    """Queues this node writes to."""
 
     def __post_init__(self) -> None:
-        if len(self.input_queues) > 1:
-            raise AssertionError(
-                f"_FanOutNode supports at most 1 input queue, got {len(self.input_queues)}. "
-                "Use _FanInNode for fan-in stages."
-            )
+        if len(self.output_queues) < 1:
+            raise AssertionError("[INTERNAL ERROR] Output queues cannot be empty.")
 
     def create_task(self) -> Task:
         if self._task is not None:
@@ -173,6 +168,10 @@ class _FanOutNode(_Node):
         task = create_task(self.coro, name=self.name)
         self._task = task
         return task
+
+
+_TNodes: TypeAlias = _Node | _FanInNode | _FanOutNode
+_TOutputNodes: TypeAlias = _Node | _FanInNode
 
 
 ################################################################################
@@ -228,11 +227,11 @@ _BUFFER_SIZE: int = 2
 
 def _convert_pipes(
     pipes: Sequence[_PipeConfigBase],
-    n: _Node,
+    n: _TOutputNodes,
     q_class: type[AsyncQueue],
     pipeline_id: int,
     stage_id: _MutableInt,
-) -> _Node:
+) -> _TOutputNodes:
     """Convert a sequence of pipe configs into a chain of _Nodes.
 
     Each config becomes a new _Node linked to the previous one via upstream references.
@@ -251,7 +250,7 @@ def _convert_pipes(
         name, q_name = _get_names(cfg, pipeline_id, stage_id)
         stage_id += 1
         out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
-        n = _Node(name, cfg, [n], [n.output_queues[0]], [out_q])
+        n = _Node(name, cfg, [n], input_queue=n.output_queue, output_queue=out_q)
     return n
 
 
@@ -261,7 +260,7 @@ def _convert_config(
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
-) -> _Node:
+) -> _TOutputNodes:
     """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
     :py:class:`~spdl.pipeline._components._node._Node` objects.
 
@@ -282,34 +281,36 @@ def _convert_config(
     """
     name, q_name = _get_names(plc.src, pipeline_id, stage_id)
     stage_id += 1
-
-    upstream = (
-        [
+    src_out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
+    if isinstance(plc.src, MergeConfig):
+        upstream = [
             _convert_config(cfg, q_class, pipeline_id, stage_id, disable_sink=True)
             for cfg in plc.src.pipeline_configs
         ]
-        if isinstance(plc.src, MergeConfig)
-        else []
-    )
-    src_out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
-    in_qs = [n.output_queues[0] for n in upstream] if upstream else []
-    n = (
-        _FanInNode(name, plc.src, upstream, in_qs, [src_out_q])
-        if upstream
-        else _Node(name, plc.src, upstream, in_qs, [src_out_q])
-    )
+        n = _FanInNode(
+            name,
+            plc.src,
+            upstream,
+            input_queues=[n.output_queue for n in upstream],
+            output_queue=src_out_q,
+        )
+    else:
+        n = _Node(name, plc.src, [], input_queue=None, output_queue=src_out_q)
+
     n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
         name, q_name = _get_names(plc.sink, pipeline_id, stage_id)
         stage_id += 1
         sink_out_q = q_class(q_name, buffer_size=plc.sink.buffer_size)
-        n = _Node(name, plc.sink, [n], [n.output_queues[0]], [sink_out_q])
+        n = _Node(
+            name, plc.sink, [n], input_queue=n.output_queue, output_queue=sink_out_q
+        )
     return n
 
 
 def _build_node(
-    node: _Node,
+    node: _TNodes,
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int | Fraction,
@@ -366,28 +367,30 @@ def _build_node(
             return
         raise RuntimeError(f"[Internal Error] coroutine cannot be built twice. {node}")
 
-    match node.cfg:
+    match cfg := node.cfg:
         case SourceConfig():
-            cfg: SourceConfig = node.cfg
+            assert isinstance(node, _Node)
             assert len(node.upstream) == 0
-            node._coro = _source(cfg.source, node.output_queues[0])
+            node._coro = _source(cfg.source, node.output_queue)
         case MergeConfig():
-            cfg: MergeConfig = node.cfg
+            assert isinstance(node, _FanInNode)
             assert len(node.upstream) > 0
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
             node._coro = _merge(
-                node.name, node.input_queues, node.output_queues[0], fc, hooks, cfg.op
+                node.name, node.input_queues, node.output_queue, fc, hooks, cfg.op
             )
         case SinkConfig():
-            cfg: SinkConfig = node.cfg
+            assert isinstance(node, _Node)
             assert len(node.upstream) == 1
-            node._coro = _sink(node.input_queues[0], node.output_queues[0])
+            assert node.input_queue is not None
+            node._coro = _sink(node.input_queue, node.output_queue)
         case PipeConfig():
-            cfg: PipeConfig = node.cfg
+            assert isinstance(node, _Node)
             assert len(node.upstream) == 1
+            assert node.input_queue is not None
 
-            in_q, out_q = node.input_queues[0], node.output_queues[0]
+            in_q, out_q = node.input_queue, node.output_queue
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures, cfg._max_failures)
             match cfg._type:
@@ -403,10 +406,11 @@ def _build_node(
                     raise ValueError(f"Unexpected process type: {cfg._type}")
 
         case AggregateConfig():
-            cfg: AggregateConfig = node.cfg
+            assert isinstance(node, _Node)
             assert len(node.upstream) == 1
+            assert node.input_queue is not None
 
-            in_q, out_q = node.input_queues[0], node.output_queues[0]
+            in_q, out_q = node.input_queue, node.output_queue
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
             # Use specialized aggregate pipe that drains the input queue
@@ -424,10 +428,11 @@ def _build_node(
             )
 
         case DisaggregateConfig():
-            cfg: DisaggregateConfig = node.cfg
+            assert isinstance(node, _Node)
             assert len(node.upstream) == 1
+            assert node.input_queue is not None
 
-            in_q, out_q = node.input_queues[0], node.output_queues[0]
+            in_q, out_q = node.input_queue, node.output_queue
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
             args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
@@ -435,7 +440,7 @@ def _build_node(
 
 
 def _build_node_recursive(
-    node: _Node,
+    node: _TNodes,
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[str], list[TaskHook]],
     max_failures: int | Fraction,
@@ -507,7 +512,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None,
     stage_id: int,
-) -> _Node:
+) -> _TNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
@@ -527,7 +532,7 @@ def _build_pipeline_node(
 ################################################################################
 # Coroutine execution logics
 ################################################################################
-def _start_tasks(node: _Node) -> set[Task]:
+def _start_tasks(node: _TNodes) -> set[Task]:
     if isinstance(node, _FanOutNode) and node._task is not None:
         return {node.task}
     node.create_task()
@@ -537,17 +542,13 @@ def _start_tasks(node: _Node) -> set[Task]:
     return ret
 
 
-def _cancel_recursive(node: _Node) -> None:
-    if isinstance(node, _FanOutNode):
-        node._cancel_count -= 1
-        if node._cancel_count > 0:
-            return
+def _cancel_recursive(node: _TNodes) -> None:
     node.task.cancel()
     for n in node.upstream:
         _cancel_recursive(n)
 
 
-def _cancel_orphaned(node: _Node) -> None:
+def _cancel_orphaned(node: _TNodes) -> None:
     """
     Cancel upstream tasks when the current node's task has completed to prevent orphaned producers.
 
@@ -573,14 +574,22 @@ def _cancel_orphaned(node: _Node) -> None:
         _cancel_orphaned(n)
 
 
-def _gather_error(node: _Node) -> list[tuple[str, Exception]]:
+def _gather_error(
+    node: _TNodes, _visited: set[int] | None = None
+) -> list[tuple[str, Exception]]:
+    if _visited is None:
+        _visited = set()
+    if id(node) in _visited:
+        return []
+    _visited.add(id(node))
+
     task = node.task
     errs = []
     if not task.cancelled() and (err := task.exception()) is not None:
         errs.append((task.get_name(), err))
 
     for n in node.upstream:
-        errs.extend(_gather_error(n))
+        errs.extend(_gather_error(n, _visited))
     errs.sort(key=lambda i: i[0])
     return errs
 
@@ -605,7 +614,7 @@ class PipelineFailure(RuntimeError):
 
 
 async def _run_pipeline_coroutines(
-    node: _Node,
+    node: _TNodes,
     background_tasks: Sequence[Callable[[], Any]] | None = None,
 ) -> None:
     """Orchestrate the execution of all pipeline stage coroutines.
@@ -713,4 +722,4 @@ def _build_pipeline_coro(
     )
     coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 
-    return coro, node.output_queues[0]
+    return coro, node.output_queue  # pyre-ignore[16]
