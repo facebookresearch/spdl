@@ -6,6 +6,7 @@
 
 import asyncio
 import logging
+import sys
 from asyncio import ALL_COMPLETED, FIRST_COMPLETED, Task
 from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass, field
@@ -712,14 +713,19 @@ def _build_pipeline_coro(
     stage_id: int = 0,
     background_tasks: Sequence[Callable[[], Any]] | None = None,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
-    node = _build_pipeline_node(
-        plc,
-        max_failures=max_failures,
-        report_stats_interval=report_stats_interval,
-        queue_class=queue_class,
-        task_hook_factory=task_hook_factory,
-        stage_id=stage_id,
-    )
-    coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
+    try:
+        node = _build_pipeline_node(
+            plc,
+            max_failures=max_failures,
+            report_stats_interval=report_stats_interval,
+            queue_class=queue_class,
+            task_hook_factory=task_hook_factory,
+            stage_id=stage_id,
+        )
+        coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 
-    return coro, node.output_queue  # pyre-ignore[16]
+        return coro, node.output_queue  # pyre-ignore[16]
+    except Exception as e:
+        if sys.version_info.minor >= 11:
+            e.add_note(f"PipelineConfig: {plc}")
+        raise
