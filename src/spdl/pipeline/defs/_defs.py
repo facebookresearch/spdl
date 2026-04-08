@@ -24,6 +24,7 @@ U = TypeVar("U")
 
 __all__ = [
     "_PipeArgs",
+    "_PipeConfigBase",
     "_PipeType",
     "_TPipeInputs",
     "_ConfigBase",
