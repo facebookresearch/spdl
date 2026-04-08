@@ -24,7 +24,6 @@ U = TypeVar("U")
 
 __all__ = [
     "_PipeArgs",
-    "_PipeConfigBase",
     "_PipeType",
     "_TPipeInputs",
     "_ConfigBase",
@@ -174,12 +173,8 @@ class _PipeArgs(Generic[T, U]):
             )
 
 
-class _PipeConfigBase(_ConfigBase):
-    pass
-
-
 @dataclass(frozen=True)
-class PipeConfig(Generic[T, U], _PipeConfigBase):
+class PipeConfig(Generic[T, U], _ConfigBase):
     """PipeConfig()
 
     A pipe configuration.
@@ -357,7 +352,7 @@ class Aggregator(abc.ABC):
 
 
 @dataclass(frozen=True)
-class AggregateConfig(Generic[T], _PipeConfigBase):
+class AggregateConfig(Generic[T], _ConfigBase):
     """Configuration for aggregation operation.
 
     .. versionchanged:: 0.2.1
@@ -392,7 +387,7 @@ class AggregateConfig(Generic[T], _PipeConfigBase):
 
 
 @dataclass(frozen=True)
-class DisaggregateConfig(Generic[T], _PipeConfigBase):
+class DisaggregateConfig(Generic[T], _ConfigBase):
     """Configuration for disaggregation operation.
 
     Slices incoming lists of items and yields them one by one.

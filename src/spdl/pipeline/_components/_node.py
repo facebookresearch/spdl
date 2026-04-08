@@ -11,13 +11,12 @@ from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import partial
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeAlias, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline.defs import (
     _ConfigBase,
     _PipeArgs,
-    _PipeConfigBase,
     _PipeType,
     AggregateConfig,
     DisaggregateConfig,
@@ -43,6 +42,12 @@ from ._sink import _sink
 from ._source import _source
 
 T = TypeVar("T")
+S = TypeVar("S")
+
+_PipeConfigBase: TypeAlias = (
+    PipeConfig[T, S] | AggregateConfig[T] | DisaggregateConfig[T]
+)
+
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
