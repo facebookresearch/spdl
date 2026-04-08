@@ -16,7 +16,6 @@ from typing import Any, TypeAlias, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline.defs import (
-    _ConfigBase,
     _PipeArgs,
     _PipeType,
     AggregateConfig,
@@ -44,10 +43,6 @@ from ._source import _source
 
 T = TypeVar("T")
 S = TypeVar("S")
-
-_PipeConfigBase: TypeAlias = (
-    PipeConfig[T, S] | AggregateConfig[T] | DisaggregateConfig[T]
-)
 
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -80,12 +75,6 @@ class _NodeMixin:
 
     name: str
     """A unique identifier for the node, used for logging and task naming."""
-
-    cfg: _ConfigBase
-    """The configuration object that defines the behavior of this stage."""
-
-    upstream: "Sequence[_TNodes]"
-    """A sequence of upstream nodes that this node depends on."""
 
     _coro: Coroutine[None, None, None] | None = field(default=None, init=False)
     _task: Task | None = field(default=None, init=False)
@@ -120,10 +109,32 @@ class _NodeMixin:
 
 
 @dataclass
+class _SourceNode(_NodeMixin):
+    """Node with only a single output queue."""
+
+    cfg: SourceConfig
+    """The configuration object that defines the behavior of this stage."""
+
+    output_queue: AsyncQueue
+    """Queue this node writes to."""
+
+    @property
+    def upstream(self) -> "Sequence[_TNodes]":
+        """Convenience attributes for compatibility with _Node."""
+        return []
+
+
+@dataclass
 class _Node(_NodeMixin):
     """Node with a single input queue and a single output queue."""
 
-    input_queue: AsyncQueue | None
+    cfg: PipeConfig | AggregateConfig | DisaggregateConfig | SinkConfig
+    """The configuration object that defines the behavior of this stage."""
+
+    upstream: "Sequence[_TNodes]"
+    """A sequence of upstream nodes that this node depends on."""
+
+    input_queue: AsyncQueue
     """Queue this node reads from. Empty for source."""
 
     output_queue: AsyncQueue
@@ -133,6 +144,12 @@ class _Node(_NodeMixin):
 @dataclass
 class _FanInNode(_NodeMixin):
     """Node with multiple input queues for fan-in stages (e.g., MergeConfig)."""
+
+    cfg: MergeConfig
+    """The configuration object that defines the behavior of this stage."""
+
+    upstream: "Sequence[_TNodes]"
+    """A sequence of upstream nodes that this node depends on."""
 
     input_queues: Sequence[AsyncQueue]
     """Queues this node reads from."""
@@ -153,6 +170,12 @@ class _FanOutNode(_NodeMixin):
     so graph traversals visit them multiple times.
     """
 
+    cfg: object
+    """The configuration object that defines the behavior of this stage."""
+
+    upstream: "Sequence[_TNodes]"
+    """A sequence of upstream nodes that this node depends on."""
+
     input_queue: AsyncQueue
     """Queues this node reads from."""
 
@@ -171,8 +194,8 @@ class _FanOutNode(_NodeMixin):
         return task
 
 
-_TNodes: TypeAlias = _Node | _FanInNode | _FanOutNode
-_TOutputNodes: TypeAlias = _Node | _FanInNode
+_TNodes: TypeAlias = _SourceNode | _Node | _FanInNode | _FanOutNode
+_TOutputNodes: TypeAlias = _SourceNode | _Node | _FanInNode
 
 
 ################################################################################
@@ -192,9 +215,7 @@ class _MutableInt:
         return str(self.v)
 
 
-def _get_names(
-    cfg: _ConfigBase, pipeline_id: int, stage_id: _MutableInt
-) -> tuple[str, str]:
+def _get_names(cfg: object, pipeline_id: int, stage_id: _MutableInt) -> tuple[str, str]:
     match cfg:
         case SourceConfig():
             base = "src"
@@ -227,7 +248,7 @@ _BUFFER_SIZE: int = 2
 
 
 def _convert_pipes(
-    pipes: Sequence[_PipeConfigBase],
+    pipes: Sequence[PipeConfig | AggregateConfig | DisaggregateConfig],
     n: _TOutputNodes,
     q_class: type[AsyncQueue],
     pipeline_id: int,
@@ -282,21 +303,19 @@ def _convert_config(
     """
     name, q_name = _get_names(plc.src, pipeline_id, stage_id)
     stage_id += 1
-    src_out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
-    if isinstance(plc.src, MergeConfig):
-        upstream = [
-            _convert_config(cfg, q_class, pipeline_id, stage_id, disable_sink=True)
-            for cfg in plc.src.pipeline_configs
-        ]
-        n = _FanInNode(
-            name,
-            plc.src,
-            upstream,
-            input_queues=[n.output_queue for n in upstream],
-            output_queue=src_out_q,
-        )
-    else:
-        n = _Node(name, plc.src, [], input_queue=None, output_queue=src_out_q)
+    q = q_class(q_name, buffer_size=_BUFFER_SIZE)
+    match cfg := plc.src:
+        case SourceConfig():
+            n = _SourceNode(name, cfg, output_queue=q)
+        case MergeConfig():
+            upstream = [
+                _convert_config(c, q_class, pipeline_id, stage_id, disable_sink=True)
+                for c in cfg.pipeline_configs
+            ]
+            in_qs = [n.output_queue for n in upstream]
+            n = _FanInNode(name, cfg, upstream, input_queues=in_qs, output_queue=q)
+        case _:
+            raise NotImplementedError(f"`{type(cfg)}` is not supported.")
 
     n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
@@ -370,8 +389,7 @@ def _build_node(
 
     match cfg := node.cfg:
         case SourceConfig():
-            assert isinstance(node, _Node)
-            assert len(node.upstream) == 0
+            assert isinstance(node, _SourceNode)
             node._coro = _source(cfg.source, node.output_queue)
         case MergeConfig():
             assert isinstance(node, _FanInNode)
@@ -513,7 +531,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None,
     stage_id: int,
-) -> _TNodes:
+) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
@@ -724,8 +742,8 @@ def _build_pipeline_coro(
         )
         coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 
-        return coro, node.output_queue  # pyre-ignore[16]
+        return coro, node.output_queue
     except Exception as e:
-        if sys.version_info.minor >= 11:
+        if sys.version_info[1] >= 11:
             e.add_note(f"PipelineConfig: {plc}")
         raise
