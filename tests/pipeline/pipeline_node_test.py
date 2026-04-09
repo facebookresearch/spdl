@@ -13,31 +13,57 @@ from spdl.pipeline._components import AsyncQueue
 from spdl.pipeline._components._node import (
     _cancel_orphaned,
     _cancel_recursive,
+    _FanInNode,
     _gather_error,
     _Node,
+    _PathVariantsMergeConfig,
+    _SourceNode,
     _start_tasks,
 )
-from spdl.pipeline.defs import SinkConfig
+from spdl.pipeline.defs import SinkConfig, SourceConfig
 
 
 class DummyException(Exception):
     pass
 
 
-def _node(name: str, deps: list[_Node], exc: Exception | None = None) -> _Node:
+_TTestNode = _SourceNode | _Node | _FanInNode
+
+
+def _node(
+    name: str,
+    deps: list[_TTestNode],
+    exc: Exception | None = None,
+) -> _TTestNode:
     async def coro() -> None:
         if exc:
             raise exc
         else:
             await asyncio.sleep(10)
 
-    n = _Node(
-        name,
-        SinkConfig(buffer_size=1),
-        deps,
-        input_queue=AsyncQueue(f"{name}_in"),
-        output_queue=AsyncQueue(name),
-    )
+    n: _TTestNode
+    if not deps:
+        n = _SourceNode(
+            name,
+            SourceConfig(source=[]),
+            output_queue=AsyncQueue(name),
+        )
+    elif len(deps) > 1:
+        n = _FanInNode(
+            name,
+            _PathVariantsMergeConfig(),
+            deps,
+            input_queues=[AsyncQueue(f"{name}_in_{i}") for i in range(len(deps))],
+            output_queue=AsyncQueue(name),
+        )
+    else:
+        n = _Node(
+            name,
+            SinkConfig(buffer_size=1),
+            deps,
+            input_queue=AsyncQueue(f"{name}_in"),
+            output_queue=AsyncQueue(name),
+        )
     n._coro = coro()
     return n
 

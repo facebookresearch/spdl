@@ -158,6 +158,13 @@ class _Node(_NodeMixin):
     output_queue: AsyncQueue
     """Queue this node writes to."""
 
+    def __post_init__(self) -> None:
+        if len(self.upstream) != 1:
+            raise AssertionError(
+                "[INTERNAL ERROR] _Node must have exactly one upstream node. "
+                f"Upstream nodes: {self.upstream}"
+            )
+
 
 @dataclass
 class _FanInNode(_NodeMixin):
@@ -176,8 +183,10 @@ class _FanInNode(_NodeMixin):
     """Queues this node writes to."""
 
     def __post_init__(self) -> None:
-        if len(self.input_queues) < 1:
-            raise AssertionError("[INTERNAL ERROR] Input queues cannot be empty.")
+        if len(self.upstream) < 1 or len(self.input_queues) < 1:
+            raise AssertionError(
+                "[INTERNAL ERROR] _FanInNode must have at least one upstream node/input queue."
+            )
 
 
 @dataclass
@@ -201,6 +210,12 @@ class _FanOutNode(_NodeMixin):
     """Queues this node writes to."""
 
     def __post_init__(self) -> None:
+        if len(self.upstream) != 1:
+            raise AssertionError(
+                "[INTERNAL ERROR] _FanOutNode must have exactly one upstream node. "
+                f"Upstream nodes: {self.upstream}"
+            )
+
         if len(self.output_queues) < 1:
             raise AssertionError("[INTERNAL ERROR] Output queues cannot be empty.")
 
@@ -510,92 +525,89 @@ def _build_node(
             return
         raise RuntimeError(f"[Internal Error] coroutine cannot be built twice. {node}")
 
-    match cfg := node.cfg:
-        case SourceConfig():
-            assert isinstance(node, _SourceNode)
-            node._coro = _source(cfg.source, node.output_queue)
-        case MergeConfig():
-            assert isinstance(node, _FanInNode)
-            assert len(node.upstream) > 0
-            hooks = task_hook_factory(node.name)
-            fc = fc_class(max_failures)
-            node._coro = _merge(
-                node.name, node.input_queues, node.output_queue, fc, hooks, cfg.op
-            )
-        case SinkConfig():
-            assert isinstance(node, _Node)
-            assert len(node.upstream) == 1
-            assert node.input_queue is not None
-            node._coro = _sink(node.input_queue, node.output_queue)
-        case PipeConfig():
-            assert isinstance(node, _Node)
-            assert len(node.upstream) == 1
-            assert node.input_queue is not None
-
-            in_q, out_q = node.input_queue, node.output_queue
-            hooks = task_hook_factory(node.name)
-            fc = fc_class(max_failures, cfg._max_failures)
-            match cfg._type:
-                case _PipeType.Pipe:
-                    node._coro = _pipe(
-                        node.name, in_q, out_q, cfg._args, fc, hooks, False
-                    )
-                case _PipeType.OrderedPipe:
-                    node._coro = _ordered_pipe(
-                        node.name, in_q, out_q, cfg._args, fc, hooks
-                    )
-                case _:  # pragma: no cover
-                    raise ValueError(f"Unexpected process type: {cfg._type}")
-
-        case AggregateConfig():
-            assert isinstance(node, _Node)
-            assert len(node.upstream) == 1
-            assert node.input_queue is not None
-
-            in_q, out_q = node.input_queue, node.output_queue
-            hooks = task_hook_factory(node.name)
-            fc = fc_class(max_failures)
-            # Use specialized aggregate pipe that drains the input queue
-            # in bulk to reduce context switching overhead.
-            # When drop_last=False, pass EOF to op so it can emit remaining items
-            # When drop_last=True, don't pass EOF to op, effectively dropping last batch
-            node._coro = _aggregate(
-                node.name,
-                in_q,
-                out_q,
-                cfg.op,
-                fc,
-                hooks,
-                op_requires_eof=not cfg.drop_last,
-            )
-
-        case DisaggregateConfig():
-            assert isinstance(node, _Node)
-            assert len(node.upstream) == 1
-            assert node.input_queue is not None
-
-            in_q, out_q = node.input_queue, node.output_queue
-            hooks = task_hook_factory(node.name)
-            fc = fc_class(max_failures)
-            args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
-            node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, False)
-
-        case PathVariantsConfig():  # Router of PathVariants
-            assert isinstance(node, _FanOutNode)
+    match node:
+        case _SourceNode():
+            node._coro = _source(node.cfg.source, node.output_queue)
+        case _FanOutNode():
             hooks = task_hook_factory(node.name)
             node._coro = _path_variants_router(
                 node.input_queue,
                 node.output_queues,
-                cfg.router,
+                node.cfg.router,
                 hooks,
             )
-        case _PathVariantsMergeConfig():
-            assert isinstance(node, _FanInNode)
+        case _FanInNode():
             hooks = task_hook_factory(node.name)
             fc = fc_class(max_failures)
-            node._coro = _merge(
-                node.name, node.input_queues, node.output_queue, fc, hooks, None
-            )
+            match cfg := node.cfg:
+                case MergeConfig():
+                    node._coro = _merge(
+                        node.name,
+                        node.input_queues,
+                        node.output_queue,
+                        fc,
+                        hooks,
+                        cfg.op,
+                    )
+                case _PathVariantsMergeConfig():
+                    node._coro = _merge(
+                        node.name, node.input_queues, node.output_queue, fc, hooks, None
+                    )
+                case _:  # pragma: no cover
+                    raise ValueError(
+                        f"[Internal Error] Unexpected config type in _FanInNode: {cfg}"
+                    )
+        case _Node():
+            match cfg := node.cfg:
+                case SinkConfig():
+                    node._coro = _sink(node.input_queue, node.output_queue)
+                case PipeConfig():
+                    in_q, out_q = node.input_queue, node.output_queue
+                    hooks = task_hook_factory(node.name)
+                    fc = fc_class(max_failures, cfg._max_failures)
+                    match cfg._type:
+                        case _PipeType.Pipe:
+                            node._coro = _pipe(
+                                node.name, in_q, out_q, cfg._args, fc, hooks, False
+                            )
+                        case _PipeType.OrderedPipe:
+                            node._coro = _ordered_pipe(
+                                node.name, in_q, out_q, cfg._args, fc, hooks
+                            )
+                        case _:  # pragma: no cover
+                            raise ValueError(
+                                f"[Internal Error] Unexpected process type: {cfg._type}"
+                            )
+
+                case AggregateConfig():
+                    in_q, out_q = node.input_queue, node.output_queue
+                    hooks = task_hook_factory(node.name)
+                    fc = fc_class(max_failures)
+                    # Use specialized aggregate pipe that drains the input queue
+                    # in bulk to reduce context switching overhead.
+                    # When drop_last=False, pass EOF to op so it can emit remaining items
+                    # When drop_last=True, don't pass EOF to op, effectively dropping last batch
+                    node._coro = _aggregate(
+                        node.name,
+                        in_q,
+                        out_q,
+                        cfg.op,
+                        fc,
+                        hooks,
+                        op_requires_eof=not cfg.drop_last,
+                    )
+
+                case DisaggregateConfig():
+                    in_q, out_q = node.input_queue, node.output_queue
+                    hooks = task_hook_factory(node.name)
+                    fc = fc_class(max_failures)
+                    args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
+                    node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, False)
+
+                case _:  # pragma: no cover
+                    raise ValueError(
+                        f"[Internal Error] Unexpected config type in _Node: {cfg}"
+                    )
 
 
 def _build_node_recursive(
