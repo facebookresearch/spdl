@@ -26,7 +26,6 @@ The following step explains the steps to build a pipeline using the building blo
 """
 
 from ._defs import (
-    _ConfigBase,
     _PipeArgs,
     _PipeType,
     _TPipeInputs,
@@ -46,7 +45,6 @@ from ._defs import (
 )
 
 __all__ = [
-    "_ConfigBase",
     "_PipeArgs",
     "_PipeType",
     "_TAsyncCallables",

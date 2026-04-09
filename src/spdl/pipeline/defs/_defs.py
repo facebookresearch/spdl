@@ -26,7 +26,6 @@ __all__ = [
     "_PipeArgs",
     "_PipeType",
     "_TPipeInputs",
-    "_ConfigBase",
     "MergeConfig",
     "PipeConfig",
     "AggregateConfig",
@@ -43,15 +42,11 @@ __all__ = [
 ]
 
 
-class _ConfigBase:
-    pass
-
-
 ################################################################################
 # Source
 ################################################################################
 @dataclass(frozen=True)
-class SourceConfig(Generic[T], _ConfigBase):
+class SourceConfig(Generic[T]):
     """A source configuration.
 
     A source in Pipeline yields a series of input data, that is going to be
@@ -90,7 +85,7 @@ class SourceConfig(Generic[T], _ConfigBase):
 
 
 @dataclass(frozen=True)
-class MergeConfig(_ConfigBase):
+class MergeConfig:
     """MergeConfig()
 
     Merge multiple pipelines into one output queue.
@@ -174,7 +169,7 @@ class _PipeArgs(Generic[T, U]):
 
 
 @dataclass(frozen=True)
-class PipeConfig(Generic[T, U], _ConfigBase):
+class PipeConfig(Generic[T, U]):
     """PipeConfig()
 
     A pipe configuration.
@@ -352,7 +347,7 @@ class Aggregator(abc.ABC):
 
 
 @dataclass(frozen=True)
-class AggregateConfig(Generic[T], _ConfigBase):
+class AggregateConfig(Generic[T]):
     """Configuration for aggregation operation.
 
     .. versionchanged:: 0.2.1
@@ -387,7 +382,7 @@ class AggregateConfig(Generic[T], _ConfigBase):
 
 
 @dataclass(frozen=True)
-class DisaggregateConfig(Generic[T], _ConfigBase):
+class DisaggregateConfig(Generic[T]):
     """Configuration for disaggregation operation.
 
     Slices incoming lists of items and yields them one by one.
@@ -406,7 +401,7 @@ class DisaggregateConfig(Generic[T], _ConfigBase):
 # Sink
 ################################################################################
 @dataclass(frozen=True)
-class SinkConfig(Generic[T], _ConfigBase):
+class SinkConfig(Generic[T]):
     """A sink configuration.
 
     The sink is where the final result of pipeline is buffered.
@@ -434,7 +429,7 @@ class SinkConfig(Generic[T], _ConfigBase):
 # Top-level Config
 ##############################################################################
 @dataclass(frozen=True)
-class PipelineConfig(Generic[U], _ConfigBase):
+class PipelineConfig(Generic[U]):
     """A pipeline configuration.
 
     A pipeline consists of source, a series of pipes and sink.

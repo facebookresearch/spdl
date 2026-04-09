@@ -17,7 +17,7 @@ from spdl.pipeline._components._node import (
     _Node,
     _start_tasks,
 )
-from spdl.pipeline.defs import _ConfigBase
+from spdl.pipeline.defs import SinkConfig
 
 
 class DummyException(Exception):
@@ -32,7 +32,11 @@ def _node(name: str, deps: list[_Node], exc: Exception | None = None) -> _Node:
             await asyncio.sleep(10)
 
     n = _Node(
-        name, _ConfigBase(), deps, input_queue=None, output_queue=AsyncQueue(name)
+        name,
+        SinkConfig(buffer_size=1),
+        deps,
+        input_queue=AsyncQueue(f"{name}_in"),
+        output_queue=AsyncQueue(name),
     )
     n._coro = coro()
     return n
