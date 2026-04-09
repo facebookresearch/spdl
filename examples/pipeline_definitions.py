@@ -17,18 +17,18 @@ This example showcases the usage of all configuration classes available in the
 - :py:class:`SinkConfig`: Configures output buffering for pipelines
 - :py:class:`PipelineConfig`: Top-level pipeline configuration combining all components
 - :py:class:`Merge`: Merges outputs from multiple pipelines into a single stream
+- :py:class:`PathVariantsConfig`: Routes items to different processing paths
 
 The example also demonstrates the factory functions:
 
 - :py:func:`Pipe`: Creates pipe configurations for general processing
 - :py:func:`Aggregate`: Creates configurations for batching/grouping data
 - :py:func:`Disaggregate`: Creates configurations for splitting batched data
-
-The pipeline structure created by this example is illustrated below:
+- :py:func:`PathVariants`: Creates variant path routing configurations
 
 .. note::
 
-   The pipeline defined here uses merge mechanism, which is not supported by
+   This pipeline uses the merge mechanism, which is not supported by
    :py:class:`~spdl.pipeline.PipelineBuilder`.
 
 .. mermaid::
@@ -50,8 +50,13 @@ The pipeline structure created by this example is illustrated below:
            SNK2 --> M
            M --> NORM[Pipe: normalize_to_lists]
            NORM --> DISAGG[Disaggregate]
-           DISAGG --> P3[Pipe: multiply_by_10]
-           P3 --> FINAL_SINK[Final Sink]
+           DISAGG --> R[Router: cache_router]
+           R -->|cache hit| CACHE[Pipe: load_from_cache]
+           R -->|cache miss| MUL[Pipe: multiply_by_10]
+           MUL --> STORE[Pipe: store_in_cache]
+           CACHE --> PV_MERGE[PathVariants merge]
+           STORE --> PV_MERGE
+           PV_MERGE --> FINAL_SINK[Final Sink]
        end
 
 The data flow:
@@ -66,8 +71,11 @@ The data flow:
    ``[[0, 1], [4, 9], [16], [110], [111], [112], [113], [114]]``
 5. Disaggregate flattens:
    ``[0, 1, 4, 9, 16, 110, 111, 112, 113, 114]``
-6. Finally, multiply by 10:
-   ``[0, 10, 40, 90, 160, 1100, 1110, 1120, 1130, 1140]``
+6. PathVariants routes each item based on cache membership:
+
+   - Cache hits (pre-populated values) → ``load_from_cache`` (1 stage)
+   - Cache misses → ``multiply_by_10`` → ``store_in_cache`` (2 stages:
+     compute ``×10``, then store the result for future lookups)
 """
 
 __all__ = [
@@ -78,7 +86,10 @@ __all__ = [
     "square",
     "add_100",
     "multiply_by_10",
+    "store_in_cache",
     "normalize_to_lists",
+    "cache_router",
+    "load_from_cache",
     "run_pipeline_example",
 ]
 
@@ -90,6 +101,7 @@ from spdl.pipeline.defs import (
     Aggregate,
     Disaggregate,
     Merge,
+    PathVariants,
     Pipe,
     PipelineConfig,
     SinkConfig,
@@ -111,9 +123,41 @@ def add_100(x: int) -> int:
     return x + 100
 
 
-def multiply_by_10(x: int) -> int:
-    """Multiply the input by 10."""
-    return x * 10
+################################################################################
+# Cache-based routing with PathVariants
+################################################################################
+
+# Cache of pre-computed results.  In a real pipeline this might be backed by
+# a key-value store or an on-disk cache; here we use a plain dict.
+_CACHE: dict[int, int] = {0: 0, 1: 10, 4: 40}  # pre-populated with a few ×10 values
+
+
+def cache_router(item: int) -> int:
+    """Route items based on cache membership.
+
+    Returns 0 for cache hits (fast path) and 1 for cache misses (slow path).
+    """
+    return 0 if item in _CACHE else 1
+
+
+def load_from_cache(item: int) -> int:
+    """Retrieve a previously computed result from the cache (fast path)."""
+    return _CACHE[item]
+
+
+def multiply_by_10(item: int) -> tuple[int, int]:
+    """Multiply the input by 10 (slow path, first stage).
+
+    Returns a (key, result) tuple so the next stage can store it in the cache.
+    """
+    return (item, item * 10)
+
+
+def store_in_cache(item: tuple[int, int]) -> int:
+    """Store the computed result in the cache and return it (slow path, second stage)."""
+    key, value = item
+    _CACHE[key] = value
+    return value
 
 
 def create_sub_pipeline_1() -> PipelineConfig[list[int]]:
@@ -179,12 +223,24 @@ def create_main_pipeline(
 ) -> PipelineConfig[int]:
     """Create the main pipeline that merges outputs from sub-pipelines.
 
+    After merging, normalising and disaggregating, the pipeline uses
+    :py:func:`PathVariants` to route each item through a cache-aware
+    multiply-by-10 stage:
+
+    - **Cache hit** → ``load_from_cache`` (1 pipe stage)
+    - **Cache miss** → ``multiply_by_10`` → ``store_in_cache`` (2 pipe stages)
+
+    Note that the two paths have different numbers of pipe stages,
+    which PathVariants supports.
+
     .. code-block:: text
 
        Merge([sub1, sub2])
          → normalize_to_lists
          → disaggregate
-         → multiply_by_10
+         → PathVariants(cache_router)
+             path 0 (hit):  load_from_cache
+             path 1 (miss): multiply_by_10 → store_in_cache
 
     Args:
         sub_pipeline_1: First sub-pipeline configuration
@@ -196,17 +252,27 @@ def create_main_pipeline(
     merge_config = Merge([sub_pipeline_1, sub_pipeline_2])
     normalize_pipe = Pipe(normalize_to_lists)
     disaggregate_pipe = Disaggregate()
-    multiply_pipe = Pipe(
-        multiply_by_10,
-        concurrency=3,
-        output_order="input",  # Maintain input order
+
+    # Instead of a plain Pipe(multiply_by_10), use PathVariants to
+    # demonstrate cache-based routing: items already in the cache are
+    # served instantly, while cache misses compute the result and
+    # populate the cache for future lookups.
+    cached_multiply = PathVariants(
+        router=cache_router,
+        paths=[
+            [Pipe(load_from_cache)],  # path 0: 1-stage (fast)
+            [
+                Pipe(multiply_by_10),
+                Pipe(store_in_cache),
+            ],  # path 1: 2-stage (compute + cache)
+        ],
     )
 
     sink_config = SinkConfig(buffer_size=20)
 
     return PipelineConfig(
         src=merge_config,
-        pipes=[normalize_pipe, disaggregate_pipe, multiply_pipe],
+        pipes=[normalize_pipe, disaggregate_pipe, cached_multiply],
         sink=sink_config,
     )
 

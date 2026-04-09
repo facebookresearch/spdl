@@ -21,6 +21,7 @@ from spdl.pipeline.defs import (
     AggregateConfig,
     DisaggregateConfig,
     MergeConfig,
+    PathVariantsConfig,
     PipeConfig,
     PipelineConfig,
     SinkConfig,
@@ -261,6 +262,9 @@ def _profile_pipeline(
         raise ValueError(f"Unexpected source type {type(cfg.src)}")
 
     for pipe in cfg.pipes:
+        if isinstance(pipe, PathVariantsConfig):
+            _LG.warning("Skipping PathVariants stage in profiling (not supported).")
+            continue
         _LG.info("Profiling Stage: %s", pipe.name)
         inputs, result = _profile_pipe(inputs, pipe, hook, callback)
         results.append(result)
