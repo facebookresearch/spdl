@@ -11,16 +11,11 @@ import time
 import unittest
 
 from spdl.pipeline import BackgroundTask, build_pipeline
-from spdl.pipeline._build import (
+from spdl.pipeline.config import (
     get_default_background_tasks,
     set_default_background_tasks,
 )
-from spdl.pipeline.defs import (
-    Pipe,
-    PipelineConfig,
-    SinkConfig,
-    SourceConfig,
-)
+from spdl.pipeline.defs import Pipe, PipelineConfig, SinkConfig, SourceConfig
 
 
 def _simple_cfg() -> PipelineConfig[int]:

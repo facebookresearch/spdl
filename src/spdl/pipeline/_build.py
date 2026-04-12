@@ -12,10 +12,6 @@ __all__ = [
     "run_pipeline_in_subprocess",
     "get_default_build_callback",
     "set_default_build_callback",
-    "BackgroundTask",
-    "BackgroundTaskFactory",
-    "get_default_background_tasks",
-    "set_default_background_tasks",
 ]
 
 import logging
@@ -26,6 +22,10 @@ from fractions import Fraction
 from functools import partial
 from typing import Any, Generic, TypeVar
 
+from spdl.pipeline._bg_task import (
+    BackgroundTaskFactory,
+    get_default_background_tasks,
+)
 from spdl.pipeline._components import (
     _build_pipeline_coro,
     _get_global_id,
@@ -68,67 +68,6 @@ def set_default_build_callback(
     """
     global _DEFAULT_BUILD_CALLBACK
     _DEFAULT_BUILD_CALLBACK = callback
-
-
-class BackgroundTask:
-    """A background task that runs alongside pipeline stages.
-
-    Subclass this and override :py:meth:`run` to implement custom logic.
-    The task is started when the pipeline starts and cancelled when the
-    pipeline completes. Errors are logged but do not cause the pipeline
-    to fail.
-
-    Example::
-
-        class MyMonitor(BackgroundTask):
-            async def run(self) -> None:
-                while True:
-                    collect_metrics()
-                    await asyncio.sleep(60)
-
-        pipeline = build_pipeline(cfg, num_threads=4,
-                                  background_tasks=[MyMonitor])
-    """
-
-    async def run(self) -> None:
-        """Override this to implement the background task logic.
-
-        This coroutine runs in the pipeline's event loop. It will be
-        cancelled when the pipeline completes, so use ``try/except
-        asyncio.CancelledError`` if cleanup is needed.
-        """
-        raise NotImplementedError
-
-
-BackgroundTaskFactory = Callable[[], BackgroundTask]
-
-_DEFAULT_BACKGROUND_TASKS: list[BackgroundTaskFactory] | None = None
-
-
-def get_default_background_tasks() -> list[BackgroundTaskFactory] | None:
-    """Get the default background task factories.
-
-    Returns:
-        The default background task factories or None if not set.
-    """
-    return _DEFAULT_BACKGROUND_TASKS
-
-
-def set_default_background_tasks(
-    tasks: list[BackgroundTaskFactory] | None,
-) -> None:
-    """Set the default background task factories.
-
-    Each factory is called to create a :py:class:`BackgroundTask` instance
-    whose :py:meth:`~BackgroundTask.run` coroutine runs alongside the pipeline
-    stages. Tasks are cancelled when the pipeline completes. Their errors are
-    logged but do not cause the pipeline to fail.
-
-    Args:
-        tasks: A list of background task factories, or None to unset.
-    """
-    global _DEFAULT_BACKGROUND_TASKS
-    _DEFAULT_BACKGROUND_TASKS = tasks
 
 
 # The following is how we intend pipeline to behave. If the implementation
@@ -201,8 +140,9 @@ def _build_pipeline(
 
     # Merge per-pipeline background tasks with defaults
     all_bg_tasks: list[BackgroundTaskFactory] = []
-    if _DEFAULT_BACKGROUND_TASKS:
-        all_bg_tasks.extend(_DEFAULT_BACKGROUND_TASKS)
+    default_bg = get_default_background_tasks()
+    if default_bg:
+        all_bg_tasks.extend(default_bg)
     if background_tasks:
         all_bg_tasks.extend(background_tasks)
 
