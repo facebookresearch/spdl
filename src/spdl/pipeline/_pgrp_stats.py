@@ -572,6 +572,19 @@ class ProcessGroupStatsMonitor(BackgroundTask):
         self._interval = interval
 
     async def run(self) -> None:
+        """Spawn a daemon subprocess to collect process-group stats and wait for it.
+
+        The subprocess runs its own asyncio event loop that periodically
+        reads ``/proc`` to gather CPU, memory, disk IO, and network stats
+        for all processes in this process group, then invokes the
+        user-provided callback with a :class:`ProcessGroupResourceUsage`
+        snapshot.
+
+        This method polls the subprocess every 5 seconds until it exits
+        or this coroutine is cancelled.  On cancellation the subprocess
+        is terminated (then killed if it does not exit within 5 seconds)
+        and ``CancelledError`` is re-raised.
+        """
         proc = multiprocessing.Process(
             target=_pgrp_monitor_subprocess,
             args=(self._interval, self._callback),
