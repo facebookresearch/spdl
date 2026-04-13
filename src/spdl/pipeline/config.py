@@ -19,10 +19,12 @@ from spdl.pipeline._components import (
     set_default_queue_class,
 )
 
-from ._build import (
+from ._bg_task import (
     get_default_background_tasks,
-    get_default_build_callback,
     set_default_background_tasks,
+)
+from ._build import (
+    get_default_build_callback,
     set_default_build_callback,
 )
 from ._common._misc import (
