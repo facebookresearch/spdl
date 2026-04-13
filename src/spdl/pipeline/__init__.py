@@ -31,12 +31,18 @@ from ._iter_utils import (
     iterate_in_subinterpreter,
     iterate_in_subprocess,
 )
+from ._pgrp_stats import (
+    ProcessGroupResourceUsage,
+    ProcessGroupStatsMonitor,
+)
 from ._pipeline import Pipeline
 from ._profile import profile_pipeline, ProfileHook, ProfileResult
 
 __all__ = [
     "BackgroundTask",
     "BackgroundTaskFactory",
+    "ProcessGroupResourceUsage",
+    "ProcessGroupStatsMonitor",
     "build_pipeline",
     "is_eof",
     "profile_pipeline",
