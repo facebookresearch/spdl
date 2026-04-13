@@ -14,6 +14,7 @@ from fractions import Fraction
 from functools import partial
 from typing import Any, TypeAlias, TypeVar
 
+from spdl.pipeline._bg_task import BackgroundTaskFactory
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline.defs import (
     _PipeArgs,
@@ -786,7 +787,7 @@ class PipelineFailure(RuntimeError):
 
 async def _run_pipeline_coroutines(
     node: _TNodes,
-    background_tasks: Sequence[Callable[[], Any]] | None = None,
+    background_tasks: Sequence[BackgroundTaskFactory] | None = None,
 ) -> None:
     """Orchestrate the execution of all pipeline stage coroutines.
 
@@ -881,7 +882,7 @@ def _build_pipeline_coro(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
     stage_id: int = 0,
-    background_tasks: Sequence[Callable[[], Any]] | None = None,
+    background_tasks: Sequence[BackgroundTaskFactory] | None = None,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     try:
         node = _build_pipeline_node(

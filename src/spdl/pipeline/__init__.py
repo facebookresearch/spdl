@@ -8,9 +8,8 @@
 
 # pyre-strict
 
+from ._bg_task import BackgroundTask, BackgroundTaskFactory
 from ._build import (
-    BackgroundTask,
-    BackgroundTaskFactory,
     build_pipeline,
     run_pipeline_in_subinterpreter,
     run_pipeline_in_subprocess,
