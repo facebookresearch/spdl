@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import unittest
 from collections.abc import Iterable
@@ -22,7 +22,7 @@ def _make_files(paths: Iterable[Path]) -> None:
 
 
 class SourceTest(unittest.TestCase):
-    def test_LocalDirectory(self):
+    def test_LocalDirectory(self) -> None:
         """LocalDirectory can traverse specified files"""
         with TemporaryDirectory() as root_dir:
             root_dir = Path(root_dir)
@@ -52,7 +52,7 @@ class SourceTest(unittest.TestCase):
             self.assertEqual(set(vals2), targets)
             self.assertEqual(set(vals3), targets)
 
-    def test_ImageNet(self):
+    def test_ImageNet(self) -> None:
         """ImageNet returns image path and class ID"""
         with TemporaryDirectory() as root_dir:
             root_dir = Path(root_dir)
